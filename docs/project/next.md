@@ -5,7 +5,7 @@
 ## Current Status
 
 **Milestone 0 complete** — all 11 sessions done (0A, 0B, M0.1–M0.10)
-**Last session**: M0.10 (end-to-end integration, commit b89abc7, 2026-06-22)
+**Last session**: M0.10 (end-to-end integration, commit b89abc7, 2026-06-22) + Quicklisp setup
 **Test count**: 78 unit + 18 integration = 96 total, all passing
 
 ## Up Next
@@ -56,14 +56,22 @@ M1 sessions will be planned in detail when we start M1 work.
 - **Threat detection**: Procedural-first (L1/L3 in-image), LLM-strategic (L2/L4 plugin)
 - **Privilege**: Split daemon — user daemon (CL) + system daemon (C, root, stateless)
 - **TUI**: Raw ANSI escape codes (no external TUI dep yet)
-- **dbus**: gdbus subprocess (cl-dbus deferred until Quicklisp)
-- **Test harness**: Custom (D-005, FiveAM migration deferred)
+- **dbus**: gdbus subprocess (cl-dbus can now be installed via Quicklisp when needed)
+- **Test harness**: Custom (D-005, FiveAM migration now possible — FiveAM installed)
 - **License**: AGPL-3.0-or-later
 
-## Package Recommendations (install before M1)
+## Environment (ready for M1)
 
-Via pacman: `cl-bordeaux-threads cl-cffi cl-json cl-ppcre cl-alexandria`
-Set up Quicklisp for: cl-dbus, cl-charms, cl-sqlite, cl-yaml (needed for M1+)
+- **SBCL**: 2.6.5 (via pacman, CachyOS)
+- **Quicklisp**: installed at `~/quicklisp/`, dist 2026-01-01, auto-loaded via `~/.sbclrc`
+- **CL packages installed** (via pacman, ASDF-visible, ql:quickload-compatible):
+  - `bordeaux-threads` — threading (used by scheduler, event bus)
+  - `cffi` — foreign function interface (for C interop, GPU libs)
+  - `cl-json` — JSON parsing (for AI tool hub, config)
+  - `cl-ppcre` — regex (for dbus signal parsing, package name validation)
+  - `alexandria` — utilities (general purpose)
+  - `fiveam` — test framework (migration from custom harness now possible)
+- **Available via Quicklisp when needed**: cl-dbus, cl-charms, cl-sqlite, cl-yaml
 
 ## Repository
 
@@ -75,7 +83,7 @@ Set up Quicklisp for: cl-dbus, cl-charms, cl-sqlite, cl-yaml (needed for M1+)
 
 ## Blocked
 
-Nothing blocked. Codeberg mirror pushed. GitHub project board configured (views need manual creation via web UI).
+Nothing blocked. Quicklisp set up, CL packages installed. Codeberg mirror pushed. GitHub project board configured (views need manual creation via web UI).
 
 ## Notes
 
