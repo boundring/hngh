@@ -49,6 +49,21 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Decision**: Use Lisp plist format (parseable with READ).
 **Rationale**: Keeps dependencies minimal (no YAML/JSON parser needed). Readable and editable by humans. Natively supports Lisp data types. Can migrate to YAML later if non-Lisp plugins need a format they can parse.
 
+### D-010: dbus bridge uses gdbus subprocess (cl-dbus deferred)
+**Context**: dbus bridge needs to monitor session bus signals and call methods. cl-dbus is not available without Quicklisp.
+**Decision**: Use `gdbus monitor` subprocess to watch signals and `gdbus call` for method invocation. Migrate to cl-dbus when Quicklisp is set up.
+**Rationale**: gdbus is available on CachyOS/Arch (via glib2). Subprocess approach works for M0's needs (passive monitoring). cl-dbus will provide programmatic signal subscription and method calls with proper type handling when available.
+
+### D-011: Dashboard TUI uses raw ANSI escape codes
+**Context**: Dashboard TUI needs a terminal rendering library. cl-charms and croatoan are not available without Quicklisp.
+**Decision**: Use raw ANSI escape codes for minimal TUI rendering (clear screen, colors, cursor positioning).
+**Rationale**: No external dependency needed. Three views (overview/events/plugins) and keyboard navigation work with basic ANSI. cl-charms/croatoan will be needed for M2's graphical buddy avatar, but M0's dashboard only needs status display and event feed.
+
+### D-012: System daemon needs _POSIX_C_SOURCE for C11
+**Context**: Compiling system daemon with `-std=c11` causes implicit declaration errors for popen, pclose, and chmod.
+**Decision**: Add `#define _POSIX_C_SOURCE 200809L` at the top of main.c before any includes.
+**Rationale**: C11 strict mode doesn't expose POSIX functions by default. The `_POSIX_C_SOURCE` define enables them. This is standard practice for C code using POSIX functions with strict C standards.
+
 ### D-009: Scheduler action functions passed as objects
 **Context**: Scheduler actions can be (:event topic payload) or (:function fn). Initially tried passing quoted lambda forms and eval-ing them.
 **Decision**: Pass actual function objects via (list :function (lambda () ...)) instead of quoted forms.

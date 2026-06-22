@@ -78,7 +78,47 @@
 - Wired dbus bridge and dashboard TUI into start/stop sequence
 - Verified: `make test` = **78/78 passed, 0 failed**
 
-### Session M0.10: End-to-End Integration
+### Session M0.10: End-to-End Integration (commit b89abc7)
+- Created `tests/integration/m0-full-stack.sh` — 18 integration tests covering build, version, help, state tree (8 dirs), event journal, unit tests, system daemon compilation, config
+- Added `integration-test` target to Makefile
+- Created `systemd/user/hngh.service` — user daemon systemd unit
+- Fixed: C daemon needed `_POSIX_C_SOURCE 200809L` for popen/pclose/chmod with `-std=c11`
+- Fixed: Event journal test checks directory existence (no events published during stub startup, so no journal file is created)
+- Verified: `make integration-test` = 18/18 passed, 0 failed
+- Full stack validated: build → version → help → state tree (8 dirs) → event journal dir → unit tests (78/78) → system daemon compiles → config file writable
+
+## Milestone 0 Summary (complete)
+
+All 11 sessions completed. 96 total tests (78 unit + 18 integration), all passing.
+
+### Components built (7 core + 2 plugins + 1 external):
+
+| Component | ID | File | Tests |
+|---|---|---|---|
+| Logging | — | src/core/logging.lisp | 4 (in test-main) |
+| Config | — | src/core/config.lisp | 4 (in test-main) |
+| Main entry | — | src/core/main.lisp | 4 (in test-main) |
+| Event Bus | A2 | src/core/event-bus.lisp | 11 |
+| State Store | A3 | src/core/state-store.lisp | 17 |
+| Plugin Host | A1 | src/core/plugin-host.lisp | 11 |
+| Supervisor | A6 | src/core/supervisor.lisp | 11 |
+| Scheduler | A5 | src/core/scheduler.lisp | 6 |
+| dbus Bridge | B13 | src/plugins/dbus-bridge.lisp | 3 |
+| Dashboard TUI | B9 | src/plugins/dashboard-tui.lisp | 6 |
+| System Daemon | C1 | src/system-daemon/main.c | (integration) |
+
+### Decisions logged (D-005 through D-009):
+- D-005: Custom test harness (FiveAM deferred)
+- D-006: Build dir named bin/ (Makefile conflict avoidance)
+- D-007: File-based locks (SQLite deferred)
+- D-008: Plugin manifests use Lisp plist (YAML deferred)
+- D-009: Scheduler action functions as objects (not quoted forms)
+
+### Build system:
+- ASDF system definition (hngh.asd) with core + tests systems
+- Makefile: all, build, daemon, run, test, integration-test, repl, install, uninstall, clean, help
+- CI: GitHub Actions (ci.yml), Codeberg mirror (mirror.yml)
+- systemd units: hngh-system.service, hngh-helper@.service, hngh.service (user), org.hngh.System.conf (dbus policy)
 - Created `tests/integration/m0-full-stack.sh` — 18 integration tests covering build, version, help, state tree (8 dirs), event journal, unit tests, system daemon compilation, config
 - Added `integration-test` target to Makefile
 - Fixed: C daemon needed `_POSIX_C_SOURCE 200809L` for popen/pclose/chmod with `-std=c11`
