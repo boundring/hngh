@@ -1,0 +1,22 @@
+# Hngh System Daemon — systemd unit and dbus policy
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+[Unit]
+Description=Hngh System Daemon (privileged companion)
+After=network.target dbus.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hngh-system
+Restart=on-failure
+RestartSec=5
+
+# Security: no AI, no plugins, no network listening
+NoNewPrivileges=no
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

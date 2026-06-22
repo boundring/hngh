@@ -114,7 +114,9 @@ Initialization sequence:
   (hngh.core.supervisor:init)
   ;; Start Scheduler
   (hngh.core.scheduler:init)
-  ;; TODO (M0.4): Load first-party plugins (once plugin host is wired)
+  ;; Start first-party plugins
+  (hngh.plugins.dbus-bridge:init :monitor-systemd nil) ; M0.7: no systemd monitor in stub mode
+  (hngh.plugins.dashboard-tui:init :headless t)       ; M0.8: headless by default
   (hngh.core:log-info "Hngh started")
   t)
 
@@ -132,7 +134,9 @@ Shutdown sequence (reverse of startup):
     (hngh.core:log-warn "Hngh is not running")
     (return-from stop nil))
   (hngh.core:log-info "Stopping Hngh...")
-  ;; TODO (M0.4): Unload all plugins
+  ;; Stop first-party plugins
+  (hngh.plugins.dashboard-tui:shutdown)
+  (hngh.plugins.dbus-bridge:shutdown)
   ;; Stop Scheduler
   (hngh.core.scheduler:shutdown)
   ;; Stop Supervisor

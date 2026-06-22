@@ -29,17 +29,9 @@
                (:file "core/supervisor")
                (:file "core/scheduler")
                (:file "core/main")
-               ;; Core components will be added here:
-               ;; (:file "core/threat-detection")
-               ;; (:file "core/plugin-host")
-               ;; (:file "core/supervisor")
-               ;; (:file "core/scheduler")
-               ;; (:file "core/threat-detection")
-               ;; First-party plugins will be added here:
-               ;; (:file "plugins/package-manager")
-               ;; (:file "plugins/ai-orchestrator")
-               ;; (:file "plugins/ai-tool-hub")
-               ;; etc.
+               ;; First-party plugins:
+               (:file "plugins/dbus-bridge")
+               (:file "plugins/dashboard-tui")
                )
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
@@ -55,9 +47,9 @@
                (:file "test-state-store")
                (:file "test-plugin-host")
                (:file "test-supervisor")
-               (:file "test-scheduler"))
-               ;; Test files will be added here:
-               ;; (:file "test-threat-detection")
+               (:file "test-scheduler")
+               (:file "test-dbus-bridge")
+               (:file "test-dashboard-tui"))
    :perform (test-op (op c)
                        (declare (ignore op c))
                        ;; The test harness is loaded and run via Makefile
