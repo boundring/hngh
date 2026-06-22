@@ -1,0 +1,35 @@
+# Build artifacts
+bin/
+*.fasl
+*.o
+*.so
+*.a
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# SBCL/CL
+*.lx64fsl
+*.x86fsl
+.fasl/
+
+# State (never version-control runtime state)
+state/locks.db
+secrets/
+*.age
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OMC
+.omc/
