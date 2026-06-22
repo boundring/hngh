@@ -10,7 +10,12 @@
            #:stop
            #:version
            #:main
-           #:*hngh-home*))
+           #:*hngh-home*
+           #:*running*
+           #:*state-tree-dirs*
+           #:init-state-tree
+           #:parse-option
+           #:keyword-from-string))
 
 (defpackage :hngh.core
   (:documentation "Core image internals. Not exported to plugins.
@@ -19,7 +24,26 @@ All core component implementations live in sub-packages of hngh.core.")
   (:export #:log-info
            #:log-warn
            #:log-error
-           #:log-debug))
+           #:log-debug
+           #:log-message
+           #:set-log-level
+           #:*log-level*
+           #:*log-levels*
+           #:log-level-priority
+           #:should-log-p))
+
+(defpackage :hngh.core.config
+  (:documentation "Configuration loading and management.")
+  (:use :cl :hngh.core)
+  (:export #:load-config
+           #:load-config-file
+           #:merge-config
+           #:config-get
+           #:config-set
+           #:save-config
+           #:config-path
+           #:*config*
+           #:*default-config*))
 
 (defpackage :hngh.core.event-bus
   (:documentation "Event Bus (A2) — pub/sub nervous system.")

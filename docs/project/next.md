@@ -4,21 +4,27 @@
 
 ## Current Session
 
-**Session 0B**: Build system + CI scaffolding — **complete**
+**Session M0.1**: SBCL project skeleton — **complete**
 
 ## Up Next
 
-**Session M0.1**: SBCL project skeleton
-- Create `src/packages.lisp` (package definitions for all core components)
-- Create `src/main.lisp` (entry point with start/stop/main)
-- Create `hngh.asd` (ASDF system with dependencies)
-- **Exit criteria**: `./hngh` starts, logs "Hngh starting...", exits cleanly
-- **Dependencies**: Session 0B (complete)
-- **GitHub issue**: https://github.com/boundring/hngh/issues/1
+**Session M0.2**: Event bus (A2)
+- Implement internal pub/sub with topic namespacing
+- Event journaling to State Store (append-only)
+- Persistent subscriptions (replay from journal)
+- Backpressure policies (:block, :drop, :queue)
+- **Exit criteria**: publish/subscribe works; events journaled; persistent subscriptions replay
+- **Dependencies**: M0.1 (complete)
+- **GitHub issue**: https://github.com/boundring/hngh/issues/2
 
-Note: M0.1 is partially complete (packages.lisp and main.lisp exist as stubs from 0B).
-The M0.1 session will flesh them out with proper initialization, logging levels,
-and configuration loading.
+**Session M0.3**: State store (A3) — can parallel with M0.2
+- File tree read/write operations
+- SQLite cross-plugin locks
+- Journal append (append-only event log)
+- Snapshot (hash the whole tree)
+- **Exit criteria**: file r/w works; SQLite locks acquire/release; journal appends
+- **Dependencies**: M0.1 (complete)
+- **GitHub issue**: https://github.com/boundring/hngh/issues/3
 
 ## Blocked
 
