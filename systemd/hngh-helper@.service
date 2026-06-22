@@ -1,0 +1,13 @@
+# Hngh helper template unit — spawned per-operation by the system daemon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+[Unit]
+Description=Hngh privileged helper (%i)
+
+[Service]
+Type=oneshot
+# The instance name (%i) determines the operation
+# e.g. hngh-helper@install.service runs pacman install
+# This is a stub — actual helpers are scripts in /usr/lib/hngh/helpers/
+ExecStart=/usr/lib/hngh/helpers/%i

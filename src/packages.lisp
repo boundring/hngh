@@ -168,3 +168,27 @@ All core component implementations live in sub-packages of hngh.core.")
   (:documentation "Namespace for first-party plugin packages.
 Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
   (:use :cl))
+
+(defpackage :hngh.plugins.dbus-bridge
+  (:documentation "dbus Bridge (B13) — translates between internal bus and systemd dbus.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:find-gdbus
+           #:start-monitor
+           #:stop-monitor
+           #:call-session-method
+           #:call-system-method))
+
+(defpackage :hngh.plugins.dashboard-tui
+  (:documentation "Dashboard TUI (B9) — text-based dashboard with ANSI escape codes.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:render
+           #:handle-key
+           #:format-event-time))
