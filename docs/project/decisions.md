@@ -43,3 +43,13 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Context**: State Store needs cross-plugin transactional locks. cl-sqlite is not available on this system without Quicklisp setup. Design spec (D9) specifies SQLite for the locks DB.
 **Decision**: Use file-based locks (one file per resource, with TTL and holder tracking) for M0.3. Migrate to SQLite when cl-sqlite is available.
 **Rationale**: File-based locks work for M0's needs (single-process Hngh, low lock contention). TTL-based expiry handles crash recovery. Auto-reclamation of expired locks prevents deadlocks. SQLite migration is straightforward — the lock API (acquire-lock, release-lock, list-locks) is unchanged; only the implementation swaps from file operations to SQL queries.
+
+### D-008: Plugin manifests use Lisp plist format
+**Context**: Plugin manifests need to be readable and parseable. Options: YAML, JSON, or Lisp data.
+**Decision**: Use Lisp plist format (parseable with READ).
+**Rationale**: Keeps dependencies minimal (no YAML/JSON parser needed). Readable and editable by humans. Natively supports Lisp data types. Can migrate to YAML later if non-Lisp plugins need a format they can parse.
+
+### D-009: Scheduler action functions passed as objects
+**Context**: Scheduler actions can be (:event topic payload) or (:function fn). Initially tried passing quoted lambda forms and eval-ing them.
+**Decision**: Pass actual function objects via (list :function (lambda () ...)) instead of quoted forms.
+**Rationale**: eval of lambda forms doesnt capture local variables (null lexical environment). Passing function objects directly avoids eval entirely and correctly captures closures.

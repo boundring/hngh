@@ -64,7 +64,8 @@ All core component implementations live in sub-packages of hngh.core.")
            #:event-source
            #:make-event
            #:list-subscriptions
-           #:clear-all-subscriptions))
+           #:clear-all-subscriptions
+           #:*event-bus*))
 
 (defpackage :hngh.core.state-store
   (:documentation "State Store (A3) — file tree + file-based locks.")
@@ -89,27 +90,72 @@ All core component implementations live in sub-packages of hngh.core.")
 
 (defpackage :hngh.core.plugin-host
   (:documentation "Plugin Host (A1) — load/unload/reload plugins.")
-  (:use :cl)
+  (:use :cl :hngh.core)
   (:export #:load-plugin
            #:unload-plugin
            #:reload-plugin
            #:list-plugins
-           #:parse-manifest))
+           #:get-plugin
+           #:plugin-loaded-p
+           #:parse-manifest
+           #:validate-manifest
+           #:unload-all-plugins
+           #:clear-registry
+           #:plugin-info
+           #:plugin-info-name
+           #:plugin-info-version
+           #:plugin-info-trust-tier
+           #:plugin-info-language
+           #:plugin-info-package
+           #:plugin-info-init-fn
+           #:plugin-info-cleanup-fn
+           #:plugin-info-reload-fn
+           #:plugin-info-loaded-at
+           #:plugin-info-manifest-path
+           #:plugin-info-state))
 
 (defpackage :hngh.core.supervisor
   (:documentation "Supervisor (A6) — lifecycle management.")
-  (:use :cl)
-  (:export #:register
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:register
+           #:unregister
+           #:check-health
+           #:check-all-health
+           #:report-failure
+           #:report-success
            #:restart-component
            #:suspend
-           #:component-status))
+           #:get-status
+           #:list-components
+           #:component-count
+           #:component-info
+           #:component-info-id
+           #:component-info-type
+           #:component-info-restart-policy
+           #:component-info-restart-count
+           #:component-info-window-restarts
+           #:component-info-status))
 
 (defpackage :hngh.core.scheduler
   (:documentation "Scheduler (A5) — timers and scheduling.")
-  (:use :cl)
-  (:export #:schedule
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:schedule
            #:cancel
-           #:list-schedules))
+           #:list-schedules
+           #:schedule-count
+           #:schedule-info
+           #:schedule-info-id
+           #:schedule-info-name
+           #:schedule-info-type
+           #:schedule-info-next-fire
+           #:schedule-info-active-p
+           #:schedule-info-fire-count))
 
 (defpackage :hngh.core.threat-detection
   (:documentation "Procedural Threat Detection (A7) — L1 static + L3 runtime.")

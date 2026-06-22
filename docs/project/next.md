@@ -4,28 +4,27 @@
 
 ## Current Session
 
-**Sessions M0.2 + M0.3**: Event bus + State store — **complete**
+**Sessions M0.4 + M0.5 + M0.6**: Plugin host + Supervisor + Scheduler — **complete**
 
 ## Up Next
 
-**Session M0.4**: Plugin host (A1)
-- CL plugin loading, manifest parsing, package-level isolation
-- One test plugin (first-party tier)
-- **Exit criteria**: load/unload CL plugin; package isolation works; hot-reload works
-- **Dependencies**: M0.2 (Event Bus), M0.3 (State Store) — both complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/4
+**Session M0.7**: dbus bridge (B13)
+- systemd session bus subscription, basic event translation
+- **Exit criteria**: systemd signals appear on internal bus
+- **Dependencies**: M0.4 (Plugin Host) — complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/7
 
-**Session M0.5**: Supervisor (A6) — can parallel with M0.4
-- Restart policies, health checks, component registration
-- **Exit criteria**: register component; restart on failure; escalate after N failures
-- **Dependencies**: M0.2 (Event Bus) — complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/5
+**Session M0.8**: Dashboard TUI (B9) — can parallel with M0.7
+- Minimal TUI: status display, event feed, basic navigation
+- **Exit criteria**: TUI starts, shows status, live event feed
+- **Dependencies**: M0.4 (Plugin Host) — complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/8
 
-**Session M0.6**: Scheduler (A5) — can parallel with M0.4
-- Timers, basic scheduling, cancel/list
-- **Exit criteria**: schedule timer fires event; cancel works
-- **Dependencies**: M0.2 (Event Bus) — complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/6
+**Session M0.9**: System daemon (C1) — can parallel with M0.7/M0.8
+- C skeleton, dbus method (InstallPackages), systemd units
+- **Exit criteria**: daemon starts as root, installs packages via dbus
+- **Dependencies**: Session 0B (build system) — complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/9
 
 ## Blocked
 
