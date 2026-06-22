@@ -106,12 +106,14 @@ Initialization sequence:
   (hngh.core:log-info "Log level: ~A" hngh.core:*log-level*)
   ;; Install signal handlers
   (install-signal-handlers)
-  ;; TODO (M0.2): Start Event Bus
-  ;; TODO (M0.3): Start State Store
+  ;; Start Event Bus
+  (hngh.core.event-bus:init :hngh-home hngh-home)
+  ;; Start State Store
+  (hngh.core.state-store:init :hngh-home hngh-home)
   ;; TODO (M0.5): Start Supervisor
   ;; TODO (M0.6): Start Scheduler
   ;; TODO (M0.4): Load first-party plugins
-  (hngh.core:log-info "Hngh started (stub — no components loaded yet)")
+  (hngh.core:log-info "Hngh started")
   t)
 
 (defun stop ()
@@ -131,8 +133,10 @@ Shutdown sequence (reverse of startup):
   ;; TODO (M0.4): Unload all plugins
   ;; TODO (M0.6): Stop Scheduler
   ;; TODO (M0.5): Stop Supervisor
-  ;; TODO (M0.3): Flush State Store
-  ;; TODO (M0.2): Stop Event Bus
+  ;; Flush State Store (releases locks)
+  (hngh.core.state-store:shutdown)
+  ;; Stop Event Bus
+  (hngh.core.event-bus:shutdown)
   (setf *running* nil)
   (hngh.core:log-info "Hngh stopped")
   t)
@@ -170,7 +174,7 @@ Used when building a standalone executable via `make build`."
                (start :hngh-home hngh-home))
            ;; TODO (M0.8): Enter main event loop (Dashboard TUI owns this)
            ;; For now, start and stop immediately (stub)
-           (hngh.core:log-info "No event loop yet — exiting after startup (stub)")
+           (hngh.core:log-info "No event loop yet — exiting after startup")
            (stop)
            (uiop:quit 0)))))))
 
