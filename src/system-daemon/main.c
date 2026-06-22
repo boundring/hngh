@@ -16,11 +16,14 @@
  * Each operation spawns a hngh-helper@.service template unit.
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <dbus/dbus.h>
 
 static const char * const DAEMON_NAME = "org.hngh.System";

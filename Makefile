@@ -60,6 +60,10 @@ check:
 		--eval "(let ((ok (hngh.tests.harness:run-all-tests))) (uiop:quit (if ok 0 1)))" \
 		--quit
 
+## Run integration tests (end-to-end full stack)
+integration-test: build
+	@bash tests/integration/m0-full-stack.sh
+
 ## REPL — start an SBCL REPL with Hngh loaded
 repl:
 	$(SBCL) $(SBCL_FLAGS) \
@@ -97,6 +101,7 @@ help:
 	@echo "  daemon         Build the system daemon (C)"
 	@echo "  run            Run Hngh in dev mode (loads via ASDF)"
 	@echo "  test           Run the test suite"
+	@echo "  integration-test  Run end-to-end integration tests"
 	@echo "  repl           Start an SBCL REPL with Hngh loaded"
 	@echo "  install        Install binaries to $(PREFIX)/bin"
 	@echo "  uninstall      Remove installed binaries"
