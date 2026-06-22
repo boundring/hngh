@@ -4,27 +4,28 @@
 
 ## Current Session
 
-**Session M0.1**: SBCL project skeleton — **complete**
+**Sessions M0.2 + M0.3**: Event bus + State store — **complete**
 
 ## Up Next
 
-**Session M0.2**: Event bus (A2)
-- Implement internal pub/sub with topic namespacing
-- Event journaling to State Store (append-only)
-- Persistent subscriptions (replay from journal)
-- Backpressure policies (:block, :drop, :queue)
-- **Exit criteria**: publish/subscribe works; events journaled; persistent subscriptions replay
-- **Dependencies**: M0.1 (complete)
-- **GitHub issue**: https://github.com/boundring/hngh/issues/2
+**Session M0.4**: Plugin host (A1)
+- CL plugin loading, manifest parsing, package-level isolation
+- One test plugin (first-party tier)
+- **Exit criteria**: load/unload CL plugin; package isolation works; hot-reload works
+- **Dependencies**: M0.2 (Event Bus), M0.3 (State Store) — both complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/4
 
-**Session M0.3**: State store (A3) — can parallel with M0.2
-- File tree read/write operations
-- SQLite cross-plugin locks
-- Journal append (append-only event log)
-- Snapshot (hash the whole tree)
-- **Exit criteria**: file r/w works; SQLite locks acquire/release; journal appends
-- **Dependencies**: M0.1 (complete)
-- **GitHub issue**: https://github.com/boundring/hngh/issues/3
+**Session M0.5**: Supervisor (A6) — can parallel with M0.4
+- Restart policies, health checks, component registration
+- **Exit criteria**: register component; restart on failure; escalate after N failures
+- **Dependencies**: M0.2 (Event Bus) — complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/5
+
+**Session M0.6**: Scheduler (A5) — can parallel with M0.4
+- Timers, basic scheduling, cancel/list
+- **Exit criteria**: schedule timer fires event; cancel works
+- **Dependencies**: M0.2 (Event Bus) — complete
+- **GitHub issue**: https://github.com/boundring/hngh/issues/6
 
 ## Blocked
 

@@ -51,22 +51,41 @@ All core component implementations live in sub-packages of hngh.core.")
   (:export #:publish
            #:subscribe
            #:unsubscribe
-           #:make-topic
+           #:init
+           #:shutdown
+           #:running-p
+           #:topic-match-p
+           #:read-journal-events
            #:event
+           #:event-id
            #:event-topic
            #:event-payload
-           #:event-timestamp))
+           #:event-timestamp
+           #:event-source
+           #:make-event
+           #:list-subscriptions
+           #:clear-all-subscriptions))
 
 (defpackage :hngh.core.state-store
-  (:documentation "State Store (A3) — file tree + SQLite locks.")
+  (:documentation "State Store (A3) — file tree + file-based locks.")
   (:use :cl)
-  (:export #:read-state
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:read-state
+           #:read-state-string
            #:write-state
+           #:write-state-string
+           #:delete-state
+           #:state-exists-p
            #:append-journal
+           #:read-journal
            #:acquire-lock
            #:release-lock
-           #:snapshot
-           #:init-state-tree))
+           #:release-all-locks
+           #:list-locks
+           #:lock-valid-p
+           #:snapshot))
 
 (defpackage :hngh.core.plugin-host
   (:documentation "Plugin Host (A1) — load/unload/reload plugins.")

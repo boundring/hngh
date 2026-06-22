@@ -38,3 +38,8 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Context**: Makefile phony target `build` conflicted with build directory name `build/`, causing circular dependency.
 **Decision**: Rename build directory to `bin/`.
 **Rationale**: Avoids Makefile phony/directory name collision. `bin/` is also more conventional for compiled binaries.
+
+### D-007: File-based locks for M0.3 (SQLite deferred)
+**Context**: State Store needs cross-plugin transactional locks. cl-sqlite is not available on this system without Quicklisp setup. Design spec (D9) specifies SQLite for the locks DB.
+**Decision**: Use file-based locks (one file per resource, with TTL and holder tracking) for M0.3. Migrate to SQLite when cl-sqlite is available.
+**Rationale**: File-based locks work for M0's needs (single-process Hngh, low lock contention). TTL-based expiry handles crash recovery. Auto-reclamation of expired locks prevents deadlocks. SQLite migration is straightforward — the lock API (acquire-lock, release-lock, list-locks) is unchanged; only the implementation swaps from file operations to SQL queries.

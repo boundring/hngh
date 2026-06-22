@@ -46,3 +46,12 @@
 - Created `tests/unit/test-main.lisp` — 12 unit tests (version, log levels, config, start/stop, state tree init, keyword/option parsing)
 - Updated ASDF system and package exports
 - Verified: `make build` produces binary; `make test` = 12/12 passed, 0 failed; `./bin/hngh --log-level debug` shows DEBUG messages
+
+### Sessions M0.2 + M0.3: Event Bus + State Store
+- Created `src/core/event-bus.lisp` — pub/sub with topic matching (exact, wildcard `.*` and `*`), event journaling (append-only to `journal/events/YYYY-MM-DD.lisp`), persistent subscriptions (replay from journal), subscription filters, backpressure policies (:block, :drop, :queue)
+- Created `src/core/state-store.lisp` — file tree read/write (Lisp data and raw strings), journal append/read, file-based cross-plugin locks with TTL and holder tracking, snapshot (tree hash), automatic stale lock reclamation, shutdown releases all locks
+- Created `tests/unit/test-event-bus.lisp` — 11 tests: topic matching (4), bus lifecycle (1), publish/subscribe (4), journaling (2)
+- Created `tests/unit/test-state-store.lisp` — 17 tests: lifecycle (1), file r/w (6), journal (1), locks (8), snapshot (2) [one test uses sleep for TTL expiry]
+- Wired both into start/stop sequence in main.lisp
+- Updated hngh.asd and packages.lisp
+- Verified: `make build` produces 37MB binary; `make test` = **40/40 passed, 0 failed**; `./bin/hngh --log-level debug` shows event bus + state store initialization
