@@ -9,29 +9,29 @@
 | Session | Title | Status | Priority |
 |---|---|---|---|
 | 0A | Repo setup + PM scaffolding | Done | P0 |
-| 0B | Build system + CI scaffolding | Next | P0 |
+| 0B | Build system + CI scaffolding | Done | P0 |
 
-## Milestone 0 — Foundation
+## Milestone 0 — Foundation (complete)
 
-| ID | Title | Status | Priority | Dependencies |
-|---|---|---|---|---|
-| M0.1 | SBCL project skeleton | Backlog | P0 | 0B |
-| M0.2 | Event bus (A2) | Backlog | P0 | M0.1 |
-| M0.3 | State store (A3) | Backlog | P0 | M0.1 |
-| M0.4 | Plugin host (A1) | Backlog | P0 | M0.2, M0.3 |
-| M0.5 | Supervisor (A6) | Backlog | P1 | M0.2 |
-| M0.6 | Scheduler (A5) | Backlog | P1 | M0.2 |
-| M0.7 | dbus bridge (B13) | Backlog | P0 | M0.4 |
-| M0.8 | Dashboard TUI (B9) | Backlog | P0 | M0.4 |
-| M0.9 | System daemon (C1) | Backlog | P0 | 0B |
-| M0.10 | End-to-end integration | Backlog | P0 | M0.4–M0.9 |
-
+| ID | Title | Status | Tests |
+|---|---|---|---|
+| M0.1 | SBCL project skeleton | Done | 12 |
+| M0.2 | Event bus (A2) | Done | 11 |
+| M0.3 | State store (A3) | Done | 17 |
+| M0.4 | Plugin host (A1) | Done | 11 |
+| M0.5 | Supervisor (A6) | Done | 11 |
+| M0.6 | Scheduler (A5) | Done | 6 |
+| M0.7 | dbus bridge (B13) | Done | 3 |
+| M0.8 | Dashboard TUI (B9) | Done | 6 |
+| M0.9 | System daemon (C1) | Done | (integration) |
+| M0.10 | End-to-end integration | Done | 18 integration |
+| **Total** | | | **78 unit + 18 integration** |
 ## Milestone 1 — The Harness (v0.1)
 
 | ID | Title | Status | Priority | Batch |
 |---|---|---|---|---|
-| M1.1 | Procedural threat detection (L1+L3) | Future | P0 | 1: Security |
-| M1.2 | Resource manager (A4) | Future | P0 | 1: Resources |
+| M1.1 | Procedural threat detection (L1+L3) | Next | P0 | 1: Security |
+| M1.2 | Resource manager (A4) | Next | P0 | 1: Resources |
 | M1.3 | Package manager (B1) | Future | P0 | 2: System |
 | M1.4 | System config (B2) | Future | P0 | 2: System |
 | M1.5 | Model runtime manager (B4) | Future | P0 | 3: AI |
