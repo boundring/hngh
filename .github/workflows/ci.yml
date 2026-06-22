@@ -11,7 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install SBCL
-        run: sudo apt-get update && sudo apt-get install -y sbcl
-      - name: Build check
-        run: make check || echo "No build targets yet — stub CI"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sbcl
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test

@@ -1,0 +1,109 @@
+# Hngh Makefile
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+# --- Configuration ---
+
+SBCL ?= sbcl
+SBCL_FLAGS = --no-sysinit --no-userinit --disable-debugger
+LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp)
+C_FILES = src/system-daemon/main.c
+
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+
+BUILD_DIR = bin
+BINARY = $(BUILD_DIR)/hngh
+DAEMON_BINARY = $(BUILD_DIR)/hngh-system
+
+# --- Targets ---
+
+.PHONY: all run clean test check install uninstall help
+
+all: $(BINARY)
+
+## Build the Hngh SBCL image as a standalone binary
+$(BINARY): hngh.asd $(LISP_FILES) | $(BUILD_DIR)
+	$(SBCL) $(SBCL_FLAGS) \
+		--eval "(require 'asdf)" \
+		--eval "(push (truename \".\") asdf:*central-registry*)" \
+		--eval "(asdf:load-system :hngh)" \
+		--eval "(sb-ext:save-lisp-and-die \"$(BINARY)\" :executable t :save-runtime-options t :toplevel 'hngh:main)"
+
+## Build the Hngh SBCL image (alias for default target)
+build: $(BINARY)
+
+## Build the system daemon (C)
+daemon: $(DAEMON_BINARY)
+
+$(DAEMON_BINARY): $(C_FILES) | $(BUILD_DIR)
+	$(CC) -o $(DAEMON_BINARY) $(C_FILES) $(shell pkg-config --cflags --libs dbus-1 2>/dev/null || echo "")
+	@echo "Built system daemon: $(DAEMON_BINARY)"
+
+## Run Hngh in dev mode (loads via ASDF, no standalone binary)
+run:
+	$(SBCL) $(SBCL_FLAGS) \
+		--eval "(require 'asdf)" \
+		--eval "(push (truename \".\") asdf:*central-registry*)" \
+		--eval "(asdf:load-system :hngh)" \
+		--eval "(hngh:main)"
+
+## Run tests
+test: check
+
+check:
+	$(SBCL) $(SBCL_FLAGS) \
+		--eval "(require 'asdf)" \
+		--eval "(push (truename \".\") asdf:*central-registry*)" \
+		--eval "(asdf:load-system :hngh)" \
+		--eval "(asdf:load-system :hngh/tests)" \
+		--eval "(let ((ok (hngh.tests.harness:run-all-tests))) (uiop:quit (if ok 0 1)))" \
+		--quit
+
+## REPL — start an SBCL REPL with Hngh loaded
+repl:
+	$(SBCL) $(SBCL_FLAGS) \
+		--eval "(require 'asdf)" \
+		--eval "(push (truename \".\") asdf:*central-registry*)" \
+		--eval "(asdf:load-system :hngh)"
+
+## Install binaries to BINDIR
+install: $(BINARY) $(DAEMON_BINARY)
+	install -Dm755 $(BINARY) $(DESTDIR)$(BINDIR)/hngh
+	install -Dm755 $(DAEMON_BINARY) $(DESTDIR)$(BINDIR)/hngh-system
+
+## Uninstall binaries
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/hngh $(DESTDIR)$(BINDIR)/hngh-system
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+## Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR) .build
+	find . -name "*.fasl" -delete
+	find . -name "*.lx64fsl" -delete
+	find . -name "*.x86fsl" -delete
+	rm -rf __pycache__ .fasl
+
+## Show this help
+help:
+	@echo "Hngh Makefile"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all            Build the Hngh standalone binary (default)"
+	@echo "  build          Alias for all"
+	@echo "  daemon         Build the system daemon (C)"
+	@echo "  run            Run Hngh in dev mode (loads via ASDF)"
+	@echo "  test           Run the test suite"
+	@echo "  repl           Start an SBCL REPL with Hngh loaded"
+	@echo "  install        Install binaries to $(PREFIX)/bin"
+	@echo "  uninstall      Remove installed binaries"
+	@echo "  clean          Remove build artifacts"
+	@echo "  help           Show this help"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  SBCL=$(SBCL)"
+	@echo "  PREFIX=$(PREFIX)"
+	@echo "  BINDIR=$(BINDIR)"
