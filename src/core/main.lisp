@@ -1,5 +1,5 @@
 ;;;; core/main.lisp — Hngh entry point
-;;;;
+;;;
 ;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
@@ -9,51 +9,130 @@
   "Current Hngh version string.")
 
 (defparameter *hngh-home* (merge-pathnames ".hngh/" (user-homedir-pathname))
-  "Default path to the Hngh state directory (~/.hngh/).")
+  "Path to the Hngh state directory (~/.hngh/).")
 
 (defparameter *running* nil
-  "Whether Hngh is currently running. Set by START, cleared by STOP.")
+  "Whether Hngh is currently running.")
+
+(defparameter *state-tree-dirs*
+  '("config/"
+    "config/plugins/"
+    "state/"
+    "state/plugin-observations/"
+    "journal/"
+    "journal/events/"
+    "journal/hnghbeats/"
+    "knowledge-base/"
+    "knowledge-base/articles/"
+    "knowledge-base/decisions/"
+    "knowledge-base/learned-patterns/"
+    "knowledge-base/learned-patterns/threats/"
+    "knowledge-base/learned-patterns/optimizations/"
+    "knowledge-base/learned-patterns/workflows/"
+    "plugins/"
+    "agents/"
+    "secrets/")
+  "Subdirectories to create in the Hngh state tree on first start.")
 
 (defun version ()
   "Return the Hngh version string."
   *version*)
 
-(defun start (&key (hngh-home *hngh-home*) (log-level :info))
+(defun init-state-tree (hngh-home)
+  "Create the Hngh state directory tree under HNGH-HOME.
+Idempotent — does nothing for directories that already exist."
+  (hngh.core:log-debug "Initializing state tree at ~A" (namestring hngh-home))
+  (dolist (dir *state-tree-dirs*)
+    (let ((full-path (merge-pathnames dir hngh-home)))
+      (ensure-directories-exist full-path)))
+  ;; Set restrictive permissions on secrets/ (0700)
+  #+sbcl
+  (let ((secrets-dir (merge-pathnames "secrets/" hngh-home)))
+    (sb-ext:run-program "chmod"
+                        (list "700" (namestring secrets-dir))
+                        :search t :wait t :output nil))
+  (hngh.core:log-debug "State tree initialized"))
+
+(defun install-signal-handlers ()
+  "Install SIGTERM and SIGINT handlers for graceful shutdown."
+  #+sbcl
+  (progn
+    (sb-sys:enable-interrupt sb-unix:sigterm
+                             (lambda (signal code ctx)
+                               (declare (ignore signal code ctx))
+                               (hngh.core:log-info "Received SIGTERM — shutting down")
+                               (stop)
+                               (uiop:quit 0)))
+    (sb-sys:enable-interrupt sb-unix:sigint
+                             (lambda (signal code ctx)
+                               (declare (ignore signal code ctx))
+                               (hngh.core:log-info "Received SIGINT — shutting down")
+                               (stop)
+                               (uiop:quit 0))))
+  #-sbcl
+  (hngh.core:log-warn "Signal handling not supported on this Lisp implementation"))
+
+(defun start (&key (hngh-home *hngh-home*) (log-level nil log-level-p))
   "Start the Hngh system.
 
 HNGH-HOME: path to the Hngh state directory (default: ~/.hngh/).
-LOG-LEVEL: one of :debug, :info, :warn, :error.
+LOG-LEVEL: one of :debug, :info, :warn, :error. If not specified, uses config.
 
-This is a stub — actual initialization will:
-  1. Initialize the State Store (create ~/.hngh/ tree)
-  2. Start the Event Bus
-  3. Start the Supervisor
-  4. Start the Scheduler
-  5. Load first-party plugins
-  6. Enter the main event loop
-
-For now, it logs a startup message and returns."
-  (declare (ignore log-level))
+Initialization sequence:
+  1. Set HNGH-HOME
+  2. Initialize state directory tree
+  3. Load configuration
+  4. Set log level (from arg, config, or default :info)
+  5. Install signal handlers
+  6. (future: Start Event Bus — M0.2)
+  7. (future: Start State Store — M0.3)
+  8. (future: Start Supervisor — M0.5)
+  9. (future: Start Scheduler — M0.6)
+  10. (future: Load first-party plugins — M0.4)
+  11. Log startup complete"
   (setf *hngh-home* hngh-home)
+  ;; Initialize state tree first (config loading needs it)
+  (init-state-tree hngh-home)
+  ;; Load config
+  (hngh.core.config:load-config :hngh-home hngh-home)
+  ;; Determine log level: arg > config > default
+  (let ((effective-level (cond
+                            (log-level-p log-level)
+                            (t (hngh.core.config:config-get :log-level :info)))))
+    (hngh.core:set-log-level effective-level))
   (setf *running* t)
   (hngh.core:log-info "Hngh v~A starting..." *version*)
   (hngh.core:log-info "State directory: ~A" (namestring hngh-home))
-  ;; TODO: actual initialization sequence (M0.2–M0.10)
+  (hngh.core:log-info "Log level: ~A" hngh.core:*log-level*)
+  ;; Install signal handlers
+  (install-signal-handlers)
+  ;; TODO (M0.2): Start Event Bus
+  ;; TODO (M0.3): Start State Store
+  ;; TODO (M0.5): Start Supervisor
+  ;; TODO (M0.6): Start Scheduler
+  ;; TODO (M0.4): Load first-party plugins
   (hngh.core:log-info "Hngh started (stub — no components loaded yet)")
   t)
 
 (defun stop ()
   "Stop the Hngh system.
 
-Unloads plugins, shuts down scheduler, supervisor, event bus, and exits.
-
-This is a stub — actual shutdown will gracefully deinitialize all components
-in reverse order of startup."
+Shutdown sequence (reverse of startup):
+  1. (future: Unload plugins)
+  2. (future: Stop Scheduler)
+  3. (future: Stop Supervisor)
+  4. (future: Stop State Store)
+  5. (future: Stop Event Bus)
+  6. Mark as not running"
   (unless *running*
     (hngh.core:log-warn "Hngh is not running")
     (return-from stop nil))
   (hngh.core:log-info "Stopping Hngh...")
-  ;; TODO: actual shutdown sequence (M0.2–M0.10)
+  ;; TODO (M0.4): Unload all plugins
+  ;; TODO (M0.6): Stop Scheduler
+  ;; TODO (M0.5): Stop Supervisor
+  ;; TODO (M0.3): Flush State Store
+  ;; TODO (M0.2): Stop Event Bus
   (setf *running* nil)
   (hngh.core:log-info "Hngh stopped")
   t)
@@ -70,44 +149,37 @@ Used when building a standalone executable via `make build`."
        (uiop:quit 0))
       ((member "--help" args :test #'string=)
        (format t "Usage: hngh [options]~%")
-       (format t "  --version    Print version and exit~%")
-       (format t "  --help       Print this help and exit~%")
-       (format t "  --hngh-home  Set state directory (default: ~~/.hngh/)~%")
+       (format t "~%")
+       (format t "Options:~%")
+       (format t "  --version          Print version and exit~%")
+       (format t "  --help             Print this help and exit~%")
+       (format t "  --hngh-home PATH   Set state directory (default: ~~/.hngh/)~%")
+       (format t "  --log-level LEVEL  Set log level: debug, info, warn, error~%")
        (uiop:quit 0))
       (t
-       ;; Parse --hngh-home if present
-       (let ((home-idx (position "--hngh-home" args :test #'string=)))
-         (let ((home (if (and home-idx (< (1+ home-idx) (length args)))
-                         (merge-pathnames (nth (1+ home-idx) args))
-                         *hngh-home*)))
-           (start :hngh-home home)
-           ;; TODO: enter main event loop (M0.8 Dashboard TUI will own this)
-           ;; For now, just log and exit
+       ;; Parse options
+       (let ((home (parse-option args "--hngh-home" #'identity))
+             (level-str (parse-option args "--log-level" #'identity)))
+           (let ((hngh-home (if home
+                               (merge-pathnames (concatenate 'string home "/"))
+                               *hngh-home*))
+               (log-level (when level-str
+                           (keyword-from-string level-str))))
+           (if log-level
+               (start :hngh-home hngh-home :log-level log-level)
+               (start :hngh-home hngh-home))
+           ;; TODO (M0.8): Enter main event loop (Dashboard TUI owns this)
+           ;; For now, start and stop immediately (stub)
            (hngh.core:log-info "No event loop yet — exiting after startup (stub)")
            (stop)
            (uiop:quit 0)))))))
 
-;; Logging functions (used by all core components)
+(defun parse-option (args flag converter)
+  "Parse a --flag VALUE option from ARGS. Returns (funcall CONVERTER value) or NIL."
+  (let ((idx (position flag args :test #'string=)))
+    (when (and idx (< (1+ idx) (length args)))
+      (funcall converter (nth (1+ idx) args)))))
 
-(in-package :hngh.core)
-
-(defun log-info (format-string &rest args)
-  "Log an informational message."
-  (format t "[INFO] ~?~%" format-string args)
-  (finish-output))
-
-(defun log-warn (format-string &rest args)
-  "Log a warning message."
-  (format t "[WARN] ~?~%" format-string args)
-  (finish-output))
-
-(defun log-error (format-string &rest args)
-  "Log an error message."
-  (format t "[ERROR] ~?~%" format-string args)
-  (finish-output))
-
-(defun log-debug (format-string &rest args)
-  "Log a debug message (only when debug logging is enabled)."
-  ;; TODO: respect log level (M0.1 will add a *log-level* variable)
-  (format t "[DEBUG] ~?~%" format-string args)
-  (finish-output))
+(defun keyword-from-string (str)
+  "Convert a string like \"debug\" to a keyword like :debug."
+  (intern (string-upcase str) :keyword))

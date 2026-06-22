@@ -21,6 +21,8 @@
   :pathname "src/"
   :serial t
   :components ((:file "packages")
+               (:file "core/logging")
+               (:file "core/config")
                (:file "core/main")
                ;; Core components will be added here:
                ;; (:file "core/event-bus")
@@ -44,6 +46,7 @@
   :serial t
   :components ((:file "packages")
                (:file "harness")
+               (:file "test-main")
                ;; Test files will be added here:
                ;; (:file "test-event-bus")
                ;; (:file "test-state-store")

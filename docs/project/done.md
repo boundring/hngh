@@ -38,3 +38,11 @@
 - Updated CI workflow to build SBCL and run tests
 - Created directory structure: `src/core/`, `src/plugins/`, `src/system-daemon/`, `tests/unit/`, `tests/integration/`, `tests/fixtures/`
 - Verified: `make build` produces 37MB standalone binary; `./bin/hngh --version` outputs "hngh 0.0.1"; `make test` runs (0/0 — no tests defined yet); exit code 0
+
+### Session M0.1: SBCL Project Skeleton
+- Created `src/core/logging.lisp` — log levels (:debug/:info/:warn/:error) with priority filtering and ISO 8601 timestamps
+- Created `src/core/config.lisp` — config file loading, merge with defaults, config-get/set/save
+- Rewrote `src/core/main.lisp` — proper init sequence (state tree → config → log level → signal handlers), 17-directory state tree creation, SIGTERM/SIGINT handling, --log-level CLI option
+- Created `tests/unit/test-main.lisp` — 12 unit tests (version, log levels, config, start/stop, state tree init, keyword/option parsing)
+- Updated ASDF system and package exports
+- Verified: `make build` produces binary; `make test` = 12/12 passed, 0 failed; `./bin/hngh --log-level debug` shows DEBUG messages
