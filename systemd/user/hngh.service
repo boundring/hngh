@@ -1,0 +1,20 @@
+# Hngh User Daemon — systemd user unit
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+[Unit]
+Description=Hngh — system harness for CachyOS/Arch Linux
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hngh
+ExecStop=/usr/local/bin/hngh --stop
+Restart=on-failure
+RestartSec=5
+
+# Environment
+Environment=HNGH_HOME=%h/.hngh
+
+[Install]
+WantedBy=default.target

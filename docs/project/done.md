@@ -67,3 +67,21 @@
 - Wired all three into start/stop sequence in main.lisp
 - Updated hngh.asd and packages.lisp
 - Verified: `make build` produces binary; `make test` = **69/69 passed, 0 failed**
+
+### Sessions M0.7 + M0.8 + M0.9: dbus Bridge + Dashboard TUI + System Daemon
+- Created `src/plugins/dbus-bridge.lisp` (B13) — gdbus monitor subprocess for session bus signals, gdbus call for method invocation, background reader thread, signal translation stub
+- Created `src/plugins/dashboard-tui.lisp` (B9) — raw ANSI escape codes (no external TUI dep), three views (overview/events/plugins), wildcard event subscription (capped at 100), headless mode, background input thread
+- Rewrote `src/system-daemon/main.c` (C1) — full dbus method handlers: InstallPackages (validates package names, spawns pacman), WriteFile (path whitelist, byte array content), CreateSnapshot (btrfs). Added `_POSIX_C_SOURCE` for popen/pclose/chmod
+- Created systemd units: `hngh-system.service`, `hngh-helper@.service`, `org.hngh.System.conf` (dbus policy)
+- Created `systemd/user/hngh.service` — user daemon unit
+- Created `tests/unit/test-dbus-bridge.lisp` — 3 tests, `tests/unit/test-dashboard-tui.lisp` — 6 tests
+- Wired dbus bridge and dashboard TUI into start/stop sequence
+- Verified: `make test` = **78/78 passed, 0 failed**
+
+### Session M0.10: End-to-End Integration
+- Created `tests/integration/m0-full-stack.sh` — 18 integration tests covering build, version, help, state tree (8 dirs), event journal, unit tests, system daemon compilation, config
+- Added `integration-test` target to Makefile
+- Fixed: C daemon needed `_POSIX_C_SOURCE 200809L` for popen/pclose/chmod with `-std=c11`
+- Fixed: Event journal test checks directory existence (no events published during stub startup)
+- Verified: `make integration-test` = **18/18 passed, 0 failed**
+- Full stack: build → version → help → state tree → event journal → unit tests → system daemon → config — all pass

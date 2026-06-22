@@ -4,27 +4,29 @@
 
 ## Current Session
 
-**Sessions M0.4 + M0.5 + M0.6**: Plugin host + Supervisor + Scheduler — **complete**
+**Milestone 0 complete** — all 11 sessions done (0A, 0B, M0.1–M0.10)
 
 ## Up Next
 
-**Session M0.7**: dbus bridge (B13)
-- systemd session bus subscription, basic event translation
-- **Exit criteria**: systemd signals appear on internal bus
-- **Dependencies**: M0.4 (Plugin Host) — complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/7
+**Milestone 1: The Harness (v0.1)** — 15 deliverables across 6 batches.
 
-**Session M0.8**: Dashboard TUI (B9) — can parallel with M0.7
-- Minimal TUI: status display, event feed, basic navigation
-- **Exit criteria**: TUI starts, shows status, live event feed
-- **Dependencies**: M0.4 (Plugin Host) — complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/8
+### Batch 1: Core Security + Resources
+- **M1.1**: Procedural threat detection (L1+L3) — static analysis, runtime observation
+- **M1.2**: Resource manager (A4) — VRAM/CPU arbitration, preemption, hardware audit
 
-**Session M0.9**: System daemon (C1) — can parallel with M0.7/M0.8
-- C skeleton, dbus method (InstallPackages), systemd units
-- **Exit criteria**: daemon starts as root, installs packages via dbus
-- **Dependencies**: Session 0B (build system) — complete
-- **GitHub issue**: https://github.com/boundring/hngh/issues/9
+### Batch 2: System Management
+- **M1.3**: Package manager (B1) — pacman/yay/paru, breakage detection
+- **M1.4**: System config (B2) — /etc management, btrfs snapshots, theming
+
+### Batch 3: AI Infrastructure
+- **M1.5**: Model runtime manager (B4) — ollama, llama.cpp, unsloth, comfyUI
+- **M1.6**: AI tool hub (B11) — tool registry, agentic CLI invocation, direct API
+- **M1.7**: AI orchestrator (B3) — coordinator, context packages, inter-tool handoffs
+
+See `docs/project/roadmap.md` for full M1 deliverable list.
+See `docs/project/work-sessions.md` for detailed session plans.
+
+M1 sessions will be planned in detail after reviewing M0 results.
 
 ## Blocked
 
