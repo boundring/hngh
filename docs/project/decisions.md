@@ -28,3 +28,13 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Context**: Need git-visible work state tracking alongside GitHub issues.
 **Decision**: Add `next.md` (current work), `done.md` (completed log), `backlog.md` (future queue), `decisions.md` (this file) to `docs/project/`.
 **Rationale**: GitHub issues are the canonical tracker, but git-visible planning files give a quick "what's happening" view without opening GitHub. Maintained by hand or by agentic tools during work sessions.
+
+### D-005: Custom test harness instead of FiveAM
+**Context**: Need a test framework for M0. Could use FiveAM (popular CL test framework) or write a minimal custom harness.
+**Decision**: Custom test harness for M0. Can migrate to FiveAM later if needed.
+**Rationale**: Keeping external dependencies minimal for the skeleton. The custom harness (define-test, assert-true, assert-equal, assert-condition) is ~80 lines and sufficient for M0 unit tests. FiveAM migration is straightforward if the custom harness becomes limiting.
+
+### D-006: Build directory named bin/ (not build/)
+**Context**: Makefile phony target `build` conflicted with build directory name `build/`, causing circular dependency.
+**Decision**: Rename build directory to `bin/`.
+**Rationale**: Avoids Makefile phony/directory name collision. `bin/` is also more conventional for compiled binaries.

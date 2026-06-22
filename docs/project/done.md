@@ -26,3 +26,15 @@
 - GitHub Project board created (Hngh Development) with custom fields: Status, Priority, Phase, Size
 - All 11 issues linked to project board
 - Planning docs added: next.md, done.md, backlog.md, decisions.md
+
+### Session 0B: Build System + CI Scaffolding
+- Created ASDF system definition (`hngh.asd`) with core + tests systems
+- Created package definitions for all core components (event-bus, state-store, plugin-host, supervisor, scheduler, threat-detection)
+- Created entry point (`src/core/main.lisp`) with start/stop/main, --version, --help, --hngh-home
+- Created custom test harness (`tests/unit/harness.lisp`) with define-test, assert-true, assert-equal, assert-condition
+- Created Makefile with targets: all, build, daemon, run, test, repl, install, uninstall, clean, help
+- Created system daemon C skeleton (`src/system-daemon/main.c`) with dbus connection
+- Created system daemon Makefile
+- Updated CI workflow to build SBCL and run tests
+- Created directory structure: `src/core/`, `src/plugins/`, `src/system-daemon/`, `tests/unit/`, `tests/integration/`, `tests/fixtures/`
+- Verified: `make build` produces 37MB standalone binary; `./bin/hngh --version` outputs "hngh 0.0.1"; `make test` runs (0/0 — no tests defined yet); exit code 0

@@ -4,16 +4,21 @@
 
 ## Current Session
 
-**Session 0A**: Repo setup + project management scaffolding — **complete**
+**Session 0B**: Build system + CI scaffolding — **complete**
 
 ## Up Next
 
-**Session 0B**: Build system + CI scaffolding
-- Create `hngh.asd` (ASDF system definition)
-- Create `Makefile` with `build`, `run`, `clean`, `test` targets
-- Create `src/` directory structure
-- Update CI workflow to build SBCL
-- **Exit criteria**: `make build` produces an SBCL image; CI passes
+**Session M0.1**: SBCL project skeleton
+- Create `src/packages.lisp` (package definitions for all core components)
+- Create `src/main.lisp` (entry point with start/stop/main)
+- Create `hngh.asd` (ASDF system with dependencies)
+- **Exit criteria**: `./hngh` starts, logs "Hngh starting...", exits cleanly
+- **Dependencies**: Session 0B (complete)
+- **GitHub issue**: https://github.com/boundring/hngh/issues/1
+
+Note: M0.1 is partially complete (packages.lisp and main.lisp exist as stubs from 0B).
+The M0.1 session will flesh them out with proper initialization, logging levels,
+and configuration loading.
 
 ## Blocked
 
