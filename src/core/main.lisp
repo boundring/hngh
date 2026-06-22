@@ -110,9 +110,11 @@ Initialization sequence:
   (hngh.core.event-bus:init :hngh-home hngh-home)
   ;; Start State Store
   (hngh.core.state-store:init :hngh-home hngh-home)
-  ;; TODO (M0.5): Start Supervisor
-  ;; TODO (M0.6): Start Scheduler
-  ;; TODO (M0.4): Load first-party plugins
+  ;; Start Supervisor
+  (hngh.core.supervisor:init)
+  ;; Start Scheduler
+  (hngh.core.scheduler:init)
+  ;; TODO (M0.4): Load first-party plugins (once plugin host is wired)
   (hngh.core:log-info "Hngh started")
   t)
 
@@ -131,8 +133,10 @@ Shutdown sequence (reverse of startup):
     (return-from stop nil))
   (hngh.core:log-info "Stopping Hngh...")
   ;; TODO (M0.4): Unload all plugins
-  ;; TODO (M0.6): Stop Scheduler
-  ;; TODO (M0.5): Stop Supervisor
+  ;; Stop Scheduler
+  (hngh.core.scheduler:shutdown)
+  ;; Stop Supervisor
+  (hngh.core.supervisor:shutdown)
   ;; Flush State Store (releases locks)
   (hngh.core.state-store:shutdown)
   ;; Stop Event Bus

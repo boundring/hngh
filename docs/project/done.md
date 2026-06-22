@@ -54,4 +54,16 @@
 - Created `tests/unit/test-state-store.lisp` — 17 tests: lifecycle (1), file r/w (6), journal (1), locks (8), snapshot (2) [one test uses sleep for TTL expiry]
 - Wired both into start/stop sequence in main.lisp
 - Updated hngh.asd and packages.lisp
-- Verified: `make build` produces 37MB binary; `make test` = **40/40 passed, 0 failed**; `./bin/hngh --log-level debug` shows event bus + state store initialization
+- Verified: `make build` produces 37MB binary; `make test` = **40/40 passed, 0 failed**
+
+### Sessions M0.4 + M0.5 + M0.6: Plugin Host + Supervisor + Scheduler
+- Created `src/core/plugin-host.lisp` — manifest parsing, CL plugin loading (ASDF or file), package-level isolation, init/cleanup/reload function resolution, load/unload/reload/list/query
+- Created `src/core/supervisor.lisp` — component registration, restart policies (:always/:on-failure/:never), health checks, restart window tracking, max-restarts escalation, event publishing on restart/escalate
+- Created `src/core/scheduler.lisp` — background thread scheduler, interval/delayed/at schedules, event publishing and function calling, cancel/list, thread-safe
+- Created `tests/fixtures/test-plugin/` — minimal first-party CL test plugin with init/cleanup/reload/get-state/set-state
+- Created `tests/unit/test-plugin-host.lisp` — 11 tests (manifest parsing, validation, load/unload/reload, query)
+- Created `tests/unit/test-supervisor.lisp` — 11 tests (lifecycle, registration, health checks, restart logic, escalation, query)
+- Created `tests/unit/test-scheduler.lisp` — 6 tests (lifecycle, delayed/interval firing, cancel, event publishing, list)
+- Wired all three into start/stop sequence in main.lisp
+- Updated hngh.asd and packages.lisp
+- Verified: `make build` produces binary; `make test` = **69/69 passed, 0 failed**
