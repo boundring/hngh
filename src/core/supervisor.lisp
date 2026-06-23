@@ -19,6 +19,9 @@
 (defvar *components* (make-hash-table :test 'equal)
   "Registry of supervised components. Key: component ID (string), value: component-info.")
 
+(defvar *components-lock* (bt:make-lock "hngh-supervisor")
+  "Mutex protecting *components*.")
+
 (defstruct component-info
   "Information about a supervised component."
   id              ; string (unique identifier)
@@ -61,12 +64,12 @@ Does not stop components — just stops monitoring."
 ;;; --- Registration ---
 
 (defun register (id &key (type :plugin)
-                       (restart-policy :on-failure)
-                       (health-check nil)
-                       (health-interval 60)
-                       (restart-fn nil)
-                       (max-restarts 5)
-                       (window-duration 300))
+                        (restart-policy :on-failure)
+                        (health-check nil)
+                        (health-interval 60)
+                        (restart-fn nil)
+                        (max-restarts 5)
+                        (window-duration 300))
   "Register a component for supervision.
 ID: unique string identifier for this component
 TYPE: :plugin or :agent
@@ -76,34 +79,36 @@ HEALTH-INTERVAL: seconds between health checks (default 60)
 RESTART-FN: function () -> boolean to restart the component (T = success)
 MAX-RESTARTS: max restarts within WINDOW-DURATION before escalation
 WINDOW-DURATION: restart counting window in seconds (default 300 = 5 min)"
-  (when (gethash id *components*)
-    (hngh.core:log-warn "Component ~A already registered" id)
-    (return-from register nil))
-  (let ((info (make-component-info
-                :id id
-                :type type
-                :restart-policy restart-policy
-                :health-check health-check
-                :health-interval health-interval
-                :last-health-ok (get-universal-time)
-                :restart-count 0
-                :restart-window-start (get-universal-time)
-                :window-restarts 0
-                :max-restarts max-restarts
-                :window-duration window-duration
-                :restart-fn restart-fn
-                :status :running
-                :registered-at (get-universal-time))))
-    (setf (gethash id *components*) info)
-    (hngh.core:log-debug "Registered component ~A (policy: ~A)" id restart-policy)
-    info))
+  (bt:with-lock-held (*components-lock*)
+    (when (gethash id *components*)
+      (hngh.core:log-warn "Component ~A already registered" id)
+      (return-from register nil))
+    (let ((info (make-component-info
+                  :id id
+                  :type type
+                  :restart-policy restart-policy
+                  :health-check health-check
+                  :health-interval health-interval
+                  :last-health-ok (get-universal-time)
+                  :restart-count 0
+                  :restart-window-start (get-universal-time)
+                  :window-restarts 0
+                  :max-restarts max-restarts
+                  :window-duration window-duration
+                  :restart-fn restart-fn
+                  :status :running
+                  :registered-at (get-universal-time))))
+      (setf (gethash id *components*) info)
+      (hngh.core:log-debug "Registered component ~A (policy: ~A)" id restart-policy)
+      info)))
 
 (defun unregister (id)
   "Remove a component from supervision."
-  (when (gethash id *components*)
-    (remhash id *components*)
-    (hngh.core:log-debug "Unregistered component ~A" id)
-    t))
+  (bt:with-lock-held (*components-lock*)
+    (when (gethash id *components*)
+      (remhash id *components*)
+      (hngh.core:log-debug "Unregistered component ~A" id)
+      t)))
 
 ;;; --- Health checking ---
 
@@ -111,17 +116,19 @@ WINDOW-DURATION: restart counting window in seconds (default 300 = 5 min)"
   "Run health check for component ID.
 Returns T if healthy, NIL if unhealthy.
 If no health check is defined, assumes healthy."
-  (let ((info (gethash id *components*)))
+  (let ((info (bt:with-lock-held (*components-lock*)
+                (gethash id *components*))))
     (unless info
       (return-from check-health nil))
     (cond
       ((null (component-info-health-check info))
-       t) ; No health check = assume healthy
+       t)
       (t
        (handler-case
            (let ((ok (funcall (component-info-health-check info))))
              (when ok
-               (setf (component-info-last-health-ok info) (get-universal-time)))
+               (bt:with-lock-held (*components-lock*)
+                 (setf (component-info-last-health-ok info) (get-universal-time))))
              ok)
          (error (c)
            (hngh.core:log-warn "Health check error for ~A: ~A" id c)
@@ -130,8 +137,12 @@ If no health check is defined, assumes healthy."
 (defun check-all-health ()
   "Run health checks for all registered components.
 Returns a list of (id healthy-p) pairs."
-  (loop for id being the hash-keys of *components*
-        collect (list id (check-health id))))
+  (let ((ids nil))
+    (bt:with-lock-held (*components-lock*)
+      (loop for id being the hash-keys of *components*
+            do (push id ids)))
+    (loop for id in ids
+          collect (list id (check-health id)))))
 
 ;;; --- Restart logic ---
 
@@ -139,30 +150,30 @@ Returns a list of (id healthy-p) pairs."
   "Report that component ID has failed.
 If restart policy allows, attempts to restart.
 If max-restarts exceeded, escalates."
-  (let ((info (gethash id *components*)))
+  (let ((info (bt:with-lock-held (*components-lock*)
+                (gethash id *components*))))
     (unless info
       (hngh.core:log-warn "Failure reported for unknown component ~A" id)
       (return-from report-failure nil))
     (hngh.core:log-warn "Component ~A failed: ~A" id (or reason "unknown"))
-    ;; Check if we should restart
     (when (eq (component-info-restart-policy info) :never)
-      (setf (component-info-status info) :failed)
+      (bt:with-lock-held (*components-lock*)
+        (setf (component-info-status info) :failed))
       (hngh.core:log-info "Component ~A has :never policy — not restarting" id)
       (return-from report-failure nil))
-    ;; Check restart window
     (let ((now (get-universal-time)))
-      (when (> (- now (component-info-restart-window-start info))
-               (component-info-window-duration info))
-        ;; Window expired — reset
-        (setf (component-info-restart-window-start info) now
-              (component-info-window-restarts info) 0))
-      ;; Check if we've exceeded max restarts
-      (when (>= (component-info-window-restarts info)
-                (component-info-max-restarts info))
-        (setf (component-info-status info) :escalated)
-        (hngh.core:log-error "Component ~A exceeded max restarts (~D in ~Ds) — escalating"
-                             id (component-info-max-restarts info)
-                             (component-info-window-duration info))
+      (bt:with-lock-held (*components-lock*)
+        (when (> (- now (component-info-restart-window-start info))
+                 (component-info-window-duration info))
+          (setf (component-info-restart-window-start info) now
+                (component-info-window-restarts info) 0))
+        (when (>= (component-info-window-restarts info)
+                  (component-info-max-restarts info))
+          (setf (component-info-status info) :escalated)
+          (hngh.core:log-error "Component ~A exceeded max restarts (~D in ~Ds) — escalating"
+                               id (component-info-max-restarts info)
+                               (component-info-window-duration info))))
+      (when (eq (component-info-status info) :escalated)
         (when hngh.core.event-bus:*event-bus*
           (hngh.core.event-bus:publish
             "supervisor.escalated"
@@ -170,17 +181,18 @@ If max-restarts exceeded, escalates."
                   :restarts (component-info-restart-count info))
             :source 'supervisor))
         (return-from report-failure nil))
-      ;; Attempt restart
       (when (component-info-restart-fn info)
-        (incf (component-info-restart-count info))
-        (incf (component-info-window-restarts info))
+        (bt:with-lock-held (*components-lock*)
+          (incf (component-info-restart-count info))
+          (incf (component-info-window-restarts info)))
         (hngh.core:log-info "Restarting component ~A (attempt ~D in window)"
                             id (component-info-window-restarts info))
         (handler-case
             (let ((ok (funcall (component-info-restart-fn info))))
               (if ok
                   (progn
-                    (setf (component-info-status info) :running)
+                    (bt:with-lock-held (*components-lock*)
+                      (setf (component-info-status info) :running))
                     (hngh.core:log-info "Component ~A restarted successfully" id)
                     (when hngh.core.event-bus:*event-bus*
                       (hngh.core.event-bus:publish
@@ -189,35 +201,41 @@ If max-restarts exceeded, escalates."
                         :source 'supervisor))
                     t)
                   (progn
-                    (setf (component-info-status info) :failed)
+                    (bt:with-lock-held (*components-lock*)
+                      (setf (component-info-status info) :failed))
                     (hngh.core:log-error "Component ~A restart failed" id)
                     nil)))
           (error (c)
-            (setf (component-info-status info) :failed)
+            (bt:with-lock-held (*components-lock*)
+              (setf (component-info-status info) :failed))
             (hngh.core:log-error "Component ~A restart error: ~A" id c)
             nil))))))
 
 (defun report-success (id)
   "Report that component ID is running normally.
 Resets the restart window counter."
-  (let ((info (gethash id *components*)))
-    (when info
-      (setf (component-info-status info) :running
-            (component-info-window-restarts info) 0))))
+  (bt:with-lock-held (*components-lock*)
+    (let ((info (gethash id *components*)))
+      (when info
+        (setf (component-info-status info) :running
+              (component-info-window-restarts info) 0)))))
 
 ;;; --- Query ---
 
 (defun get-status (id)
   "Return the status of component ID (:running, :stopped, :failed, :escalated)."
-  (let ((info (gethash id *components*)))
-    (when info
-      (component-info-status info))))
+  (bt:with-lock-held (*components-lock*)
+    (let ((info (gethash id *components*)))
+      (when info
+        (component-info-status info)))))
 
 (defun list-components ()
   "Return a list of all registered component-info structs."
-  (loop for info being the hash-values of *components*
-        collect info))
+  (bt:with-lock-held (*components-lock*)
+    (loop for info being the hash-values of *components*
+          collect info)))
 
 (defun component-count ()
   "Return the number of registered components."
-  (hash-table-count *components*))
+  (bt:with-lock-held (*components-lock*)
+    (hash-table-count *components*)))

@@ -84,51 +84,55 @@ Initialization sequence:
   3. Load configuration
   4. Set log level (from arg, config, or default :info)
   5. Install signal handlers
-  6. (future: Start Event Bus — M0.2)
-  7. (future: Start State Store — M0.3)
-  8. (future: Start Supervisor — M0.5)
-  9. (future: Start Scheduler — M0.6)
-  10. (future: Load first-party plugins — M0.4)
-  11. Log startup complete"
+  6. Start Event Bus
+  7. Start State Store
+  8. Start Supervisor
+  9. Start Scheduler
+  10. Load first-party plugins
+  11. Set *running* flag
+  12. Log startup complete
+
+If any step fails, already-started components are shut down in reverse order."
   (setf *hngh-home* hngh-home)
-  ;; Initialize state tree first (config loading needs it)
   (init-state-tree hngh-home)
-  ;; Load config
   (hngh.core.config:load-config :hngh-home hngh-home)
-  ;; Determine log level: arg > config > default
   (let ((effective-level (cond
                             (log-level-p log-level)
                             (t (hngh.core.config:config-get :log-level :info)))))
     (hngh.core:set-log-level effective-level))
-  (setf *running* t)
   (hngh.core:log-info "Hngh v~A starting..." *version*)
   (hngh.core:log-info "State directory: ~A" (namestring hngh-home))
   (hngh.core:log-info "Log level: ~A" hngh.core:*log-level*)
-  ;; Install signal handlers
   (install-signal-handlers)
-  ;; Start Event Bus
-  (hngh.core.event-bus:init :hngh-home hngh-home)
-  ;; Start State Store
-  (hngh.core.state-store:init :hngh-home hngh-home)
-  ;; Start Supervisor
-  (hngh.core.supervisor:init)
-  ;; Start Scheduler
-  (hngh.core.scheduler:init)
-  ;; Start first-party plugins
-  (hngh.plugins.dbus-bridge:init :monitor-systemd nil) ; M0.7: no systemd monitor in stub mode
-  (hngh.plugins.dashboard-tui:init :headless t)       ; M0.8: headless by default
-  (hngh.core:log-info "Hngh started")
-  t)
+  (unwind-protect
+       (progn
+         (hngh.core.event-bus:init :hngh-home hngh-home)
+         (hngh.core.state-store:init :hngh-home hngh-home)
+         (hngh.core.supervisor:init)
+         (hngh.core.scheduler:init)
+         (hngh.plugins.dbus-bridge:init :monitor-systemd nil)
+         (hngh.plugins.dashboard-tui:init :headless t)
+         (setf *running* t)
+         (hngh.core:log-info "Hngh started")
+         t)
+    (unless *running*
+      (hngh.core:log-error "Startup failed — rolling back")
+      (ignore-errors (hngh.plugins.dashboard-tui:shutdown))
+      (ignore-errors (hngh.plugins.dbus-bridge:shutdown))
+      (ignore-errors (hngh.core.scheduler:shutdown))
+      (ignore-errors (hngh.core.supervisor:shutdown))
+      (ignore-errors (hngh.core.state-store:shutdown))
+      (ignore-errors (hngh.core.event-bus:shutdown)))))
 
 (defun stop ()
   "Stop the Hngh system.
 
 Shutdown sequence (reverse of startup):
-  1. (future: Unload plugins)
-  2. (future: Stop Scheduler)
-  3. (future: Stop Supervisor)
-  4. (future: Stop State Store)
-  5. (future: Stop Event Bus)
+  1. Unload plugins
+  2. Stop Scheduler
+  3. Stop Supervisor
+  4. Flush State Store (releases locks)
+  5. Stop Event Bus
   6. Mark as not running"
   (unless *running*
     (hngh.core:log-warn "Hngh is not running")
@@ -180,9 +184,8 @@ Used when building a standalone executable via `make build`."
            (if log-level
                (start :hngh-home hngh-home :log-level log-level)
                (start :hngh-home hngh-home))
-           ;; TODO (M0.8): Enter main event loop (Dashboard TUI owns this)
-           ;; For now, start and stop immediately (stub)
-           (hngh.core:log-info "No event loop yet — exiting after startup")
+            ;; No event loop yet — start and stop immediately (stub)
+            (hngh.core:log-info "No event loop — exiting after startup")
            (stop)
            (uiop:quit 0)))))))
 

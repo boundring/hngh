@@ -25,6 +25,10 @@
 (defvar *subscriptions* '()
   "List of (bus destination) pairs being monitored.")
 
+(defvar *signal-scanner*
+  (cl-ppcre:create-scanner "^(/[^:]+):\\s+(\\S+)\\.([^(]+)\\((.*)\\)$")
+  "Regex matching gdbus monitor signal lines: /path: interface.member(args)")
+
 ;;; --- Lifecycle ---
 
 (defun init (&key (monitor-systemd t))
@@ -115,11 +119,24 @@ gdbus monitor output looks like:
   The name :1.42 is owned by org.freedesktop.systemd1
   /org/freedesktop/systemd1: org.freedesktop.systemd1.Manager.JobNew (...)
   /org/freedesktop/systemd1: org.freedesktop.systemd1.Manager.UnitNew (...)"
-  (declare (ignore line))
-  ;; TODO: parse the signal and translate to internal events
-  ;; For M0, just log that we received something
-  ;; Full parsing will be done when we have cl-dbus or proper regex
-  nil)
+  (cl-ppcre:register-groups-bind (object-path interface+member args)
+      (*signal-scanner* line)
+    (let* ((last-dot (position #\. interface+member :from-end t))
+           (interface (subseq interface+member 0 last-dot))
+           (member (subseq interface+member (1+ last-dot)))
+           (topic (format nil "dbus.signal.~A.~A"
+                          (cl-ppcre:regex-replace-all "\\." interface "-")
+                          member)))
+      (hngh.core:log-debug "dbus signal: ~A.~A (~A)" interface member args)
+      (when hngh.core.event-bus:*event-bus*
+        (hngh.core.event-bus:publish
+          topic
+          (list :object-path object-path
+                :interface interface
+                :member member
+                :args args)
+          :source 'dbus-bridge)))
+    t))
 
 ;;; --- Method calls ---
 

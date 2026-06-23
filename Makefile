@@ -5,7 +5,7 @@
 # --- Configuration ---
 
 SBCL ?= sbcl
-SBCL_FLAGS = --no-sysinit --no-userinit --disable-debugger
+SBCL_FLAGS = --disable-debugger
 LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp)
 C_FILES = src/system-daemon/main.c
 

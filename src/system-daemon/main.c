@@ -17,11 +17,13 @@
  */
 
 #define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <dbus/dbus.h>
@@ -73,34 +75,38 @@ respond_string(DBusConnection *conn, DBusMessage *msg, const char *str)
 static int
 path_is_allowed(const char *path)
 {
+    /* Canonicalize the path to prevent traversal (../../etc/shadow) */
+    char resolved[PATH_MAX];
+    if (realpath(path, resolved) == NULL) {
+        /* Path doesn't exist yet (for new files) — resolve parent */
+        char parent[PATH_MAX];
+        strncpy(parent, path, sizeof(parent) - 1);
+        parent[sizeof(parent) - 1] = '\0';
+        /* Strip last path component to get parent */
+        char *last_slash = strrchr(parent, '/');
+        if (last_slash == NULL) {
+            return 0;
+        }
+        *last_slash = '\0';
+        if (strlen(parent) == 0) {
+            strcpy(parent, "/");
+        }
+        char resolved_parent[PATH_MAX];
+        if (realpath(parent, resolved_parent) == NULL) {
+            return 0;
+        }
+        /* Reconstruct full path: resolved_parent + "/" + basename */
+        snprintf(resolved, sizeof(resolved), "%s/%s", resolved_parent,
+                 last_slash + 1);
+    }
+
     for (int i = 0; ALLOWED_PATH_PREFIXES[i] != NULL; i++) {
         size_t len = strlen(ALLOWED_PATH_PREFIXES[i]);
-        if (strncmp(path, ALLOWED_PATH_PREFIXES[i], len) == 0) {
+        if (strncmp(resolved, ALLOWED_PATH_PREFIXES[i], len) == 0) {
             return 1;
         }
     }
     return 0;
-}
-
-static int
-spawn_helper(const char *service_unit, const char **extra_args, int nargs)
-{
-    /* Build systemctl start command with template unit */
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "systemctl start %s", service_unit);
-    for (int i = 0; i < nargs; i++) {
-        strncat(cmd, " ", sizeof(cmd) - strlen(cmd) - 1);
-        strncat(cmd, extra_args[i], sizeof(cmd) - strlen(cmd) - 1);
-    }
-    
-    /* Log to journald via stderr */
-    fprintf(stderr, "hngh-system: spawning helper: %s\n", cmd);
-    
-    int ret = system(cmd);
-    if (WIFEXITED(ret)) {
-        return WEXITSTATUS(ret);
-    }
-    return -1;
 }
 
 static DBusHandlerResult
@@ -273,6 +279,18 @@ handle_create_snapshot(DBusConnection *conn, DBusMessage *msg)
     if (dbus_message_iter_init(msg, &args) &&
         dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
         dbus_message_iter_get_basic(&args, &description);
+    }
+
+    /* Validate description: only alphanumerics, dashes, underscores */
+    for (const char *p = description; *p; p++) {
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+              (*p >= '0' && *p <= '9') || *p == '-' || *p == '_')) {
+            char errmsg[256];
+            snprintf(errmsg, sizeof(errmsg),
+                     "Invalid snapshot description: %s", description);
+            respond_error(conn, msg, "org.hngh.System.Error.InvalidArgs", errmsg);
+            return DBUS_HANDLER_RESULT_HANDLED;
+        }
     }
     
     fprintf(stderr, "hngh-system: CreateSnapshot: %s\n", description);
