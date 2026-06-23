@@ -53,12 +53,12 @@ test: check
 
 check:
 	$(SBCL) $(SBCL_FLAGS) \
-		--eval "(require 'asdf)" \
-		--eval "(push (truename \".\") asdf:*central-registry*)" \
-		--eval "(asdf:load-system :hngh)" \
-		--eval "(asdf:load-system :hngh/tests)" \
-		--eval "(let ((ok (hngh.tests.harness:run-all-tests))) (uiop:quit (if ok 0 1)))" \
-		--quit
+	--eval "(require 'asdf)" \
+	--eval "(push (truename \".\") asdf:*central-registry*)" \
+	--eval "(asdf:load-system :hngh)" \
+	--eval "(asdf:load-system :hngh/tests)" \
+	--eval "(let ((ok (hngh.tests:run-tests))) (uiop:quit (if ok 0 1)))" \
+	--quit
 
 ## Run integration tests (end-to-end full stack)
 integration-test: build

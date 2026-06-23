@@ -1,96 +1,83 @@
 ;;;; tests/unit/test-event-bus.lisp — Tests for Event Bus (A2)
 ;;;;
-;;; SPDX-License-Identifier: AGPL-3.0-or-later
-;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+;;;; SPDX-License-Identifier: AGPL-3.0-or-later
+;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
-(in-package :hngh.tests.harness)
+(in-package :hngh.tests)
 
-;; --- Topic matching ---
+(def-suite :hngh.event-bus
+  :description "Tests for Event Bus (A2)"
+  :in :hngh)
 
-(define-test topic-match-exact
-  (assert-true (hngh.core.event-bus:topic-match-p
-                 "system.pacman.transaction-completed"
-                 "system.pacman.transaction-completed"))
-  (assert-true (not (hngh.core.event-bus:topic-match-p
-                      "system.pacman.transaction-completed"
-                      "system.pacman.transaction-started"))))
+(in-suite :hngh.event-bus)
 
-(define-test topic-match-wildcard-dot-star
-  (assert-true (hngh.core.event-bus:topic-match-p "system.*" "system.pacman.hook"))
-  (assert-true (hngh.core.event-bus:topic-match-p "system.*" "system.udev.device-changed"))
-  (assert-true (not (hngh.core.event-bus:topic-match-p "system.*" "plugin.loaded"))))
+(test topic-match-exact
+  (is (hngh.core.event-bus:topic-match-p
+       "system.pacman.transaction-completed"
+       "system.pacman.transaction-completed"))
+  (is (not (hngh.core.event-bus:topic-match-p
+            "system.pacman.transaction-completed"
+            "system.pacman.transaction-started"))))
 
-(define-test topic-match-wildcard-nested
-  (assert-true (hngh.core.event-bus:topic-match-p
-                 "system.pacman.*" "system.pacman.transaction-completed"))
-  (assert-true (not (hngh.core.event-bus:topic-match-p
-                      "system.pacman.*" "system.udev.device-changed"))))
+(test topic-match-wildcard-dot-star
+  (is (hngh.core.event-bus:topic-match-p "system.*" "system.pacman.hook"))
+  (is (hngh.core.event-bus:topic-match-p "system.*" "system.udev.device-changed"))
+  (is (not (hngh.core.event-bus:topic-match-p "system.*" "plugin.loaded"))))
 
-(define-test topic-match-bare-star
-  (assert-true (hngh.core.event-bus:topic-match-p "*" "anything.at.all"))
-  (assert-true (hngh.core.event-bus:topic-match-p "*" "system.pacman")))
+(test topic-match-wildcard-nested
+  (is (hngh.core.event-bus:topic-match-p
+       "system.pacman.*" "system.pacman.transaction-completed"))
+  (is (not (hngh.core.event-bus:topic-match-p
+            "system.pacman.*" "system.udev.device-changed"))))
 
-;; --- Bus lifecycle ---
+(test topic-match-bare-star
+  (is (hngh.core.event-bus:topic-match-p "*" "anything.at.all"))
+  (is (hngh.core.event-bus:topic-match-p "*" "system.pacman")))
 
-(define-test init-creates-bus
-  (let ((tmp-home (merge-pathnames "test-ebus-init/"
-                                    (uiop:temporary-directory))))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
-    (assert-true (hngh.core.event-bus:running-p))
+(test init-creates-bus
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
+    (is (hngh.core.event-bus:running-p))
     (hngh.core.event-bus:shutdown)
-    (assert-true (not (hngh.core.event-bus:running-p)))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (is (not (hngh.core.event-bus:running-p)))
+    (cleanup-tmp-home tmp)))
 
-;; --- Publish / Subscribe ---
-
-(define-test publish-delivers-to-subscriber
-  (let ((tmp-home (merge-pathnames "test-ebus-pubsub/"
-                                    (uiop:temporary-directory)))
+(test publish-delivers-to-subscriber
+  (let ((tmp (make-tmp-home))
         (received nil))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (hngh.core.event-bus:subscribe "test.topic"
-                                    (lambda (evt)
-                                      (push (hngh.core.event-bus:event-payload evt)
-                                            received)))
+        (lambda (evt)
+          (push (hngh.core.event-bus:event-payload evt) received)))
     (hngh.core.event-bus:publish "test.topic" "hello")
-    (assert-equal "hello" (first received))
+    (is (equal "hello" (first received)))
     (hngh.core.event-bus:shutdown)
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (cleanup-tmp-home tmp)))
 
-(define-test wildcard-subscription-receives-nested
-  (let ((tmp-home (merge-pathnames "test-ebus-wild/"
-                                    (uiop:temporary-directory)))
+(test wildcard-subscription-receives-nested
+  (let ((tmp (make-tmp-home))
         (received nil))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (hngh.core.event-bus:subscribe "test.*"
-                                    (lambda (evt)
-                                      (push (hngh.core.event-bus:event-topic evt)
-                                            received)))
+        (lambda (evt)
+          (push (hngh.core.event-bus:event-topic evt) received)))
     (hngh.core.event-bus:publish "test.foo" 1)
     (hngh.core.event-bus:publish "test.bar.baz" 2)
-    (hngh.core.event-bus:publish "other.topic" 3)  ; should NOT be received
-    (assert-equal 2 (length received))
-    (assert-true (member "test.bar.baz" received :test #'string=))
-    (assert-true (member "test.foo" received :test #'string=))
+    (hngh.core.event-bus:publish "other.topic" 3)
+    (is (equal 2 (length received)))
+    (is (member "test.bar.baz" received :test #'string=))
+    (is (member "test.foo" received :test #'string=))
     (hngh.core.event-bus:shutdown)
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (cleanup-tmp-home tmp)))
 
-(define-test unsubscribe-stops-delivery
-  (let ((tmp-home (merge-pathnames "test-ebus-unsub/"
-                                    (uiop:temporary-directory)))
+(test unsubscribe-stops-delivery
+  (let ((tmp (make-tmp-home))
         (received nil))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (let ((sub-id (hngh.core.event-bus:subscribe
                     "test.topic"
                     (lambda (evt)
@@ -98,70 +85,57 @@
       (hngh.core.event-bus:publish "test.topic" "first")
       (hngh.core.event-bus:unsubscribe sub-id)
       (hngh.core.event-bus:publish "test.topic" "second"))
-    (assert-equal 1 (length received))
-    (assert-equal "first" (first received))
+    (is (equal 1 (length received)))
+    (is (equal "first" (first received)))
     (hngh.core.event-bus:shutdown)
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (cleanup-tmp-home tmp)))
 
-(define-test filter-only-delivers-matching
-  (let ((tmp-home (merge-pathnames "test-ebus-filter/"
-                                    (uiop:temporary-directory)))
+(test filter-only-delivers-matching
+  (let ((tmp (make-tmp-home))
         (received nil))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (hngh.core.event-bus:subscribe "test.*"
-                                    (lambda (evt)
-                                      (push (hngh.core.event-bus:event-payload evt)
-                                            received))
-                                    :filter (lambda (evt)
-                                              (> (hngh.core.event-bus:event-payload evt) 5)))
+        (lambda (evt)
+          (push (hngh.core.event-bus:event-payload evt) received))
+        :filter (lambda (evt)
+                  (> (hngh.core.event-bus:event-payload evt) 5)))
     (hngh.core.event-bus:publish "test.num" 3)
     (hngh.core.event-bus:publish "test.num" 10)
     (hngh.core.event-bus:publish "test.num" 7)
-    (assert-equal 2 (length received))
-    (assert-true (member 10 received))
-    (assert-true (member 7 received))
+    (is (equal 2 (length received)))
+    (is (member 10 received))
+    (is (member 7 received))
     (hngh.core.event-bus:shutdown)
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (cleanup-tmp-home tmp)))
 
-;; --- Event journaling ---
-
-(define-test publish-journals-event
-  (let ((tmp-home (merge-pathnames "test-ebus-journal/"
-                                    (uiop:temporary-directory))))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+(test publish-journals-event
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (hngh.core.event-bus:publish "test.topic" "journaled" :source 'test)
     (hngh.core.event-bus:shutdown)
-    ;; Check journal file exists and contains the event
-    (let ((journal-dir (merge-pathnames "journal/events/" tmp-home)))
-      (assert-true (probe-file journal-dir))
-      (let ((files (directory (merge-pathnames "*.lisp" journal-dir))))
-        (assert-true (= 1 (length files)))
+    (let* ((journal-dir (merge-pathnames "journal/events/" tmp))
+           (files (directory (merge-pathnames "*.lisp" journal-dir))))
+      (is (probe-file journal-dir))
+      (is (= 1 (length files)))
+      (when files
         (let ((events (hngh.core.event-bus:read-journal-events (first files))))
-          (assert-true (= 1 (length events)))
-          (assert-equal "test.topic" (hngh.core.event-bus:event-topic (first events)))
-          (assert-equal "journaled" (hngh.core.event-bus:event-payload (first events))))))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+          (is (= 1 (length events)))
+          (is (equal "test.topic" (hngh.core.event-bus:event-topic (first events))))
+          (is (equal "journaled" (hngh.core.event-bus:event-payload (first events)))))))
+    (cleanup-tmp-home tmp)))
 
-(define-test event-ids-increment
-  (let ((tmp-home (merge-pathnames "test-ebus-ids/"
-                                    (uiop:temporary-directory))))
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))
-    (hngh.core.event-bus:init :hngh-home tmp-home)
+(test event-ids-increment
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
     (let ((e1 (hngh.core.event-bus:publish "test" 1))
           (e2 (hngh.core.event-bus:publish "test" 2))
           (e3 (hngh.core.event-bus:publish "test" 3)))
-      (assert-true (< (hngh.core.event-bus:event-id e1)
-                      (hngh.core.event-bus:event-id e2)))
-      (assert-true (< (hngh.core.event-bus:event-id e2)
-                      (hngh.core.event-bus:event-id e3))))
+      (is (< (hngh.core.event-bus:event-id e1)
+             (hngh.core.event-bus:event-id e2)))
+      (is (< (hngh.core.event-bus:event-id e2)
+             (hngh.core.event-bus:event-id e3))))
     (hngh.core.event-bus:shutdown)
-    (when (probe-file tmp-home)
-      (uiop:delete-directory-tree tmp-home :validate #'identity))))
+    (cleanup-tmp-home tmp)))
