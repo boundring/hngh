@@ -31,10 +31,13 @@
                (:file "core/threat-detection")
                (:file "core/resource-manager")
                (:file "core/main")
-               ;; First-party plugins:
-               (:file "plugins/dbus-bridge")
-               (:file "plugins/dashboard-tui")
-               )
+                ;; First-party plugins:
+                (:file "plugins/dbus-bridge")
+                (:file "plugins/dashboard-tui")
+                (:file "plugins/package-manager")
+                (:file "plugins/system-config")
+                (:file "plugins/secrets-manager")
+                )
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/tests"
@@ -53,7 +56,10 @@
                (:file "test-threat-detection")
                (:file "test-resource-manager")
                (:file "test-dbus-bridge")
-               (:file "test-dashboard-tui"))
+               (:file "test-dashboard-tui")
+               (:file "test-package-manager")
+               (:file "test-system-config")
+               (:file "test-secrets-manager"))
     :perform (test-op (op c)
                         (declare (ignore op c))
                         ))
