@@ -29,6 +29,7 @@
                (:file "core/supervisor")
                (:file "core/scheduler")
                (:file "core/threat-detection")
+               (:file "core/resource-manager")
                (:file "core/main")
                ;; First-party plugins:
                (:file "plugins/dbus-bridge")
@@ -49,6 +50,8 @@
                (:file "test-plugin-host")
                (:file "test-supervisor")
                (:file "test-scheduler")
+               (:file "test-threat-detection")
+               (:file "test-resource-manager")
                (:file "test-dbus-bridge")
                (:file "test-dashboard-tui"))
     :perform (test-op (op c)
