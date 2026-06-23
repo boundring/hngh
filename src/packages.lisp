@@ -226,5 +226,60 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:running-p
            #:status
            #:render
-           #:handle-key
-           #:format-event-time))
+            #:handle-key
+            #:format-event-time))
+
+(defpackage :hngh.plugins.package-manager
+  (:documentation "Package Manager (B1) — pacman/yay/paru integration.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:search
+           #:info
+           #:list-installed
+           #:list-aur
+           #:list-updates
+           #:list-orphans
+           #:install-packages
+           #:remove-packages
+           #:upgrade-system
+           #:check-breakage
+           #:history
+           #:*history*))
+
+(defpackage :hngh.plugins.system-config
+  (:documentation "System Config (B2) — /etc management, btrfs snapshots, theming.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:read-config
+           #:write-config
+           #:create-snapshot
+           #:list-snapshots
+           #:managed-paths
+           #:add-managed-path
+           #:remove-managed-path))
+
+(defpackage :hngh.plugins.secrets-manager
+  (:documentation "Secrets Manager (B8) — 1Password/KeePassXC/age vault, policy-checked access.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:get-secret
+           #:set-secret
+           #:list-secrets
+           #:authorize
+           #:revoke
+           #:list-policies
+           #:backend-available-p
+           #:unlock
+           #:lock
+           #:*backend*
+           #:*policies*
+           #:*access-log*))
