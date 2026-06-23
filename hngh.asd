@@ -38,7 +38,7 @@
 
 (defsystem "hngh/tests"
   :description "Test suite for Hngh"
-  :depends-on ("hngh")
+  :depends-on ("hngh" "fiveam")
   :pathname "tests/unit/"
   :serial t
   :components ((:file "packages")
@@ -51,7 +51,6 @@
                (:file "test-scheduler")
                (:file "test-dbus-bridge")
                (:file "test-dashboard-tui"))
-   :perform (test-op (op c)
-                       (declare (ignore op c))
-                       ;; The test harness is loaded and run via Makefile
-                       ))
+    :perform (test-op (op c)
+                        (declare (ignore op c))
+                        ))

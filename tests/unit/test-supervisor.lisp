@@ -1,130 +1,120 @@
 ;;;; tests/unit/test-supervisor.lisp — Tests for Supervisor (A6)
 ;;;;
-;;; SPDX-License-Identifier: AGPL-3.0-or-later
-;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+;;;; SPDX-License-Identifier: AGPL-3.0-or-later
+;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
-(in-package :hngh.tests.harness)
+(in-package :hngh.tests)
 
-;; --- Lifecycle ---
+(def-suite :hngh.supervisor
+  :description "Tests for Supervisor (A6)"
+  :in :hngh)
 
-(define-test supervisor-init-shutdown
+(in-suite :hngh.supervisor)
+
+(test supervisor-init-shutdown
   (hngh.core.supervisor:init)
-  (assert-true (hngh.core.supervisor:running-p))
+  (is (hngh.core.supervisor:running-p))
   (hngh.core.supervisor:shutdown)
-  (assert-true (not (hngh.core.supervisor:running-p))))
+  (is (not (hngh.core.supervisor:running-p))))
 
-;; --- Registration ---
-
-(define-test register-component
+(test register-component
   (hngh.core.supervisor:init)
   (let ((info (hngh.core.supervisor:register "test-comp" :type :plugin)))
-    (assert-true (not (null info)))
-    (assert-equal "test-comp" (hngh.core.supervisor:component-info-id info))
-    (assert-equal :running (hngh.core.supervisor:component-info-status info)))
+    (is (not (null info)))
+    (is (equal "test-comp" (hngh.core.supervisor:component-info-id info)))
+    (is (equal :running (hngh.core.supervisor:component-info-status info))))
   (hngh.core.supervisor:shutdown))
 
-(define-test register-duplicate-returns-nil
+(test register-duplicate-returns-nil
   (hngh.core.supervisor:init)
   (hngh.core.supervisor:register "dup-comp" :type :plugin)
-  (assert-true (null (hngh.core.supervisor:register "dup-comp" :type :plugin)))
+  (is (null (hngh.core.supervisor:register "dup-comp" :type :plugin)))
   (hngh.core.supervisor:shutdown))
 
-(define-test unregister-component
+(test unregister-component
   (hngh.core.supervisor:init)
   (hngh.core.supervisor:register "temp-comp" :type :plugin)
-  (assert-true (hngh.core.supervisor:unregister "temp-comp"))
-  (assert-true (null (hngh.core.supervisor:get-status "temp-comp")))
+  (is (hngh.core.supervisor:unregister "temp-comp"))
+  (is (null (hngh.core.supervisor:get-status "temp-comp")))
   (hngh.core.supervisor:shutdown))
 
-;; --- Health checking ---
-
-(define-test health-check-no-fn-returns-true
+(test health-check-no-fn-returns-true
   (hngh.core.supervisor:init)
   (hngh.core.supervisor:register "healthy-comp" :type :plugin)
-  (assert-true (hngh.core.supervisor:check-health "healthy-comp"))
+  (is (hngh.core.supervisor:check-health "healthy-comp"))
   (hngh.core.supervisor:shutdown))
 
-(define-test health-check-with-fn
+(test health-check-with-fn
   (let ((healthy t))
     (hngh.core.supervisor:init)
     (hngh.core.supervisor:register "checked-comp" :type :plugin
-                                    :health-check (lambda () healthy))
-    (assert-true (hngh.core.supervisor:check-health "checked-comp"))
+        :health-check (lambda () healthy))
+    (is (hngh.core.supervisor:check-health "checked-comp"))
     (setf healthy nil)
-    (assert-true (not (hngh.core.supervisor:check-health "checked-comp")))
+    (is (not (hngh.core.supervisor:check-health "checked-comp")))
     (hngh.core.supervisor:shutdown)))
 
-;; --- Restart logic ---
-
-(define-test report-failure-never-policy-no-restart
+(test report-failure-never-policy-no-restart
   (let ((restart-called nil))
     (hngh.core.supervisor:init)
     (hngh.core.supervisor:register "never-comp" :type :plugin
-                                    :restart-policy :never
-                                    :restart-fn (lambda () (setf restart-called t) t))
+        :restart-policy :never
+        :restart-fn (lambda () (setf restart-called t) t))
     (hngh.core.supervisor:report-failure "never-comp" "test failure")
-    (assert-true (not restart-called))
-    (assert-equal :failed (hngh.core.supervisor:get-status "never-comp"))
+    (is (not restart-called))
+    (is (equal :failed (hngh.core.supervisor:get-status "never-comp")))
     (hngh.core.supervisor:shutdown)))
 
-(define-test report-failure-always-policy-restarts
+(test report-failure-always-policy-restarts
   (let ((restart-count 0))
     (hngh.core.supervisor:init)
     (hngh.core.supervisor:register "always-comp" :type :plugin
-                                    :restart-policy :always
-                                    :restart-fn (lambda () (incf restart-count) t)
-                                    :max-restarts 10)
+        :restart-policy :always
+        :restart-fn (lambda () (incf restart-count) t)
+        :max-restarts 10)
     (hngh.core.supervisor:report-failure "always-comp" "crash")
-    (assert-equal 1 restart-count)
-    (assert-equal :running (hngh.core.supervisor:get-status "always-comp"))
+    (is (equal 1 restart-count))
+    (is (equal :running (hngh.core.supervisor:get-status "always-comp")))
     (hngh.core.supervisor:shutdown)))
 
-(define-test escalation-after-max-restarts
+(test escalation-after-max-restarts
   (let ((restart-count 0))
     (hngh.core.supervisor:init)
     (hngh.core.supervisor:register "escalate-comp" :type :plugin
-                                    :restart-policy :always
-                                    :restart-fn (lambda () (incf restart-count) t)
-                                    :max-restarts 2
-                                    :window-duration 300)
-    ;; First failure — restart (count 1)
+        :restart-policy :always
+        :restart-fn (lambda () (incf restart-count) t)
+        :max-restarts 2
+        :window-duration 300)
     (hngh.core.supervisor:report-failure "escalate-comp" "crash 1")
-    (assert-equal 1 restart-count)
-    ;; Second failure — restart (count 2)
+    (is (equal 1 restart-count))
     (hngh.core.supervisor:report-failure "escalate-comp" "crash 2")
-    (assert-equal 2 restart-count)
-    ;; Third failure — should escalate, not restart
+    (is (equal 2 restart-count))
     (hngh.core.supervisor:report-failure "escalate-comp" "crash 3")
-    (assert-equal 2 restart-count) ; no new restart
-    (assert-equal :escalated (hngh.core.supervisor:get-status "escalate-comp"))
+    (is (equal 2 restart-count))
+    (is (equal :escalated (hngh.core.supervisor:get-status "escalate-comp")))
     (hngh.core.supervisor:shutdown)))
 
-;; --- Query ---
-
-(define-test list-components-shows-all
+(test list-components-shows-all
   (hngh.core.supervisor:init)
   (hngh.core.supervisor:register "comp-a" :type :plugin)
   (hngh.core.supervisor:register "comp-b" :type :agent)
-  (assert-equal 2 (hngh.core.supervisor:component-count))
+  (is (equal 2 (hngh.core.supervisor:component-count)))
   (let ((ids (mapcar #'hngh.core.supervisor:component-info-id
-                      (hngh.core.supervisor:list-components))))
-    (assert-true (member "comp-a" ids :test #'string=))
-    (assert-true (member "comp-b" ids :test #'string=)))
+                     (hngh.core.supervisor:list-components))))
+    (is (member "comp-a" ids :test #'string=))
+    (is (member "comp-b" ids :test #'string=)))
   (hngh.core.supervisor:shutdown))
 
-(define-test report-success-resets-window
+(test report-success-resets-window
   (let ((restart-count 0))
     (hngh.core.supervisor:init)
     (hngh.core.supervisor:register "success-comp" :type :plugin
-                                    :restart-policy :always
-                                    :restart-fn (lambda () (incf restart-count) t)
-                                    :max-restarts 1)
-    ;; Failure + restart
+        :restart-policy :always
+        :restart-fn (lambda () (incf restart-count) t)
+        :max-restarts 1)
     (hngh.core.supervisor:report-failure "success-comp" "crash")
-    (assert-equal 1 restart-count)
-    ;; Report success — resets window
+    (is (equal 1 restart-count))
     (hngh.core.supervisor:report-success "success-comp")
-    ;; Another failure should restart again (window was reset)
     (hngh.core.supervisor:report-failure "success-comp" "crash 2")
-    (assert-equal 2 restart-count)
+    (is (equal 2 restart-count))
     (hngh.core.supervisor:shutdown)))
