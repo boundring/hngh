@@ -110,6 +110,8 @@ If any step fails, already-started components are shut down in reverse order."
          (hngh.core.state-store:init :hngh-home hngh-home)
          (hngh.core.supervisor:init)
          (hngh.core.scheduler:init)
+         (hngh.core.threat-detection:init :hngh-home hngh-home)
+         (hngh.core.resource-manager:init :hngh-home hngh-home)
          (hngh.plugins.dbus-bridge:init :monitor-systemd nil)
          (hngh.plugins.dashboard-tui:init :headless t)
          (setf *running* t)
@@ -119,6 +121,8 @@ If any step fails, already-started components are shut down in reverse order."
       (hngh.core:log-error "Startup failed — rolling back")
       (ignore-errors (hngh.plugins.dashboard-tui:shutdown))
       (ignore-errors (hngh.plugins.dbus-bridge:shutdown))
+      (ignore-errors (hngh.core.resource-manager:shutdown))
+      (ignore-errors (hngh.core.threat-detection:shutdown))
       (ignore-errors (hngh.core.scheduler:shutdown))
       (ignore-errors (hngh.core.supervisor:shutdown))
       (ignore-errors (hngh.core.state-store:shutdown))
@@ -141,6 +145,9 @@ Shutdown sequence (reverse of startup):
   ;; Stop first-party plugins
   (hngh.plugins.dashboard-tui:shutdown)
   (hngh.plugins.dbus-bridge:shutdown)
+  ;; Stop core components
+  (hngh.core.threat-detection:shutdown)
+  (hngh.core.resource-manager:shutdown)
   ;; Stop Scheduler
   (hngh.core.scheduler:shutdown)
   ;; Stop Supervisor

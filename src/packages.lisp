@@ -157,10 +157,48 @@ All core component implementations live in sub-packages of hngh.core.")
 
 (defpackage :hngh.core.threat-detection
   (:documentation "Procedural Threat Detection (A7) — L1 static + L3 runtime.")
-  (:use :cl)
-  (:export #:analyze-manifest
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:analyze-manifest
            #:analyze-code
-           #:observe-behavior))
+           #:observe-behavior
+           #:add-pattern
+           #:list-flags
+           #:clear-flags
+           #:*patterns*
+           #:*flags*
+           #:l1-verdict
+           #:l1-verdict-result
+           #:l1-verdict-checks-run
+           #:l1-verdict-failures))
+
+(defpackage :hngh.core.resource-manager
+  (:documentation "Resource Manager (A4) — GPU/VRAM/CPU/memory arbitration.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:request-resource
+           #:release
+           #:status
+           #:preempt
+           #:hardware-info
+           #:list-grants
+           #:grant-info
+           #:grant-info-id
+           #:grant-info-kind
+           #:grant-info-spec
+           #:grant-info-holder
+           #:grant-info-priority
+           #:grant-info-preemptible
+           #:grant-info-acquired-at
+           #:hardware-info-gpus
+           #:hardware-info-cpu-model
+           #:hardware-info-cpu-cores
+           #:hardware-info-memory-total
+           #:hardware-info-memory-available))
 
 (defpackage :hngh.plugins
   (:documentation "Namespace for first-party plugin packages.
