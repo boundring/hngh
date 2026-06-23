@@ -5,7 +5,7 @@
 ## Current Status
 
 **Milestone 0 complete** — all 11 sessions done (0A, 0B, M0.1–M0.10)
-**Last session**: M0.10 (end-to-end integration, commit b89abc7, 2026-06-22) + Quicklisp setup
+**Last session**: M0 critical review + fixes (commit e4fd116, 2026-06-23) + Quicklisp setup
 **Test count**: 78 unit + 18 integration = 96 total, all passing
 
 ## Up Next
@@ -55,22 +55,26 @@ M1 sessions will be planned in detail when we start M1 work.
 - **Scheduler actions**: Function objects, not quoted forms (D-009)
 - **Threat detection**: Procedural-first (L1/L3 in-image), LLM-strategic (L2/L4 plugin)
 - **Privilege**: Split daemon — user daemon (CL) + system daemon (C, root, stateless)
-- **TUI**: Raw ANSI escape codes (no external TUI dep yet)
-- **dbus**: gdbus subprocess (cl-dbus can now be installed via Quicklisp when needed)
+- **TUI**: Raw ANSI escape codes (defparameter, not defconstant — SBCL EQL issue)
+- **dbus**: cl-ppcre parsing implemented; cl-dbus can replace gdbus subprocess when available
 - **Test harness**: Custom (D-005, FiveAM migration now possible — FiveAM installed)
+- **Thread safety**: bordeaux-threads mutexes on all shared state (event-bus, scheduler, supervisor, TUI)
+- **READ safety**: *read-eval* bound to nil for all untrusted file reads
+- **Startup**: *running* set after all components initialized; unwind-protect rolls back on failure
 - **License**: AGPL-3.0-or-later
 
 ## Environment (ready for M1)
 
 - **SBCL**: 2.6.5 (via pacman, CachyOS)
 - **Quicklisp**: installed at `~/quicklisp/`, dist 2026-01-01, auto-loaded via `~/.sbclrc`
-- **CL packages installed** (via pacman, ASDF-visible, ql:quickload-compatible):
-  - `bordeaux-threads` — threading (used by scheduler, event bus)
+- **CL packages installed** (via pacman + Quicklisp):
+  - `bordeaux-threads` — mutexes (now used for all shared state)
   - `cffi` — foreign function interface (for C interop, GPU libs)
   - `cl-json` — JSON parsing (for AI tool hub, config)
-  - `cl-ppcre` — regex (for dbus signal parsing, package name validation)
+  - `cl-ppcre` — regex (now used for dbus signal parsing)
   - `alexandria` — utilities (general purpose)
   - `fiveam` — test framework (migration from custom harness now possible)
+- **ASDF dependencies**: :bordeaux-threads, :cl-ppcre
 - **Available via Quicklisp when needed**: cl-dbus, cl-charms, cl-sqlite, cl-yaml
 
 ## Repository
