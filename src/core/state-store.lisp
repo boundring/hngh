@@ -65,7 +65,8 @@ Returns NIL if the file doesn't exist."
   (let ((path (state-path relative-path)))
     (when (probe-file path)
       (with-open-file (stream path :direction :input :element-type 'character)
-        (read stream nil nil)))))
+        (let ((*read-eval* nil))
+          (read stream nil nil))))))
 
 (defun read-state-string (relative-path)
   "Read raw string content from RELATIVE-PATH.
@@ -143,9 +144,10 @@ Returns a list of Lisp forms."
                           *hngh-home*)))
     (when (probe-file journal-path)
       (with-open-file (stream journal-path :direction :input)
-        (loop for form = (read stream nil nil)
-              while form
-              collect form)))))
+        (let ((*read-eval* nil))
+          (loop for form = (read stream nil nil)
+                while form
+                collect form))))))
 
 ;;; --- Cross-plugin locks (file-based with TTL) ---
 ;;;
@@ -163,9 +165,10 @@ Returns a list of Lisp forms."
   "Read a lock file. Returns (holder acquired-time ttl) or NIL."
   (when (probe-file path)
     (with-open-file (stream path :direction :input)
-      (let ((form (read stream nil nil)))
-        (when (and (listp form) (= (length form) 3))
-          form)))))
+      (let ((*read-eval* nil))
+        (let ((form (read stream nil nil)))
+          (when (and (listp form) (= (length form) 3))
+            form))))))
 
 (defun lock-valid-p (resource-id)
   "Return T if RESOURCE-ID has a valid (non-expired) lock."
@@ -183,21 +186,31 @@ TTL: time-to-live in seconds (default: 300 = 5 minutes)
 Returns T if acquired, NIL if already locked by someone else.
 If the existing lock is expired, it is automatically reclaimed."
   (let ((path (lock-file-path resource-id)))
-    ;; Check if a valid lock exists
-    (when (lock-valid-p resource-id)
-      (let ((existing (read-lock-file path)))
-        (when existing
-          (destructuring-bind (existing-holder acquired ttl) existing
-            (declare (ignore acquired ttl))
-            ;; If we already hold it, renew it
-            (when (string= existing-holder holder)
-              (write-lock-file path holder ttl)
-              (return-from acquire-lock t))
-            ;; Someone else holds it
-            (return-from acquire-lock nil)))))
-    ;; No valid lock — acquire it
-    (write-lock-file path holder ttl)
-    t))
+    (cond
+      ;; If we already hold a valid lock, renew it
+      ((and (lock-valid-p resource-id)
+            (string= (first (read-lock-file path)) holder))
+       (write-lock-file path holder ttl)
+       t)
+      ;; If someone else holds a valid lock, fail
+      ((lock-valid-p resource-id)
+       nil)
+      ;; No valid lock — delete stale file if present, then try atomic creation
+      (t
+       (ensure-directories-exist path)
+       (when (probe-file path)
+         (ignore-errors (delete-file path)))
+       (handler-case
+           (with-open-file (stream path :direction :output
+                                     :if-exists nil
+                                     :if-does-not-exist :create)
+             (if stream
+                 (progn
+                   (let ((*print-case* :downcase))
+                     (format stream "(~S ~D ~D)~%" holder (get-universal-time) ttl))
+                   t)
+                 nil))
+         (error () nil))))))
 
 (defun write-lock-file (path holder ttl)
   "Write a lock file."

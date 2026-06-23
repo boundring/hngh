@@ -9,15 +9,15 @@
   :license "AGPL-3.0-or-later"
   :author "boundring <boundring@gmail.com>"
   :depends-on (;; Core dependencies
-                ;; Event bus, state store, plugin host don't need external deps yet.
-                ;; These will be added as components are implemented:
-                ;;   :sqlite      — for State Store locks (M0.3)
-                ;;   :cl-dbus     — for dbus Bridge (M0.7)
-                ;;   :cl-yaml     — for plugin manifests (M0.4)
-                ;;   :cl-charms   — for Dashboard TUI (M0.8)
-                ;;   :bordeaux-threads — for Supervisor concurrency (M0.5)
-                ;; For now, no external dependencies — pure SBCL.
-                )
+               ;; Now available via pacman + Quicklisp:
+               :bordeaux-threads  ; mutexes for thread-safe shared state
+               :cl-ppcre          ; regex for dbus signal parsing
+               ;; Future dependencies (available via Quicklisp when needed):
+               ;;   :cl-json      — for AI tool hub (M1.6)
+               ;;   :cl-dbus      — for dbus Bridge upgrade
+               ;;   :cl-charms    — for Dashboard TUI upgrade
+               ;;   :sqlite       — for State Store locks (M1+)
+               )
   :pathname "src/"
   :serial t
   :components ((:file "packages")
@@ -28,6 +28,7 @@
                (:file "core/plugin-host")
                (:file "core/supervisor")
                (:file "core/scheduler")
+               (:file "core/threat-detection")
                (:file "core/main")
                ;; First-party plugins:
                (:file "plugins/dbus-bridge")

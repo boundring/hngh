@@ -17,6 +17,9 @@
 (defvar *schedules* (make-hash-table :test 'eq)
   "Registry of schedules. Key: schedule ID (integer), value: schedule-info.")
 
+(defvar *schedules-lock* (bt:make-lock "hngh-scheduler")
+  "Mutex protecting *schedules* and *next-schedule-id*.")
+
 (defvar *next-schedule-id* 0
   "Counter for schedule IDs.")
 
@@ -62,10 +65,10 @@
   (setf *scheduler-running* nil)
   #+sbcl
   (when (and *scheduler-thread* (sb-thread:thread-alive-p *scheduler-thread*))
-    ;; Thread will notice *scheduler-running* is nil and exit
     (sb-thread:join-thread *scheduler-thread* :timeout 5))
-  (setf *schedules* nil
-        *scheduler-thread* nil)
+  (bt:with-lock-held (*schedules-lock*)
+    (clrhash *schedules*))
+  (setf *scheduler-thread* nil)
   (hngh.core:log-info "Scheduler shut down"))
 
 (defun running-p ()
@@ -89,7 +92,8 @@ Returns the schedule ID."
   (unless *scheduler-running*
     (error "Scheduler not initialized"))
   (destructuring-bind (spec-type &rest spec-args) spec
-    (let* ((id (incf *next-schedule-id*))
+    (let* ((id (bt:with-lock-held (*schedules-lock*)
+                 (incf *next-schedule-id*)))
            (now (get-universal-time))
            (info (make-schedule-info
                    :id id
@@ -112,25 +116,28 @@ Returns the schedule ID."
                    :active-p t
                    :fire-count 0
                    :created-at now)))
-      (setf (gethash id *schedules*) info)
+      (bt:with-lock-held (*schedules-lock*)
+        (setf (gethash id *schedules*) info))
       (hngh.core:log-debug "Scheduled ~A (type: ~A, next-fire: ~D)" name spec-type
                            (schedule-info-next-fire info))
       id)))
 
 (defun cancel (schedule-id)
   "Cancel a schedule by ID. Returns T if cancelled, NIL if not found."
-  (let ((info (gethash schedule-id *schedules*)))
-    (when info
-      (setf (schedule-info-active-p info) nil)
-      (remhash schedule-id *schedules*)
-      (hngh.core:log-debug "Cancelled schedule ~A" (schedule-info-name info))
-      t)))
+  (bt:with-lock-held (*schedules-lock*)
+    (let ((info (gethash schedule-id *schedules*)))
+      (when info
+        (setf (schedule-info-active-p info) nil)
+        (remhash schedule-id *schedules*)
+        (hngh.core:log-debug "Cancelled schedule ~A" (schedule-info-name info))
+        t))))
 
 (defun list-schedules ()
   "Return a list of all active schedule-info structs."
-  (loop for info being the hash-values of *schedules*
-        when (schedule-info-active-p info)
-        collect info))
+  (bt:with-lock-held (*schedules-lock*)
+    (loop for info being the hash-values of *schedules*
+          when (schedule-info-active-p info)
+          collect info)))
 
 ;;; --- Scheduler loop ---
 
@@ -150,17 +157,20 @@ Checks for due schedules every second and fires them."
 
 (defun check-and-fire ()
   "Check all schedules and fire any that are due."
-  (let ((now (get-universal-time)))
-    (loop for info being the hash-values of *schedules*
-          when (and (schedule-info-active-p info)
-                    (<= (schedule-info-next-fire info) now))
-          do (fire-schedule info now))))
+  (let ((now (get-universal-time))
+        (due nil))
+    (bt:with-lock-held (*schedules-lock*)
+      (loop for info being the hash-values of *schedules*
+            when (and (schedule-info-active-p info)
+                      (<= (schedule-info-next-fire info) now))
+            do (push info due)))
+    (dolist (info due)
+      (fire-schedule info now))))
 
 (defun fire-schedule (info now)
   "Fire a single schedule. Updates next-fire for repeating schedules."
   (hngh.core:log-debug "Firing schedule ~A" (schedule-info-name info))
   (incf (schedule-info-fire-count info))
-  ;; Execute the action
   (handler-case
       (case (schedule-info-action-type info)
         (:event
@@ -175,13 +185,10 @@ Checks for due schedules every second and fires them."
     (error (c)
       (hngh.core:log-warn "Schedule ~A fire error: ~A"
                           (schedule-info-name info) c)))
-  ;; Update next-fire or deactivate
   (if (schedule-info-repeat-p info)
-      ;; Repeating schedule: calculate next fire
       (setf (schedule-info-next-fire info)
             (+ now (schedule-info-interval info)))
-      ;; One-shot: deactivate
-      (progn
+      (bt:with-lock-held (*schedules-lock*)
         (setf (schedule-info-active-p info) nil)
         (remhash (schedule-info-id info) *schedules*))))
 

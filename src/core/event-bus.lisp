@@ -47,6 +47,9 @@
 (defvar *event-bus* nil
   "The current event bus instance (bound during START).")
 
+(defvar *bus-lock* (bt:make-lock "hngh-event-bus")
+  "Mutex protecting *event-bus*, *next-event-id*, *next-subscription-id*.")
+
 (defvar *next-event-id* 0
   "Counter for event IDs (monotonically increasing).")
 
@@ -154,22 +157,23 @@ If the date has changed, close the old file and open a new one."
 Returns a list of event structs."
   (when (probe-file path)
     (with-open-file (stream path :direction :input)
-      (loop for form = (read stream nil nil)
-            while form
-            when (and (listp form)
-                      (let ((tag (first form)))
-                        (or (eq tag 'event)
-                            (eq tag 'hngh.core.event-bus:event)
-                            (string= (string tag) "EVENT"))))
-            collect (let ((plist (rest form)))
-                      (make-event :id (getf plist :id)
-                                  :topic (getf plist :topic)
-                                  :payload (getf plist :payload)
-                                  :timestamp (getf plist :timestamp)
-                                  :source (getf plist :source)))
-            into events
-            finally (return (remove-if (lambda (e) (<= (event-id e) after-id))
-                                        events))))))
+      (let ((*read-eval* nil))
+        (loop for form = (read stream nil nil)
+              while form
+              when (and (listp form)
+                        (let ((tag (first form)))
+                          (or (eq tag 'event)
+                              (eq tag 'hngh.core.event-bus:event)
+                              (string= (string tag) "EVENT"))))
+              collect (let ((plist (rest form)))
+                        (make-event :id (getf plist :id)
+                                    :topic (getf plist :topic)
+                                    :payload (getf plist :payload)
+                                    :timestamp (getf plist :timestamp)
+                                    :source (getf plist :source)))
+              into events
+              finally (return (remove-if (lambda (e) (<= (event-id e) after-id))
+                                         events)))))))
 
 ;;; --- Bus lifecycle ---
 
@@ -203,24 +207,29 @@ Closes the journal, clears subscriptions."
 The event is journaled and delivered to all matching subscribers."
   (unless *event-bus*
     (error "Event bus not initialized — call EVENT-BUS:INIT first"))
-  (let ((evt (make-event :id (incf *next-event-id*)
-                         :topic topic
-                         :payload payload
-                         :timestamp (get-universal-time)
-                         :source source)))
-    ;; Journal the event
+  (let (evt)
+    (bt:with-lock-held (*bus-lock*)
+      (setf evt (make-event :id (incf *next-event-id*)
+                            :topic topic
+                            :payload payload
+                            :timestamp (get-universal-time)
+                            :source source)))
     (journal-event evt)
-    ;; Deliver to subscribers
     (deliver-event evt)
     evt))
 
 (defun deliver-event (event)
   "Deliver EVENT to all matching subscriptions."
-  (loop for sub being the hash-values of *event-bus*
-        when (and (subscription-active-p sub)
-                  (topic-match-p (subscription-topic-pattern sub)
-                                 (event-topic event)))
-        do (deliver-to-subscription sub event)))
+  (let ((subs nil))
+    (bt:with-lock-held (*bus-lock*)
+      (when *event-bus*
+        (loop for sub being the hash-values of *event-bus*
+              when (and (subscription-active-p sub)
+                        (topic-match-p (subscription-topic-pattern sub)
+                                       (event-topic event)))
+              do (push sub subs))))
+    (dolist (sub subs)
+      (deliver-to-subscription sub event))))
 
 (defun deliver-to-subscription (sub event)
   "Deliver EVENT to a single subscription SUB.
@@ -240,10 +249,10 @@ Applies filter, backpressure, and persistent tracking."
     (setf (subscription-last-event-id sub) (event-id event))))
 
 (defun subscribe (topic-pattern callback &key
-                  (filter nil)
-                  (persistent nil)
-                  (queue-max 1000)
-                  (drop-policy :block))
+                   (filter nil)
+                   (persistent nil)
+                   (queue-max 1000)
+                   (drop-policy :block))
   "Subscribe to TOPIC-PATTERN with CALLBACK.
 Returns a subscription ID that can be used with UNSUBSCRIBE.
 
@@ -255,26 +264,28 @@ QUEUE-MAX: max queued events before backpressure applies
 DROP-POLICY: :block (default), :drop, or :queue"
   (unless *event-bus*
     (error "Event bus not initialized"))
-  (let ((sub (make-subscription :id (incf *next-subscription-id*)
-                                  :topic-pattern topic-pattern
-                                  :callback callback
-                                  :filter filter
-                                  :persistent-p persistent
-                                  :last-event-id *next-event-id*
-                                  :queue nil
-                                  :queue-max queue-max
-                                  :drop-policy drop-policy
-                                  :active-p t)))
-    (setf (gethash (subscription-id sub) *event-bus*) sub)
-    ;; If persistent, replay missed events from journal
+  (let ((sub (bt:with-lock-held (*bus-lock*)
+               (make-subscription :id (incf *next-subscription-id*)
+                                   :topic-pattern topic-pattern
+                                   :callback callback
+                                   :filter filter
+                                   :persistent-p persistent
+                                   :last-event-id *next-event-id*
+                                   :queue nil
+                                   :queue-max queue-max
+                                   :drop-policy drop-policy
+                                   :active-p t))))
+    (bt:with-lock-held (*bus-lock*)
+      (setf (gethash (subscription-id sub) *event-bus*) sub))
     (when persistent
       (replay-missed-events sub))
     (subscription-id sub)))
 
 (defun unsubscribe (subscription-id)
   "Remove a subscription by ID."
-  (when *event-bus*
-    (remhash subscription-id *event-bus*)))
+  (bt:with-lock-held (*bus-lock*)
+    (when *event-bus*
+      (remhash subscription-id *event-bus*))))
 
 (defun replay-missed-events (sub)
   "Replay events from the journal that the subscription missed.
@@ -298,11 +309,13 @@ Called on subscribe for persistent subscriptions."
 
 (defun list-subscriptions ()
   "Return a list of all active subscriptions."
-  (when *event-bus*
-    (loop for sub being the hash-values of *event-bus*
-          collect sub)))
+  (bt:with-lock-held (*bus-lock*)
+    (when *event-bus*
+      (loop for sub being the hash-values of *event-bus*
+            collect sub))))
 
 (defun clear-all-subscriptions ()
   "Remove all subscriptions (used during shutdown)."
-  (when *event-bus*
-    (clrhash *event-bus*)))
+  (bt:with-lock-held (*bus-lock*)
+    (when *event-bus*
+      (clrhash *event-bus*))))

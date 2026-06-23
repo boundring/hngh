@@ -34,9 +34,10 @@
     (hngh.core:log-debug "Loading config from ~A" (namestring path))
     (handler-case
         (with-open-file (stream path :direction :input)
-          (let ((form (read stream nil nil)))
-            (when (and (listp form) (evenp (length form)))
-              form)))
+          (let ((*read-eval* nil))
+            (let ((form (read stream nil nil)))
+              (when (and (listp form) (evenp (length form)))
+                form))))
       (error (c)
         (hngh.core:log-warn "Failed to load config from ~A: ~A"
                             (namestring path) c)

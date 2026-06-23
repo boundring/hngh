@@ -124,11 +124,9 @@ All core component implementations live in sub-packages of hngh.core.")
            #:unregister
            #:check-health
            #:check-all-health
-           #:report-failure
-           #:report-success
-           #:restart-component
-           #:suspend
-           #:get-status
+            #:report-failure
+            #:report-success
+            #:get-status
            #:list-components
            #:component-count
            #:component-info

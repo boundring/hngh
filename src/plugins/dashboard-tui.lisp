@@ -22,6 +22,9 @@
 (defvar *event-buffer* '()
   "Recent events for the event feed (newest first, max 100).")
 
+(defvar *buffer-lock* (bt:make-lock "hngh-tui-buffer")
+  "Mutex protecting *event-buffer*.")
+
 (defvar *event-subscription* nil
   "Subscription ID for the wildcard event subscription.")
 
@@ -33,16 +36,16 @@
 
 ;;; --- ANSI escape codes ---
 
-(defconstant +ansi-clear+ #.(coerce #( #\Esc #\[ #\2 #\J) 'string))
-(defconstant +ansi-home+ #.(coerce #( #\Esc #\[ #\H) 'string))
-(defconstant +ansi-clear-line+ #.(coerce #( #\Esc #\[ #\2 #\K) 'string))
-(defconstant +ansi-bold+ #.(coerce #( #\Esc #\[ #\1 #\m) 'string))
-(defconstant +ansi-dim+ #.(coerce #( #\Esc #\[ #\2 #\m) 'string))
-(defconstant +ansi-green+ #.(coerce #( #\Esc #\[ #\3 #\2 #\m) 'string))
-(defconstant +ansi-yellow+ #.(coerce #( #\Esc #\[ #\3 #\3 #\m) 'string))
-(defconstant +ansi-red+ #.(coerce #( #\Esc #\[ #\3 #\1 #\m) 'string))
-(defconstant +ansi-cyan+ #.(coerce #( #\Esc #\[ #\3 #\6 #\m) 'string))
-(defconstant +ansi-reset+ #.(coerce #( #\Esc #\[ #\0 #\m) 'string))
+(defparameter +ansi-clear+ (coerce '(#\Esc #\[ #\2 #\J) 'string))
+(defparameter +ansi-home+ (coerce '(#\Esc #\[ #\H) 'string))
+(defparameter +ansi-clear-line+ (coerce '(#\Esc #\[ #\2 #\K) 'string))
+(defparameter +ansi-bold+ (coerce '(#\Esc #\[ #\1 #\m) 'string))
+(defparameter +ansi-dim+ (coerce '(#\Esc #\[ #\2 #\m) 'string))
+(defparameter +ansi-green+ (coerce '(#\Esc #\[ #\3 #\2 #\m) 'string))
+(defparameter +ansi-yellow+ (coerce '(#\Esc #\[ #\3 #\3 #\m) 'string))
+(defparameter +ansi-red+ (coerce '(#\Esc #\[ #\3 #\1 #\m) 'string))
+(defparameter +ansi-cyan+ (coerce '(#\Esc #\[ #\3 #\6 #\m) 'string))
+(defparameter +ansi-reset+ (coerce '(#\Esc #\[ #\0 #\m) 'string))
 
 (defun ansi (code)
   "Output an ANSI escape code to *standard-output*."
@@ -68,9 +71,10 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
     (setf *event-subscription*
           (hngh.core.event-bus:subscribe "*"
             (lambda (evt)
-              (push evt *event-buffer*)
-              (when (> (length *event-buffer*) 100)
-                (setf *event-buffer* (subseq *event-buffer* 0 100)))))))
+              (bt:with-lock-held (*buffer-lock*)
+                (push evt *event-buffer*)
+                (when (> (length *event-buffer*) 100)
+                  (setf *event-buffer* (subseq *event-buffer* 0 100))))))))
   ;; Start input thread (only in interactive mode)
   (unless headless
     #+sbcl
@@ -164,7 +168,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
   (format t "~%")
   ;; Recent events (last 5)
   (format t "~ARecent Events:~A~%" +ansi-bold+ +ansi-reset+)
-  (let ((events (subseq *event-buffer* 0 (min 5 (length *event-buffer*)))))
+  (let ((events (bt:with-lock-held (*buffer-lock*)
+                  (subseq *event-buffer* 0 (min 5 (length *event-buffer*))))))
     (if events
         (dolist (evt events)
           (format t "  ~A~A~A ~A~%"
@@ -177,7 +182,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-events ()
   "Render the live event feed."
   (render-header "Events")
-  (let ((events (subseq *event-buffer* 0 (min 30 (length *event-buffer*)))))
+  (let ((events (bt:with-lock-held (*buffer-lock*)
+                  (subseq *event-buffer* 0 (min 30 (length *event-buffer*))))))
     (if events
         (dolist (evt events)
           (format t "  ~A~A~A ~A~A~A ~S~%"
