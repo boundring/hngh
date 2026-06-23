@@ -62,7 +62,17 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 ### D-012: System daemon needs _POSIX_C_SOURCE for C11
 **Context**: Compiling system daemon with `-std=c11` causes implicit declaration errors for popen, pclose, and chmod.
 **Decision**: Add `#define _POSIX_C_SOURCE 200809L` at the top of main.c before any includes.
-**Rationale**: C11 strict mode doesn't expose POSIX functions by default. The `_POSIX_C_SOURCE` define enables them. This is standard practice for C code using POSIX functions with strict C standards.
+**Rationale**: C11 strict mode doesn't expose POSIX functions by default. The `_POSIX_C_SOURCE` define enables them. This is standard practice for C code using POSIX functions with strict C standards. Also added `_DEFAULT_SOURCE` for `realpath()` availability (added during M0 critical review).
+
+### D-013: Migrate test suite to FiveAM
+**Context**: Custom test harness (D-005) has no setup/teardown hooks, no fixtures, no parameterized tests. Failed tests contaminate global state for subsequent tests. Scheduler tests use `sleep` (flaky). FiveAM is now installed via pacman.
+**Decision**: Migrate from custom harness to FiveAM as the first M1 session (M1.0a).
+**Rationale**: FiveAM provides `def-fixture` with `before-each`/`after-each` — solves state contamination. Better test isolation, proper failure reporting, and `fiveam:run!` for CI. The migration is mechanical (78 tests, same assertions, different macro names). M1 components (threat detection, resource manager, AI orchestrator) are more complex and need better test infrastructure than M0.
+
+### D-014: M1 batch reordering — secrets moved up, backup moved down
+**Context**: Original M1 batch plan had secrets manager (M1.11) in Batch 5, but AI tool hub (M1.6, Batch 3) needs API keys from the secrets manager. Backup manager (M1.10) was in Batch 5 but isn't a blocker for any other component.
+**Decision**: Move M1.11 (secrets) to Batch 2 (before AI infrastructure). Move M1.10 (backup) to Batch 5 (polish). Merge old Batches 5+6 into a single Batch 5.
+**Rationale**: Secrets manager must exist before AI tool hub can retrieve API keys for cloud providers. Backup manager is needed before packaging (M1.14) but doesn't block any feature development. Reordering eliminates a dependency gap that would have caused integration problems in Batch 3.
 
 ### D-009: Scheduler action functions passed as objects
 **Context**: Scheduler actions can be (:event topic payload) or (:function fn). Initially tried passing quoted lambda forms and eval-ing them.

@@ -217,12 +217,12 @@ graph TD
 
 ### A3. State Store
 
-**Purpose**: Canonical source of truth for all persisted Hngh state. Hybrid file tree + one SQLite for locks.
+**Purpose**: Canonical source of truth for all persisted Hngh state. Hybrid file tree + file-based locks for cross-plugin coordination.
 
 **Inputs**:
 - `fn:read(path:StatePath) -> Value` — read from the file tree
 - `fn:write(path:StatePath, value:Value) -> ok` — write (triggers `config.*` or `state.*` event)
-- `fn:lock(resource:ResourceID, ttl:Duration) -> LockID` — acquire cross-plugin lock (SQLite)
+- `fn:lock(resource:ResourceID, ttl:Duration) -> LockID` — acquire cross-plugin lock (file-based, atomic creation)
 - `fn:release(lockID:LockID) -> ok`
 - `fn:append(journal:JournalID, event:Event) -> ok` — append to journal (append-only, no rewrite)
 - `fn:snapshot() -> TreeHash` — hash the whole state tree (for backup integrity)
@@ -238,7 +238,7 @@ graph TD
 ```
 ~/.hngh/
   state/
-    locks.db                  # SQLite, cross-plugin transactional locks (only opaque store)
+    locks/                    # file-based locks (one file per resource, with holder + TTL)
     hardware.lisp             # discovered hardware inventory (audited at startup)
     plugins.lisp              # plugin registry
   journal/
@@ -255,23 +255,23 @@ graph TD
   backups/                   # backup metadata, not the backups themselves
   plugins/
     <name>/state/            # plugin-owned state, plugin-defined format
-    <name>/manifest.yaml
-    <name>/review-verdict.yaml   # for AI-generated
+    <name>/manifest.lisp
+    <name>/review-verdict.lisp   # for AI-generated
     <name>/code/             # plugin source (CL system or Python module or WASM)
 ```
 
 **Owned State**:
 - The entire `~/.hngh/` tree is the owned state (except `plugins/*/code/` which is owned by Backup Manager for versioning, and `agents/*/transcript.lisp` which is owned by AI Orchestrator).
-- SQLite `locks.db` schema: `(resource_id TEXT, holder TEXT, acquired_at INT, ttl INT)`.
+- File-based lock format: each lock is a file in `state/locks/<resource-id>.lock` containing `(holder acquired-time ttl)`. Atomic creation via `:if-exists nil` prevents TOCTOU races (D-007).
 
 **Failure Modes**:
 - File write fails (disk full, permissions) → return error to caller; caller decides (most plugins retry or notify user).
-- SQLite lock acquisition fails (resource already locked) → return `LockError`; caller can wait or fail.
-- Corruption (file or SQLite) → State Store detects on next read; triggers `event:StateCorrupted(path)` → Backup Manager offers restore from last good snapshot.
+- File lock acquisition fails (resource already locked) → return `LockError`; caller can wait or fail.
+- Corruption (file or lock) → State Store detects on next read; triggers `event:StateCorrupted(path)` → Backup Manager offers restore from last good snapshot.
 - Migration fails → State Store rolls back to pre-migration state; Hngh refuses to start with clear error.
 
 **Lifecycle**:
-- Startup: read `state/hardware.lisp` (or trigger audit if missing); open `locks.db`; replay any pending persistent subscriptions from `journal/events/`.
+- Startup: read `state/hardware.lisp` (or trigger audit if missing); initialize lock directory; replay any pending persistent subscriptions from `journal/events/`.
 - Runtime: serve reads/writes/locks/appends.
 - Shutdown: flush pending writes; release all locks held by the image; fsync.
 
@@ -664,7 +664,7 @@ This is the defining pattern of the architecture: Hngh is a system harness that 
 **Outputs**:
 - `event:ReviewVerdict(plugin, verdict, layer:L2|L4)` → Plugin Host acts on L2, user notified on L4.
 - `event:ThreatAssessment(plugin, assessment:Benign|Suspicious|Malicious, reasoning)` → Dashboard + KB.
-- Writes verdict to `~/.hngh/plugins/<name>/review-verdict.yaml` (L2) or `state/plugin-observations/<name>/assessments.lisp` (L4).
+- Writes verdict to `~/.hngh/plugins/<name>/review-verdict.lisp` (L2) or `state/plugin-observations/<name>/assessments.lisp` (L4).
 - Writes learned patterns to KB (`knowledge-base/learned-patterns/threats/`).
 
 **API**:
@@ -758,7 +758,7 @@ This is the defining pattern of the architecture: Hngh is a system harness that 
 
 **Secrets Exclusion** (critical):
 - The `.gitignore` (or equivalent) of the Hngh tree excludes:
-  - `state/locks.db` (ephemeral)
+  - `state/locks/` (ephemeral)
   - `config/plugins/secrets-manager/*` (secrets manager config — the *manager* config, not the secrets themselves, but still sensitive)
   - `state/plugins/*/cache/` (caches)
   - Any path declared by Secrets Manager as a secret store
