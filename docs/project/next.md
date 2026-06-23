@@ -12,13 +12,18 @@
 
 **Milestone 1: The Harness (v0.1)** — 15 deliverables across 6 batches.
 
+### Batch 0: Foundation for M1
+- **M1.0a**: Migrate test suite to FiveAM (D-013) — fixtures, before-each/after-each, solve state contamination
+- **M1.0b**: Design spec sync — already done (SQLite→file-based locks, YAML→Lisp plist)
+
 ### Batch 1: Core Security + Resources
 - **M1.1**: Procedural threat detection (L1+L3) — static analysis, runtime observation
 - **M1.2**: Resource manager (A4) — VRAM/CPU arbitration, preemption, hardware audit
 
-### Batch 2: System Management
+### Batch 2: System Management + Secrets
 - **M1.3**: Package manager (B1) — pacman/yay/paru, breakage detection
 - **M1.4**: System config (B2) — /etc management, btrfs snapshots, theming
+- **M1.11**: Secrets manager (B8) — 1Password/KeePassXC/vault.age backends, policy (moved up — needed before M1.6)
 
 ### Batch 3: AI Infrastructure
 - **M1.5**: Model runtime manager (B4) — ollama, llama.cpp, unsloth, comfyUI
@@ -30,11 +35,8 @@
 - **M1.9**: Hnghbeats (B6) — event condensation, daily beats
 - **M1.12**: Knowledge base (B12) — article storage, keyword search, learned patterns
 
-### Batch 5: Backup + Secrets
+### Batch 5: Backup + Polish
 - **M1.10**: Backup manager (B7) — git versioning, remote sync, restore
-- **M1.11**: Secrets manager (B8) — 1Password/KeePassXC/vault.age, policy
-
-### Batch 6: Polish + Packaging
 - **M1.13**: KDE integration (B10) — theming, notifications (optional)
 - **M1.14**: PKGBUILD + split packages — all five packages, custom repo
 - **M1.15**: Integration tests — all 8 critical flows
@@ -42,7 +44,7 @@
 See `docs/project/roadmap.md` for full M1 deliverable list.
 See `docs/project/work-sessions.md` for detailed session plans.
 
-M1 sessions will be planned in detail when we start M1 work.
+M1 sessions are planned in detail in `docs/project/work-sessions.md`.
 
 ## Key Architecture Decisions (for context carry-forward)
 

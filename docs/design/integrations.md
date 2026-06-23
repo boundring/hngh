@@ -69,7 +69,7 @@ Hngh integrates with the OS via four substrates: systemd, dbus, pacman (libalpm)
 | **Agent transcripts** | `~/.hngh/agents/<id>/transcript.lisp` | AI Orchestrator (B3) | Git (append-only) | User-trust |
 | **Plugin state** | `~/.hngh/plugins/<name>/state/` | Each plugin | Git | User-trust |
 | **Cost log** | `~/.hngh/state/plugins/ai-tool-hub/costs.lisp` | AI Tool Hub (B11) | Git (append-only) | User-trust |
-| **Cross-plugin locks** | `~/.hngh/state/locks.db` (SQLite) | State Store (A3) | NOT versioned (ephemeral) | User-trust |
+| **Cross-plugin locks** | `~/.hngh/state/locks/` (file-based, one file per resource) | State Store (A3) | NOT versioned (ephemeral) | User-trust |
 | **Secrets** (API keys, passwords, SSH keys) | Password manager backend (1Password, KeePassXC) or `~/.hngh/secrets/vault.age` (age-encrypted) | Secrets Manager (B8) | NOT in git tree | Secured by backend |
 | **System config** (`/etc`, `/usr/lib/systemd/system/`) | Original locations on disk | System Config (B2) via System Daemon | Git-tracked copy in `~/.hngh/config/system/` (for diff/restore) | Root-trust for write; user-trust for tracking |
 
@@ -322,7 +322,7 @@ get-secret(name: SecretName, requester: PluginName) -> Secret | Denied
 
 **Git tree versioning**:
 - The `~/.hngh/` tree is a git repository (initialized by Backup Manager on first run).
-- `.gitignore` excludes: `state/locks.db`, `secrets/`, `plugins/*/cache/`, and any path declared by Secrets Manager.
+- `.gitignore` excludes: `state/locks/`, `secrets/`, `plugins/*/cache/`, and any path declared by Secrets Manager.
 - On every `config.changed` event, Backup Manager stages the affected file.
 - Periodic auto-commit (Scheduler fires every N minutes, configurable): stages all changes, commits with auto-generated message, emits `backup.committed`.
 
@@ -366,7 +366,7 @@ The review pipeline has a typed verdict schema that flows between L1, L2, and th
 - Dashboard shows: plugin diff, L1 findings, L2 verdict and reasoning, suggested fixes.
 - User chooses: `approve` (load with L3 observation), `approve-with-sandbox` (load sandboxed), `reject` (don't load; log to KB), `defer` (decide later).
 
-**Verdict storage**: L2 verdicts stored at `~/.hngh/plugins/<name>/review-verdict.yaml`. L4 assessments stored at `state/plugin-observations/<name>/assessments.lisp`. Both journaled to KB as learned patterns.
+**Verdict storage**: L2 verdicts stored at `~/.hngh/plugins/<name>/review-verdict.lisp`. L4 assessments stored at `state/plugin-observations/<name>/assessments.lisp`. Both journaled to KB as learned patterns.
 
 ---
 
@@ -754,9 +754,9 @@ When Opencode completes a task, its output (files changed, reasoning, test resul
 AI Orchestrator uses this to assemble the next tool's context package.
 
 ### 5.4 Concurrent Plugin State Access
-Multiple plugins may read/write the State Store concurrently. The SQLite locks DB handles cross-plugin transactional coordination, but the file-tree writes need a coordination story.
+Multiple plugins may read/write the State Store concurrently. File-based locks (in `state/locks/`) handle cross-plugin transactional coordination, with atomic creation to prevent races.
 
-**Recommendation**: State Store serializes writes to the same file (single-writer per path, enforced by SQLite lock). Reads are concurrent (no lock needed). Plugins declare which paths they write in their manifest; State Store enforces the lock.
+**Recommendation**: State Store serializes writes to the same file (single-writer per path, enforced by file lock). Reads are concurrent (no lock needed). Plugins declare which paths they write in their manifest; State Store enforces the lock.
 
 ### 5.5 Tool Versioning and Compatibility
 Agentic CLIs update frequently (Opencode, OMC, Pi, Cecli all have regular releases). An update may change the tool's event schema, breaking Hngh's capture.

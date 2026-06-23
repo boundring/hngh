@@ -81,7 +81,7 @@ Eleven architectural decisions are locked. Full rationale in `architecture-decis
 | D6 | Distribution | Split AUR packages; package-manager-mediated self-update |
 | D7 | Extensibility | Declarative manifest, tiered trust, CL/Python/WASM, hot-reload for CL |
 | D8 | Architecture pattern | Image + Bus + Supervisor |
-| D9 | State authority | Hybrid file tree (git-versioned) + one SQLite for cross-plugin locks |
+| D9 | State authority | Hybrid file tree (git-versioned) + file-based locks for cross-plugin coordination |
 | D10 | Event bus | Custom internal bus + dbus bridge plugin |
 | D11 | CL plugin isolation | Package-level (own package, explicit imports, locked core) |
 
@@ -107,7 +107,7 @@ The default is the agentic CLI. Direct API is the exception, not the baseline. H
 |---|---|---|
 | A1 | Plugin Host | Load, unload, reload plugins (CL, Python, WASM) |
 | A2 | Event Bus | Pub/sub nervous system for all intra-Hngh communication |
-| A3 | State Store | Canonical source of truth — hybrid file tree + SQLite locks |
+| A3 | State Store | Canonical source of truth — hybrid file tree + file-based locks |
 | A4 | Resource Manager | Arbitrate GPU/VRAM, CPU, memory among requestors |
 | A5 | Scheduler | Time-based triggers — timers, cron-like, systemd timer integration |
 | A6 | Supervisor | Lifecycle management — restart policies, health checks, escalation |
@@ -199,7 +199,7 @@ graph TD
 ```
 ~/.hngh/
   state/
-    locks.db                  # SQLite — cross-plugin locks (only opaque store)
+    locks/                    # file-based locks (one file per resource, with holder + TTL)
     hardware.lisp             # hardware inventory (audited at startup)
     plugins.lisp              # plugin registry
     components.lisp           # supervisor component registry
@@ -226,8 +226,8 @@ graph TD
     state.lisp                # current state, context summary, pending handoffs
   plugins/
     <name>/
-      manifest.yaml           # declarative plugin manifest
-      review-verdict.yaml     # for AI-generated (L2 verdict)
+      manifest.lisp           # declarative plugin manifest (Lisp plist format, D-008)
+      review-verdict.lisp    # for AI-generated (L2 verdict)
       code/                   # plugin source (CL system, Python module, or WASM)
       state/                  # plugin-owned state
   secrets/
@@ -246,7 +246,7 @@ graph TD
 | Agent transcripts | AI Orchestrator (B3) | Yes (append-only files) | Git |
 | Plugin state | Each plugin | Yes (plugin-defined format) | Git |
 | Cost log | AI Tool Hub (B11) | Yes (append-only file) | Git |
-| Cross-plugin locks | State Store | Yes (SQLite) | No (ephemeral) |
+| Cross-plugin locks | State Store | Yes (file-based) | No (ephemeral) |
 | Hardware inventory | Resource Manager (A4) | Yes (file) | Git (reference) |
 | Secrets | Secrets Manager (B8) | Yes (backend or vault.age) | NOT in git tree |
 | Runtime state (active agents, allocations, subscriptions) | Respective components | No (in-memory) | N/A (rebuilt on restart) |
@@ -256,7 +256,7 @@ graph TD
 The git-versioned tree (`~/.hngh/`) NEVER contains secrets. This is enforced at three levels:
 
 1. **Convention**: secrets live in password manager backends or `~/.hngh/secrets/vault.age` (age-encrypted, excluded from git).
-2. **Backup Manager enforcement**: `.gitignore` excludes `secrets/`, `state/locks.db`, caches. Secrets Manager declares additional sensitive paths; Backup Manager respects them.
+2. **Backup Manager enforcement**: `.gitignore` excludes `secrets/`, `state/locks/`, caches. Secrets Manager declares additional sensitive paths; Backup Manager respects them.
 3. **State Store enforcement**: writes to declared secret paths are routed to Secrets Manager, not the file tree.
 
 Secrets are retrieved at runtime via the Secrets Access Protocol (policy-checked, backend-retrieved, audit-logged, never cached). Unauthorized access attempts trigger L3 threat flags.
@@ -376,44 +376,43 @@ Even if you distrust every AI component, the system is still useful, just less a
 
 ### 8.1 Plugin Manifest
 
-Declarative, parsed by L1 before any code loads:
+Declarative, parsed by L1 before any code loads. Uses Lisp plist format (D-008 — natively parseable with `READ`, no external dependency):
 
-```yaml
-name: my-plugin
-version: 0.1.0
-author: user
-trust-tier: ai-generated   # first-party | signed-community | user | ai-generated
-language: cl               # cl | python | wasm
+```lisp
+(:name "my-plugin"
+ :version "0.1.0"
+ :author "user"
+ :trust-tier :ai-generated   ; first-party | signed-community | user | ai-generated
+ :language :cl               ; cl | python | wasm
 
-capabilities:
-  filesystem:
-    read:  [/etc/pacman.d, ~/.config/hngh]
-    write: [~/.config/hngh/my-plugin]
-  network:
-    hosts: [api.github.com, registry.hngh.dev]
-  subprocess:
-    allowed: [pacman, git, systemctl --user]
-  dbus:
-    system: [org.hngh.System]
-    session: [org.kde.plasma.*]
-  ai:
-    spawn-subagents: true
-    query-models: [local-small, cloud-claude]
-  knowledge-base:
-    read: true
-    write: false
-  secrets:
-    read: [git-ssh-key]    # authorized via Secrets Manager policy
+ :capabilities
+ (:filesystem
+  (:read  ("/etc/pacman.d/" "~/.config/hngh/")
+   :write ("~/.config/hngh/my-plugin/"))
+  :network
+  (:hosts ("api.github.com" "registry.hngh.dev"))
+  :subprocess
+  (:allowed ("pacman" "git" "systemctl --user"))
+  :dbus
+  (:system ("org.hngh.System")
+   :session ("org.kde.plasma.*"))
+  :ai
+  (:spawn-subagents t
+   :query-models (:local-small :cloud-claude))
+  :knowledge-base
+  (:read t :write nil)
+  :secrets
+  (:read ("git-ssh-key")))   ; authorized via Secrets Manager policy
 
-review:                       # populated for ai-generated tier
-  source: ai-generated
-  generator: opencode
-  prompt-hash: sha256:...
+ :review                      ; populated for ai-generated tier
+ (:source "ai-generated"
+  :generator "opencode"
+  :prompt-hash "sha256:...")
 
-lifecycle:
-  load: hngh.my-plugin:init
-  unload: hngh.my-plugin:cleanup
-  reload: hngh.my-plugin:reload
+ :lifecycle
+ (:load "hngh.my-plugin:init"
+  :unload "hngh.my-plugin:cleanup"
+  :reload "hngh.my-plugin:reload"))
 ```
 
 ### 8.2 Plugin Languages
@@ -516,7 +515,7 @@ The PKGBUILD declares hard deps and `optdepends` for everything else. Hngh disco
 |---|---|
 | SBCL image skeleton | Core image process, package structure |
 | Event bus (A2) | Internal pub/sub, in-process delivery |
-| State store (A3) | File tree read/write, SQLite locks, journal append |
+| State store (A3) | File tree read/write, file-based locks, journal append |
 | Plugin host (A1) | CL plugin loading, manifest parsing, package-level isolation |
 | Supervisor (A6) | Restart policies, health checks |
 | Scheduler (A5) | Timers, basic scheduling |
@@ -596,7 +595,7 @@ The PKGBUILD declares hard deps and `optdepends` for everything else. Hngh disco
 | **Threat detection false positives** — L3 rules engine may flag benign behavior | Medium | Low | User can dismiss flags; L4 LLM review provides semantic judgment; flags feed back to improve rules |
 | **GPU resource contention** — user workloads (comfyUI, gaming) vs. Hngh model loading | High | Medium | Resource Manager preempts Hngh grants for user-interactive workloads; Hngh models unload on pressure |
 | **pacman hook observation** — no clean dbus interface for pacman transactions | Medium | Low | File watch on `pacman.log` for v0.1; custom libalpm hook for v0.2 if needed |
-| **Concurrent state access** — multiple plugins writing to State Store | Medium | Medium | SQLite locks for cross-plugin coordination; per-path single-writer enforced by State Store |
+| **Concurrent state access** — multiple plugins writing to State Store | Medium | Medium | File-based locks for cross-plugin coordination; per-path single-writer enforced by State Store |
 | **Large context packages** — assembled context may exceed tool input limits | Medium | Medium | KB compaction summarizes older context; AI Orchestrator splits tasks if too large |
 
 ### 11.2 Design Risks
@@ -613,7 +612,7 @@ The PKGBUILD declares hard deps and `optdepends` for everything else. Hngh disco
 
 | Question | Target Resolution |
 |---|---|
-| Exact plugin manifest schema (YAML vs. Lisp data) | Milestone 0 (prototype both, pick based on ergonomics) |
+| ~~Exact plugin manifest schema (YAML vs. Lisp data)~~ | **Resolved (D-008)**: Lisp plist format — natively parseable, no external dependency |
 | Event bus delivery guarantees (at-least-once confirmed; exactly-once needed?) | Milestone 0 (test with real workloads) |
 | Tool result normalization schema (`ToolResult` struct) | Milestone 1 (define when first handoff is implemented) |
 | KB search: keyword (v0.1) → embeddings (v0.2) transition path | Milestone 1 (keyword search interface stable; embeddings added behind same interface) |

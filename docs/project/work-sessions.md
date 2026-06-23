@@ -101,34 +101,67 @@ sittings. Each session ends with a commit (or PR) and a journal entry.
 
 ## Milestone 1 Sessions (The Harness)
 
-M1 sessions are sketched here; detailed planning happens after M0 completion.
+M1 sessions are planned in detail below. Batches are ordered by dependency —
+each batch's deliverables are prerequisites for later batches. Within a batch,
+sessions are independent and can be parallelized.
+
+### Batch 0: Foundation for M1
+
+- **M1.0a**: Migrate test suite from custom harness to FiveAM (D-013)
+  — 78 existing tests rewritten to FiveAM's `def-test`, `def-fixture`,
+  `before-each`/`after-each` pattern. Solves state contamination and flaky
+  scheduler tests. Design spec sync (SQLite→file-based locks, YAML→plist)
+  is included since the docs are already updated.
+- **M1.0b**: Design spec sync — already done during M0 critical review.
 
 ### Batch 1: Core Security + Resources
-- **M1.1**: Procedural threat detection (L1+L3) — static analysis, runtime observation
-- **M1.2**: Resource manager — VRAM/CPU arbitration, preemption, hardware audit
 
-### Batch 2: System Management
-- **M1.3**: Package manager — pacman/yay/paru, breakage detection, btrfs snapshots
-- **M1.4**: System config — /etc management, theming files
+- **M1.1**: Procedural threat detection (L1+L3) — static analysis of plugin
+  manifests and code, runtime observation of plugin behavior, rules engine.
+  Implements `src/core/threat-detection.lisp` (currently a stub).
+- **M1.2**: Resource manager (A4) — VRAM/CPU/memory arbitration, preemption,
+  hardware audit. Scans system at startup, arbitrates requests from model
+  runtime manager and AI tools.
+
+### Batch 2: System Management + Secrets
+
+- **M1.3**: Package manager (B1) — pacman/yay/paru integration, breakage
+  detection. Calls system daemon for privileged operations.
+- **M1.4**: System config (B2) — /etc management, btrfs snapshots, theming
+  files. Calls system daemon for WriteFile and CreateSnapshot.
+- **M1.11**: Secrets manager (B8) — 1Password/KeePassXC/vault.age backends,
+  policy-checked access, audit log. Moved up from Batch 5 — needed before
+  AI tool hub (M1.6) requires API keys.
 
 ### Batch 3: AI Infrastructure
-- **M1.5**: Model runtime manager — ollama, llama.cpp, unsloth, comfyUI
-- **M1.6**: AI tool hub — tool registry, agentic CLI invocation, direct API
-- **M1.7**: AI orchestrator — coordinator, context packages, inter-tool handoffs
+
+- **M1.5**: Model runtime manager (B4) — ollama, llama.cpp, unsloth,
+  comfyUI spawn/lifecycle. Depends on M1.2 for VRAM arbitration.
+- **M1.6**: AI tool hub (B11) — tool registry, agentic CLI invocation,
+  direct API, cost tracking. Depends on M1.11 for API key retrieval.
+- **M1.7**: AI orchestrator (B3) — coordinator, context package assembly,
+  inter-tool handoffs. Depends on M1.5 and M1.6.
 
 ### Batch 4: Security AI + Knowledge
-- **M1.8**: LLM threat detector (L2+L4) — on-demand review, drift detection
-- **M1.9**: Hnghbeats — event condensation, daily beats
-- **M1.12**: Knowledge base — article storage, keyword search, learned patterns
 
-### Batch 5: Backup + Secrets
-- **M1.10**: Backup manager — git versioning, remote sync, restore
-- **M1.11**: Secrets manager — 1Password/KeePassXC/vault.age, policy
+- **M1.8**: LLM threat detector (L2+L4) — on-demand LLM review, periodic
+  drift detection. Depends on M1.1 (threat detection) and M1.5 (model
+  runtime for local LLM).
+- **M1.9**: Hnghbeats (B6) — event condensation, daily beats. Produces
+  human-readable summaries from the raw event journal.
+- **M1.12**: Knowledge base (B12) — article storage, keyword search,
+  learned-pattern recording. Feeds context packages for AI orchestrator.
 
-### Batch 6: Polish + Packaging
-- **M1.13**: KDE integration (optional) — theming, notifications
-- **M1.14**: PKGBUILD + split packages
-- **M1.15**: Integration tests for all 8 critical flows
+### Batch 5: Backup + Polish
+
+- **M1.10**: Backup manager (B7) — git versioning of state tree, remote
+  sync, restore. Moved down from Batch 5 — not a blocker for other
+  components, but needed before M1.14 packaging.
+- **M1.13**: KDE integration (B10) — theming, notifications (optional).
+- **M1.14**: PKGBUILD + split packages — all five packages (hngh-core,
+  hngh-system, hngh-python, hngh-kde, hngh-dev), custom repo.
+- **M1.15**: Integration tests — end-to-end tests for all 8 critical flows
+  defined in `docs/design/integrations.md`.
 
 ---
 

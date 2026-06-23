@@ -80,14 +80,14 @@ Hybrid of Microkernel + Event Bus + Actor Supervisor:
 - **Rationale**: matches Emacs model most directly (small core, modes do everything); supervisor closes the lifecycle gap; bus gives universal observation for free; distribution-ready (remote instances = remote bus peers in v0.3).
 - **Rejected**: pure Hexagonal (weak extensibility), Layered (doesn't fit autonomous work or live redefinition), pure Actor/OTP (actors can't redefine each other live).
 
-### D9 — State Authority (Hybrid File Tree + Single SQLite)
+### D9 — State Authority (Hybrid File Tree + File-Based Locks)
 - **Journal/event log**: append-only files in `journal/`.
 - **Knowledge base**: files in `knowledge-base/`, lisp-readable, git-versioned.
 - **Configuration**: files in `config/`, git-versioned, human-readable.
 - **Plugin state**: `plugins/<name>/state/`, plugin-defined format.
 - **Agent conversation history**: `agents/<id>/`, append-only transcripts.
 - **Runtime/cache**: in-memory only, rehydrated on startup.
-- **Cross-component locks**: single small SQLite DB (`state/locks.db`) — the only opaque store.
+- **Cross-component locks**: file-based locks in `state/locks/` directory (one file per resource, with holder + TTL). SQLite deferred until cl-sqlite is needed for more complex queries (D-007).
 - The whole tree under `~/.hngh/` is git-initialized by default; user can push to remote. Secrets never enter this tree (handled by Secrets Manager plugin via password manager integration).
 
 ### D10 — Event Bus Substrate (Custom Internal + dbus Bridge)
