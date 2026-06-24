@@ -43,15 +43,15 @@
 | M1.8 | LLM threat detector (L2+L4) | Done | 6 | 4: Security AI + Knowledge |
 | M1.9 | Hnghbeats (B6) | Done | 3 | 4: Security AI + Knowledge |
 | M1.12 | Knowledge base (B12) | Done | 7 | 4: Security AI + Knowledge |
-| **M1.10** | **Backup manager (B7)** | **Future** | **—** | **5: Backup + Polish** |
-| M1.13 | KDE integration (B10) | Future | — | 5: Backup + Polish (optional, P2) |
+| M1.10 | Backup manager (B7) | Done | 16 | 5: Backup + Polish |
+| M1.13 | KDE integration (B10) | Future | — | 5: Backup + Polish (P2, included in v0.1 per user) |
 | M1.14 | PKGBUILD + split packages | Future | — | 5: Backup + Polish |
 | M1.15 | Integration tests (M1) | Future | — | 5: Backup + Polish |
-| **M1 total** | | **11/15 done** | **149 M1 unit tests** | Batches 0–4 done |
+| **M1 total** | | **12/15 done** | **165 M1 unit tests** | Batches 0–4 + M1.10 done |
 
-**Cumulative totals (M0 + M1 batches 0–4)**:
-- Unit tests: 78 (M0) + 149 (M1) = **227**
-- Integration tests: 18 (M0 only, no M1 integration tests yet)
+**Cumulative totals (M0 + M1 through M1.10)**:
+- Unit tests: 78 (M0) + 165 (M1) = **243** (1090 FiveAM checks)
+- Integration tests: 18 (M0 only; M1 integration tests = M1.15, pending)
 - All passing.
 
 ## Milestone 2 — The Companion (v0.2)
@@ -74,9 +74,9 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 ## Backlog Notes
 
 ### Carryover from M1
-- **M1.10 (Backup Manager, B7)**: git versioning of state tree, remote
-  sync, restore. The `state/plugins/` tree contains valuable per-plugin
-  history that should be backed up. Spec in design doc.
+- ~~**M1.10 (Backup Manager, B7)**~~ — **Done 2026-06-24** (Oracle-reviewed,
+  hardened H1–H5). Follow-up: a `verify-history` command to audit git history
+  for forbidden paths before first push to a public remote (D-028/M1 limitation).
 - **M1.13 (KDE integration, B10)**: optional, P2. Theming and DBus
   notifications through `org.hngh.*`. Skip if scope exceeds v0.1 budget.
 - **M1.14 (PKGBUILD + split packages)**: needed before any Arch package

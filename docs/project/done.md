@@ -193,6 +193,43 @@
 - Added LLM threat detector state dirs to `*state-tree-dirs*`.
 - Verified: `make test && make integration-test` = **1020 unit + 18 integration, all passing**
 
+### Session M1.10: Backup Manager (B7) — Batch 5 (pending commit)
+- **M1.10 — Backup Manager (B7)**: git-versions the `~/.hngh/` state tree.
+  Public API: `init`, `shutdown`, `running-p`, `status`, `commit`,
+  `push-backup`, `restore`, `diff`, `list-history`, `add-remote`,
+  `list-remotes`, `managed-ignore-paths`.
+  - Idempotent `git init`; managed `.gitignore` (defaults + persisted user ignores).
+  - SECURITY: secrets never committed — defense-in-depth via `.gitignore` +
+    a pre-commit staging guard (`enforce-staging-guard`) that unstages
+    forbidden paths (`secrets/`, `state/locks/`, `config/plugins/secrets-manager/`,
+    `*.age`, `*.gpg`) and aborts the commit.
+  - Periodic auto-commit via Scheduler; `config.changed` subscription
+    refreshes `.gitignore`/remotes.
+  - Events: `backup.committed`, `backup.pushed`, `backup.restored`.
+  - Owned state: `config/plugins/backup-manager/{remotes,ignore}.lisp`,
+    `state/plugins/backup-manager/history.lisp`.
+- **Oracle security review** performed before finalizing. 5 HIGH findings
+  fixed (all with regression tests):
+  - **H1**: git C-quoting of non-ASCII paths defeated the prefix guard →
+    added `unquote-git-path`, applied in `staged-files`.
+  - **H2**: argument injection (option-like values) → `safe-git-arg-p`
+    validation + `--` separators in restore/push-backup/add-remote.
+  - **H3**: TOCTOU race between guard check and commit (scheduler thread vs
+    user) → `*git-lock*` mutex (bordeaux-threads) wrapping
+    commit/push-backup/restore; periodic lambda calls `commit` (no double-lock).
+  - **H4**: restore clobbered the working tree → auto-stash
+    (`--include-untracked`) before checkout; `:stashed` in payload.
+  - **H5**: restore could extract secrets from history → forbidden-path
+    rejection before any stash/checkout.
+  - **M3**: guard now unstages ONLY violating paths (`git reset -- <paths>`).
+  - Documented limitations: prior-committed secrets persist in history (M1);
+    case-sensitive-FS assumption (M2). See decisions.md D-028/D-029.
+- Wired into start/stop sequence in `src/core/main.lisp` (init after
+  secrets-manager; reverse-order shutdown; state-tree dirs added).
+- 16 FiveAM tests (8 functional + 8 security-fix regression tests).
+- Verified: `make test && make integration-test` = **1090 FiveAM checks
+  (243 unit test functions) + 18 integration, all passing**
+
 ---
 
 ## Milestone 0 Summary (complete)
@@ -232,10 +269,10 @@ All 11 sessions completed. 96 total tests (78 unit + 18 integration), all passin
 
 ## Milestone 1 Status (in progress)
 
-Batches 0–4 complete (11 of 12 deliverables implemented). Batch 5 remaining
-(M1.10 backup, M1.13 KDE, M1.14 PKGBUILD, M1.15 integration tests).
+Batches 0–4 complete; Batch 5 in progress — **M1.10 (Backup Manager) done** (2026-06-24).
+Batch 5 remaining: M1.13 KDE, M1.14 PKGBUILD, M1.15 integration tests.
 
-**Total tests after M1 batches 0–4**: 227 unit + 18 integration = 245, all passing.
+**Total tests after M1.10**: 243 unit + 18 integration = 261, all passing (1090 FiveAM checks).
 
 ### Components added by M1:
 
@@ -252,7 +289,7 @@ Batches 0–4 complete (11 of 12 deliverables implemented). Batch 5 remaining
 | Hnghbeats | B6 | src/plugins/hnghbeats.lisp | 3 | Done (M1.9) |
 | Secrets manager | B8 | src/plugins/secrets-manager.lisp | 22 | Done (M1.11) |
 | Knowledge base | B12 | src/plugins/knowledge-base.lisp | 7 | Done (M1.12) |
-| Backup manager | B7 | — | — | **Future (M1.10)** |
+| Backup manager | B7 | src/plugins/backup-manager.lisp | 16 | Done (M1.10) |
 | KDE integration | B10 | — | — | Future (M1.13, optional) |
 | PKGBUILD + packages | — | — | — | Future (M1.14) |
 | Integration tests (M1) | — | — | — | Future (M1.15) |

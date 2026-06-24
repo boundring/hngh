@@ -109,12 +109,13 @@ and can be parallelized.
   keyword + tag query, lock-aware writes. **Done** (commit `cc4afa8`,
   2026-06-24). 7 tests.
 
-### Batch 5: Backup + Polish — pending
+### Batch 5: Backup + Polish — in progress
 
 - **M1.10**: Backup manager (B7) — git versioning of state tree,
-  remote sync, restore. P1. **Not started.**
-- **M1.13**: KDE integration (B10) — theming, notifications (optional,
-  P2). **Not started.**
+  remote sync, restore, secrets exclusion (defense-in-depth).
+  **Done** (2026-06-24, Oracle-reviewed + hardened H1–H5). 16 tests.
+- **M1.13**: KDE integration (B10) — theming, notifications (P2;
+  included in v0.1 per user decision). **Not started.**
 - **M1.14**: PKGBUILD + split packages — five packages
   (`hngh-core`, `hngh-system`, `hngh-python`, `hngh-kde`,
   `hngh-dev`), custom repo. P0. **Not started.**
@@ -122,15 +123,16 @@ and can be parallelized.
   critical flows in `docs/design/integrations.md`. P0.
   **Not started.**
 
-### Cleanup before Batch 5
+### Cleanup (revisited)
 
-- Remove orphaned `tests/unit/harness.lisp` and its `:file "harness"`
-  entry in `hngh.asd`. Vestigial after FiveAM migration in M1.0a.
-- Wire `hngh.asd` `:perform (test-op ...)` body to call
-  `(hngh.tests:run-tests)`. Currently a no-op.
+- `tests/unit/harness.lisp` is NOT orphaned — it holds the FiveAM
+  harness (`def-suite`, `run-tests`, fixtures). Kept; optional rename
+  deferred (D-026).
+- `hngh.asd` `:perform (test-op ...)` now calls `hngh.tests:run-tests`
+  (D-027). Done.
 
-**Cumulative test count after M1 batches 0–4**:
-227 unit + 18 integration = 245 tests, all passing.
+**Cumulative test count after M1.10**:
+243 unit + 18 integration = 261 tests, all passing (1090 FiveAM checks).
 
 ---
 
