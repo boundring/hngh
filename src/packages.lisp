@@ -363,5 +363,40 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:agent-info-status
            #:agent-info-cost
            #:agent-info-started-at
-           #:*agents*
-           #:*policies*))
+            #:*agents*
+            #:*policies*))
+
+(defpackage :hngh.plugins.hnghbeats
+  (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:perform-condensation))
+
+(defpackage :hngh.plugins.knowledge-base
+  (:documentation "Knowledge Base (B12) — curated articles, decisions, learned patterns.")
+  (:use :cl :hngh.core)
+  (:export #:initialize-knowledge-base
+           #:shutdown-knowledge-base
+           #:knowledge-base-ready-p
+           #:kb-write-article
+           #:kb-get-article
+           #:kb-get-decision
+           #:kb-get-pattern
+           #:kb-query
+           #:kb-record-decision
+           #:kb-record-pattern
+           #:kb-status))
+
+(defpackage :hngh.plugins.llm-threat-detector
+  (:documentation "LLM Threat Detector (B5) — L2/L4 semantic and behavioral threat review.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:review-plugin
+           #:review-behavior
+           #:explain))

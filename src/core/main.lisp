@@ -26,12 +26,14 @@
     "knowledge-base/articles/"
     "knowledge-base/decisions/"
     "knowledge-base/learned-patterns/"
-    "knowledge-base/learned-patterns/threats/"
-    "knowledge-base/learned-patterns/optimizations/"
-    "knowledge-base/learned-patterns/workflows/"
-    "plugins/"
-    "agents/"
-    "secrets/")
+     "knowledge-base/learned-patterns/threats/"
+     "knowledge-base/learned-patterns/optimizations/"
+     "knowledge-base/learned-patterns/workflows/"
+     "config/plugins/llm-threat/"
+     "state/plugins/llm-threat/"
+     "plugins/"
+     "agents/"
+     "secrets/")
   "Subdirectories to create in the Hngh state tree on first start.")
 
 (defun version ()
@@ -117,14 +119,20 @@ If any step fails, already-started components are shut down in reverse order."
          (hngh.plugins.package-manager:init)
          (hngh.plugins.system-config:init)
          (hngh.plugins.secrets-manager:init)
-         (hngh.plugins.model-runtime:init)
-         (hngh.plugins.ai-tool-hub:init)
-         (hngh.plugins.ai-orchestrator:init)
-         (setf *running* t)
-         (hngh.core:log-info "Hngh started")
-         t)
-    (unless *running*
-      (hngh.core:log-error "Startup failed — rolling back")
+          (hngh.plugins.model-runtime:init)
+           (hngh.plugins.ai-tool-hub:init)
+           (hngh.plugins.ai-orchestrator:init)
+           (hngh.plugins.hnghbeats:init)
+           (hngh.plugins.knowledge-base:initialize-knowledge-base :hngh-home hngh-home)
+           (hngh.plugins.llm-threat-detector:init :hngh-home hngh-home)
+           (setf *running* t)
+           (hngh.core:log-info "Hngh started")
+           t)
+     (unless *running*
+       (hngh.core:log-error "Startup failed — rolling back")
+       (ignore-errors (hngh.plugins.llm-threat-detector:shutdown))
+       (ignore-errors (hngh.plugins.knowledge-base:shutdown-knowledge-base))
+       (ignore-errors (hngh.plugins.hnghbeats:shutdown))
       (ignore-errors (hngh.plugins.ai-orchestrator:shutdown))
       (ignore-errors (hngh.plugins.ai-tool-hub:shutdown))
       (ignore-errors (hngh.plugins.model-runtime:shutdown))
@@ -155,6 +163,9 @@ Shutdown sequence (reverse of startup):
     (return-from stop nil))
   (hngh.core:log-info "Stopping Hngh...")
   ;; Stop first-party plugins (reverse order)
+  (ignore-errors (hngh.plugins.llm-threat-detector:shutdown))
+  (ignore-errors (hngh.plugins.knowledge-base:shutdown-knowledge-base))
+  (ignore-errors (hngh.plugins.hnghbeats:shutdown))
   (hngh.plugins.ai-orchestrator:shutdown)
   (hngh.plugins.ai-tool-hub:shutdown)
   (hngh.plugins.model-runtime:shutdown)
