@@ -1,0 +1,673 @@
+;;;; plugins/ai-orchestrator.lisp — Hngh AI Orchestrator (B3)
+;;;;
+;;;; Coordinator, context packages, inter-tool handoffs.
+;;;; Delegates tasks to the best available AI tool (agentic CLI, local model
+;;;; runtime, or direct API), manages agent lifecycle, and assembles rich
+;;;; context packages from the system state, event history, and user activity.
+;;;;
+;;;; Dependencies: AI Tool Hub (B11), Model Runtime Manager (B4),
+;;;;               Resource Manager (A4), Event Bus (A2), State Store (A3).
+;;;;
+;;;; SPDX-License-Identifier: AGPL-3.0-or-later
+;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+(in-package :hngh.plugins.ai-orchestrator)
+
+;;; --- Data structures ------------------------------------------------------
+
+(defstruct agent-info
+  "Metadata for a single AI agent invocation.
+Tracked across its entire lifecycle: pending → running → completed/failed/killed.
+Transcripts are persisted to agents/<id>/transcript.lisp via the state store."
+  (id 0 :type integer)
+  (tool nil :type (or null keyword))
+  (task "" :type string)
+  (status :pending :type keyword)
+  (cost 0.0 :type number)
+  (started-at 0 :type integer)
+  (context nil :type list)
+  (result nil :type (or null string))
+  (transcript-path nil :type (or null string)))
+
+(defstruct delegate-policy
+  "Policy rules that guide agent delegation decisions.
+Used by the orchestrator to select the most appropriate tool
+for a given task based on cost, latency, and privacy constraints."
+  (prefer-tool nil :type (or null keyword))
+  (prefer-tier :any :type keyword)
+  (max-cost nil :type (or null number))
+  (max-latency nil :type (or null integer))
+  (privacy :any :type keyword)
+  (model nil :type (or null string)))
+
+;;; --- Internal state -------------------------------------------------------
+
+(defvar *running* nil
+  "Whether the AI orchestrator plugin is active.")
+
+(defvar *agents* (make-hash-table :test 'eql)
+  "Map of agent ID → agent-info struct. Thread-safe via *agents-lock*.")
+
+(defvar *agents-lock* (bt:make-lock "hngh-aio-agents")
+  "Mutex protecting *agents* and *next-agent-id*.")
+
+(defvar *next-agent-id* 0
+  "Counter for monotonically increasing agent IDs. Protected by *agents-lock*.")
+
+(defvar *policies* (make-hash-table :test 'eq)
+  "Map of policy keyword → delegate-policy struct. Thread-safe.
+Key :default holds the fallback policy used when no specific policy is specified.")
+
+(defvar *policies-lock* (bt:make-lock "hngh-aio-policies")
+  "Mutex protecting *policies*.")
+
+(defvar *event-subscriptions* '()
+  "List of event subscription IDs for cleanup on shutdown.")
+
+(defvar *policy-state-path* "config/plugins/ai-orchestrator/policies.lisp"
+  "Relative path within the state store for persisting policies.")
+
+;;; --- Default policy -------------------------------------------------------
+
+(defparameter *default-policy*
+  (make-delegate-policy :prefer-tier :any :privacy :any)
+  "Default delegation policy used as a fallback.
+Can be overridden by per-call preferences or named policies in *policies*.")
+
+;;; --- Dependency readiness helpers -----------------------------------------
+
+(defun state-store-ready-p ()
+  "Return T if the state store is initialized and ready for read/write."
+  (let ((home-sym (find-symbol "*HNGH-HOME*" :hngh.core.state-store)))
+    (and home-sym (boundp home-sym) (symbol-value home-sym))))
+
+(defun event-bus-ready-p ()
+  "Return T if the event bus is initialized."
+  (and (boundp 'hngh.core.event-bus:*event-bus*)
+       hngh.core.event-bus:*event-bus*))
+
+(defun tool-hub-running-p ()
+  "Return T if AI Tool Hub is initialized and running."
+  (and (find-package :hngh.plugins.ai-tool-hub)
+       (let ((sym (find-symbol "RUNNING-P" :hngh.plugins.ai-tool-hub)))
+         (and sym (fboundp sym) (funcall sym)))))
+
+(defun model-runtime-running-p ()
+  "Return T if Model Runtime Manager is initialized and running."
+  (and (find-package :hngh.plugins.model-runtime)
+       (let ((sym (find-symbol "RUNNING-P" :hngh.plugins.model-runtime)))
+         (and sym (fboundp sym) (funcall sym)))))
+
+(defun resource-manager-running-p ()
+  "Return T if Resource Manager is initialized and running."
+  (and (find-package :hngh.core.resource-manager)
+       (let ((sym (find-symbol "RUNNING-P" :hngh.core.resource-manager)))
+         (and sym (fboundp sym) (funcall sym)))))
+
+(defun tool-hub-fbound-p (name)
+  "Return T if the named function is fbound in the AI Tool Hub package."
+  (and (find-package :hngh.plugins.ai-tool-hub)
+       (let ((sym (find-symbol name :hngh.plugins.ai-tool-hub)))
+         (and sym (fboundp sym)))))
+
+(defun model-runtime-fbound-p (name)
+  "Return T if the named function is fbound in the Model Runtime package."
+  (and (find-package :hngh.plugins.model-runtime)
+       (let ((sym (find-symbol name :hngh.plugins.model-runtime)))
+         (and sym (fboundp sym)))))
+
+;;; --- Policy utilities -----------------------------------------------------
+
+(defun default-policy ()
+  "Return the currently active default policy from *policies*.
+If no default is stored, returns the hardcoded *default-policy*."
+  (bt:with-lock-held (*policies-lock*)
+    (or (gethash :default *policies*) *default-policy*)))
+
+(defun get-policy (name)
+  "Retrieve a named policy from *policies* by keyword NAME.
+Returns the delegate-policy struct if found, NIL otherwise."
+  (when name
+    (bt:with-lock-held (*policies-lock*)
+      (gethash name *policies*))))
+
+(defun set-policy (name policy)
+  "Store a named POLICY under keyword NAME in *policies*."
+  (bt:with-lock-held (*policies-lock*)
+    (setf (gethash name *policies*) policy))
+  (handler-case (persist-policies)
+    (error (c) (hngh.core:log-warn "Failed to persist policies: ~A" c)))
+  policy)
+
+(defun policy-from-plist (plist)
+  "Convert a plist to a delegate-policy struct."
+  (make-delegate-policy
+   :prefer-tool (getf plist :prefer-tool nil)
+   :prefer-tier (getf plist :prefer-tier :any)
+   :max-cost (getf plist :max-cost nil)
+   :max-latency (getf plist :max-latency nil)
+   :privacy (getf plist :privacy :any)
+   :model (getf plist :model nil)))
+
+(defun ensure-policy (preferences)
+  "Normalize PREFERENCES into a delegate-policy struct."
+  (cond ((null preferences) (default-policy))
+        ((delegate-policy-p preferences) preferences)
+        ((listp preferences) (policy-from-plist preferences))
+        (t (default-policy))))
+
+;;; --- Persistence ----------------------------------------------------------
+
+(defun persist-policies ()
+  "Write *policies* to the state store as an alist."
+  (when (state-store-ready-p)
+    (let ((alist (bt:with-lock-held (*policies-lock*)
+                   (loop for key being the hash-keys of *policies*
+                           using (hash-value policy)
+                         collect (cons key
+                                       (list :prefer-tool (delegate-policy-prefer-tool policy)
+                                             :prefer-tier (delegate-policy-prefer-tier policy)
+                                             :max-cost (delegate-policy-max-cost policy)
+                                             :max-latency (delegate-policy-max-latency policy)
+                                             :privacy (delegate-policy-privacy policy)
+                                             :model (delegate-policy-model policy)))))))
+      (hngh.core.state-store:write-state *policy-state-path* alist))))
+
+(defun load-policies ()
+  "Load policies from the state store. Merges with *default-policy*."
+  (when (state-store-ready-p)
+    (handler-case
+        (let ((alist (hngh.core.state-store:read-state *policy-state-path*)))
+          (when (listp alist)
+            (bt:with-lock-held (*policies-lock*)
+              (dolist (entry alist)
+                (when (consp entry)
+                  (setf (gethash (car entry) *policies*)
+                        (policy-from-plist (cdr entry))))))
+            (hngh.core:log-info "Loaded ~D policies from state store" (length alist))))
+      (error (c)
+        (hngh.core:log-warn "Could not load policies: ~A" c)))))
+
+;;; --- Agent management -----------------------------------------------------
+
+(defun next-agent-id ()
+  "Allocate and return the next agent ID (thread-safe)."
+  (bt:with-lock-held (*agents-lock*)
+    (incf *next-agent-id*)))
+
+(defun register-agent (info)
+  "Register an agent-info struct in *agents*."
+  (bt:with-lock-held (*agents-lock*)
+    (setf (gethash (agent-info-id info) *agents*) info))
+  info)
+
+(defun find-agent (id)
+  "Find an agent-info by ID. Returns NIL if not found."
+  (bt:with-lock-held (*agents-lock*)
+    (gethash id *agents*)))
+
+(defun update-agent (id &rest updates)
+  "Update fields of agent ID with UPDATES (keyword→value plist).
+Returns the updated agent-info or NIL if not found."
+  (bt:with-lock-held (*agents-lock*)
+    (let ((agent (gethash id *agents*)))
+      (when agent
+        (loop for (key val) on updates by #'cddr
+              do (case key
+                   (:status (setf (agent-info-status agent) val))
+                   (:cost (setf (agent-info-cost agent) val))
+                   (:result (setf (agent-info-result agent) val))
+                   (:transcript-path (setf (agent-info-transcript-path agent) val))
+                   (:tool (setf (agent-info-tool agent) val))
+                   (t (hngh.core:log-debug "Unknown agent update key: ~A" key))))
+        agent))))
+
+(defun remove-agent (id)
+  "Remove agent ID from *agents*. Returns the removed agent-info or NIL."
+  (bt:with-lock-held (*agents-lock*)
+    (let ((agent (gethash id *agents*)))
+      (when agent (remhash id *agents*))
+      agent)))
+
+;;; --- Event emission -------------------------------------------------------
+
+(defun emit-agent-event (topic payload)
+  "Emit an agent lifecycle event on the event bus if available."
+  (when (event-bus-ready-p)
+    (handler-case
+        (hngh.core.event-bus:publish topic payload :source 'ai-orchestrator)
+      (error (c)
+        (hngh.core:log-warn "Failed to emit event ~A: ~A" topic c)))))
+
+;;; --- Context assembly -----------------------------------------------------
+
+(defun meta-context (&key (scope :full))
+  "Assemble a meta-context plist describing the current system state."
+  (declare (ignore scope))
+  (list :recent-activity (collect-recent-activity)
+        :system-state (collect-system-state)
+        :kb-articles (list :relevant nil)
+        :dogfooding (list :is-self-improvement nil :repo-state nil)
+        :intra-tool-informing (list :conventions "Follow Hngh coding standards"
+                                     :skills-to-activate nil)))
+
+(defun collect-recent-activity ()
+  "Gather recent activity from the event bus journal.
+Returns a plist (:count N :events (...))."
+  (let* ((journal-sym (find-symbol "*EVENT-JOURNAL-PATH*" :hngh.core.event-bus)))
+    (if (and journal-sym (boundp journal-sym) (symbol-value journal-sym))
+        (handler-case
+            (let* ((journal-dir (symbol-value journal-sym))
+                   (pattern (merge-pathnames "*.lisp" journal-dir))
+                   (files (sort (or (directory pattern) '())
+                                #'string> :key #'namestring))
+                   (events '())
+                   (max-events 20))
+              (dolist (file files)
+                (when (>= (length events) max-events) (return))
+                (dolist (evt (hngh.core.event-bus:read-journal-events file))
+                  (when (>= (length events) max-events) (return))
+                  (push (list :id (hngh.core.event-bus:event-id evt)
+                              :topic (hngh.core.event-bus:event-topic evt)
+                              :source (hngh.core.event-bus:event-source evt)
+                              :timestamp (hngh.core.event-bus:event-timestamp evt))
+                        events)))
+              (list :count (length events) :events (nreverse events)))
+          (error () (list :count 0 :events nil)))
+        (list :count 0 :events nil))))
+
+(defun collect-system-state ()
+  "Gather system state: hardware info, package count, config changes."
+  (list :hardware (safe-hardware-info)
+        :packages (safe-package-count)
+        :config (safe-recent-config-changes)))
+
+(defun safe-hardware-info ()
+  "Get hardware-info plist from Resource Manager, or NIL if unavailable."
+  (handler-case
+      (when (and (fboundp 'hngh.core.resource-manager:hardware-info)
+                 (resource-manager-running-p))
+        (let ((hw (hngh.core.resource-manager:hardware-info)))
+          (when hw
+            (list :gpus (length (hngh.core.resource-manager:hardware-info-gpus hw))
+                  :cpu-model (hngh.core.resource-manager:hardware-info-cpu-model hw)
+                  :cpu-cores (hngh.core.resource-manager:hardware-info-cpu-cores hw)
+                  :memory-total (hngh.core.resource-manager:hardware-info-memory-total hw)
+                  :memory-available (hngh.core.resource-manager:hardware-info-memory-available hw)))))
+    (error () nil)))
+
+(defun safe-package-count ()
+  "Get installed package count from Package Manager, or NIL if unavailable."
+  (handler-case
+      (let ((sym (find-symbol "LIST-INSTALLED" :hngh.plugins.package-manager)))
+        (when (and sym (fboundp sym))
+          (length (funcall sym))))
+    (error () nil)))
+
+(defun safe-recent-config-changes ()
+  "Get recent config changes. Returns NIL for M1 (not yet implemented)."
+  nil)
+
+;;; --- Tool selection -------------------------------------------------------
+
+(defun select-tool-for-task (task policy)
+  "Select the most appropriate AI tool for TASK according to POLICY."
+  (let ((prefer-tool (delegate-policy-prefer-tool policy))
+        (privacy (delegate-policy-privacy policy))
+        (tier (delegate-policy-prefer-tier policy)))
+    ;; Explicit tool preference
+    (when prefer-tool
+      (return-from select-tool-for-task prefer-tool))
+    ;; Privacy constraint: local-only forces local model
+    (when (eq privacy :local-only)
+      (when (model-runtime-running-p)
+        (return-from select-tool-for-task :ollama)))
+    ;; Tier preference
+    (when (eq tier :local)
+      (when (model-runtime-running-p)
+        (return-from select-tool-for-task :ollama)))
+    (when (eq tier :agentic)
+      (when (tool-hub-fbound-p "SELECT-TOOL")
+        (handler-case
+            (let ((select-fn (find-symbol "SELECT-TOOL" :hngh.plugins.ai-tool-hub)))
+              (let ((tool (funcall select-fn (make-task-spec task))))
+                (when tool (return-from select-tool-for-task tool))))
+          (error ()))))
+    ;; Default: try agentic first, then local
+    (when (tool-hub-fbound-p "SELECT-TOOL")
+      (handler-case
+          (let ((select-fn (find-symbol "SELECT-TOOL" :hngh.plugins.ai-tool-hub)))
+            (let ((tool (funcall select-fn (make-task-spec task))))
+              (when tool (return-from select-tool-for-task tool))))
+        (error ())))
+    (when (model-runtime-running-p)
+      (return-from select-tool-for-task :ollama))
+    ;; Last resort
+    (when (tool-hub-running-p) :opencode)))
+
+(defun make-task-spec (task)
+  "Create a task-spec plist from a task description string."
+  (list :description task
+        :success-criteria (format nil "Complete: ~A" task)
+        :constraints (list :max-cost 0.10 :max-latency 300)))
+
+;;; --- Context package assembly ---------------------------------------------
+
+(defun assemble-context-package (task context)
+  "Assemble a full context package for TASK with optional CONTEXT."
+  (let ((sys-context (if (or (null context) (eq context :auto))
+                         (meta-context)
+                         context)))
+    (list* :task-spec (make-task-spec task) sys-context)))
+
+;;; --- Core delegation ------------------------------------------------------
+
+(defun delegate (task &key (preferences nil) (context :auto))
+  "Delegate TASK to the best available AI tool.
+Returns an agent-info struct with the invocation result."
+  (let* ((policy (ensure-policy preferences))
+         (ctx (assemble-context-package task context))
+         (tool (select-tool-for-task task policy)))
+    (unless tool
+      (hngh.core:log-warn "No AI tool available for task: ~A" task)
+      (let ((agent (make-agent-info
+                    :id (next-agent-id)
+                    :task task
+                    :status :failed
+                    :started-at (get-universal-time)
+                    :context ctx
+                    :result "No AI tool available. Ensure AI Tool Hub or Model Runtime is initialized."
+                    :cost 0.0)))
+        (register-agent agent)
+        (return-from delegate agent)))
+    ;; Create and register agent
+    (let* ((agent-id (next-agent-id))
+           (agent (make-agent-info
+                   :id agent-id :tool tool :task task
+                   :status :pending :started-at (get-universal-time)
+                   :context ctx :cost 0.0)))
+      (register-agent agent)
+      (emit-agent-event "agent.spawned"
+                        (list :id agent-id :tool tool
+                              :task-hash (sxhash task) :cost-estimate 0.0))
+      (setf (agent-info-status agent) :running)
+      ;; Invoke and process result
+      (let ((outcome (invoke-agent agent policy)))
+        (update-agent agent-id
+                      :status (if (eq outcome :success) :completed :failed))
+        (emit-agent-event (if (eq outcome :success) "agent.completed" "agent.failed")
+                          (list :id agent-id :tool tool :task task
+                                :result (agent-info-result agent)
+                                :cost (agent-info-cost agent)))
+        (handler-case (write-transcript agent)
+          (error (c)
+            (hngh.core:log-warn "Failed to write transcript for agent ~D: ~A" agent-id c))))
+      agent)))
+
+(defun invoke-agent (agent policy)
+  "Invoke AGENT using the appropriate tool dispatch.
+Returns :success or :failure. Updates agent-info in-place."
+  (let ((tool (agent-info-tool agent))
+        (task (agent-info-task agent))
+        (ctx (agent-info-context agent))
+        (id (agent-info-id agent)))
+    (handler-case
+        (cond
+          ;; Agentic CLI / direct API tools
+          ((member tool '(:opencode :claude :codex :gemini))
+           (if (tool-hub-fbound-p "INVOKE")
+               (let ((invoke-fn (find-symbol "INVOKE" :hngh.plugins.ai-tool-hub)))
+                 (let ((result (funcall invoke-fn tool task :context ctx)))
+                   (update-agent id :result (princ-to-string result) :status :completed)
+                   (return-from invoke-agent :success)))
+               (progn
+                 (update-agent id
+                               :result (format nil "AI Tool Hub invoke not yet implemented for ~A" tool)
+                               :status :failed)
+                 (return-from invoke-agent :failure))))
+          ;; Local model runtime tools
+          ((member tool '(:ollama :llama.cpp :unsloth :comfyui))
+           (if (model-runtime-fbound-p "SPAWN-RUNTIME")
+               (handler-case
+                   (let ((spawn-fn (find-symbol "SPAWN-RUNTIME" :hngh.plugins.model-runtime)))
+                     (funcall spawn-fn tool
+                              (or (delegate-policy-model policy) "default")
+                              :grant-id nil)
+                     (update-agent id
+                                   :result (format nil "Local runtime ~A spawned (query M2+)" tool)
+                                   :status :completed)
+                     (return-from invoke-agent :success))
+                 (error (c)
+                   (update-agent id
+                                 :result (format nil "Failed to spawn local runtime ~A: ~A" tool c)
+                                 :status :failed)
+                   (return-from invoke-agent :failure)))
+               (progn
+                 (update-agent id
+                               :result (format nil "Model Runtime not available for ~A" tool)
+                               :status :failed)
+                 (return-from invoke-agent :failure))))
+          ;; Unknown tool
+          (t
+           (update-agent id
+                         :result (format nil "Unknown tool: ~A" tool)
+                         :status :failed)
+           :failure))
+      (error (c)
+        (update-agent id
+                      :result (format nil "Invocation error: ~A" c)
+                      :status :failed)
+        :failure))))
+
+;;; --- Transcript persistence -----------------------------------------------
+
+(defun write-transcript (agent)
+  "Persist the agent's transcript to agents/<id>/transcript.lisp."
+  (when (state-store-ready-p)
+    (let ((path (format nil "agents/~D/transcript.lisp" (agent-info-id agent)))
+          (transcript (list :agent-id (agent-info-id agent)
+                            :tool (agent-info-tool agent)
+                            :task (agent-info-task agent)
+                            :status (agent-info-status agent)
+                            :cost (agent-info-cost agent)
+                            :started-at (agent-info-started-at agent)
+                            :result (agent-info-result agent)
+                            :context (agent-info-context agent)
+                            :completed-at (get-universal-time))))
+      (hngh.core.state-store:write-state path transcript)
+      (setf (agent-info-transcript-path agent) path)))
+  agent)
+
+;;; --- Handoff --------------------------------------------------------------
+
+(defun handoff (from-agent to-tool &key (context-delta nil))
+  "Hand off work from an existing agent to a new tool.
+Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
+  (let ((source (find-agent from-agent)))
+    (unless source
+      (hngh.core:log-warn "Handoff source agent ~D not found" from-agent)
+      (return-from handoff nil))
+    (let* ((task (format nil "Handoff from agent ~D (~A): ~A"
+                         from-agent
+                         (agent-info-tool source)
+                         (agent-info-task source)))
+           (combined-context (list* :handoff-source-id from-agent
+                                    :handoff-source-tool (agent-info-tool source)
+                                    :handoff-source-result (agent-info-result source)
+                                    (append context-delta
+                                            (agent-info-context source))))
+           (agent-id (next-agent-id))
+           (agent (make-agent-info
+                   :id agent-id :tool to-tool :task task
+                   :status :pending :started-at (get-universal-time)
+                   :context combined-context :cost 0.0)))
+      (register-agent agent)
+      (setf (agent-info-status agent) :running)
+      (emit-agent-event "agent.handoff"
+                        (list :from-id from-agent :to-id agent-id
+                              :from-tool (agent-info-tool source)
+                              :to-tool to-tool
+                              :context-delta context-delta))
+      (let ((outcome (invoke-agent agent (default-policy))))
+        (update-agent agent-id
+                      :status (if (eq outcome :success) :completed :failed))
+        (emit-agent-event (if (eq outcome :success) "agent.completed" "agent.failed")
+                          (list :id agent-id :tool to-tool :task task
+                                :result (agent-info-result agent)
+                                :cost (agent-info-cost agent)))
+        (handler-case (write-transcript agent)
+          (error (c)
+            (hngh.core:log-warn "Failed to write transcript for handoff agent ~D: ~A"
+                                agent-id c))))
+      agent)))
+
+;;; --- Kill agent -----------------------------------------------------------
+
+(defun kill-agent (id &key (reason :killed))
+  "Kill a running agent by ID. Returns T if found and killed, NIL otherwise."
+  (let ((agent (find-agent id)))
+    (unless agent
+      (hngh.core:log-debug "Kill agent: agent ~D not found" id)
+      (return-from kill-agent nil))
+    (let ((tool (agent-info-tool agent))
+          (status (agent-info-status agent)))
+      (unless (member status '(:running :pending))
+        (hngh.core:log-debug "Agent ~D is ~A, not killing" id status)
+        (return-from kill-agent nil))
+      ;; Kill via appropriate channel
+      (cond
+        ((member tool '(:opencode :claude :codex :gemini))
+         (when (tool-hub-fbound-p "KILL-INVOCATION")
+           (handler-case
+               (funcall (find-symbol "KILL-INVOCATION" :hngh.plugins.ai-tool-hub) id)
+             (error (c)
+               (hngh.core:log-warn "Error killing invocation ~D: ~A" id c)))))
+        ((member tool '(:ollama :llama.cpp :unsloth :comfyui))
+         (when (model-runtime-fbound-p "STOP-RUNTIME")
+           (handler-case
+               (funcall (find-symbol "STOP-RUNTIME" :hngh.plugins.model-runtime) id)
+             (error (c)
+               (hngh.core:log-warn "Error stopping runtime ~D: ~A" id c))))))
+      ;; Update status and emit event
+      (update-agent id :status :killed
+                    :result (format nil "Killed by orchestrator: ~A" reason))
+      (emit-agent-event "agent.failed"
+                        (list :id id :tool tool :reason reason))
+      (handler-case (write-transcript (find-agent id))
+        (error (c)
+          (hngh.core:log-warn "Failed to write transcript for killed agent ~D: ~A" id c)))
+      t)))
+
+;;; --- Queries --------------------------------------------------------------
+
+(defun list-agents ()
+  "Return a list of all agent-info structs, ordered by creation time."
+  (bt:with-lock-held (*agents-lock*)
+    (sort (loop for agent being the hash-values of *agents* collect agent)
+          #'< :key #'agent-info-started-at)))
+
+(defun status ()
+  "Return a plist describing the current orchestrator status."
+  (bt:with-lock-held (*agents-lock*)
+    (let ((all-agents (loop for agent being the hash-values of *agents* collect agent))
+          (active-count 0)
+          (total-cost 0.0))
+      (dolist (a all-agents)
+        (when (member (agent-info-status a) '(:running :pending))
+          (incf active-count))
+        (incf total-cost (agent-info-cost a)))
+      (list :running *running*
+            :active-agents active-count
+            :total-agents (length all-agents)
+            :total-cost total-cost))))
+
+;;; --- Event handlers -------------------------------------------------------
+
+(defun handle-resource-pressure (event)
+  "Handle resource.pressure events. On :critical, preempt lowest-priority agent."
+  (let ((payload (hngh.core.event-bus:event-payload event)))
+    (when (eq (getf payload :level) :critical)
+      (hngh.core:log-warn "Resource pressure critical — preempting lowest-priority agent")
+      (let ((victim (find-lowest-priority-agent)))
+        (when victim
+          (hngh.core:log-info "Preempting agent ~D (~A) due to resource pressure"
+                              (agent-info-id victim) (agent-info-task victim))
+          (kill-agent (agent-info-id victim) :reason :preempted))))))
+
+(defun handle-agent-completed (event)
+  "Handle agent.completed events from AI Tool Hub. Updates local agent-info."
+  (let* ((payload (hngh.core.event-bus:event-payload event))
+         (id (getf payload :id)))
+    (when id
+      (let ((agent (find-agent id)))
+        (when agent
+          (update-agent id :status :completed
+                        :result (getf payload :result)
+                        :cost (getf payload :cost 0.0))
+          (hngh.core:log-debug "Agent ~D completed (via event)" id))))))
+
+(defun find-lowest-priority-agent ()
+  "Find the most recently started running/pending agent (LIFO heuristic)."
+  (bt:with-lock-held (*agents-lock*)
+    (let ((candidates (loop for agent being the hash-values of *agents*
+                            when (member (agent-info-status agent) '(:running :pending))
+                            collect agent)))
+      (car (sort candidates #'> :key #'agent-info-started-at)))))
+
+;;; --- Lifecycle ------------------------------------------------------------
+
+(defun init (&key (hngh-home hngh:*hngh-home*))
+  "Initialize the AI orchestrator plugin."
+  (declare (ignore hngh-home))
+  (setf *running* nil *event-subscriptions* '())
+  (bt:with-lock-held (*agents-lock*)
+    (setf *agents* (make-hash-table :test 'eql) *next-agent-id* 0))
+  (bt:with-lock-held (*policies-lock*)
+    (setf *policies* (make-hash-table :test 'eq))
+    (setf (gethash :default *policies*) (copy-delegate-policy *default-policy*)))
+  (load-policies)
+  (when (event-bus-ready-p)
+    (handler-case
+        (push (hngh.core.event-bus:subscribe "resource.pressure"
+                                              #'handle-resource-pressure)
+              *event-subscriptions*)
+      (error (c)
+        (hngh.core:log-warn "Could not subscribe to resource.pressure: ~A" c)))
+    (handler-case
+        (push (hngh.core.event-bus:subscribe "agent.completed"
+                                              #'handle-agent-completed)
+              *event-subscriptions*)
+      (error (c)
+        (hngh.core:log-warn "Could not subscribe to agent.completed: ~A" c))))
+  (setf *running* t)
+  (hngh.core:log-info "AI Orchestrator initialized"))
+
+(defun shutdown ()
+  "Shut down the AI orchestrator plugin."
+  (when *running*
+    (hngh.core:log-info "Shutting down AI Orchestrator...")
+    (let ((running-ids
+            (bt:with-lock-held (*agents-lock*)
+              (loop for agent being the hash-values of *agents*
+                    when (member (agent-info-status agent) '(:running :pending))
+                    collect (agent-info-id agent)))))
+      (dolist (id running-ids)
+        (handler-case (kill-agent id :reason :shutdown)
+          (error (c)
+            (hngh.core:log-warn "Error killing agent ~D during shutdown: ~A" id c)))))
+    (when (event-bus-ready-p)
+      (dolist (sub-id *event-subscriptions*)
+        (handler-case (hngh.core.event-bus:unsubscribe sub-id)
+          (error (c)
+            (hngh.core:log-warn "Error unsubscribing ~D: ~A" sub-id c)))))
+    (setf *event-subscriptions* '())
+    (bt:with-lock-held (*agents-lock*)
+      (clrhash *agents*) (setf *next-agent-id* 0))
+    (bt:with-lock-held (*policies-lock*)
+      (clrhash *policies*))
+    (setf *running* nil)
+    (hngh.core:log-info "AI Orchestrator shut down")))
+
+(defun running-p ()
+  "Return T if the AI orchestrator plugin is active."
+  *running*)
