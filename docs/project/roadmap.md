@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 in progress (Batches 0–4 complete, Batch 5 pending)
+**Status**: M1 in progress (Batches 0–4 complete; Batch 5 in progress — M1.10 done)
 **Last updated**: 2026-06-24
 
 ---
@@ -12,7 +12,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 | Milestone | Name | Goal | Status |
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
-| M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done; 11/12 features) |
+| M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
 | M2 | The Companion (v0.2) | Graphical buddies, passive observation, cost optimization | Not started |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
@@ -61,7 +61,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 | M1.7 | AI orchestrator | B3: coordinator, context package assembly, inter-tool handoffs | Done | 16 |
 | M1.8 | LLM threat detector (L2+L4) | B5: on-demand LLM review, periodic drift detection | Done | 6 |
 | M1.9 | Hnghbeats | B6: event condensation, daily beats | Done | 3 |
-| M1.10 | Backup manager | B7: git versioning, remote sync, restore | **Future** | — |
+| M1.10 | Backup manager | B7: git versioning, remote sync, restore | Done | 16 |
 | M1.11 | Secrets manager | B8: 1Password/KeePassXC/vault.age backends, policy | Done | 22 |
 | M1.12 | Knowledge base | B12: article storage, keyword search, learned-pattern recording | Done | 7 |
 | M1.13 | KDE integration (optional) | B10: theming, notifications | Future (P2) | — |
@@ -77,7 +77,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 | 2: System + Secrets | M1.3, M1.4, M1.11 | **Done** |
 | 3: AI Infrastructure | M1.5, M1.6, M1.7 | **Done** |
 | 4: Security AI + Knowledge | M1.8, M1.9, M1.12 | **Done** |
-| 5: Backup + Polish | M1.10, M1.13, M1.14, M1.15 | Pending |
+| 5: Backup + Polish | M1.10 ✓, M1.13, M1.14, M1.15 | In progress (M1.10 done) |
 
 ---
 

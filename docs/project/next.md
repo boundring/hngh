@@ -5,23 +5,23 @@
 ## Current Status
 
 **Milestone 0 complete** (commit b89abc7) — 78 unit + 18 integration = 96 tests, all passing.
-**Milestone 1 batches 0–4 complete** (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8) — 11 of 12 feature deliverables implemented.
-**Cumulative after M1 batches 0–4**: 227 unit + 18 integration = 245 tests, all passing.
-**Last session**: M1.8 + M1.9 + M1.12 (commit cc4afa8, 2026-06-24) — LLM threat detector + Hnghbeats + Knowledge base.
+**Milestone 1 batches 0–4 complete** (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8) — 11 feature deliverables.
+**Batch 5 in progress**: M1.10 Backup Manager done (2026-06-24, Oracle-reviewed + hardened).
+**Cumulative after M1.10**: 243 unit + 18 integration = 261 tests, all passing (1090 FiveAM checks).
+**Last session**: M1.10 Backup Manager (B7) — git-versioned state backup with secrets exclusion.
 
 ## Up Next
 
-**Milestone 1: The Harness (v0.1)** — 15 deliverables across 6 batches. Batches 0–4 done; **Batch 5 remaining**.
+**Milestone 1: The Harness (v0.1)** — Batches 0–4 done; **Batch 5 in progress (M1.10 done; 3 deliverables remaining)**.
 
-### Batch 5: Backup + Polish
-- **M1.10**: Backup manager (B7) — git versioning, remote sync, restore. P1.
-- **M1.13**: KDE integration (B10) — theming, notifications. P2 (optional).
+### Batch 5: Backup + Polish — remaining
+- **M1.13**: KDE integration (B10) — theming, notifications. P2 (user chose to include in v0.1).
 - **M1.14**: PKGBUILD + split packages — five packages (hngh-core, hngh-system, hngh-python, hngh-kde, hngh-dev), custom repo. P0.
-- **M1.15**: Integration tests — end-to-end shell tests for all 8 critical flows in `docs/design/integrations.md`. P0.
+- **M1.15**: Integration tests — end-to-end shell tests for all 8 critical flows in `docs/design/integrations.md`. P0. (The backup-to-remote flow 4.7 is now unblocked by M1.10.)
 
-### Cleanup before Batch 5
-- ~~Remove orphaned `tests/unit/harness.lisp`~~ — **NOT orphaned.** The file holds the migrated FiveAM test infrastructure: `def-suite :hngh`, `hngh.tests:run-tests`, and the fixture helpers (`make-tmp-home`, `cleanup-tmp-home`, `fixture-path`). The old custom `define-test` / `assert-true` macros are gone. The file name is misleading but the contents are essential. Could be renamed to `tests/unit/fiveam-harness.lisp` for clarity (D-026).
-- Wire `hngh.asd` `:perform (test-op ...)` body to call `(uiop:symbol-call :hngh.tests :run-tests)`. **Done (commit TBD)** — `asdf:test-system :hngh/tests` now actually runs the full 1020 checks.
+### M1.10 follow-ups (deferred, non-blocking)
+- `verify-history` command to audit git history for forbidden paths before first push to a public remote (mitigates the prior-committed-secrets limitation, D-028/M1).
+- Optional rename `tests/unit/harness.lisp` → `fiveam-harness.lisp` (D-026); history ring-buffer cap (Oracle L2).
 
 See `docs/project/roadmap.md` for full M1 deliverable list.
 See `docs/project/work-sessions.md` for detailed session plans.
