@@ -92,3 +92,34 @@
   (is (hngh.core.plugin-host:plugin-loaded-p "test-plugin"))
   (hngh.core.plugin-host:unload-plugin "test-plugin")
   (is (not (hngh.core.plugin-host:plugin-loaded-p "test-plugin"))))
+
+(test plugin-host-emits-load-and-unload-events
+  (let ((tmp (make-tmp-home))
+        (loaded-events '())
+        (unloaded-events '()))
+    (cleanup-tmp-home tmp)
+    (unwind-protect
+         (progn
+           (hngh.core.event-bus:init :hngh-home tmp)
+           (hngh.core.plugin-host:clear-registry)
+           (hngh.core.event-bus:subscribe
+            "plugin.loaded"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-payload evt) loaded-events)))
+           (hngh.core.event-bus:subscribe
+            "plugin.unloaded"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-payload evt) unloaded-events)))
+
+           (hngh.core.plugin-host:load-plugin (fixture-path "test-plugin/manifest.lisp"))
+           (is (not (null loaded-events)) "plugin.loaded should be emitted")
+           (is (equal "test-plugin" (getf (first loaded-events) :name))
+               "plugin.loaded payload should include plugin name")
+
+           (hngh.core.plugin-host:unload-plugin "test-plugin")
+           (is (not (null unloaded-events)) "plugin.unloaded should be emitted")
+           (is (equal "test-plugin" (getf (first unloaded-events) :name))
+               "plugin.unloaded payload should include plugin name"))
+      (ignore-errors (hngh.core.plugin-host:clear-registry))
+      (ignore-errors (hngh.core.event-bus:shutdown))
+      (cleanup-tmp-home tmp))))

@@ -113,20 +113,40 @@ Runs in a background thread."
 
 ;;; --- Signal translation ---
 
+(defun kebab-token (value)
+  "Return VALUE lowercased with non-alphanumerics replaced by '-'."
+  (let ((text (string-downcase (or value ""))))
+    (with-output-to-string (out)
+      (loop for ch across text
+            do (write-char (if (alphanumericp ch) ch #\-) out)))))
+
+(defun normalize-system-topic (interface member)
+  "Return normalized system.* topic for known INTERFACE classes, else NIL."
+  (let* ((iface (string-downcase (or interface "")))
+         (member-kebab (kebab-token member)))
+    (cond
+      ((search "systemd1" iface)
+       (format nil "system.systemd.~A" member-kebab))
+      ((or (search "udev" iface)
+           (search "device" iface)
+           (search "hotplug" iface))
+       (format nil "system.udev.~A" member-kebab))
+      ((search "login1" iface)
+       (format nil "system.login.~A" member-kebab))
+      (t nil))))
+
 (defun handle-dbus-signal (line)
   "Parse a gdbus monitor output line and translate to an internal event.
 gdbus monitor output looks like:
   The name :1.42 is owned by org.freedesktop.systemd1
   /org/freedesktop/systemd1: org.freedesktop.systemd1.Manager.JobNew (...)
   /org/freedesktop/systemd1: org.freedesktop.systemd1.Manager.UnitNew (...)"
-  (cl-ppcre:register-groups-bind (object-path interface+member args)
+  (cl-ppcre:register-groups-bind (object-path interface member args)
       (*signal-scanner* line)
-    (let* ((last-dot (position #\. interface+member :from-end t))
-           (interface (subseq interface+member 0 last-dot))
-           (member (subseq interface+member (1+ last-dot)))
-           (topic (format nil "dbus.signal.~A.~A"
-                          (cl-ppcre:regex-replace-all "\\." interface "-")
-                          member)))
+    (let* ((topic (format nil "dbus.signal.~A.~A"
+                           (cl-ppcre:regex-replace-all "\\." interface "-")
+                           member))
+           (system-topic (normalize-system-topic interface member)))
       (hngh.core:log-debug "dbus signal: ~A.~A (~A)" interface member args)
       (when hngh.core.event-bus:*event-bus*
         (hngh.core.event-bus:publish
@@ -135,7 +155,15 @@ gdbus monitor output looks like:
                 :interface interface
                 :member member
                 :args args)
-          :source 'dbus-bridge)))
+          :source 'dbus-bridge)
+        (when system-topic
+          (hngh.core.event-bus:publish
+           system-topic
+           (list :interface interface
+                 :member member
+                 :args args
+                 :source :dbus-bridge)
+           :source 'dbus-bridge))))
     t))
 
 ;;; --- Method calls ---

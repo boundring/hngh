@@ -658,6 +658,8 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 
 (defun handle-agent-completed (event)
   "Handle agent.completed events from AI Tool Hub. Updates local agent-info."
+  (when (eq (hngh.core.event-bus:event-source event) 'ai-orchestrator)
+    (return-from handle-agent-completed nil))
   (let* ((payload (hngh.core.event-bus:event-payload event))
          (id (or (getf payload :id)
                  (getf payload :invocation-id))))

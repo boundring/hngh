@@ -26,3 +26,57 @@
 
 (test find-gdbus-returns-bool
   (is (hngh.plugins.dbus-bridge:find-gdbus)))
+
+(test dbus-bridge-handle-signal-emits-system-topic-for-known-interface
+  (let ((tmp (make-tmp-home))
+        (system-topics '())
+        (dbus-topics '()))
+    (cleanup-tmp-home tmp)
+    (unwind-protect
+         (progn
+           (hngh.core.event-bus:init :hngh-home tmp)
+           (hngh.core.event-bus:subscribe
+            "system.*"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-topic evt) system-topics)))
+           (hngh.core.event-bus:subscribe
+            "dbus.signal.*"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-topic evt) dbus-topics)))
+
+           (hngh.plugins.dbus-bridge::handle-dbus-signal
+            "/org/freedesktop/systemd1: org.freedesktop.systemd1.Manager.JobNew((u 42))")
+
+           (is (find "system.systemd.jobnew" system-topics :test #'string=)
+               "Known systemd interface should emit normalized system.* event")
+           (is (not (null dbus-topics))
+               "Raw dbus.signal.* event should remain backward-compatible"))
+      (ignore-errors (hngh.core.event-bus:shutdown))
+      (cleanup-tmp-home tmp))))
+
+(test dbus-bridge-handle-signal-skips-system-topic-for-unknown-interface
+  (let ((tmp (make-tmp-home))
+        (system-topics '())
+        (dbus-topics '()))
+    (cleanup-tmp-home tmp)
+    (unwind-protect
+         (progn
+           (hngh.core.event-bus:init :hngh-home tmp)
+           (hngh.core.event-bus:subscribe
+            "system.*"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-topic evt) system-topics)))
+           (hngh.core.event-bus:subscribe
+            "dbus.signal.*"
+            (lambda (evt)
+              (push (hngh.core.event-bus:event-topic evt) dbus-topics)))
+
+           (hngh.plugins.dbus-bridge::handle-dbus-signal
+            "/org/example/custom: com.example.Custom.InterfaceChanged((\"x\"))")
+
+           (is (null system-topics)
+               "Unknown interfaces should not emit normalized system.* events")
+           (is (not (null dbus-topics))
+               "Unknown interfaces should still emit dbus.signal.* events"))
+      (ignore-errors (hngh.core.event-bus:shutdown))
+      (cleanup-tmp-home tmp))))

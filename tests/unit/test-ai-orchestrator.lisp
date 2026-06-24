@@ -344,6 +344,41 @@
         (is (= 0.42 (hngh.plugins.ai-orchestrator:agent-info-cost updated))
             "Agent cost should be set from payload")))))
 
+(test aio-handle-agent-completed-ignores-self-source
+  "handle-agent-completed ignores events emitted by ai-orchestrator itself."
+  (with-aio-light (tmp)
+    (let ((agent (hngh.plugins.ai-orchestrator::make-agent-info
+                  :id 201 :tool :opencode :task "task"
+                  :status :running :cost 0.0 :started-at (get-universal-time)
+                  :backend-id 808 :context nil :result nil :transcript-path nil)))
+      (hngh.plugins.ai-orchestrator::register-agent agent)
+
+      (hngh.plugins.ai-orchestrator::handle-agent-completed
+       (hngh.core.event-bus:make-event
+        :id 1
+        :topic "agent.completed"
+        :payload (list :invocation-id 808 :result "self" :cost 0.10)
+        :timestamp (get-universal-time)
+        :source 'hngh.plugins.ai-orchestrator::ai-orchestrator))
+
+      (let ((unchanged (hngh.plugins.ai-orchestrator::find-agent 201)))
+        (is (eq :running (hngh.plugins.ai-orchestrator:agent-info-status unchanged))
+            "Self-sourced completion event should be ignored"))
+
+      (hngh.plugins.ai-orchestrator::handle-agent-completed
+       (hngh.core.event-bus:make-event
+        :id 2
+        :topic "agent.completed"
+        :payload (list :invocation-id 808 :result "foreign" :cost 0.20)
+        :timestamp (get-universal-time)
+        :source 'ai-tool-hub))
+
+      (let ((updated (hngh.plugins.ai-orchestrator::find-agent 201)))
+        (is (eq :completed (hngh.plugins.ai-orchestrator:agent-info-status updated))
+            "Foreign completion event should be processed")
+        (is (string= "foreign" (hngh.plugins.ai-orchestrator::agent-info-result updated))
+            "Foreign completion should update result")))))
+
 ;;; --- Test 16: Local invoke uses plist model-spec + backend-id --------------
 
 (test aio-invoke-agent-local-runtime-model-spec

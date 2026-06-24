@@ -21,6 +21,15 @@
 
 (in-package :hngh.core.plugin-host)
 
+(defun maybe-publish (topic payload)
+  "Publish TOPIC with PAYLOAD if event bus is available."
+  (when hngh.core.event-bus:*event-bus*
+    (handler-case
+        (hngh.core.event-bus:publish topic payload :source 'plugin-host)
+      (error (c)
+        (hngh.core:log-warn "Plugin Host event publish failed (~A): ~A" topic c)
+        nil))))
+
 (defvar *loaded-plugins* (make-hash-table :test 'equal)
   "Registry of loaded plugins. Key: plugin name (string), value: plugin-info struct.")
 
@@ -138,15 +147,30 @@ Returns the plugin-info struct on success, or signals an error."
              ;; Call init function if present
              (when (plugin-info-init-fn info)
                (hngh.core:log-debug "Calling init for ~A" name)
-               (funcall (plugin-info-init-fn info)))
-             ;; Register
-             (setf (gethash name *loaded-plugins*) info)
-             (hngh.core:log-info "Plugin ~A v~A loaded" name (plugin-info-version info))
-             info)))
+                (handler-case
+                    (funcall (plugin-info-init-fn info))
+                  (error (c)
+                    (maybe-publish "plugin.load-failed"
+                                   (list :name name
+                                         :stage :init
+                                         :reason (princ-to-string c)))
+                    (error c))))
+              ;; Register
+              (setf (gethash name *loaded-plugins*) info)
+              (hngh.core:log-info "Plugin ~A v~A loaded" name (plugin-info-version info))
+              (maybe-publish "plugin.loaded"
+                             (list :name name
+                                   :tier (plugin-info-trust-tier info)
+                                   :version (plugin-info-version info)))
+              info)))
         ;; Non-CL plugins (Python, WASM) — stub for now
         (t
-         (hngh.core:log-warn "Plugin ~A: language ~A not yet supported" name lang)
-         nil)))))
+          (hngh.core:log-warn "Plugin ~A: language ~A not yet supported" name lang)
+          (maybe-publish "plugin.load-failed"
+                         (list :name name
+                               :stage :load
+                               :reason "unsupported language"))
+          nil)))))
 
 (defun find-system-p (name)
   "Check if an ASDF system named NAME is registered."
@@ -174,6 +198,8 @@ Does not delete the package (CL packages can't be deleted portably)."
     ;; Remove from registry
     (remhash name *loaded-plugins*)
     (hngh.core:log-info "Plugin ~A unloaded" name)
+    (maybe-publish "plugin.unloaded"
+                   (list :name name :reason :user-request))
     t))
 
 ;;; --- Plugin reload (hot-patch) ---
@@ -189,10 +215,14 @@ If the plugin has a reload-fn, calls it. Otherwise, does unload + load."
       ((plugin-info-reload-fn info)
        (hngh.core:log-info "Hot-reloading plugin ~A" name)
        (handler-case
-           (progn
-             (funcall (plugin-info-reload-fn info))
-             (hngh.core:log-info "Plugin ~A hot-reloaded" name)
-             t)
+            (progn
+              (funcall (plugin-info-reload-fn info))
+              (hngh.core:log-info "Plugin ~A hot-reloaded" name)
+              (maybe-publish "plugin.reloaded"
+                             (list :name name
+                                   :old-version (plugin-info-version info)
+                                   :new-version (plugin-info-version info)))
+              t)
          (error (c)
            (hngh.core:log-error "Plugin ~A hot-reload failed: ~A" name c)
            nil)))

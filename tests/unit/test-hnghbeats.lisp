@@ -69,8 +69,8 @@
       (is (integerp schedule-id) "Init should register daily scheduler job")
       (is (not (null has-job))
           "Scheduler should contain hnghbeats daily condensation job")
-      (is (= 1 (getf status :subscriptions))
-          "Plugin should subscribe to the *.* event stream"))
+       (is (= 1 (getf status :subscriptions))
+          "Plugin should subscribe to the * event stream"))
     (hngh.plugins.hnghbeats:shutdown)
     (is (not (hngh.plugins.hnghbeats:running-p))
         "Plugin should report not running after shutdown")
@@ -166,7 +166,7 @@
   (with-hnghbeats (tmp)
     (let* ((date (hnghbeats-yesterday-date-string))
            (rel-path (format nil "journal/hnghbeats/~A.lisp" date))
-            (beat (hngh.plugins.hnghbeats:perform-condensation)))
+             (beat (hngh.plugins.hnghbeats:perform-condensation)))
       (declare (ignore tmp))
       (is (hngh.core.state-store:state-exists-p rel-path)
           "Even with no events, condensation should persist a beat file")
@@ -179,3 +179,16 @@
       (is (equal 0 (getf (getf beat :threat-events) :count)))
       (is (equal 0 (getf (getf beat :user-activity) :count)))
       (is (equal 0 (getf (getf beat :errors) :count))))))
+
+(test hnghbeats-live-subscription-captures-published-events
+  (with-hnghbeats (tmp)
+    (hngh.core.event-bus:publish "package.op-completed"
+                                 '(:op :install :package "foo")
+                                 :source 'test)
+    (let ((recent hngh.plugins.hnghbeats::*recent-events*))
+      (is (not (null recent))
+          "Recent event buffer should capture live published events")
+      (is (find "package.op-completed" recent
+                :test #'string=
+                :key (lambda (evt) (getf evt :topic)))
+          "Captured events should include package.op-completed topic"))))
