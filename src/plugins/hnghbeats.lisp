@@ -303,7 +303,7 @@
     (hngh.core.event-bus:publish "hnghbeats.beat" beat :source 'hnghbeats)))
 
 (defun capture-event (event)
-  "Event bus callback used to capture *.* stream for fallback condensation."
+  "Event bus callback used to capture all live events for fallback condensation."
   (let ((normalized (normalize-event event)))
     (bt:with-lock-held (*events-lock*)
       (push normalized *recent-events*)
@@ -352,7 +352,7 @@ Always returns a deterministic beat plist, including when no events exist."
     (setf *recent-events* '()))
 
   (when hngh.core.event-bus:*event-bus*
-    (push (hngh.core.event-bus:subscribe "*.*" #'capture-event)
+    (push (hngh.core.event-bus:subscribe "*" #'capture-event)
           *event-subscriptions*))
 
   (when (hngh.core.scheduler:running-p)
