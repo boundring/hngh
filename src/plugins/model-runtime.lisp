@@ -102,7 +102,11 @@ Returns NIL if the command fails."
   (handler-case
       (let ((output (with-output-to-string (s)
                       (sb-ext:run-program "curl"
-                                          (list "-s" "-o" "/dev/null" "-w" "%{http_code}"
+                                          (list "-s"
+                                                "--connect-timeout" "3"
+                                                "--max-time" "8"
+                                                "-o" "/dev/null"
+                                                "-w" "%{http_code}"
                                                 (format nil "http://localhost:~D/api/version" port))
                                           :output s :search t :wait t))))
         (string= (string-trim '(#\Space #\Newline) output) "200"))
@@ -115,7 +119,10 @@ Returns T if model exists, NIL otherwise."
   (handler-case
       (multiple-value-bind (output code)
           (run-command "curl"
-                       (list "-s" "-X" "POST"
+                       (list "-s"
+                             "--connect-timeout" "3"
+                             "--max-time" "10"
+                             "-X" "POST"
                              (format nil "http://localhost:~D/api/show" port)
                              "-d" (format nil "{\"name\":\"~A\"}" model)))
         (and (zerop code)
@@ -309,7 +316,7 @@ Returns a runtime-info struct on success, or NIL on failure."
 
 ;;; --- Runtime stopping -----------------------------------------------------
 
-(defun stop-runtime (id)
+(defun stop-runtime (id &key (reason :explicit))
   "Stop a runtime by ID.
 For ollama: unloads the model from the shared server (does NOT kill the process).
 For llama.cpp: kills the subprocess.
@@ -338,12 +345,15 @@ Returns T on success, NIL if not found."
            (let ((port (runtime-info-port info))
                  (model (runtime-info-model info)))
              (when (and port model)
-               (multiple-value-bind (output code)
-                   (run-command "curl"
-                                (list "-s" "-X" "POST"
-                                      (format nil "http://localhost:~D/api/generate" port)
-                                      "-d" (format nil "{\"model\":\"~A\",\"keep_alive\":0}"
-                                                   model)))
+                (multiple-value-bind (output code)
+                    (run-command "curl"
+                                 (list "-s"
+                                       "--connect-timeout" "3"
+                                       "--max-time" "12"
+                                       "-X" "POST"
+                                       (format nil "http://localhost:~D/api/generate" port)
+                                       "-d" (format nil "{\"model\":\"~A\",\"keep_alive\":0}"
+                                                    model)))
                  (if (zerop code)
                      (hngh.core:log-info "Model ~A unloaded from ollama" model)
                      (hngh.core:log-warn "Failed to unload model ~A from ollama: ~A"
@@ -388,7 +398,8 @@ Returns T on success, NIL if not found."
         (error () nil)))
 
     ;; Release resource grant if held
-    (when (runtime-info-grant-id info)
+    (when (and (runtime-info-grant-id info)
+               (not (eq reason :preempted)))
       (when (hngh.core.resource-manager:running-p)
         (handler-case
             (hngh.core.resource-manager:release (runtime-info-grant-id info))
@@ -397,7 +408,7 @@ Returns T on success, NIL if not found."
                                 (runtime-info-grant-id info) c)))))
 
     ;; Emit runtime.stopped event
-    (emit-runtime-event "runtime.stopped" info :reason :explicit)
+    (emit-runtime-event "runtime.stopped" info :reason reason)
 
     t))
 
@@ -511,30 +522,22 @@ Returns the runtime-info struct or NIL."
 (defun stop-runtimes-by-grant-id (grant-id)
   "Stop all runtimes with the given GRANT-ID.
 Used when resource.preempted events are received."
-  (let ((victims '()))
+  (let ((victim-ids '()))
     (bt:with-lock-held (*runtimes-lock*)
-      (setf victims (remove-if-not
+      (setf victim-ids
+            (mapcar #'runtime-info-id
+                    (remove-if-not
                      (lambda (rt) (eql (runtime-info-grant-id rt) grant-id))
-                     *runtimes*)))
-    (dolist (rt victims)
-      (hngh.core:log-info "Preempting runtime ~D (~A) — grant ~D preempted"
-                           (runtime-info-id rt)
-                           (runtime-info-model rt)
-                           grant-id)
-      (emit-runtime-event "runtime.stopped" rt :reason :preempted)
-      (bt:with-lock-held (*runtimes-lock*)
-        (setf *runtimes* (remove rt *runtimes*)))
-      ;; Release the grant
-      (when (hngh.core.resource-manager:running-p)
-        (handler-case
-            (hngh.core.resource-manager:release grant-id)
-          (error () nil)))
-      ;; Unregister from supervisor
-      (when (hngh.core.supervisor:running-p)
-        (handler-case
-            (hngh.core.supervisor:unregister
-             (format nil "runtime-~D" (runtime-info-id rt)))
-          (error () nil))))))
+                     *runtimes*))))
+    (dolist (runtime-id victim-ids)
+      (handler-case
+          (progn
+            (hngh.core:log-info "Preempting runtime ~D — grant ~D preempted"
+                                runtime-id grant-id)
+            (stop-runtime runtime-id :reason :preempted))
+        (error (c)
+          (hngh.core:log-warn "Failed to stop preempted runtime ~D: ~A"
+                              runtime-id c))))))
 
 ;;; --- Lifecycle ------------------------------------------------------------
 

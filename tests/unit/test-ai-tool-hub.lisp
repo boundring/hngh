@@ -272,3 +272,19 @@
          (is (= (length tools) 8)
              "Tool registry should have 8 default entries"))
     (ath-teardown)))
+
+;;; --- Tests: Direct API headers --------------------------------------
+
+(test ath-provider-api-headers
+  "AI Tool Hub: provider-api-headers uses provider-correct auth headers."
+  (let ((anthropic (hngh.plugins.ai-tool-hub::provider-api-headers :anthropic-api "anth-key"))
+        (google (hngh.plugins.ai-tool-hub::provider-api-headers :google-api "goog-key"))
+        (openai (hngh.plugins.ai-tool-hub::provider-api-headers :openai-api "open-key")))
+    (is (find "x-api-key: anth-key" anthropic :test #'string=)
+        "Anthropic should use x-api-key header")
+    (is (find "anthropic-version: 2023-06-01" anthropic :test #'string=)
+        "Anthropic should include version header")
+    (is (find "x-goog-api-key: goog-key" google :test #'string=)
+        "Google should use x-goog-api-key header")
+    (is (find "Authorization: Bearer open-key" openai :test #'string=)
+        "OpenAI should use Authorization Bearer header")))

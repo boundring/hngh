@@ -49,18 +49,19 @@ All core component implementations live in sub-packages of hngh.core.")
   (:documentation "Event Bus (A2) — pub/sub nervous system.")
   (:use :cl)
   (:export #:publish
-           #:subscribe
-           #:unsubscribe
-           #:init
-           #:shutdown
-           #:running-p
-           #:topic-match-p
-           #:read-journal-events
-           #:event
-           #:event-id
-           #:event-topic
-           #:event-payload
-           #:event-timestamp
+            #:subscribe
+            #:unsubscribe
+            #:init
+            #:shutdown
+            #:running-p
+            #:topic-match-p
+            #:read-journal-events
+            #:journal-file-path
+            #:event
+            #:event-id
+            #:event-topic
+            #:event-payload
+            #:event-timestamp
            #:event-source
            #:make-event
            #:list-subscriptions
@@ -332,12 +333,16 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:tool-info-available-p
            #:tool-info-capabilities
            #:invocation-info
-           #:invocation-info-id
-           #:invocation-info-tool
-           #:invocation-info-task
-           #:invocation-info-status
-           #:invocation-info-started-at
-           #:invocation-info-cost))
+            #:invocation-info-id
+            #:invocation-info-tool
+            #:invocation-info-task
+            #:invocation-info-status
+            #:invocation-info-started-at
+            #:invocation-info-cost
+            #:invocation-info-pid
+            #:invocation-info-workdir
+            #:invocation-info-result
+            #:invocation-info-error))
 
 (defpackage :hngh.plugins.ai-orchestrator
   (:documentation "AI Orchestrator (B3) — coordinator, context packages, inter-tool handoffs.")

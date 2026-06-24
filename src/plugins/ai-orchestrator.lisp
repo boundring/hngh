@@ -25,6 +25,7 @@ Transcripts are persisted to agents/<id>/transcript.lisp via the state store."
   (status :pending :type keyword)
   (cost 0.0 :type number)
   (started-at 0 :type integer)
+  (backend-id nil :type (or null integer))
   (context nil :type list)
   (result nil :type (or null string))
   (transcript-path nil :type (or null string)))
@@ -216,11 +217,20 @@ Returns the updated agent-info or NIL if not found."
               do (case key
                    (:status (setf (agent-info-status agent) val))
                    (:cost (setf (agent-info-cost agent) val))
+                    (:backend-id (setf (agent-info-backend-id agent) val))
                    (:result (setf (agent-info-result agent) val))
                    (:transcript-path (setf (agent-info-transcript-path agent) val))
                    (:tool (setf (agent-info-tool agent) val))
                    (t (hngh.core:log-debug "Unknown agent update key: ~A" key))))
         agent))))
+
+(defun find-agent-by-backend-id (backend-id)
+  "Find an agent-info by backend invocation/runtime ID. Returns NIL if not found."
+  (when backend-id
+    (bt:with-lock-held (*agents-lock*)
+      (loop for agent being the hash-values of *agents*
+            when (eql (agent-info-backend-id agent) backend-id)
+            do (return agent)))))
 
 (defun remove-agent (id)
   "Remove agent ID from *agents*. Returns the removed agent-info or NIL."
@@ -330,14 +340,18 @@ Returns a plist (:count N :events (...))."
       (when (tool-hub-fbound-p "SELECT-TOOL")
         (handler-case
             (let ((select-fn (find-symbol "SELECT-TOOL" :hngh.plugins.ai-tool-hub)))
-              (let ((tool (funcall select-fn (make-task-spec task))))
+              (let ((tool (funcall select-fn task
+                                   :max-cost (delegate-policy-max-cost policy)
+                                   :privacy (eq privacy :local-only))))
                 (when tool (return-from select-tool-for-task tool))))
           (error ()))))
     ;; Default: try agentic first, then local
     (when (tool-hub-fbound-p "SELECT-TOOL")
       (handler-case
           (let ((select-fn (find-symbol "SELECT-TOOL" :hngh.plugins.ai-tool-hub)))
-            (let ((tool (funcall select-fn (make-task-spec task))))
+            (let ((tool (funcall select-fn task
+                                 :max-cost (delegate-policy-max-cost policy)
+                                 :privacy (eq privacy :local-only))))
               (when tool (return-from select-tool-for-task tool))))
         (error ())))
     (when (model-runtime-running-p)
@@ -414,33 +428,77 @@ Returns :success or :failure. Updates agent-info in-place."
     (handler-case
         (cond
           ;; Agentic CLI / direct API tools
-          ((member tool '(:opencode :claude :codex :gemini))
+          ((member tool '(:opencode :claude :codex :gemini :cecli
+                          :anthropic-api :google-api :openai-api))
            (if (tool-hub-fbound-p "INVOKE")
-               (let ((invoke-fn (find-symbol "INVOKE" :hngh.plugins.ai-tool-hub)))
-                 (let ((result (funcall invoke-fn tool task :context ctx)))
-                   (update-agent id :result (princ-to-string result) :status :completed)
-                   (return-from invoke-agent :success)))
-               (progn
-                 (update-agent id
-                               :result (format nil "AI Tool Hub invoke not yet implemented for ~A" tool)
-                               :status :failed)
-                 (return-from invoke-agent :failure))))
+                (let ((invoke-fn (find-symbol "INVOKE" :hngh.plugins.ai-tool-hub)))
+                  (let* ((result (funcall invoke-fn tool task :context ctx))
+                         (inv-id (ignore-errors
+                                   (hngh.plugins.ai-tool-hub:invocation-info-id result)))
+                         (inv-status (ignore-errors
+                                       (hngh.plugins.ai-tool-hub:invocation-info-status result)))
+                         (inv-cost (ignore-errors
+                                     (hngh.plugins.ai-tool-hub:invocation-info-cost result)))
+                         (inv-result (ignore-errors
+                                       (hngh.plugins.ai-tool-hub:invocation-info-result result)))
+                         (inv-error (ignore-errors
+                                      (hngh.plugins.ai-tool-hub:invocation-info-error result))))
+                    (update-agent id
+                                  :backend-id inv-id
+                                  :cost (or inv-cost 0.0))
+                    (if (eq inv-status :completed)
+                        (progn
+                          (update-agent id
+                                        :result (or (and (stringp inv-result) inv-result)
+                                                    (and inv-result (princ-to-string inv-result))
+                                                    (princ-to-string result))
+                                        :status :completed)
+                          (return-from invoke-agent :success))
+                        (progn
+                          (update-agent id
+                                        :result (or (and (stringp inv-error) inv-error)
+                                                    (and inv-error (princ-to-string inv-error))
+                                                    (and (stringp inv-result) inv-result)
+                                                    (and inv-result (princ-to-string inv-result))
+                                                    (princ-to-string result))
+                                        :status :failed)
+                          (return-from invoke-agent :failure)))))
+                (progn
+                  (update-agent id
+                                :result (format nil "AI Tool Hub invoke not yet implemented for ~A" tool)
+                                :status :failed)
+                  (return-from invoke-agent :failure))))
           ;; Local model runtime tools
-          ((member tool '(:ollama :llama.cpp :unsloth :comfyui))
+          ((member tool '(:ollama :llama-cpp :unsloth :comfyui))
            (if (model-runtime-fbound-p "SPAWN-RUNTIME")
-               (handler-case
-                   (let ((spawn-fn (find-symbol "SPAWN-RUNTIME" :hngh.plugins.model-runtime)))
-                     (funcall spawn-fn tool
-                              (or (delegate-policy-model policy) "default")
-                              :grant-id nil)
-                     (update-agent id
-                                   :result (format nil "Local runtime ~A spawned (query M2+)" tool)
-                                   :status :completed)
-                     (return-from invoke-agent :success))
-                 (error (c)
-                   (update-agent id
-                                 :result (format nil "Failed to spawn local runtime ~A: ~A" tool c)
-                                 :status :failed)
+                (handler-case
+                    (let* ((spawn-fn (find-symbol "SPAWN-RUNTIME" :hngh.plugins.model-runtime))
+                           (model-name (or (delegate-policy-model policy) "default"))
+                           (runtime (funcall spawn-fn tool
+                                            (list :name model-name)
+                                            :grant-id nil))
+                           (runtime-id (and runtime
+                                            (hngh.plugins.model-runtime:runtime-info-id runtime)))
+                           (runtime-status (and runtime
+                                                (hngh.plugins.model-runtime:runtime-info-status
+                                                 runtime))))
+                      (update-agent id :backend-id runtime-id)
+                      (if (eq runtime-status :ready)
+                          (progn
+                            (update-agent id
+                                          :result (format nil "Local runtime ~A (~A) spawned" tool model-name)
+                                          :status :completed)
+                            (return-from invoke-agent :success))
+                          (progn
+                            (update-agent id
+                                          :result (format nil "Failed to spawn local runtime ~A (~A): status ~A"
+                                                          tool model-name runtime-status)
+                                          :status :failed)
+                            (return-from invoke-agent :failure))))
+                  (error (c)
+                    (update-agent id
+                                  :result (format nil "Failed to spawn local runtime ~A: ~A" tool c)
+                                  :status :failed)
                    (return-from invoke-agent :failure)))
                (progn
                  (update-agent id
@@ -530,24 +588,28 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
       (hngh.core:log-debug "Kill agent: agent ~D not found" id)
       (return-from kill-agent nil))
     (let ((tool (agent-info-tool agent))
-          (status (agent-info-status agent)))
+          (status (agent-info-status agent))
+          (backend-id (agent-info-backend-id agent)))
       (unless (member status '(:running :pending))
         (hngh.core:log-debug "Agent ~D is ~A, not killing" id status)
         (return-from kill-agent nil))
       ;; Kill via appropriate channel
       (cond
-        ((member tool '(:opencode :claude :codex :gemini))
-         (when (tool-hub-fbound-p "KILL-INVOCATION")
-           (handler-case
-               (funcall (find-symbol "KILL-INVOCATION" :hngh.plugins.ai-tool-hub) id)
-             (error (c)
-               (hngh.core:log-warn "Error killing invocation ~D: ~A" id c)))))
-        ((member tool '(:ollama :llama.cpp :unsloth :comfyui))
-         (when (model-runtime-fbound-p "STOP-RUNTIME")
-           (handler-case
-               (funcall (find-symbol "STOP-RUNTIME" :hngh.plugins.model-runtime) id)
-             (error (c)
-               (hngh.core:log-warn "Error stopping runtime ~D: ~A" id c))))))
+        ((member tool '(:opencode :claude :codex :gemini :cecli
+                        :anthropic-api :google-api :openai-api))
+          (when (tool-hub-fbound-p "KILL-INVOCATION")
+            (handler-case
+                (funcall (find-symbol "KILL-INVOCATION" :hngh.plugins.ai-tool-hub)
+                         (or backend-id id))
+              (error (c)
+                (hngh.core:log-warn "Error killing invocation ~D: ~A" id c)))))
+        ((member tool '(:ollama :llama-cpp :unsloth :comfyui))
+          (when (model-runtime-fbound-p "STOP-RUNTIME")
+            (handler-case
+                (funcall (find-symbol "STOP-RUNTIME" :hngh.plugins.model-runtime)
+                         (or backend-id id))
+              (error (c)
+                (hngh.core:log-warn "Error stopping runtime ~D: ~A" id c))))))
       ;; Update status and emit event
       (update-agent id :status :killed
                     :result (format nil "Killed by orchestrator: ~A" reason))
@@ -597,14 +659,20 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 (defun handle-agent-completed (event)
   "Handle agent.completed events from AI Tool Hub. Updates local agent-info."
   (let* ((payload (hngh.core.event-bus:event-payload event))
-         (id (getf payload :id)))
+         (id (or (getf payload :id)
+                 (getf payload :invocation-id))))
     (when id
-      (let ((agent (find-agent id)))
+      (let ((agent (or (find-agent id)
+                       (find-agent-by-backend-id id))))
         (when agent
-          (update-agent id :status :completed
-                        :result (getf payload :result)
-                        :cost (getf payload :cost 0.0))
-          (hngh.core:log-debug "Agent ~D completed (via event)" id))))))
+          (let ((agent-id (agent-info-id agent)))
+            (update-agent agent-id :status :completed
+                          :result (or (getf payload :result)
+                                      (agent-info-result agent)
+                                      "Completed")
+                          :cost (getf payload :cost (agent-info-cost agent)))
+            (hngh.core:log-debug "Agent ~D completed (via event id ~D)"
+                                 agent-id id)))))))
 
 (defun find-lowest-priority-agent ()
   "Find the most recently started running/pending agent (LIFO heuristic)."
