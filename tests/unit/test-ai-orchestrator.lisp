@@ -318,3 +318,74 @@
     (hngh.plugins.ai-orchestrator:init :hngh-home tmp)
     (is (zerop (length (hngh.plugins.ai-orchestrator:list-agents)))
         "Agent list should be empty after re-init")))
+
+;;; --- Test 15: Event payload mapping by :invocation-id ----------------------
+
+(test aio-handle-agent-completed-invocation-id
+  "handle-agent-completed maps :invocation-id payloads to backend-id agents."
+  (with-aio-light (tmp)
+    (let ((agent (hngh.plugins.ai-orchestrator::make-agent-info
+                  :id 101 :tool :opencode :task "task"
+                  :status :running :cost 0.0 :started-at (get-universal-time)
+                  :backend-id 777 :context nil :result nil :transcript-path nil)))
+      (hngh.plugins.ai-orchestrator::register-agent agent)
+      (hngh.plugins.ai-orchestrator::handle-agent-completed
+       (hngh.core.event-bus:make-event
+        :id 1
+        :topic "agent.completed"
+        :payload (list :invocation-id 777 :result "ok" :cost 0.42)
+        :timestamp (get-universal-time)
+        :source 'hngh.plugins.ai-tool-hub))
+      (let ((updated (hngh.plugins.ai-orchestrator::find-agent 101)))
+        (is (eq :completed (hngh.plugins.ai-orchestrator:agent-info-status updated))
+            "Agent status should become :completed")
+        (is (string= "ok" (hngh.plugins.ai-orchestrator::agent-info-result updated))
+            "Agent result should be set from payload")
+        (is (= 0.42 (hngh.plugins.ai-orchestrator:agent-info-cost updated))
+            "Agent cost should be set from payload")))))
+
+;;; --- Test 16: Local invoke uses plist model-spec + backend-id --------------
+
+(test aio-invoke-agent-local-runtime-model-spec
+  "invoke-agent passes model-spec plist to spawn-runtime and stores backend-id."
+  (with-aio-light (tmp)
+    (let* ((spawn-sym (find-symbol "SPAWN-RUNTIME" :hngh.plugins.model-runtime))
+           (running-sym (find-symbol "RUNNING-P" :hngh.plugins.model-runtime))
+           (orig-spawn (and spawn-sym (symbol-function spawn-sym)))
+           (orig-running (and running-sym (symbol-function running-sym)))
+           (captured nil))
+      (is (and spawn-sym running-sym)
+          "Model runtime symbols should exist")
+      (unwind-protect
+           (progn
+             (setf (symbol-function running-sym) (lambda () t))
+             (setf (symbol-function spawn-sym)
+                   (lambda (kind model-spec &key grant-id port)
+                     (declare (ignore grant-id port))
+                     (setf captured (list kind model-spec))
+                     (hngh.plugins.model-runtime::make-runtime-info
+                      :id 9001
+                      :kind kind
+                      :model (getf model-spec :name)
+                      :pid nil
+                      :port nil
+                      :status :ready
+                      :grant-id nil
+                      :started-at (get-universal-time))))
+             (let* ((agent (hngh.plugins.ai-orchestrator::make-agent-info
+                            :id 42 :tool :ollama :task "local task"
+                            :status :running :cost 0.0 :started-at (get-universal-time)
+                            :backend-id nil :context nil :result nil :transcript-path nil))
+                    (policy (hngh.plugins.ai-orchestrator::make-delegate-policy
+                             :model "llama3.2-3b")))
+               (hngh.plugins.ai-orchestrator::register-agent agent)
+               (is (eq :success (hngh.plugins.ai-orchestrator::invoke-agent agent policy))
+                   "invoke-agent should succeed for ready local runtime")
+               (is (equal (second captured) (list :name "llama3.2-3b"))
+                   "model-spec should be passed as plist with :name")
+               (is (= 9001 (hngh.plugins.ai-orchestrator::agent-info-backend-id agent))
+                   "backend-id should track spawned runtime id")))
+        (when spawn-sym
+          (setf (symbol-function spawn-sym) orig-spawn))
+        (when running-sym
+          (setf (symbol-function running-sym) orig-running))))))

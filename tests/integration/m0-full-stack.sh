@@ -63,12 +63,12 @@ fi
 # --- 3. Help ---
 echo "--- Help ---"
 HELP=$("$PROJECT_DIR/bin/hngh" --help 2>&1)
-if echo "$HELP" | grep -q "\-\-version"; then
+if echo "$HELP" | grep -Fq -- "--version"; then
     pass "help shows --version"
 else
     fail "help missing --version"
 fi
-if echo "$HELP" | grep -q "\-\-hngh-home"; then
+if echo "$HELP" | grep -Fq -- "--hngh-home"; then
     pass "help shows --hngh-home"
 else
     fail "help missing --hngh-home"

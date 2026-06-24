@@ -452,9 +452,10 @@
         ;; Register invocation
         (bt:with-lock-held (*invocations-lock*)
           (push inv *invocations*))
-        ;; Emit agent.spawned event
-        (publish-event "agent.spawned"
-                        (list :invocation-id inv-id
+         ;; Emit agent.spawned event
+         (publish-event "agent.spawned"
+                        (list :id inv-id
+                              :invocation-id inv-id
                               :tool selected-tool
                               :task task
                               :timestamp (get-universal-time)))
@@ -466,8 +467,11 @@
                     (invocation-info-result inv) output)
               ;; Emit agent.completed event
               (publish-event "agent.completed"
-                              (list :invocation-id inv-id
+                              (list :id inv-id
+                                    :invocation-id inv-id
                                     :tool selected-tool
+                                    :result output
+                                    :cost (invocation-info-cost inv)
                                     :timestamp (get-universal-time)))
               ;; Log cost
               (log-cost-entry tool-info task inv t)
@@ -477,7 +481,8 @@
                   (invocation-info-error inv) (princ-to-string c))
             ;; Emit agent.failed event
             (publish-event "agent.failed"
-                            (list :invocation-id inv-id
+                            (list :id inv-id
+                                  :invocation-id inv-id
                                   :tool selected-tool
                                   :reason :execution-error
                                   :error (princ-to-string c)
@@ -541,29 +546,51 @@
 
 (defun execute-direct-api (tool-id task)
   "Execute a direct API call using curl.
-  Returns captured stdout as a string."
+Returns captured stdout as a string."
   (let* ((api-key (get-api-key tool-id))
          (endpoint (api-endpoint tool-id))
          (model (default-model tool-id))
          (payload (format-json-payload tool-id model task))
-         (env-list (when api-key
-                     (list (format nil "API_KEY=~A" api-key)))))
+         (headers (provider-api-headers tool-id api-key))
+         (header-file nil)
+         (payload-file nil))
     (unless api-key
       (error "No API key available for ~A" tool-id))
-    (hngh.core:log-info "AI Tool Hub: executing curl ~A" endpoint)
-    (let* ((process (sb-ext:run-program
-                     "curl"                      (list "-s" endpoint
-                                  "-H" (format nil "x-api-key: ~A" api-key)
-                                  "-H" "content-type: application/json"
-                                  "-d" payload)
+    (unwind-protect
+         (progn
+           (setf header-file
+                 (write-temp-file
+                  "headers"
+                  (with-output-to-string (out)
+                    (dolist (header headers)
+                      (write-string header out)
+                      (terpri out)))))
+           (setf payload-file (write-temp-file "payload" payload))
+           (hngh.core:log-info "AI Tool Hub: executing HTTP request to ~A" endpoint)
+           (let* ((process
+                    (sb-ext:run-program
+                     "curl"
+                     (list "-sS"
+                           "--fail-with-body"
+                           "--connect-timeout" "10"
+                           "--max-time" "120"
+                           endpoint
+                           "-H" (format nil "@~A" header-file)
+                           "--data-binary" (format nil "@~A" payload-file))
                      :output :stream
                      :error :output
                      :wait t
-                     :search t
-                     :environment env-list))
-           (stdout (read-stream-to-string
-                    (sb-ext:process-output process))))
-      stdout)))
+                     :search t))
+                  (stdout (or (read-stream-to-string (sb-ext:process-output process)) ""))
+                  (exit-code (sb-ext:process-exit-code process)))
+             (unless (and exit-code (zerop exit-code))
+               (error "Direct API call failed for ~A (exit ~A): ~A"
+                      tool-id exit-code stdout))
+             stdout))
+      (when header-file
+        (ignore-errors (delete-file header-file)))
+      (when payload-file
+        (ignore-errors (delete-file payload-file))))))
 
 (defun agentic-cli-args (tool-id task)
   "Return the command-line arguments for an agentic CLI tool for TASK."
@@ -580,6 +607,39 @@
     (:anthropic-api "https://api.anthropic.com/v1/messages")
     (:google-api "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
     (:openai-api "https://api.openai.com/v1/chat/completions")))
+
+(defun provider-api-headers (tool-id api-key)
+  "Return a list of provider-specific HTTP header lines.
+Each line is in the form expected by curl -H @file." 
+  (unless (and api-key (plusp (length api-key)))
+    (error "API key is empty for ~A" tool-id))
+  (ecase tool-id
+    (:anthropic-api
+     (list (format nil "x-api-key: ~A" api-key)
+           "anthropic-version: 2023-06-01"
+           "content-type: application/json"))
+    (:google-api
+     (list (format nil "x-goog-api-key: ~A" api-key)
+           "content-type: application/json"))
+    (:openai-api
+     (list (format nil "Authorization: Bearer ~A" api-key)
+           "content-type: application/json"))))
+
+(defun write-temp-file (prefix content)
+  "Write CONTENT to a temporary file and return its pathname string." 
+  (let* ((dir (uiop:temporary-directory))
+         (name (format nil "hngh-~A-~D-~D.tmp"
+                       prefix
+                       (get-universal-time)
+                       (random 1000000)))
+         (path (merge-pathnames name dir)))
+    (with-open-file (stream path
+                            :direction :output
+                            :if-exists :supersede
+                            :if-does-not-exist :create
+                            :element-type 'character)
+      (write-string (or content "") stream))
+    (namestring path)))
 
 (defun default-model (tool-id)
   "Return the default model name for TOOL-ID."
@@ -663,7 +723,8 @@
     (kill-invocation-internal inv)
     ;; Emit agent.failed event
     (publish-event "agent.failed"
-                    (list :invocation-id id
+                    (list :id id
+                          :invocation-id id
                           :tool (invocation-info-tool inv)
                           :reason :killed
                           :timestamp (get-universal-time)))

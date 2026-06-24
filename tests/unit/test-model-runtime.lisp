@@ -212,3 +212,40 @@ model runtime manager on TMP."
   (with-mr (tmp)
     (let ((result (hngh.plugins.model-runtime:stop-runtime 99999)))
       (is (not result) "Should return NIL for nonexistent runtime ID"))))
+
+;;; --- Test 13: Preempted grant delegates through stop-runtime ---------------
+
+(test mr-stop-runtimes-by-grant-id-delegates-stop
+  "stop-runtimes-by-grant-id must call stop-runtime with :preempted reason."
+  (with-mr (tmp :init-resource-manager nil)
+    (let* ((stop-sym (find-symbol "STOP-RUNTIME" :hngh.plugins.model-runtime))
+           (orig-stop (and stop-sym (symbol-function stop-sym)))
+           (calls '()))
+      (is (not (null stop-sym)) "stop-runtime symbol should exist")
+      (unwind-protect
+           (progn
+             (setf hngh.plugins.model-runtime::*runtimes*
+                   (list
+                    (hngh.plugins.model-runtime::make-runtime-info
+                     :id 11 :kind :ollama :model "a" :pid nil :port 11434
+                     :status :ready :grant-id 5 :started-at (get-universal-time))
+                    (hngh.plugins.model-runtime::make-runtime-info
+                     :id 12 :kind :ollama :model "b" :pid nil :port 11434
+                     :status :ready :grant-id 5 :started-at (get-universal-time))
+                    (hngh.plugins.model-runtime::make-runtime-info
+                     :id 13 :kind :ollama :model "c" :pid nil :port 11434
+                     :status :ready :grant-id 9 :started-at (get-universal-time))))
+             (setf (symbol-function stop-sym)
+                   (lambda (id &key (reason :explicit))
+                     (push (list id reason) calls)
+                     t))
+             (hngh.plugins.model-runtime::stop-runtimes-by-grant-id 5)
+             (is (= 2 (length calls))
+                 "Should stop exactly runtimes bound to grant-id 5")
+             (is (every (lambda (entry) (eq :preempted (second entry))) calls)
+                 "Each delegated stop should use :preempted reason")
+             (let ((ids (mapcar #'first calls)))
+               (is (and (member 11 ids) (member 12 ids) (not (member 13 ids)))
+                   "Only runtime IDs 11 and 12 should be stopped")))
+        (when stop-sym
+          (setf (symbol-function stop-sym) orig-stop))))))
