@@ -6,18 +6,26 @@
 
 **Milestone 0 complete** (commit b89abc7) — 78 unit + 18 integration = 96 tests, all passing.
 **Milestone 1 batches 0–4 complete** (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8) — 11 feature deliverables.
-**Batch 5 in progress**: M1.10 Backup Manager done (2026-06-24, Oracle-reviewed + hardened).
-**Cumulative after M1.10**: 243 unit + 18 integration = 261 tests, all passing (1090 FiveAM checks).
-**Last session**: M1.10 Backup Manager (B7) — git-versioned state backup with secrets exclusion.
+**Batch 5 in progress**: M1.10 Backup Manager done (Oracle-reviewed + hardened); M1 integration hardening done (D-030).
+**Cumulative after integration hardening**: 248 unit + 18 integration = 266 tests, all passing (1103 FiveAM checks).
+**Last session**: M1 alignment review + integration hardening — closed 4 verified event-wiring gaps (plugin.* events, hnghbeats wildcard, agent.completed self-loop, dbus system.* normalization).
 
 ## Up Next
 
-**Milestone 1: The Harness (v0.1)** — Batches 0–4 done; **Batch 5 in progress (M1.10 done; 3 deliverables remaining)**.
+**Milestone 1: The Harness (v0.1)** — Batches 0–4 done; **Batch 5 in progress**.
 
-### Batch 5: Backup + Polish — remaining
-- **M1.13**: KDE integration (B10) — theming, notifications. P2 (user chose to include in v0.1).
-- **M1.14**: PKGBUILD + split packages — five packages (hngh-core, hngh-system, hngh-python, hngh-kde, hngh-dev), custom repo. P0.
-- **M1.15**: Integration tests — end-to-end shell tests for all 8 critical flows in `docs/design/integrations.md`. P0. (The backup-to-remote flow 4.7 is now unblocked by M1.10.)
+### Alignment status (from the 2026-06-24 review)
+Feature plumbing is strongly aligned (12/15 deliverables). The remaining gap to the v0.1 exit criteria ("install on CachyOS … all from the TUI dashboard") is the **end-to-end experience**: packaging, dashboard depth, and validated integration flows.
+
+### Batch 5: remaining
+- **Dashboard depth (NEW — unplanned gap)**: the TUI is still the M0 stub (3/9 views, no M1 plugin integration). Needed for the "all from the TUI dashboard" exit criterion. Implement 6 missing views (Packages, Agents, Resources, Threats, Config, Secrets) + topic-filtered subscriptions + calls into the M1 plugins.
+- **M1.13**: KDE integration (B10) — theming, notifications. P2 (included in v0.1 per user).
+- **M1.14**: PKGBUILD + split packages — five packages (hngh-core, hngh-system, hngh-python, hngh-kde, hngh-dev), custom repo. P0. (Needed for "install on CachyOS".)
+- **M1.15**: Integration tests — end-to-end tests for the 8 flows in `docs/design/integrations.md`. P0. (Wiring now hardened, so these validate a correct system; backup flow 4.7 unblocked by M1.10.)
+
+### Deferred follow-ups (non-blocking)
+- Plugin *behavioral* observation events (`plugin.subprocess-started`, `plugin.file-accessed`, …) — L3 handles these topics but nothing emits them; needs runtime instrumentation (likely M2).
+- `verify-history` command for the Backup Manager (D-028/M1); optional `harness.lisp` rename (D-026); history ring-buffer cap (Oracle L2).
 
 ### M1.10 follow-ups (deferred, non-blocking)
 - `verify-history` command to audit git history for forbidden paths before first push to a public remote (mitigates the prior-committed-secrets limitation, D-028/M1).

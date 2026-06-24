@@ -230,6 +230,30 @@
 - Verified: `make test && make integration-test` = **1090 FiveAM checks
   (243 unit test functions) + 18 integration, all passing**
 
+### Session: M1 alignment review + integration hardening — Batch 5 (pending commit)
+- **Alignment review** (intent vs. built), two verified audits:
+  - Dashboard TUI still the M0 stub (3/9 views, no M1 plugin integration) —
+    the "all from the TUI dashboard" exit criterion is unmet. Tracked as a
+    new Batch 5 item (own session); NOT fixed in this pass.
+  - Cross-plugin event-wiring audit found 4 verified defects (below).
+- **4 wiring fixes** (with regression tests):
+  - **Plugin Host (A1)** now emits `plugin.loaded`/`unloaded`/`reloaded`/
+    `load-failed` (guarded `maybe-publish`; init-failure re-signals after
+    emit). L3 threat observation's `plugin.*` subscription is now reachable.
+  - **hnghbeats** subscription `"*.*"` (a silent no-op — leading `*` is
+    literal in `topic-match-p`) → `"*"`. Live event capture now works.
+  - **ai-orchestrator** `handle-agent-completed` ignores its own
+    `:source 'ai-orchestrator` events (breaks the self-subscription loop).
+  - **dbus-bridge** adds `normalize-system-topic` + dual-publishes `system.*`
+    (systemd1/udev/login1) alongside `dbus.signal.*`, closing
+    resource-manager's `system.udev.*` orphan.
+- Deferred (tracked): Dashboard depth; runtime plugin behavioral-observation
+  events (`plugin.subprocess-started`, etc. — needs instrumentation, likely M2).
+- See decisions.md **D-030**.
+- 5 new regression tests.
+- Verified: `make test && make integration-test` = **1103 FiveAM checks
+  (248 unit test functions) + 18 integration, all passing**
+
 ---
 
 ## Milestone 0 Summary (complete)
