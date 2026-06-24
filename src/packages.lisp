@@ -280,6 +280,83 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:backend-available-p
            #:unlock
            #:lock
-           #:*backend*
-           #:*policies*
-           #:*access-log*))
+            #:*backend*
+            #:*policies*
+            #:*access-log*))
+
+(defpackage :hngh.plugins.model-runtime
+  (:documentation "Model Runtime Manager (B4) — ollama/llama.cpp/unsloth/comfyUI lifecycle.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:spawn-runtime
+           #:stop-runtime
+           #:list-runtimes
+           #:runtime-info
+           #:runtime-info-id
+           #:runtime-info-kind
+           #:runtime-info-model
+           #:runtime-info-pid
+           #:runtime-info-port
+           #:runtime-info-status
+           #:runtime-info-grant-id
+           #:runtime-info-started-at
+           #:discover-runtimes
+           #:*runtimes*))
+
+(defpackage :hngh.plugins.ai-tool-hub
+  (:documentation "AI Tool Hub (B11) — agentic CLI invocation + direct API, tool registry, cost tracking.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:invoke
+           #:list-tools
+           #:tool-capabilities
+           #:estimate-cost
+           #:select-tool
+           #:kill-invocation
+           #:list-invocations
+           #:cost-log
+           #:*tools*
+           #:*invocations*
+           #:*cost-log*
+           #:tool-info
+           #:tool-info-id
+           #:tool-info-name
+           #:tool-info-type
+           #:tool-info-command
+           #:tool-info-available-p
+           #:tool-info-capabilities
+           #:invocation-info
+           #:invocation-info-id
+           #:invocation-info-tool
+           #:invocation-info-task
+           #:invocation-info-status
+           #:invocation-info-started-at
+           #:invocation-info-cost))
+
+(defpackage :hngh.plugins.ai-orchestrator
+  (:documentation "AI Orchestrator (B3) — coordinator, context packages, inter-tool handoffs.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:delegate
+           #:handoff
+           #:meta-context
+           #:kill-agent
+           #:list-agents
+           #:agent-info
+           #:agent-info-id
+           #:agent-info-tool
+           #:agent-info-task
+           #:agent-info-status
+           #:agent-info-cost
+           #:agent-info-started-at
+           #:*agents*
+           #:*policies*))
