@@ -1,6 +1,6 @@
 # Done — Completed Work Log
 
-**Last updated**: 2026-06-22
+**Last updated**: 2026-06-24
 
 ---
 
@@ -73,7 +73,7 @@
 - Created `src/plugins/dashboard-tui.lisp` (B9) — raw ANSI escape codes (no external TUI dep), three views (overview/events/plugins), wildcard event subscription (capped at 100), headless mode, background input thread
 - Rewrote `src/system-daemon/main.c` (C1) — full dbus method handlers: InstallPackages (validates package names, spawns pacman), WriteFile (path whitelist, byte array content), CreateSnapshot (btrfs). Added `_POSIX_C_SOURCE` for popen/pclose/chmod
 - Created systemd units: `hngh-system.service`, `hngh-helper@.service`, `org.hngh.System.conf` (dbus policy)
-- Created `systemd/user/hngh.service` — user daemon unit
+- Created `systemd/user/hngh.service` — user daemon systemd unit
 - Created `tests/unit/test-dbus-bridge.lisp` — 3 tests, `tests/unit/test-dashboard-tui.lisp` — 6 tests
 - Wired dbus bridge and dashboard TUI into start/stop sequence
 - Verified: `make test` = **78/78 passed, 0 failed**
@@ -86,6 +86,114 @@
 - Fixed: Event journal test checks directory existence (no events published during stub startup, so no journal file is created)
 - Verified: `make integration-test` = 18/18 passed, 0 failed
 - Full stack validated: build → version → help → state tree (8 dirs) → event journal dir → unit tests (78/78) → system daemon compiles → config file writable
+
+---
+
+## 2026-06-23
+
+### Session M1.0a: Migrate test suite to FiveAM (commit 8ebcbe4)
+- Migrated all 78 M0 unit tests from custom harness to FiveAM
+  (`def-suite`/`in-suite`/`test`/`is`/`signals`/`is-true`/`is-equal`)
+- Centralised test fixture helpers (`make-tmp-home`, `cleanup-tmp-home`,
+  `fixture-path`) in `tests/unit/packages.lisp`
+- D-013 closed: test suite is now on FiveAM, no functional regressions
+- Verified: `make test` = 78/78 passed, 0 failed (after migration)
+
+### Sessions M1.1 + M1.2: Procedural threat detection + Resource manager (commit f33bbd6)
+- **M1.1 — Procedural Threat Detection (A7)**: L1 static analysis
+  (manifest validation, dangerous function detection, capability cross-
+  check, pattern DB, trust-tier rules with mandatory L2 review for
+  AI-generated). L3 runtime observation via `plugin.*` and `secret.*`
+  event subscriptions. Pattern DB persistence. `threat.flag` events.
+  19 FiveAM tests, all passing.
+- **M1.2 — Resource Manager (A4)**: hardware audit (lspci,
+  /proc/cpuinfo, /proc/meminfo), VRAM arbitration with priority-based
+  preemption, `:cpu-affinity`/`:memory`/`:model-load` stubs, pressure
+  monitoring (`:normal`/`:elevated`/`:critical`), event publication.
+  17 FiveAM tests, all passing.
+- Wired both into start/stop sequence in `src/core/main.lisp`.
+- Updated `hngh.asd` and `packages.lisp`.
+- Verified: `make test` = 78 (M0) + 36 (M1.1+M1.2) = **114/114 passed, 0 failed**
+
+### Sessions M1.3 + M1.4 + M1.11: Package manager + System config + Secrets manager (commit f45c5c7)
+- **M1.3 — Package Manager (B1)**: pacman queries (search, info, list,
+  updates, orphans), AUR helper detection (paru preferred), privileged
+  install via dbus, breakage detection. 15 FiveAM tests.
+- **M1.4 — System Config (B2)**: read direct (`/etc/`, `~/.config/`),
+  write via daemon (`/etc/`, `/usr/`) or direct (`~/.config/`),
+  btrfs snapshot via daemon, managed-paths list with persistence.
+  14 FiveAM tests.
+- **M1.11 — Secrets Manager (B8)**: local-vault backend, policy-
+  checked access, 4 backends (1Password / KeePassXC / vault.age /
+  local-vault) with only local-vault fully implemented in M1.
+  Access log never contains values. 22 FiveAM tests.
+- Wired all three into start/stop sequence in `src/core/main.lisp`.
+- Verified: `make test` = 78 (M0) + 36 (M1.1+M1.2) + 51 (M1.3+M1.4+M1.11) = **165/165 passed, 0 failed**
+
+---
+
+## 2026-06-24
+
+### Sessions M1.5 + M1.6 + M1.7: Model runtime + AI tool hub + AI orchestrator (commit 868de1a)
+- **M1.5 — Model Runtime Manager (B4)**: runtime discovery (ollama,
+  llama.cpp, comfyui, unsloth), spawn (ollama loads model on shared
+  server, llama.cpp subprocess), stop (unload model / SIGTERM),
+  health check (curl), resource integration (subscribe to
+  `resource.preempted` and `resource.pressure`), supervisor
+  integration. 13 FiveAM tests.
+- **M1.6 — AI Tool Hub (B11)**: tool registry (8 default tools,
+  capability/cost metadata), tool detection at init, invoke (agentic
+  CLI subprocess + direct API via curl), API keys from Secrets
+  Manager (env vars, never cmdline), select-tool (capability →
+  availability → privacy → cost → prefer-agentic), cost tracking.
+  17 FiveAM tests.
+- **M1.7 — AI Orchestrator (B3)**: delegate (meta-context → select
+  tier → route → emit events → persist transcript), meta-context
+  (system state, recent activity, KB articles), handoff, kill-agent,
+  policy management, resource pressure handling. 16 FiveAM tests.
+- Wired all three into start/stop sequence in `src/core/main.lisp`.
+- Verified: `make test` = 165 + 46 = **211/211 passed, 0 failed**
+
+### Session: Harden M1.5 + M1.6 + M1.7 orchestration (commit 905ea2f)
+- Added curl connect/max timeouts across model-runtime health/probe/unload
+- Routed preemption through `stop-runtime` with `:reason :preempted`
+- Emitted canonical `:id` in agent.spawned/completed/failed payloads
+- Used provider-specific auth headers (Anthropic: `x-api-key`, Google:
+  `x-goog-api-key`, OpenAI: `Authorization: Bearer`)
+- Moved direct-API request payload + headers to temp files
+- Orchestrator tracks `backend-id` and maps completion by either
+  agent ID or invocation/backend ID
+- Policy `max-cost` and `privacy` now flow into `select-tool`
+- Local invoke passes proper model-spec plist
+- 3 new regression tests: invocation-id mapping, runtime preemption
+  delegation, provider-API headers
+- Integration help-flag grep tightened to fixed-string matching
+- Verified: `make test && make integration-test` = **1018 unit + 18 integration, all passing**
+
+### Sessions M1.8 + M1.9 + M1.12: LLM threat detector + Hnghbeats + Knowledge base (commit cc4afa8)
+- **M1.8 — LLM Threat Detector (B5)**: L2 plugin review (`review-plugin`)
+  and L4 behaviour assessment (`review-behavior`), scheduler-driven
+  periodic reviews (`run-periodic-reviews`), `threat.flag` event
+  subscription triggering immediate L4 review, persistence to
+  `config/plugins/llm-threat/prefs.lisp`, `state/plugins/llm-threat/history.lisp`,
+  `plugins/<slug>/review-verdict.lisp`, and `state/plugin-observations/<slug>/assessments.lisp`,
+  resource grant integration (`:model-load`), `threat.review-verdict` and
+  `threat.assessment` events, KB pattern recording for suspicious/malicious
+  assessments. 6 FiveAM tests.
+- **M1.9 — Hnghbeats (B6)**: daily condensation with deterministic
+  summaries (categories: `:system-changes`, `:package-ops`,
+  `:agent-activity`, `:costs`, `:threat-events`, `:user-activity`,
+  `:errors`), persistence to `journal/hnghbeats/YYYY-MM-DD.lisp`,
+  `hnghbeats.beat` event emission. 3 FiveAM tests.
+- **M1.12 — Knowledge Base (B12)**: article/decision/pattern storage,
+  keyword + tag query, lock-aware writes (returns NIL if another holder
+  has the lock), persistent across restart. 7 FiveAM tests.
+- Wired all three into start/stop sequence in `src/core/main.lisp`
+  (with rollback on failure and reverse-order shutdown).
+- Added LLM threat detector state dirs to `*state-tree-dirs*`.
+- Verified: `make test && make integration-test` = **1020 unit + 18 integration, all passing**
+
+---
 
 ## Milestone 0 Summary (complete)
 
@@ -108,7 +216,7 @@ All 11 sessions completed. 96 total tests (78 unit + 18 integration), all passin
 | System Daemon | C1 | src/system-daemon/main.c | (integration) |
 
 ### Decisions logged (D-005 through D-009):
-- D-005: Custom test harness (FiveAM deferred)
+- D-005: Custom test harness (FiveAM deferred) — **superseded by D-013 in M1.0a**
 - D-006: Build dir named bin/ (Makefile conflict avoidance)
 - D-007: File-based locks (SQLite deferred)
 - D-008: Plugin manifests use Lisp plist (YAML deferred)
@@ -119,9 +227,32 @@ All 11 sessions completed. 96 total tests (78 unit + 18 integration), all passin
 - Makefile: all, build, daemon, run, test, integration-test, repl, install, uninstall, clean, help
 - CI: GitHub Actions (ci.yml), Codeberg mirror (mirror.yml)
 - systemd units: hngh-system.service, hngh-helper@.service, hngh.service (user), org.hngh.System.conf (dbus policy)
-- Created `tests/integration/m0-full-stack.sh` — 18 integration tests covering build, version, help, state tree (8 dirs), event journal, unit tests, system daemon compilation, config
-- Added `integration-test` target to Makefile
-- Fixed: C daemon needed `_POSIX_C_SOURCE 200809L` for popen/pclose/chmod with `-std=c11`
-- Fixed: Event journal test checks directory existence (no events published during stub startup)
-- Verified: `make integration-test` = **18/18 passed, 0 failed**
-- Full stack: build → version → help → state tree → event journal → unit tests → system daemon → config — all pass
+
+---
+
+## Milestone 1 Status (in progress)
+
+Batches 0–4 complete (11 of 12 deliverables implemented). Batch 5 remaining
+(M1.10 backup, M1.13 KDE, M1.14 PKGBUILD, M1.15 integration tests).
+
+**Total tests after M1 batches 0–4**: 227 unit + 18 integration = 245, all passing.
+
+### Components added by M1:
+
+| Component | ID | File | Tests | Status |
+|---|---|---|---|---|
+| Procedural threat detection (core) | A7 | src/core/threat-detection.lisp | 19 | Done (M1.1) |
+| Resource manager (core) | A4 | src/core/resource-manager.lisp | 17 | Done (M1.2) |
+| Package manager | B1 | src/plugins/package-manager.lisp | 15 | Done (M1.3) |
+| System config | B2 | src/plugins/system-config.lisp | 14 | Done (M1.4) |
+| Model runtime manager | B4 | src/plugins/model-runtime.lisp | 13 | Done (M1.5) |
+| AI tool hub | B11 | src/plugins/ai-tool-hub.lisp | 17 | Done (M1.6) |
+| AI orchestrator | B3 | src/plugins/ai-orchestrator.lisp | 16 | Done (M1.7) |
+| LLM threat detector | B5 | src/plugins/llm-threat-detector.lisp | 6 | Done (M1.8) |
+| Hnghbeats | B6 | src/plugins/hnghbeats.lisp | 3 | Done (M1.9) |
+| Secrets manager | B8 | src/plugins/secrets-manager.lisp | 22 | Done (M1.11) |
+| Knowledge base | B12 | src/plugins/knowledge-base.lisp | 7 | Done (M1.12) |
+| Backup manager | B7 | — | — | **Future (M1.10)** |
+| KDE integration | B10 | — | — | Future (M1.13, optional) |
+| PKGBUILD + packages | — | — | — | Future (M1.14) |
+| Integration tests (M1) | — | — | — | Future (M1.15) |
