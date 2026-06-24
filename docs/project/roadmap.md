@@ -1,7 +1,7 @@
 # Hngh Roadmap
 
-**Status**: Planning (pre-implementation)
-**Last updated**: 2026-06-22
+**Status**: M1 in progress (Batches 0–4 complete, Batch 5 pending)
+**Last updated**: 2026-06-24
 
 ---
 
@@ -11,68 +11,79 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 
 | Milestone | Name | Goal | Status |
 |---|---|---|---|
-| M0 | Foundation | Core image skeleton, end-to-end validation | Not started |
-| M1 | The Harness (v0.1) | Full system harness with AI orchestration | Not started |
+| M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
+| M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done; 11/12 features) |
 | M2 | The Companion (v0.2) | Graphical buddies, passive observation, cost optimization | Not started |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
 
-## Milestone 0 — Foundation
+## Milestone 0 — Foundation (complete)
 
 **Goal**: Get the core image running with minimal plugins for end-to-end validation.
+**Exit criteria** (achieved): Hngh starts as a systemd user service, loads one first-party CL plugin, displays status in TUI, and can install a package via the System Daemon.
 
-**Exit criteria**: Hngh starts as a systemd user service, loads one first-party CL plugin, displays status in TUI, and can install a package via the System Daemon.
+### Deliverables (all done)
 
-### Deliverables
-
-| ID | Deliverable | Components | Dependencies |
+| ID | Deliverable | Components | Status |
 |---|---|---|---|
-| M0.1 | SBCL project skeleton + build system | ASDF system definition, project structure, Makefile | — |
-| M0.2 | Event bus | A2: internal pub/sub, in-process delivery, event journaling | M0.1 |
-| M0.3 | State store | A3: file tree read/write, SQLite locks, journal append | M0.1 |
-| M0.4 | Plugin host | A1: CL plugin loading, manifest parsing, package-level isolation | M0.2, M0.3 |
-| M0.5 | Supervisor | A6: restart policies, health checks, component registration | M0.2 |
-| M0.6 | Scheduler | A5: timers, basic scheduling | M0.2 |
-| M0.7 | dbus bridge (minimal) | B13: systemd session bus subscription, basic event translation | M0.2 |
-| M0.8 | Dashboard TUI (minimal) | B9: status display, event feed, basic navigation | M0.2 |
-| M0.9 | System daemon skeleton | C1: C skeleton, one dbus method (InstallPackages), systemd units | — |
-| M0.10 | End-to-end integration test | Full stack: start service → load plugin → TUI shows status → install package | M0.4–M0.9 |
+| M0.1 | SBCL project skeleton + build system | ASDF system definition, project structure, Makefile | Done |
+| M0.2 | Event bus | A2: internal pub/sub, in-process delivery, event journaling | Done |
+| M0.3 | State store | A3: file tree read/write, SQLite locks, journal append | Done |
+| M0.4 | Plugin host | A1: CL plugin loading, manifest parsing, package-level isolation | Done |
+| M0.5 | Supervisor | A6: restart policies, health checks, component registration | Done |
+| M0.6 | Scheduler | A5: timers, basic scheduling | Done |
+| M0.7 | dbus bridge (minimal) | B13: systemd session bus subscription, basic event translation | Done |
+| M0.8 | Dashboard TUI (minimal) | B9: status display, event feed, basic navigation | Done |
+| M0.9 | System daemon skeleton | C1: C skeleton, one dbus method (InstallPackages), systemd units | Done |
+| M0.10 | End-to-end integration test | Full stack: start service → load plugin → TUI shows status → install package | Done (18 integration tests) |
 
 ---
 
-## Milestone 1 — The Harness (v0.1)
+## Milestone 1 — The Harness (v0.1) — **in progress**
 
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
-
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
+
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). 227 unit tests + 18 integration tests passing.
 
 ### Deliverables
 
-| ID | Deliverable | Components | Dependencies |
-|---|---|---|---|
-| M1.1 | Procedural threat detection (L1+L3) | A7: static analysis, runtime observation, rules engine | M0.4 |
-| M1.2 | Resource manager | A4: VRAM/CPU/memory arbitration, preemption, hardware audit | M0.3 |
-| M1.3 | Package manager | B1: pacman/yay/paru integration, breakage detection | M0.7, M0.9 |
-| M1.4 | System config | B2: /etc management, btrfs snapshots, theming files | M0.7, M0.9 |
-| M1.5 | Model runtime manager | B4: ollama, llama.cpp, unsloth, comfyUI spawn/lifecycle | M1.2 |
-| M1.6 | AI tool hub | B11: tool registry, agentic CLI invocation, direct API, cost tracking | M1.2 |
-| M1.7 | AI orchestrator | B3: coordinator, context package assembly, inter-tool handoffs | M1.6, M1.5 |
-| M1.8 | LLM threat detector (L2+L4) | B5: on-demand LLM review, periodic drift detection | M1.5, M1.1 |
-| M1.9 | Hnghbeats | B6: event condensation, daily beats | M0.2 |
-| M1.10 | Backup manager | B7: git versioning, remote sync, restore | M0.3 |
-| M1.11 | Secrets manager | B8: 1Password/KeePassXC/vault.age backends, policy | M0.3 |
-| M1.12 | Knowledge base | B12: article storage, keyword search, learned-pattern recording | M0.3 |
-| M1.13 | KDE integration (optional) | B10: theming, notifications | M0.7 |
-| M1.14 | PKGBUILD + split packages | All five packages, custom repo | M1.1–M1.13 |
-| M1.15 | Integration tests | End-to-end tests for all critical flows | M1.1–M1.13 |
+| ID | Deliverable | Components | Status | Tests |
+|---|---|---|---|---|
+| M1.0a | Migrate test suite to FiveAM (D-013) | Test framework | Done | (infra) |
+| M1.1 | Procedural threat detection (L1+L3) | A7: static analysis, runtime observation, rules engine | Done | 19 |
+| M1.2 | Resource manager | A4: VRAM/CPU/memory arbitration, preemption, hardware audit | Done | 17 |
+| M1.3 | Package manager | B1: pacman/yay/paru integration, breakage detection | Done | 15 |
+| M1.4 | System config | B2: /etc management, btrfs snapshots, theming files | Done | 14 |
+| M1.5 | Model runtime manager | B4: ollama, llama.cpp, unsloth, comfyUI spawn/lifecycle | Done | 13 |
+| M1.6 | AI tool hub | B11: tool registry, agentic CLI invocation, direct API, cost tracking | Done | 17 |
+| M1.7 | AI orchestrator | B3: coordinator, context package assembly, inter-tool handoffs | Done | 16 |
+| M1.8 | LLM threat detector (L2+L4) | B5: on-demand LLM review, periodic drift detection | Done | 6 |
+| M1.9 | Hnghbeats | B6: event condensation, daily beats | Done | 3 |
+| M1.10 | Backup manager | B7: git versioning, remote sync, restore | **Future** | — |
+| M1.11 | Secrets manager | B8: 1Password/KeePassXC/vault.age backends, policy | Done | 22 |
+| M1.12 | Knowledge base | B12: article storage, keyword search, learned-pattern recording | Done | 7 |
+| M1.13 | KDE integration (optional) | B10: theming, notifications | Future (P2) | — |
+| M1.14 | PKGBUILD + split packages | All five packages, custom repo | Future | — |
+| M1.15 | Integration tests | End-to-end tests for all 8 critical flows | Future | — |
+
+### Batch progress
+
+| Batch | Deliverables | Status |
+|---|---|---|
+| 0: Foundation | M1.0a | **Done** |
+| 1: Security + Resources | M1.1, M1.2 | **Done** |
+| 2: System + Secrets | M1.3, M1.4, M1.11 | **Done** |
+| 3: AI Infrastructure | M1.5, M1.6, M1.7 | **Done** |
+| 4: Security AI + Knowledge | M1.8, M1.9, M1.12 | **Done** |
+| 5: Backup + Polish | M1.10, M1.13, M1.14, M1.15 | Pending |
 
 ---
 
 ## Milestone 2 — The Companion (v0.2)
 
 **Goal**: The system becomes interactive and intelligent.
-
 **Exit criteria**: The system proactively observes user behavior, suggests shortcuts, generates plugins to automate repetitive tasks, and presents a graphical companion that interacts with the user.
 
 ### Deliverables (sketch — detailed in v0.1 cycle)
@@ -91,7 +102,6 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 ## Milestone 3 — The Network (v0.3)
 
 **Goal**: Hngh instances coordinate across machines.
-
 **Exit criteria**: Users can connect Hngh instances across machines, share knowledge bases, delegate tasks to remote instances, and coordinate backups and configurations across a fleet.
 
 ### Deliverables (sketch — detailed in v0.2 cycle)
@@ -114,3 +124,5 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `components.md` | 3 | 21 component specifications + architectural principles |
 | `integrations.md` | 4 | Integration map, event schema, contracts, 8 sequence diagrams |
 | `hngh-design-spec.md` | 5 | Single source of truth (compiles all phases) |
+
+Light-weight day-to-day decisions are in `docs/project/decisions.md` (D-001 through D-020).

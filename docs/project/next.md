@@ -1,50 +1,31 @@
 # Next — Current Work
 
-**Last updated**: 2026-06-22
+**Last updated**: 2026-06-24
 
 ## Current Status
 
-**Milestone 0 complete** — all 11 sessions done (0A, 0B, M0.1–M0.10)
-**Last session**: M0 critical review + fixes (commit e4fd116, 2026-06-23) + Quicklisp setup
-**Test count**: 78 unit + 18 integration = 96 total, all passing
+**Milestone 0 complete** (commit b89abc7) — 78 unit + 18 integration = 96 tests, all passing.
+**Milestone 1 batches 0–4 complete** (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8) — 11 of 12 feature deliverables implemented.
+**Cumulative after M1 batches 0–4**: 227 unit + 18 integration = 245 tests, all passing.
+**Last session**: M1.8 + M1.9 + M1.12 (commit cc4afa8, 2026-06-24) — LLM threat detector + Hnghbeats + Knowledge base.
 
 ## Up Next
 
-**Milestone 1: The Harness (v0.1)** — 15 deliverables across 6 batches.
-
-### Batch 0: Foundation for M1
-- **M1.0a**: Migrate test suite to FiveAM (D-013) — fixtures, before-each/after-each, solve state contamination
-- **M1.0b**: Design spec sync — already done (SQLite→file-based locks, YAML→Lisp plist)
-
-### Batch 1: Core Security + Resources
-- **M1.1**: Procedural threat detection (L1+L3) — static analysis, runtime observation
-- **M1.2**: Resource manager (A4) — VRAM/CPU arbitration, preemption, hardware audit
-
-### Batch 2: System Management + Secrets
-- **M1.3**: Package manager (B1) — pacman/yay/paru, breakage detection
-- **M1.4**: System config (B2) — /etc management, btrfs snapshots, theming
-- **M1.11**: Secrets manager (B8) — 1Password/KeePassXC/vault.age backends, policy (moved up — needed before M1.6)
-
-### Batch 3: AI Infrastructure
-- **M1.5**: Model runtime manager (B4) — ollama, llama.cpp, unsloth, comfyUI
-- **M1.6**: AI tool hub (B11) — tool registry, agentic CLI invocation, direct API
-- **M1.7**: AI orchestrator (B3) — coordinator, context packages, inter-tool handoffs
-
-### Batch 4: Security AI + Knowledge
-- **M1.8**: LLM threat detector (L2+L4) — on-demand review, drift detection
-- **M1.9**: Hnghbeats (B6) — event condensation, daily beats
-- **M1.12**: Knowledge base (B12) — article storage, keyword search, learned patterns
+**Milestone 1: The Harness (v0.1)** — 15 deliverables across 6 batches. Batches 0–4 done; **Batch 5 remaining**.
 
 ### Batch 5: Backup + Polish
-- **M1.10**: Backup manager (B7) — git versioning, remote sync, restore
-- **M1.13**: KDE integration (B10) — theming, notifications (optional)
-- **M1.14**: PKGBUILD + split packages — all five packages, custom repo
-- **M1.15**: Integration tests — all 8 critical flows
+- **M1.10**: Backup manager (B7) — git versioning, remote sync, restore. P1.
+- **M1.13**: KDE integration (B10) — theming, notifications. P2 (optional).
+- **M1.14**: PKGBUILD + split packages — five packages (hngh-core, hngh-system, hngh-python, hngh-kde, hngh-dev), custom repo. P0.
+- **M1.15**: Integration tests — end-to-end shell tests for all 8 critical flows in `docs/design/integrations.md`. P0.
+
+### Cleanup before Batch 5
+- ~~Remove orphaned `tests/unit/harness.lisp`~~ — **NOT orphaned.** The file holds the migrated FiveAM test infrastructure: `def-suite :hngh`, `hngh.tests:run-tests`, and the fixture helpers (`make-tmp-home`, `cleanup-tmp-home`, `fixture-path`). The old custom `define-test` / `assert-true` macros are gone. The file name is misleading but the contents are essential. Could be renamed to `tests/unit/fiveam-harness.lisp` for clarity (D-026).
+- Wire `hngh.asd` `:perform (test-op ...)` body to call `(uiop:symbol-call :hngh.tests :run-tests)`. **Done (commit TBD)** — `asdf:test-system :hngh/tests` now actually runs the full 1020 checks.
 
 See `docs/project/roadmap.md` for full M1 deliverable list.
 See `docs/project/work-sessions.md` for detailed session plans.
-
-M1 sessions are planned in detail in `docs/project/work-sessions.md`.
+M1 sessions completed are journaled in `docs/journal/2026-06-23.md` and `docs/journal/2026-06-24.md`.
 
 ## Key Architecture Decisions (for context carry-forward)
 
@@ -59,11 +40,26 @@ M1 sessions are planned in detail in `docs/project/work-sessions.md`.
 - **Privilege**: Split daemon — user daemon (CL) + system daemon (C, root, stateless)
 - **TUI**: Raw ANSI escape codes (defparameter, not defconstant — SBCL EQL issue)
 - **dbus**: cl-ppcre parsing implemented; cl-dbus can replace gdbus subprocess when available
-- **Test harness**: Custom (D-005, FiveAM migration now possible — FiveAM installed)
-- **Thread safety**: bordeaux-threads mutexes on all shared state (event-bus, scheduler, supervisor, TUI)
-- **READ safety**: *read-eval* bound to nil for all untrusted file reads
+- **Test harness**: FiveAM (D-013, migrated from custom in M1.0a)
+- **Thread safety**: bordeaux-threads mutexes on all shared state (event-bus, scheduler, supervisor, TUI, threat-detection flags, secrets access log, KB write lock, llm-threat history append, resource manager grants)
+- **READ safety**: *read-eval* bound to nil for all untrusted file reads (threat-detection code analysis, llm-threat safe-read-state)
 - **Startup**: *running* set after all components initialized; unwind-protect rolls back on failure
-- **License**: AGPL-3.0-or-later
+- **License**: AGPL-3.0-or-later (D-003)
+
+### M1-era additions
+- **AI tool keys**: API keys retrieved from Secrets Manager and passed to
+  subprocess via environment variables (never command line). Direct API
+  uses temp files for headers + payload to avoid process-arg leakage.
+- **Grant lifecycle**: Resource grants are scoped per request and released
+  via `hngh.core.resource-manager:release` after use. Preemption path
+  releases grants before stopping runtimes (M1.5 hardening).
+- **Agent handoff**: Orchestrator tracks `backend-id` separately from
+  agent ID to map completion events from either naming scheme (M1.7
+  hardening).
+- **Trust tier**: AI-generated plugins must include `:review` section in
+  manifest and trigger mandatory L2 review (threat-detection rule).
+- **AI-generated confidence**: LLM threat detector downshifts confidence
+  by one notch for `:trust-tier :ai-generated` plugins (D-018).
 
 ## Environment (ready for M1)
 
@@ -75,7 +71,7 @@ M1 sessions are planned in detail in `docs/project/work-sessions.md`.
   - `cl-json` — JSON parsing (for AI tool hub, config)
   - `cl-ppcre` — regex (now used for dbus signal parsing)
   - `alexandria` — utilities (general purpose)
-  - `fiveam` — test framework (migration from custom harness now possible)
+  - `fiveam` — test framework (migrated from custom harness in M1.0a)
 - **ASDF dependencies**: :bordeaux-threads, :cl-ppcre
 - **Available via Quicklisp when needed**: cl-dbus, cl-charms, cl-sqlite, cl-yaml
 
@@ -86,16 +82,18 @@ M1 sessions are planned in detail in `docs/project/work-sessions.md`.
 - Local: ~/Projects/etc/hngh/
 - Design artifacts: docs/design/ (ADR, components, integrations, design spec)
 - Project management: docs/project/ (roadmap, work-sessions, next, done, backlog, decisions)
+- Journal: docs/journal/YYYY-MM-DD.md (one file per work day)
 
 ## Blocked
 
-Nothing blocked. Quicklisp set up, CL packages installed. Codeberg mirror pushed. GitHub project board configured (views need manual creation via web UI).
+Nothing blocked. M1 Batch 5 unblocked and ready to start.
 
 ## Notes
 
 - Codeberg SSH key unlocked and working
 - GitHub Projects API auth refreshed (`project` scope)
-- All 11 M0 issues linked to project board
+- All 11 M0 issues + 12 M1 issues linked to project board
 - Custom fields: Status, Priority, Phase, Size
 - Project board URL: https://github.com/users/boundring/projects/1
 - Views (Kanban, Roadmap) need manual creation via web UI — no API support
+- Local ollama server is running on `:11434` — used by M1.5 tests for real health checks and spawn

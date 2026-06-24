@@ -73,5 +73,6 @@
                  (:file "test-knowledge-base")
                  (:file "test-llm-threat-detector"))
     :perform (test-op (op c)
-                        (declare (ignore op c))
-                        ))
+                        (declare (ignore op))
+                        (uiop:symbol-call :hngh.tests :run-tests)
+                        (values)))
