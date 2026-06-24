@@ -400,3 +400,19 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:review-plugin
            #:review-behavior
            #:explain))
+
+(defpackage :hngh.plugins.backup-manager
+  (:documentation "Backup Manager (B7) — git-versioned state backup with secrets exclusion.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:commit
+           #:push-backup
+           #:restore
+           #:diff
+           #:list-history
+           #:add-remote
+           #:list-remotes
+           #:managed-ignore-paths))

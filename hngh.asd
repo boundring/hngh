@@ -43,7 +43,8 @@
                  (:file "plugins/hnghbeats")
                  (:file "plugins/knowledge-base")
                  (:file "plugins/llm-threat-detector")
-                   )
+                 (:file "plugins/backup-manager")
+                    )
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/tests"
@@ -71,7 +72,8 @@
                  (:file "test-ai-orchestrator")
                  (:file "test-hnghbeats")
                  (:file "test-knowledge-base")
-                 (:file "test-llm-threat-detector"))
+                 (:file "test-llm-threat-detector")
+                 (:file "test-backup-manager"))
     :perform (test-op (op c)
                         (declare (ignore op))
                         (uiop:symbol-call :hngh.tests :run-tests)
