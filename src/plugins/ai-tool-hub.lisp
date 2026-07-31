@@ -2,7 +2,7 @@
 ;;;; Agentic CLI invocation + direct API, tool registry, cost tracking.
 ;;;;
 ;;;; Tools: Opencode, Claude Code, Codex, Gemini-CLI, Cecli,
-;;;;        Anthropic API, Google API, OpenAI API.
+;;;;        Anthropic API, Google API, OpenAI API, Local OpenAI-compatible (unsloth).
 ;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
@@ -25,6 +25,29 @@
   #-sbcl
   (progn
     (hngh.core:log-warn "which() not implemented on this Lisp")
+    nil))
+
+;;; --- Utility: local endpoint probe (M2) ---------------------------------
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (ignore-errors (require :sb-bsd-sockets)))
+
+(defun local-endpoint-available-p (host port)
+  "T when a TCP connection to HOST:PORT succeeds (loopback: instant fail if down)."
+  #+sbcl
+  (handler-case
+      (let ((sock (make-instance 'sb-bsd-sockets:inet-socket
+                                 :type :stream :protocol :tcp)))
+        (unwind-protect
+             (sb-bsd-sockets:socket-connect
+              sock (sb-bsd-sockets:host-ent-address
+                    (sb-bsd-sockets:get-host-by-name host)) port)
+          (sb-bsd-sockets:socket-close sock))
+        t)
+    (error () nil))
+  #-sbcl
+  (progn
+    (hngh.core:log-warn "local-endpoint-available-p() not implemented on this Lisp")
     nil))
 
 ;;; --- Data structures -------------------------------------------------
@@ -216,6 +239,20 @@
            :cost-model :per-token
            :context-format :https-system-message
            :dogfooding nil)
+          tools)
+    ;; Local OpenAI-compatible (unsloth :8888) — direct API, $0
+    (push (make-tool-info
+           :id :local-openai-api
+           :name "Local OpenAI-Compatible (unsloth)"
+           :type :direct-api
+           :command "curl"
+           :available-p (and (which "curl")
+                             (local-endpoint-available-p "127.0.0.1" 8888))
+           :capabilities '(:simple-output)
+           :providers '(:local :openai-compatible)
+           :cost-model :free
+           :context-format :https-system-message
+           :dogfooding t)
           tools)
     (nreverse tools)))
 
@@ -601,12 +638,16 @@ Returns captured stdout as a string."
     (:gemini (list task))
     (:cecli (list "--message" task))))
 
+(defparameter *provider-endpoints*
+  '((:anthropic-api . "https://api.anthropic.com/v1/messages")
+    (:google-api . "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
+    (:openai-api . "https://api.openai.com/v1/chat/completions")
+    (:local-openai-api . "http://127.0.0.1:8888/v1/chat/completions"))
+  "Provider endpoint map. Rebind/extend via config instead of editing code.")
 (defun api-endpoint (tool-id)
   "Return the API endpoint URL for TOOL-ID."
-  (ecase tool-id
-    (:anthropic-api "https://api.anthropic.com/v1/messages")
-    (:google-api "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
-    (:openai-api "https://api.openai.com/v1/chat/completions")))
+  (or (cdr (assoc tool-id *provider-endpoints*))
+      (error "Unknown tool ID: ~A" tool-id)))
 
 (defun provider-api-headers (tool-id api-key)
   "Return a list of provider-specific HTTP header lines.
@@ -622,6 +663,9 @@ Each line is in the form expected by curl -H @file."
      (list (format nil "x-goog-api-key: ~A" api-key)
            "content-type: application/json"))
     (:openai-api
+     (list (format nil "Authorization: Bearer ~A" api-key)
+           "content-type: application/json"))
+    (:local-openai-api
      (list (format nil "Authorization: Bearer ~A" api-key)
            "content-type: application/json"))))
 
@@ -646,7 +690,8 @@ Each line is in the form expected by curl -H @file."
   (ecase tool-id
     (:anthropic-api "claude-sonnet-4-20250514")
     (:google-api "gemini-2.5-flash")
-    (:openai-api "gpt-4o")))
+    (:openai-api "gpt-4o")
+    (:local-openai-api "unsloth/gemma-4-12b-it-qat-GGUF")))
 
 (defun format-json-payload (tool-id model task)
   "Format a JSON payload string appropriate for TOOL-ID.
@@ -661,6 +706,10 @@ Each line is in the form expected by curl -H @file."
              "{\"contents\":[{\"parts\":[{\"text\":\"~A\"}]}]}"
              (escape-json-string task)))
     (:openai-api
+     (format nil
+             "{\"model\":\"~A\",\"messages\":[{\"role\":\"user\",\"content\":\"~A\"}]}"
+             model (escape-json-string task)))
+    (:local-openai-api
      (format nil
              "{\"model\":\"~A\",\"messages\":[{\"role\":\"user\",\"content\":\"~A\"}]}"
              model (escape-json-string task)))))
@@ -691,6 +740,8 @@ Each line is in the form expected by curl -H @file."
 (defun get-api-key (tool-id)
   "Retrieve the API key for TOOL-ID from the Secrets Manager.
   Returns the key string or NIL."
+  (when (eq tool-id :local-openai-api)
+    (return-from get-api-key (or (uiop:getenv "UNSLOTH_API_KEY") "local-dummy-key")))
   (let ((secret-name (ecase tool-id
                        (:anthropic-api :anthropic-api-key)
                        (:google-api :google-api-key)

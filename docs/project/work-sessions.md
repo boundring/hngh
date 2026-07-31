@@ -158,3 +158,39 @@ calendar — pick the next session, do it, mark it done, pick the next.
 
 Dependencies are noted to prevent starting a session before its prerequisites are
 complete. Within a batch, sessions are independent and can be parallelized.
+
+
+## M2 Sessions — Local Model Access
+### Session M2.1: Local OpenAI-Compatible Endpoints (AI Tool Hub)
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: Let ai-tool-hub call the local unsloth server (OpenAI-compatible, $0) so hngh loops fit the < $1/day remote policy.
+- **Artifacts**: `sessions/m2-local-baseurl.md` (wave plan, supersedes `sessions/m2-local-baseurl-draft.md`); patch to `src/plugins/ai-tool-hub.lisp`; test update in `tests/unit/test-ai-tool-hub.lisp`.
+- **Exit criteria (all met)**: registry has 9 tools incl. `:local-openai-api`; `select-tool` picks it; `estimate-cost` = 0.0; `execute-direct-api :local-openai-api` live-returns "ok" from unsloth:8888; `make test` 844/844 green.
+- **Dependencies**: unsloth at 127.0.0.1:8888 via systemd `unsloth-studio.service` + `unsloth-warm.service` (installed 2026-07-31, keeps gemma-4-12b warm).
+- **Changes**: `local-endpoint-available-p` TCP probe (sb-bsd-sockets, eval-when require); registry entry (`:type :direct-api`, `:cost-model :free`, `:providers (:local :openai-compatible)`, `:dogfooding t`); `*provider-endpoints*` alist replaces hardcoded `api-endpoint`; ecase branches added in `default-model`, `format-json-payload`, `provider-api-headers`; `get-api-key` short-circuit (`UNSLOTH_API_KEY` env, fallback "local-dummy-key").
+
+### Session M3.1: Event Loop (Task Driver on the Scheduler)
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: Replace the "no event loop" stub with a working driver: persistent task queue + scheduler-driven execution, defaulting to $0 local inference.
+- **Artifacts**: `sessions/m3-event-loop.md` (wave plan); `src/plugins/ai-orchestrator.lisp` (queue+driver), `src/core/main.lisp` (driver registration + `--once` + blocking loop), `src/packages.lisp` (driver exports), `tests/unit/test-task-driver.lisp`, `hngh.asd` (test registration); **invoke-agent dispatch fix** (`:local-openai-api` added to the tool member list — integration gap found during implementation review: M2 registered the tool but the orchestrator couldn't dispatch it).
+- **Exit criteria (all met)**: `make test` 860/860; task submitted in one process persisted; `hngh --once` in a second process drained it to `:done` via real :8888 inference (transcript: tool `:local-openai-api`, status `:completed`, cost 0.0, result "ok"); clean shutdown.
+- **Dependencies**: M2 (`:local-openai-api`), unsloth via systemd units (M0).
+- **Notes**: Queue lives at `~/.hngh/tasks/queue.lisp` (state-store root is `~/.hngh/`, not `~/.hngh/state/` as the wave file guessed). Default policy `(:prefer-tool :local-openai-api)` = deterministic $0. Driver is serial, one task per tick; retries/backoff, parallel workers, and dashboard controls are later waves.
+
+### Session M4.1: Unsloth Lifecycle in Model Runtime (shared-server management)
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: Manage unsloth the ollama way — shared systemd-owned server, API-level lifecycle, never spawn/kill the process.
+- **Artifacts**: `sessions/m4-unsloth-lifecycle.md` (wave plan); `src/plugins/model-runtime.lisp` (unsloth API helpers: `unsloth-request`/`unsloth-health-p`/`unsloth-models`/`unsloth-model-loaded-p`/`unsloth-warm-model`/`unsloth-ensure-server`, `spawn-unsloth-runtime`, spawn/stop ecase splits, health-based discovery); 3 new tests in `tests/unit/test-model-runtime.lisp`.
+- **Exit criteria (all met)**: `make test` 868/868; live cycle — discover ⇒ `:unsloth t`, spawn ⇒ `:ready`/8888/pid nil, stop ⇒ clean, server healthy after; original systemd process (pid 182017) untouched throughout.
+- **Dependencies**: M0 (unsloth-studio.service + unsloth-warm.service).
+- **Notes**: Design constraint — hngh must NOT spawn its own unsloth (port collision with the systemd unit); management is `/v1/models` + load-on-call only; no warm-by-default (20GB eviction risk — `:warm t` is explicit opt-in); comfyUI keeps the manual stub. `unsloth-api-key` reads env var, then by-name from `~/.hermes/.env`, then dummy. Env var has no setf on this SBCL — tests stub `uiop:getenv` via symbol-function.
+
+### Session M5.1: First Dogfood Loop — Real Task on $0 Local Inference
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: Prove the whole thesis — a real, useful task flows through hngh's queue -> task-driver -> delegate -> local model at $0, producing a reviewable artifact.
+- **Task**: Draft the svc-dash wave-5 spec (detail polish: start/stop buttons, log-follow mode, panel sparklines). Self-contained prompt; direct-api single completion (no file tools).
+- **Execution**: `submit-task` in one sbcl process (task id 2, persisted); `hngh --once` in a second process drained it: real HTTP call to :8888, 13s, 1,727 tokens (236 prompt + 1,491 completion), cost 0.0.
+- **Artifact**: `~/Projects/etc/svc-dash/sessions/wave-5-detail-polish.md` (3,332 chars) — all seven required sections present; reviewed and adopted by opencode as the wave-5 spec.
+- **Exit criteria (all met)**: queue shows `:done` with non-empty result; artifact saved with attribution; total spend $0.
+- **Dependencies**: M2 (local endpoints), M3 (event loop), M0 (unsloth warm).
+- **Notes**: Extraction lesson — Lisp prints JSON with `\\n` for JSON's `\n`; never string-surgery Lisp output in Python — have SBCL `read` the queue natively and emit clean JSON (see /tmp extraction pattern this session). Queue `:result` stores the full chat-completion JSON (usage included), not just message text.

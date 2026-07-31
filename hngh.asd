@@ -70,6 +70,7 @@
                 (:file "test-model-runtime")
                  (:file "test-ai-tool-hub")
                  (:file "test-ai-orchestrator")
+                 (:file "test-task-driver")
                  (:file "test-hnghbeats")
                  (:file "test-knowledge-base")
                  (:file "test-llm-threat-detector")

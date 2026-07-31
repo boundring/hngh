@@ -125,6 +125,7 @@ If any step fails, already-started components are shut down in reverse order."
            (hngh.plugins.model-runtime:init)
             (hngh.plugins.ai-tool-hub:init)
             (hngh.plugins.ai-orchestrator:init)
+            (ignore-errors (hngh.plugins.ai-orchestrator:start-task-driver))
            (hngh.plugins.hnghbeats:init)
            (hngh.plugins.knowledge-base:initialize-knowledge-base :hngh-home hngh-home)
            (hngh.plugins.llm-threat-detector:init :hngh-home hngh-home)
@@ -225,8 +226,13 @@ Used when building a standalone executable via `make build`."
            (if log-level
                (start :hngh-home hngh-home :log-level log-level)
                (start :hngh-home hngh-home))
-            ;; No event loop yet — start and stop immediately (stub)
-            (hngh.core:log-info "No event loop — exiting after startup")
+            (if (member "--once" args :test #'string=)
+                (progn
+                  (hngh.core:log-info "--once: single task-driver tick")
+                  (ignore-errors (hngh.plugins.ai-orchestrator:task-driver-tick)))
+                (progn
+                  (hngh.core:log-info "Event loop active (scheduler-driven task-driver)")
+                  (loop while *running* do (sleep 1))))
            (stop)
            (uiop:quit 0)))))))
 

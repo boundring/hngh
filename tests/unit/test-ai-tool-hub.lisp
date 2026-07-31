@@ -265,12 +265,14 @@
 ;;; --- Tests: Tool Registry Size --------------------------------------
 
 (test ath-tool-registry-size
-  "AI Tool Hub: registry contains exactly 8 default tools."
+  "AI Tool Hub: registry contains exactly 9 default tools (incl. local unsloth)."
   (ath-setup)
   (unwind-protect
        (let ((tools (hngh.plugins.ai-tool-hub:list-tools)))
-         (is (= (length tools) 8)
-             "Tool registry should have 8 default entries"))
+         (is (= (length tools) 9)
+             "Tool registry should have 9 default entries")
+         (is (not (null (hngh.plugins.ai-tool-hub::find-tool :local-openai-api)))
+             "Registry should include :local-openai-api"))
     (ath-teardown)))
 
 ;;; --- Tests: Direct API headers --------------------------------------
