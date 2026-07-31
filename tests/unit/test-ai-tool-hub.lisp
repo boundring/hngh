@@ -302,3 +302,20 @@
     (is (not (find #\Null escaped))))
   (is (string= "\\u001F"
                 (hngh.plugins.ai-tool-hub::escape-json-string (string (code-char 31))))))
+
+;;; --- Tests: agentic CLI args (M6.2) ------------------------------------------
+
+(test ath-agentic-cli-args-opencode
+  "agentic-cli-args for :opencode uses opencode 1.18 'run' syntax with the free local model pinned."
+  (let ((args (hngh.plugins.ai-tool-hub::agentic-cli-args :opencode "do a thing")))
+    (is (equal "run" (first args)))
+    (is (member "--auto" args :test #'string=))
+    (is (member "-m" args :test #'string=))
+    (is (member "unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF" args :test #'string=))
+    (is (equal "do a thing" (car (last args))))))
+
+(test ath-default-model-total
+  "default-model never falls through for agentic CLI tools (M6.2 dogfood catch)."
+  (is (string= "opencode" (hngh.plugins.ai-tool-hub::default-model :opencode)))
+  (is (string= "claude" (hngh.plugins.ai-tool-hub::default-model :claude)))
+  (is (string= "gpt-4o" (hngh.plugins.ai-tool-hub::default-model :openai-api))))
