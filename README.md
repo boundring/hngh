@@ -13,6 +13,22 @@ Code, Codex, Gemini-CLI) as its execution substrate. It does not reimplement age
 harnesses — it coordinates between them, informs their behavior task-specifically,
 and manages the inter-tool boundary.
 
+## Current state (2026-07-31)
+
+The harness runs. M0–M6.2 are done and verified: the core image boots with
+eleven plugins, the event loop drives a persistent task queue through a
+scheduler-ticked driver, and tasks execute on local models at $0 — text via
+`:local-openai-api` (unsloth :8888) and file-writing agentic work via
+`opencode run` on the free local model. Mission control (`mc`) opens a tiled
+tmux session with the services dashboard, the daemon, the queue watcher, and
+summonable agent panes. 888 tests green.
+
+- **Run the daemon**: `make run` (or `hngh --once` for a single driver cycle)
+- **Queue a task**: `(hngh.plugins.ai-orchestrator:submit-task "..." :policy '(:prefer-tool :local-openai-api))` — or agentic: `'(:prefer-tool :opencode)`
+- **Watch everything**: `mc` (tiled tmux), or `hngh-status` for the one-glance view
+- **Guide**: [`docs/guides/mission-control.md`](docs/guides/mission-control.md)
+- **Session history**: [`docs/project/work-sessions.md`](docs/project/work-sessions.md) (M2–M6.2, per-model attributed)
+
 ## Core Principles
 
 1. **Dogfooding Substrate**: The agentic tools Hngh uses at runtime are the same
@@ -54,12 +70,12 @@ complete design specification.
 
 ## Roadmap
 
-- **Milestone 0 — Foundation**: Core image skeleton, end-to-end validation
-- **Milestone 1 — The Harness (v0.1)**: Full system harness with AI orchestration
-- **Milestone 2 — The Companion (v0.2)**: Graphical buddies, passive observation, cost optimization
-- **Milestone 3 — The Network (v0.3)**: Remote instance coordination, knowledge sharing
+- **Milestone 0 — Foundation**: ✅ Core image, end-to-end validation
+- **Milestone 1 — The Harness (v0.1)**: ✅ System harness, AI orchestration (M1.0–M1.10)
+- **Milestone 2 — The Dogfooding Loop** ✅ (2026-07-31): M2 local OpenAI-compatible endpoints, M3 event loop + task driver, M4 unsloth lifecycle (systemd-respecting), M5 first $0 dogfood loop, M6.1 mission control, M6.2 agentic file-editing loops
+- **Milestone 3 — The Network (v0.3)**: planned — client/server daemon mode (Emacs-style headless + extensible clients), model-management plugin (selection, sourcing, benchmark harness, unsloth/llama.cpp/ollama routing), remote instance coordination, knowledge sharing
 
-See [`docs/project/roadmap.md`](docs/project/roadmap.md) for details.
+Detailed session history: [`docs/project/work-sessions.md`](docs/project/work-sessions.md). Program plan: `~/Projects/etc/sysconfig_mgmt/.omc/plans/hngh-gbd-dogfood-program.md`.
 
 ## License
 
