@@ -364,7 +364,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:agent-info-cost
            #:agent-info-started-at
             #:*agents*
-            #:*policies*))
+            #:*policies*
+            ;; Task driver (M3)
+            #:submit-task
+            #:list-tasks
+            #:task-driver-tick
+            #:start-task-driver
+            #:stop-task-driver))
 
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")

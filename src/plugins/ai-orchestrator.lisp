@@ -429,7 +429,7 @@ Returns :success or :failure. Updates agent-info in-place."
         (cond
           ;; Agentic CLI / direct API tools
           ((member tool '(:opencode :claude :codex :gemini :cecli
-                          :anthropic-api :google-api :openai-api))
+                          :anthropic-api :google-api :openai-api :local-openai-api))
            (if (tool-hub-fbound-p "INVOKE")
                 (let ((invoke-fn (find-symbol "INVOKE" :hngh.plugins.ai-tool-hub)))
                   (let* ((result (funcall invoke-fn tool task :context ctx))
@@ -741,3 +741,110 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 (defun running-p ()
   "Return T if the AI orchestrator plugin is active."
   *running*)
+
+
+;;; --- Task driver (M3): persistent queue + scheduler-driven execution -------
+(defvar *task-queue-path* "tasks/queue.lisp"
+  "State-store relative path of the persistent task queue.")
+(defvar *task-queue-lock* (bt:make-lock "hngh-task-queue"))
+(defvar *next-task-id* 0)
+(defvar *task-driver-schedule-id* nil)
+
+(defun read-task-queue ()
+  "Read the task queue list from the state store (NIL if absent)."
+  (when (state-store-ready-p)
+    (let ((q (ignore-errors (hngh.core.state-store:read-state *task-queue-path*))))
+      (and (listp q) q))))
+
+(defun write-task-queue (queue)
+  "Persist QUEUE (list of task plists) to the state store."
+  (when (state-store-ready-p)
+    (hngh.core.state-store:write-state *task-queue-path* queue)))
+
+(defun %update-queue-entry (id fn)
+  "Apply FN to the entry with :id ID inside the persisted queue (under lock)."
+  (bt:with-lock-held (*task-queue-lock*)
+    (let ((queue (or (read-task-queue) '())))
+      (dolist (e queue)
+        (when (and (listp e) (eql (getf e :id) id))
+          (funcall fn e)))
+      (write-task-queue queue))))
+
+(defun submit-task (task &key (policy '(:prefer-tool :local-openai-api)))
+  "Enqueue TASK (string) with POLICY plist. Returns the new task id.
+Default policy routes to the free local tool (:local-openai-api)."
+  (unless (stringp task)
+    (error "TASK must be a string"))
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((queue (or (read-task-queue) '()))
+           (max-id (reduce #'max
+                           (mapcar (lambda (e)
+                                     (if (and (listp e) (integerp (getf e :id)))
+                                         (getf e :id) 0))
+                                   queue)
+                           :initial-value 0))
+           (id (setf *next-task-id* (max (1+ max-id) (1+ *next-task-id*))))
+           (entry (list :id id :task task :status :queued :policy policy
+                        :result nil :error nil
+                        :submitted-at (get-universal-time) :finished-at nil)))
+      (write-task-queue (append queue (list entry)))
+      (hngh.core:log-info "Task ~D queued (~D chars)" id (length task))
+      id)))
+
+(defun list-tasks (&key status)
+  "Return task entries, optionally filtered by STATUS keyword."
+  (let ((queue (or (read-task-queue) '())))
+    (if status
+        (remove-if-not (lambda (e) (eq (getf e :status) status)) queue)
+        queue)))
+
+(defun task-driver-tick ()
+  "One driver cycle: run the oldest :queued task via DELEGATE, persist outcome.
+The delegate call runs outside the queue lock (long inference)."
+  (let ((entry (find :queued (or (read-task-queue) '())
+                     :key (lambda (e) (getf e :status)))))
+    (when entry
+      (let ((id (getf entry :id))
+            (task (getf entry :task))
+            (policy (getf entry :policy)))
+        (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
+        (handler-case
+            (let* ((agent (delegate task :preferences policy))
+                   (ok (eq (agent-info-status agent) :completed))
+                   (result (agent-info-result agent)))
+              (%update-queue-entry
+               id (lambda (e)
+                    (setf (getf e :status) (if ok :done :failed)
+                          (getf e :result) (and (stringp result) result)
+                          (getf e :error) (unless ok (or (and (stringp result) result) "unknown"))
+                          (getf e :finished-at) (get-universal-time))))
+              (when (event-bus-ready-p)
+                (ignore-errors
+                 (hngh.core.event-bus:publish :task-completed
+                                              (list :id id :status (if ok :done :failed))
+                                              :source 'ai-orchestrator)))
+              id)
+          (error (c)
+            (%update-queue-entry
+             id (lambda (e)
+                  (setf (getf e :status) :failed
+                        (getf e :error) (princ-to-string c)
+                        (getf e :finished-at) (get-universal-time))))
+            nil))))))
+
+(defun start-task-driver (&key (tick-seconds 5))
+  "(Re)register the task driver on the scheduler. Returns the schedule id.
+Idempotent and restart-safe: any previous registration is cancelled first."
+  (when *task-driver-schedule-id*
+    (ignore-errors (hngh.core.scheduler:cancel *task-driver-schedule-id*))
+    (setf *task-driver-schedule-id* nil))
+  (setf *task-driver-schedule-id*
+        (hngh.core.scheduler:schedule
+         "task-driver" (list :interval tick-seconds)
+         (list :function #'task-driver-tick) :source 'ai-orchestrator)))
+
+(defun stop-task-driver ()
+  "Cancel the task driver schedule."
+  (when *task-driver-schedule-id*
+    (ignore-errors (hngh.core.scheduler:cancel *task-driver-schedule-id*))
+    (setf *task-driver-schedule-id* nil)))

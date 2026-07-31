@@ -131,6 +131,110 @@ Returns T if model exists, NIL otherwise."
              (not (search "error" output :test #'char-equal))))
     (error () nil)))
 
+;;; --- Helper: unsloth API (OpenAI-compatible, systemd-managed server) -------
+
+(defun %read-hermes-env-key (name)
+  "Read variable NAME's value from ~/.hermes/.env by name only (never echoed).
+Returns the value string or NIL."
+  (let ((env-path (merge-pathnames ".hermes/.env" (user-homedir-pathname))))
+    (when (probe-file env-path)
+      (handler-case
+          (with-open-file (s env-path)
+            (loop for line = (read-line s nil nil)
+                  while line
+                  for prefix = (concatenate 'string "export " name "=")
+                  when (and (>= (length line) (length prefix))
+                            (string= prefix line :end2 (length prefix)))
+                    do (return (string-trim '(#\Space #\" #\')
+                                            (subseq line (length prefix))))))
+        (error () nil)))))
+
+(defun unsloth-api-key ()
+  "API key for the local unsloth server: env var first, hermes .env fallback."
+  (or (uiop:getenv "UNSLOTH_API_KEY")
+      (%read-hermes-env-key "UNSLOTH_API_KEY")
+      "local-dummy-key"))
+
+(defun unsloth-request (path &key (method :get) data (max-time 30) (port 8888))
+  "Call the unsloth server at PORT with PATH. Returns (values body exit-code)."
+  (let ((args (list "-s" "--connect-timeout" "3"
+                    "--max-time" (write-to-string max-time)
+                    "-X" (string-upcase (string method))
+                    "-H" (format nil "Authorization: Bearer ~A" (unsloth-api-key))
+                    "-H" "Content-Type: application/json")))
+    (when data
+      (setf args (append args (list "-d" data))))
+    (setf args (append args (list (format nil "http://127.0.0.1:~D~A" port path))))
+    (run-command "curl" args)))
+
+(defun unsloth-health-p (&key (port 8888))
+  "T when the unsloth server answers /v1/models."
+  (multiple-value-bind (body code)
+      (unsloth-request "/v1/models" :max-time 8 :port port)
+    (and (zerop code) body (search "\"object\"" body) t)))
+
+(defun %json-object-chunks (body)
+  "Split JSON BODY on '{' to isolate object-ish chunks (no json lib)."
+  (loop with start = 0
+        for pos = (position #\{ body :start start)
+        while pos
+        for next = (position #\{ body :start (1+ pos))
+        collect (subseq body pos next)
+        do (setf start (or next (length body)))))
+
+(defun %json-string-val (chunk key)
+  "Extract the string value of \"key\":\"value\" from CHUNK, or NIL."
+  (let* ((pat (concatenate 'string "\"" key "\":\""))
+         (pos (search pat chunk)))
+    (when pos
+      (let* ((val-start (+ pos (length pat)))
+             (val-end (position #\" chunk :start val-start)))
+        (and val-end (subseq chunk val-start val-end))))))
+
+(defun unsloth-models (&key (port 8888))
+  "List of (model-id . loaded-p) from /v1/models, parsed without a JSON lib."
+  (multiple-value-bind (body code)
+      (unsloth-request "/v1/models" :max-time 10 :port port)
+    (when (and (zerop code) body)
+      (loop for chunk in (%json-object-chunks body)
+            for id = (%json-string-val chunk "id")
+            when id
+            collect (cons id (not (null (search "\"loaded\":true" chunk))))))))
+
+(defun unsloth-model-loaded-p (model &key (port 8888))
+  "T when MODEL (id string) is currently loaded on the unsloth server."
+  (cdr (assoc model (unsloth-models :port port) :test #'string=)))
+
+(defun unsloth-warm-model (model &key (max-time 900) (port 8888))
+  "Trigger a model load with a 1-token chat call (load-on-call). T on success.
+NOTE: on a 20GB card this may evict the resident model. Call only on intent."
+  (multiple-value-bind (body code)
+      (unsloth-request "/v1/chat/completions" :method :post :port port
+                       :data (format nil "{\"model\":\"~A\",\"messages\":[{\"role\":\"user\",\"content\":\"warm\"}],\"max_tokens\":1}" model)
+                       :max-time max-time)
+    (declare (ignore body))
+    (zerop code)))
+
+(defun systemd-user-unit-active-p (unit)
+  "T when systemd --user UNIT reports active."
+  (multiple-value-bind (output code stderr)
+      (run-command "systemctl" (list "--user" "is-active" unit))
+    (declare (ignore stderr))
+    (and (zerop code) output
+         (string= (string-trim '(#\Space #\Newline) output) "active"))))
+
+(defun unsloth-ensure-server (&key (port 8888))
+  "Ensure the systemd-managed unsloth server answers. Starts the unit if
+needed (M0's unsloth-studio.service), then polls up to 60s. Returns T or NIL."
+  (or (unsloth-health-p :port port)
+      (progn
+        (hngh.core:log-info "unsloth server not answering — starting unsloth-studio.service")
+        (run-command "systemctl" (list "--user" "start" "unsloth-studio.service"))
+        (loop for i from 0 below 60
+              until (unsloth-health-p :port port)
+              do (sleep 1)
+              finally (return (unsloth-health-p :port port))))))
+
 ;;; --- Helper: next runtime ID ----------------------------------------------
 
 (defun get-next-id ()
@@ -240,20 +344,37 @@ Returns T if model exists, NIL otherwise."
     (setf (runtime-info-status info) :ready)
     info))
 
+(defun spawn-unsloth-runtime (info model-spec port)
+  "Set up an unsloth runtime against the systemd-managed server (M4).
+Never spawns or kills the process — systemd owns it; we manage via API.
+MODEL-SPEC may include :warm t to explicitly warm (load) :name on spawn."
+  (let ((unsloth-port (or port 8888))
+        (model-name (runtime-info-model info)))
+    (unless (unsloth-ensure-server :port unsloth-port)
+      (error "unsloth server unreachable on port ~D and could not be started" unsloth-port))
+    (setf (runtime-info-pid info) nil
+          (runtime-info-port info) unsloth-port
+          (runtime-info-status info) :ready)
+    (when (and (getf model-spec :warm) (stringp model-name) (plusp (length model-name)))
+      (if (unsloth-model-loaded-p model-name :port unsloth-port)
+          (hngh.core:log-info "Model ~A already loaded in unsloth" model-name)
+          (progn
+            (hngh.core:log-info "Warming unsloth model ~A (may take minutes)..." model-name)
+            (if (unsloth-warm-model model-name :port unsloth-port)
+                (hngh.core:log-info "Model ~A warm" model-name)
+                (hngh.core:log-warn "Warm-up call for ~A failed" model-name)))))
+    info))
+
 (defun spawn-python-runtime (info model-spec port)
-  "Handle unsloth/comfyui runtimes (Python-based).
-In M1.5, these require manual setup — return info with guidance."
+  "Handle comfyUI runtimes (Python-based).
+Still manual setup — return info with guidance. (unsloth is M4-managed; see above.)"
   (declare (ignore port))
-  (let* ((kind (runtime-info-kind info))
-         (kind-str (ecase kind
-                     (:unsloth "unsloth")
-                     (:comfyui "comfyUI"))))
-    (if (which-exists-p "python3")
-        (progn
-          (hngh.core:log-warn "~A runtime requires manual setup (python3 detected)" kind-str)
-          (setf (runtime-info-status info) :ready)
-          info)
-        (error "python3 not found — ~A runtime cannot be set up" kind-str))))
+  (if (which-exists-p "python3")
+      (progn
+        (hngh.core:log-warn "comfyUI runtime requires manual setup (python3 detected)")
+        (setf (runtime-info-status info) :ready)
+        info)
+      (error "python3 not found — comfyUI runtime cannot be set up")))
 
 (defun spawn-runtime (kind model-spec &key grant-id port)
   "Spawn a model runtime of the given KIND.
@@ -288,7 +409,9 @@ Returns a runtime-info struct on success, or NIL on failure."
            (spawn-ollama-runtime info model-spec port))
           (:llama-cpp
            (spawn-llama-cpp-runtime info model-spec port))
-          ((:unsloth :comfyui)
+          (:unsloth
+           (spawn-unsloth-runtime info model-spec port))
+          (:comfyui
            (spawn-python-runtime info model-spec port)))
       (error (c)
         (setf (runtime-info-status info) :failed)
@@ -377,7 +500,11 @@ Returns T on success, NIL if not found."
                  (hngh.core:log-warn "Error killing llama.cpp process ~D: ~A"
                                      (runtime-info-pid info) c))))
            (setf (runtime-info-status info) :stopped))
-          ((:unsloth :comfyui)
+          (:unsloth
+           ;; Shared systemd-managed server — never kill (M4)
+           (hngh.core:log-info "unsloth runtime ~D released; systemd server left running" id)
+           (setf (runtime-info-status info) :stopped))
+          (:comfyui
            (when (runtime-info-pid info)
              (handler-case
                  (sb-ext:run-program "kill"
@@ -455,7 +582,7 @@ Returns a plist:
           (list :ollama ollama-available
                 :llama-cpp llama-cpp-available
                 :comfyui python-available
-                :unsloth python-available
+                :unsloth (unsloth-health-p)
                 :models models))
     *available-runtimes*))
 

@@ -249,3 +249,55 @@ model runtime manager on TMP."
                    "Only runtime IDs 11 and 12 should be stopped")))
         (when stop-sym
           (setf (symbol-function stop-sym) orig-stop))))))
+
+
+;;; --- Tests: unsloth lifecycle (M4) ------------------------------------------
+
+(test unsloth-key-prefers-env
+  "unsloth-api-key prefers the UNSLOTH_API_KEY env var."
+  (let ((orig (symbol-function 'uiop:getenv)))
+    (unwind-protect
+         (progn
+           (setf (symbol-function 'uiop:getenv)
+                 (lambda (name)
+                   (and (string= name "UNSLOTH_API_KEY") "env-key-123")))
+           (is (string= "env-key-123" (hngh.plugins.model-runtime::unsloth-api-key))))
+      (setf (symbol-function 'uiop:getenv) orig))))
+
+(test spawn-unsloth-ready-stop-no-kill
+  "spawn-unsloth-runtime is :ready on the systemd server; stop never kills it."
+  (with-mr (tmp)
+    (let ((orig-ensure (symbol-function 'hngh.plugins.model-runtime::unsloth-ensure-server))
+          (orig-run-command (symbol-function 'hngh.plugins.model-runtime::run-command))
+          (kill-called nil))
+      (unwind-protect
+           (progn
+             (setf (symbol-function 'hngh.plugins.model-runtime::unsloth-ensure-server)
+                   (lambda (&key port) (declare (ignore port)) t))
+             (setf (symbol-function 'hngh.plugins.model-runtime::run-command)
+                   (lambda (program args)
+                     (when (string= program "kill") (setf kill-called t))
+                     (values "" 0 "")))
+             (let ((info (hngh.plugins.model-runtime::spawn-runtime
+                          :unsloth '(:name "unsloth/gemma-4-12b-it-qat-GGUF"))))
+               (is (not (null info)))
+               (is (eq :ready (hngh.plugins.model-runtime::runtime-info-status info)))
+               (is (= 8888 (hngh.plugins.model-runtime::runtime-info-port info)))
+               (is (null (hngh.plugins.model-runtime::runtime-info-pid info)))
+               (is (hngh.plugins.model-runtime::stop-runtime
+                    (hngh.plugins.model-runtime::runtime-info-id info)))
+               (is (not kill-called)
+                   "stop-runtime must not kill the systemd-managed server")))
+        (setf (symbol-function 'hngh.plugins.model-runtime::unsloth-ensure-server) orig-ensure)
+        (setf (symbol-function 'hngh.plugins.model-runtime::run-command) orig-run-command)))))
+
+(test discover-reports-unsloth-health
+  "discover-runtimes reports :unsloth from the server health probe."
+  (with-mr (tmp)
+    (let ((orig (symbol-function 'hngh.plugins.model-runtime::unsloth-health-p)))
+      (unwind-protect
+           (progn
+             (setf (symbol-function 'hngh.plugins.model-runtime::unsloth-health-p)
+                   (lambda (&key port) (declare (ignore port)) t))
+             (is (eq t (getf (hngh.plugins.model-runtime:discover-runtimes) :unsloth))))
+        (setf (symbol-function 'hngh.plugins.model-runtime::unsloth-health-p) orig)))))
