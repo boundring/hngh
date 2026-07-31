@@ -22,3 +22,13 @@ prefer local models for any loop or automated work.
 Common Lisp (SBCL) agent-orchestration system. Build: `make build`. Test: `make test`.
 Docs: `docs/` — roadmap at `docs/project/roadmap.md` (M1.x active). Runtime state: `~/.hngh/`.
 Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ahead.
+
+
+## Per-model attribution (required)
+
+Every artifact and session record names its producer: agent + model + harness
+(+ cost when nonzero). Examples: "wave-5 spec — hngh task #2 via
+unsloth/gemma-4-12b-it-qat-GGUF, $0"; "fix — opencode (kimi-k3, attended)";
+"M2 patch — opencode (kimi-k3) reviewing hngh task #4 draft (gemma-4-12b)".
+Applies to: session files, work-sessions.md, JOURNAL.md entries, commit
+messages (body or trailers), memo notes, README status lines.
