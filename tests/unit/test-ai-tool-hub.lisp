@@ -290,3 +290,15 @@
         "Google should use x-goog-api-key header")
     (is (find "Authorization: Bearer open-key" openai :test #'string=)
         "OpenAI should use Authorization Bearer header")))
+
+
+;;; --- Tests: JSON escaping (M6.1 dogfood catch) -------------------------------
+
+(test ath-escape-json-string-control-chars
+  "escape-json-string escapes control characters as \u00XX (NUL found by dogfooding)."
+  (let ((escaped (hngh.plugins.ai-tool-hub::escape-json-string
+                  (format nil "a~Ab" #\Null))))
+    (is (search "\\u0000" escaped))
+    (is (not (find #\Null escaped))))
+  (is (string= "\\u001F"
+                (hngh.plugins.ai-tool-hub::escape-json-string (string (code-char 31))))))
