@@ -202,3 +202,12 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Exit criteria (all met)**: `make test` 880/880 (incl. live tmux lifecycle); mc session live with all panes (svc-dash rendered, daemon event loop active); task #4 (wave-5 implementation diff, 13.8KB self-contained prompt) processed by the daemon to `:done` — 19.2K-char unified diff, 13,874 tokens, $0, saved at `svc-dash/sessions/wave-5-implementation-draft.diff.md`.
 - **Dogfood catch**: task #3 failed (server 400). Root cause: `(make-string (file-length s))`+`read-sequence` leaves NUL padding on multi-byte UTF-8 (file-length is bytes, not chars). Fixed two ways: `escape-json-string` hardened to emit `\u00XX` for all control chars (+ regression test), and the correct idiom documented (`(subseq str 0 (read-sequence str s))`).
 - **Dependencies**: M0–M5 machinery; tmux; svc-dash.
+
+### Session M6.2: Agentic File-Editing Loops (opencode via tool hub)
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: Let the driver run tasks that WRITE code, not just text — agentic CLI path (opencode headless) at $0 via the local model.
+- **Root-cause arc**: task #5 failed with `:OPENCODE fell through ECASE`. Two latent bugs: (1) `agentic-cli-args` used stale `--task` syntax → fixed to opencode 1.18 `run --auto -m unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF`; (2) the REAL outcome was masked by `log-cost-entry` calling `default-model` unconditionally — its ecase covered only the 4 API tools, so every agentic invocation crashed at cost-logging (success marked failed, true error hidden). Fixed with a total case fallback (agentic CLIs report their tool id).
+- **Artifacts**: `src/plugins/ai-tool-hub.lisp` (2 fixes), `tests/unit/test-ai-tool-hub.lisp` (args-shape + default-model-total tests), `sessions/m6-2-agentic-loops.md` (wave notes).
+- **Exit criteria (all met)**: `make test` 888/888; task #6 (write /tmp/hngh-agentic-proof.txt with "ok") ran queue → driver → `opencode run --auto -m <local-12b>` → file exists with "ok"; queue shows `:done` with correct attribution.
+- **Notes**: Agentic invocations run with `--auto` (headless auto-approve; secret-path denies still enforced by opencode config). `execute-agentic-cli` has NO timeout — a hung agentic task blocks the tick; timeout support is follow-up hardening.
+- **Dependencies**: M2 local endpoints, M3 driver, opencode 1.18 + unsloth-local provider config.

@@ -632,7 +632,7 @@ Returns captured stdout as a string."
 (defun agentic-cli-args (tool-id task)
   "Return the command-line arguments for an agentic CLI tool for TASK."
   (ecase tool-id
-    (:opencode (list "--task" task))
+    (:opencode (list "run" "--auto" "-m" "unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF" task))
     (:claude (list "-p" task))
     (:codex (list task))
     (:gemini (list task))
@@ -686,12 +686,15 @@ Each line is in the form expected by curl -H @file."
     (namestring path)))
 
 (defun default-model (tool-id)
-  "Return the default model name for TOOL-ID."
-  (ecase tool-id
+  "Return the default model name for TOOL-ID.
+Direct-API tools have named models; agentic CLIs report their tool id
+(per-query/subscription — no per-token model to attribute)."
+  (case tool-id
     (:anthropic-api "claude-sonnet-4-20250514")
     (:google-api "gemini-2.5-flash")
     (:openai-api "gpt-4o")
-    (:local-openai-api "unsloth/gemma-4-12b-it-qat-GGUF")))
+    (:local-openai-api "unsloth/gemma-4-12b-it-qat-GGUF")
+    (t (string-downcase (symbol-name tool-id)))))
 
 (defun format-json-payload (tool-id model task)
   "Format a JSON payload string appropriate for TOOL-ID.
