@@ -715,7 +715,8 @@ Each line is in the form expected by curl -H @file."
              model (escape-json-string task)))))
 
 (defun escape-json-string (str)
-  "Basic JSON string escaping. Handles double-quote, backslash, newline."
+  "Escape a string for embedding in JSON. Handles double-quote, backslash,
+newline, return, tab, and any other control character as \u00XX."
   (with-output-to-string (out)
     (loop for c across str do
       (case c
@@ -724,7 +725,10 @@ Each line is in the form expected by curl -H @file."
         (#\Newline (write-string "\\n" out))
         (#\Return (write-string "\\r" out))
         (#\Tab (write-string "\\t" out))
-        (t (write-char c out))))))
+        (t (let ((code (char-code c)))
+             (if (< code 32)
+                 (format out "\\u~4,'0X" code)
+                 (write-char c out))))))))
 
 (defun read-stream-to-string (stream)
   "Read all output from STREAM into a string.

@@ -372,6 +372,20 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
             #:start-task-driver
             #:stop-task-driver))
 
+(defpackage :hngh.plugins.mission-control
+  (:documentation "Mission Control (M6) — tiled tmux observability and agent summoning.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:start-session
+           #:stop-session
+           #:add-pane
+           #:summon
+           #:session-alive-p
+           #:panes))
+
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")
   (:use :cl :hngh.core)

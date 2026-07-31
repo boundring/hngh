@@ -194,3 +194,11 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Exit criteria (all met)**: queue shows `:done` with non-empty result; artifact saved with attribution; total spend $0.
 - **Dependencies**: M2 (local endpoints), M3 (event loop), M0 (unsloth warm).
 - **Notes**: Extraction lesson — Lisp prints JSON with `\\n` for JSON's `\n`; never string-surgery Lisp output in Python — have SBCL `read` the queue natively and emit clean JSON (see /tmp extraction pattern this session). Queue `:result` stores the full chat-completion JSON (usage included), not just message text.
+
+### Session M6.1: Mission Control (tiled tmux observability + agent summoning)
+**Status**: Done (2026-07-31) — changes uncommitted, awaiting owner commit
+- **Goal**: One command (`mc`) opens a tiled tmux session with dashboard, daemon, status, event journal, and summonable agent panes — scrollable, auto-tiling, at-startup or on-demand.
+- **Artifacts**: `~/.local/bin/mc` (launcher: panes = svc-dash | hngh daemon | `watch hngh-status` | events tail | free); `src/plugins/mission-control.lisp` (+ defpackage in packages.lisp, component in hngh.asd, init/shutdown in main.lisp incl. rollback); `tests/unit/test-mission-control.lisp` (live tmux lifecycle test); `~/.config/autostart/hngh-mc.desktop`; `sessions/m6-mission-control.md` (wave plan); gbd tracks `mc` + `hngh-status` (agent-configs commit f8a1a56).
+- **Exit criteria (all met)**: `make test` 880/880 (incl. live tmux lifecycle); mc session live with all panes (svc-dash rendered, daemon event loop active); task #4 (wave-5 implementation diff, 13.8KB self-contained prompt) processed by the daemon to `:done` — 19.2K-char unified diff, 13,874 tokens, $0, saved at `svc-dash/sessions/wave-5-implementation-draft.diff.md`.
+- **Dogfood catch**: task #3 failed (server 400). Root cause: `(make-string (file-length s))`+`read-sequence` leaves NUL padding on multi-byte UTF-8 (file-length is bytes, not chars). Fixed two ways: `escape-json-string` hardened to emit `\u00XX` for all control chars (+ regression test), and the correct idiom documented (`(subseq str 0 (read-sequence str s))`).
+- **Dependencies**: M0–M5 machinery; tmux; svc-dash.
