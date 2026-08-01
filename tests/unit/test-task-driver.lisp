@@ -149,3 +149,190 @@
       (ignore-errors (hngh.core.state-store:shutdown))
       (ignore-errors (hngh.core.event-bus:shutdown))
       (cleanup-tmp-home tmp))))
+
+;;; --- H-A3: Pause/Resume and Stale-Lease Recovery tests ---------------------
+;;;
+;;; Tests cover:
+;;;   - Dispatch pause with optional resume_at timestamp.
+;;;   - Dispatch resume clears pause state.
+;;;   - task-driver-tick is a no-op while paused (before resume_at).
+;;;   - task-driver-tick resumes automatically when resume_at has passed.
+;;;   - recover-stale-task-leases transitions :running tasks with expired
+;;;     leases to :blocked with a deterministic blocked-reason.
+;;;   - recover-stale-task-leases ignores :running tasks with nil lease-until.
+;;;   - recover-stale-task-leases ignores non-:running tasks.
+;;;   - task-driver-tick calls recover-stale-task-leases before dispatch.
+
+;;; --- Pause / Resume state tests -------------------------------------------
+
+(test pause-dispatch-sets-paused-state
+  "pause-dispatch marks the driver as paused with an optional resume_at."
+  (with-aio-light (tmp)
+    (let ((resume-at (+ (get-universal-time) 300)))
+      (is (null (hngh.plugins.ai-orchestrator::dispatch-paused-p))
+          "not paused before pause-dispatch")
+      (hngh.plugins.ai-orchestrator::pause-dispatch :resume-at resume-at)
+      (is (hngh.plugins.ai-orchestrator::dispatch-paused-p)
+          "paused after pause-dispatch")
+      (is (= resume-at (hngh.plugins.ai-orchestrator::dispatch-resume-at))
+          "resume_at is stored"))))
+
+(test pause-dispatch-without-resume-at
+  "pause-dispatch without :resume-at pauses indefinitely (resume_at is nil)."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::pause-dispatch)
+    (is (hngh.plugins.ai-orchestrator::dispatch-paused-p))
+    (is (null (hngh.plugins.ai-orchestrator::dispatch-resume-at))))
+
+(test resume-dispatch-clears-paused-state
+  "resume-dispatch clears the pause flag and resume_at."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::pause-dispatch
+      :resume-at (+ (get-universal-time) 300))
+    (is (hngh.plugins.ai-orchestrator::dispatch-paused-p))
+    (hngh.plugins.ai-orchestrator::resume-dispatch)
+    (is (null (hngh.plugins.ai-orchestrator::dispatch-paused-p))
+        "no longer paused after resume-dispatch")
+    (is (null (hngh.plugins.ai-orchestrator::dispatch-resume-at))
+        "resume_at cleared after resume-dispatch")))
+
+;;; --- Tick respects pause state --------------------------------------------
+
+(test tick-no-op-when-paused
+  "task-driver-tick is a no-op when paused and resume_at has not passed."
+  (with-aio-light (tmp)
+    (with-delegate-stub (:completed "stub")
+      (hngh.plugins.ai-orchestrator::submit-task "should not run")
+      (hngh.plugins.ai-orchestrator::pause-dispatch
+        :resume-at (+ (get-universal-time) 3600))
+      (is (null (hngh.plugins.ai-orchestrator::task-driver-tick)))
+      (let ((tasks (hngh.plugins.ai-orchestrator::list-tasks)))
+        (is (= 1 (length tasks)))
+        (is (eq :queued (getf (first tasks) :status))
+            "task remains queued when paused")))))
+
+(test tick-resumes-after-resume-at-passed
+  "task-driver-tick auto-resumes when resume_at is in the past."
+  (with-aio-light (tmp)
+    (with-delegate-stub (:completed "stub says ok")
+      (hngh.plugins.ai-orchestrator::submit-task "should run after resume")
+      (hngh.plugins.ai-orchestrator::pause-dispatch
+        :resume-at (- (get-universal-time) 1))
+      ;; First tick auto-resumes, but we also need it to dispatch.
+      (hngh.plugins.ai-orchestrator::task-driver-tick)
+      (let ((tasks (hngh.plugins.ai-orchestrator::list-tasks)))
+        (is (eq :done (getf (first tasks) :status))
+            "task dispatched after auto-resume")
+        (is (null (hngh.plugins.ai-orchestrator::dispatch-paused-p))
+            "pause cleared after auto-resume")))))
+
+;;; --- recover-stale-task-leases tests --------------------------------------
+
+(test recover-stale-transitions-expired-running-to-blocked
+  "A :running task with an expired lease-until is transitioned to :blocked."
+  (with-aio-light (tmp)
+    (let ((past (- (get-universal-time) 120)))
+      (hngh.plugins.ai-orchestrator::submit-task "will go stale")
+      ;; Manually mark it :running with an expired lease.
+      (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+        (let* ((queue (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+               (id (getf (first queue) :id)))
+          (hngh.plugins.ai-orchestrator::write-task-queue
+            (list (append (first queue)
+                         (list :status :running :lease-until past
+                               :started-at (- (get-universal-time) 180))))))
+        ;; recover
+        (let ((count (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+          (is (= 1 count) "one stale task recovered"))
+        (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+               (entry (first queue)))
+          (is (eq :blocked (getf entry :status)))
+          (is (stringp (getf entry :blocked-reason))
+              "blocked-reason is a string"))))))
+
+(test recover-stale-ignores-nil-lease-until
+  "A :running task with nil lease-until is NOT stale (holds slot indefinitely)."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::submit-task "running forever")
+    (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+      (hngh.plugins.ai-orchestrator::write-task-queue
+        (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+                     (list :status :running :lease-until nil
+                           :started-at (- (get-universal-time) 999))))))
+    (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases))
+        "no tasks recovered when lease-until is nil")
+    (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+      (is (eq :running (getf entry :status))
+          "still running — nil lease means indefinite")))))
+
+(test recover-stale-ignores-non-running
+  "Non-:running tasks are never touched by recover-stale-task-leases."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::submit-task "queued task")
+    (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+    (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+      (is (eq :queued (getf entry :status)))))
+
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::submit-task "done task")
+    (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+      (hngh.plugins.ai-orchestrator::write-task-queue
+        (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+                     (list :status :done :finished-at (get-universal-time))))))
+    (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+    (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+      (is (eq :done (getf entry :status))))))
+
+(test recover-stale-ignores-unexpired-lease
+  "A :running task whose lease-until is still in the future is NOT stale."
+  (with-aio-light (tmp)
+    (let ((future (+ (get-universal-time) 300)))
+      (hngh.plugins.ai-orchestrator::submit-task "actively running")
+      (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+        (hngh.plugins.ai-orchestrator::write-task-queue
+          (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+                       (list :status :running :lease-until future
+                             :started-at (- (get-universal-time) 10))))))
+      (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+      (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+        (is (eq :running (getf entry :status)))))))
+
+(test recover-stale-multiple-stale-tasks
+  "Multiple stale tasks are all recovered in one pass."
+  (with-aio-light (tmp)
+    (let ((past (- (get-universal-time) 60)))
+      (hngh.plugins.ai-orchestrator::submit-task "stale 1")
+      (hngh.plugins.ai-orchestrator::submit-task "stale 2")
+      (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+        (let* ((queue (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+               (e1 (first queue))
+               (e2 (second queue)))
+          (hngh.plugins.ai-orchestrator::write-task-queue
+            (list (append e1 (list :status :running :lease-until past
+                                   :started-at (- (get-universal-time) 120)))
+                  (append e2 (list :status :running :lease-until past
+                                   :started-at (- (get-universal-time) 100)))))))
+      (is (= 2 (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+      (let ((blocked (hngh.plugins.ai-orchestrator::list-tasks :status :blocked)))
+        (is (= 2 (length blocked)))))))
+
+(test tick-recovers-stale-before-dispatch
+  "task-driver-tick recovers stale leases before attempting dispatch."
+  (with-aio-light (tmp)
+    (let ((past (- (get-universal-time) 120)))
+      ;; Queue a stale running task.
+      (hngh.plugins.ai-orchestrator::submit-task "stale")
+      (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+        (hngh.plugins.ai-orchestrator::write-task-queue
+          (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+                       (list :status :running :lease-until past
+                             :started-at (- (get-universal-time) 180))))))
+      ;; Queue a fresh task that should dispatch.
+      (with-delegate-stub (:completed "fresh result")
+        (hngh.plugins.ai-orchestrator::submit-task "fresh task")
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let* ((tasks (hngh.plugins.ai-orchestrator::list-tasks))
+               (stale (find-if (lambda (e) (eq :blocked (getf e :status))) tasks))
+               (fresh (find-if (lambda (e) (eq :done (getf e :status))) tasks)))
+          (is stale "stale task was recovered to :blocked")
+          (is fresh "fresh task was dispatched to :done"))))))
