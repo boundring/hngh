@@ -1,6 +1,7 @@
 # hngh-mc.el — Emacs mission-control dashboard for hngh
 
 MC-2 wave 1 — produced by opencode (kimi-k3, attended), 2026-07-31.
+MC-2 wave 2 WP-A (task-queue panel) — opencode (kimi-k3), 2026-07-31.
 
 Read-only Emacs dashboard over the existing hngh tooling (`hngh-status`, the
 event journal, `llmtrim`, `svc-dash`). The hngh daemon lifecycle is **not**
@@ -22,7 +23,7 @@ windows with no fixed sizes and tolerates resizing.
 
 | Command | Description |
 | --- | --- |
-| `M-x hngh-mc-open` | Open the dashboard: `*hngh-status*` left, `*hngh-events*` right-top, `*llmtrim*` right-bottom. Starts the 5s status/journal timer and the 30s llmtrim timer. |
+| `M-x hngh-mc-open` | Open the dashboard: `*hngh-status*` left, `*hngh-events*` right-top, `*llmtrim*` and `*hngh-queue*` stacked right. Starts the 5s status/journal/queue timer and the 30s llmtrim timer. |
 | `M-x hngh-mc-refresh` | Refresh all panels immediately. |
 | `M-x hngh-mc-svc-dash` | Open `*svc-dash*` running the Textual TUI via `uv run --project ~/Projects/etc/svc-dash python -m svc_dash.app` in an eat terminal; falls back to `compilation-mode` (mode line says so) when eat cannot be loaded. |
 | `M-x hngh-mc-tmux-status` | Echo-area summary of `mc status` (tmux fallback session). |
@@ -40,3 +41,16 @@ No default keybindings are installed; bind as desired, e.g.
   day's file automatically on the 5s timer.
 - `*llmtrim*` — raw `llmtrim status` output (box chars intact), refreshed
   every 30s.
+- `*hngh-queue*` — `hngh-mc-queue-mode` (derived from `special-mode`); the
+  hngh task queue (`~/.hngh/tasks/queue.lisp`, read-only here — hngh owns the
+  file): id, status, age, task text truncated to fit. Done/failed tasks older
+  than 10 minutes are shown in the `shadow` face; the header counts tasks done
+  today. Refreshes on the 5s timer.
+  - `g` re-reads the queue file.
+  - `d` acknowledges the done/failed task on the row, hiding it for this Emacs
+    session (in-memory only; the queue file is never edited from elisp).
+  - `D` clears all acknowledgements.
+  - `RET` opens the task on the row in `*hngh-task*`.
+- `*hngh-task*` — read-only detail buffer (`special-mode`) pretty-printing one
+  full task plist with `:task`, `:result`, and `:error` verbatim; `q` quits as
+  usual for `special-mode`.

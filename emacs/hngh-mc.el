@@ -1,6 +1,7 @@
 ;;; hngh-mc.el --- Mission-control dashboard for hngh -*- lexical-binding: t -*-
 
 ;; MC-2 wave 1 - produced by opencode (kimi-k3, attended), 2026-07-31.
+;; MC-2 wave 2 WP-A (task-queue panel) - opencode (kimi-k3), 2026-07-31.
 ;; Emacs 30.2+.  Built-ins only; eat is optional (svc-dash panel).
 ;; tmux (`mc') remains the headless fallback and manages the hngh daemon.
 
@@ -29,6 +30,15 @@
 (defvar hngh-mc-svc-dash-project (expand-file-name "~/Projects/etc/svc-dash")
   "Project directory handed to uv for the svc-dash TUI.")
 
+(defvar hngh-mc-queue-buffer-name "*hngh-queue*"
+  "Name of the task-queue panel buffer.")
+
+(defvar hngh-mc-task-buffer-name "*hngh-task*"
+  "Name of the task detail buffer.")
+
+(defvar hngh-mc-queue-file (expand-file-name "~/.hngh/tasks/queue.lisp")
+  "Path to the hngh task queue file; owned by hngh, read-only here.")
+
 (defvar hngh-mc-status-refresh-interval 5
   "Seconds between automatic hngh-status panel refreshes.")
 
@@ -54,6 +64,23 @@
 
 (define-derived-mode hngh-mc-llmtrim-mode special-mode "llmtrim"
   "Major mode for the llmtrim panel.")
+
+(defvar hngh-mc-queue-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "d") #'hngh-mc-task-ack)
+    (define-key map (kbd "D") #'hngh-mc-task-ack-clear)
+    (define-key map (kbd "RET") #'hngh-mc-task-detail)
+    map)
+  "Keymap for `hngh-mc-queue-mode'.")
+
+(define-derived-mode hngh-mc-queue-mode special-mode "hngh-queue"
+  "Major mode for the task-queue panel.")
+
+(defvar hngh-mc--queue-acked nil
+  "Buffer-local list of task ids acknowledged (hidden) in the queue panel.")
+
+(defvar hngh-mc--queue-error nil
+  "Message of the last queue parse failure, nil when the last read succeeded.")
 
 (defun hngh-mc--revert-status (&optional _ignore-auto _noconfirm)
   "Re-run hngh-status and replace the status panel contents."
@@ -90,6 +117,157 @@
       (setq-local revert-buffer-function #'hngh-mc--revert-llmtrim)
       (hngh-mc--revert-llmtrim nil t))
     buffer))
+
+
+(defun hngh-mc--queue-epoch (universal-time)
+  "Convert hngh (Common Lisp) UNIVERSAL-TIME to seconds since the epoch."
+  (- universal-time 2208988800))
+
+(defun hngh-mc--queue-read ()
+  "Return the list of task plists from `hngh-mc-queue-file'.
+Return nil when the file is missing or empty; on parse failure record
+`hngh-mc--queue-error' and return nil.  Never signals."
+  (setq hngh-mc--queue-error nil)
+  (when (file-exists-p hngh-mc-queue-file)
+    (condition-case err
+        (with-temp-buffer
+          (insert-file-contents hngh-mc-queue-file)
+          (goto-char (point-min))
+          (if (zerop (buffer-size))
+              nil
+            (let ((data (read (current-buffer))))
+              (if (listp data)
+                  data
+                (setq hngh-mc--queue-error "queue file is not a list")
+                nil))))
+      (error
+       (setq hngh-mc--queue-error (error-message-string err))
+       nil))))
+
+(defun hngh-mc--queue-age (task)
+  "Return a compact age string for TASK's :submitted-at, or \"?\"."
+  (let ((submitted (plist-get task :submitted-at)))
+    (if (not (integerp submitted))
+        "?"
+      (let ((delta (max 0 (- (float-time) (hngh-mc--queue-epoch submitted)))))
+        (cond ((< delta 60) (format "%ds" (floor delta)))
+              ((< delta 3600) (format "%dm" (floor delta 60)))
+              ((< delta 86400) (format "%dh" (floor delta 3600)))
+              (t (format "%dd" (floor delta 86400))))))))
+
+(defun hngh-mc--queue-dim-p (task)
+  "Return non-nil when TASK is done/failed and submitted over 10 minutes ago."
+  (and (memq (plist-get task :status) '(:done :failed))
+       (integerp (plist-get task :submitted-at))
+       (> (- (float-time) (hngh-mc--queue-epoch (plist-get task :submitted-at)))
+          600)))
+
+(defun hngh-mc--queue-done-today (tasks)
+  "Return the number of TASKS with status :done finished today."
+  (let ((today (format-time-string "%F"))
+        (count 0))
+    (dolist (task tasks count)
+      (when (and (eq (plist-get task :status) :done)
+                 (integerp (plist-get task :finished-at))
+                 (equal today
+                        (format-time-string
+                         "%F" (hngh-mc--queue-epoch
+                               (plist-get task :finished-at)))))
+        (setq count (1+ count))))))
+
+(defun hngh-mc--queue-insert (tasks)
+  "Insert the queue header and one row per task in TASKS.
+Acknowledged tasks (see `hngh-mc-task-ack') are skipped; done/failed
+tasks older than 10 minutes are de-emphasized with the shadow face."
+  (insert (propertize
+           (format "hngh queue — %d done today"
+                   (hngh-mc--queue-done-today tasks))
+           'face 'bold)
+          "\n\n")
+  (insert (format "%3s  %-11s %-5s %s" "ID" "STATUS" "AGE" "TASK") "\n")
+  (let* ((window (get-buffer-window (current-buffer)))
+         (width (if (window-live-p window) (window-width window) 80))
+         (task-width (max 10 (- width 24))))
+    (dolist (task tasks)
+      (unless (memq (plist-get task :id) hngh-mc--queue-acked)
+        (let ((start (point))
+              (text (truncate-string-to-width
+                     (string-trim
+                      (string-replace
+                       "\n" " " (or (plist-get task :task) "")))
+                     task-width)))
+          (insert (format "%3s  %-11s %-5s %s\n"
+                          (or (plist-get task :id) "?")
+                          (or (plist-get task :status) "?")
+                          (hngh-mc--queue-age task)
+                          text))
+          (put-text-property start (point) 'hngh-mc-task task)
+          (when (hngh-mc--queue-dim-p task)
+            (put-text-property start (point) 'face 'shadow)))))))
+
+(defun hngh-mc--revert-queue (&optional _ignore-auto _noconfirm)
+  "Re-read the task queue file and replace the queue panel contents."
+  (let ((inhibit-read-only t)
+        (position (point)))
+    (erase-buffer)
+    (let ((tasks (hngh-mc--queue-read)))
+      (cond
+       (hngh-mc--queue-error
+        (insert "Queue parse error: " hngh-mc--queue-error "\n"))
+       ((null tasks)
+        (insert (if (file-exists-p hngh-mc-queue-file)
+                    "Task queue is empty.\n"
+                  (concat "No task queue file at " hngh-mc-queue-file "\n"))))
+       (t (hngh-mc--queue-insert tasks))))
+    (goto-char (min position (point-max)))))
+
+(defun hngh-mc--queue-buffer ()
+  "Return the queue panel buffer, creating and populating it."
+  (let ((buffer (get-buffer-create hngh-mc-queue-buffer-name)))
+    (with-current-buffer buffer
+      (unless (derived-mode-p 'hngh-mc-queue-mode)
+        (hngh-mc-queue-mode))
+      (setq-local revert-buffer-function #'hngh-mc--revert-queue)
+      (hngh-mc--revert-queue nil t))
+    buffer))
+
+(defun hngh-mc--queue-task-at-point ()
+  "Return the task plist stored on the current queue row, or nil."
+  (get-text-property (line-beginning-position) 'hngh-mc-task))
+
+(defun hngh-mc-task-ack ()
+  "Acknowledge the done/failed task on the current row, hiding it this session."
+  (interactive)
+  (if-let* ((task (hngh-mc--queue-task-at-point)))
+      (if (memq (plist-get task :status) '(:done :failed))
+          (progn
+            (setq-local hngh-mc--queue-acked
+                        (cons (plist-get task :id) hngh-mc--queue-acked))
+            (hngh-mc--revert-queue nil t))
+        (message "Only done/failed tasks can be acknowledged"))
+    (message "No task on this row")))
+
+(defun hngh-mc-task-ack-clear ()
+  "Clear all task acknowledgements and re-show every task."
+  (interactive)
+  (setq-local hngh-mc--queue-acked nil)
+  (hngh-mc--revert-queue nil t))
+
+(defun hngh-mc-task-detail ()
+  "Show the full task plist for the current row in a read-only detail buffer."
+  (interactive)
+  (if-let* ((task (hngh-mc--queue-task-at-point)))
+      (let ((buffer (get-buffer-create hngh-mc-task-buffer-name)))
+        (with-current-buffer buffer
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (insert (format "hngh task %s — %s\n\n"
+                            (plist-get task :id) (plist-get task :status)))
+            (pp task (current-buffer)))
+          (special-mode)
+          (goto-char (point-min)))
+        (pop-to-buffer buffer))
+    (message "No task on this row")))
 
 (defun hngh-mc--events-newest-file ()
   "Return the newest journal file in `hngh-mc-events-directory', or nil."
@@ -145,8 +323,9 @@
                (window-parameter window 'window-side))
       (delete-window window))))
 
-(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer)
-  "Display STATUS-BUFFER left, EVENTS-BUFFER right-top, LLMTRIM-BUFFER below."
+(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer queue-buffer)
+  "Display STATUS-BUFFER left, with EVENTS-BUFFER, LLMTRIM-BUFFER and
+QUEUE-BUFFER stacked in right side windows."
   (hngh-mc--delete-side-windows)
   (delete-other-windows)
   (let ((display-buffer-alist
@@ -155,9 +334,13 @@
             (side . right) (slot . 0) (dedicated . t))
            (,(concat "\\`" (regexp-quote hngh-mc-llmtrim-buffer-name) "\\'")
             (display-buffer-in-side-window)
-            (side . right) (slot . 1) (dedicated . t)))))
+            (side . right) (slot . 1) (dedicated . t))
+           (,(concat "\\`" (regexp-quote hngh-mc-queue-buffer-name) "\\'")
+            (display-buffer-in-side-window)
+            (side . right) (slot . 2) (dedicated . t)))))
     (display-buffer events-buffer)
-    (display-buffer llmtrim-buffer))
+    (display-buffer llmtrim-buffer)
+    (display-buffer queue-buffer))
   (set-window-buffer (window-main-window) status-buffer)
   (select-window (window-main-window)))
 
@@ -173,12 +356,20 @@
     (with-current-buffer buffer
       (hngh-mc--revert-llmtrim nil t))))
 
+(defun hngh-mc--refresh-queue ()
+  "Refresh the queue panel if its buffer exists."
+  (when-let* ((buffer (get-buffer hngh-mc-queue-buffer-name)))
+    (with-current-buffer buffer
+      (hngh-mc--revert-queue nil t))))
+
 (defun hngh-mc--live-p ()
   "Return non-nil while any dashboard buffer is live."
   (let ((live nil))
     (dolist (name (list hngh-mc-status-buffer-name
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
+                        hngh-mc-queue-buffer-name
+                        hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
       (when (get-buffer name)
         (setq live t)))
@@ -196,6 +387,7 @@
   (if (hngh-mc--live-p)
       (progn
         (hngh-mc--refresh-status)
+        (hngh-mc--refresh-queue)
         (hngh-mc--events-maybe-switch))
     (hngh-mc--cancel-timers)))
 
@@ -224,7 +416,8 @@
   (interactive)
   (hngh-mc--layout (hngh-mc--status-buffer)
                    (hngh-mc--events-buffer)
-                   (hngh-mc--llmtrim-buffer))
+                   (hngh-mc--llmtrim-buffer)
+                   (hngh-mc--queue-buffer))
   (hngh-mc--ensure-timers))
 
 ;;;###autoload
@@ -233,6 +426,7 @@
   (interactive)
   (hngh-mc--refresh-status)
   (hngh-mc--refresh-llmtrim)
+  (hngh-mc--refresh-queue)
   (hngh-mc--events-maybe-switch))
 
 ;;;###autoload
@@ -276,6 +470,8 @@
     (dolist (name (list hngh-mc-status-buffer-name
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
+                        hngh-mc-queue-buffer-name
+                        hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
       (when-let* ((buffer (get-buffer name)))
         (kill-buffer buffer)))))
