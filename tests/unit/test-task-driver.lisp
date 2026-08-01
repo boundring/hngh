@@ -38,6 +38,54 @@
 
 ;;; --- Tests -----------------------------------------------------------------
 
+(test queue-record-normalizes-v1-entry
+  "Old queue entries gain v2 control fields without losing recorded values."
+  (let ((entry (hngh.plugins.ai-orchestrator::normalize-task-record
+                '(:id 41 :task "keep this" :status :done :result "artifact"))))
+    (is (= 2 (getf entry :schema-version)))
+    (is (eq :advisory (getf entry :authority)))
+    (is (null (getf entry :approval-at)))
+    (is (equal '() (getf entry :depends-on)))
+    (is (= 0 (getf entry :attempt)))
+    (is (= 1 (getf entry :max-attempts)))
+    (is (= 41 (getf entry :id)))
+    (is (string= "keep this" (getf entry :task)))
+    (is (string= "artifact" (getf entry :result)))))
+
+(test queue-record-validation-rejects-invalid-fields
+  "Queue records fail closed when their control fields are malformed."
+  (labels ((valid ()
+             (hngh.plugins.ai-orchestrator::normalize-task-record
+              '(:id 1 :task "valid" :status :queued))))
+    (is (hngh.plugins.ai-orchestrator::validate-task-record (valid)))
+    (dolist (mutator
+             (list (lambda (entry) (setf (getf entry :task) 7))
+                   (lambda (entry) (setf (getf entry :status) :unknown))
+                   (lambda (entry) (setf (getf entry :authority) :unknown))
+                   (lambda (entry) (setf (getf entry :attempt) -1))
+                   (lambda (entry) (setf (getf entry :max-attempts) 0))
+                   (lambda (entry) (setf (getf entry :depends-on) :not-a-list))))
+      (let ((entry (valid)))
+        (funcall mutator entry)
+        (signals error
+          (hngh.plugins.ai-orchestrator::validate-task-record entry))))))
+
+(test submit-persists-v2-defaults
+  "submit-task persists the control fields required by the v2 queue format."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::submit-task "v2 task")
+    (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+      (is (= 2 (getf entry :schema-version)))
+      (is (eq :advisory (getf entry :authority)))
+      (is (null (getf entry :approval-at)))
+      (is (equal '() (getf entry :depends-on)))
+      (is (= 0 (getf entry :attempt)))
+      (is (= 1 (getf entry :max-attempts)))
+      (is (null (getf entry :not-before)))
+      (is (null (getf entry :lease-until)))
+      (is (null (getf entry :blocked-reason)))
+      (is (null (getf entry :started-at))))))
+
 (test submit-persists-task
   "submit-task writes a :queued entry to the state store."
   (with-aio-light (tmp)
