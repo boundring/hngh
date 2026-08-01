@@ -29,6 +29,13 @@
   (expand-file-name "~/.local/share/opencode/log/opencode.log")
   "Path to the opencode session log tailed by the opencode panel.")
 
+(defvar hngh-mc-ralph-buffer-name "*night-ralph*"
+  "Name of the night-ralph local-loop log panel buffer.")
+
+(defvar hngh-mc-ralph-log
+  (expand-file-name "~/.hngh-night/ralph.log")
+  "Path to the night-ralph loop log tailed by the night-ralph panel.")
+
 (defvar hngh-mc-svc-dash-buffer-name "*svc-dash*"
   "Name of the svc-dash terminal buffer.")
 
@@ -128,18 +135,27 @@
 
 (defun hngh-mc--opencode-buffer ()
   "Return the opencode panel buffer tailing the opencode session log."
-  (if (not (file-readable-p hngh-mc-opencode-log))
-      (let ((buffer (get-buffer-create hngh-mc-opencode-buffer-name)))
+  (hngh-mc--tail-file-buffer hngh-mc-opencode-log hngh-mc-opencode-buffer-name))
+
+(defun hngh-mc--ralph-buffer ()
+  "Return the night-ralph panel buffer tailing the local-loop log."
+  (hngh-mc--tail-file-buffer hngh-mc-ralph-log hngh-mc-ralph-buffer-name))
+
+(defun hngh-mc--tail-file-buffer (file buffer-name)
+  "Return a buffer named BUFFER-NAME tailing FILE via auto-revert-tail-mode.
+Show a placeholder when FILE is not readable."
+  (if (not (file-readable-p file))
+      (let ((buffer (get-buffer-create buffer-name)))
         (with-current-buffer buffer
           (let ((inhibit-read-only t))
             (erase-buffer)
-            (insert "No opencode log at " hngh-mc-opencode-log "\n"))
+            (insert "No log at " file "\n"))
           (special-mode))
         buffer)
-    (let ((buffer (find-file-noselect hngh-mc-opencode-log)))
+    (let ((buffer (find-file-noselect file)))
       (with-current-buffer buffer
-        (unless (string= (buffer-name) hngh-mc-opencode-buffer-name)
-          (rename-buffer hngh-mc-opencode-buffer-name))
+        (unless (string= (buffer-name) buffer-name)
+          (rename-buffer buffer-name))
         (read-only-mode 1)
         (auto-revert-tail-mode 1)
         (goto-char (point-max)))
@@ -350,9 +366,9 @@ tasks older than 10 minutes are de-emphasized with the shadow face."
                (window-parameter window 'window-side))
       (delete-window window))))
 
-(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer queue-buffer opencode-buffer)
-  "Display STATUS-BUFFER left, with EVENTS-BUFFER, LLMTRIM-BUFFER,
-OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
+(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer queue-buffer opencode-buffer ralph-buffer)
+  "Display STATUS-BUFFER left, with the other buffers stacked in right
+side windows (events, llmtrim, opencode, queue, night-ralph)."
   (hngh-mc--delete-side-windows)
   (delete-other-windows)
   (let ((display-buffer-alist
@@ -367,11 +383,15 @@ OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
             (side . right) (slot . 2) (dedicated . t))
            (,(concat "\\`" (regexp-quote hngh-mc-queue-buffer-name) "\\'")
             (display-buffer-in-side-window)
-            (side . right) (slot . 3) (dedicated . t)))))
+            (side . right) (slot . 3) (dedicated . t))
+           (,(concat "\\`" (regexp-quote hngh-mc-ralph-buffer-name) "\\'")
+            (display-buffer-in-side-window)
+            (side . right) (slot . 4) (dedicated . t)))))
     (display-buffer events-buffer)
     (display-buffer llmtrim-buffer)
     (display-buffer opencode-buffer)
-    (display-buffer queue-buffer))
+    (display-buffer queue-buffer)
+    (display-buffer ralph-buffer))
   (set-window-buffer (window-main-window) status-buffer)
   (select-window (window-main-window)))
 
@@ -400,6 +420,7 @@ OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
                         hngh-mc-opencode-buffer-name
+                        hngh-mc-ralph-buffer-name
                         hngh-mc-queue-buffer-name
                         hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
@@ -450,7 +471,8 @@ OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
                    (hngh-mc--events-buffer)
                    (hngh-mc--llmtrim-buffer)
                    (hngh-mc--queue-buffer)
-                   (hngh-mc--opencode-buffer))
+                   (hngh-mc--opencode-buffer)
+                   (hngh-mc--ralph-buffer))
   (hngh-mc--ensure-timers))
 
 ;;;###autoload
@@ -504,6 +526,7 @@ OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
                         hngh-mc-opencode-buffer-name
+                        hngh-mc-ralph-buffer-name
                         hngh-mc-queue-buffer-name
                         hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
