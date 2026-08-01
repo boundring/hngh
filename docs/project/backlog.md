@@ -1,6 +1,7 @@
 # Backlog — Future Work Queue
 
-**Last updated**: 2026-06-24
+**Last updated**: 2026-07-31 (reconciled with work-sessions.md; M0–M6.2 done,
+892 tests green)
 
 ---
 
@@ -55,6 +56,13 @@
 - All passing.
 
 ## Milestone 2 — The Companion (v0.2)
+
+> **Reality note (2026-07-31)**: M1 closed out informally — the roadmap's
+> "batches" gave way to the M2–M6.2 sessions in `work-sessions.md`
+> (AI-tool-hub baseURL, event loop, unsloth lifecycle, dogfood loop, mission
+> control, agentic loops). M1.13/M1.14/M1.15 remain as leftovers (P2, see
+> `next.md`). M2-era items below are still the right sketch for v0.2 but now
+> share the horizon with M7 (client-server daemon) and M8 (model management).
 
 Detailed planning deferred until M1 cycle completes.
 
