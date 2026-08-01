@@ -8,6 +8,7 @@
 ;;; Code:
 
 (require 'subr-x)
+(require 'cl-lib)
 
 (declare-function eat-exec "eat")
 (declare-function eat-mode "eat")
@@ -508,6 +509,45 @@ OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
                         hngh-mc-svc-dash-buffer-name))
       (when-let* ((buffer (get-buffer name)))
         (kill-buffer buffer)))))
+
+;;;###autoload
+(defun hngh-mc-balance-windows ()
+  "Make the right-hand dashboard side windows share frame height equally.
+Leaves the main status window alone. Idempotent; no-op when fewer than two
+dashboard side windows are open."
+  (interactive)
+  (let ((sides (cl-remove-if-not
+                (lambda (w) (window-parameter w 'window-side))
+                (window-list))))
+    (when (>= (length sides) 2)
+      (let ((target (max 1 (/ (frame-height) (length sides)))))
+        (dolist (w sides)
+          (window-resize w (- target (window-height w)) nil nil t))
+        ;; distribute the leftover rows
+        (balance-windows)
+        (message "hngh-mc: %d panels balanced" (length sides))))))
+
+;;;###autoload
+(defun hngh-mc-rotate-windows (&optional reverse)
+  "Rotate the dashboard buffers among the visible windows.
+With prefix arg REVERSE, rotate the other way. Each panel keeps its own
+buffer; only the window assignment moves."
+  (interactive "P")
+  (let* ((wins (window-list))
+         (bufs (mapcar #'window-buffer wins))
+         (n (length wins)))
+    (when (> n 1)
+      (let ((shifted (if reverse
+                         (append (last bufs 1) (butlast bufs))
+                       (append (cdr bufs) (list (car bufs))))))
+        (dolist (w wins)
+          (set-window-dedicated-p w nil))
+        (cl-loop for w in wins for b in shifted
+                 do (set-window-buffer w b))
+        (dolist (w wins)
+          (when (window-parameter w 'window-side)
+            (set-window-dedicated-p w t)))
+        (select-window (car wins))))))
 
 (provide 'hngh-mc)
 ;;; hngh-mc.el ends here

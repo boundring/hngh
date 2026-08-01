@@ -28,6 +28,8 @@ windows with no fixed sizes and tolerates resizing.
 | `M-x hngh-mc-svc-dash` | Open `*svc-dash*` running the Textual TUI via `uv run --project ~/Projects/etc/svc-dash python -m svc_dash.app` in an eat terminal; falls back to `compilation-mode` (mode line says so) when eat cannot be loaded. |
 | `M-x hngh-mc-tmux-status` | Echo-area summary of `mc status` (tmux fallback session). |
 | `M-x hngh-mc-close` | Kill dashboard timers and buffers; remove the dashboard side windows. |
+| `M-x hngh-mc-balance-windows` | Make the right-hand panels share frame height equally (idempotent; no-op when fewer than two panels). |
+| `M-x hngh-mc-rotate-windows` | Rotate the panel buffers among the visible windows (cycle which panel is prominent). `C-u M-x hngh-mc-rotate-windows` rotates the other way. |
 
 No default keybindings are installed; bind as desired, e.g.
 `(global-set-key (kbd "C-c m") #'hngh-mc-open)`.

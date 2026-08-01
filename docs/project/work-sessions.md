@@ -219,3 +219,11 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Exit criteria (all met)**: `make test` 901/901, 0 fail, 0 skip; plugin compiles clean; guarded live test passes headless; pre-existing daemon never stopped.
 - **Dependencies**: emacs 30.2 + emacsclient on PATH (`--daemon` detaches; readiness = `emacsclient --eval` exit 0).
 - **Notes**: Daemon start is policy-explicit — `init` logs state but never auto-starts; `shutdown` is bookkeeping only, the daemon outlives hngh (like the tmux session outlives mission-control). Safety property: `emacsclient --eval` (incl. `(kill-emacs)`) reaches only the daemon's server socket, so a non-daemon GUI emacs is untouched. A daemon (pid 439063) was ALREADY running when this session started, so the live test exercised its guarded health-only branch (asserts shape, never stops); the start/stop branch runs only when no daemon pre-exists. `daemon-alive-p` runs emacsclient with a 5s kill-on-timeout guard. — M6.3 patch: opencode (kimi-k3, attended), work package WP-B from Hermes TUI orchestrator (moonshotai/kimi-k3).
+
+### Session MC-2 w3: Emacs Dashboard Panels + Window Management
+**Status**: Done (2026-07-31)
+- **Goal**: Live agent visibility + frame management on the emacs dashboard (MC-2 wave 3, first slice).
+- **Artifacts**: `emacs/hngh-mc.el` — `*opencode*` panel (right side-window slot 2, tails `~/.local/share/opencode/log/opencode.log` via auto-revert-tail-mode, placeholder when unreadable); `hngh-mc-balance-windows` (equalize right-panel heights, idempotent); `hngh-mc-rotate-windows` (cycle buffers among windows, `C-u` reverses; temporarily clears side-window dedication to swap). `emacs/README.md` commands table.
+- **Exit criteria (all met)**: byte-compile 0 warnings; batch open shows all 5 panels; balance equalizes (6/6/6/5 rows); rotate cycles and `C-u` restores exactly; reloaded into the running daemon (live frame shows 5 panels).
+- **Bug found+fixed**: rotation initially failed — side windows are `dedicated . t`, so `set-window-buffer` refused; now dedication is cleared for the swap and restored for side windows.
+- **Notes**: Read-only tail — elisp never writes the opencode log. Author: moonshotai/kimi-k3 via OpenRouter (Hermes TUI).

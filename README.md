@@ -67,6 +67,7 @@ complete design specification.
 | **Integration & data flows** (8 sequence diagrams) | [`docs/design/integrations.md`](docs/design/integrations.md) |
 | **Roadmap & milestones** | [`docs/project/roadmap.md`](docs/project/roadmap.md) |
 | **Work session plan** | [`docs/project/work-sessions.md`](docs/project/work-sessions.md) |
+| **Emacs mission-control dashboard** (panels, commands) | [`emacs/README.md`](emacs/README.md) |
 
 ## Roadmap
 
