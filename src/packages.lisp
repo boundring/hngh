@@ -386,6 +386,18 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:session-alive-p
            #:panes))
 
+(defpackage :hngh.plugins.emacs-daemon
+  (:documentation "Emacs Daemon (M6.3) — lifecycle management for the emacs daemon server.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:daemon-alive-p
+           #:start-daemon
+           #:stop-daemon
+           #:health))
+
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")
   (:use :cl :hngh.core)
