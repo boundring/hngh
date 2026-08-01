@@ -21,6 +21,13 @@
 (defvar hngh-mc-llmtrim-buffer-name "*llmtrim*"
   "Name of the llmtrim panel buffer.")
 
+(defvar hngh-mc-opencode-buffer-name "*opencode*"
+  "Name of the opencode session-log panel buffer.")
+
+(defvar hngh-mc-opencode-log
+  (expand-file-name "~/.local/share/opencode/log/opencode.log")
+  "Path to the opencode session log tailed by the opencode panel.")
+
 (defvar hngh-mc-svc-dash-buffer-name "*svc-dash*"
   "Name of the svc-dash terminal buffer.")
 
@@ -117,6 +124,25 @@
       (setq-local revert-buffer-function #'hngh-mc--revert-llmtrim)
       (hngh-mc--revert-llmtrim nil t))
     buffer))
+
+(defun hngh-mc--opencode-buffer ()
+  "Return the opencode panel buffer tailing the opencode session log."
+  (if (not (file-readable-p hngh-mc-opencode-log))
+      (let ((buffer (get-buffer-create hngh-mc-opencode-buffer-name)))
+        (with-current-buffer buffer
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (insert "No opencode log at " hngh-mc-opencode-log "\n"))
+          (special-mode))
+        buffer)
+    (let ((buffer (find-file-noselect hngh-mc-opencode-log)))
+      (with-current-buffer buffer
+        (unless (string= (buffer-name) hngh-mc-opencode-buffer-name)
+          (rename-buffer hngh-mc-opencode-buffer-name))
+        (read-only-mode 1)
+        (auto-revert-tail-mode 1)
+        (goto-char (point-max)))
+      buffer)))
 
 
 (defun hngh-mc--queue-epoch (universal-time)
@@ -323,9 +349,9 @@ tasks older than 10 minutes are de-emphasized with the shadow face."
                (window-parameter window 'window-side))
       (delete-window window))))
 
-(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer queue-buffer)
-  "Display STATUS-BUFFER left, with EVENTS-BUFFER, LLMTRIM-BUFFER and
-QUEUE-BUFFER stacked in right side windows."
+(defun hngh-mc--layout (status-buffer events-buffer llmtrim-buffer queue-buffer opencode-buffer)
+  "Display STATUS-BUFFER left, with EVENTS-BUFFER, LLMTRIM-BUFFER,
+OPENCODE-BUFFER and QUEUE-BUFFER stacked in right side windows."
   (hngh-mc--delete-side-windows)
   (delete-other-windows)
   (let ((display-buffer-alist
@@ -335,11 +361,15 @@ QUEUE-BUFFER stacked in right side windows."
            (,(concat "\\`" (regexp-quote hngh-mc-llmtrim-buffer-name) "\\'")
             (display-buffer-in-side-window)
             (side . right) (slot . 1) (dedicated . t))
+           (,(concat "\\`" (regexp-quote hngh-mc-opencode-buffer-name) "\\'")
+            (display-buffer-in-side-window)
+            (side . right) (slot . 2) (dedicated . t))
            (,(concat "\\`" (regexp-quote hngh-mc-queue-buffer-name) "\\'")
             (display-buffer-in-side-window)
-            (side . right) (slot . 2) (dedicated . t)))))
+            (side . right) (slot . 3) (dedicated . t)))))
     (display-buffer events-buffer)
     (display-buffer llmtrim-buffer)
+    (display-buffer opencode-buffer)
     (display-buffer queue-buffer))
   (set-window-buffer (window-main-window) status-buffer)
   (select-window (window-main-window)))
@@ -368,6 +398,7 @@ QUEUE-BUFFER stacked in right side windows."
     (dolist (name (list hngh-mc-status-buffer-name
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
+                        hngh-mc-opencode-buffer-name
                         hngh-mc-queue-buffer-name
                         hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
@@ -417,7 +448,8 @@ QUEUE-BUFFER stacked in right side windows."
   (hngh-mc--layout (hngh-mc--status-buffer)
                    (hngh-mc--events-buffer)
                    (hngh-mc--llmtrim-buffer)
-                   (hngh-mc--queue-buffer))
+                   (hngh-mc--queue-buffer)
+                   (hngh-mc--opencode-buffer))
   (hngh-mc--ensure-timers))
 
 ;;;###autoload
@@ -470,6 +502,7 @@ QUEUE-BUFFER stacked in right side windows."
     (dolist (name (list hngh-mc-status-buffer-name
                         hngh-mc-events-buffer-name
                         hngh-mc-llmtrim-buffer-name
+                        hngh-mc-opencode-buffer-name
                         hngh-mc-queue-buffer-name
                         hngh-mc-task-buffer-name
                         hngh-mc-svc-dash-buffer-name))
