@@ -750,11 +750,75 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 (defvar *next-task-id* 0)
 (defvar *task-driver-schedule-id* nil)
 
+(defparameter *task-statuses*
+  '(:proposed :queued :blocked :running :done :failed :cancelled)
+  "Statuses accepted by version 2 task records.")
+
+(defparameter *task-authorities*
+  '(:procedural :advisory :approval)
+  "Action-authority classes accepted by version 2 task records.")
+
+(defun task-record-has-key-p (record key)
+  "Return T when plist RECORD explicitly contains KEY."
+  (not (null (member key record))))
+
+(defun normalize-task-record (record)
+  "Return RECORD upgraded to the version 2 task-record shape.
+Existing values are retained. Missing v2 control fields receive conservative
+local/advisory defaults so historical queue entries remain readable."
+  (unless (listp record)
+    (error "Task record must be a plist: ~S" record))
+  (let ((entry (copy-list record)))
+    (setf (getf entry :schema-version) 2)
+    (unless (task-record-has-key-p entry :authority)
+      (setf (getf entry :authority) :advisory))
+    (dolist (default '((:approval-at nil)
+                       (:depends-on ())
+                       (:attempt 0)
+                       (:max-attempts 1)
+                       (:not-before nil)
+                       (:lease-until nil)
+                       (:blocked-reason nil)
+                       (:started-at nil)))
+      (unless (task-record-has-key-p entry (first default))
+        (setf (getf entry (first default)) (second default))))
+    entry))
+
+(defun validate-task-record (record)
+  "Return T for a valid normalized task RECORD or signal an error.
+Validation is intentionally structural: dispatch eligibility remains the task
+of the later queue-selection wave."
+  (unless (listp record)
+    (error "Task record must be a plist: ~S" record))
+  (unless (stringp (getf record :task))
+    (error "Task record :task must be a string"))
+  (unless (member (getf record :status) *task-statuses*)
+    (error "Task record has unsupported status: ~S" (getf record :status)))
+  (unless (member (getf record :authority) *task-authorities*)
+    (error "Task record has unsupported authority: ~S" (getf record :authority)))
+  (unless (and (integerp (getf record :attempt))
+               (not (minusp (getf record :attempt))))
+    (error "Task record :attempt must be a non-negative integer"))
+  (unless (and (integerp (getf record :max-attempts))
+               (plusp (getf record :max-attempts)))
+    (error "Task record :max-attempts must be a positive integer"))
+  (unless (listp (getf record :depends-on))
+    (error "Task record :depends-on must be a list"))
+  t)
+
 (defun read-task-queue ()
-  "Read the task queue list from the state store (NIL if absent)."
+  "Read, normalize, and validate persisted task records.
+Malformed data signals an error so callers fail closed rather than dropping work."
   (when (state-store-ready-p)
-    (let ((q (ignore-errors (hngh.core.state-store:read-state *task-queue-path*))))
-      (and (listp q) q))))
+    (let ((queue (hngh.core.state-store:read-state *task-queue-path*)))
+      (when queue
+        (unless (listp queue)
+          (error "Task queue must be a list: ~S" queue))
+        (mapcar (lambda (entry)
+                  (let ((normalized (normalize-task-record entry)))
+                    (validate-task-record normalized)
+                    normalized))
+                queue)))))
 
 (defun write-task-queue (queue)
   "Persist QUEUE (list of task plists) to the state store."
@@ -784,9 +848,12 @@ Default policy routes to the free local tool (:local-openai-api)."
                                    queue)
                            :initial-value 0))
            (id (setf *next-task-id* (max (1+ max-id) (1+ *next-task-id*))))
-           (entry (list :id id :task task :status :queued :policy policy
-                        :result nil :error nil
-                        :submitted-at (get-universal-time) :finished-at nil)))
+           (entry (list :id id :schema-version 2 :task task :status :queued
+                        :policy policy :authority :advisory :approval-at nil
+                        :depends-on '() :attempt 0 :max-attempts 1
+                        :not-before nil :lease-until nil :blocked-reason nil
+                        :result nil :error nil :submitted-at (get-universal-time)
+                        :started-at nil :finished-at nil)))
       (write-task-queue (append queue (list entry)))
       (hngh.core:log-info "Task ~D queued (~D chars)" id (length task))
       id)))
