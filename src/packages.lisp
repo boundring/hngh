@@ -370,7 +370,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
             #:list-tasks
             #:task-driver-tick
             #:start-task-driver
-            #:stop-task-driver))
+            #:stop-task-driver
+            ;; Pause/Resume and Stale-Lease Recovery (H-A3)
+            #:pause-dispatch
+            #:resume-dispatch
+            #:dispatch-paused-p
+            #:dispatch-resume-at
+            #:recover-stale-task-leases))
 
 (defpackage :hngh.plugins.mission-control
   (:documentation "Mission Control (M6) — tiled tmux observability and agent summoning.")

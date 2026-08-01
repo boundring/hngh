@@ -68,6 +68,24 @@ Key :default holds the fallback policy used when no specific policy is specified
 (defvar *policy-state-path* "config/plugins/ai-orchestrator/policies.lisp"
   "Relative path within the state store for persisting policies.")
 
+;;; --- H-A3: Pause/Resume dispatch state -------------------------------------
+;;;
+;;; The dispatch pause is an in-memory flag (not persisted) because it is a
+;;; runtime control: if the image restarts, the driver starts unpaused.
+;;; The optional resume_at is a universal-time timestamp; when set, the tick
+;;; auto-resumes once `now >= resume_at`.
+
+(defvar *dispatch-paused* nil
+  "When T, task-driver-tick does not dispatch new work.
+Cleared by resume-dispatch or auto-resume when resume_at has passed.")
+
+(defvar *dispatch-resume-at* nil
+  "Universal-time timestamp at which the pause auto-clears, or NIL for
+an indefinite pause (manual resume only).")
+
+(defvar *dispatch-lock* (bt:make-lock "hngh-dispatch-pause")
+  "Mutex protecting *dispatch-paused* and *dispatch-resume-at*.")
+
 ;;; --- Default policy -------------------------------------------------------
 
 (defparameter *default-policy*
@@ -690,6 +708,8 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
   "Initialize the AI orchestrator plugin."
   (declare (ignore hngh-home))
   (setf *running* nil *event-subscriptions* '())
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* nil *dispatch-resume-at* nil))
   (bt:with-lock-held (*agents-lock*)
     (setf *agents* (make-hash-table :test 'eql) *next-agent-id* 0))
   (bt:with-lock-held (*policies-lock*)
@@ -731,6 +751,8 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
           (error (c)
             (hngh.core:log-warn "Error unsubscribing ~D: ~A" sub-id c)))))
     (setf *event-subscriptions* '())
+    (bt:with-lock-held (*dispatch-lock*)
+      (setf *dispatch-paused* nil *dispatch-resume-at* nil))
     (bt:with-lock-held (*agents-lock*)
       (clrhash *agents*) (setf *next-agent-id* 0))
     (bt:with-lock-held (*policies-lock*)
@@ -865,9 +887,94 @@ Default policy routes to the free local tool (:local-openai-api)."
         (remove-if-not (lambda (e) (eq (getf e :status) status)) queue)
         queue)))
 
+;;; --- H-A3: Pause/Resume dispatch -------------------------------------------
+
+(defun dispatch-paused-p ()
+  "Return T when new task dispatch is paused."
+  (bt:with-lock-held (*dispatch-lock*)
+    *dispatch-paused*))
+
+(defun dispatch-resume-at ()
+  "Return the resume_at universal-time, or NIL for an indefinite pause."
+  (bt:with-lock-held (*dispatch-lock*)
+    *dispatch-resume-at*))
+
+(defun pause-dispatch (&key (resume-at nil))
+  "Pause new task dispatch. When RESUME-AT (a universal time) is supplied,
+task-driver-tick will auto-resume once `now >= resume_at`. Without RESUME-AT
+the pause lasts until resume-dispatch is called manually."
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* t
+          *dispatch-resume-at* resume-at))
+  (hngh.core:log-info "Task dispatch paused~@[ until ~D~]" resume-at))
+
+(defun resume-dispatch ()
+  "Clear the dispatch pause and resume_at. Idempotent — safe to call when
+not paused."
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* nil
+          *dispatch-resume-at* nil))
+  (hngh.core:log-info "Task dispatch resumed"))
+
+(defun %maybe-auto-resume (now)
+  "If paused and resume_at is set and has passed, clear the pause.
+Returns T if the pause was auto-cleared (meaning the tick may proceed)."
+  (bt:with-lock-held (*dispatch-lock*)
+    (when (and *dispatch-paused*
+               *dispatch-resume-at*
+               (>= now *dispatch-resume-at*))
+      (let ((resume-at *dispatch-resume-at*))
+        (setf *dispatch-paused* nil
+              *dispatch-resume-at* nil)
+        (hngh.core:log-info "Task dispatch auto-resumed (resume_at ~D reached)"
+                            resume-at)
+        t))))
+
+;;; --- H-A3: Stale-lease recovery --------------------------------------------
+
+(defun recover-stale-task-leases ()
+  "Transition :running tasks with expired (non-nil) :lease-until to :blocked.
+A :running task with :lease-until nil holds the slot indefinitely and is NOT
+recovered. Returns the count of tasks transitioned.
+
+This function reads and writes the task queue under *task-queue-lock*."
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((now (get-universal-time))
+           (queue (or (read-task-queue) '()))
+           (count 0))
+      (dolist (entry queue)
+        (when (and (eq (getf entry :status) :running)
+                   (let ((lease-until (getf entry :lease-until)))
+                     (and (integerp lease-until) (< lease-until now))))
+          (let ((id (getf entry :id))
+                (lease-until (getf entry :lease-until))
+                (started-at (getf entry :started-at)))
+            (setf (getf entry :status) :blocked
+                  (getf entry :blocked-reason)
+                  (format nil "stale lease: task ~D lease-until ~D expired at ~D"
+                          id lease-until now)
+                  (getf entry :finished-at) now)
+            (incf count)
+            (hngh.core:log-warn "Recovered stale task ~D (lease expired ~D)"
+                                id lease-until))))
+      (when (plusp count)
+        (write-task-queue queue))
+      count)))
+
+;;; --- Task driver tick (updated for H-A3) ------------------------------------
+
 (defun task-driver-tick ()
-  "One driver cycle: run the oldest :queued task via DELEGATE, persist outcome.
+  "One driver cycle: recover stale leases, check pause, then run the oldest
+:queued task via DELEGATE, persisting the outcome.
 The delegate call runs outside the queue lock (long inference)."
+  ;; 1. Recover stale leases first — frees the execution slot.
+  (recover-stale-task-leases)
+  ;; 2. Check pause state (auto-resume if resume_at has passed).
+  (let ((now (get-universal-time)))
+    (when (dispatch-paused-p)
+      (unless (%maybe-auto-resume now)
+        (return-from task-driver-tick nil))))
+  ;; 3. Dispatch.
   (let ((entry (find :queued (or (read-task-queue) '())
                      :key (lambda (e) (getf e :status)))))
     (when entry
