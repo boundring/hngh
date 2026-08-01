@@ -1,11 +1,11 @@
 # Next — Current Work
 
-**Last updated**: 2026-07-31
+**Last updated**: 2026-08-01
 
 ## Current Status
 
-**M0–M6.2 complete** — 892 tests, all passing (FiveAM, `make test` verified
-2026-07-31). Session detail in `docs/project/work-sessions.md` (M3–M6.2) and
+**M0–M6.2 complete; M6.3 + M-sentry done 2026-08-01** — 920 tests, all passing (FiveAM, `make test` verified
+2026-08-01). Session detail in `docs/project/work-sessions.md` (M3–M-sentry) and
 `docs/journal/` (M0–M1).
 
 Recent sessions:
@@ -26,13 +26,17 @@ Recent sessions:
 
 | Priority | Item | Where |
 |---|---|---|
-| P0 | **M7 client-server daemon mode** — Emacs-style headless + extensible clients | hngh |
-| P0 | **MC-2 Emacs mission control** — `hngh-mc.el` dashboard (emacs/ dir); wave 1 delegated 2026-07-31 | hngh + `~/Projects/etc/sysconfig_mgmt/.omc/plans/mission-control-v2.md` |
-| P1 | **M8 model-management plugin** — selection/sourcing/benchmark harness; unsloth/llama.cpp/ollama routing | hngh; `sysconfig_mgmt/.omc/plans/multi-model-topology.md` |
-| P1 | **svc-dash wave 6** — entry-point install, history persistence, hngh M6.x integration | svc-dash |
-| P1 | **svc-dash PyPI release** | `sysconfig_mgmt/.omc/plans/distribution-packaging.md` |
+| P0 | **M7 client-server daemon mode** — Emacs-style headless + extensible clients; wire protocol ADR drafted (night-ralph) | hngh |
+| P0 | **Sentry Tier-1** — light-ralph analysis (config-tweak proposer, drift triage, secret-guard pattern review) + git pre-commit hook calling `guard-text` | hngh; `.omc/plans/sentry-safeguards.md` |
+| P1 | **M8 model-management plugin** — routing table seeded (`docs/design/model-routing.md`); selection/sourcing/benchmark harness | hngh; `sysconfig_mgmt/.omc/plans/multi-model-topology.md` |
+| P1 | **Night-ralph task library** — continual planning/docs/training-set/research tasks, $0 local; isolated `~/.hngh-night` | hngh; `.omc/plans/overnight-local-loop.md` |
+| P1 | **svc-dash PyPI release** (wave 6 history persistence done, local) | `sysconfig_mgmt/.omc/plans/distribution-packaging.md` |
 | P2 | **gbd TUI waves 1–8** | `~/Projects/etc/20260725/git-back-dots` |
 | P2 | **DOC leftovers**: M1.13 KDE integration (P2), M1.14 PKGBUILD, M1.15 integration tests | hngh |
+
+Done 2026-07-31/08-01: M6.3 emacs-daemon, M-sentry (secret-guard +
+context-watch), MC-2 waves 1–3 (6-panel emacs dashboard), svc-dash wave 6,
+night-run/night-ralph loop. README + work-sessions.md carry details.
 
 Note: M7 feeds MC-2 (daemon clients) but MC-2 does not block M7 — both can
 proceed; MC-2 wave 1 is read-only panels over existing state.

@@ -13,21 +13,27 @@ Code, Codex, Gemini-CLI) as its execution substrate. It does not reimplement age
 harnesses — it coordinates between them, informs their behavior task-specifically,
 and manages the inter-tool boundary.
 
-## Current state (2026-07-31)
+## Current state (2026-08-01)
 
-The harness runs. M0–M6.2 are done and verified: the core image boots with
-eleven plugins, the event loop drives a persistent task queue through a
-scheduler-ticked driver, and tasks execute on local models at $0 — text via
-`:local-openai-api` (unsloth :8888) and file-writing agentic work via
-`opencode run` on the free local model. Mission control (`mc`) opens a tiled
-tmux session with the services dashboard, the daemon, the queue watcher, and
-summonable agent panes. 888 tests green.
+> **Pre-alpha — half-working, under active continual development.** hngh is
+> built partly by automated low-resource "night-ralphing" loops that notice,
+> log, and address repository interactions (stars, forks, PRs) and plan
+> countermeasures against malicious external data (context hijacking, secret
+> exfiltration, malware dependency suggestions). Expect rough edges.
+
+The harness runs. M0–M6.2 are done and verified; M6.3 adds an emacs-daemon
+plugin (start/stop/health of a headless emacs server) and M-sentry adds
+procedural safeguards (secret-guard scanning, context-watch). MC-2 waves 1–3
+provide a six-panel emacs dashboard (status, events, llmtrim, opencode log,
+task queue, night-ralph log) with window balance/rotate commands. A $0
+overnight local-model loop (night-run/night-ralph) does slow planning, docs,
+and training-set generation on local models. 920 tests green.
 
 - **Run the daemon**: `make run` (or `hngh --once` for a single driver cycle)
 - **Queue a task**: `(hngh.plugins.ai-orchestrator:submit-task "..." :policy '(:prefer-tool :local-openai-api))` — or agentic: `'(:prefer-tool :opencode)`
 - **Watch everything**: `mc` (tiled tmux), or `hngh-status` for the one-glance view
 - **Guide**: [`docs/guides/mission-control.md`](docs/guides/mission-control.md)
-- **Session history**: [`docs/project/work-sessions.md`](docs/project/work-sessions.md) (M2–M6.2, per-model attributed)
+- **Session history**: [`docs/project/work-sessions.md`](docs/project/work-sessions.md) (M2–M-sentry, per-model attributed)
 
 ## Core Principles
 
