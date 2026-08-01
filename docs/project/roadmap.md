@@ -112,6 +112,26 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 - Multi-user Support — multiple Hngh instances per machine
 - Inbound Network Listener — authenticated inbound for remote coordination
 
+### NET-1 prep notes (2026-07-31 — text only, no code)
+
+- **M7 as groundwork**: the client-server daemon mode (Emacs-style headless +
+  extensible clients) is the on-ramp — a daemon that already serves local
+  clients over a socket is most of an Inbound Network Listener. Design M7's
+  wire protocol so it can later carry auth + remote peers without a rewrite.
+- **Steam Deck as first LAN node**: Deck on the LAN already; it runs Arch
+  (SteamOS). Candidate first remote instance: low-power, always on the couch.
+  Needs: hngh-core package (M1.14 PKGBUILD) or a manual sbcl core deploy.
+- **Steam as distribution route**: package hngh as a Steam "tool"/non-game app
+  — `systemd --user` service for the daemon (no game-slot occupancy, starts
+  with the session). Roadmap note only; depends on M1.14 packaging discipline.
+- **Arbitrary device pooling + social aspect**: the M3 lineage — any machine a
+  user trusts joins the fleet (desktop, Deck, laptop, VPS); instances share
+  KB, delegate tasks by cost/capability, coordinate backups. Social: multiple
+  users' instances can peer (multi-user support + authenticated listener).
+  Design questions to resolve in the v0.2 cycle: peer identity (SSH keys vs
+  age), event-bus bridging semantics across WAN jitter, and whether the cost
+  ledger (llm-budget pattern) becomes fleet-wide.
+
 ---
 
 ## Design Artifacts
