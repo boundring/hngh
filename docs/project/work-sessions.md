@@ -220,6 +220,14 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Dependencies**: emacs 30.2 + emacsclient on PATH (`--daemon` detaches; readiness = `emacsclient --eval` exit 0).
 - **Notes**: Daemon start is policy-explicit — `init` logs state but never auto-starts; `shutdown` is bookkeeping only, the daemon outlives hngh (like the tmux session outlives mission-control). Safety property: `emacsclient --eval` (incl. `(kill-emacs)`) reaches only the daemon's server socket, so a non-daemon GUI emacs is untouched. A daemon (pid 439063) was ALREADY running when this session started, so the live test exercised its guarded health-only branch (asserts shape, never stops); the start/stop branch runs only when no daemon pre-exists. `daemon-alive-p` runs emacsclient with a 5s kill-on-timeout guard. — M6.3 patch: opencode (kimi-k3, attended), work package WP-B from Hermes TUI orchestrator (moonshotai/kimi-k3).
 
+### Session M-sentry: Sentry Procedural Safeguards Plugin (Tier-0)
+**Status**: Done (2026-08-01)
+- **Goal**: Build the continual-safeguards layer's Tier-0 into hngh as a procedural plugin — secret-guard + context-watch, NO model calls in the hot path (llmtrim's shape). See `.omc/plans/sentry-safeguards.md`.
+- **Artifacts**: `src/plugins/sentry.lisp` (new: `scan-secrets`/`guard-text` with 9 secret patterns + redacted evidence via `threat.flag` publish; `context-pressure`/`latest-context-size` reading the hermes agent.log tail, green/yellow/red against a 256k ceiling); `src/packages.lisp` (defpackage :hngh.plugins.sentry); `hngh.asd` (component + test); `src/core/main.lisp` (init + both shutdown chains, mirroring emacs-daemon); `tests/unit/test-sentry.lisp` (12 fixture-based tests).
+- **Exit criteria (all met)**: `make test` 920/920 (901→920), 0 fail, 0 skip; each secret pattern fires on a synthetic fixture; clean text passes; redaction test proves no secret value leaks into returned hits; context-pressure green/red/unknown verified on synthetic logs.
+- **Design notes**: Plugins raise flags via `event-bus:publish "threat.flag"`, NOT by calling threat-detection's unexported `raise-flag` (corrected during implementation — mirrors how llm-threat-detector observes flags). Evidence is pattern-names + text-length only, never content. `context-watch` reads only the last ~64KB of the 4.6MB log to stay cheap. Procedural + fail-closed throughout; this is the tier that later feeds light-ralph (Tier-1) analysis and the human gate (Tier-2).
+- **Author**: moonshotai/kimi-k3 via OpenRouter (Hermes TUI). Built directly (procedural code needs no model delegation); the analysis tasks for this layer are delegated to night-ralph.
+
 ### Session MC-2 w3: Emacs Dashboard Panels + Window Management
 **Status**: Done (2026-07-31)
 - **Goal**: Live agent visibility + frame management on the emacs dashboard (MC-2 wave 3, first slice).

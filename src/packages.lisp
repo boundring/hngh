@@ -398,6 +398,19 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:stop-daemon
            #:health))
 
+(defpackage :hngh.plugins.sentry
+  (:documentation "Sentry (M-sentry) — procedural safeguards: secret-guard + context-watch.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:scan-secrets
+           #:guard-text
+           #:context-pressure
+           #:latest-context-size
+           #:*secret-patterns*))
+
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")
   (:use :cl :hngh.core)
