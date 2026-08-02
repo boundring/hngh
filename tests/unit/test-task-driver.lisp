@@ -70,6 +70,62 @@
         (signals error
           (hngh.plugins.ai-orchestrator::validate-task-record entry))))))
 
+(test queue-record-normalizes-and-validates-v3-shared-queue-fields
+  "A valid v3 record retains its schema and shared-queue metadata."
+  (let ((entry
+          (hngh.plugins.ai-orchestrator::normalize-task-record
+           '(:id 42
+             :schema-version 3
+             :task "summarize queue architecture"
+             :status :queued
+             :type :research
+             :assigned-role :scout
+             :input-artifacts ("source-readme-sha256")
+             :output-artifacts ()
+             :verification (:command "schema-check" :status :pending
+                            :observed-at nil)))))
+    (is (= 3 (getf entry :schema-version)))
+    (is (eq :research (getf entry :type)))
+    (is (eq :scout (getf entry :assigned-role)))
+    (is (equal '("source-readme-sha256") (getf entry :input-artifacts)))
+    (is (hngh.plugins.ai-orchestrator::validate-task-record entry))))
+
+(test queue-record-v3-validation-rejects-malformed-shared-queue-fields
+  "Version 3 shared-queue fields fail closed when malformed."
+  (labels ((valid ()
+             (hngh.plugins.ai-orchestrator::normalize-task-record
+              '(:id 43
+                :schema-version 3
+                :task "validate metadata"
+                :status :queued
+                :type :research
+                :assigned-role :scout
+                :input-artifacts ("source-sha256")
+                :output-artifacts ()
+                :verification (:command "schema-check" :status :pending
+                               :observed-at nil)))))
+    (dolist (mutator
+             (list (lambda (entry) (setf (getf entry :schema-version) 4))
+                   (lambda (entry) (setf (getf entry :type) :unknown))
+                   (lambda (entry) (setf (getf entry :assigned-role) :unknown))
+                   (lambda (entry) (setf (getf entry :input-artifacts) '(7)))
+                   (lambda (entry) (setf (getf entry :output-artifacts) :not-a-list))
+                   (lambda (entry)
+                     (setf (getf entry :verification)
+                           '(:command 7 :status :pending :observed-at nil)))
+                   (lambda (entry)
+                     (setf (getf entry :verification)
+                           '(:command "schema-check" :status :unknown
+                             :observed-at nil)))
+                   (lambda (entry)
+                     (setf (getf entry :verification)
+                           '(:command "schema-check" :status :passed
+                             :observed-at "not-a-time")))))
+      (let ((entry (valid)))
+        (funcall mutator entry)
+        (signals error
+          (hngh.plugins.ai-orchestrator::validate-task-record entry))))))
+
 (test submit-persists-v2-defaults
   "submit-task persists the control fields required by the v2 queue format."
   (with-aio-light (tmp)
@@ -96,6 +152,23 @@
         (is (eq :queued (getf (first tasks) :status)))
         (is (string= "hello world" (getf (first tasks) :task)))
         (is (equal '(:prefer-tool :local-openai-api) (getf (first tasks) :policy)))))))
+
+(test submit-publishes-task-queued-event
+  "Queue admission emits a task-queued event with stable task metadata."
+  (with-aio-light (tmp)
+    (let ((received nil))
+      (hngh.core.event-bus:subscribe
+       "task-queued"
+       (lambda (event)
+         (setf received event)))
+      (let ((id (hngh.plugins.ai-orchestrator::submit-task "emit queue event")))
+        (is (not (null received)))
+        (when received
+          (is (eq :task-queued (hngh.core.event-bus:event-topic received)))
+          (let ((payload (hngh.core.event-bus:event-payload received)))
+            (is (= id (getf payload :id)))
+            (is (eq :queued (getf payload :status)))
+            (is (= 2 (getf payload :schema-version)))))))))
 
 (test tick-completes-task
   "task-driver-tick transitions a queued task to :done on successful delegate."

@@ -780,18 +780,32 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
   '(:procedural :advisory :approval)
   "Action-authority classes accepted by version 2 task records.")
 
+(defparameter *task-schema-versions* '(2 3)
+  "Task record schemas understood by the persistent queue.")
+
+(defparameter *task-types* '(:plan :research :work :operation)
+  "Task classes accepted by version 3 task records.")
+
+(defparameter *task-roles* '(:coordinator :worker :reviewer :scout)
+  "Agent roles accepted by version 3 task records.")
+
+(defparameter *verification-statuses* '(:pending :passed :failed)
+  "Verification states accepted by version 3 task records.")
+
 (defun task-record-has-key-p (record key)
   "Return T when plist RECORD explicitly contains KEY."
   (not (null (member key record))))
 
 (defun normalize-task-record (record)
-  "Return RECORD upgraded to the version 2 task-record shape.
+  "Return RECORD upgraded to the latest compatible task-record shape.
 Existing values are retained. Missing v2 control fields receive conservative
-local/advisory defaults so historical queue entries remain readable."
+local/advisory defaults so historical queue entries remain readable. Version 3
+records retain their schema and gain shared-queue metadata defaults."
   (unless (listp record)
     (error "Task record must be a plist: ~S" record))
-  (let ((entry (copy-list record)))
-    (setf (getf entry :schema-version) 2)
+  (let* ((entry (copy-list record))
+         (schema-version (or (getf entry :schema-version) 2)))
+    (setf (getf entry :schema-version) schema-version)
     (unless (task-record-has-key-p entry :authority)
       (setf (getf entry :authority) :advisory))
     (dolist (default '((:approval-at nil)
@@ -804,6 +818,15 @@ local/advisory defaults so historical queue entries remain readable."
                        (:started-at nil)))
       (unless (task-record-has-key-p entry (first default))
         (setf (getf entry (first default)) (second default))))
+    (when (eql schema-version 3)
+      (dolist (default '((:type :work)
+                         (:assigned-role :worker)
+                         (:input-artifacts ())
+                         (:output-artifacts ())
+                         (:verification (:command nil :status :pending
+                                         :observed-at nil))))
+        (unless (task-record-has-key-p entry (first default))
+          (setf (getf entry (first default)) (second default)))))
     entry))
 
 (defun validate-task-record (record)
@@ -812,6 +835,9 @@ Validation is intentionally structural: dispatch eligibility remains the task
 of the later queue-selection wave."
   (unless (listp record)
     (error "Task record must be a plist: ~S" record))
+  (unless (member (getf record :schema-version) *task-schema-versions*)
+    (error "Task record has unsupported schema version: ~S"
+           (getf record :schema-version)))
   (unless (stringp (getf record :task))
     (error "Task record :task must be a string"))
   (unless (member (getf record :status) *task-statuses*)
@@ -826,6 +852,28 @@ of the later queue-selection wave."
     (error "Task record :max-attempts must be a positive integer"))
   (unless (listp (getf record :depends-on))
     (error "Task record :depends-on must be a list"))
+  (when (eql (getf record :schema-version) 3)
+    (unless (member (getf record :type) *task-types*)
+      (error "Task record has unsupported type: ~S" (getf record :type)))
+    (unless (member (getf record :assigned-role) *task-roles*)
+      (error "Task record has unsupported role: ~S"
+             (getf record :assigned-role)))
+    (dolist (key '(:input-artifacts :output-artifacts))
+      (let ((artifacts (getf record key)))
+        (unless (and (listp artifacts) (every #'stringp artifacts))
+          (error "Task record ~S must be a list of strings" key))))
+    (let ((verification (getf record :verification)))
+      (unless (listp verification)
+        (error "Task record :verification must be a plist"))
+      (unless (or (null (getf verification :command))
+                  (stringp (getf verification :command)))
+        (error "Task record verification :command must be a string or NIL"))
+      (unless (member (getf verification :status) *verification-statuses*)
+        (error "Task record has unsupported verification status: ~S"
+               (getf verification :status)))
+      (unless (or (null (getf verification :observed-at))
+                  (integerp (getf verification :observed-at)))
+        (error "Task record verification :observed-at must be an integer or NIL"))))
   t)
 
 (defun read-task-queue ()
@@ -877,6 +925,12 @@ Default policy routes to the free local tool (:local-openai-api)."
                         :result nil :error nil :submitted-at (get-universal-time)
                         :started-at nil :finished-at nil)))
       (write-task-queue (append queue (list entry)))
+      (when (event-bus-ready-p)
+        (ignore-errors
+          (hngh.core.event-bus:publish
+           :task-queued
+           (list :id id :status :queued :schema-version 2)
+           :source 'ai-orchestrator)))
       (hngh.core:log-info "Task ~D queued (~D chars)" id (length task))
       id)))
 
