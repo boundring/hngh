@@ -46,6 +46,7 @@
                  (:file "plugins/mission-control")
                  (:file "plugins/emacs-daemon")
                  (:file "plugins/sentry")
+                 (:file "plugins/maintenance-coordinator")
                  (:file "plugins/hnghbeats")
                  (:file "plugins/knowledge-base")
                  (:file "plugins/llm-threat-detector")
