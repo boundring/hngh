@@ -68,6 +68,236 @@ Uses agent-call; the summon is logged to OptMem automatically."
   "Raw pane listing text (tmux list-panes via mc status)."
   (mc-run '("status")))
 
+;;; --- Pane layout persistence ------------------------------------------------
+
+(defparameter *session-layout-relative-path* "state/mc-layout.lisp"
+  "State-store-relative path for the mission-control pane layout.")
+
+(defun session-layout-path (&optional (hngh-home hngh:*hngh-home*))
+  "Resolve the pane layout state path beneath HNGH-HOME."
+  (merge-pathnames *session-layout-relative-path* hngh-home))
+
+(defun split-layout-fields (line)
+  "Split a tab-delimited tmux layout LINE without disturbing spaces."
+  (loop with start = 0
+        for separator = (position #\Tab line :start start)
+        collect (subseq line start separator)
+        while separator
+        do (setf start (1+ separator))))
+
+(defun parse-layout-integer (text field-name)
+  "Parse a non-negative integer from TEXT for FIELD-NAME."
+  (handler-case
+      (let ((value (parse-integer text :junk-allowed nil)))
+        (unless (>= value 0)
+          (error "Layout ~A must be non-negative: ~S" field-name text))
+        value)
+    (parse-error ()
+      (error "Layout ~A must be an integer: ~S" field-name text))))
+
+(defun parse-layout-pane (line)
+  "Parse one tab-delimited tmux pane LINE into the documented plist shape."
+  (let ((fields (split-layout-fields line)))
+    (unless (= 5 (length fields))
+      (error "Layout pane record has ~D fields, expected 5: ~S"
+             (length fields) line))
+    (destructuring-bind (index width height cwd command) fields
+      (list :index (parse-layout-integer index "index")
+            :width (parse-layout-integer width "width")
+            :height (parse-layout-integer height "height")
+            :cwd cwd
+            :cmd command))))
+
+(defun plist-has-key-p (plist key)
+  "Return T when proper PLIST contains KEY, including a NIL value."
+  (loop for tail on plist by #'cddr
+        thereis (eq (first tail) key)))
+
+(defun proper-list-p (value)
+  "Return T when VALUE is a finite proper list."
+  (handler-case
+      (progn (length value) (listp value))
+    (type-error () nil)))
+
+(defun valid-layout-pane-p (pane)
+  "Return T when PANE has safe, structurally usable layout fields."
+  (and (proper-list-p pane)
+       (= 10 (length pane))
+       (every (lambda (key) (plist-has-key-p pane key))
+              '(:index :width :height :cwd :cmd))
+       (integerp (getf pane :index))
+       (>= (getf pane :index) 0)
+       (integerp (getf pane :width))
+       (> (getf pane :width) 0)
+       (integerp (getf pane :height))
+       (> (getf pane :height) 0)
+       (stringp (getf pane :cwd))
+       (> (length (getf pane :cwd)) 0)
+       (stringp (getf pane :cmd))
+       (> (length (getf pane :cmd)) 0)))
+
+(defun valid-session-layout-p (layout)
+  "Return T when LAYOUT matches the documented pane plist contract."
+  (and (proper-list-p layout)
+       (= 2 (length layout))
+       (plist-has-key-p layout :panes)
+       (let ((panes (getf layout :panes)))
+         (and (proper-list-p panes)
+              panes
+              (every #'valid-layout-pane-p panes)
+              (= (length panes)
+                 (length (remove-duplicates
+                          (mapcar (lambda (pane) (getf pane :index)) panes))))))))
+
+(defun sorted-layout-panes (layout)
+  "Return a fresh pane list sorted by persisted pane index."
+  (sort (copy-list (getf layout :panes)) #'< :key (lambda (pane)
+                                                    (getf pane :index))))
+
+(defun read-session-layout (&key (hngh-home hngh:*hngh-home*))
+  "Safely read and validate the persisted session layout.
+Returns two values: layout and one of :VALID, :MISSING, or :MALFORMED."
+  (let ((path (session-layout-path hngh-home)))
+    (unless (probe-file path)
+      (hngh.core:log-warn "Mission-control layout missing at ~A; use tiled fallback"
+                          path)
+      (return-from read-session-layout (values nil :missing)))
+    (handler-case
+        (with-open-file (stream path :direction :input)
+          (let* ((*read-eval* nil)
+                 (eof (gensym "EOF"))
+                 (layout (read stream nil eof))
+                 (extra (read stream nil eof)))
+            (unless (and (not (eq layout eof))
+                         (eq extra eof)
+                         (valid-session-layout-p layout))
+              (error "layout does not match (:panes ((:index ...)))"))
+            (values layout :valid)))
+      (error (condition)
+        (hngh.core:log-warn
+         "Mission-control layout malformed at ~A (~A); use tiled fallback"
+         path condition)
+        (values nil :malformed)))))
+
+(defun layout-list-panes-format ()
+  "Return the tmux format used for lossless space-preserving pane fixtures."
+  (format nil "#{pane_index}~C#{pane_width}~C#{pane_height}~C#{pane_current_path}~C#{pane_current_command}"
+          #\Tab #\Tab #\Tab #\Tab))
+
+(defun run-layout-command (args)
+  "Run a tmux layout command through the injectable mission-control runner."
+  (multiple-value-bind (code output error)
+      (funcall *squad-command-runner* "tmux" args)
+    (unless (zerop code)
+      (error "Mission-control tmux command failed (~D): ~A" code error))
+    (values output error)))
+
+(defun save-session-layout (&key (session *session-name*)
+                                 (hngh-home hngh:*hngh-home*))
+  "Query SESSION and atomically save its pane layout beneath HNGH-HOME."
+  (multiple-value-bind (output ignored)
+      (run-layout-command
+       (list "list-panes" "-t" (format nil "~A:main" session)
+             "-F" (layout-list-panes-format)))
+    (declare (ignore ignored))
+    (let ((layout
+            (list :panes
+                  (mapcar #'parse-layout-pane (split-lines output)))))
+      (unless (valid-session-layout-p layout)
+        (error "tmux returned an unusable mission-control layout"))
+      (write-squad-state (session-layout-path hngh-home) layout)
+      layout)))
+
+(defun pane-target-from-output (output session pane)
+  "Use tmux pane id OUTPUT, falling back to SESSION and persisted PANE index."
+  (let ((pane-id (string-trim '(#\Space #\Tab #\Newline #\Return) output)))
+    (if (zerop (length pane-id))
+        (format nil "~A:main.~D" session (getf pane :index))
+        pane-id)))
+
+(defun restore-layout-panes (layout session)
+  "Create SESSION panes from validated LAYOUT and request their saved sizes."
+  (let* ((panes (sorted-layout-panes layout))
+         (first-pane (first panes))
+         (targets '())
+         (created nil))
+    (handler-case
+        (progn
+          (multiple-value-bind (output ignored)
+              (run-layout-command
+               (list "new-session" "-d" "-P" "-F" "#{pane_id}"
+                     "-s" session "-n" "main"
+                     "-c" (getf first-pane :cwd) (getf first-pane :cmd)))
+            (declare (ignore ignored))
+            (setf created t)
+            (push (cons first-pane
+                        (pane-target-from-output output session first-pane))
+                  targets))
+          (dolist (pane (rest panes))
+            (let ((orientation (if (< (getf pane :width)
+                                      (getf first-pane :width))
+                                   "-h"
+                                   "-v")))
+              (multiple-value-bind (output ignored)
+                  (run-layout-command
+                   (list "split-window" orientation "-d" "-P" "-F" "#{pane_id}"
+                         "-t" (format nil "~A:main" session)
+                         "-c" (getf pane :cwd) (getf pane :cmd)))
+                (declare (ignore ignored))
+                (push (cons pane (pane-target-from-output output session pane))
+                      targets))))
+          (run-layout-command
+           (list "select-layout" "-t" (format nil "~A:main" session) "tiled"))
+          (dolist (entry (nreverse targets))
+            (run-layout-command
+             (list "resize-pane" "-t" (cdr entry)
+                   "-x" (write-to-string (getf (car entry) :width))
+                   "-y" (write-to-string (getf (car entry) :height)))))
+          t)
+      (error (condition)
+        (when created
+          (ignore-errors
+            (run-layout-command (list "kill-session" "-t" session))))
+        (error condition)))))
+
+(defun restore-session-layout (&key (session *session-name*)
+                                    (hngh-home hngh:*hngh-home*))
+  "Restore SESSION from validated state without evaluating persisted forms.
+Returns true and :RESTORED on success. Missing, malformed, or failed restores
+return NIL and an actionable reason so callers can use their tiled fallback."
+  (multiple-value-bind (layout status)
+      (read-session-layout :hngh-home hngh-home)
+    (unless layout
+      (return-from restore-session-layout (values nil status)))
+    (handler-case
+        (progn
+          (restore-layout-panes layout session)
+          (values t :restored))
+      (error (condition)
+        (hngh.core:log-warn
+         "Mission-control layout restore failed for ~A (~A); use tiled fallback"
+         session condition)
+        (values nil :restore-failed)))))
+
+(defun layout-geometry-within-tolerance-p (saved actual &optional (tolerance 2))
+  "Return T when ACTUAL pane sizes are within TOLERANCE of SAVED by index."
+  (and (valid-session-layout-p saved)
+       (valid-session-layout-p actual)
+       (= (length (getf saved :panes)) (length (getf actual :panes)))
+       (every
+        (lambda (saved-pane)
+          (let ((actual-pane
+                  (find (getf saved-pane :index) (getf actual :panes)
+                        :key (lambda (pane) (getf pane :index)))))
+            (and actual-pane
+                 (<= (abs (- (getf saved-pane :width)
+                             (getf actual-pane :width)))
+                     tolerance)
+                 (<= (abs (- (getf saved-pane :height)
+                             (getf actual-pane :height)))
+                     tolerance))))
+        (getf saved :panes))))
+
 ;;; --- Declarative squads -----------------------------------------------------
 
 (defun default-squad-command-runner (program args)
