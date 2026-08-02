@@ -320,6 +320,18 @@
           (is (eq :task-failed
                   (hngh.core.event-bus:event-topic received))))))))
 
+(test phase2-pm-can-fail-task
+  "A privileged PM caller can move a claimed task to terminal failure."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (hngh.plugins.ai-orchestrator::fail-task
+     501 :agent "pm" :role :owner :reason "reassigned" )
+    (is (eq :failed
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
 (test phase2-ready-tasks-filters-by-role-and-authority
   "Ready tasks include only queued records claimable by the requested role."
   (with-aio-light (tmp)
