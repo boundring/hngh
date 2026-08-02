@@ -67,6 +67,12 @@
   (is (supported-op-p :health))
   (is (supported-op-p :get-status))
   (is (supported-op-p :subscribe-events))
+  (is (supported-op-p :claim-task))
+  (is (supported-op-p :release-task))
+  (is (supported-op-p :complete-task))
+  (is (supported-op-p :block-task))
+  (is (supported-op-p :fail-task))
+  (is (supported-op-p :ready-tasks))
   (is (not (supported-op-p :unknown-op))))
 
 (test wire-protocol/read-eval-disabled
@@ -161,6 +167,14 @@
   (is (not (null (gethash :list-tasks hngh.core.daemon::*request-handlers*))))
   (hngh.core.daemon:shutdown))
 
+(test daemon/phase2-handler-registration
+  "Phase 2 task operations have registered daemon handlers."
+  (hngh.core.daemon:init)
+  (dolist (operation '(:claim-task :release-task :complete-task :block-task
+                       :fail-task :ready-tasks))
+    (is (functionp (gethash operation hngh.core.daemon::*request-handlers*))))
+  (hngh.core.daemon:shutdown))
+
 (test daemon/event-control-handler-registration
   "Streaming and H-A3 control operations have daemon handlers."
   (hngh.core.daemon:init)
@@ -195,8 +209,85 @@
             (hngh.core.daemon::handle-request
              1 (make-request 1 :submit-task 42))))
       (is (equalp (response-status response) :error))
-      (is (search "string" (response-result response) :test #'char-equal)))
+    (is (search "string" (response-result response) :test #'char-equal)))
     (hngh.core.daemon:shutdown)))
+
+(test daemon/phase2-task-operation-roundtrip
+  "Phase 2 task operations dispatch through the daemon request handlers."
+  (with-aio-light (tmp)
+    (hngh.core.daemon:init)
+    (unwind-protect
+         (progn
+           (hngh.plugins.ai-orchestrator::write-task-queue
+            (list (list :id 701 :schema-version 3 :task "claim fixture"
+                        :status :queued :authority :worker
+                        :allowed-roles '(:worker) :verifier "reviewer")
+                  (list :id 702 :schema-version 3 :task "block fixture"
+                        :status :claimed :authority :worker
+                        :allowed-roles '(:worker) :claimant "worker-b"
+                        :claimant-role :worker :verifier "reviewer"
+                        :lease-expires-at (+ (get-universal-time) 300))
+                  (list :id 703 :schema-version 3 :task "fail fixture"
+                        :status :claimed :authority :worker
+                        :allowed-roles '(:worker) :claimant "worker-c"
+                        :claimant-role :worker :verifier "reviewer"
+                        :lease-expires-at (+ (get-universal-time) 300))
+                  (list :id 704 :schema-version 3 :task "ready fixture"
+                        :status :queued :authority :worker
+                        :allowed-roles '(:worker))))
+           (let ((claimed
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        1 :claim-task
+                        '(:id 701 :agent "worker-a" :role :worker
+                          :route :local-12b)))))
+             (is (eq :ok (response-status claimed)))
+             (is (eq :claimed (getf (response-result claimed) :status))))
+           (let ((released
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        2 :release-task
+                        '(:id 701 :agent "worker-a" :reason "handoff")))))
+             (is (eq :ok (response-status released)))
+             (is (eq :queued
+                     (getf (response-result released) :status))))
+           (let ((claimed
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        3 :claim-task
+                        '(:id 701 :agent "worker-a" :role :worker
+                          :route :local-12b)))))
+             (is (eq :ok (response-status claimed))))
+           (let ((completed
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        4 :complete-task
+                        '(:id 701 :agent "reviewer"
+                          :evidence "/tmp/701.txt")))))
+             (is (eq :ok (response-status completed)))
+             (is (eq :done (getf (response-result completed) :status))))
+           (let ((blocked
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        5 :block-task
+                        '(:id 702 :agent "worker-b" :class :verification
+                          :reason "failed" :evidence "/tmp/702.txt")))))
+             (is (eq :ok (response-status blocked)))
+             (is (eq :blocked (getf (response-result blocked) :status))))
+           (let ((failed
+                   (hngh.core.daemon::handle-request
+                    10 (make-request
+                        6 :fail-task
+                        '(:id 703 :agent "reviewer"
+                          :reason "verification failed")))))
+             (is (eq :ok (response-status failed)))
+             (is (eq :failed (getf (response-result failed) :status))))
+           (let ((ready
+                   (hngh.core.daemon::handle-request
+                    10 (make-request 7 :ready-tasks '(:role :worker)))))
+             (is (eq :ok (response-status ready)))
+             (is (equal '(704) (response-result ready)))))
+      (hngh.core.daemon:shutdown))))
 
 (test daemon/orchestrator-unavailable-fails-closed
   "Submit-task fails closed when the orchestrator is not initialized."

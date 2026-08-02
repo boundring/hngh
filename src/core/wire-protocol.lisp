@@ -209,7 +209,8 @@ or (values nil :error) on protocol error."
 (defparameter *supported-ops*
   '(:submit-task :list-tasks :get-task :pause :resume :renew-lease
     :get-status :health :maintenance-status :subscribe-events
-    :unsubscribe-events :stop-daemon)
+    :unsubscribe-events :stop-daemon
+    :claim-task :release-task :complete-task :block-task :fail-task :ready-tasks)
   "Operations supported by the daemon wire protocol.")
 
 (defun supported-op-p (op)
