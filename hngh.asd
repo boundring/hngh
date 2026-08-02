@@ -56,6 +56,7 @@
                  (:file "plugins/knowledge-base")
                  (:file "plugins/llm-threat-detector")
                  (:file "plugins/backup-manager")
+                 (:file "plugins/config-watcher")
                    )
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
@@ -100,6 +101,7 @@
                  (:file "test-knowledge-base")
                 (:file "test-llm-threat-detector")
                  (:file "test-backup-manager")
+                 (:file "test-config-watcher")
                  (:file "test-daemon")
                  (:file "test-client"))
    :perform (test-op (op c)
