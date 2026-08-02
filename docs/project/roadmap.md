@@ -13,7 +13,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
 | M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
-| M2 | The Companion (v0.2) | Graphical buddies, passive observation, cost optimization | Not started |
+| M2 | The Companion (v0.2) | Graphical buddies, passive observation, cost optimization, session lifecycle & window management | Not started |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
