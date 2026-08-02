@@ -433,7 +433,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:add-pane
            #:summon
            #:session-alive-p
-           #:panes))
+           #:panes
+           #:read-squad-registry
+           #:squad-definition
+           #:squad-up
+           #:squad-down
+           #:squad-forward-prompt
+           #:squad-status))
 
 (defpackage :hngh.plugins.emacs-daemon
   (:documentation "Emacs Daemon (M6.3) — lifecycle management for the emacs daemon server.")
