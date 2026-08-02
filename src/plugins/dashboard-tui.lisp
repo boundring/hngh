@@ -19,6 +19,15 @@
 (defvar *current-view* :overview
   "Current view: :overview, :events, :plugins")
 
+(defvar *help-open* nil
+  "Whether the keyboard help panel is shown.")
+
+(defparameter *level-map*
+  '((:overview . "B1-Core")
+    (:events . "B3-Event Bus")
+    (:plugins . "B2-Scheduler"))
+  "View-keyword to megastructure floor name mapping.")
+
 (defvar *event-buffer* '()
   "Recent events for the event feed (newest first, max 100).")
 
@@ -107,25 +116,47 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 
 ;;; --- Rendering ---
 
+(defun render-help-panel ()
+  "Render the keyboard help overlay."
+  (format t "~A~A╔═══════════════════════════╗~A~%" +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (format t "~A~A║ KEY        COMMAND       ║~A~%" +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (format t "~A~A╠═══════════════════════════╣~A~%" +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (format t "~A║ 1          Overview      ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A║ 2          Events        ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A║ 3          Plugins       ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A║ 4          Megastructure ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A║ ?          Help          ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A║ q/Q        Quit          ║~A~%" +ansi-dim+ +ansi-reset+)
+  (format t "~A~A╚═══════════════════════════╝~A~%" +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (format t "~%"))
+
 (defun render ()
   "Render the current view to the terminal."
   (when *headless*
     (return-from render))
   (clear-screen)
-  (case *current-view*
-    (:overview (render-overview))
-    (:events (render-events))
-    (:plugins (render-plugins)))
+  (if *help-open*
+      (render-help-panel)
+      (case *current-view*
+        (:overview (render-overview))
+        (:events (render-events))
+        (:plugins (render-plugins))))
   (render-footer))
 
+(defun render-level-indicator ()
+  "Render the current megastructure floor beneath the header box."
+  (let ((level (or (cdr (assoc *current-view* *level-map*)) "??-Unknown")))
+    (format t "~A~A[Level ~A]~A~%"
+            +ansi-bold+ +ansi-cyan+ level +ansi-reset+)))
 (defun render-header (title)
-  "Render the header bar."
+  "Render the header bar with megastructure floor indicator."
   (format t "~A~A╔══════════════════════════════════════════════════════╗~A~%"
           +ansi-bold+ +ansi-cyan+ +ansi-reset+)
-  (format t "~A~A║ 🗼 Hngh v~A [Megastructure] — ~A                     ║~A~%"
+  (format t "~A~A║ Hngh v~A [Megastructure] — ~A                     ║~A~%"
           +ansi-bold+ +ansi-cyan+ (hngh:version) title +ansi-reset+)
   (format t "~A~A╚══════════════════════════════════════════════════════╝~A~%"
           +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (render-level-indicator)
   (format t "~%"))
 
 (defun render-overview ()
@@ -164,34 +195,49 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           (if (hngh.core.scheduler:running-p)
               (length (hngh.core.scheduler:list-schedules))
               0))
-  ;; Plugins
-  (format t "  Plugins loaded: ~D~%"
-          (length (hngh.core.plugin-host:list-plugins)))
-  (format t "~%")
-  ;; Recent events (last 5)
-  (format t "~ARecent Events:~A~%" +ansi-bold+ +ansi-reset+)
-  (let ((events (bt:with-lock-held (*buffer-lock*)
-                  (subseq *event-buffer* 0 (min 5 (length *event-buffer*))))))
-    (if events
-        (dolist (evt events)
-          (format t "  ~A~A~A ~A~%"
-                  +ansi-dim+
-                  (format-event-time evt)
-                  +ansi-reset+
-                  (hngh.core.event-bus:event-topic evt)))
-        (format t "  ~A(no events)~A~%" +ansi-dim+ +ansi-reset+))))
+  ;; Plugins health grid
+  (format t "~APlugins:~A~%" +ansi-bold+ +ansi-reset+)
+  (let ((plugins (hngh.core.plugin-host:list-plugins)))
+    (if plugins
+        (dolist (info plugins)
+          (let ((running (handler-case
+                            (eq :loaded (hngh.core.plugin-host:plugin-info-state info))
+                          (error () nil))))
+            (format t "  ~A~22A~A   ~A~A~A~%"
+                    +ansi-bold+
+                    (hngh.core.plugin-host:plugin-info-name info)
+                    +ansi-reset+
+                    (if running +ansi-green+ +ansi-red+)
+                    (if running "[+] active" "[-] inactive")
+                    +ansi-reset+)))
+        (format t "  ~A(no plugins loaded)~A~%" +ansi-dim+ +ansi-reset+))))
+
+(defun severity-color (topic)
+  "Map an event TOPIC string to its severity ANSI color."
+  (let ((name (string-downcase (string topic))))
+    (cond
+      ((some (lambda (p) (search p name))
+             '("error" "fault" "breach")) +ansi-red+)
+      ((some (lambda (p) (search p name))
+             '("warn" "pause" "throttle")) +ansi-yellow+)
+      ((some (lambda (p) (search p name))
+             '("complete" "done" "green")) +ansi-green+)
+      (t +ansi-cyan+))))
 
 (defun render-events ()
-  "Render the live event feed."
+  "Render the live event feed with severity color-coding."
   (render-header "Events")
   (let ((events (bt:with-lock-held (*buffer-lock*)
                   (subseq *event-buffer* 0 (min 30 (length *event-buffer*))))))
     (if events
         (dolist (evt events)
-          (format t "  ~A~A~A ~A~A~A ~S~%"
+          (format t "  ~A~A~A ~A~A~A ~A~S~A~%"
                   +ansi-dim+ (format-event-time evt) +ansi-reset+
-                  +ansi-cyan+ (hngh.core.event-bus:event-topic evt) +ansi-reset+
-                  (hngh.core.event-bus:event-payload evt)))
+                  (severity-color (hngh.core.event-bus:event-topic evt))
+                  (hngh.core.event-bus:event-topic evt) +ansi-reset+
+                  +ansi-dim+
+                  (hngh.core.event-bus:event-payload evt)
+                  +ansi-reset+))
         (format t "  ~A(no events yet)~A~%" +ansi-dim+ +ansi-reset+))))
 
 (defun render-plugins ()
@@ -208,11 +254,24 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
                   (hngh.core.plugin-host:plugin-info-trust-tier info)))
         (format t "  ~A(no plugins loaded)~A~%" +ansi-dim+ +ansi-reset+))))
 
+(defun buffer-fill-bar (n max)
+  "Return a ten-segment ASCII bar string representing N / MAX fill."
+  (let* ((denom (max max 1))
+         (ratio (/ (max 0 (min n max)) denom))
+         (filled (round (* ratio 10))))
+    (concatenate 'string
+     (make-string filled :initial-element #\█)
+     (make-string (- 10 filled) :initial-element #\░))))
+
 (defun render-footer ()
-  "Render the footer with navigation hints."
+  "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
-  (format t "~A[1]Overview [2]Events [3]Plugins [q]uit~A~%"
-          +ansi-dim+ +ansi-reset+))
+  (format t "~A[1]Overview [2]Events [3]Plugins [?]Help [q]uit~A"
+          +ansi-dim+ +ansi-reset+)
+  (bt:with-lock-held (*buffer-lock*)
+    (let ((n (length *event-buffer*)))
+      (format t "  |  Events: ~D/100  ~A~A~A~%"
+              n +ansi-yellow+ (buffer-fill-bar n 100) +ansi-reset+))))
 
 (defun format-event-time (evt)
   "Format an event's timestamp as HH:MM:SS."
@@ -236,12 +295,18 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 
 (defun handle-key (char)
   "Handle a keyboard input character."
-  (case char
-    (#\1 (setf *current-view* :overview) (render))
-    (#\2 (setf *current-view* :events) (render))
-    (#\3 (setf *current-view* :plugins) (render))
-    (#\q (setf *running* nil))
-    (#\Q (setf *running* nil))))
+  (if *help-open*
+      (progn
+        (setf *help-open* nil)
+        (render))
+      (progn
+        (case char
+          (#\? (setf *help-open* t) (render))
+          (#\1 (setf *current-view* :overview) (render))
+          (#\2 (setf *current-view* :events) (render))
+          (#\3 (setf *current-view* :plugins) (render))
+          (#\q (setf *running* nil))
+          (#\Q (setf *running* nil))))))
 
 ;;; --- Status ---
 
