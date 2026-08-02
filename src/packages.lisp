@@ -417,6 +417,15 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:latest-context-size
            #:*secret-patterns*))
 
+(defpackage :hngh.plugins.maintenance-coordinator
+  (:documentation "Maintenance Coordinator (H-B1) — read-only maintenance state from state store and pacman lock.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:read-maintenance-state))
+
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")
   (:use :cl :hngh.core)
