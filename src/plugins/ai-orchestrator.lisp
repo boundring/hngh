@@ -773,12 +773,12 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 (defvar *task-driver-schedule-id* nil)
 
 (defparameter *task-statuses*
-  '(:proposed :queued :blocked :running :done :failed :cancelled)
-  "Statuses accepted by version 2 task records.")
+  '(:proposed :queued :claimed :blocked :running :done :failed :cancelled)
+  "Statuses accepted by persisted task records.")
 
 (defparameter *task-authorities*
-  '(:procedural :advisory :approval)
-  "Action-authority classes accepted by version 2 task records.")
+  '(:procedural :advisory :approval :worker :owner :operation)
+  "Action-authority classes accepted by persisted task records.")
 
 (defparameter *task-schema-versions* '(2 3)
   "Task record schemas understood by the persistent queue.")
@@ -807,7 +807,8 @@ records retain their schema and gain shared-queue metadata defaults."
          (schema-version (or (getf entry :schema-version) 2)))
     (setf (getf entry :schema-version) schema-version)
     (unless (task-record-has-key-p entry :authority)
-      (setf (getf entry :authority) :advisory))
+      (setf (getf entry :authority)
+            (if (eql schema-version 3) :worker :advisory)))
     (dolist (default '((:approval-at nil)
                        (:depends-on ())
                        (:attempt 0)
@@ -824,7 +825,18 @@ records retain their schema and gain shared-queue metadata defaults."
                          (:input-artifacts ())
                          (:output-artifacts ())
                          (:verification (:command nil :status :pending
-                                         :observed-at nil))))
+                                         :observed-at nil))
+                         (:claimant nil)
+                         (:claimant-role nil)
+                         (:claimant-route nil)
+                         (:claimed-at nil)
+                         (:lease-expires-at nil)
+                         (:verifier nil)
+                         (:allowed-roles nil)
+                         (:authority :worker)
+                         (:verification-command nil)
+                         (:last-failure nil)
+                         (:transition-log ())))
         (unless (task-record-has-key-p entry (first default))
           (setf (getf entry (first default)) (second default)))))
     entry))
@@ -894,6 +906,60 @@ Malformed data signals an error so callers fail closed rather than dropping work
   "Persist QUEUE (list of task plists) to the state store."
   (when (state-store-ready-p)
     (hngh.core.state-store:write-state *task-queue-path* queue)))
+
+;;; --- Phase 2 claim/release (RED-stage API skeletons) ----------------------
+
+(defun %claim-authority-permits-role-p (authority role)
+  "Return T when ROLE may claim AUTHORITY, or signal for an unknown authority."
+  (case authority
+    (:worker (eq role :worker))
+    (:owner (eq role :owner))
+    (:operation (eq role :operation))
+    (otherwise (error "Task has unsupported claim authority: ~S" authority))))
+
+(defun claim-task (id &key agent role route)
+  "Claim queued task ID for AGENT.
+This RED-stage skeleton verifies the Phase 2 admission guards under the queue
+lock. Persisting the transition and emitting :TASK-CLAIMED are deliberately
+deferred to the GREEN implementation."
+  (declare (ignore route))
+  (unless (and (integerp id) (stringp agent) role)
+    (error "Claim requires an integer id, string agent, and role"))
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((queue (or (read-task-queue) '()))
+           (task (find id queue :key (lambda (entry) (getf entry :id)))))
+      (unless task
+        (error "Task ~D does not exist" id))
+      (unless (eq (getf task :status) :queued)
+        (error "Task ~D is not queued" id))
+      (unless (member role (getf task :allowed-roles))
+        (error "Role ~S may not claim task ~D" role id))
+      (unless (%claim-authority-permits-role-p (getf task :authority) role)
+        (error "Role ~S may not claim ~S-authority task ~D"
+               role (getf task :authority) id))
+      (error "claim-task Phase 2 transition is not implemented"))))
+
+(defun release-task (id &key agent reason)
+  "Release claimed task ID for AGENT.
+This RED-stage skeleton verifies release ownership under the queue lock. The
+state transition and :TASK-RELEASED event are intentionally deferred to the
+GREEN implementation."
+  (declare (ignore reason))
+  (unless (and (integerp id) (stringp agent))
+    (error "Release requires an integer id and string agent"))
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((queue (or (read-task-queue) '()))
+           (task (find id queue :key (lambda (entry) (getf entry :id))))
+           (now (get-universal-time)))
+      (unless task
+        (error "Task ~D does not exist" id))
+      (unless (eq (getf task :status) :claimed)
+        (error "Task ~D is not claimed" id))
+      (let ((lease-expires-at (getf task :lease-expires-at)))
+        (unless (or (string= agent (or (getf task :claimant) ""))
+                    (and (integerp lease-expires-at) (<= lease-expires-at now)))
+          (error "Agent ~S may not release task ~D" agent id)))
+      (error "release-task Phase 2 transition is not implemented"))))
 
 (defun %update-queue-entry (id fn)
   "Apply FN to the entry with :id ID inside the persisted queue (under lock)."
