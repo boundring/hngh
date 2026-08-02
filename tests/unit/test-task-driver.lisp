@@ -141,7 +141,8 @@
 
 (defun %phase2-task (&key (id 501) (status :queued) (authority :worker)
                            (allowed-roles '(:worker)) (claimant nil)
-                           (lease-expires-at nil))
+                           (claimant-role nil) (lease-expires-at nil)
+                           (verifier nil) (lease-seconds nil))
   "Build a minimal v3.1 task record for claim/release transition fixtures."
   (list :id id
         :schema-version 3
@@ -150,7 +151,10 @@
         :authority authority
         :allowed-roles allowed-roles
         :claimant claimant
-        :lease-expires-at lease-expires-at))
+        :claimant-role claimant-role
+        :lease-expires-at lease-expires-at
+        :verifier verifier
+        :lease-seconds lease-seconds))
 
 (defun %write-phase2-task (task)
   "Persist one Phase 2 fixture task in the isolated test state store."
@@ -213,6 +217,127 @@
     (is (string= "operator"
                  (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
                        :claimant)))))
+
+(test phase2-verifier-completes-claimed-task
+  "The named verifier can complete a claimed task and emits an event."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (let ((received nil))
+      (hngh.core.event-bus:subscribe
+       "task-completed"
+       (lambda (event) (setf received event)))
+      (hngh.plugins.ai-orchestrator::complete-task
+       501 :agent "reviewer" :evidence "/tmp/task-501.txt")
+      (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+        (is (eq :done (getf task :status)))
+        (is (string= "/tmp/task-501.txt" (getf task :evidence)))
+        (is (not (null received)))
+        (when received
+          (is (eq :task-completed
+                  (hngh.core.event-bus:event-topic received))))))))
+
+(test phase2-non-verifier-cannot-complete-task
+  "A caller other than the named verifier cannot complete a task."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (signals error
+      (hngh.plugins.ai-orchestrator::complete-task
+       501 :agent "worker-a" :evidence "/tmp/task-501.txt"))
+    (is (eq :claimed
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
+(test phase2-worker-self-completes-without-verifier
+  "A worker may self-verify only when no verifier is named."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier nil))
+    (hngh.plugins.ai-orchestrator::complete-task
+     501 :agent "worker-a" :evidence "/tmp/task-501.txt")
+    (is (eq :done
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
+(test phase2-claimant-blocks-task-with-failure-evidence
+  "A claimant can block a task and records structured failure evidence."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (let ((received nil))
+      (hngh.core.event-bus:subscribe
+       "task-blocked"
+       (lambda (event) (setf received event)))
+      (hngh.plugins.ai-orchestrator::block-task
+       501 :agent "worker-a" :class :verification
+       :reason "acceptance failed" :evidence "/tmp/task-501.txt")
+      (let* ((task (first (hngh.plugins.ai-orchestrator::read-task-queue)))
+             (failure (getf task :last-failure)))
+        (is (eq :blocked (getf task :status)))
+        (is (eq :verification (getf failure :class)))
+        (is (string= "acceptance failed" (getf failure :reason)))
+        (is (string= "/tmp/task-501.txt" (getf failure :evidence)))
+        (is (not (null received)))
+        (when received
+          (is (eq :task-blocked
+                  (hngh.core.event-bus:event-topic received))))))))
+
+(test phase2-non-authorized-caller-cannot-block-task
+  "A caller who is neither claimant nor verifier cannot block a task."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (signals error
+      (hngh.plugins.ai-orchestrator::block-task
+       501 :agent "other" :class :verification :reason "not mine"
+       :evidence "/tmp/task-501.txt"))
+    (is (eq :claimed
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
+(test phase2-verifier-fails-task
+  "The named verifier can move a claimed task to terminal failure."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :claimant-role :worker :verifier "reviewer"))
+    (let ((received nil))
+      (hngh.core.event-bus:subscribe
+       "task-failed"
+       (lambda (event) (setf received event)))
+      (hngh.plugins.ai-orchestrator::fail-task
+       501 :agent "reviewer" :reason "verification failed")
+      (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+        (is (eq :failed (getf task :status)))
+        (is (not (null received)))
+        (when received
+          (is (eq :task-failed
+                  (hngh.core.event-bus:event-topic received))))))))
+
+(test phase2-ready-tasks-filters-by-role-and-authority
+  "Ready tasks include only queued records claimable by the requested role."
+  (with-aio-light (tmp)
+    (hngh.plugins.ai-orchestrator::write-task-queue
+     (list (%phase2-task :id 501 :authority :worker
+                         :allowed-roles '(:worker))
+           (%phase2-task :id 502 :authority :owner
+                         :allowed-roles '(:worker))
+           (%phase2-task :id 503 :authority :worker
+                         :allowed-roles '(:reviewer))
+           (%phase2-task :id 504 :status :claimed :claimant "worker-a"
+                         :authority :worker :allowed-roles '(:worker))
+           (%phase2-task :id 505 :authority :operation
+                         :allowed-roles '(:owner))))
+    (is (equal '(501)
+               (hngh.plugins.ai-orchestrator::ready-tasks :role :worker)))
+    (is (equal '(505)
+               (hngh.plugins.ai-orchestrator::ready-tasks :role :owner)))))
 
 (test phase2-claim-rejects-disallowed-role
   "A claimant whose role is absent from :allowed-roles cannot claim."
