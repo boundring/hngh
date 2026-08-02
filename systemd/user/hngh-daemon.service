@@ -9,7 +9,7 @@ Wants=unsloth-studio.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/hngh --daemon
+ExecStart=%h/.local/bin/hngh --daemon
 Restart=on-failure
 RestartSec=5
 
