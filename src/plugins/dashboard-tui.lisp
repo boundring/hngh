@@ -120,10 +120,12 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 
 (defun render-header (title)
   "Render the header bar."
-  (format t "~A~AHngh ~A — ~A~A~%"
+  (format t "~A~A╔══════════════════════════════════════════════════════╗~A~%"
+          +ansi-bold+ +ansi-cyan+ +ansi-reset+)
+  (format t "~A~A║ 🗼 Hngh v~A [Megastructure] — ~A                     ║~A~%"
           +ansi-bold+ +ansi-cyan+ (hngh:version) title +ansi-reset+)
-  (format t "~A~A----------------------------------------~A~%"
-          +ansi-dim+ "" +ansi-reset+)
+  (format t "~A~A╚══════════════════════════════════════════════════════╝~A~%"
+          +ansi-bold+ +ansi-cyan+ +ansi-reset+)
   (format t "~%"))
 
 (defun render-overview ()

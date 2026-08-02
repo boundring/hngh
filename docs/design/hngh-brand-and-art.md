@@ -1,75 +1,77 @@
 # Hngh Brand, TUI Aesthetics & Visual Identity Specification
+## 🗼 The Megastructure & Dungeon Crawler Edition
 
 **Author**: Sisyphus (Artist)
 **Date**: 2026-08-02
-**Milestone Scope**: M2 (The Companion) & M7+ TUI Polish
+**Milestone Scope**: M2 (The Companion), M7+ TUI Polish, and Megastructural Exploration
 
 ---
 
-## 1. Design Philosophy
+## 1. Design Philosophy: Brutalist Megastructure & Roguelike Exploration
 
-Hngh is built on SBCL Common Lisp and system-level C primitives. Its visual language mirrors its architecture: **crisp, deterministic, symmetrical, and uncluttered**. We avoid noisy chat bubbles and bloated web UI chrome in favor of high-density terminal interfaces, clean box-drawing characters, and precise ANSI color hierarchies.
+Hngh is built on SBCL Common Lisp and system-level C primitives. Its visual language reflects a **Tsutomu Nihei *Blame!* aesthetic** fused with classic **roguelike dungeon crawler** ergonomics:
+- **The Megastructure**: Monumental, towering layers of autonomous infrastructure, endless steel-and-concrete levels, automated Safeguard processes, and deep subterranean silicon conduits.
+- **The Dungeon Crawler Interface**: Tactical grid awareness, floor descent logging (`Level B4: State Store`, `Level B3: Event Bus`, `Level B2: Scheduler`, `Level B1: Megastructure Core`), ASCII glyph iconography, and dense telemetry status.
+- **Crisp & Deterministic**: We reject bloated web UI chrome in favor of high-density terminal interfaces, precise ANSI color hierarchies, and evocative aesthetic emojis (`🗼`, `⚙️`, `🧱`, `👾`, `🧬`, `🛡️`, `🔦`, `🌀`).
 
 ---
 
-## 2. Color Palette & ANSI Hierarchy
+## 2. Color Palette & ANSI Hierarchy (Megastructure Neon & Concrete)
 
-To maintain readability across light and dark terminal emulators, Hngh TUIs use a restrained 16-color ANSI palette with strict semantic assignments:
-
-| Role | ANSI Code | Hex Equivalent (Reference) | Semantic Meaning |
+| Role | ANSI Code | Hex Equivalent | Semantic Meaning & Megastructural Vibe |
 |---|---|---|---|
-| **Primary Accent** | `\033[36m` (Cyan) | `#00BCD4` | Headers, framework identity, interactive prompts |
-| **Success / Running** | `\033[32m` (Green) | `#4CAF50` | Active daemons, passing tests, operational health |
-| **Warning / Paused** | `\033[33m` (Yellow) | `#FFEB3B` | Degraded state, paused queues, high resource load |
-| **Error / Stopped** | `\033[31m` (Red) | `#F44336` | Faults, offline nodes, failed health checks |
-| **Muted / Timestamp** | `\033[2m` (Dim) | `#757575` | Event timestamps, secondary metadata, borders |
-| **Emphasis** | `\033[1m` (Bold) | — | Section headers, active selections, key metrics |
+| **Primary Accent** | `\033[36m` (Cyan) | `#00BCD4` | **Netsphere Beam / Terminal Grid** — Framework identity, active links |
+| **Success / Running** | `\033[32m` (Green) | `#4CAF50` | **Silicon Life / Active Node** — Daemons online, tests green |
+| **Warning / Paused** | `\033[33m` (Yellow) | `#FFEB3B` | **Safeguard Caution / Power Fluctuations** — Queues paused, throttle active |
+| **Error / Stopped** | `\033[31m` (Red) | `#F44336` | **Exterminator Alert / Breach** — Faults, offline nodes, breached invariants |
+| **Muted / Timestamp** | `\033[2m` (Dim) | `#757575` | **Reinforced Concrete / Shadows** — Timestamps, borders, secondary metadata |
+| **Emphasis** | `\033[1m` (Bold) | — | **Structural Steel** — Section headers, active selections, floor markers |
 
 ---
 
-## 3. TUI Box-Drawing Standards
+## 3. TUI Box-Drawing & Megastructural Glyphs
 
-All panel frames and dashboard widgets in `dashboard-tui.lisp` and `mission-control.lisp` adhere to standard UTF-8 box-drawing character blocks:
+Dashboard widgets in `dashboard-tui.lisp` and `mission-control.lisp` use heavy double-line and single-line box frames to evoke massive industrial bulkheads:
 
 ```text
-┌────────────────────────────────────────┐
-│ Hngh v0.1.0 — Mission Control          │
-├────────────────────────────────────────┤
-│ Status: [ RUNNING ]  Daemon: UDS active│
-│ Agents: 5 active     Queue: 0 pending  │
-└────────────────────────────────────────┘
+╔════════════════════════════════════════╗
+║ 🗼 Hngh Megastructure [Level: B1-Core] ║
+╠════════════════════════════════════════╣
+║ 🟢 Status: RUNNING   ⚙️ Daemon: UDS    ║
+║ 👾 Agents: 5 active  🛡️ Sentry: ACTIVE ║
+╚════════════════════════════════════════╝
 ```
 
-- **Top Corners**: `┌` (`\u250c`), `┐` (`\u2510`)
-- **Bottom Corners**: `└` (`\u2514`), `┘` (`\u2518`)
-- **Horizontal Rule**: `─` (`\u2500`)
-- **Vertical Rule**: `│` (`\u2502`)
-- **T-Junctions**: `├` (`\u251c`), `┤` (`\u2524`)
+### Roguelike Map & Status Glyph Legend
+- `@` — The Orchestrator (Player / Agent Head)
+- `#` — Megastructural Bulkhead / Wall
+- `.` — Open Conduit / Floor
+- `%` — Loot / Artifact / Task Result
+- `&` — Active Subagent / Silicon Lifeform
+- `!` — Safeguard Anomaly / Threat Alert
 
 ---
 
-## 4. ASCII Banner & Emblem
-
-When spawning interactive sessions or launching the TUI dashboard, Hngh proudly displays a minimal, symmetrical ASCII emblem:
+## 4. ASCII Megastructural Emblem
 
 ```text
-  _   _                       _     
- | | | |_ __   __ _ _ __     | |    
- | |_| | '_ \ / _` | '_ \     | |    
- |  _  | | | | (_| | | | |    | |___ 
- |_| |_|_| |_|\__, |_| |_|    |_____|
-              |___/                  
-  Common Lisp Agent Orchestrator [v0.1]
+  ██╗  ██╗███╗   ██╗ ██████╗ ██╗  ██╗
+  ██║  ██║████╗  ██║██╔════╝ ██║  ██║
+  ███████║██╔██╗ ██║██║  ███╗███████║
+  ██╔══██║██║╚██╗██║██║   ██║██╔══██║
+  ██║  ██║██║ ╚████║╚██████╔╝██║  ██║
+  ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝
+  [ The Infinite Megastructure TUI v0.1 ]
 ```
 
 ---
 
-## 5. Companion Avatar Concepts (M2 Preview)
+## 5. Companion Avatar Concepts (Roguelike / Blame! Edition)
 
-For Milestone 2 (The Companion), assistant avatars rendered in TUI/wayland status widgets follow a modular ASCII glyph set reflecting agent states:
+For Milestone 2 (The Companion), assistant avatars render state through industrial-cyborg glyphs:
 
-- **Idle / Listening**: `( •_• )`
-- **Thinking / Processing**: `( o_o )~`
-- **Executing / Working**: `[ ⚡_⚡ ]`
-- **Success / Complete**: `( ^_^ )v`
-- **Error / Blocked**: `( x_x )!`
+- **Idle / Scouting**: `[ 🔦 •_• ]` (Scanning endless corridors)
+- **Thinking / Querying Netsphere**: `[ 🌀 o_o ]~` (Neural net ping)
+- **Executing / Combat Mode**: `[ ⚡_⚡ ]⚔️` (Graviton beam active)
+- **Success / Loot Acquired**: `[ ^_^ ]%` (Artifact secured)
+- **Error / Safeguard Alert**: `[ x_x ]!` (Exterminator spotted)
