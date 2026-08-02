@@ -544,6 +544,114 @@ Remote models are rejected in this local-first slice."
          (state (read-squad-state state-path)))
     (append state (list :alive (session-alive-p (getf state :session))))))
 
+;;; --- Session tree -----------------------------------------------------------
+
+(defparameter *session-tree-relative-path* "state/session-tree.lisp"
+  "State-store-relative path for the mission-control session tree.")
+
+(defun session-tree-path (&optional (hngh-home hngh:*hngh-home*))
+  "Resolve the session tree state path beneath HNGH-HOME."
+  (merge-pathnames *session-tree-relative-path* hngh-home))
+
+(defun read-session-tree (&key (hngh-home hngh:*hngh-home*))
+  "Read the session tree with reader evaluation disabled. Returns NIL when absent."
+  (let ((path (session-tree-path hngh-home)))
+    (when (probe-file path)
+      (handler-case
+          (with-open-file (stream path :direction :input)
+            (let* ((*read-eval* nil)
+                   (raw (read stream nil nil)))
+              (when (and (listp raw) (plist-has-key-p raw :sessions))
+                raw)))
+        (error () nil)))))
+
+(defun write-session-tree (tree &key (hngh-home hngh:*hngh-home*))
+  "Atomically persist TREE as a flat plist under HNGH-HOME."
+  (write-squad-state (session-tree-path hngh-home) tree))
+
+(defun register-session (name &key parent (hngh-home hngh:*hngh-home*))
+  "Add or update a session entry in the tree. Return the updated tree."
+  (let* ((tree (or (read-session-tree :hngh-home hngh-home)
+                   '(:sessions)))
+         (sessions (getf tree :sessions))
+         (existing (find name sessions :key (lambda (s) (getf s :name))
+                         :test #'string=)))
+    (if existing
+        (setf (getf existing :parent) parent
+              (getf existing :updated-at) (get-universal-time))
+        (push (list :name name
+                    :parent parent
+                    :created-at (get-universal-time)
+                    :updated-at (get-universal-time))
+              (getf tree :sessions)))
+    (write-session-tree tree :hngh-home hngh-home)
+    tree))
+
+(defun unregister-session (name &key (hngh-home hngh:*hngh-home*))
+  "Remove a session from the tree. Return the updated tree."
+  (let* ((tree (or (read-session-tree :hngh-home hngh-home)
+                   '(:sessions)))
+         (sessions (getf tree :sessions)))
+    (setf (getf tree :sessions)
+          (remove name sessions :key (lambda (s) (getf s :name))
+                  :test #'string=))
+    (write-session-tree tree :hngh-home hngh-home)
+    tree))
+
+(defun session-children (name &key (hngh-home hngh:*hngh-home*))
+  "Return the list of child session NAME plists from the tree."
+  (let ((tree (read-session-tree :hngh-home hngh-home)))
+    (when tree
+      (remove-if-not (lambda (s)
+                       (and (getf s :parent)
+                            (string= (getf s :parent) name)))
+                     (getf tree :sessions)))))
+
+;;; --- Session restart -------------------------------------------------------
+
+(defun restart-session (&key (session *session-name*)
+                              (hngh-home hngh:*hngh-home*))
+  "Save layout, stop, start, restore layout, and emit session.restarted."
+  (unless (session-alive-p session)
+    (error "Session ~A is not running — cannot restart" session))
+  (let ((saved (handler-case (save-session-layout :session session
+                                                  :hngh-home hngh-home)
+                 (error (c)
+                   (hngh.core:log-warn
+                    "Save layout failed for ~A (~A); restarting without saved state"
+                    session c)
+                   nil))))
+    (stop-session)
+    (sleep 0.5)
+    (start-session)
+    (when saved
+      (handler-case
+          (restore-session-layout :session session :hngh-home hngh-home)
+        (error (c)
+          (hngh.core:log-warn
+           "Restore layout failed for ~A (~A); using current layout"
+           session c))))
+    (when hngh.core.event-bus:*event-bus*
+      (handler-case
+          (hngh.core.event-bus:publish "session.restarted"
+                                       (list :session session
+                                             :had-layout (not (null saved)))
+                                       :source 'mission-control)
+        (error ())))
+    (values t saved)))
+
+(defun cascade-restart (name &key (hngh-home hngh:*hngh-home*))
+  "Restart NAME session, then restart its children in dependency order."
+  (let ((children (session-children name :hngh-home hngh-home)))
+    (restart-session :session name :hngh-home hngh-home)
+    (dolist (child children)
+      (handler-case
+          (cascade-restart (getf child :name) :hngh-home hngh-home)
+        (error (c)
+          (hngh.core:log-warn "Cascade restart child ~A failed: ~A"
+                              (getf child :name) c))))
+    (values t children)))
+
 (defun init (&key (hngh-home hngh:*hngh-home*))
   "Initialize the mission-control plugin."
   (declare (ignore hngh-home))
