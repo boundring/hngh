@@ -346,3 +346,76 @@
                (fresh (find-if (lambda (e) (eq :done (getf e :status))) tasks)))
           (is (not (null stale)) "stale task was recovered to :blocked")
           (is (not (null fresh)) "fresh task was dispatched to :done"))))))
+
+;;; --- H-B1: Maintenance Coordinator tests -----------------------------------
+;;;
+;;; Tests for the read-maintenance-state pure function.
+
+;;; --- Test helpers for maintenance state ---
+
+(defmacro with-pacman-lock ((tmp exists) &body body)
+  "Run BODY with *pacman-lock-path* bound to a test lock file in TMP.
+If EXISTS is T, create the lock file; if NIL, ensure it doesn't exist."
+  `(let ((lock-path (merge-pathnames "test-pacman.lock" ,tmp)))
+     (when ,exists (ensure-directories-exist lock-path) (close (open lock-path :direction :output :if-exists :supersede)))
+     (let ((hngh.plugins.maintenance-coordinator::*pacman-lock-path* lock-path))
+       ,@body)))
+
+
+;;; --- Test cases ---
+
+(test maintenance-state-clear-when-store-ready-no-lock
+  "State store initialized, no active flag, no pacman lock -> :clear."
+  (with-aio-light (tmp)
+    (is (eq :clear (hngh.plugins.maintenance-coordinator::read-maintenance-state)))))
+
+(test maintenance-state-pending-when-pacman-lock-exists
+  "State store initialized, no active flag, pacman lock exists -> :maintenance-pending."
+  (with-aio-light (tmp)
+    (with-pacman-lock (tmp t)
+      (is (eq :maintenance-pending (hngh.plugins.maintenance-coordinator::read-maintenance-state))))))
+
+(test maintenance-state-active-when-flag-set
+  "State store has active flag -> :maintenance-active (overrides pacman lock)."
+  (with-aio-light (tmp)
+    ;; Write active flag to state store
+    (hngh.core.state-store:write-state "state/maintenance/active.lisp" t)
+    (with-pacman-lock (tmp t)
+      (is (eq :maintenance-active (hngh.plugins.maintenance-coordinator::read-maintenance-state))))))
+
+(test maintenance-state-unknown-when-store-not-initialized
+  "State store not initialized -> :unknown."
+  ;; Call with no state store initialized (fresh image, no init called)
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (is (eq :unknown (hngh.plugins.maintenance-coordinator::read-maintenance-state)))))
+
+
+(test maintenance-state-pending-overrides-clear
+  "Pacman lock exists, store ready, no active flag -> :maintenance-pending (not :clear)."
+  (with-aio-light (tmp)
+    (with-pacman-lock (tmp t)
+      (is (eq :maintenance-pending (hngh.plugins.maintenance-coordinator::read-maintenance-state))))))
+
+(test maintenance-state-active-overrides-pending
+  "Both active flag set AND pacman lock exists -> :maintenance-active (priority: active > pending > clear)."
+  (with-aio-light (tmp)
+    (hngh.core.state-store:write-state "state/maintenance/active.lisp" t)
+    (with-pacman-lock (tmp t)
+      (is (eq :maintenance-active (hngh.plugins.maintenance-coordinator::read-maintenance-state))))))
+
+(test maintenance-state-read-only-no-writes
+  "Verify no state-store write functions are called during read-maintenance-state."
+  (with-aio-light (tmp)
+    (let ((write-called nil)
+          (orig-write (symbol-function 'hngh.core.state-store:write-state)))
+      (unwind-protect
+           (progn
+             (setf (symbol-function 'hngh.core.state-store:write-state)
+                   (lambda (&rest args)
+                     (declare (ignore args))
+                     (setf write-called t)))
+             (hngh.plugins.maintenance-coordinator::read-maintenance-state)
+             (is (null write-called) "write-state was not called"))
+        (setf (symbol-function 'hngh.core.state-store:write-state) orig-write)))))
+
