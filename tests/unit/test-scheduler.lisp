@@ -93,3 +93,68 @@
     (hngh.core.scheduler:shutdown)
     (hngh.core.event-bus:shutdown)
     (cleanup-tmp-home tmp)))
+
+(test scheduler-expired-task-lease-auto-releases
+  "A scheduler tick releases an expired claimed task and emits an event."
+  (let ((tmp (make-tmp-home))
+        (received nil))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
+    (hngh.core.state-store:init :hngh-home tmp)
+    (hngh.plugins.ai-orchestrator:init :hngh-home tmp)
+    (unwind-protect
+         (progn
+           (hngh.core.event-bus:subscribe
+            "lease-expired"
+            (lambda (event) (setf received event)))
+           (hngh.plugins.ai-orchestrator::write-task-queue
+            (list (list :id 601 :schema-version 3
+                        :task "expired lease fixture"
+                        :status :claimed
+                        :authority :worker
+                        :allowed-roles '(:worker)
+                        :claimant "worker-a"
+                        :claimant-role :worker
+                        :lease-expires-at (- (get-universal-time) 1))))
+           (hngh.core.scheduler::check-and-fire)
+           (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+             (is (eq :queued (getf task :status)))
+             (is (null (getf task :claimant)))
+             (is (null (getf task :lease-expires-at)))
+             (is (not (null received)))
+             (when received
+               (let ((payload (hngh.core.event-bus:event-payload received)))
+                 (is (= 601 (getf payload :id)))
+                 (is (string= "worker-a" (getf payload :claimant)))))))
+      (hngh.plugins.ai-orchestrator:shutdown)
+      (hngh.core.event-bus:shutdown)
+      (hngh.core.state-store:shutdown)
+      (cleanup-tmp-home tmp))))
+
+(test scheduler-active-task-lease-remains-claimed
+  "A scheduler tick leaves an active claimed lease unchanged."
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
+    (hngh.core.state-store:init :hngh-home tmp)
+    (hngh.plugins.ai-orchestrator:init :hngh-home tmp)
+    (unwind-protect
+         (progn
+           (hngh.plugins.ai-orchestrator::write-task-queue
+            (list (list :id 602 :schema-version 3
+                        :task "active lease fixture"
+                        :status :claimed
+                        :authority :worker
+                        :allowed-roles '(:worker)
+                        :claimant "worker-a"
+                        :claimant-role :worker
+                        :lease-expires-at (+ (get-universal-time) 300))))
+           (hngh.core.scheduler::check-and-fire)
+           (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+             (is (eq :claimed (getf task :status)))
+             (is (string= "worker-a" (getf task :claimant)))
+             (is (integerp (getf task :lease-expires-at)))))
+      (hngh.plugins.ai-orchestrator:shutdown)
+      (hngh.core.event-bus:shutdown)
+      (hngh.core.state-store:shutdown)
+      (cleanup-tmp-home tmp))))
