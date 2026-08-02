@@ -30,7 +30,50 @@ All core component implementations live in sub-packages of hngh.core.")
            #:*log-level*
            #:*log-levels*
            #:log-level-priority
-           #:should-log-p))
+          #:should-log-p))
+
+(defpackage :hngh.core.wire-protocol
+  (:documentation "Wire protocol for daemon-client communication — length-prefixed S-expressions.")
+  (:use :cl)
+  (:export #:make-request
+           #:make-response
+           #:make-event
+           #:message-type
+           #:request-p
+           #:response-p
+           #:event-p
+           #:encode-message
+           #:encode-request
+           #:encode-response
+           #:encode-event
+           #:decode-message
+           #:read-message
+           #:request-id
+           #:request-op
+           #:request-payload
+           #:request-policy
+           #:response-status
+           #:response-result
+           #:response-error
+           #:event-topic
+           #:event-payload
+           #:supported-op-p))
+
+(defpackage :hngh.core.daemon
+  (:documentation "Daemon core — Unix socket server, client handling, event broadcast.")
+  (:use :cl :hngh.core)
+  (:export #:daemon-start
+           #:daemon-stop
+           #:daemon-status
+           #:init
+           #:shutdown
+           #:running-p
+           #:register-request-handler
+           #:broadcast-event
+           #:subscribe-client
+           #:unsubscribe-client
+           #:daemon-socket-path
+           #:*daemon-running*))
 
 (defpackage :hngh.core.config
   (:documentation "Configuration loading and management.")
@@ -461,3 +504,19 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:add-remote
            #:list-remotes
            #:managed-ignore-paths))
+
+(defpackage :hngh.client
+  (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
+  (:use :cl :hngh.core :hngh.core.wire-protocol)
+  (:export #:main
+           #:client-connect
+           #:client-disconnect
+           #:send-request
+           #:cmd-health
+           #:cmd-status
+           #:cmd-submit-task
+           #:cmd-list-tasks
+           #:cmd-watch
+           #:cmd-pause
+           #:cmd-resume
+           #:cmd-stop-daemon))

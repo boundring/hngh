@@ -5,7 +5,7 @@
 
 (defpackage :hngh.tests
   (:documentation "Hngh test suite using FiveAM.")
-  (:use :cl :fiveam :hngh)
+  (:use :cl :fiveam :hngh :hngh.core :hngh.core.wire-protocol :hngh.core.daemon)
   (:export #:run-tests
            #:make-tmp-home
            #:cleanup-tmp-home

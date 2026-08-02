@@ -34,6 +34,11 @@
   (is (hngh.core.event-bus:topic-match-p "*" "anything.at.all"))
   (is (hngh.core.event-bus:topic-match-p "*" "system.pacman")))
 
+(test topic-match-keyword-topic
+  "Keyword topics emitted by plugins match string subscriptions."
+  (is (hngh.core.event-bus:topic-match-p "*" :task-completed))
+  (is (hngh.core.event-bus:topic-match-p "task-completed" :task-completed)))
+
 (test init-creates-bus
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)

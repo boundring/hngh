@@ -1,27 +1,34 @@
-;;;; tests/unit/test-ai-orchestrator.lisp — Tests for AI Orchestrator (B3)
-;;;;
-;;;; Tests cover lifecycle, meta-context assembly, policy management,
-;;;; delegation failure handling, agent lifecycle, and handoff/kill logic.
-;;;; Does NOT actually invoke AI tools or spawn model runtimes.
-;;;;
-;;;; Uses hngh.plugins.ai-orchestrator:: for internal (unexported) symbols
-;;;; that the test suite needs to access.
+;;;; tests/unit/test-ai-orchestrator.lisp -- AI Orchestrator Plugin Unit Tests
 ;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
 (in-package :hngh.tests)
 
-(def-suite :hngh.ai-orchestrator
-  :description "Tests for AI Orchestrator (B3)"
+;;; --- Test Suite -----------------------------------------------------------
+
+(def-suite ai-orchestrator-suite
+  :description "AI Orchestrator plugin unit tests"
   :in :hngh)
 
-(in-suite :hngh.ai-orchestrator)
+(in-suite ai-orchestrator-suite)
 
-;;; --- Helpers: setup / teardown --------------------------------------------
+;;; --- Test Helpers ---------------------------------------------------------
+
+(defun make-tmp-home ()
+  "Create a temporary directory for tests."
+  (let ((path (format nil "/tmp/test-aio-~A/" (random 1000000))))
+    (ensure-directories-exist path)
+    path))
+
+(defun cleanup-tmp-home (path)
+  "Remove temporary directory."
+  (uiop:delete-directory-tree (uiop:parse-native-namestring path)
+                             :validate t
+                             :if-does-not-exist :ignore))
 
 (defun aio-setup (tmp)
-  "Initialize event bus, state store, resource manager, and orchestrator on TMP."
+  "Initialize event bus, state store, resource manager, and orchestrator."
   (hngh.core.event-bus:init :hngh-home tmp)
   (hngh.core.state-store:init :hngh-home tmp)
   (hngh.core.resource-manager:init :hngh-home tmp)
@@ -36,8 +43,9 @@
   (cleanup-tmp-home tmp))
 
 (defmacro with-aio ((tmp-var) &body body)
-  "Execute BODY with a temporary home, all services initialized."
+  "Execute BODY with full test setup/teardown."
   `(let ((,tmp-var (make-tmp-home)))
+     (declare (ignorable ,tmp-var))
      (cleanup-tmp-home ,tmp-var)
      (unwind-protect
           (progn (aio-setup ,tmp-var) ,@body)
@@ -59,6 +67,7 @@
 (defmacro with-aio-light ((tmp-var) &body body)
   "Execute BODY with minimal services (no resource manager)."
   `(let ((,tmp-var (make-tmp-home)))
+     (declare (ignorable ,tmp-var))
      (cleanup-tmp-home ,tmp-var)
      (unwind-protect
           (progn (aio-setup-light ,tmp-var) ,@body)
