@@ -4,8 +4,8 @@
 
 ## Current Status
 
-**M0–M7 complete; Agent Platoons v0 designed** — 1009 tests, all passing (FiveAM, `make test` verified
-2026-08-02 @ 40785b3 on queue-v3; main 999/999 @ 79db55f). Session detail in `docs/project/work-sessions.md` (M3–M7) and
+**M0–M7+Phase 2 spec complete; Agent Platoons v0 designed** — 1028/1028 tests passing (FiveAM, `make test` verified
+2026-08-02 @ 106a922 on main, post queue-v3 merge). Session detail in `docs/project/work-sessions.md` (M3–M7) and
 `docs/journal/` (M0–M1).
 
 Recent sessions:
@@ -22,13 +22,14 @@ Recent sessions:
 - **M6.2** Agentic file-editing loops: driver runs opencode headless via tool
   hub at $0 on gemma-4-12b.
 - **M6.3** Emacs daemon: daemon lifecycle (start/stop/health), policy-explicit start, daemon outlives hngh.
-- **M7** Client-server daemon: wire protocol (SEXP-over-UDS), daemon core, client CLI, systemd units. 999/999 tests.
+- **M7** Client-server daemon: wire protocol (SEXP-over-UDS), daemon core, client CLI, systemd units. 1028/1028 tests.
 - **Agent Platoons v0**: declarative squad specs, bash launcher, 7 role templates, first dogfood (duo-review).
 
 ## Up Next
 
 | Priority | Item | Where |
 |---|---|---|
+| P0 | **Phase 2** — atomic claim/release, verifier-gated completion, M7 wire handlers, lease expiry (spec @106a922, tasks 66-69) | hngh |
 | P0 | **M8 model-management** — routing table, benchmark harness, cost/latency matrix | hngh |
 | P0 | **Sentry Tier-1** — light-ralph analysis (config-tweak proposer, drift triage, secret-guard pattern review) + git pre-commit hook calling `guard-text` | hngh; `.omc/plans/sentry-safeguards.md` |
 | P1 | **M8 model-management plugin** — routing table seeded (`docs/design/model-routing.md`); selection/sourcing/benchmark harness | hngh; `sysconfig_mgmt/.omc/plans/multi-model-topology.md` |

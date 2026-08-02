@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 in progress (Batches 0–4 complete; Batch 5 in progress — M1.10 done). M7 daemon committed. Agent Platoons v0 designed. 999/999 tests green @ 79db55f.
+**Status**: M1 in progress (Batches 0–4 complete; Batch 5 in progress — M1.10 done). M7 daemon committed. Agent Platoons v0 designed. 1028/1028 tests green @ 106a922.
 **Last updated**: 2026-08-02
 
 ---
