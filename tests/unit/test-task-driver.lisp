@@ -88,6 +88,17 @@
     (is (eq :research (getf entry :type)))
     (is (eq :scout (getf entry :assigned-role)))
     (is (equal '("source-readme-sha256") (getf entry :input-artifacts)))
+    (is (null (getf entry :claimant)))
+    (is (null (getf entry :claimant-role)))
+    (is (null (getf entry :claimant-route)))
+    (is (null (getf entry :claimed-at)))
+    (is (null (getf entry :lease-expires-at)))
+    (is (null (getf entry :verifier)))
+    (is (null (getf entry :allowed-roles)))
+    (is (eq :worker (getf entry :authority)))
+    (is (null (getf entry :verification-command)))
+    (is (null (getf entry :last-failure)))
+    (is (equal '() (getf entry :transition-log)))
     (is (hngh.plugins.ai-orchestrator::validate-task-record entry))))
 
 (test queue-record-v3-validation-rejects-malformed-shared-queue-fields
@@ -125,6 +136,123 @@
         (funcall mutator entry)
         (signals error
           (hngh.plugins.ai-orchestrator::validate-task-record entry))))))
+
+;;; --- Phase 2 claim/release RED fixtures -----------------------------------
+
+(defun %phase2-task (&key (id 501) (status :queued) (authority :worker)
+                           (allowed-roles '(:worker)) (claimant nil)
+                           (lease-expires-at nil))
+  "Build a minimal v3.1 task record for claim/release transition fixtures."
+  (list :id id
+        :schema-version 3
+        :task "phase 2 claim fixture"
+        :status status
+        :authority authority
+        :allowed-roles allowed-roles
+        :claimant claimant
+        :lease-expires-at lease-expires-at))
+
+(defun %write-phase2-task (task)
+  "Persist one Phase 2 fixture task in the isolated test state store."
+  (hngh.plugins.ai-orchestrator::write-task-queue (list task)))
+
+(test phase2-worker-claim-emits-task-claimed
+  "A worker claim records :claimed ownership and emits :task-claimed."
+  (with-aio-light (tmp)
+    (%write-phase2-task (%phase2-task))
+    (let ((received nil))
+      (hngh.core.event-bus:subscribe
+       "task-claimed"
+       (lambda (event) (setf received event)))
+      (hngh.plugins.ai-orchestrator::claim-task
+       501 :agent "worker-a" :role :worker :route :local-12b)
+      (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+        (is (eq :claimed (getf task :status)))
+        (is (string= "worker-a" (getf task :claimant)))
+        (is (eq :worker (getf task :claimant-role)))
+        (is (eq :local-12b (getf task :claimant-route)))
+        (is (not (null received)))
+        (when received
+          (is (eq :task-claimed (hngh.core.event-bus:event-topic received))))))))
+
+(test phase2-worker-cannot-claim-owner-authority-task
+  "A worker cannot mutate an owner-authority task while claim is rejected."
+  (with-aio-light (tmp)
+    (%write-phase2-task (%phase2-task :authority :owner))
+    (signals error
+      (hngh.plugins.ai-orchestrator::claim-task
+       501 :agent "worker-a" :role :worker :route :local-12b))
+    (is (eq :queued
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
+(test phase2-claim-rejects-disallowed-role
+  "A claimant whose role is absent from :allowed-roles cannot claim."
+  (with-aio-light (tmp)
+    (%write-phase2-task (%phase2-task :allowed-roles '(:reviewer)))
+    (signals error
+      (hngh.plugins.ai-orchestrator::claim-task
+       501 :agent "worker-a" :role :worker :route :local-12b))
+    (is (eq :queued
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))))
+
+(test phase2-second-agent-cannot-claim-claimed-task
+  "A claimed task rejects a second claimant without changing its owner."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :lease-expires-at (+ (get-universal-time) 300)))
+    (signals error
+      (hngh.plugins.ai-orchestrator::claim-task
+       501 :agent "worker-b" :role :worker :route :local-12b))
+    (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+      (is (eq :claimed (getf task :status)))
+      (is (string= "worker-a" (getf task :claimant))))))
+
+(test phase2-claim-sets-lease-expiration
+  "Claim assigns a lease from :lease-seconds or the 300-second default."
+  (with-aio-light (tmp)
+    (%write-phase2-task (%phase2-task))
+    (let ((before (get-universal-time)))
+      (hngh.plugins.ai-orchestrator::claim-task
+       501 :agent "worker-a" :role :worker :route :local-12b)
+      (let ((lease-expires-at
+              (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                    :lease-expires-at)))
+        (is (integerp lease-expires-at))
+        (is (<= (+ before 300) lease-expires-at))
+        (is (<= lease-expires-at (+ before 301)))))))
+
+(test phase2-claimant-release-requeues-for-another-agent
+  "The claimant can release a task, after which a second agent may claim it."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :lease-expires-at (+ (get-universal-time) 300)))
+    (hngh.plugins.ai-orchestrator::release-task
+     501 :agent "worker-a" :reason "handoff")
+    (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+      (is (eq :queued (getf task :status)))
+      (is (null (getf task :claimant))))
+    (hngh.plugins.ai-orchestrator::claim-task
+     501 :agent "worker-b" :role :worker :route :local-12b)
+    (is (string= "worker-b"
+                 (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                       :claimant)))))
+
+(test phase2-non-claimant-cannot-release-active-lease
+  "Release requires the recorded claimant while its lease remains active."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :status :claimed :claimant "worker-a"
+                   :lease-expires-at (+ (get-universal-time) 300)))
+    (signals error
+      (hngh.plugins.ai-orchestrator::release-task
+       501 :agent "worker-b" :reason "not mine"))
+    (let ((task (first (hngh.plugins.ai-orchestrator::read-task-queue))))
+      (is (eq :claimed (getf task :status)))
+      (is (string= "worker-a" (getf task :claimant))))))
 
 (test submit-persists-v2-defaults
   "submit-task persists the control fields required by the v2 queue format."
@@ -645,4 +773,3 @@ If EXISTS is T, create the lock file; if NIL, ensure it doesn't exist."
                (fresh (find-if (lambda (e) (eq :queued (getf e :status))) tasks)))
           (is (not (null stale)) "stale task recovered")
           (is (not (null fresh)) "fresh task remains queued due to pause")))))))
-
