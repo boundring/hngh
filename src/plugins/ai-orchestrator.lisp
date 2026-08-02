@@ -910,11 +910,13 @@ Malformed data signals an error so callers fail closed rather than dropping work
 ;;; --- Phase 2 claim/release -------------------------------------------------
 
 (defun %claim-authority-permits-role-p (authority role)
-  "Return T when ROLE may claim AUTHORITY, or signal for an unknown authority."
+  "Return T when ROLE may claim AUTHORITY, or signal for an unknown authority.
+Privileged owner and operation roles may claim any authority after the
+task-specific :allowed-roles gate has passed."
   (case authority
-    (:worker (eq role :worker))
-    (:owner (eq role :owner))
-    (:operation (eq role :operation))
+    (:worker (or (eq role :worker) (member role '(:owner :operation))))
+    (:owner (or (eq role :owner) (member role '(:owner :operation))))
+    (:operation (or (eq role :operation) (member role '(:owner :operation))))
     (otherwise (error "Task has unsupported claim authority: ~S" authority))))
 
 (defun claim-task (id &key agent role route)

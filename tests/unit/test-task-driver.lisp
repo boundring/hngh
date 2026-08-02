@@ -186,6 +186,34 @@
             (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
                   :status)))))
 
+(test phase2-owner-role-can-claim-any-authority
+  "An owner-role claimant may claim an operation-authority task."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :authority :operation :allowed-roles '(:owner)))
+    (hngh.plugins.ai-orchestrator::claim-task
+     501 :agent "pm" :role :owner :route :local-12b)
+    (is (eq :claimed
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))
+    (is (string= "pm"
+                 (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                       :claimant)))))
+
+(test phase2-operation-role-can-claim-any-authority
+  "An operation-role claimant may claim a worker-authority task."
+  (with-aio-light (tmp)
+    (%write-phase2-task
+     (%phase2-task :authority :worker :allowed-roles '(:operation)))
+    (hngh.plugins.ai-orchestrator::claim-task
+     501 :agent "operator" :role :operation :route :local-12b)
+    (is (eq :claimed
+            (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                  :status)))
+    (is (string= "operator"
+                 (getf (first (hngh.plugins.ai-orchestrator::read-task-queue))
+                       :claimant)))))
+
 (test phase2-claim-rejects-disallowed-role
   "A claimant whose role is absent from :allowed-roles cannot claim."
   (with-aio-light (tmp)
