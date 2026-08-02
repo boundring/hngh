@@ -140,3 +140,29 @@ again before expiry.
 - Verifier identity is checked against the declared `:verifier` field,
   not against model self-identification. The daemon trusts the caller's
   declared role, but the PM (human or Terra) can override any state.
+
+## ROLE-ACK lookup source
+
+**Decision:** The claim request carries the claimant's declared role and
+agent identity as parameters. The queue does NOT look up OptMem or any
+external registry to verify the declaration.
+
+Rationale:
+1. OptMem is a shared-memory signpost system, not an authority store.
+   It has no atomic semantics, no schema, and no guarantee of freshness.
+2. The queue is the authority. It records what was declared at claim
+   time. If the declaration was false, the transition log preserves the
+   evidence for audit.
+3. The verifier gate is the real enforcement: even if a worker lies
+   about its role to claim a task, it cannot mark the task done — only
+   the named verifier can.
+4. The PM (K3 or human) can revoke a claim at any time by calling
+   `release-task` with a reason.
+
+Callers pass `:role` and `:agent` in the claim request. The queue stores
+them in `:claimant-role` and `:claimant`. The `:allowed-roles` field on
+the task is checked against the declared `:role`, not against any
+external lookup.
+
+This keeps the queue self-contained, testable with fixtures, and free
+of external dependencies on OptMem or any other shared state.
