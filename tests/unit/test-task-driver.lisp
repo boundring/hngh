@@ -419,3 +419,157 @@ If EXISTS is T, create the lock file; if NIL, ensure it doesn't exist."
              (is (null write-called) "write-state was not called"))
         (setf (symbol-function 'hngh.core.state-store:write-state) orig-write)))))
 
+;;; --- H-B2: Maintenance State Gating in Tick tests ---------------------
+;;;
+;;; Tests for task-driver-tick integration with maintenance state.
+
+;;; --- Test helpers for H-B2 ---
+
+(defmacro with-maintenance-state ((maintenance-state) &body body)
+  "Run BODY with read-maintenance-state stubbed to return MAINTENANCE-STATE."
+  (let ((orig (gensym)))
+    `(let ((,orig (symbol-function 'hngh.plugins.maintenance-coordinator:read-maintenance-state)))
+       (unwind-protect
+           (progn
+             (setf (symbol-function 'hngh.plugins.maintenance-coordinator:read-maintenance-state)
+                   (lambda () ,maintenance-state))
+             ,@body)
+         (setf (symbol-function 'hngh.plugins.maintenance-coordinator:read-maintenance-state) ,orig)))))
+
+;;; --- Test cases ---
+
+(test tick-dispatches-ordinary-task-when-maintenance-pending
+  "Pacman lock exists, ordinary task in queue > task dispatched to :done."
+  (with-aio-light (tmp)
+    (with-pacman-lock (tmp t)
+      (with-delegate-stub (:completed "ok")
+        (hngh.plugins.ai-orchestrator::submit-task "ordinary task")
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+          (is (eq :done (getf entry :status))
+              "ordinary task dispatched despite maintenance-pending"))))))
+
+(defun %mark-requires-stable-system (id)
+  "Test helper: set :requires-stable-system t in the task's policy plist."
+  (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+    (let ((queue (hngh.plugins.ai-orchestrator::read-task-queue)))
+      (dolist (e queue)
+        (when (eql (getf e :id) id)
+          (setf (getf (getf e :policy) :requires-stable-system) t)))
+      (hngh.plugins.ai-orchestrator::write-task-queue queue))))
+
+(test tick-blocks-stable-system-task-when-maintenance-pending
+  "Pacman lock exists, :requires-stable-system task > task remains :queued."
+  (with-aio-light (tmp)
+    (with-pacman-lock (tmp t)
+      (with-delegate-stub (:completed "ok")
+        (let ((id (hngh.plugins.ai-orchestrator::submit-task "stable task")))
+          (%mark-requires-stable-system id))
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+          (is (eq :queued (getf entry :status))
+              "stable-system task blocked by maintenance-pending"))))))
+
+(test tick-dispatches-stable-system-task-when-clear
+  "No lock, no active flag, :requires-stable-system task > task dispatched."
+  (with-aio-light (tmp)
+    (with-maintenance-state (:clear)
+      (with-delegate-stub (:completed "ok")
+        (let ((id (hngh.plugins.ai-orchestrator::submit-task "stable task")))
+          (%mark-requires-stable-system id))
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+          (is (eq :done (getf entry :status))
+              "stable-system task dispatched when clear"))))))
+
+(test tick-blocks-all-when-maintenance-active
+  "Active flag set, both ordinary and stable-system tasks > neither dispatched."
+  (with-aio-light (tmp)
+    (with-maintenance-state (:maintenance-active)
+      (with-delegate-stub (:completed "ok")
+        (hngh.plugins.ai-orchestrator::submit-task "ordinary task")
+        (let ((id (hngh.plugins.ai-orchestrator::submit-task "stable task")))
+          (%mark-requires-stable-system id))
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let ((tasks (hngh.plugins.ai-orchestrator::list-tasks)))
+          (is (every (lambda (e) (eq :queued (getf e :status))) tasks)
+              "all tasks remain queued when maintenance-active"))))))
+
+(test tick-blocks-stable-system-when-unknown
+  "State store NOT initialized, :requires-stable-system task > task remains :queued."
+  ;; Initialize state store, then stub maintenance state to :unknown
+  (with-aio-light (tmp)
+    (with-maintenance-state (:unknown)
+      (with-delegate-stub (:completed "ok")
+        (let ((id (hngh.plugins.ai-orchestrator::submit-task "stable task")))
+          (%mark-requires-stable-system id)
+          (hngh.plugins.ai-orchestrator::task-driver-tick)
+          (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+            (is (eq :queued (getf entry :status))
+                "stable-system task blocked when unknown")))))))
+
+(test tick-persists-blocked-tasks-from-dependency-failure
+  "Task with failed dependency > returned in blocked-tasks, persisted as :blocked."
+  (with-aio-light (tmp)
+    (let* ((id1 (hngh.plugins.ai-orchestrator::submit-task "dep task"))
+           (id2 (hngh.plugins.ai-orchestrator::submit-task "dependent task")))
+      ;; Mark dependency as failed and wire up id2's :depends-on
+      (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+        (let ((queue (hngh.plugins.ai-orchestrator::read-task-queue)))
+          (dolist (e queue)
+            (cond
+              ((eql (getf e :id) id1)
+               (setf (getf e :status) :failed
+                     (getf e :finished-at) (get-universal-time)))
+              ((eql (getf e :id) id2)
+               (setf (getf e :depends-on) (list id1)))))
+          (hngh.plugins.ai-orchestrator::write-task-queue queue)))
+      (with-maintenance-state (:clear)
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let* ((tasks (hngh.plugins.ai-orchestrator::list-tasks))
+               (blocked (find id2 tasks :key (lambda (e) (getf e :id)))))
+          (is (not (null blocked)) "dependent task found")
+          (is (eq :blocked (getf blocked :status))
+              "dependent task marked :blocked")
+          (is (search "dependency" (getf blocked :blocked-reason))
+              "blocked-reason mentions dependency")))))
+
+(test tick-respects-maintenance-state-priority
+  "Active flag set AND pacman lock exists > :maintenance-active wins, all blocked."
+  (with-aio-light (tmp)
+    (hngh.core.state-store:write-state "state/maintenance/active.lisp" t)
+    (with-pacman-lock (tmp t)
+      (with-maintenance-state (:maintenance-active)
+        (with-delegate-stub (:completed "ok")
+          (hngh.plugins.ai-orchestrator::submit-task "ordinary task")
+          (hngh.plugins.ai-orchestrator::task-driver-tick)
+          (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
+            (is (eq :queued (getf entry :status))
+                "task blocked when maintenance-active overrides pending")))))))
+
+(test tick-integration-with-pause-and-stale-recovery
+  "Paused driver with stale lease and maintenance pending > pause checked first."
+  (with-aio-light (tmp)
+    (with-pacman-lock (tmp t)
+      (with-delegate-stub (:completed "ok")
+        ;; Submit a task that will go stale
+        (hngh.plugins.ai-orchestrator::submit-task "stale task")
+        (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
+          (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+                 (entry (first queue)))
+            (setf (getf entry :status) :running
+                  (getf entry :lease-until) (- (get-universal-time) 100)
+                  (getf entry :started-at) (- (get-universal-time) 200))
+            (hngh.plugins.ai-orchestrator::write-task-queue queue)))
+        ;; Pause dispatch
+        (hngh.plugins.ai-orchestrator::pause-dispatch)
+        ;; Submit fresh task
+        (hngh.plugins.ai-orchestrator::submit-task "fresh task")
+        ;; Tick should: recover stale, then check pause (blocked), not check maintenance
+        (hngh.plugins.ai-orchestrator::task-driver-tick)
+        (let* ((tasks (hngh.plugins.ai-orchestrator::list-tasks))
+               (stale (find-if (lambda (e) (eq :blocked (getf e :status))) tasks))
+               (fresh (find-if (lambda (e) (eq :queued (getf e :status))) tasks)))
+          (is (not (null stale)) "stale task recovered")
+          (is (not (null fresh)) "fresh task remains queued due to pause")))))))
+
