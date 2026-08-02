@@ -1,6 +1,6 @@
 # Decisions — Lightweight Decision Log
 
-**Last updated**: 2026-06-24
+**Last updated**: 2026-08-02
 
 This is a lightweight log of day-to-day decisions that don't warrant a full ADR.
 Architecture-level decisions live in `docs/design/architecture-decision-record.md`.
@@ -170,3 +170,27 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Context**: An alignment review (intent vs. built) plus a cross-plugin event-wiring audit found that the 12 plugins were built as well-tested but isolated islands, with real integration-fabric gaps that unit tests (plugins in isolation) don't catch: (1) Plugin Host published no `plugin.*` lifecycle events, so L3 threat observation received nothing; (2) hnghbeats subscribed to `"*.*"`, which matches nothing (a leading `*` is literal in `topic-match-p`); (3) ai-orchestrator re-processed its own `agent.completed` emissions; (4) dbus-bridge emitted `dbus.signal.*` but never `system.*`, orphaning resource-manager's `system.udev.*` subscription.
 **Decision**: Fix all four with regression tests, before M1.15. Plugin Host now emits `plugin.loaded`/`unloaded`/`reloaded`/`load-failed`; hnghbeats subscribes to `"*"`; `handle-agent-completed` ignores its own source; dbus-bridge normalizes known interfaces to `system.*` (dual-publish, keeping `dbus.signal.*`). NOT in scope (deferred): Dashboard depth (the "all from the TUI dashboard" exit criterion — own session) and runtime plugin *behavioral* observation events (`plugin.subprocess-started`, etc. — requires instrumentation, likely M2).
 **Rationale**: Cheaper to fix known wiring defects before integration tests (M1.15) so the tests validate a correct system. The fixes are surgical and restore design intent without changing the event-bus core. An event producer/consumer audit is now a recommended gate before integration testing.
+
+---
+
+## 2026-08-02
+
+### D-031: M7 wire protocol — SEXP-over-UDS
+**Context**: M7 transforms hngh into a daemon + client architecture. Need a wire protocol for daemon ↔ client communication over Unix domain sockets.
+**Decision**: Length-prefixed S-expressions over Unix sockets. 4-byte big-endian length header followed by S-expression bytes. Message types: `:request` (client→daemon with `:id`), `:response` (daemon→client matching `:id`), `:event` (daemon→client async). Security: `*read-eval* nil` at wire-protocol.lisp:135.
+**Rationale**: S-expressions are native to CL, parseable with `read` when `*read-eval*` is bound to NIL. Length-prefix framing avoids delimiter escaping. UDS is local-only, no auth needed for v0.1. TCP upgrade deferred to M3 (Network).
+
+### D-032: M7 daemon architecture — headless SBCL + systemd
+**Context**: Hngh runs as a foreground process with embedded tmux. M7 extracts daemon into a headless systemd user service.
+**Decision**: `hngh-daemon` is a headless SBCL process owning event loop, scheduler, plugin host, state store, event bus. systemd user service manages lifecycle. Clients (CLI, Emacs, TUI) connect via UDS wire protocol. Daemon stays alive when clients disconnect.
+**Rationale**: Emacs-style headless daemon pattern. Systemd provides restart/health/logging. Decoupling daemon from UI enables multiple concurrent clients and remote access (M3).
+
+### D-033: Agent Platoons v0 — shell launcher + SEXP specs
+**Context**: Need declarative, reproducible spin-up of attended multi-agent sessions with wake prompts, role contracts, and journaling.
+**Decision**: v0 is a bash launcher (`~/.local/bin/squad`) reading SEXP specs from `hngh/squads/`. Specs declare name, layout, preflight gates, member roles (cli/model/cwd/wake-template), and journal paths. Launcher creates tmux session, injects wake prompts, writes projected journal. Lisp plugin (`agent-platoons.lisp`) deferred to M9.
+**Rationale**: Shell script is fast to implement and test. SEXP is Lisp-native, parseable with `sbcl --script`. Preflight gates (MCP, systemd, model, quota, disk) abort on failure. Projected/actual journal convention provides audit trail.
+
+### D-034: Night queue task numbering — check .done/ before renumbering
+**Context**: Multiple agents staging tasks to `~/.hngh-night/tasks/` caused collisions when reusing numbers.
+**Decision**: Check `.done/` directory before numbering new tasks. Consumed tasks move to `.done/` immediately. Ledger is append-only; never reuse numbers.
+**Rationale**: Simple filesystem-based coordination. No locking needed. Agents sign notes in optmem with their name for attribution.

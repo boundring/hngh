@@ -26,11 +26,11 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 
 ## Current state (2026-08-02)
 
-- **Tests**: `make test` green — 983/983 @ f6e69dc
+- **Tests**: `make test` green — 1009/1009 @ 40785b3 (queue-v3); main 999/999 @ 79db55f
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
-- **Night queue**: 49 tasks processed (artifacts in ~/.hngh-night/artifacts/)
+- **Night queue**: 58 tasks processed (artifacts in ~/.hngh-night/artifacts/)
 - **Cost routing v2**: verified faucet ladder active (kimi-sub → copilot → gemini-free → or-free)
 - **Role split**: hermes=queue manager, opencode=Sisyphus=M7+platoon code, other opencode=code/docs
 - **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
