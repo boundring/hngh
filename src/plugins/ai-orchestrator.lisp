@@ -907,7 +907,7 @@ Malformed data signals an error so callers fail closed rather than dropping work
   (when (state-store-ready-p)
     (hngh.core.state-store:write-state *task-queue-path* queue)))
 
-;;; --- Phase 2 claim/release (RED-stage API skeletons) ----------------------
+;;; --- Phase 2 claim/release -------------------------------------------------
 
 (defun %claim-authority-permits-role-p (authority role)
   "Return T when ROLE may claim AUTHORITY, or signal for an unknown authority."
@@ -919,10 +919,7 @@ Malformed data signals an error so callers fail closed rather than dropping work
 
 (defun claim-task (id &key agent role route)
   "Claim queued task ID for AGENT.
-This RED-stage skeleton verifies the Phase 2 admission guards under the queue
-lock. Persisting the transition and emitting :TASK-CLAIMED are deliberately
-deferred to the GREEN implementation."
-  (declare (ignore route))
+Verifies admission guards and atomically persists the claim transition."
   (unless (and (integerp id) (stringp agent) role)
     (error "Claim requires an integer id, string agent, and role"))
   (bt:with-lock-held (*task-queue-lock*)
@@ -937,14 +934,32 @@ deferred to the GREEN implementation."
       (unless (%claim-authority-permits-role-p (getf task :authority) role)
         (error "Role ~S may not claim ~S-authority task ~D"
                role (getf task :authority) id))
-      (error "claim-task Phase 2 transition is not implemented"))))
+      (let* ((now (get-universal-time))
+             (lease-seconds (or (getf task :lease-seconds) 300)))
+        (unless (and (integerp lease-seconds) (plusp lease-seconds))
+          (error "Task ~D lease-seconds must be a positive integer" id))
+        (setf (getf task :status) :claimed
+              (getf task :claimant) agent
+              (getf task :claimant-role) role
+              (getf task :claimant-route) route
+              (getf task :claimed-at) now
+              (getf task :lease-expires-at) (+ now lease-seconds)
+              (getf task :transition-log)
+              (append (getf task :transition-log)
+                      (list (list :from :queued :to :claimed :at now
+                                  :by agent :reason :claim))))
+        (write-task-queue queue)
+        (when (event-bus-ready-p)
+          (ignore-errors
+            (hngh.core.event-bus:publish
+             :task-claimed
+             (list :id id :claimant agent :role role :route route :at now)
+             :source 'ai-orchestrator)))
+        task))))
 
 (defun release-task (id &key agent reason)
   "Release claimed task ID for AGENT.
-This RED-stage skeleton verifies release ownership under the queue lock. The
-state transition and :TASK-RELEASED event are intentionally deferred to the
-GREEN implementation."
-  (declare (ignore reason))
+The claimant, or any caller after expiry, atomically persists the release."
   (unless (and (integerp id) (stringp agent))
     (error "Release requires an integer id and string agent"))
   (bt:with-lock-held (*task-queue-lock*)
@@ -959,7 +974,25 @@ GREEN implementation."
         (unless (or (string= agent (or (getf task :claimant) ""))
                     (and (integerp lease-expires-at) (<= lease-expires-at now)))
           (error "Agent ~S may not release task ~D" agent id)))
-      (error "release-task Phase 2 transition is not implemented"))))
+      (let ((claimant (getf task :claimant)))
+        (setf (getf task :status) :queued
+              (getf task :claimant) nil
+              (getf task :claimant-role) nil
+              (getf task :claimant-route) nil
+              (getf task :claimed-at) nil
+              (getf task :lease-expires-at) nil
+              (getf task :transition-log)
+              (append (getf task :transition-log)
+                      (list (list :from :claimed :to :queued :at now
+                                  :by agent :reason reason))))
+        (write-task-queue queue)
+        (when (event-bus-ready-p)
+          (ignore-errors
+            (hngh.core.event-bus:publish
+             :task-released
+             (list :id id :claimant claimant :reason reason :at now)
+             :source 'ai-orchestrator)))
+        task))))
 
 (defun %update-queue-entry (id fn)
   "Apply FN to the entry with :id ID inside the persisted queue (under lock)."
