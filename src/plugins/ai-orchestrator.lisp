@@ -961,11 +961,70 @@ This function reads and writes the task queue under *task-queue-lock*."
         (write-task-queue queue))
       count)))
 
-;;; --- Task driver tick (updated for H-A3) ------------------------------------
+;;; --- H-A2: Pure eligibility selector -----------------------------------------
+
+(defun next-eligible-task (queue now maintenance-state)
+  "Select the oldest eligible task from QUEUE given NOW and MAINTENANCE-STATE.
+Returns two values:
+1. The eligible task plist (oldest by :submitted-at, then :id), or NIL if none.
+2. A list of tasks that should be persisted as :blocked (due to failed/cancelled deps).
+The function is PURE w.r.t. the queue argument: no state-store access."
+  (labels ((dep-done-p (dep-id)
+             (let ((dep (find dep-id queue :key (lambda (e) (getf e :id)))))
+               (and dep (eq (getf dep :status) :done))))
+           (running-lease-blocks-p ()
+             (some (lambda (other)
+                     (and (eq (getf other :status) :running)
+                          (let ((lease (getf other :lease-until)))
+                            (or (null lease) (> lease now)))))
+                   queue))
+           (task-eligible-p (task)
+             (and (eq (getf task :status) :queued)
+                  (every #'dep-done-p (getf task :depends-on))
+                  (or (null (getf task :not-before))
+                      (<= (getf task :not-before) now))
+                  (not (running-lease-blocks-p))
+                  (not (eq (getf task :authority) :proposed))
+                  (or (not (eq (getf task :authority) :approval))
+                      (and (integerp (getf task :approval-at))
+                           (> (getf task :approval-at) 0)))
+                  (let ((requires-stable (getf (getf task :policy) :requires-stable-system)))
+                    (or (not requires-stable)
+                        (eq maintenance-state :clear))))))
+    (if (eq maintenance-state :maintenance-active)
+        (values nil (%blocked-by-failed-deps queue now))
+        (let* ((candidates (remove-if-not #'task-eligible-p queue))
+               (sorted (sort (copy-list candidates)
+                              (lambda (a b)
+                                (let ((sa (getf a :submitted-at))
+                                      (sb (getf b :submitted-at)))
+                                  (or (< sa sb)
+                                      (and (= sa sb)
+                                           (< (getf a :id) (getf b :id)))))))))
+          (values (first sorted) (%blocked-by-failed-deps queue now))))))
+
+(defun %blocked-by-failed-deps (queue now)
+  "Return a list of QUEUE tasks whose dependency has failed/cancelled,
+each returned with :status :blocked and :blocked-reason set."
+  (let ((blocked-tasks '()))
+    (dolist (task queue)
+      (when (eq (getf task :status) :queued)
+        (dolist (dep-id (getf task :depends-on))
+          (let ((dep (find dep-id queue :key (lambda (e) (getf e :id)))))
+            (when (and dep (member (getf dep :status) '(:failed :cancelled)))
+              (let ((blocked (copy-list task)))
+                (setf (getf blocked :status) :blocked
+                      (getf blocked :blocked-reason)
+                      (format nil "dependency ~D ~A" dep-id (getf dep :status))
+                      (getf blocked :finished-at) now)
+                (push blocked blocked-tasks)))))))
+    (nreverse blocked-tasks)))
+
+;;; --- Task driver tick (updated for H-B2) -------------------------------------
 
 (defun task-driver-tick ()
-  "One driver cycle: recover stale leases, check pause, then run the oldest
-:queued task via DELEGATE, persisting the outcome.
+  "One driver cycle: recover stale leases, check pause, check maintenance,
+then run the oldest eligible task via DELEGATE, persisting the outcome.
 The delegate call runs outside the queue lock (long inference)."
   ;; 1. Recover stale leases first — frees the execution slot.
   (recover-stale-task-leases)
@@ -973,38 +1032,47 @@ The delegate call runs outside the queue lock (long inference)."
   (let ((now (get-universal-time)))
     (when (dispatch-paused-p)
       (unless (%maybe-auto-resume now)
-        (return-from task-driver-tick nil))))
-  ;; 3. Dispatch.
-  (let ((entry (find :queued (or (read-task-queue) '())
-                     :key (lambda (e) (getf e :status)))))
-    (when entry
-      (let ((id (getf entry :id))
-            (task (getf entry :task))
-            (policy (getf entry :policy)))
-        (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
-        (handler-case
-            (let* ((agent (delegate task :preferences policy))
-                   (ok (eq (agent-info-status agent) :completed))
-                   (result (agent-info-result agent)))
-              (%update-queue-entry
-               id (lambda (e)
-                    (setf (getf e :status) (if ok :done :failed)
-                          (getf e :result) (and (stringp result) result)
-                          (getf e :error) (unless ok (or (and (stringp result) result) "unknown"))
-                          (getf e :finished-at) (get-universal-time))))
-              (when (event-bus-ready-p)
-                (ignore-errors
-                 (hngh.core.event-bus:publish :task-completed
-                                              (list :id id :status (if ok :done :failed))
-                                              :source 'ai-orchestrator)))
-              id)
-          (error (c)
+        (return-from task-driver-tick nil)))
+    ;; 3. Read maintenance state and select eligible task.
+    (let* ((maintenance-state (hngh.plugins.maintenance-coordinator:read-maintenance-state))
+           (queue (or (read-task-queue) '())))
+      (multiple-value-bind (eligible-task blocked-tasks)
+          (next-eligible-task queue now maintenance-state)
+        (dolist (blocked blocked-tasks)
+          (let ((bid (getf blocked :id)))
             (%update-queue-entry
-             id (lambda (e)
-                  (setf (getf e :status) :failed
-                        (getf e :error) (princ-to-string c)
-                        (getf e :finished-at) (get-universal-time))))
-            nil))))))
+             bid (lambda (e)
+                   (setf (getf e :status) :blocked
+                         (getf e :blocked-reason) (getf blocked :blocked-reason)
+                         (getf e :finished-at) (get-universal-time))))))
+        (when eligible-task
+          (let ((id (getf eligible-task :id))
+                (task (getf eligible-task :task))
+                (policy (getf eligible-task :policy)))
+            (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
+            (handler-case
+                (let* ((agent (delegate task :preferences policy))
+                       (ok (eq (agent-info-status agent) :completed))
+                       (result (agent-info-result agent)))
+                  (%update-queue-entry
+                   id (lambda (e)
+                        (setf (getf e :status) (if ok :done :failed)
+                              (getf e :result) (and (stringp result) result)
+                              (getf e :error) (unless ok (or (and (stringp result) result) "unknown"))
+                              (getf e :finished-at) (get-universal-time))))
+                  (when (event-bus-ready-p)
+                    (ignore-errors
+                     (hngh.core.event-bus:publish :task-completed
+                                                  (list :id id :status (if ok :done :failed))
+                                                  :source 'ai-orchestrator)))
+                  id)
+              (error (c)
+                (%update-queue-entry
+                 id (lambda (e)
+                      (setf (getf e :status) :failed
+                            (getf e :error) (princ-to-string c)
+                            (getf e :finished-at) (get-universal-time))))
+                nil))))))))
 
 (defun start-task-driver (&key (tick-seconds 5))
   "(Re)register the task driver on the scheduler. Returns the schedule id.
