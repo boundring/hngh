@@ -544,15 +544,22 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)
-  (:export #:main
-           #:client-connect
-           #:client-disconnect
-           #:send-request
-           #:cmd-health
-           #:cmd-status
-           #:cmd-submit-task
-           #:cmd-list-tasks
-           #:cmd-watch
-           #:cmd-pause
-           #:cmd-resume
+(:export #:main
+#:client-connect
+#:client-disconnect
+#:send-request
+#:cmd-health
+#:cmd-status
+#:cmd-submit-task
+#:cmd-list-tasks
+#:cmd-watch
+#:cmd-pause
+#:cmd-resume
            #:cmd-stop-daemon))
+
+(defpackage :hngh.core.ascii-art
+  (:documentation "Austere brutalist ASCII art and megastructure layout utilities.")
+  (:use :cl)
+  (:export #:print-megastructure-header
+           #:print-brutalist-box
+           #:megastructure-banner))
