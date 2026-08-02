@@ -1,13 +1,13 @@
 ;;;; hngh.asd — ASDF system definition for Hngh
 ;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
-;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+;;;; SPDX-FileCopyrightText: 2026 boundring
 
 (defsystem "hngh"
   :description "System harness for CachyOS/Arch Linux with AI agent orchestration"
   :version "0.0.1"
   :license "AGPL-3.0-or-later"
-  :author "boundring <boundring@gmail.com>"
+  :author "boundring"
   :depends-on (;; Core dependencies
                ;; Now available via pacman + Quicklisp:
                :bordeaux-threads  ; mutexes for thread-safe shared state
@@ -18,6 +18,7 @@
                ;;   :cl-dbus      — for dbus Bridge upgrade
                ;;   :cl-charms    — for Dashboard TUI upgrade
                ;;   :sqlite       — for State Store locks (M1+)
+               :jsown             ; JSON schema validation for model probes
                )
   :pathname "src/"
   :serial t
@@ -30,10 +31,13 @@
                (:file "core/supervisor")
                (:file "core/scheduler")
                (:file "core/threat-detection")
-(:file "core/resource-manager")
+               (:file "core/resource-manager")
                (:file "core/wire-protocol")
                (:file "core/daemon")
                (:file "core/main")
+                ;; Data modules (loaded at runtime with *read-eval* nil, not compiled)
+                (:static-file "data/squads.lisp")
+                (:static-file "data/model-probes.lisp")
                 ;; First-party plugins:
                 (:file "plugins/dbus-bridge")
                 (:file "plugins/dashboard-tui")
@@ -61,7 +65,7 @@
   :serial t
   :components ((:file "main"))
   :build-operation "program-op"
-  :build-pathname "hngh"
+  :build-pathname "hngh-client"
   :entry-point "hngh.client:main")
 
 (defsystem "hngh/tests"
@@ -97,7 +101,7 @@
                  (:file "test-backup-manager")
                  (:file "test-daemon")
                  (:file "test-client"))
-    :perform (test-op (op c)
+   :perform (test-op (op c)
                         (declare (ignore op))
                         (uiop:symbol-call :hngh.tests :run-tests)
                         (values)))

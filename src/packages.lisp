@@ -88,6 +88,21 @@ All core component implementations live in sub-packages of hngh.core.")
            #:*config*
            #:*default-config*))
 
+(defpackage :hngh.data.model-probes
+  (:documentation "Model benchmark probe suite — procedural scorers for model evaluation.")
+  (:use :cl :hngh.core)
+  (:export #:*model-probes*
+           #:run-probe
+           #:run-probe-suite
+           #:probe-suite-report
+           #:make-scorer-exact
+           #:make-scorer-regex
+           #:make-scorer-keywords
+           #:make-scorer-property
+           #:make-scorer-min-lines
+           #:make-scorer-no-forbidden
+           #:make-scorer-combinator))
+
 (defpackage :hngh.core.event-bus
   (:documentation "Event Bus (A2) — pub/sub nervous system.")
   (:use :cl)
