@@ -12,6 +12,7 @@
                ;; Now available via pacman + Quicklisp:
                :bordeaux-threads  ; mutexes for thread-safe shared state
                :cl-ppcre          ; regex for dbus signal parsing
+               :babel             ; UTF-8 encoding/decoding for wire protocol
                ;; Future dependencies (available via Quicklisp when needed):
                ;;   :cl-json      — for AI tool hub (M1.6)
                ;;   :cl-dbus      — for dbus Bridge upgrade
@@ -29,7 +30,9 @@
                (:file "core/supervisor")
                (:file "core/scheduler")
                (:file "core/threat-detection")
-               (:file "core/resource-manager")
+(:file "core/resource-manager")
+               (:file "core/wire-protocol")
+               (:file "core/daemon")
                (:file "core/main")
                 ;; First-party plugins:
                 (:file "plugins/dbus-bridge")
@@ -47,12 +50,22 @@
                  (:file "plugins/knowledge-base")
                  (:file "plugins/llm-threat-detector")
                  (:file "plugins/backup-manager")
-                    )
+                   )
   :in-order-to ((test-op (test-op "hngh/tests"))))
+
+(defsystem "hngh/client"
+  :description "Hngh Client CLI — thin client for daemon wire protocol"
+  :depends-on ("hngh" "babel" "sb-bsd-sockets")
+  :pathname "src/client/"
+  :serial t
+  :components ((:file "main"))
+  :build-operation "program-op"
+  :build-pathname "hngh"
+  :entry-point "hngh.client:main")
 
 (defsystem "hngh/tests"
   :description "Test suite for Hngh"
-  :depends-on ("hngh" "fiveam")
+  :depends-on ("hngh" "hngh/client" "fiveam")
   :pathname "tests/unit/"
   :serial t
   :components ((:file "packages")
@@ -79,8 +92,10 @@
                  (:file "test-sentry")
                  (:file "test-hnghbeats")
                  (:file "test-knowledge-base")
-                 (:file "test-llm-threat-detector")
-                 (:file "test-backup-manager"))
+                (:file "test-llm-threat-detector")
+                 (:file "test-backup-manager")
+                 (:file "test-daemon")
+                 (:file "test-client"))
     :perform (test-op (op c)
                         (declare (ignore op))
                         (uiop:symbol-call :hngh.tests :run-tests)

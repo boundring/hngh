@@ -1,0 +1,20 @@
+# Hngh M7 Daemon — systemd user unit (client-server mode)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
+
+[Unit]
+Description=Hngh daemon — headless event loop + Unix socket server (M7)
+After=network.target unsloth-studio.service
+Wants=unsloth-studio.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hngh --daemon
+Restart=on-failure
+RestartSec=5
+
+# Environment
+Environment=HNGH_HOME=%h/.hngh
+
+[Install]
+WantedBy=default.target

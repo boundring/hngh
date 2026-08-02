@@ -14,13 +14,14 @@ BINDIR ?= $(PREFIX)/bin
 
 BUILD_DIR = bin
 BINARY = $(BUILD_DIR)/hngh
+CLIENT_BINARY = $(BUILD_DIR)/hngh-client
 DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
 .PHONY: all run clean test check install uninstall help
 
-all: $(BINARY)
+all: $(BINARY) $(CLIENT_BINARY)
 
 ## Build the Hngh SBCL image as a standalone binary
 $(BINARY): hngh.asd $(LISP_FILES) | $(BUILD_DIR)
@@ -32,6 +33,17 @@ $(BINARY): hngh.asd $(LISP_FILES) | $(BUILD_DIR)
 
 ## Build the Hngh SBCL image (alias for default target)
 build: $(BINARY)
+
+## Build the Hngh client CLI as a standalone binary (M7)
+$(CLIENT_BINARY): hngh.asd $(LISP_FILES) $(wildcard src/client/*.lisp) | $(BUILD_DIR)
+	$(SBCL) $(SBCL_FLAGS) \
+		--eval "(require 'asdf)" \
+		--eval "(push (truename \".\") asdf:*central-registry*)" \
+		--eval "(asdf:load-system :hngh/client)" \
+		--eval "(sb-ext:save-lisp-and-die \"$(CLIENT_BINARY)\" :executable t :save-runtime-options t :toplevel 'hngh.client:main)"
+
+## Build the client CLI (alias)
+build-client: $(CLIENT_BINARY)
 
 ## Build the system daemon (C)
 daemon: $(DAEMON_BINARY)
@@ -72,13 +84,14 @@ repl:
 		--eval "(asdf:load-system :hngh)"
 
 ## Install binaries to BINDIR
-install: $(BINARY) $(DAEMON_BINARY)
+install: $(BINARY) $(CLIENT_BINARY) $(DAEMON_BINARY)
 	install -Dm755 $(BINARY) $(DESTDIR)$(BINDIR)/hngh
+	install -Dm755 $(CLIENT_BINARY) $(DESTDIR)$(BINDIR)/hngh-client
 	install -Dm755 $(DAEMON_BINARY) $(DESTDIR)$(BINDIR)/hngh-system
 
 ## Uninstall binaries
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/hngh $(DESTDIR)$(BINDIR)/hngh-system
+	rm -f $(DESTDIR)$(BINDIR)/hngh $(DESTDIR)$(BINDIR)/hngh-client $(DESTDIR)$(BINDIR)/hngh-system
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)

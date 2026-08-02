@@ -132,11 +132,15 @@ If any step fails, already-started components are shut down in reverse order."
            (hngh.plugins.mission-control:init)
            (hngh.plugins.emacs-daemon:init)
            (hngh.plugins.sentry:init)
+           ;; M7: daemon core + Unix socket server (guarded; failure must not block startup)
+           (ignore-errors (hngh.core.daemon:init))
+           (ignore-errors (hngh.core.daemon:daemon-start :hngh-home hngh-home))
            (setf *running* t)
            (hngh.core:log-info "Hngh started")
            t)
      (unless *running*
        (hngh.core:log-error "Startup failed — rolling back")
+       (ignore-errors (hngh.core.daemon:shutdown))
        (ignore-errors (hngh.plugins.llm-threat-detector:shutdown))
        (ignore-errors (hngh.plugins.mission-control:shutdown))
        (ignore-errors (hngh.plugins.emacs-daemon:shutdown))
@@ -173,6 +177,8 @@ Shutdown sequence (reverse of startup):
     (hngh.core:log-warn "Hngh is not running")
     (return-from stop nil))
   (hngh.core:log-info "Stopping Hngh...")
+  ;; M7: stop daemon socket server first (started last, after plugins)
+  (ignore-errors (hngh.core.daemon:shutdown))
   ;; Stop first-party plugins (reverse order)
   (ignore-errors (hngh.plugins.llm-threat-detector:shutdown))
   (ignore-errors (hngh.plugins.mission-control:shutdown))
@@ -222,6 +228,8 @@ Used when building a standalone executable via `make build`."
        (format t "  --help             Print this help and exit~%")
        (format t "  --hngh-home PATH   Set state directory (default: ~~/.hngh/)~%")
        (format t "  --log-level LEVEL  Set log level: debug, info, warn, error~%")
+       (format t "  --daemon           Run as daemon (default; Unix socket at ~~/.hngh/daemon/socket)~%")
+       (format t "  --once             Single task-driver tick, then exit~%")
        (uiop:quit 0))
       (t
        ;; Parse options

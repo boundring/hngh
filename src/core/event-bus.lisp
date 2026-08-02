@@ -73,25 +73,33 @@ Pattern can contain a trailing * for wildcard matching:
   \"system.*\" matches \"system.pacman.transaction-completed\"
   \"system.pacman.*\" matches \"system.pacman.transaction-completed\"
   \"system.pacman.transaction-completed\" matches only itself."
-  (cond
-    ;; Exact match
-    ((string= pattern topic) t)
+  (let ((pattern (topic-string pattern))
+        (topic (topic-string topic)))
+    (cond
+      ;; Exact match
+      ((string= pattern topic) t)
     ;; Wildcard: ends with ".*"
-    ((and (>= (length pattern) 2)
-          (char= (char pattern (- (length pattern) 1)) #\*)
-          (char= (char pattern (- (length pattern) 2)) #\.))
-     (let ((prefix (subseq pattern 0 (- (length pattern) 2))))
-       (and (>= (length topic) (length prefix))
-            (string= (subseq topic 0 (length prefix)) prefix)
-            (or (= (length topic) (length prefix))
-                (char= (char topic (length prefix)) #\.)))))
+      ((and (>= (length pattern) 2)
+            (char= (char pattern (- (length pattern) 1)) #\*)
+            (char= (char pattern (- (length pattern) 2)) #\.))
+       (let ((prefix (subseq pattern 0 (- (length pattern) 2))))
+         (and (>= (length topic) (length prefix))
+              (string= (subseq topic 0 (length prefix)) prefix)
+              (or (= (length topic) (length prefix))
+                  (char= (char topic (length prefix)) #\.)))))
     ;; Wildcard: ends with just "*"
-    ((and (>= (length pattern) 1)
-          (char= (char pattern (- (length pattern) 1)) #\*))
-     (let ((prefix (subseq pattern 0 (- (length pattern) 1))))
-       (string= (subseq topic 0 (min (length prefix) (length topic)))
-                prefix)))
-    (t nil)))
+      ((and (>= (length pattern) 1)
+            (char= (char pattern (- (length pattern) 1)) #\*))
+       (let ((prefix (subseq pattern 0 (- (length pattern) 1))))
+         (string= (subseq topic 0 (min (length prefix) (length topic)))
+                  prefix)))
+      (t nil))))
+
+(defun topic-string (topic)
+  "Return the case-normalized string representation of a topic designator."
+  (etypecase topic
+    (string (string-downcase topic))
+    (symbol (string-downcase (symbol-name topic)))))
 
 ;;; --- Event journal ---
 
