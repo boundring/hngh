@@ -255,10 +255,12 @@
   (with-aio-light (tmp)
     (hngh.plugins.ai-orchestrator::submit-task "running forever")
     (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
-      (hngh.plugins.ai-orchestrator::write-task-queue
-        (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
-                     (list :status :running :lease-until nil
-                           :started-at (- (get-universal-time) 999))))))
+      (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+             (entry (first queue)))
+        (setf (getf entry :status) :running
+              (getf entry :lease-until) nil
+              (getf entry :started-at) (- (get-universal-time) 999))
+        (hngh.plugins.ai-orchestrator::write-task-queue queue)))
     (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases))
         "no tasks recovered when lease-until is nil")
     (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
@@ -269,17 +271,19 @@
   "Non-:running tasks are never touched by recover-stale-task-leases."
   (with-aio-light (tmp)
     (hngh.plugins.ai-orchestrator::submit-task "queued task")
-    (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+    (is (zerop (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
     (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
       (is (eq :queued (getf entry :status)))))
 
   (with-aio-light (tmp)
     (hngh.plugins.ai-orchestrator::submit-task "done task")
     (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
-      (hngh.plugins.ai-orchestrator::write-task-queue
-        (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
-                     (list :status :done :finished-at (get-universal-time))))))
-    (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+      (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+             (entry (first queue)))
+        (setf (getf entry :status) :done
+              (getf entry :finished-at) (get-universal-time))
+        (hngh.plugins.ai-orchestrator::write-task-queue queue)))
+    (is (zerop (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
     (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
       (is (eq :done (getf entry :status))))))
 
@@ -289,11 +293,13 @@
     (let ((future (+ (get-universal-time) 300)))
       (hngh.plugins.ai-orchestrator::submit-task "actively running")
       (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
-        (hngh.plugins.ai-orchestrator::write-task-queue
-          (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
-                       (list :status :running :lease-until future
-                             :started-at (- (get-universal-time) 10))))))
-      (is (null (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
+        (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+               (entry (first queue)))
+          (setf (getf entry :status) :running
+                (getf entry :lease-until) future
+                (getf entry :started-at) (- (get-universal-time) 10))
+          (hngh.plugins.ai-orchestrator::write-task-queue queue)))
+      (is (zerop (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
       (let ((entry (first (hngh.plugins.ai-orchestrator::list-tasks))))
         (is (eq :running (getf entry :status)))))))
 
@@ -304,14 +310,16 @@
       (hngh.plugins.ai-orchestrator::submit-task "stale 1")
       (hngh.plugins.ai-orchestrator::submit-task "stale 2")
       (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
-        (let* ((queue (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
+        (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
                (e1 (first queue))
                (e2 (second queue)))
-          (hngh.plugins.ai-orchestrator::write-task-queue
-            (list (append e1 (list :status :running :lease-until past
-                                   :started-at (- (get-universal-time) 120)))
-                  (append e2 (list :status :running :lease-until past
-                                   :started-at (- (get-universal-time) 100)))))))
+          (setf (getf e1 :status) :running
+                (getf e1 :lease-until) past
+                (getf e1 :started-at) (- (get-universal-time) 120))
+          (setf (getf e2 :status) :running
+                (getf e2 :lease-until) past
+                (getf e2 :started-at) (- (get-universal-time) 100))
+          (hngh.plugins.ai-orchestrator::write-task-queue queue)))
       (is (= 2 (hngh.plugins.ai-orchestrator::recover-stale-task-leases)))
       (let ((blocked (hngh.plugins.ai-orchestrator::list-tasks :status :blocked)))
         (is (= 2 (length blocked)))))))
@@ -323,10 +331,12 @@
       ;; Queue a stale running task.
       (hngh.plugins.ai-orchestrator::submit-task "stale")
       (bt:with-lock-held (hngh.plugins.ai-orchestrator::*task-queue-lock*)
-        (hngh.plugins.ai-orchestrator::write-task-queue
-          (list (append (first (or (hngh.plugins.ai-orchestrator::read-task-queue) '()))
-                       (list :status :running :lease-until past
-                             :started-at (- (get-universal-time) 180))))))
+        (let* ((queue (hngh.plugins.ai-orchestrator::read-task-queue))
+               (entry (first queue)))
+          (setf (getf entry :status) :running
+                (getf entry :lease-until) past
+                (getf entry :started-at) (- (get-universal-time) 180))
+          (hngh.plugins.ai-orchestrator::write-task-queue queue)))
       ;; Queue a fresh task that should dispatch.
       (with-delegate-stub (:completed "fresh result")
         (hngh.plugins.ai-orchestrator::submit-task "fresh task")
@@ -334,5 +344,5 @@
         (let* ((tasks (hngh.plugins.ai-orchestrator::list-tasks))
                (stale (find-if (lambda (e) (eq :blocked (getf e :status))) tasks))
                (fresh (find-if (lambda (e) (eq :done (getf e :status))) tasks)))
-          (is stale "stale task was recovered to :blocked")
-          (is fresh "fresh task was dispatched to :done"))))))
+          (is (not (null stale)) "stale task was recovered to :blocked")
+          (is (not (null fresh)) "fresh task was dispatched to :done"))))))
