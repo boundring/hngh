@@ -514,6 +514,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:kb-record-pattern
            #:kb-status))
 
+(defpackage :hngh.plugins.config-watcher
+  (:documentation "Config Watcher (M2 Wave 2) — watches Hermes config files for changes and emits targeted reload events.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status))
 (defpackage :hngh.plugins.llm-threat-detector
   (:documentation "LLM Threat Detector (B5) — L2/L4 semantic and behavioral threat review.")
   (:use :cl :hngh.core)
