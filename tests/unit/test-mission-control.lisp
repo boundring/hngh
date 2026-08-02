@@ -78,3 +78,109 @@
           (declare (ignore out))
           (is (zerop code)))
         (is (not (hngh.plugins.mission-control::session-alive-p "hngh-mc-test"))))))
+
+(test squad-registry-loads-local-definitions
+  "The data registry is readable without evaluating executable forms."
+  (let* ((root (asdf:system-source-directory :hngh))
+         (registry (hngh.plugins.mission-control:read-squad-registry
+                    (merge-pathnames "data/squads.lisp" root)))
+         (names (mapcar (lambda (definition) (getf definition :name)) registry)))
+    (is (= 2 (length registry)))
+    (is (member "day-queue" names :test #'string=))
+    (is (member "night-ralph" names :test #'string=))
+    (is (every (lambda (definition)
+                 (every (lambda (role)
+                          (hngh.plugins.mission-control::local-model-p
+                           (getf role :model)))
+                        (getf definition :roles)))
+               registry))))
+
+(test squad-lifecycle-persists-continuation-and-forwards
+  "Squad lifecycle is testable without launching an external harness."
+  (let* ((home (make-tmp-home))
+         (root (asdf:system-source-directory :hngh))
+         (registry (merge-pathnames "data/squads.lisp" root))
+         (calls '())
+         (starting-status nil)
+         (hngh.plugins.mission-control::*squad-command-runner*
+           (lambda (program args)
+             (push (list program args) calls)
+             (unless (string= program "tmux")
+               (setf starting-status
+                     (getf (hngh.plugins.mission-control::read-squad-state
+                            (hngh.plugins.mission-control::squad-state-path
+                             "day-queue" home))
+                           :status)))
+             (if (and (string= program "tmux")
+                      (string= (first args) "list-panes"))
+                (values 0 (format nil "%1~%%2~%") "")
+                 (values 0 "started" "")))))
+    (unwind-protect
+         (progn
+           (let ((state (hngh.plugins.mission-control:squad-up
+                         "day-queue"
+                         :registry-path registry
+                         :hngh-home home)))
+             (is (eq :starting starting-status))
+             (is (eq :running (getf state :status)))
+             (is (eq :hngh (getf state :ownership)))
+             (is (not (null (probe-file (getf state :forward-prompt-path))))))
+           (multiple-value-bind (state pane-count)
+               (hngh.plugins.mission-control:squad-forward-prompt
+                "day-queue" "resume from the shared queue"
+                :hngh-home home)
+             (is (= 2 pane-count))
+             (is (= 1 (getf state :forward-count)))
+             (is (search "resume from the shared queue"
+                         (uiop:read-file-string
+                          (getf state :forward-prompt-path)))))
+           (let ((state (hngh.plugins.mission-control:squad-down
+                         "day-queue" :hngh-home home)))
+             (is (eq :stopped (getf state :status))))
+           (is (>= (length calls) 5)))
+      (cleanup-tmp-home home))))
+
+(test squad-launch-failure-persists-failed-state
+  "A launcher failure leaves readable failed ownership evidence."
+  (let* ((home (make-tmp-home))
+         (root (asdf:system-source-directory :hngh))
+         (registry (merge-pathnames "data/squads.lisp" root))
+         (failure-runner
+           (lambda (program args)
+             (declare (ignore program args))
+             (values 17 "" "launcher unavailable")))
+         (hngh.plugins.mission-control::*squad-command-runner* failure-runner))
+    (unwind-protect
+         (progn
+           (signals simple-error
+             (hngh.plugins.mission-control:squad-up
+              "day-queue" :registry-path registry :hngh-home home))
+           (let ((state (hngh.plugins.mission-control::read-squad-state
+                         (hngh.plugins.mission-control::squad-state-path
+                          "day-queue" home))))
+             (is (eq :failed (getf state :status)))
+             (is (search "launcher unavailable" (getf state :error)))
+             (signals simple-error
+               (hngh.plugins.mission-control:squad-down
+                "day-queue" :hngh-home home))))
+      (cleanup-tmp-home home))))
+
+(test squad-state-publish-preserves-prior-state-on-rename-failure
+  "Atomic publication does not destroy the prior readable state."
+  (let* ((home (make-tmp-home))
+         (path (merge-pathnames "squads/state.lisp" home)))
+    (unwind-protect
+         (progn
+           (hngh.plugins.mission-control::write-squad-state
+            path '(:status :old))
+           (let ((hngh.plugins.mission-control::*squad-state-rename-function*
+                   (lambda (source target)
+                     (declare (ignore source target))
+                     (error "injected rename failure"))))
+             (signals simple-error
+               (hngh.plugins.mission-control::write-squad-state
+                path '(:status :new))))
+           (is (eq :old
+                   (getf (hngh.plugins.mission-control::read-squad-state path)
+                         :status))))
+      (cleanup-tmp-home home))))
