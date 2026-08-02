@@ -8,8 +8,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/hngh
-ExecStop=/usr/local/bin/hngh --stop
+ExecStart=%h/.local/bin/hngh
 Restart=on-failure
 RestartSec=5
 

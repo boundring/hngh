@@ -413,7 +413,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
             #:list-tasks
             #:task-driver-tick
             #:start-task-driver
-            #:stop-task-driver))
+            #:stop-task-driver
+            ;; Pause/Resume and Stale-Lease Recovery (H-A3)
+            #:pause-dispatch
+            #:resume-dispatch
+            #:dispatch-paused-p
+            #:dispatch-resume-at
+            #:recover-stale-task-leases))
 
 (defpackage :hngh.plugins.mission-control
   (:documentation "Mission Control (M6) — tiled tmux observability and agent summoning.")
@@ -453,6 +459,15 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:context-pressure
            #:latest-context-size
            #:*secret-patterns*))
+
+(defpackage :hngh.plugins.maintenance-coordinator
+  (:documentation "Maintenance Coordinator (H-B1) — read-only maintenance state from state store and pacman lock.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:read-maintenance-state))
 
 (defpackage :hngh.plugins.hnghbeats
   (:documentation "Hnghbeats (B6) — scheduler-driven daily event condensation.")

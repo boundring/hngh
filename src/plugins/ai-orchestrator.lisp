@@ -68,6 +68,24 @@ Key :default holds the fallback policy used when no specific policy is specified
 (defvar *policy-state-path* "config/plugins/ai-orchestrator/policies.lisp"
   "Relative path within the state store for persisting policies.")
 
+;;; --- H-A3: Pause/Resume dispatch state -------------------------------------
+;;;
+;;; The dispatch pause is an in-memory flag (not persisted) because it is a
+;;; runtime control: if the image restarts, the driver starts unpaused.
+;;; The optional resume_at is a universal-time timestamp; when set, the tick
+;;; auto-resumes once `now >= resume_at`.
+
+(defvar *dispatch-paused* nil
+  "When T, task-driver-tick does not dispatch new work.
+Cleared by resume-dispatch or auto-resume when resume_at has passed.")
+
+(defvar *dispatch-resume-at* nil
+  "Universal-time timestamp at which the pause auto-clears, or NIL for
+an indefinite pause (manual resume only).")
+
+(defvar *dispatch-lock* (bt:make-lock "hngh-dispatch-pause")
+  "Mutex protecting *dispatch-paused* and *dispatch-resume-at*.")
+
 ;;; --- Default policy -------------------------------------------------------
 
 (defparameter *default-policy*
@@ -690,6 +708,8 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
   "Initialize the AI orchestrator plugin."
   (declare (ignore hngh-home))
   (setf *running* nil *event-subscriptions* '())
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* nil *dispatch-resume-at* nil))
   (bt:with-lock-held (*agents-lock*)
     (setf *agents* (make-hash-table :test 'eql) *next-agent-id* 0))
   (bt:with-lock-held (*policies-lock*)
@@ -731,6 +751,8 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
           (error (c)
             (hngh.core:log-warn "Error unsubscribing ~D: ~A" sub-id c)))))
     (setf *event-subscriptions* '())
+    (bt:with-lock-held (*dispatch-lock*)
+      (setf *dispatch-paused* nil *dispatch-resume-at* nil))
     (bt:with-lock-held (*agents-lock*)
       (clrhash *agents*) (setf *next-agent-id* 0))
     (bt:with-lock-held (*policies-lock*)
@@ -865,39 +887,192 @@ Default policy routes to the free local tool (:local-openai-api)."
         (remove-if-not (lambda (e) (eq (getf e :status) status)) queue)
         queue)))
 
+;;; --- H-A3: Pause/Resume dispatch -------------------------------------------
+
+(defun dispatch-paused-p ()
+  "Return T when new task dispatch is paused."
+  (bt:with-lock-held (*dispatch-lock*)
+    *dispatch-paused*))
+
+(defun dispatch-resume-at ()
+  "Return the resume_at universal-time, or NIL for an indefinite pause."
+  (bt:with-lock-held (*dispatch-lock*)
+    *dispatch-resume-at*))
+
+(defun pause-dispatch (&key (resume-at nil))
+  "Pause new task dispatch. When RESUME-AT (a universal time) is supplied,
+task-driver-tick will auto-resume once `now >= resume_at`. Without RESUME-AT
+the pause lasts until resume-dispatch is called manually."
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* t
+          *dispatch-resume-at* resume-at))
+  (hngh.core:log-info "Task dispatch paused~@[ until ~D~]" resume-at))
+
+(defun resume-dispatch ()
+  "Clear the dispatch pause and resume_at. Idempotent — safe to call when
+not paused."
+  (bt:with-lock-held (*dispatch-lock*)
+    (setf *dispatch-paused* nil
+          *dispatch-resume-at* nil))
+  (hngh.core:log-info "Task dispatch resumed"))
+
+(defun %maybe-auto-resume (now)
+  "If paused and resume_at is set and has passed, clear the pause.
+Returns T if the pause was auto-cleared (meaning the tick may proceed)."
+  (bt:with-lock-held (*dispatch-lock*)
+    (when (and *dispatch-paused*
+               *dispatch-resume-at*
+               (>= now *dispatch-resume-at*))
+      (let ((resume-at *dispatch-resume-at*))
+        (setf *dispatch-paused* nil
+              *dispatch-resume-at* nil)
+        (hngh.core:log-info "Task dispatch auto-resumed (resume_at ~D reached)"
+                            resume-at)
+        t))))
+
+;;; --- H-A3: Stale-lease recovery --------------------------------------------
+
+(defun recover-stale-task-leases ()
+  "Transition :running tasks with expired (non-nil) :lease-until to :blocked.
+A :running task with :lease-until nil holds the slot indefinitely and is NOT
+recovered. Returns the count of tasks transitioned.
+
+This function reads and writes the task queue under *task-queue-lock*."
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((now (get-universal-time))
+           (queue (or (read-task-queue) '()))
+           (count 0))
+      (dolist (entry queue)
+        (when (and (eq (getf entry :status) :running)
+                   (let ((lease-until (getf entry :lease-until)))
+                     (and (integerp lease-until) (< lease-until now))))
+          (let ((id (getf entry :id))
+                (lease-until (getf entry :lease-until))
+                (started-at (getf entry :started-at)))
+            (setf (getf entry :status) :blocked
+                  (getf entry :blocked-reason)
+                  (format nil "stale lease: task ~D lease-until ~D expired at ~D"
+                          id lease-until now)
+                  (getf entry :finished-at) now)
+            (incf count)
+            (hngh.core:log-warn "Recovered stale task ~D (lease expired ~D)"
+                                id lease-until))))
+      (when (plusp count)
+        (write-task-queue queue))
+      count)))
+
+;;; --- H-A2: Pure eligibility selector -----------------------------------------
+
+(defun next-eligible-task (queue now maintenance-state)
+  "Select the oldest eligible task from QUEUE given NOW and MAINTENANCE-STATE.
+Returns two values:
+1. The eligible task plist (oldest by :submitted-at, then :id), or NIL if none.
+2. A list of tasks that should be persisted as :blocked (due to failed/cancelled deps).
+The function is PURE w.r.t. the queue argument: no state-store access."
+  (labels ((dep-done-p (dep-id)
+             (let ((dep (find dep-id queue :key (lambda (e) (getf e :id)))))
+               (and dep (eq (getf dep :status) :done))))
+           (running-lease-blocks-p ()
+             (some (lambda (other)
+                     (and (eq (getf other :status) :running)
+                          (let ((lease (getf other :lease-until)))
+                            (or (null lease) (> lease now)))))
+                   queue))
+           (task-eligible-p (task)
+             (and (eq (getf task :status) :queued)
+                  (every #'dep-done-p (getf task :depends-on))
+                  (or (null (getf task :not-before))
+                      (<= (getf task :not-before) now))
+                  (not (running-lease-blocks-p))
+                  (not (eq (getf task :authority) :proposed))
+                  (or (not (eq (getf task :authority) :approval))
+                      (and (integerp (getf task :approval-at))
+                           (> (getf task :approval-at) 0)))
+                  (let ((requires-stable (getf (getf task :policy) :requires-stable-system)))
+                    (or (not requires-stable)
+                        (eq maintenance-state :clear))))))
+    (if (eq maintenance-state :maintenance-active)
+        (values nil (%blocked-by-failed-deps queue now))
+        (let* ((candidates (remove-if-not #'task-eligible-p queue))
+               (sorted (sort (copy-list candidates)
+                              (lambda (a b)
+                                (let ((sa (getf a :submitted-at))
+                                      (sb (getf b :submitted-at)))
+                                  (or (< sa sb)
+                                      (and (= sa sb)
+                                           (< (getf a :id) (getf b :id)))))))))
+          (values (first sorted) (%blocked-by-failed-deps queue now))))))
+
+(defun %blocked-by-failed-deps (queue now)
+  "Return a list of QUEUE tasks whose dependency has failed/cancelled,
+each returned with :status :blocked and :blocked-reason set."
+  (let ((blocked-tasks '()))
+    (dolist (task queue)
+      (when (eq (getf task :status) :queued)
+        (dolist (dep-id (getf task :depends-on))
+          (let ((dep (find dep-id queue :key (lambda (e) (getf e :id)))))
+            (when (and dep (member (getf dep :status) '(:failed :cancelled)))
+              (let ((blocked (copy-list task)))
+                (setf (getf blocked :status) :blocked
+                      (getf blocked :blocked-reason)
+                      (format nil "dependency ~D ~A" dep-id (getf dep :status))
+                      (getf blocked :finished-at) now)
+                (push blocked blocked-tasks)))))))
+    (nreverse blocked-tasks)))
+
+;;; --- Task driver tick (updated for H-B2) -------------------------------------
+
 (defun task-driver-tick ()
-  "One driver cycle: run the oldest :queued task via DELEGATE, persist outcome.
+  "One driver cycle: recover stale leases, check pause, check maintenance,
+then run the oldest eligible task via DELEGATE, persisting the outcome.
 The delegate call runs outside the queue lock (long inference)."
-  (let ((entry (find :queued (or (read-task-queue) '())
-                     :key (lambda (e) (getf e :status)))))
-    (when entry
-      (let ((id (getf entry :id))
-            (task (getf entry :task))
-            (policy (getf entry :policy)))
-        (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
-        (handler-case
-            (let* ((agent (delegate task :preferences policy))
-                   (ok (eq (agent-info-status agent) :completed))
-                   (result (agent-info-result agent)))
-              (%update-queue-entry
-               id (lambda (e)
-                    (setf (getf e :status) (if ok :done :failed)
-                          (getf e :result) (and (stringp result) result)
-                          (getf e :error) (unless ok (or (and (stringp result) result) "unknown"))
-                          (getf e :finished-at) (get-universal-time))))
-              (when (event-bus-ready-p)
-                (ignore-errors
-                 (hngh.core.event-bus:publish :task-completed
-                                              (list :id id :status (if ok :done :failed))
-                                              :source 'ai-orchestrator)))
-              id)
-          (error (c)
+  ;; 1. Recover stale leases first — frees the execution slot.
+  (recover-stale-task-leases)
+  ;; 2. Check pause state (auto-resume if resume_at has passed).
+  (let ((now (get-universal-time)))
+    (when (dispatch-paused-p)
+      (unless (%maybe-auto-resume now)
+        (return-from task-driver-tick nil)))
+    ;; 3. Read maintenance state and select eligible task.
+    (let* ((maintenance-state (hngh.plugins.maintenance-coordinator:read-maintenance-state))
+           (queue (or (read-task-queue) '())))
+      (multiple-value-bind (eligible-task blocked-tasks)
+          (next-eligible-task queue now maintenance-state)
+        (dolist (blocked blocked-tasks)
+          (let ((bid (getf blocked :id)))
             (%update-queue-entry
-             id (lambda (e)
-                  (setf (getf e :status) :failed
-                        (getf e :error) (princ-to-string c)
-                        (getf e :finished-at) (get-universal-time))))
-            nil))))))
+             bid (lambda (e)
+                   (setf (getf e :status) :blocked
+                         (getf e :blocked-reason) (getf blocked :blocked-reason)
+                         (getf e :finished-at) (get-universal-time))))))
+        (when eligible-task
+          (let ((id (getf eligible-task :id))
+                (task (getf eligible-task :task))
+                (policy (getf eligible-task :policy)))
+            (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
+            (handler-case
+                (let* ((agent (delegate task :preferences policy))
+                       (ok (eq (agent-info-status agent) :completed))
+                       (result (agent-info-result agent)))
+                  (%update-queue-entry
+                   id (lambda (e)
+                        (setf (getf e :status) (if ok :done :failed)
+                              (getf e :result) (and (stringp result) result)
+                              (getf e :error) (unless ok (or (and (stringp result) result) "unknown"))
+                              (getf e :finished-at) (get-universal-time))))
+                  (when (event-bus-ready-p)
+                    (ignore-errors
+                     (hngh.core.event-bus:publish :task-completed
+                                                  (list :id id :status (if ok :done :failed))
+                                                  :source 'ai-orchestrator)))
+                  id)
+              (error (c)
+                (%update-queue-entry
+                 id (lambda (e)
+                      (setf (getf e :status) :failed
+                            (getf e :error) (princ-to-string c)
+                            (getf e :finished-at) (get-universal-time))))
+                nil))))))))
 
 (defun start-task-driver (&key (tick-seconds 5))
   "(Re)register the task driver on the scheduler. Returns the schedule id.
