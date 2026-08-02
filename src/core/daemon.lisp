@@ -506,6 +506,91 @@ HANDLER: (client-id request-msg) -> response-plist"
   (hngh.core.wire-protocol:make-response
    (hngh.core.wire-protocol:request-id request-msg) :ok :result :stopping))
 
+;;; --- Phase 2 Task Handlers ------------------------------------------------
+
+(defun handle-claim-task (client-id request-msg)
+  "Dispatch :claim-task request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "CLAIM-TASK")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn (getf p :id)
+                      :agent (getf p :agent)
+                      :role (getf p :role)
+                      :route (getf p :route)))))
+
+(defun handle-release-task (client-id request-msg)
+  "Dispatch :release-task request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "RELEASE-TASK")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn (getf p :id)
+                      :agent (getf p :agent)
+                      :reason (getf p :reason)))))
+
+(defun handle-complete-task (client-id request-msg)
+  "Dispatch :complete-task request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "COMPLETE-TASK")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn (getf p :id)
+                      :agent (getf p :agent)
+                      :verifier (getf p :verifier)
+                      :evidence (getf p :evidence)))))
+
+(defun handle-block-task (client-id request-msg)
+  "Dispatch :block-task request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "BLOCK-TASK")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn (getf p :id)
+                      :agent (getf p :agent)
+                      :verifier (getf p :verifier)
+                      :class (getf p :class)
+                      :reason (getf p :reason)
+                      :evidence (getf p :evidence)))))
+
+(defun handle-fail-task (client-id request-msg)
+  "Dispatch :fail-task request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "FAIL-TASK")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn (getf p :id)
+                      :agent (getf p :agent)
+                      :verifier (getf p :verifier)
+                      :role (getf p :role)
+                      :reason (getf p :reason)))))
+
+(defun handle-ready-tasks (client-id request-msg)
+  "Dispatch :ready-tasks request to the AI orchestrator."
+  (declare (ignore client-id))
+  (let* ((id (hngh.core.wire-protocol:request-id request-msg))
+         (p (hngh.core.wire-protocol:request-payload request-msg))
+         (fn (%orchestrator-function "READY-TASKS")))
+    (unless fn (error "AI orchestrator unavailable"))
+    (hngh.core.wire-protocol:make-response
+     id :ok
+     :result (funcall fn :role (getf p :role)))))
+
 ;;; --- Lifecycle ------------------------------------------------------------
 
 (defun init (&key (hngh-home (default-hngh-home)))
@@ -525,6 +610,12 @@ HANDLER: (client-id request-msg) -> response-plist"
   (register-request-handler :pause #'handle-pause)
   (register-request-handler :resume #'handle-resume)
   (register-request-handler :stop-daemon #'handle-stop-daemon)
+  (register-request-handler :claim-task #'handle-claim-task)
+  (register-request-handler :release-task #'handle-release-task)
+  (register-request-handler :complete-task #'handle-complete-task)
+  (register-request-handler :block-task #'handle-block-task)
+  (register-request-handler :fail-task #'handle-fail-task)
+  (register-request-handler :ready-tasks #'handle-ready-tasks)
   (start-event-bridge)
   (hngh.core:log-info "Daemon core initialized")
   t)
