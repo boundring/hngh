@@ -141,6 +141,44 @@ Returns the schedule ID."
 
 ;;; --- Scheduler loop ---
 
+(defun %ai-orchestrator-function (name)
+  "Return the loaded AI orchestrator function named NAME, or NIL."
+  (let* ((package (find-package :hngh.plugins.ai-orchestrator))
+         (symbol (and package (find-symbol name package))))
+    (when (and symbol (fboundp symbol))
+      (symbol-function symbol))))
+
+(defun check-task-lease-expiry ()
+  "Release claimed AI tasks whose lease has expired and publish an event.
+Returns the number of successfully released tasks."
+  (let ((read-queue (%ai-orchestrator-function "READ-TASK-QUEUE"))
+        (release-task (%ai-orchestrator-function "RELEASE-TASK")))
+    (if (not (and read-queue release-task))
+        0
+        (let ((now (get-universal-time))
+              (released-count 0))
+          (dolist (task (or (funcall read-queue) '()) released-count)
+            (let ((lease-expires-at (getf task :lease-expires-at)))
+              (when (and (eq (getf task :status) :claimed)
+                         (integerp lease-expires-at)
+                         (<= lease-expires-at now))
+                (let ((id (getf task :id))
+                      (claimant (getf task :claimant)))
+                  (handler-case
+                      (when (funcall release-task
+                                     id :agent "scheduler"
+                                     :reason :lease-expired)
+                        (incf released-count)
+                        (when (hngh.core.event-bus:running-p)
+                          (hngh.core.event-bus:publish
+                           :lease-expired
+                           (list :id id :claimant claimant :at now)
+                           :source 'scheduler)))
+                    (error (condition)
+                      (hngh.core:log-warn
+                       "Lease expiry release failed for task ~D: ~A"
+                       id condition)))))))))))
+
 (defun scheduler-loop ()
   "Main scheduler loop. Runs in a background thread.
 Checks for due schedules every second and fires them."
@@ -157,6 +195,7 @@ Checks for due schedules every second and fires them."
 
 (defun check-and-fire ()
   "Check all schedules and fire any that are due."
+  (check-task-lease-expiry)
   (let ((now (get-universal-time))
         (due nil))
     (bt:with-lock-held (*schedules-lock*)
