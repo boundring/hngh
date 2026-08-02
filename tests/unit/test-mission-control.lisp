@@ -1,7 +1,7 @@
 ;;;; tests/unit/test-mission-control.lisp — Tests for Mission Control (M6.1)
 ;;;;
-;;;; Live tmux integration on a throwaway session (MC_SESSION=hngh-mc-test).
-;;;; Skips cleanly when tmux or the mc script is unavailable.
+;;;; Layout lifecycle tests use a fixture tmux executable and temporary state.
+;;;; They never inspect or modify a live user tmux server.
 ;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
@@ -16,68 +16,267 @@
 
 ;;; --- Helpers ---------------------------------------------------------------
 
-(defun mc-test-available-p ()
-  "T when the mc script and a working tmux are present."
-  (and (probe-file (hngh.plugins.mission-control::mc-path))
-       (ignore-errors
-         (let ((proc (sb-ext:run-program "tmux" '("-V") :search t :wait t
-                                         :output nil :error nil)))
-           (zerop (sb-ext:process-exit-code proc))))))
+(defparameter +fake-tmux-script+
+  "#!/usr/bin/env bash
+set -uo pipefail
+cmd=\"${1:-}\"
+{
+  printf '%s' \"$cmd\"
+  shift || true
+  printf '\\t%s' \"$@\"
+  printf '\\n'
+} >> \"$MC_FIXTURE/calls\"
+case \"$cmd\" in
+  has-session)
+    test -f \"$MC_FIXTURE/session\"
+    ;;
+  list-panes)
+    test -f \"$MC_FIXTURE/panes\" && cat \"$MC_FIXTURE/panes\"
+    ;;
+  new-session)
+    : > \"$MC_FIXTURE/session\"
+    ;;
+  split-window)
+    if [[ \" $* \" == *\" -P \"* ]]; then printf '%%fixture\\n'; fi
+    ;;
+  kill-session)
+    rm -f \"$MC_FIXTURE/session\"
+    ;;
+esac
+")
 
-(defun %mc-test-run (&rest args)
-  "Run mc with ARGS against the throwaway session. Returns (values output exit-code)."
+(defun %write-test-file (path contents &key executable)
+  "Write CONTENTS to PATH and optionally make it executable."
+  (ensure-directories-exist path)
+  (with-open-file (stream path :direction :output :if-exists :supersede
+                               :if-does-not-exist :create)
+    (write-string contents stream))
+  (when executable
+    (uiop:run-program (list "chmod" "+x" (namestring path))))
+  path)
+
+(defun %setup-mc-fixture (home &key panes session)
+  "Create an isolated tmux executable and optional pane/session fixtures."
+  (let ((tmux (merge-pathnames "bin/tmux" home))
+        (fixture (merge-pathnames "fixture/" home)))
+    (%write-test-file tmux +fake-tmux-script+ :executable t)
+    (%write-test-file (merge-pathnames "calls" fixture) "")
+    (when panes
+      (%write-test-file (merge-pathnames "panes" fixture) panes))
+    (when session
+      (%write-test-file (merge-pathnames "session" fixture)
+                        (format nil "running~%")))
+    fixture))
+
+(defun %mc-test-run (home &rest args)
+  "Run mc with ARGS against HOME's fake tmux and state root."
   (let* ((out-str (make-string-output-stream))
+         (err-str (make-string-output-stream))
+         (path (format nil "~Abin:~A" (namestring home) (uiop:getenv "PATH")))
          (proc (sb-ext:run-program
                 "env"
                 (append (list "MC_SESSION=hngh-mc-test"
+                              (format nil "MC_STATE_ROOT=~Astate" (namestring home))
+                              (format nil "MC_FIXTURE=~Afixture" (namestring home))
+                              (format nil "PATH=~A" path)
                               (namestring (hngh.plugins.mission-control::mc-path)))
                         args)
-                :search t :wait t :output out-str :error nil)))
+                :search t :wait t :output out-str :error err-str)))
     (values (get-output-stream-string out-str)
-            (sb-ext:process-exit-code proc))))
+            (sb-ext:process-exit-code proc)
+            (get-output-stream-string err-str))))
 
-(defun %mc-test-cleanup ()
-  "Kill the throwaway session if it exists."
-  (ignore-errors
-    (sb-ext:run-program "tmux" '("kill-session" "-t" "hngh-mc-test")
-                        :search t :wait t :output nil :error nil)))
+(defun %read-layout-file (home)
+  "Read HOME's layout fixture with reader evaluation disabled."
+  (with-open-file (stream (merge-pathnames "state/mc-layout.lisp" home)
+                          :direction :input)
+    (let ((*read-eval* nil))
+      (read stream))))
 
-(defun %count-lines (string)
-  "Count lines in STRING."
-  (if (or (null string) (zerop (length string)))
-      0
-      (1+ (count #\Newline (string-right-trim '(#\Newline) string)))))
+(defun %fixture-calls (home)
+  "Return fake tmux calls recorded under HOME."
+  (uiop:read-file-lines (merge-pathnames "fixture/calls" home)))
+
+(defun %count-call (name calls)
+  "Count fixture CALLS whose first tab-separated field is NAME."
+  (count-if (lambda (call)
+              (and (>= (length call) (length name))
+                   (string= name call :end2 (length name))
+                   (or (= (length call) (length name))
+                       (char= #\Tab (char call (length name))))))
+            calls))
 
 ;;; --- Tests -----------------------------------------------------------------
 
-(test mc-session-lifecycle
-  "mc start creates a 4+ pane session; add adds one; stop removes the session."
-  (if (not (mc-test-available-p))
-      (skip "tmux or mc script not available")
-      (progn
-        (%mc-test-cleanup)
-        (unwind-protect
-             (progn
-               (multiple-value-bind (out code) (%mc-test-run "start")
-                 (declare (ignore out))
-                 (is (zerop code)))
-               (is (hngh.plugins.mission-control::session-alive-p "hngh-mc-test"))
-               (multiple-value-bind (out code) (%mc-test-run "status")
-                 (is (zerop code))
-                 (is (>= (%count-lines out) 4)
-                     "expected at least 4 panes, got: ~A" out))
-               (multiple-value-bind (out code) (%mc-test-run "add" "echo test-pane")
-                 (declare (ignore out))
-                 (is (zerop code)))
-               (multiple-value-bind (out code) (%mc-test-run "status")
-                 (is (zerop code))
-                 (is (>= (%count-lines out) 5)
-                     "expected at least 5 panes after add, got: ~A" out)))
-          (%mc-test-cleanup))
-        (multiple-value-bind (out code) (%mc-test-run "stop")
-          (declare (ignore out))
-          (is (zerop code)))
-        (is (not (hngh.plugins.mission-control::session-alive-p "hngh-mc-test"))))))
+(test mc-save-layout-produces-valid-plist
+  "Saving fixture panes preserves count, geometry, cwd, and command strings."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           (%setup-mc-fixture
+            home :session t
+            :panes (format nil "0~C80~C40~C/tmp/project one~Csvc-dash~%1~C79~C40~C/tmp/project two~Cmake run~%"
+                           #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab))
+           (multiple-value-bind (out code err) (%mc-test-run home "save-layout")
+             (declare (ignore out err))
+             (is (zerop code)))
+           (let* ((layout (%read-layout-file home))
+                  (panes (getf layout :panes)))
+             (is (= 2 (length panes)))
+             (is (= 80 (getf (first panes) :width)))
+             (is (= 40 (getf (second panes) :height)))
+             (is (string= "/tmp/project one" (getf (first panes) :cwd)))
+             (is (string= "make run" (getf (second panes) :cmd)))))
+      (cleanup-tmp-home home))))
+
+(test mc-restore-layout-recreates-count-and-sizes
+  "Restore issues one creation per pane and requests the saved geometry."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           (%setup-mc-fixture home)
+           (%write-test-file
+            (merge-pathnames "state/mc-layout.lisp" home)
+            (format nil "(:panes ((:index 0 :width 80 :height 40 :cwd \"/tmp/project one\" :cmd \"svc-dash\") (:index 1 :width 79 :height 40 :cwd \"/tmp/project two\" :cmd \"make run\")))~%"))
+           (multiple-value-bind (out code err) (%mc-test-run home "restore-layout")
+             (declare (ignore out))
+             (is (zerop code) "restore-layout failed: ~A" err))
+           (let ((calls (%fixture-calls home)))
+             (is (= 1 (%count-call "new-session" calls)))
+             (is (= 1 (%count-call "split-window" calls)))
+             (is (= 2 (%count-call "resize-pane" calls)))
+             (is (some (lambda (call)
+                         (search (format nil "-x~C80~C-y~C40" #\Tab #\Tab #\Tab)
+                                 call))
+                       calls))
+             (is (some (lambda (call)
+                         (search (format nil "-x~C79~C-y~C40" #\Tab #\Tab #\Tab)
+                                 call))
+                       calls))
+             (is (some (lambda (call) (search "/tmp/project two" call)) calls))))
+      (cleanup-tmp-home home))))
+
+(test mc-start-missing-layout-uses-tiled-fallback
+  "Missing state warns and starts the original four-pane tiled layout."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           (%setup-mc-fixture home)
+           (multiple-value-bind (out code err) (%mc-test-run home "start")
+             (declare (ignore out))
+             (is (zerop code))
+             (is (search "no saved layout" err)))
+           (let ((calls (%fixture-calls home)))
+             (is (= 1 (%count-call "new-session" calls)))
+             (is (= 3 (%count-call "split-window" calls)))
+             (is (= 1 (%count-call "select-layout" calls)))))
+      (cleanup-tmp-home home))))
+
+(test mc-start-malformed-layout-fails-closed
+  "Malformed state warns and starts tiled without executing saved data."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           (%setup-mc-fixture home)
+           (%write-test-file (merge-pathnames "state/mc-layout.lisp" home)
+                             (format nil "#.(error \"must not run\")~%"))
+           (multiple-value-bind (out code err) (%mc-test-run home "start")
+             (declare (ignore out))
+             (is (zerop code))
+             (is (search "malformed layout" err)))
+           (let ((calls (%fixture-calls home)))
+             (is (= 1 (%count-call "new-session" calls)))
+             (is (= 3 (%count-call "split-window" calls)))))
+      (cleanup-tmp-home home))))
+
+(test mc-stop-start-roundtrip-preserves-cwd
+  "Stop saves before teardown and the next start restores cwd with spaces."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           (%setup-mc-fixture
+            home :session t
+            :panes (format nil "0~C80~C40~C/tmp/round trip one~Cbash~%1~C79~C40~C/tmp/round trip two~Cwatch~%"
+                           #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab))
+           (multiple-value-bind (out code err) (%mc-test-run home "stop")
+             (declare (ignore out err))
+             (is (zerop code)))
+           (let ((calls (%fixture-calls home)))
+             (is (< (position-if (lambda (call) (search "list-panes" call)) calls)
+                    (position-if (lambda (call) (search "kill-session" call)) calls))))
+           (%write-test-file (merge-pathnames "fixture/calls" home) "")
+           (multiple-value-bind (out code err) (%mc-test-run home "start")
+             (declare (ignore out err))
+             (is (zerop code)))
+           (let ((calls (%fixture-calls home)))
+             (is (some (lambda (call) (search "/tmp/round trip one" call)) calls))
+             (is (some (lambda (call) (search "/tmp/round trip two" call)) calls))))
+      (cleanup-tmp-home home))))
+
+(test session-layout-fixtures-validate-geometry-tolerance
+  "Lisp layout helpers accept two-cell drift and reject larger drift."
+  (let ((saved '(:panes ((:index 0 :width 80 :height 40 :cwd "/tmp/a" :cmd "bash")
+                         (:index 1 :width 79 :height 40 :cwd "/tmp/b" :cmd "watch"))))
+        (near '(:panes ((:index 0 :width 78 :height 42 :cwd "/tmp/a" :cmd "bash")
+                        (:index 1 :width 80 :height 39 :cwd "/tmp/b" :cmd "watch"))))
+        (far '(:panes ((:index 0 :width 76 :height 40 :cwd "/tmp/a" :cmd "bash")
+                       (:index 1 :width 79 :height 40 :cwd "/tmp/b" :cmd "watch")))))
+    (is (hngh.plugins.mission-control::layout-geometry-within-tolerance-p saved near))
+    (is (not (hngh.plugins.mission-control::layout-geometry-within-tolerance-p saved far)))))
+
+(test session-layout-save-restore-uses-isolated-state
+  "Lisp save and restore use data-only state and mocked tmux commands."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (hngh.plugins.mission-control::*squad-command-runner*
+           (lambda (program args)
+             (push (list program args) calls)
+             (if (and (string= program "tmux")
+                      (string= (first args) "list-panes"))
+                 (values 0
+                         (format nil "0~C80~C40~C/tmp/lisp one~Cbash~%1~C79~C40~C/tmp/lisp two~Cwatch~%"
+                                 #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab)
+                         "")
+                 (values 0 (format nil "%fixture~%") "")))))
+    (unwind-protect
+         (progn
+           (let ((layout (hngh.plugins.mission-control::save-session-layout
+                          :session "fixture" :hngh-home home)))
+             (is (= 2 (length (getf layout :panes)))))
+           (multiple-value-bind (restored reason)
+               (hngh.plugins.mission-control::restore-session-layout
+                :session "fixture" :hngh-home home)
+             (is (not (null restored)))
+             (is (eq :restored reason)))
+           (is (some (lambda (call)
+                       (member "/tmp/lisp two" (second call) :test #'string=))
+                     calls)))
+      (cleanup-tmp-home home))))
+
+(test session-layout-missing-and-malformed-fail-closed
+  "Lisp restore does not call tmux for absent or non-data layout state."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (hngh.plugins.mission-control::*squad-command-runner*
+           (lambda (program args)
+             (push (list program args) calls)
+             (values 0 "" ""))))
+    (unwind-protect
+         (progn
+           (multiple-value-bind (restored reason)
+               (hngh.plugins.mission-control::restore-session-layout
+                :session "fixture" :hngh-home home)
+             (is (not restored))
+             (is (eq :missing reason)))
+           (%write-test-file (merge-pathnames "state/mc-layout.lisp" home)
+                             (format nil "#.(error \"must not run\")~%"))
+           (multiple-value-bind (restored reason)
+               (hngh.plugins.mission-control::restore-session-layout
+                :session "fixture" :hngh-home home)
+             (is (not restored))
+             (is (eq :malformed reason)))
+           (is (null calls)))
+      (cleanup-tmp-home home))))
 
 (test squad-registry-loads-local-definitions
   "The data registry is readable without evaluating executable forms."
