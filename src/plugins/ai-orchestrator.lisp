@@ -816,7 +816,9 @@ records retain their schema and gain shared-queue metadata defaults."
                        (:not-before nil)
                        (:lease-until nil)
                        (:blocked-reason nil)
-                       (:started-at nil)))
+                       (:started-at nil)
+                       (:finished-at nil)
+                       (:evidence nil)))
       (unless (task-record-has-key-p entry (first default))
         (setf (getf entry (first default)) (second default))))
     (when (eql schema-version 3)
@@ -995,6 +997,149 @@ The claimant, or any caller after expiry, atomically persists the release."
              (list :id id :claimant claimant :reason reason :at now)
              :source 'ai-orchestrator)))
         task))))
+
+(defun %task-caller (agent verifier)
+  "Return the caller identity supplied as AGENT or VERIFIER."
+  (when (and agent verifier (not (string= agent verifier)))
+    (error "Conflicting task caller identities: ~S and ~S" agent verifier))
+  (let ((caller (or agent verifier)))
+    (unless (stringp caller)
+      (error "Task transition requires a string caller identity"))
+    caller))
+
+(defun %task-caller-matches-p (caller recorded)
+  "Return T when CALLER matches a recorded task identity."
+  (and (stringp recorded) (string= caller recorded)))
+
+(defun %record-task-transition (task from to at by reason)
+  "Append one transition record to TASK and return TASK."
+  (setf (getf task :transition-log)
+        (append (getf task :transition-log)
+                (list (list :from from :to to :at at
+                            :by by :reason reason))))
+  task)
+
+(defun %publish-task-event (topic payload)
+  "Publish a task transition event when the event bus is available."
+  (when (event-bus-ready-p)
+    (ignore-errors
+      (hngh.core.event-bus:publish topic payload :source 'ai-orchestrator))))
+
+(defun %privileged-task-role-p (role)
+  "Return T for roles permitted to override task authority gates."
+  (member role '(:owner :operation)))
+
+(defun complete-task (id &key agent verifier evidence)
+  "Complete claimed task ID when CALLER is its verifier or eligible claimant."
+  (unless (integerp id)
+    (error "Complete requires an integer id"))
+  (let ((caller (%task-caller agent verifier)))
+    (unless (or (null evidence) (stringp evidence))
+      (error "Task evidence must be a string or NIL"))
+    (bt:with-lock-held (*task-queue-lock*)
+      (let* ((queue (or (read-task-queue) '()))
+             (task (find id queue :key (lambda (entry) (getf entry :id)))))
+        (unless task
+          (error "Task ~D does not exist" id))
+        (unless (eq (getf task :status) :claimed)
+          (error "Task ~D is not claimed" id))
+        (let* ((task-verifier (getf task :verifier))
+               (self-verify-p
+                 (and (null task-verifier)
+                      (eq (getf task :authority) :worker)
+                      (%task-caller-matches-p caller (getf task :claimant)))))
+          (unless (or (%task-caller-matches-p caller task-verifier)
+                      self-verify-p)
+            (error "Caller ~S may not complete task ~D" caller id)))
+        (when (eq (getf (getf task :verification) :status) :failed)
+          (error "Task ~D has failed verification" id))
+        (let ((now (get-universal-time)))
+          (setf (getf task :status) :done
+                (getf task :evidence) evidence
+                (getf task :finished-at) now)
+          (%record-task-transition task :claimed :done now caller :complete)
+          (write-task-queue queue)
+          (%publish-task-event
+           :task-completed
+           (list :id id :claimant (getf task :claimant)
+                 :verifier caller :evidence evidence :at now))
+          task)))))
+
+(defun block-task (id &key agent verifier class reason evidence)
+  "Block a queued or claimed task for its claimant or named verifier."
+  (unless (integerp id)
+    (error "Block requires an integer id"))
+  (let ((caller (%task-caller agent verifier)))
+    (unless class
+      (error "Blocking task ~D requires a failure class" id))
+    (unless (or (null evidence) (stringp evidence))
+      (error "Task evidence must be a string or NIL"))
+    (bt:with-lock-held (*task-queue-lock*)
+      (let* ((queue (or (read-task-queue) '()))
+             (task (find id queue :key (lambda (entry) (getf entry :id))))
+             (status (and task (getf task :status))))
+        (unless task
+          (error "Task ~D does not exist" id))
+        (unless (member status '(:queued :claimed))
+          (error "Task ~D cannot be blocked from status ~S" id status))
+        (unless (or (%task-caller-matches-p caller (getf task :claimant))
+                    (%task-caller-matches-p caller (getf task :verifier)))
+          (error "Caller ~S may not block task ~D" caller id))
+        (let ((now (get-universal-time)))
+          (setf (getf task :status) :blocked
+                (getf task :last-failure)
+                (list :class class :reason reason :evidence evidence :at now)
+                (getf task :finished-at) now)
+          (%record-task-transition task status :blocked now caller reason)
+          (write-task-queue queue)
+          (%publish-task-event
+           :task-blocked
+           (list :id id :claimant (getf task :claimant)
+                 :class class :reason reason :evidence evidence :at now))
+          task)))))
+
+(defun fail-task (id &key agent verifier role reason)
+  "Fail a claimed task when CALLER is its verifier or privileged PM role."
+  (unless (integerp id)
+    (error "Fail requires an integer id"))
+  (let ((caller (%task-caller agent verifier)))
+    (bt:with-lock-held (*task-queue-lock*)
+      (let* ((queue (or (read-task-queue) '()))
+             (task (find id queue :key (lambda (entry) (getf entry :id)))))
+        (unless task
+          (error "Task ~D does not exist" id))
+        (unless (eq (getf task :status) :claimed)
+          (error "Task ~D is not claimed" id))
+        (unless (or (%task-caller-matches-p caller (getf task :verifier))
+                    (%privileged-task-role-p role))
+          (error "Caller ~S may not fail task ~D" caller id))
+        (let ((now (get-universal-time)))
+          (setf (getf task :status) :failed
+                (getf task :last-failure)
+                (list :class :failure :reason reason :evidence nil :at now)
+                (getf task :finished-at) now)
+          (%record-task-transition task :claimed :failed now caller reason)
+          (write-task-queue queue)
+          (%publish-task-event
+           :task-failed
+           (list :id id :reason reason :at now))
+          task)))))
+
+(defun ready-tasks (&key role)
+  "Return IDs of queued tasks claimable by ROLE."
+  (unless role
+    (error "Ready tasks requires a role"))
+  (bt:with-lock-held (*task-queue-lock*)
+    (mapcar (lambda (task) (getf task :id))
+            (remove-if-not
+             (lambda (task)
+               (and (eq (getf task :status) :queued)
+                    (member role (getf task :allowed-roles))
+                    (member (getf task :authority)
+                            '(:worker :owner :operation))
+                    (%claim-authority-permits-role-p
+                     (getf task :authority) role)))
+             (or (read-task-queue) '())))))
 
 (defun %update-queue-entry (id fn)
   "Apply FN to the entry with :id ID inside the persisted queue (under lock)."
