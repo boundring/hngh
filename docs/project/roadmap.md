@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 in progress (Batches 0–4 complete; Batch 5 in progress — M1.10 done). M7 daemon committed. Agent Platoons v0 designed. 1028/1028 tests green @ 106a922.
+**Status**: M1 in progress (Batches 0–4 complete; Batch 5 in progress — M1.10 done). M7 daemon committed. Phase 2 protocol handlers merged. 1120/1120 tests green @ 1f645f2.
 **Last updated**: 2026-08-02
 
 ---
@@ -45,7 +45,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
 
-**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). 227 unit tests + 18 integration tests passing (M1-era snapshot; current: 1028/1028 @ 106a922 on main).
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 1120/1120 @ 1f645f2 on main).
 
 ### Deliverables
 
