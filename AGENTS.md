@@ -11,17 +11,29 @@
 - Never print secret VALUES from `~/.hermes/.env`, `auth.json`, `*.pem`, `*.key`.
   By-NAME scripted access only (grep/sed/python, no value echo).
 
-## Local-model policy
+## Local-model & quota policy
 
 Daily driver: `unsloth/gemma-4-12b-it-qat-GGUF` via http://127.0.0.1:8888/v1 (219904 ctx).
 Heavy/long-context: Qwythos-9B 1M variants. Avoid Qwen3.6-27B. Remote API spend < $1/day;
 prefer local models for any loop or automated work.
+GitHub Copilot models: Distribute non-local tasks to GitHub Copilot models (Sol / Terra / Luna) to conserve K3 quota when available. K3 is reserved for novel design forks and critical reviews.
 
 ## Repo notes
 
 Common Lisp (SBCL) agent-orchestration system. Build: `make build`. Test: `make test`.
 Docs: `docs/` — roadmap at `docs/project/roadmap.md` (M1.x active). Runtime state: `~/.hngh/`.
 Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ahead.
+
+## Current state (2026-08-02)
+
+- **Tests**: `make test` green — 983/983 @ f6e69dc
+- **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
+- **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
+- **Security**: `*read-eval* nil` at wire-protocol.lisp:135
+- **Night queue**: 49 tasks processed (artifacts in ~/.hngh-night/artifacts/)
+- **Cost routing v2**: verified faucet ladder active (kimi-sub → copilot → gemini-free → or-free)
+- **Role split**: hermes=queue manager, opencode=Sisyphus=M7+platoon code, other opencode=code/docs
+- **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
 
 
 ## Per-model attribution (required)
