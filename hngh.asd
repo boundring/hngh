@@ -24,6 +24,7 @@
   :serial t
   :components ((:file "packages")
                (:file "core/logging")
+               (:file "core/ascii-art")
                (:file "core/config")
                (:file "core/event-bus")
                (:file "core/state-store")
