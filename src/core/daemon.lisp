@@ -230,23 +230,28 @@ HANDLER: (client-id request-msg) -> response-plist"
 (defun client-connection-loop (client-id stream)
   "Main loop for a single client connection. Runs in its own thread."
   (unwind-protect
-      (loop
-        (multiple-value-bind (msg err) (hngh.core.wire-protocol:read-message stream)
-          (when err
-            (case err
-              (:eof (hngh.core:log-info "Client ~D disconnected (EOF)" client-id))
-              (:error (hngh.core:log-warn "Client ~D protocol error" client-id)))
-            (return))
-          (update-client-heartbeat client-id)
-          (cond
-            ((hngh.core.wire-protocol:request-p msg)
-             (let ((response (handle-request client-id msg)))
-               (write-client-message
-                client-id (hngh.core.wire-protocol:encode-message response))))
-            ((hngh.core.wire-protocol:event-p msg)
-             (hngh.core:log-debug "Client ~D sent event (unexpected): ~A" client-id msg))
-            (t
-             (hngh.core:log-warn "Client ~D sent unknown message type: ~A" client-id msg)))))
+      (handler-case
+          (loop
+            (multiple-value-bind (msg err) (hngh.core.wire-protocol:read-message stream)
+              (when err
+                (case err
+                  (:eof (hngh.core:log-info "Client ~D disconnected (EOF)" client-id))
+                  (:error (hngh.core:log-warn "Client ~D protocol error" client-id)))
+                (return))
+              (update-client-heartbeat client-id)
+              (cond
+                ((hngh.core.wire-protocol:request-p msg)
+                 (let ((response (handle-request client-id msg)))
+                   (write-client-message
+                    client-id (hngh.core.wire-protocol:encode-message response))))
+                ((hngh.core.wire-protocol:event-p msg)
+                 (hngh.core:log-debug "Client ~D sent event (unexpected): ~A" client-id msg))
+                (t
+                 (hngh.core:log-warn "Client ~D sent unknown message type: ~A" client-id msg)))))
+        (error (condition)
+          (when *daemon-running*
+            (hngh.core:log-warn "Client ~D connection error: ~A"
+                                client-id condition))))
     (unregister-client client-id)
     (hngh.core:log-info "Client ~D connection closed" client-id)))
 
