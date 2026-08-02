@@ -657,7 +657,7 @@ The AI Tool Hub ships with these tools registered by default. All are configurab
 ## Appendix B: File Tree (Complete)
 
 ```
-/home/bricker/Projects/etc/20260621/
+<project-root>/
   architecture-decision-record.md   # Phase 1+2 — 11 locked decisions
   components.md                      # Phase 3 — 21 component specifications
   integrations.md                    # Phase 4 — integration map + sequence diagrams

@@ -1,11 +1,11 @@
 # Next — Current Work
 
-**Last updated**: 2026-08-01
+**Last updated**: 2026-08-02
 
 ## Current Status
 
-**M0–M6.2 complete; M6.3 + M-sentry done 2026-08-01** — 920 tests, all passing (FiveAM, `make test` verified
-2026-08-01). Session detail in `docs/project/work-sessions.md` (M3–M-sentry) and
+**M0–M7 complete; Agent Platoons v0 designed** — 1009 tests, all passing (FiveAM, `make test` verified
+2026-08-02 @ 40785b3 on queue-v3; main 999/999 @ 79db55f). Session detail in `docs/project/work-sessions.md` (M3–M7) and
 `docs/journal/` (M0–M1).
 
 Recent sessions:
@@ -21,12 +21,15 @@ Recent sessions:
   remain-on-exit), `mc refresh` dead-pane respawn.
 - **M6.2** Agentic file-editing loops: driver runs opencode headless via tool
   hub at $0 on gemma-4-12b.
+- **M6.3** Emacs daemon: daemon lifecycle (start/stop/health), policy-explicit start, daemon outlives hngh.
+- **M7** Client-server daemon: wire protocol (SEXP-over-UDS), daemon core, client CLI, systemd units. 999/999 tests.
+- **Agent Platoons v0**: declarative squad specs, bash launcher, 7 role templates, first dogfood (duo-review).
 
 ## Up Next
 
 | Priority | Item | Where |
 |---|---|---|
-| P0 | **M7 client-server daemon mode** — Emacs-style headless + extensible clients; wire protocol ADR drafted (night-ralph) | hngh |
+| P0 | **M8 model-management** — routing table, benchmark harness, cost/latency matrix | hngh |
 | P0 | **Sentry Tier-1** — light-ralph analysis (config-tweak proposer, drift triage, secret-guard pattern review) + git pre-commit hook calling `guard-text` | hngh; `.omc/plans/sentry-safeguards.md` |
 | P1 | **M8 model-management plugin** — routing table seeded (`docs/design/model-routing.md`); selection/sourcing/benchmark harness | hngh; `sysconfig_mgmt/.omc/plans/multi-model-topology.md` |
 | P1 | **Night-ralph task library** — continual planning/docs/training-set/research tasks, $0 local; isolated `~/.hngh-night` | hngh; `.omc/plans/overnight-local-loop.md` |
@@ -34,9 +37,7 @@ Recent sessions:
 | P2 | **gbd TUI waves 1–8** | `~/Projects/etc/20260725/git-back-dots` |
 | P2 | **DOC leftovers**: M1.13 KDE integration (P2), M1.14 PKGBUILD, M1.15 integration tests | hngh |
 
-Done 2026-07-31/08-01: M6.3 emacs-daemon, M-sentry (secret-guard +
-context-watch), MC-2 waves 1–3 (6-panel emacs dashboard), svc-dash wave 6,
-night-run/night-ralph loop. README + work-sessions.md carry details.
+Done 2026-07-31/08-02: M6.3 emacs-daemon, M-sentry (secret-guard + context-watch), MC-2 waves 1–3 (6-panel emacs dashboard), svc-dash wave 6, night-run/night-ralph loop, M7 daemon, Agent Platoons v0.
 
 Note: M7 feeds MC-2 (daemon clients) but MC-2 does not block M7 — both can
 proceed; MC-2 wave 1 is read-only panels over existing state.
