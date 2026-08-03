@@ -24,9 +24,9 @@ Common Lisp (SBCL) agent-orchestration system. Build: `make build`. Test: `make 
 Docs: `docs/` — roadmap at `docs/project/roadmap.md` (M1.x active). Runtime state: `~/.hngh/`.
 Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ahead.
 
-## Current state (2026-08-02)
+## Current state (2026-08-03)
 
-- **Tests**: `make test` green — 1120/1120 @ 1f645f2 (main, post Phase 2 merge)
+- **Tests**: `make test` green — 1393/1393 @ d569e3b+uncommitted (M9 W1-2: agents-md, squad-resources, fragment-journal, hngh-up plugins; W3: C7 PM-first-prompt generator)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
@@ -34,6 +34,10 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Cost routing v2**: verified faucet ladder active (kimi-sub → copilot → gemini-free → or-free)
 - **Role split**: hermes=queue manager, opencode=Sisyphus=M7+platoon code, other opencode=code/docs
 - **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
+- **Test-count lint**: `make lint-counts` — procedural, no LLM. Scans current-state refs in AGENTS.md + roadmap.md
+- **hngh-up plugin**: exists with design doc at `docs/design/hngh-up.md` (goal-driven squad spin-up, procedural questionnaire, strategy system, autonomous continuation, social sharing)
+- **M9 squad autonomy**: W1-2 done (C1, C2, C5 + partial C3). W3 in progress (C7 PM-first-prompt generator). Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
+- **squad-up**: `~/.local/bin/squad-up` — 6-seat cascading Konsole launcher. Config: `~/.hngh-night/squad-seats.conf`
 
 
 ## Per-model attribution (required)
