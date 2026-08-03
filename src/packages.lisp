@@ -521,6 +521,22 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:shutdown
            #:running-p
            #:status))
+
+(defpackage :hngh.plugins.hngh-up
+  (:documentation "Hngh-Up — goal-driven squad spin-up with procedural questionnaire, spec derivation, and strategy management.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:cmd-up
+           #:derive-squad-spec
+           #:generate-questionnaire
+           #:answer-from-agents-md
+           #:gather-agents-md-context
+           #:list-strategies
+           #:save-strategy
+           #:load-strategy))
 (defpackage :hngh.plugins.llm-threat-detector
   (:documentation "LLM Threat Detector (B5) — L2/L4 semantic and behavioral threat review.")
   (:use :cl :hngh.core)
@@ -547,6 +563,48 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:add-remote
            #:list-remotes
            #:managed-ignore-paths))
+
+(defpackage :hngh.plugins.agents-md
+  (:documentation "AGENTS.md discovery/merge (C1) — per-directory context gathering.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:discover-agents-md
+           #:merge-agents-md
+           #:extract-section-headers
+           #:extract-fenced-code-blocks
+           #:extract-freshness-date
+           #:extract-bullet-facts))
+
+(defpackage :hngh.plugins.fragment-journal
+  (:documentation "Fragment journal writer (C5) — breadcrumbs unfinished-but-valuable squad work.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:write-fragment-journal
+           #:render-fragment-journal
+           #:fragment-journal-path
+           #:format-journal-timestamp))
+
+(defpackage :hngh.plugins.squad-resources
+  (:documentation "Squad resource gate and grants (C2) — VRAM-aware squad sizing.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:model-vram-mb
+           #:local-model-p
+           #:estimate-squad-vram
+           #:free-vram-mb
+           #:check-resource-gate
+           #:acquire-squad-grants
+           #:release-squad-grants
+           #:reject-with-fragment))
 
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")

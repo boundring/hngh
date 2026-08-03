@@ -414,3 +414,168 @@ esac
              (is (string= "child-2" (getf (first children) :name)))))
       (cleanup-tmp-home home))))
 
+
+;;; --- Session restart (Task 83 lifecycle seam) -----------------------------
+
+(defun %restart-runner (home &key alive-panes alive-names)
+  "Fake *squad-command-runner* for restart tests: ALIVE-NAMES are session names reported alive by has-session; ALIVE-PANES is the list-panes fixture text (or NIL to fail saves)."
+  (lambda (program args)
+    (cond
+      ((and (string= program "tmux")
+            (string= (first args) "has-session"))
+       (if (member (third args) alive-names :test #'string=)
+           (values 0 "" "")
+           (values 1 "" "")))
+      ((and (string= program "tmux")
+            (string= (first args) "list-panes"))
+       (if alive-panes
+           (values 0 alive-panes "")
+           (values 1 "" "tmux list-panes failed")))
+      ((string= program "tmux")
+       (values 0 "" ""))
+      (t
+       (values 0 "started" "")))))
+
+(defun %control-calls (runner-calls)
+  "Return start/stop entries from a recorded runner call log (reverse order)."
+  (remove-if-not (lambda (entry)
+                   (let ((args (second entry)))
+                     (and args (member (first args) '("start" "stop") :test #'string=))))
+                 runner-calls))
+
+(defun %has-session-targets (runner-calls)
+  "Return the session names checked by has-session in call-log order."
+  (mapcar (lambda (entry) (third (second entry)))
+          (remove-if-not (lambda (entry)
+                          (and (string= (first entry) "tmux")
+                               (string= (first (second entry)) "has-session")))
+                        runner-calls)))
+
+(test restart-session-signals-when-not-alive
+  "Restarting a session that is not running signals an actionable error."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (signals simple-error
+           (let ((hngh.plugins.mission-control::*squad-command-runner*
+                   (%restart-runner home :alive-names nil)))
+             (hngh.plugins.mission-control::restart-session
+              :session "fixture" :hngh-home home)))
+      (cleanup-tmp-home home))))
+
+(test restart-session-saves-stops-starts-restores
+  "Restarting a live session saves layout, stops, starts, and restores it."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (panes (format nil "0~C80~C40~C/tmp/project one~Csvc-dash~%1~C79~C40~C/tmp/project two~Cmake run~%"
+                        #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab #\Tab))
+         (runner (lambda (program args)
+                    (push (list program args) calls)
+                    (funcall (%restart-runner home
+                                             :alive-panes panes
+                                             :alive-names '("fixture"))
+                             program args))))
+    (unwind-protect
+         (progn
+           (multiple-value-bind (ok saved)
+               (let ((hngh.plugins.mission-control::*squad-command-runner* runner))
+                 (hngh.plugins.mission-control::restart-session
+                  :session "fixture" :hngh-home home))
+             (is-true ok)
+             (is (not (null saved))))
+           ;; Layout was persisted to the state root
+           (is (probe-file (merge-pathnames "state/mc-layout.lisp" home)))
+           ;; Calls log is newest-first, so start (latest) precedes stop (earliest)
+           (let ((controls (%control-calls calls)))
+             (is (string= "start" (first (second (first controls)))))
+             (is (string= "stop" (first (second (first (last controls))))))))
+      (cleanup-tmp-home home))))
+
+(test restart-session-proceeds-without-saved-layout
+  "A failed layout save does not abort the restart; it falls back to tiled."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (runner (lambda (program args)
+                    (push (list program args) calls)
+                    (funcall (%restart-runner home
+                                             :alive-names '("fixture")
+                                             :alive-panes nil)
+                             program args))))
+    (unwind-protect
+         (progn
+           (multiple-value-bind (ok saved)
+               (let ((hngh.plugins.mission-control::*squad-command-runner* runner))
+                 (hngh.plugins.mission-control::restart-session
+                  :session "fixture" :hngh-home home))
+             (is-true ok)
+             (is (null saved)))
+           ;; Stop/start still ran even though layout save failed
+           (let ((controls (%control-calls calls)))
+             (is (= 2 (length controls))))
+           (is (not (probe-file (merge-pathnames "state/mc-layout.lisp" home)))))
+      (cleanup-tmp-home home))))
+
+(test cascade-restart-restarts-parent-before-children
+  "Cascade restart restarts the named session, then each registered child."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (panes (format nil "0~C80~C40~C/tmp/project one~Csvc-dash~%"
+                        #\Tab #\Tab #\Tab #\Tab))
+         (runner (lambda (program args)
+                    (push (list program args) calls)
+                    (funcall (%restart-runner home
+                                             :alive-panes panes
+                                             :alive-names '("parent" "child-a" "child-b"))
+                             program args))))
+    (unwind-protect
+         (progn
+           (hngh.plugins.mission-control::register-session
+            "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session
+            "child-a" :parent "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session
+            "child-b" :parent "parent" :hngh-home home)
+           (multiple-value-bind (ok children)
+               (let ((hngh.plugins.mission-control::*squad-command-runner* runner))
+                 (hngh.plugins.mission-control::cascade-restart
+                  "parent" :hngh-home home))
+             (is-true ok)
+             (is (= 2 (length children))))
+           ;; Every session was alive-checked; parent was checked first (log is newest-first)
+           (let ((targets (%has-session-targets calls)))
+             (is (string= "parent" (first (last targets))))
+             (is (member "child-a" targets :test #'string=))
+             (is (member "child-b" targets :test #'string=))))
+      (cleanup-tmp-home home))))
+
+(test cascade-restart-tolerates-child-failure
+  "A child that is not alive is logged and does not abort the cascade."
+  (let* ((home (make-tmp-home))
+         (calls '())
+         (panes (format nil "0~C80~C40~C/tmp/project one~Csvc-dash~%"
+                        #\Tab #\Tab #\Tab #\Tab))
+         (runner (lambda (program args)
+                    (push (list program args) calls)
+                    (funcall (%restart-runner home
+                                             :alive-panes panes
+                                             :alive-names '("parent" "child-b"))
+                             program args))))
+    (unwind-protect
+         (progn
+           (hngh.plugins.mission-control::register-session
+            "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session
+            "child-a" :parent "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session
+            "child-b" :parent "parent" :hngh-home home)
+           ;; child-a reports not-alive; the cascade must continue to child-b
+           (multiple-value-bind (ok children)
+               (let ((hngh.plugins.mission-control::*squad-command-runner* runner))
+                 (hngh.plugins.mission-control::cascade-restart
+                  "parent" :hngh-home home))
+             (is-true ok)
+             (is (= 2 (length children))))
+           (let ((targets (%has-session-targets calls)))
+             (is (string= "parent" (first (last targets))))
+             (is (member "child-a" targets :test #'string=))
+             (is (member "child-b" targets :test #'string=))))
+      (cleanup-tmp-home home))))
