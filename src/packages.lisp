@@ -532,6 +532,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:cmd-up
            #:derive-squad-spec
            #:generate-questionnaire
+           #:generate-pm-prompt
            #:answer-from-agents-md
            #:gather-agents-md-context
            #:list-strategies
