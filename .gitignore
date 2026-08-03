@@ -34,3 +34,6 @@ Thumbs.db
 
 # OMC
 .omc/build/
+.hngh-night/
+.omc/
+.omo/

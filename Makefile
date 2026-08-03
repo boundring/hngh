@@ -19,7 +19,7 @@ DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
-.PHONY: all run clean test check install uninstall help
+.PHONY: all run clean test check install uninstall help lint-counts
 
 all: $(BINARY) $(CLIENT_BINARY)
 
@@ -76,6 +76,10 @@ check:
 integration-test: build
 	@bash tests/integration/m0-full-stack.sh
 
+## Lint test-count references in docs against actual make test count
+lint-counts:
+	@bash scripts/lint-test-counts.sh
+
 ## REPL — start an SBCL REPL with Hngh loaded
 repl:
 	$(SBCL) $(SBCL_FLAGS) \
@@ -114,6 +118,7 @@ help:
 	@echo "  daemon         Build the system daemon (C)"
 	@echo "  run            Run Hngh in dev mode (loads via ASDF)"
 	@echo "  test           Run the test suite"
+	@echo "  lint-counts    Lint doc test-count references vs actual"
 	@echo "  integration-test  Run end-to-end integration tests"
 	@echo "  repl           Start an SBCL REPL with Hngh loaded"
 	@echo "  install        Install binaries to $(PREFIX)/bin"
