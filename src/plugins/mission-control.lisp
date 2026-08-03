@@ -572,25 +572,26 @@ Remote models are rejected in this local-first slice."
 (defun register-session (name &key parent (hngh-home hngh:*hngh-home*))
   "Add or update a session entry in the tree. Return the updated tree."
   (let* ((tree (or (read-session-tree :hngh-home hngh-home)
-                   '(:sessions)))
+                   (list :sessions nil)))
          (sessions (getf tree :sessions))
          (existing (find name sessions :key (lambda (s) (getf s :name))
                          :test #'string=)))
     (if existing
         (setf (getf existing :parent) parent
               (getf existing :updated-at) (get-universal-time))
-        (push (list :name name
-                    :parent parent
-                    :created-at (get-universal-time)
-                    :updated-at (get-universal-time))
-              (getf tree :sessions)))
+        (setf (getf tree :sessions)
+              (cons (list :name name
+                          :parent parent
+                          :created-at (get-universal-time)
+                          :updated-at (get-universal-time))
+                    sessions)))
     (write-session-tree tree :hngh-home hngh-home)
     tree))
 
 (defun unregister-session (name &key (hngh-home hngh:*hngh-home*))
   "Remove a session from the tree. Return the updated tree."
   (let* ((tree (or (read-session-tree :hngh-home hngh-home)
-                   '(:sessions)))
+                   (list :sessions nil)))
          (sessions (getf tree :sessions)))
     (setf (getf tree :sessions)
           (remove name sessions :key (lambda (s) (getf s :name))
