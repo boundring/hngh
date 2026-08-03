@@ -218,6 +218,7 @@ Returns (values response-plist error-string)."
   (format t "  pause [--resume-at TIME]  Pause task dispatch~%")
   (format t "  resume                    Resume task dispatch~%")
   (format t "  stop-daemon               Stop the daemon (admin)~%")
+  (format t "  up <goal>                 Spin up a squad for GOAL (local, no daemon needed)~%")
   (format t "~%Options:~%")
   (format t "  --hngh-home PATH          Set state directory (default: ~~/.hngh/)~%")
   (format t "  --policy KEY VALUE        Set delegation policy (for submit)~%"))
@@ -295,6 +296,20 @@ Returns (values subcommand remaining-args hngh-home)."
          (unless subcommand
            (print-usage)
            (uiop:quit 1))
+
+         ;; hngh up is a local command — does not need daemon connection.
+         ;; It delegates to the hngh-up plugin which runs the questionnaire,
+         ;; derives a squad spec, and launches via the squad script.
+         (when (string= subcommand "up")
+           (let ((goal (first remaining)))
+             (unless goal
+               (format t "Error: up requires a goal string~%")
+               (uiop:quit 1))
+             (hngh.plugins.hngh-up:cmd-up
+              goal :hngh-home *hngh-home*
+              :dry-run (member "--dry-run" remaining :test #'string=))
+             (uiop:quit 0)))
+
          (unless (client-connect)
            (format t "Error: Could not connect to daemon at ~A~%"
                    (namestring (resolve-socket-path)))

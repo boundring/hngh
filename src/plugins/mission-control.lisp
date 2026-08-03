@@ -41,19 +41,24 @@ The test suite binds this to inject a publish failure.")
 
 (defun session-alive-p (&optional (session *session-name*))
   "T when the mission-control tmux session exists."
-  (handler-case
-      (let ((proc (sb-ext:run-program "tmux" (list "has-session" "-t" session)
-                                      :search t :wait t :output nil :error nil)))
-        (zerop (sb-ext:process-exit-code proc)))
-    (error () nil)))
+  (multiple-value-bind (code output error)
+      (funcall *squad-command-runner* "tmux" (list "has-session" "-t" session))
+    (declare (ignore output error))
+    (zerop code)))
 
 (defun start-session ()
   "Start the mission-control session (idempotent — mc handles existing)."
-  (mc-run '("start")))
+  (multiple-value-bind (code output error)
+      (funcall *squad-command-runner* (namestring (mc-path)) '("start"))
+    (declare (ignore error))
+    (values output code)))
 
 (defun stop-session ()
   "Stop the mission-control session."
-  (mc-run '("stop")))
+  (multiple-value-bind (code output error)
+      (funcall *squad-command-runner* (namestring (mc-path)) '("stop"))
+    (declare (ignore error))
+    (values output code)))
 
 (defun add-pane (command)
   "Add a tiled pane running COMMAND (string) to the session."
@@ -435,6 +440,7 @@ return NIL and an actionable reason so callers can use their tiled fallback."
         :forward-prompt-path (namestring forward-path)
         :roles (mapcar (lambda (role) (getf role :name))
                        (getf definition :roles))
+        :grant-ids nil
         :started-at (get-universal-time)))
 
 (defun squad-up (name &key registry-path spec-path
@@ -457,6 +463,16 @@ Remote models are rejected in this local-first slice."
     (unless (every (lambda (role) (local-model-p (getf role :model)))
                    (getf definition :roles))
       (error "Remote squad models are disabled; use an explicit approved lane"))
+    ;; Resource gate (C2): fail closed when VRAM is insufficient and no
+    ;; fallback exists; breadcrumb the rejection as a fragment (C5).
+    (multiple-value-bind (decision reason)
+        (hngh.plugins.squad-resources:check-resource-gate
+         (getf definition :roles))
+      (when (eq decision :reject)
+        (hngh.plugins.squad-resources:reject-with-fragment
+         name reason (princ-to-string spec) "n/a"
+         "free VRAM or lower model tier before relaunching")
+        (error "Squad ~A rejected by resource gate: ~A" name reason)))
     (when (probe-file state-path)
       (let ((state (read-squad-state state-path)))
         (when (member (getf state :status) '(:starting :running))
@@ -470,7 +486,10 @@ Remote models are rejected in this local-first slice."
             (terpri stream))
           (run-squad-command (namestring launcher) (list "up" (namestring spec)))
           (setf launched t
-                (getf state :status) :running)
+                (getf state :status) :running
+                (getf state :grant-ids)
+                (hngh.plugins.squad-resources:acquire-squad-grants
+                 name (getf definition :roles)))
           (write-squad-state state-path state)
           state)
       (error (condition)
@@ -480,6 +499,8 @@ Remote models are rejected in this local-first slice."
               (run-squad-command "tmux"
                                  (list "kill-session" "-t"
                                        (getf state :session)))))
+          (hngh.plugins.squad-resources:release-squad-grants
+           (getf state :grant-ids))
           (setf (getf state :status) :failed
                 (getf state :error) message
                 (getf state :failed-at) (get-universal-time))
@@ -498,6 +519,7 @@ Remote models are rejected in this local-first slice."
                  (eq (getf state :status) :running))
       (error "Refusing to stop non-running or unowned squad session: ~A" name))
     (run-squad-command "tmux" (list "kill-session" "-t" (getf state :session)))
+    (hngh.plugins.squad-resources:release-squad-grants (getf state :grant-ids))
     (setf (getf state :status) :stopped
           (getf state :stopped-at) (get-universal-time))
     (write-squad-state state-path state)
