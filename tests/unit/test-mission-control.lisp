@@ -383,3 +383,34 @@ esac
                    (getf (hngh.plugins.mission-control::read-squad-state path)
                          :status))))
       (cleanup-tmp-home home))))
+
+(test session-tree-registration-and-children
+  "Register, query children, and unregister sessions in the session tree."
+  (let ((home (make-tmp-home)))
+    (unwind-protect
+         (progn
+           ;; Initial tree is empty
+           (is (null (hngh.plugins.mission-control::read-session-tree :hngh-home home)))
+           
+           ;; Register parent and children
+           (hngh.plugins.mission-control::register-session "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session "child-1" :parent "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session "child-2" :parent "parent" :hngh-home home)
+           (hngh.plugins.mission-control::register-session "other" :hngh-home home)
+
+           (let ((tree (hngh.plugins.mission-control::read-session-tree :hngh-home home)))
+             (is (not (null tree)))
+             (is (= 4 (length (getf tree :sessions)))))
+
+           (let ((children (hngh.plugins.mission-control::session-children "parent" :hngh-home home)))
+             (is (= 2 (length children)))
+             (is (not (null (find "child-1" children :key (lambda (s) (getf s :name)) :test #'string=))))
+             (is (not (null (find "child-2" children :key (lambda (s) (getf s :name)) :test #'string=)))))
+
+           ;; Unregister child-1
+           (hngh.plugins.mission-control::unregister-session "child-1" :hngh-home home)
+           (let ((children (hngh.plugins.mission-control::session-children "parent" :hngh-home home)))
+             (is (= 1 (length children)))
+             (is (string= "child-2" (getf (first children) :name)))))
+      (cleanup-tmp-home home))))
+
