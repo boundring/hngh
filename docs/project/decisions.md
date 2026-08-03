@@ -194,3 +194,29 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Context**: Multiple agents staging tasks to `~/.hngh-night/tasks/` caused collisions when reusing numbers.
 **Decision**: Check `.done/` directory before numbering new tasks. Consumed tasks move to `.done/` immediately. Ledger is append-only; never reuse numbers.
 **Rationale**: Simple filesystem-based coordination. No locking needed. Agents sign notes in optmem with their name for attribution.
+
+---
+
+## 2026-08-02
+
+### D-035: hngh-up architecture — local command with procedural questionnaire and strategy system
+**Context**: Need a `hngh up <goal>` command for goal-driven squad spin-up. Must not depend on the daemon (local command), must gather context to generate adaptive questions (max 5), must derive squad specs from answers, must support strategy reuse/sharing, and must integrate with existing `squad` launcher.
+**Decision**: 
+- Local command (no daemon dependency) — `up` subcommand in client CLI, runs as a standalone Lisp script.
+- Procedural questionnaire — max 5 adaptive questions generated from project/file/system/OptMem context.
+- Spec derivation — answers transformed into squad spec with model mapping, role layouts, preflight gates, journal config.
+- Strategy system — built-in strategies (duo-review, feature-sprint, design-fork, nightly-audit) + user-saved + shareable (sanitized export/import).
+- Autonomous continuation — token-aware pause/resume via forward-prompt mechanism.
+- Social sharing — sanitized strategy export/import for cross-instance reuse.
+- Integration — launches squads via existing `~/.local/bin/squad` script (reads SEXP specs from `hngh/squads/`).
+**Rationale**: Daemon-independent CLI command enables use without running hngh service. Questionnaire capped at 5 questions keeps interaction lightweight. Strategy system enables pattern reuse and team sharing. Existing squad launcher avoids duplicating tmux/session logic. Forward-prompt mechanism aligns with M2 session lifecycle design.
+
+### D-036: Squad automation bootstrapping — C7 self-written prompts, file-change notification, journal lifecycle
+**Context**: M9 W1-2 done (C1, C2, C5, partial C3). Squad startup still uses static prompts. Hngh needs to automate the PM's first-prompt generation from project/system context, generalize file watching beyond config files (gbd's systemd .path unit pattern), and wire journaling into squad lifecycle (startup, ongoing, shutdown). Test counts in docs are stale and manually maintained — need procedural lint.
+**Decision**:
+- C7 PM-first-prompt generator: procedurally assembles orientation prompt from AGENTS.md discovery, plans, system context, roadmap, OptMem, squad intent. Replaces static SEAT_PROMPT strings.
+- File-change notification: generalize config-watcher to registered-path bus. Plugins register interest. Systemd .path units for daemon mode (gbd pattern). mtime-poll fallback for local mode. Events on the bus as squad comm-lines.
+- Squad journal lifecycle: startup writes -projected.md, ongoing writes -actual.md triggered by file-change events, shutdown writes -fragment.md (C5).
+- Test-count lint: `make lint-counts` runs make test, parses check count, scans docs for N/M patterns, exits 1 on stale. No LLM involved.
+- Self-improvement loop: hngh reads its own roadmap, decomposes next wave, dispatches a squad to implement it. First iteration wired in Wave 5.
+**Rationale**: Static prompts don't scale. Procedural generation from context makes squads self-orienting. gbd's systemd .path pattern is proven, native, and doesn't poll. Journal lifecycle makes squad work auditable and resumable. Test-count lint eliminates a recurring manual task that wastes LLM tokens.

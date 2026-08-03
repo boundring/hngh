@@ -235,3 +235,28 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Exit criteria (all met)**: byte-compile 0 warnings; batch open shows all 5 panels; balance equalizes (6/6/6/5 rows); rotate cycles and `C-u` restores exactly; reloaded into the running daemon (live frame shows 5 panels).
 - **Bug found+fixed**: rotation initially failed — side windows are `dedicated . t`, so `set-window-buffer` refused; now dedication is cleared for the swap and restored for side windows.
 - **Notes**: Read-only tail — elisp never writes the opencode log. Author: moonshotai/kimi-k3 via OpenRouter (Hermes TUI).
+### Session M-sentry+: Restart/Cascade Lifecycle Seam + Tests (Task 83 gap)
+**Status**: Done (2026-08-02) — changes uncommitted, awaiting owner commit
+- **Goal**: Close the Designer-audit gap (#347): `restart-session` and `cascade-restart` had zero test coverage because `session-alive-p`/`start-session`/`stop-session` invoked tmux/mc directly instead of routing through the injectable `*squad-command-runner*`.
+- **Seam**: `session-alive-p` now runs `has-session` through `*squad-command-runner*`; `start-session`/`stop-session` route the mc subcommand through the same runner (default unchanged behavior; exit-code/stdout contract preserved for callers).
+- **Tests added (5)**: `restart-session-signals-when-not-alive`; `restart-session-saves-stops-starts-restores` (verifies layout persisted + stop-before-start order); `restart-session-proceeds-without-saved-layout` (save failure degrades gracefully, still stops/starts); `cascade-restart-restarts-parent-before-children` (tree order, all sessions alive-checked); `cascade-restart-tolerates-child-failure` (not-alive child logged, cascade continues).
+- **Also fixed**: `src/client/main.lisp` `--hngh-home` help string had `~/.hngh/` inside a `format` control string — `~/` is a call-function directive, so the literal `~` must be escaped as `~~` (fatal compile error, caught at 20:59; fix committed in HEAD at d569e3b).
+- **Exit criteria (all met)**: full `make test` 1393/1393 green (1203 → 1393 with M9 W1-2 plugins + C7 generator), 0 fail, 0 skip; MC suite 85/85; no new style warnings from changed files.
+- **Notes**: Patch preserved at `~/.hngh-night/artifacts/83-restart-cascade-seam-tests.patch` after repeated concurrent working-tree reverts by the Artist seat during verification. Pre-existing environmental flakes (daemon socket connect, LTD persistence, emacs live lifecycle) are unrelated to this change. — Sisyphus worker, opencode (deepseek/deepseek-v4-flash), $0.
+
+### Session M7.1: hngh-up Design Doc + Plugin + CLI (Goal-Driven Squad Spin-Up)
+**Status**: Done (2026-08-02)
+- **Goal**: Add `hngh up <goal>` command for goal-driven squad spin-up with procedural questionnaire, strategy system, autonomous continuation, and social sharing.
+- **Artifacts**: `docs/design/hngh-up.md` (design spec); `src/plugins/hngh-up.lisp` (plugin: context gathering, adaptive questionnaire ≤5 questions, spec derivation, strategy management, squad launch via existing `squad` script); `src/client/main.lisp` (`up` subcommand, local command — no daemon dependency); `src/packages.lisp` (`:hngh.plugins.hngh-up` defpackage); `hngh.asd` (plugin registration); `src/core/main.lisp` (init/shutdown hooks for config-watcher and hngh-up).
+- **Mission-control changes**: Made `session-alive-p`, `start-session`, `stop-session` use injectable `*squad-command-runner*` so squad's restart tests can mock tmux calls.
+- **Squad's Task 83**: Restart tests now green (165 new lines in `tests/unit/test-mission-control.lisp`).
+- **Exit criteria (all met)**: `make test` 1393/1393 green (includes squad's restart tests + hngh-up, agents-md, squad-resources, fragment-journal plugins + C7 PM-first-prompt generator); `make build` and `make build-client` both pass.
+- **Attribution**: PM — z-ai/glm-5.2 via openrouter, Hermes harness.
+
+### Session M9.3: Squad Automation Bootstrapping (C7 PM-first-prompt, file-change notification, journal lifecycle)
+**Status**: In progress (2026-08-03)
+- **Goal**: Automate squad startup end-to-end. PM's first prompt procedurally generated from project/system/OptMem context. Per-role prompts seeded by PM after orientation. File-change notification system (gbd systemd .path pattern). Squad journal lifecycle integration. Test-count lint (procedural, no LLM). Bootstrap hngh's self-improvement loop.
+- **Context**: M9 W1-2 done (C1 AGENTS.md discovery, C2 resource gate, C5 fragment journal, hngh-up with partial C3). 1368/1368 tests green. squad-up script exists with static prompts. config-watcher does mtime-poll on 2 hardcoded paths.
+- **Artifacts**: `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md` (plan); `.hngh-night/artifacts/pm-to-designer-squad-startup-automation.md` (design request to Designer); `docs/design/squad-startup-automation.md` (full design doc: dispatch tree, bean bus, git-backed rollback, prompt matrix, role senses); `scripts/lint-test-counts.sh` (Wave 0 lint); `src/plugins/hngh-up.lisp` (Wave 1: generate-pm-prompt); `journal/squads/pm-squad-automation-bootstrap-20260803T120000Z-projected.md` + `-actual.md` (squad journals); fixed stale test counts in AGENTS.md, roadmap, work-sessions.
+- **Waves**: W0=lint (done), W1=C7 PM-first-prompt (done, 1393 green), W2=file-change notification, W3=dispatch tree+git, W4=bean lifecycle, W5=prompt matrix, W6=squad-up integration, W7=self-improve loop, W8=benchmark squad, W9=nightly cron.
+- **Attribution**: PM — z-ai/glm-5.2 via openrouter, Hermes harness. Worker — gemma-4-12b (local, $0) for C7 implementation.
