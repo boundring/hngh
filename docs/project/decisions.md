@@ -220,3 +220,32 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 - Test-count lint: `make lint-counts` runs make test, parses check count, scans docs for N/M patterns, exits 1 on stale. No LLM involved.
 - Self-improvement loop: hngh reads its own roadmap, decomposes next wave, dispatches a squad to implement it. First iteration wired in Wave 5.
 **Rationale**: Static prompts don't scale. Procedural generation from context makes squads self-orienting. gbd's systemd .path pattern is proven, native, and doesn't poll. Journal lifecycle makes squad work auditable and resumable. Test-count lint eliminates a recurring manual task that wastes LLM tokens.
+
+---
+
+## 2026-08-04
+
+### D-037: OpenRouter quota-aware fallbacks and multi-tier model rotation
+**Context**: We depleted our 7-day Moonshot Kimi K3 native API quota (resets August 8th), and we have a strict $20/week spending limit on OpenRouter. Premium models (such as GLM-5.2 or Kimi K3 via OpenRouter) must be rationed.
+**Decision**: 
+- Rotate PM and Designer through cheap and free models (such as `deepseek-v4-flash`, `gpt-5.6-luna`, or free models via OpenRouter).
+- Establish the "Skeleton, Bones, and Flesh" development workflow: use local Gemma or free models for skeleton code/unit tests (RED); use cheap models for implementation logic; only invoke premium models (`glm-5.2`) for final validation or fixing highly complex logical bottlenecks.
+- Implement parallel cheap model fan-out and voting instead of single-turn premium model debugging.
+**Rationale**: Keeps operating costs strictly under budget limits while maintaining a functional squad structure. Leveraging local and free-tier resources for the majority of standard TDD loops preserves the weekly $20 budget for critical-path PM/Designer steering.
+
+### D-038: MisakaNet integration for agent safety and error mitigation
+**Context**: Cheap squads running headless loops are vulnerable to repeating identical environment/code failures (such as SQLite database locks, cronjob races, or cross-thread delivery mixing), wasting valuable context tokens.
+**Decision**: 
+- Integrate MisakaNet (github.com/Ikalus1988/MisakaNet), a git-backed failure-memory layer.
+- Hook into the squad event bus: when `squad.seat.error` or `make test` fails, query the local or API-based MisakaNet lesson index.
+- If a lesson matches the error pattern (e.g. SQLite database lock, uncommitted git locks), inject the matching "Fix Path" directly into the Coder's prompt.
+- Contribute resolved lessons (such as the Lisp parenthesis mismatch) to the global MisakaNet repository using TEMPLATE.md.
+**Rationale**: Injects collective failure-recovery memories directly into the agent's context, preventing endless loops of self-debugging and saving significant token costs.
+
+### D-039: Tight scaffolding and strict goalposts for less-intelligent models
+**Context**: When rotating the Designer or Coder to cheaper models (such as `gemma-4-12b` or `deepseek-v4-flash`), open-ended design specs lead to halluncinated structures or broken interfaces.
+**Decision**: 
+- All design sessions (D2–D9) must be tightly structured with explicit goalposts, keyword-milestones, "must-includes" (interfaces, paths, libraries), and "must-not-includes" (deprecated patterns, external binary deps, multithreading locks).
+- PM must validate every spec against these criteria before dispatching to the Coder.
+**Rationale**: High-scaffolding prompts enable low-intelligence/cheap models to perform high-quality, targeted work by narrowing their search space, eliminating loose design ambiguity.
+
