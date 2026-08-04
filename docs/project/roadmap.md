@@ -152,7 +152,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 |---|---|---|
 | 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (1393/1393 tests @ d569e3b+uncommitted) |
 | 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | C2 **done**; C3 in progress (1393/1393 tests @ d569e3b+uncommitted) |
-| 3 | C4 start-now/pause-on-cause defaults, C7 self-written prompts | **In progress** (2026-08-03: C7 PM-first-prompt generator + squad journal integration) |
+| 3 | C4 start-now/pause-on-cause defaults, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (2026-08-03: C7 PM-first-prompt generator + squad journal integration + Misaka integration design) |
 | 4 | C6 planner cycle (roadmap → task queue → squad dispatch) | Not started |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 

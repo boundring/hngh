@@ -522,6 +522,21 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:running-p
            #:status))
 
+(defpackage :hngh.plugins.file-watcher
+  (:documentation "File Watcher (M9 Wave 2) — generalized file-change notification with mtime-poll, debounce, and scoped registration.")
+  (:use :cl :hngh.core)
+  (:export #:register-path
+           #:deregister-path
+           #:registered-paths
+           #:register-role-paths
+           #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:generate-path-unit
+           #:*watch-interval*
+           #:*debounce-ms*))
+
 (defpackage :hngh.plugins.hngh-up
   (:documentation "Hngh-Up — goal-driven squad spin-up with procedural questionnaire, spec derivation, and strategy management.")
   (:use :cl :hngh.core)
@@ -606,6 +621,48 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:acquire-squad-grants
            #:release-squad-grants
            #:reject-with-fragment))
+
+(defpackage :hngh.plugins.squad-dispatch
+  (:documentation "Squad Dispatch Tree (Wave 3) — directory tree, dispatch.md index, git-backed rollback.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           ;; Squad lifecycle
+           #:create-squad
+           #:rollback-squad
+           #:get-squad-status
+           #:squad-log
+           ;; Bean operations
+           #:plant-bean
+           #:harvest-bean
+           ;; Task operations
+           #:assign-task
+           #:update-task-status
+           #:update-role-status
+           ;; Precondition gates
+           #:check-preconditions))
+
+(defpackage :hngh.plugins.beans
+  (:documentation "Bean Lifecycle (Wave 4) — typed beans, husk/core/membrane format, lifecycle state machine, spoiled/feral detection, spore propagation.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           ;; Bean lifecycle
+           #:plant-bean
+           #:harvest-bean
+           #:digest-bean
+           #:husk-bean
+           #:read-bean
+           ;; Staleness and culling
+           #:check-bean-staleness
+           #:cull-spoiled-beans
+           ;; Bean type constants
+           #:*bean-types*
+           #:*membrane-directives*))
 
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
