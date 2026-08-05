@@ -249,3 +249,21 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 - PM must validate every spec against these criteria before dispatching to the Coder.
 **Rationale**: High-scaffolding prompts enable low-intelligence/cheap models to perform high-quality, targeted work by narrowing their search space, eliminating loose design ambiguity.
 
+---
+
+## 2026-08-05
+
+### D-040: Canonical model mandate — deepseek-v4-flash-0731 primary, GLM-5.2 deep tier
+**Context**: oh-my-openagent.json and ~/.hermes/config.yaml now carry strictly-ordered fallback chains (deepseek-v4-flash-0731 -> deepseek-v4-flash -> gpt-5.6-luna -> mimo-v2.5 -> minimax-m3 -> gemini-3.5-flash -> hy3-preview -> glm-5.2 -> nemotron-3-ultra:free -> Qwythos-9B local -> gemma-4-12b local), GLM-5.2 primary for deep-thinking work, gpt-5.6-terra for heavy research, qwen3.7-flash for vision. Squad configs referenced older chains (kimi-k2.6, deepseek-v4-pro, gemini-3.5-flash-lite, local-first daily driver).
+**Decision**:
+- Align hngh runtime + docs to the mandate: squad-seats.conf, squad-seats-cheap.conf, squad-up defaults/prompts/--cheap.
+- Primary for most roles: deepseek-v4-flash-0731 (openrouter). GLM-5.2 stays primary for PM/Designer. Vision looker: qwen3.7-flash. Locals are last-resort fallbacks, not the daily driver.
+- Policy does not lean on GitHub Copilot; gpt-5.6-luna is openai-provided.
+**Rationale**: Cheapest-capable-first beats free-faucet-first on intelligence per $; consistency across Hermes, OpenCode (oh-my-openagent), and hngh squads. K3 native API back Aug 8.
+**Files touched**: ~/.hngh-night/squad-seats.conf, squad-seats-cheap.conf, ~/.local/bin/squad-up, AGENTS.md, docs/design/model-pareto.md, model-routing.md, model-strategy.md, journal/20260805-model-mandate.md.
+
+### D-041: MCP integration — misakanet MCP replaces gh-api lookup; nothumansearch documented
+**Context**: misakanet, cogmem, nothumansearch MCPs auto-start in Hermes/OpenCode.
+**Decision**: model-strategy.md Misaka Guard pre-flight now queries the misakanet MCP; AGENTS.md MCP section lists nothumansearch; cogmem + misakanet are candidates to replace OptMem for PM communication (pending design review).
+**Rationale**: Tools are live; the design doc referenced a pre-MCP gh api call.
+
