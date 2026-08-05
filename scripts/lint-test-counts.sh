@@ -40,7 +40,7 @@ else
   TEST_OUTPUT="$(cd "$REPO_ROOT" && make test 2>&1)"
 fi
 
-ACTUAL_COUNT="$(echo "$TEST_OUTPUT" | grep -oP 'Did \K[0-9]+' | tail -1)"
+ACTUAL_COUNT="$(echo "$TEST_OUTPUT" | grep -oP 'Did \K[0-9]+' | awk '{s+=$1} END {print s}')"
 
 if [[ -z "$ACTUAL_COUNT" ]]; then
   echo "ERROR: could not parse test count from output" >&2

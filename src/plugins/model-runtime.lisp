@@ -35,6 +35,9 @@
 (defvar *next-runtime-id* 0
   "Counter for monotonically increasing runtime IDs.")
 
+(defvar *skip-model-pull* nil
+  "If T, skip pulling models via external commands (e.g. during tests).")
+
 (defvar *available-runtimes* '()
   "Cached plist from discover-runtimes: (:ollama t ... :models (...)).")
 
@@ -284,10 +287,11 @@ needed (M0's unsloth-studio.service), then polls up to 60s. Returns T or NIL."
 
     (setf (runtime-info-port info) ollama-port)
 
-    ;; Check if the model exists; if not, attempt to pull it
-    (if (health-check-model ollama-port model-name)
+    ;; Check if the model exists; if not, attempt to pull it (unless skipped)
+    (if (or (health-check-model ollama-port model-name)
+            *skip-model-pull*)
         (progn
-          (hngh.core:log-info "Model ~A already loaded in ollama" model-name)
+          (hngh.core:log-info "Model ~A already loaded in ollama (or skipping pull)" model-name)
           (setf (runtime-info-status info) :ready))
         (progn
           (hngh.core:log-info "Model ~A not loaded — attempting pull" model-name)
@@ -315,6 +319,8 @@ needed (M0's unsloth-studio.service), then polls up to 60s. Returns T or NIL."
          (llama-port (or port 8080)))
     (unless model-path
       (error "llama.cpp requires :path in model-spec"))
+    (unless (probe-file model-path)
+      (error "Model file does not exist: ~A" model-path))
     (unless (which-exists-p "llama-server")
       ;; Try llama.cpp as alternative binary name
       (unless (which-exists-p "llama.cpp")

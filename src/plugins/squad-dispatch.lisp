@@ -22,16 +22,32 @@
 
 ;;; --- Helpers: git ----------------------------------------------------------
 
+(defun %work-tree-pathspecs (squad-root)
+  "Return top-level work-tree paths, excluding the embedded state repository."
+  (append (list ".gitignore" "dispatch.md")
+          (loop for path in (directory (merge-pathnames "*" squad-root))
+                for relative = (enough-namestring path squad-root)
+                unless (or (string= relative "state.git")
+                           (and (>= (length relative) 10)
+                                (string= (subseq relative 0 10) "state.git/")))
+                collect relative)))
+
 (defun %git (args squad-root)
   "Run git with --git-dir=<state.git> --work-tree=<squad-root>.
 Returns plist: (:ok bool :code int :output string :error string)."
   (let* ((state-git (merge-pathnames "state.git/" squad-root))
+         (safe-args (if (and (equal (first args) "add")
+                             (member "-A" args :test #'string=))
+                        (append (list "add" "-A" "--")
+                                (%work-tree-pathspecs squad-root))
+                        args))
          (full-args (append (list "--git-dir" (namestring state-git)
                                  "--work-tree" (namestring squad-root))
-                            args)))
+                            safe-args)))
     (handler-case
         (let* ((proc (sb-ext:run-program "git" full-args
                                         :search t :wait t
+                                        :directory squad-root
                                         :output :stream :error :stream))
                (stdout (with-output-to-string (out)
                          (when (sb-ext:process-output proc)
@@ -73,9 +89,9 @@ Returns plist: (:ok bool :code int :output string :error string)."
 
 (defun %atomic-write (path content)
   "Write CONTENT to PATH atomically (write-then-rename)."
-  (let ((tmp (merge-pathnames
-              (format nil ".tmp.~D" (random 1000000))
-              path)))
+  (let* ((tmp (merge-pathnames
+               (make-pathname :name (format nil ".tmp-~D" (random 1000000)))
+               path)))
     (with-open-file (out tmp :direction :output
                          :if-exists :supersede
                          :if-does-not-exist :create
@@ -425,6 +441,9 @@ Returns plist: (:squad-name :squad-root :state-git :roles :commit-sha)."
                                  :roles roles-plist
                                  :tasks '()
                                  :communications '())))
+    ;; Write .gitignore to ignore the embedded state repository
+    (%atomic-write (merge-pathnames ".gitignore" squad-root)
+                  (format nil "state.git~%state.git/~%**/state.git~%**/state.git/**~%"))
     ;; Set git identity for the repo
     (%git (list "config" "user.email" "hngh-squad@localhost") squad-root)
     (%git (list "config" "user.name" "Hngh Squad") squad-root)

@@ -329,9 +329,11 @@ updated bean plist."
   "Return list of role keywords for all role directories under squad-root."
   (let ((dirs '()))
     (uiop:collect-sub*directories
-     squad-root t nil
+     squad-root
+     (lambda (dir) t)
      (lambda (dir)
-       ;; A role dir has inbox.md in it
+       (not (search "state.git" (namestring dir))))
+     (lambda (dir)
        (when (probe-file (merge-pathnames "inbox.md" dir))
          (let* ((name (car (last (pathname-directory dir))))
                 (kw (when name (intern (string-upcase name) :keyword))))
@@ -425,7 +427,11 @@ Returns a list of plists, each with :bean, :to, :type, :content,
              (setf current-spec nil
                    in-type-fields nil)
              (let ((rest (cl-ppcre:regex-replace "^-\\s+" line "")))
-               (setf current-spec (%parse-kv-line rest))))
+               (let ((kv (%parse-kv-line rest)))
+                 (when kv
+                   (setf current-spec
+                         (list (intern (string-upcase (first kv)) :keyword)
+                               (second kv)))))))
             ;; Inside type-fields (indented under a type-fields: header)
             ((and in-type-fields
                   (or (= (length line) 0)
@@ -441,7 +447,7 @@ Returns a list of plists, each with :bean, :to, :type, :content,
                            val))))))
             ;; key: value line (could be start of type-fields section)
             ((and current-spec
-                  (cl-ppcre:scan "^\\s*\\w[\\w-]*:\\s" line))
+                  (cl-ppcre:scan "^\\s*\\w[\\w-]*:\\s*" line))
              (let ((kv (%parse-kv-line (string-trim '(#\Space #\Tab) line))))
                (when kv
                  (let ((key (first kv))
@@ -463,9 +469,11 @@ Returns a list of plists, each with :bean, :to, :type, :content,
 (defun %parse-kv-line (line)
   "Parse a 'key: value' line, returning (key value) or nil."
   (let ((colon-pos (position #\: line)))
-    (when (and colon-pos (> (length line) (1+ colon-pos)))
+    (when colon-pos
       (let* ((key (string-trim '(#\Space #\Tab) (subseq line 0 colon-pos)))
-             (val (string-trim '(#\Space #\Tab) (subseq line (1+ colon-pos)))))
+             (val (if (> (length line) (1+ colon-pos))
+                      (string-trim '(#\Space #\Tab) (subseq line (1+ colon-pos)))
+                      "")))
         ;; Remove surrounding quotes from value
         (when (and (> (length val) 1)
                    (char= (char val 0) #\")
@@ -571,11 +579,12 @@ Returns propagation result plist."
       (let ((inbox-path (%inbox-path squad-root role)))
         (%rewrite-inbox-section inbox-path bean-name "feral"))
       (%update-dispatch-comm-status squad-root bean-name role "feral"))
-    (list :spore-id spore-id
-          :sub-beans (nreverse planted-beans)
-          :sub-bean-count (length planted-beans)
-          :feral feral
-          :feral-reason feral-reason)))
+    (let ((sub-beans (nreverse planted-beans)))
+      (list :spore-id spore-id
+            :sub-beans sub-beans
+            :sub-bean-count (length sub-beans)
+            :feral feral
+            :feral-reason feral-reason))))
 
 (defun %count-spore-depth (squad-root spore-id)
   "Count the depth of the spore propagation chain by following
@@ -691,7 +700,7 @@ Cross-role exchange: any role can plant in any other role's inbox."
                            (if (string= existing-content "")
                                bean-section
                                (concatenate 'string existing-content bean-section
-                                            "\n"))))
+                                            (string #\Newline)))))
           ;; Update dispatch.md Communications table
           (let ((parsed (%parse-dispatch-md squad-root)))
             (setf (getf parsed :communications)

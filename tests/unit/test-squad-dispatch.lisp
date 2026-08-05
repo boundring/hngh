@@ -29,6 +29,21 @@
 
 ;;; --- Tests -----------------------------------------------------------------
 
+(test work-tree-pathspecs-exclude-state-git
+  "Work-tree staging paths never include the embedded git directory."
+  (let ((root (%squad-dispatch-tmp-root)))
+    (unwind-protect
+         (progn
+           (ensure-directories-exist (merge-pathnames "state.git/" root))
+           (ensure-directories-exist (merge-pathnames "pm/" root))
+           (let ((paths (hngh.plugins.squad-dispatch::%work-tree-pathspecs root)))
+             (is (member "dispatch.md" paths :test #'string=))
+             (is (notany (lambda (path)
+                           (or (string= path "state.git")
+                               (search "state.git/" path)))
+                         paths))))
+      (%cleanup-squad root))))
+
 (test create-squad-creates-tree
   "create-squad creates the directory tree and initial commit."
   (let ((home (%squad-dispatch-tmp-root)))
