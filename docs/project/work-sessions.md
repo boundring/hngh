@@ -260,3 +260,12 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Artifacts**: `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md` (plan); `.hngh-night/artifacts/pm-to-designer-squad-startup-automation.md` (design request to Designer); `docs/design/squad-startup-automation.md` (full design doc: dispatch tree, bean bus, git-backed rollback, prompt matrix, role senses); `scripts/lint-test-counts.sh` (Wave 0 lint); `src/plugins/hngh-up.lisp` (Wave 1: generate-pm-prompt); `journal/squads/pm-squad-automation-bootstrap-20260803T120000Z-projected.md` + `-actual.md` (squad journals); fixed stale test counts in AGENTS.md, roadmap, work-sessions.
 - **Waves**: W0=lint (done), W1=C7 PM-first-prompt (done, 1393 green), W2=file-change notification, W3=dispatch tree+git, W4=bean lifecycle, W5=prompt matrix, W6=squad-up integration, W7=self-improve loop, W8=benchmark squad, W9=nightly cron.
 - **Attribution**: PM — z-ai/glm-5.2 via openrouter, Hermes harness. Worker — gemma-4-12b (local, $0) for C7 implementation.
+
+### Session M9.4: Test-loop optimization completion (fast-suite gate)
+**Status**: Done (2026-08-05)
+- **Goal**: Complete the halted 20260804 squad's test-loop work; make incremental and gate-keeping tests fast.
+- **Context**: Squad run 20260804T150741Z-cheap left uncommitted work (focused test-fast targets, model-runtime pull fence, squad-dispatch pathspecs). Post-mortem reviewed; verification exposed five real bugs in committed code.
+- **Artifacts**: Makefile test-fast/test-suite/test-full split (15s timeout); scripts/lint-test-counts.sh sums the fast suite; fixes in beans.lisp, squad-dispatch.lisp, model-runtime.lisp.
+- **Bugs fixed**: fiveam run! form quoting; %git run outside squad root; %atomic-write rename mangling extensionless targets; ANSI-CL newline literal in bean inbox append (wrote 'n'); nreverse count footgun; %find-role-dirs uiop signature mismatch; lint parse.
+- **Exit criteria (met)**: make test 205/205 @ 2.6s; make test-full 1406/1406; lint-counts clean.
+- **Attribution**: squad run 20260804T150741Z-cheap (deepseek-v4-flash via openrouter); verification + fixes — deepseek-v4-flash-0731 via openrouter (Hermes TUI). Commit b7a0289.

@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-2 in progress (1393 tests green @ d569e3b+uncommitted). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-2 in progress (205/205 fast tests green @ b7a0289). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
 **Last updated**: 2026-08-03
 
 ---
@@ -13,7 +13,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
 | M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
-| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (1393 tests passing @ d569e3b+uncommitted) |
+| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (205/205 fast tests passing @ b7a0289) |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
@@ -45,7 +45,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
 
-**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 1393/1393 @ d569e3b+uncommitted).
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 205/205 @ b7a0289).
 
 ### Deliverables
 
@@ -150,8 +150,8 @@ and benchmark squads; nightly cron turns that into a real dataset.
 
 | Wave | Capabilities | Status |
 |---|---|---|
-| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (1393/1393 tests @ d569e3b+uncommitted) |
-| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | C2 **done**; C3 in progress (1393/1393 tests @ d569e3b+uncommitted) |
+| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (205/205 tests @ b7a0289) |
+| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | C2 **done**; C3 in progress (205/205 tests @ b7a0289) |
 | 3 | C4 start-now/pause-on-cause defaults, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (2026-08-03: C7 PM-first-prompt generator + squad journal integration + Misaka integration design) |
 | 4 | C6 planner cycle (roadmap → task queue → squad dispatch) | Not started |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |

@@ -253,6 +253,14 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 
 ## 2026-08-05
 
+### D-042: Test-loop optimization completed — fast suite is the gate
+**Context**: Halted 20260804 squad run left uncommitted test-loop work (focused test-fast targets, model-runtime pull fence, squad-dispatch pathspecs). Verification exposed five real bugs in committed code.
+**Decision**:
+- `make test` = focused fast suite (205 checks, ~2.6s, 15s timeout, per-package targets). `make test-full` = exhaustive (1406 checks).
+- Test-count lint sums the fast suite; current-state doc references are 205/205.
+- Fixed during verification: fiveam run! suite form quoting; `%git` invoked outside the squad root; `%atomic-write` rename mangling extensionless targets; ANSI-CL newline literal in the bean inbox append (wrote 'n', broke section splitting); nreverse count footgun in spore propagation; `%find-role-dirs` uiop signature mismatch.
+**Rationale**: A fast deterministic gate per the fast-test-feedback skill; the exhaustive suite stays an explicit operation.
+
 ### D-040: Canonical model mandate — deepseek-v4-flash-0731 primary, GLM-5.2 deep tier
 **Context**: oh-my-openagent.json and ~/.hermes/config.yaml now carry strictly-ordered fallback chains (deepseek-v4-flash-0731 -> deepseek-v4-flash -> gpt-5.6-luna -> mimo-v2.5 -> minimax-m3 -> gemini-3.5-flash -> hy3-preview -> glm-5.2 -> nemotron-3-ultra:free -> Qwythos-9B local -> gemma-4-12b local), GLM-5.2 primary for deep-thinking work, gpt-5.6-terra for heavy research, qwen3.7-flash for vision. Squad configs referenced older chains (kimi-k2.6, deepseek-v4-pro, gemini-3.5-flash-lite, local-first daily driver).
 **Decision**:

@@ -34,9 +34,9 @@ Common Lisp (SBCL) agent-orchestration system. Build: `make build`. Test: `make 
 Docs: `docs/` — roadmap at `docs/project/roadmap.md` (M1.x active). Runtime state: `~/.hngh/`.
 Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ahead.
 
-## Current state (2026-08-03)
+## Current state (2026-08-05)
 
-- **Tests**: `make test` green — 1393/1393 @ d569e3b+uncommitted (M9 W1-2: agents-md, squad-resources, fragment-journal, hngh-up plugins; W3: C7 PM-first-prompt generator)
+- **Tests**: `make test` green — 205/205 fast (2.6s, focused suites, 15s timeout) and the full suite green @ b7a0289 (squad 20260804 test-loop work completed: test-fast split, model-runtime pull fence, squad-dispatch pathspecs; beans/squad-dispatch/hngh-up bugs fixed during verification)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
