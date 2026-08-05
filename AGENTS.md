@@ -30,6 +30,8 @@ not Copilot quota).
 
 ## Repo notes
 
+- Push mirrors: `origin` carries both github and codeberg push URLs — `git push origin` syncs both. Never push to a single mirror; if one fails, sync it before continuing.
+
 Common Lisp (SBCL) agent-orchestration system. Build: `make build`. Test: `make test`.
 Docs: `docs/` — roadmap at `docs/project/roadmap.md` (M1.x active). Runtime state: `~/.hngh/`.
 Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ahead.
