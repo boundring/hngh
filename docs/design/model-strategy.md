@@ -19,8 +19,9 @@ With `opencode/kimi-k3` native API offline for 4 days, the PM role rotates throu
 | Tier | Model | Provider | Cost ($/1M in) | Cost ($/1M out) | Note |
 |---|---|---|---|---|---|
 | Primary | `z-ai/glm-5.2` | openrouter | 0.40 | 0.40 | High reasoning, within the $20/week cap |
-| Secondary | `luna` (gpt-5.6-luna) | copilot | 0.10 | 0.10 | Low cost, high speed, high syntax-familiarity |
-| Tertiary | `deepseek/deepseek-v4-flash` | openrouter | 0.09 | 0.14 | Cheap, great for straightforward coordination |
+| Fallback 1 | `deepseek/deepseek-v4-flash-0731` | openrouter | 0.09* | 0.09* | Cheapest capable; primary for most non-PM roles (2026-08-05 mandate) |
+| Fallback 2 | `deepseek/deepseek-v4-flash` | openrouter | 0.09 | 0.14 | Cheap, great for straightforward coordination |
+| Fallback 3 | `gpt-5.6-luna` | openai | 0.10 | 0.10 | Low cost, high speed, high syntax-familiarity |
 | Quota Floor | `gemma-4-12b` | local (ollama) | 0.00 | 0.00 | Free, unlimited. Use when OR budget exhausted |
 
 ### 1.2 Designer Rotation Matrix
@@ -41,14 +42,15 @@ To keep remote API spend near zero, we divide code implementation into three dis
 
 ### 2.1 The Passes
 
-1. **The Skeleton Pass (Local / Free — $0)**
-   - *Driver*: `gemma-4-12b` (local) or `deepseek-v4-flash` (cheap/free).
+1. **The Skeleton Pass (Cheap — < $0.01)**
+   - *Driver*: `deepseek-v4-flash-0731` (primary, cheapest capable) or local
+     `gemma-4-12b` as last resort.
    - *Purpose*: Establish interfaces, define package structures, and write RED unit tests.
    - *Deliverable*: `tests/unit/test-*.lisp` and `package.lisp` stubs.
    - *Verification*: Must fail compilation or test run with expected "not implemented" or RED status (`exit-code 2`).
 
-2. **The Bones Pass (Free / Cheap — < $0.01)**
-   - *Driver*: `deepseek-v4-flash` or `luna`.
+2. **The Bones Pass (Cheap — < $0.01)**
+   - *Driver*: `deepseek-v4-flash-0731` or `deepseek-v4-flash`; `luna` next.
    - *Purpose*: Implement the basic structural branches, loop skeletons, and type assertions.
    - *Deliverable*: `src/plugins/*.lisp` logic bones.
    - *Verification*: Compilation succeeds. Tests still fail or return stub/partial results.
@@ -62,7 +64,7 @@ To keep remote API spend near zero, we divide code implementation into three dis
 ### 2.2 Parallel Fan-Out & Voting (Lisp Synthesis)
 
 When a Bones or Flesh pass fails tests repeatedly (spinning wheels), the PM executes a **Fan-Out** action:
-- Dispatch 3 parallel tasks to `deepseek-v4-flash` (free/cheap) with slightly varied prompt seeds.
+- Dispatch 3 parallel tasks to `deepseek-v4-flash-0731` (cheap) with slightly varied prompt seeds.
 - Excrete their outputs to `/tmp/synthesis/`.
 - A local script runs `sbcl --load` and `make test` against each candidate's code.
 - **The Vote**: The candidate code that passes the most unit tests is selected and merged into `main`. The failed candidates are culled. This leverages cheap parallel search over single-threaded high-cost reasoning.
@@ -77,7 +79,9 @@ Our cheap squads cannot afford to debug the same local environment or platform f
 
 1. **Pre-flight Query**
    - Before a Coder or Worker is dispatched, the PM or Agent CLI automatically checks if there is a known failure-recovery lesson for the task's keywords.
-   - Command: `gh api repos/Ikalus1988/MisakaNet/contents/lessons` is checked (or a local cache) to match errors.
+   - Command: `misakanet_search` (misakanet MCP, auto-start in Hermes/OpenCode)
+     is queried to match errors; falls back to a local cache of
+     `~/.local/share/misakanet` lessons.
    
 2. **Post-failure Intake & Healing**
    - When a test run fails with a system error (e.g. `SQLite database is locked`, `UIOP:COMPILE-FILE-ERROR`), the PM intercepts the error log on the event bus (`squad.seat.error`).

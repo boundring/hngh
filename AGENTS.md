@@ -7,16 +7,26 @@
 - Sign memo notes with your agent name. Memo = signposts/status (<280 bytes); files = payloads
   (write-then-rename for atomicity). Never use memo for task claiming — no claim/ack semantics.
 - Summon a sibling agent headlessly: `agent-call hermes|opencode "prompt" [model]`
-  (auto-logs to shared memory). Default opencode model is free local gemma-4-12b.
+  (auto-logs to shared memory). Default opencode model follows the mandate
+  chain (deepseek-v4-flash-0731 primary; see docs/project/decisions.md D-040).
 - Never print secret VALUES from `~/.hermes/.env`, `auth.json`, `*.pem`, `*.key`.
   By-NAME scripted access only (grep/sed/python, no value echo).
 
 ## Local-model & quota policy
 
-Daily driver: `unsloth/gemma-4-12b-it-qat-GGUF` via http://127.0.0.1:8888/v1 (219904 ctx).
-Heavy/long-context: Qwythos-9B 1M variants. Avoid Qwen3.6-27B. Remote API spend < $1/day;
-prefer local models for any loop or automated work.
-GitHub Copilot models: Distribute non-local tasks to GitHub Copilot models (Sol / Terra / Luna) to conserve K3 quota when available. K3 is reserved for novel design forks and critical reviews.
+Primary driver: `deepseek/deepseek-v4-flash-0731` via openrouter — cheapest
+capable, highest intelligence per $ (1M ctx). Fallbacks in order:
+deepseek-v4-flash -> gpt-5.6-luna -> xiaomi/mimo-v2.5 -> minimax/minimax-m3 ->
+gemini-3.5-flash -> tencent/hy3-preview -> z-ai/glm-5.2 (when not primary) ->
+nemotron-3-ultra:free -> Qwythos-9B 1M (local) -> gemma-4-12b (local;
+queued/procedural only, never PM/Artist/critical-path). GLM-5.2 is primary for
+deep-thinking roles (PM, Designer, planning/critique). Vision/recognition:
+qwen3.7-flash with vision-capable fallbacks. Remote API spend capped at
+$20/week (OpenRouter); free/local models are fallbacks, not the daily driver.
+Avoid Qwen3.6-27B. K3 is reserved for novel design forks and critical reviews
+(native API back Aug 8); distribute other non-local work via the deepseek chain
+(openai-provided gpt-5.6-luna sits in the fallback chain on its own merits,
+not Copilot quota).
 
 ## Repo notes
 
@@ -31,7 +41,10 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
 - **Night queue**: 58 tasks processed (artifacts in ~/.hngh-night/artifacts/)
-- **Cost routing v2**: verified faucet ladder active (kimi-sub → copilot → gemini-free → or-free)
+- **Cost routing**: canonical fallback chain active (deepseek-v4-flash-0731 →
+  deepseek-v4-flash → gpt-5.6-luna → mimo-v2.5 → minimax-m3 → gemini-3.5-flash
+  → hy3-preview → glm-5.2 → nemotron-3-ultra:free → Qwythos-9B → gemma-4-12b);
+  D-040, no Copilot reliance
 - **Role split**: hermes=queue manager, opencode=Sisyphus=M7+platoon code, other opencode=code/docs
 - **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
 - **Test-count lint**: `make lint-counts` — procedural, no LLM. Scans current-state refs in AGENTS.md + roadmap.md
@@ -48,3 +61,17 @@ unsloth/gemma-4-12b-it-qat-GGUF, $0"; "fix — opencode (kimi-k3, attended)";
 "M2 patch — opencode (kimi-k3) reviewing hngh task #4 draft (gemma-4-12b)".
 Applies to: session files, work-sessions.md, JOURNAL.md entries, commit
 messages (body or trailers), memo notes, README status lines.
+
+## MCP infrastructure (2026-08-05)
+
+- MisakaNet MCP (`misakanet_search`): failure-lesson lookup before re-debugging
+  (SQLite/git lockups, DCO, pip). Server: ~/.local/share/misakanet; update via
+  `git pull`. Lessons are community-contributed — review commands before running.
+- cogmem MCP (`recall`/`note`): local agent memory. Vault ~/.claude/cogmem; warm
+  daemon `systemctl --user cogmem-recall`. No Claude Code hooks — recall only.
+- nothumansearch MCP (`search_agents`/`verify_mcp`): agentic-readiness index for
+  API/service discovery; pairs with depscope (supply-chain checks).
+- All auto-start in Hermes and OpenCode (global opencode config).
+- Design note (2026-08-05): cogmem + misakanet are candidates to replace OptMem
+  for PM communication — see journal/20260805-model-mandate.md before changing
+  the coordination contract.

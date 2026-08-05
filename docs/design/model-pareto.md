@@ -15,7 +15,8 @@ by quota and budget.
 |---|---|---|---|---|---|---|---|
 | gemma-4-12b-it-qat | unsloth (local) | 0 | 0 | 200K | 6/10 | unlimited | yes |
 | deepseek-v4-flash | openrouter | 0.09 | 0.09 | 1M | 7/10 | paid | no |
-| gpt-5.6-luna | github-copilot | 0.10 | 0.10 | 1M | 7.5/10 | copilot quota | no |
+| deepseek-v4-flash-0731 | openrouter | 0.09* | 0.09* | 1M | 7.5/10 | paid | no |
+| gpt-5.6-luna | openai | 0.10 | 0.10 | 1M | 7.5/10 | paid | no |
 | mimo-v2.5 | openrouter | 0.14 | 0.14 | 1M | 6.5/10 | paid | no |
 | gemini-3.5-flash-lite | gemini | 0.30 | 0.30 | 1M | 6.5/10 | free tier | no |
 | kimi-k2.6 | kimi-coding | 0.60 | 0.60 | 262K | 8/10 | paid | no |
@@ -35,6 +36,10 @@ scores are conservative estimates. Refine continually with real benchmark
 data from Wave 8 (benchmark squad) and external sources (LMSYS, Artificial
 Analysis, HuggingFace leaderboards). The scores are intentionally conservative —
 better to underestimate and be surprised than overestimate and be disappointed.
+
+\* flash-family price tier — verify on OpenRouter catalog. `deepseek-v4-flash-0731`
+is the flagship flash variant; primary for most roles per the 2026-08-05 model
+mandate (docs/project/decisions.md, journal/20260805-model-mandate.md).
 
 **External benchmark sources** (check periodically, not per-dispatch):
 - LMSYS Chatbot Arena (https://lmarena.ai) — head-to-head ELO ratings
@@ -73,7 +78,8 @@ Capability (Y, 1-10)
 |---|---|---|---|---|
 | 1 | gemma-4-12b (local) | 0 | 6/10 | procedural, creative riff, queued background |
 | 2 | deepseek-v4-flash | 0.09 | 7/10 | coder, worker (cheapest capable) |
-| 3 | gpt-5.6-luna | 0.10 | 7.5/10 | coder (copilot quota), worker |
+| 2a | deepseek-v4-flash-0731 | 0.09 | 7.5/10 | primary for most roles (2026-08-05 mandate) |
+| 3 | gpt-5.6-luna | 0.10 | 7.5/10 | coder, worker (cheap, high speed) |
 | 4 | glm-5.2 | 0.40 | 8.5/10 | PM, designer (best intelligence/cost ratio) |
 | 5 | kimi-k3 | 3.00 | 9/10 | novel design forks, critical reviews only (K3 reserved) |
 
@@ -97,17 +103,18 @@ zero-cost fallbacks when budget is exhausted.
 
 | Role | Primary (frontier) | Fallback 1 | Fallback 2 | Fallback 3 (local) |
 |---|---|---|---|---|
-| PM | glm-5.2 ($0.40, 8.5) | kimi-k2.6 ($0.60, 8) | nemotron-ultra:free (6.5) | gemma-4-12b (6) |
-| Designer | glm-5.2 ($0.40, 8.5) | kimi-k2.6 ($0.60, 8) | nemotron-super:free (6) | gemma-4-12b (6, creative only) |
-| Coder | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | kimi-k2.6 ($0.60, 8) | gemma-4-12b (6, simple only) |
-| Artist | glm-5.2 ($0.40, 8.5) | deepseek-v4-pro ($0.435, 8) | nemotron-super:free (6) | never local |
-| Accountant | gemini-3.5-flash-lite ($0.30, 6.5) | nemotron-nano:free (5) | — | gemma-4-12b (6, procedural) |
-| Worker | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | nemotron-super:free (6) | gemma-4-12b (6, queued only) |
+| PM | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, never) |
+| Designer | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, creative only) |
+| Coder | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, simple only) |
+| Artist | deepseek-v4-flash-0731 ($0.09*, 7.5, visual-eng) | gemini-3.5-flash-lite ($0.30, 6.5, vision) | mimo-v2.5 ($0.14, 6.5, vision) | never local; looker qwen3.7-flash |
+| Accountant | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gemini-3.5-flash-lite ($0.30, 6.5) | gemma-4-12b (6, procedural) |
+| Worker | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, queued only) |
 
-Note: Artist primary was gemini-3.6-flash in the earlier table; glm-5.2
-dominates it on the Pareto frontier (cheaper, equal or better). Artist keeps
-gemini-3.6-flash as a visual-strength option if glm-5.2's visual output is
-insufficient — but try glm-5.2 first.
+Note: Artist primary moved from glm-5.2 to deepseek-v4-flash-0731 (visual-
+engineering tier) per the 2026-08-05 mandate; glm-5.2 stays in the Artist
+vision fallback chain. Qwen 3.7 flash (`openrouter/qwen/qwen3.7-flash`) is the
+vision looker for image recognition/review, with fallbacks mimo-v2.5 ->
+minimax-m3 -> gpt-5.6-luna -> gemini-3.5-flash-lite -> local gemma.
 
 ---
 
@@ -162,11 +169,11 @@ Each projected design session (D2-D9) includes a model recommendation block:
 | Role | Model | $/M | Est. tokens | Est. cost |
 |---|---|---|---|---|
 | Designer | glm-5.2 | 0.40 | 50K | $0.02 |
-| Coder | deepseek-v4-flash | 0.09 | 100K | $0.01 |
-| Accountant | gemini-3.5-flash-lite | 0.30 | 10K | $0.003 |
-| Artist | glm-5.2 | 0.40 | 20K | $0.008 |
+| Coder | deepseek-v4-flash-0731 | 0.09 | 100K | $0.009 |
+| Accountant | deepseek-v4-flash-0731 | 0.09 | 10K | $0.0009 |
+| Artist | deepseek-v4-flash-0731 | 0.09 | 20K | $0.0018 |
 
-Total estimated cost: $0.04
+Total estimated cost: $0.03
 Budget gate: passes ($1/day, $0.04 < remaining)
 ```
 

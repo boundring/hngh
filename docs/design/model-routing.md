@@ -38,6 +38,12 @@ We do NOT run LiteLLM itself. hngh already has the pieces: model-runtime
 Cost ladder: free faucets first, quota'd subscriptions second, local $0
 sprinkles, careful pay-as-you-go last. Verified live against each endpoint.
 
+> 2026-08-05 mandate: payg `deepseek-v4-flash-0731` (openrouter) is the primary
+> route for most task classes — cheapest capable beats free faucets on
+> intelligence-per-$; free/local routes move to fallback positions, not
+> primary. See docs/project/decisions.md (model mandate) and
+> journal/20260805-model-mandate.md.
+
 | Route | Backend | Model | $/tok | Use for |
 |---|---|---|---|---|
 | `local-12b` | ollama :11434 | gemma-4-12B-it-qat (loaded) | $0 | loops, drafts, queue tasks, test-gen |
@@ -48,6 +54,7 @@ sprinkles, careful pay-as-you-go last. Verified live against each endpoint.
 | `kimi-sub` | api.kimi.com/coding (annual) | k3, k3-256k, kimi-for-coding (K2.7), K2.7-highspeed | $0 marginal, hourly/daily/weekly quota | main agent, delegation, design forks, MoA aggregate |
 | `copilot` | api.githubcopilot.com (gh token) | claude-sonnet-5, claude-opus-5, gemini-3.6-flash, gpt-5.6 family | subscription quota | antagonistic review, anthropic-tier w/o Anthropic balance |
 | `cheap` | openai-api / openrouter | gpt-5.6-luna, z-ai/glm-5.2 | ~$0.10–$0.60/M | bulk aux (title, approval, mcp), design-tier aux |
+| `or-dsv4` | openrouter | deepseek-v4-flash-0731 | $0.09/M flash tier | primary for most classes (2026-08-05 mandate) |
 | `frontier` | openai-api / openrouter | gpt-5.6-terra/sol | $1–$6/M | architecture forks, novel debugging only |
 | `zen-drain` | opencode zen | gpt-5.6-luna via zen | balance $25 | mid-chain fallback only; drain slowly |
 | `anthropic` | anthropic direct | claude (rare) | balance $33 | rare use cases only; copilot covers most anthropic-tier needs |
@@ -68,9 +75,11 @@ rate-limit-gated by the provider, fail over on 429.
 - `copilot` → `kimi-sub` (quota) or `anthropic` (rare, balance-gated)
 - `frontier` → `kimi-sub` → `copilot`
 
-Live Hermes fallback chain (2026-08-01): k3 → kimi-for-coding (K2.7) →
-nemotron-3-ultra:free → north-mini-code:free → claude-sonnet-5 (copilot) →
-gemini-3.5-flash (AI Studio) → gpt-5.6-luna → glm-5.2 → local gemma-4-12b.
+Live Hermes fallback chain (2026-08-05): deepseek-v4-flash-0731 (openrouter) →
+deepseek-v4-flash (deepseek) → z-ai/glm-5.2 (openrouter) → gpt-5.6-luna (openai)
+→ gemini-3.5-flash (gemini) → xiaomi/mimo-v2.5 (openrouter) → gemma-4-12b
+(unsloth) → nemotron-3-ultra:free (openrouter) → tencent/hy3-preview
+(openrouter). Mirror of `~/.hermes/config.yaml` `fallback_providers`.
 
 Health: model-runtime's `health` per backend; unsloth empty (`unsloth: []`)
 means "no model resident — route to ollama instead" until warm.
