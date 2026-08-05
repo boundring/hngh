@@ -9,6 +9,8 @@ SBCL_FLAGS = --disable-debugger
 LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp)
 C_FILES = src/system-daemon/main.c
 
+FAST_TEST_TIMEOUT ?= 15
+
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
@@ -19,7 +21,7 @@ DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
-.PHONY: all run clean test check install uninstall help lint-counts
+.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts
 
 all: $(BINARY) $(CLIENT_BINARY)
 
@@ -60,8 +62,34 @@ run:
 		--eval "(asdf:load-system :hngh)" \
 		--eval "(hngh:main)"
 
-## Run tests
-test: check
+## Run the focused default test set
+# Keep `make test` short and deterministic. Use `make test-full` for the
+# exhaustive suite, which may exercise timers, daemons, filesystems, and GUIs.
+test: test-fast
+
+test-fast:
+	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.model-runtime)'
+
+test-beans:
+	$(MAKE) test-suite SUITE='(:hngh.beans)'
+
+test-model-runtime:
+	$(MAKE) test-suite SUITE='(:hngh.model-runtime)'
+
+test-squad-dispatch:
+	$(MAKE) test-suite SUITE='(:hngh.squad-dispatch)'
+
+test-suite:
+	timeout --foreground $(FAST_TEST_TIMEOUT)s $(SBCL) $(SBCL_FLAGS) \
+	--eval "(require 'asdf)" \
+	--eval "(push (truename \".\") asdf:*central-registry*)" \
+	--eval "(asdf:load-system :hngh/tests)" \
+	--eval "(let ((ok t)) (dolist (suite '$(SUITE)) (unless (fiveam:run! suite) (setf ok nil))) (uiop:quit (if ok 0 1)))" \
+	--quit
+
+## Run the exhaustive test suite
+# Explicit because this can include slow external-service and timer fixtures.
+test-full: check
 
 check:
 	$(SBCL) $(SBCL_FLAGS) \
@@ -117,7 +145,11 @@ help:
 	@echo "  build          Alias for all"
 	@echo "  daemon         Build the system daemon (C)"
 	@echo "  run            Run Hngh in dev mode (loads via ASDF)"
-	@echo "  test           Run the test suite"
+	@echo "  test           Run focused fast tests"
+	@echo "  test-full      Run exhaustive test suite"
+	@echo "  test-beans     Run Beans suite only"
+	@echo "  test-model-runtime  Run model-runtime suite only"
+	@echo "  test-squad-dispatch Run squad-dispatch suite only"
 	@echo "  lint-counts    Lint doc test-count references vs actual"
 	@echo "  integration-test  Run end-to-end integration tests"
 	@echo "  repl           Start an SBCL REPL with Hngh loaded"

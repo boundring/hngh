@@ -17,7 +17,7 @@
 
 ;;; --- Helpers --------------------------------------------------------------
 
-(defun mr-setup (tmp &key (init-supervisor t) (init-resource-manager t))
+(defun mr-setup (tmp &key (init-supervisor nil) (init-resource-manager nil))
   "Initialize event bus, state store, supervisor, resource manager, and
 model runtime manager on TMP."
   (hngh.core.event-bus:init :hngh-home tmp)
@@ -37,9 +37,11 @@ model runtime manager on TMP."
   (hngh.core.state-store:shutdown)
   (cleanup-tmp-home tmp))
 
-(defmacro with-mr ((tmp-var &key (init-supervisor t) (init-resource-manager t)) &body body)
+(defmacro with-mr ((tmp-var &key (init-supervisor nil) (init-resource-manager nil)) &body body)
   "Execute BODY with a temporary home, all services initialized."
-  `(let ((,tmp-var (make-tmp-home)))
+  `(let ((,tmp-var (make-tmp-home))
+         (hngh.plugins.model-runtime::*skip-model-pull* t))
+     (declare (special hngh.plugins.model-runtime::*skip-model-pull*))
      (cleanup-tmp-home ,tmp-var)
      (unwind-protect
           (progn
@@ -183,18 +185,14 @@ model runtime manager on TMP."
 ;;; --- Test 10: Spawn non-existent runtime returns gracefully ----------------
 
 (test mr-spawn-nonexistent
-  "Spawning llama-cpp when llama-server is not installed returns gracefully."
+  "A missing llama.cpp model path fails before server launch."
   (with-mr (tmp :init-resource-manager nil)
-    ;; Only test if llama-server is NOT available
-    (unless (hngh.plugins.model-runtime::health-check 1) ; dummy check for existence
-      (let ((runtime (hngh.plugins.model-runtime:spawn-runtime
-                      :llama-cpp (list :name "test-model" :path "/nonexistent/model.gguf"))))
-        ;; Should return a runtime-info even on failure (marked as :failed)
-        (when runtime
-          (is (typep runtime 'hngh.plugins.model-runtime:runtime-info)
-              "Should return a runtime-info struct even on failure")
-          (is (eq :failed (hngh.plugins.model-runtime:runtime-info-status runtime))
-              "Nonexistent runtime should have status :failed"))))))
+    (let ((runtime (hngh.plugins.model-runtime:spawn-runtime
+                    :llama-cpp (list :name "test-model" :path "/nonexistent/model.gguf"))))
+      (is (typep runtime 'hngh.plugins.model-runtime:runtime-info)
+          "Should return a runtime-info struct even on failure")
+      (is (eq :failed (hngh.plugins.model-runtime:runtime-info-status runtime))
+          "Nonexistent runtime should have status :failed"))))
 
 ;;; --- Test 11: Spawn with non-running plugin returns nil --------------------
 
