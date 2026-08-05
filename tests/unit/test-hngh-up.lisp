@@ -38,7 +38,13 @@
       (ignore-errors (uiop:delete-directory-tree dir :validate t)))))
 
 (defparameter %c3-rich-agents-md
-  "# Fixture project
+  (let* ((yesterday (- (get-universal-time) 86400))
+         (date-str
+           (multiple-value-bind (sec min hour day mon year) (decode-universal-time yesterday)
+             (declare (ignore sec min hour))
+             (format nil "~4,'0D-~2,'0D-~2,'0D" year mon day))))
+    (concatenate 'string
+                 "# Fixture project
 
 ## Coordination contract (machine-wide)
 
@@ -50,14 +56,16 @@
 Daily driver: unsloth/gemma-4-12b-it-qat-GGUF. Prefer local models for any
 loop or automated work. Remote API spend < $1/day.
 
-## Current state (2026-08-02)
+## Current state ("
+                 date-str
+                 ")
 
 Tests green.
 
 ## Doc convention (D1)
 
 Durable records carry green @ sha.
-")
+")))
 
 (defparameter %c3-stale-agents-md
   "# Stale fixture
