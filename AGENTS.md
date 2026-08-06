@@ -38,7 +38,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 
 ## Current state (2026-08-06)
 
-- **Tests**: `make test` green — 207/207 fast and full 1416/1416 @ 9116f94 (M9.5 resume committed: mandate-to-code sync, C3 inference fix, wave 2-4 plugins wired into daemon lifecycle, Makefile LISP_FILES glob now includes src/plugins/)
+- **Tests**: `make test` green — 207/207 @ 9116f94 (M9.5 resume committed: mandate-to-code sync, C3 inference fix, wave 2-4 plugins wired into daemon lifecycle, Makefile LISP_FILES glob now includes src/plugins/)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
