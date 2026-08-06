@@ -271,7 +271,7 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Attribution**: squad run 20260804T150741Z-cheap (deepseek-v4-flash via openrouter); verification + fixes — deepseek-v4-flash-0731 via openrouter (Hermes TUI). Commit b7a0289.
 
 ### Session M9.5: M9 resume — mandate-to-code sync, plugin wiring, build-fence fix
-**Status**: Done (2026-08-06) — changes uncommitted, awaiting owner commit
+**Status**: Done (2026-08-06) — committed 9116f94
 - **Goal**: Close the three documented M9 gaps: code-embedded model chains still
   on the old kimi/gemma routing (journal 20260805-model-mandate.md "Open"),
   Wave 2-4 plugins staged but never wired into the daemon lifecycle, and a
