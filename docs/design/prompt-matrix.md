@@ -1309,8 +1309,8 @@ Returns a model spec plist or NIL."
         finally (return nil)))
 
 (defparameter *flesh-model-chain*
-  '((:name "deepseek-v4-flash" :provider "openrouter" :est-cost 0.001)
-    (:name "gpt-5.6-luna" :provider "github-copilot" :est-cost 0.001)
+  '((:name "deepseek-v4-flash-0731" :provider "openrouter" :est-cost 0.001)
+    (:name "gpt-5.6-luna" :provider "openai" :est-cost 0.001)
     (:name "nemotron-super:free" :provider "openrouter" :est-cost 0)
     (:name "gemma-4-12b" :provider "unsloth-local" :est-cost 0))
   "Cheapest-first model chain for flesh pass. The last entry is local —
@@ -1403,13 +1403,13 @@ assigned model, cost, estimated tokens, and estimated cost.
 |---|---|---|---|---|
 | PM | glm-5.2 | 0.40 | 50K | $0.02 |
 | Designer | glm-5.2 | 0.40 | 50K | $0.02 |
-| Coder | deepseek-v4-flash | 0.09 | 100K | $0.01 |
-| Artist | glm-5.2 | 0.40 | 20K | $0.008 |
-| Accountant | gemini-3.5-flash-lite | 0.30 | 10K | $0.003 |
-| Worker | deepseek-v4-flash | 0.09 | 50K | $0.005 |
+| Coder | deepseek-v4-flash-0731 | 0.09 | 100K | $0.01 |
+| Artist | deepseek-v4-flash-0731 | 0.09 | 20K | $0.002 |
+| Accountant | deepseek-v4-flash-0731 | 0.09 | 10K | $0.001 |
+| Worker | deepseek-v4-flash-0731 | 0.09 | 50K | $0.005 |
 
-Total estimated cost: $0.066
-Budget gate: passes ($1/day, $0.066 < remaining)
+Total estimated cost: $0.058
+Budget gate: passes ($1/day, $0.058 < remaining)
 ```
 
 ### 6.2 Filler function
@@ -1583,34 +1583,49 @@ Static table from model-pareto.md §3:
 (defparameter *per-role-fallback-chains*
   '((:pm
      ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
-      (:name "kimi-k2.6" :provider "kimi-coding" :input-cost 0.60 :output-cost 0.60 :capability 8.0 :local-p nil)
-      (:name "nemotron-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
+      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:designer
      ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
-      (:name "kimi-k2.6" :provider "kimi-coding" :input-cost 0.60 :output-cost 0.60 :capability 8.0 :local-p nil)
+      (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
       (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:coder
-     ((:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "github-copilot" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "kimi-k2.6" :provider "kimi-coding" :input-cost 0.60 :output-cost 0.60 :capability 8.0 :local-p nil)
-      (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
+      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
+      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
+      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:artist
-     ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
-      (:name "deepseek-v4-pro" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 8.0 :local-p nil)
-      (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)))
+     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "qwen3.7-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.0 :local-p nil)
+      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
+      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
+      (:name "gemini-3.5-flash" :provider "google" :input-cost 0.30 :output-cost 0.30 :capability 7.0 :local-p nil)
+      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)))
     (:accountant
-     ((:name "gemini-3.5-flash-lite" :provider "gemini" :input-cost 0.30 :output-cost 0.30 :capability 6.5 :local-p nil)
+     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
       (:name "nemotron-nano:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 5.0 :local-p nil)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:worker
-     ((:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "github-copilot" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
+      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
+      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
+      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
+      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
+      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t))))
-  "Per-role model fallback chains from model-pareto.md §3.
+  "Per-role model fallback chains from model-pareto.md §3 (2026-08-05 mandate).
 Ordered cheapest-capable first. Artist has no local fallback (never local).")
 ```
 

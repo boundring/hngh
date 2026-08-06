@@ -19,8 +19,8 @@
     ("qwythos-9b" . 12288)
     ("qwen3-6b" . 8192)
     ("deepseek-v4" . 0)
-    ("kimi-k2.6" . 0)
-    ("kimi-k3" . 0)
+    ("glm-5.2" . 0)
+    ("qwen3.7" . 0)
     ("gpt-5.6" . 0))
   "Estimated VRAM in MB per model (0 = remote, no local VRAM).
 Keys are substrings; the first matching key wins.")

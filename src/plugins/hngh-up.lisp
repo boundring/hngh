@@ -119,8 +119,14 @@ silent guesses."
        (cond
          ((and body (search "prefer local" body))
           (values "local-only" "AGENTS.md local-model policy prefers local models"))
+         ((and body (search "not the daily driver" body))
+          (values "budget-50" "AGENTS.md names a remote primary driver; locals are fallbacks"))
          ((and body (search "daily driver" body))
           (values "local-only" "AGENTS.md names a local daily-driver model"))
+         ((and body (search "primary driver" body))
+          (values "budget-50" "AGENTS.md names a remote primary driver"))
+         ((and body (search "$20" body))
+          (values "budget-200" "AGENTS.md caps remote spend at $20/week"))
          ((and body (search "$1" body))
           (values "budget-50" "AGENTS.md caps remote spend under $1/day"))
          (t nil))))
@@ -180,9 +186,9 @@ Returns a list of QUESTION structs."
      (make-question
       :id :model-tier
       :prompt "Model tier?"
-      :options '(("local-only" "Local only, zero cost (gemma-4-12b)")
-                 ("budget-50" "Up to 50c remote (kimi-k2.6 / deepseek-v4-flash)")
-                 ("budget-200" "Up to $2 remote (kimi-k3 / gpt-5.6-luna)"))
+      :options '(("local-only" "Local only, zero cost (gemma-4-12b queued)")
+                 ("budget-50" "Up to 50c remote (deepseek-v4-flash-0731)")
+                 ("budget-200" "Up to $2 remote (glm-5.2 deep tier / deepseek-v4-flash-0731)"))
       :default (if unsloth-active "local-only" "budget-50")
       :inferred-from (list :unsloth-active unsloth-active))
 
@@ -255,11 +261,11 @@ AGENTS.md cannot answer."
      ("hermes" . "unsloth/gemma-4-12b-it-qat-GGUF")
      ("opencode" . "unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF"))
     (:budget-50
-     ("hermes" . "moonshotai/kimi-k2.6")
-     ("opencode" . "deepseek/deepseek-v4-flash"))
+     ("hermes" . "deepseek/deepseek-v4-flash-0731")
+     ("opencode" . "deepseek/deepseek-v4-flash-0731"))
     (:budget-200
-     ("hermes" . "moonshotai/kimi-k3")
-     ("opencode" . "gpt-5.6-luna"))))
+     ("hermes" . "z-ai/glm-5.2")
+     ("opencode" . "deepseek/deepseek-v4-flash-0731"))))
 
 (defparameter *role-layouts*
   '((:squad

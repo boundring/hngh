@@ -79,6 +79,24 @@ Daily driver: unsloth/gemma-4-12b-it-qat-GGUF. Prefer local models.
 Ancient.
 ")
 
+(defparameter %c3-mandate-agents-md
+  "# Mandate-era fixture
+
+## Local-model & quota policy
+
+Primary driver: deepseek/deepseek-v4-flash-0731 via openrouter.
+Remote API spend capped at $20/week (OpenRouter); free/local models are
+fallbacks, not the daily driver.
+
+## Current state (2026-08-05)
+
+Tests green.
+
+## Doc convention (D1)
+
+Durable records carry green @ sha.
+")
+
 (defparameter %c3-bare-agents-md
   "# Bare fixture
 
@@ -104,6 +122,14 @@ No useful signals here.
        :model-tier (%merged-fixture %c3-rich-agents-md))
     (is (string= "local-only" answer))
     (is (search "local" reason))))
+
+(test hngh-up-c3-answers-model-tier-budget-50-on-mandate-phrasing
+  "model-tier auto-answers budget-50 when AGENTS.md names a remote primary driver (2026-08-05 mandate phrasing)."
+  (multiple-value-bind (answer reason)
+      (hngh.plugins.hngh-up:answer-from-agents-md
+       :model-tier (%merged-fixture %c3-mandate-agents-md))
+    (is (string= "budget-50" answer))
+    (is (search "remote primary driver" reason))))
 
 (test hngh-up-c3-answers-continue-policy-fresh
   "continue-policy auto-answers token-aware for a fresh current-state date."

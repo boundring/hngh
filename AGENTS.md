@@ -38,7 +38,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 
 ## Current state (2026-08-05)
 
-- **Tests**: `make test` green — 205/205 fast (2.6s, focused suites, 15s timeout) and the full suite green @ b7a0289 (squad 20260804 test-loop work completed: test-fast split, model-runtime pull fence, squad-dispatch pathspecs; beans/squad-dispatch/hngh-up bugs fixed during verification)
+- **Tests**: `make test` green — 207/207 fast (2.6s, focused suites, 15s timeout) and the full suite green @ b7a0289 (squad 20260804 test-loop work completed: test-fast split, model-runtime pull fence, squad-dispatch pathspecs; beans/squad-dispatch/hngh-up bugs fixed during verification)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
@@ -51,7 +51,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
 - **Test-count lint**: `make lint-counts` — procedural, no LLM. Scans current-state refs in AGENTS.md + roadmap.md
 - **hngh-up plugin**: exists with design doc at `docs/design/hngh-up.md` (goal-driven squad spin-up, procedural questionnaire, strategy system, autonomous continuation, social sharing)
-- **M9 squad autonomy**: W1-2 done (C1, C2, C5 + partial C3). W3 in progress (C7 PM-first-prompt generator). Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
+- **M9 squad autonomy**: W1-2 done (C1, C2, C3, C5). W3 in progress (C7 PM-first-prompt generator done; C4 + C10 design-only). Wave 2-4 plugins (file-watcher, squad-dispatch, beans, squad-resources) staged 03282f3, wired into main.lisp lifecycle. Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
 - **squad-up**: `~/.local/bin/squad-up` — 6-seat cascading Konsole launcher. Config: `~/.hngh-night/squad-seats.conf`
 
 

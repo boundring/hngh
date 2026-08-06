@@ -6,7 +6,7 @@
 
 SBCL ?= sbcl
 SBCL_FLAGS = --disable-debugger
-LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp)
+LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp src/plugins/*.lisp)
 C_FILES = src/system-daemon/main.c
 
 FAST_TEST_TIMEOUT ?= 15

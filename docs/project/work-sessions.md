@@ -1,7 +1,7 @@
 # Hngh Work Session Plan
 
-**Status**: M1 batches 0–4 complete; Batch 5 next
-**Last updated**: 2026-06-24
+**Status**: M9 W1-2 done, W3 in progress (C7 done); M9.5 resume closed
+**Last updated**: 2026-08-06
 
 ---
 
@@ -269,3 +269,32 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Bugs fixed**: fiveam run! form quoting; %git run outside squad root; %atomic-write rename mangling extensionless targets; ANSI-CL newline literal in bean inbox append (wrote 'n'); nreverse count footgun; %find-role-dirs uiop signature mismatch; lint parse.
 - **Exit criteria (met)**: make test 205/205 @ 2.6s; make test-full 1406/1406; lint-counts clean.
 - **Attribution**: squad run 20260804T150741Z-cheap (deepseek-v4-flash via openrouter); verification + fixes — deepseek-v4-flash-0731 via openrouter (Hermes TUI). Commit b7a0289.
+
+### Session M9.5: M9 resume — mandate-to-code sync, plugin wiring, build-fence fix
+**Status**: Done (2026-08-06) — changes uncommitted, awaiting owner commit
+- **Goal**: Close the three documented M9 gaps: code-embedded model chains still
+  on the old kimi/gemma routing (journal 20260805-model-mandate.md "Open"),
+  Wave 2-4 plugins staged but never wired into the daemon lifecycle, and a
+  C3 inference bug found during smoke testing.
+- **Artifacts**: `src/plugins/hngh-up.lisp` (model-mapping + strategy labels ->
+  mandate; C3 rule negation/remote-primary branches); `src/plugins/ai-tool-hub.lisp`
+  (opencode default -> deepseek-v4-flash-0731); `src/plugins/squad-resources.lisp`
+  (vram table kimi -> glm-5.2/qwen3.7); `src/core/main.lisp` (file-watcher,
+  squad-dispatch, beans, squad-resources wired init/stop/rollback); `Makefile`
+  (LISP_FILES glob += src/plugins/*.lisp — plugins now trigger rebuilds);
+  `docs/design/prompt-matrix.md` (chains/tables synced); `docs/design/
+  squad-startup-automation.md` (wave table 2/3/4 -> done); `docs/project/
+  roadmap.md` + `AGENTS.md` (status + counts 207); `tests/unit/test-hngh-up.lisp`
+  (+mandate-phrasing fixture), `tests/unit/test-ai-tool-hub.lisp` (default
+  assertion); `journal/20260806-m9-resume.md`.
+- **Bugs found+fixed**: (1) C3 `answer-from-agents-md` matched bare "daily
+  driver" and inferred local-only against the mandate-era AGENTS.md ("not the
+  daily driver") — added negation + remote-primary branches, smoke run now
+  auto-answers budget-50; (2) Makefile `LISP_FILES` glob excluded src/plugins/
+  so plugin edits never rebuilt the binary — smoke ran stale; fixed glob,
+  verified touch-rebuild + no-op.
+- **Exit criteria (met)**: make test-fast 207/207; make test-full 1416/1416;
+  lint-counts clean; make build/build-client both rebuild after plugin touch;
+  `hngh-client up --dry-run` auto-answers all four questions and emits the PM
+  first prompt with the mandate model tier.
+- **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
