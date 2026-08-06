@@ -632,7 +632,7 @@ Returns captured stdout as a string."
 (defun agentic-cli-args (tool-id task)
   "Return the command-line arguments for an agentic CLI tool for TASK."
   (ecase tool-id
-    (:opencode (list "run" "--auto" "-m" "unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF" task))
+    (:opencode (list "run" "--auto" "-m" "deepseek/deepseek-v4-flash-0731" task))
     (:claude (list "-p" task))
     (:codex (list task))
     (:gemini (list task))

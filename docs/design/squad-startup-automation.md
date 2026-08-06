@@ -523,9 +523,9 @@ selection, and squad layouts.
 |---|---|---|---|---|---|
 | 0 | Test-count lint | scripts/lint-test-counts.sh, Makefile | nothing | done | — |
 | 1 | C7 PM-first-prompt generator | src/plugins/hngh-up.lisp | C1 (done) | done | — |
-| 2 | File-change notification (bean bus) | src/plugins/file-watcher.lisp (new) | config-watcher (done) | next | D2 |
-| 3 | Dispatch tree + git-backed state | src/plugins/squad-dispatch.lisp (new) | Wave 2 | pending | D3 |
-| 4 | Bean lifecycle (plant/harvest/digest/husk) | src/plugins/beans.lisp (new) | Wave 3 | pending | D4 |
+| 2 | File-change notification (bean bus) | src/plugins/file-watcher.lisp | config-watcher (done) | done (staged 03282f3, wired main.lisp) | D2 |
+| 3 | Dispatch tree + git-backed state | src/plugins/squad-dispatch.lisp | Wave 2 | done (staged 03282f3, wired main.lisp) | D3 |
+| 4 | Bean lifecycle (plant/harvest/digest/husk) | src/plugins/beans.lisp | Wave 3 | done (staged 03282f3, wired main.lisp) | D4 |
 | 5 | Prompt matrix (skeleton-bones-flesh) | src/plugins/hngh-up.lisp (extend) | Wave 1, 4 | pending | D5 |
 | 6 | squad-up integration | ~/.local/bin/squad-up | Wave 3, 5 | pending | D6 |
 | 7 | Self-improvement loop (C6 planner) | src/plugins/hngh-planner.lisp (new) | Wave 3, 5, 6 | pending | D7 |
