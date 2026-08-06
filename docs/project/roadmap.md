@@ -1,7 +1,7 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-2 done, W3 in progress (207/207 fast tests green @ b7a0289). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
-**Last updated**: 2026-08-03
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix next (207/207 fast + 1416/1416 full green @ 9116f94). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Last updated**: 2026-08-06
 
 ---
 
