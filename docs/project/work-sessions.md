@@ -409,3 +409,27 @@ complete. Within a batch, sessions are independent and can be parallelized.
   test-model-probes.lisp loads it explicitly at compile time. Escape-test
   builds input from char codes to avoid source-literal ambiguity.
 - **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
+
+### Session M9.10: Public-release close-out (docs + PII scrub + dual remotes)
+**Status**: Done (2026-08-07) — committed `1c693dc`, pushed github + codeberg
+- **Goal**: Bring the repo to a clean public checkpoint for pushing.
+- **Findings (via repo-public-readiness skill)**: README was 2026-08-01
+  (M0-M6.2 / 920 tests) but reality is M9 / 494 fast + 1687 full; next.md
+  was M0-M7 / 1028 — both stale in lockstep. 5 tracked session/journal
+  records leaked `/home/bricker`. `origin.pushurl` pointed at Codeberg only,
+  so `git push origin` silently skipped GitHub (D-002 violation) and the
+  GitHub mirror had drifted 11 commits behind.
+- **Doc wave**: README current-state -> M9 autonomy W1-5 + benchmark sourcing
+  + probe runner (494/494 fast, 1687/1687 full), plugin count 13->24, core
+  7->13, "Probe local models" hook added, Roadmap gained M7/M8/M9 rows.
+  next.md reconciled in lockstep (status, Up Next M9 C4/C6/C8/C9, Done line,
+  env facts SBCL 2.6.7 + jsown, Blocked note for the OpenRouter weekly spend
+  wall). Chained in one commit so they can't drift apart again.
+- **PII scrub**: `/home/bricker` -> `~/` in sessions/h-a2, h-a3, and 3 squad
+  journals (had to chmod the 0444 projected journals writable). Sweep across
+  tracked tree now clean; secret sweep shows only the expected test-sentry
+  self-fixtures.
+- **Remote fix**: added the missing GitHub pushurl to `origin` so
+  `git push origin` syncs both mirrors per D-002. Verified both GitHub and
+  Codeberg at `1c693dc`.
+- **Attribution**: deepseek-v4-flash-0731 via openrouter (Hermes TUI).
