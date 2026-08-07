@@ -64,7 +64,8 @@
                  (:file "plugins/squad-resources")
                  (:file "plugins/squad-dispatch")
                  (:file "plugins/beans")
-                 (:file "plugins/hngh-planner"))
+                 (:file "plugins/hngh-planner")
+                 (:file "plugins/quota-spreader"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -119,6 +120,7 @@
                  (:file "test-squad-dispatch")
                  (:file "test-beans")
                  (:file "test-hngh-planner")
+                 (:file "test-quota-spreader")
                  (:file "test-model-probes"))
    :perform (test-op (op c)
                         (declare (ignore op))
