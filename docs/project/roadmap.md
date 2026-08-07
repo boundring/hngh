@@ -168,6 +168,7 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `components.md` | 3 | 21 component specifications + architectural principles |
 | `integrations.md` | 4 | Integration map, event schema, contracts, 8 sequence diagrams |
 | `hngh-design-spec.md` | 5 | Single source of truth (compiles all phases) |
+| `planner-design-roadmap.md` | M9+ | How far/how well we can roadmap; squad consumption contract; external procedural guidance (self-improvement survey + dispatch heuristics); the senses→planner feedback + config hot-swap interface (designed now, gated later) |
 | `squad-autonomy.md` | M9 | AGENTS.md-oriented, resource-aware, self-continuing squads; recursive planner cycle |
 | `autonomy-strategy.md` | M9+ | Research synthesis: self-developing/self-healing engine, clean-arch self-modification guardrails, security hardening (OWASP agentic), cheap-inference + cost control, MCP/A2A/fleet interop — wave-ordered plan + open questions |
 | `swe-selfdev-research.md` | M9+ | Cited deep-dive on autonomous SWE agents (SWE-agent, Codex, OpenHands, Agentless, Reflexion), self-healing systems, and pitfalls |
