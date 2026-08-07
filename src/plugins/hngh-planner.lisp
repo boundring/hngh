@@ -300,3 +300,94 @@ with v3 structured fields and a :planner source tag. Returns the new task id."
 Returns the list of new task ids."
   (mapcar (lambda (gap) (planner-emit-task (car (planner-decompose gap))))
           gaps))
+
+;;; --- Closed loop orchestration (Wave 2) -----------------------------------
+;;;
+;;; planner-cycle ties the roadmap parser + emission into a safe, resumable
+;;; loop. It is deliberately conservative:
+;;;   - dedups against open planner-sourced tasks (never re-queues a gap)
+;;;   - gate: refrains when dispatch is paused
+;;;   - cost gate: checks the quota envelope before emitting (fail closed)
+;;;   - dry-run mode: scans/plans and reports, submits nothing
+
+(defparameter *planner-open-statuses*
+  '(:queued :claimed :running :blocked :proposed)
+  "Queue statuses that count as 'the gap is already in flight' for dedup.")
+
+(defun %roadmap-path (cwd)
+  "Return the absolute roadmap path under CWD, or NIL."
+  (let ((p (merge-pathnames "docs/project/roadmap.md" cwd)))
+    (and (probe-file p) p)))
+
+(defun %read-roadmap-text (cwd)
+  "Read CWD/docs/project/roadmap.md as a string, or NIL when absent."
+  (let ((p (%roadmap-path cwd)))
+    (and p (uiop:read-file-string p))))
+
+(defun %open-planner-milestones ()
+  "Return the set of milestone ids (as strings) that already have an open
+planner-sourced task in the queue. Used for dedup."
+  (let ((opened (make-hash-table :test 'equal))
+        (source-tag (symbol-name *planner-source-tag*)))
+    (dolist (entry (hngh.plugins.ai-orchestrator:list-tasks))
+      (let ((src (getf entry :source))
+            (status (getf entry :status))
+            (task (getf entry :task)))
+        (when (and src
+                   (string= (symbol-name src) source-tag)
+                   (member status *planner-open-statuses*)
+                   (stringp task))
+          ;; Planner tasks are formatted "Implement M<N>: <title>". Extract
+          ;; the milestone id robustly (regex, tolerant of title cls).
+          (multiple-value-bind (match? regs)
+              (cl-ppcre:scan-to-strings "\\b(M[0-9]+)\\b" task)
+            (declare (ignore match?))
+            (when (and regs (plusp (length regs)))
+              (setf (gethash (aref regs 0) opened) t))))))
+    opened))
+
+(defun %gap-already-open-p (gap opened)
+  "Return T when GAP's milestone is already represented by an open
+planner-sourced task (dedup)."
+  (gethash (string (getf gap :milestone)) opened))
+
+(defun %quota-gate-open-p (&optional (route 'kimi-sub))
+  "Return T when the quota envelope allows emitting more work now. Fail
+closed: unknown envelope or over-even-rate refuses. Uses the general pool
+(one-off/emission, not an authority reservation unless caller names one)."
+  (hngh.plugins.quota-spreader:quota-general-ok-p route :used 0
+                                                  :elapsed-seconds 0))
+
+(defun planner-cycle (cwd &key (dry-run nil) (emit t)
+                             (max-emissions *max-tasks-per-cycle*))
+  "Run one planner cycle against CWD's roadmap. Returns a summary plist:
+  (:gaps <n> :new <n> :skipped-dupe <n> :dry-run <bool> :emitted <ids>)
+Behavior:
+  - scans gaps from the roadmap (never mutates the roadmap)
+  - dedups against open planner tasks
+  - if dispatch is paused or the quota gate is closed, scans but emits
+    nothing (fail closed)
+  - DRY-RUN plans and reports but submits nothing; EMIT NIL also submits
+    nothing (scan-only)."
+  (let* ((roadmap-text (%read-roadmap-text cwd)))
+    (unless roadmap-text
+      (return-from planner-cycle
+        (list :gaps 0 :new 0 :skipped-dupe 0 :dry-run dry-run
+              :emitted '() :error :no-roadmap)))
+    (let* ((all-gaps (planner-gap-list roadmap-text))
+           (opened (%open-planner-milestones))
+           (new-gaps (remove-if (lambda (g) (%gap-already-open-p g opened))
+                                all-gaps))
+           (paused (hngh.plugins.ai-orchestrator:dispatch-paused-p))
+           (gate-open (%quota-gate-open-p))
+           (should-emit (and emit (not dry-run) (not paused) gate-open))
+           (to-emit (subseq new-gaps 0 (min (length new-gaps)
+                                            (max 1 max-emissions))))
+           (ids (if should-emit (planner-emit-gaps to-emit) '())))
+      (list :gaps (length all-gaps)
+            :new (length new-gaps)
+            :skipped-dupe (- (length all-gaps) (length new-gaps))
+            :dry-run (or dry-run (not emit))
+            :paused paused
+            :gate-open gate-open
+            :emitted ids))))

@@ -706,7 +706,9 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:planner-weight
            #:planner-decompose
            #:planner-emit-task
-           #:planner-emit-gaps))
+           #:planner-emit-gaps
+           #:planner-cycle
+           #:*planner-open-statuses*))
 
 (defpackage :hngh.plugins.quota-spreader
   (:documentation "Quota Spreader (C6 W2) — per-route quota envelopes, even-sparse drawdown, recurring-authority reservations, and strategic-reserve gating for expensive models. Config-first: code defaults, user-overridable via ~/.hngh/quotas.lisp.")
