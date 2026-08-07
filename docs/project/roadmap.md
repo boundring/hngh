@@ -153,7 +153,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 | 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (567/567 tests @ 78cfde9) |
 | 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 567/567 tests @ 78cfde9; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** (typed agent↔agent control channel — eases all later coordination) | **In progress** (W0-W1 done @ d711143: parser + weighting + bounded decomposition + v3 emission bridge, 567/567 fast, 1790/1790 full; W1.5 signals + W2 closed loop next) |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W2 done @ a58fe86: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope; 567/567 fast, 1840/1840 full; W1.5 signals next) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 
 ---
