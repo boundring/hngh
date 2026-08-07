@@ -152,14 +152,42 @@ spreader's job at reset:
 
 ## 4. Config & defaults
 
-- Per-route envelope defaults live in code (`model-routing` / a `quotas`
-  data file); overridable by `~/.hngh/quotas.lisp` or env.
-- Caps are **rubrics, not authority** — the PM/user can override per period
-  (same stance as milestone priorities in the planner).
-- Price bumps: when a model's price rises, its envelope `cap` in cents stays
-  but its token-equivalent `cap` implicitly falls; the "spend least, spread
-  evenly" rule becomes stricter automatically. Track cents, not just tokens,
-  per route.
+**Config-first, defaults second**: every knob is configurable via
+`~/.hngh/quotas.lisp` (state-store key `quotas`) with conservative code
+defaults that are overridden, never forked. No behavior lives only in code;
+no override is required for sane operation.
+
+- **Route envelopes** (buckets, caps, reset anchors) — code defaults, overridable.
+- **Reservations** (situation-class → reserved cap, even-over, spillover) —
+  code defaults, PM-overridable. Situation-class *names* are config so the
+  user can name the recurring cases (e.g. `code-final-review`) without code.
+- **Sparse rules** (even-drawdown safety margin, cheapest-capable threshold) —
+  config, with conservative defaults (keep paid quota'd routes scarce).
+
+Resolved envelope = merge(code-defaults, user-overrides). Precedence:
+user > defaults. A missing override falls back to defaults; a malformed
+override fails closed (deny the route's spend that tick) rather than guessing.
+
+### Expensive models are a strategic reserve (limited use by default)
+
+The expensive/authority routes (K3, frontier, anthropic-tier) carry an
+explicit **strategic-use policy**, not a soft preference:
+
+- **Default posture: refuse expensive routes.** A costly model is chosen only
+  when a defensible trigger selects it — an authority situation-class, a
+  one-off that passed the cheapest-capable + reservation checks, or an
+  explicit PM override. Generic work never lands on an expensive route.
+- **Hard restricted cap.** Each expensive route has a small period cap by
+  default (e.g. frontier: a few dollars/week). The cap is the same trigger a
+  house budget would be: once spent, the route refuses until reset.
+- **Onto cheaper first.** Selection walks the cost ladder (local $0 → free →
+  cheap remote → authority quota), and only the strategic triggers escalate
+  past the cheap tiers. This makes accidental over-spend structurally
+  impossible: even a bug can't route bulk work to `frontier`, because the
+  default posture is *refuse* and only a narrow trigger opens it.
+
+Net: expensive models exist for specific, strategic, limited use — reached by
+explicit selection, capped, and configurable — never by default or accident.
 
 ---
 
