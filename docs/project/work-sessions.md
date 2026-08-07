@@ -366,3 +366,25 @@ complete. Within a batch, sessions are independent and can be parallelized.
   to refresh capability estimates. Capability scores for the new free
   models are estimates until a benchmark covers them.
 - **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
+
+### Session M9.8: Benchmark sourcing design brief
+**Status**: Done (2026-08-06) — committed
+- **Goal**: Expand benchmark sourcing so local GGUF models (8-35B on the
+  RX 7900 XT) are compared against published leaderboards and remote free
+  models procedurally, no LLM judging.
+- **Artifacts**: `docs/design/benchmark-sourcing.md` (new) — verified
+  data paths for HF Open LLM Leaderboard v2 (`contents` parquet URL
+  pattern + columns + Raw-vs-normalized units; `results` rows API broken
+  dataset-side, use `first-rows`), offline harnesses (lm-eval
+  `local-chat-completions` invocation, promptfoo YAML matrix, aider
+  polyglot), procedural perf measurement (ollama /api/chat timing fields
+  in ns; sysfs `/sys/class/drm/card1/device/mem_info_vram_*` rootless
+  VRAM; rocm-smi cross-check), snapshot JSON schema for
+  `model-benchmarks-local-YYYYMMDD.json`, and the remote-free scoring
+  path with OpenRouter attribution headers.
+- **Verified on-host**: HF datasets-server endpoints, ollama 0.30.6 API
+  (note: `/metrics` 404s on this host — use /api/chat timing fields),
+  sysfs card1 = RX 7900 XT (20 GiB), rocm-smi GPU[0] matches.
+- **Attribution**: deepseek-v4-flash via deepseek (Hermes TUI, direct —
+  delegation re-pointed off OpenRouter after its weekly spend wall hit,
+  see ~/.hermes/config.yaml delegation section).
