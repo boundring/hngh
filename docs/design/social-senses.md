@@ -179,20 +179,29 @@ history.
   relationship and the task — the "directly connect agents in any number of
   procedural ways" idea, but resolved by the orchestrator.
 
-### Research reference: social-emotional learning (SEL) [low priority, later]
+### Research reference: social-emotional learning (SEL) [deferred, gated]
 
-The "how agents read each other's unspoken cues and build rapport" layer has
-a mature human analog worth tapping **when we get there** — not soon. Social-
-emotional learning systematizes: recognizing others' states (reading cues),
-building and calibrating relationships (trust/rapport), and communicating
-through low-bandwidth signals (norms, implied meaning). Its categories map
-neatly onto our design vocabulary — e.g. *social awareness* ≈ detecting a
-peer's state from the signal/thought-trace layer, *relationship skills* ≈
-the rapport + coordination-routing logic, *self-awareness* ≈ the context-
-pressure/spoilage senses. Treat this as a *research reference only* for the
-later SEL-flavored refinement of §3–§5, not a near-term build and not a
-license to anthropomorphize the signal codes into pretend-emotions. The dead-
-pan bean vernacular in beans-aesthetic.md already keeps the tone right.
+The "how agents read each other's unspoken cues and build rapport" layer has a
+mature human analog worth tapping **later** — social-emotional learning
+systematizes recognizing others' states (reading cues), building and
+calibrating relationships (trust/rapport), and communicating through
+low-bandwidth signals (norms, implied meaning). Its categories map onto our
+design vocabulary — *social awareness* ≈ detecting a peer's state from the
+signal/thought-trace layer, *relationship skills* ≈ the rapport +
+coordination-routing logic, *self-awareness* ≈ the context-pressure/spoilage
+senses.
+
+There is **no reason not to give agents emotions** — in fact the signal codes
+already carry affective tone (AFFIRM/NEGATE/WINK are reactions). The point is
+ordering and safety, not avoidance. Emotions come later, **gated on
+guaranteed emotional maturity**: agents only get an emotional layer when the
+system can guarantee they don't act on raw, uncompensated "feelings" in ways
+that hurt coordination or the trust boundary (e.g. sulking on a NEGATE,
+escalating a WINK into an unwarranted action). Until that maturity guarantee
+is real, signals stay *typed behavioral codes* (cheap, deterministic, safe);
+the affective layer is a known, deferred extension of the same codes, not a
+separate system. The dead-pan bean vernacular in beans-aesthetic.md keeps the
+tone right in the meantime.
 
 ---
 
@@ -215,16 +224,38 @@ Explicitly **not** designed now (avoid tech debt):
 
 ---
 
-## 7. Intent file & roadmap hooks
+## 7. Priority & integration with near-term work
 
-- This is a **capture**, not a build commitment. Concrete near-term (only when
-  a squad needs it): start with **signals** over the existing event bus
-  (smallest, fastest, reuses beans) and the **thought-trace keyword layer** on
-  the streams Hngh already intercepts (reuses tool-hub interception).
-- Tie-in: the PM's "background brain" (metabolism §3) is the natural first
-  consumer — it already senses; give it signal + trace senses.
-- Link in `docs/project/roadmap.md` Design Artifacts once it hardens past
-  capture; for now it lives as a design note here.
+This doc is mostly a **capture**, but one piece is pulled forward to near-term
+because it directly eases everything else:
+
+- **Signals layer = near-term (high priority).** The typed control-channel
+  (ASK/AFFIRM/NEGATE/WINK/BLOCK/PERMIT/RETRY/PAUSE/DONE over the event bus,
+  mapped to existing queue transitions) is cheap, deterministic, no-ML, and
+  reuses beans + the event bus. It lowers the cost of *every* squad
+  coordination and is a direct input to the C6 planner loop (dispatch
+  feedback, unblock routing). Build it as part of the squad-dispatch/beans
+  work, not as a separate milestone. See the C6 build plan
+  (`.hermes/plans/2026-08-07_141500-c6-recursive-planner.md`).
+- **Deferred (capture-only), with a deliberate order:**
+  1. **Thought-trace** (procedural intent layer over streams) — cheap but
+     needs the tool-hub interception pattern wired and the privacy boundary
+     agreed; do after signals prove out.
+  2. **Relationship graph + rapport** — needs accumulated history/data to be
+     meaningful; gated on real squads producing traffic.
+  3. **Emotional/affective layer** — gated on a *guaranteed emotional
+     maturity* guarantee (§5); never shipped untested.
+  4. **Multi-device / physical layer** — deferred until >1 real node across
+     hardware (vLLM, Steam Deck, Android, thin clients).
+
+Integration principle: **anything that eases later work ships earliest.** The
+signals layer eases all later social + planner work (it's the cheapest shared
+primitive); thought-trace builds on the interception Hngh already does; rapport
+needs data; emotions need maturity; the physical layer needs nodes. Build in
+that order, pull a piece forward only when the piece before it is proven.
+
+Tie-in: the PM's "background brain" (metabolism §3) is the natural first
+consumer — it already senses; give it the signal + trace senses.
 
 ---
 
