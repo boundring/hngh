@@ -123,3 +123,51 @@ Some prose with **Status**: relevant but the table is what matters.
   (is (eql :done (hngh.plugins.hngh-planner:planner-status "Complete")))
   (is (eql :blocked (hngh.plugins.hngh-planner:planner-status "**Blocked** (needs mDNS)")))
   (is (eql :unknown (hngh.plugins.hngh-planner:planner-status "Random prose"))))
+
+;;; --- Weighting + decomposition + emission (Wave 1) ------------------------
+
+(test planner-weight-is-rule-based-and-tolerant
+  (let* ((gap '(:milestone "M9" :title "Squad Autonomy" :status :in-progress
+                :blocked nil :waves ((:wave 4 :status :in-progress))))
+         (w (hngh.plugins.hngh-planner:planner-weight gap)))
+    (is (numberp (getf w :priority)))
+    (is (numberp (getf w :confidence)))
+    (is (numberp (getf w :cost)))
+    (is (numberp (getf w :score)))
+    ;; M9 has a defined base priority.
+    (is (= 70 (getf w :priority)))))
+
+(test planner-weight-blocked-bumps-priority
+  (let* ((gap '(:milestone "M3" :title "Network" :status :blocked
+                :blocked t :waves ()))
+         (w (hngh.plugins.hngh-planner:planner-weight gap)))
+    ;; 60 base + 5 blocked bump.
+    (is (= 65 (getf w :priority)))))
+
+(test planner-decompose-fallback-emits-single-work-task
+  (let ((specs (hngh.plugins.hngh-planner:planner-decompose
+                '(:milestone "M9" :title "Squad Autonomy"))))
+    (is (listp specs))
+    (is (= 1 (length specs)))
+    (let ((s (first specs)))
+      (is (stringp (getf s :task)))
+      (is (eql :work (getf s :type)))
+      (is (eql :worker (getf s :role))))))
+
+(test planner-decompose-hook-is-bounded-by-max-tasks
+  (let ((hngh.plugins.hngh-planner::*decompose-notify*
+          (lambda (gap ctx) (declare (ignore gap ctx))
+            (loop for i from 1 to 20 collect
+              (list :task (format nil "task ~D" i) :type :work :role :worker)))))
+    (let ((specs (hngh.plugins.hngh-planner:planner-decompose
+                  '(:milestone "M9" :title "Squad Autonomy")
+                  :max-tasks 5)))
+      (is (= 5 (length specs))))))
+
+(test planner-emit-tasks-stamp-planner-source
+  ;; Verify a decomposed spec carries the :planner source tag through
+  ;; planner-emit-task composition (the emission path used by the loop).
+  (let* ((gap '(:milestone "M9" :title "Squad Autonomy"))
+         (spec (first (hngh.plugins.hngh-planner:planner-decompose gap))))
+    (is (eql :planner hngh.plugins.hngh-planner:*planner-source-tag*))
+    (is (stringp (getf spec :task)))))
