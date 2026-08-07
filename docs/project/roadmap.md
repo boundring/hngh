@@ -155,7 +155,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
 | 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope + signals + ledger/status; 596/596 fast, 2237/2237 full; schedule `--emit` from cron when ready) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
-| 6 | **Live orchestration** (observe → guard-rail → steer → plugins → optimize): hngh-mc observe + TUI peep depth, procedural evidence-check + multi-pass dev/review, priority-scored /steer + opencode-correct, Hermes/opencode plugins, shadow-then-promote param optimizer | **Not started** (design `live-orchestration.md` L1–L5; L2 guard-rails + L5 param opt ride on C4/C10 + C8/C9 gating) |
+| 6 | **Live orchestration** (observe → guard-rail → steer → plugins → optimize): hngh-mc observe + TUI peep depth, procedural evidence-check + multi-pass dev/review, priority-scored /steer + opencode-correct, Hermes/opencode plugins, shadow-then-promote param optimizer | **Not started** (design `live-orchestration.md` L1–L5; **steering surface de-risked 2026-08-07: ACP servers on both Hermes + opencode + opencode HTTP/SSE control plane** — build the plugin as an ACP client; L2 guard-rails + L5 param opt ride on C4/C10 + C8/C9 gating) |
 
 ---
 
