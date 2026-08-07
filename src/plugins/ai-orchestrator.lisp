@@ -1150,9 +1150,18 @@ The claimant, or any caller after expiry, atomically persists the release."
           (funcall fn e)))
       (write-task-queue queue))))
 
-(defun submit-task (task &key (policy '(:prefer-tool :local-openai-api)))
+(defun submit-task (task &key (policy '(:prefer-tool :local-openai-api))
+                              (type nil) (assigned-role nil) (verification nil)
+                              (depends-on nil) (input-artifacts nil)
+                              (output-artifacts nil) (authority :advisory)
+                              (source nil) (max-attempts nil))
   "Enqueue TASK (string) with POLICY plist. Returns the new task id.
-Default policy routes to the free local tool (:local-openai-api)."
+Default policy routes to the free local tool (:local-openai-api).
+
+Optional v3 keywords upgrade the record to schema-version 3 so the planner
+can emit structured tasks (TYPE, ASSIGNED-ROLE, VERIFICATION, DEPENDS-ON,
+input/output artifacts, SOURCE tag). All default to the existing v2 shape
+when omitted — fully backward compatible."
   (unless (stringp task)
     (error "TASK must be a string"))
   (bt:with-lock-held (*task-queue-lock*)
@@ -1164,20 +1173,40 @@ Default policy routes to the free local tool (:local-openai-api)."
                                    queue)
                            :initial-value 0))
            (id (setf *next-task-id* (max (1+ max-id) (1+ *next-task-id*))))
-           (entry (list :id id :schema-version 2 :task task :status :queued
-                        :policy policy :authority :advisory :approval-at nil
-                        :depends-on '() :attempt 0 :max-attempts 1
+           (v3p (or type assigned-role verification input-artifacts
+                    output-artifacts source depends-on))
+           (schema-version (if v3p 3 2))
+           (entry (list :id id :schema-version schema-version :task task
+                        :status :queued :policy policy
+                        :authority (if v3p :worker authority)
+                        :approval-at nil
+                        :depends-on (or depends-on '())
+                        :attempt 0 :max-attempts (or max-attempts 1)
                         :not-before nil :lease-until nil :blocked-reason nil
-                        :result nil :error nil :submitted-at (get-universal-time)
+                        :result nil :error nil
+                        :submitted-at (get-universal-time)
                         :started-at nil :finished-at nil)))
+      ;; Merge v3-only fields when present (kept out of the base plist above
+      ;; so pure-v2 submissions stay byte-identical to before).
+      (when v3p
+        (setf (getf entry :type) (or type :work))
+        (setf (getf entry :assigned-role) (or assigned-role :worker))
+        (setf (getf entry :verification)
+              (or verification (list :command nil :status :pending
+                                     :observed-at nil)))
+        (setf (getf entry :input-artifacts) (or input-artifacts '()))
+        (setf (getf entry :output-artifacts) (or output-artifacts '()))
+        (when source
+          (setf (getf entry :source) source)))
       (write-task-queue (append queue (list entry)))
       (when (event-bus-ready-p)
         (ignore-errors
           (hngh.core.event-bus:publish
            :task-queued
-           (list :id id :status :queued :schema-version 2)
+           (list :id id :status :queued :schema-version schema-version)
            :source 'ai-orchestrator)))
-      (hngh.core:log-info "Task ~D queued (~D chars)" id (length task))
+      (hngh.core:log-info "Task ~D queued (~D chars, schema v~D)"
+                          id (length task) schema-version)
       id)))
 
 (defun list-tasks (&key status)

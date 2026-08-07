@@ -695,7 +695,18 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:status
            ;; Roadmap parsing (Wave 0)
            #:planner-gap-list
-           #:planner-status))
+           #:planner-status
+           ;; Weighting + decomposition + emission (Wave 1)
+           #:*planner-source-tag*
+           #:*default-confidence*
+           #:*milestone-priority-base*
+           #:*max-tasks-per-cycle*
+           #:*decompose-notify*
+           #:milestone-priority
+           #:planner-weight
+           #:planner-decompose
+           #:planner-emit-task
+           #:planner-emit-gaps))
 
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")

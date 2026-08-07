@@ -203,3 +203,100 @@ Complete milestones and non-table sections are ignored."
                                            waves))))
                    (append m (list :blocked blocked))))
                gaps)))))
+
+;;; --- Weighting + decomposition + emission (Wave 1) -------------------------
+;;;
+;;; Scope note (2026-08-07): squads already run tasks end-to-end today via
+;;; task-driver-tick -> delegate -> complete-task. These functions are the
+;;; *planner-loop* half — turning roadmap gaps into scored, structured queue
+;;; tasks. They are kept (not gold-plated away): weighting is pure rule-based
+;;; scoring, decomposition is bounded with an optional hook and a
+;;; deterministic fallback, and emission stamps :planner source. They only
+;;; run when the closed loop calls them; building them now eases that, per
+;;; the "anything that eases later work ships earliest" principle. The LLM
+;;; decomposition hook is optional — the planner never depends on a live
+;;; model.
+
+(defparameter *default-confidence* 0.5
+  "Confidence default until the C8/C9 benchmark dataset fills the
+planner-feedback-source. See docs/design/planner-design-roadmap.md §4 —
+confidence reads from a module, never an inlined constant.")
+
+(defparameter *milestone-priority-base*
+  '(("M0" . 10) ("M1" . 30) ("M2" . 40) ("M3" . 60) ("M9" . 70))
+  "Base priority (higher = more important) per milestone id. Unlisted
+milestones get a modest default. Values are a rubric, not an authority; the
+PM/user can override.")
+
+(defparameter *planner-source-tag* :planner
+  "Source tag stamped on planner-emitted queue tasks, so re-scans can
+distinguish planner-generated tasks from human-written ones and never
+re-queue a gap that already has an open planner task.")
+
+(defparameter *max-tasks-per-cycle* 5
+  "Hard cap on decomposition output per planner cycle — prevents the loop
+from fanning one gap into an unbounded task burst (budget/overflow guard).")
+
+(defparameter *decompose-notify* nil
+  "Optional hook: a function of (gap context) that returns task-spec list.
+Set by the harness to perform the actual LLM decomposition; defaults to a
+coarse one-task fallback so the planner never depends on a live model.")
+
+(defun milestone-priority (milestone)
+  "Return the base priority for MILESTONE id, or a safe default when unlisted."
+  (or (cdr (assoc milestone *milestone-priority-base* :test #'string=)) 20))
+
+(defun planner-weight (gap)
+  "Compute a scoring plist for a gap:
+    (:priority <n> :confidence <n> :cost <n> :score <n>)
+Priority from milestone ordering + blocked bump; confidence from the
+feedback-source module (default 0.5 placeholder); cost is a task-unit
+estimate from the gap's wave count (coarse proxy until prior actuals exist).
+Never an LLM call — pure rule-based scoring."
+  (let* ((milestone (getf gap :milestone))
+         (base (milestone-priority milestone))
+         (blocked (getf gap :blocked))
+         (priority (if blocked (+ base 5) base))
+         (confidence *default-confidence*)
+         (wave-count (max 1 (length (getf gap :waves))))
+         (cost (* wave-count 3))
+         (score (* priority confidence
+                   (if (zerop cost) 0.1 (/ 1.0 cost)))))
+    (list :priority priority
+          :confidence confidence
+          :cost cost
+          :score score)))
+
+(defun planner-decompose (gap &key (context nil) (max-tasks *max-tasks-per-cycle*))
+  "Decompose GAP into a list of task-spec plists, capped at MAX-TASKS.
+Returns (:task <str> :type <kw> :role <kw> :verification <plist> :source <tag>).
+Uses the *DECOMPOSE-NOTIFY* hook when set (bounded by MAX-TASKS); otherwise
+a coarse fallback emits a single :research task from the gap's title. The
+LLM is bounded here; the loop is bounded by the cap, never by good behavior."
+  (let ((raw (if *decompose-notify*
+                 (funcall *decompose-notify* gap context)
+                 (list
+                  (list :task (format nil "Implement ~A: ~A"
+                                      (getf gap :milestone)
+                                      (getf gap :title))
+                        :type :work
+                        :role :worker)))))
+    (subseq raw 0 (min (length raw) (max 1 max-tasks)))))
+
+(defun planner-emit-task (spec)
+  "Submit a single task SPEC plist to the queue via ai-orchestrator:submit-task
+with v3 structured fields and a :planner source tag. Returns the new task id."
+  (hngh.plugins.ai-orchestrator:submit-task
+   (getf spec :task)
+   :type (getf spec :type :work)
+   :assigned-role (getf spec :role :worker)
+   :verification (or (getf spec :verification)
+                     (list :command nil :status :pending :observed-at nil))
+   :depends-on (getf spec :depends-on)
+   :source *planner-source-tag*))
+
+(defun planner-emit-gaps (gaps)
+  "Decompose + submit each GAP in GAPS to the queue as a planner task.
+Returns the list of new task ids."
+  (mapcar (lambda (gap) (planner-emit-task (car (planner-decompose gap))))
+          gaps))
