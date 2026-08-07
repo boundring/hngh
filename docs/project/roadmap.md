@@ -169,5 +169,8 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `integrations.md` | 4 | Integration map, event schema, contracts, 8 sequence diagrams |
 | `hngh-design-spec.md` | 5 | Single source of truth (compiles all phases) |
 | `squad-autonomy.md` | M9 | AGENTS.md-oriented, resource-aware, self-continuing squads; recursive planner cycle |
+| `autonomy-strategy.md` | M9+ | Research synthesis: self-developing/self-healing engine, clean-arch self-modification guardrails, security hardening (OWASP agentic), cheap-inference + cost control, MCP/A2A/fleet interop — wave-ordered plan + open questions |
+| `security-agentic-research.md` | M9+ | Cited deep-dive on prompt injection, CIA-Triple-A, supply chain, self-modifying-code and multi-instance risks |
+| `coordination-patterns-research.md` | M9+ | Cited multi-agent coordination/memory/perception/review patterns mapped to Hngh mechanics |
 
 Light-weight day-to-day decisions are in `docs/project/decisions.md` (D-001 through D-020).
