@@ -57,8 +57,8 @@ Final: 1393/1393 pass, 0 fail. Lint clean.
 
 | Role | CLI | Model | CWD |
 |---|---|---|---|
-| PM | hermes | z-ai/glm-5.2 | /home/bricker/Projects/etc/hngh/ |
-| Worker | subagent | gemma-4-12b (local) | /home/bricker/Projects/etc/hngh/ |
+| PM | hermes | z-ai/glm-5.2 | ~/Projects/etc/hngh/ |
+| Worker | subagent | gemma-4-12b (local) | ~/Projects/etc/hngh/ |
 
 ## Attribution
 

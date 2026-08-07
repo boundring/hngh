@@ -15,10 +15,10 @@ nearly-atomic work items for worker/coder dogfooding.
 
 | Role | CLI | Model | CWD |
 |---|---|---|---|
-| PM | hermes | z-ai/glm-5.2 | /home/bricker/Projects/etc/hngh/ |
-| Designer | hermes | z-ai/glm-5.2 | /home/bricker/Projects/etc/hngh/ |
-| Worker | opencode | local/free | /home/bricker/Projects/etc/hngh/ |
-| Coder | opencode | local/free | /home/bricker/Projects/etc/hngh/ |
+| PM | hermes | z-ai/glm-5.2 | ~/Projects/etc/hngh/ |
+| Designer | hermes | z-ai/glm-5.2 | ~/Projects/etc/hngh/ |
+| Worker | opencode | local/free | ~/Projects/etc/hngh/ |
+| Coder | opencode | local/free | ~/Projects/etc/hngh/ |
 
 ## Preflight results
 

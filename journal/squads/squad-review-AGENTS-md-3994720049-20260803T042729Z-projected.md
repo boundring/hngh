@@ -12,9 +12,9 @@ review AGENTS md
 
 | Role | CLI | Model | CWD |
 |---|---|---|---|
-| coordinator | hermes | unsloth/gemma-4-12b-it-qat-GGUF | /home/bricker/Projects/etc/hngh/ |
-| worker | opencode | unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF | /home/bricker/Projects/etc/hngh/ |
-| reviewer | hermes | unsloth/gemma-4-12b-it-qat-GGUF | /home/bricker/Projects/etc/hngh/ |
+| coordinator | hermes | unsloth/gemma-4-12b-it-qat-GGUF | ~/Projects/etc/hngh/ |
+| worker | opencode | unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF | ~/Projects/etc/hngh/ |
+| reviewer | hermes | unsloth/gemma-4-12b-it-qat-GGUF | ~/Projects/etc/hngh/ |
 
 ## Preflight results
 

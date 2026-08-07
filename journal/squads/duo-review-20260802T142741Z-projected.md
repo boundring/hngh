@@ -12,8 +12,8 @@ Two-agent code review: opencode + hermes review AGENTS.md files across projects
 
 | Role | CLI | Model | CWD |
 |---|---|---|---|
-| coordinator | opencode | unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF | /home/bricker/Projects/etc |
-| reviewer | hermes | unsloth/gemma-4-12b-it-qat-GGUF | /home/bricker/Projects/etc |
+| coordinator | opencode | unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF | ~/Projects/etc |
+| reviewer | hermes | unsloth/gemma-4-12b-it-qat-GGUF | ~/Projects/etc |
 
 ## Preflight results
 

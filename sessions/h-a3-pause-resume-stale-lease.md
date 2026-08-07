@@ -2,7 +2,7 @@
 
 **Date**: 2026-08-02
 **Author**: Opencode (Sisyphus)
-**Project**: `hngh` (`/home/bricker/Projects/etc/hngh`)
+**Project**: `hngh` (`~/Projects/etc/hngh`)
 **Depends on**: H-A2 (`next-eligible-task` pure function)
 **Status**: Design Ready for Implementation (`LOCAL-IMPLEMENT`)
 

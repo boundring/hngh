@@ -2,7 +2,7 @@
 
 **Date**: 2026-08-02
 **Author**: Opencode (Sisyphus)
-**Worktree**: ~~`/home/bricker/Projects/etc/.worktrees/hngh-day-queue-a2`~~ (abandoned; landed on lane-a3)
+**Worktree**: ~~`~/Projects/etc/.worktrees/hngh-day-queue-a2`~~ (abandoned; landed on lane-a3)
 **Branch**: ~~`lane-hngh-day-queue-a2`~~ `lane-hngh-day-queue-a3` (commit 829f4db, merged to main as part of a3)
 **Status**: Implementation Complete & Tested; merged to main (983/983 green)
 
