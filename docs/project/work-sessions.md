@@ -467,3 +467,12 @@ Per-route quota envelopes (hour/day/week/month reset + even-sparse drawdown)
 gate quota'd routes like Kimi k3 and feed the C6 Wave-2 planner budget gate.
 Extends llm-budget (rolling hour only) with reset-period awareness. Build
 steps folded toward C6 Wave-2; not yet implemented.
+
+### Session M9.13: Live-orchestration design capture (observation, steering, guard-rails)
+**Status**: Design captured (2026-08-07) — `docs/design/live-orchestration.md`.
+The underway-not-after-the-fact layer: procedural guard-rails (evidence cross-
+checking, multi-pass dev/review, escalate), hngh-mc + TUI observation surfaces,
+priority-scored Hermes/opencode steering, continual parameter optimization, and
+Hermes/opencode integration plugins. Wave-ordered L1 (observe) → L2 (guard-
+rails) → L3 (steer) → L4 (plugins) → L5 (self-steer + param optimizer). Not yet
+built; captures the brief's architecture.
