@@ -330,3 +330,39 @@ complete. Within a batch, sessions are independent and can be parallelized.
   lint-counts clean; backward compat — all C7 generate-pm-prompt tests pass
   unchanged against the delegating implementation.
 - **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
+
+### Session M9.7: Free-tier refresh + model benchmark sourcing
+**Status**: Done (2026-08-06) — committed
+- **Goal**: Replace the stale, single-vendor free fallback tier (nemotron-
+  stack with short IDs that 404 on OpenRouter) with the best current free
+  models distributed across vendors; promote Qwen-AgentWorld-35B to primary
+  local; add a procedural benchmark-sourcing script so model choice is
+  grounded in real data, not vibes.
+- **Artifacts**: `src/plugins/hngh-up.lisp` (*per-role-fallback-chains*
+  refreshed to live catalog IDs: nvidia/nemotron-3-ultra-550b-a55b:free,
+  google/gemma-4-31b-it:free, openai/gpt-oss-20b:free, poolside/laguna-s,
+  cohere/north-mini-code:free, inclusionai/ling-3.0-tiny:free, google/gemma-
+  4-26b-a4b-it:free, nvidia/nemotron-3-super/nano-omni; Qwen-AgentWorld-35B
+  as primary local fallback in designer/coder/accountant/worker; flesh chain
+  -> gemma-4-31b-it:free + Qwen-AgentWorld; *model-mapping* :local-only ->
+  Qwen-AgentWorld; select-system local-models list = 4 real locals);
+  `src/plugins/squad-resources.lisp` (*model-vram-mb* + qwen-agentworld/
+  ornith entries — they were classified remote before); `scripts/
+  fetch-model-benchmarks.sh` (new: OpenRouter catalog + LM Arena PPE +
+  Aider leaderboard -> dated snapshot); `data/model-benchmarks-20260806.json`
+  (snapshot: 400 catalog, 68 aider, 2 ppe); `docs/design/model-pareto.md`
+  (free-tier table + per-role chains + sourcing note); `docs/design/
+  prompt-matrix.md` (§7.3 chain block replaced with source-of-truth pointer
+  — it had drifted twice); `docs/design/squad-startup-automation.md` +
+  `hngh-up.md` (stale kimi/nemotron references); `tests/unit/test-hngh-up.
+  lisp` (+2 regression tests: d5-free-tier-distributed, d5-local-workhorse-
+  agentworld).
+- **Verification**: make test-fast 464/464 (+74); make test-full 1665/1665
+  (+74); lint-counts clean; benchmark script run twice with identical
+  output.
+- **Notes**: PPE datasets only cover legacy models (gpt-4o-mini, gemma-2,
+  llama-3-8b) — good mechanism, thin coverage for today's free tier; the
+  script's value is the catalog + aider overlap plus a repeatable pipeline
+  to refresh capability estimates. Capability scores for the new free
+  models are estimates until a benchmark covers them.
+- **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).

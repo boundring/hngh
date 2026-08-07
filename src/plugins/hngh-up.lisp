@@ -186,7 +186,7 @@ Returns a list of QUESTION structs."
      (make-question
       :id :model-tier
       :prompt "Model tier?"
-      :options '(("local-only" "Local only, zero cost (gemma-4-12b queued)")
+      :options '(("local-only" "Local only, zero cost (Qwen-AgentWorld-35B queued)")
                  ("budget-50" "Up to 50c remote (deepseek-v4-flash-0731)")
                  ("budget-200" "Up to $2 remote (glm-5.2 deep tier / deepseek-v4-flash-0731)"))
       :default (if unsloth-active "local-only" "budget-50")
@@ -258,8 +258,8 @@ AGENTS.md cannot answer."
 
 (defparameter *model-mapping*
   '((:local-only
-     ("hermes" . "unsloth/gemma-4-12b-it-qat-GGUF")
-     ("opencode" . "unsloth-local/unsloth/gemma-4-12b-it-qat-GGUF"))
+     ("hermes" . "unsloth/Qwen-AgentWorld-35B-A3B-GGUF")
+     ("opencode" . "unsloth-local/unsloth/Qwen-AgentWorld-35B-A3B-GGUF"))
     (:budget-50
      ("hermes" . "deepseek/deepseek-v4-flash-0731")
      ("opencode" . "deepseek/deepseek-v4-flash-0731"))
@@ -1458,14 +1458,16 @@ Report: total cost, husk count, spoilage rate.
       (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
       (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
+      (:name "nvidia/nemotron-3-ultra-550b-a55b:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 7.5 :local-p nil)
+      (:name "google/gemma-4-31b-it:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 7.0 :local-p nil)))
     (:designer
      ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
       (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
       (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+      (:name "google/gemma-4-31b-it:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 7.0 :local-p nil)
+      (:name "nvidia/nemotron-3-super-120b-a12b:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 7.0 :local-p nil)
+      (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.5 :local-p t)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:coder
      ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
@@ -1473,7 +1475,10 @@ Report: total cost, husk count, spoilage rate.
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
       (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
       (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "openai/gpt-oss-20b:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "poolside/laguna-s-2.1:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "cohere/north-mini-code:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+      (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.5 :local-p t)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:artist
      ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
@@ -1481,13 +1486,16 @@ Report: total cost, husk count, spoilage rate.
       (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
       (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "gemini-3.5-flash" :provider "google" :input-cost 0.30 :output-cost 0.30 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)))
+      (:name "google/gemma-4-31b-it:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 7.0 :local-p nil)
+      (:name "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+      (:name "nvidia/nemotron-nano-12b-v2-vl:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 5.5 :local-p nil)))
     (:accountant
      ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
       (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-nano:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 5.0 :local-p nil)
+      (:name "openai/gpt-oss-20b:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "google/gemma-4-26b-a4b-it:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.5 :local-p t)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
     (:worker
      ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
@@ -1495,10 +1503,16 @@ Report: total cost, husk count, spoilage rate.
       (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
       (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
       (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "google/gemma-4-26b-a4b-it:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
+      (:name "cohere/north-mini-code:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
+      (:name "inclusionai/ling-3.0-tiny:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 5.5 :local-p nil)
+      (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.5 :local-p t)
       (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t))))
-  "Per-role model fallback chains from model-pareto.md §3 (2026-08-05 mandate).
-Ordered cheapest-capable first. Artist has no local fallback (never local).")
+  "Per-role model fallback chains from model-pareto.md §3 (2026-08-05 mandate,
+2026-08-06 free-tier refresh). Paid heads first, then the best free models
+distributed across vendors (OpenRouter :free catalog, checked 2026-08-06),
+then local. Ordered by capability within each tier. Artist has no local
+fallback (never local).")
 
 (defun estimate-model-cost (model role)
   "Estimate the cost in dollars of MODEL running ROLE's token budget."
@@ -1608,7 +1622,10 @@ the unit set changes rarely and caching keeps repeated prompt fills cheap.")
           :gpu-name (getf ctx :gpu-name)
           :vram-total-mb (getf ctx :vram-total-mb)
           :vram-free-mb (getf ctx :vram-free-mb)
-          :local-models (list "gemma-4-12b")
+          :local-models (list "unsloth/Qwen-AgentWorld-35B-A3B-GGUF"
+                              "unsloth/Ornith-1.0-35B-GGUF"
+                              "unsloth/Ornith-1.0-9B-GGUF"
+                              "unsloth/gemma-4-12b-it-qat-GGUF")
           :systemd-units (%running-user-services))))
 
 (defun select-strategy-from-goal (goal)
@@ -2013,8 +2030,8 @@ Returns the filled string with all slots replaced."
 (defparameter *flesh-model-chain*
   '((:name "deepseek-v4-flash-0731" :provider "openrouter" :est-cost 0.001)
     (:name "gpt-5.6-luna" :provider "openai" :est-cost 0.001)
-    (:name "nemotron-super:free" :provider "openrouter" :est-cost 0)
-    (:name "gemma-4-12b" :provider "unsloth-local" :est-cost 0))
+    (:name "google/gemma-4-31b-it:free" :provider "openrouter" :est-cost 0)
+    (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :est-cost 0))
   "Cheapest-first model chain for flesh pass. The last entry is local —
 only used as a final fallback and only if the role allows local models.")
 

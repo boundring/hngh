@@ -1311,8 +1311,8 @@ Returns a model spec plist or NIL."
 (defparameter *flesh-model-chain*
   '((:name "deepseek-v4-flash-0731" :provider "openrouter" :est-cost 0.001)
     (:name "gpt-5.6-luna" :provider "openai" :est-cost 0.001)
-    (:name "nemotron-super:free" :provider "openrouter" :est-cost 0)
-    (:name "gemma-4-12b" :provider "unsloth-local" :est-cost 0))
+    (:name "google/gemma-4-31b-it:free" :provider "openrouter" :est-cost 0)
+    (:name "unsloth/Qwen-AgentWorld-35B-A3B-GGUF" :provider "unsloth-local" :est-cost 0))
   "Cheapest-first model chain for flesh pass. The last entry is local —
 only used as a final fallback and only if the role allows local models.")
 ```
@@ -1577,57 +1577,30 @@ or NIL if no model can be assigned."
 
 ### 7.3 Per-role fallback chain
 
-Static table from model-pareto.md §3:
+**Source of truth: `src/plugins/hngh-up.lisp` `*per-role-fallback-chains*`**
+and `*flesh-model-chain*`. This section does not duplicate the table —
+it drifted twice (M9.5 mandate, M9.6 free-tier refresh) before being
+removed. The human-readable per-role table lives in `model-pareto.md §3`;
+the machine-readable copy is the code.
 
-```lisp
-(defparameter *per-role-fallback-chains*
-  '((:pm
-     ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
-      (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
-    (:designer
-     ((:name "glm-5.2" :provider "openrouter" :input-cost 0.40 :output-cost 0.40 :capability 8.5 :local-p nil)
-      (:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-super:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.0 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
-    (:coder
-     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
-      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
-    (:artist
-     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "qwen3.7-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.0 :local-p nil)
-      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
-      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "gemini-3.5-flash" :provider "google" :input-cost 0.30 :output-cost 0.30 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)))
-    (:accountant
-     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "nemotron-nano:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 5.0 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t)))
-    (:worker
-     ((:name "deepseek-v4-flash-0731" :provider "openrouter" :input-cost 0.09 :output-cost 0.09 :capability 7.5 :local-p nil)
-      (:name "deepseek-v4-flash" :provider "openrouter" :input-cost 0.09 :output-cost 0.14 :capability 7.0 :local-p nil)
-      (:name "gpt-5.6-luna" :provider "openai" :input-cost 0.10 :output-cost 0.10 :capability 7.5 :local-p nil)
-      (:name "xiaomi/mimo-v2.5" :provider "openrouter" :input-cost 0.435 :output-cost 0.435 :capability 7.0 :local-p nil)
-      (:name "minimax/minimax-m3" :provider "openrouter" :input-cost 0.20 :output-cost 0.20 :capability 7.0 :local-p nil)
-      (:name "nemotron-3-ultra:free" :provider "openrouter" :input-cost 0 :output-cost 0 :capability 6.5 :local-p nil)
-      (:name "gemma-4-12b" :provider "unsloth-local" :input-cost 0 :output-cost 0 :capability 6.0 :local-p t))))
-  "Per-role model fallback chains from model-pareto.md §3 (2026-08-05 mandate).
-Ordered cheapest-capable first. Artist has no local fallback (never local).")
-```
+Current shape (2026-08-06, after the free-tier refresh):
+
+| Role | Paid head → fallbacks | Free tier (distributed) | Local |
+|---|---|---|---|
+| PM | glm-5.2 → deepseek-v4-flash-0731 → deepseek-v4-flash → gpt-5.6-luna | nemotron-3-ultra-550b-a55b:free → gemma-4-31b-it:free | never |
+| Designer | glm-5.2 → deepseek-v4-flash-0731 → deepseek-v4-flash → gpt-5.6-luna | gemma-4-31b-it:free → nemotron-3-super-120b-a12b:free | Qwen-AgentWorld-35B → gemma-4-12b |
+| Coder | deepseek-v4-flash-0731 → deepseek-v4-flash → gpt-5.6-luna → mimo-v2.5 → minimax-m3 | gpt-oss-20b:free → laguna-s-2.1:free → north-mini-code:free | Qwen-AgentWorld-35B → gemma-4-12b |
+| Artist | deepseek-v4-flash-0731 → qwen3.7-flash → mimo-v2.5 → minimax-m3 → gpt-5.6-luna | gemma-4-31b-it:free (multimodal) → nemotron-3-nano-omni-30b-a3b-reasoning:free → nemotron-nano-12b-v2-vl:free (vision) | never |
+| Accountant | deepseek-v4-flash-0731 → deepseek-v4-flash → gpt-5.6-luna | gpt-oss-20b:free → gemma-4-26b-a4b-it:free | Qwen-AgentWorld-35B → gemma-4-12b |
+| Worker | deepseek-v4-flash-0731 → deepseek-v4-flash → gpt-5.6-luna → mimo-v2.5 → minimax-m3 | gemma-4-26b-a4b-it:free → north-mini-code:free → ling-3.0-tiny:free | Qwen-AgentWorld-35B → gemma-4-12b |
+
+Flesh chain (cheapest-first): deepseek-v4-flash-0731 → gpt-5.6-luna →
+google/gemma-4-31b-it:free → unsloth/Qwen-AgentWorld-35B-A3B-GGUF (local,
+final fallback only).
+
+Rule: when editing the chains, edit `src/plugins/hngh-up.lisp` and
+`model-pareto.md §3` together; re-run `scripts/fetch-model-benchmarks.sh`
+first if the change is motivated by new catalog/benchmark data.
 
 **Fallback chain evaluation** (runtime, not static):
 
