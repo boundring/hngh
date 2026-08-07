@@ -490,3 +490,15 @@ built; captures the brief's architecture.
   my own shell line and I looped on the same pattern — a live-orchestration
   type failure the design is meant to catch. Kept the doc note; stopped,
   checked the error shape, switched to precise scoping.
+
+### Session M9.15: ACP-everywhere + LSP design (broaden ACP use)
+**Status**: Design captured (2026-08-07) — `docs/design/agent-client-protocol.md`.
+Position: ACP (Zed's open standard, JSON-RPC2/stdio, 25+ agents) is Hngh's
+uniform agent control+observe+gate layer — one ACP client drives any ACP-
+capable agent (Hermes, opencode, Gemini CLI, Claude Code via adapter);
+ACP server dogfoods Hngh (Emacs/Zed). Steer-vs-queue negotiated per agent
+(never assumed; pi #4444 caveat); `session/request_permission` = human-gate.
+LSP: Hngh as first-class LSP client — diagnostics/symbols power evidence-check
++ review/verify gates (ties L2 + P7). Waves A1 (client) -> A2 (task-driver
+integration) -> A3 (steering) -> A4 (server). ACP and MCP kept separate
+(control vs tools). Docs/comments only.
