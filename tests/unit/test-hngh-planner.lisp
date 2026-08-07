@@ -171,3 +171,78 @@ Some prose with **Status**: relevant but the table is what matters.
          (spec (first (hngh.plugins.hngh-planner:planner-decompose gap))))
     (is (eql :planner hngh.plugins.hngh-planner:*planner-source-tag*))
     (is (stringp (getf spec :task)))))
+
+;;; --- Closed loop (Wave 2) -------------------------------------------------
+
+(defun %write-tmp-roadmap (tmp)
+  "Write a representative roadmap under TMP and return TMP."
+  (ensure-directories-exist (format nil "~A/docs/project/" tmp))
+  (with-open-file (s (format nil "~A/docs/project/roadmap.md" tmp)
+                     :direction :output :if-exists :supersede)
+    (format s "## Milestone 9 — Squad Autonomy (in progress)
+
+| Wave | Capabilities | Status |
+|---|---|---|
+| 4 | C6 planner | **In progress** |
+| 5 | C8 benchmark | Not started |
+")
+    (format s "## Milestone 3 — The Network (in progress)
+
+| Wave | Capabilities | Status |
+|---|---|---|
+| 1 | Peer link | **In progress** |
+"))
+  tmp)
+
+(test planner-cycle-no-roadmap-fails-closed
+  (with-aio-light (tmp)
+    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
+                                                      :emit t)))
+      (is (eql :no-roadmap (getf r :error)))
+      (is (null (getf r :emitted))))))
+
+(test planner-cycle-dry-run-submits-nothing
+  (with-aio-light (tmp)
+    (%write-tmp-roadmap tmp)
+    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
+                                                      :dry-run t)))
+      (is (null (getf r :emitted)))
+      (is-true (getf r :dry-run))
+      (is (>= (getf r :gaps) 1))
+      ;; Queue is empty after dry-run.
+      (is (null (hngh.plugins.ai-orchestrator:list-tasks))))))
+
+(test planner-cycle-emits-when-open
+  (with-aio-light (tmp)
+    (%write-tmp-roadmap tmp)
+    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
+                                                      :emit t)))
+      (is (plusp (getf r :gaps)))
+      ;; Emits at most max-emissions and returns ids.
+      (is (plusp (length (getf r :emitted))))
+      (is (= (length (getf r :emitted))
+             (getf r :new)))
+      ;; The queue now has planner-sourced tasks.
+      (is (some (lambda (e)
+                  (eql :planner (getf e :source)))
+                (hngh.plugins.ai-orchestrator:list-tasks))))))
+
+(test planner-cycle-dedups-reopen
+  (with-aio-light (tmp)
+    (%write-tmp-roadmap tmp)
+    ;; First cycle emits.
+    (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)
+    ;; Second cycle sees the same gaps already open -> dedup, no new emit.
+    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)))
+      (is (zerop (length (getf r :emitted))))
+      (is (>= (getf r :skipped-dupe) 1)))))
+
+(test planner-cycle-refrains-when-paused
+  (with-aio-light (tmp)
+    (%write-tmp-roadmap tmp)
+    (hngh.plugins.ai-orchestrator:pause-dispatch)
+    (unwind-protect
+         (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)))
+           (is (null (getf r :emitted)))
+           (is-true (getf r :paused)))
+      (hngh.plugins.ai-orchestrator:resume-dispatch))))
