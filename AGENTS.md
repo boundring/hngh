@@ -51,7 +51,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Doc convention (D1)**: durable records carry `green @ <sha>`, never bare counts
 - **Test-count lint**: `make lint-counts` — procedural, no LLM. Scans current-state refs in AGENTS.md + roadmap.md
 - **hngh-up plugin**: exists with design doc at `docs/design/hngh-up.md` (goal-driven squad spin-up, procedural questionnaire, strategy system, autonomous continuation, social sharing)
-- **M9 squad autonomy**: W1-2 done (C1, C2, C3, C5). W3 in progress (C7 PM-first-prompt generator done; C4 + C10 design-only). Wave 2-4 plugins (file-watcher, squad-dispatch, beans, squad-resources) staged 03282f3, wired into main.lisp lifecycle. **W5 prompt matrix built** (docs/design/prompt-matrix.md, per-role chains synced to D-040 in M9.5): generate-prompt, 36 skeletons, bone fillers, flesh pass, model selection, prompt cache — 515/515 fast, 1687/1687 full @ e173d21. Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
+- **M9 squad autonomy**: W1-2 done (C1, C2, C3, C5). W3 in progress (C7 PM-first-prompt generator done; C4 + C10 design-only). Wave 2-4 plugins (file-watcher, squad-dispatch, beans, squad-resources) staged 03282f3, wired into main.lisp lifecycle. **W5 prompt matrix built** (docs/design/prompt-matrix.md, per-role chains synced to D-040 in M9.5): generate-prompt, 36 skeletons, bone fillers, flesh pass, model selection, prompt cache — 515/515 fast, 1752/1752 full @ e173d21. Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
 - **squad-up**: `~/.local/bin/squad-up` — 6-seat cascading Konsole launcher. Config: `~/.hngh-night/squad-seats.conf`
 
 
