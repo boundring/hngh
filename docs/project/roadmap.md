@@ -153,7 +153,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 | 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (494/494 tests @ 78cfde9) |
 | 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 494/494 tests @ 78cfde9; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) | Not started |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** (typed agent↔agent control channel over the event bus — eases all later coordination) | **In progress** (C6 build plan at `.hermes/plans/2026-08-07_141500-c6-recursive-planner.md`; signals pulled forward per social-senses §7) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 
 ---
