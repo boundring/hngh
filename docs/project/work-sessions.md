@@ -502,3 +502,16 @@ LSP: Hngh as first-class LSP client — diagnostics/symbols power evidence-check
 + review/verify gates (ties L2 + P7). Waves A1 (client) -> A2 (task-driver
 integration) -> A3 (steering) -> A4 (server). ACP and MCP kept separate
 (control vs tools). Docs/comments only.
+
+### Session M9.16: ACP transport/SDK research — CL-first confirmed
+**Status**: Research done (2026-08-07), decision recorded in agent-client-
+protocol.md. Findings: (1) Hngh has NO JSON-RPC lib today (only jsown JSON) —
+corrected earlier "plumbing exists for MCP" note; (2) cxxxr/jsonrpc (Quicklisp
+20260101) loads clean and ships client.lisp + transport/stdio.lisp — the exact
+stdio JSON-RPC client transport ACP needs, in-CL; (3) no CL ACP client lib
+exists (Python official agent-client-protocol + Rust/JS are the mature SDKs);
+(4) Hermes' own ACP server is a Python adapter (acp_adapter) — wire contract
+language-agnostic. Decision: build A1 CL-first on cxxxr/jsonrpc (consistent
+with the CL plugin image; avoid a second runtime), pin protocolVersion, stay
+explicit/schema-locked (ACP stabilizing via use_unstable_protocol). Fully
+de-risked; D1 (CL-first) confirmed.
