@@ -433,3 +433,30 @@ complete. Within a batch, sessions are independent and can be parallelized.
   `git push origin` syncs both mirrors per D-002. Verified both GitHub and
   Codeberg at `1c693dc`.
 - **Attribution**: deepseek-v4-flash-0731 via openrouter (Hermes TUI).
+
+### Session M9.11: Autonomy-strategy research (6-thread synthesis)
+**Status**: Done (2026-08-07) — committed with `docs/design/autonomy-strategy.md`
+- **Goal**: Research the full arc toward Hngh as a self-developing,
+  self-healing system-harnessing engine (up to a consulting workforce with
+  peer instances), and fold it into a wave-ordered roadmap.
+- **Method**: 3 delegated research subagents (self-dev systems, security/
+  takeover resistance, multi-agent coordination) + orchestrated web research
+  on the remaining threads (memory taxonomy, clean-arch self-modification,
+  cheap inference/cost, MCP/A2A/ecosystem interop).
+- **Artifacts (committed)**:
+  - `docs/design/autonomy-strategy.md` — 683-line synthesis: north star, 6
+    research sections, wave-ordered roadmap implications (C6 planner →
+    guardrails → security baseline → benchmark/cost → MCP/A2A → fleet), open
+    questions.
+  - `docs/design/security-agentic-research.md` (26KB) + `docs/design/
+    coordination-patterns-research.md` (29KB) — cited deep-dive reports.
+  - `docs/project/roadmap.md` — design-artifacts table gains the four docs.
+- **Key findings**: C6 (the recursive planner) is the keystone that makes
+  Hngh run itself; guardrails must be deterministic fitness functions
+  (not advisory docs); security baseline (immutable policy layer, least
+  agency, provenance tagging, canaries, sandboxing, allowlisted deps) is a
+  MUST-HAVE gate before any core self-modification or networking; cost comes
+  from routing (DeepSeek-first) + prompt-cache awareness (~$0.0036/M cache
+  hits); MCP (agent→tool) + A2A (agent→agent) are Hngh's M3 interop layer.
+- **Attribution**: deepseek-v4-flash-0731 (orchestrator) + 3 delegated
+  subagent passes (deepseek-v4-flash) via Hermes.
