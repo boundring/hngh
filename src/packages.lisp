@@ -666,7 +666,6 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:update-role-status
            ;; Precondition gates
            #:check-preconditions))
-
 (defpackage :hngh.plugins.beans
   (:documentation "Bean Lifecycle (Wave 4) — typed beans, husk/core/membrane format, lifecycle state machine, spoiled/feral detection, spore propagation.")
   (:use :cl :hngh.core)
@@ -686,6 +685,17 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            ;; Bean type constants
            #:*bean-types*
            #:*membrane-directives*))
+
+(defpackage :hngh.plugins.hngh-planner
+  (:documentation "C6 Recursive Planner — reads the roadmap, extracts gaps, and produces work-session-shaped tasks for the queue. Wave 0: tolerant section-aware roadmap parser.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           ;; Roadmap parsing (Wave 0)
+           #:planner-gap-list
+           #:planner-status))
 
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")

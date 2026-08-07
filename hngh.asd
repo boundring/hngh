@@ -63,7 +63,8 @@
                  (:file "plugins/fragment-journal")
                  (:file "plugins/squad-resources")
                  (:file "plugins/squad-dispatch")
-                 (:file "plugins/beans"))
+                 (:file "plugins/beans")
+                 (:file "plugins/hngh-planner"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -117,6 +118,7 @@
                  (:file "test-hngh-up")
                  (:file "test-squad-dispatch")
                  (:file "test-beans")
+                 (:file "test-hngh-planner")
                  (:file "test-model-probes"))
    :perform (test-op (op c)
                         (declare (ignore op))
