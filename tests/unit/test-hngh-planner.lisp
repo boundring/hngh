@@ -246,3 +246,53 @@ Some prose with **Status**: relevant but the table is what matters.
            (is (null (getf r :emitted)))
            (is-true (getf r :paused)))
       (hngh.plugins.ai-orchestrator:resume-dispatch))))
+
+;;; --- Ledger + status (Wave 3) ---------------------------------------------
+
+(defun %count-substr (text needle)
+  "Return the number of non-overlapping occurrences of NEEDLE in TEXT."
+  (loop with len = (length needle)
+        with from = 0
+        for pos = (search needle text :start2 from)
+        while pos
+        do (setf from (+ pos len))
+        count pos))
+
+(test append-ledger-creates-file
+  (with-aio-light (tmp)
+    (let ((path (hngh.plugins.hngh-planner:append-planner-ledger
+                 tmp '(:gaps 4 :new 2 :skipped-dupe 2 :dry-run nil
+                       :emitted (1 2)))))
+      (is (probe-file path))
+      (let ((txt (uiop:read-file-string path)))
+        (is (search "Timestamp" txt))
+        (is (search "gaps" txt))
+        ;; Header + one data row.
+        (is (>= (count #\Newline txt) 3))))))
+
+(test append-ledger-appends
+  (with-aio-light (tmp)
+    (hngh.plugins.hngh-planner:append-planner-ledger
+     tmp '(:gaps 4 :new 2 :skipped-dupe 2 :dry-run nil :emitted (1)))
+    (hngh.plugins.hngh-planner:append-planner-ledger
+     tmp '(:gaps 3 :new 1 :skipped-dupe 2 :dry-run nil :emitted (9)))
+    (let ((txt (uiop:read-file-string
+                (merge-pathnames
+                 hngh.plugins.hngh-planner:*planner-ledger-path* tmp))))
+      ;; Header present exactly once; two data rows (rows begin with a
+      ;; "| YYYY-" timestamp).
+      (is (= 1 (%count-substr txt "Timestamp")))
+      (let ((rows (uiop:split-string txt :separator '(#\Newline))))
+        (is (= 2 (count-if (lambda (l)
+                             (and (plusp (length l))
+                                  (search "| 20" l)))
+                           rows)))))))
+
+(test planner-cycle-dry-run-does-not-write-ledger
+  (with-aio-light (tmp)
+    (%write-tmp-roadmap tmp)
+    (hngh.plugins.hngh-planner:planner-cycle tmp :dry-run t)
+    ;; Dry-run does not emit nor write the ledger.
+    (let ((p (merge-pathnames
+              hngh.plugins.hngh-planner:*planner-ledger-path* tmp)))
+      (is-false (probe-file p)))))

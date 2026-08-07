@@ -28,10 +28,19 @@
   "Return T when the planner plugin is active."
   *running*)
 
+(defvar *last-cycle* nil
+  "Cached summary plist of the most recent planner-cycle run (for status).")
+
 (defun status ()
-  "Return a one-line status summary. Wave 0: parser only, no loop yet."
+  "Return a one-line status summary. Wave 2+: reports the last planner-cycle
+summary (gaps/new/emitted) if one is cached, else 'not run'."
   (if *running*
-      "planner: parser ready (decomposition/loop pending)"
+      (if *last-cycle*
+          (format nil "planner: ~D gaps -> ~D new -> ~D emitted (last cycle)"
+                  (getf *last-cycle* :gaps)
+                  (getf *last-cycle* :new)
+                  (length (getf *last-cycle* :emitted)))
+          "planner: ready, no cycle run yet")
       "planner: inactive"))
 
 ;;; --- Roadmap parsing (Wave 0) ---------------------------------------------
@@ -383,11 +392,53 @@ Behavior:
            (should-emit (and emit (not dry-run) (not paused) gate-open))
            (to-emit (subseq new-gaps 0 (min (length new-gaps)
                                             (max 1 max-emissions))))
-           (ids (if should-emit (planner-emit-gaps to-emit) '())))
-      (list :gaps (length all-gaps)
-            :new (length new-gaps)
-            :skipped-dupe (- (length all-gaps) (length new-gaps))
-            :dry-run (or dry-run (not emit))
-            :paused paused
-            :gate-open gate-open
-            :emitted ids))))
+           (ids (if should-emit (planner-emit-gaps to-emit) '()))
+           (summary (list :gaps (length all-gaps)
+                          :new (length new-gaps)
+                          :skipped-dupe (- (length all-gaps) (length new-gaps))
+                          :dry-run (or dry-run (not emit))
+                          :paused paused
+                          :gate-open gate-open
+                          :emitted ids)))
+      (setf *last-cycle* summary)
+      (unless dry-run
+        (ignore-errors (append-planner-ledger cwd summary)))
+      summary)))
+
+;;; --- Planner ledger / husk (Wave 3) ---------------------------------------
+
+(defparameter *planner-ledger-path* "journal/squads/planner-ledger.md"
+  "Planner dispatch ledger path (relative to CWD). Append-only record of each
+cycle: gaps found, tasks queued, and their status — the durable trace the
+planner leaves behind (beans 'husk' analog for the loop).")
+
+(defun %format-planner-ledger-timestamp (&optional (ut (get-universal-time)))
+  "Format a universal time as a timestamp string."
+  (multiple-value-bind (s m h d mo y)
+      (decode-universal-time ut)
+    (format nil "~4,'0D-~2,'0D-~2,'0D ~2,'0D:~2,'0D:~2,'0D UTC"
+            y mo d h m s)))
+
+(defun append-planner-ledger (cwd summary)
+  "Append a dated entry for a planner-cycle SUMMARY to CWD's planner ledger
+(JOURNAL/SQUADS/PLANNER-LEDGER.MD), creating the file if absent. Returns the
+ledger path. Mirror of the fragment-journal write convention."
+  (let* ((path (merge-pathnames *planner-ledger-path* cwd))
+         (dir (uiop:pathname-directory-pathname path))
+         (line (format nil "| ~A | ~D | ~D | ~D | ~D | ~A~%"
+                       (%format-planner-ledger-timestamp)
+                       (getf summary :gaps)
+                       (getf summary :new)
+                       (getf summary :skipped-dupe)
+                       (length (getf summary :emitted))
+                       (if (getf summary :dry-run) "dry-run" "emitted"))))
+    (ensure-directories-exist dir)
+    (if (probe-file path)
+        (with-open-file (s path :direction :output
+                           :if-exists :append :if-does-not-exist :create)
+          (write-string line s))
+        (with-open-file (s path :direction :output :if-exists :supersede)
+          (format s "| Timestamp | gaps | new | dupes-skipped | emitted | mode |~%")
+          (format s "|---|---|---|---|---|---|~%")
+          (write-string line s)))
+    path))
