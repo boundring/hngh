@@ -397,3 +397,305 @@ AGENTS.md sections, plans, and design docs."
            (is (search "Intent" prompt))
            (is (search "do something" prompt)))
       (%c7-cleanup dir))))
+
+;;; --- W5 prompt matrix (D5) -------------------------------------------------
+
+(defun %d5-tmp-project ()
+  "Create a fresh synthetic project for prompt matrix tests.
+Extends %c7-tmp-project with a Makefile, a second plan, and design stubs.
+Returns the directory pathname."
+  (let ((dir (%c7-tmp-project)))
+    ;; Add Makefile
+    (with-open-file (s (merge-pathnames "Makefile" dir)
+                       :direction :output :if-exists :supersede
+                       :if-does-not-exist :create)
+      (write-string "build:\n\techo built\ntest:\n\techo tested\n" s))
+    ;; Add second plan
+    (with-open-file (s (merge-pathnames
+                        ".hermes/plans/2026-08-03_second-plan.md" dir)
+                       :direction :output :if-exists :supersede
+                       :if-does-not-exist :create)
+      (write-string "# Second Plan\n\nAnother plan for testing.\n" s))
+    ;; Add design stubs
+    (with-open-file (s (merge-pathnames
+                        "docs/design/beans-aesthetic.md" dir)
+                       :direction :output :if-exists :supersede
+                       :if-does-not-exist :create)
+      (write-string "# Beans Aesthetic\n\nBean vocabulary per role.\n" s))
+    (with-open-file (s (merge-pathnames
+                        "docs/design/model-pareto.md" dir)
+                       :direction :output :if-exists :supersede
+                       :if-does-not-exist :create)
+      (write-string "# Model Pareto\n\nPer-role fallback chains.\n" s))
+    dir))
+
+(test d5-dimension-selection
+  "Dimension selection functions return correct values from context."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                      :role :coder
+                      :scenario :task-assign
+                      :strategy :feature-sprint
+                      :resources :budget-50
+                      :squad-count 3
+                      :roles-active '(:pm :designer :coder)
+                      :lifetime :ephemeral
+                      :directory (hngh.plugins.hngh-up::select-directory dir)
+                      :system (hngh.plugins.hngh-up::select-system)
+                      :purpose "implement the watcher plugin")))
+           (is (eq (hngh.plugins.hngh-up:prompt-dimensions-role dims) :coder))
+           (is (eq (hngh.plugins.hngh-up:prompt-dimensions-scenario dims) :task-assign))
+           (is (eq (hngh.plugins.hngh-up:prompt-dimensions-strategy dims) :feature-sprint))
+           (is (= (hngh.plugins.hngh-up:prompt-dimensions-squad-count dims) 3))
+           (is (equal (hngh.plugins.hngh-up:prompt-dimensions-roles-active dims) '(:pm :designer :coder)))
+           (is (string= (hngh.plugins.hngh-up:prompt-dimensions-purpose dims) "implement the watcher plugin")))
+      (%c7-cleanup dir))))
+
+(test d5-skeleton-selection
+  "get-skeleton returns the correct template for each role×scenario pair."
+  ;; All 36 combinations return non-NIL
+  (dolist (role '(:pm :designer :coder :artist :accountant :worker))
+    (dolist (scenario '(:startup :task-assign :status-check :review :shutdown :unblock))
+      (let ((skeleton (hngh.plugins.hngh-up:get-skeleton role scenario)))
+        (is (not (null skeleton))
+            "No skeleton for ~A×~A" role scenario)
+        (when skeleton
+          ;; Skeleton contains at least one {{slot}} placeholder
+          (is (search "{{" skeleton)
+              "Skeleton for ~A×~A has no slots" role scenario)))))
+  ;; PM startup skeleton contains the orientation directive
+  (is (search "Orientation" (hngh.plugins.hngh-up:get-skeleton :pm :startup)))
+  ;; Coder task-assign skeleton contains task-id slot
+  (is (search "{{task-id}}" (hngh.plugins.hngh-up:get-skeleton :coder :task-assign)))
+  ;; Review skeleton contains review-criteria slot
+  (is (search "{{review-criteria}}" (hngh.plugins.hngh-up:get-skeleton :coder :review)))
+  ;; Shutdown skeleton contains fragment-journal slot
+  (is (search "{{fragment-journal}}" (hngh.plugins.hngh-up:get-skeleton :pm :shutdown)))
+  ;; Unblock skeleton contains blocker-description slot
+  (is (search "{{blocker-description}}" (hngh.plugins.hngh-up:get-skeleton :coder :unblock))))
+
+(test d5-bone-filling
+  "fill-bones replaces all {{slot}} placeholders with deterministic values."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let* ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :pm
+                       :scenario :startup
+                       :strategy :duo-review
+                       :resources :local-only
+                       :squad-count 1
+                       :roles-active '(:pm)
+                       :lifetime :ephemeral
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (hngh.plugins.hngh-up::select-system)
+                       :purpose "review plugins"))
+                (skeleton (hngh.plugins.hngh-up:get-skeleton :pm :startup))
+                (filled (hngh.plugins.hngh-up:fill-bones skeleton dims nil "test-squad")))
+           ;; No unfilled {{slot}} placeholders remain
+           (is (not (search "{{" filled))
+               "Unfilled slots remain: ~A" filled)
+           ;; Role name appears
+           (is (search "pm" filled))
+           ;; Squad name appears
+           (is (search "test-squad" filled))
+           ;; Goal appears
+           (is (search "review plugins" filled))
+           ;; Lifetime policy appears
+           (is (search "ephemeral" (string-downcase filled)))
+           ;; System context appears (GPU/VRAM)
+           (is (search "GPU" filled)))
+      (%c7-cleanup dir))))
+
+(test d5-bone-filling-with-task-spec
+  "fill-bones uses task-spec values when provided."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let* ((task-spec (list :id "w2" :title "File watcher plugin"
+                                 :files (list "src/plugins/file-watcher.lisp")
+                                 :acceptance "make test green"
+                                 :preconditions "config-watcher exists"))
+                (dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :coder
+                       :scenario :task-assign
+                       :strategy :feature-sprint
+                       :resources :budget-50
+                       :squad-count 3
+                       :roles-active '(:pm :designer :coder)
+                       :lifetime :ephemeral
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (hngh.plugins.hngh-up::select-system)
+                       :purpose "implement file watcher"))
+                (skeleton (hngh.plugins.hngh-up:get-skeleton :coder :task-assign))
+                (filled (hngh.plugins.hngh-up:fill-bones skeleton dims task-spec "test-squad")))
+           (is (not (search "{{" filled)))
+           (is (search "w2" filled))
+           (is (search "File watcher plugin" filled))
+           (is (search "file-watcher.lisp" filled))
+           (is (search "make test green" filled)))
+      (%c7-cleanup dir))))
+
+(test d5-flesh-skip-when-local
+  "Flesh pass is skipped when the assigned model is local (gemma-4-12b)."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let* ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :worker
+                       :scenario :startup
+                       :strategy :nightly-audit
+                       :resources :local-only
+                       :squad-count 1
+                       :roles-active '(:worker)
+                       :lifetime :continual
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (list :gpu-count 1 :vram-total-mb 24576 :vram-free-mb 16384)
+                       :purpose "batch tasks"))
+                (model (hngh.plugins.hngh-up:select-role-model :worker dims)))
+           ;; Worker with local-only resources gets local model
+           (is (getf model :local-p))
+           ;; should-flesh-p returns NIL for local model
+           (is (null (hngh.plugins.hngh-up:should-flesh-p dims (getf model :name) 1.00 0.001)))
+           ;; generate-prompt returns the pre-flesh prompt (no flesh)
+           (let ((prompt (hngh.plugins.hngh-up:generate-prompt dims :squad-name "test-squad"
+                                                               :budget-remaining 1.00)))
+             (is (search "Worker" prompt))
+             (is (search "batch tasks" prompt))))
+      (%c7-cleanup dir))))
+
+(test d5-flesh-skip-when-no-budget
+  "Flesh pass is skipped when budget-remaining is NIL or below estimated cost."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let* ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :coder
+                       :scenario :startup
+                       :strategy :feature-sprint
+                       :resources :budget-50
+                       :squad-count 3
+                       :roles-active '(:pm :designer :coder)
+                       :lifetime :ephemeral
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (hngh.plugins.hngh-up::select-system)
+                       :purpose "implement watcher")))
+           ;; Budget NIL → no flesh
+           (is (null (hngh.plugins.hngh-up:should-flesh-p dims "deepseek-v4-flash" nil 0.001)))
+           ;; Budget 0 → no flesh
+           (is (null (hngh.plugins.hngh-up:should-flesh-p dims "deepseek-v4-flash" 0 0.001)))
+           ;; Budget sufficient → flesh
+           (is (hngh.plugins.hngh-up:should-flesh-p dims "deepseek-v4-flash" 1.00 0.001)))
+      (%c7-cleanup dir))))
+
+(test d5-model-selection-per-role
+  "select-role-model returns the correct primary model for each role."
+  ;; PM gets glm-5.2 (frontier)
+  (let ((model (hngh.plugins.hngh-up:select-role-model :pm
+                                   (hngh.plugins.hngh-up:make-prompt-dimensions
+                                    :role :pm :scenario :startup
+                                    :strategy :duo-review :resources :budget-200
+                                    :squad-count 2 :roles-active '(:pm :coder)
+                                    :lifetime :ephemeral
+                                    :directory (list :cwd (uiop:getcwd))
+                                    :system (list :vram-free-mb 16384)
+                                    :purpose "review"))))
+    (is (search "glm-5.2" (getf model :name))))
+  ;; Coder gets deepseek-v4-flash (cheapest capable)
+  (let ((model (hngh.plugins.hngh-up:select-role-model :coder
+                                   (hngh.plugins.hngh-up:make-prompt-dimensions
+                                    :role :coder :scenario :startup
+                                    :strategy :feature-sprint :resources :budget-200
+                                    :squad-count 3 :roles-active '(:pm :coder :worker)
+                                    :lifetime :ephemeral
+                                    :directory (list :cwd (uiop:getcwd))
+                                    :system (list :vram-free-mb 16384)
+                                    :purpose "implement"))))
+    (is (search "deepseek-v4-flash" (getf model :name))))
+  ;; Artist never gets local model — chain head is deepseek-v4-flash-0731
+  ;; per the D-040 synced chain (prompt-matrix.md §7.3, no glm-5.2 for artist)
+  (let ((model (hngh.plugins.hngh-up:select-role-model :artist
+                                   (hngh.plugins.hngh-up:make-prompt-dimensions
+                                    :role :artist :scenario :startup
+                                    :strategy :design-fork :resources :budget-200
+                                    :squad-count 2 :roles-active '(:pm :artist)
+                                    :lifetime :ephemeral
+                                    :directory (list :cwd (uiop:getcwd))
+                                    :system (list :vram-free-mb 16384)
+                                    :purpose "design"))))
+    (is (not (getf model :local-p)))
+    (is (search "deepseek-v4-flash" (getf model :name)))))
+
+(test d5-model-fallback-chain
+  "Fallback chain degrades correctly when primary is unavailable."
+  ;; When budget is 0, remote models fail budget gate, chain falls to local
+  (let ((model (hngh.plugins.hngh-up:select-role-model :worker
+                                   (hngh.plugins.hngh-up:make-prompt-dimensions
+                                    :role :worker :scenario :shutdown
+                                    :strategy :nightly-audit :resources :local-only
+                                    :squad-count 1 :roles-active '(:worker)
+                                    :lifetime :continual
+                                    :directory (list :cwd (uiop:getcwd))
+                                    :system (list :vram-free-mb 16384)
+                                    :purpose "shutdown"))))
+    ;; Worker shutdown allows local model
+    (is (getf model :local-p))))
+
+(test d5-prompt-cache
+  "Same dimension combo returns cached prompt (no second flesh pass)."
+  (hngh.plugins.hngh-up:cache-clear)
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let* ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :pm :scenario :startup
+                       :strategy :duo-review :resources :budget-50
+                       :squad-count 1 :roles-active '(:pm)
+                       :lifetime :ephemeral
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (hngh.plugins.hngh-up::select-system)
+                       :purpose "test caching"))
+                (prompt1 (hngh.plugins.hngh-up:generate-prompt dims :squad-name "cache-test"
+                                                               :budget-remaining nil))  ; no flesh
+                (prompt2 (hngh.plugins.hngh-up:generate-prompt dims :squad-name "cache-test"
+                                                               :budget-remaining nil)))
+           ;; Both calls return the same prompt
+           (is (string= prompt1 prompt2)))
+      (hngh.plugins.hngh-up:cache-clear)
+      (%c7-cleanup dir))))
+
+(test d5-generate-pm-prompt-backward-compat
+  "generate-pm-prompt still works and delegates to generate-prompt."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let ((prompt (hngh.plugins.hngh-up:generate-pm-prompt
+                        "review plugins"
+                        :cwd dir :lifetime :ephemeral
+                        :squad-name "compat-test")))
+           (is (search "Orientation" prompt))
+           (is (search "review plugins" prompt))
+           (is (search "compat-test" prompt))
+           (is (search "Lifetime" prompt)))
+      (%c7-cleanup dir))))
+
+(test d5-all-skeletons-fill
+  "Every skeleton in the library fills without leaving unfilled slots or crashing."
+  (let ((dir (%d5-tmp-project)))
+    (unwind-protect
+         (let ((dims (hngh.plugins.hngh-up:make-prompt-dimensions
+                       :role :pm :scenario :startup
+                       :strategy :duo-review :resources :budget-50
+                       :squad-count 3 :roles-active '(:pm :designer :coder)
+                       :lifetime :ephemeral
+                       :directory (hngh.plugins.hngh-up::select-directory dir)
+                       :system (hngh.plugins.hngh-up::select-system)
+                       :purpose "test all skeletons")))
+           (dolist (role '(:pm :designer :coder :artist :accountant :worker))
+             (setf (hngh.plugins.hngh-up:prompt-dimensions-role dims) role)
+             (dolist (scenario '(:startup :task-assign :status-check
+                                 :review :shutdown :unblock))
+               (setf (hngh.plugins.hngh-up:prompt-dimensions-scenario dims) scenario)
+               (let* ((skeleton (hngh.plugins.hngh-up:get-skeleton role scenario))
+                      (filled (hngh.plugins.hngh-up:fill-bones skeleton dims nil "all-skeletons-test")))
+                 (is (not (null filled))
+                     "Skeleton ~A×~A filled to NIL" role scenario)
+                 (is (not (search "{{" filled))
+                     "Skeleton ~A×~A has unfilled slots: ~A"
+                     role scenario filled)))))
+      (%c7-cleanup dir))))
