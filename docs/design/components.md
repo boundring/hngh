@@ -843,6 +843,9 @@ This is the defining pattern of the architecture: Hngh is a system harness that 
   peep — overview → members → thought-trace → signals → ledger. Verify squad
   work *underway*, not after-the-fact. See `docs/design/live-orchestration.md`
   L1 and `mission-control.lisp` (`hngh-mc observe`).
+- Code (added by ACP/LSP wave): structural view over the live workspace via
+  LSP (symbols, diagnostics, references) — the code-intelligence half of the
+  observation wall. See `docs/design/agent-client-protocol.md` §10.
 
 **Owned State**:
 - `config/plugins/dashboard/layout.lisp` — user's preferred layout, enabled widgets.

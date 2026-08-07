@@ -9,6 +9,11 @@
 ;;;; thought-trace intent, ledger tail) and `observe --all` (squad wall).
 ;;;; See docs/design/live-orchestration.md.
 ;;;;
+;;;; NOTE (agent-client-protocol.md): the underlying observation + steering
+;;;; channel is moving onto ACP — mission-control's tmux panes should sit
+;;;; above (or alongside) the ACP client, reading an agent's session/update
+;;;; stream rather than shelling per-tool. See Wave A2.
+;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
