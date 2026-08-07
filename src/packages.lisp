@@ -708,6 +708,30 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:planner-emit-task
            #:planner-emit-gaps))
 
+(defpackage :hngh.plugins.quota-spreader
+  (:documentation "Quota Spreader (C6 W2) — per-route quota envelopes, even-sparse drawdown, recurring-authority reservations, and strategic-reserve gating for expensive models. Config-first: code defaults, user-overridable via ~/.hngh/quotas.lisp.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           ;; Envelopes
+           #:quota-envelope
+           #:route-strategic-p
+           #:reservations-for
+           ;; Gating
+           #:quota-ok-p
+           #:quota-reserved-ok-p
+           #:quota-general-ok-p
+           ;; Accounting + reset
+           #:quota-consumed
+           #:maybe-advance-reset
+           ;; Config
+           #:*route-defaults*
+           #:*reservation-defaults*
+           #:*sparse-defaults*
+           #:*overrides*))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)
