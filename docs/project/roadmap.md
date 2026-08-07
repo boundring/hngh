@@ -169,6 +169,7 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `integrations.md` | 4 | Integration map, event schema, contracts, 8 sequence diagrams |
 | `hngh-design-spec.md` | 5 | Single source of truth (compiles all phases) |
 | `planner-design-roadmap.md` | M9+ | How far/how well we can roadmap; squad consumption contract; external procedural guidance (self-improvement survey + dispatch heuristics); the senses→planner feedback + config hot-swap interface (designed now, gated later) |
+| `quota-spreader.md` | M9+ | Per-route quota envelopes (daily/weekly/monthly reset) with even-sparse drawdown; gates quota'd routes (e.g. Kimi k3), feeds C6 Wave-2 budget gate, cost-control vs price bumps |
 | `squad-autonomy.md` | M9 | AGENTS.md-oriented, resource-aware, self-continuing squads; recursive planner cycle |
 | `social-senses.md` | M9+ | Social/relational layer on the sense taxonomy: instant agent↔agent signals ("emotes"), 1:1 talks + message boards, thought-trace procedural intent layer, relationship graph + rapport; multi-device horizon kept node-agnostic |
 | `autonomy-strategy.md` | M9+ | Research synthesis: self-developing/self-healing engine, clean-arch self-modification guardrails, security hardening (OWASP agentic), cheap-inference + cost control, MCP/A2A/fleet interop — wave-ordered plan + open questions |

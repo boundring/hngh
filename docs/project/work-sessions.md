@@ -460,3 +460,10 @@ complete. Within a batch, sessions are independent and can be parallelized.
   hits); MCP (agent→tool) + A2A (agent→agent) are Hngh's M3 interop layer.
 - **Attribution**: deepseek-v4-flash-0731 (orchestrator) + 3 delegated
   subagent passes (deepseek-v4-flash) via Hermes.
+
+### Session M9.12: Quota-spreader design (cost control vs price bumps + K3 weekly reset)
+**Status**: Design captured (2026-08-07) — `docs/design/quota-spreader.md`.
+Per-route quota envelopes (hour/day/week/month reset + even-sparse drawdown)
+gate quota'd routes like Kimi k3 and feed the C6 Wave-2 planner budget gate.
+Extends llm-budget (rolling hour only) with reset-period awareness. Build
+steps folded toward C6 Wave-2; not yet implemented.
