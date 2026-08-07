@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix built (390/390 fast green, uncommitted; C4 + C10 design-only). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix committed (390/390 fast green @ 9e86a90, full suite green; C4 + C10 design-only). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
 **Last updated**: 2026-08-06
 
 ---
@@ -13,7 +13,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
 | M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
-| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (390/390 fast tests passing, uncommitted W5) |
+| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (390/390 fast tests passing @ 9e86a90) |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
