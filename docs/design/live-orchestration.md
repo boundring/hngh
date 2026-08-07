@@ -105,6 +105,39 @@ highest-value new integration.
 | **opencode mid-turn** | opencode can be paused and fed corrective guidance between turns (verify exact mechanism; steer if possible, else pause→resume with note) | build plugin, verify |
 | **Score + rank situations** | event → score → queue; periodic/routine steering by priority, not alertness | build priority router |
 
+### De-risked: ACP is the uniform programmatic surface (verified 2026-08-07)
+
+Empirically probed before building so the plugin targets a real, uniform API
+rather than tmux key-sends or per-tool hacks:
+
+- **Both Hermes and opencode expose ACP (Agent Client Protocol) servers.**
+  - `hermes acp` — `hermes acp --check` returns "Hermes ACP check OK".
+  - `opencode acp` — starts an ACP server (`--port`/`--hostname`).
+  - ACP gives a **uniform client→server surface**: list/create sessions, send
+    a message, read a session — the same wire shape for both tools. This is
+    the de-risked steering + observation channel: an Hngh plugin becomes an
+    ACP *client* to any running Hermes or opencode session.
+- **opencode `serve` is a full HTTP/SSE control plane** (verified against the
+  server spec): `POST /session/:id/message` (send + wait), `POST
+  /session/:id/prompt_async` (send, no wait), `POST /session/:id/abort`
+  (stop a running session — the pause primitive), `GET /event` (SSE stream —
+  the observe primitive), `GET /session/:id/message` (read transcript),
+  `/tui/append-prompt` + `/tui/submit-prompt` (drive the prompt box), and
+  `/session/:id/permissions/:id` (respond to a permission prompt).
+- **Hermes `/steer`** injects a message *after the next tool call* without
+  interrupting the current turn — exactly the "one agent learns something, the
+  squad needs it now" case. `--accept-hooks` on `hermes acp` keeps it
+  non-interactive.
+
+**Consequence**: L4 does NOT need to reinvent a control channel. Build the Hngh
+plugin as **an ACP client** (+ opencode HTTP client) — observe via the
+event/session streams, steer via `/steer` (Hermes) and `/session/:id/message`
+or `/abort` (opencode). The verified endpoints are the contract. Mid-turn
+*interrupt* on opencode is cleaner than *injection*: opencode's server has
+`/abort` + async-reply, and #21388 (message-injection UX) is an open upstream
+feature; our guard-rail covers it by abort-and-reprompt rather than relying on
+unknown in-turn injection semantics.
+
 ### Priority-scored steering
 - Each situation (a new squad-wide fact, a gate failure, a claim dispute) gets a
   **priority score** from a small procedural rubric: impact × urgency × spread

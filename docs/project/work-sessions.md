@@ -476,3 +476,17 @@ priority-scored Hermes/opencode steering, continual parameter optimization, and
 Hermes/opencode integration plugins. Wave-ordered L1 (observe) → L2 (guard-
 rails) → L3 (steer) → L4 (plugins) → L5 (self-steer + param optimizer). Not yet
 built; captures the brief's architecture.
+
+### Session M9.14: Steering-surface de-risk probe (ACP + opencode HTTP, L3/L4)
+**Status**: Probe done + recorded (2026-08-07). Verified empirically:
+- `hermes acp --check` → "Hermes ACP check OK"; opencode exposes `opencode acp`
+  (ACP server) and `opencode serve` (HTTP/SSE control plane: /session/:id/message,
+  /prompt_async, /abort, /event SSE, /tui/append+submit-prompt, permissions).
+- Conclusion (in `live-orchestration.md` §3): build the Hngh steering plugin as
+  an **ACP client** (uniform cross-tool) + opencode HTTP client. opencode
+  mid-turn is interrupt-then-reprompt (/abort), not injection (upstream #21388
+  open). Hermes /steer injects after next tool call.
+- Process lesson (owner noteworthiness): loose `pkill -f`/`pgrep -af` matched
+  my own shell line and I looped on the same pattern — a live-orchestration
+  type failure the design is meant to catch. Kept the doc note; stopped,
+  checked the error shape, switched to precise scoping.
