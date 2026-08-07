@@ -153,7 +153,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 | 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (529/529 tests @ 78cfde9) |
 | 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 529/529 tests @ 78cfde9; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** (typed agent↔agent control channel — eases all later coordination) | **In progress** (W0 parser done: `hngh-planner.lisp`, 529/529 @ e173d21; W1 decomposition/weighting/emission + W1.5 signals next) |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** (typed agent↔agent control channel — eases all later coordination) | **In progress** (W0-W1 done @ d711143: parser + weighting + bounded decomposition + v3 emission bridge, 529/529 fast, 1790/1790 full; W1.5 signals + W2 closed loop next) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 
 ---
