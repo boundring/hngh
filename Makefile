@@ -68,7 +68,7 @@ run:
 test: test-fast
 
 test-fast:
-	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.model-runtime)'
+	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.model-runtime :hngh.model-probes)'
 
 test-beans:
 	$(MAKE) test-suite SUITE='(:hngh.beans)'

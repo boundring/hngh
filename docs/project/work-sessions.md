@@ -388,3 +388,24 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Attribution**: deepseek-v4-flash via deepseek (Hermes TUI, direct —
   delegation re-pointed off OpenRouter after its weekly spend wall hit,
   see ~/.hermes/config.yaml delegation section).
+
+### Session M9.9: Model probe runner implemented
+**Status**: Done (2026-08-07) — committed
+- **Goal**: Implement the probe-suite runner that docs/design/benchmark-
+  sourcing.md specifies (run-probe was a TODO stub).
+- **Artifacts**: `data/model-probes.lisp` — real `run-probe` (ollama native
+  `/api/chat` vs OpenAI-compatible `/chat/completions` by endpoint, curl +
+  sb-ext, jsown parsing, per-probe timing: tokens/sec + prefill ms from ns
+  fields), `run-probe-suite` (perf plists), `write-benchmark-snapshot`
+  (dated JSON + sysfs VRAM host block + weighted aggregate), `validate-
+  json-schema` (was referenced but never defined), `make-scorer-json-schema`
+  factory, `%json-escape`. Also fixed latent broken syntax throughout the
+  file: `[...]` pseudo-list literals (SBCL reads them as symbols — the file
+  had never loaded), unbalanced defparameter, and the `export` form taking
+  symbols instead of a list.
+- **Verification**: `make test-fast` 494/494 (was 464; +30 new model-probes
+  tests), `make test-full` 1687/1687, `make lint-counts` clean.
+- **Notes**: The file is a static data module (`:static-file`), so
+  test-model-probes.lisp loads it explicitly at compile time. Escape-test
+  builds input from char codes to avoid source-literal ambiguity.
+- **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
