@@ -158,6 +158,14 @@ and can choose to look closer or stay in the background.
 This is the megastructure metaphor: the structure senses disturbances in its
 own fabric. The PM is the structure's awareness. Roles are its inhabitants.
 
+The table above is the *environmental + shared* sense set. The **social/
+relational layer** — how agents perceive each other (signals/"emotes",
+1:1 talks, message boards, relationship graph + rapport, and the procedural
+thought-trace intent layer) — is captured separately in
+[`docs/design/social-senses.md`](social-senses.md). The relational graph is
+the social analog of the dispatch tree; rapport is the social analog of
+`:experience` here (§4).
+
 ---
 
 ## 4. Avatar roles — stats, traits, and equipment

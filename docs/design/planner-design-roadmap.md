@@ -186,7 +186,9 @@ planner-feedback-source
                  completion, cost, quality} per squad run
   qualitative  ← husk retrospectives: {what failed, why, what next}
   experiential ← avatar :experience counters (metabolism §4) + verification
-                 history per role
+                 history per role; also fed by the social-senses thought-trace
+                 layer (`docs/design/social-senses.md` §4) — a cheap
+                 "what this agent was likely doing" signal for intent/state
 planner-consumer
   confidence ← f(scalar, qualitative)   # feeds C6 weighting
   strategy   ← argmax over scalar per task-tag (recommended squad strategy)

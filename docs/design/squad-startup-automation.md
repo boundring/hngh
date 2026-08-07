@@ -222,6 +222,15 @@ vs ignores. Over time, prune the registration list to the events that matter.
 A simple frequency table (event type × role → action taken) is enough to start.
 No model needed — just count and threshold.
 
+### The social layer is separate but adjacent
+
+The senses above are *environmental* (files, events, persistence). The
+**social/relational sense layer** — instant signals/"emotes" between agents,
+1:1 talks and message boards, the procedural thought-trace intent stream, and
+the relationship graph with rapport — is captured in
+[`docs/design/social-senses.md`](social-senses.md). Same speed/ephemeral-
+vs-persisting discipline applies; signals ride the same event bus.
+
 ---
 
 ## 5. Prompt matrix — procedural skeleton-bones
