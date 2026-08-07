@@ -538,7 +538,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:*debounce-ms*))
 
 (defpackage :hngh.plugins.hngh-up
-  (:documentation "Hngh-Up — goal-driven squad spin-up with procedural questionnaire, spec derivation, and strategy management.")
+  (:documentation "Hngh-Up — goal-driven squad spin-up with procedural questionnaire, spec derivation, strategy management, and the W5 prompt matrix (skeleton-bones-flesh).")
   (:use :cl :hngh.core)
   (:export #:init
            #:shutdown
@@ -552,7 +552,30 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:gather-agents-md-context
            #:list-strategies
            #:save-strategy
-           #:load-strategy))
+           #:load-strategy
+           ;; W5 prompt matrix
+           #:generate-prompt
+           #:select-role-model
+           #:make-prompt-dimensions
+           #:prompt-dimensions
+           #:prompt-dimensions-p
+           #:prompt-dimensions-role
+           #:prompt-dimensions-scenario
+           #:prompt-dimensions-strategy
+           #:prompt-dimensions-resources
+           #:prompt-dimensions-squad-count
+           #:prompt-dimensions-roles-active
+           #:prompt-dimensions-lifetime
+           #:prompt-dimensions-directory
+           #:prompt-dimensions-system
+           #:prompt-dimensions-purpose
+           #:get-skeleton
+           #:fill-bones
+           #:should-flesh-p
+           #:run-flesh-pass
+           #:cache-clear
+           #:*per-role-fallback-chains*
+           #:*skeleton-library*))
 (defpackage :hngh.plugins.llm-threat-detector
   (:documentation "LLM Threat Detector (B5) — L2/L4 semantic and behavioral threat review.")
   (:use :cl :hngh.core)

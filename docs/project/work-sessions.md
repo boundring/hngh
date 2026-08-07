@@ -298,3 +298,35 @@ complete. Within a batch, sessions are independent and can be parallelized.
   `hngh-client up --dry-run` auto-answers all four questions and emits the PM
   first prompt with the mandate model tier.
 - **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
+
+### Session M9.6: W5 prompt matrix build (skeleton-bones-flesh)
+**Status**: Done (2026-08-06) — uncommitted, owner review pending
+- **Goal**: Build the W5 prompt matrix per `docs/design/prompt-matrix.md`:
+  `generate-prompt` extending `generate-pm-prompt` into a full dimensional
+  prompt generator (36 skeletons, deterministic bone fillers, optional flesh
+  pass, per-role model selection synced to D-040, prompt cache).
+- **Artifacts**: `src/plugins/hngh-up.lisp` (prompt-dimensions struct,
+  *skeleton-library* 36 templates, 41 bone fillers incl. bean vocabulary +
+  aesthetic briefs, *per-role-fallback-chains* D-040 synced, select-role-model
+  + gates, flesh pass (should-flesh-p/select-flesh-model/validate-flesh-output/
+  invoke-flesh-model), prompt cache, generate-prompt; generate-pm-prompt now
+  delegates to generate-prompt); `src/packages.lisp` (hngh-up export list +
+  23 W5 symbols); `tests/unit/test-hngh-up.lisp` (%d5-tmp-project fixture,
+  T1-T11: dimension selection, skeleton selection, bone filling with/without
+  task-spec, flesh skip local/no-budget, model selection per role, fallback
+  chain, prompt cache, backward compat, all-36-fill); `AGENTS.md` + `roadmap.md`
+  (status + counts 390/390 fast, 1591/1591 full).
+- **Bugs found+fixed**: (1) `evaluate-fallback-chain` looked up
+  `*per-role-fallback-chains*` with `getf` — returns NIL on the alist-shaped
+  table; switched to `second (assoc ...)` (double-wrapped alist pitfall);
+  (2) `:local-only` resources let free ($0) remote models through the budget
+  gate — added explicit remote-block branch; (3) prompt cache key omitted
+  squad-name — cached prompts leaked the previous squad's name across calls.
+- **Spec deviation (flagged)**: prompt-matrix.md T7 asserted artist falls back
+  to "glm-5.2"; the D-040-synced artist chain (§7.3, no glm-5.2) selects
+  deepseek-v4-flash-0731 instead. Test asserts the synced chain head. Spec
+  test was stale from the pre-mandate chain; chains are the source of truth.
+- **Exit criteria (met)**: make test-fast 390/390; make test-full 1591/1591;
+  lint-counts clean; backward compat — all C7 generate-pm-prompt tests pass
+  unchanged against the delegating implementation.
+- **Attribution**: deepseek-v4-flash-0731 via deepseek (Hermes TUI).
