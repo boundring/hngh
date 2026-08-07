@@ -241,6 +241,14 @@ already follows.
 | P6 | Self-gated | C6 queues tasks; core-file self-modification waits for guardrails + security |
 | P7 | Consumption contract | every emitted task: scope + deps + runnable verification + budget + reflection hook |
 | P8 | Hot-swap | designed (interface), not built; gated on C8/C9 + security/guardrails |
+| P9 | Guard-rail loop | every dispatched task runs a multi-pass dev→review→verify loop with bounded retries + procedural evidence-check; never self-review alone (live-orchestration L2) |
+| P10 | Observation surface | planner activity + squad state legible via mission-control observe + TUI peep depth, so humans can verify underway (live-orchestration L1) |
+| P11 | Priority steering | situations scored (impact×urgency×spread) and emitted as `/steer`/opencode-correct by priority, not by human alertness (live-orchestration L3) |
+| P12 | Continual param optimization | shadow-then-promote optimizer over per-role temperature/token/logit params, driven by C8/C9 outcomes (live-orchestration L5) |
+
+`live-orchestration.md` carries the full L1–L5 detail; P9–P12 record how it
+threads into the planner loop's decisions. P8 and P12 share the same gating:
+both wait on C8/C9 data + guardrails being real.
 
 ---
 

@@ -839,6 +839,10 @@ This is the defining pattern of the architecture: Hngh is a system harness that 
 - Config (managed paths, recent changes, diff)
 - Secrets (access log, policy — never values)
 - Plugins (loaded, by tier, recent reviews)
+- Squads (added by live-orchestration L1): squad wall + per-member depth
+  peep — overview → members → thought-trace → signals → ledger. Verify squad
+  work *underway*, not after-the-fact. See `docs/design/live-orchestration.md`
+  L1 and `mission-control.lisp` (`hngh-mc observe`).
 
 **Owned State**:
 - `config/plugins/dashboard/layout.lisp` — user's preferred layout, enabled widgets.
