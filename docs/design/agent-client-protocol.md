@@ -128,9 +128,37 @@ ACP and MCP do different jobs; Hngh uses both, deliberately:
   Hngh steers the agent over ACP).
 
 Don't merge them: ACP answers "who runs, and gate it"; MCP answers "what tools
-does it call." Engineering note for the common-lisp plugin: ACP client is a
-stdio JSON-RPC 2.0 subprocess channel (like the existing MCP wiring), so Hngh's
-JSON-RPC plumbing is reused.
+does it call." Engineering note: ACP is JSON-RPC 2.0 over stdio — the same
+transport family MCP uses — so the client subprocess framing is shared, even
+though the protocol schema differs.
+
+### Transport/SDK reality (researched 2026-08-07 — corrects earlier note)
+- Hngh has **no JSON-RPC library today** (only `jsown` for JSON). The earlier
+  "plumbing exists for MCP" note was wrong; MCP/ACP stdio is not yet wired.
+- **CL JSON-RPC exists**: `cxxxr/jsonrpc` (Quicklisp/Ultralisp) is a JSON-RPC
+  2.0 server/client for Common Lisp with a **stdio transport** — exactly the
+  transport ACP needs, in the stack Hngh already uses.
+- **ACP stdio framing is trivial**: one JSON message per line between two
+  pipes + a spawned subprocess (the MCP/ACP stdio client is ~3 stream handles
+  and a process). The heavy part of ACP is the *schema* (session/update
+  blocks, capabilities), which is a mapping layer, not a transport problem.
+- **Hermes' ACP server is itself a Python adapter** (`acp_adapter`,
+  `python -m acp_adapter`, `use_unstable_protocol=True`) — so the ACP *wire
+  contract is what matters, not the server's implementation language. A CL
+  client drives a Python-served ACP agent over stdio transparently.
+- **No Common Lisp ACP client library exists** (research: nothing for CL).
+  Mature SDKs are Python (`agent-client-protocol`, official, schema-versioned,
+  `acp.client` + `acp.contrib` helpers) and Rust/JS.
+
+**Implication (A1 decision)**: CL-first is the architecturally consistent
+choice — Hngh is a CL plugin image, a second runtime (Python) just for one
+client is a heavy cost, `cxxxr/jsonrpc` already gives the stdio JSON-RPC
+transport, and the ACP-specific part (schema + capability negotiation) is a
+thin, bounded mapping layer over it. Trade-off: we hand-roll/own the ACP
+schema vs. an SDK's version-drift safety net. Mitigation: pin `protocolVersion`
+at `initialize` (already required) + the honest-capabilities discipline, and
+note that Hermes itself runs ACP on a `use_unstable_protocol` flag, so ACP is
+still stabilizing — the client should be explicit/schema-locked, not inferred.
 
 ---
 
