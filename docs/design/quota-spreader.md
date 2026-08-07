@@ -61,12 +61,47 @@ Spend within a period is **paced**, not bursty. Two rules:
    when cheaper/local/free routes genuinely can't do the job. K3 is for the
    "certain situations" that need it — nothing else.
 
+### Recurring-authority reservation
+
+K3 (and other strong quota'd models) is not a general-purpose faucet — it's
+an **authority**: the right answer for a *recurring class* of situation
+(code-completion final vetting, context-specific plans/designs, decisions
+where a cheaper model's answer wouldn't be trusted). Those recurring needs
+are real and may exceed what a casual even-spread would leave available. So
+the envelope supports **reserved allocations per situation-class**:
+
+```
+budget kimi-authority        ; reserved slice of the weekly cap
+  cap          333k tokens/week (example)
+  situations   code-final-review, plan-veto, design-authority
+  even-over    7 days
+  spillover    no          ; never eats into the general nightly pool
+```
+
+- Each recurring situation-class gets a **reserved cap** carved out of the
+  route's period cap. The even-drawdown applies *within* the reservation, so
+  the authority stays available all week, not just Monday.
+- **Reservations do not spill** — a class that underuses its reservation
+  does not silently balloon into the general pool (that would recreate the
+  mid-week dry run it's meant to prevent). Unused reservation is forfeited at
+  reset (optionally reallocated by the PM on override).
+- **One-off requests** (a single high-value call, not a recurring class) are
+  drawn from the *general* envelope pool, gated by the same even rate and the
+  cheapest-capable rule — a one-off is allowed when it's within today's fair
+  share, never if it would breach tomorrow's reservation.
+
+Net effect: the recurring authority need is **budgeted first**, the general
+pool spreads what's left, and no single spike can eat the reservation. This
+is the concrete mechanism for "carefully distributing K3 and other
+more-expensive remote options across their quota reset / budget windows."
+
 ### Period projection
 
 A route is "destined to run dry" if `spent/projected-use` exceeds the even
 rate. Before a route is chosen, the router asks the envelope: *"given what's
 used and what's left and how long until reset, is drawing from me now
-sustainable?"* If not, route to a cheaper/local/fallback route.
+sustainable?"* If not, route to a cheaper/local/fallback route. Reservation
+checks happen first (authority class vs general pool).
 
 ---
 
@@ -146,14 +181,21 @@ spreader's job at reset:
 1. **`quotas.lisp` data + envelope reader** — a small Lisp module (or extend
    model-routing) with `quota-envelope (route)`, `quota-ok-p (route amount)`,
    `quota-consumed (route amount)`.
-2. **Envelope → route selection**: gate `kimi-sub` (and any quota route) on
+2. **Reservation layer** — `quota-reserved-p (route situation-class amount)`
+   and `quota-general-ok-p (route amount)`: authority classes draw from their
+   reservation first (no spillover), one-offs from the general pool, both
+   gated by even-rate.
+3. **Envelope → route selection**: gate `kimi-sub` (and any quota route) on
    `quota-ok-p` + even-rate before selection.
-3. **Reset handling**: `maybe-advance-reset (route)` zeros period usage when
-   the anchor passes.
-4. **Planner Wave-2 gate**: per-cycle budget check calls the envelope; fail
-   closed when any route is over its even-drawdown.
-5. **Tests**: envelope math (even rate, reset advance, sparse distribution,
-   fail-closed on unknown), pure and fixture-based — no live API.
+4. **Reset handling**: `maybe-advance-reset (route)` zeros period usage when
+   the anchor passes; forfeits unused reservations (reallocation is a PM
+   override).
+5. **Planner Wave-2 gate**: per-cycle budget check calls the envelope; fail
+   closed when any route is over its even-drawdown or its authority
+   reservation is at risk.
+6. **Tests**: envelope math (even rate, reset advance, sparse distribution,
+   reservation no-spillover, one-off-vs-reserved routing, fail-closed on
+   unknown), pure and fixture-based — no live API.
 
 ## Attribution
 Cost-control design for Hngh (owner concern: K3 weekly quota + expected price
