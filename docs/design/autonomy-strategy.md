@@ -2,8 +2,8 @@
 
 **Status**: Research synthesis — 6 threads, all COMPLETE (2026-08-07).*
 Consolidated into a wave-ordered plan in §7; sources live in the companion
-research reports `security-agentic-research.md` and
-`coordination-patterns-research.md`.
+research reports `swe-selfdev-research.md`, `security-agentic-research.md`,
+and `coordination-patterns-research.md`.
 **Scope**: M9+ long arc — how Hngh becomes a self-developing, self-healing,
 system-harnessing engine for a broad variety of agentic tasks, up to and
 including part/all of an automated workforce for a consulting business, with
@@ -31,11 +31,9 @@ graduate into docs/project/roadmap.md and the design docs.
 
 ---
 
-## 1. Self-developing systems (research: delegated subagent COMPLETE; synthesis below)
+## 1. Self-developing systems (research COMPLETE — delegated subagent; synthesis below)
 
-**Verified anchors from a 26-source research pass** (SWE-agent, OpenAI Codex
-agent loop, OpenHands SDK, Agentless, Claude Code hooks, reflexion, gpt-engineer,
-self-healing-software survey). Best-guess at the transferable core:
+**Source**: `swe-selfdev-research.md` (26-source cited report).
 
 ### From titled-agent → to spec → passing tests (verified ground truth)
 
@@ -86,23 +84,109 @@ self-healing-software survey). Best-guess at the transferable core:
   when the model can *see the actual error*, so Hngh's runner must surface
   real tracebacks to agents that already fix bugs (the probe/perf work shows
   Hngh's agents already do this).
+- **Reflexion** (arxiv 2303.11366): after a failed trial, the agent writes a
+  *verbal reflection* on what went wrong + why, stores it in episodic memory,
+  feeds it into the next trial — 91% pass@1 HumanEval (vs 80% GPT-4). This is
+  exactly "squad tests and regenerates fix" with a mandatory reflection
+  artifact between attempts. Map: squad writes "what failed, why, what I'll
+  change" into OptMem/dispatch tree before the next attempt.
+- **Self-Debugging** (arxiv 2304.05128): iterate until tests pass or max
+  turns, feeding execution results back (up to +12%); **reusing failed
+  predictions makes the loop sample-efficient** — one generation + K cheap
+  repair turns, not N fresh generations.
 
-### What transfers to Hngh (the executable seed)
+### Verified cross-system mechanics worth copying (full report §1–§3)
+
+- **Codex agent loop**: context grows every turn (hundreds of tool calls/turn
+  can exhaust the window) — context-window management is a first-class harness
+  responsibility; an explicit `update_plan` tool keeps a plan artifact
+  mid-task; auto-compact preserves a latent summary on exceed.
+- **SWE-agent ACI**: curated command set, not a raw shell; **malformed
+  generations trigger an error response and all but the first error message
+  are omitted from context** (anti-bloat); invalid edits discarded → retry
+  told; +10.7% over same model with a default shell.
+- **Claude Code containment**: per-action approval gates fail from **approval
+  fatigue** (~93% auto-approved); a model classifier catches ~83% of overeager
+  behaviors blocking only ~0.4% benign (≈17% of risky actions still slip —
+  defense-in-depth, not a guarantee). Consequence for Hngh: **contain at the
+  environment/sandbox + deterministic hook layer first**, model-layer steering
+  second. Hooks (`PreToolUse`/`PostToolUse`/...) are the directly
+  transplantable mechanic — **exit-code 2 from a hook = block/deny**; the cost
+  gate belongs in a PreToolUse hook.
+- **OpenHands**: event-sourced state with deterministic replay (audit + rerun),
+  immutable agent config, typed tools w/ MCP — "negligible event-sourcing
+  overhead." Hngh's beans/event-bus log is the same shape; make squad runs
+  replayable deterministically (fixed seeds, pinned model+config) so a fix
+  that passes is reproducible before touching the trunk.
+- **Agentless** (arxiv 2407.01489): a *fixed* localize→repair→validate
+  pipeline beat open-source agent frameworks on SWE-bench Lite (32% @ $0.70)
+  at the time; **localization is where accuracy lives and it's cheap**;
+  verifier = generated reproduction test + regression suite makes sampling
+  viable; returns plateaued ~40 patch samples. (Number is the paper's 2024
+  claim — the architecture lesson stands, the figure is dated.)
+- **aider**: tree-sitter **repo map** (model sees structure, not whole files) +
+  **architect/editor split** (strong planner model + cheap editor model = lower
+  session cost) + atomic message-committed git commits.
+- **MetaGPT** (arxiv 2308.00352): SOP "assembly line" with **structured
+  intermediate artifacts** as the interface between stages — the deterministic
+  spine that makes failures attributable to a stage.
+
+### Pitfalls to engineer against (full report §4 — high value)
+
+- **Runaway retry loops**: an agent re-fixes a failing test, sees a different
+  timestamp in the error, reads it as "progress," loops forever. Counter-
+  measures: hard step counts, per-run/per-week budget caps with circuit
+  breakers, "no progress = escalate" (same failing test N times → stop), and
+  **reflection-artifact diffs** (trial k+1's plan textually near-identical to
+  trial k's → it's looping).
+- **Regressions**: the only reliable guard is a verifier richer than "target
+  test passes" — run the **pre-existing suite (PASS_TO_PASS)** and reject
+  patches that break it (Agentless's regression filtering; self-healing
+  prototype's revert-up-to-3-then-escalate). Never accept "target test green"
+  as completion.
+- **Context overflow**: compact/summarize old turns, keep the ACI terse,
+  feed structure/skeletons not whole files, make reflection text the
+  *compressed* artifact that survives across trials.
+- **Approval fatigue**: a human gate with per-action approvals degrades
+  (93% auto-approve); deterministic policy hooks (deny-list, cost gate,
+  sandbox) beat probabilistic supervision.
+
+### What transfers to Hngh (the executable seed, fullest form)
 
 1. **The loop is the product** — C6 owns test→run→repair→re-run, bounded by
    the cost gate; `generate-pm-prompt` + squad dispatch feed it.
-2. **Phase everything** — localize → repair → patch-validation as explicit,
-   independently-scored steps (Agentless simplicity), escalating to a
-   defensive agent loop only when needed.
-3. **Hooks are the governance mechanism** — deterministic Pre/PostToolUse
-   hooks enforce §3 guardrails + §4 least-agency, no model involved.
-4. **Self-healing = failed-verification-triggered, minimal, reverting-aware**,
-   cost-gated; never unattended on unseen code.
-5. **Surfaces matter as much as models** — the ACI (dispatch tree, beans,
-   tool hub, sense events) is a first-class lever to keep polishing.
+2. **Cost gate = PreToolUse hook** — gate every tool call + model query on the
+   weekly budget *before* execution, checked in the harness, never the prompt;
+   add per-task step-cap + per-task token budget as independent circuit
+   breakers (the AutoGPT loop pathology: an agent reading a changing timestamp
+   as "progress" and looping forever).
+3. **Verifier richer than "target test passes"** — regression suite + generated
+   reproduction test, accept only all-green, revert-and-regenerate with a
+   Reflexion artifact on failure; cap attempts ~3–5/sub-task, explicit
+   escalate path.
+4. **Planner = localization stage** — C6's real job is narrowing the edit
+   surface (files→functions→lines in Hngh's own tree) before dispatching,
+   keeping squad context small and cost low.
+5. **Structured artifact hand-off** between stages (planner spec → squad
+   tests+patch+reflection → verifier pass/fail) — no free-form chatter; the
+   ACI / beans are the interface.
+6. **Keep failed predictions** — reuse failed patch + test output as the next
+   attempt's seed (sample efficiency), don't regenerate from scratch.
+7. **Event-sourced + replayable** — deterministic squad runs (fixed seeds,
+   pinned model/config) so a fix that passes is reproducible before trunk.
+8. **When Hngh modifies Hngh**: test-first only — write failing test → squad
+   makes it pass → full suite → only then merge to the git-backed dispatch
+   tree, with the harness's own budget gate guarding the loop that guards the
+   loop.
+9. **Surfaces matter as much as models** — the ACI (dispatch tree, beans,
+   tool hub, sense events) is a first-class lever to keep polishing; keep the
+   tool surface and error-feedback formatting terse and deliberate.
 
-(Enrichment: the full 26-source report re-enters as a message; fold any
-additional named systems/pitfalls it adds into this section when it lands.)
+*(Self-development thread fully folded from the 26-source subagent report:
+SWE-agent ACI, Codex agent loop, Claude containment + hooks, OpenHands
+event-sourcing, Agentless, Reflexion, self-debugging, aider, MetaGPT, GPT-
+Engineer, and the §4 pitfalls — runaway loops, regression guards, context
+overflow, approval fatigue.)*
 
 ---
 
