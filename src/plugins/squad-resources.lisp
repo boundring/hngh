@@ -14,7 +14,10 @@
   "Whether the squad-resources plugin is active.")
 
 (defparameter *model-vram-mb*
-  '(("gemma-4-12b" . 8192)
+  '(("qwen-agentworld-35b" . 20480)
+    ("ornith-1.0-35b" . 20480)
+    ("ornith-1.0-9b" . 8192)
+    ("gemma-4-12b" . 8192)
     ("gemma-3-27b" . 24576)
     ("qwythos-9b" . 12288)
     ("qwen3-6b" . 8192)

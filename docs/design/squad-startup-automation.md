@@ -248,12 +248,12 @@ needs fast iteration or sound decision-making.
 | Worker | deepseek-v4-flash ($0.09/M) | batch task execution | non-time-sensitive batch work, queued background tasks |
 
 Fallback chains per role (cheapest capable -> next -> local):
-- PM: kimi-k2.6 -> glm-5.2 -> nemotron-ultra:free -> local (last resort)
-- Designer: glm-5.2 -> kimi-k2.6 -> nemotron-super:free -> local (creative only)
-- Coder: deepseek-v4-flash -> gpt-5.6-luna -> kimi-k2.7-code -> nemotron-super:free -> local (simple only)
-- Artist: gemini-3.6-flash -> deepseek-v4-pro -> nemotron-super:free -> local (never)
-- Accountant: gemini-3.5-flash-lite -> nemotron-nano:free -> local (procedural only)
-- Worker: deepseek-v4-flash -> mimo-v2.5 -> nemotron-super:free -> local (queued only)
+- PM: glm-5.2 -> deepseek-v4-flash-0731 -> gpt-5.6-luna -> nemotron-3-ultra-550b-a55b:free -> local (never)
+- Designer: glm-5.2 -> deepseek-v4-flash-0731 -> gpt-5.6-luna -> gemma-4-31b-it:free -> local (creative only)
+- Coder: deepseek-v4-flash-0731 -> deepseek-v4-flash -> gpt-5.6-luna -> gpt-oss-20b:free -> laguna-s-2.1:free -> local (simple only)
+- Artist: deepseek-v4-flash-0731 -> qwen3.7-flash -> gemma-4-31b-it:free (multimodal) -> local (never)
+- Accountant: deepseek-v4-flash-0731 -> deepseek-v4-flash -> gpt-oss-20b:free -> local (procedural only)
+- Worker: deepseek-v4-flash-0731 -> deepseek-v4-flash -> gemma-4-26b-a4b-it:free -> local (queued only)
 
 ### Model assignment in the startup flow
 

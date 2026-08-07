@@ -699,3 +699,51 @@ Returns the directory pathname."
                      "Skeleton ~A×~A has unfilled slots: ~A"
                      role scenario filled)))))
       (%c7-cleanup dir))))
+
+(test d5-free-tier-distributed
+  "Free-tier entries in every role chain are distributed across vendors
+and use live OpenRouter catalog IDs (2026-08-06 refresh)."
+  (let ((chains hngh.plugins.hngh-up::*per-role-fallback-chains*))
+    (dolist (role '(:pm :designer :coder :artist :accountant :worker))
+      (let* ((chain (second (assoc role chains)))
+             (free-entries (remove-if-not (lambda (m)
+                                            (and (not (getf m :local-p))
+                                                 (zerop (getf m :input-cost))))
+                                          chain))
+             ;; Vendor = the org prefix of the catalog ID (nvidia/, google/, ...)
+             (vendors (remove-duplicates
+                       (mapcar (lambda (m)
+                                 (subseq (getf m :name) 0
+                                         (position #\/ (getf m :name))))
+                               free-entries))))
+        ;; Every role has at least one free model
+        (is (not (null free-entries))
+            "~A has no free-tier fallback" role)
+        ;; Free tier spans at least two vendors (distributed, not single-vendor)
+        (is (>= (length vendors) 2)
+            "~A free tier is single-vendor: ~A" role vendors)
+        ;; No stale short IDs — every free entry is a full catalog ID
+        (dolist (m free-entries)
+          (is (search ":free" (getf m :name))
+              "~A free entry ~A lacks :free suffix" role (getf m :name))
+          (is (not (search "nemotron-3-ultra:free" (getf m :name)))
+              "~A uses stale nemotron-3-ultra:free ID" role)
+          (is (not (search "nemotron-super:free" (getf m :name)))
+              "~A uses stale nemotron-super:free ID" role)
+          (is (not (search "nemotron-nano:free" (getf m :name)))
+              "~A uses stale nemotron-nano:free ID" role))))))
+
+(test d5-local-workhorse-agentworld
+  "Qwen-AgentWorld-35B is the primary local fallback (fast when loaded),
+and the VRAM table knows it (classified local, not remote)."
+  (let ((model (hngh.plugins.hngh-up:select-role-model :coder
+                                   (hngh.plugins.hngh-up:make-prompt-dimensions
+                                    :role :coder :scenario :shutdown
+                                    :strategy :feature-sprint :resources :local-only
+                                    :squad-count 1 :roles-active '(:coder)
+                                    :lifetime :ephemeral
+                                    :directory (list :cwd (uiop:getcwd))
+                                    :system (list :vram-free-mb 24576)
+                                    :purpose "shutdown"))))
+    (is (getf model :local-p))
+    (is (search "Qwen-AgentWorld" (getf model :name)))))

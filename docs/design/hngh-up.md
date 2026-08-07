@@ -105,9 +105,9 @@ The questionnaire is **not a fixed template** — it's generated from context:
 
    (:id :model-tier
     :prompt "Model tier for this run?"
-    :options '((:local-only "Local only, zero cost (gemma-4-12b)")
-               (:budget-50 "Up to 50¢ remote (kimi-k2.6 / deepseek-v4-flash)")
-               (:budget-200 "Up to $2 remote (kimi-k3 / gpt-5.6-luna)")
+    :options '((:local-only "Local only, zero cost (Qwen-AgentWorld-35B)")
+               (:budget-50 "Up to 50¢ remote (deepseek-v4-flash-0731)")
+               (:budget-200 "Up to $2 remote (glm-5.2 / deepseek-v4-flash-0731)")
                (:unlimited "No budget cap"))
     :default :budget-50
     :inferred-from '(:system-context "unsloth-studio active" :optmem "cost routing v2 active"))

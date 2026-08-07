@@ -14,6 +14,9 @@ by quota and budget.
 | Model | Provider | Input $/M | Output $/M | Context | Capability | Quota | Local? |
 |---|---|---|---|---|---|---|---|
 | gemma-4-12b-it-qat | unsloth (local) | 0 | 0 | 200K | 6/10 | unlimited | yes |
+| unsloth/Qwen-AgentWorld-35B-A3B-GGUF | unsloth (local) | 0 | 0 | 200K | 6.5/10 | unlimited | yes |
+| unsloth/Ornith-1.0-35B-GGUF | unsloth (local) | 0 | 0 | 200K | 6/10 | unlimited | yes |
+| unsloth/Ornith-1.0-9B-GGUF | unsloth (local) | 0 | 0 | 200K | 5.5/10 | unlimited | yes |
 | deepseek-v4-flash | openrouter | 0.09 | 0.09 | 1M | 7/10 | paid | no |
 | deepseek-v4-flash-0731 | openrouter | 0.09* | 0.09* | 1M | 7.5/10 | paid | no |
 | gpt-5.6-luna | openai | 0.10 | 0.10 | 1M | 7.5/10 | paid | no |
@@ -25,10 +28,17 @@ by quota and budget.
 | glm-5.2 | openrouter | 0.40 | 0.40 | 1M | 8.5/10 | paid | no |
 | gemini-3.6-flash | openrouter | 1.50 | 1.50 | 1M | 8/10 | paid | no |
 | kimi-k3 | kimi-coding | 3.00 | 3.00 | 1M | 9/10 | paid (K3 reserved) | no |
-| nemotron-ultra:free | openrouter | 0 | 0 | 1M | 6.5/10 | 1000/day free | no |
-| nemotron-super:free | openrouter | 0 | 0 | 262K | 6/10 | 1000/day free | no |
-| north-mini-code:free | openrouter | 0 | 0 | 256K | 5.5/10 | 1000/day free | no |
-| nemotron-nano:free | openrouter | 0 | 0 | 128K | 5/10 | 1000/day free | no |
+| nvidia/nemotron-3-ultra-550b-a55b:free | openrouter | 0 | 0 | 1M | 7.5/10 | 1000/day free | no |
+| nvidia/nemotron-3-super-120b-a12b:free | openrouter | 0 | 0 | 262K | 7/10 | 1000/day free | no |
+| google/gemma-4-31b-it:free | openrouter | 0 | 0 | 262K | 7/10 | 1000/day free | no |
+| google/gemma-4-26b-a4b-it:free | openrouter | 0 | 0 | 262K | 6.5/10 | 1000/day free | no |
+| openai/gpt-oss-20b:free | openrouter | 0 | 0 | 131K | 6.5/10 | 1000/day free | no |
+| poolside/laguna-s-2.1:free | openrouter | 0 | 0 | 262K | 6.5/10 | 1000/day free | no |
+| poolside/laguna-xs-2.1:free | openrouter | 0 | 0 | 262K | 6/10 | 1000/day free | no |
+| cohere/north-mini-code:free | openrouter | 0 | 0 | 256K | 6/10 | 1000/day free | no |
+| inclusionai/ling-3.0-tiny:free | openrouter | 0 | 0 | 262K | 5.5/10 | 1000/day free | no |
+| nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free | openrouter | 0 | 0 | 256K | 6/10 | 1000/day free | no |
+| nvidia/nemotron-nano-12b-v2-vl:free | openrouter | 0 | 0 | 128K | 5.5/10 | 1000/day free | no |
 
 Capability scores are sourced from available benchmarks where possible (e.g.
 LMSYS Chatbot Arena, HumanEval, MMLU). Where no benchmark exists for a model,
@@ -42,11 +52,19 @@ is the flagship flash variant; primary for most roles per the 2026-08-05 model
 mandate (docs/project/decisions.md, journal/20260805-model-mandate.md).
 
 **External benchmark sources** (check periodically, not per-dispatch):
+- OpenRouter catalog (https://openrouter.ai/api/v1/models) — authoritative for what exists: id, pricing, context, modality
+- LM Arena PPE datasets (https://huggingface.co/datasets-server) — per-model mean scores: MBPP-Plus, GPQA, IFEval, MMLU-Pro, MATH
+- Aider Polyglot leaderboard (https://aider.chat/docs/leaderboards/) — coding capability
 - LMSYS Chatbot Arena (https://lmarena.ai) — head-to-head ELO ratings
 - Artificial Analysis (https://artificialanalysis.ai) — cost/performance scatter
 - HuggingFace Open LLM Leaderboard — for local models
-- Aider Polyglot Benchmark — for coding capability
-- Model providers' own benchmark reports (take with grain of salt)
+
+**Automated sourcing**: `scripts/fetch-model-benchmarks.sh` pulls the OpenRouter
+catalog + LM Arena PPE + Aider leaderboard into a dated snapshot
+(`data/model-benchmarks-<YYYYMMDD>.json`). Run it before refreshing the
+tables above; capability scores are estimates where no benchmark covers the
+model. Free-tier IDs were refreshed against the live catalog 2026-08-06 —
+the old short IDs (nemotron-ultra:free etc.) 404 on OpenRouter.
 
 ---
 
@@ -101,14 +119,14 @@ zero-cost fallbacks when budget is exhausted.
 
 ## 3. Per-role selection from the frontier
 
-| Role | Primary (frontier) | Fallback 1 | Fallback 2 | Fallback 3 (local) |
-|---|---|---|---|---|
-| PM | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, never) |
-| Designer | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, creative only) |
-| Coder | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, simple only) |
-| Artist | deepseek-v4-flash-0731 ($0.09*, 7.5, visual-eng) | gemini-3.5-flash-lite ($0.30, 6.5, vision) | mimo-v2.5 ($0.14, 6.5, vision) | never local; looker qwen3.7-flash |
-| Accountant | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gemini-3.5-flash-lite ($0.30, 6.5) | gemma-4-12b (6, procedural) |
-| Worker | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-12b (6, queued only) |
+| Role | Primary (frontier) | Fallback 1 | Fallback 2 | Free tier (best, distributed) | Local fallback |
+|---|---|---|---|---|---|
+| PM | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | nemotron-3-ultra-550b-a55b:free (7.5) → gemma-4-31b-it:free (7.0) | never |
+| Designer | glm-5.2 ($0.40, 8.5) | deepseek-v4-flash-0731 ($0.09*, 7.5) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-31b-it:free (7.0) → nemotron-3-super-120b-a12b:free (7.0) | Qwen-AgentWorld-35B (6.5) → gemma-4-12b (6.0) |
+| Coder | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gpt-oss-20b:free (6.5) → laguna-s-2.1:free (6.5) → north-mini-code:free (6.0) | Qwen-AgentWorld-35B (6.5) → gemma-4-12b (6.0) |
+| Artist | deepseek-v4-flash-0731 ($0.09*, 7.5, visual-eng) | qwen3.7-flash (7.0, vision) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-31b-it:free (7.0, multimodal) → nemotron-3-nano-omni-30b-a3b-reasoning:free (6.0) → nemotron-nano-12b-v2-vl:free (5.5, vision) | never local |
+| Accountant | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gpt-oss-20b:free (6.5) → gemma-4-26b-a4b-it:free (6.5) | Qwen-AgentWorld-35B (6.5) → gemma-4-12b (6.0) |
+| Worker | deepseek-v4-flash-0731 ($0.09*, 7.5) | deepseek-v4-flash ($0.09, 7) | gpt-5.6-luna ($0.10, 7.5) | gemma-4-26b-a4b-it:free (6.5) → north-mini-code:free (6.0) → ling-3.0-tiny:free (5.5) | Qwen-AgentWorld-35B (6.5) → gemma-4-12b (6.0) |
 
 Note: Artist primary moved from glm-5.2 to deepseek-v4-flash-0731 (visual-
 engineering tier) per the 2026-08-05 mandate; glm-5.2 stays in the Artist
