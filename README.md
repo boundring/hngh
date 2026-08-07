@@ -13,7 +13,7 @@ Code, Codex, Gemini-CLI) as its execution substrate. It does not reimplement age
 harnesses — it coordinates between them, informs their behavior task-specifically,
 and manages the inter-tool boundary.
 
-## Current state (2026-08-01)
+## Current state (2026-08-07)
 
 > **Pre-alpha — half-working, under active continual development.** hngh is
 > built partly by automated low-resource "night-ralphing" loops that notice,
@@ -27,13 +27,32 @@ procedural safeguards (secret-guard scanning, context-watch). MC-2 waves 1–3
 provide a six-panel emacs dashboard (status, events, llmtrim, opencode log,
 task queue, night-ralph log) with window balance/rotate commands. A $0
 overnight local-model loop (night-run/night-ralph) does slow planning, docs,
-and training-set generation on local models. 920 tests green.
+and training-set generation on local models.
+
+M9 squad autonomy is well into its build-out. Wave 1–3 shipped: AGENTS.md
+discovery/merge, questionnaire-from-AGENTS.md, resource-gate preflight, and
+a PM-first-prompt generator (`generate-pm-prompt`, delegating to the W5
+prompt matrix). Wave 2–4 plugins (file-watcher, squad-dispatch, beans,
+squad-resources) are wired into the main daemon lifecycle. The W5 prompt
+matrix is committed: `generate-prompt`, a 36-skeleton prompt library, bone
+fillers, a flesh pass with its own cheap-model chain, D-040-synced model
+selection, and a prompt cache. Model selection is grounded against real
+data — a free-tier refresh moved the fallback chains to live OpenRouter
+catalog IDs across a mixed-vendor set, and a benchmark-sourcing design brief
+plus a working probe runner (12 procedural probes executed locally via
+ollama/OpenRouter, with tokens/sec, prefill timing, VRAM, and a snapshot
+writer) lay the groundwork for the C8/C9 nightly benchmark loop.
+
+**494/494 fast tests green** (`make test`, FiveAM), **1687/1687 full suite** (`make test-full`). Current sessions:
+`docs/project/work-sessions.md`. Detailed roadmap at
+`docs/project/roadmap.md`.
 
 - **Run the daemon**: `make run` (or `hngh --once` for a single driver cycle)
 - **Queue a task**: `(hngh.plugins.ai-orchestrator:submit-task "..." :policy '(:prefer-tool :local-openai-api))` — or agentic: `'(:prefer-tool :opencode)`
 - **Watch everything**: `mc` (tiled tmux), or `hngh-status` for the one-glance view
+- **Probe local models**: `scripts/fetch-model-benchmarks.sh` (catalog + leaderboards) and the probe suite in `data/model-probes.lisp` (`run-probe-suite`, `write-benchmark-snapshot`)
 - **Guide**: [`docs/guides/mission-control.md`](docs/guides/mission-control.md)
-- **Session history**: [`docs/project/work-sessions.md`](docs/project/work-sessions.md) (M2–M-sentry, per-model attributed)
+- **Session history**: [`docs/project/work-sessions.md`](docs/project/work-sessions.md) (M2–M7/M9, per-model attributed)
 
 ## Core Principles
 
@@ -53,11 +72,13 @@ procedural-first threat detection system. Everything else is a plugin. A small,
 stateless C daemon handles privileged operations via dbus. The AI never runs as root.
 
 - **Core Image**: plugin host, event bus, state store, resource manager, scheduler,
-  supervisor, procedural threat detection (7 components)
+  supervisor, procedural threat detection (13 components total)
 - **First-Party Plugins**: package manager, AI orchestrator, AI tool hub, model
-  runtime manager, threat detector, hnghbeats, backup manager, secrets manager,
-  dashboard TUI, KDE integration, knowledge base, dbus bridge, system config
-  (13 components)
+  runtime manager, threat detector, hnghbeats, sentry, backup manager, secrets
+  manager, dashboard TUI, KDE integration, knowledge base, dbus bridge, system
+  config, mission control, emacs daemon, maintenance coordinator, config watcher,
+  file watcher, fragment journal, agents-md, squad resources, squad dispatch,
+  beans, hngh-up (24 components)
 - **External Process**: system daemon (C, root, stateless, ~500 LoC)
 
 See [`docs/design/hngh-design-spec.md`](docs/design/hngh-design-spec.md) for the
@@ -80,6 +101,9 @@ complete design specification.
 - **Milestone 0 — Foundation**: ✅ Core image, end-to-end validation
 - **Milestone 1 — The Harness (v0.1)**: ✅ System harness, AI orchestration (M1.0–M1.10)
 - **Milestone 2 — The Dogfooding Loop** ✅ (2026-07-31): M2 local OpenAI-compatible endpoints, M3 event loop + task driver, M4 unsloth lifecycle (systemd-respecting), M5 first $0 dogfood loop, M6.1 mission control, M6.2 agentic file-editing loops
+- **Milestone 7 — The Companion (v0.2)**: ✅ Session lifecycle, window management, config watcher, cascading restart, TUI QoL
+- **Milestone 8 — Model Routing** ✅ (2026-08-05): model-pareto, cost routing, fallback chains synced with the D-040 model mandate
+- **Milestone 9 — Squad Autonomy** 🔄 in progress: recursive planner cycle, squad dispatch/work queue, prompt matrix (36 skeletons, bones/flesh), AGENTS.md discovery, resource-gated preflight, PM-first-prompt generator, benchmark sourcing + probe runner; C4 start-now/pause-on-cause, C6 planner, C8/C9 benchmark loop design-only or unstarted
 - **Milestone 3 — The Network (v0.3)**: planned — client/server daemon mode (Emacs-style headless + extensible clients), model-management plugin (selection, sourcing, benchmark harness, unsloth/llama.cpp/ollama routing), remote instance coordination, knowledge sharing
 
 Detailed session history: [`docs/project/work-sessions.md`](docs/project/work-sessions.md). Program plan: `~/Projects/etc/sysconfig_mgmt/.omc/plans/hngh-gbd-dogfood-program.md`.
