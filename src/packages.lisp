@@ -734,6 +734,19 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:*sparse-defaults*
            #:*overrides*))
 
+(defpackage :hngh.plugins.signals
+  (:documentation "Signals (C6 W1.5) — typed agent↔agent control channel over the event bus: fixed-code semantic ACK/NAK/control (social-senses §3), durable signal inbox, and thin exported-transition mapping.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*signal-kinds*
+           #:valid-signal-kind-p
+           #:plant-signal
+           #:receive-signals
+           #:apply-signal))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)
