@@ -4,6 +4,11 @@
 ;;;; shell script (~/.local/bin/mc) is the single source of layout truth;
 ;;;; this plugin lets hngh start sessions and summon panes for subagents.
 ;;;;
+;;;; Observation surface (live-orchestration L1): extend with `hngh-mc
+;;;; observe <squad>` (a pane showing a squad's dispatch tree, beans, signals,
+;;;; thought-trace intent, ledger tail) and `observe --all` (squad wall).
+;;;; See docs/design/live-orchestration.md.
+;;;;
 ;;;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;;;; SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
 
