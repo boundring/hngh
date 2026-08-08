@@ -71,6 +71,7 @@
                  (:file "plugins/hngh-planner")
                  (:file "plugins/quota-spreader")
                  (:file "plugins/signals")
+                 (:file "plugins/acp-transport")
                  (:file "plugins/acp-client"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 

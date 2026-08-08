@@ -138,6 +138,15 @@ though the protocol schema differs.
 - **CL JSON-RPC exists**: `cxxxr/jsonrpc` (Quicklisp/Ultralisp) is a JSON-RPC
   2.0 server/client for Common Lisp with a **stdio transport** — exactly the
   transport ACP needs, in the stack Hngh already uses.
+- **Framing pitfall (found 2026-08-07)**: `cxxxr/jsonrpc`'s stock stdio
+  transport uses **LSP Content-Length framing**, but ACP mandates
+  **newline-delimited JSON** (one JSON message per line, no embedded newlines).
+  In-repo client↔server tests pass even on the wrong framing because both ends
+  share the library; a real ACP peer will NOT. Hngh ships its own
+  `acp-transport` (JSON-RPC mode `:acp`) that reuses the library's
+  connection/processing/dispatch but frames each message as one JSON line +
+  newline. Verified by driving `bin/hngh acp` with plain newline-delimited
+  JSON (no Content-Length headers) — interop PASS.
 - **ACP stdio framing is trivial**: one JSON message per line between two
   pipes + a spawned subprocess (the MCP/ACP stdio client is ~3 stream handles
   and a process). The heavy part of ACP is the *schema* (session/update

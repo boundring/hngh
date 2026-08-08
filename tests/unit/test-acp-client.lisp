@@ -60,7 +60,7 @@ observe-stream case the driver must handle). Runs in the calling thread
               (text (or (and first (gethash "text" first)) "")))
          (%obj "stopReason" "end_turn"
                "content" (%obj "type" "text" "text" (format nil "echo:~A" text))))))
-    (jsonrpc:server-listen server :mode :stdio
+    (jsonrpc:server-listen server :mode :acp
                            :input input :output output)))
 
 (defmacro with-mock-agent ((conn) &body body)
@@ -215,3 +215,46 @@ with CONN bound, then disconnect and destroy the server thread."
                      conn sid :none "should not be sent")))
         (is (eql :none (getf result :action)))
         (is (null (getf result :result)))))))
+
+;;; --- ACP server / dogfood round-trip (A4) ---------------------------------
+
+(test acp-server-is-drivable-by-the-client
+  ;; The A1 client must be able to drive the A4 server end-to-end (dogfood):
+  ;; server over two pipes in a worker thread, client over the cross-wired
+  ;; sides, then initialize / session/new / prompt -> text reply.
+  ;; Wiring mirrors `with-mock-agent`: server reads in1, writes out2; client
+  ;; reads in2, writes out1. Pipes are unidirectional per fd.
+  (multiple-value-bind (in1 out1) (sb-posix:pipe)
+    (multiple-value-bind (in2 out2) (sb-posix:pipe)
+      (let ((server-thread nil)
+            (conn nil))
+        (unwind-protect
+            (progn
+              (setf server-thread
+                    (bt:make-thread
+                     (lambda ()
+                       (hngh.plugins.acp-client:acp-serve
+                        (lambda (text) (format nil "echo:~A" text))
+                        :input (sb-sys:make-fd-stream in1 :input t)
+                        :output (sb-sys:make-fd-stream out2 :output t)))
+                     :name "acp-server-test"))
+              (sleep 0.3)
+              (setf conn
+                    (hngh.plugins.acp-client:acp-connect-stdio
+                     (sb-sys:make-fd-stream in2 :input t)
+                     (sb-sys:make-fd-stream out1 :output t)))
+              (let ((info (hngh.plugins.acp-client:acp-initialize conn)))
+                (is (string= "hngh" (gethash "name"
+                                             (hngh.plugins.acp-client:acp-agent-info conn)))))
+              (let ((sid (hngh.plugins.acp-client:acp-session-new conn :cwd "/tmp")))
+                (is (search "hngh_" sid))
+                (let ((resp (hngh.plugins.acp-client:acp-prompt
+                             conn sid "hello server" :timeout 10)))
+                  (let ((text (hngh.plugins.acp-client:acp-extract-text
+                               (gethash "content" resp))))
+                    (is (equal "echo:hello server" text)))))
+              (when conn (hngh.plugins.acp-client:acp-disconnect conn)))
+          ;; cleanup streams
+          (sb-posix:close in1) (sb-posix:close in2)
+          (sb-posix:close out1) (sb-posix:close out2)
+          (when server-thread (ignore-errors (bt:destroy-thread server-thread))))))))

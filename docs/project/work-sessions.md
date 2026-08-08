@@ -576,3 +576,18 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Tests: +15 (mapping thresholds incl. >= boundary + non-number fail-closed +
   steer-on-connection + none-noop). acp-client 34/34 (100%).
 - Full suite 2291/2291, lint 630. Committed; working tree green.
+
+### Session M9.21: ACP framing fix — newline-delimited JSON-RPC transport
+**Status**: Built + interop-verified (2026-08-07).
+- CRITICAL finding: cxxxr/jsonrpc's stdio transport uses LSP Content-Length
+  framing, but ACP mandates newline-delimited JSON ("messages delimited by
+  \\n"). In-repo tests passed only because client+server shared the same
+  library framing; a real ACP peer (editor/opencode) would not interoperate.
+- Fix: new src/plugins/acp-transport.lisp defining jsonrpc/transport/acp mode
+  (acp-transport class) reusing the library's connection/processing/dispatch
+  machinery but overriding send/receive to write one JSON line + newline.
+  Client (acp-connect-stdio) + server (acp-serve) + test mock all use :mode :acp.
+- Verified: acp-client 37/37; test-full 2294/2294; INTEROP PASS — driven
+  bin/hngh acp with plain newline-delimited JSON, one line per message, no
+  Content-Length headers (python driver /tmp/interop-acp.py). Real-wire-proven.
+- Design note folded into agent-client-protocol.md (framing under transport).

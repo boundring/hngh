@@ -37,10 +37,11 @@
 
 (defun acp-connect-stdio (input output)
   "Create an ACP connection whose transport is the stdio streams INPUT/
-OUTPUT (a spawned agent subprocess's pipes). Returns an ACP-CONNECTION with
-its JSON-RPC client connected over stdio."
+OUTPUT (a spawned agent subprocess's pipes), using ACP's newline-delimited
+JSON-RPC framing (NOT LSP Content-Length framing — see acp-transport.lisp).
+Returns an ACP-CONNECTION with its JSON-RPC client connected over stdio."
   (let ((client (jsonrpc:make-client)))
-    (jsonrpc:client-connect client :mode :stdio
+    (jsonrpc:client-connect client :mode :acp
                             :input input :output output)
     (make-instance 'acp-connection
                    :client client :input input :output output)))
@@ -288,6 +289,80 @@ COMMAND is :none. Fail-closed: any condition returns (:action :failed ...)."
          (list :action :none :result nil)))
     (condition (c)
       (list :action :failed :result (princ-to-string c)))))
+
+;;; --- ACP server (A4): Hngh as a drivable ACP agent --------------------------
+;;;
+;;; Wave A4 (docs/design/agent-client-protocol.md §2b, §8): `hngh acp` exposes
+;;; Hngh as an ACP AGENT over stdio JSON-RPC, so editors (Zed/Neovim/Emacs) and
+;;; other Hngh instances can drive it. Mirrors the A1 client surface — the same
+;;; methods on the server side: initialize, session/new, session/load,
+;;; session/prompt, session/cancel, session/request_permission.
+
+(defvar *acp-prompt-handler* nil
+  "Pluggable (lambda (prompt-text session-id) -> response-string) called when
+an ACP client prompts this server. NIL default returns a bounded acknowledgment
+(routing into Hngh's own processing is a pluggable hook, not a recursive
+delegate).")
+
+(defun %acp-server-capabilities ()
+  "Advertise this server's agentCapabilities (mirror of the client's parse)."
+  (%ht "loadSession" t
+       "promptCapabilities" (%ht "image" nil "audio" nil "embeddedContext" nil)
+       "sessionCapabilities" (%ht)))
+
+(defun acp-make-server (handler)
+  "Create an ACP JSON-RPC SERVER exposing Hngh as an ACP agent, routing
+session/prompt to HANDLER (a function of prompt-text -> response-string, or
+NIL for the default bounded acknowledgment). Returns the jsonrpc server object
+ready for SERVER-LISTEN."
+  (let ((server (jsonrpc:make-server)))
+    (jsonrpc:expose
+     server "initialize"
+     (lambda (params)
+       (declare (ignore params))
+       (%ht "protocolVersion" *protocol-version*
+            "agentCapabilities" (%acp-server-capabilities)
+            "agentInfo" (%ht "name" "hngh" "version" hngh::*version*)
+            "authMethods" nil)))
+    (jsonrpc:expose
+     server "session/new"
+     (lambda (params)
+       (declare (ignore params))
+       (%ht "sessionId" (format nil "hngh_~D" (get-universal-time)))))
+    (jsonrpc:expose
+     server "session/load"
+     (lambda (params)
+       (%ht "sessionId" (gethash "sessionId" params))))
+    (jsonrpc:expose
+     server "session/prompt"
+     (lambda (params)
+       (let* ((prompt (gethash "prompt" params))
+              (first (and (listp prompt) (car prompt)))
+              (text (or (and first (gethash "text" first)) ""))
+              (reply (if handler
+                         (funcall handler text)
+                         (format nil "hngh acp: received (~D chars)" (length text)))))
+         (%ht "stopReason" "end_turn"
+              "content" (%ht "type" "text" "text" reply)))))
+    (jsonrpc:expose
+     server "session/cancel"
+     (lambda (params)
+       (declare (ignore params))
+       (%ht)))
+    (jsonrpc:expose
+     server "session/request_permission"
+     (lambda (params)
+       (declare (ignore params))
+       (%ht "response" t)))
+    server))
+
+(defun acp-serve (handler &key (input *standard-input*) (output *standard-output*))
+  "Run the ACP server on INPUT/OUTPUT (default stdio): expose Hngh as an ACP
+agent and serve requests until the stream closes. Uses ACP's newline-delimited
+JSON-RPC framing (acp-transport.lisp). Used by `hngh acp`. Blocks."
+  (let ((server (acp-make-server handler)))
+    (jsonrpc:server-listen server :mode :acp
+                           :input input :output output)))
 
 ;;; --- Plugin lifecycle -----------------------------------------------------
 

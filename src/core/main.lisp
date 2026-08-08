@@ -251,6 +251,8 @@ Parses command-line arguments, starts the system, and enters the main loop.
 Used when building a standalone executable via `make build`."
   (let ((args (uiop:command-line-arguments)))
     (cond
+      ((member "acp" args :test #'string=)
+       (acp-subcommand args) (uiop:quit 0))
       ((member "--version" args :test #'string=)
        (format t "hngh ~A~%" *version*)
        (uiop:quit 0))
@@ -286,6 +288,17 @@ Used when building a standalone executable via `make build`."
                   (loop while *running* do (sleep 1))))
            (stop)
            (uiop:quit 0)))))))
+
+(defun acp-subcommand (args)
+  "Run Hngh as an ACP server (`hngh acp`): serve the ACP wire protocol over
+stdio until the stream closes. Editors and other Hngh instances drive Hngh
+through this. A --test-handler flag lets a caller supply a synthetic prompt
+handler for headless verification."
+  (let ((handler (if (member "--test-handler" args :test #'string=)
+                     (lambda (text)
+                       (format nil "hngh acp test reply to ~D chars" (length text)))
+                     nil)))
+    (hngh.plugins.acp-client:acp-serve handler)))
 
 (defun parse-option (args flag converter)
   "Parse a --flag VALUE option from ARGS. Returns (funcall CONVERTER value) or NIL."

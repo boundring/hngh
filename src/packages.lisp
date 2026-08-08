@@ -763,6 +763,9 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:acp-run-task-on-connection
            #:acp-steer-command
            #:acp-steer
+           #:acp-make-server
+           #:acp-serve
+           #:*acp-prompt-handler*
            #:*spawn-timeout*))
 
 (defpackage :hngh.plugins.signals
