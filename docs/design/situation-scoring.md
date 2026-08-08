@@ -290,12 +290,12 @@ own work and the web:
   — arXiv Huang/Kamoi/MINT/ReAct/SWE-agent/GAIA/MAST/tau-bench/CoALA, hallucination
   benchmarks (SelfCheckGPT, MIRAGE, SimpleToolHalluBench, AgentHallu, StableToolBench,
   ToolBeHonest), Anthropic Building Effective Agents. Saved at
-  `~/Projects/etc/sysconfig_mgmt/agent_failure_modes_reference.md`.
+  `docs/research/agent_failure_modes_reference.md`.
 - **Prior-art design space**: `B1_agent_supervision_design_space.md` (~24KB, 30+
   sources) — guardrails (LlamaGuard, NeMo, Guardrails AI, AGT), observability
   (OTel GenAI), self-verification (PRM, CriticGPT, Reflexion, LATS), stuck-detection
   (OpenFang #481, strands, AgentCenter), HITL (LangGraph, Claude Code hooks). Saved
-  at `~/Projects/etc/sysconfig_mgmt/B1_agent_supervision_design_space.md`.
+  at `docs/research/B1_agent_supervision_design_space.md`.
 - See the two reference docs for full bibliographies; the key headline findings
   are inlined in §B.1–B.4 and §4 of the research reference.
 
