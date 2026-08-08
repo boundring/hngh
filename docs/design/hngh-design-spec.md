@@ -641,11 +641,12 @@ The AI Tool Hub ships with these tools registered by default. All are configurab
 | Tool | Type | Providers | Key Integration Interface | Dogfooding |
 |---|---|---|---|---|
 | Opencode | Agentic CLI | Multi-provider | Subprocess + task events; multi-agent orchestration; skills; MCP servers | Yes (primary) |
-| oh-my-claudecode (OMC) | Orchestration layer | Anthropic | Subprocess (wraps Claude Code); skills; team mode; ralph loops; wiki; project memory | Yes |
-| oh-my-codex (omx) | Orchestration layer | OpenAI | Subprocess (wraps Codex); same patterns as OMC | Yes |
+| oh-my-opencode | Orchestration layer | Multi-provider (wraps Opencode) | Subprocess (wraps Opencode); skills; team mode; ralph loops; wiki; project memory | Yes |
+| oh-my-openagent (omo) | Orchestration layer | Multi-provider (wraps agent CLIs incl. Opencode) | Subprocess; skills; team mode; ralph loops; wiki; project memory | Yes |
+| oh-my-codex (omx) | Orchestration layer | OpenAI | Subprocess (wraps Codex); same oh-my-* patterns | Yes |
 | Pi | Agentic CLI | Multi-provider | Subprocess + JSON Event Stream (stdin/stdout JSONL) + RPC mode; SDK; sessions; compaction; skills; extensions; custom models/providers | Yes |
 | Cecli | Agentic CLI | Multi-provider (15+) | Subprocess + Python scripting; sub-agents; skills; hooks; MCP servers; agent mode; git integration; workspaces; Ollama support | Yes |
-| Claude Code | Agentic CLI | Anthropic | Subprocess | No (use OMC instead) |
+| Claude Code | Agentic CLI | Anthropic | Subprocess | No (direct; no oh-my layer kept for it — oh-my-claudecode assessed and discarded) |
 | Codex | Agentic CLI | OpenAI | Subprocess | No (use omx instead) |
 | Gemini-CLI | Agentic CLI | Google | Subprocess | No |
 | Direct API (Anthropic) | Direct API | Anthropic | HTTPS | No |

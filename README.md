@@ -18,13 +18,14 @@ Canonical bookend family (each expands into itself, Hngh at both ends):
 management, GPU/runtime management, and generative AI agents. Emacs-like extensibility
 applied to the entire operating system.**
 
-Hngh is a system-level agentic operating layer that takes advantage of existing
-agentic coding tools as its execution substrate, primarily **Hermes Agent**
-(the attendant session in which Hngh's own development happens) alongside
-Opencode, oh-my-openagent, oh-my-codex, Pi, Cecli, Claude Code, Codex, and
-Gemini-CLI. It does not reimplement agentic harnesses — it coordinates between
-them, informs their behavior task-specifically, and manages the inter-tool
-boundary.
+Hngh is a system-level agentic operating layer that drives existing agentic
+tools as its execution substrate. Today that means **Hermes Agent** (the
+attendant session in which Hngh's own development happens) and **Opencode**
+(the primary agentic CLI), with the oh-my-* orchestration wrappers layered on
+Opencode-side tools. Pi, Cecli, and any ACP-compatible agent are on the target
+list — not yet integrated, and this README won't claim them until they are.
+Hngh does not reimplement agentic harnesses — it coordinates between them,
+informs their behavior task-specifically, and manages the inter-tool boundary.
 
 ## Current state (2026-08-08)
 
