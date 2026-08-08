@@ -10,6 +10,28 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — L2/L3 Tier-1 semantic judge + paren lint gate
+- **`src/plugins/situation-judge.lisp`** — cheap/local semantic judge (step 4
+  of `situation-scoring.md` §8) catching what Tier-0 detectors cannot: faulty
+  logic, hallucination, instruction-misread, risky-approach, wasted work.
+  - **Pluggable backend**: `:http` (direct OpenAI-compatible call to any
+    cheap/local endpoint — ollama, unsloth, vllm) or `:agentic` (one-off
+    opencode/Hermes/Pi session via the `*judge-responder*` injection seam).
+  - **Watchdog budget**: bounded judge calls per run (`*budget-per-run*`),
+    reserve/fail-closed when exhausted.
+  - **Bounded prompt**: recent N observations, one-line JSON verdict
+    (score + confidence + reason), parsed fail-closed.
+  - **Offline calibration harness**: `calibrate-judge` measures precision /
+    recall / confidence-calibration against a labeled case-base; the live gate
+    only opens once calibration is recorded (§6/§7). Open taxonomy grows with
+    Hngh's self-development loop.
+- **`scripts/lint-parens.py` + `make lint-parens`** — procedural paren guard
+  wired into `test-suite`: detects unbalanced `()[]{}` in Lisp source before
+  every test run (single full-text pass; handles strings/comments/char
+  literals; zero false positives on multi-line docstrings), with `--fix` to
+  append missing `)` at EOF.
+- Green @ `be14779`: **730/730 fast, 2471/2471 full** (was 693/2434).
+
 ### Added
 - **Design seed** — `docs/design/encoded-filename-metadata.md`: captured the
   standing idea of a standardized, decodable filename convention for agent
