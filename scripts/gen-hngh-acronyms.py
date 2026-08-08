@@ -54,11 +54,38 @@ N_WORDS = [
 ]
 
 # --- curated G verbs (pairing-verb + "Hngh" complement) ----------------
-G_WORDS = [
-    "goes", "go", "grows", "grinds", "grind", "gives", "give", "gets",
-    "get", "gains", "gain", "grunts", "grunt", "generates", "generate",
-    "greets", "greet", "gardens", "garden",
+# Split by FORM so the grammar gate can enforce subject-verb agreement:
+#   G_3P     : 3rd-person singular ("goes")  — for noun-subject connectors
+#   G_BARE   : imperative/infinitive ("go")  — for "next" stage-direction
+#   G_FORM   : the display form (title-cased later)
+G_VERBS = [
+    # (3rd-person singular, bare)
+    ("goes", "go"), ("grows", "grow"), ("grinds", "grind"),
+    ("gives", "give"), ("gets", "get"), ("gains", "gain"),
+    ("grunts", "grunt"), ("generates", "generate"),
+    ("greets", "greet"), ("gardens", "garden"),
 ]
+G_3P = [v3 for v3, _ in G_VERBS]
+G_BARE = [vb for _, vb in G_VERBS]
+
+# --- grammar gate: which verb form each N-connector takes -----------------
+# The dominant nonsense in a raw cartesian product is AGREEMENT ERRORS:
+# "Hermes Network Gain Hngh" (bare verb after a singular noun subject),
+# "Hermes Nor Gain Hngh" (a connector that never yields a sentence), or
+# "Home Not Get Hngh" (not-X without "does"). Rule them out procedurally:
+#   network / networks / never / now  -> 3rd-person singular ("goes")
+#   next                              -> BARE imperative ("go") — the
+#       stage-direction register the user likes ("Hermes Next Go Hngh")
+#   not / nor                         -> never grammatical here — drop
+N_VERB_FORM = {
+    "network": G_3P,
+    "networks": G_3P,
+    "never": G_3P,
+    "now": G_3P,
+    "next": G_BARE,
+    "not": [],
+    "nor": [],
+}
 
 # --- title-casing helper ----------------------------------------------------
 def title(word):
@@ -121,16 +148,18 @@ def main(argv=None):
         f.write("4-word recursive acronyms (H-N-G-<Hngh>), grouped by the "
                 "type of the H-word, alphabetized within each section.\n\n")
         total = 0
+        rejected = 0
         for headline, words in H_GROUPS:
             lines = []
             for h in words:
                 for n in N_WORDS:
-                    for g in G_WORDS:
+                    allowed = N_VERB_FORM[n]
+                    for g in allowed:
                         lines.append(render(h, n, g))
-                if ns.flipped:
-                    for n in N_WORDS:
-                        for g in G_WORDS:
+                    if ns.flipped:
+                        for g in allowed:
                             lines.append(render_flipped(n, g, h))
+                    rejected += len(G_VERBS) - len(allowed)
             lines = sorted(set(lines))
             total += len(lines)
             f.write(f"{headline}\n\n")
@@ -139,6 +168,7 @@ def main(argv=None):
             else:
                 f.write("_(culled — no words in this type)_\n\n")
         print(f"wrote {total} expansions -> {ns.out}")
+        print(f"gate rejected ~{rejected} agreement-error lines")
 
     # sample across sections for the terminal
     with open(ns.out, encoding="utf-8") as f:
