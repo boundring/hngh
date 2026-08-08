@@ -148,6 +148,15 @@ Existing journal files:
 - `docs/journal/2026-06-22.md` — Design phase + M0 sessions (0A, 0B, M0.1–M0.10)
 - `docs/journal/2026-06-23.md` — M1.0a, M1.1+M1.2, M1.3+M1.4+M1.11
 - `docs/journal/2026-06-24.md` — M1.5+M1.6+M1.7, hardening, M1.8+M1.9+M1.12
+- `docs/journal/2026-07-31.md` — MC-1 tmux QoL, MC-2/3, llm-budget spend gate, DOC wave, NET-1
+- `docs/journal/2026-08-01.md` — H-A2/B1/B2/A3, M-sentry Tier-0, queue v3, cost-routing v2
+- `docs/journal/2026-08-02.md` — M7 daemon merge, Phase 2 claim/release, squad lifecycle, platoons, aesthetics
+- `docs/journal/2026-08-03.md` — M9 W1-3 squad autonomy, C7 PM-first-prompt, lint-counts
+- `docs/journal/2026-08-04.md` — M9 W2-5 staging
+- `docs/journal/2026-08-05.md` — model mandate, squad test-loop fast-gate, dual-push policy
+- `docs/journal/2026-08-06.md` — M9.5 resume, W5 prompt matrix, free-tier refresh, benchmark brief
+- `docs/journal/2026-08-07.md` — M9.9-9.13, C6 planner waves, quota-spreader, live-orchestration, ACP A1-A4, cost policy, cogmem drop
+- `docs/journal/2026-08-08.md` — L2/L3 situation-scoring design, research docs, handoff, MisakaNet nodes
 
 ---
 
