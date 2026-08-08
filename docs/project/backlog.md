@@ -115,6 +115,7 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 | Backup strategy for `state/plugins/` | M1.10 (backup manager, B7) |
 | KDE notification protocol | M1.13 (B10, optional) |
 | **Encoded filename metadata for agent direction** | Design seed — `docs/design/encoded-filename-metadata.md`. Evaluate later: prior art, decode-primitive prototype, token-scope ROI, beans/dispatch-tree interplay. Not on any current build path. |
+| **Public vetting — self-optimization / parity / cost accounting** | `docs/design/public-vetting.md` (assessment framing before going public). Researcher: Odysseus & Agent Zero docs-first feature-parity matrix → `docs/research/`; public cost-vs-capability dashboard over the existing ledger; ACP/MCP/A2A multi-tool surface; multi-instance network kept as a design seed (security-first, post-v1). Not scheduled build. |
 
 ## MisakaNet lesson candidates (submission backlog)
 
