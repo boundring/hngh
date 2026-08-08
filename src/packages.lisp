@@ -828,6 +828,36 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:situation-action
            #:decide))
 
+(defpackage :hngh.plugins.situation-judge
+  (:documentation "L2/L3 Tier-1 semantic judge (step 4) — cheap/local model that catches what Tier-0 procedural detectors cannot: faulty logic, hallucination, instruction-misread, risky-approach, wasted work. Pluggable backend (:http direct to ollama/unsloth/vllm, :agentic one-off session via responder hook), watchdog budget (bounded calls/run), fail-closed verdict parsing, and an offline calibration harness measured against the case-base before live use. See docs/design/situation-scoring.md §2.2/§6/§8.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*default-endpoint*
+           #:*default-model*
+           #:*budget-per-run*
+           #:*judge-responder*
+           #:*valid-situations*
+           #:judge-budget-remaining
+           #:judge-budget-ok-p
+           #:reserve-judge-call
+           #:reset-judge-budget
+           #:build-judge-prompt
+           #:judge-call
+           #:parse-verdict
+           #:make-verdict
+           #:judge-situation
+           #:calibration
+           #:calibration-n
+           #:calibration-correct
+           #:calibration-precision
+           #:calibration-recall
+           #:calibration-conf-calib
+           #:calibration-calibrated
+           #:calibrate-judge))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)
