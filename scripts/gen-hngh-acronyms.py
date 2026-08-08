@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
-"""gen-hngh-acronyms.py — enumerate recursive acronym expansions for "Hngh".
+"""gen-hngh-acronyms.py — recursive-acronym expansion generator for "Hngh".
 
-The user's reference is "Home Network Goes Hngh": a 4-word recursive
-acronym, H-N-G-<Hngh>, that reads as a complete SENTENCE with "Hngh" as the
-guttural complement ("goes boom" -> "goes Hngh"). So G is a verb that pairs
-with the subject, not an object noun.
+DECISION (2026-08-08): the canonical expansion is
 
-Output is a reference document, grouped into headered sections BY H-WORD
-TYPE (agent / structure / element / state), title-cased, alphabetized within
-a section. Punctuation is applied judgementally: an Oxford comma separates a
-coordinate list when the H-word expands to one (e.g. "Heavy, Hard ..."),
-otherwise the line stays a clean single clause.
+    Hngh Network Goes Hngh.
+
+A doubly-recursive bookend — "Hngh" is both the first and last word, the
+acronym expanding into itself. Not the most efficient form; it works, and
+the owner likes it, so it ships.
+
+This script's default output is that canonical form. EVERYTHING else —
+the full gated enumeration (H-N-G-<Hngh> via the grammar gate), the human
+curated picks, and the owner/prompt-composed bookend family — is archived
+under data/acronyms/archive/ as best efforts *toward* the winner. Nothing
+else is promoted into the canonical file.
 
 Usage
 -----
-  python3 scripts/gen-hngh-acronyms.py [--out FILE] [--show N]
+  python3 scripts/gen-hngh-acronyms.py            # canonical file
+  python3 scripts/gen-hngh-acronyms.py --archive  # regenerate the archive
+  python3 scripts/gen-hngh-acronyms.py --flipped  # include flipped series in
+                                                  # the archive (default on)
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 SPDX-FileCopyrightText: 2026 boundring <boundring@gmail.com>
@@ -25,41 +31,36 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-DEFAULT_OUT = os.path.join(ROOT, "data", "acronyms", "hngh-acronyms.txt")
+OUT_DIR = os.path.join(ROOT, "data", "acronyms")
+ARCHIVE_DIR = os.path.join(OUT_DIR, "archive")
+CANONICAL = os.path.join(OUT_DIR, "hngh-acronyms.txt")
+ARCHIVE = os.path.join(ARCHIVE_DIR, "hngh-acronyms-candidates.txt")
+
+WINNER = "Hngh Network Goes Hngh."
 
 # --- curated H subjects, grouped by semantic TYPE --------------------------
-# "Hermes" is the anchor (the recursion should land on the actual agent).
-# Sections in the output are these five types, in this order.
 H_GROUPS = [
-    # (type headline, [words]) — the keeper set after the 2026-08-08 cull.
-    # hermes = the anchor (recursion lands on the actual agent).
-    ("## Agents", [
+    (("Agents"), [
         "hermes", "host",
     ]),
-    ("## Structures & places", [
+    (("Structures & places"), [
         "home",
     ]),
-    ("## Elements & forces", [
-        # culled — kept empty so the section renders with a note instead
+    (("Elements & forces"), [
+        # culled
     ]),
-    ("## States & properties", [
+    (("States & properties"), [
         "heavy",
     ]),
 ]
 
 # --- curated N connectors ----------------------------------------------
-# network (user-approved) + next (from "Hermes next go Hngh") + negations
 N_WORDS = [
     "network", "networks", "next", "never", "not", "now", "nor",
 ]
 
-# --- curated G verbs (pairing-verb + "Hngh" complement) ----------------
-# Split by FORM so the grammar gate can enforce subject-verb agreement:
-#   G_3P     : 3rd-person singular ("goes")  — for noun-subject connectors
-#   G_BARE   : imperative/infinitive ("go")  — for "next" stage-direction
-#   G_FORM   : the display form (title-cased later)
+# --- curated G verbs, split by form for the grammar gate ----------------
 G_VERBS = [
-    # (3rd-person singular, bare)
     ("goes", "go"), ("grows", "grow"), ("grinds", "grind"),
     ("gives", "give"), ("gets", "get"), ("gains", "gain"),
     ("grunts", "grunt"), ("generates", "generate"),
@@ -69,14 +70,6 @@ G_3P = [v3 for v3, _ in G_VERBS]
 G_BARE = [vb for _, vb in G_VERBS]
 
 # --- grammar gate: which verb form each N-connector takes -----------------
-# The dominant nonsense in a raw cartesian product is AGREEMENT ERRORS:
-# "Hermes Network Gain Hngh" (bare verb after a singular noun subject),
-# "Hermes Nor Gain Hngh" (a connector that never yields a sentence), or
-# "Home Not Get Hngh" (not-X without "does"). Rule them out procedurally:
-#   network / networks / never / now  -> 3rd-person singular ("goes")
-#   next                              -> BARE imperative ("go") — the
-#       stage-direction register the user likes ("Hermes Next Go Hngh")
-#   not / nor                         -> never grammatical here — drop
 N_VERB_FORM = {
     "network": G_3P,
     "networks": G_3P,
@@ -87,101 +80,124 @@ N_VERB_FORM = {
     "nor": [],
 }
 
-# --- title-casing helper ----------------------------------------------------
+# --- human-curated picks (all grammatical, some near-misses on meaning) --
+CURATED_PICKS = [
+    "Hermes Next Go Hngh.",
+    "Home Next Go Hngh.",
+    "Hngh Next Go Home.",
+    "Home Never Goes Hngh.",
+    "Host Never Goes Hngh.",
+    "Heavy Never Goes Hngh.",
+    "Hermes Never Goes Hngh.",
+    "Home Network Goes Hngh.",
+    "Home Network Grunts Hngh.",
+    "Host Network Grinds Hngh.",
+    "Heavy Network Grinds Hngh.",
+    "Host Network Gives Hngh.",
+    "Hngh Never Goes Home.",
+    "Hngh Network Goes Home.",
+    "Hngh Now Goes Home.",
+    "Hngh Never Grows Heavy.",
+    "Hngh Never Gets Heavy.",
+]
+
+# --- composed bookend family (Hngh ... Hngh) — best efforts toward win --
+# Same doubly-recursive shape as the winner; some keep the meaning of what
+# Hngh is (self-developing, self-healing, cost-conscious, always working).
+COMPOSED_BOOKENDS = [
+    "Hngh Network Goes Hngh.",
+    "Hngh Network Grows Hngh.",
+    "Hngh Network Grinds Hngh.",
+    "Hngh Network Generates Hngh.",
+    "Hngh Never Goes Hngh.",
+    "Hngh Now Generates Hngh.",
+    "Hngh Next Grinds Hngh.",
+    "Hngh Never Grows Heavy.",
+    "Hngh Never Gets Heavy.",
+    "Hngh Next Grows Hngh.",
+]
+
+
 def title(word):
     return word[0].upper() + word[1:] if word else word
 
 
-# --- punctuation: Oxford comma where the H-word is a coordinate list -------
-# If the H-word itself reads as two items joined ("hard-and-heavy"), the
-# expansion is a list and gets a comma; otherwise a clean clause. Most H-words
-# here are single units, so most lines stay comma-free. This maps just the
-# obviously-coordinate H forms.
-OXFORD_H = {
-    # h-word -> rendered leading list
-    "hard": "Hard",
-    "heavy": "Heavy",
-    "hyper": "Hyper",
-}
-# A minimal, honest rule: a comma separates a leading item from the rest only
-# when the H-word is itself a count noun being elaborated. Leave the rule
-# OFF by default (the lines are single clauses); set True to enable.
-ENABLE_OXFORD = False
-
-
 def render(h, n, g):
-    """Render one expansion as a punctuated sentence.
-
-    Title-cased (each word starts its own letter of the acronym), terminated
-    with a period since each is a full independent clause. An Oxford comma is
-    applied ONLY where the line is a genuine coordinate list (the H-word
-    expands to two adjacent list items), which is the only context the comma
-    is grammatical. Most H-words here are single units, so most lines get no
-    comma — correctly, because these are single clauses, not lists.
-    """
-    head = title(h)
-    mid = title(n)
-    tail = title(g)
-    if ENABLE_OXFORD and h in OXFORD_H:
-        # coordinate list: "Hard, Heavy, Hollow — Hngh" reads as a list of
-        # three properties; comma before the final item is the Oxford comma.
-        return f"{head}, {mid} {tail} Hngh."
-    return f"{head} {mid} {tail} Hngh."
+    return f"{title(h)} {title(n)} {title(g)} Hngh."
 
 
 def render_flipped(n, g, h):
-    """Flipped series: Hngh leads, an H-word closes ("Hngh Never Goes Home.")."""
     return f"Hngh {title(n)} {title(g)} {title(h)}."
+
+
+def section_entries(words, flipped):
+    """Generate the gated (H N G Hngh) forms for one H-group."""
+    lines = []
+    for h in words:
+        for n in N_WORDS:
+            allowed = N_VERB_FORM[n]
+            for g in allowed:
+                lines.append(render(h, n, g))
+                if flipped:
+                    lines.append(render_flipped(n, g, h))
+    return sorted(set(lines))
+
+
+def write_canonical():
+    os.makedirs(OUT_DIR, exist_ok=True)
+    with open(CANONICAL, "w", encoding="utf-8") as f:
+        f.write("# Hngh — recursive-acronym expansion\n\n")
+        f.write("Canonical (2026-08-08):\n\n")
+        f.write(f"**{WINNER}**\n\n")
+        f.write("Hngh is both the first and the last word — the acronym\n")
+        f.write("expands into itself. All other candidates are archived at\n")
+        f.write("`data/acronyms/archive/` as best efforts toward this form.\n")
+
+
+def write_archive(flipped):
+    os.makedirs(ARCHIVE_DIR, exist_ok=True)
+    with open(ARCHIVE, "w", encoding="utf-8") as f:
+        f.write("# Hngh — archived alternative expansions\n\n")
+        f.write("Best efforts toward the canonical `Hngh Network Goes Hngh.`\n")
+        f.write("None of these are promoted; kept for reference and possible\n")
+        f.write("regional/secondary use.\n\n")
+        total = 0
+
+        f.write("## Gated enumeration (H-N-G-<Hngh>)\n\n")
+        for headline, words in H_GROUPS:
+            entries = section_entries(words, flipped)
+            total += len(entries)
+            f.write(f"### {headline}\n\n")
+            if entries:
+                f.write("\n".join(entries) + "\n\n")
+            else:
+                f.write("_(culled — no words in this type)_\n\n")
+
+        f.write("## Human-curated picks\n\n")
+        for line in CURATED_PICKS:
+            f.write(line + "\n")
+        f.write("\n")
+
+        f.write("## Composed bookend family (Hngh ... Hngh)\n\n")
+        for line in COMPOSED_BOOKENDS:
+            f.write(line + "\n")
+        f.write("\n")
+        total += len(CURATED_PICKS) + len(COMPOSED_BOOKENDS)
+        print(f"archive: {total} lines -> {ARCHIVE}")
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", default=DEFAULT_OUT)
-    ap.add_argument("--show", type=int, default=20)
-    ap.add_argument("--flipped", action="store_true",
-                    help="also emit the flipped series: Hngh <N> <G> <H>")
+    ap.add_argument("--archive", action="store_true",
+                    help="regenerate the candidate archive")
+    ap.add_argument("--flipped", action="store_true", default=True,
+                    help="include the flipped series in the archive (default)")
     ns = ap.parse_args(argv)
-
-    os.makedirs(os.path.dirname(ns.out) or ".", exist_ok=True)
-    with open(ns.out, "w", encoding="utf-8") as f:
-        f.write("# Hngh — recursive-acronym expansions\n\n")
-        f.write("4-word recursive acronyms (H-N-G-<Hngh>), grouped by the "
-                "type of the H-word, alphabetized within each section.\n\n")
-        total = 0
-        rejected = 0
-        for headline, words in H_GROUPS:
-            lines = []
-            for h in words:
-                for n in N_WORDS:
-                    allowed = N_VERB_FORM[n]
-                    for g in allowed:
-                        lines.append(render(h, n, g))
-                    if ns.flipped:
-                        for g in allowed:
-                            lines.append(render_flipped(n, g, h))
-                    rejected += len(G_VERBS) - len(allowed)
-            lines = sorted(set(lines))
-            total += len(lines)
-            f.write(f"{headline}\n\n")
-            if lines:
-                f.write("\n".join(lines) + "\n\n")
-            else:
-                f.write("_(culled — no words in this type)_\n\n")
-        print(f"wrote {total} expansions -> {ns.out}")
-        print(f"gate rejected ~{rejected} agreement-error lines")
-
-    # sample across sections for the terminal
-    with open(ns.out, encoding="utf-8") as f:
-        text = f.read()
-    heads = [l for l in text.splitlines() if l.startswith("## ")]
-    print("--- sections ---")
-    for h in heads:
-        print("  " + h)
-    print(f"--- sample ({ns.show}) ---")
-    body_lines = [l for l in text.splitlines()
-                  if l and not l.startswith("#") and not l.startswith("## ")]
-    for line in body_lines[: ns.show]:
-        print("  " + line)
+    if ns.archive:
+        write_archive(ns.flipped)
+    else:
+        write_canonical()
+        print(f"canonical: {WINNER} -> {CANONICAL}")
     return 0
 
 
