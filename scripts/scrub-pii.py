@@ -22,13 +22,13 @@ string: an owner home path becomes `~/...`; a bare owner username becomes
 
 Usage
 -----
-  scripts/scrub-pii.py [--user bricker] [--path /home/bricker]
+  scripts/scrub-pii.py [--user USER] [--path /home/USER]
       report-only; exit 1 if any tracked file contains the identifier
 
   scripts/scrub-pii.py --check
       same as report-only, but exit 0 even with hits (CI non-blocking)
 
-  scripts/scrub-pii.py --fix [--user bricker] [--path /home/bricker]
+  scripts/scrub-pii.py --fix [--user USER] [--path /home/USER]
       rewrite each hit: owner home path -> '~/', owner username alone -> '<user>'
 
 Exit codes
