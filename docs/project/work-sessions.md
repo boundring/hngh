@@ -603,7 +603,7 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
   SWE-agent, GAIA, MAST, tau-bench, hallucination benchmarks); (3) prior-art
   delegation -> B1_agent_supervision_design_space.md (LLaMaGuard/NeMo/Guardrails
   AI/AGT, OTel GenAI, PRM/CriticGPT/Reflexion, OpenFang loop-guard, LangGraph
-  HITL). Both refs saved in ~/Projects/etc/sysconfig_mgmt/.
+  HITL). Both refs now in docs/research/.
 - Key design decisions: (a) recovery-STAGE progression, not single faults —
   escalate only on 2 consecutive unvalidated same-class faults or S3 or
   long-thinking-zero-env (evidence: intrinsic self-correction of reasoning
