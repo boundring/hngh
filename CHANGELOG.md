@@ -32,16 +32,17 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   append missing `)` at EOF.
 - Green @ `be14779`: **730/730 fast, 2471/2471 full** (was 693/2434).
 
-### Added — canonical recursive acronym + archive
-- **Decision (human): canonical expansion = `Hngh Network Goes Hngh.`** —
-  doubly recursive (Hngh first + last word; the acronym expands into
-  itself). Canonical file `data/acronyms/hngh-acronyms.txt`; all other
-  candidates archived at `data/acronyms/archive/` as best efforts toward it.
+### Added — canonical recursive acronym family + archive
+- **Decision (human): canonical = the `Hngh ... Hngh` bookend family** —
+  Hngh as both first and last word (the acronym expands into itself).
+  Winner: `Hngh Network Goes Hngh.`; honorable mention: `Hngh Network
+  Grows Hngh.` The `... Heavy` ending variants were discarded (they break
+  the self-referential shape). README tagline + family updated.
 - `scripts/gen-hngh-acronyms.py`: deterministic generator — grammar gate
   (`N_VERB_FORM`, killed agreement noise 1,064→400), Nihei/BLAME! register,
-  H-type sections, flipped series, canonical + archive outputs. Curated
-  picks + composed bookend family drafted by LLM (deepseek-v4-flash-0731
-  via openrouter) — archived, never promoted. Winner is human-selected.
+  H-type sections, flipped series, canonical + archive outputs. Composed
+  bookend family + curated picks drafted by LLM (deepseek-v4-flash-0731 via
+  openrouter) — promoted only on human approval, rest archived.
 
 ### Added — pre-public vetting + recursive-acronym tooling
 - **`docs/design/public-vetting.md`** — assessment framing for going public:

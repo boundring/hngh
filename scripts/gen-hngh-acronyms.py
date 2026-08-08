@@ -97,14 +97,16 @@ CURATED_PICKS = [
     "Hngh Never Goes Home.",
     "Hngh Network Goes Home.",
     "Hngh Now Goes Home.",
-    "Hngh Never Grows Heavy.",
-    "Hngh Never Gets Heavy.",
 ]
 
-# --- composed bookend family (Hngh ... Hngh) — best efforts toward win --
-# Same doubly-recursive shape as the winner; some keep the meaning of what
-# Hngh is (self-developing, self-healing, cost-conscious, always working).
-COMPOSED_BOOKENDS = [
+# --- composed bookend family (Hngh ... Hngh) — PROMOTED to canonical. ----
+# The owner's call (2026-08-08): the whole "Hngh ... Hngh" bookend group is
+# good — the acronym expanding into itself on both ends. Winner first:
+#   Hngh Network Goes Hngh.
+# Honorable mention (user): "Hngh Network Grows Hngh." — same register, the
+# network growing itself. The "Hngh ... Heavy" cost-discipline variants were
+# considered and DISCARDED (they break the self-referential bookend shape).
+BOOKEND_FAMILY = [
     "Hngh Network Goes Hngh.",
     "Hngh Network Grows Hngh.",
     "Hngh Network Grinds Hngh.",
@@ -112,8 +114,6 @@ COMPOSED_BOOKENDS = [
     "Hngh Never Goes Hngh.",
     "Hngh Now Generates Hngh.",
     "Hngh Next Grinds Hngh.",
-    "Hngh Never Grows Heavy.",
-    "Hngh Never Gets Heavy.",
     "Hngh Next Grows Hngh.",
 ]
 
@@ -131,14 +131,20 @@ def render_flipped(n, g, h):
 
 
 def section_entries(words, flipped):
-    """Generate the gated (H N G Hngh) forms for one H-group."""
+    """Generate the gated (H N G Hngh) forms for one H-group.
+
+    Flipped forms that END in "Heavy" are dropped: the owner discarded the
+    "... Heavy" ending register entirely ("Hngh ... Heavy" lines) — the
+    canonical bookends must end in "Hngh". Forward forms that START with
+    H-word "Heavy" are fine (they end in Hngh).
+    """
     lines = []
     for h in words:
         for n in N_WORDS:
             allowed = N_VERB_FORM[n]
             for g in allowed:
                 lines.append(render(h, n, g))
-                if flipped:
+                if flipped and h != "heavy":
                     lines.append(render_flipped(n, g, h))
     return sorted(set(lines))
 
@@ -147,18 +153,21 @@ def write_canonical():
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(CANONICAL, "w", encoding="utf-8") as f:
         f.write("# Hngh — recursive-acronym expansion\n\n")
-        f.write("Canonical (2026-08-08):\n\n")
-        f.write(f"**{WINNER}**\n\n")
-        f.write("Hngh is both the first and the last word — the acronym\n")
-        f.write("expands into itself. All other candidates are archived at\n")
-        f.write("`data/acronyms/archive/` as best efforts toward this form.\n")
+        f.write("Canonical bookend family (2026-08-08) — Hngh is both the\n")
+        f.write("first and the last word; the acronym expands into itself.\n")
+        f.write("Winner first:\n\n")
+        for line in BOOKEND_FAMILY:
+            f.write(f"- {line}\n")
+        f.write("\nAll other candidates are archived at\n")
+        f.write("`data/acronyms/archive/` as best efforts toward this group.\n")
 
 
 def write_archive(flipped):
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
     with open(ARCHIVE, "w", encoding="utf-8") as f:
         f.write("# Hngh — archived alternative expansions\n\n")
-        f.write("Best efforts toward the canonical `Hngh Network Goes Hngh.`\n")
+        f.write("Best efforts toward the canonical bookend family\n")
+        f.write("(`Hngh ... Hngh`, see `data/acronyms/hngh-acronyms.txt`).\n")
         f.write("None of these are promoted; kept for reference and possible\n")
         f.write("regional/secondary use.\n\n")
         total = 0
@@ -178,11 +187,11 @@ def write_archive(flipped):
             f.write(line + "\n")
         f.write("\n")
 
-        f.write("## Composed bookend family (Hngh ... Hngh)\n\n")
-        for line in COMPOSED_BOOKENDS:
+        f.write("## Bookend family (canonical, reference copy)\n\n")
+        for line in BOOKEND_FAMILY:
             f.write(line + "\n")
         f.write("\n")
-        total += len(CURATED_PICKS) + len(COMPOSED_BOOKENDS)
+        total += len(CURATED_PICKS) + len(BOOKEND_FAMILY)
         print(f"archive: {total} lines -> {ARCHIVE}")
 
 
