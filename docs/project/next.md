@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**M0–M9 + ACP waves + L2/L3 design + L2/L3 first build — 693/693 fast, 2434/2434 full suite green** (FiveAM; `make test` / `make test-full` verified
+**M0–M9 + ACP waves + L2/L3 design + L2/L3 build (steps 1–4) — 730/730 fast, 2471/2471 full suite green** (FiveAM; `make test` / `make test-full` verified
 2026-08-08 on main). Session detail in `docs/project/work-sessions.md` (M3–M7/M9) and
 `docs/journal/` (M0–M1). Detailed roadmap at `docs/project/roadmap.md`.
 
@@ -14,7 +14,8 @@ Starting work on Hngh from a fresh session: read this, then
 `docs/project/work-sessions.md` M9.17–M9.22 for the session-level detail.
 
 **What shipped this block (2026-08-07/08, all committed + green):**
-- **L2/L3 build — Tier-0 detectors + L3 scorer** (`0c62fa9`): `src/plugins/situation-detectors.lisp` (observation model + 8 deterministic detectors: identical-call loop, retry-without-progress, zero-progress, token-sink, failing-verification, excessive-waits, cost-exceedance, chatter-loop; emit `situation.detected` on the bus) + `src/plugins/situation-scoring.lisp` (impact×urgency×spread×confidence score, recovery-stage tracker, progressive gate-lowering → A3 actuator via `acp-steer-command`). 60 new checks; 693/693 fast, 2434/2434 full.
+- **L2/L3 judge model (step 4)** (`be14779`): `src/plugins/situation-judge.lisp` — cheap/local semantic judge for what Tier-0 can't see (faulty logic, hallucination, instruction-misread, risky-approach, wasted work). Pluggable backend (`:http` → ollama/unsloth/**vllm** direct; `:agentic` seam via `*judge-responder*` for opencode/Hermes one-offs), watchdog budget (bounded calls/run), bounded prompt (recent N obs), fail-closed verdict parsing (JSON score+confidence+reason; malformed/low-confidence never escalates), offline calibration harness (precision/recall/conf vs case-base; live gate only after calibration). 37 new checks; 730/730 fast, 2471/2471 full. **`scripts/lint-parens.py` + `make lint-parens`** gate (detect + auto-fix unbalanced parens before every test run).
+- **L2/L3 build — Tier-0 detectors + L3 scorer** (`0c62fa9`): `src/plugins/situation-detectors.lisp` (observation model + 8 deterministic detectors: identical-call loop, retry-without-progress, zero-progress, token-sink, failing-verification, excessive-waits, cost-exceedance, chatter-loop; emit `situation.detected` on the bus) + `src/plugins/situation-scoring.lisp` (impact×urgency×spread×confidence score, recovery-stage tracker, progressive gate-lowering → A3 actuator via `acp-steer-command`). 60 new checks.
 - **A1** ACP client (`c9d6f5c`): initialize/new/prompt/update/cancel/permission over stdio JSON-RPC.
 - **A2** ACP dispatch driver (`b7c5635`): run a task through an ACP agent subprocess; fail-closed.
 - **A3** ACP steering primitive (`d6328b3`): `acp-steer-command` (scored situation → :none/:steer/:interrupt) + `acp-steer` on a live session; fail-closed on non-numeric scores.
@@ -27,14 +28,14 @@ Starting work on Hngh from a fresh session: read this, then
 1. ~~L2 Tier-0 procedural detectors~~ — **DONE** (`0c62fa9`): all 8 detectors on the sentry/observation stream, model-free, unit-tested against /steer-derived fixtures.
 2. ~~L3 scoring + recovery-stage tracker~~ — **DONE** (`0c62fa9`): impact×urgency×spread×confidence, stage tracker, fail-closed.
 3. ~~Progressive gate-lowering + steer/interrupt mapping → A3~~ — **DONE** (`0c62fa9`): ladder + acp-steer-command mapping with lowered thresholds.
-4. **Judge model (cheap/local) on suspicious windows, offline-calibrated first** (NOT yet built — next wave).
-5. Case-base + review pass (self-improvement loop).
-6. Cross-agent normalization (Hermes + OpenCode, one scorer).
+4. ~~Judge model (cheap/local) on suspicious windows, offline-calibrated first~~ — **DONE** (`be14779`): situation-judge.lisp with pluggable backend, budget, fail-closed parsing, calibration harness; live gate only after offline calibration against the case-base.
+5. **Case-base + review pass (self-improvement loop)** — append scored situations + outcomes, scheduled cheap/local recalibration, web re-grounding (open taxonomy).
+6. **Cross-agent normalization** — Hermes + OpenCode traces through the same scorer; dogfood on live squads.
 
 **Launch context (squads):** `squad-up` launches seats; PM/Designer default to
-deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 91
-(A3+A4) is DONE — archive to .done/. A next-wave card (L2/L3 build) is staged at
-`~/.hngh-night/tasks/92-l2-l3-situation-scoring-build.txt` (see next.md §Up Next).
+deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 92
+(L2/L3 steps 1–3) is DONE — archived to .done/. Next-wave cards: L2/L3 step 5
+(case-base + review), step 6 (cross-agent normalization); C6 emit-cron; C4/C10.
 
 Recent sessions (see work-sessions.md for full per-session artifacts):
 - **M6.3** Emacs daemon: lifecycle (start/stop/health), policy-explicit start, outlives hngh.
@@ -48,7 +49,7 @@ Recent sessions (see work-sessions.md for full per-session artifacts):
 
 | Priority | Item | Where |
 |---|---|---|
-| P0 | **L2/L3 build steps 4–6** — judge model (cheap/local, offline-calibrated first), case-base + review loop, cross-agent normalization (steps 1–3 done `0c62fa9`) | `docs/design/situation-scoring.md` §8; hngh |
+| P0 | **L2/L3 build steps 5–6** — case-base + review loop (self-improvement), cross-agent normalization (steps 1–4 done `be14779`) | `docs/design/situation-scoring.md` §8; hngh |
 | P0 | **M9 C4** start-now/pause-on-cause; **C10** MisakaNet failure shield (design-only now) | hngh; `docs/design/squad-autonomy.md` |
 | P0 | **M9 C6** planner cycle (roadmap → task queue → squad dispatch) | hngh |
 | P0 | **M9 C8/C9** benchmark-runner strategy + nightly benchmark cron — strategy exists (`docs/design/benchmark-sourcing.md`), runner + cron unbuilt; add `--run` wrapper to the probe runner | hngh |

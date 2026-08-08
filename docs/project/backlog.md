@@ -115,3 +115,16 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 | Backup strategy for `state/plugins/` | M1.10 (backup manager, B7) |
 | KDE notification protocol | M1.13 (B10, optional) |
 | **Encoded filename metadata for agent direction** | Design seed — `docs/design/encoded-filename-metadata.md`. Evaluate later: prior art, decode-primitive prototype, token-scope ROI, beans/dispatch-tree interplay. Not on any current build path. |
+
+## MisakaNet lesson candidates (submission backlog)
+
+Ideas learned this period worth submitting to MisakaNet as lessons (search is
+free; lesson reading paid). Not submitted yet — review + submit when suitable:
+
+| Lesson candidate | Reason it's valuable |
+|---|---|
+| Paren linter: multi-line docstrings break per-line depth counting | False "unclosed form" on files that compile fine; fix = single full-text pass with cross-line string state (`scripts/lint-parens.py`). |
+| Shared test package: duplicate helper names clobber across files | `hngh.tests` is one package; later-loaded test file's `%result` won, causing `UNKNOWN-KEYWORD-ARGUMENT :ARTIFACTS` in an unrelated suite. Namespace per-file helpers. |
+| Judge verdicts: (coerce x 'double-float) breaks `=` equality in tests | `0.8d0` ≠ `0.8` under `=`; tests must compare double literals (`0.8d0`) or the code returns single floats. |
+| `:none` keyword is truthy in CL | Calibration false-positive counting: `(not (null :none))` is T; check `(eq x :none)` explicitly for sentinel values. |
+| Lisp `reserve-judge-call` missing parens → unbound variable | `(when judge-budget-ok-p)` (missing call parens) reads as an unbound variable at runtime; fiveam reports it only when the test invokes the function. |

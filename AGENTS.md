@@ -38,7 +38,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 
 ## Current state (2026-08-08)
 
-- **Tests**: `make test` green — 693/693 fast @ 0c62fa9 (L2/L3 Tier-0 situation detectors + L3 scorer built; W5 prompt matrix committed: generate-prompt, 36-skeleton library, bone fillers, flesh pass, D-040 synced model selection, prompt cache)
+- **Tests**: `make test` green — 730/730 fast @ be14779 (L2/L3 Tier-0 situation detectors + L3 scorer + semantic judge built; W5 prompt matrix committed: generate-prompt, 36-skeleton library, bone fillers, flesh pass, D-040 synced model selection, prompt cache)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
@@ -52,7 +52,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Changelog**: every user-visible or architecture-relevant change gets a dated, categorized entry in `CHANGELOG.md` (Keep a Changelog format) as part of the commit — same discipline as the journal + work-sessions records.
 - **Test-count lint**: `make lint-counts` — procedural, no LLM. Scans current-state refs in AGENTS.md + roadmap.md
 - **hngh-up plugin**: exists with design doc at `docs/design/hngh-up.md` (goal-driven squad spin-up, procedural questionnaire, strategy system, autonomous continuation, social sharing)
-- **M9 squad autonomy**: W1-2 done (C1, C2, C3, C5). W3 in progress (C7 PM-first-prompt generator done; C4 + C10 design-only). Wave 2-4 plugins (file-watcher, squad-dispatch, beans, squad-resources) staged 03282f3, wired into main.lisp lifecycle. **W5 prompt matrix built** (docs/design/prompt-matrix.md, per-role chains synced to D-040 in M9.5): generate-prompt, 36 skeletons, bone fillers, flesh pass, model selection, prompt cache — @ b3c5274. **L2/L3 situation-detection + scoring built** (docs/design/situation-scoring.md §8 steps 1–3): observation model + 8 Tier-0 detectors (situation-detectors.lisp) + L3 scorer/recovery-tracker/gate-lowering → A3 (situation-scoring.lisp) — 693/693 fast @ 0c62fa9. Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
+- **M9 squad autonomy**: W1-2 done (C1, C2, C3, C5). W3 in progress (C7 PM-first-prompt generator done; C4 + C10 design-only). Wave 2-4 plugins (file-watcher, squad-dispatch, beans, squad-resources) staged 03282f3, wired into main.lisp lifecycle. **W5 prompt matrix built** (docs/design/prompt-matrix.md, per-role chains synced to D-040 in M9.5): generate-prompt, 36 skeletons, bone fillers, flesh pass, model selection, prompt cache — @ b3c5274. **L2/L3 situation-detection + scoring + judge built** (docs/design/situation-scoring.md §8 steps 1–4): observation model + 8 Tier-0 detectors (situation-detectors.lisp) + L3 scorer/recovery-tracker/gate-lowering → A3 (situation-scoring.lisp) + semantic judge (situation-judge.lisp, pluggable backend/budget/calibration) — 730/730 fast @ be14779. **`make lint-parens`** paren gate wired into test-suite. Design at `docs/design/squad-autonomy.md`. Plan at `.hermes/plans/2026-08-03_squad-automation-bootstrapping.md`
 - **squad-up**: `~/.local/bin/squad-up` — 6-seat cascading Konsole launcher. Config: `~/.hngh-night/squad-seats.conf`
 
 

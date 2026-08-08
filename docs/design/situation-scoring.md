@@ -93,6 +93,16 @@ ground, see §6). The judge consumes a *bounded* window (recent N tool calls +
 the current/nearby thought + last message), not the whole transcript (bounded
 prompt, like `consolidate.py`'s KNOWLEDGE_BUDGET principle).
 
+**Judge backend is pluggable** (user direction 2026-08-08). `:http` = a direct
+OpenAI-compatible call to any cheap/local endpoint — ollama, unsloth, **vllm**,
+or gemma-scale local — the deterministic low-cost default (mirrors the
+model-probes HTTP primitive). `:agentic` = a one-off agentic session (opencode,
+Hermes, or even Pi) invoked for the judgment, for windows where a richer,
+verbatim-context reader is worth the extra latency/cost. Both resolve to the
+same structured verdict (score + one-line why + confidence) so the rest of the
+pipeline does not care which backend produced it. Bounded + fail-closed either
+way (§6).
+
 Judges map the six target situations + MAST's validated taxonomy:
 
 | Target situation | Judge question (yes/no-ish, scored) | Primary input |

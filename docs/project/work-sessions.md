@@ -663,3 +663,22 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Pitfall #27 in the multi-agent-coordination skill corrected: deepseek provider exists but its models are simply named; `-0731` is openrouter's catalog name.
 - **Design direction (user)** — squad startup should integrate ACP calls (kick seats over `session/prompt` with a text content block; the durable fix to the paste-race, pitfall #23) while KEEPING the cascading Konsole windows so each seat's session stays visually observable. Recorded in journal 2026-08-08; build is a later wave (agent-client-protocol.md).
 - No repo code change in this session; journal + work-sessions entry are the only repo edits.
+
+### Session M9.26: L2/L3 Tier-1 semantic judge built (step 4) + paren lint gate
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- `src/plugins/situation-judge.lisp` — the cheap/local semantic judge:
+  - Pluggable backend `:http` (direct OpenAI-compatible chat to ollama/unsloth/vllm, mirrors model-probes curl primitive) with an `:agentic` seam via `*judge-responder*` (one-off opencode/Hermes sessions); responder injection is the test seam too.
+  - `build-judge-prompt` — bounded (recent N obs), one-line JSON verdict request; `parse-verdict` fail-closed (only valid score/confidence ranges + known situation keywords; malformed/non-JSON → NIL).
+  - `judge-situation` — reserve budget → build → invoke → parse; fail-closed `:error` verdicts (no budget / no response / unparseable) that never escalate.
+  - `calibrate-judge` — offline precision/recall/confidence-calibration against a labeled case-base (`calibration` struct; `calibrated` flag only when ≥80% accuracy + ≥70% conf agreement); live gate opens only after calibration is recorded.
+- Wired into main.lisp lifecycle, packages.lisp, hngh.asd, Makefile fast suite.
+- Tests: test-situation-judge.lisp — 37 checks (prompt bounding, parsing incl. reject-invalid, budget gating, fail-closed paths, calibration perfect/wrong, status shape). Network-free: the dead-endpoint path is simulated by a nil-returning responder (real curl would add ~5s and blow the 15s fast-suite budget).
+- **Bugs found + fixed** (recorded in skill sbcl-common-lisp-patterns #13–14):
+  - `reserve-judge-call` had `(when judge-budget-ok-p` (missing call parens) → unbound variable at runtime.
+  - `parse-verdict` coerces to double-float; tests compared single-float literals (`0.8` ≠ `0.8d0` under `=`).
+  - Calibration FP count treated `:none` as truthy — `(not (null :none))` is T; fixed explicit `(eq x :none)` checks.
+  - **Symbol collision across test files**: `%obs`/`%call`/`%result` defined in both test-situation-detectors.lisp and test-situation-judge.lisp in the shared `hngh.tests` package — later-loaded copy clobbered the detectors' `%result` (`UNKNOWN-KEYWORD-ARGUMENT :ARTIFACTS`). Renamed judge helpers `%j-*`.
+- **`scripts/lint-parens.py` + `make lint-parens`** (user direction): procedural paren guard wired into `test-suite`. Single full-text pass handling strings/comments/char-literals; `--fix` appends missing `)` at EOF. First version false-positived on multi-line docstrings (per-line depth state); rewrote as cross-line string-state pass — **zero false positives on the full tree**, still catches a deliberately-broken fixture.
+- **Verified**: 730/730 fast (lint-parens gate runs first, exit 0, 4.5s < 15s budget), 2471/2471 full, exit 0. Baseline before work: 693/693 fast, 2434/2434 full.
+- MisakaNet lesson candidates for the paren/docstring/CL-test gotchas added to backlog (submission free; search free; lesson reading is the paid side — noted correctly).
+- Docs updated: AGENTS.md, next.md, roadmap.md (status + design-artifacts row), CHANGELOG, backlog, work-sessions M9.26. Committed.
