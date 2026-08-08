@@ -757,7 +757,11 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:acp-prompt
            #:acp-cancel
            #:acp-request-permission
-           #:acp-register-update-handler))
+           #:acp-register-update-handler
+           #:acp-extract-text
+           #:acp-run-task
+           #:acp-run-task-on-connection
+           #:*spawn-timeout*))
 
 (defpackage :hngh.plugins.signals
   (:documentation "Signals (C6 W1.5) — typed agent↔agent control channel over the event bus: fixed-code semantic ACK/NAK/control (social-senses §3), durable signal inbox, and thin exported-transition mapping.")

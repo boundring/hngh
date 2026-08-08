@@ -526,3 +526,21 @@ are string-keyed hash-tables (camelCase; yason encodes HT as objects, plain
 lists as arrays — caught via mock fixture bug). Tests: in-CL mock agent over
 stdio pipes, 11 checks, 100%. Full suite 2268/2268, lint 607. No ACP schema
 SDK adopted — CL owns it, protocolVersion pinned, per design decision.
+
+### Session M9.18: ACP driver built (Wave A2) + CSS planted
+**Status**: Built + verified (2026-08-07).
+- acp-run-task-on-connection: dispatch driver core over an existing ACP
+  connection — initialize, session/new, prompt, capture result (via
+  acp-extract-text, which handles ACP content blocks) + observation count;
+  register update handler BEFORE the turn (reader would throw on unknown
+  inbound method otherwise). fail-closed returns :failed.
+- acp-run-task: subprocess wrapper (spawn via uiop:launch-program, connect,
+  delegate, teardown). fail-closed: bad command returns :failed, never throws
+  (caught by test — launch throws without the handler-case around it).
+- Tests: 8 A2/regression (total acp-client 19/19, 100%): driver round-trip,
+  fail-closed bad command, camelCase regression, midturn negotiation.
+- Full suite 2276/2276, lint 615.
+- Note: gave up on a python-subprocess ACP-mock test (stdout-buffering +
+  jsonrpc thread race in this env); instead tested the driver core against the
+  deterministic in-CL mock over stdio pipes. session/update observation
+  counting deferred to subprocess-integration (A2 follow-on).

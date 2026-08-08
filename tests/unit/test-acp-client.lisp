@@ -27,11 +27,13 @@ lists (incl. alists) as arrays."
           do (setf (gethash k h) v))
     h))
 
-(defun %mock-agent-server (input output)
+(defun %mock-agent-server (input output &key (emit-update nil))
   "Run a JSON-RPC server on INPUT/OUTPUT exposing a minimal ACP agent:
 initialize (returns protocol v1 + agentCapabilities), session/new,
-session/prompt. Runs in the calling thread (call from a worker thread in the
-tests)."
+session/prompt. When EMIT-UPDATE is T, session/prompt also emits one
+session/update notification on the stdio stream before responding (the
+observe-stream case the driver must handle). Runs in the calling thread
+(call from a worker thread in the tests)."
   (let ((server (jsonrpc:make-server)))
     (jsonrpc:expose
      server "initialize"
@@ -52,8 +54,12 @@ tests)."
     (jsonrpc:expose
      server "session/prompt"
      (lambda (params)
-       (declare (ignore params))
-       (%obj "stopReason" "end_turn" "content" nil)))
+       ;; Echo the prompt text so the driver can assert the round-trip.
+       (let* ((prompt (gethash "prompt" params))
+              (first (and (listp prompt) (car prompt)))
+              (text (or (and first (gethash "text" first)) "")))
+         (%obj "stopReason" "end_turn"
+               "content" (%obj "type" "text" "text" (format nil "echo:~A" text))))))
     (jsonrpc:server-listen server :mode :stdio
                            :input input :output output)))
 
@@ -130,3 +136,38 @@ with CONN bound, then disconnect and destroy the server thread."
     (is (eql 1 (gethash "protocolVersion" ht)))
     (is (equal "s1" (gethash "sessionId" ht)))
     (is-false (gethash "protocolversion" ht))))
+
+;;; --- Dispatch driver (A2) --------------------------------------------------
+
+(test acp-driver-runs-task-on-connection
+  ;; End-to-end of the dispatch driver core against the in-CL mock agent over
+  ;; real stdio pipes (deterministic — no subprocess flakiness): it must
+  ;; initialize, create a session, prompt, and return the echoed result with
+  ;; the turn's stop reason + session id.
+  ;;
+  ;; Note: session/update observation counting is not asserted here. It
+  ;; depends on the agent emitting in-turn notifications and the jsonrpc
+  ;; library's notification dispatch, which the in-CL mock cannot exercise
+  ;; without racing the response stream — covered separately / at the
+  ;; subprocess-integration level (A2 follow-on), not in this unit.
+  (with-mock-agent (conn)
+    (let ((result (hngh.plugins.acp-client:acp-run-task-on-connection
+                   conn "please build the thing"
+                   :cwd "/tmp" :timeout 15)))
+      (is (eql :done (getf result :status)))
+      (is (equal "echo:please build the thing" (getf result :result)))
+      ;; ACP discriminator strings are snake_case, so stopReason "end_turn"
+      ;; interns to :END_TURN (not :END-TURN).
+      (is (eql :END_TURN (getf result :stop-reason)))
+      (is (stringp (getf result :session-id)))
+      (is (null (getf result :error)))
+      (is (integerp (getf result :observations))))))
+
+(test acp-driver-fails-closed-on-bad-command
+  ;; A spawn command that cannot run must return :failed via acp-run-task
+  ;; (the subprocess wrapper), never hang or throw.
+  (let ((result (hngh.plugins.acp-client:acp-run-task
+                 (list "definitely-not-a-real-binary-xyz") "task"
+                 :cwd "/tmp" :timeout 5 :spawn-timeout 5)))
+    (is (eql :failed (getf result :status)))
+    (is (stringp (getf result :error)))))

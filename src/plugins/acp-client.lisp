@@ -120,6 +120,17 @@ Never assumes: absence of an injection capability => :interrupt."
       ((gethash "steer" (or caps (make-hash-table))) :steer)
       (t :interrupt))))
 
+(defun acp-extract-text (content)
+  "Extract the concatenated text from ACP session/prompt CONTENT — a list of
+content blocks (each a hash-table with a :type and :text), or a single
+hash-table. Returns a string (possibly empty)."
+  (if (listp content)
+      (apply #'concatenate 'string
+             (loop for block in content
+                   for text = (and (hash-table-p block) (gethash "text" block))
+                   when (stringp text) collect text))
+      (or (and (hash-table-p content) (gethash "text" content)) "")))
+
 ;;; --- Session lifecycle ----------------------------------------------------
 
 (defun acp-session-new (conn &key cwd mcp-servers title)
@@ -166,6 +177,74 @@ Called by the human-gate path after scoring/approval."
                     ;; Notifications expect no reply; returning nil is fine.
                     nil))
   t)
+
+;;; --- Plugin lifecycle -----------------------------------------------------
+
+(defvar *spawn-timeout* 30
+  "Seconds to wait for an agent subprocess to become ready (init handshake).")
+
+(defun acp-run-task-on-connection (conn task &key (cwd "/") (timeout 300))
+  "Dispatch driver core (Wave A2), operating on an already-connected
+ACPCONNECTION: initialize, create a session, prompt with TASK, capture the
+turn result + any session/update observation count. Register the update
+handler BEFORE prompting — the agent's session/update notifications arrive
+DURING the turn and the reading thread would throw on an unknown inbound
+method if no handler is registered yet.
+
+Returns:
+  (:status :done|:failed :result <text> :session-id <id>
+   :stop-reason <kw-or-nil> :error <msg-or-nil> :observations <n>)
+
+Fail-closed: any unhandled condition returns :failed, never hangs."
+  (handler-case
+      (progn
+        (acp-initialize conn)
+        (let* ((sid (acp-session-new conn :cwd cwd))
+               (obs-lock (bt:make-lock "acp-obs"))
+               (obs-count 0))
+          (acp-register-update-handler
+           conn (lambda (u)
+                  (declare (ignore u))
+                  (bt:with-lock-held (obs-lock) (incf obs-count))))
+          (let ((resp (acp-prompt conn sid task :timeout timeout)))
+            (list :status :done
+                  :result (acp-extract-text (gethash "content" resp))
+                  :session-id sid
+                  :stop-reason (and (gethash "stopReason" resp)
+                                    (intern (string-upcase (gethash "stopReason" resp))
+                                            :keyword))
+                  :error nil
+                  :observations obs-count))))
+    (condition (c)
+      (list :status :failed :result nil :session-id nil
+            :stop-reason nil :error (princ-to-string c) :observations 0))))
+
+(defun acp-run-task (command task &key (cwd "/") (timeout 300) (spawn-timeout *spawn-timeout*))
+  "Run TASK through an ACP agent subprocess spawned by COMMAND (a list of
+program + args, e.g. '(\"opencode\" \"acp\")). Spawns the agent, connects over
+stdio, then delegates to ACP-RUN-TASK-ON-CONNECTION, and tears down the
+subprocess (disconnect + terminate). Returns the same result plist.
+Fail-closed: a command that cannot launch returns :failed, never throws."
+  (declare (ignore spawn-timeout))
+  (handler-case
+      (let* ((proc (uiop:launch-program command
+                                        :input :stream :output :stream :error :output
+                                        :wait nil))
+             (input (uiop:process-info-input proc))
+             (output (uiop:process-info-output proc))
+             (conn nil)
+             (result nil))
+        (unwind-protect
+            (progn
+              (setf conn (acp-connect-stdio output input))
+              (setf result (acp-run-task-on-connection conn task
+                                                       :cwd cwd :timeout timeout))
+              result)
+          (when conn (ignore-errors (acp-disconnect conn)))
+          (ignore-errors (uiop:terminate-process proc))))
+    (condition (c)
+      (list :status :failed :result nil :session-id nil
+            :stop-reason nil :error (princ-to-string c) :observations 0))))
 
 ;;; --- Plugin lifecycle -----------------------------------------------------
 
