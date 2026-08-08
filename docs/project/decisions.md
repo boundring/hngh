@@ -275,3 +275,19 @@ Architecture-level decisions live in `docs/design/architecture-decision-record.m
 **Decision**: model-strategy.md Misaka Guard pre-flight now queries the misakanet MCP; AGENTS.md MCP section lists nothumansearch; cogmem + misakanet are candidates to replace OptMem for PM communication (pending design review).
 **Rationale**: Tools are live; the design doc referenced a pre-MCP gh api call.
 
+
+### ADR-042: Drop cogmem (2026-08-07)
+**Context**: D-041 listed cogmem as a candidate to replace OptMem for PM
+communication, and cogmem was wired as an MCP server (Hermes, OpenCode) with a
+`cogmem-recall` systemd daemon.
+**Decision**: cogmem is dropped from all use (Hermes, OpenCode, Hngh).
+Evaluation found its automated pipeline (capture/consolidation/promote) is
+hard-wired to Claude via `ANTHROPIC_API_KEY` (api.anthropic.com, claude-sonnet
+for consolidation) — unusable without an Anthropic key, which conflicts with
+the cost-conservation policy (anything >$0.10/M tokens is strategic reserve).
+**Actions**: `cogmem` MCP removed from Hermes config and OpenCode; uv tool
+uninstalled; `cogmem-recall` systemd unit stopped/removed; `~/.claude/cogmem`
+and `~/.local/share/uv/tools/cogmem` removed. OptMem remains the local PM
+memory store; the two cogmem notes were already in optmem (nothing recoverable
+lost).
+**Supersedes**: the cogmem portion of D-041.

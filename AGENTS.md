@@ -69,11 +69,10 @@ messages (body or trailers), memo notes, README status lines.
 - MisakaNet MCP (`misakanet_search`): failure-lesson lookup before re-debugging
   (SQLite/git lockups, DCO, pip). Server: ~/.local/share/misakanet; update via
   `git pull`. Lessons are community-contributed — review commands before running.
-- cogmem MCP (`recall`/`note`): local agent memory. Vault ~/.claude/cogmem; warm
-  daemon `systemctl --user cogmem-recall`. No Claude Code hooks — recall only.
 - nothumansearch MCP (`search_agents`/`verify_mcp`): agentic-readiness index for
   API/service discovery; pairs with depscope (supply-chain checks).
 - All auto-start in Hermes and OpenCode (global opencode config).
-- Design note (2026-08-05): cogmem + misakanet are candidates to replace OptMem
-  for PM communication — see journal/20260805-model-mandate.md before changing
-  the coordination contract.
+- Design note (2026-08-05) proposed cogmem + misakanet as candidates to replace
+  OptMem for PM communication. **cogmem was dropped 2026-08-07** (Anthropic-key
+  dependency conflicts with cost-conservation policy); only misakanet remains a
+  candidate. See journal/20260805-model-mandate.md for context.

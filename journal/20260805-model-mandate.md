@@ -43,6 +43,7 @@ tier; qwen3.7-flash vision looker; free/local models as last-resort fallbacks.
     with tests, via make test gate.
 - OptMem -> cogmem/misakanet for PM communication: design review before change
   (touches coordination contract in AGENTS.md + 14 docs).
+  [2026-08-07: cogmem DROPPED — see ADR-042; only misakanet remains a candidate.]
 - Verify deepseek-v4-flash-0731 price on OpenRouter catalog (footnote \*).
 - Remaining docs with model refs (prompt-matrix, projected-design-sessions,
   squad-metabolism, dispatch-tree, hngh-up, mission-control, agent-platoons,
