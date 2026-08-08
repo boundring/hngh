@@ -38,12 +38,15 @@ sourcing design brief + a working probe runner.
 
 The **ACP layer** ships (A1–A4): Hngh drives or serves any ACP-capable agent
 (client over newline-framed JSON-RPC, dispatch driver, scored steering,
-server). On top of that, the **L2/L3 auto-steering brain** is built
-(steps 1–3): 8 Tier-0 procedural situation detectors feeding an L3 scorer
-with a recovery-stage tracker and progressive gate-lowering, mapped to the A3
-actuator. Full design: `docs/design/situation-scoring.md`.
+server). On top of that, the **L2/L3 auto-steering brain** is built (steps 1–4): 8
+Tier-0 procedural situation detectors feeding an L3 scorer with a
+recovery-stage tracker and progressive gate-lowering, mapped to the A3
+actuator, plus the Tier-1 semantic judge (cheap/local model, pluggable
+backend, watchdog budget, offline calibration before live use). Full design:
+`docs/design/situation-scoring.md`. Steps 5–6 (case-base + review loop,
+cross-agent normalization) remain.
 
-**693/693 fast tests green** (`make test`, FiveAM), **2434/2434 full suite**
+**730/730 fast tests green** (`make test`, FiveAM), **2471/2471 full suite**
 (`make test-full`). Current sessions: `docs/project/work-sessions.md`.
 Changelog at `CHANGELOG.md`. Detailed roadmap at `docs/project/roadmap.md`.
 
