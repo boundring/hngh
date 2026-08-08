@@ -25,9 +25,11 @@ Changes to architecture require updating these documents first, then implementin
 2. Create a feature branch: `git checkout -b session/M0.X-short-name`
 3. Implement, committing atomically per logical unit
 4. Write a journal entry in `docs/journal/YYYY-MM-DD.md`
-5. Push and open a PR
-6. Review (human or AI-assisted)
-7. Merge to `main`
+5. Update the changelog (`CHANGELOG.md`) — add a dated, categorized entry for
+   any user-visible or architecture-relevant change
+6. Push and open a PR
+7. Review (human or AI-assisted)
+8. Merge to `main`
 
 ## Commit Convention
 
