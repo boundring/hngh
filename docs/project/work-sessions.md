@@ -652,12 +652,14 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Docs updated: AGENTS.md, next.md, roadmap.md (status + M-table + design-artifacts row for situation-scoring.md), work-sessions M9.24. Committed. Task 92 → archive to .done/.
 - Note (design idea for later): the mission-control/dashboard TUI could render the numeric streams (impact/urgency/spread/confidence, detector hit tables) in the repo's existing Nihei/BLAME! aesthetic as stat-sheet surfaces — presentation-layer follow-on, not built this wave.
 
-### Session M9.25: squad seat startup fix — opencode provider prefix
+### Session M9.25: squad seat startup fix — opencode model-string naming
 **Status**: Fixed + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
 - Symptom (user-reported): "opencode squad members don't start up." Diagnosed via the headless kick squad-up uses:
   - `opencode run -m deepseek/deepseek-v4-flash-0731` → `UnknownError: Unexpected server error` (seat "starts" — konsole window up, squad-up reports RUNNING — but the first prompt dies on model resolution).
   - `set -a; . ~/.hermes/.env; set +a; opencode run -m openrouter/deepseek/deepseek-v4-flash-0731` → `OPENCODE_SMOKE_OK`.
-- Root cause: coder/worker seats run the **opencode CLI**, whose model strings need opencode's provider prefix `openrouter/...`. The config carried `deepseek/deepseek-v4-flash-0731`, and opencode has no provider literally named `deepseek`. Not an auth problem — `OPENROUTER_API_KEY` is in `~/.hermes/.env` (sourced by the interactive shell, absent from the Hermes terminal env; key located by name, never printed).
-- Fix: `~/.hngh-night/squad-seats.conf` — `SEAT_MODEL[coder]` and `SEAT_MODEL[worker]` → `openrouter/deepseek/deepseek-v4-flash-0731`, with a NOTE comment explaining the prefix rule (opencode CLI = `openrouter/...`, Hermes CLI = `deepseek/...`). `squad-up --list` parses clean.
-- Pitfall #27 in the multi-agent-coordination skill corrected: real cause is the provider-prefix mismatch (auth present), not missing credentials.
-- No repo code change; journal + this entry are the only repo edits (not committed to this point — see git state).
+- Root cause: opencode recognizes the `deepseek` provider but only offers simply-named models there (`deepseek-v4-flash`, `deepseek-v4-pro`); the `-0731` suffix is **openrouter's catalog name**, not a deepseek-provider model. The config's `deepseek/deepseek-v4-flash-0731` never resolved. `deepseek-v4-flash` == `deepseek-v4-flash-0731` (deepseek serves that as its latest under a simpler name). Auth was fine — `OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY` exported in `~/.hermes/.env` (lines 507/496, sourced by the interactive shell, absent from the Hermes terminal env; located by name, never printed).
+- Routing decision: we use **Flash** (the smarter model for now) and default to the **openrouter** route because it's usually cheaper — a cost preference, not a rule; `deepseek/deepseek-v4-flash` (direct API) is the valid alternate when it prices lower.
+- Fix: `~/.hngh-night/squad-seats.conf` — `SEAT_MODEL[coder]` and `SEAT_MODEL[worker]` → `openrouter/deepseek/deepseek-v4-flash-0731`, with corrected NOTE comments explaining deepseek-provider vs openrouter-catalog naming. `squad-up --list` parses clean.
+- Pitfall #27 in the multi-agent-coordination skill corrected: deepseek provider exists but its models are simply named; `-0731` is openrouter's catalog name.
+- **Design direction (user)** — squad startup should integrate ACP calls (kick seats over `session/prompt` with a text content block; the durable fix to the paste-race, pitfall #23) while KEEPING the cascading Konsole windows so each seat's session stays visually observable. Recorded in journal 2026-08-08; build is a later wave (agent-client-protocol.md).
+- No repo code change in this session; journal + work-sessions entry are the only repo edits.
