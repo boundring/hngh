@@ -99,6 +99,7 @@ complete design specification.
 | **Work session plan** | [`docs/project/work-sessions.md`](docs/project/work-sessions.md) |
 | **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) |
 | **Auto-steering (L2/L3)** | [`docs/design/situation-scoring.md`](docs/design/situation-scoring.md) |
+| **Public vetting (pre-public)** | [`docs/design/public-vetting.md`](docs/design/public-vetting.md) |
 | **ACP — agent client protocol** | [`docs/design/agent-client-protocol.md`](docs/design/agent-client-protocol.md) |
 | **Emacs mission-control dashboard** (panels, commands) | [`emacs/README.md`](emacs/README.md) |
 

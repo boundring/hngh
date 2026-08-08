@@ -32,6 +32,17 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   append missing `)` at EOF.
 - Green @ `be14779`: **730/730 fast, 2471/2471 full** (was 693/2434).
 
+### Added — pre-public vetting + recursive-acronym tooling
+- **`docs/design/public-vetting.md`** — assessment framing for going public:
+  self-improvement-loop honesty, feature parity vs Odysseus & Agent Zero
+  (docs-first research), multi-agent-tool ACP/MCP/A2A surface, public
+  cost-vs-capability accounting, multi-instance network (design seed,
+  post-v1). Registered in backlog + roadmap (not scheduled build).
+- **`scripts/gen-hngh-acronyms.py`** — recursive-acronym enumerator for
+  "Hngh" (H-N-G-<Hngh> in the Nihei/BLAME! register, sentence-grammar gate).
+  `data/acronyms/hngh-acronyms.txt`: reproducible expansions;
+  "hermes next go Hngh" / "home network goes Hngh" are in the space.
+
 ### Added
 - **Design seed** — `docs/design/encoded-filename-metadata.md`: captured the
   standing idea of a standardized, decodable filename convention for agent
