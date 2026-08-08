@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (596/596 fast green @ 78cfde9, full suite green; C4 + C10 design-only). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (607/607 fast green @ 78cfde9, full suite green; C4 + C10 design-only). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
 **Last updated**: 2026-08-06
 
 ---
@@ -13,7 +13,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
 | M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
-| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (596/596 fast tests passing @ 78cfde9) |
+| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (607/607 fast tests passing @ 78cfde9) |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
@@ -45,7 +45,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
 
-**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 596/596 fast green, full suite green).
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 607/607 fast green, full suite green).
 
 ### Deliverables
 
@@ -150,10 +150,10 @@ and benchmark squads; nightly cron turns that into a real dataset.
 
 | Wave | Capabilities | Status |
 |---|---|---|
-| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (596/596 tests @ 78cfde9) |
-| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 596/596 tests @ 78cfde9; wired main.lisp) |
+| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (607/607 tests @ 78cfde9) |
+| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 607/607 tests @ 78cfde9; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope + signals + ledger/status; 596/596 fast, 2237/2237 full; schedule `--emit` from cron when ready) |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope + signals + ledger/status; 607/607 fast, 2248/2248 full; schedule `--emit` from cron when ready) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 | 6 | **Live orchestration** (observe → guard-rail → steer → plugins → optimize): hngh-mc observe + TUI peep depth, procedural evidence-check + multi-pass dev/review, priority-scored /steer + opencode-correct, Hermes/opencode plugins, shadow-then-promote param optimizer | **Not started** (design `live-orchestration.md` L1–L5; **steering surface de-risked 2026-08-07: ACP servers on both Hermes + opencode + opencode HTTP/SSE control plane** — build the plugin as an ACP client; L2 guard-rails + L5 param opt ride on C4/C10 + C8/C9 gating) |
 
