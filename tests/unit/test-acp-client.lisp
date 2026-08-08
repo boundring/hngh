@@ -171,3 +171,47 @@ with CONN bound, then disconnect and destroy the server thread."
                  :cwd "/tmp" :timeout 5 :spawn-timeout 5)))
     (is (eql :failed (getf result :status)))
     (is (stringp (getf result :error)))))
+
+;;; --- Steering via ACP (A3) -------------------------------------------------
+
+(test acp-steer-command-mapping-thresholds
+  ;; Pure mapping: score -> action. Thresholds default steer>0.6, interrupt>=0.9.
+  (is (eql :interrupt (hngh.plugins.acp-client:acp-steer-command 0.95)))
+  (is (eql :interrupt (hngh.plugins.acp-client:acp-steer-command 0.9)))
+  (is (eql :steer (hngh.plugins.acp-client:acp-steer-command 0.9 :interrupt-above 0.95)))
+  (is (eql :steer (hngh.plugins.acp-client:acp-steer-command 0.7)))
+  ;; Boundaries: >= threshold acts (at/above, not strict above).
+  (is (eql :steer (hngh.plugins.acp-client:acp-steer-command 0.6)))
+  (is (eql :none (hngh.plugins.acp-client:acp-steer-command 0.59)))
+  (is (eql :none (hngh.plugins.acp-client:acp-steer-command 0.2)))
+  (is (eql :none (hngh.plugins.acp-client:acp-steer-command 0.0)))
+  ;; Custom thresholds.
+  (is (eql :steer (hngh.plugins.acp-client:acp-steer-command
+                   0.5 :steer-above 0.4 :interrupt-above 0.8))))
+
+(test acp-steer-command-fails-closed-on-non-number
+  ;; A non-number score (e.g. nil from a broken scorer) => :none, never a
+  ;; higher escalation tier guessed.
+  (is (eql :none (hngh.plugins.acp-client:acp-steer-command nil)))
+  (is (eql :none (hngh.plugins.acp-client:acp-steer-command "high"))))
+
+(test acp-steer-applies-on-connection
+  ;; Apply :interrupt on a real in-CL mock session: cancel (notification, no
+  ;; response) then reprompt with guidance; the mock echoes the guidance text.
+  (with-mock-agent (conn)
+    (hngh.plugins.acp-client:acp-initialize conn)
+    (let ((sid (hngh.plugins.acp-client:acp-session-new conn :cwd "/tmp")))
+      (let ((result (hngh.plugins.acp-client:acp-steer
+                     conn sid :interrupt "stop, go left instead" :timeout 5)))
+        (is (eql :interrupt (getf result :action)))
+        (is (equal "echo:stop, go left instead" (getf result :result)))))))
+
+(test acp-steer-none-is-a-noop
+  ;; :none command => (:action :none), no wire traffic beyond session exists.
+  (with-mock-agent (conn)
+    (hngh.plugins.acp-client:acp-initialize conn)
+    (let ((sid (hngh.plugins.acp-client:acp-session-new conn :cwd "/tmp")))
+      (let ((result (hngh.plugins.acp-client:acp-steer
+                     conn sid :none "should not be sent")))
+        (is (eql :none (getf result :action)))
+        (is (null (getf result :result)))))))

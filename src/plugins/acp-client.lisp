@@ -246,6 +246,49 @@ Fail-closed: a command that cannot launch returns :failed, never throws."
       (list :status :failed :result nil :session-id nil
             :stop-reason nil :error (princ-to-string c) :observations 0))))
 
+;;; --- Steering via ACP (A3) -------------------------------------------------
+;;;
+;;; Wave A3 (docs/design/agent-client-protocol.md §8): map a SCORED SITUATION
+;;; about a running member to an ACP action — steer via session/prompt,
+;;; interrupt via session/cancel + reprompt, or take no action. request_permission
+;;; is the human-gate for gated dispatch actions (reuses acp-request-permission).
+
+(defun acp-steer-command (score &key (steer-above 0.6) (interrupt-above 0.9))
+  "Map a SCORED SITUATION (a number 0.0–1.0, higher = more urgent) to an ACP
+steering action keyword:
+  :none       — score below the steer threshold; let the member continue.
+  :steer      — score above STEER-ABOVE but below INTERRUPT-ABOVE: send a
+                follow-up session/prompt to redirect mid-turn.
+  :interrupt  — score at/above INTERRUPT-ABOVE: session/cancel + reprompt.
+Fail-closed: a non-number score returns :none (never guesses a higher tier)."
+  (cond ((not (numberp score)) :none)
+        ((>= score interrupt-above) :interrupt)
+        ((>= score steer-above) :steer)
+        (t :none)))
+
+(defun acp-steer (conn session-id command guidance &key (timeout 300))
+  "Apply a steering COMMAND (:steer | :interrupt) to SESSION-ID on CONN, with
+GUIDANCE text for the reprompt.
+  :steer      -> acp-prompt with guidance (a follow-up user message).
+  :interrupt  -> acp-cancel, then acp-prompt with guidance (reprompt).
+Returns (:action <cmd> :result <text>) on success, or (:action :none ...) if
+COMMAND is :none. Fail-closed: any condition returns (:action :failed ...)."
+  (handler-case
+      (case command
+        (:steer
+         (let ((resp (acp-prompt conn session-id guidance :timeout timeout)))
+           (list :action :steer
+                 :result (acp-extract-text (gethash "content" resp)))))
+        (:interrupt
+         (acp-cancel conn session-id)
+         (let ((resp (acp-prompt conn session-id guidance :timeout timeout)))
+           (list :action :interrupt
+                 :result (acp-extract-text (gethash "content" resp)))))
+        (otherwise
+         (list :action :none :result nil)))
+    (condition (c)
+      (list :action :failed :result (princ-to-string c)))))
+
 ;;; --- Plugin lifecycle -----------------------------------------------------
 
 (defun init ()

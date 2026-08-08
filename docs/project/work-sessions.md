@@ -562,3 +562,17 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Handoff to user (seat config is user-owned): demote glm-5.2 from PM/Designer
   primary to reserve; default to deepseek-v4-flash-0731. Exact commands in
   session.
+
+### Session M9.20: ACP steering primitive built (Wave A3)
+**Status**: Built + verified (2026-08-07).
+- acp-steer-command: scored situation (0-1) -> :none/:steer/:interrupt by
+  thresholds (default steer>=0.6, interrupt>=0.9); fails closed :none on
+  non-number score.
+- acp-steer: apply command on live session — :steer => acp-prompt(guidance);
+  :interrupt => acp-cancel + acp-prompt(guidance) reprompt. Fail-closed
+  (:action :failed). Reuses acp-prompt/acp-cancel/acp-extract-text (A1/A2).
+- request_permission human-gate: acp-request-permission already exists (A1),
+  reused by gated dispatch.
+- Tests: +15 (mapping thresholds incl. >= boundary + non-number fail-closed +
+  steer-on-connection + none-noop). acp-client 34/34 (100%).
+- Full suite 2291/2291, lint 630. Committed; working tree green.
