@@ -1,7 +1,18 @@
 # Hngh
 
-> *Hosting Now, GPU Hereafter — or whatever you like; the acronym is deliberately
-> open-ended.*
+> *Hngh Network Goes Hngh.* — the recursive acronym expands into itself:
+> Hngh is both the first and the last word. (Bookend variants below.)
+
+Canonical bookend family (each expands into itself, Hngh at both ends):
+
+- Hngh Network Goes Hngh.
+- Hngh Network Grows Hngh.
+- Hngh Network Grinds Hngh.
+- Hngh Network Generates Hngh.
+- Hngh Never Goes Hngh.
+- Hngh Now Generates Hngh.
+- Hngh Next Grinds Hngh.
+- Hngh Next Grows Hngh.
 
 **A system harness for CachyOS/Arch Linux that orchestrates configuration, package
 management, GPU/runtime management, and generative AI agents. Emacs-like extensibility

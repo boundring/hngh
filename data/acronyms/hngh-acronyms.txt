@@ -1,9 +1,17 @@
 # Hngh — recursive-acronym expansion
 
-Canonical (2026-08-08):
+Canonical bookend family (2026-08-08) — Hngh is both the
+first and the last word; the acronym expands into itself.
+Winner first:
 
-**Hngh Network Goes Hngh.**
+- Hngh Network Goes Hngh.
+- Hngh Network Grows Hngh.
+- Hngh Network Grinds Hngh.
+- Hngh Network Generates Hngh.
+- Hngh Never Goes Hngh.
+- Hngh Now Generates Hngh.
+- Hngh Next Grinds Hngh.
+- Hngh Next Grows Hngh.
 
-Hngh is both the first and the last word — the acronym
-expands into itself. All other candidates are archived at
-`data/acronyms/archive/` as best efforts toward this form.
+All other candidates are archived at
+`data/acronyms/archive/` as best efforts toward this group.

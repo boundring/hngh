@@ -1,6 +1,7 @@
 # Hngh — archived alternative expansions
 
-Best efforts toward the canonical `Hngh Network Goes Hngh.`
+Best efforts toward the canonical bookend family
+(`Hngh ... Hngh`, see `data/acronyms/hngh-acronyms.txt`).
 None of these are promoted; kept for reference and possible
 regional/secondary use.
 
@@ -368,56 +369,6 @@ Heavy Now Greets Hngh.
 Heavy Now Grinds Hngh.
 Heavy Now Grows Hngh.
 Heavy Now Grunts Hngh.
-Hngh Network Gains Heavy.
-Hngh Network Gardens Heavy.
-Hngh Network Generates Heavy.
-Hngh Network Gets Heavy.
-Hngh Network Gives Heavy.
-Hngh Network Goes Heavy.
-Hngh Network Greets Heavy.
-Hngh Network Grinds Heavy.
-Hngh Network Grows Heavy.
-Hngh Network Grunts Heavy.
-Hngh Networks Gains Heavy.
-Hngh Networks Gardens Heavy.
-Hngh Networks Generates Heavy.
-Hngh Networks Gets Heavy.
-Hngh Networks Gives Heavy.
-Hngh Networks Goes Heavy.
-Hngh Networks Greets Heavy.
-Hngh Networks Grinds Heavy.
-Hngh Networks Grows Heavy.
-Hngh Networks Grunts Heavy.
-Hngh Never Gains Heavy.
-Hngh Never Gardens Heavy.
-Hngh Never Generates Heavy.
-Hngh Never Gets Heavy.
-Hngh Never Gives Heavy.
-Hngh Never Goes Heavy.
-Hngh Never Greets Heavy.
-Hngh Never Grinds Heavy.
-Hngh Never Grows Heavy.
-Hngh Never Grunts Heavy.
-Hngh Next Gain Heavy.
-Hngh Next Garden Heavy.
-Hngh Next Generate Heavy.
-Hngh Next Get Heavy.
-Hngh Next Give Heavy.
-Hngh Next Go Heavy.
-Hngh Next Greet Heavy.
-Hngh Next Grind Heavy.
-Hngh Next Grow Heavy.
-Hngh Next Grunt Heavy.
-Hngh Now Gains Heavy.
-Hngh Now Gardens Heavy.
-Hngh Now Generates Heavy.
-Hngh Now Gets Heavy.
-Hngh Now Gives Heavy.
-Hngh Now Goes Heavy.
-Hngh Now Greets Heavy.
-Hngh Now Grinds Heavy.
-Hngh Now Grows Heavy.
-Hngh Now Grunts Heavy.
 
 ## Human-curated picks
 
@@ -436,10 +387,8 @@ Host Network Gives Hngh.
 Hngh Never Goes Home.
 Hngh Network Goes Home.
 Hngh Now Goes Home.
-Hngh Never Grows Heavy.
-Hngh Never Gets Heavy.
 
-## Composed bookend family (Hngh ... Hngh)
+## Bookend family (canonical, reference copy)
 
 Hngh Network Goes Hngh.
 Hngh Network Grows Hngh.
@@ -448,7 +397,5 @@ Hngh Network Generates Hngh.
 Hngh Never Goes Hngh.
 Hngh Now Generates Hngh.
 Hngh Next Grinds Hngh.
-Hngh Never Grows Heavy.
-Hngh Never Gets Heavy.
 Hngh Next Grows Hngh.
 
