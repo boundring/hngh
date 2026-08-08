@@ -425,7 +425,7 @@ complete. Within a batch, sessions are independent and can be parallelized.
 - **Findings (via repo-public-readiness skill)**: README was 2026-08-01
   (M0-M6.2 / 920 tests) but reality is M9 / 494 fast + 1687 full; next.md
   was M0-M7 / 1028 — both stale in lockstep. 5 tracked session/journal
-  records leaked `/home/bricker`. `origin.pushurl` pointed at Codeberg only,
+  records leaked the owner's home path. `origin.pushurl` pointed at Codeberg only,
   so `git push origin` silently skipped GitHub (D-002 violation) and the
   GitHub mirror had drifted 11 commits behind.
 - **Doc wave**: README current-state -> M9 autonomy W1-5 + benchmark sourcing
@@ -434,7 +434,7 @@ complete. Within a batch, sessions are independent and can be parallelized.
   next.md reconciled in lockstep (status, Up Next M9 C4/C6/C8/C9, Done line,
   env facts SBCL 2.6.7 + jsown, Blocked note for the OpenRouter weekly spend
   wall). Chained in one commit so they can't drift apart again.
-- **PII scrub**: `/home/bricker` -> `~/` in sessions/h-a2, h-a3, and 3 squad
+- **PII scrub**: owner's home path -> `~/` in sessions/h-a2, h-a3, and 3 squad
   journals (had to chmod the 0444 projected journals writable). Sweep across
   tracked tree now clean; secret sweep shows only the expected test-sentry
   self-fixtures.
