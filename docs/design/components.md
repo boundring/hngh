@@ -896,7 +896,8 @@ This is the defining pattern of the architecture: Hngh is a system harness that 
 | Tool | Type | Provider(s) | Integration Interface | Key Capabilities |
 |---|---|---|---|---|
 | **Opencode** | Agentic CLI | Multi-provider (Anthropic, Google, OpenAI, local) | Subprocess + structured event capture | Multi-agent orchestration, skills, MCP servers, task delegation, context management, `/compact` |
-| **oh-my-claudecode (OMC)** | Orchestration layer on Claude Code | Anthropic | Subprocess (wraps Claude Code) | Team mode, ralph loops, wiki, project memory, notepad, skills registry, sub-agents |
+| **oh-my-opencode** | Orchestration layer on Opencode | Multi-provider (wraps Opencode) | Subprocess (wraps Opencode) | Skills, team mode, ralph loops, wiki, project memory, notepad, skills registry, sub-agents |
+| **oh-my-openagent (omo)** | Orchestration layer | Multi-provider (wraps agent CLIs incl. Opencode) | Subprocess | Same oh-my-* orchestration patterns |
 | **oh-my-codex / omx** | Orchestration layer on Codex | OpenAI | Subprocess (wraps Codex) | Same orchestration patterns as OMC, different underlying model |
 | **Pi** | Agentic CLI | Multi-provider (subscription + API key) | Subprocess + JSON Event Stream mode (stdin/stdout JSONL) or RPC mode | Skills, extensions, prompt templates, sessions with branching/compaction, SDK for embedding, custom models/providers |
 | **Cecli** | Agentic CLI | Multi-provider (OpenAI, Anthropic, Gemini, GROQ, LM Studio, xAI, Ollama, OpenRouter, Copilot, Vertex, Bedrock, +more) | Subprocess + scriptable via Python + sub-agents + hooks + MCP servers | Agent mode (autonomous codebase exploration/modification), skills system, sub-agents (autonomous delegation to dedicated LLM sessions), git integration, repo maps, edit formats, TUI mode, workspaces |
@@ -1156,8 +1157,9 @@ Each is supervised (Supervisor tracks its pid, restart per policy). Resource Man
 These are invoked as supervised subprocesses by the AI Tool Hub (B11) when the AI Orchestrator (B3) delegates a task:
 
 - **Opencode** — primary agentic substrate; the dogfooding anchor (Hngh uses it to develop itself)
-- **oh-my-claudecode (OMC)** — orchestration layer on Claude Code; skills, team mode, ralph loops, wiki, project memory
-- **oh-my-codex (omx)** — OMC variant for OpenAI models
+- **oh-my-opencode** — orchestration layer on Opencode; skills, team mode, ralph loops, wiki, project memory
+- **oh-my-openagent (omo)** — oh-my-* orchestration wrapping agent CLIs (incl. Opencode)
+- **oh-my-codex (omx)** — oh-my variant for OpenAI models
 - **Pi** — agentic CLI with JSON Event Stream mode (stdin/stdout JSONL) for structured capture; sessions with branching/compaction; skills, extensions, SDK
 - **Cecli** — agentic CLI with sub-agents (autonomous delegation), skills system, hooks, MCP servers, agent mode, git integration, scriptable via Python
 - **Claude Code** — Anthropic's CLI (direct, without OMC layer)
