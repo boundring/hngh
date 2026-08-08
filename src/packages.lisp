@@ -781,6 +781,53 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:receive-signals
            #:apply-signal))
 
+(defpackage :hngh.plugins.situation-detectors
+  (:documentation "L2 situation recognition (Tier-0) — the observation model + procedural situation detectors feeding the L3 scorer. Deterministic, model-free, always-on, fail-closed; emits situation datums on the event bus, never acts on them (the scorer decides). See docs/design/situation-scoring.md.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*window-size*
+           #:*poll-tools*
+           #:fingerprint
+           #:poll-tool-p
+           #:observe
+           #:reset-window
+           #:make-situation
+           #:publish-situation
+           #:detect-situations
+           #:analyze
+           #:detect-identical-call-loop
+           #:detect-retry-without-progress
+           #:detect-zero-progress
+           #:detect-token-sink
+           #:detect-failing-verification
+           #:detect-excessive-waits
+           #:detect-cost-exceedance
+           #:detect-chatter-loop))
+
+(defpackage :hngh.plugins.situation-scoring
+  (:documentation "L3 situation scoring + action mapping — the brain behind the A3 actuator. Scores detected situations (impact x urgency x spread + confidence, /steer§3), tracks recovery-stage progression (never escalate a single fault with a visible fix), and maps to :none/:steer/:interrupt via acp-steer-command with progressively-lowered thresholds per unresolved recurrence. See docs/design/situation-scoring.md.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*category-impact*
+           #:*impact-value*
+           #:category-impact
+           #:recovery-tracker
+           #:make-recovery-tracker
+           #:tracker-count
+           #:tracker-stage
+           #:record-recovery
+           #:score-situation
+           #:effective-thresholds
+           #:escalate-by-class-p
+           #:situation-action
+           #:decide))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)
