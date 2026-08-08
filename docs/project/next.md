@@ -1,12 +1,39 @@
 # Next — Current Work
 
-**Last updated**: 2026-08-07
+**Last updated**: 2026-08-08
 
 ## Current Status
 
-**M0–M9 in build; M9 squad autonomy well into W1–5 — 494/494 fast, 1687/1687 full suite green** (FiveAM; `make test` / `make test-full` verified
-2026-08-07 on main). Session detail in `docs/project/work-sessions.md` (M3–M7/M9) and
+**M0–M9 + ACP waves + L2/L3 design — 633/633 fast, 2294/2294 full suite green** (FiveAM; `make test` / `make test-full` verified
+2026-08-08 on main). Session detail in `docs/project/work-sessions.md` (M3–M7/M9) and
 `docs/journal/` (M0–M1). Detailed roadmap at `docs/project/roadmap.md`.
+
+## Handoff brief (new sessions start here)
+
+Starting work on Hngh from a fresh session: read this, then
+`docs/project/work-sessions.md` M9.17–M9.22 for the session-level detail.
+
+**What shipped this block (2026-08-07/08, all committed + green):**
+- **A1** ACP client (`c9d6f5c`): initialize/new/prompt/update/cancel/permission over stdio JSON-RPC.
+- **A2** ACP dispatch driver (`b7c5635`): run a task through an ACP agent subprocess; fail-closed.
+- **A3** ACP steering primitive (`d6328b3`): `acp-steer-command` (scored situation → :none/:steer/:interrupt) + `acp-steer` on a live session; fail-closed on non-numeric scores.
+- **A4** ACP server + framing fix (`95d61e2`): `hngh acp` exposes Hngh as an ACP agent; NEW `src/plugins/acp-transport.lisp` = JSON-RPC mode `:acp` with **newline-delimited framing** (ACP's wire format; the stock cxxxr/jsonrpc stdio transport uses LSP Content-Length and does NOT interoperate with real ACP peers — do not switch back to `:mode :stdio`). INTEROP-verified driving `bin/hngh acp` with plain newline JSON.
+- **L2/L3 design capture** (`b01a0ac`, +research `aa2e88e`): `docs/design/situation-scoring.md` — the auto-steering brain behind A3 (recognition + scoring; recovery-stage model; steer-don't-interrupt; Tier-0 procedural first; cheap/local calibrated judge; progressive gate-lowering; self-improvement loop). Evidence in `docs/research/`.
+- **Cost policy** (`ff61698`): >$0.10/M tokens = strategic reserve (GLM-5.2, K3); cheap/local primary. PM/Designer seat defaults demoted to deepseek-v4-flash-0731 in ~/.hngh-night/squad-seats.conf.
+- **cogmem dropped** (`0dc36a0`, ADR-042): Anthropic-key dependency conflicts with cost policy; uninstalled everywhere, notes already in optmem. Cross-session memory = optmem + hngh beans + AGENTS.md breadcrumbs.
+
+**Immediate next work (in order — full build order in situation-scoring.md §8):**
+1. **L2 Tier-0 procedural detectors** (first build): identical-call loop, retry-without-progress, zero-progress-delta, long-thinking token sink, repeated failing verification, excessive waits, cost-exceedance, chatter-loop — on the sentry/observation stream, model-free, unit-tested against /steer-derived fixtures.
+2. L3 scoring + recovery-stage tracker (no model).
+3. Progressive gate-lowering + steer/interrupt mapping → A3 actuator.
+4. Judge model (cheap/local) on suspicious windows, offline-calibrated first.
+5. Case-base + review pass (self-improvement loop).
+6. Cross-agent normalization (Hermes + OpenCode, one scorer).
+
+**Launch context (squads):** `squad-up` launches seats; PM/Designer default to
+deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 91
+(A3+A4) is DONE — archive to .done/. A next-wave card (L2/L3 build) is staged at
+`~/.hngh-night/tasks/92-l2-l3-situation-scoring-build.txt` (see next.md §Up Next).
 
 Recent sessions (see work-sessions.md for full per-session artifacts):
 - **M6.3** Emacs daemon: lifecycle (start/stop/health), policy-explicit start, outlives hngh.
@@ -20,7 +47,8 @@ Recent sessions (see work-sessions.md for full per-session artifacts):
 
 | Priority | Item | Where |
 |---|---|---|
-| P0 | **Phase 2 finish** — atomic claim/release, verifier-gated completion, M7 wire handlers, lease expiry | hngh |
+| P0 | **L2/L3 build steps 1–3** — Tier-0 procedural detectors, L3 scoring + recovery-stage tracker, progressive gate-lowering → A3 actuator (task card 92 staged) | `docs/design/situation-scoring.md` §8; hngh |
+| P0 | **L2/L3 build steps 4–6** — cheap/local judge (offline-calibrated first), case-base + review loop, cross-agent normalization | `docs/design/situation-scoring.md` §8; hngh |
 | P0 | **M9 C4** start-now/pause-on-cause; **C10** MisakaNet failure shield (design-only now) | hngh; `docs/design/squad-autonomy.md` |
 | P0 | **M9 C6** planner cycle (roadmap → task queue → squad dispatch) | hngh |
 | P0 | **M9 C8/C9** benchmark-runner strategy + nightly benchmark cron — strategy exists (`docs/design/benchmark-sourcing.md`), runner + cron unbuilt; add `--run` wrapper to the probe runner | hngh |
