@@ -10,6 +10,15 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added
+- **Design seed** — `docs/design/encoded-filename-metadata.md`: captured the
+  standing idea of a standardized, decodable filename convention for agent
+  direction (intended consumer, project scope, per-agent read hints / line
+  scoping, semantic tags) as a non-committal seed for later evaluation.
+  Registered in `docs/project/backlog.md` Open Design Questions. The
+  "design seed → review gate" capture process is now formalized in
+  `CONTRIBUTING.md`.
+
 ### Added — L2/L3 auto-steering brain (steps 1–3, `0c62fa9`)
 - **`src/plugins/situation-detectors.lisp`** — the observation model (plist:
   `ts/agent/kind/tool/args/fingerprint/error-class/tokens/ok/artifacts/seconds`;

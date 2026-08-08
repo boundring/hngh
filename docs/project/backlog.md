@@ -114,3 +114,4 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 | Cost optimization algorithm (v0.2) | M2 (start rules-based) |
 | Backup strategy for `state/plugins/` | M1.10 (backup manager, B7) |
 | KDE notification protocol | M1.13 (B10, optional) |
+| **Encoded filename metadata for agent direction** | Design seed — `docs/design/encoded-filename-metadata.md`. Evaluate later: prior art, decode-primitive prototype, token-scope ROI, beans/dispatch-tree interplay. Not on any current build path. |

@@ -31,6 +31,30 @@ Changes to architecture require updating these documents first, then implementin
 7. Review (human or AI-assisted)
 8. Merge to `main`
 
+## Capturing early ideas (design seeds)
+
+Early / half-formed ideas (user riffs, session observations, speculative
+directions) are captured as **design seeds** — lightweight, non-committal
+records — so they are not lost to conversation and are available for a later,
+proper evaluation. The convention:
+
+- Write a short `docs/design/<topic>.md` file: **Status: Idea capture — NOT
+  a build spec**, the idea in the originator's words, a rough (illustrative,
+  non-committal) shape, **open questions** (not answered in the seed), a
+  **review gate** (conditions under which it gets a proper evaluation), and
+  attribution.
+- Register it in `docs/project/backlog.md` under Open Design Questions with a
+  pointer, so it is tracked rather than orphaned.
+- A seed is **never folded into the current build path** until the review
+  gate is met: prior art research, a fixtured prototype of the smallest
+  useful primitive, and a clear motivated use case. Do not force seeds into
+  unrelated work.
+
+This keeps the development cycle rigorous: research + scaffold from
+documentation first, no forced experimentation, pieces that suit each other,
+and ideas either blossom under Hngh's later self-development work or are
+deliberately dropped.
+
 ## Commit Convention
 
 ```
