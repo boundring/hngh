@@ -651,3 +651,13 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Load-bearing rules honored: never interrupt a single fault with a visible fix; weight ACTING over THINKING (token-sink only fires on runs with no env interaction); fail-closed throughout.
 - Docs updated: AGENTS.md, next.md, roadmap.md (status + M-table + design-artifacts row for situation-scoring.md), work-sessions M9.24. Committed. Task 92 → archive to .done/.
 - Note (design idea for later): the mission-control/dashboard TUI could render the numeric streams (impact/urgency/spread/confidence, detector hit tables) in the repo's existing Nihei/BLAME! aesthetic as stat-sheet surfaces — presentation-layer follow-on, not built this wave.
+
+### Session M9.25: squad seat startup fix — opencode provider prefix
+**Status**: Fixed + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- Symptom (user-reported): "opencode squad members don't start up." Diagnosed via the headless kick squad-up uses:
+  - `opencode run -m deepseek/deepseek-v4-flash-0731` → `UnknownError: Unexpected server error` (seat "starts" — konsole window up, squad-up reports RUNNING — but the first prompt dies on model resolution).
+  - `set -a; . ~/.hermes/.env; set +a; opencode run -m openrouter/deepseek/deepseek-v4-flash-0731` → `OPENCODE_SMOKE_OK`.
+- Root cause: coder/worker seats run the **opencode CLI**, whose model strings need opencode's provider prefix `openrouter/...`. The config carried `deepseek/deepseek-v4-flash-0731`, and opencode has no provider literally named `deepseek`. Not an auth problem — `OPENROUTER_API_KEY` is in `~/.hermes/.env` (sourced by the interactive shell, absent from the Hermes terminal env; key located by name, never printed).
+- Fix: `~/.hngh-night/squad-seats.conf` — `SEAT_MODEL[coder]` and `SEAT_MODEL[worker]` → `openrouter/deepseek/deepseek-v4-flash-0731`, with a NOTE comment explaining the prefix rule (opencode CLI = `openrouter/...`, Hermes CLI = `deepseek/...`). `squad-up --list` parses clean.
+- Pitfall #27 in the multi-agent-coordination skill corrected: real cause is the provider-prefix mismatch (auth present), not missing credentials.
+- No repo code change; journal + this entry are the only repo edits (not committed to this point — see git state).
