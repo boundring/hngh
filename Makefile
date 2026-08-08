@@ -21,7 +21,7 @@ DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
-.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens
+.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens scrub-pii
 
 all: $(BINARY) $(CLIENT_BINARY)
 
@@ -90,6 +90,11 @@ test-suite: lint-parens
 ## Lint source for unbalanced parens before running tests (procedural guard).
 lint-parens:
 	@python3 scripts/lint-parens.py $(LISP_FILES) || exit 1
+
+## Scrub owner identifiers from the tracked tree (report mode; CI non-failing).
+## Use `scripts/scrub-pii.py --fix` to apply the ~/ rewrite manually.
+scrub-pii:
+	@python3 scripts/scrub-pii.py --check
 
 ## Run the exhaustive test suite
 # Explicit because this can include slow external-service and timer fixtures.
