@@ -4,7 +4,8 @@
 **Cross-links**: `mission-control.lisp` (hngh-mc, tmux panes), `dashboard-tui.lisp`
 (levels), `social-senses.md` (thought-trace, signals), `quota-spreader.md`
 (cost gate), `planner-design-roadmap.md` (feedback-source), `autonomy-strategy.md`
-(procedural guard-rails).
+(procedural guard-rails), `situation-scoring.md` (the L2 recognition + L3
+scoring brain that feeds the §3 steering primitive).
 
 ---
 

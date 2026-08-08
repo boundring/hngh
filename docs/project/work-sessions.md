@@ -591,3 +591,27 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
   bin/hngh acp with plain newline-delimited JSON, one line per message, no
   Content-Length headers (python driver /tmp/interop-acp.py). Real-wire-proven.
 - Design note folded into agent-client-protocol.md (framing under transport).
+
+### Session M9.22: L2/L3 situation-scoring research + design capture
+**Status**: Research + design done (2026-08-07/08).
+- Task: design the auto-steering "brain" behind A3 (acp-steer-command).
+- Grounded in THREE evidence bases: (1) 243 real human /steer messages mined
+  from ~/.hermes/.hermes_history (dominant classes = wasted waits, faulty
+  logic, not-sourcing-info, risky-experiment, coordination gaps, cost/token
+  overrun, stuck/wedged seats); (2) research delegation -> agent_failure_modes_
+  reference.md (23 sources: Huang self-correction, Kamoi survey, MINT, ReAct,
+  SWE-agent, GAIA, MAST, tau-bench, hallucination benchmarks); (3) prior-art
+  delegation -> B1_agent_supervision_design_space.md (LLaMaGuard/NeMo/Guardrails
+  AI/AGT, OTel GenAI, PRM/CriticGPT/Reflexion, OpenFang loop-guard, LangGraph
+  HITL). Both refs saved in ~/Projects/etc/sysconfig_mgmt/.
+- Key design decisions: (a) recovery-STAGE progression, not single faults —
+  escalate only on 2 consecutive unvalidated same-class faults or S3 or
+  long-thinking-zero-env (evidence: intrinsic self-correction of reasoning
+  fails; tool-grounded recovery works); (b) weight ACTING stream over THINKING
+  stream; (c) Tier-0 procedural detectors first (free, deterministic, catch
+  highest-count real cases); (d) judge = cheap/local with calibration; (e)
+  progressive gate-lowering log->steer->rewrite->ask->interrupt; (f) open
+  taxonomy + self-improvement loop (case-base + review + web re-grounding).
+- Deliverable: docs/design/situation-scoring.md (full design capture).
+- Note: delegation.max_concurrent_children=1 serialized research (ran 2
+  legacy tasks sequentially); considered raising but left as-is per config.
