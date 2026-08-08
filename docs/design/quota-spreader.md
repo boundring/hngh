@@ -16,18 +16,38 @@ Current cost control is a *semicolon-shaped* mechanism:
 
 - `llm-budget` gates **OpenRouter** spend on a **rolling 60-minute window** —
   it only tracks "how much in the last hour," nothing about reset periods.
-- Kimi's own **weekly/daily quota** is not tracked at all by our tooling; we
+- Kimi's own **weekly quota** is not tracked at all by our tooling; we
   "just use it sparingly" by hand.
 
-That means: when the weekly Kimi quota resets tomorrow, we have *no automated
-way* to spend it evenly and sparsely across the period — we either overuse it
+That means: when the weekly Kimi quota resets, we have *no automated way*
+to spend it evenly and sparsely across the period — we either overuse it
 early and run dry, or underuse and waste the quota. And with price bumps, the
 "use each paid model as little as possible, spread evenly" discipline has no
 enforcement.
 
+### Kimi Code reset semantics (authoritative, Kimi Code docs — Membership Benefits)
+
+Read the docs, don't probe the API: there is **no public Kimi Code API
+endpoint** for quota or reset (balance/token-estimation APIs on
+`api.moonshot.ai` are the separate pay-as-you-go Kimi Open Platform, not the
+`kimi-sub` subscription). Documented facts:
+
+- Kimi Code quota **refreshes automatically every 7 days from the
+  subscription date**; unused quota does not roll over. Reset is deterministic
+  by construction — model locally, no API call needed.
+- A **rolling 5-hour rate window** also applies (rate limits recover when the
+  window rolls over).
+- Check remaining quota/rate-limit: **Kimi Code Console** (web),
+  **Kimi Code CLI `/usage`**, or Kimi web/app My Quota — not an API.
+- All logged-in devices + API keys share the same quota; sharing with the
+  Kimi membership month.
+
 **Goal**: a **quota spreader** — schedule awareness per route (daily/weekly/
 monthly reset, with per-period token/cent budgets), so spend is drawn down
-evenly and sparsely across each reset period, and never spikes early.
+evenly and sparsely across each reset period, and never spikes early. For
+`kimi-sub`, the reset is a 7-day period anchored to the subscription date;
+persist that anchor (the reset-anchor table) and treat the period as fixed, not
+queried.
 
 ---
 

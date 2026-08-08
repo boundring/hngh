@@ -624,3 +624,18 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Deliverable: docs/design/situation-scoring.md (full design capture).
 - Note: delegation.max_concurrent_children=1 serialized research (ran 2
   legacy tasks sequentially); considered raising but left as-is per config.
+
+### Session M9.23: Kimi Code quota-reset research (documentation-first)
+**Status**: Research done (2026-08-08).
+- Question: does the API expose the weekly quota reset time? Answered NO per
+  official Kimi Code docs (Membership Benefits): no public endpoint for
+  quota/reset; reset is deterministic — every 7 days from subscription date,
+  no rollover; rolling 5-hour rate window; console/CLI `/usage` are the
+  check surfaces (web only). Balance/token-estimation APIs on api.moonshot.ai
+  are the separate pay-as-you-go Open Platform, not kimi-sub.
+- Process correction recorded: I probed guessed endpoints before reading the
+  docs; the user's standing guidance is documentation-first (authorities over
+  experiments). quota-spreader.md now carries the authoritative reset
+  semantics + the "model the anchor locally, don't probe" rule.
+- Follow-on: if live quota numbers are wanted, read the Kimi Code CLI
+  (/usage) source for the real endpoint rather than scraping rendered HTML.
