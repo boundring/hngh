@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**M0–M9 + ACP waves + L2/L3 design — 633/633 fast, 2294/2294 full suite green** (FiveAM; `make test` / `make test-full` verified
+**M0–M9 + ACP waves + L2/L3 design + L2/L3 first build — 693/693 fast, 2434/2434 full suite green** (FiveAM; `make test` / `make test-full` verified
 2026-08-08 on main). Session detail in `docs/project/work-sessions.md` (M3–M7/M9) and
 `docs/journal/` (M0–M1). Detailed roadmap at `docs/project/roadmap.md`.
 
@@ -14,6 +14,7 @@ Starting work on Hngh from a fresh session: read this, then
 `docs/project/work-sessions.md` M9.17–M9.22 for the session-level detail.
 
 **What shipped this block (2026-08-07/08, all committed + green):**
+- **L2/L3 build — Tier-0 detectors + L3 scorer** (`<L2L3>`): `src/plugins/situation-detectors.lisp` (observation model + 8 deterministic detectors: identical-call loop, retry-without-progress, zero-progress, token-sink, failing-verification, excessive-waits, cost-exceedance, chatter-loop; emit `situation.detected` on the bus) + `src/plugins/situation-scoring.lisp` (impact×urgency×spread×confidence score, recovery-stage tracker, progressive gate-lowering → A3 actuator via `acp-steer-command`). 60 new checks; 693/693 fast, 2434/2434 full.
 - **A1** ACP client (`c9d6f5c`): initialize/new/prompt/update/cancel/permission over stdio JSON-RPC.
 - **A2** ACP dispatch driver (`b7c5635`): run a task through an ACP agent subprocess; fail-closed.
 - **A3** ACP steering primitive (`d6328b3`): `acp-steer-command` (scored situation → :none/:steer/:interrupt) + `acp-steer` on a live session; fail-closed on non-numeric scores.
@@ -23,10 +24,10 @@ Starting work on Hngh from a fresh session: read this, then
 - **cogmem dropped** (`0dc36a0`, ADR-042): Anthropic-key dependency conflicts with cost policy; uninstalled everywhere, notes already in optmem. Cross-session memory = optmem + hngh beans + AGENTS.md breadcrumbs.
 
 **Immediate next work (in order — full build order in situation-scoring.md §8):**
-1. **L2 Tier-0 procedural detectors** (first build): identical-call loop, retry-without-progress, zero-progress-delta, long-thinking token sink, repeated failing verification, excessive waits, cost-exceedance, chatter-loop — on the sentry/observation stream, model-free, unit-tested against /steer-derived fixtures.
-2. L3 scoring + recovery-stage tracker (no model).
-3. Progressive gate-lowering + steer/interrupt mapping → A3 actuator.
-4. Judge model (cheap/local) on suspicious windows, offline-calibrated first.
+1. ~~L2 Tier-0 procedural detectors~~ — **DONE** (`<L2L3>`): all 8 detectors on the sentry/observation stream, model-free, unit-tested against /steer-derived fixtures.
+2. ~~L3 scoring + recovery-stage tracker~~ — **DONE** (`<L2L3>`): impact×urgency×spread×confidence, stage tracker, fail-closed.
+3. ~~Progressive gate-lowering + steer/interrupt mapping → A3~~ — **DONE** (`<L2L3>`): ladder + acp-steer-command mapping with lowered thresholds.
+4. **Judge model (cheap/local) on suspicious windows, offline-calibrated first** (NOT yet built — next wave).
 5. Case-base + review pass (self-improvement loop).
 6. Cross-agent normalization (Hermes + OpenCode, one scorer).
 
@@ -47,8 +48,7 @@ Recent sessions (see work-sessions.md for full per-session artifacts):
 
 | Priority | Item | Where |
 |---|---|---|
-| P0 | **L2/L3 build steps 1–3** — Tier-0 procedural detectors, L3 scoring + recovery-stage tracker, progressive gate-lowering → A3 actuator (task card 92 staged) | `docs/design/situation-scoring.md` §8; hngh |
-| P0 | **L2/L3 build steps 4–6** — cheap/local judge (offline-calibrated first), case-base + review loop, cross-agent normalization | `docs/design/situation-scoring.md` §8; hngh |
+| P0 | **L2/L3 build steps 4–6** — judge model (cheap/local, offline-calibrated first), case-base + review loop, cross-agent normalization (steps 1–3 done `<L2L3>`) | `docs/design/situation-scoring.md` §8; hngh |
 | P0 | **M9 C4** start-now/pause-on-cause; **C10** MisakaNet failure shield (design-only now) | hngh; `docs/design/squad-autonomy.md` |
 | P0 | **M9 C6** planner cycle (roadmap → task queue → squad dispatch) | hngh |
 | P0 | **M9 C8/C9** benchmark-runner strategy + nightly benchmark cron — strategy exists (`docs/design/benchmark-sourcing.md`), runner + cron unbuilt; add `--run` wrapper to the probe runner | hngh |

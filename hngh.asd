@@ -72,7 +72,9 @@
                  (:file "plugins/quota-spreader")
                  (:file "plugins/signals")
                  (:file "plugins/acp-transport")
-                 (:file "plugins/acp-client"))
+                 (:file "plugins/acp-client")
+                 (:file "plugins/situation-detectors")
+                 (:file "plugins/situation-scoring"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -130,6 +132,8 @@
                  (:file "test-quota-spreader")
                  (:file "test-signals")
                  (:file "test-acp-client")
+                 (:file "test-situation-detectors")
+                 (:file "test-situation-scoring")
                  (:file "test-model-probes"))
    :perform (test-op (op c)
                         (declare (ignore op))

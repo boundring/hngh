@@ -639,3 +639,15 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
   semantics + the "model the anchor locally, don't probe" rule.
 - Follow-on: if live quota numbers are wanted, read the Kimi Code CLI
   (/usage) source for the real endpoint rather than scraping rendered HTML.
+
+### Session M9.24: L2/L3 situation-detectors + scorer built (Tier-0 + L3)
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- Card 92 waves 1–3 complete. Two new plugins:
+  - `src/plugins/situation-detectors.lisp` — **observation model** (plist: ts/agent/kind/tool/args/fingerprint/error-class/tokens/ok/artifacts/seconds; roles :tool-call/:tool-result/:thinking/:wait/:message/:cost-exceeded) + **8 Tier-0 deterministic detectors** (identical-call loop w/ md5 fingerprint + poll-tool exemption, retry-without-progress, zero-progress, long-thinking-token-sink, failing-verification, excessive-waits, cost-exceedance [fail-closed], chatter-loop). Emits `situation.detected` on the event bus (threat.flag-style); never acts.
+  - `src/plugins/situation-scoring.lisp` — L3 **scorer + recovery-stage tracker + action mapping**: score = w_i·impact·urgency·spread + w_c·confidence (+0.15/count recurrence boost); recovery-tracker resets on validated fix; progressive gate-lowering lowers steer/interrupt thresholds per unresolved recurrence; maps to A3 via `acp-steer-command`. Fail-closed (nil situation → :none; first-seen never interrupts; S3/token-sink-zero-env → interrupt only on recurrence).
+- Wired both into main.lisp lifecycle (init after acp-client, reverse-order shutdown in rollback + stop), packages.lisp, hngh.asd; added both suites to Makefile `test-fast`.
+- Tests: test-situation-detectors.lisp 32 checks + test-situation-scoring.lisp 28 checks, each with healthy counter-examples (healthy fix never fires / never interrupts).
+- **Verified**: 693/693 fast, 2434/2434 full, exit 0. Baseline before work: 633/633 fast, 2294/2294 full.
+- Load-bearing rules honored: never interrupt a single fault with a visible fix; weight ACTING over THINKING (token-sink only fires on runs with no env interaction); fail-closed throughout.
+- Docs updated: AGENTS.md, next.md, roadmap.md (status + M-table + design-artifacts row for situation-scoring.md), work-sessions M9.24. Committed. Task 92 → archive to .done/.
+- Note (design idea for later): the mission-control/dashboard TUI could render the numeric streams (impact/urgency/spread/confidence, detector hit tables) in the repo's existing Nihei/BLAME! aesthetic as stat-sheet surfaces — presentation-layer follow-on, not built this wave.

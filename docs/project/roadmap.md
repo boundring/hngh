@@ -1,7 +1,7 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (633/633 fast green @ 78cfde9, full suite green; C4 + C10 design-only). hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
-**Last updated**: 2026-08-06
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (693/693 fast green, full suite green; C4 + C10 design-only). **L2/L3 situation-detection + scoring built (Tier-0 detectors + L3 scorer, steps 1–3 of situation-scoring §8)**. hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Last updated**: 2026-08-08
 
 ---
 
@@ -13,7 +13,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 |---|---|---|---|
 | M0 | Foundation | Core image skeleton, end-to-end validation | **Complete** (96 tests passing) |
 | M1 | The Harness (v0.1) | Full system harness with AI orchestration | **In progress** (Batches 0–4 done + M1.10; 12/15 deliverables) |
-| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (633/633 fast tests passing @ 78cfde9) |
+| M2 | The Companion (v0.2) | Session lifecycle, window management, config watcher, cascading restart, TUI QoL | **Complete** (693/693 fast tests passing) |
 | M3 | The Network (v0.3) | Remote instance coordination, knowledge sharing | Not started |
 
 ---
@@ -45,7 +45,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
 
-**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 633/633 fast green, full suite green).
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 693/693 fast green, full suite green).
 
 ### Deliverables
 
@@ -150,10 +150,10 @@ and benchmark squads; nightly cron turns that into a real dataset.
 
 | Wave | Capabilities | Status |
 |---|---|---|
-| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (633/633 tests @ 78cfde9) |
-| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 633/633 tests @ 78cfde9; wired main.lisp) |
+| 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (693/693 fast) |
+| 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 693/693 fast; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope + signals + ledger/status; 633/633 fast, 2248/2248 full; schedule `--emit` from cron when ready) |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274: parser + weighting/decomposition/emission + planner-cycle loop [scan/dedup/pause/gate/dry-run] + quota envelope + signals + ledger/status; 693/693 fast, 2434/2434 full; schedule `--emit` from cron when ready) |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 | 6 | **Live orchestration** (observe → guard-rail → steer → plugins → optimize): hngh-mc observe + TUI peep depth, procedural evidence-check + multi-pass dev/review, priority-scored /steer + opencode-correct, Hermes/opencode plugins, shadow-then-promote param optimizer | **Not started** (design `live-orchestration.md` L1–L5; **steering surface de-risked 2026-08-07: ACP servers on both Hermes + opencode + opencode HTTP/SSE control plane** — build the plugin as an ACP client; L2 guard-rails + L5 param opt ride on C4/C10 + C8/C9 gating) |
 
@@ -175,6 +175,7 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `social-senses.md` | M9+ | Social/relational layer on the sense taxonomy: instant agent↔agent signals ("emotes"), 1:1 talks + message boards, thought-trace procedural intent layer, relationship graph + rapport; multi-device horizon kept node-agnostic |
 | `live-orchestration.md` | M9+ | Live (underway, not after-the-fact) monitoring + steering + observation: procedural guard-rails (evidence cross-checking, multi-pass dev/review), hngh-mc + TUI observation surfaces, priority-scored Hermes/opencode steering, continual parameter optimization, Hermes/opencode integration plugins — wave L1–L5 |
 | `agent-client-protocol.md` | M9+ | Hngh as an ACP hub: one ACP client drives observe/steer/gate across any ACP-capable agent (Hermes, opencode, Gemini CLI, Claude Code via adapter); ACP server dogfood (Emacs/Zed); steer-vs-queue capability negotiation; `session/request_permission` = human-gate; LSP as Hngh's code-intelligence substrate (evidence-check + review/verify). Waves A1–A4 |
+| `situation-scoring.md` | M9+ | Auto-steering "brain" behind the A3 ACP actuator: L2 recognition (Tier-0 procedural detectors → Tier-1 cheap/local judge) + L3 scoring (impact×urgency×spread×confidence + recovery-stage tracker + progressive gate-lowering). **Steps 1–3 built** (`<L2L3>`, 693/693 fast, 2434/2434 full): all 8 Tier-0 detectors + scorer + A3 mapping. Steps 4–6 (judge, case-base, normalization) remain. |
 | `autonomy-strategy.md` | M9+ | Research synthesis: self-developing/self-healing engine, clean-arch self-modification guardrails, security hardening (OWASP agentic), cheap-inference + cost control, MCP/A2A/fleet interop — wave-ordered plan + open questions |
 | `swe-selfdev-research.md` | M9+ | Cited deep-dive on autonomous SWE agents (SWE-agent, Codex, OpenHands, Agentless, Reflexion), self-healing systems, and pitfalls |
 | `security-agentic-research.md` | M9+ | Cited deep-dive on prompt injection, CIA-Triple-A, supply chain, self-modifying-code and multi-instance risks |
