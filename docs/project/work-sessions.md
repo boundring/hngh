@@ -544,3 +544,21 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
   jsonrpc thread race in this env); instead tested the driver core against the
   deterministic in-CL mock over stdio pipes. session/update observation
   counting deferred to subprocess-integration (A2 follow-on).
+
+### Session M9.19: Cost conservation policy + squad-handoff-loop skill
+**Status**: Policy captured (2026-08-07).
+- Finding from first live ACP squad run: GLM-5.2 ($0.40/M) fired as default
+  driver because PM/Designer seats pinned to it as primary; 4x the $0.10/M
+  conservation line. Recorded docs/design/cost-conservation.md.
+- Policy: >$0.10/M models = strategic reserve, used as infrequently as K3.
+  Granular quota windows (weekly/daily/half-day/hour) + reset windows +
+  provider balances all budgeted. Squads = one tool among a suite, small on
+  average, off-peak when cheaper. Summon-on-need cost ladder (cheap summons
+  limited-smart; smart summons cheap for summarization/tagging; procedural
+  tools first). User-led vs agentic session tracking = open design item.
+- Skill created: squad-handoff-loop (devops) — LAUNCH→RECORD→DESIGN→
+  LEAST-CHANGE→RELAUNCH loop; task-card-first, focused seats, background
+  launch, verify kick.
+- Handoff to user (seat config is user-owned): demote glm-5.2 from PM/Designer
+  primary to reserve; default to deepseek-v4-flash-0731. Exact commands in
+  session.
