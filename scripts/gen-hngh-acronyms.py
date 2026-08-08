@@ -31,20 +31,19 @@ DEFAULT_OUT = os.path.join(ROOT, "data", "acronyms", "hngh-acronyms.txt")
 # "Hermes" is the anchor (the recursion should land on the actual agent).
 # Sections in the output are these five types, in this order.
 H_GROUPS = [
-    # (type headline, [words])
+    # (type headline, [words]) — the keeper set after the 2026-08-08 cull.
+    # hermes = the anchor (recursion lands on the actual agent).
     ("## Agents", [
-        "hermes", "herald", "heretic", "hunter", "hyperion",
-        "hydra", "host",
+        "hermes", "host",
     ]),
     ("## Structures & places", [
-        "harbor", "hangar", "haven", "hearth", "hive", "home", "hull",
-        "husk",
+        "home",
     ]),
     ("## Elements & forces", [
-        "hazard", "horizon", "howl", "hydrogen", "halo", "hearse",
+        # culled — kept empty so the section renders with a note instead
     ]),
     ("## States & properties", [
-        "heavy", "hard", "hollow", "hyper",
+        "heavy",
     ]),
 ]
 
@@ -103,10 +102,17 @@ def render(h, n, g):
     return f"{head} {mid} {tail} Hngh."
 
 
+def render_flipped(n, g, h):
+    """Flipped series: Hngh leads, an H-word closes ("Hngh Never Goes Home.")."""
+    return f"Hngh {title(n)} {title(g)} {title(h)}."
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--show", type=int, default=20)
+    ap.add_argument("--flipped", action="store_true",
+                    help="also emit the flipped series: Hngh <N> <G> <H>")
     ns = ap.parse_args(argv)
 
     os.makedirs(os.path.dirname(ns.out) or ".", exist_ok=True)
@@ -121,10 +127,17 @@ def main(argv=None):
                 for n in N_WORDS:
                     for g in G_WORDS:
                         lines.append(render(h, n, g))
+                if ns.flipped:
+                    for n in N_WORDS:
+                        for g in G_WORDS:
+                            lines.append(render_flipped(n, g, h))
             lines = sorted(set(lines))
             total += len(lines)
             f.write(f"{headline}\n\n")
-            f.write("\n".join(lines) + "\n\n")
+            if lines:
+                f.write("\n".join(lines) + "\n\n")
+            else:
+                f.write("_(culled — no words in this type)_\n\n")
         print(f"wrote {total} expansions -> {ns.out}")
 
     # sample across sections for the terminal
