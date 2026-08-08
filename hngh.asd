@@ -13,6 +13,10 @@
                :bordeaux-threads  ; mutexes for thread-safe shared state
                :cl-ppcre          ; regex for dbus signal parsing
                :babel             ; UTF-8 encoding/decoding for wire protocol
+               :jsonrpc           ; ACP client (Wave A1): JSON-RPC 2.0 + stdio transport
+               :alexandria
+               :yason
+               :sb-posix          ; stdio pipe FDs for the ACP transport (tests + client)
                ;; Future dependencies (available via Quicklisp when needed):
                ;;   :cl-json      — for AI tool hub (M1.6)
                ;;   :cl-dbus      — for dbus Bridge upgrade
@@ -66,7 +70,8 @@
                  (:file "plugins/beans")
                  (:file "plugins/hngh-planner")
                  (:file "plugins/quota-spreader")
-                 (:file "plugins/signals"))
+                 (:file "plugins/signals")
+                 (:file "plugins/acp-client"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -123,6 +128,7 @@
                  (:file "test-hngh-planner")
                  (:file "test-quota-spreader")
                  (:file "test-signals")
+                 (:file "test-acp-client")
                  (:file "test-model-probes"))
    :perform (test-op (op c)
                         (declare (ignore op))

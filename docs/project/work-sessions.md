@@ -515,3 +515,14 @@ language-agnostic. Decision: build A1 CL-first on cxxxr/jsonrpc (consistent
 with the CL plugin image; avoid a second runtime), pin protocolVersion, stay
 explicit/schema-locked (ACP stabilizing via use_unstable_protocol). Fully
 de-risked; D1 (CL-first) confirmed.
+
+### Session M9.17: ACP client built (Wave A1, CL-first on cxxxr/jsonrpc)
+**Status**: Built + verified (2026-08-07). src/plugins/acp-client.lisp: uniform
+ACP client over stdio JSON-RPC — acp-initialize (protocol v1 negotiation +
+agentCapabilities parsing), acp-midturn-mode (steer/interrupt/unknown, never
+assumes), acp-session-new/load/prompt/cancel/request-permission,
+acp-register-update-handler (inbound session/update via expose). Object params
+are string-keyed hash-tables (camelCase; yason encodes HT as objects, plain
+lists as arrays — caught via mock fixture bug). Tests: in-CL mock agent over
+stdio pipes, 11 checks, 100%. Full suite 2268/2268, lint 607. No ACP schema
+SDK adopted — CL owns it, protocolVersion pinned, per design decision.

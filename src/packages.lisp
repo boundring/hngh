@@ -737,6 +737,28 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:*sparse-defaults*
            #:*overrides*))
 
+(defpackage :hngh.plugins.acp-client
+  (:documentation "ACP client (Wave A1) — Hngh drives any ACP-capable agent over stdio JSON-RPC: observe (session/update), steer (session/prompt), pause (session/cancel), gate (session/request_permission), with steer-vs-interrupt capability negotiation at initialize.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*protocol-version*
+           #:acp-connection
+           #:acp-connect-stdio
+           #:acp-disconnect
+           #:acp-initialize
+           #:acp-agent-info
+           #:acp-agent-capabilities
+           #:acp-midturn-mode
+           #:acp-session-new
+           #:acp-session-load
+           #:acp-prompt
+           #:acp-cancel
+           #:acp-request-permission
+           #:acp-register-update-handler))
+
 (defpackage :hngh.plugins.signals
   (:documentation "Signals (C6 W1.5) — typed agent↔agent control channel over the event bus: fixed-code semantic ACK/NAK/control (social-senses §3), durable signal inbox, and thin exported-transition mapping.")
   (:use :cl :hngh.core)
