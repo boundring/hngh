@@ -21,7 +21,7 @@ applied to the entire operating system.**
 Hngh is a system-level agentic operating layer that takes advantage of existing
 agentic coding tools as its execution substrate, primarily **Hermes Agent**
 (the attendant session in which Hngh's own development happens) alongside
-Opencode, oh-my-claudecode, oh-my-codex, Pi, Cecli, Claude Code, Codex, and
+Opencode, oh-my-openagent, oh-my-codex, Pi, Cecli, Claude Code, Codex, and
 Gemini-CLI. It does not reimplement agentic harnesses — it coordinates between
 them, informs their behavior task-specifically, and manages the inter-tool
 boundary.
