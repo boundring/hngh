@@ -90,6 +90,14 @@ live-only. The operation gate uses the same split.
 1. `submit-task` gains `&key operation-spec` — when present: `:type :operation`,
    `:authority :approval`, store spec. Backward compatible (v3 merge already
    exists; `validate-task-record` passes unknown keys).
+   **SEAM TRAP (verified 2026-08-09):** submit-task line 1181 sets
+   `:authority (if v3p :worker authority)` — ANY v3 submission (operation-spec
+   included) is force-flattened to `:worker`, which `next-eligible-task` does
+   NOT gate → an operation task would dispatch without the approval gate.
+   The operation-spec branch MUST re-set `(setf (getf entry :authority)
+   :approval)` AFTER the v3 merge (and after the `:type :operation` set), and
+   the blocked-on-unapproved state must be applied after that. Do not rely on
+   the `authority` keyword arg — it is overwritten for v3 records.
 2. `approve-task (id &key approver)` — sets `:approval-at (get-universal-time)`
    on the task AND adds a live `*approved-operations*` entry. Human-only entry:
    client CLI command or owner config `:operation-approvals` seed. Never called
