@@ -143,6 +143,12 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
         (:plugins (render-plugins))))
   (render-footer))
 
+(defun render-to-string ()
+  "Render the current dashboard view and return its terminal text."
+  (with-output-to-string (*standard-output*)
+    (let ((*headless* nil))
+      (render))))
+
 (defun render-level-indicator ()
   "Render the current megastructure floor beneath the header box."
   (let ((level (or (cdr (assoc *current-view* *level-map*)) "??-Unknown")))
