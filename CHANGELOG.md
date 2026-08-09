@@ -68,6 +68,33 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave C items 2+4 (bwrap sandbox + hash-chained log) + paren-fixer hardening
+- **Hash-chained action log (item 4, task 94 — Luna-delegated `c4c5b88`)**:
+  `log-action` now hashes each entry (additive SHA-256 `:hash`, zero root for
+  the first, backward-compatible skip of pre-chain entries); new
+  `verify-action-log` re-derives the chain and reports the first broken
+  index, fail-closed `(values nil nil)` on any error. First delegated build
+  (brief → `hermes chat` on gpt-5.6-luna → verify → commit), vetted for the
+  Hngh delegation process. 19 new checks; ironclad pinned in qlfile.
+- **Bubblewrap per-task sandbox (item 2, task 96 — attended)**:
+  `src/core/sandbox.lisp` — `run-sandboxed` runs a command in a bwrap
+  default-deny profile (no net, ro system dirs, writable only the explicit
+  task dir; `--die-with-parent --new-session`); fail-closed: no bwrap =>
+  error, never an unsandboxed fallback. Tool hub: `tool-info` gains
+  `sandboxed-p` (default NIL — attended agent sessions untouched),
+  `execute-agentic-cli` routes through the sandbox when set. Tests:
+  argv shape, network opt-in, fail-closed, real smoke (write outside task
+  dir denied). +2 checks (smoke skipped when bwrap absent).
+- **Procedural paren fixer (owner directive: LLMs never hand-count parens)**:
+  `lint-parens --fix` now runs before the check in the test gate
+  (auto-appends the needed `)` at EOF for unclosed forms; stray-close stays
+  report-only — never deletes blindly). New regression tests
+  `tests/scripts/test-lint-parens.py` (4 tests: balanced pass, unclosed
+  auto-fix, stray reported-not-deleted, mixed never half-fixed) run via
+  `uv run --with pytest`, wired as `make lint-parens-test` in test-suite.
+- **Verified**: `make test` exit 0, **858/858 fast, 0 fail-suites**,
+  lint gates + fixer tests green.
+
 ### Added — Wave C item 1 (qlot pin) + CI red→green
 - **`qlfile` + `qlfile.lock`** — project-local dependency pin via qlot
   (Wave C item 1 / autonomy-strategy §7 item 9): pins Quicklisp dist
