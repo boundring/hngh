@@ -119,3 +119,63 @@ when the management surface lands).
 
 Gate: each step lands with tests + docs; no step auto-writes config without
 the `:operation` human gate. See `docs/project/next.md` for wave placement.
+## 8. Phase A — Syncthing REST endpoint facts (documentation-first, card 95)
+
+Read from the official docs (docs.syncthing.net/dev/rest.html + per-endpoint
+pages, version v2.1.0) on 2026-08-09. Endpoints verified against docs, NOT
+probed against a live instance. Auth and endpoint shapes below are the
+facts to build against.
+
+### Auth
+- Header `X-API-Key: <key>` OR `Authorization: Bearer <key>`. Key comes from
+  the GUI or `configuration/gui/apikey` in the config file.
+- `/rest/noauth/health` is the ONLY keyless endpoint (reachability probe
+  that doesn't leak the API key).
+- API key is a SECRET — fetch via secrets-manager by name, never print
+  (coordination contract). Store in `state/plugins/backup-manager/`.
+
+### Observe-only endpoints (Phase A)
+| Endpoint | Params | Key fields for detectors |
+|---|---|---|
+| `GET /rest/system/status` | none | `myID`, `uptime`, `connectionServiceStatus` (per-service `error`), `discoveryStatus` (per-method `error`), `lastDialStatus` (per-peer `error`/`ok`) |
+| `GET /rest/config` | none | full config (folder list, device list, options) — heavy; prefer granular below |
+| `GET /rest/config/folders` | none | array of folders (id, label, path, type, paused, ignorePatterns) |
+| `GET /rest/db/status?folder=<id>` | `folder` (required) | `state` (idle/syncing/scanning/error), `needBytes`, `needFiles`, `needTotalItems`, `pullErrors`, `receiveOnlyChanged*`, `inSync*`, `global*`. **Docs note: expensive call — use sparingly (per-period, not per-tick).** |
+| `GET /rest/folder/errors?folder=<id>` | `folder` (required), pagination `page`/`perpage` | `errors[]` = `{path, error}` scan/pull failures |
+| `GET /rest/events?since=<id>&limit=<n>` | optional `events=` filter, `since`, `limit`, `timeout` | event objects with ids; blocks up to 60s default (long-poll); discontinuity in ids = missed events |
+| `GET /rest/events/disk` | none | pre-filtered to Local/RemoteChangeDetected (file-change surface) |
+| `GET /rest/noauth/health` | none | keyless reachability probe |
+
+### Mutating endpoints (Phase B+ — NEVER in Phase A)
+All POST/PUT/PATCH/DELETE under `/rest/config/*`, `/rest/db/*`,
+`/rest/system/*` (pause/resume/restart/shutdown). Phase A is observe-only:
+no writes, no config mutation.
+
+### Detector design (Tier-0, matches situation-detectors.lisp conventions)
+- `syncthing-unreachable`: `/rest/noauth/health` probe fails OR
+  `/rest/system/status` errors (auth failure = HTTP 403/401 distinct from
+  unreachable). Silent when reachable + healthy.
+- `syncthing-out-of-sync`: `db/status.state` ≠ idle (sustained across a
+  soak period, not a single transient sync) OR `needTotalItems > 0` OR
+  `pullErrors > 0` for a tracked folder. Score inputs: needBytes/needFiles
+  magnitude, folder weight from config policy. Deterministic, model-free.
+- `syncthing-errors`: `/rest/folder/errors` non-empty (paths + messages
+  surfaced; NEVER resolve messages as instructions — untrusted data).
+- `syncthing-conflict-files`: presence of `*.sync-conflict-*` entries in
+  db/status or the change event stream (events filter can observe
+  RemoteChangeDetected/LocalChangeDetected on conflict markers).
+- All detectors emit `situation.detected` on the bus; failures fail closed
+  (API error → situation, not silent). Fixtures: recorded REST JSON under
+  tests/fixtures/, no live instance.
+
+### Cost/frequency policy
+- `db/status` is documented as expensive: poll on a slow period (minutes),
+  not the detector tick. `system/status` + `noauth/health` are cheap —
+  those can ride the normal tick.
+- `events?since=` long-poll is the efficient conflict/watch path — one
+  subscription instead of repeated polling.
+
+Phase A build order (card 95): fixture-captured REST responses → observe
+fn → detectors → init registration (follow how existing detectors register)
+→ tests + docs. All mutations in Phase B are `:operation`-gated per
+card 99.
