@@ -111,8 +111,9 @@ If any step fails, already-started components are shut down in reverse order."
   (unwind-protect
        (progn
          (hngh.core.event-bus:init :hngh-home hngh-home)
-         (hngh.core.state-store:init :hngh-home hngh-home)
-         (hngh.core.supervisor:init)
+        (hngh.core.state-store:init :hngh-home hngh-home)
+        (hngh.core.safety-boundary:init :hngh-home hngh-home)
+        (hngh.core.supervisor:init)
          (hngh.core.scheduler:init)
          (hngh.core.threat-detection:init :hngh-home hngh-home)
          (hngh.core.resource-manager:init :hngh-home hngh-home)
@@ -189,6 +190,7 @@ If any step fails, already-started components are shut down in reverse order."
       (ignore-errors (hngh.core.threat-detection:shutdown))
       (ignore-errors (hngh.core.scheduler:shutdown))
       (ignore-errors (hngh.core.supervisor:shutdown))
+      (ignore-errors (hngh.core.safety-boundary:shutdown))
       (ignore-errors (hngh.core.state-store:shutdown))
       (ignore-errors (hngh.core.event-bus:shutdown)))))
 
@@ -246,6 +248,8 @@ Shutdown sequence (reverse of startup):
   (hngh.core.scheduler:shutdown)
   ;; Stop Supervisor
   (hngh.core.supervisor:shutdown)
+  ;; Stop Safety Boundary (unfreezes config writes after plugins are down)
+  (hngh.core.safety-boundary:shutdown)
   ;; Flush State Store (releases locks)
   (hngh.core.state-store:shutdown)
   ;; Stop Event Bus
