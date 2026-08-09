@@ -279,11 +279,11 @@ bidirectional channels.
   The pane's "type a line => steer to seat" claim is aspirational.
 - hngh-coord MCP face exists and is wire-proven (card 101): tools
   `register`, `post_message`, `read_inbox`, `status`, `steer` over
-  Content-Length MCP framing (`~/.local/bin/hngh-coord-mcp` stdio
-  server). NOT yet registered as an MCP server in `~/.hermes/
-  config.yaml` — no agent session currently has the tool wired.
+  newline-delimited JSON (`~/.local/bin/hngh-coord-mcp` stdio
+  server). Registered in `~/.hermes/config.yaml`; Hermes discovery,
+  test, and list all pass with five tools enabled.
 - tmux dispatch works (seat-steer care layer, lane-watch nudge): the
-  dashboard's control path is real. The agent->Hngh path is not.
+  dashboard's control path is real. The agent->Hngh path is now active.
 
 ### 8.2 Design: the ride-along console (pane 2, owned by dashboard later)
 
@@ -324,19 +324,20 @@ INPUT GATING (Cibo review 12:55):
 
 ### 8.3 Design: agent back-channel (MCP first, tmux + lane fallback)
 
-STATUS: PLANNED — the MCP bridge is not active until the owner runs
-`hermes mcp add hngh ...` AND an independent post->read wire test
-passes (per Cibo review 12:55). The face is wire-proven (card 101);
-the registration is not done. Everything in this section is the
-target design, not current capability.
+STATUS: ACTIVE — `hngh-coord-mcp` is registered as `hngh` in
+`~/.hermes/config.yaml` with five tools enabled. Independent newline
+wire probe, `hermes mcp add`, `hermes mcp test`, and `hermes mcp list`
+all pass. The registration is now part of the working-group wave.
+
+The current design has three channels. The eventual back-channel count
+is N: it grows with the coordination surfaces Hngh actually supports.
 
 Agents connect back to Hngh through THREE channels, in order:
 
-1. **MCP (tool-level, primary)**: register `hngh-coord-mcp` as a stdio
-   MCP server (`hermes mcp add hngh --command
-   /home/bricker/.local/bin/hngh-coord-mcp`; owner-gated config edit;
-   connect-timeout 120 for the SBCL boot). Each Hermes session then has
-   `mcp__hngh__*` tools. Agents
+1. **MCP (tool-level, primary)**: registered as `hngh` in the local
+   Hermes config (`hermes mcp add hngh --command
+   /home/bricker/.local/bin/hngh-coord-mcp`; connect-timeout 120 for
+   the SBCL boot). Each Hermes session can expose `mcp__hngh__*` tools.
    post findings, read their inboxes, steer siblings — via tools, from
    inside any session, no tmux knowledge needed.
    TOOL ALIGNMENT (Cibo review 12:55): the exposed set is

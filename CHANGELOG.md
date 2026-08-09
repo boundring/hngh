@@ -10,7 +10,16 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
-### Added — durable coordination records design (owner 13:10/13:14, design lane)
+### Added — hngh-coord MCP registration (MCP-REG, working-group wave)
+- Fixed `initialize.capabilities.tools` from JSON `null` to an empty
+  object, and normalized empty tool schemas to `{}` / `[]` rather than
+  JSON nulls.
+- Corrected the stdio transport to newline-delimited JSON, matching the
+  Python MCP SDK used by Hermes. The prior raw Content-Length probe was
+  valid for cxxxr/jsonrpc but not for Hermes's client transport.
+- Registered `hngh-coord-mcp` as local Hermes server `hngh`; discovery and
+  test report five enabled tools. Independent newline wire probe passes.
+
 - Added docs/design/durable-coordination-records.md: layered record
   model — COORD JOURNAL (steers as data), automatic procedural
   breadcrumbs per seat per phase, append-only enforced by tooling

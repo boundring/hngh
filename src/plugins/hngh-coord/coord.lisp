@@ -1,8 +1,9 @@
 ;;;; src/plugins/hngh-coord/coord.lisp — squad coordination plane (card 101).
 ;;;;
 ;;;; Any-number-of-agents coordinator: two faces, one append-only store —
-;;;;   MCP face (Content-Length framing — the stock cxxxr/jsonrpc stdio
-;;;;   transport IS MCP framing; registered as the :mcp mode below),
+;;;;   MCP face (newline-delimited JSON — the stock cxxxr/jsonrpc :acp
+;;;;   transport is used below; this is the framing spoken by the Python
+;;;;   MCP SDK),
 ;;;;   ACP face (newline-delimited JSON — the shipped :acp mode from
 ;;;;   acp-transport.lisp).
 ;;;;
@@ -107,8 +108,8 @@ hash-tables; keyword keys would need a symbol policy yason lacks)."
   (%mcp-object "name" name
                "description" desc
                "inputSchema" (%mcp-object "type" "object"
-                                          "properties" props
-                                          "required" required)))
+                                          "properties" (or props (%mcp-object))
+                                          "required" (or required #()))))
 
 (defun mcp-server (handler)
   "Build an MCP server: same JSON-RPC server machinery as the ACP server
@@ -161,7 +162,7 @@ Return values are yason-safe hash-tables (see %MCP-OBJECT)."
        (%mcp-object
         "protocolVersion" (or (gethash "protocolVersion" params)
                               "2024-11-05")
-        "capabilities" (%mcp-object "tools" nil)
+        "capabilities" (%mcp-object "tools" (%mcp-object))
         "serverInfo" (%mcp-object "name" "hngh-coord"
                                   "version" "0.1.0"))))
 
@@ -209,19 +210,16 @@ Return values are yason-safe hash-tables (see %MCP-OBJECT)."
 
 (defun serve-mcp (&key (input *standard-input*) (output *standard-output*)
                        (log-stream *error-output*))
-  "Run the MCP face on INPUT/OUTPUT (default stdio). The stock
-JSON-RPC stdio transport uses LSP-style Content-Length framing — which
-IS the MCP framing — so :mode :stdio is exactly the MCP transport
-(framing per the mcp-server-setup 2026-08-08 lesson: MCP Content-Length
-vs ACP newline are NOT interchangeable). LOG-STREAM receives logger
-output; MCP OUTPUT carries ONLY Content-Length frames, so logs must not
-share that stream (default: *error-output*). Blocks until the stream
-closes."
+  "Run the MCP face on INPUT/OUTPUT (default stdio). MCP stdio uses
+newline-delimited JSON messages, matching the Python MCP SDK and the
+shipped :acp transport. LOG-STREAM receives logger output; the MCP
+OUTPUT carries only JSON lines, so logs must not share that stream
+(default: *error-output*). Blocks until the stream closes."
   (let* ((mcp-in (or input *standard-input*))
          (mcp-out (or output *standard-output*))
          (server (mcp-server #'handle-tool-call))
          (*standard-output* (or log-stream *error-output*)))
-    (jsonrpc:server-listen server :mode :stdio
+    (jsonrpc:server-listen server :mode :acp
                            :input mcp-in :output mcp-out)))
 
 ;;; --- ACP face (newline framing, shipped transport) -------------------------
