@@ -20,14 +20,27 @@
   "Initialize event bus, state store, and package manager on TMP."
   (hngh.core.event-bus:init :hngh-home tmp)
   (hngh.core.state-store:init :hngh-home tmp)
+  (hngh.core.safety-boundary:init :hngh-home tmp)
+  (hngh.plugins.ai-orchestrator:init :hngh-home tmp)
   (hngh.plugins.package-manager:init :hngh-home tmp))
 
 (defun pkgmgr-teardown (tmp)
   "Shut down package manager, event bus, state store, and clean TMP."
   (hngh.plugins.package-manager:shutdown)
+  (hngh.plugins.ai-orchestrator:shutdown)
+  (hngh.core.safety-boundary:shutdown)
   (hngh.core.event-bus:shutdown)
   (hngh.core.state-store:shutdown)
   (cleanup-tmp-home tmp))
+
+(defun pkgmgr-approve (kind targets)
+  "Seed one explicit human approval for a privileged fixture operation."
+  (bt:with-lock-held (hngh.plugins.ai-orchestrator::*approved-operations-lock*)
+    (setf hngh.plugins.ai-orchestrator::*approved-operations*
+          (list (list :kind kind
+                      :targets (copy-list targets)
+                      :approved-at (get-universal-time)
+                      :approver "test-human")))))
 
 (defmacro with-pkgmgr ((tmp-var) &body body)
   "Execute BODY with a temporary home, all services initialized."
@@ -213,8 +226,9 @@
 ;;; --- Test 14: Remove-packages signals not implemented --------------------
 
 (test pm-remove-packages-not-implemented
-  "Remove-packages returns NIL (not yet implemented via daemon)."
+  "Remove-packages returns NIL (not implemented via daemon)."
   (with-pkgmgr (tmp)
+    (pkgmgr-approve :dep-install '("testpkg"))
     (let ((result (hngh.plugins.package-manager:remove-packages
                    '("testpkg") :reason "test")))
       (is (not result) "Remove should return NIL (not implemented)"))))
