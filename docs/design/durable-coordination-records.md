@@ -370,6 +370,11 @@ Generic checklist (appended when reason does not fit 1-4):
 4. If nothing stands, WRITE THE STATE and end the turn — no in-turn
    sleep, the watcher re-wakes you on lane change.
 
+The composed wake REQUIRES the HANDOFF phrasing in its text (per the
+rename wave): "A HANDOFF does not stop the watch — the deck has more
+work." (killy reconcile 17:01: one clause in the spec saves a re-sync
+when cibo's code lands.)
+
 Parameterization: seat lists come from the REGISTRY
 (registry/roll config), never hardcoded `for s in killy seu cibo`.
 The composition reads `$TANDEM-*/inbox.md` mtimes + claims
