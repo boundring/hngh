@@ -17,7 +17,7 @@
   "Whether the TUI is active.")
 
 (defvar *current-view* :overview
-  "Current view: :overview, :events, :plugins, :watch, :steers, :owner-inbox")
+  "Current view: :overview, :events, :plugins, :watch, :steers, :owner-inbox, :seats")
 
 (defvar *help-open* nil
   "Whether the keyboard help panel is shown.")
@@ -28,7 +28,8 @@
     (:plugins . "B2-Scheduler")
     (:watch . "B4-Watcher")
     (:steers . "B5-Steers")
-    (:owner-inbox . "B6-Owner"))
+    (:owner-inbox . "B6-Owner")
+    (:seats . "B7-Seats"))
   "View-keyword to megastructure floor name mapping.")
 
 (defvar *event-buffer* '()
@@ -49,8 +50,14 @@
 (defvar *steers-log-path* "/tmp/hngh-steers.log"
   "Path to the centralized steer delivery log.")
 
+(defvar *seat-registry-path* "/home/bricker/.hngh-night/seat-names.md"
+  "Path to the seat registry.")
+
 (defvar *owner-inbox-path* "/home/bricker/.hngh-night/owner/inbox.md"
   "Path to the owner-facing decision inbox.")
+
+(defvar *seat-lanes-root* "/home/bricker/.hngh-night"
+  "Root containing tandem seat lane directories.")
 
 (defvar *headless* nil
   "If T, don't render TUI (for service/SSH mode).")
@@ -155,7 +162,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
         (:plugins (render-plugins))
         (:watch (render-watch-state))
         (:steers (render-steers))
-        (:owner-inbox (render-owner-inbox))))
+        (:owner-inbox (render-owner-inbox))
+        (:seats (render-seats))))
   (render-footer))
 
 (defun render-to-string ()
@@ -206,6 +214,32 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
       (dolist (line (last (read-owner-inbox *owner-inbox-path*) 40))
         (format t "  ~A~%" line))
       (format t "  ~A(no owner inbox)~A~%" +ansi-dim+ +ansi-reset+)))
+
+(defun read-seat-status (registry lanes-root)
+  "Read assigned seats and model truth from REGISTRY and LANES-ROOT."
+  (let ((seats nil))
+    (dolist (line (uiop:read-file-lines registry))
+      (when (search "— ASSIGNED" line)
+        (let* ((name (string-trim '(#\Space #\Tab #\-)
+                                  (subseq line 0 (search "—" line))))
+               (lane (merge-pathnames
+                      (format nil "tandem-~A/" (string-downcase name))
+                      lanes-root))
+               (status-file (merge-pathnames "model-status" lane))
+               (error-file (merge-pathnames "model-error" lane))
+               (status (cond ((probe-file status-file) "verified")
+                             ((probe-file error-file) "paused")
+                             (t "unknown"))))
+          (push (cons name (list :status status)) seats))))
+    (nreverse seats)))
+
+(defun render-seats ()
+  "Render assigned seat truth from the registry and lane status files."
+  (render-header "Seats")
+  (if (probe-file *seat-registry-path*)
+      (dolist (entry (read-seat-status *seat-registry-path* *seat-lanes-root*))
+        (format t "  ~A  ~A~%" (car entry) (getf (cdr entry) :status)))
+      (format t "  ~A(no seat registry)~A~%" +ansi-dim+ +ansi-reset+)))
 
 (defun render-watch-state ()
   "Render the latest live-watch state for each seat."
@@ -351,7 +385,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-footer ()
   "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
-  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [5]Steers [6]Owner [?]Help [q]uit~A"
+  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [5]Steers [6]Owner [7]Seats [?]Help [q]uit~A"
           +ansi-dim+ +ansi-reset+)
   (bt:with-lock-held (*buffer-lock*)
     (let ((n (length *event-buffer*)))
@@ -393,6 +427,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           (#\4 (setf *current-view* :watch) (render))
           (#\5 (setf *current-view* :steers) (render))
           (#\6 (setf *current-view* :owner-inbox) (render))
+          (#\7 (setf *current-view* :seats) (render))
           (#\q (setf *running* nil))
           (#\Q (setf *running* nil))))))
 

@@ -296,6 +296,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:read-watch-state
            #:read-steers-log
            #:read-owner-inbox
+           #:read-seat-status
            #:format-event-time))
 
 (defpackage :hngh.plugins.package-manager
