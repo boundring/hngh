@@ -71,6 +71,8 @@
     (is (equal :overview (getf (hngh.plugins.dashboard-tui:status) :view)))
     (hngh.plugins.dashboard-tui:handle-key #\3)
     (is (equal :plugins (getf (hngh.plugins.dashboard-tui:status) :view)))
+    (hngh.plugins.dashboard-tui:handle-key #\4)
+    (is (equal :watch (getf (hngh.plugins.dashboard-tui:status) :view)))
     (hngh.plugins.dashboard-tui:shutdown)
     (hngh.core.event-bus:shutdown)
     (cleanup-tmp-home tmp)))
