@@ -52,14 +52,18 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - **Makefile**: `SBCL_FLAGS` loads `.qlot/setup.lisp` when present
   (conditional no-op otherwise) so all build/test sbcl invocations resolve
   deps from the pin. `.qlot/` gitignored.
-- **`ci.yml` rewritten** to install SBCL+Quicklisp+qlot then
-  `qlot install` + `qlot exec make build/test` — fixes the long-standing
-  "BORDEAUX-THREADS not found" CI failure (runner had no Quicklisp).
+- **`ci.yml` rewritten** to **lint-only** (deterministic `lint-parens` +
+  `lint-deps`, pure python, seconds) — owner decision: the per-push
+  build/test CI was serving no function (local `make test` is the quality
+  gate and runs on every commit), was slow (cold recompile per push) and
+  flaky (ACP stream race under CI timing). Kept as a cheap public health
+  signal (`workflow_dispatch` available now). GitHub CI green.
 - **`mirror.yml` deleted** — redundant (local pushes both remotes) and
   broken on the runner (SSH key path absent); was the source of "Run failed"
   email noise on every push.
 - **Verified**: `make test` exit 0, 837/837 fast, 0 fail-suites; `make
-  build` exit 0 — all under the pin (was failing pre-fix).
+  build` exit 0 — all under the pin (was failing pre-fix); GitHub CI green
+  on the lint-only gate.
 
 ### Added — Wave C/backup task deck (93–99) + Luna delegation verified
 - **Task cards 93–99** composed in `~/.hngh-night/tasks/` from the
