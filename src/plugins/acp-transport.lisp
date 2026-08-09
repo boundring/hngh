@@ -89,9 +89,16 @@ terminated by a single \\n, per ACP's stdio framing requirement."
 
 (defmethod receive-message-using-transport ((transport acp-transport) connection)
   "Read one newline-delimited JSON line and parse it into a message.
-Returns NIL at EOF (ends the reading loop cleanly, not an error)."
+Returns NIL at EOF or when the pipe is closed underneath us (Card 100:
+the CI flake where a teardown close left the reading thread with an
+unhandled SB-INT:SIMPLE-STREAM-ERROR). A dead/closed pipe is the same
+clean-shutdown signal as EOF — the reading loop exits quietly, matching
+the daemon's disconnect handling. Parse failures (real protocol errors)
+still propagate: they are not STREAM-ERRORs and are not caught here."
   (declare (ignore transport))
   (let ((stream (connection-stream connection)))
-    (let ((line (read-line stream nil nil)))
+    (let ((line (handler-case
+                    (read-line stream nil nil)
+                  (stream-error () nil))))
       (when line
         (parse-message line)))))

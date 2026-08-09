@@ -258,3 +258,70 @@ with CONN bound, then disconnect and destroy the server thread."
           (sb-posix:close in1) (sb-posix:close in2)
           (sb-posix:close out1) (sb-posix:close out2)
           (when server-thread (ignore-errors (bt:destroy-thread server-thread))))))))
+
+;;; --- Card 100: ACP pipe-close race (CI flake) -----------------------------
+;;;
+;;; The reading thread blocks in READ-LINE on the subprocess pipe; when the
+;;; fd is closed underneath it (teardown/close race under CI timing) SBCL
+;;; signals SB-INT:SIMPLE-STREAM-ERROR ("couldn't read from fd N") and the
+;;; unhandled condition leaks into later suites. The transport must treat
+;;; a dead/closed pipe like EOF: receive returns NIL, the reading loop
+;;; (run-reading-loop's `while message`) exits quietly. Parse failures are
+;;; NOT stream-errors and still propagate.
+
+(test acp-transport-receive-treats-closed-pipe-as-eof
+  "Card 100: a closed/dead pipe must read as clean EOF (NIL), not signal
+a stream error."
+  (multiple-value-bind (rfd wfd) (sb-posix:pipe)
+    (let* ((input (sb-sys:make-fd-stream rfd :input t))
+           (output (sb-sys:make-fd-stream wfd :output t))
+           (stream (make-two-way-stream input output))
+           (connection (make-instance 'jsonrpc/connection:connection
+                                      :stream stream))
+           (transport (make-instance 'jsonrpc/transport/acp:acp-transport
+                                     :input input :output output)))
+      (close input)
+      (handler-case
+          (let ((msg (jsonrpc/transport/interface:receive-message-using-transport
+                      transport connection)))
+            (is (null msg)
+                "receive on a closed pipe returns NIL (clean EOF)"))
+        (error (c)
+          (is-false t (format nil "receive signaled on closed pipe: ~A" c))))
+      (ignore-errors (close output))
+      (ignore-errors (sb-posix:close wfd)))))
+
+(test acp-transport-reader-thread-exits-quietly-on-dead-pipe
+  "Card 100: a reading THREAD over a pipe closed under it must exit
+without an unhandled stream error."
+  (multiple-value-bind (rfd wfd) (sb-posix:pipe)
+    (let* ((input (sb-sys:make-fd-stream rfd :input t))
+           (output (sb-sys:make-fd-stream wfd :output t))
+           (stream (make-two-way-stream input output))
+           (connection (make-instance 'jsonrpc/connection:connection
+                                      :stream stream))
+           (transport (make-instance 'jsonrpc/transport/acp:acp-transport
+                                     :input input :output output))
+           (result (list :unset))
+           (reader
+             (bt:make-thread
+              (lambda ()
+                (setf result
+                      (handler-case
+                          (list :ok
+                                (jsonrpc/transport/interface:receive-message-using-transport
+                                 transport connection))
+                        (error (c) (list :err (type-of c))))))
+              :name "acp-transport-dead-pipe-reader")))
+      (close input)                    ; pipe dead before the reader starts
+      (loop for i below 100
+            until (not (bt:thread-alive-p reader))
+            do (sleep 0.05))
+      (is-true (eq :ok (first result))
+               "reader exits with :ok (clean EOF), no unhandled error")
+      (is (null (second result))
+          "clean-EOF read returns NIL")
+      (is-false (bt:thread-alive-p reader)
+                "reader thread exits after pipe close")
+      (ignore-errors (close output))
+      (ignore-errors (sb-posix:close wfd)))))

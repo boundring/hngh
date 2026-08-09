@@ -46,10 +46,29 @@ Returns an ACP-CONNECTION with its JSON-RPC client connected over stdio."
     (make-instance 'acp-connection
                    :client client :input input :output output)))
 
+(defun %transport-threads (client)
+  "Return the jsonrpc transport's thread list for CLIENT (or NIL)."
+  (handler-case
+      (let ((tr (slot-value client 'jsonrpc/base::transport)))
+        (jsonrpc/transport/interface:transport-threads tr))
+    (error () nil)))
+
 (defun acp-disconnect (conn)
-  "Disconnect and release the ACP connection."
+  "Disconnect and release the ACP connection.
+
+Card 100: destroy the transport's reading/processing threads DIRECTLY with
+the real bordeaux-threads API in addition to client-disconnect. The vendored
+jsonrpc calls BT2:DESTROY-THREAD, which under this qlot pin resolves to a
+generic without an applicable method for SBCL threads — leaving the reading
+thread blocked on the pipe forever. A leaked reader then reads recycled fds
+during later suites and dies with an unhandled JSONRPC-PARSE-ERROR, killing
+the image. Destroying the threads here is the same operation jsonrpc
+intended, using an API that actually works."
   (when (and conn (acp-client conn))
-    (ignore-errors (jsonrpc:client-disconnect (acp-client conn))))
+    (let ((client (acp-client conn)))
+      (ignore-errors (jsonrpc:client-disconnect client))
+      (dolist (th (%transport-threads client))
+        (ignore-errors (bt:destroy-thread th)))))
   t)
 
 ;;; --- Message helpers ------------------------------------------------------
