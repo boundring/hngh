@@ -43,6 +43,26 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave C immutable safety layer (part 1)
+- **`src/core/safety-boundary.lisp`** — the root piece of the hardened
+  security baseline (autonomy-strategy.md §7 Wave C): the agent cannot edit
+  its own approval/sentry/sandbox config.
+  - Protected-path registry: `config/hngh.lisp`, `config/sentry.lisp`,
+    `config/sandbox.lisp` registered + frozen at init; containment check
+    (a path under a protected dir is protected).
+  - `allow-mutation-p` — fail-closed (NIL for protected), denial recorded
+    to the append-only action log. `ensure-mutable` signals on protected.
+  - Append-only action log (`journal/actions.lisp`), `recent-denials`.
+  - Best-effort 0444 mode-lock at init (tolerated in temp dirs / read-only
+    filesystems — in-process guard enforces regardless).
+  - Lives in CORE, not a plugin, so a self-modifying agent can't extend its
+    own protected list. Wired into main.lisp init (after state-store,
+    before plugins) + both shutdown paths.
+- 19 new checks; **837/837 fast, 2578/2578 full** (was 818/2559).
+- Remaining Wave C items (least-agency tool scoping, untrusted-content
+  tagging, canary tokens, execution sandboxing, pinned deps, `:operation`
+  human gate) are next; no core self-modification until complete.
+
 ### Added — Wave B governance guardrails (`make lint-deps`)
 - **`scripts/lint-deps.py`** — deterministic dependency fitness checks
   (autonomy-strategy.md §7 Wave B), wired into `test-suite` alongside

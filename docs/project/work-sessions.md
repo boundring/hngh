@@ -714,3 +714,17 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Bugs found + fixed during build**: (a) `_USE_RE` expected nested `:use (...)` but repo writes `(:use :cl ...)` — fixed `\(?`; (b) rule2 was directory-based (src/core/) but core-ness is package-based (hngh.core.* / hngh) — fixed; (c) multi-in-package files misattributed calls — added `segment_packages` (last-in-package scoping); (d) **cycle finder never fired**: call edges captured bare plugin name (`circ-a`) while graph keys are full packages (`hngh.plugins.circ-a`) — the classic name-mismatch cycle bug, edges normalized to full names.
 - **Verified**: `make test` exit 0 — both gates before tests, 818/818 fast, 0 fail-suites.
 - Docs updated: CHANGELOG, work-sessions M9.29. Committed + pushed.
+
+### Session M9.30: Wave C immutable safety layer (part 1)
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner direction**: continue security/guardrails before anything public or self-launched. Wave C begins with its root: the **immutable safety layer**.
+- `src/core/safety-boundary.lisp` (CORE, not a plugin — so the agent can't edit its own protection list):
+  - Registry: config/hngh.lisp + config/sentry.lisp + config/sandbox.lisp frozen at init; containment check (anything under a protected dir is protected).
+  - `allow-mutation-p` fail-closed; denial journaled to the append-only `journal/actions.lisp`. `ensure-mutable` signals.
+  - Best-effort 0444 mode-lock (temp-dir/read-only tolerant; in-process guard always enforces).
+  - Wired after state-store, before plugins (so configs are locked before any plugin runs); on both shutdown paths.
+- Tests: test-safety-boundary.lisp — 19 checks (registry frozen, containment, deny+log, allow no-log, ensure-mutable signals, log shape, status). Isolated temp home; no network/model/privileges.
+- Verified uiop functions against SBCL before using (`subpathp`, `pathname-equal`, `pathname-directory-pathname`, `file-exists-p` all present) — no guessed APIs.
+- **Verified**: 837/837 fast (was 818), full suite running; exit 0.
+- Docs updated: next.md (Wave C P0 part 1 shipped), CHANGELOG (+19 checks). Committed + pushed.
+- Also: verified the Hermes **file-mutation verifier footer** explanation for the user — AGENTS.md flagged as "not modified" was a false positive from repairing a failed patch via `sed` (invisible to the verifier); file was correct. Owner README.md revision committed (`8e2433f`) with attribution.
