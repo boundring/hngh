@@ -95,6 +95,48 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - **Verified**: `make test` exit 0, **858/858 fast, 0 fail-suites**,
   lint gates + fixer tests green.
 
+### Fixed — ACP subprocess-pipe flake (card 100, `51ebf47`)
+- Two halves of the same M9.34 CI flake: an ACP reading thread whose pipe
+  died under it either signaled an unhandled `SB-INT:SIMPLE-STREAM-ERROR`
+  or lingered and later read recycled descriptors, dying with an unhandled
+  `JSONRPC-PARSE-ERROR` that killed the whole SBCL image mid-suite.
+- `acp-transport.lisp` `receive-message-using-transport`: `read-line`
+  wrapped in `handler-case (stream-error () nil)` — dead/closed pipe is
+  clean EOF, reader loop exits quietly (parse failures still propagate).
+- `acp-client.lisp` `acp-disconnect`: destroys the jsonrpc reader/processor
+  threads with bordeaux-threads `bt:destroy-thread` (the vendored
+  `jsonrpc:client-disconnect` calls `bt2:destroy-thread`, a generic with
+  no applicable method under the pinned qlot — silently leaked every
+  connection's reader thread). Verified: 0 leaked jsonrpc threads after
+  the fix; full suite stable across consecutive runs.
+- +3 checks in `test-acp-client.lisp` (closed-pipe-as-EOF, thread exits
+  quietly).
+
+### Added — Wave C item 8: :operation human gate (card 99, tandem-delivered)
+- **Spec** `docs/design/operation-gate.md` (tandem-a, `8933f89` + seam trap
+  `f343128` + deployment note `1ca1edf`); **impl** `c657071` (tandem-b:
+  gpt-5.6-luna-max). Core-file commits + dependency installs require
+  explicit human approval. Unapproved → refused (task `:blocked`
+  "awaiting-human-approval" at submit), journaled via safety-boundary
+  `log-action :denied`, published as `operation.denied` bus event. Never
+  silent, never auto-approved.
+- **What landed**: `submit-task &key operation-spec` forces
+  `:type :operation` + `:authority :approval` (re-set after the v3
+  flatten — submit-task's `(if v3p :worker authority)` would otherwise
+  dispatch an un-gated `:worker` task); `approve-task` human-only
+  (config-seeded `:operation-approvals` durable, live registry, flips
+  `:blocked`→`:queued`); `operation-gate-check` exact-match predicate
+  (subset/superset rejected) composing lint-deps for `:core-commit`;
+  driver pre-delegate gate (refusal → `:failed`, no delegate call);
+  package-manager gates `install-packages`/`remove-packages`/
+  `upgrade-system` before any daemon call. 8 tests, 38 checks
+  (suite `:hngh.operation-gate`).
+- **Deployment note (owner)**: `:operation-approvals` lives in
+  `config/hngh.lisp`, which safety-boundary mode-locks to 0444 — an owner
+  `hngh config set :operation-approvals ...` needs a chmod first (same
+  quirk as `:tool-grants` after card 97). C6 stays PARKED until the
+  canary/scan tail closes.
+
 ### Added — Wave C item 3 (least-agency tool scoping, tandem-delivered)
 - **Two-Hermes ACP tandem delivered the full item** (`dccad77`, ~35 min
   launch→commit→FINAL, unattended): seat B (gpt-5.6-luna) implemented
