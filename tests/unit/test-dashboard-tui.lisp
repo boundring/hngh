@@ -108,6 +108,26 @@
       (when (probe-file tmp)
         (delete-file tmp)))))
 
+(test tui-renders-live-watch-state
+  (let ((tmp (make-pathname :name "watch-state-render" :type "txt"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "2026-08-09T18:30:00 cibo status=idle-nudge action=nudge idle_s=18~%"))
+           (hngh.core.event-bus:init :hngh-home (make-tmp-home))
+           (hngh.plugins.dashboard-tui:init :headless t)
+           (hngh.plugins.dashboard-tui:handle-key #\4)
+           (let ((hngh.plugins.dashboard-tui::*watch-state-path* tmp))
+             (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+               (is (search "Live Watch" output))
+               (is (search "cibo" output))
+               (is (search "idle-nudge" output))))
+           (hngh.plugins.dashboard-tui:shutdown)
+           (hngh.core.event-bus:shutdown))
+      (when (probe-file tmp)
+        (delete-file tmp)))))
+
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)

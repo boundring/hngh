@@ -17,7 +17,7 @@
   "Whether the TUI is active.")
 
 (defvar *current-view* :overview
-  "Current view: :overview, :events, :plugins")
+  "Current view: :overview, :events, :plugins, :watch")
 
 (defvar *help-open* nil
   "Whether the keyboard help panel is shown.")
@@ -39,6 +39,9 @@
 
 (defvar *input-thread* nil
   "Background thread reading keyboard input.")
+
+(defvar *watch-state-path* "/tmp/hngh-live-watch.state"
+  "Path to the live-watch state feed consumed by the dashboard.")
 
 (defvar *headless* nil
   "If T, don't render TUI (for service/SSH mode).")
@@ -140,7 +143,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
       (case *current-view*
         (:overview (render-overview))
         (:events (render-events))
-        (:plugins (render-plugins))))
+        (:plugins (render-plugins))
+        (:watch (render-watch-state))))
   (render-footer))
 
 (defun render-to-string ()
@@ -164,6 +168,20 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           +ansi-bold+ +ansi-cyan+ +ansi-reset+)
   (render-level-indicator)
   (format t "~%"))
+
+(defun render-watch-state ()
+  "Render the latest live-watch state for each seat."
+  (format t "~A~%Live Watch~A~%" +ansi-bold+ +ansi-reset+)
+  (if (probe-file *watch-state-path*)
+      (dolist (entry (read-watch-state *watch-state-path*))
+        (let ((seat (car entry))
+              (state (cdr entry)))
+          (format t "  ~A  ~A ~A idle=~Ds~%"
+                  seat
+                  (or (getf state :status) "unknown")
+                  (or (getf state :action) "none")
+                  (getf state :idle-s 0))))
+      (format t "  ~A(no watcher state)~A~%" +ansi-dim+ +ansi-reset+)))
 
 (defun render-overview ()
   "Render the overview view."
@@ -295,7 +313,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-footer ()
   "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
-  (format t "~A[1]Overview [2]Events [3]Plugins [?]Help [q]uit~A"
+  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [?]Help [q]uit~A"
           +ansi-dim+ +ansi-reset+)
   (bt:with-lock-held (*buffer-lock*)
     (let ((n (length *event-buffer*)))
@@ -334,6 +352,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           (#\1 (setf *current-view* :overview) (render))
           (#\2 (setf *current-view* :events) (render))
           (#\3 (setf *current-view* :plugins) (render))
+          (#\4 (setf *current-view* :watch) (render))
           (#\q (setf *running* nil))
           (#\Q (setf *running* nil))))))
 
