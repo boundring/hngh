@@ -716,6 +716,7 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
     (setf *policies* (make-hash-table :test 'eq))
     (setf (gethash :default *policies*) (copy-delegate-policy *default-policy*)))
   (load-policies)
+  (%load-operation-approvals)
   (when (event-bus-ready-p)
     (handler-case
         (push (hngh.core.event-bus:subscribe "resource.pressure"
@@ -771,6 +772,146 @@ Returns the new agent-info, or NIL if FROM-AGENT doesn't exist."
 (defvar *task-queue-lock* (bt:make-lock "hngh-task-queue"))
 (defvar *next-task-id* 0)
 (defvar *task-driver-schedule-id* nil)
+
+;;; --- Operation gate (Wave C item 8): approved mutations --------------------
+;;;
+;;; Core-file commits + dependency installs require explicit human approval.
+;;; Unapproved -> refused, journaled (safety-boundary action log), published
+;;; as `operation.denied`. Composes with lint-deps: an approved core-commit
+;;; whose lint-deps check is not :passed is refused even when approved.
+;;; Approval = exact match on (kind, targets) — subset/superset rejected.
+;;; Durable source: owner config plist :operation-approvals (fail-soft on
+;;; init); runtime additions via approve-task are live-only.
+
+(defvar *approved-operations* '()
+  "List of plists (:kind <kw> :targets (list) :approved-at <ut>
+:approver <string>) explicitly approved by a human. Exact-match only.")
+
+(defvar *approved-operations-lock* (bt:make-lock "hngh-approved-operations")
+  "Mutex protecting *approved-operations*.")
+
+(defun %load-operation-approvals ()
+  "Seed *approved-operations* from the owner config plist, fail-soft.
+Garbage config -> deny-all (empty registry), never a crash."
+  (bt:with-lock-held (*approved-operations-lock*)
+    (setf *approved-operations*
+          (handler-case
+              (let ((seed (hngh.core.config:config-get :operation-approvals '())))
+                (if (listp seed) seed '()))
+            (error () '())))))
+
+(defun %operation-approved-p (kind targets)
+  "T iff an exact (KIND, TARGETS) match exists in *approved-operations*.
+Exact only: an approval for 2 files does not approve 1 of them, and vice
+versa. Fail-closed on unknown KIND or malformed targets."
+  (bt:with-lock-held (*approved-operations-lock*)
+    (some (lambda (entry)
+            (and (eq (getf entry :kind) kind)
+                 (integerp (getf entry :approved-at))
+                 (let ((t1 (sort (copy-list targets) #'string<))
+                       (t2 (sort (copy-list (getf entry :targets)) #'string<)))
+                   (and (= (length t1) (length t2))
+                        (every #'string= t1 t2)))))
+          *approved-operations*)))
+
+(defun %publish-operation-denied (kind targets reason)
+  "Emit operation.denied on the bus when available (fail-soft)."
+  (when (event-bus-ready-p)
+    (ignore-errors
+      (hngh.core.event-bus:publish
+       "operation.denied"
+       (list :kind kind :targets targets :reason reason
+             :timestamp (get-universal-time))
+       :source 'ai-orchestrator))))
+
+(defun %refuse-operation (kind targets reason)
+  "Journal a :denied action + publish operation.denied. Returns NIL."
+  (handler-case
+      (hngh.core.safety-boundary:log-action :denied
+        :target (string-downcase (format nil "operation/~A" kind))
+        :detail (string-downcase (symbol-name reason)))
+    (error (c)
+      (hngh.core:log-warn "Operation gate: denial journal failed: ~A" c)))
+  (%publish-operation-denied kind targets reason)
+  nil)
+
+(defun %live-lint-deps-p (targets)
+  "Run scripts/lint-deps.py over TARGETS (repo-relative); T iff exit 0.
+Fail-closed: missing script or missing target files -> NIL."
+  (let* ((repo-root (ignore-errors (asdf:system-source-directory :hngh)))
+         (script (and repo-root
+                      (merge-pathnames "scripts/lint-deps.py" repo-root)))
+         (paths (and repo-root
+                     (mapcar (lambda (tgt)
+                               (merge-pathnames tgt repo-root))
+                             targets))))
+    (unless (and script (probe-file script)
+                 paths (every #'probe-file paths))
+      (return-from %live-lint-deps-p nil))
+    (multiple-value-bind (out code)
+        (sb-ext:run-program (namestring script)
+                            (mapcar #'namestring paths)
+                            :search nil :wait t
+                            :output :string :error-output :string)
+      (declare (ignore out))
+      (zerop code))))
+
+(defun operation-gate-check (kind targets &key lint-deps)
+  "Return T iff KIND/TARGETS are human-approved AND lint-deps passes.
+For :core-commit, lint-deps must be :passed (or a live scripts/lint-deps.py
+run must succeed when LINT-DEPS is NIL/pending and the files exist).
+Refusal: journal :denied + operation.denied event + NIL. Never succeeds
+silently on refusal. This is the MUST-CALL guard for any future commit
+tooling and for C6 self-modification."
+  (unless (%operation-approved-p kind targets)
+    (%refuse-operation kind targets :operation-not-approved)
+    (return-from operation-gate-check nil))
+  (when (eq kind :core-commit)
+    (let ((lint-ok (cond ((eq lint-deps :passed) t)
+                         ((eq lint-deps :failed) nil)
+                         (t (%live-lint-deps-p targets)))))
+      (unless lint-ok
+        (%refuse-operation kind targets :operation-lint-deps-failed)
+        (return-from operation-gate-check nil))))
+  t)
+
+(defun approve-task (id &key approver)
+  "Human approval for task ID: set :approval-at and record the live
+*approved-operations* entry; flip :blocked (awaiting-human-approval) to
+:queued. HUMANS ONLY — no agent code calls this (same trust model as
+grant-tool; the durable source is owner config :operation-approvals)."
+  (unless (and (integerp id) (stringp approver))
+    (error "approve-task requires an integer id and string approver"))
+  (bt:with-lock-held (*task-queue-lock*)
+    (let* ((queue (or (read-task-queue) '()))
+           (task (find id queue :key (lambda (e) (getf e :id))))
+           (spec (and task (getf task :operation-spec))))
+      (unless task
+        (error "Task ~D does not exist" id))
+      (unless spec
+        (error "Task ~D has no operation-spec (not an :operation task)" id))
+      (let ((now (get-universal-time)))
+        (bt:with-lock-held (*approved-operations-lock*)
+          (setf *approved-operations*
+                (append *approved-operations*
+                        (list (list :kind (getf spec :kind)
+                                    :targets (copy-list (getf spec :targets))
+                                    :approved-at now
+                                    :approver approver)))))
+        (setf (getf task :approval-at) now)
+        (when (and (eq (getf task :status) :blocked)
+                   (equal (getf task :blocked-reason)
+                          "awaiting-human-approval"))
+          (setf (getf task :status) :queued
+                (getf task :blocked-reason) nil))
+        (write-task-queue queue)
+        (when (event-bus-ready-p)
+          (ignore-errors
+            (hngh.core.event-bus:publish
+             :task-approved
+             (list :id id :approver approver :at now)
+             :source 'ai-orchestrator)))
+        task))))
 
 (defparameter *task-statuses*
   '(:proposed :queued :claimed :blocked :running :done :failed :cancelled)
@@ -1154,14 +1295,21 @@ The claimant, or any caller after expiry, atomically persists the release."
                               (type nil) (assigned-role nil) (verification nil)
                               (depends-on nil) (input-artifacts nil)
                               (output-artifacts nil) (authority :advisory)
-                              (source nil) (max-attempts nil))
+                              (source nil) (max-attempts nil)
+                              (operation-spec nil))
   "Enqueue TASK (string) with POLICY plist. Returns the new task id.
 Default policy routes to the free local tool (:local-openai-api).
 
 Optional v3 keywords upgrade the record to schema-version 3 so the planner
 can emit structured tasks (TYPE, ASSIGNED-ROLE, VERIFICATION, DEPENDS-ON,
 input/output artifacts, SOURCE tag). All default to the existing v2 shape
-when omitted — fully backward compatible."
+when omitted — fully backward compatible.
+
+OPERATION-SPEC (Wave C item 8): when present, forces :type :operation +
+:authority :approval. An :operation submitted with NO exact-match human
+approval enters :blocked (reason \"awaiting-human-approval\") and the
+refusal is journaled + published — visible now, human-recoverable via
+approve-task (which flips it back to :queued)."
   (unless (stringp task)
     (error "TASK must be a string"))
   (bt:with-lock-held (*task-queue-lock*)
@@ -1173,23 +1321,32 @@ when omitted — fully backward compatible."
                                    queue)
                            :initial-value 0))
            (id (setf *next-task-id* (max (1+ max-id) (1+ *next-task-id*))))
+           (op-spec operation-spec)
+           (op-approved (and op-spec
+                             (%operation-approved-p (getf op-spec :kind)
+                                                    (getf op-spec :targets))))
            (v3p (or type assigned-role verification input-artifacts
-                    output-artifacts source depends-on))
+                    output-artifacts source depends-on op-spec))
            (schema-version (if v3p 3 2))
            (entry (list :id id :schema-version schema-version :task task
-                        :status :queued :policy policy
-                        :authority (if v3p :worker authority)
+                        :status (if (and op-spec (not op-approved))
+                                    :blocked :queued)
+                        :policy policy
+                        :authority (if op-spec :approval
+                                       (if v3p :worker authority))
                         :approval-at nil
                         :depends-on (or depends-on '())
                         :attempt 0 :max-attempts (or max-attempts 1)
-                        :not-before nil :lease-until nil :blocked-reason nil
+                        :not-before nil :lease-until nil
+                        :blocked-reason (if (and op-spec (not op-approved))
+                                            "awaiting-human-approval" nil)
                         :result nil :error nil
                         :submitted-at (get-universal-time)
                         :started-at nil :finished-at nil)))
       ;; Merge v3-only fields when present (kept out of the base plist above
       ;; so pure-v2 submissions stay byte-identical to before).
       (when v3p
-        (setf (getf entry :type) (or type :work))
+        (setf (getf entry :type) (if op-spec :operation (or type :work)))
         (setf (getf entry :assigned-role) (or assigned-role :worker))
         (setf (getf entry :verification)
               (or verification (list :command nil :status :pending
@@ -1197,13 +1354,21 @@ when omitted — fully backward compatible."
         (setf (getf entry :input-artifacts) (or input-artifacts '()))
         (setf (getf entry :output-artifacts) (or output-artifacts '()))
         (when source
-          (setf (getf entry :source) source)))
+          (setf (getf entry :source) source))
+        (when op-spec
+          (setf (getf entry :operation-spec) op-spec)))
+      (when (and op-spec (not op-approved))
+        ;; Visible, journaled refusal at submit; human-recoverable.
+        (%refuse-operation (getf op-spec :kind) (getf op-spec :targets)
+                           :operation-not-approved))
       (write-task-queue (append queue (list entry)))
       (when (event-bus-ready-p)
         (ignore-errors
           (hngh.core.event-bus:publish
            :task-queued
-           (list :id id :status :queued :schema-version schema-version)
+           (list :id id :status (if (and op-spec (not op-approved))
+                                    :blocked :queued)
+                 :schema-version schema-version)
            :source 'ai-orchestrator)))
       (hngh.core:log-info "Task ~D queued (~D chars, schema v~D)"
                           id (length task) schema-version)
@@ -1379,6 +1544,27 @@ The delegate call runs outside the queue lock (long inference)."
                 (task (getf eligible-task :task))
                 (policy (getf eligible-task :policy)))
             (%update-queue-entry id (lambda (e) (setf (getf e :status) :running)))
+            ;; Wave C item 8: operation gate — a :type :operation task is the
+            ;; commit/install-producing step. Refuse BEFORE delegate when the
+            ;; gate fails (unapproved or lint-deps-failed); the check has
+            ;; journaled + published the refusal. No delegate call.
+            (let ((op-spec (getf eligible-task :operation-spec)))
+              (when (and op-spec
+                         (eq (getf eligible-task :type) :operation))
+                (unless (operation-gate-check
+                         (getf op-spec :kind) (getf op-spec :targets)
+                         :lint-deps (getf op-spec :lint-deps))
+                  (%update-queue-entry
+                   id (lambda (e)
+                        (setf (getf e :status) :failed
+                              (getf e :error) "operation refused"
+                              (getf e :finished-at) (get-universal-time))))
+                  (when (event-bus-ready-p)
+                    (ignore-errors
+                     (hngh.core.event-bus:publish :task-completed
+                                                  (list :id id :status :failed)
+                                                  :source 'ai-orchestrator)))
+                  (return-from task-driver-tick nil))))
             (handler-case
                 (let* ((agent (delegate task :preferences policy))
                        (ok (eq (agent-info-status agent) :completed))

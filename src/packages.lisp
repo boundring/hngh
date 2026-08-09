@@ -433,8 +433,13 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
             #:submit-task
             #:list-tasks
             #:task-driver-tick
+            #:next-eligible-task
             #:start-task-driver
             #:stop-task-driver
+            ;; Operation gate (Wave C item 8 / card 99)
+            #:approve-task
+            #:operation-gate-check
+            #:*approved-operations*
             ;; Pause/Resume and Stale-Lease Recovery (H-A3)
             #:pause-dispatch
             #:resume-dispatch
