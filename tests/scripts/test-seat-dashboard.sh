@@ -3,6 +3,10 @@ set -euo pipefail
 
 SEAT_UP=${SEAT_UP:-/home/bricker/.local/bin/seat-up}
 LANE_WATCH=${LANE_WATCH:-/home/bricker/.local/bin/lane-watch}
+REPO_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+HERMES_SOURCE=${HERMES_SOURCE:-$HOME/.hermes/hermes-agent}
+GATE_PY="$HERMES_SOURCE/venv/bin/python"
+[ -x "$GATE_PY" ] || GATE_PY=python3
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 pass() { printf 'PASS: %s\n' "$*"; }
@@ -185,6 +189,54 @@ fi
 grep -q 'negotiated=missing' "$SEAT_FIXTURE_ROOT/lanes/model-error" || \
   fail "seat-up records missing model verification"
 pass "seat-up fails closed without model verification"
+
+# 107B: config custom providers (e.g. unsloth-local) are runtime truth.
+# Give seat-up a hermetic HERMES_HOME whose config.yaml declares the
+# provider + models list; the gate must accept through the config branch.
+seat_fixture
+mkdir -p "$SEAT_FIXTURE_ROOT/hermes-home"
+cat >"$SEAT_FIXTURE_ROOT/hermes-home/config.yaml" <<'CONFIG'
+providers:
+  unsloth-local:
+    name: unsloth
+    api: http://127.0.0.1:8888/v1
+    api_key: UNSLOTH_API_KEY
+    models:
+      - unsloth/Qwen-AgentWorld-35B-A3B-GGUF
+CONFIG
+if ! PATH="$SEAT_FIXTURE_ROOT/bin:$PATH" \
+  SEAT_REGISTRY="$SEAT_FIXTURE_ROOT/registry" \
+  SEAT_MODEL_CATALOG="$SEAT_FIXTURE_ROOT/catalog.json" \
+  SEAT_TMUX_SOCKET=seat-test SEAT_LANES="$SEAT_FIXTURE_ROOT/lanes" \
+  SEAT_HERMES_BIN=/bin/true SEAT_STARTUP_WAIT=0 SEAT_STEER_WAIT=0 \
+  SEAT_NEGOTIATED_MODEL=unsloth/Qwen-AgentWorld-35B-A3B-GGUF \
+  HERMES_HOME="$SEAT_FIXTURE_ROOT/hermes-home" \
+  HERMES_SOURCE="$HOME/.hermes/hermes-agent" \
+  "$SEAT_UP" cibo unsloth/Qwen-AgentWorld-35B-A3B-GGUF unsloth-local "$SEAT_FIXTURE_ROOT/work" \
+  "$SEAT_FIXTURE_ROOT/mission" >"$SEAT_FIXTURE_ROOT/out" 2>"$SEAT_FIXTURE_ROOT/err"; then
+  cat "$SEAT_FIXTURE_ROOT/err" >&2
+  fail "seat-up accepts a config custom provider (unsloth-local)"
+fi
+grep -q 'status=verified' "$SEAT_FIXTURE_ROOT/lanes/model-status" || \
+  fail "seat-up records verified config provider model"
+pass "seat-up accepts manifest model from config providers"
+
+# 107B: the Hngh model manifest itself must validate against the hermes
+# schema before anything consumes it.
+if ! "$GATE_PY" - "$REPO_ROOT/docs/design/model-manifest.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+sys.path.insert(0, os.environ.get("HERMES_SOURCE", "/home/bricker/.hermes/hermes-agent"))
+from hermes_cli.model_catalog import _validate_manifest
+data = json.load(open(path, encoding="utf-8"))
+if not _validate_manifest(data):
+    print(f"manifest failed schema validation: {path}", file=sys.stderr)
+    raise SystemExit(2)
+PY
+then
+  fail "Hngh model manifest validates against the hermes schema"
+fi
+pass "model manifest validates against hermes schema"
 
 rm -rf "$SEAT_FIXTURE_ROOT"
 printf 'focused seat dashboard fixtures: PASS\n'

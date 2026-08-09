@@ -10,6 +10,22 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — Hngh model manifest (card 107B, design lane)
+- Added `docs/design/model-manifest.json`: the Hngh provider:model set
+  with tier metadata (workhorse / reserve), schema v1. Validated in the
+  seat-dashboard fixture suite against
+  `hermes_cli/model_catalog._validate_manifest`.
+- `seat-up`'s model gate now reads runtime truth: the SWR disk cache
+  (`~/.hermes/cache/model_catalog.json`) when present, with the
+  checkout copy as fallback; the gate accepts models from the catalog
+  block, the canonical registry, or config `providers.<name>.models`
+  (so config custom providers like `unsloth-local` spawn cleanly).
+  Gate runs under the Hermes venv python (system python3 lacks yaml).
+- Manifest/override transport (`model_catalog.providers.<name>.url`,
+  `file://` URLs) verified end-to-end; wiring remains owner-gated.
+- Fixture coverage: `tests/scripts/test-seat-dashboard.sh` now 12
+  checks (added config-provider accept + manifest schema validation).
+
 ### Added — procedural agent-to-agent prompt lint (card 103)
 - Added `hngh prompt-lint FILE`, a local, no-LLM guard for briefs, steers,
   and outbox entries. It emits one JSON report with level, category,
