@@ -769,6 +769,15 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Verified under the pin** (real output): `make test` exit 0, **837/837 fast, 0 fail-suites**, guardrails clean; `make build` exit 0 (53MB `bin/hngh`).
 - Docs: next.md (shipped block + Wave C row item 1 DONE), CHANGELOG, work-sessions. Task card 93 archived to `.done/`.
 
+### Session M9.35: Task 94 (Luna-delegated) + task 96 (bwrap) + paren-fixer hardening
+**Status**: Delivered + verified (2026-08-09). Mixed attended+delegated session (deepseek-v4-flash-0731 attended; gpt-5.6-luna delegated via hermes chat --provider openai).
+- **Delegation process vetted end-to-end**: card 94 (hash-chained action log) → self-contained brief → background `hermes chat -Q -m gpt-5.6-luna --provider openai -q "$(cat brief)"` → Luna read the repo, added ironclad to qlfile, implemented additive SHA-256 `:hash` (zero root, backward-compatible pre-chain skip) + `verify-action-log` (fail-closed `(values nil nil)`), 19 checks, committed `c4c5b88` + doc fill `e427bad`, exit 0, **never pushed** per brief, and explicitly left my concurrent in-flight edits alone (coordination hygiene observed). Verified by full suite + code review.
+- **Owner feedback mid-run (recorded)**: (a) don't come to a halt to watch a delegated agent — use the slack for own work; (b) delegated agents should be observable in their own terminal windows (Konsole cascade, squad-up technique) not headless backgrounds; (c) LLMs should never hand-count parens — procedural scripts fix this. All three folded into behavior below + this record.
+- **Task 96 (bwrap sandbox, attended)**: `src/core/sandbox.lisp` — `run-sandboxed` (bwrap default-deny: `--unshare-net`, ro system dirs, writable only task dir, `--die-with-parent --new-session`; fail-closed missing bwrap => error). Tool hub `sandboxed-p` flag (default NIL — attended agents untouched; only agent-generated/tool execution opts in). Wrap point chosen by reading the real spawn surface (`execute-agentic-cli`, NOT `acp-run-task` — over-wrapping the dev loop). Pitfalls hit + fixed procedurally: `defun` vs `defmacro` (&body comma), stray-close paren (fixed via lint-parens), invalid FiveAM `(is t)` → `(is (eq t t))`, glued-line EOF. 858/858 green.
+- **Paren-fixer hardening (owner directive)**: `lint-parens --fix` now runs BEFORE the check in the test gate; new `tests/scripts/test-lint-parens.py` (4 pytest regression tests: balanced pass, unclosed auto-fix, stray report-only, mixed never half-fixed) via `uv run --with pytest`, wired `make lint-parens-test`. From now on: **LLMs don't count parens; the script fixes them.**
+- **Verified**: `make test` exit 0 — paren fixer tests 4 passed, guardrails clean, **858/858 fast, 0 fail-suites**.
+- Cards 94/96 archived to `.done/` after commit.
+
 ### Session M9.35: Wave C item 4 — hash-chained action log
 **Status**: Delivered + verified (2026-08-09). Delegated session (drafting hermes/gpt-5.6-luna (delegated); brief hermes deepseek-v4-flash-0731).
 - **`src/core/safety-boundary.lisp`** — the append-only action log is now
