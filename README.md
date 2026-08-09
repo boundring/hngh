@@ -1,41 +1,39 @@
 # Hngh
 
-> *Hngh Network Goes Hngh.* — the recursive acronym expands into itself:
-> Hngh is both the first and the last word. (Bookend variants below.)
-
-> **Operator note (2026-08-08):** the attendant Hermes session runs its own
-> verify-on-stop gate (`~/.hermes/verification_evidence.db` ledger). It
-> nudges when *any* code file is edited after the last recorded passing
-> test evidence, independently of hngh's gates — expect the occasional
-> redundant `make test` request after doc-only commits that follow code
-> work. Toggle: `hermes config set agent.verify_on_stop false` (or
-> `HERMES_VERIFY_ON_STOP=0` per invocation). Decided: leave it on; hngh's
-> verification narrative (`make test` / lint-counts / scrub-pii) already
-> satisfies it.
-
-Canonical bookend family (each expands into itself, Hngh at both ends):
-
-- Hngh Network Goes Hngh.
-- Hngh Network Grows Hngh.
-- Hngh Network Grinds Hngh.
-- Hngh Network Generates Hngh.
+> *Hngh Network. Goes Hngh.*
+Alternative meanings:
 - Hngh Never Goes Hngh.
-- Hngh Now Generates Hngh.
-- Hngh Next Grinds Hngh.
-- Hngh Next Grows Hngh.
+- Hngh Needs to Grow Hngh.
+- Hngh Network Gathers Hngh.
+- Hngh Network Grows Hngh.
 
 **A system harness for CachyOS/Arch Linux that orchestrates configuration, package
 management, GPU/runtime management, and generative AI agents. Emacs-like extensibility
 applied to the entire operating system.**
 
-Hngh is a system-level agentic operating layer that drives existing agentic
-tools as its execution substrate. Today that means **Hermes Agent** (the
-attendant session in which Hngh's own development happens) and **Opencode**
-(the primary agentic CLI), with the oh-my-* orchestration wrappers layered on
-Opencode-side tools. Pi, Cecli, and any ACP-compatible agent are on the target
-list — not yet integrated, and this README won't claim them until they are.
-Hngh does not reimplement agentic harnesses — it coordinates between them,
-informs their behavior task-specifically, and manages the inter-tool boundary.
+Hngh is a system-level agentic operating layer that drives existing agentic tools as its
+execution substrate. Today that means **Hermes Agent** (the attendant session in which
+Hngh's own development happens) and **Opencode** (the primary agentic CLI), with the
+oh-my-* orchestration wrappers layered on Opencode-side tools. Pi, Cecli, Agent-Zero and
+any ACP-compatible agents are targeted for integration via plugin.
+
+Hngh coordinates and orchestrates agentic harnesses, meta-automating the kinds of
+optimizing and streamlining and manual prompt-writing and manual agent-steering and
+correction cycles users find themselves falling into. Eventually, Hngh may help alleviate
+any variety of repetitive delays a user may face in software in general, freeing up the time
+and effort they find themselves putting into typing and clicking for activities and purposes
+that are not artistic, not journaling, not personal communications. Perhaps important typing,
+sometimes, and important mouse-clicking, but not anything that respectable people would
+bother with if it were simply automated out of their way.
+
+Agentic software like Hermes or Opencode, they're truly incredible and amazing tools,
+things that most folks could put to any number of uses and purposes in their lives,
+supporting their livelihoods and hobbies and interests and capabilities in an ever-expanding
+field. In the modern era, these tools and the kinds of things people can get done with them,
+this is a frontier that most normal folks are not at all prepared for, with complex requirements
+for any of the working parts. What can you do for those folks? Help them automate whatever
+they want. Give them arms and legs and boats and cars, self-improving ones, structures to use
+as seeds for their own purposes.
 
 ## Current state (2026-08-08)
 
@@ -87,7 +85,7 @@ Changelog at `CHANGELOG.md`. Detailed roadmap at `docs/project/roadmap.md`.
    tools used to develop Hngh. The boundary between "Hngh using tools" and "Hngh
    being developed by tools" dissolves.
 
-2. **Self-Improvement Loop**: Hngh can spawn an agentic tool session to improve its
+2. **Self-Improvement Loop**: Hngh can spawn agentic sessions to improve its
    own code, because that's the same thing it does for users. When Hngh identifies
    a UX bottleneck, it generates a plugin or shortcut; the plugin enters the review
    pipeline; if approved, it's integrated.
