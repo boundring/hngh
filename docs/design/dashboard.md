@@ -106,6 +106,28 @@ Concrete requirements:
 - UI: requested vs negotiated shown side-by-side; any difference is an
   ERROR-state banner, never a quiet footer.
 
+Authoritative mechanism (hermes docs, hermes-agent.nousresearch.com/docs/
+user-guide/features/fallback-providers, read 2026-08-09):
+- `fallback_providers:` (top-level list in config.yaml) is tried in
+  ORDER when the primary fails with RATE-LIMIT / OVERLOAD / AUTH /
+  CONNECTION errors mid-session. Each entry needs BOTH provider and
+  model; entries missing either are ignored. `hermes fallback {list,
+  add, remove, clear}` manages it; `fallback_model` is legacy single
+  key, `fallback_providers` wins when both present.
+- IMPLICATION for seat spawn: chain slide at spawn = the pinned
+  provider:model failed NEGOTIATION (unregistered/typo id, missing
+  creds), which the runtime reads as an error class and slides the
+  chain. The 2026-08-09 evidence matches: `-m gpt-5.6-luna --provider
+  openai` rendered flash (chain entry 1 = openrouter flash); `hermes
+  models` lists no `gpt-5.6-luna`, so the id is not in the built-in
+  catalog as spelled — the picker the owner used presents only
+  REGISTERED ids, which is why the manual switch worked.
+- THEREFORE the spawn-time guard is: (1) spawn STOPS if the id isn't
+  in the picker-validated catalog (fail closed), (2) spawned seats ship
+  with `fallback_providers: []` unless the roll explicitly lists one,
+  (3) post-spawn probe must match requested id or the seat is flagged
+  ERROR and paused — never "close enough".
+
 ### P3 — procedural reporting (unchanged) + MCP links
 - Per-seat summaries via procedural extraction; local-model summarization
   where fast enough; feeds L2/L3 detectors → strategies → intervention.
