@@ -144,7 +144,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
   (render-footer))
 
 (defun render-to-string ()
-  "Render the current dashboard view and return its terminal text."
+  "Return terminal text for fixture inspection, not a headless event view."
   (with-output-to-string (*standard-output*)
     (let ((*headless* nil))
       (render))))
