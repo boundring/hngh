@@ -165,6 +165,10 @@ breadcrumb layer, not a separate script:
   Ctrl+C busy-hint excluded) AND is the watcher's first per-seat
   guard. Never overwrite text that may be a user's paste. If
   ownership is uncertain, record the pending nudge and stop.
+- **Cross-seat wake task.** A wake is not merely "resume your own lane":
+  after checking its inbox and deck, a seat checks sibling lanes and helps
+  an agent with active work when its own lane is clear. The watcher prompt
+  must name this behavior explicitly.
 
 ### 7.1 Lane-triggered wake (killy WATCHER DESIGN v2 13:15, owner-steered)
 
@@ -211,3 +215,45 @@ FACT-SYNC — no FINAL abatement, 15/45/10/600 params, composer_active
 in seat-steer, systemd lifecycle, source-safe by construction. The
 13:45 joint-diagnosis findings (source-guard placement, singleton
 lock) were against the pre-v5 file; v5 already implements both fixes.
+
+### 7.2 Consensus boundary + escalation ladder (15:30, cibo + killy + seu)
+
+The group design is converged (owner: watcher is a group design, not
+solo). Recorded here so the code and the doc agree:
+
+- **Code home**: `scripts/hngh-live-watch` versioned in the hngh repo;
+  `~/.local/bin` is only the gbd-tracked installed SHIM; user systemd
+  owns lifecycle; card 105 dashboard controls/statuses it. The CORE
+  (state machine: lane-change trigger, idle backstop, WAIT-GATE
+  judge, escalation) is separated from the daemon wrapper so the
+  ride-along and dashboard never fork the logic.
+- **Necessity recognition**: WAIT-GATE is the written contract, not
+  the authority. The judge cross-references the gate target against
+  deck/registry/live-lane state (structured form:
+  `WAIT-GATE: <target> <reason>`; target = deck card, lane, or
+  registry entry). Self-declared/unstructured gates are NOT
+  machine-verifiable → after grace, remedy is END-TURN (declare),
+  not merely "stop sleeping". DECLARE-OR-END is the default;
+  WAIT-GATE is the escape hatch. WAIT_TTL=600 bounds self-declared
+  gates.
+- **Ladder (agreed order, no overwrite / repeated Enter)**:
+  lane-change pulse → safe exact-pane preflight (`-t <seat>:0.0`,
+  verify input EMPTY after) → skip composer-active/uncertain input
+  (Ctrl+C busy-hint excluded) → declare-or-end for unmarked in-turn
+  sleep → WAIT-GATE hold until lane change/deadline → bounded owner
+  escalation (`ESCALATE-OWNER: <seat> <state>` lane marker + sibling
+  inbox notes, max-nudges config default 3, then STOP) → done.
+  Consumption-verified before counting (a nudge that landed in the
+  wrong pane is not a nudge).
+- **No FINAL abatement**: HANDOFF files are archive artifacts
+  (tandem-*/archive/), never a stop signal; the deck always has next
+  steps. The escalation + watch continues until the seat is working
+  or the owner stops it.
+- **Delivery contract**: steer delivery = send-keys -t <seat>:0.0 -l
+  '<text>' + Enter, then verify the input line is EMPTY (footer busy
+  is fine). Visible text at the prompt is not delivery. Stranded
+  owner steers are held by composer_active, never typed over.
+
+Attribution (15:05): tandem seu + killy + cibo consensus recorded —
+group design, owner-steered; seu drafting §7.2 for cibo's watcher
+update build target.
