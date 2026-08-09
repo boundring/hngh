@@ -81,8 +81,35 @@ Binds *coord-tmp-home* so tests can re-init to the same scratch store."
        (is (= 1 (length inbox-b)))
        (is (equal "steer" (getf (car inbox-b) :kind)))))))
 
+(test coord-mcp-steer-appends-target-lane
+  "MCP steer writes the durable note to the target seat's inbox."
+  (%coord-with-temp-store
+   (lambda ()
+     (let ((lane-root (merge-pathnames
+                       (format nil "hngh-coord-lanes-~D/"
+                               (get-universal-time))
+                       (uiop:temporary-directory))))
+       (unwind-protect
+            (progn
+              (ensure-directories-exist
+               (merge-pathnames "tandem-B/" lane-root))
+              (with-open-file (stream (merge-pathnames "tandem-B/inbox.md" lane-root)
+                                      :direction :output :if-exists :supersede)
+                (format stream "existing~%"))
+              (let ((args (make-hash-table :test #'equal)))
+                (setf (gethash "agent_id" args) "B"
+                      (gethash "text" args) "reorient now")
+                (let ((hngh.plugins.hngh-coord::*lane-root* lane-root))
+                  (is (equal "steer delivered"
+                             (hngh.plugins.hngh-coord::handle-tool-call
+                              "steer" args)))))
+              (let ((content (uiop:read-file-string
+                              (merge-pathnames "tandem-B/inbox.md" lane-root))))
+                (is (search "STEER" content))
+                (is (search "reorient now" content))))
+         (when (probe-file lane-root)
+           (uiop:delete-directory-tree lane-root :validate #'identity)))))))
 (test coord-mcp-initialize-advertises-object-tools-capability
-  "MCP initialize capabilities.tools must be an object, not JSON null."
   (let ((result
           (hngh.plugins.hngh-coord::%mcp-object
            "capabilities"

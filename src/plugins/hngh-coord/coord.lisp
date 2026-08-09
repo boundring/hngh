@@ -32,6 +32,7 @@ and steers squads.")
            #:post-message
            #:read-inbox
            #:coord-view
+           #:steer-to-lane
            #:*agent-id*))
 
 (in-package #:hngh.plugins.hngh-coord)
@@ -64,6 +65,22 @@ default when nil rather than failing on a NIL pathname."
                       :id (%next-id))))
     (hngh.core.state-store:append-journal *journal-name* entry)
     entry))
+
+(defvar *lane-root* "/home/bricker/.hngh-night"
+  "Root containing tandem seat lanes for direct MCP delivery.")
+
+(defun steer-to-lane (agent-id text)
+  "Append a durable STEER note to AGENT-ID's lane inbox."
+  (unless (string= agent-id "*")
+    (let ((path (merge-pathnames
+                 (format nil "tandem-~A/inbox.md" agent-id)
+                 *lane-root*)))
+      (ensure-directories-exist path)
+      (with-open-file (stream path :direction :output :if-exists :append
+                                    :if-does-not-exist :create)
+        (format stream "STEER ~A -> ~A: ~A~%"
+                (get-universal-time) agent-id text))
+      path)))
 
 (defun read-inbox (for-id)
   "Return messages addressed to FOR-ID (or broadcast), oldest first."
@@ -205,6 +222,7 @@ Return values are yason-safe hash-tables (see %MCP-OBJECT)."
       ((equal name "steer")
        (post-message "coordinator" (or (arg "agent_id") "*") "steer"
                      (or (arg "text") ""))
+       (steer-to-lane (or (arg "agent_id") "*") (or (arg "text") ""))
        "steer delivered")
       (t (error "unknown tool: ~A" name)))))
 
