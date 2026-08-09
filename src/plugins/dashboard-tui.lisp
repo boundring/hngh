@@ -269,6 +269,29 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
      (make-string filled :initial-element #\█)
      (make-string (- 10 filled) :initial-element #\░))))
 
+(defun read-watch-state (path)
+  "Read the latest state entry for each seat from PATH."
+  (let ((states nil))
+    (dolist (line (uiop:read-file-lines path))
+      (let* ((fields (uiop:split-string line))
+             (seat (second fields))
+             (values (loop for field in (cddr fields)
+                           for equal = (position #\= field)
+                           when equal
+                             collect (cons (subseq field 0 equal)
+                                           (subseq field (1+ equal))))))
+        (when seat
+          (push (cons seat
+                      (list :status (cdr (assoc "status" values :test #'string=))
+                            :action (cdr (assoc "action" values :test #'string=))
+                            :idle-s (parse-integer
+                                     (or (cdr (assoc "idle_s" values :test #'string=)) "0")
+                                     :junk-allowed t)))
+                states))))
+    (mapcar (lambda (seat)
+              (cons seat (cdr (assoc seat states :test #'string=))))
+            (remove-duplicates (mapcar #'car states) :test #'string=))))
+
 (defun render-footer ()
   "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
