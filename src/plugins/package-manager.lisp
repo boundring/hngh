@@ -323,6 +323,20 @@ Returns a list of package name strings."
   (or (run-command-lines "pacman" '("-Qdtq")) '()))
 
 ;;; --- Privileged Operations (via system daemon) ---------------------------
+;;;
+;;; Wave C item 8 (card 99): the :operation human gate. Every privileged op
+;;; calls OPERATION-GATE-CHECK before ANY mutation (fail-closed: NIL -> error,
+;;; journaled by the gate itself). package-manager loads before ai-orchestrator
+;;; in hngh.asd, so the call is a soft funcall (find-symbol + fboundp, same
+;;; pattern as ai-orchestrator's cross-plugin lookups); orchestrator absent ->
+;;; gate NIL -> refuse (deny-by-default).
+
+(defun %operation-gate-ok (kind targets)
+  "Return T iff the AI orchestrator's operation-gate-check approves
+KIND/TARGETS. Fail-closed: orchestrator absent or gate refused -> NIL."
+  (let ((sym (find-symbol "OPERATION-GATE-CHECK" :hngh.plugins.ai-orchestrator)))
+    (and sym (fboundp sym)
+         (funcall (symbol-function sym) kind targets))))
 
 ;;; 7. install-packages
 
@@ -334,6 +348,10 @@ Emits package.op-started and package.op-completed/package.op-failed events.
 Appends to history. Returns T on success, NIL on failure."
   (let* ((pkg-json (json-list-of-strings packages))
          (reason-str (or reason "")))
+    ;; Wave C item 8: refuse unapproved dep-installs before any mutation.
+    (unless (%operation-gate-ok :dep-install packages)
+      (error "operation gate: dependency install not approved: ~{~A~^, ~}"
+             packages))
     (emit-event "package.op-started"
                 (list :op :install :packages packages :reason reason-str))
     (hngh.core:log-info "Installing packages: ~{~A~^, ~}" packages)
@@ -361,6 +379,10 @@ Appends to history. Returns T on success, NIL on failure."
 Emits package.op-failed with :not-implemented reason.
 Returns NIL."
   (declare (ignore reason))
+  ;; Wave C item 8: the gate applies to remove too (privileged mutation).
+  (unless (%operation-gate-ok :dep-install packages)
+    (error "operation gate: package removal not approved: ~{~A~^, ~}"
+           packages))
   (hngh.core:log-warn "Package removal not yet supported via system daemon")
   (emit-event "package.op-failed"
               (list :op :remove :packages packages :reason :not-implemented))
@@ -383,6 +405,12 @@ Emits events at each step. Returns T on success, NIL on failure."
     (unless update-packages
       (hngh.core:log-info "No updates available — nothing to upgrade")
       (return-from upgrade-system t))
+
+    ;; Wave C item 8: the full upgrade is a privileged mutation at the
+    ;; dep-install entry (InstallPackages); gate before the first daemon call.
+    (unless (%operation-gate-ok :dep-install update-packages)
+      (error "operation gate: system upgrade not approved (~D packages)"
+             (length update-packages)))
 
     (hngh.core:log-info "Starting system upgrade: ~D packages" (length update-packages))
 
