@@ -159,6 +159,8 @@
                (format stream "ordinary note~%"))
              (is (= 2 (hngh.plugins.situation-casebase:feed-lanes root
                                                                     :seats '("cibo"))))
+             (is (= 0 (hngh.plugins.situation-casebase:feed-lanes root
+                                                                    :seats '("cibo"))))
              (is (= 2 (hngh.plugins.situation-casebase:case-count)))
              (is (= 1 (length (hngh.plugins.situation-casebase:cases-by-source :human)))))
         (when (probe-file root)

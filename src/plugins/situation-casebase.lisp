@@ -252,7 +252,7 @@ Only STATE, STEER, and HANDOFF evidence lines are considered."
                    (format nil "tandem-~A/worklog.md" seat) lane-root)))
         (when (probe-file path)
           (dolist (line (uiop:read-file-lines path))
-            (let ((key (format nil "~A:~A" seat line)))
+            (let ((key (format nil "tandem-~A:~A" seat line)))
               (when (and (or (search "STATE:" line :test #'char-equal)
                              (search "STEER" line :test #'char-equal)
                              (search "HANDOFF" line :test #'char-equal))
