@@ -1,6 +1,6 @@
 # Hngh Roadmap
 
-**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (**914/914 fast green**, full suite green; C4 + C10 design-only). **L2/L3 situation-detection + scoring + judge + case-base built (steps 1–5 of situation-scoring §8)**. hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
+**Status**: M1 Batches 0–5 complete. M7 daemon committed. Phase 2 protocol handlers merged. M2 session lifecycle & window management complete. M9 squad autonomy W1-3 done (C1, C2, C3, C5, C7), wave 2-4 plugins wired, W5 prompt matrix + free-tier refresh committed (**956/956 fast green**, full suite green; C4 + C10 design-only). **L2/L3 situation-detection + scoring + judge + case-base built (steps 1–5 of situation-scoring §8)**. hngh-up plugin + design doc added (M1.15 integration / M2 boundary).
 **Last updated**: 2026-08-08
 
 ---
@@ -45,7 +45,7 @@ Four milestones, dependency-ordered. Each milestone has explicit exit criteria.
 **Goal**: The full v0.1 scope — a usable system harness with AI orchestration.
 **Exit criteria**: A power-user can install Hngh on CachyOS, manage packages, configure their system, run local models, invoke cloud AI, back up their config, and have the threat detection system running — all from the TUI dashboard or programmatically.
 
-**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 914/914 fast green, full suite green).
+**Status**: 11 of 12 deliverables implemented (commits 8ebcbe4, f33bbd6, f45c5c7, 868de1a, 905ea2f, cc4afa8). M1-era split: 227 unit + 18 integration tests (historical; current: 956/956 fast green, full suite green).
 
 ### Deliverables
 
