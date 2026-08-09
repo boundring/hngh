@@ -513,6 +513,33 @@ DISPATCHER SURFACE (what the pipeline owns beyond seat-steer):
   seat — routes through the SAME dispatcher contract. No second
   implementation of composer-check/busy-retry/consume-verify.
 
+PEER DIRECTION — the two-way loop (owner 14:36: formalize it):
+the pipeline above is NOT one-way (Hngh→seat). Seats steer each
+other and the coordinator through the SAME dispatcher; there is no
+privileged sender class. A steer's FROM field is one of: owner
+(human), Hngh/the watcher, or another seat — the delivery adapter,
+queuing, and verification are identical for all three.
+- Symmetry rule: every seat is reachable the same way, including
+  the coordinator (killy). `seat-steer <seat> "text"` is the tool;
+  any seat may call it on any seat. The coordinator is not a
+  black box that only waits on the owner.
+- Contract doc: the hngh-lane skill's PEER STEERING section spells
+  the tool + exit codes for every seat (0 consumed, 3 composer,
+  4 busy-retry) and killy's lane path. Skill and this doc must not
+  drift: the skill is the operational contract, this section is the
+  design rationale.
+- Attestation: the dispatcher must not require special
+  authorization for seat→seat steers beyond the lane contract
+  itself — a seat that can read another's outbox can steer it.
+  Owner steers keep priority ordering (§2) but arrive through the
+  same pipe (FROM=owner).
+- Testing lens: the two-way loop is verified when a seat steering
+  the coordinator produces the same observable behavior as the
+  watcher steering it — consume-verified, logged to the steers
+  log, retried on busy. Fixture: steer_dispatch self-test (killy
+  14:33) proved the trail end-to-end; peer-direction should add a
+  cibo→killy seat-steer delivery check.
+
 Build order: the watcher IS the prototype (done); the dispatcher
 surface is a Hngh plugin/service per §7.4 embedding; the dashboard
 (105) becomes the first non-watcher consumer. The owner inbox
