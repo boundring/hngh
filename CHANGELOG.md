@@ -32,6 +32,17 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   append missing `)` at EOF.
 - Green @ `be14779`: **730/730 fast, 2471/2471 full** (was 693/2434).
 
+### Added — M8 model-routing data seed (two-role split)
+- **`src/plugins/model-routes.lisp`** — the route table as data
+  (id/backend/model/price/class) + the **2026-08 human steer**: primary
+  **agentic** model = **deepseek-v4-flash**, primary **coding** model =
+  **gpt-5.6-luna**. Accessors `route-model`/`role-model`; `role-model` falls
+  back to the agentic primary for unknown roles. Read-only parse test
+  (design doc verification task #2).
+- 63 new checks; **818/818 fast, 2559/2559 full** (was 755/2496).
+- Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
+  only, per design.
+
 ### Added — L2/L3 case-base + review pass (step 5, self-improvement loop)
 - **`src/plugins/situation-casebase.lisp`** — persistent case-base: every
   scored situation + action + outcome is appended to a journal alongside
