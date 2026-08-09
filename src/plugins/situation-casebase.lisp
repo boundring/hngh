@@ -198,7 +198,69 @@ NIL when <2 passes have run."
                   :n (getf r :n)))
           (read-pass-stats)))
 
-;;; --- Status --------------------------------------------------------------
+(defun %lane-situation (line)
+  (let ((text (string-downcase line)))
+    (cond
+      ((or (search "loop" text) (search "retry" text) (search "stuck" text)
+           (search "false-death" text) (search "dead pane" text)) :loop-or-stuck)
+      ((or (search "model drift" text) (search "negotiated" text)
+           (search "mismatch" text) (search "fallback" text)
+           (search "provider" text)) :model-drift)
+      ((or (search "blocked" text) (search "gate" text)
+           (search "owner-gated" text) (search "red herring" text)
+           (search "acceptance" text)) :policy-or-gate)
+      ((or (search "steer" text) (search "steered" text)
+           (search "guidance" text)) :human-steer)
+      ((or (search "crash" text) (search "killed" text)
+           (search "died" text) (search "hang" text)) :infra-failure)
+      ((or (search "missing" text) (search "no such" text)
+           (search "exit 127" text) (search "absent" text)) :env-gap)
+      ((or (search "make test" text) (search "make check" text)
+           (search "fixture" text) (search "pass" text)
+           (search "fail" text)) :verification)
+      (t :uncategorized))))
+
+(defun classify-lane-line (line)
+  "Return the deterministic situation class for a lane evidence LINE."
+  (%lane-situation line))
+
+(defun %lane-record (seat line)
+  (let ((situation (%lane-situation line)))
+    (make-case (list :window (format nil "tandem-~A" seat)
+                     :evidence line)
+               situation
+               :score (if (eq situation :human-steer) 1.0 0.5)
+               :action (if (eq situation :human-steer) :steer :none)
+               :outcome :pending
+               :weight (if (eq situation :human-steer) 2.0 1.0)
+               :source (if (eq situation :human-steer) :human :auto)
+               :attribution (format nil "tandem ~A" seat))))
+
+(defun feed-lanes (lane-root &key (seats '("cibo" "seu" "killy")))
+  "Feed lane evidence lines from LANE-ROOT into the case-base.
+Only STATE, STEER, and HANDOFF evidence lines are considered."
+  (let ((count 0)
+        (seen (make-hash-table :test #'equal)))
+    (dolist (case (all-cases))
+      (let* ((window (getf case :window))
+             (seat (getf window :window))
+             (evidence (getf window :evidence)))
+        (when evidence
+          (setf (gethash (format nil "~A:~A" seat evidence) seen) t))))
+    (dolist (seat seats count)
+      (let ((path (merge-pathnames
+                   (format nil "tandem-~A/worklog.md" seat) lane-root)))
+        (when (probe-file path)
+          (dolist (line (uiop:read-file-lines path))
+            (let ((key (format nil "~A:~A" seat line)))
+              (when (and (or (search "STATE:" line :test #'char-equal)
+                             (search "STEER" line :test #'char-equal)
+                             (search "HANDOFF" line :test #'char-equal))
+                         (not (gethash key seen)))
+                (setf (gethash key seen) t)
+                (let ((record (%lane-record seat line)))
+                  (hngh.core.state-store:append-journal *journal-name* record)
+                  (incf count))))))))))
 
 (defun status ()
   (list :running *running*
