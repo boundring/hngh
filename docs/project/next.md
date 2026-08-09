@@ -50,9 +50,20 @@ task cards 93–99 in `~/.hngh-night/tasks/` — 93 qlot pin → 94 hash-chain �
 scoping → 98 canary/scan sidecar → 99 `:operation` gate. Gate items are
 93/94/96/97 (no core self-modification until those land). Delegation:
 model-tier per card; **GPT-5.6 Luna (`gpt-5.6-luna(-max)`, openai provider,
-$verified live 2026-08-08)** available for delegated code completions on the
+verified live 2026-08-08)** available for delegated code completions on the
 cards; cheap/mechanical tail may go to deepseek-v4-flash via the pinned
-delegation route.
+delegation route. 93 (qlot) + 94 (hash-chain, Luna) + 96 (bwrap) DONE —
+Wave C gate 3 of 4; item 3 (97, scoping) is the remaining gate block.
+
+**Tandem experiment live (2026-08-09 ~01:15 → wind-down ~06:00):**
+two Hermes seats on card 97 (item 3) — Seat A deepseek-v4-flash-0731
+(DESIGN lane, docs only), Seat B gpt-5.6-luna (IMPLEMENT lane, code+tests),
+each in its own Konsole window (`tandem-up` launcher), free-form
+collaboration via `~/.hngh-night/tandem-20260809/` inbox/outbox/worklog,
+lane separation by file scope (no overlapping files), time-aware gentle
+halt if not done by 06:00. Test of the mutual-steering / tandem-coding
+idea: both seats expose `hermes acp`; lap-level steering available from
+the session or between seats.
 
 Recent sessions (see work-sessions.md for full per-session artifacts):
 - **M6.3** Emacs daemon: lifecycle (start/stop/health), policy-explicit start, outlives hngh.
