@@ -10,6 +10,20 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Fixed — hngh-coord ACP face wire-proven (card 101 ACP half, tandem-delivered)
+- Same yason trap as the MCP face, fatal on the ACP wire too: `acp-server`
+  returned keyword plists, which yason's list encoder walks as arrays.
+  Results now use `%mcp-object` hash-tables (the ACP face's `%ht` shape);
+  coord/post and coord/status encode as JSON objects.
+- `serve-acp` now rebinds `*standard-output*` to `*error-output*` — the
+  state-store init INFO log was leaking onto the newline wire (same
+  stream-discipline fix as `serve-mcp`).
+- `read-inbox` / `coord-view` call `%ensure-store`: reading the journal
+  before the first post died with a NIL `*hngh-home*` (Merge-Pathnames
+  type error). Store init is now lazy on both read and write paths.
+- **Verified**: independent newline-framed wire probe — initialize +
+  coord/post + coord/status: ALL PASS (frame-only stdout).
+
 ### Fixed — hngh-coord MCP face dead on startup (card 101, tandem-delivered)
 - Two defects, both invisible to the FiveAM store suite (which never wired
   the serve path — the MCP/ACP serve path is verified only by an
