@@ -693,3 +693,11 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Bugs found + fixed**: `record-case` malformed lambda list (`&rest args &key :score` rejected the `:score` keyword); `run-review-pass`'s default `responsibility` was `identity` comparing the whole verdict plist to a keyword (fixed to extract `:situation`); `accuracy-improving-p` used `(second (last ...))` wrongly (fixed with index math); my record-ids test assertion was wrong.
 - **Verified**: 755/755 fast (lint-parens gate first), 2496/2496 full, exit 0. Baseline before work: 730/730 fast, 2471/2471 full.
 - Docs updated: AGENTS.md, next.md (step 5 done, step 6 P0), roadmap.md (status + design-artifacts row), CHANGELOG, work-sessions M9.27. Committed + pushed.
+
+### Session M9.28: M8 model-routing data seed + two-role split
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- Per the 2026-08 human steer: **agentic model = deepseek-v4-flash; coding model = gpt-5.6-luna**. Landed as the M8 routing *data seed* (`src/plugins/model-routes.lisp`) per `docs/design/model-routing.md` verification task #2 — the route table (id/backend/model/price/class) as data, plus the two-role primary split, with `route-model`/`role-model` accessors (unknown role falls back to agentic primary).
+- Read-only parse test: test-model-routes.lisp — 63 checks (route fields well-formed, known routes present, two-role primaries correct, backstop).
+- **Suspended deliberately**: C6 `--emit` from cron, which I had started toward — user steered toward the higher-value simpler route split instead. Full M8 routers (`route-task`) remain unbuilt, by design (seed data only).
+- **Verified**: 818/818 fast (was 755), full suite running. Baseline: 755/755 fast, 2496/2496 full.
+- Docs updated: AGENTS.md, next.md (M8 seed done, added to Up Next as P1), roadmap.md (status + design-artifacts row), CHANGELOG, work-sessions M9.28. Committed + pushed.

@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**M0–M9 + ACP waves + L2/L3 design + L2/L3 build (steps 1–5) — 755/755 fast, 2496 full suite green** (FiveAM; `make test` / `make test-full` verified
+**M0–M9 + ACP waves + L2/L3 design + L2/L3 build (steps 1–5) — 818/818 fast, 2559 full suite green** (FiveAM; `make test` / `make test-full` verified
 2026-08-08 on main). Session detail in `docs/project/work-sessions.md` (M3–M7/M9) and
 `docs/journal/` (M0–M1). Detailed roadmap at `docs/project/roadmap.md`.
 
@@ -14,7 +14,8 @@ Starting work on Hngh from a fresh session: read this, then
 `docs/project/work-sessions.md` M9.17–M9.22 for the session-level detail.
 
 **What shipped this block (2026-08-07/08, all committed + green):**
-- **L2/L3 case-base + review pass (step 5)** (`6e6ddcb`): `src/plugins/situation-casebase.lisp` — persistent case-base (every scored situation + action + outcome appended to a journal, alongside human /steer as high-weight ground truth, with attribution), plus a scheduled cheap-local review pass that re-runs the judge offline to recalibrate/tune/surface emerging classes (open taxonomy; `accuracy-improving-p` = the §8 step 5 gate). 25 new checks; 755/755 fast.
+- **M8 routing data seed** (`ba77639`): `src/plugins/model-routes.lisp` — route table (id/backend/model/price/class) + the 2026-08 two-role primary split (agentic→deepseek-v4-flash, coding→gpt-5.6-luna), read-only parse test (design doc verification task #2). Accessors `route-model`/`role-model`. 63 new checks.
+- **L2/L3 case-base + review pass (step 5)** (`6e6ddcb`): `src/plugins/situation-casebase.lisp` — persistent case-base (every scored situation + action + outcome appended to a journal, alongside human /steer as high-weight ground truth, with attribution), plus a scheduled cheap-local review pass that re-runs the judge offline to recalibrate/tune/surface emerging classes (open taxonomy; `accuracy-improving-p` = the §8 step 5 gate). 25 new checks; 818/818 fast.
 - **L2/L3 judge model (step 4)** (`be14779`): `src/plugins/situation-judge.lisp` — cheap/local semantic judge for what Tier-0 can't see (faulty logic, hallucination, instruction-misread, risky-approach, wasted work). Pluggable backend (`:http` → ollama/unsloth/**vllm** direct; `:agentic` seam via `*judge-responder*` for opencode/Hermes one-offs), watchdog budget (bounded calls/run), bounded prompt (recent N obs), fail-closed verdict parsing (JSON score+confidence+reason; malformed/low-confidence never escalates), offline calibration harness (precision/recall/conf vs case-base; live gate only after calibration). 37 new checks; **`scripts/lint-parens.py` + `make lint-parens`** gate (detect + auto-fix unbalanced parens before every test run).
 - **L2/L3 build — Tier-0 detectors + L3 scorer** (`0c62fa9`): `src/plugins/situation-detectors.lisp` (observation model + 8 deterministic detectors: identical-call loop, retry-without-progress, zero-progress, token-sink, failing-verification, excessive-waits, cost-exceedance, chatter-loop; emit `situation.detected` on the bus) + `src/plugins/situation-scoring.lisp` (impact×urgency×spread×confidence score, recovery-stage tracker, progressive gate-lowering → A3 actuator via `acp-steer-command`). 60 new checks.
 - **A1** ACP client (`c9d6f5c`): initialize/new/prompt/update/cancel/permission over stdio JSON-RPC.
@@ -55,6 +56,7 @@ Recent sessions (see work-sessions.md for full per-session artifacts):
 | P0 | **M9 C4** start-now/pause-on-cause; **C10** MisakaNet failure shield (design-only now) | hngh; `docs/design/squad-autonomy.md` |
 | P0 | **M9 C6** planner cycle (roadmap → task queue → squad dispatch) | hngh |
 | P0 | **M9 C8/C9** benchmark-runner strategy + nightly benchmark cron — strategy exists (`docs/design/benchmark-sourcing.md`), runner + cron unbuilt; add `--run` wrapper to the probe runner | hngh |
+| P1 | **M8 routing data seed** — `src/plugins/model-routes.lisp` (route table + two-role split: agentic→deepseek-v4-flash, coding→gpt-5.6-luna) + read-only parse test. **DONE** (`ba77639`); full routing selectors (M8) still unbuilt | hngh; `docs/design/model-routing.md` |
 | P1 | **Night-ralph task library** — continual planning/docs/training-set/research tasks, $0 local; isolated `~/.hngh-night` | hngh |
 | P1 | **svc-dash PyPI release** (wave 6 history persistence done, local) | `sysconfig_mgmt/.omc/plans/distribution-packaging.md` |
 | P1 | **Sentry Tier-1** — light-ralph analysis + git pre-commit hook calling `guard-text` | hngh; `.omc/plans/sentry-safeguards.md` |
