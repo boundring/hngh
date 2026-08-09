@@ -60,7 +60,7 @@ backend, watchdog budget, offline calibration before live use). Full design:
 `docs/design/situation-scoring.md`. Steps 5–6 (case-base + review loop,
 cross-agent normalization) remain.
 
-**730/730 fast tests green** (`make test`, FiveAM), **2471/2471 full suite**
+**755/755 fast tests green** (`make test`, FiveAM), **2496/2496 full suite**
 (`make test-full`). Current sessions: `docs/project/work-sessions.md`.
 Changelog at `CHANGELOG.md`. Detailed roadmap at `docs/project/roadmap.md`.
 

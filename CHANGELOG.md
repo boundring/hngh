@@ -32,6 +32,20 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   append missing `)` at EOF.
 - Green @ `be14779`: **730/730 fast, 2471/2471 full** (was 693/2434).
 
+### Added — L2/L3 case-base + review pass (step 5, self-improvement loop)
+- **`src/plugins/situation-casebase.lisp`** — persistent case-base: every
+  scored situation + action + outcome is appended to a journal alongside
+  human `/steer` ground-truth (high-weight), with attribution (§7).
+  - `record-case` / `all-cases` / `cases-by-source` /
+    `situation-distribution` — append-only persistence via the state-store.
+  - `run-review-pass` — cheap/local, scheduled: re-runs the judge offline,
+    recomputes precision/recall/conf, appends the pass record.
+  - `accuracy-improving-p` — the §8 step 5 gate (calibration improves across
+    successive passes). `emergent-classes` — open-taxonomy probe.
+- 25 new checks; **755/755 fast, 2496/2496 full** (was 730/2471).
+- L2/L3 steps 1–5 of `situation-scoring.md` §8 are now built; step 6
+  (cross-agent normalization) remains.
+
 ### Added — canonical recursive acronym family + archive
 - **Decision (human): canonical = the `Hngh ... Hngh` bookend family** —
   Hngh as both first and last word (the acronym expands into itself).
