@@ -58,7 +58,9 @@ esac
 (defun %setup-mc-fixture (home &key panes session)
   "Create an isolated tmux executable and optional pane/session fixtures."
   (let ((tmux (merge-pathnames "bin/tmux" home))
-        (fixture (merge-pathnames "fixture/" home)))
+        (fixture (merge-pathnames "fixture/" home))
+        (state (merge-pathnames "state/" home)))
+    (ensure-directories-exist state)
     (%write-test-file tmux +fake-tmux-script+ :executable t)
     (%write-test-file (merge-pathnames "calls" fixture) "")
     (when panes
