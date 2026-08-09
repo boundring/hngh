@@ -102,6 +102,19 @@
     (is (equal "/tmp/hngh" (hngh:parse-option args "--hngh-home" #'identity)))
     (is (not (hngh:parse-option args "--nonexistent" #'identity)))))
 
+(test dashboard-startup-command-is-data-driven
+  (is (equal '("new-session" "-d" "-s" "hngh-dash" "hermes"
+               ";" "split-window" "-h" "-t" "hngh-dash"
+               "hngh dash-pane" ";" "attach-session" "-t" "hngh-dash")
+             (hngh:dashboard-pair-arguments)))
+  (is (search "scratch" (hngh:dashboard-startup-script :session "scratch"))))
+
+(test dashboard-subcommand-delegates-to-runner
+  (let ((called nil))
+    (hngh:dashboard-subcommand
+     (lambda () (setf called t)))
+    (is-true called)))
+
 (test dashboard-subcommand-is-dispatched
   (is (search "(dashboard-subcommand)"
               (with-open-file (stream "src/core/main.lisp")

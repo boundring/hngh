@@ -9,6 +9,9 @@
   (:export #:start
            #:stop
            #:version
+           #:dashboard-startup-script
+           #:dashboard-pair-arguments
+           #:dashboard-subcommand
            #:main
            #:*hngh-home*
            #:*running*
