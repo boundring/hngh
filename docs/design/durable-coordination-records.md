@@ -163,7 +163,7 @@ A CLAIM is a machine-readable record that a seat holds a surface:
    zero, logs) a write to a surface claimed by another seat. The
    writer then either waits (WAIT-GATE against the holder's lane → the
    watcher re-wakes it when the holder's lane moves, i.e. serial
-   execution with the same machinery) or escalates to the owner if
+   execution with the same machinery) or escalates to the operator if
    the claim looks stale (>WAIT_TTL without lane movement).
 3. CROSS-CUTTING CHECK — the watcher's WAIT-GATE judge treats a
    claim on a surface as machine-verifiable NECESSITY for a gate that
