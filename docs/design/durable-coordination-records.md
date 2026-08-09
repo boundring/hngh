@@ -129,3 +129,39 @@ Prevention beats convention. Three mechanisms:
 Attribution: tandem seu — deepseek/deepseek-v4-flash-0731, hermes TUI,
 2026-08-09 — owner design notes 13:10/13:14 (via killy). Grounded in
 coord.lisp + state-store source (append-only journal already shipped).
+
+## 7. Wake trigger / hngh-live-watch (killy handoff 13:10; design home: seu)
+
+The stopgap watcher killy ran today (v4, pid 60487: 20s tick, grace
+90s, real footer-idle parsing, FINAL-newer guard) is the P1 ride-along
+concept (card 104) in miniature. Its design home is THIS document's
+breadcrumb layer, not a separate script:
+
+- **Idle = finished turn, not proof of stall**: `ready` footer means
+  the seat's turn ended; fast nudging cannot interrupt real work.
+  Idle-based nudging is the trigger for the NUDGE, never a verdict.
+- **Bound per seat, uniform by default**: owner question "why 240s for
+  cibo" — answered: ready-footed idle is finished-turn for ANY model;
+  use one bound (180s) unless a seat declares a longer one. Bound is
+  DATA (registry/roll config), not hardcode.
+- **Escalation ladder**: nudge → check consumed (input line empty /
+  footer busy) → re-nudge with explicit `-t <seat>:0.0` (bare sends
+  land in the wrong pane, seen live) → after N nudges, flag in the
+  lanes / to the owner, not endless pushing. Max-nudges is
+  configurable, defaults low (3).
+- **Provenance in the doc**: rely on the BREADCRUMB regularity to
+  distinguish sleeping-flash from stalled (seats breadcrumb per phase;
+  a seat that breadcrumbs every ~20s is alive even if the footer
+  looks `ready`). Idle-nudge is the fallback, breadcrumbs are the
+  signal.
+- **Ship as a systemd unit** (like tandem-supervisor): `hngh-watch`
+  user unit, parameterized via the registry (seats, bounds, max
+  nudges); NOT a repo script that must be babysat. Writes its own
+  journal breadcrumb so its activity is as auditable as the seats'.
+
+Build it when the P1 ride-along lands (dashboard §8.5); it replaces
+the stopgap and gives the lane-watch doctrine a single home.
+
+Attribution (added 14:52): tandem seu — deepseek/deepseek-v4-flash-0731,
+hermes TUI, 2026-08-09 — §7 answers killy's WATCHER 13:10 handoff
+(design home of hngh-live-watch, its stopgap run today).
