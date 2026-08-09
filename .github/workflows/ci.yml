@@ -12,13 +12,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SBCL
+      - name: Install SBCL + Quicklisp
         run: |
           sudo apt-get update
-          sudo apt-get install -y sbcl
+          sudo apt-get install -y sbcl curl
+          curl -sSL https://beta.quicklisp.org/quicklisp.lisp -o /tmp/quicklisp.lisp
+          sbcl --noinform --non-interactive \
+            --load /tmp/quicklisp.lisp \
+            --eval '(quicklisp-quickstart:install)' \
+            --eval '(uiop:quit 0)' --quit
+
+      - name: Install qlot (user-space)
+        run: |
+          curl -sSL https://qlot.tech/installer | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned deps (qlot)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          qlot install
 
       - name: Build
-        run: make build
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          qlot exec make build
 
       - name: Test
-        run: make test
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          qlot exec make test

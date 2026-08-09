@@ -758,3 +758,13 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
   - 95 backup/sync Phase A observe (Syncthing REST status + Tier-0 detector, fixture-tested) — P1, sequenced alongside.
   - 98 canary/scan sidecar (item 5, external services), 99 `:operation` gate extension (item 8) — tail after gate items.
 - next.md launch-context block updated with the deck + delegation availability. Docs committed + pushed.
+
+### Session M9.34: Task 93 (qlot pin) + CI red→green
+**Status**: Delivered + verified (2026-08-09). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner report**: GitHub "Run failed" emails on every push. Investigated `.github/workflows/`:
+  - `ci.yml` build step always failed — runner had SBCL but **no Quicklisp**, so `asdf:load-system :hngh` died on `:BORDEAUX-THREADS not found`. Failing on every push (not a this-week regression).
+  - `mirror.yml` failed on SSH push (runner has no `~/.ssh/id_ed25519_codeberg`) AND is redundant — local already pushes both remotes (`codeberg` remote + origin→both). It spawned the "Run failed" email noise.
+- **Fix (task 93 + CI, aligned with Wave C, not a quicklisp hack)**: installed **qlot 1.8.4** (user-space `~/.local/bin`, non-privileged — owner consented); wrote `qlfile` + generated `qlfile.lock` (pins **Quicklisp dist 2026-01-01** + 8 project deps: bordeaux-threads, cl-ppcre, babel, jsonrpc, alexandria, yason, jsown, fiveam; sb-posix/sb-bsd-sockets are SBCL-internal, correctly excluded). Makefile `SBCL_FLAGS` now loads `.qlot/setup.lisp` when present (conditional no-op otherwise); `.qlot/` gitignored.
+- **`ci.yml` rewritten**: install SBCL+Quicklisp+qlot → `qlot install` (from committed lock) → `qlot exec make build` / `qlot exec make test`. **`mirror.yml` deleted.**
+- **Verified under the pin** (real output): `make test` exit 0, **837/837 fast, 0 fail-suites**, guardrails clean; `make build` exit 0 (53MB `bin/hngh`).
+- Docs: next.md (shipped block + Wave C row item 1 DONE), CHANGELOG, work-sessions. Task card 93 archived to `.done/`.

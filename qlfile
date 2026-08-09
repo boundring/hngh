@@ -1,0 +1,10 @@
+dist quicklisp http://beta.quicklisp.org/dist/quicklisp.txt
+
+ql bordeaux-threads
+ql cl-ppcre
+ql babel
+ql jsonrpc
+ql alexandria
+ql yason
+ql jsown
+ql fiveam
