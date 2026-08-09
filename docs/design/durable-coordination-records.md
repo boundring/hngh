@@ -132,39 +132,39 @@ coord.lisp + state-store source (append-only journal already shipped).
 
 ## 7. Wake trigger / hngh-live-watch (killy handoff 13:10; design home: seu)
 
-The stopgap watcher killy ran today (v4, pid 60487: 20s tick, grace
-90s, real footer-idle parsing, FINAL-newer guard) is the P1 ride-along
+The watcher is SHIPPED as v5 (systemd --user hngh-live-watch.service,
+Restart=always, enabled; single-instance pidfile lock that exists ONLY
+when executed, never when sourced — v5 source-guards the whole main, so
+sourcing the file never starts a loop). It is the P1 ride-along
 concept (card 104) in miniature. Its design home is THIS document's
 breadcrumb layer, not a separate script:
 
 - **Idle = finished turn, not proof of stall**: `ready` footer means
   the seat's turn ended; fast nudging cannot interrupt real work.
   Idle-based nudging is the trigger for the NUDGE, never a verdict.
-- **Bound per seat, uniform by default**: owner question "why 240s for
-  cibo" — answered: ready-footed idle is finished-turn for ANY model;
-  use one bound (180s) unless a seat declares a longer one. Bound is
-  DATA (registry/roll config), not hardcode.
-- **Escalation ladder**: nudge → check consumed (input line empty /
-  footer busy) → re-nudge with explicit `-t <seat>:0.0` (bare sends
-  land in the wrong pane, seen live) → after N nudges, flag in the
-  lanes / to the owner, not endless pushing. Max-nudges is
-  configurable, defaults low (3).
+- **Bound uniform, shipped**: IDLE_BOUND=15s, NUDGE_GRACE=45s (owner
+  went 60→10→45: 60 was invented courtesy, 10 too hot, 45 the call),
+  TICK=10s, WAIT_TTL=600 (WAIT-GATE honored 10min then re-nudged —
+  the implied time-bound on self-declared gates). Bound is DATA,
+  not hardcode.
+- **NO FINAL ABATEMENT**: v5 never checks FINAL in the nudge path
+  (owner 13:32: "dumb to include anything that fully halts
+  inappropriately"). FINAL files are archive artifacts
+  (tandem-*/archive/), not permission to stop — the deck always has
+  next steps.
+- **Lane-change trigger is primary, idle is backstop** — the lane
+  mtime vs last-read-marker check (WATCHER DESIGN v2, §7.1). Nudge
+  cadence is NUDGE_GRACE; no lossy suppression.
 - **Provenance in the doc**: rely on the BREADCRUMB regularity to
   distinguish sleeping-flash from stalled (seats breadcrumb per phase;
   a seat that breadcrumbs every ~20s is alive even if the footer
   looks `ready`). Idle-nudge is the fallback, breadcrumbs are the
   signal.
-- **Ship as a systemd unit** (like tandem-supervisor): `hngh-watch`
-  user unit, parameterized via the registry (seats, bounds, max
-  nudges); NOT a repo script that must be babysat. Writes its own
-  journal breadcrumb so its activity is as auditable as the seats'.
-- **Protect active user input.** Before a steer is inserted, inspect the
-  target pane and require an empty or known watcher-owned input field.
-  Never overwrite text that may be a user's paste. If ownership is
-  uncertain, record the pending nudge and stop.
-
-Build it when the P1 ride-along lands (dashboard §8.5); it replaces
-the stopgap and gives the lane-watch doctrine a single home.
+- **Protect active user input.** composer_active pre-check lives in
+  seat-steer (skip + exit 3 when the input line holds non-prompt text;
+  Ctrl+C busy-hint excluded) AND is the watcher's first per-seat
+  guard. Never overwrite text that may be a user's paste. If
+  ownership is uncertain, record the pending nudge and stop.
 
 ### 7.1 Lane-triggered wake (killy WATCHER DESIGN v2 13:15, owner-steered)
 
@@ -188,9 +188,26 @@ hngh-lane discipline "end turns, don't sleep" becomes a hard rule
 (worklog + outbox written before ending). Watcher-side: `-t <seat>:0.0`
 retargeting and the composer-active pre-check (killy 13:17 collision
 class: never type over an owner's in-progress line) apply to lane-
-triggered nudges too.
+triggered nudges too. FINAL does not abate the watch: v5 never checks
+it (owner 13:32) — a FINAL file is an archive artifact, not a stop
+signal; the deck always has next steps.
+
+Escalation ladder (per Q3 consensus 15:30): lane-change pulse →
+idle backstop (NUDGE_GRACE cadence) → consumption-verified before
+counting (input line empty / footer busy; a nudge that landed in the
+wrong pane is not a nudge) → explicit `-t <seat>:0.0` retargeting →
+after max-nudges (config, default 3), write an `ESCALATE-OWNER: <seat>
+<state>` lane marker + sibling inbox notes, then STOP poking — poking
+a stuck seat is harassment; surfacing is the move. No overwrite /
+repeated Enter.
 
 Attribution (added 14:58): tandem seu — deepseek/deepseek-v4-flash-0731,
 hermes TUI, 2026-08-09 — §7.1 folds killy's WATCHER DESIGN v2 13:15
 (lane-triggered wake, end-turns-not-sleeping) into the wake-trigger
 design; also records the 13:17 seat-steer composer pre-check fix.
+
+Attribution (13:50 update): §7/§7.1 aligned to SHIPPED v5 per killy's
+FACT-SYNC — no FINAL abatement, 15/45/10/600 params, composer_active
+in seat-steer, systemd lifecycle, source-safe by construction. The
+13:45 joint-diagnosis findings (source-guard placement, singleton
+lock) were against the pre-v5 file; v5 already implements both fixes.
