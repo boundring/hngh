@@ -265,6 +265,92 @@ Layout rule: all pane geometry is DATA (config + registry), never
 hardcoded snippets. `seat-up` reads the roll config; the dashboard reads
 the same files; nothing invents its own geometry.
 
+## 8. Ride-along console + agent back-channel (owner 12:45, holistic)
+
+The ride-along pane is not a passive tail — it is the seat's interactive
+console, and the agent connects back to Hngh the same way the dashboard
+does: MCP tools, tmux dispatch, file lane. One window, three
+bidirectional channels.
+
+### 8.1 Current state (audited 2026-08-09)
+
+- Ride-along pane command is `echo; tail -F worklog.md & wait` — it
+  DISPLAYS the lane but has NO stdin routing. Typed lines go nowhere.
+  The pane's "type a line => steer to seat" claim is aspirational.
+- hngh-coord MCP face exists and is wire-proven (card 101): tools
+  `register`, `post_message`, `read_inbox`, `status`, `steer` over
+  Content-Length MCP framing (`~/.local/bin/hngh-coord-mcp` stdio
+  server). NOT yet registered as an MCP server in `~/.hermes/
+  config.yaml` — no agent session currently has the tool wired.
+- tmux dispatch works (seat-steer care layer, lane-watch nudge): the
+  dashboard's control path is real. The agent->Hngh path is not.
+
+### 8.2 Design: the ride-along console (pane 2, owned by dashboard later)
+
+One process, three functions, stdin-routed by prefix — a small
+`ride-along` script (replaces the inline `tail -F & wait`):
+
+```
+Display (stdout)   tail -F worklog.md + outbox tail + model-status
+                   + lane-watch log lines for this seat
+Input (stdin)      plain line        -> append to own worklog
+                   ack <lane/text>   -> append ACK to <lane>/inbox.md
+                   steer <seat> ...  -> seat-steer <seat> "..."
+                   status            -> print seat-truth (model, phase,
+                                        lanes, last activity)
+                   mcp ping          -> run a local-hook MCP probe
+                   help              -> command list
+                   (Ctrl-C exits the ride-along, not the seat)
+```
+
+Routing is implemented against the file lane and tmux sockets the
+dashboard already uses — no new wire. Prefix parsing is a ~30-line
+function; fixture-testable with the existing fake-tmux harness plus a
+fake lane dir. Human and Hngh can both drive it (same input path); the
+DASHBOARD owns the pane once P1 lands, per §5.3.
+
+### 8.3 Design: agent back-channel (MCP first, tmux + lane fallback)
+
+Agents connect back to Hngh through THREE channels, in order:
+
+1. **MCP (tool-level, primary)**: register `hngh-coord-mcp` as a stdio
+   MCP server (`hermes mcp add hngh --command
+   /home/bricker/.local/bin/hngh-coord-mcp`; owner-gated config edit;
+   connect-timeout 120 for the SBCL boot). Each Hermes session then has
+   `mcp__hngh__{register,post_message,read_inbox,status,steer}`. Agents
+   post findings, read their inboxes, steer siblings — via tools, from
+   inside any session, no tmux knowledge needed.
+2. **tmux dispatch (UI-level)**: seat-steer / lane-watch nudge — the
+   dashboard's existing control path; used for steers and nudges where
+   a live prompt matters more than a message.
+3. **File lane (durable, crash-surviving)**: inbox/outbox/worklog —
+   canonical for anything that must outlive a session (crash-resume
+   works because the lane survived).
+
+Rule (from §2.4, made concrete): MCP for tool/message-level control,
+tmux for UI-level control, file lane for durable coordination. A seat
+uses whichever fits the action; the dashboard reads all three.
+
+### 8.4 Skills as the agent-side adapter
+
+Ship one Hermes skill (`hngh-lane`) teaching an agent the contract:
+read your inbox, post to outbox, ack via lane or `mcp__hngh__*`,
+report model truth. Skills make MCP tools discoverable and keep agent
+sessions cheap (no need to reverse-engineer the lane layout per
+session). This is the same adapter role `misakanet` plays for the
+failure-memory shield.
+
+### 8.5 Build order (adds to P1/P3)
+
+- P1: `ride-along` console script + fixture; register hngh MCP server
+  (owner runs the config edit); seat-up starts the console instead of
+  inline tail.
+- P3: `hngh-lane` skill; dashboard MCP bridge uses the registered
+  server (already in §7); summary LLM overlay may post findings via
+  `post_message` instead of dead-dropping files.
+- Verify per surface: `hermes mcp test hngh` (real tool call), ride-
+  along stdin routing fixtures, lane-watch still reads seats.
+
 ## Attribution
 Sanakan (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — integrating
 owner's 10:40 architecture directive verbatim in intent; report to owner
@@ -274,3 +360,7 @@ the open decisions documentation-first (llmtrim-0.12.5 source =
 Rust/Tauri, not Textual; hngh.asd cl-charms declaration), dashboard TUI
 spec + window/layout design; verification lane: mirrors verified in
 sync at 2717815.
+Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §8: ride-along
+console + agent back-channel (owner 12:45 holistic direction) —
+ride-along stdin routing, hngh-coord MCP registration, three-channel
+rule + hngh-lane skill adapter, build order into P1/P3.
