@@ -10,6 +10,31 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Fixed — hngh-coord MCP face dead on startup (card 101, tandem-delivered)
+- Two defects, both invisible to the FiveAM store suite (which never wired
+  the serve path — the MCP/ACP serve path is verified only by an
+  independent wire probe over Content-Length frames).
+- `coord.lisp` `mcp-server`: a paren imbalance in the `tools/list` tool
+  descriptor folded the `tools/call` + `initialize` expose calls into the
+  `tools/list` expose as extra arguments; at runtime the outer call hit
+  `jsonrpc:expose` with 5 arguments ("invalid number of arguments: 5")
+  and the server died before the first frame. Source-side count was
+  globally balanced, so compiles/loads were clean; only the reader parse
+  showed EXPOSE(len 6) at LET level. One missing close after the last
+  `%mcp-tool` call, one compensating extra close in `initialize`.
+- `coord.lisp` MCP returns: string-keyed alists → `%mcp-object` hash-tables.
+  yason's default list encoder emits arrays and walks every element; a
+  dotted-tail alist crashed on `("protocolVersion" . "2024-11-05")`
+  ("The value \"2024-11-05\" is not of type LIST"). Hash-tables encode as
+  JSON objects natively; same shape as the ACP face's `%ht`.
+- `~/.local/bin/hngh-coord-mcp`: `init`'s INFO log went to fd1 (the MCP
+  wire) before `serve-mcp` rebinds stdout to stderr; wrapped the init eval
+  in `(let ((*standard-output* *error-output*)) ...)`. Wire is now
+  frame-only, verified by raw-byte capture.
+- **Verified**: independent wire probe — initialize + tools/list +
+  post_message + read_inbox over raw Content-Length framing: ALL PASS
+  (frame-only stdout). `make test`: **956/956 fast, 0 fail-suites**.
+
 ### Added — Wave C item 4: hash-chained action log
 - **`src/core/safety-boundary.lisp`** — the append-only action log
   (`journal/actions.lisp`) is now **tamper-evident**: every entry carries
