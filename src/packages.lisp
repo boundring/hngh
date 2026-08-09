@@ -889,6 +889,24 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:route-model
            #:role-model))
 
+(defpackage :hngh.core.safety-boundary
+  (:documentation "Wave C immutable safety layer (autonomy-strategy §7): protected-path registry (approval/sentry/sandbox configs under config/), fail-closed mutation guard, append-only action log, best-effort mode-lock. Lives in core — a plugin cannot edit its own protection list.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*protected-paths*
+           #:*default-protected-relative*
+           #:*action-log-name*
+           #:protected-paths
+           #:protected-path-p
+           #:allow-mutation-p
+           #:ensure-mutable
+           #:log-action
+           #:read-action-log
+           #:recent-denials))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)

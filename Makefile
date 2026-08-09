@@ -68,7 +68,7 @@ run:
 test: test-fast
 
 test-fast:
-	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.hngh-planner :hngh.quota-spreader :hngh.signals :hngh.acp-client :hngh.situation-detectors :hngh.situation-scoring :hngh.situation-judge :hngh.situation-casebase :hngh.model-runtime :hngh.model-probes :hngh.model-routes)'
+	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.hngh-planner :hngh.quota-spreader :hngh.signals :hngh.acp-client :hngh.situation-detectors :hngh.situation-scoring :hngh.situation-judge :hngh.situation-casebase :hngh.model-runtime :hngh.model-probes :hngh.model-routes :hngh.safety-boundary)'
 
 test-beans:
 	$(MAKE) test-suite SUITE='(:hngh.beans)'
