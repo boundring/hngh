@@ -137,7 +137,33 @@
       (is (listp em))
       (is (<= (length em) 2)))))
 
-;;; --- standard plugin surface ----------------------------------------------
+(test classify-lane-line-uses-deterministic-taxonomy
+  (is (eq :loop-or-stuck
+          (hngh.plugins.situation-casebase:classify-lane-line
+           "STATE: found false-death retry loop")))
+  (is (eq :human-steer
+          (hngh.plugins.situation-casebase:classify-lane-line
+           "STEER: check the sibling lane"))))
+
+(test feed-lanes-appends-fixture-records
+  (%within-home
+    (let* ((root (merge-pathnames "lane-fixture/" (uiop:temporary-directory)))
+           (lane (merge-pathnames "tandem-cibo/" root)))
+      (unwind-protect
+           (progn
+             (ensure-directories-exist lane)
+             (with-open-file (stream (merge-pathnames "worklog.md" lane)
+                                     :direction :output :if-exists :supersede)
+               (format stream "STATE: false-death retry loop~%")
+               (format stream "STEER: check the sibling lane~%")
+               (format stream "ordinary note~%"))
+             (is (= 2 (hngh.plugins.situation-casebase:feed-lanes root
+                                                                    :seats '("cibo"))))
+             (is (= 2 (hngh.plugins.situation-casebase:case-count)))
+             (is (= 1 (length (hngh.plugins.situation-casebase:cases-by-source :human)))))
+        (when (probe-file root)
+          (uiop:delete-directory-tree root :validate #'identity))))))
+
 
 (test situation-casebase-status-shape
   (%within-home

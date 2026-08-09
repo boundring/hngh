@@ -911,7 +911,9 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:write-pass-stats
            #:accuracy-improving-p
            #:pass-stats
-           #:emergent-classes))
+           #:emergent-classes
+           #:feed-lanes
+           #:classify-lane-line))
 
 (defpackage :hngh.plugins.model-routes
   (:documentation "M8 model route table + task-class→model routing seed (docs/design/model-routing.md). Data: the route table (id/backend/model/price/class) + the 2026-08 two-role split (agentic→deepseek-v4-flash, coding→gpt-5.6-luna). Accessors: route-model, role-model. Read-only — this seeds M8's routing data without committing to full selection logic.")
