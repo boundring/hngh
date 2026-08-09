@@ -116,6 +116,8 @@ Prevention beats convention. Three mechanisms:
 - lane-watch: CLOBBER detection + breadcrumb consumption + steer-
   accounting for nudges (no nudge right after a steer).
 - seat-up/ride-along/seat-steer: all writes via `lane-append`.
+- claims (collision prevention, §8): registry written via the same
+  helper; lane-watch/seat-up consult claims before writes/spawns.
 
 ## 6. Cost + fail-closed
 
@@ -125,6 +127,77 @@ Prevention beats convention. Three mechanisms:
   same gate as ride-along input).
 - No new wire: reuses hngh-coord's journal, state-store, and the
   existing tmux/lane paths.
+
+## 8. Collision prevention: surface claims + serial execution (owner 15:13)
+
+Owner directive: Hngh must PREVENT collisions and manage overlapping
+work SERIALLY — not rely on post-hoc "flag conflicts" notes. Two
+agents must not work on the same surface (file, doc section, script,
+deck card) simultaneously.
+
+### 8.1 Surface claims registry
+
+A CLAIM is a machine-readable record that a seat holds a surface:
+  CLAIM: <surface> <seat> <purpose> <ts>
+- Surfaces are named by WOBBLE: `file:i`, `doc:§7`, `script:seat-up`,
+  `card:105`, `deck-tasks/*.txt` — coarse enough to be predictable,
+  fine enough to prevent same-file races.
+- Written via the append-only helper (same gate as lanes) into
+  `~/state/claims.lisp` (or the COORD JOURNAL with :kind "claim").
+  One line = one claim; RELEASE is a paired `CLAIM-RELEASE` line or a
+  phase landing in the worklog (lane-mtime delta).
+- Claims are DATA the dashboard §8 STATUS panel shows (who holds what),
+  and lane-watch/seat-up consult before any write or spawn.
+
+### 8.2 Enforcement (three rungs)
+
+1. PREVENT AT PICK TIME — when a seat picks its next deck card, the
+   card's declared surface (the "Files + This-card-does-NOT" list in
+   the card brief, machine-readable) is checked against the claims
+   registry. Any overlap with a live claim → the card is NOT picked;
+   the seat takes a different card or declares WAIT-GATE on the
+   holder. This makes the collision impossible by construction, the
+   same way lane-change wake makes in-turn sleeps impossible (owner's
+   13:15 doctrine).
+2. SERIALIZE ON WRITE — the append/write helper refuses (exit non-
+   zero, logs) a write to a surface claimed by another seat. The
+   writer then either waits (WAIT-GATE against the holder's lane → the
+   watcher re-wakes it when the holder's lane moves, i.e. serial
+   execution with the same machinery) or escalates to the owner if
+   the claim looks stale (>WAIT_TTL without lane movement).
+3. CROSS-CUTTING CHECK — the watcher's WAIT-GATE judge treats a
+   claim on a surface as machine-verifiable NECESSITY for a gate that
+   names it: `WAIT-GATE: card:105 (held by cibo)` is verifiable by
+   looking up the claim, no prose trust needed. This ties §7.2's
+   "cross-reference against deck/registry/lane state" to a concrete
+   object.
+
+### 8.3 The watcher surface, concretely (this session's collision)
+
+The watcher update is the first live test. Surface:
+- `script:hngh-live-watch` (repo scripts/ + ~/.local/bin shim) — held
+  by CIBO for the code build.
+- `doc:durable-records` — design home SEU; §7.2 is the build target.
+- Collision rule for THIS wave: while CIBO builds, SEU holds the doc
+  pen only for REVIEW notes (additive attribution lines / errata),
+  not structural edits; CIBO's code commits must state "conforms to
+  §7.2" or flag delta. The doc converges in one wave via review, not
+  two writers racing.
+
+### 8.4 Fail-closed
+
+- A claimed surface is never written around: no "just this once"
+  bypass flag. Wrong-claim (temporary) → WAIT-GATE + watcher re-wake;
+  stale-claim (claim > WAIT_TTL, holder lane dead) → owner
+  escalation, not silent take-over.
+- Claims live in the same append-only journal as lanes (agent-proof,
+  breadcrumbed), so takeover history is auditable.
+
+Attribution (15:16): tandem seu — deepseek/deepseek-v4-flash-0731,
+hermes TUI — §§8.1-8.4 owner directive 15:13; extends §5 (§5 now
+mentions claims) and §7.2 (judge treats claims as verifiable gates).
+
+## 9. Attribution (original)
 
 Attribution: tandem seu — deepseek/deepseek-v4-flash-0731, hermes TUI,
 2026-08-09 — owner design notes 13:10/13:14 (via killy). Grounded in
