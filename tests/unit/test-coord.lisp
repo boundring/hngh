@@ -80,3 +80,15 @@ Binds *coord-tmp-home* so tests can re-init to the same scratch store."
      (let ((inbox-b (hngh.plugins.hngh-coord:read-inbox "B")))
        (is (= 1 (length inbox-b)))
        (is (equal "steer" (getf (car inbox-b) :kind)))))))
+
+(test coord-mcp-initialize-advertises-object-tools-capability
+  "MCP initialize capabilities.tools must be an object, not JSON null."
+  (let ((result
+          (hngh.plugins.hngh-coord::%mcp-object
+           "capabilities"
+           (hngh.plugins.hngh-coord::%mcp-object
+            "tools"
+            (hngh.plugins.hngh-coord::%mcp-object)))))
+    (is (hash-table-p (gethash "capabilities" result)))
+    (is (hash-table-p
+         (gethash "tools" (gethash "capabilities" result))))))
