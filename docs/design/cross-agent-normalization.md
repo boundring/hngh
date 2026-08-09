@@ -1,9 +1,9 @@
-# Cross-agent normalization (card 111A) — lane/FINAL → case-base schema
+# Cross-agent normalization (card 111A) — lane/HANDOFF → case-base schema
 
 Relation to situation-scoring.md: that doc defines L2 recognition + L3
 scoring over a single agent's stream. Step 6 (book §8, build order) is
 the **cross-agent artery**: normalize what tandem seats actually
-reported (lanes, worklogs, FINAL-*, benchmark-log) into the situation
+reported (lanes, worklogs, HANDOFF-*, benchmark-log) into the situation
 case-base so the L2/L3 brain learns from real sessions — not only from
 auto-detected windows.
 
@@ -28,7 +28,7 @@ record:
 |---|---|---|
 | `STATE:` / worklog bullet | "found multi-seat false-death bug: tmux list-panes returned both panes" | situation detect + action |
 | `STEER:` received | "check inbox per phase; verify 104" | human steering signal |
-| `FINAL-*.md` closeout | "make test exit 0 with 38/38; make check exit 2 on pre-existing failure" | outcome + attribution |
+| `HANDOFF-*.md` closeout | "make test exit 0 with 38/38; make check exit 2 on pre-existing failure" | outcome + attribution |
 | `benchmark-log.md` rows | model/cost/outcome rows | score/weight calibration input |
 | `model-error` / `model-status` | "negotiated=missing status=paused" | situation = model drift |
 
@@ -49,7 +49,7 @@ rules:
 | `:outcome` | none/pending/resolved/failed | derived from the NEXT line (fix landed? FINAL says green?) |
 | `:weight` | 1.0 auto; >1 human | human steer/override ⇒ 2.0 (per §7.5 highest-weight ground truth) |
 | `:source` | `:auto` or `:human` | `:auto` for lane-detected; `:human` for recorded human steers |
-| `:attribution` | "tandem <seat> — <model> via <provider>" | FINAL-* line or lane attribution footer; fallback `hngh/<lisp-version>` |
+| `:attribution` | "tandem <seat> — <model> via <provider>" | HANDOFF-* line or lane attribution footer; fallback `hngh/<lisp-version>` |
 
 Extra lane pieces SHALL ride in a `:meta` plist (unknown fields are
 ignored by the journal consumer, matching model_catalog's
@@ -81,7 +81,7 @@ Overrides: a line containing an explicit `:situation` tag wins.
 The feed path runs as a **post-session sweep**, not per-line mid-run
 (cheap, batch, no hot-path cost):
 
-1. A seat's `FINAL-*.md` appears (seat closed its shift) → feed its
+1. A seat's `HANDOFF-*.md` appears (seat closed its shift) → feed its
    whole lane: every `STATE:` line, `STEER:` line, and the FINAL
    outcome.
 2. A lane `model-error` file appears or changes → immediately feed one
@@ -103,7 +103,7 @@ sweep sees a later line in the same lane that resolves it:
 
 - "fixed", "closed", "green", "exit 0", "PASS" after the same topic ⇒ `:resolved`
 - "blocked", "red herring", "dead end", "FAIL", "exit 2" ⇒ `:failed`
-- FINAL-* says green but earlier line named a failure ⇒ that failure's
+- HANDOFF-* says green but earlier line named a failure ⇒ that failure's
   outcome = `:resolved` (context collapse), the recorded action worked.
 
 ## 5a. Durable records as the feed source (owner 13:10/13:11)
@@ -138,7 +138,7 @@ and demotes prose parsing to fallback:
 
 ## 7. Open questions for owner (not blocking)
 
-- Where the sweep lives: a plugin on FINAL-* appearance, or a cron/manual
+- Where the sweep lives: a plugin on HANDOFF-* appearance, or a cron/manual
   `hngh normalize-lanes` command. Recommendation: both — plugin for
   trigger 2 (model-error is urgent), CLI for the batch sweep.
 - Retention: case-base is append-only by design; no purge.
