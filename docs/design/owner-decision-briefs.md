@@ -29,10 +29,13 @@ IF NO DECISION: <fail-closed default — what happens, who it hurts>
 
 - DECISION ≤ 1 sentence. CHOICES ≤ 3. Each option: cost/unblock +
   one tradeoff clause. No paragraph prose.
-- SIZE = estimated owner effort to decide (S ≤ 2 min, M ≤ 10 min,
-  L = needs discussion). URGENCY drives the owner-inbox render order.
-  BLOCKS names the seats/cards waiting — the owner sees blast radius
-  at a glance.
+- SIZE = owner effort ONLY (≤ 2 min = S, ≤ 10 min = M, L = needs
+  discussion) — NOT implementation effort; say which you mean.
+  URGENCY drives the owner-inbox render order. BLOCKS names the
+  seats/cards waiting — the owner sees blast radius at a glance.
+- Re-formatted escalations (like the 107A re-issue) carry the
+  ORIGINAL escalation text appended, so the owner sees nothing was
+  lost in the template conversion.
 - IF NO DECISION is mandatory: a decision that silently expires is
   the failure class we are killing. Default is fail-closed (do
   nothing = do the safe thing, not the nothing).
