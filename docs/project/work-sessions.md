@@ -701,3 +701,16 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Suspended deliberately**: C6 `--emit` from cron, which I had started toward — user steered toward the higher-value simpler route split instead. Full M8 routers (`route-task`) remain unbuilt, by design (seed data only).
 - **Verified**: 818/818 fast (was 755), full suite running. Baseline: 755/755 fast, 2496/2496 full.
 - Docs updated: AGENTS.md, next.md (M8 seed done, added to Up Next as P1), roadmap.md (status + design-artifacts row), CHANGELOG, work-sessions M9.28. Committed + pushed.
+
+### Session M9.29: Wave B governance guardrails (`make lint-deps`) — park C6
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner direction**: build security + guardrails BEFORE public release and BEFORE launching automatic sessions — "the most rational, stable, known-reliable route." C6 emit-cron (launch automatic Hngh sessions) deliberately PARKED; the design's own gate (autonomy-strategy §7 Wave B/C before self-modification of core) supports this ordering.
+- `scripts/lint-deps.py` — deterministic Wave B fitness checks, same pattern as lint-parens (single full-tree pass, exit 1 on violations), wired into `test-suite` (`make test` = lint-parens → lint-deps → 818 tests):
+  - **rule1**: no plugin→plugin `:use` (plugins talk via hngh.core — verified: zero such clauses in the real tree)
+  - **rule2**: core packages never call plugin symbols (main.lisp = composition root, restricted to `:init`/`:shutdown` — the registration contract)
+  - **rule3**: no circular deps over the `:use` + plugin-call graph
+  - **rule4**: production never depends on `hngh.tests`
+- **Fixture-verified**: 4 deliberate-violation fixtures under `tests/fixtures/guardrails/` all fire (each rule); real tree clean. Proof the checker isn't a no-op.
+- **Bugs found + fixed during build**: (a) `_USE_RE` expected nested `:use (...)` but repo writes `(:use :cl ...)` — fixed `\(?`; (b) rule2 was directory-based (src/core/) but core-ness is package-based (hngh.core.* / hngh) — fixed; (c) multi-in-package files misattributed calls — added `segment_packages` (last-in-package scoping); (d) **cycle finder never fired**: call edges captured bare plugin name (`circ-a`) while graph keys are full packages (`hngh.plugins.circ-a`) — the classic name-mismatch cycle bug, edges normalized to full names.
+- **Verified**: `make test` exit 0 — both gates before tests, 818/818 fast, 0 fail-suites.
+- Docs updated: CHANGELOG, work-sessions M9.29. Committed + pushed.

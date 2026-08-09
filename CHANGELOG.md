@@ -43,6 +43,20 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave B governance guardrails (`make lint-deps`)
+- **`scripts/lint-deps.py`** — deterministic dependency fitness checks
+  (autonomy-strategy.md §7 Wave B), wired into `test-suite` alongside
+  `lint-parens`:
+  - rule1: no plugin→plugin `:use` clauses (plugins talk via hngh.core)
+  - rule2: core packages never call plugin symbols (main.lisp is the
+    composition root, restricted to `:init`/`:shutdown`)
+  - rule3: no circular dependencies over the package `:use` + call graph
+  - rule4: production never depends on `hngh.tests`
+- Pattern matches `lint-parens`: single full-tree pass, per-rule violation
+  reports, exit 1 on violations. Fixture-verified (4 deliberate-violation
+  fixtures under `tests/fixtures/guardrails/` all fire; real tree clean).
+- **Verified**: `make test` exit 0 — gates run before tests, 818/818 fast.
+
 ### Added — L2/L3 case-base + review pass (step 5, self-improvement loop)
 - **`src/plugins/situation-casebase.lisp`** — persistent case-base: every
   scored situation + action + outcome is appended to a journal alongside
@@ -53,7 +67,8 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
     recomputes precision/recall/conf, appends the pass record.
   - `accuracy-improving-p` — the §8 step 5 gate (calibration improves across
     successive passes). `emergent-classes` — open-taxonomy probe.
-- 25 new checks; **755/755 fast, 2496/2496 full** (was 730/2471).
+- 25 new checks; **755/755 fast, 2496/2496 full** (was 730/2471); later
+  M8 routing seed raised the suite to 818/2559.
 - L2/L3 steps 1–5 of `situation-scoring.md` §8 are now built; step 6
   (cross-agent normalization) remains.
 
