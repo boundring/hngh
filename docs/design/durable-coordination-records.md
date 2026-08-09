@@ -307,8 +307,9 @@ solo). Recorded here so the code and the doc agree:
   registry entry). Self-declared/unstructured gates are NOT
   machine-verifiable → after grace, remedy is END-TURN (declare),
   not merely "stop sleeping". DECLARE-OR-END is the default;
-  WAIT-GATE is the escape hatch. WAIT_TTL=600 bounds self-declared
-  gates.
+  WAIT-GATE is the escape hatch. WAIT_TTL bounds self-declared gates;
+  the TTL value is NOT a re-nudge cadence for owner-gated waits — see
+  below.
 - **Ladder (agreed order, no overwrite / repeated Enter)**:
   lane-change pulse → safe exact-pane preflight (`-t <seat>:0.0`,
   verify input EMPTY after) → skip composer-active/uncertain input
@@ -322,6 +323,18 @@ solo). Recorded here so the code and the doc agree:
   (tandem-*/archive/), never a stop signal; the deck always has next
   steps. The escalation + watch continues until the seat is working
   or the owner stops it.
+- **TTL semantics — escalate, don't re-nudge (owner 19:22)**:
+  WAIT_TTL is NOT a seat re-ping rubber band. Two gate classes:
+  (a) co-agent gates (target = a sibling's lane): short TTL is fine —
+  the lane moves in minutes; expiry just means "still waiting, re-
+  check the lane". (b) OWNER gates (target = a deck item awaiting the
+  owner: 109A pick, 110 scope, key presence): re-nudging the SEAT
+  every 10min converts a human-pace decision into seat noise. On
+  expiry of an owner-class gate the watcher should ESCALATE TO THE
+  OWNER (ESCALATE-OWNER marker) and STOP pinging the seat in the
+  meantime — the seat has declared correctly and is blocked on the
+  human, not its own discipline. Owner-class gates carry `owner:`
+  in the target so the judge classifies them.
 - **Delivery contract**: steer delivery = send-keys -t <seat>:0.0 -l
   '<text>' + Enter, then verify the input line is EMPTY (footer busy
   is fine). Visible text at the prompt is not delivery. Stranded
