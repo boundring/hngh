@@ -17,7 +17,7 @@
   "Whether the TUI is active.")
 
 (defvar *current-view* :overview
-  "Current view: :overview, :events, :plugins, :watch")
+  "Current view: :overview, :events, :plugins, :watch, :steers, :owner-inbox")
 
 (defvar *help-open* nil
   "Whether the keyboard help panel is shown.")
@@ -25,7 +25,10 @@
 (defparameter *level-map*
   '((:overview . "B1-Core")
     (:events . "B3-Event Bus")
-    (:plugins . "B2-Scheduler"))
+    (:plugins . "B2-Scheduler")
+    (:watch . "B4-Watcher")
+    (:steers . "B5-Steers")
+    (:owner-inbox . "B6-Owner"))
   "View-keyword to megastructure floor name mapping.")
 
 (defvar *event-buffer* '()
@@ -42,6 +45,12 @@
 
 (defvar *watch-state-path* "/tmp/hngh-live-watch.state"
   "Path to the live-watch state feed consumed by the dashboard.")
+
+(defvar *steers-log-path* "/tmp/hngh-steers.log"
+  "Path to the centralized steer delivery log.")
+
+(defvar *owner-inbox-path* "/home/bricker/.hngh-night/owner/inbox.md"
+  "Path to the owner-facing decision inbox.")
 
 (defvar *headless* nil
   "If T, don't render TUI (for service/SSH mode).")
@@ -144,7 +153,9 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
         (:overview (render-overview))
         (:events (render-events))
         (:plugins (render-plugins))
-        (:watch (render-watch-state))))
+        (:watch (render-watch-state))
+        (:steers (render-steers))
+        (:owner-inbox (render-owner-inbox))))
   (render-footer))
 
 (defun render-to-string ()
@@ -168,6 +179,33 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           +ansi-bold+ +ansi-cyan+ +ansi-reset+)
   (render-level-indicator)
   (format t "~%"))
+
+(defun read-steers-log (path)
+  "Read non-delivery lines from the centralized steer log at PATH."
+  (remove-if (lambda (line)
+               (or (string= line "")
+                   (uiop:string-prefix-p "delivery=" line)))
+             (uiop:read-file-lines path)))
+
+(defun read-owner-inbox (path)
+  "Read owner inbox lines from PATH."
+  (uiop:read-file-lines path))
+
+(defun render-steers ()
+  "Render the centralized steer feed."
+  (render-header "Steers")
+  (if (probe-file *steers-log-path*)
+      (dolist (line (last (read-steers-log *steers-log-path*) 30))
+        (format t "  ~A~%" line))
+      (format t "  ~A(no steer log)~A~%" +ansi-dim+ +ansi-reset+)))
+
+(defun render-owner-inbox ()
+  "Render the owner-facing decision inbox."
+  (render-header "Owner Inbox")
+  (if (probe-file *owner-inbox-path*)
+      (dolist (line (last (read-owner-inbox *owner-inbox-path*) 40))
+        (format t "  ~A~%" line))
+      (format t "  ~A(no owner inbox)~A~%" +ansi-dim+ +ansi-reset+)))
 
 (defun render-watch-state ()
   "Render the latest live-watch state for each seat."
@@ -313,7 +351,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-footer ()
   "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
-  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [?]Help [q]uit~A"
+  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [5]Steers [6]Owner [?]Help [q]uit~A"
           +ansi-dim+ +ansi-reset+)
   (bt:with-lock-held (*buffer-lock*)
     (let ((n (length *event-buffer*)))
@@ -353,6 +391,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           (#\2 (setf *current-view* :events) (render))
           (#\3 (setf *current-view* :plugins) (render))
           (#\4 (setf *current-view* :watch) (render))
+          (#\5 (setf *current-view* :steers) (render))
+          (#\6 (setf *current-view* :owner-inbox) (render))
           (#\q (setf *running* nil))
           (#\Q (setf *running* nil))))))
 

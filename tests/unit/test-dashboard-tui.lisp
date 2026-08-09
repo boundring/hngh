@@ -130,6 +130,63 @@
       (when (probe-file tmp)
         (delete-file tmp)))))
 
+(test tui-reads-steers-log
+  (let ((tmp (make-pathname :name "steers" :type "log"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "2026-08-09T14:34:13 STEER killy -> cibo :: wake~%")
+             (format stream "delivery=0~%"))
+           (let ((entries (hngh.plugins.dashboard-tui:read-steers-log tmp)))
+             (is (= 1 (length entries)))
+             (is (search "STEER killy -> cibo" (first entries)))))
+      (when (probe-file tmp)
+        (delete-file tmp)))))
+
+(test tui-reads-owner-inbox
+  (let ((tmp (make-pathname :name "owner-inbox" :type "md"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "DECISION: choose the safe route~%")
+             (format stream "CHOICES: A/B~%"))
+           (let ((lines (hngh.plugins.dashboard-tui:read-owner-inbox tmp)))
+             (is (= 2 (length lines)))
+             (is (search "DECISION:" (first lines)))))
+      (when (probe-file tmp)
+        (delete-file tmp)))))
+
+(test tui-renders-steers-and-owner-inbox
+  (let ((steers (make-pathname :name "steers-render" :type "log"
+                               :defaults (uiop:temporary-directory)))
+        (owner (make-pathname :name "owner-render" :type "md"
+                              :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream steers :direction :output :if-exists :supersede)
+             (format stream "2026-08-09T14:34:13 STEER killy -> cibo :: wake~%"))
+           (with-open-file (stream owner :direction :output :if-exists :supersede)
+             (format stream "DECISION: choose the safe route~%"))
+           (hngh.core.event-bus:init :hngh-home (make-tmp-home))
+           (hngh.plugins.dashboard-tui:init :headless t)
+           (let ((hngh.plugins.dashboard-tui::*steers-log-path* steers)
+                 (hngh.plugins.dashboard-tui::*owner-inbox-path* owner))
+             (hngh.plugins.dashboard-tui:handle-key #\5)
+             (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+               (is (search "Steers" output))
+               (is (search "STEER killy -> cibo" output)))
+             (hngh.plugins.dashboard-tui:handle-key #\6)
+             (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+               (is (search "Owner Inbox" output))
+               (is (search "DECISION:" output))))
+           (hngh.plugins.dashboard-tui:shutdown)
+           (hngh.core.event-bus:shutdown))
+      (when (probe-file steers)
+        (delete-file steers))
+      (when (probe-file owner)
+        (delete-file owner)))))
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)
