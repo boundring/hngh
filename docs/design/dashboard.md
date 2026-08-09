@@ -322,6 +322,20 @@ INPUT GATING (Cibo review 12:55):
   dispatches also writes a COORD JOURNAL record (kind "steer") so the
   dashboard's per-seat steer history is data, not prose archaeology.
 
+COLLISION-AWARE DISPATCH (durable-coordination-records.md §8, owner
+15:13):
+- Before `steer <seat> ...` or `ack <lane> ...` dispatches, consult
+  `~/.hngh-night/state/claims.lisp`. If the TARGET surface is claimed
+  by another seat mid-build (e.g. a steer asking a seat to edit
+  `script:hngh-live-watch` while cibo holds that claim), do NOT send
+  the raw steer: surface it as a QUEUED PENDING note in the ride-along
+  with the holder's name, and land a WAIT-GATE line naming the claim.
+  The watcher re-wakes when the holder's lane moves (serial
+  execution, §8.2 rung 2).
+- `status` and `help` are read-only, never blocked by claims.
+- Plain worklog appends are the seat's own surface — never claim-
+  blocked; the seat writes its own lane.
+
 ### 8.3 Design: agent back-channel (MCP first, tmux + lane fallback)
 
 STATUS: ACTIVE — `hngh-coord-mcp` is registered as `hngh` in
