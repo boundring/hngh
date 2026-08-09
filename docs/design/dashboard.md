@@ -157,18 +157,120 @@ something they didn't; observation local, no telemetry.
 - Delivery is a mechanism, not a dead drop: lane-watch / ride-along
   processes deliver; writing a file proves nothing until read.
 
-## 5. Open decisions (owner)
-- Dashboard TUI implementation: Textual Python vs Lisp TUI? (llmtrim
-  itself is Python/Textual — check llmtrim's UI library first,
-  documentation-first.)
-- Window management at startup: which terminal (Konsole)? autostart via
-  .desktop or systemd user unit (learned: KDE-generated autostart units
-  bite; prefer owned systemd unit).
-- Ride-along process initial form: is `seat-up` + `lane-watch` +
-  ride-along-log.sh the v1, or does the dashboard TUI itself own the
-  panes?
+## 5. Open decisions — RESOLVED (seu, documentation-first, 2026-08-09)
+
+### 5.1 TUI stack: cl-charms (Lisp TUI). NOT Textual, and not llmtrim's UI.
+The premise that "llmtrim itself is Python/Textual" is FALSE — verified
+from the installed source (Homebrew llmtrim-0.12.5 tarball): llmtrim is a
+Rust workspace (crates: llmtrim-core, llmtrim-cli, llmtrim-ledger,
+llmtrim-tray, llmtrim-uniffi, llmtrim-wasm). Its dashboard is a Tauri
+desktop app — "status-watch" with Overview savings dashboard, Sessions,
+Detail, and Sub-routing tabs — plus a Claude Code status line. Nothing
+there is reusable in a tmux pane.
+- "llmtrim-style" therefore means the INFORMATION ARCHITECTURE of that
+  dashboard (overview grid of sessions, per-session detail, a routing/
+  config tab), ported to a TUI idiom — not its implementation.
+- Hngh's own declaration already points at the stack: hngh.asd future
+  deps notes `:cl-charms — for Dashboard TUI upgrade`. Decision: the
+  dashboard TUI is a Common Lisp program using cl-charms (ncurses),
+  speaking the daemon wire protocol + reading lane files directly.
+  Single runtime (SBCL), single test suite, no Python in the product,
+  works in a tmux pane.
+- Rejected alternative: Textual/Python — second runtime and a separate
+  test harness in a CL product for layout convenience; no TUI precedent
+  in llmtrim to copy (Tauri is a desktop app, not a pane TUI).
+
+### 5.2 Window management: Konsole + owned systemd user unit.
+- Startup window launched by `hngh dash`: `konsole --new-tab` (or a
+  dedicated `konsole --separate`) running a tmux pair; the unit owns the
+  launch, not KDE's autostart (learned 10:23 — KDE autostart generator
+  resurrected the archived `mc`; the generated `app-*-@autostart.service`
+  is masked and its .desktop disabled; service-map documents it).
+- Unit shape mirrors app-hngh-mc@: `app-hngh-dash@.service` (user),
+  ExecStart = konsole/tmux launch; `hngh dash` is idempotent — start or
+  attach.
+
+### 5.3 Ride-along initial form: launcher-owned pair; dashboard owns panes later.
+- v1 = `seat-up` (two-pane window: Hermes + ride-along, dedicated socket,
+  setsid per the 10:22 crash lesson) + `lane-watch` (idle AND dead-seat
+  detection, respawn hint never silent auto-respawn) + the ride-along
+  pane itself (log tail + steer interface). This is the delivery
+  mechanism, matching the day's "delivery is a mechanism, not a dead
+  drop" lesson.
+- The dashboard TUI OWNS the panes only once it exists (P1 build); until
+  then `seat-up` creates the pair and `lane-watch` drives delivery. The
+  dashboard reads the same seat registry + lane files + lane-watch log,
+  so it is a VIEW over what lane-watch already tracks, not a fork.
+
+## 6. Dashboard TUI spec (llmtrim-style, ported to cl-charms)
+
+Window: one Konsole window, tmux, two panes.
+- pane A: paired Hermes session (system config ~/.hermes/config.yaml).
+- pane B: `hngh dash` TUI. Full-screen, ncurses.
+
+Pane B layout (data-driven; no hardcoded pane geometry; registry+config
+are the source — anti-goal 4):
+- HEADER (1-2 rows): role of paired session (the owner's attendant),
+  negotiated model (verified, per P2 — banner on ANY requested-vs-
+  negotiated mismatch, never quiet), daemon/lane-watch health, clock.
+- SEATS LIST (main area): one row per active seat (ALL active agent
+  sessions, including the paired one):
+  - name (BLAME! registry), role
+  - MODEL-TRUTH: requested id + negotiated id side-by-side; mismatch =
+    ERROR banner (per P2 fail-closed rule)
+  - phase / last activity (from lane files + tmux capture)
+  - context % and lifespan (declared per seat)
+  - lane state: idle / stalled / DEAD (distinct — lane-watch's dead-seat
+    rung feeds this; death is visible, never silently absent) / working
+- DETAIL (selectable row): tail of the seat's worklog + outbox, the
+  lane-watch log lines for that seat, and its controls:
+  - steer (inject /steer via the seat's own tmux socket, care layer:
+    check for stranded text → C-u, queue or submit per prompt state)
+  - nudge (if idle+unread), respawn hint (if dead; action only when
+    config says respawn=yes)
+  - pause/close (wind-down FINAL)
+- ROUTING TAB (llmtrim's "Sub routing" equivalent): per-seat roll config
+  — provider, pinned model id, allowed fallback chain (default: NONE,
+  per P2). Editing here rewrites the seat roll; spawn uses it.
+
+Data feed: procedural only (anti-goal 2 — no LLM in the watch path).
+Reads: seat-names registry, lane dirs (inbox/outbox/worklog), lane-watch
+log, tmux state (capture-pane per seat socket), model-status files,
+daemon wire protocol. Write: steer/nudge/respawn via tmux send-keys and
+seat-steer; config edits via hngh config API. Summary LLMs (P3) are an
+optional overlay, never required for the UI to render.
+
+## 7. Window/layout design — card 102 remaining (seat windows)
+
+Per spawned seat (from `seat-up`, already the in-place launcher):
+- ONE terminal window per seat (Konsole), tmux session on dedicated
+  socket `tmux -L <name>`, setsid — seat survives spawner shell death
+  (10:22 lesson).
+- Two panes:
+  - pane 1: Hermes session (or Opencode soon) — the agent. Spawned with
+    the roll's pinned provider+model id (catalog-verified, fail-closed
+    if not registered), `fallback_providers: []` unless the roll lists
+    one (P2).
+  - pane 2: ride-along — log tail + input/steer interface for the seat;
+    usable by human OR Hngh (dashboard/background services) via tmux.
+- Post-spawn (P2): probe the negotiated model (cmdline/footer cross-
+  check), write model-status, flag mismatch → ERROR + pause. Never let
+  a silently-fallen-back seat keep working.
+- MCP connectivity (2.4): the window's tmux + ride-along + log + process
+  can bridge the agent back to Hngh (hngh-coord's MCP face — registered
+  tools: register / post_message / read_inbox / coord-view — is the
+  immediate target for the dashboard's own MCP bridge).
+
+Layout rule: all pane geometry is DATA (config + registry), never
+hardcoded snippets. `seat-up` reads the roll config; the dashboard reads
+the same files; nothing invents its own geometry.
 
 ## Attribution
 Sanakan (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — integrating
 owner's 10:40 architecture directive verbatim in intent; report to owner
 for confirmation before the dashboard build begins.
+Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §5-7: resolved
+the open decisions documentation-first (llmtrim-0.12.5 source =
+Rust/Tauri, not Textual; hngh.asd cl-charms declaration), dashboard TUI
+spec + window/layout design; verification lane: mirrors verified in
+sync at 2717815.
