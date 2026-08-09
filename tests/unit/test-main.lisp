@@ -101,3 +101,10 @@
   (let ((args '("--hngh-home" "/tmp/hngh" "--version")))
     (is (equal "/tmp/hngh" (hngh:parse-option args "--hngh-home" #'identity)))
     (is (not (hngh:parse-option args "--nonexistent" #'identity)))))
+
+(test dashboard-subcommand-is-dispatched
+  (is (search "(dashboard-subcommand)"
+              (with-open-file (stream "src/core/main.lisp")
+                (let ((text (make-string (file-length stream))))
+                  (read-sequence text stream)
+                  text)))))

@@ -265,6 +265,8 @@ Parses command-line arguments, starts the system, and enters the main loop.
 Used when building a standalone executable via `make build`."
   (let ((args (uiop:command-line-arguments)))
     (cond
+      ((and args (string= (first args) "dash"))
+       (dashboard-subcommand))
       ((and args (string= (first args) "prompt-lint"))
        (let ((file (second args)))
          (unless file
@@ -308,6 +310,15 @@ Used when building a standalone executable via `make build`."
                   (loop while *running* do (sleep 1))))
            (stop)
            (uiop:quit 0)))))))
+
+(defun dashboard-subcommand ()
+  "Run the interactive dashboard TUI without starting the daemon loop."
+  (hngh.plugins.dashboard-tui:init)
+  (unwind-protect
+       (loop while (hngh.plugins.dashboard-tui:running-p) do
+         (sleep 1))
+    (hngh.plugins.dashboard-tui:shutdown))
+  (uiop:quit 0))
 
 (defun acp-subcommand (args)
   "Run Hngh as an ACP server (`hngh acp`): serve the ACP wire protocol over
