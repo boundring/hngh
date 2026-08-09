@@ -62,7 +62,11 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   and `STATE:`/`STEER:`/`ANSWER:` plus acceptance structure.
 - Regression coverage: `tests/scripts/test-prompt-lint.py` drives the built
   `hngh` binary with temporary fixtures; 8 fast tests, no LLM or network.
-- Launch-path wiring remains deferred to the tandem/apollo-up card.
+- Launch-path wiring is now covered by card 106: `seat-up` runs the
+  no-LLM lint before tmux/Hermes spawn, saves the JSON report in the seat
+  lane, rejects error findings, and appends warning counts to worklog.
+- Regression coverage: the seat fixture checks a clean mission passes and
+  `gpt-5.6-luna-max` is rejected before spawn.
 
 ### Fixed — hngh-coord ACP face wire-proven (card 101 ACP half, tandem-delivered)
 - Same yason trap as the MCP face, fatal on the ACP wire too: `acp-server`

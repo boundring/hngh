@@ -1,7 +1,8 @@
 ;;;; src/plugins/prompt-lint.lisp — procedural agent-request guard (card 103).
 ;;;;
 ;;;; No model calls, network access, or telemetry. Findings are deterministic
-;;;; and fail closed for errors; launch-path wiring is intentionally deferred.
+;;;; and fail closed for errors; card 106 wires the guard into seat-up before
+;;;; tmux/Hermes spawn.
 
 (in-package #:hngh.plugins.prompt-lint)
 

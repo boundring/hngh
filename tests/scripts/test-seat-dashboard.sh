@@ -190,7 +190,67 @@ grep -q 'negotiated=missing' "$SEAT_FIXTURE_ROOT/lanes/model-error" || \
   fail "seat-up records missing model verification"
 pass "seat-up fails closed without model verification"
 
-# 107B: config custom providers (e.g. unsloth-local) are runtime truth.
+# 106: prompt-lint must gate the mission before tmux spawn.
+seat_fixture
+printf 'STATE: ready\nSTEER: clean mission\nANSWER: verified\nAcceptance: fixture\n' >"$SEAT_FIXTURE_ROOT/mission"
+if ! PATH="$SEAT_FIXTURE_ROOT/bin:$PATH" \
+  SEAT_REGISTRY="$SEAT_FIXTURE_ROOT/registry" \
+  SEAT_MODEL_CATALOG="$SEAT_FIXTURE_ROOT/catalog.json" \
+  SEAT_TMUX_SOCKET=seat-test SEAT_LANES="$SEAT_FIXTURE_ROOT/lanes" \
+  SEAT_PROMPT_LINT_BIN="$REPO_ROOT/bin/hngh" \
+  SEAT_PROMPT_LINT_CONFIG="$SEAT_FIXTURE_ROOT/config.yaml" \
+  SEAT_HERMES_BIN=/bin/true SEAT_STARTUP_WAIT=0 SEAT_STEER_WAIT=0 \
+  SEAT_NEGOTIATED_MODEL=gpt-5.6-luna \
+  "$SEAT_UP" cibo gpt-5.6-luna openai-api "$SEAT_FIXTURE_ROOT/work" \
+  "$SEAT_FIXTURE_ROOT/mission" >"$SEAT_FIXTURE_ROOT/out" 2>"$SEAT_FIXTURE_ROOT/err"; then
+  cat "$SEAT_FIXTURE_ROOT/err" >&2
+  fail "seat-up accepts clean mission after prompt-lint"
+fi
+grep -q '"findings":\[\]' "$SEAT_FIXTURE_ROOT/lanes/prompt-lint.json" || \
+  fail "clean mission lint report"
+pass "seat-up accepts clean mission after prompt-lint"
+
+seat_fixture
+printf 'STATE: ready\nSTEER: launch -m gpt-5.6-luna-max\nANSWER: blocked\n' >"$SEAT_FIXTURE_ROOT/mission"
+if PATH="$SEAT_FIXTURE_ROOT/bin:$PATH" \
+  SEAT_REGISTRY="$SEAT_FIXTURE_ROOT/registry" \
+  SEAT_MODEL_CATALOG="$SEAT_FIXTURE_ROOT/catalog.json" \
+  SEAT_TMUX_SOCKET=seat-test SEAT_LANES="$SEAT_FIXTURE_ROOT/lanes" \
+  SEAT_PROMPT_LINT_BIN="$REPO_ROOT/bin/hngh" \
+  SEAT_PROMPT_LINT_CONFIG="$SEAT_FIXTURE_ROOT/config.yaml" \
+  SEAT_HERMES_BIN=/bin/true SEAT_STARTUP_WAIT=0 SEAT_STEER_WAIT=0 \
+  SEAT_NEGOTIATED_MODEL=gpt-5.6-luna \
+  "$SEAT_UP" cibo gpt-5.6-luna openai-api "$SEAT_FIXTURE_ROOT/work" \
+  "$SEAT_FIXTURE_ROOT/mission" >"$SEAT_FIXTURE_ROOT/out" 2>"$SEAT_FIXTURE_ROOT/err"; then
+  fail "seat-up rejects prompt-lint model typo"
+fi
+grep -q 'prompt-lint rejected mission' "$SEAT_FIXTURE_ROOT/err" || \
+  fail "seat-up reports prompt-lint rejection"
+grep -q 'model-id' "$SEAT_FIXTURE_ROOT/lanes/prompt-lint.json" || \
+  fail "seat-up saves lint report"
+pass "seat-up rejects prompt-lint model typo before spawn"
+
+seat_fixture
+printf 'STATE: ready\n' >"$SEAT_FIXTURE_ROOT/mission"
+if ! PATH="$SEAT_FIXTURE_ROOT/bin:$PATH" \
+  SEAT_REGISTRY="$SEAT_FIXTURE_ROOT/registry" \
+  SEAT_MODEL_CATALOG="$SEAT_FIXTURE_ROOT/catalog.json" \
+  SEAT_TMUX_SOCKET=seat-test SEAT_LANES="$SEAT_FIXTURE_ROOT/lanes" \
+  SEAT_PROMPT_LINT_BIN="$REPO_ROOT/bin/hngh" \
+  SEAT_PROMPT_LINT_CONFIG="$SEAT_FIXTURE_ROOT/config.yaml" \
+  SEAT_HERMES_BIN=/bin/true SEAT_STARTUP_WAIT=0 SEAT_STEER_WAIT=0 \
+  SEAT_NEGOTIATED_MODEL=gpt-5.6-luna \
+  "$SEAT_UP" cibo gpt-5.6-luna openai-api "$SEAT_FIXTURE_ROOT/work" \
+  "$SEAT_FIXTURE_ROOT/mission" >"$SEAT_FIXTURE_ROOT/out" 2>"$SEAT_FIXTURE_ROOT/err"; then
+  cat "$SEAT_FIXTURE_ROOT/err" >&2
+  fail "seat-up accepts warning-only mission"
+fi
+grep -q 'prompt-lint warnings:' "$SEAT_FIXTURE_ROOT/lanes/worklog.md" || \
+  fail "seat-up surfaces prompt-lint warnings in worklog"
+[ "$(tail -c 1 "$SEAT_FIXTURE_ROOT/lanes/worklog.md" | od -An -t x1 | tr -d ' \n')" = 0a ] || \
+  fail "seat-up writes a real worklog newline after warnings"
+pass "seat-up surfaces prompt-lint warnings"
+
 # Give seat-up a hermetic HERMES_HOME whose config.yaml declares the
 # provider + models list; the gate must accept through the config branch.
 seat_fixture
