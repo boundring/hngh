@@ -802,6 +802,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:post-message
            #:read-inbox
            #:coord-view
+           #:steer-to-lane
            #:*agent-id*))
 
 (defpackage :hngh.plugins.signals
