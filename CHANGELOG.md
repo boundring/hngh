@@ -95,6 +95,24 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - **Verified**: `make test` exit 0, **858/858 fast, 0 fail-suites**,
   lint gates + fixer tests green.
 
+### Added — Wave C item 3 (least-agency tool scoping, tandem-delivered)
+- **Two-Hermes ACP tandem delivered the full item** (`dccad77`, ~35 min
+  launch→commit→FINAL, unattended): seat B (gpt-5.6-luna) implemented
+  deny-by-default tool grants from seat A's (deepseek-v4-flash) spec
+  `2244281`. Both seats ran as `hermes acp` servers driven over stdio
+  JSON-RPC by the tandem director.
+- **What landed**: `*tool-grants*` registry + `tool-granted-p` +
+  `grant-tool`/`revoke-tool`, read-only tools auto-granted, denials
+  journaled + `tool.denied` bus event, `select-tool` filter, config
+  fail-closed until `:tool-grants` present. 46 new checks.
+- **Process notes**: flash-as-review-counterpoint wrote STEER: notes
+  (stale `grants-path` symbol, wrong bus topic, spec-contradicting
+  persistence test) before luna finished — folded in mid-flight. Seat
+  stopped itself cleanly with FINAL-B.md per the wind-down policy.
+- **Verified**: `make test` exit 0, **904/904 fast, 0 fail-suites**.
+- All Wave C gate items 1–4 land; `:operation` gate (99) + canary/scan
+  tail remain before C6 is unparked.
+
 ### Added — Wave C item 1 (qlot pin) + CI red→green
 - **`qlfile` + `qlfile.lock`** — project-local dependency pin via qlot
   (Wave C item 1 / autonomy-strategy §7 item 9): pins Quicklisp dist
