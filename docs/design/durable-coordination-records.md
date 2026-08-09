@@ -323,18 +323,22 @@ solo). Recorded here so the code and the doc agree:
   (tandem-*/archive/), never a stop signal; the deck always has next
   steps. The escalation + watch continues until the seat is working
   or the owner stops it.
-- **TTL semantics — escalate, don't re-nudge (owner 19:22)**:
-  WAIT_TTL is NOT a seat re-ping rubber band. Two gate classes:
+- **TTL semantics — escalate to the OWNER, immediately, don't re-nudge
+  (owner 19:22, 19:30)**: WAIT_TTL is NOT a seat re-ping rubber band,
+  and an OWNER-gate is not a seat problem at all. Two gate classes:
   (a) co-agent gates (target = a sibling's lane): short TTL is fine —
-  the lane moves in minutes; expiry just means "still waiting, re-
-  check the lane". (b) OWNER gates (target = a deck item awaiting the
-  owner: 109A pick, 110 scope, key presence): re-nudging the SEAT
-  every 10min converts a human-pace decision into seat noise. On
-  expiry of an owner-class gate the watcher should ESCALATE TO THE
-  OWNER (ESCALATE-OWNER marker) and STOP pinging the seat in the
-  meantime — the seat has declared correctly and is blocked on the
-  human, not its own discipline. Owner-class gates carry `owner:`
-  in the target so the judge classifies them.
+  the lane moves in minutes; expiry means "still waiting, re-check
+  the lane". (b) OWNER gates (target = a deck item awaiting the owner:
+  109A pick, 110 scope, key presence): the seat declared correctly and
+  is blocked ON THE HUMAN. The moment such a gate is DECLARED (not on
+  expiry), the watcher must notify the owner through a dedicated OWNER
+  SURFACE (e.g. `~/.hngh-night/owner/inbox.md`, or a wall-clock ping)
+  — the owner decides at human pace, and re-pinging the seat every
+  10min converts a human decision into seat noise. Seat-class gates
+  carry `owner:` in the target so the judge classifies them.
+  The owner should never have to WAKE A SEAT to discover a blocked
+  decision; waking Killy to "check things" means the escalation
+  surface did not exist. It must.
 - **Delivery contract**: steer delivery = send-keys -t <seat>:0.0 -l
   '<text>' + Enter, then verify the input line is EMPTY (footer busy
   is fine). Visible text at the prompt is not delivery. Stranded
