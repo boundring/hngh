@@ -10,6 +10,19 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — durable coordination records design (owner 13:10/13:14, design lane)
+- Added docs/design/durable-coordination-records.md: layered record
+  model — COORD JOURNAL (steers as data), automatic procedural
+  breadcrumbs per seat per phase, append-only enforced by tooling
+  (lane-append helper + lane-watch CLOBBER detection), git-backed
+  recovery floor via the existing ~/.hngh backup-manager tree.
+- dashboard.md §8 input gating extended: all ride-along writes via the
+  append helper with breadcrumbs; every steer dispatch lands a COORD
+  JOURNAL record (kind "steer") for data-driven steer history.
+- cross-agent-normalization.md §5a: steer ledger + breadcrumbs are the
+  structured case-base feed (:human ground truth from records, not
+  prose parsing); prose sweep demoted to fallback.
+
 ### Added — Hngh model manifest (card 107B, design lane)
 - Added `docs/design/model-manifest.json`: the Hngh provider:model set
   with tier metadata (workhorse / reserve), schema v1. Validated in the
