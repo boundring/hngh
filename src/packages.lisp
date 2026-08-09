@@ -294,7 +294,9 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:render-to-string
            #:handle-key
            #:read-watch-state
-            #:format-event-time))
+           #:read-steers-log
+           #:read-owner-inbox
+           #:format-event-time))
 
 (defpackage :hngh.plugins.package-manager
   (:documentation "Package Manager (B1) — pacman/yay/paru integration.")
