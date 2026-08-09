@@ -65,6 +65,8 @@
   context-format ; :opencode-prompt, :cli-args, :jsonl, :https-system-message
   sandboxed-p   ; boolean — run this tool inside the bwrap per-task sandbox
                 ; (Wave C item 8; default NIL = run unsandboxed)
+  read-only-p   ; boolean — structurally read-only/observe tool; auto-granted
+                ; (Wave C item 5; default NIL = requires explicit grant)
   dogfooding)   ; boolean — used to develop Hngh?
 
 (defstruct invocation-info
@@ -110,6 +112,16 @@
 
 (defvar *cost-log-lock* (bt:make-lock "hngh-ai-tool-hub-cost-log")
   "Mutex protecting *cost-log*.")
+
+(defvar *tool-grants* nil
+  "List of granted tool-id keywords (Wave C item 5 deny-by-default grant set).
+Seeded at INIT from the owner config plist key :tool-grants (policy as data);
+runtime GRANT-TOOL/REVOKE-TOOL affect the live set only (config file is the
+durable source). A tool neither granted nor structurally read-only is
+refused by invoke.")
+
+(defvar *tool-grants-lock* (bt:make-lock "hngh-ai-tool-hub-tool-grants")
+  "Mutex protecting *tool-grants*.")
 
 ;;; --- Persistence paths -----------------------------------------------
 
@@ -297,6 +309,17 @@
   (setf *next-invocation-id* 0)
   ;; Load persisted cost log from state store
   (load-cost-log)
+  ;; Seed the deny-by-default grant set from owner config (policy as data;
+  ;; fail-soft: config edge => empty *tool-grants* => deny all)
+  (handler-case
+      (let ((grants (hngh.core.config:config-get :tool-grants '())))
+        (bt:with-lock-held (*tool-grants-lock*)
+          (setf *tool-grants* (if (listp grants) grants nil)))
+        (hngh.core:log-debug "AI Tool Hub: seeded ~D tool grants"
+                              (length *tool-grants*)))
+    (error (c)
+      (hngh.core:log-warn
+       "AI Tool Hub: failed to read :tool-grants config; deny-by-default: ~A" c)))
   (hngh.core:log-info "AI Tool Hub initialized (~D tools available)"
                        (length (available-tools-list))))
 
@@ -324,6 +347,8 @@
     (setf *invocations* nil))
   (bt:with-lock-held (*cost-log-lock*)
     (setf *cost-log* nil))
+  (bt:with-lock-held (*tool-grants-lock*)
+    (setf *tool-grants* nil))
   (setf *next-invocation-id* 0
         *hngh-home* nil)
   (hngh.core:log-info "AI Tool Hub shut down"))
@@ -405,14 +430,20 @@
   ;; If prefer-tool specified and available, return it
   (when prefer-tool
     (let ((tool (find-tool prefer-tool)))
-      (when (and tool (tool-info-available-p tool))
+      (when (and tool (tool-info-available-p tool)
+                 (tool-granted-p prefer-tool))
         (return-from select-tool prefer-tool))))
-  ;; Gather candidates
+  ;; Gather candidates (availability under lock; grant filter after —
+  ;; tool-granted-p re-enters the registry lock via find-tool)
   (let ((candidates
           (bt:with-lock-held (*tools-lock*)
             (loop for tool in *tools*
                   when (tool-info-available-p tool)
                   collect tool))))
+    (setf candidates
+          (remove-if-not (lambda (tool)
+                           (tool-granted-p (tool-info-id tool)))
+                         candidates))
     ;; Filter by privacy (local-only)
     (when privacy
       (setf candidates
@@ -447,6 +478,40 @@
           (setf best cand)))
       (tool-info-id best))))
 
+;;; --- Public API: Grant list (Wave C item 5, deny-by-default) -----------
+
+(defun tool-granted-p (tool-id)
+  "Return T when TOOL-ID may be invoked: it is explicitly granted OR the
+registered tool is structurally read-only (tool-info-read-only-p).
+Deny-by-default: unknown tools are refused."
+  (let ((granted (bt:with-lock-held (*tool-grants-lock*)
+                   (member tool-id *tool-grants*))))
+    (or granted
+        (let ((tool (find-tool tool-id)))
+          (and tool (tool-info-read-only-p tool))))))
+
+(defun granted-tools-list ()
+  "Return the list of explicitly granted tool-id keywords (shallow copy)."
+  (bt:with-lock-held (*tool-grants-lock*)
+    (copy-list *tool-grants*)))
+
+(defun grant-tool (tool-id)
+  "Explicitly grant TOOL-ID for this session (live set only; the owner
+config file remains the durable source). Returns T."
+  (bt:with-lock-held (*tool-grants-lock*)
+    (pushnew tool-id *tool-grants*))
+  t)
+
+(defun revoke-tool (tool-id)
+  "Remove the explicit grant for TOOL-ID; deny-by-default applies again
+(unless the tool is structurally read-only). Returns T when the tool was
+previously granted, NIL otherwise."
+  (let ((found nil))
+    (bt:with-lock-held (*tool-grants-lock*)
+      (setf found (member tool-id *tool-grants*))
+      (setf *tool-grants* (remove tool-id *tool-grants*)))
+    (and found t)))
+
 ;;; --- Public API: Invocation ------------------------------------------
 
 (defun invoke (tool task &key context params workdir)
@@ -470,6 +535,22 @@
         (error "Tool ~A not found in registry" selected-tool))
       (unless (tool-info-available-p tool-info)
         (error "Tool ~A is not available" selected-tool))
+      ;; Wave C item 5: deny-by-default grant gate. Refusal is fail-closed — an
+      ;; error, no invocation record, no silent fallthrough. Every denial is
+      ;; journaled (safety-boundary action log) and published on the bus.
+      (unless (tool-granted-p selected-tool)
+        (handler-case
+            (hngh.core.safety-boundary:log-action :denied
+              :target (string-downcase (symbol-name selected-tool))
+              :detail "tool-grant-refused")
+          (error (c)
+            (hngh.core:log-warn "AI Tool Hub: denial journal failed: ~A" c)))
+        (publish-event "tool.denied"
+                       (list :tool selected-tool
+                             :task task
+                             :reason :not-granted
+                             :timestamp (get-universal-time)))
+        (error "Tool ~A is not granted (deny-by-default)" selected-tool))
       ;; Create invocation record
       (let* ((inv-id (bt:with-lock-held (*invocations-lock*)
                        (incf *next-invocation-id*)))
@@ -643,13 +724,15 @@ Returns captured stdout as a string."
         (ignore-errors (delete-file payload-file))))))
 
 (defun agentic-cli-args (tool-id task)
-  "Return the command-line arguments for an agentic CLI tool for TASK."
-  (ecase tool-id
+  "Return the command-line arguments for an agentic CLI tool for TASK.
+Unknown agentic CLIs (e.g. a test stub) fall back to TASK as a single arg."
+  (case tool-id
     (:opencode (list "run" "--auto" "-m" "deepseek/deepseek-v4-flash-0731" task))
     (:claude (list "-p" task))
     (:codex (list task))
     (:gemini (list task))
-    (:cecli (list "--message" task))))
+    (:cecli (list "--message" task))
+    (t (list task))))
 
 (defparameter *provider-endpoints*
   '((:anthropic-api . "https://api.anthropic.com/v1/messages")

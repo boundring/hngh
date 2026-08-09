@@ -110,14 +110,18 @@
 ;;; --- Tests: Select Tool ---------------------------------------------
 
 (test ath-select-tool-default
-  "AI Tool Hub: select-tool returns a tool by default."
+  "AI Tool Hub: select-tool returns a tool once one is granted."
   (ath-setup)
   (unwind-protect
-       (let ((result (hngh.plugins.ai-tool-hub:select-tool "Do a thing")))
-         (is (not (null result))
-             "select-tool should return a tool for a valid task")
-         (is (keywordp result)
-             "select-tool should return a keyword"))
+       (progn
+         ;; Wave C item 5: select-tool only picks granted tools; grant the
+         ;; known-available :opencode so selection has a candidate.
+         (hngh.plugins.ai-tool-hub:grant-tool :opencode)
+         (let ((result (hngh.plugins.ai-tool-hub:select-tool "Do a thing")))
+           (is (not (null result))
+               "select-tool should return a tool for a valid task")
+           (is (keywordp result)
+               "select-tool should return a keyword")))
     (ath-teardown)))
 
 (test ath-select-tool-prefer
@@ -132,20 +136,24 @@
                 (when claude-tool
                   (hngh.plugins.ai-tool-hub:tool-info-available-p claude-tool))))
          (when claude-available
-           (let ((result (hngh.plugins.ai-tool-hub:select-tool
-                          "Do a thing" :prefer-tool :claude)))
-             (is (eq result :claude)
-                 "select-tool with :prefer-tool :claude should return :claude"))))
+                   (hngh.plugins.ai-tool-hub:grant-tool :claude)
+                   (let ((result (hngh.plugins.ai-tool-hub:select-tool
+                                  "Do a thing" :prefer-tool :claude)))
+                     (is (eq result :claude)
+                         "select-tool with :prefer-tool :claude should return :claude"))))
     (ath-teardown)))
 
 (test ath-select-tool-bogus-task
   "AI Tool Hub: select-tool works with various task inputs."
   (ath-setup)
   (unwind-protect
-       ;; select-tool should handle empty string
-       (let ((result (hngh.plugins.ai-tool-hub:select-tool "")))
-         (is (not (null result))
-             "select-tool should return a tool even for empty task"))
+       (progn
+         ;; Wave C item 5: grant a tool so selection has a candidate.
+         (hngh.plugins.ai-tool-hub:grant-tool :opencode)
+         ;; select-tool should handle empty string
+         (let ((result (hngh.plugins.ai-tool-hub:select-tool "")))
+           (is (not (null result))
+               "select-tool should return a tool even for empty task")))
     (ath-teardown)))
 
 ;;; --- Tests: Estimate Cost -------------------------------------------

@@ -377,6 +377,11 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:tool-capabilities
            #:estimate-cost
            #:select-tool
+           #:*tool-grants*
+           #:tool-granted-p
+           #:grant-tool
+           #:revoke-tool
+           #:granted-tools-list
            #:kill-invocation
            #:list-invocations
            #:cost-log
@@ -390,6 +395,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:tool-info-command
            #:tool-info-available-p
            #:tool-info-capabilities
+           #:tool-info-read-only-p
            #:invocation-info
             #:invocation-info-id
             #:invocation-info-tool
