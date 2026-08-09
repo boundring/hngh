@@ -42,6 +42,16 @@ deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 92
 (cross-agent normalization), C6 emit-cron (schedule Hngh's own roadmap from the
 case-base), C4/C10.
 
+**Wave C + backup/sync deck (2026-08-08, composed granular for dogfooding):**
+task cards 93–99 in `~/.hngh-night/tasks/` — 93 qlot pin → 94 hash-chain →
+95 backup observe (Phase A) → 96 bwrap sandbox → 97 native least-agency
+scoping → 98 canary/scan sidecar → 99 `:operation` gate. Gate items are
+93/94/96/97 (no core self-modification until those land). Delegation:
+model-tier per card; **GPT-5.6 Luna (`gpt-5.6-luna(-max)`, openai provider,
+$verified live 2026-08-08)** available for delegated code completions on the
+cards; cheap/mechanical tail may go to deepseek-v4-flash via the pinned
+delegation route.
+
 Recent sessions (see work-sessions.md for full per-session artifacts):
 - **M6.3** Emacs daemon: lifecycle (start/stop/health), policy-explicit start, outlives hngh.
 - **M-sentry / M7** Procedural safeguards (secret-guard, context-watch); client-server daemon (SEXP-over-UDS, client CLI, systemd units).

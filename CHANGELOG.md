@@ -43,6 +43,19 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave C/backup task deck (93–99) + Luna delegation verified
+- **Task cards 93–99** composed in `~/.hngh-night/tasks/` from the
+  Wave C adoption research + backup-sync design (owner directive: plans →
+  requirements → granular dogfood-able tasks): qlot pin, hash-chained action
+  log, bwrap sandbox, native least-agency scoping (gate items 1–4), backup
+  Phase A observe, canary/scan sidecar, `:operation` gate. Each card carries
+  context, VERIFIED FACTS, must-do/must-not, verification gate, attribution.
+- **GPT-5.6 Luna delegation verified live** (`gpt-5.6-luna` and
+  `-max`, openai provider, existing OPENAI_API_KEY; probes exit 0) — no
+  Copilot OAuth needed; available for delegated code completions per card.
+- Session estimates from M9.32 remain provisional until cards are run and
+  the work is measured against surfaces.
+
 ### Added — backup/sync accommodation design (Syncthing flagship, ADR-043/044)
 - **`docs/design/backup-sync-integration.md`** — owner direction: Hngh
   manages/configures/optimizes backup + sync across devices, eliminating
