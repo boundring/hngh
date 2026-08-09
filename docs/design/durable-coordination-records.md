@@ -189,8 +189,8 @@ hngh-lane discipline "end turns, don't sleep" becomes a hard rule
 retargeting and the composer-active pre-check (killy 13:17 collision
 class: never type over an owner's in-progress line) apply to lane-
 triggered nudges too. FINAL does not abate the watch: v5 never checks
-it (owner 13:32) — a FINAL file is an archive artifact, not a stop
-signal; the deck always has next steps.
+it (owner 13:32) — a HANDOFF file (see rename consensus 13:48) is an
+archive artifact, not a stop signal; the deck always has next steps.
 
 Escalation ladder (per Q3 consensus 15:30): lane-change pulse →
 idle backstop (NUDGE_GRACE cadence) → consumption-verified before
