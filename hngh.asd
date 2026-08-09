@@ -75,7 +75,8 @@
                  (:file "plugins/acp-client")
                  (:file "plugins/situation-detectors")
                  (:file "plugins/situation-scoring")
-                 (:file "plugins/situation-judge"))
+                 (:file "plugins/situation-judge")
+                 (:file "plugins/situation-casebase"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -136,6 +137,7 @@
                  (:file "test-situation-detectors")
                  (:file "test-situation-scoring")
                  (:file "test-situation-judge")
+                 (:file "test-situation-casebase")
                  (:file "test-model-probes"))
    :perform (test-op (op c)
                         (declare (ignore op))

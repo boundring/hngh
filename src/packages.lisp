@@ -858,6 +858,28 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:calibration-calibrated
            #:calibrate-judge))
 
+(defpackage :hngh.plugins.situation-casebase
+  (:documentation "L2/L3 persistent case-base + review pass (step 5, design §7). Every scored situation + action + outcome is appended to a persistent journal alongside human /steer ground-truth; a scheduled cheap/local review pass re-runs the judge offline to recalibrate, tune, and surface emerging classes. Calibration metrics should improve across successive passes (the §8 step 5 gate). See docs/design/situation-scoring.md §7/§8.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:*journal-name*
+           #:*pass-stats-path*
+           #:make-case
+           #:record-case
+           #:all-cases
+           #:case-count
+           #:cases-by-source
+           #:situation-distribution
+           #:run-review-pass
+           #:read-pass-stats
+           #:write-pass-stats
+           #:accuracy-improving-p
+           #:pass-stats
+           #:emergent-classes))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)

@@ -147,6 +147,7 @@ If any step fails, already-started components are shut down in reverse order."
            (hngh.plugins.situation-detectors:init)
            (hngh.plugins.situation-scoring:init)
            (hngh.plugins.situation-judge:init)
+           (hngh.plugins.situation-casebase:init)
            ;; M7: daemon core + Unix socket server (guarded; failure must not block startup)
            (ignore-errors (hngh.core.daemon:init))
            (ignore-errors (hngh.core.daemon:daemon-start :hngh-home hngh-home))
