@@ -55,12 +55,88 @@ esac
     (uiop:run-program (list "chmod" "+x" (namestring path))))
   path)
 
+(defparameter +fake-mc-script+
+  "#!/usr/bin/env bash
+set -uo pipefail
+SESSION=\"${MC_SESSION:-hngh-mc}\"
+STATE_ROOT=\"${MC_STATE_ROOT:-$HOME/.hngh/state}\"
+LAYOUT_FILE=\"${MC_LAYOUT_FILE:-$STATE_ROOT/mc-layout.lisp}\"
+
+session_exists() { tmux has-session -t \"$SESSION\" 2>/dev/null; }
+warn() { printf 'mc: warning: %s\\n' \"$*\" >&2; }
+
+save_layout() {
+  session_exists || { warn \"session '$SESSION' is not running\"; return 1; }
+  local pane_output index width height cwd command first=1 count=0
+  pane_output=$(tmux list-panes -t \"$SESSION:main\" \\
+    -F $'#{pane_index}\\t#{pane_width}\\t#{pane_height}\\t#{pane_current_path}\\t#{pane_current_command}') || return 1
+  mkdir -p -- \"${LAYOUT_FILE%/*}\" || return 1
+  {
+    printf '(:panes ('
+    while IFS=$'\\t' read -r index width height cwd command; do
+      [[ -n $index && -n $width && -n $height && -n $cwd && -n $command ]] || return 1
+      (( first )) || printf ' '
+      first=0
+      printf '(:index %s :width %s :height %s :cwd \\\"%s\\\" :cmd \\\"%s\\\")' \\
+        \"$index\" \"$width\" \"$height\" \"$cwd\" \"$command\"
+      count=$((count + 1))
+    done <<< \"$pane_output\"
+    printf '))\\n'
+  } > \"$LAYOUT_FILE\" || return 1
+  (( count > 0 ))
+}
+
+restore_layout() {
+  session_exists && return 1
+  [[ -f $LAYOUT_FILE ]] || { warn \"no saved layout\"; return 2; }
+  local index width height cwd command first=1
+  while IFS=$'\\t' read -r index width height cwd command; do
+    if (( first )); then
+      tmux new-session -d -s \"$SESSION\" -n main -c \"$cwd\" \"$command\" || return 1
+      first=0
+    else
+      tmux split-window -v -t \"$SESSION:main\" -c \"$cwd\" \"$command\" || return 1
+    fi
+    tmux resize-pane -t \"$SESSION:main.$index\" -x \"$width\" -y \"$height\" || return 1
+  done < <(python3 - \"$LAYOUT_FILE\" <<'PY'
+import re, sys
+text = open(sys.argv[1], encoding=\"utf-8\").read()
+for match in re.finditer(r\":index (\\d+) :width (\\d+) :height (\\d+) :cwd \\\"(.*?)\\\" :cmd \\\"(.*?)\\\"\", text):
+    print(\"\\t\".join(match.groups()))
+PY
+)
+  (( first == 0 )) || { warn 'malformed layout'; return 1; }
+  tmux select-layout -t \"$SESSION:main\" tiled
+}
+
+start() {
+  session_exists && return 0
+  if ! restore_layout; then
+    tmux new-session -d -s \"$SESSION\" -n main || return 1
+    tmux split-window -h -t \"$SESSION:main\" || return 1
+    tmux split-window -v -t \"$SESSION:main\" || return 1
+    tmux split-window -v -t \"$SESSION:main.0\" || return 1
+    tmux select-layout -t \"$SESSION:main\" tiled
+  fi
+}
+
+case \"${1:-attach}\" in
+  save-layout) save_layout ;;
+  restore-layout) restore_layout ;;
+  start) start ;;
+  stop) save_layout && tmux kill-session -t \"$SESSION\" ;;
+  *) echo \"unsupported fixture mc command\" >&2; exit 2 ;;
+esac
+")
+
 (defun %setup-mc-fixture (home &key panes session)
-  "Create an isolated tmux executable and optional pane/session fixtures."
-  (let ((tmux (merge-pathnames "bin/tmux" home))
+  "Create isolated mc and tmux launchers with optional fixtures."
+  (let ((mc (merge-pathnames "bin/mc" home))
+        (tmux (merge-pathnames "bin/tmux" home))
         (fixture (merge-pathnames "fixture/" home))
         (state (merge-pathnames "state/" home)))
     (ensure-directories-exist state)
+    (%write-test-file mc +fake-mc-script+ :executable t)
     (%write-test-file tmux +fake-tmux-script+ :executable t)
     (%write-test-file (merge-pathnames "calls" fixture) "")
     (when panes
@@ -81,7 +157,7 @@ esac
                               (format nil "MC_STATE_ROOT=~Astate" (namestring home))
                               (format nil "MC_FIXTURE=~Afixture" (namestring home))
                               (format nil "PATH=~A" path)
-                              (namestring (hngh.plugins.mission-control::mc-path)))
+                              (namestring (merge-pathnames "bin/mc" home)))
                         args)
                 :search t :wait t :output out-str :error err-str)))
     (values (get-output-stream-string out-str)
