@@ -10,6 +10,16 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — MisakaNet lesson pipeline (card 113, owner 14:51)
+- Backlog card for queueing/processing/submitting failure lessons to
+  MisakaNet at scale (deferred execution; deck first).
+- Queue seeds from session lessons: argv-shaped duplicate-kill match,
+  calm-cadence busy-fail retry, heartbeat-vs-demand steers, atomic
+  steer delivery (two-call send race).
+- References existing lessons (cronjob one-shot race, FReeLLMAPI
+  cross-thread) instead of duplicating; template + 75-pt quality gate
+  respected per repo LESSON_QUALITY_SCORING.md.
+
 ### Added — hngh-coord MCP registration (MCP-REG, working-group wave)
 - Fixed `initialize.capabilities.tools` from JSON `null` to an empty
   object, and normalized empty tool schemas to `{}` / `[]` rather than
