@@ -905,6 +905,8 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:ensure-mutable
            #:log-action
            #:read-action-log
+           #:verify-action-log
+           #:verify-action-log-entries
            #:recent-denials))
 
 (defpackage :hngh.client
