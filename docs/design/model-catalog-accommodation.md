@@ -31,11 +31,16 @@ seat spawns, without fighting the static manifest.
 |---|---|---|
 | deepseek/deepseek-v4-flash-0731 | openrouter | workhorse (default) |
 | deepseek-v4-flash | deepseek | workhorse |
-| openai/gpt-5.6-luna (+pro) | openrouter / openai-api | strategic reserve |
-| z-ai/glm-5.2 | openrouter | strategic reserve |
-| xiaomi/mimo-v2.5 | openrouter | fallback |
+| openai/gpt-5.6-luna (+pro) | openrouter / openai-api | **workhorse** (owner 2026-08-09: anything under $0.20/M is a workhorse or candidate) |
+| z-ai/glm-5.2 | openrouter | reserve if ≥$0.20/M; else workhorse — price-check |
+| xiaomi/mimo-v2.5 | openrouter | workhorse/fallback |
 | unsloth/{Qwen-AgentWorld-35B, Ornith variants, gemma-4-12b} | unsloth-local (local HTTP) | local/free |
-| moonshotai/kimi-k3 | openrouter/kimi-coding | strategic reserve (quota-windowed) |
+| moonshotai/kimi-k3 | openrouter/kimi-coding | reserve (quota-windowed; deliberate distribution per window) |
+
+Tier rule (owner 2026-08-09): anything cheaper than ~$0.20/M is a
+workhorse or should be considered for it. Strategic reserve = models at
+or above the line (currently K3, glm-5.2 pending price check, frontier)
+used deliberately, quota-distributed, never idle-unused.
 
 Most of these ARE in the shipped manifest (openrouter + nous carry
 luna, luna-pro, flash-0731, k3, glm-5.2, mimo). The gaps are:
