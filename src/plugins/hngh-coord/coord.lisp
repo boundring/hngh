@@ -88,67 +88,79 @@ default when nil rather than failing on a NIL pathname."
       (setf lines (nreverse lines))
       (format nil "~{~A~%~}messages: ~D" lines message-count))))
 
-;;; --- MCP face (stock transport = Content-Length framing) ------------------
+(in-package #:hngh.plugins.hngh-coord)
+
+(defun %mcp-tool (name desc props required)
+  "Build one MCP tool descriptor as a STRING-keyed alist (yason encodes
+string keys natively; keyword keys need a symbol policy it lacks)."
+  (list (cons "name" name)
+        (cons "description" desc)
+        (cons "inputSchema"
+              (list (cons "type" "object")
+                    (cons "properties" props)
+                    (cons "required" required)))))
 
 (defun mcp-server (handler)
   "Build an MCP server: same JSON-RPC server machinery as the ACP server
 but with the STOCK transport, whose stdio framing is LSP-style
-Content-Length — which IS the MCP framing. Exposes the coordinator tools."
+Content-Length — which IS the MCP framing. Exposes the coordinator tools.
+Return values are STRING-keyed alists (yason rejects keyword keys)."
   (let ((server (make-instance 'jsonrpc:server)))
+
     (jsonrpc:expose
      server "tools/list"
      (lambda (params)
        (declare (ignore params))
-       (list :tools
-             (list
-              (list :name "register"
-                    :description "join the squad"
-                    :inputSchema (list :type "object"
-                                       :properties (list :agent_id (list :type "string")
-                                                         :role (list :type "string"))
-                                       :required (list "agent_id")))
-              (list :name "post_message"
-                    :description "deliver a message to an agent"
-                    :inputSchema (list :type "object"
-                                       :properties (list :to (list :type "string")
-                                                         :kind (list :type "string")
-                                                         :body (list :type "string"))
-                                       :required (list "to" "kind" "body")))
-              (list :name "read_inbox"
-                    :description "read messages addressed to me"
-                    :inputSchema (list :type "object"
-                                       :properties (list :agent_id (list :type "string"))
-                                       :required nil))
-              (list :name "status"
-                    :description "coordinator view"
-                    :inputSchema (list :type "object" :properties nil
-                                       :required nil))
-              (list :name "steer"
-                    :description "inject a coordination note"
-                    :inputSchema (list :type "object"
-                                       :properties (list :agent_id (list :type "string")
-                                                         :text (list :type "string"))
-                                       :required (list "agent_id" "text")))))))
+       (list
+        (cons "tools"
+              (list
+               (%mcp-tool "register" "join the squad"
+                          (list (cons "agent_id" (list (cons "type" "string")))
+                                (cons "role" (list (cons "type" "string"))))
+                          (list "agent_id"))
+               (%mcp-tool "post_message" "deliver a message to an agent"
+                          (list (cons "to" (list (cons "type" "string")))
+                                (cons "kind" (list (cons "type" "string")))
+                                (cons "body" (list (cons "type" "string"))))
+                          (list "to" "kind" "body"))
+               (%mcp-tool "read_inbox" "read messages addressed to me"
+                          (list (cons "agent_id" (list (cons "type" "string"))))
+                          nil)
+               (%mcp-tool "status" "coordinator view" nil nil)
+               (%mcp-tool "steer" "inject a coordination note"
+                          (list (cons "agent_id" (list (cons "type" "string")))
+                                (cons "text" (list (cons "type" "string"))))
+                          (list "agent_id" "text"))))))
+
     (jsonrpc:expose
      server "tools/call"
      (lambda (params)
        (let* ((name (gethash "name" params))
               (args (gethash "arguments" params))
               (args (or args (make-hash-table :test #'equal)))
-              (result (handler name args)))
-         (list :content (list (list :type "text" :text result))))))
+              (result (funcall handler name args)))
+         (list
+          (cons "content"
+                (list
+                 (list (cons "type" "text")
+                       (cons "text" result))))))))
+
     (jsonrpc:expose
      server "initialize"
      (lambda (params)
-       (list :protocolVersion (or (gethash "protocolVersion" params)
-                                  "2024-11-05")
-             :capabilities (list :tools nil)
-             :serverInfo (list :name "hngh-coord" :version "0.1.0"))))
+       (list
+        (cons "protocolVersion" (or (gethash "protocolVersion" params)
+                                    "2024-11-05"))
+        (cons "capabilities" (list (cons "tools" nil)))
+        (cons "serverInfo" (list (cons "name" "hngh-coord")
+                                 (cons "version" "0.1.0")))))))
+
     ;; notifications/initialized is a notification — returning a result
     ;; would mislead; expose a no-op handler so it isn't 'unknown method'.
     (jsonrpc:expose
      server "notifications/initialized"
      (lambda (params) (declare (ignore params)) nil))
+
     server))
 
 (defun handle-tool-call (name args)
@@ -185,12 +197,22 @@ Content-Length — which IS the MCP framing. Exposes the coordinator tools."
        "steer delivered")
       (t (error "unknown tool: ~A" name)))))
 
-(defun serve-mcp (&key (input *standard-input*) (output *standard-output*))
-  "Run the MCP face on INPUT/OUTPUT (default stdio). Content-Length framing
-(the stock transport). Blocks until the stream closes."
-  (let ((server (mcp-server #'handle-tool-call)))
-    (jsonrpc:server-listen server
-                           :input input :output output)))
+(defun serve-mcp (&key (input *standard-input*) (output *standard-output*)
+                       (log-stream *error-output*))
+  "Run the MCP face on INPUT/OUTPUT (default stdio). The stock
+JSON-RPC stdio transport uses LSP-style Content-Length framing — which
+IS the MCP framing — so :mode :stdio is exactly the MCP transport
+(framing per the mcp-server-setup 2026-08-08 lesson: MCP Content-Length
+vs ACP newline are NOT interchangeable). LOG-STREAM receives logger
+output; MCP OUTPUT carries ONLY Content-Length frames, so logs must not
+share that stream (default: *error-output*). Blocks until the stream
+closes."
+  (let* ((mcp-in (or input *standard-input*))
+         (mcp-out (or output *standard-output*))
+         (server (mcp-server #'handle-tool-call))
+         (*standard-output* (or log-stream *error-output*)))
+    (jsonrpc:server-listen server :mode :stdio
+                           :input mcp-in :output mcp-out)))
 
 ;;; --- ACP face (newline framing, shipped transport) -------------------------
 
