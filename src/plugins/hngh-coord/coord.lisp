@@ -66,6 +66,7 @@ default when nil rather than failing on a NIL pathname."
 
 (defun read-inbox (for-id)
   "Return messages addressed to FOR-ID (or broadcast), oldest first."
+  (%ensure-store)
   (remove-if-not (lambda (entry)
                    (let ((to (getf entry :to)))
                      (or (equal to for-id) (equal to "*"))))
@@ -73,6 +74,7 @@ default when nil rather than failing on a NIL pathname."
 
 (defun coord-view ()
   "Coordinator view: registered agents + recent activity."
+  (%ensure-store)
   (let ((agents nil)
         (message-count 0))
     (dolist (entry (hngh.core.state-store:read-journal *journal-name*))
@@ -226,16 +228,19 @@ closes."
 
 (defun acp-server (handler)
   "Build an ACP server exposing coordinator methods (coord/post,
-coord/status). Mirrors acp-client.lisp's acp-make-server shape."
+coord/status). Mirrors acp-client.lisp's acp-make-server shape: hash-table
+results (keyword plists would be walked as a JSON array by yason's list
+encoder and the symbol keys crash the encoder — same trap as the MCP face)."
   (declare (ignore handler))
   (let ((server (make-instance 'jsonrpc:server)))
     (jsonrpc:expose
      server "initialize"
      (lambda (params)
        (declare (ignore params))
-       (list :protocolVersion 1
-             :agentCapabilities (list :loadSession nil)
-             :agentInfo (list :name "hngh-coord" :version "0.1.0"))))
+       (%mcp-object "protocolVersion" 1
+                    "agentCapabilities" (%mcp-object "loadSession" nil)
+                    "agentInfo" (%mcp-object "name" "hngh-coord"
+                                             "version" "0.1.0"))))
     (jsonrpc:expose
      server "coord/post"
      (lambda (params)
@@ -243,18 +248,23 @@ coord/status). Mirrors acp-client.lisp's acp-make-server shape."
                      (or (gethash "to" params) "*")
                      (or (gethash "kind" params) "note")
                      (or (gethash "body" params) ""))
-       (list :posted t)))
+       (%mcp-object "posted" t)))
     (jsonrpc:expose
      server "coord/status"
      (lambda (params)
        (declare (ignore params))
-       (list :status (coord-view))))
+       (%mcp-object "status" (coord-view))))
     server))
 
-(defun serve-acp (&key (input *standard-input*) (output *standard-output*))
+(defun serve-acp (&key (input *standard-input*) (output *standard-output*)
+                       (log-stream *error-output*))
   "Run the ACP face on INPUT/OUTPUT (default stdio). Newline framing — the
-shipped :acp mode from acp-transport.lisp. Blocks until the stream closes."
-  (let ((server (acp-server nil)))
+shipped :acp mode from acp-transport.lisp. LOG-STREAM receives logger
+output; the ACP wire carries ONLY newline-delimited JSON lines, so logs
+must not share it (default: *error-output*). Blocks until the stream
+closes."
+  (let ((server (acp-server nil))
+        (*standard-output* (or log-stream *error-output*)))
     (jsonrpc:server-listen server :mode :acp
                            :input input :output output)))
 
