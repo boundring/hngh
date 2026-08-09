@@ -462,3 +462,62 @@ Rule (fail-closed): a watcher that stops being swappable — one whose
 behavior only the shell script can express and no one else can
 replicate via the contract — is a design defect, not a feature. The
 watch is owned by Hngh's doctrine, not by any one file or unit.
+
+### 7.5 Steer dispatch: the watcher's delivery logic is Hngh's steer engine (owner 14:25, killy 14:26)
+
+Owner vision: Hngh will make MOST/MOST-ALL steers. Users submit
+steers to Hngh for agents in various ways — PREMADE (templates),
+PROCEDURAL (programmatic/generated), CUSTOM (free-form). The
+watcher's seat-steer delivery logic (composer-check, stranded-
+detect, busy-retry, consume-verify) is the PROTOTYPE of that steer-
+dispatch engine. This makes the steer pipeline a FIRST-CLASS surface:
+
+    source (premade | procedural | custom)
+      -> Hngh dispatcher (queuing, policy, delivery adapter)
+      -> seat (pane 0 Hermes input)
+
+THE DELIVERY CONTRACT (already proven in the watcher, now the
+dispatcher's adapter contract):
+1. COMPOSER-CHECK — before any keystroke injection, verify the input
+   field holds only a known prompt; NEVER type over a human's or
+   seat's in-progress text. composer_active is the guard.
+2. STRANDED-DETECT — if text is already sitting in the input line
+   (a steer that was typed but not entered), decide: submit it
+   (if it is a complete steer) or clear it (C-u) — never double-
+   enter, never type on top of it blindly.
+3. BUSY-RETRY (exit 4, shipped 14:26) — if delivery fails because
+   the target is busy (input busy / text stranded -> cleared),
+   return a distinguishable failure code; the caller does NOT count
+   it against grace/nudge state, and RETRIES on the next tick once
+   the input clears. Watch the typing, back off, retry when it
+   stops (owner 14:23).
+4. CONSUME-VERIFY — after delivery, verify the prompt CONSUMED the
+   steer: input line empty / footer flipped busy. Visible text at
+   the prompt is not delivery. A nudge that landed in the wrong pane
+   is not a nudge (13:50 lesson, §7.2 ladder, consumption-verified
+   before counting).
+
+DISPATCHER SURFACE (what the pipeline owns beyond seat-steer):
+- SOURCES: premade = template library (nudge templates, incline
+  templates); procedural = lane-watch/program logic emits steers;
+  custom = owner writes a steer to the dispatcher (tmux, owner
+  surface, future CLI/API).
+- QUEUING: a steer for a busy seat is QUEUED (PENDING), not dropped
+  or force-injected — §8.2 collision-aware dispatch already
+  specifies this shape for claims; the dispatcher generalizes it.
+- DELIVERY ADAPTER: seat-steer (tmux, proven, v6) is the reference
+  adapter. Per §7.4 the adapter is swappable: same contract via MCP
+  tools, dashboard, or a future native transport — consumers don't
+  care.
+- TOPOLOGY: any seat's delivery logic — watcher, dashboard, another
+  seat — routes through the SAME dispatcher contract. No second
+  implementation of composer-check/busy-retry/consume-verify.
+
+Build order: the watcher IS the prototype (done); the dispatcher
+surface is a Hngh plugin/service per §7.4 embedding; the dashboard
+(105) becomes the first non-watcher consumer. The owner inbox
+surface (this doc's §7.2) is a steer SOURCE (custom class) once the
+pipeline exists.
+
+Attribution (20:15): tandem seu — owner 14:25 + killy 14:26 vision —
+steer dispatch design; seam handed to cibo's Lisp plan.
