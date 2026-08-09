@@ -728,3 +728,15 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Verified**: 837/837 fast (was 818), full suite running; exit 0.
 - Docs updated: next.md (Wave C P0 part 1 shipped), CHANGELOG (+19 checks). Committed + pushed.
 - Also: verified the Hermes **file-mutation verifier footer** explanation for the user — AGENTS.md flagged as "not modified" was a false positive from repairing a failed patch via `sed` (invisible to the verifier); file was correct. Owner README.md revision committed (`8e2433f`) with attribution.
+
+### Session M9.31: Wave C open-source adoption research
+**Status**: Research + decision doc committed (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner directive**: don't reinvent — take advantage of existing OSS tools, libraries, methods; research options where sensible.
+- `docs/research/wave-c-open-source-tooling.md` — maps all 8 Wave C items to ADOPT-or-BUILD decisions with sources:
+  - **ADOPT**: OPA (least-agency tool scoping, CNCF policy engine), Bubblewrap (per-task sandbox — unprivileged, smallest trust base; Firejail's own maintainers caution its SUID wrapper), qlot (CL dep pinning), Canarytokens (self-hosted canary server, no Docker), LLM Guard sidecar (untrusted-content scan).
+  - **BUILD (genuinely novel)**: provenance tagging (our attribution ledger), `:operation` human gate extension (core commits + dep installs).
+  - **Small build with precedent**: SHA-256 hash-chained action log — direct precedent is NousResearch/hermes-agent issue #487 (same pattern, OpenFang-inspired); Trillian assessed and rejected (over-heavy).
+  - gVisor/Firecracker/Kata assessed + deferred (hardened fleet, not single host now).
+- Verified against authoritative sources (kernel.org Landlock docs, OPA docs, Thinkst, NeMo Guardrails GitHub, qlot/CLPM, hermes-agent #487) — no guessed claims; every decision cited.
+- Adoption order documented (qlot → bwrap → OPA → hash-chain → canaries/scan → `:operation` gate); Wave C gate unchanged.
+- Docs updated: next.md (Wave C row: research done), roadmap.md (design-artifacts row). Committed + pushed.

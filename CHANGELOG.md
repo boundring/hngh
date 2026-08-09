@@ -43,6 +43,19 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave C open-source adoption research
+- **`docs/research/wave-c-open-source-tooling.md`** — ADOPT-or-BUILD
+  decisions for all 8 Wave C items, per the owner's "don't reinvent"
+  direction. ADOPT: **OPA** (least-agency tool scoping), **Bubblewrap**
+  (per-task sandbox; unprivileged, smallest trust base; Firejail's own
+  maintainers caution wrapper-SUID limits), **qlot** (CL dep pinning),
+  **Canarytokens** (self-hosted canaries, no Docker), **LLM Guard**
+  sidecar (untrusted-content scan). BUILD (novel): provenance tagging,
+  `:operation` gate extension. Small build w/ precedent: SHA-256
+  hash-chained action log (hermes-agent #487 pattern); Trillian rejected
+  as over-heavy. gVisor/Firecracker/Kata deferred to the fleet wave.
+  Adoption order documented; Wave C gate unchanged.
+
 ### Added — Wave C immutable safety layer (part 1)
 - **`src/core/safety-boundary.lisp`** — the root piece of the hardened
   security baseline (autonomy-strategy.md §7 Wave C): the agent cannot edit
