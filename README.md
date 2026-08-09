@@ -1,4 +1,4 @@
-# Hngh
+# Hngh!
 
 > *Hngh Network. Goes Hngh.*
 Alternative meanings:
