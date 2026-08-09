@@ -311,11 +311,35 @@ Used when building a standalone executable via `make build`."
            (stop)
            (uiop:quit 0)))))))
 
-(defun dashboard-subcommand ()
-  "Run the interactive dashboard TUI without starting the daemon loop."
+(defun tui-running-p ()
+  "Return whether the dashboard TUI lifecycle is active."
+  (hngh.plugins.dashboard-tui:running-p))
+
+(defun dashboard-subcommand (&optional (runner #'default-dashboard-runner))
+  "Run the interactive dashboard TUI through RUNNER.
+The default runner owns the TUI lifecycle; tests may inject a scratch runner."
+  (funcall runner))
+
+(defun dashboard-pair-arguments (&key (session "hngh-dash")
+                                      (agent-command "hermes")
+                                      (dashboard-command "hngh dash-pane"))
+  "Return tmux arguments for the Hermes + dashboard startup pair."
+  (list "new-session" "-d" "-s" session agent-command
+        ";" "split-window" "-h" "-t" session dashboard-command
+        ";" "attach-session" "-t" session))
+
+(defun dashboard-startup-script (&key (konsole "konsole")
+                                      (tmux "tmux")
+                                      (session "hngh-dash"))
+  "Return the data-driven startup command for the dashboard tmux pair."
+  (format nil "~A --new-tab -e ~A ~{~A~^ ~}"
+          konsole tmux (dashboard-pair-arguments :session session)))
+
+(defun default-dashboard-runner ()
+  "Run the dashboard TUI without starting the daemon loop."
   (hngh.plugins.dashboard-tui:init)
   (unwind-protect
-       (loop while (hngh.plugins.dashboard-tui:running-p) do
+       (loop while (tui-running-p) do
          (sleep 1))
     (hngh.plugins.dashboard-tui:shutdown))
   (uiop:quit 0))

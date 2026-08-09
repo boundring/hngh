@@ -173,12 +173,17 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 
 (defun render-to-string ()
   "Return terminal text for fixture inspection, not a headless event view."
-  (with-output-to-string (*standard-output*)
-    (let ((*headless* nil))
-      (render))))
+  (let ((hngh.core.event-bus:*event-bus*
+          (or hngh.core.event-bus:*event-bus*
+              (make-hash-table :test 'eq)))
+        (hngh.core.plugin-host::*loaded-plugins*
+          (or hngh.core.plugin-host::*loaded-plugins*
+              (make-hash-table :test 'equal))))
+    (with-output-to-string (*standard-output*)
+      (let ((*headless* nil))
+        (render)))))
 
 (defun render-level-indicator ()
-  "Render the current megastructure floor beneath the header box."
   (let ((level (or (cdr (assoc *current-view* *level-map*)) "??-Unknown")))
     (format t "~A~A[Level ~A]~A~%"
             +ansi-bold+ +ansi-cyan+ level +ansi-reset+)))
