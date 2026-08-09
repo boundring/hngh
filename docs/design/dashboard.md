@@ -309,7 +309,22 @@ function; fixture-testable with the existing fake-tmux harness plus a
 fake lane dir. Human and Hngh can both drive it (same input path); the
 DASHBOARD owns the pane once P1 lands, per §5.3.
 
+INPUT GATING (Cibo review 12:55):
+- `ack <lane>` accepts only KNOWN lanes (registry-derived target list),
+  never arbitrary paths — append-only to the sibling's inbox, never
+  overwrite (the 11:05 lane-clobber lesson).
+- Every routed line passes prompt-lint before dispatch (card 103, no
+  LLM): steers and acks are briefs; the same gate that checks seats'
+  briefs applies here. Failed lint → dropped with a message in the
+  ride-along, never silently forwarded.
+
 ### 8.3 Design: agent back-channel (MCP first, tmux + lane fallback)
+
+STATUS: PLANNED — the MCP bridge is not active until the owner runs
+`hermes mcp add hngh ...` AND an independent post->read wire test
+passes (per Cibo review 12:55). The face is wire-proven (card 101);
+the registration is not done. Everything in this section is the
+target design, not current capability.
 
 Agents connect back to Hngh through THREE channels, in order:
 
@@ -317,12 +332,21 @@ Agents connect back to Hngh through THREE channels, in order:
    MCP server (`hermes mcp add hngh --command
    /home/bricker/.local/bin/hngh-coord-mcp`; owner-gated config edit;
    connect-timeout 120 for the SBCL boot). Each Hermes session then has
-   `mcp__hngh__{register,post_message,read_inbox,status,steer}`. Agents
+   `mcp__hngh__*` tools. Agents
    post findings, read their inboxes, steer siblings — via tools, from
    inside any session, no tmux knowledge needed.
+   TOOL ALIGNMENT (Cibo review 12:55): the exposed set is
+   `register`, `post_message`, `read_inbox`, `status`, `steer`
+   (source: coord.lisp tools/list). The old "coord-view" name in §7 is
+   superseded by `status`; do not cite coord-view. Schema drift is
+   live — verify each tool's args against coord.lisp before building
+   on it (register role key; post_message target; read_inbox me).
 2. **tmux dispatch (UI-level)**: seat-steer / lane-watch nudge — the
    dashboard's existing control path; used for steers and nudges where
-   a live prompt matters more than a message.
+   a live prompt matters more than a message. MCP `steer` and tmux
+   seat-steer are DIFFERENT channels: MCP steer = durable note in the
+   coord journal; tmux seat-steer = live input to a running seat.
+   Do not conflate them in the UI.
 3. **File lane (durable, crash-surviving)**: inbox/outbox/worklog —
    canonical for anything that must outlive a session (crash-resume
    works because the lane survived).
@@ -364,3 +388,9 @@ Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §8: ride-along
 console + agent back-channel (owner 12:45 holistic direction) —
 ride-along stdin routing, hngh-coord MCP registration, three-channel
 rule + hngh-lane skill adapter, build order into P1/P3.
+Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §8 amended
+13:00 (Cibo review 12:55 + Killy source-verdict): MCP STATUS=PLANNED
+until owner runs `hermes mcp add` + independent wire test; tool
+alignment (status supersedes coord-view; verify args per coord.lisp);
+MCP steer vs tmux seat-steer distinguished; ride-along input gating
+(known-lane append-only + prompt-lint).
