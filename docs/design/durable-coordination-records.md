@@ -403,3 +403,42 @@ others" when there are no others.
 Attribution (15:30): tandem seu — owner 15:24 direction — wake
 composition design; cibo owns the wake-line code (owner-assigned),
 this is its spec. Complements §7.2 delivery contract.
+
+### 7.4 Embedding doctrine: the watcher is Hngh, not a separate thing (owner 19:40)
+
+Owner direction: the watcher must NOT be a permanent, separate
+component. Hngh either EMBEDS the watcher under its full control, or
+Hngh uses MODULAR REPLACEMENTS with a broad variety of watcher types.
+
+Two acceptable architectures (either satisfies, mixed is fine):
+
+A. EMBEDDED — the wake core moves INTO Hngh as a plugin/service:
+   - The state machine (lane-change trigger, idle backstop, WAIT-GATE
+     judge, escalation, composition) lives under Hngh's own
+     lifecycle: started/stopped/statused by `hngh` itself (or the
+     dashboard, which is Hngh surface per §7.2 code home), config
+     from the registry, state in the claims journal — no systemd
+     script as the owner of the logic.
+   - The current `scripts/hngh-live-watch` + systemd unit is an
+     INTERIM, a dogfooding vehicle for the contract. It must not
+     become the reference implementation by inertia.
+
+B. MODULAR — a watcher CONTRACT with pluggable implementations:
+   - The contract is what this doc specifies: surfaces (claims),
+     gate classes (co-agent vs owner), TTL semantics, escalation
+     ladder, delivery verification, composition rules.
+   - Any implementation conforming to the contract is swappable:
+     the v5/v6 shell watcher, a native Hngh plugin watcher, a
+     Nikolai-style external supervisor, a dashboard-embedded
+     watcher. Hngh selects the watcher type from config
+     (`watcher.impl` or equivalent), not from what happens to be
+     running.
+   - The state/journal seam is the swap point: any watcher writes
+     the same per-seat state + claims + escalations, so consumers
+     (dashboard, seats, owner surface) never depend on a specific
+     watcher's implementation.
+
+Rule (fail-closed): a watcher that stops being swappable — one whose
+behavior only the shell script can express and no one else can
+replicate via the contract — is a design defect, not a feature. The
+watch is owned by Hngh's doctrine, not by any one file or unit.
