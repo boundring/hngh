@@ -291,7 +291,8 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:running-p
            #:status
            #:render
-            #:handle-key
+           #:render-to-string
+           #:handle-key
             #:format-event-time))
 
 (defpackage :hngh.plugins.package-manager

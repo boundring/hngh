@@ -75,6 +75,18 @@
     (hngh.core.event-bus:shutdown)
     (cleanup-tmp-home tmp)))
 
+(test tui-headless-render-to-string
+  (let ((tmp (make-tmp-home)))
+    (cleanup-tmp-home tmp)
+    (hngh.core.event-bus:init :hngh-home tmp)
+    (hngh.plugins.dashboard-tui:init :headless nil)
+    (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+      (is (search "Hngh v" output))
+      (is (search "Overview" output)))
+    (hngh.plugins.dashboard-tui:shutdown)
+    (hngh.core.event-bus:shutdown)
+    (cleanup-tmp-home tmp)))
+
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)
