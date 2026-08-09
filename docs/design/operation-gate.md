@@ -210,6 +210,11 @@ shared fixture (= deny-all posture).
   item 8 completes the final gate block, flag for the owner.
 - Commit body carries attribution: `tandem-a — deepseek-v4-flash-0731` (docs)
   / `tandem-b — gpt-5.6-luna` (impl).
+- Deployment note (owner): `:operation-approvals` is edited in the config
+  file, which safety-boundary mode-locks to 0444 — an owner invoking
+  `hngh config set :operation-approvals ...` must chmod config/hngh.lisp
+  first (same quirk as `:tool-grants` after card 97). Documented in
+  next.md with the card-97 deployment note.
 
 ## Explicit non-goals (card MUST NOT)
 
