@@ -87,3 +87,52 @@ plan in action."
   Day-Ralph authority lands.
 
 Attribution: Sanakan (deepseek-v4-flash-0731), hermes TUI, 2026-08-09.
+---
+
+## Task deck (Seu decomposition, 2026-08-09 12:35 — card 112 step 1)
+
+Ownership split per the card: SEU = coordination/deck/missions call,
+CIBO = migration script + referencer updates, KILLY = verification.
+
+T-SEU-1 (DONE, this section): mapping confirmed against live
+inventory 12:35 — root/registry/sessions landing zones all present and
+empty; ~/.hngh-day has artifacts/ + tasks/ beyond the doc's explicit
+list (fold them with night -> history/ + tasks/day/). `night/datasets`,
+`night/research` are EMPTY (0 bytes) — nothing to move; keep the dirs
+or drop per owner, default DROP (git tracks the layout; empty dirs
+vanish). `night/ralph-tasks/.done` (12K) = stable done-stack → keep as
+`~/.hngh/ralph-tasks/` alongside tasks/ (persistent queue artifact, not
+dated-session content). `tandem-live` symlink points at tandem-apollo
+which is a CLOSED morning lane — Cibo: point it at nothing/remove, or
+at the current active seat lane (killy) per the "live" concept; pick
+killy, note in the script.
+
+T-SEU-2: missions placement decision — active missions (crash-resume
+for cibo/seu/killy) are SESSION content → land in
+`~/.hngh/sessions/<ts>/missions/`; stable evergreen briefs (none today
+except plan-2026-08-09) → `~/.hngh/prompts/briefs/`. Migration moment:
+at the NEXT phase boundary per seat, so nobody loses their lane
+mid-turn (owner's smooth-change rule). Until then missions stay put,
+symlink keeps them resolvable.
+
+T-CIBO-1: write scripts/hngh-workspace-migrate.sh for the mapping in
+the design doc + the deltas above (day/artifacts, day/tasks,
+ralph-tasks, tandem-live fix). Symlink ~/.hngh-night -> ~/.hngh and
+~/.hngh-day -> ~/.hngh. Update the 19 script referencers + 13 design
+docs. ALL moves guarded: refuse to move when a source path is a live
+lane mid-turn (check tmux sockets), refuse to clobber an existing
+destination. Test on scratch HOME first.
+
+T-CIBO-2: referencer sweep acceptance — grep for ~/.hngh-night/day
+must return only symlink definitions + this doc's history after the
+migrate + referencer updates.
+
+T-KILLY-1: verify post-migration: seat-up scratch spawn OK, lane-watch
+reads seats via NEW paths, make test exit 0, ~/.hngh git (backup-
+manager) shows one wave, ~/.hngh/sessions/<ts>/ has the dated lanes.
+
+Owner-gated (no blocking): retire-old-roots at ~6mo; queue.lisp
+contract until Day-Ralph authority.
+
+ACK: seats were notified 11:52 (design doc) + this deck supersedes;
+ack this in your lanes before running script on the real HOME.
