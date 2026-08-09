@@ -17,7 +17,7 @@
   "Whether the TUI is active.")
 
 (defvar *current-view* :overview
-  "Current view: :overview, :events, :plugins, :watch, :steers, :owner-inbox, :seats")
+  "Current view: :overview, :events, :plugins, :watch, :steers, :owner-inbox, :seats, :claims")
 
 (defvar *help-open* nil
   "Whether the keyboard help panel is shown.")
@@ -29,7 +29,8 @@
     (:watch . "B4-Watcher")
     (:steers . "B5-Steers")
     (:owner-inbox . "B6-Owner")
-    (:seats . "B7-Seats"))
+    (:seats . "B7-Seats")
+    (:claims . "B8-Claims"))
   "View-keyword to megastructure floor name mapping.")
 
 (defvar *event-buffer* '()
@@ -58,6 +59,9 @@
 
 (defvar *seat-lanes-root* "/home/bricker/.hngh-night"
   "Root containing tandem seat lane directories.")
+
+(defvar *claims-register-path* "/home/bricker/.hngh-night/state/claims.lisp"
+  "Path to the append-only surface claims register.")
 
 (defvar *headless* nil
   "If T, don't render TUI (for service/SSH mode).")
@@ -163,7 +167,8 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
         (:watch (render-watch-state))
         (:steers (render-steers))
         (:owner-inbox (render-owner-inbox))
-        (:seats (render-seats))))
+        (:seats (render-seats))
+        (:claims (render-claims))))
   (render-footer))
 
 (defun render-to-string ()
@@ -240,6 +245,29 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
       (dolist (entry (read-seat-status *seat-registry-path* *seat-lanes-root*))
         (format t "  ~A  ~A~%" (car entry) (getf (cdr entry) :status)))
       (format t "  ~A(no seat registry)~A~%" +ansi-dim+ +ansi-reset+)))
+
+(defun read-claims-register (path)
+  "Read active CLAIM lines from PATH, excluding released surfaces."
+  (let ((released (make-hash-table :test #'equal))
+        (claims nil))
+    (dolist (line (uiop:read-file-lines path))
+      (cond
+        ((uiop:string-prefix-p "CLAIM-RELEASE:" line)
+         (setf (gethash (second (uiop:split-string line)) released) t))
+        ((uiop:string-prefix-p "CLAIM:" line)
+         (push line claims))))
+    (nreverse
+     (remove-if (lambda (line)
+                  (gethash (second (uiop:split-string line)) released))
+                claims))))
+
+(defun render-claims ()
+  "Render active surface claims from the append-only register."
+  (render-header "Claims")
+  (if (probe-file *claims-register-path*)
+      (dolist (line (read-claims-register *claims-register-path*))
+        (format t "  ~A~%" line))
+      (format t "  ~A(no claims register)~A~%" +ansi-dim+ +ansi-reset+)))
 
 (defun render-watch-state ()
   "Render the latest live-watch state for each seat."
@@ -385,7 +413,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-footer ()
   "Render the footer with navigation hints and event-buffer status bar."
   (format t "~%")
-  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [5]Steers [6]Owner [7]Seats [?]Help [q]uit~A"
+  (format t "~A[1]Overview [2]Events [3]Plugins [4]Watch [5]Steers [6]Owner [7]Seats [8]Claims [?]Help [q]uit~A"
           +ansi-dim+ +ansi-reset+)
   (bt:with-lock-held (*buffer-lock*)
     (let ((n (length *event-buffer*)))
@@ -428,6 +456,7 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
           (#\5 (setf *current-view* :steers) (render))
           (#\6 (setf *current-view* :owner-inbox) (render))
           (#\7 (setf *current-view* :seats) (render))
+          (#\8 (setf *current-view* :claims) (render))
           (#\q (setf *running* nil))
           (#\Q (setf *running* nil))))))
 

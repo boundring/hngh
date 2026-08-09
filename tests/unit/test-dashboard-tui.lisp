@@ -249,6 +249,39 @@
       (when (probe-file lanes)
         (uiop:delete-directory-tree lanes :validate #'identity)))))
 
+(test tui-reads-claims-register
+  (let ((tmp (make-pathname :name "claims" :type "lisp"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "CLAIM: card:105 cibo dashboard-tui-build 15:20~%")
+             (format stream "CLAIM: doc:durable-records seu design-home 15:20~%")
+             (format stream "CLAIM-RELEASE: card:104 seu ride-along-design 17:05~%"))
+           (let ((claims (hngh.plugins.dashboard-tui:read-claims-register tmp)))
+             (is (= 2 (length claims)))
+             (is (search "card:105" (first claims)))
+             (is (search "durable-records" (second claims)))
+             (is (not (some (lambda (line) (search "card:104" line)) claims)))))
+      (when (probe-file tmp) (delete-file tmp)))))
+
+(test tui-renders-claims
+  (let ((claims (make-pathname :name "claims-render" :type "lisp"
+                               :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream claims :direction :output :if-exists :supersede)
+             (format stream "CLAIM: card:105 cibo dashboard-tui-build 15:20~%"))
+           (hngh.core.event-bus:init :hngh-home (make-tmp-home))
+           (hngh.plugins.dashboard-tui:init :headless t)
+           (let ((hngh.plugins.dashboard-tui::*claims-register-path* claims))
+             (hngh.plugins.dashboard-tui:handle-key #\8)
+             (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+               (is (search "Claims" output))
+               (is (search "card:105" output)))))
+           (hngh.plugins.dashboard-tui:shutdown)
+           (hngh.core.event-bus:shutdown))
+      (when (probe-file claims) (delete-file claims))))
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)
