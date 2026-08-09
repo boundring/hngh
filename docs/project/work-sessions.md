@@ -682,3 +682,14 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **Verified**: 730/730 fast (lint-parens gate runs first, exit 0, 4.5s < 15s budget), 2471/2471 full, exit 0. Baseline before work: 693/693 fast, 2434/2434 full.
 - MisakaNet lesson candidates for the paren/docstring/CL-test gotchas added to backlog (submission free; search free; lesson reading is the paid side — noted correctly).
 - Docs updated: AGENTS.md, next.md, roadmap.md (status + design-artifacts row), CHANGELOG, backlog, work-sessions M9.26. Committed.
+
+### Session M9.27: L2/L3 persistent case-base + review pass (step 5)
+**Status**: Built + verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- `src/plugins/situation-casebase.lisp` — the self-improvement substrate:
+  - **Persistent case-base** via the state-store journal (`append-journal`/`read-journal`): every scored situation + action + outcome appended, with monotonic ids, timestamps, source (`:auto`/`:human`), and attribution (§7). Human `/steer` is recorded high-weight as ground-truth (§7.5).
+  - **Review pass** (`run-review-pass`): cheap/local, offline re-run of the judge against the case-base; recomputes precision/recall/conf-agreement, appends a pass record to pass-stats. `accuracy-improving-p` is the §8 step 5 gate (calibration improves across successive passes). `emergent-classes` is an open-taxonomy probe — new classes are expected, surfaced for human triage.
+- Wired into main.lisp lifecycle, packages.lisp, hngh.asd, Makefile fast suite.
+- Tests: test-situation-casebase.lisp — 25 checks (persistence/read-back, monotonic ids, human high-weight, distribution, review metrics, improvement gate, empty-base noop, emergent probe, status shape). Uses a temp isolated hngh-home + a deterministic judge hook — **no network, no model**.
+- **Bugs found + fixed**: `record-case` malformed lambda list (`&rest args &key :score` rejected the `:score` keyword); `run-review-pass`'s default `responsibility` was `identity` comparing the whole verdict plist to a keyword (fixed to extract `:situation`); `accuracy-improving-p` used `(second (last ...))` wrongly (fixed with index math); my record-ids test assertion was wrong.
+- **Verified**: 755/755 fast (lint-parens gate first), 2496/2496 full, exit 0. Baseline before work: 730/730 fast, 2471/2471 full.
+- Docs updated: AGENTS.md, next.md (step 5 done, step 6 P0), roadmap.md (status + design-artifacts row), CHANGELOG, work-sessions M9.27. Committed + pushed.
