@@ -87,6 +87,27 @@
     (hngh.core.event-bus:shutdown)
     (cleanup-tmp-home tmp)))
 
+(test tui-reads-live-watch-state
+  (let ((tmp (make-pathname :name "watch-state" :type "txt"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "2026-08-09T18:00:00 cibo status=checked idle_s=4~%")
+             (format stream "2026-08-09T18:00:10 cibo status=idle-nudge action=nudge idle_s=16~%")
+             (format stream "2026-08-09T18:00:10 seu status=composer-active action=hold~%"))
+           (let ((states (hngh.plugins.dashboard-tui:read-watch-state tmp)))
+             (is (equal "idle-nudge"
+                        (getf (cdr (assoc "cibo" states :test #'string=)) :status)))
+             (is (equal "nudge"
+                        (getf (cdr (assoc "cibo" states :test #'string=)) :action)))
+             (is (= 16
+                    (getf (cdr (assoc "cibo" states :test #'string=)) :idle-s)))
+             (is (equal "composer-active"
+                        (getf (cdr (assoc "seu" states :test #'string=)) :status)))))
+      (when (probe-file tmp)
+        (delete-file tmp)))))
+
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)

@@ -293,6 +293,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:render
            #:render-to-string
            #:handle-key
+           #:read-watch-state
             #:format-event-time))
 
 (defpackage :hngh.plugins.package-manager
