@@ -40,3 +40,5 @@ Thumbs.db
 # fetched corpus — regenerated via scripts/gen-hngh-acronyms.py (curated
 # pools inline); the raw download stays local, not committed
 data/wordlists/
+# qlot project-local dep cache (task 93 / Wave C) — lockfile is the source of truth
+.qlot/

@@ -43,6 +43,24 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — Wave C item 1 (qlot pin) + CI red→green
+- **`qlfile` + `qlfile.lock`** — project-local dependency pin via qlot
+  (Wave C item 1 / autonomy-strategy §7 item 9): pins Quicklisp dist
+  2026-01-01 + 8 project deps (bordeaux-threads, cl-ppcre, babel, jsonrpc,
+  alexandria, yason, jsown, fiveam). sb-posix/sb-bsd-sockets correctly
+  excluded (SBCL-internal).
+- **Makefile**: `SBCL_FLAGS` loads `.qlot/setup.lisp` when present
+  (conditional no-op otherwise) so all build/test sbcl invocations resolve
+  deps from the pin. `.qlot/` gitignored.
+- **`ci.yml` rewritten** to install SBCL+Quicklisp+qlot then
+  `qlot install` + `qlot exec make build/test` — fixes the long-standing
+  "BORDEAUX-THREADS not found" CI failure (runner had no Quicklisp).
+- **`mirror.yml` deleted** — redundant (local pushes both remotes) and
+  broken on the runner (SSH key path absent); was the source of "Run failed"
+  email noise on every push.
+- **Verified**: `make test` exit 0, 837/837 fast, 0 fail-suites; `make
+  build` exit 0 — all under the pin (was failing pre-fix).
+
 ### Added — Wave C/backup task deck (93–99) + Luna delegation verified
 - **Task cards 93–99** composed in `~/.hngh-night/tasks/` from the
   Wave C adoption research + backup-sync design (owner directive: plans →

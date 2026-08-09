@@ -6,6 +6,12 @@
 
 SBCL ?= sbcl
 SBCL_FLAGS = --disable-debugger
+# When task 93 (qlot pin, Wave C) is in effect, load the project-local
+# Quicklisp setup so deps resolve reproducibly from qlfile.lock. No-op when
+# qlot is absent (e.g. a machine using global ~/quicklisp only).
+ifneq ($(wildcard .qlot/setup.lisp),)
+SBCL_FLAGS += --load .qlot/setup.lisp
+endif
 LISP_FILES = $(wildcard src/*.lisp src/core/*.lisp src/plugins/*.lisp)
 C_FILES = src/system-daemon/main.c
 
