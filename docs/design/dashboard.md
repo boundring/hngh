@@ -77,11 +77,34 @@ units, coordination substrate. Registry: `~/.hngh-night/seat-names.md`.
 - tmux interfacing: `/steer` via the seat's own socket, care layer for
   stranded input (send → verify → clear/resubmit).
 
-### P2 — per-role model config (unchanged)
+### P2 — per-role model config + FALLBACK PREVENTION (owner-emphasized)
 Hermes profiles (`hermes -p <role>`), validated model ids, verified
 negotiated model post-spawn (the luna/typo-squat lesson: never trust the
 footer; picker is the owner's canonical switch, `-m` can silently
 fall back — bad spec → flash).
+
+Owner emphasis (10:44): "agents that spawn off the dashboard, we should
+be able to fine-grain-control the configuration applied for them. We
+should be able to prevent unintended fallback model activation."
+
+Concrete requirements:
+- Per-seat roll config: which provider, which model id, which fallback
+  chain (if any) is ALLOWED. Default for spawned seats: NO silent
+  fallback — if the pinned model+provider fails, the seat either
+  (a) stops and reports the failure, or (b) falls back ONLY to an
+  explicitly listed chain member — never to a chain default by accident.
+- The 2026-08-09 failures to prevent: (1) `-m gpt-5.6-luna-max` typo id
+  resolved to flash via chain default; (2) `-m gpt-5.6-luna` valid-id
+  still rendered flash in footer — chain slid before openai served it.
+  Both are "unintended fallback activation." Guard = config-level pin
+  (fallback_providers empty/restricted, or per-seat override) plus
+  post-spawn verification flagging ANY mismatch between requested and
+  negotiated model.
+- Prompt-lint (card 103) validates the model id in the brief; the
+  dashboard validates the id at spawn AND the negotiated model after
+  spawn (probe /cmdline, never footer-only).
+- UI: requested vs negotiated shown side-by-side; any difference is an
+  ERROR-state banner, never a quiet footer.
 
 ### P3 — procedural reporting (unchanged) + MCP links
 - Per-seat summaries via procedural extraction; local-model summarization
