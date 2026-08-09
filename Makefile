@@ -27,7 +27,7 @@ DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
-.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens lint-deps scrub-pii
+.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens lint-parens-test lint-deps scrub-pii
 
 all: $(BINARY) $(CLIENT_BINARY)
 
@@ -74,7 +74,7 @@ run:
 test: test-fast
 
 test-fast:
-	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.hngh-planner :hngh.quota-spreader :hngh.signals :hngh.acp-client :hngh.situation-detectors :hngh.situation-scoring :hngh.situation-judge :hngh.situation-casebase :hngh.model-runtime :hngh.model-probes :hngh.model-routes :hngh.safety-boundary)'
+	$(MAKE) test-suite SUITE='(:hngh.hngh-up :hngh.squad-dispatch :hngh.beans :hngh.hngh-planner :hngh.quota-spreader :hngh.signals :hngh.acp-client :hngh.situation-detectors :hngh.situation-scoring :hngh.situation-judge :hngh.situation-casebase :hngh.model-runtime :hngh.model-probes :hngh.model-routes :hngh.safety-boundary :hngh.sandbox)'
 
 test-beans:
 	$(MAKE) test-suite SUITE='(:hngh.beans)'
@@ -85,7 +85,7 @@ test-model-runtime:
 test-squad-dispatch:
 	$(MAKE) test-suite SUITE='(:hngh.squad-dispatch)'
 
-test-suite: lint-parens lint-deps
+test-suite: lint-parens lint-parens-test lint-deps
 	timeout --foreground $(FAST_TEST_TIMEOUT)s $(SBCL) $(SBCL_FLAGS) \
 	--eval "(require 'asdf)" \
 	--eval "(push (truename \".\") asdf:*central-registry*)" \
@@ -95,7 +95,12 @@ test-suite: lint-parens lint-deps
 
 ## Lint source for unbalanced parens before running tests (procedural guard).
 lint-parens:
+	@python3 scripts/lint-parens.py --fix $(LISP_FILES) || true
 	@python3 scripts/lint-parens.py $(LISP_FILES) || exit 1
+
+## Regression-test the paren fixer itself (procedural guard, uv-hosted pytest).
+lint-parens-test:
+	@uv run --with pytest python3 -m pytest tests/scripts/test-lint-parens.py -q || exit 1
 
 lint-deps:
 	@python3 scripts/lint-deps.py || exit 1
