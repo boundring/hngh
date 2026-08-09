@@ -3,6 +3,16 @@
 > *Hngh Network Goes Hngh.* — the recursive acronym expands into itself:
 > Hngh is both the first and the last word. (Bookend variants below.)
 
+> **Operator note (2026-08-08):** the attendant Hermes session runs its own
+> verify-on-stop gate (`~/.hermes/verification_evidence.db` ledger). It
+> nudges when *any* code file is edited after the last recorded passing
+> test evidence, independently of hngh's gates — expect the occasional
+> redundant `make test` request after doc-only commits that follow code
+> work. Toggle: `hermes config set agent.verify_on_stop false` (or
+> `HERMES_VERIFY_ON_STOP=0` per invocation). Decided: leave it on; hngh's
+> verification narrative (`make test` / lint-counts / scrub-pii) already
+> satisfies it.
+
 Canonical bookend family (each expands into itself, Hngh at both ends):
 
 - Hngh Network Goes Hngh.
