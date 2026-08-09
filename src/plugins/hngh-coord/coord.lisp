@@ -90,47 +90,55 @@ default when nil rather than failing on a NIL pathname."
 
 (in-package #:hngh.plugins.hngh-coord)
 
+(defun %mcp-object (&rest pairs)
+  "Build a string-keyed hash-table (JSON object) from even-length KEY VALUE
+pairs. yason encodes hash-tables as objects; alists would be walked as
+arrays and dump the dotted tail (seen: initialize crash on the wire)."
+  (let ((h (make-hash-table :test 'equal)))
+    (loop for (k v) on pairs by #'cddr
+          do (setf (gethash k h) v))
+    h))
+
 (defun %mcp-tool (name desc props required)
-  "Build one MCP tool descriptor as a STRING-keyed alist (yason encodes
-string keys natively; keyword keys need a symbol policy it lacks)."
-  (list (cons "name" name)
-        (cons "description" desc)
-        (cons "inputSchema"
-              (list (cons "type" "object")
-                    (cons "properties" props)
-                    (cons "required" required)))))
+  "Build one MCP tool descriptor as a hash-table (yason emits objects for
+hash-tables; keyword keys would need a symbol policy yason lacks)."
+  (%mcp-object "name" name
+               "description" desc
+               "inputSchema" (%mcp-object "type" "object"
+                                          "properties" props
+                                          "required" required)))
 
 (defun mcp-server (handler)
   "Build an MCP server: same JSON-RPC server machinery as the ACP server
 but with the STOCK transport, whose stdio framing is LSP-style
 Content-Length — which IS the MCP framing. Exposes the coordinator tools.
-Return values are STRING-keyed alists (yason rejects keyword keys)."
+Return values are yason-safe hash-tables (see %MCP-OBJECT)."
   (let ((server (make-instance 'jsonrpc:server)))
 
     (jsonrpc:expose
      server "tools/list"
      (lambda (params)
        (declare (ignore params))
-       (list
-        (cons "tools"
-              (list
-               (%mcp-tool "register" "join the squad"
-                          (list (cons "agent_id" (list (cons "type" "string")))
-                                (cons "role" (list (cons "type" "string"))))
-                          (list "agent_id"))
-               (%mcp-tool "post_message" "deliver a message to an agent"
-                          (list (cons "to" (list (cons "type" "string")))
-                                (cons "kind" (list (cons "type" "string")))
-                                (cons "body" (list (cons "type" "string"))))
-                          (list "to" "kind" "body"))
-               (%mcp-tool "read_inbox" "read messages addressed to me"
-                          (list (cons "agent_id" (list (cons "type" "string"))))
-                          nil)
-               (%mcp-tool "status" "coordinator view" nil nil)
-               (%mcp-tool "steer" "inject a coordination note"
-                          (list (cons "agent_id" (list (cons "type" "string")))
-                                (cons "text" (list (cons "type" "string"))))
-                          (list "agent_id" "text"))))))
+       (%mcp-object
+        "tools"
+        (list
+         (%mcp-tool "register" "join the squad"
+                    (%mcp-object "agent_id" (%mcp-object "type" "string")
+                                 "role" (%mcp-object "type" "string"))
+                    (list "agent_id"))
+         (%mcp-tool "post_message" "deliver a message to an agent"
+                    (%mcp-object "to" (%mcp-object "type" "string")
+                                 "kind" (%mcp-object "type" "string")
+                                 "body" (%mcp-object "type" "string"))
+                    (list "to" "kind" "body"))
+         (%mcp-tool "read_inbox" "read messages addressed to me"
+                    (%mcp-object "agent_id" (%mcp-object "type" "string"))
+                    nil)
+         (%mcp-tool "status" "coordinator view" nil nil)
+         (%mcp-tool "steer" "inject a coordination note"
+                    (%mcp-object "agent_id" (%mcp-object "type" "string")
+                                 "text" (%mcp-object "type" "string"))
+                    (list "agent_id" "text"))))))
 
     (jsonrpc:expose
      server "tools/call"
@@ -139,21 +147,21 @@ Return values are STRING-keyed alists (yason rejects keyword keys)."
               (args (gethash "arguments" params))
               (args (or args (make-hash-table :test #'equal)))
               (result (funcall handler name args)))
-         (list
-          (cons "content"
-                (list
-                 (list (cons "type" "text")
-                       (cons "text" result))))))))
+         (%mcp-object
+          "content"
+          (list
+           (%mcp-object "type" "text"
+                        "text" result))))))
 
     (jsonrpc:expose
      server "initialize"
      (lambda (params)
-       (list
-        (cons "protocolVersion" (or (gethash "protocolVersion" params)
-                                    "2024-11-05"))
-        (cons "capabilities" (list (cons "tools" nil)))
-        (cons "serverInfo" (list (cons "name" "hngh-coord")
-                                 (cons "version" "0.1.0")))))))
+       (%mcp-object
+        "protocolVersion" (or (gethash "protocolVersion" params)
+                              "2024-11-05")
+        "capabilities" (%mcp-object "tools" nil)
+        "serverInfo" (%mcp-object "name" "hngh-coord"
+                                  "version" "0.1.0"))))
 
     ;; notifications/initialized is a notification — returning a result
     ;; would mislead; expose a no-op handler so it isn't 'unknown method'.
