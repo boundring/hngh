@@ -127,6 +127,14 @@ user-guide/features/fallback-providers, read 2026-08-09):
   with `fallback_providers: []` unless the roll explicitly lists one,
   (3) post-spawn probe must match requested id or the seat is flagged
   ERROR and paused — never "close enough".
+- RESOLVED ROOT CAUSE (2026-08-09, from model-catalog.json): the real
+  registered id is `openai/gpt-5.6-luna` served by the OPENROUTER
+  provider (`providers.openrouter.models[11].id`, also under `nous`).
+  The config's many `provider: openai, model: gpt-5.6-luna` entries are
+  internally inconsistent — no bare-`openai` provider serves that id.
+  Correct spawn: `--provider openrouter -m openai/gpt-5.6-luna`. This is
+  the "bad spec" the owner pointed at; every flash fallback this morning
+  traced to it.
 
 ### P3 — procedural reporting (unchanged) + MCP links
 - Per-seat summaries via procedural extraction; local-model summarization
