@@ -10,6 +10,22 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — procedural agent-to-agent prompt lint (card 103)
+- Added `hngh prompt-lint FILE`, a local, no-LLM guard for briefs, steers,
+  and outbox entries. It emits one JSON report with level, category,
+  quoted fragment, suggested fix, producer attribution, and summary counts;
+  errors exit 1 and warnings-only reports exit 0.
+- The lint validates model references against the daemon's
+  `~/.hngh/config/hngh.lisp` path (or `HNGH_PROMPT_LINT_CONFIG` for an
+  explicit profile/fixture) and the loaded model-route data. This catches
+  `gpt-5.6-luna-max` without embedding a second model list.
+- V1 checks model IDs, explicit paths, dangerous actions (with
+  `operation-gate` human-gate reference), evidence for operational claims,
+  and `STATE:`/`STEER:`/`ANSWER:` plus acceptance structure.
+- Regression coverage: `tests/scripts/test-prompt-lint.py` drives the built
+  `hngh` binary with temporary fixtures; 8 fast tests, no LLM or network.
+- Launch-path wiring remains deferred to the tandem/apollo-up card.
+
 ### Fixed — hngh-coord ACP face wire-proven (card 101 ACP half, tandem-delivered)
 - Same yason trap as the MCP face, fatal on the ACP wire too: `acp-server`
   returned keyword plists, which yason's list encoder walks as arrays.

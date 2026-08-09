@@ -265,6 +265,12 @@ Parses command-line arguments, starts the system, and enters the main loop.
 Used when building a standalone executable via `make build`."
   (let ((args (uiop:command-line-arguments)))
     (cond
+      ((and args (string= (first args) "prompt-lint"))
+       (let ((file (second args)))
+         (unless file
+           (format t "Usage: hngh prompt-lint FILE~%")
+           (uiop:quit 1))
+         (uiop:quit (hngh.plugins.prompt-lint:run-file file))))
       ((member "acp" args :test #'string=)
        (acp-subcommand args) (uiop:quit 0))
       ((member "--version" args :test #'string=)

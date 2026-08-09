@@ -264,6 +264,12 @@ All core component implementations live in sub-packages of hngh.core.")
 Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
   (:use :cl))
 
+(defpackage :hngh.plugins.prompt-lint
+  (:documentation "Procedural lint for agent-to-agent prompt requests (card 103).")
+  (:use :cl :hngh.core)
+  (:export #:run-file
+           #:lint-text))
+
 (defpackage :hngh.plugins.dbus-bridge
   (:documentation "dbus Bridge (B13) — translates between internal bus and systemd dbus.")
   (:use :cl :hngh.core)
