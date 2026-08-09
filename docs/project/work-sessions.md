@@ -740,3 +740,11 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - Verified against authoritative sources (kernel.org Landlock docs, OPA docs, Thinkst, NeMo Guardrails GitHub, qlot/CLPM, hermes-agent #487) — no guessed claims; every decision cited.
 - Adoption order documented (qlot → bwrap → OPA → hash-chain → canaries/scan → `:operation` gate); Wave C gate unchanged.
 - Docs updated: next.md (Wave C row: research done), roadmap.md (design-artifacts row). Committed + pushed.
+
+### Session M9.32: Owner review — OPA shelved, Syncthing flagship, backup accommodation
+**Status**: Design + ADRs + docs committed (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner review of the Wave C adoption doc**: agreed to shelf **OPA** (single-host ~15 immutable CL rules; Rego subprocess + a policy language for the agent to maintain costs more than it buys — ADR-044).
+- **Owner direction — backup**: Hngh should manage/configure/optimize backup + sync across many devices, eliminating manual config; accommodate remote + local-network + device-local options. **Syncthing flagship**: P2P, no server, REST API at localhost:8384 = a management surface Hngh steers (observe → reconcile → tune), `:operation`-gated, read-only fail-closed default. Owner clarifications: **gbd is a dotfile VCS, not a general backup manager**; the existing plugin is the Hngh-state-tree git backup — so the design is a **three-job split** (gbd dotfiles / backup-manager state / Syncthing mirror), not one tool.
+- `docs/design/backup-sync-integration.md` written; **ADR-043** (Syncthing + split, restic/borg deferred), **ADR-044** (OPA shelved) appended to decisions.md; research doc's OPA row + additions updated; next.md (P1 backup/sync row), roadmap.md (design-artifacts row), CHANGELOG done.
+- Phase A of the design (observe/status + Tier-0 out-of-sync detector, fixture-tested, no live instance) is the next concrete build when greenlit.
+- Docs updated; committed + pushed.

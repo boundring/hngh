@@ -14,13 +14,26 @@ two items out of eight.
 
 ---
 
+**Decisions after review (2026-08-08, owner review session):**
+- **OPA → SHELVED (ADR-044)** — single host, ~15 immutable CL-owned rules; a
+  Rego subprocess + policy language costs more than it buys at this scale.
+  Extend `safety-boundary`/sentry native rules instead; revisit only for a
+  fleet or owner-editable policy at scale.
+- **Backup → Syncthing flagship (ADR-043)** — continuous device/LAN sync is
+  Syncthing (P2P, no server, REST API Hngh can steer: observe → reconcile →
+  tune). Three-layer split: gbd = dotfiles, backup-manager (git) = Hngh
+  state tree, Syncthing = mirror across devices. Encrypted offsite
+  (restic/borg) deferred. See `docs/design/backup-sync-integration.md`.
+
+---
+
 ## Mapping: Wave C item → existing OSS → decision
 
 | # | Wave C item (autonomy-strategy §7) | Adopt (existing OSS) | Decision |
 |---|---|---|---|
 | 1 | Immutable safety/policy layer | **Landlock** — kernel LSM: a process caps its own FS access, no root, no helper binary. Works for the in-process boundary we already built (`safety-boundary.lisp`); use `landrun` as the no-SUID CLI wrapper, or `chattr +i` for fs-level config immutability + read-only bind mounts | **ADOPT (reinforce, not replace)** — our layer stays the policy owner; Landlock/`chattr +i` harden it |
 | 2 | Append-only action log | We ship part 1 (journal/actions.lisp); **tamper-evidence = hash-chaining** (SHA-256 chain, per entry). Direct precedent: **NousResearch/hermes-agent #487** proposes exactly this pattern (inspired by OpenFang); Trillian is a full transparency-ledger implementation but over-heavy (Google-scale infra) | **BUILD (small, unique)** — ~40-line hash-chain in CL over the journal; reuse sbcl's sha256 if available, else ironclad. Do not adopt Trillian (weight/ops >> value) |
-| 3 | Least-agency tool scoping | **OPA (Open Policy Agent)** — CNCF-graduated, de facto standard policy engine; Rego policies can gate tool/model calls by route, cost class, arg shape. Runs as a subprocess (Hngh already shells out to agentic CLIs) | **ADOPT** — policy as data in Rego, evaluated subprocess-call, fail-closed; replaces ad-hoc `if` trees in sentry/package-manager |
+| 3 | Least-agency tool scoping | **OPA (Open Policy Agent)** — CNCF-graduated, de facto standard policy engine; Rego policies can gate tool/model calls by route, cost class, arg shape. Runs as a subprocess (Hngh already shells out to agentic CLIs) | **SHELVED (ADR-044)** — native `safety-boundary`/sentry rules at this scale; revisit for fleet/owner-editable policy |
 | 4 | Untrusted-content tagging + provenance | **LLM Guard** (MIT, self-hostable, 15 input + 20 output scanners: prompt injection, secrets, toxicity) or **NVIDIA NeMo Guardrails** (Apache-2.0, input/dialog/execution/output rails, jailbreak + injection detection, OTel tracing). Both Python — run as a sidecar scanner. **Provenance tagging itself = Hngh-native** (no OSS equivalent; it's our attribution ledger) | **ADOPT (sidecar), BUILD (provenance)** — scanner = LLM Guard; provenance stays ours |
 | 5 | Canary tokens | **Thinkst Canarytokens** (free, self-hostable; core is a Python app, Docker repo is convenience packaging) + **OpenCanary** honeypot. Plant tokens in context/prompts; a fired token = exposure | **ADOPT** — self-hosted canary server (no Docker per repo non-goals; run the Python app directly) |
 | 6 | Execution sandboxing | **Bubblewrap (bwrap)** — unprivileged namespace sandboxing, no SUID, no daemon, smallest trust base (it's Flatpak's engine). **Landrun** same idea on Landlock. gVisor (user-space kernel) / Firecracker / Kata (microVM) = stronger, but real infra weight | **ADOPT (bwrap)** — per-task sandbox for agent-generated code: default-deny FS/net; escalate to gVisor only if the threat model does |

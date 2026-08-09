@@ -43,6 +43,19 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Full M8 routing selectors (`route-task`) remain unbuilt — this seeds data
   only, per design.
 
+### Added — backup/sync accommodation design (Syncthing flagship, ADR-043/044)
+- **`docs/design/backup-sync-integration.md`** — owner direction: Hngh
+  manages/configures/optimizes backup + sync across devices, eliminating
+  manual config. **Syncthing** is the flagship continuous device/LAN sync
+  layer (P2P, no server, REST API Hngh steers: observe → reconcile → tune;
+  `:operation`-gated, read-only fail-closed default).
+- **Three jobs, three tools**: gbd = dotfiles (NOT a general backup manager,
+  per owner); `backup-manager` = Hngh state tree (git); Syncthing = mirror
+  across devices. Encrypted offsite (restic/borg/tarsnap) deferred.
+- **ADR-043** (Syncthing + split), **ADR-044** (OPA SHELVED — native
+  `safety-boundary`/sentry rules at this scale; revisit for fleet).
+- Phase A (observe/status + Tier-0 out-of-sync detector) is the first build.
+
 ### Added — Wave C open-source adoption research
 - **`docs/research/wave-c-open-source-tooling.md`** — ADOPT-or-BUILD
   decisions for all 8 Wave C items, per the owner's "don't reinvent"

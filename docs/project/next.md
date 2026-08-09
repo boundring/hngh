@@ -60,6 +60,7 @@ Recent sessions (see work-sessions.md for full per-session artifacts):
 | P0 | **M9 C6** planner cycle (roadmap → task queue → squad dispatch) — **PARKED pending Waves B/C** per 2026-08-08 owner decision (guardrails/security before launching automatic sessions) | hngh |
 | P0 | **M9 C8/C9** benchmark-runner strategy + nightly benchmark cron — strategy exists (`docs/design/benchmark-sourcing.md`), runner + cron unbuilt; add `--run` wrapper to the probe runner | hngh |
 | P1 | **M8 routing data seed** — `src/plugins/model-routes.lisp` (route table + two-role split: agentic→deepseek-v4-flash, coding→gpt-5.6-luna) + read-only parse test. **DONE** (`ba77639`); full routing selectors (M8) still unbuilt | hngh; `docs/design/model-routing.md` |
+| P1 | **Backup/sync accommodation — Syncthing flagship** — design at `docs/design/backup-sync-integration.md` (ADR-043): observe → reconcile → tune over the Syncthing REST API, `:operation`-gated; three-job split (gbd=dotfiles, backup-manager=state tree, Syncthing=mirror). Phase A (observe/status + Tier-0 detector) is the first build | hngh; `docs/design/backup-sync-integration.md` |
 | P1 | **Night-ralph task library** — continual planning/docs/training-set/research tasks, $0 local; isolated `~/.hngh-night` | hngh |
 | P1 | **svc-dash PyPI release** (wave 6 history persistence done, local) | `sysconfig_mgmt/.omc/plans/distribution-packaging.md` |
 | P1 | **Sentry Tier-1** — light-ralph analysis + git pre-commit hook calling `guard-text` | hngh; `.omc/plans/sentry-safeguards.md` |
