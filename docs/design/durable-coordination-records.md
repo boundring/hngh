@@ -158,10 +158,39 @@ breadcrumb layer, not a separate script:
   user unit, parameterized via the registry (seats, bounds, max
   nudges); NOT a repo script that must be babysat. Writes its own
   journal breadcrumb so its activity is as auditable as the seats'.
+- **Protect active user input.** Before a steer is inserted, inspect the
+  target pane and require an empty or known watcher-owned input field.
+  Never overwrite text that may be a user's paste. If ownership is
+  uncertain, record the pending nudge and stop.
 
 Build it when the P1 ride-along lands (dashboard §8.5); it replaces
 the stopgap and gives the lane-watch doctrine a single home.
 
-Attribution (added 14:52): tandem seu — deepseek/deepseek-v4-flash-0731,
-hermes TUI, 2026-08-09 — §7 answers killy's WATCHER 13:10 handoff
-(design home of hngh-live-watch, its stopgap run today).
+### 7.1 Lane-triggered wake (killy WATCHER DESIGN v2 13:15, owner-steered)
+
+The stopgap's idle-clock cannot distinguish an in-turn `sleep 40` from
+real thinking — both show a busy footer. The mechanism is therefore
+BEHAVIORAL + LANE-TRIGGERED, per owner:
+
+1. **SEATS END TURNS instead of sleeping.** When work is pending but
+   blocking-wait is needed, write the state and end the turn. No
+   in-turn sleeps — the seat re-enters when its lane moves.
+2. **WATCHER TRIGGERS ON LANE CHANGE, not brute idle**: when any
+   seat's inbox/outbox mtime is newer than its last-read marker,
+   nudge it immediately (steer-as-notification, machine-driven).
+   Idle-time nudge stays as BACKSTOP only.
+3. Consequence: "ran sleep 40" is IMPOSSIBLE by design — the seat
+   would have ended its turn, and the watcher re-wakes it on lane
+   movement.
+
+This is the P1 ride-along (card 104) essence. Seat-side: the
+hngh-lane discipline "end turns, don't sleep" becomes a hard rule
+(worklog + outbox written before ending). Watcher-side: `-t <seat>:0.0`
+retargeting and the composer-active pre-check (killy 13:17 collision
+class: never type over an owner's in-progress line) apply to lane-
+triggered nudges too.
+
+Attribution (added 14:58): tandem seu — deepseek/deepseek-v4-flash-0731,
+hermes TUI, 2026-08-09 — §7.1 folds killy's WATCHER DESIGN v2 13:15
+(lane-triggered wake, end-turns-not-sleeping) into the wake-trigger
+design; also records the 13:17 seat-steer composer pre-check fix.
