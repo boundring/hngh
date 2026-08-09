@@ -291,3 +291,19 @@ and `~/.local/share/uv/tools/cogmem` removed. OptMem remains the local PM
 memory store; the two cogmem notes were already in optmem (nothing recoverable
 lost).
 **Supersedes**: the cogmem portion of D-041.
+
+### ADR-043: Backup/sync accommodation — Syncthing flagship, three-layer split (2026-08-08)
+**Context**: owner directive — Hngh should help manage/configure/optimize backup + sync across many devices, eliminating manual config; Hngh should accommodate a variety of remote, local-networked, and device-local backup options. Owner explicitly notes git-back-dots (gbd) is for config files/dotfiles, not a general backup manager.
+**Decision**:
+- **Syncthing** is the flagship continuous device/LAN sync layer (P2P, no server, TLS device certs, REST API at localhost:8384 — a management surface Hngh can steer). Hngh phases: observe → reconcile (policy-driven device/folder/ignore provisioning) → tune (bandwidth/schedule). Config mutations are `:operation`-gated; read-only fail-closed default.
+- **Three jobs, three tools**: gbd versions dotfiles; `backup-manager` (B7) versions the Hngh state tree via git; Syncthing mirrors both across devices. No single "general backup manager."
+- **Encrypted offsite** (restic/borg/tarsnap): deferred until concrete need.
+- **OPA shelved** (ADR-044): policy stays native CL; no Rego subprocess for ~15 rules.
+**Rationale**: Syncthing is the "works when you ignore it" tool — exactly the multi-device convergence the owner wants Hngh to own; REST surface fits the scheduler/event-bus architecture; expensive options (gVisor/firecracker/restic infra) assessed + deferred to the fleet wave.
+**Files touched**: `docs/design/backup-sync-integration.md`, `docs/research/wave-c-open-source-tooling.md` (backup row), `docs/project/next.md`, roadmap.md, CHANGELOG.md, work-sessions M9.32.
+
+### ADR-044: OPA shelved — policy stays native CL (2026-08-08)
+**Context**: Wave C adoption research proposed OPA (CNCF policy engine, Rego) for least-agency tool scoping.
+**Decision**: do NOT adopt OPA now. Extend the existing `safety-boundary` + sentry native rule modules instead. Revisit only if policy must become owner/agent-editable data at scale or a multi-instance fleet requires external policy evaluation.
+**Rationale**: single-host, small immutable policy set (~15 rules), CL-owned; a Rego subprocess + language for the agent to maintain buys less than it costs at this scale. Matches "rational, balanced, flexible, expandable" — OPA is the expandable fallback, not the default.
+**Files touched**: `docs/research/wave-c-open-source-tooling.md` (OPA row marked shelved), backup-sync-integration cross-ref.
