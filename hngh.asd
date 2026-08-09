@@ -76,7 +76,8 @@
                  (:file "plugins/situation-detectors")
                  (:file "plugins/situation-scoring")
                  (:file "plugins/situation-judge")
-                 (:file "plugins/situation-casebase"))
+                 (:file "plugins/situation-casebase")
+                 (:file "plugins/model-routes"))
   :in-order-to ((test-op (test-op "hngh/tests"))))
 
 (defsystem "hngh/client"
@@ -138,7 +139,8 @@
                  (:file "test-situation-scoring")
                  (:file "test-situation-judge")
                  (:file "test-situation-casebase")
-                 (:file "test-model-probes"))
+                 (:file "test-model-probes")
+                 (:file "test-model-routes"))
    :perform (test-op (op c)
                         (declare (ignore op))
                         (uiop:symbol-call :hngh.tests :run-tests)
