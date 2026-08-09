@@ -774,6 +774,20 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:*acp-prompt-handler*
            #:*spawn-timeout*))
 
+(defpackage :hngh.plugins.hngh-coord
+  (:documentation "Squad coordination plane (card 101): MCP + ACP faces, one append-only journal. Any-number-of-agents coordinator — agents register, post messages, read inboxes, report status; the channel through which Hngh's autonomy loop observes and steers squads. Not a control plane.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:status
+           #:serve-mcp
+           #:serve-acp
+           #:post-message
+           #:read-inbox
+           #:coord-view
+           #:*agent-id*))
+
 (defpackage :hngh.plugins.signals
   (:documentation "Signals (C6 W1.5) — typed agent↔agent control channel over the event bus: fixed-code semantic ACK/NAK/control (social-senses §3), durable signal inbox, and thin exported-transition mapping.")
   (:use :cl :hngh.core)
