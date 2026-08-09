@@ -21,7 +21,8 @@ threads (e.g. the ACP client's reader) hold descriptors into shared
 state; unlinking dirs under them breaks the whole image mid-run.
 Binds *coord-tmp-home* so tests can re-init to the same scratch store."
   (let ((dir (merge-pathnames
-              (format nil "hngh-coord-test-~D/" (random 1000000))
+              (format nil "hngh-coord-test-~D-~D-~D/"
+                      (get-universal-time) (sb-posix:getpid) (random 1000000))
               (uiop:temporary-directory))))
     (ensure-directories-exist dir)
     (unwind-protect
