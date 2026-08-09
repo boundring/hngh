@@ -1,132 +1,121 @@
-# Mission-Control Dashboard (card 102) — design
+# Mission-Control Dashboard + seat windows (card 102) — design v2
 
-**Status**: design (draft by director 2026-08-09; owner-reviewed vision).
-**Watchdog lesson driving this**: seats idle silently — director + Killy
-both halted at a prompt 2026-08-09 because nothing watched for "seat
-stopped making progress." The dashboard's first job is to make halt
-VISIBLE, then to make it ACTIONABLE.
+**Status**: design v2 (Sanakan 2026-08-09 10:42, owner-directed
+architecture). Supersedes v1 (committed 9b81b9e). This is the
+integration target for all tandem sessions: launch-time dashboard,
+per-seat ride-along processes, tmux interfacing, MCP connectivity.
 
-## 1. Purpose
+## 1. Purpose (unchanged from v1, restated)
 
 One surface for the owner to watch, control, and arrange every agent
-session Hngh manages:
+session. Owner's core preference: watch agents work so mistakes and
+mix-ups get caught early; Hngh automates the watching (halt/stall/drift
+detection, steering, verification) so the OWNER's watcher role becomes a
+background service.
 
-1. **Watch** — live view of each seat (TUI pane), its ACTUAL model, brief,
-   phase, last activity, context %, coordination-lane state. Owner's
-   preference (2026-08-09): "we prefer watching agents work, whenever we
-   can, so we can catch mistakes and mix-ups." Hngh automates the
-   watching: halt/stall/drift detection without human eyes.
-2. **Control** — start/stop/resume seats, inject `/steer` or file-lane
-   messages, set per-role model + fallback, use the BLAME! name registry.
-3. **Arrange** — tiling and cascading-overlap sizes/positions; tmux
-   styling with visible, grabbable borders (the tmux-operations lesson:
-   `mouse on` + `pane-border-style fg=cyan`, active yellow bold).
-4. **Report** — procedural low-cost summaries of seat progress/actions,
-   feeding L2/L3 situation detectors → strategy triggers → intervention.
-5. **Lifecycle** — seats are ephemeral by design (lifespan per owner);
-   dashboard spawns with a declared lifespan and enforces wind-down.
+## 2. Architecture (owner-directed, 2026-08-09 10:40)
 
-It replaces the archived `mc`/svc-dash launcher (whose stale autostart
-resurrected dead panes every login — the failure mode card 102 exists to
-never repeat).
+### 2.1 Startup dashboard window (the pair)
+- **At Hngh login/startup**: one terminal window — a tmux session with
+  TWO panes:
+  - pane A: **Hermes session using system config** (`~/.hermes/config.yaml`,
+    the paired session — the owner's always-on attendant).
+  - pane B: **dashboard TUI, llmtrim-style** — layout, session stats,
+    activity, controls.
+- The dashboard pane is a **process that interfaces via tmux** with the
+  Hermes session in its own window (send-keys, /steer, input piping).
+- **Stats**: the dashboard shows detailed state on every active agent
+  session — including the paired one. Same seat-truth rules as v1:
+  ACTUAL model (verified, never footer alone), phase, last activity,
+  context %, lane state, lifespan.
 
-## 2. Substrate decision: tmux + Konsole, data-driven
+### 2.2 Each spawned agent gets its own window
+- One terminal window per agent, tmux-based:
+  - pane 1: **Hermes session** (or Opencode soon) — the agent itself.
+  - pane 2: **ride-along panel** — an active process that is the LOG for
+    the agent session, linked to it for input handling: prompts,
+    steering, TUI controls. The human OR Hngh (dashboard/background
+    services) can drive the agent through this panel.
+- The ride-along process connects the agent window back to Hngh (see 2.4).
 
-- **tmux** is the proven substrate (overnight tandem, Apollo/Killy run,
-  tmux-operations skill). Sessions = seats; panes = seat TUI + its
-  coordination watch. `remain-on-exit on`; dead panes respawn from a
-  `pane_cmd <index>` mapping (single source of truth).
-- **Konsole** windows attach to tmux sessions for visible observation
-  (owner watches Killy live now).
-- **Layouts are DATA**: a declarative config (seat list, models, roles,
-  lanes, window arrangement) — not a script with hardcoded panes. The
-  `mc.archived` anti-pattern: `SVC_DASH_DIR` hardcoded, autostart .desktop
-  unmanaged. New model: config file + manager that reads it and a systemd
-  user unit / autostart entry that runs the manager idempotently.
-- **Names**: `~/.hngh-night/seat-names.md` registry (BLAME! cohort).
+### 2.3 Orchestration layer (Hngh processes behind the dashboard)
+- Dashboard links to Hngh processes that TRACK and MANAGE agent
+  activity: follow each seat's work, automate the guidance/correction
+  actions the owner normally takes — individually or as groups,
+  coordinating and orchestrating.
+- This is lane-watch generalized: from idle/halt nudging to full
+  orchestration (assignment, steering, verification, review gates,
+  wind-down).
 
-## 3. Seat identity truth (the luna lesson, hard-coded)
+### 2.4 Connectivity
+- **tmux** = the pane-level interface (input piping, /steer, capture).
+- **MCP** = agents connect back to Hngh: each window's tmux instance +
+  ride-along panel + log + process can serve as the agent's MCP client
+  back into Hngh (e.g., hngh-coord's MCP face — the thread Apollo/Killy
+  closed this morning with the wire-proven MCP/ACP fixes).
+- "Connect each agent window and the dashboard and its agent in any
+  number of ways" — wiring is per-use; the DCSS-style rule is: tmux for
+  UI-level control, MCP for tool/message-level control, file lane for
+  durable coordination.
 
-Pane footer can LIE (shows config default, not the armed model — the
-2026-08-09 `gpt-5.6-luna-max` incident: seat ran flash all session while
-claiming luna). Dashboard MUST:
-- render the model from `/proc/<pid>/cmdline` + a negotiated-model probe,
-  never from the footer;
-- validate `-m` against config id BEFORE spawn (prompt-lint card 103
-  provides the validator);
-- record actual model in the lane STATE line, and check drift
-  (claimed vs actual) as a situation-detector input.
+## 3. Components (decision-complete phases — revised from v1)
 
-## 4. Components (decision-complete phases)
+### P0 — inventory + registry (done in v1 service-map)
+`docs/design/service-map.md` (Sanakan 2026-08-09): seats, systemd user
+units, coordination substrate. Registry: `~/.hngh-night/seat-names.md`.
 
-### P0 — inventory (already partly done)
-Service map: systemd user units (day-ralph, gbd-*, unsloth-studio),
-existing plugins (mission-control, sentry, maintenance-coordinator,
-config-watcher, file-watcher, emacs-daemon), the seat registry. Output:
-`docs/design/service-map.md`.
+### P1 — dashboard v1: the startup pair + seat windows
+- `hngh dash` command: opens the startup window (Hermes + llmtrim-style
+  TUI pane), reads seat config, opens per-seat windows.
+- Dashboard TUI (llmtrim-style): panes/columns per seat with
+  model-truth, phase, last activity, context %, lane state, controls.
+- Seat window launcher: `seat-up` (dedicated tmux socket `tmux -L
+  <name>`, setsid — seat survives spawner shell death; the 10:22 crash
+  lesson), + a ride-along log/interface pane per window.
+- Halt/stall detection + nudging (lane-watch generalization): the
+  owner's watcher role, procedural-first.
+- tmux interfacing: `/steer` via the seat's own socket, care layer for
+  stranded input (send → verify → clear/resubmit).
 
-### P1 — dashboard v1 (tmux-based, llmtrim-style display)
-- `hngh dash` command: reads seat config, opens tmux sessions/windows,
-  arranges per layout (tiled default; cascade mode), styled borders.
-- Dashboard header pane per window: seat name, ACTUAL model, brief id,
-  phase, last STATE timestamp, context %, lane state. Refreshed
-  procedurally every N seconds (cheap: tmux capture + stat — no LLM).
-- Halt detection: seat process alive BUT no lane/context activity for
-  > threshold → dashboard marks HALTED and writes a nudge to the lane.
-  (The 2026-08-09 halt: both seats paused at prompt; watchdog should
-  distinguish "at prompt idle" from "working" and tell the owner, and
-  optionally auto-nudge per policy.)
-- Lint integration: every brief/steer passes `hngh prompt-lint` before
-  send-keys (card 103); lint report shows inline.
-- Window arrangement: tmux session geometry + Konsole window positions;
-  tiling default, cascade-overlap option (owner's "really valuable
-  quality of life").
+### P2 — per-role model config (unchanged)
+Hermes profiles (`hermes -p <role>`), validated model ids, verified
+negotiated model post-spawn (the luna/typo-squat lesson: never trust the
+footer; picker is the owner's canonical switch, `-m` can silently
+fall back — bad spec → flash).
 
-### P2 — per-role model config
-- Hermes profiles (`hermes -p <role>`): per-role config.yaml with model +
-  fallback chain. Roles: coder (gpt-5.6-luna), design/review
-  (deepseek-v4-flash), PM, etc. Dashboard launcher chooses profile by
-  role, validates against known ids, verifies negotiated model post-spawn.
-- K3 / frontier tier = strategic reserve; routed only on explicit role
-  intent (owner 2026-08-09: "Kimi K3 available now, sparing use; one-off
-  code generation requests may route there").
+### P3 — procedural reporting (unchanged) + MCP links
+- Per-seat summaries via procedural extraction; local-model summarization
+  where fast enough; feeds L2/L3 detectors → strategies → intervention.
+- MCP connectivity per 2.4: agents reach Hngh's tools/services through
+  the ride-along process.
 
-### P3 — procedural reporting (low-cost, local-first)
-- Per-seat summary: phase, files touched, commits, lane entries, key
-  decisions — via procedural extraction (no remote model): git log
-  entries, lane STATE lines, prompt-lint reports. Depth levels.
-- Optional local-model summarization (vLLM/ollama) when fast enough /
-  queued efficiently — owner accepts local models for summary logging.
-- Output feeds L2/L3 situation detectors (context %, halt, drift,
-  stall) → strategies → intervention (nudge, lane note, /steer, kill).
+### P4 — safety + lifespan (unchanged)
+Lifespan per seat; wind-down FINAL; prompt-lint gate on every
+brief/steer; operation-gate for dangerous classes; hash-chained action
+log (card 94) so nobody can make it LOOK like the owner authorized
+something they didn't; observation local, no telemetry.
 
-### P4 — safety + lifespan
-- Lifespan declared per seat at spawn (e.g. `--lifespan 4h` or
-  wind-down-time); dashboard enforces FINAL write + wind-down (overnight
-  tandem pattern).
-- Prompt-lint as the request filter (dangerous-action class refuse +
-  operation-gate ref); attribution on every artifact.
-- Audit: seats' actions hash-chained (card 94) so nobody can make it
-  LOOK like the owner authorized something they didn't — the
-  owner's "prevent anyone making agents look illegal" requirement.
-- Observation stays local; no telemetry (owner 2026-08-09).
-
-## 5. Anti-goals (known-good doctrine)
-- No agent runs continually: every seat is spawned with a lifespan.
-- No LLM in the watch/control path (procedural, cheap); LLM only in
+## 4. Anti-goals (known-good doctrine, unchanged)
+- No agent runs continually; seats are ephemeral with declared lifespan.
+- No LLM in the watch/delivery path (procedural, cheap); LLM only in
   role-bearing seats and optional summaries.
-- No hardcoded pane layouts.
+- No hardcoded pane layouts; layouts are data (config + registry).
 - No cloud round-trips for observation.
+- Delivery is a mechanism, not a dead drop: lane-watch / ride-along
+  processes deliver; writing a file proves nothing until read.
 
-## 6. Open decisions (owner)
-- v1 window target: Konsole (proven, visible) vs plain tmux attach?
-  Default: Konsole for observed seats, tmux for batch.
-- Halt policy: auto-nudge after N min, or always ask owner?
-  Default: warn at 5 min, nudge via lane at 10, kill only on explicit
-  owner or exhausted lifespan.
-- Which services in P0 scope: day-ralph, gbd-*, unsloth-studio, and the
-  hermes gateway — confirm.
+## 5. Open decisions (owner)
+- Dashboard TUI implementation: Textual Python vs Lisp TUI? (llmtrim
+  itself is Python/Textual — check llmtrim's UI library first,
+  documentation-first.)
+- Window management at startup: which terminal (Konsole)? autostart via
+  .desktop or systemd user unit (learned: KDE-generated autostart units
+  bite; prefer owned systemd unit).
+- Ride-along process initial form: is `seat-up` + `lane-watch` +
+  ride-along-log.sh the v1, or does the dashboard TUI itself own the
+  panes?
 
 ## Attribution
-Directors/reviewers name producer agent+model. Draft: director
-(deepseek-v4-flash-0731), hermes TUI, 2026-08-09.
+Sanakan (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — integrating
+owner's 10:40 architecture directive verbatim in intent; report to owner
+for confirmation before the dashboard build begins.
