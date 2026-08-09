@@ -748,3 +748,13 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - `docs/design/backup-sync-integration.md` written; **ADR-043** (Syncthing + split, restic/borg deferred), **ADR-044** (OPA shelved) appended to decisions.md; research doc's OPA row + additions updated; next.md (P1 backup/sync row), roadmap.md (design-artifacts row), CHANGELOG done.
 - Phase A of the design (observe/status + Tier-0 out-of-sync detector, fixture-tested, no live instance) is the next concrete build when greenlit.
 - Docs updated; committed + pushed.
+
+### Session M9.33: Task deck 93–99 + Luna delegation verified
+**Status**: Deck composed + delivery verified (2026-08-08). Attended session (deepseek-v4-flash-0731 via openrouter, Hermes TUI).
+- **Owner directive**: compose plans/designs → requirements → granular task cards for continual dogfooding to cheaper agents; session estimates provisional until work is scaffolded onto surfaces.
+- **Delegation verified**: `gpt-5.6-luna` and `gpt-5.6-luna-max` both answer live through the **openai provider** with the existing `OPENAI_API_KEY` (probe exit 0, "LUNA_OK" / "LUNA_MAX_OK") — no Copilot OAuth, no install; the doc caveat about Copilot device-flow does not apply to this route. Delegated code completions on Luna are available per-card.
+- **Cards 93–99** written to `~/.hngh-night/tasks/` (each with context, VERIFIED FACTS, Do/MUST DO/MUST NOT DO, verification gate, attribution):
+  - 93 qlot pin (Wave C item 1, gate) → 94 hash-chain action log (item 4, gate) → 96 bwrap sandbox (item 2, gate) → 97 native least-agency scoping (item 3, gate — no OPA per ADR-044).
+  - 95 backup/sync Phase A observe (Syncthing REST status + Tier-0 detector, fixture-tested) — P1, sequenced alongside.
+  - 98 canary/scan sidecar (item 5, external services), 99 `:operation` gate extension (item 8) — tail after gate items.
+- next.md launch-context block updated with the deck + delegation availability. Docs committed + pushed.
