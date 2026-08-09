@@ -909,6 +909,16 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:verify-action-log-entries
            #:recent-denials))
 
+(defpackage :hngh.core.sandbox
+  (:documentation "Wave C per-task execution sandbox (autonomy-strategy §7 item 8): Bubblewrap default-deny FS/net wrapper for agent-generated/external tool execution; fail-closed (no bwrap => error, never unsandboxed fallback); attended agent sessions are NOT routed through it.")
+  (:use :cl :hngh.core)
+  (:export #:init
+           #:shutdown
+           #:running-p
+           #:bwrap-available-p
+           #:run-sandboxed
+           #:*bwrap*))
+
 (defpackage :hngh.client
   (:documentation "Client CLI — thin client for hngh-daemon wire protocol.")
   (:use :cl :hngh.core :hngh.core.wire-protocol)

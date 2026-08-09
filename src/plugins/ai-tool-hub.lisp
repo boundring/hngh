@@ -63,6 +63,8 @@
   providers     ; list of keywords (:anthropic :google :openai :local)
   cost-model    ; :per-query, :per-token, :subscription, :free
   context-format ; :opencode-prompt, :cli-args, :jsonl, :https-system-message
+  sandboxed-p   ; boolean — run this tool inside the bwrap per-task sandbox
+                ; (Wave C item 8; default NIL = run unsandboxed)
   dogfooding)   ; boolean — used to develop Hngh?
 
 (defstruct invocation-info
@@ -541,16 +543,27 @@
       (ensure-directories-exist (parse-namestring workdir)))
     (ecase (tool-info-type tool-info)
       (:agentic-cli
-       (execute-agentic-cli tool-id command task workdir))
+       (execute-agentic-cli tool-id command task workdir
+                            (tool-info-sandboxed-p tool-info)))
       (:direct-api
        (execute-direct-api tool-id task)))))
 
-(defun execute-agentic-cli (tool-id command task workdir)
+(defun execute-agentic-cli (tool-id command task workdir &optional sandboxed-p)
   "Run an agentic CLI tool with TASK.
-  Returns captured stdout as a string."
+  Returns captured stdout as a string.
+  SANDBOXED-P non-NIL routes execution through the bwrap per-task sandbox
+  (hngh.core.sandbox:run-sandboxed, Wave C item 8): default-deny FS/net,
+  writable only WORKDIR. Fail-closed: missing bwrap => error, never an
+  unsandboxed fallback."
   (let ((args (agentic-cli-args tool-id task)))
-    (hngh.core:log-info "AI Tool Hub: executing ~A ~S" command args)
-    (let ((proc nil))
+    (hngh.core:log-info "AI Tool Hub: executing ~A ~S (sandboxed: ~A)"
+                        command args (and sandboxed-p t))
+    (if sandboxed-p
+        (multiple-value-bind (out code)
+            (hngh.core.sandbox:run-sandboxed command args :task-dir workdir)
+          (declare (ignore code))
+          out)
+        (let ((proc nil))
       (handler-case
           (progn
             (setf proc
@@ -576,10 +589,10 @@
                   (hngh.core:log-warn
                    "AI Tool Hub: ~A exited with code ~D" command exit-code)))
               stdout))
-        (error (c)
-          (when (and proc (sb-ext:process-p proc))
-            (ignore-errors (sb-ext:process-close proc)))
-          (error "Failed to execute ~A: ~A" command c))))))
+          (error (c)
+            (when (and proc (sb-ext:process-p proc))
+              (ignore-errors (sb-ext:process-close proc)))
+            (error "Failed to execute ~A: ~A" command c)))))))
 
 (defun execute-direct-api (tool-id task)
   "Execute a direct API call using curl.
