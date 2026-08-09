@@ -82,8 +82,10 @@ two items out of eight.
 2. **Bubblewrap per-task sandbox** (item 6) — wrap the task driver's
    agent-generated-code execution; fail-closed profile (default-deny,
    `--ro-bind` only the task dir).
-3. **OPA evaluation for tool scoping** (item 3) — single Rego `main` +
-   subprocess call from `safety-boundary`/sentry; ship deny-all default.
+3. **Native least-agency tool scoping** (item 3) — extend
+   `safety-boundary`/sentry rules directly (delete-all-by-default tool grant
+   list on the tool hub), **no OPA** (ADR-044); revisit external policy
+   engine only for a fleet/owner-editable policy at scale.
 4. **Hash-chained action log** (item 2) — extend `journal/actions.lisp`
    with per-entry SHA-256 chain + verify command.
 5. **Canarytokens self-host + LLM Guard sidecar** (items 4–5) — tokens in
