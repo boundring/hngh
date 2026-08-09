@@ -89,6 +89,71 @@
       (is (eq :denied (getf (second log) :kind)))
       (is (integerp (getf (first log) :ts))))))
 
+;;; --- hash-chained action log (tamper-evident) ------------------------------
+
+(test action-log-carries-chain-hash
+  (%sf-with
+    (hngh.core.safety-boundary:log-action :denied :target "a.lisp")
+    (hngh.core.safety-boundary:log-action :denied :target "b.lisp")
+    (let ((log (hngh.core.safety-boundary:read-action-log)))
+      (is (= 2 (length log)))
+      (let ((h0 (getf (first log) :hash))
+            (h1 (getf (second log) :hash)))
+        (is (stringp h0))
+        (is (= 64 (length h0)))
+        (is (stringp h1))
+        (is (= 64 (length h1)))
+        (is (string/= h0 h1))))))
+
+(test verify-action-log-chain-intact
+  (%sf-with
+    (hngh.core.safety-boundary:log-action :denied :target "a.lisp")
+    (hngh.core.safety-boundary:log-action :locked :target "b.lisp"
+                                          :detail "mode-locked")
+    (hngh.core.safety-boundary:log-action :attempt :target "c.lisp")
+    (multiple-value-bind (ok idx)
+        (hngh.core.safety-boundary:verify-action-log)
+      (is-true ok)
+      (is (null idx)))))
+
+(test verify-action-log-reports-broken-index-on-tamper
+  (%sf-with
+    (hngh.core.safety-boundary:log-action :denied :target "a.lisp")
+    (hngh.core.safety-boundary:log-action :denied :target "b.lisp")
+    (hngh.core.safety-boundary:log-action :denied :target "c.lisp")
+    (let* ((log (hngh.core.safety-boundary:read-action-log))
+           (tampered (copy-list log))
+           (entry (copy-list (second tampered))))
+      (setf (getf entry :target) "b-EVIL.lisp")
+      (setf (second tampered) entry)
+      (multiple-value-bind (ok idx)
+          (hngh.core.safety-boundary:verify-action-log-entries tampered)
+        (is (not ok))
+        (is (= 1 idx))))))
+
+(test verify-action-log-tolerates-pre-chain-head
+  (%sf-with
+    ;; E1 is a genuine first-chain entry: appended to a fresh journal, so
+    ;; log-action chained it from the zero root.
+    (hngh.core.safety-boundary:log-action :denied :target "after-upgrade.lisp")
+    (let* ((e1 (first (hngh.core.safety-boundary:read-action-log)))
+           ;; E0 is a pre-migration entry that never carried a hash.
+           (e0 (list :kind :denied :ts 1 :target "legacy.lisp"
+                     :detail nil :attribution "legacy")))
+      (multiple-value-bind (ok idx)
+          (hngh.core.safety-boundary:verify-action-log-entries (list e0 e1))
+        (is-true ok)
+        (is (null idx))))))
+
+(test verify-action-log-fails-closed-on-malformed
+  (%sf-with
+    ;; An entry that is not a plist must fail closed (values NIL NIL),
+    ;; not leak a type error from the chain walk.
+    (multiple-value-bind (ok idx)
+        (hngh.core.safety-boundary:verify-action-log-entries '(42))
+      (is (not ok))
+      (is (null idx)))))
+
 ;;; --- status -----------------------------------------------------------------
 
 (test safety-boundary-status-shape

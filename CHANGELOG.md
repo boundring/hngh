@@ -10,6 +10,31 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — Wave C item 4: hash-chained action log
+- **`src/core/safety-boundary.lisp`** — the append-only action log
+  (`journal/actions.lisp`) is now **tamper-evident**: every entry carries
+  an additive `:hash` = SHA-256 over the previous entry's hash (32 raw
+  bytes; all-zero root for the first entry) and the entry's canonical
+  serialization (the same downcased/unpretty form `append-journal` writes,
+  so it re-derives byte-for-byte). Existing readers (`getf`-style, incl.
+  the case-base journal) are unaffected — the hash is an extra key.
+  - **`verify-action-log`** re-derives the whole chain and reports the
+    first broken index, fail-closed: `(values NIL IDX)` on the first
+    tampered entry, `(values NIL NIL)` on any read/parse error.
+    Pre-chain entries (written before this change) carry no hash and are
+    skipped — the chain restarts at the first hashed entry. `verify-action-log-entries`
+    exposes the same check over a caller-supplied list (fixture copies).
+  - Digest via **ironclad** (SHA-256) — SBCL has no built-in SHA-256
+    (`sb-md5` is MD5-only). Added `ql ironclad` to `qlfile`/`qlfile.lock`
+    (pin 2026-01-01) and `:ironclad` to `hngh.asd`.
+- New tests in the existing `:hngh.safety-boundary` suite (5): chain-carried
+  hash shape, chain intact, tamper → broken index on a fixture copy,
+  pre-chain-head tolerance, fail-closed on malformed input. Isolated temp
+  home, no network/model.
+- Verified `make test`: **851/851 fast, 0 fail-suites** (was 846; +5 new).
+  The 837 references in AGENTS.md/roadmap were already stale; corrected to
+  851 per `scripts/lint-test-counts.sh` verdict.
+
 ### Added — L2/L3 Tier-1 semantic judge + paren lint gate
 - **`src/plugins/situation-judge.lisp`** — cheap/local semantic judge (step 4
   of `situation-scoring.md` §8) catching what Tier-0 detectors cannot: faulty

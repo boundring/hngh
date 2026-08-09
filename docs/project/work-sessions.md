@@ -768,3 +768,35 @@ SDK adopted — CL owns it, protocolVersion pinned, per design decision.
 - **CI decision (owner, 2026-08-09)**: after diagnosing the long-failing build CI and deleting the spam `mirror.yml`, the per-push **build/test CI was dropped** — the local `make test` gate (lint-parens + lint-deps + 837 checks) is the quality source of truth and runs on every commit; server CI became **lint-only** (deterministic parens + dependency guardrails, pure python, seconds) as a future public health signal. Green on GitHub. Known CI-timing flake in AN ACP SUBPROCESS-PIPE TEST (`APPLY-SIGNAL-PAUSE-MAPS-TO-DISPATCH` — SIMPLE-STREAM-ERROR, fd read race) — passes locally; flagged as a genuine bug to fix (new task), no longer CI-blocking.
 - **Verified under the pin** (real output): `make test` exit 0, **837/837 fast, 0 fail-suites**, guardrails clean; `make build` exit 0 (53MB `bin/hngh`).
 - Docs: next.md (shipped block + Wave C row item 1 DONE), CHANGELOG, work-sessions. Task card 93 archived to `.done/`.
+
+### Session M9.35: Wave C item 4 — hash-chained action log
+**Status**: Delivered + verified (2026-08-09). Delegated session (drafting hermes/gpt-5.6-luna (delegated); brief hermes deepseek-v4-flash-0731).
+- **`src/core/safety-boundary.lisp`** — the append-only action log is now
+  tamper-evident (autonomy-strategy §7 item 10; direct precedent hermes-agent
+  #487, OpenFang-inspired): each entry carries an additive `:hash` =
+  SHA-256 over the previous entry's hash (32 raw bytes; zero root for the
+  first) and the entry's canonical serialization (same downcased/unpretty
+  form `append-journal` writes → byte-for-byte re-derivable). Wire format
+  intact for `getf`-style readers (incl. case-base journal) — hash is an
+  extra key.
+- **`verify-action-log`** re-derives the chain and reports the first broken
+  index, fail-closed: `(values NIL IDX)` on the first tampered entry,
+  `(values NIL NIL)` on any read/parse error. `verify-action-log-entries`
+  over a caller-supplied list (fixture copies). Pre-chain (un-hashed)
+  entries are skipped; the chain restarts at the first hashed entry
+  (migration-tolerance).
+- Digest: **ironclad** (SHA-256) — verified SBCL 2.6.7 has no built-in
+  SHA-256 (`sb-md5` is MD5-only). Added `ql ironclad` to `qlfile` +
+  regenerated `qlfile.lock` (pin 2026-01-01, ironclad ql-2024-10-12,
+  no transitive additions) + `:ironclad` in `hngh.asd`. Ironclad API read
+  from its README (make-digest/digest-sequence/byte-array-to-hex-string/
+  hex-string-to-byte-array), update-digest requires a simple-octet-vector →
+  encoded via babel (already a dep).
+- Tests (5 new in `:hngh.safety-boundary`): chain hash shape, chain intact,
+  tamper → broken index 1 on a fixture copy, pre-chain-head tolerance,
+  fail-closed on malformed input. Isolated temp home; no network/model.
+- **Verified** (real output): `make test` exit 0, **851/851 fast, 0
+  fail-suites** (safety-boundary 28→33; total was 846 at HEAD). `scripts/lint-test-counts.sh`
+  verdict: AGENTS.md + roadmap 837 refs were already stale → corrected to 851.
+- Docs: CHANGELOG (Wave C item 4 Added), work-sessions, next.md (Wave C row
+  item 4 → DONE). Committed locally (no push, per brief).

@@ -15,6 +15,7 @@
                :babel             ; UTF-8 encoding/decoding for wire protocol
                :jsonrpc           ; ACP client (Wave A1): JSON-RPC 2.0 + stdio transport
                :alexandria
+               :ironclad          ; SHA-256 for the hash-chained action log (Wave C item 4)
                :yason
                :sb-posix          ; stdio pipe FDs for the ACP transport (tests + client)
                ;; Future dependencies (available via Quicklisp when needed):
