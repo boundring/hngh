@@ -49,6 +49,14 @@ passed (tiny prompts, tight budgets). Not "one big task": even spread
 is what prevents the repeated outcome of quota running out before it
 makes a difference.
 
+GENERAL MODEL-CALLING PRINCIPLE (owner 2026-08-09): agents call on
+specific models for specific purposes, when needed. Nearly always cheap
+workhorses; a call may attach specific limits (token budgets, context
+windows), specifications, and instructions to a particular need.
+Models are tools in the agent's hands — the routing layer (per-role
+roll config, fallback chains, model_catalog providers) should make
+"cheap by default, specific by request" the natural shape.
+
 Most of these ARE in the shipped manifest (openrouter + nous carry
 luna, luna-pro, flash-0731, k3, glm-5.2, mimo). The gaps are:
 1. **unsloth-local family** — not canonical, lives in config `providers:`.
