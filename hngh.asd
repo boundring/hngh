@@ -74,6 +74,7 @@
                  (:file "plugins/hngh-planner")
                  (:file "plugins/quota-spreader")
                  (:file "plugins/signals")
+                 (:file "plugins/prompt-lint")
                  (:file "plugins/acp-transport")
                  (:file "plugins/acp-client")
                  (:file "plugins/hngh-coord/coord")
