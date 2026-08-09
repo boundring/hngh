@@ -317,6 +317,10 @@ INPUT GATING (Cibo review 12:55):
   LLM): steers and acks are briefs; the same gate that checks seats'
   briefs applies here. Failed lint → dropped with a message in the
   ride-along, never silently forwarded.
+- All writes go through the append helper (`lane-append`) and land a
+  breadcrumb (durable-coordination-records.md §4); every steer that
+  dispatches also writes a COORD JOURNAL record (kind "steer") so the
+  dashboard's per-seat steer history is data, not prose archaeology.
 
 ### 8.3 Design: agent back-channel (MCP first, tmux + lane fallback)
 
@@ -393,4 +397,7 @@ Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §8 amended
 until owner runs `hermes mcp add` + independent wire test; tool
 alignment (status supersedes coord-view; verify args per coord.lisp);
 MCP steer vs tmux seat-steer distinguished; ride-along input gating
-(known-lane append-only + prompt-lint).
+(known-lane append-only + prompt-lint).Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09 — §8 input-gating
+extended 13:15 (owner durable-records doctrine): writes via lane-append
+helper + breadcrumb; steer dispatch writes COORD JOURNAL (kind steer)
+for data-driven steer history (durable-coordination-records.md §4/§2).

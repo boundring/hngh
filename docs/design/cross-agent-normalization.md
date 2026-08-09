@@ -106,6 +106,26 @@ sweep sees a later line in the same lane that resolves it:
 - FINAL-* says green but earlier line named a failure ⇒ that failure's
   outcome = `:resolved` (context collapse), the recorded action worked.
 
+## 5a. Durable records as the feed source (owner 13:10/13:11)
+
+The lane sweep above reads MUTABLE prose. Once durable records land
+(durable-coordination-records.md), the feed prefers STRUCTURED sources
+and demotes prose parsing to fallback:
+
+- **Steer ledger** (COORD JOURNAL, kind "steer"): every /steer
+  (:ts :from :to :kind :body :id) maps directly to a case-base record
+  with `:source :human`, `:situation :human-steer`, `:weight 2.0`,
+  `:action :steer` — no prose classification needed. This is the
+  §7.5 ground-truth feed.
+- **Breadcrumbs** (journal/breadcrumbs-<seat>.lisp): STATE/STEER/DONE/
+  ACK lines are the auto-detected-state feed; the sweep maps kind →
+  situation class (STEER → steer-detected; DONE → verification;
+  ACK → outcome-resolved) with `:source :auto`.
+- **Dedup** uses the record `:id` (or breadcrumb ts+seat+kind) as the
+  `:dedup-key` — stronger than file+line.
+- Prose lane sweep remains as a fallback for lanes without records
+  (pre-migration history, human hand edits).
+
 ## 6. Acceptance (this card)
 
 - Schema doc (this file) approved → gate for 111B.
@@ -126,3 +146,7 @@ sweep sees a later line in the same lane that resolves it:
 Attribution: tandem seu — deepseek/deepseek-v4-flash-0731, hermes TUI,
 2026-08-09. Informed by situation-scoring.md (§7 self-improving loop, §8
 step 6) and situation-casebase.lisp make-case field shape.
+Attribution addendum: Seu (deepseek-v4-flash-0731), hermes TUI, 2026-08-09
+— §5a added for owner durable-records doctrine (13:10/13:11): steer
+ledger + breadcrumbs become the structured feed, prose sweep demoted to
+fallback.
