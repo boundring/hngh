@@ -187,6 +187,68 @@
         (delete-file steers))
       (when (probe-file owner)
         (delete-file owner)))))
+(test tui-reads-seat-registry-status
+  (let ((registry (make-pathname :name "seat-names" :type "md"
+                                 :defaults (uiop:temporary-directory)))
+        (lanes (merge-pathnames "seat-lanes/"
+                                (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (ensure-directories-exist lanes)
+           (with-open-file (stream registry :direction :output :if-exists :supersede)
+             (format stream "- Cibo — ASSIGNED~%")
+             (format stream "- Seu — ASSIGNED~%")
+             (format stream "- Dhomochevsky — available~%"))
+           (let ((cibo (merge-pathnames "tandem-cibo/" lanes))
+                 (seu (merge-pathnames "tandem-seu/" lanes)))
+             (ensure-directories-exist cibo)
+             (ensure-directories-exist seu)
+             (with-open-file (stream (merge-pathnames "model-status" cibo)
+                                     :direction :output :if-exists :supersede)
+               (format stream "requested=gpt provider=openrouter negotiated=gpt status=verified~%"))
+             (with-open-file (stream (merge-pathnames "model-error" seu)
+                                     :direction :output :if-exists :supersede)
+               (format stream "ERROR requested=x negotiated=missing status=paused~%")))
+           (let ((seats (hngh.plugins.dashboard-tui:read-seat-status registry lanes)))
+             (is (= 2 (length seats)))
+             (is (equal "verified"
+                        (getf (cdr (assoc "Cibo" seats :test #'string=)) :status)))
+             (is (equal "paused"
+                        (getf (cdr (assoc "Seu" seats :test #'string=)) :status)))))
+      (when (probe-file registry) (delete-file registry))
+      (when (probe-file lanes)
+        (uiop:delete-directory-tree lanes :validate #'identity)))))
+
+(test tui-renders-seat-window-status
+  (let ((registry (make-pathname :name "seat-render" :type "md"
+                                 :defaults (uiop:temporary-directory)))
+        (lanes (merge-pathnames "seat-render-lanes/"
+                                (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (ensure-directories-exist lanes)
+           (with-open-file (stream registry :direction :output :if-exists :supersede)
+             (format stream "- Cibo — ASSIGNED~%"))
+           (let ((lane (merge-pathnames "tandem-cibo/" lanes)))
+             (ensure-directories-exist lane)
+             (with-open-file (stream (merge-pathnames "model-status" lane)
+                                     :direction :output :if-exists :supersede)
+               (format stream "requested=gpt provider=openrouter negotiated=gpt status=verified~%")))
+           (hngh.core.event-bus:init :hngh-home (make-tmp-home))
+           (hngh.plugins.dashboard-tui:init :headless t)
+           (let ((hngh.plugins.dashboard-tui::*seat-registry-path* registry)
+                 (hngh.plugins.dashboard-tui::*seat-lanes-root* lanes))
+             (hngh.plugins.dashboard-tui:handle-key #\7)
+             (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
+               (is (search "Seats" output))
+               (is (search "Cibo" output))
+               (is (search "verified" output))))
+           (hngh.plugins.dashboard-tui:shutdown)
+           (hngh.core.event-bus:shutdown))
+      (when (probe-file registry) (delete-file registry))
+      (when (probe-file lanes)
+        (uiop:delete-directory-tree lanes :validate #'identity)))))
+
 (test tui-handle-key-q-stops
   (let ((tmp (make-tmp-home)))
     (cleanup-tmp-home tmp)
