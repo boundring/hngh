@@ -42,6 +42,13 @@ workhorse or should be considered for it. Strategic reserve = models at
 or above the line (currently K3, glm-5.2 pending price check, frontier)
 used deliberately, quota-distributed, never idle-unused.
 
+K3 use tactic (owner 2026-08-09): distribute as evenly as possible
+across each window (5h / 7d / monthly). Many SMALL strategic calls —
+code completions, doc improvements — with HEAVY restrictions on tokens
+passed (tiny prompts, tight budgets). Not "one big task": even spread
+is what prevents the repeated outcome of quota running out before it
+makes a difference.
+
 Most of these ARE in the shipped manifest (openrouter + nous carry
 luna, luna-pro, flash-0731, k3, glm-5.2, mimo). The gaps are:
 1. **unsloth-local family** — not canonical, lives in config `providers:`.
