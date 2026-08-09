@@ -63,6 +63,14 @@ TO SCRUTINY AUTOMATICALLY:
   remains one implementation, swappable.
 - Either way: the shell script is a PROTOTYPE ONLY, explicitly not
   reference-by-inertia.
+- OPERATOR DIRECTIVE (15:39, D2): the watcher layer must be
+  WITHIN Hngh's scope and control — not an external supervisor the
+  agents happen to run under, but a Hngh-owned surface: Hngh
+  decides what runs, when, with what knobs, and where its events
+  land (dashboard, seats, operator). Any routine (backup observe
+  per D2, lane-change, idle-backstop) registers with the layer and
+  is governed by Hngh — same config, same lifecycle, same feed.
+  The shell watcher never becomes a second authority beside Hngh.
 
 ## 5. Transition rule
 
