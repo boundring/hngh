@@ -38,7 +38,7 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 
 ## Current state (2026-08-08)
 
-- **Tests**: `make test` green — 851/851 fast @ 6e6ddcb (L2/L3 Tier-0 situation detectors + L3 scorer + semantic judge + persistent case-base/review loop built; W5 prompt matrix committed: generate-prompt, 36-skeleton library, bone fillers, flesh pass, D-040 synced model selection, prompt cache)
+- **Tests**: `make test` green — 858/858 fast @ 6e6ddcb (L2/L3 Tier-0 situation detectors + L3 scorer + semantic judge + persistent case-base/review loop built; W5 prompt matrix committed: generate-prompt, 36-skeleton library, bone fillers, flesh pass, D-040 synced model selection, prompt cache)
 - **M7 daemon**: committed (28d92ad). Wire protocol + daemon core + client CLI + systemd units
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
