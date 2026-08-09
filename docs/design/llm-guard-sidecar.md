@@ -84,6 +84,10 @@ boundary ships regardless.
 - The real llm-guard (or NeMo) integration is a thin adapter tested
   separately (smoke: one real scan call, offline-capable scanners
   only — no model download at test time).
+- The adapter stays BACKEND-NEUTRAL (cibo note 17:21): the scan()
+  interface is the only surface prompt-lint wiring sees; swapping
+  llm-guard for a maintained backend changes the adapter only, never
+  the wiring. This is the C-choice guarantee made concrete.
 
 ## ACCEPTANCE (this design)
 

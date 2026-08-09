@@ -50,6 +50,10 @@ REACTION: <ts> <source: steer|oob|correction|timing-judgment>
 - Retention: operator-gated (privacy question, see §5) — default
   proposal: keep verbatim text locally, archive after 30 days to
   the dated back-dir (same as Projects/back pattern).
+- INTERIM (cibo note 17:21): verbatim TEXT stays disabled until the
+  operator privacy choice; VALENCE+ACTION-only recording is the
+  correct default and the fixture asserts no TEXT is stored in that
+  mode.
 
 ## 4. Learners — who consumes the corpus
 

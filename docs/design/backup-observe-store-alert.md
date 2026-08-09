@@ -60,7 +60,10 @@ conflict-file. D2 adds TWO surfaces on top, nothing mutating:
   (healthy x2, unhealthy x1, unhealthy x2, unhealthy x3) against a
   fixture inbox; assert: no alert before M=3, alert lands after M=3
   in bounded-brief format, alert does NOT re-fire mid-window, and
-  the re-fire after the next window carries fresh facts.
+  the re-fire after the next window carries fresh facts. The
+  persistence fixture must PROVE no mid-window duplicate AND fresh
+  facts on re-fire (cibo note 17:21) — a stale-facts re-fire is a
+  distinct failure the fixture asserts against.
 - NO-MUTATION guard: fixture asserts zero writes to Syncthing config
   (the observe client never calls a POST endpoint; unit test on the
   endpoint allowlist).
