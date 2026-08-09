@@ -42,11 +42,15 @@ Timing knobs — IDLE_BOUND, NUDGE_GRACE, WAIT_TTL, RC4_SLOT,
 SLEEP_FLOOR — become per-routine CONFIG, and the knobs are SUBJECT
 TO SCRUTINY AUTOMATICALLY:
 
-- The layer records each nudge outcome (was it consumed? did the
-  seat act? how long to respond? was the seat actually stalled?).
+- The layer records each nudge outcome — fields: consumed? acted?
+  latency-to-act? stalled? — and that record IS the evidence source
+  (named fields, not vibes).
 - A tuner adjusts knobs by feedback: too many unconsumed nudges →
   raise grace; waits that needed more than WAIT_TTL → raise TTL;
   seats that always act on first nudge → fewer nudges needed.
+- The tuner ITSELF starts as a routine — a pure function of the
+  outcome log — dogfooding the layer before the layer exists;
+  its fixture reads a sample outcome log and asserts the knob delta.
 - Today the owner/seat hand-tunes constants; the layer replaces that
   cycle with recorded evidence. The tuning is conservative — each
   knob drifts by small deltas, never jumps, and logs every change.
