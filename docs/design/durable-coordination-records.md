@@ -330,3 +330,54 @@ solo). Recorded here so the code and the doc agree:
 Attribution (15:05): tandem seu + killy + cibo consensus recorded —
 group design, owner-steered; seu drafting §7.2 for cibo's watcher
 update build target.
+
+### 7.3 Wake composition: what a woken seat does (owner 15:24)
+
+The wake message is not a blank "check your inboxes + deck" template.
+It is COMPOSED from state — the watcher knows why it nudged, who else
+is working, and what the seat owns. The nudge text then says what to
+DO, not just where to look.
+
+Inputs the watcher already has (no new reads):
+- nudge reason: lane-change (which lane moved) vs idle-backstop vs
+  unmarked-sleep vs WAIT-GATE-expired.
+- co-agent state: the claims register (§8) — who holds which surface;
+  live lane mtimes per seat.
+- deck state: open/unclaimed cards in ~/.hngh-night/tasks/.
+- own claims: what THIS seat holds (from the register).
+
+Composed wake, by reason:
+1. LANE-CHANGE: name the lane that moved and why it matters —
+   "cibo finished card 105 (lane move). Your waiting card
+   `card:105` is free; pick it up or check its HANDOFF." The seat
+   goes straight to the NEW work, not through a general scan.
+2. IDLE-BACKSTOP with open deck: enumerate the seats working now and
+   the unclaimed next card — "killy holds watchdog, cibo holds 105.
+   Next unclaimed: 109B (brief ready). Take it." Coordination intent
+   survives in the nudge itself.
+3. WAIT-GATE EXPIRED: name the gate and the stale claim — "WAIT-GATE
+   was honored 10min; its target (cibo's card 105) has not moved.
+   Decide: escalate to owner or take a different card."
+4. UNMARKED SLEEP: no composition needed — the doctrine line
+   (declare-or-end) is the whole message; it is the one case where
+   the fixed template is correct.
+
+Generic checklist (appended when reason does not fit 1-4):
+1. Reconcile: claims you hold that are done → CLAIM-RELEASE line.
+2. Check co-agent HANDOFF files (who finished, what they left).
+3. Pick the next unclaimed card whose surface you do not conflict
+   with (§8.2 rung 1).
+4. If nothing stands, WRITE THE STATE and end the turn — no in-turn
+   sleep, the watcher re-wakes you on lane change.
+
+Parameterization: seat lists come from the REGISTRY
+(registry/roll config), never hardcoded `for s in killy seu cibo`.
+The composition reads `$TANDEM-*/inbox.md` mtimes + claims
+generically; a seat works SOLO when the registry has one entry and
+the message then omits co-agent enumeration and says so directly:
+"you are the only seat; owner surfaces: ..." — no phantom "help the
+others" when there are no others.
+
+Attribution (15:30): tandem seu — owner 15:24 direction — wake
+composition design; cibo owns the wake-line code (owner-assigned),
+this is its spec. Complements §7.2 delivery contract.
