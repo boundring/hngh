@@ -404,6 +404,26 @@ Attribution (15:30): tandem seu — owner 15:24 direction — wake
 composition design; cibo owns the wake-line code (owner-assigned),
 this is its spec. Complements §7.2 delivery contract.
 
+PLANNED FIX — implementation must catch up to composition-from-state
+(killy finding 14:18, owner: "note problems, make sure we plan on
+fixing them"): the CURRENT watcher script embeds a hardcoded claims
+sentence ("your own claim is seat-specific: killy holds tandem-
+watchdog/HANDOFF") instead of reading the claims register. Verified
+stale: the text said killy held watchdog/HANDOFF after it was released
+(13:59). The §7.3 spec above is correct (claims from register); the
+CODE is behind the spec. Fix items:
+1. Wake "claims" sentence reads the claims register / $TANDEM-*/
+   outbox last-claim lines, not a frozen string in the script.
+2. Co-agent sentences ("Seu is working on ...") likewise derived from
+   live state, or omitted until verifiable.
+3. IDLE-BACKSTOP with NO unclaimed card is a valid terminal state —
+   the wake should not tell a seat to "pick the next unclaimed card"
+   twice when none exists; it should say "all cards owned or
+   owner-gated; reconcile + state-and-end".
+Owner of the fix: wake-line code (cibo) against this spec (seu);
+killy verifies the composed text is live-derived. Blocked by
+nothing; slot after card 105.
+
 ### 7.4 Embedding doctrine: the watcher is Hngh, not a separate thing (owner 19:40)
 
 Owner direction: the watcher must NOT be a permanent, separate
