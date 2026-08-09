@@ -21,7 +21,7 @@ DAEMON_BINARY = $(BUILD_DIR)/hngh-system
 
 # --- Targets ---
 
-.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens scrub-pii
+.PHONY: all run clean test check test-full test-fast test-suite test-beans test-model-runtime test-squad-dispatch lint-counts lint-parens lint-deps scrub-pii
 
 all: $(BINARY) $(CLIENT_BINARY)
 
@@ -79,7 +79,7 @@ test-model-runtime:
 test-squad-dispatch:
 	$(MAKE) test-suite SUITE='(:hngh.squad-dispatch)'
 
-test-suite: lint-parens
+test-suite: lint-parens lint-deps
 	timeout --foreground $(FAST_TEST_TIMEOUT)s $(SBCL) $(SBCL_FLAGS) \
 	--eval "(require 'asdf)" \
 	--eval "(push (truename \".\") asdf:*central-registry*)" \
@@ -90,6 +90,9 @@ test-suite: lint-parens
 ## Lint source for unbalanced parens before running tests (procedural guard).
 lint-parens:
 	@python3 scripts/lint-parens.py $(LISP_FILES) || exit 1
+
+lint-deps:
+	@python3 scripts/lint-deps.py || exit 1
 
 ## Scrub owner identifiers from the tracked tree (report mode; CI non-failing).
 ## Use `scripts/scrub-pii.py --fix` to apply the ~/ rewrite manually.
