@@ -33,8 +33,11 @@ K2, Terra, Sol, Anthropic, Gemini, MiniMax, or an unknown-price route.
   price/budget evidence; it is never a default squad seat.
 - **Agents are disposable; Hngh persists.** Retire a session after a completed
   phase, a verified blocker, or a no-evidence state once its factual handoff is
-  valid. Start a fresh cheap successor if work remains. Continuation or
-  resurrection needs a named non-reconstructible value, bounded purpose, and
+  valid. Start a fresh cheap successor if work remains. Compare bounded
+  continuation cost (retained input plus likely output/retries and drift) to
+  verified reset loss (non-reconstructible state plus packet startup); continue
+  only when reset loss is demonstrably higher. Continuation or resurrection
+  needs a named non-reconstructible value, bounded purpose, and
   recorded cost reason; preserving chat context is never enough.
 - **Fresh sessions are cheap by design.** When a bounded task stops producing
   evidence, prepare a procedural factual handoff and retire the session with
