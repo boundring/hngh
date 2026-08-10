@@ -191,7 +191,10 @@ catalog -> classify -> estimate -> admit/refuse -> launch packet
 ```
 
 Adapters must support: route selection, profile selection, packet injection,
-context observation, compact-handoff request, and actual-usage receipt. Missing
+context observation, compact-handoff request, and actual-usage receipt. The
+strict `hngh-opencode` adapter is local-only by default: it uses purpose-built
+implement/review/probe roles, bounded steps, no automatic subagents, and
+OpenCode's pruned auto-compaction inside an Hngh-governed sprint. Missing
 adapter evidence fails closed for reserve calls and degrades workhorse calls to
 the configured local/cheap route.
 
@@ -214,7 +217,8 @@ benefit and a bounded cost record.
 5. Card 130: audit minimal Hermes/OpenCode surface; then apply named profiles
    and remove non-purposeful MCP servers.
 6. Card 133: model-control adapter contract plus Hermes/OpenCode launch seams.
-7. Card 134: fixture-first, local/cheap context/profile benchmark runner.
+7. Card 134: fixture-first, local/cheap context/profile benchmark runner,
+   including `hngh-opencode` JSON-event measurements.
 
 No autonomous reserve escalation, paid benchmark fan-out, or permanent shell
 watcher feature is part of this design.
