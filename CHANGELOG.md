@@ -43,7 +43,9 @@ independent challenge, and case-base/benchmark evidence. Kimi quota is
 K3-only; GLM 5.2 is the preferred architecture teacher; Sol and Anthropic
 are disabled; K2/MiMo/Terra remain explicit packeted specialists. Input and
 output tokens are jointly budgeted: compact evidence packets replace transcript
-replay and routine status prose. Measured
+replay and routine status prose. Fresh sessions are normal: a procedural
+handoff, evidence-backed retirement reason, and cheap successor replace
+open-ended continuation. Measured
 fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped standard Hngh sessions at 40 turns, and

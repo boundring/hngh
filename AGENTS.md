@@ -31,6 +31,10 @@ K2, Terra, Sol, Anthropic, Gemini, MiniMax, or an unknown-price route.
 - **GPT-5.6 Sol** and all **Anthropic** routes are disabled for Hngh.
   **Luna** is an opt-in coding seat (`squad-up luna-coder`) that needs current
   price/budget evidence; it is never a default squad seat.
+- **Fresh sessions are cheap by design.** When a bounded task stops producing
+  evidence, prepare a procedural factual handoff and retire the session with
+  its reason. A successor gets the packet, not a transcript or inherited claim;
+  it starts on the next named verification.
 - **Token cost is bilateral.** Bound both prompt input and generated output:
   pass compact factual packets with source references, not transcript replay;
   use a short message class rather than status narrative; do not repeat
