@@ -33,7 +33,9 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   profile audit. OpenCode removed NotHumanSearch and unfiltered DepScope;
   only local MisakaNet remains. Created mandatory standard `hngh` and
   local-only `hngh-minimal` profiles; Hngh launchers now select `hngh`, which
-  retains only core Hngh capabilities. Measured fixed-prompt budgets are documented in
+  retains only core Hngh capabilities. Hngh now treats 20 turns as a sprint
+target and 40 as a safety cap; continuation is evidence-gated. Measured
+fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped turns at 80, and removed strategic routes
   from automatic fallbacks. Fresh-seat screenshot evidence still showed 72.6K
