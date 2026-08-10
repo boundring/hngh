@@ -136,7 +136,8 @@ Disabled toolsets and MCPs must not load their schemas into the profile. The
 runtime controls profile selection at launch; it does not rely on agents to
 ignore unused affordances. On 2026-08-10 the active Hermes config removed
 Blender, Unreal Engine, and NotHumanSearch MCPs; only Hngh, MisakaNet, and
-DepScope remain pending profile audit.
+DepScope remain pending profile audit. OpenCode likewise retains only MisakaNet
+and DepScope after removing NotHumanSearch.
 
 ## Accuracy and situation routines
 
