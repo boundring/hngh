@@ -211,7 +211,7 @@ explicit selection, capped, and configurable — never by default or accident.
 
 ---
 
-## 4. K3 quota-distribution driver
+## 5. K3 quota-distribution driver
 
 The driver is opt-in routing, not a new scheduler. It exists
 because a GATE alone distributes nothing: zero K3 today means no
@@ -220,7 +220,7 @@ call ever routes to K3, so the even-rate envelope never draws down
 work, ROUTE it when the envelope has room, and GUARANTEE
 availability across all three reset windows (5h / 7d / 30d).
 
-### 4.1 Flagging — what counts as K3-appropriate work
+### 5.1 Flagging — what counts as K3-appropriate work
 
 A situation class is K3-appropriate iff it is an authority
 situation AND the judgment is high-stakes enough to justify the
@@ -239,26 +239,33 @@ tags a task with its class at creation (existing mechanism), the
 driver reads the tag. No heuristic "is this important enough"
 scan; the class IS the flag. Unknown classes refuse (fail-closed).
 
-### 4.2 Routing decision — even-rate iff within envelope
+### 5.2 Routing decision — even-rate iff within envelope
 
 ```
 should-route-to-k3-p (situation-class):
   1. class in {code-final-review, plan-veto, design-authority}? else NO
   2. reservation not exhausted? else NO (strategic reserve refusal)
-  3. every bucket (hour/day/week/30d) within even-rate envelope
-     (%even-rate-ok-p: used <= f*cap with safety margin)? else NO
+  3. every bucket (five-hour/hour/day/week/30d) within even-rate
+     envelope (%even-rate-ok-p: used <= f*cap with safety margin)?
+     else NO
   4. else YES
 ```
 
 - The spreader math stays untouched — the driver only calls
   `quota-ok-p` + `%even-rate-ok-p` through `should-route-to-k3-p`.
+- PERIOD NAMES (impl b94d00d): the kimi-sub buckets are
+  `:five-hour` (18000s) + `:hour` + `:day` + `:week` + `:month`.
+  `:five-hour` is the PRIMARY short horizon — it matches the
+  OPERATOR's stated 5h reset window (5h/7d/30d); `:hour` is a
+  rate-limit sub-bucket. The doc's earlier "hour as short
+  horizon" phrasing is superseded: five-hour first.
 - REFUSED does not mean cancelled: the caller falls back to the
   workhorse route (gpt-5.6-luna etc.) with a ledger note
   "k3-refused-over-envelope". The task still completes; only the
   route changes. This is opt-in, not a hard dependency.
 - Consumption is ledgered (`quota-consumed`) exactly as today.
 
-### 4.3 The 30-day window
+### 5.3 The 30-day window
 
 The kimi-sub envelope gains a MONTH/30d bucket (config gap,
 killy 20:30). Semantics:
@@ -276,7 +283,7 @@ killy 20:30). Semantics:
 - The 30d bucket is a LONG-HORIZON GUARD — it rarely fires alone,
   but it is the backstop against "exhausted the month by the 10th".
 
-### 4.4 Availability guarantee — floor + spend-if-idle
+### 5.4 Availability guarantee — floor + spend-if-idle
 
 The operator's both-wrongs: zero use all day AND exhausted-early.
 Two complementary policies:
@@ -310,25 +317,39 @@ Two complementary policies:
       strategic-reserve doctrine — K3 is used deliberately, not
       burned because it's there.
 
-### 4.5 Signal surface (readable by planner + watcher)
+### 5.5 Signal surface (readable by planner + watcher)
 
-`quota-status (route)` returns:
+`quota-status (route)` — TWO FORMS:
 
+v1 (shipped, b94d00d) — human-readable string:
+```
+"kimi-sub: available-now (used=0 elapsed=0)"   ; or "over-even-rate"
+```
+Serves the dashboard glance. The planner/watcher consumers named
+below need STRUCTURED fields — the v1 string is the INTERIM form.
+
+TARGET (consumer contract — planner + watcher + idle-sweep need
+these fields):
 ```
 (:route kimi-sub
  :available-now <tokens>
- :projected-until <iso or nil>
+ :projected-until <iso or nil>     ; when fair-share runs out
  :envelope-percent <0..100>
  :reservation-left <tokens>
- :windows ((:hour <pct>) (:day <pct>) (:week <pct>) (:30d <pct>)))
+ :windows ((:five-hour <pct>) (:hour <pct>) (:day <pct>)
+           (:week <pct>) (:30d <pct>)))
 ```
+`projected-until` is REQUIRED for the §5.4 idle-sweep (it decides
+"budget idling, suggest now") — without it the sweep cannot judge
+under-consumption. Treat the structured form as the 121 impl
+follow-up.
 
 Consumers: the planner (before scheduling an authority task), the
 watcher layer (117 — the idle-sweep suggestion feeds a wake cycle
 of kind "realign" per 120 §G), and the dashboard (116 — a K3
 budget view, one number the operator can glance at).
 
-### 4.6 Tie to 120 (self-adjustment, judgment layer)
+### 5.6 Tie to 120 (self-adjustment, judgment layer)
 
 The driver is a judgment layer of the same family as the watcher's
 self-adjustment: it notices (budget idling), decides (an
@@ -340,7 +361,7 @@ raises the bar (suggests only when the idleness is material); if
 acted on and useful, it keeps the cadence. Same closed loop as
 watcher knob tuning.
 
-### 4.7 Scope guard (what the driver is NOT)
+### 5.7 Scope guard (what the driver is NOT)
 
 - Not a scheduler — routes via the existing routing table.
 - Not a silent spender — suggestions and opt-in only.
@@ -349,7 +370,7 @@ watcher knob tuning.
 
 ---
 
-## 5. What this is NOT (scope guard)
+## 6. What this is NOT (scope guard)
 
 - Not a new scheduler — it reuses `core/scheduler.lisp` and the existing
   routing table.
@@ -362,7 +383,7 @@ watcher knob tuning.
 
 ---
 
-## 6. Concrete near-term steps (C6 Wave-2 adjacent, cheap)
+## 7. Concrete near-term steps (C6 Wave-2 adjacent, cheap)
 
 1. **`quotas.lisp` data + envelope reader** — a small Lisp module (or extend
    model-routing) with `quota-envelope (route)`, `quota-ok-p (route amount)`,
