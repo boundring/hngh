@@ -90,15 +90,6 @@
     (is (find 'code-final-review rs :key (lambda (r) (getf r :situation))
               :test (lambda (a b) (string= (symbol-name a) (symbol-name b)))))))
 
-(test reservation-within-cap-is-ok
-  (is-true (hngh.plugins.quota-spreader:quota-reserved-ok-p
-            'kimi-sub 'code-final-review :used 100000)))
-
-(test reservation-over-cap-refuses
-  (is-false (hngh.plugins.quota-spreader:quota-reserved-ok-p
-             'kimi-sub 'code-final-review
-             :used 500000)))
-
 (test unlisted-situation-has-no-reservation
   ;; A situation with no reservation is not an authority draw (general pool).
   (is-false (hngh.plugins.quota-spreader:quota-reserved-ok-p
@@ -137,6 +128,26 @@
             (progn ,@body)
          (hngh.core.state-store:shutdown)
          (cleanup-tmp-home ,tmp-var)))))
+
+(test reservation-within-cap-is-ok
+  ;; Full even-over window elapsed: the whole reserved cap share is available.
+  (with-quota-fixture (tmp)
+    (let ((now (get-universal-time)))
+      (hngh.core.state-store:write-state
+       "quota-anchors"
+       (list (list :route 'kimi-sub :period :week :anchor (- now 604800))))
+      (is-true (hngh.plugins.quota-spreader:quota-reserved-ok-p
+                'kimi-sub 'code-final-review :amount 50)))))
+
+(test reservation-over-cap-refuses
+  ;; Even at full window the 1.1 margin caps the share; amount over it refuses.
+  (with-quota-fixture (tmp)
+    (let ((now (get-universal-time)))
+      (hngh.core.state-store:write-state
+       "quota-anchors"
+       (list (list :route 'kimi-sub :period :week :anchor (- now 604800))))
+      (is-false (hngh.plugins.quota-spreader:quota-reserved-ok-p
+                 'kimi-sub 'code-final-review :amount 200)))))
 
 (test card-128-authoritative-settlement-writes-actual-before-next-admission
   (with-quota-fixture (tmp)
@@ -207,3 +218,123 @@
                     :elapsed-seconds 18000))
       (hngh.core.state-store:release-lock
        "quota-reservations" :holder "other-seat"))))
+
+(test card-128-public-predicate-uses-settled-ledger
+  (with-quota-fixture (tmp)
+    (is-true (hngh.plugins.quota-spreader::quota-reserve
+              'kimi-sub :sanity-review
+              :reservation-id "public-a" :amount 10
+              :elapsed-seconds 18000))
+    (is-true (hngh.plugins.quota-spreader::quota-settle
+              "public-a" :actual-amount 90))
+    ;; Caller :used is ignored by the public K3 predicate; settled actuals win.
+    (is-false (hngh.plugins.quota-spreader:should-route-to-k3-p
+               :sanity-review :used 0 :amount 1
+               :elapsed-seconds 18000))))
+
+(test card-128-actual-usage-is-window-specific
+  (with-quota-fixture (tmp)
+    (let* ((now (get-universal-time))
+           (usage (list (list :route 'kimi-sub :actual-amount 90
+                              :at (- now 100) :units :tokens)
+                        (list :route 'kimi-sub :actual-amount 90
+                              :at (- now 40000) :units :tokens))))
+      (hngh.core.state-store:write-state "quota-usage.lisp" usage)
+      (is (= 90
+             (hngh.plugins.quota-spreader::%actual-usage
+              'kimi-sub :five-hour now)))
+      (is (= 180
+             (hngh.plugins.quota-spreader::%actual-usage
+              'kimi-sub :week now))))))
+
+(test card-128-reset-anchors-are-per-bucket
+  (with-quota-fixture (tmp)
+    (let ((now (get-universal-time)))
+      (hngh.core.state-store:write-state
+       "quota-anchors"
+       (list (list :route 'kimi-sub :period :week
+                   :anchor (- now 604800))
+             (list :route 'kimi-sub :period :five-hour
+                   :anchor (- now 10))))
+      (is-true (hngh.plugins.quota-spreader:maybe-advance-reset 'kimi-sub))
+      (let ((anchors (hngh.core.state-store:read-state "quota-anchors")))
+        (is-true (find :week anchors :key (lambda (entry) (getf entry :period))))
+        (is (= (- now 10)
+               (getf (find :five-hour anchors
+                           :key (lambda (entry) (getf entry :period)))
+                     :anchor)))))))
+
+(test card-128-reserve-advances-stale-bucket-before-admission
+  ;; Seu seam: quota-reserve must run %advance-resets-under-lock BEFORE the
+  ;; admission math, exactly like both public paths do. A five-hour anchor
+  ;; left 3 periods in the past keeps the prior period's burn inside the
+  ;; window; the reserve must roll the anchor so old burn can't block a
+  ;; fresh current-period spend.
+  (with-quota-fixture (tmp)
+    (let ((now (get-universal-time)))
+      ;; Stale five-hour anchor (3 periods back) + an old-period burn of 1000
+      ;; tokens. Month cap is 10000 and week cap 1000, so the only thing that
+      ;; can block a 10-token fresh reserve is the stale five-hour window
+      ;; still counting the old burn against cap 100.
+      (hngh.core.state-store:write-state
+       "quota-anchors"
+       (list (list :route 'kimi-sub :period :five-hour
+                   :anchor (- now 54000))))
+      (hngh.core.state-store:write-state
+       "quota-usage.lisp"
+       (list (list :route 'kimi-sub :actual-amount 1000
+                   :units :tokens :at (- now 50000))))
+      (is-true (hngh.plugins.quota-spreader::quota-reserve
+                'kimi-sub :sanity-review
+                :reservation-id "fresh-window" :amount 10
+                :elapsed-seconds 18000))
+      ;; And the reserve must have advanced the anchor out of the past.
+      (let ((anchor (getf (find :five-hour
+                                (hngh.core.state-store:read-state
+                                 "quota-anchors")
+                                :key (lambda (entry)
+                                       (getf entry :period)))
+                          :anchor)))
+        (is (numberp anchor))
+        (is (>= anchor now))))))
+
+(test card-128-caller-elapsed-cannot-alter-public-admission
+  ;; Seu BLOCK: should-route-to-k3-p must not let caller pacing inflate
+  ;; admission. Caller :elapsed-seconds (and :used) are never authority;
+  ;; pacing is derived from the reset anchors under the lock.
+  (with-quota-fixture (tmp)
+    ;; Fresh window: five-hour anchor is set at NOW, so derived elapsed ~ 0
+    ;; and the even-rate envelope refuses a spend. A caller-supplied elapsed
+    ;; of a full period must NOT flip that to YES.
+    (is-false (hngh.plugins.quota-spreader:should-route-to-k3-p
+               :sanity-review :amount 10 :used 0
+               :elapsed-seconds 18000))
+    (is-false (hngh.plugins.quota-spreader:should-route-to-k3-p
+               :sanity-review :amount 10 :used 0
+               :elapsed-seconds 9999999999))))
+
+(test card-128-reservation-amount-and-share-can-refuse
+  ;; Seu BLOCK: quota-reserved-ok-p must enforce the reservation's even
+  ;; share against AMOUNT plus ledger and reservation truth, not a
+  ;; caller-supplied flat :used against cap * 0.9.
+  (with-quota-fixture (tmp)
+    (let ((now (get-universal-time)))
+      ;; Week anchor 3.5 days back: exactly half the 7-day even-over window,
+      ;; so the paced share = 100 * 0.5 * 1.1 = 55.
+      (hngh.core.state-store:write-state
+       "quota-anchors"
+       (list (list :route 'kimi-sub :period :week
+                   :anchor (- now 302400))))
+      ;; Reserve and settle a call that consumed 40 of the 100-cap share.
+      (is-true (hngh.plugins.quota-spreader::quota-reserve
+                'kimi-sub :sanity-review
+                :reservation-id "share-a" :amount 10
+                :elapsed-seconds 18000))
+      (is-true (hngh.plugins.quota-spreader::quota-settle
+                "share-a" :actual-amount 40))
+      ;; 40 settled + 20 projected = 60 > 55 -> the reservation itself refuses.
+      (is-false (hngh.plugins.quota-spreader:quota-reserved-ok-p
+                 'kimi-sub :sanity-review :amount 20))
+      ;; 40 + 10 projected = 50 <= 55 -> still inside the share.
+      (is-true (hngh.plugins.quota-spreader:quota-reserved-ok-p
+                'kimi-sub :sanity-review :amount 10)))))
