@@ -20,9 +20,10 @@ policy so it does not recur.
 
 ## 2. The conservation tier (which models are scarce)
 
-Any model costing **more than ~$0.10/M tokens** is a **strategic reserve** —
-to be used `as infrequently as Kimi K3`, i.e. only for guidance on specific
-design problems or code that must be extremely well designed.
+Any model costing **more than $0.20/M input**, or with UNKNOWN input pricing,
+is a **strategic reserve** — to be used `as infrequently as Kimi K3`, i.e. only
+for guidance on specific design problems or code that must be extremely well
+designed.
 
 | Model | $/M (in) | Tier | Use |
 |---|---|---|---|
@@ -32,8 +33,8 @@ design problems or code that must be extremely well designed.
 | glm-5.2 | 0.40 | **reserve** | specific design problems, high-stakes code only |
 | kimi-k3 | 3.00 | **reserve** | authority-only strategic reserve |
 
-Rule of thumb: **if it costs >$0.10/M, treat it like K3.** Sparse, gated,
-named-reason, never the default driver.
+Rule of thumb: **if remote input costs >$0.20/M or is UNKNOWN, treat it like
+K3.** Sparse, gated, named-reason, never the default driver.
 
 ## 3. Quota windows are budget lines, not just the weekly number
 
