@@ -27,6 +27,8 @@ Current evidence:
   unoverridden `:five-hour :unknown` assertion; paren lint and
   `git diff --check` pass. It remains uncommitted; independent card-147 review
   was still pending when the operator chose the review boundary.
+- A delayed delegated PASS covered the prior 59-check diff only. It is BASE
+  VERSION ONLY, not fresh review of the current 60-check diff.
 - `hngh-watch.service`: active.
 - Live seats: cibo and seu panes alive; killy pane dead. No successor seat was
   launched.
