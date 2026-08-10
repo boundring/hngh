@@ -45,8 +45,11 @@
 (defvar *input-thread* nil
   "Background thread reading keyboard input.")
 
-(defvar *watch-root* "/home/bricker/.hngh-night/watch"
-  "Root containing the live Python watcher's outputs.")
+(defvar *watch-root* "/home/bricker/.hngh-night/watch/"
+  "Root containing the live Python watcher's outputs (trailing slash
+required: merge-pathnames treats a slash-less root as a FILE name and
+merges into the parent directory, which silently fails the
+outcomes.jsonl probe and falls back to the stale legacy feed).")
 
 (defvar *legacy-watch-state-path* "/tmp/hngh-live-watch.state"
   "Compatibility path for the retired shell watcher feed.")
