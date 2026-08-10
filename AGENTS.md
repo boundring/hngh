@@ -31,6 +31,11 @@ K2, Terra, Sol, Anthropic, Gemini, MiniMax, or an unknown-price route.
 - **GPT-5.6 Sol** and all **Anthropic** routes are disabled for Hngh.
   **Luna** is an opt-in coding seat (`squad-up luna-coder`) that needs current
   price/budget evidence; it is never a default squad seat.
+- **Agents are disposable; Hngh persists.** Retire a session after a completed
+  phase, a verified blocker, or a no-evidence state once its factual handoff is
+  valid. Start a fresh cheap successor if work remains. Continuation or
+  resurrection needs a named non-reconstructible value, bounded purpose, and
+  recorded cost reason; preserving chat context is never enough.
 - **Fresh sessions are cheap by design.** When a bounded task stops producing
   evidence, prepare a procedural factual handoff and retire the session with
   its reason. A successor gets the packet, not a transcript or inherited claim;

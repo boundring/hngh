@@ -190,6 +190,21 @@ when the current route has named capability or provider-failure evidence;
 specialists and reserves never appear in that fallback walk. Benchmark results,
 not model reputation, promote a route for a task class.
 
+## Hngh persists; agents retire
+
+An agent session is a disposable execution process, never Hngh's memory. At a
+completed phase, verified blocker, or no-evidence state, the default is to
+validate a factual handoff and retire the session. Hngh retains the task,
+claim, evidence, route/cost record, decision, and next verification; a fresh
+cheap agent receives that packet if work remains. Keeping a session alive to
+preserve chat context is forbidden.
+
+Continuation or resurrection is an exceptional gate. It needs a named,
+non-reconstructible value; a bounded purpose; measured input/output cost; an
+active evidence-producing action; and a recorded reason a fresh packet cannot
+suffice. Missing any field means retire. Procedural lifecycle rules make this
+decision; models do not vote themselves more turns.
+
 ## Bilateral token discipline
 
 Every route budget covers both received input and generated output. Hngh sends

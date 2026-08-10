@@ -65,6 +65,9 @@ Starting work on Hngh from a fresh session: read this, then
 4. ~~Judge model (cheap/local) on suspicious windows, offline-calibrated first~~ — **DONE** (`be14779`): situation-judge.lisp with pluggable backend, budget, fail-closed parsing, calibration harness; live gate only after offline calibration against the case-base.
 5. ~~Case-base + review pass (self-improvement loop)~~ — **DONE** (`6e6ddcb`): situation-casebase.lisp — persistent append-journal case-base (situation+action+outcome, human /steer high-weight ground truth, attribution) + review pass (recalibrate/tune/emergent-class probe) + `accuracy-improving-p` gate.
 6. **Cross-agent normalization** — Hermes + OpenCode traces through the same scorer; dogfood on live squads.
+7. **Session economy** — cards 131 → 132 → 140 → 141: context lifecycle,
+   compact factual handoff, procedural reset packet, then fail-closed retirement
+   and fresh successor control. Agents retire by default; Hngh state persists.
 
 **Launch context (squads):** `squad-up` launches seats; PM/Designer default to
 deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 92
