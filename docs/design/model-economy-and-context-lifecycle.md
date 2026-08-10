@@ -134,7 +134,9 @@ why it is present, its estimate, a maximum, and an omission fallback.
 
 Disabled toolsets and MCPs must not load their schemas into the profile. The
 runtime controls profile selection at launch; it does not rely on agents to
-ignore unused affordances.
+ignore unused affordances. On 2026-08-10 the active Hermes config removed
+Blender, Unreal Engine, and NotHumanSearch MCPs; only Hngh, MisakaNet, and
+DepScope remain pending profile audit.
 
 ## Accuracy and situation routines
 
