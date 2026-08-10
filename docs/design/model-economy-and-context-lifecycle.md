@@ -190,6 +190,17 @@ when the current route has named capability or provider-failure evidence;
 specialists and reserves never appear in that fallback walk. Benchmark results,
 not model reputation, promote a route for a task class.
 
+## Bilateral token discipline
+
+Every route budget covers both received input and generated output. Hngh sends
+the smallest factual packet that can decide the next action: named question,
+source references, acceptance boundary, and compact counterexample. It does not
+paste transcripts, repeat ambient project background, or ask a reviewer to
+reconstruct state from prose. Collaboration messages use their declared class
+cap; a status event replaces a conversational recap. Higher-tier reservations
+record input and output caps before dispatch, and benchmarks charge both when
+comparing routes.
+
 ## Tiered guidance expansion
 
 Hngh treats scarce high-capability completions as curriculum, not substitute
