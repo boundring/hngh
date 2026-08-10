@@ -39,7 +39,9 @@ strict local-only `hngh-opencode` adapter: bounded implement/review/probe
 roles, named command authority, pruned compaction, and a fixture-first
 benchmark path. Added a tiered guidance loop: reserve-model decisions become
 fingerprinted teaching packets, lower-cost adoption maps, fixture proof,
-independent challenge, and case-base/benchmark evidence. Measured
+independent challenge, and case-base/benchmark evidence. Kimi quota is
+K3-only; GLM 5.2 is the preferred architecture teacher; Sol and Anthropic
+are disabled; K2/MiMo/Terra remain explicit packeted specialists. Measured
 fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped standard Hngh sessions at 40 turns, and

@@ -53,7 +53,9 @@ Starting work on Hngh from a fresh session: read this, then
 - **A3** ACP steering primitive (`d6328b3`): `acp-steer-command` (scored situation → :none/:steer/:interrupt) + `acp-steer` on a live session; fail-closed on non-numeric scores.
 - **A4** ACP server + framing fix (`95d61e2`): `hngh acp` exposes Hngh as an ACP agent; NEW `src/plugins/acp-transport.lisp` = JSON-RPC mode `:acp` with **newline-delimited framing** (ACP's wire format; the stock cxxxr/jsonrpc stdio transport uses LSP Content-Length and does NOT interoperate with real ACP peers — do not switch back to `:mode :stdio`). INTEROP-verified driving `bin/hngh acp` with plain newline JSON.
 - **L2/L3 design capture** (`b01a0ac`, +research `aa2e88e`): `docs/design/situation-scoring.md` — the auto-steering brain behind A3 (recognition + scoring; recovery-stage model; steer-don't-interrupt; Tier-0 procedural first; cheap/local calibrated judge; progressive gate-lowering; self-improvement loop). Evidence in `docs/research/`.
-- **Cost policy** (`ff61698`): >$0.10/M tokens = strategic reserve (GLM-5.2, K3); cheap/local primary. PM/Designer seat defaults demoted to deepseek-v4-flash-0731 in ~/.hngh-night/squad-seats.conf.
+- **Cost policy** (`ff61698`, superseded threshold): remote input above $0.20/M
+  or UNKNOWN price is strategic reserve; local/known-price workhorses primary.
+  PM/Designer defaults are DeepSeek Flash in `~/.hngh-night/squad-seats.conf`.
 - **cogmem dropped** (`0dc36a0`, ADR-042): Anthropic-key dependency conflicts with cost policy; uninstalled everywhere, notes already in optmem. Cross-session memory = optmem + hngh beans + AGENTS.md breadcrumbs.
 
 **Immediate next work (in order — full build order in situation-scoring.md §8):**

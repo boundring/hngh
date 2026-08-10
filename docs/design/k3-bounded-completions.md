@@ -25,7 +25,9 @@ question; K3 answers once without tools; workhorses consume the durable result.
 K3 is eligible only for:
 
 - `plan-veto` — challenge a decision-complete plan before an expensive wave;
-- `design-authority` — resolve a named architectural conflict;
+- `design-authority` — first prepare a bounded GLM 5.2 architecture packet;
+  K3 is eligible only when that packet leaves a named unresolved conflict or
+  needs an independent veto;
 - `code-final-review` — review a narrow, high-impact diff or security seam;
 - `sanity-review` — diagnose a compressed incident set and prescribe method.
 

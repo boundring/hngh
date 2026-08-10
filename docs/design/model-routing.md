@@ -61,20 +61,22 @@ sprinkles, careful pay-as-you-go last. Verified live against each endpoint.
 | `local-heavy` | unsloth :8888 | Qwen3.6-27B / Devstral-24B | $0 | hard local coding (VRAM-permitting) |
 | `or-free` | openrouter | nemotron-3-ultra-550b (1M ctx), north-mini-code, gemma-4-31b, ling-3.0-flash | $0, rate-limited | bulk remote when local ctx/quality short |
 | `gemini-free` | AI Studio key | gemini-3.5-flash / 3.5-flash-lite / 3.1-flash-lite | $0, daily/RPM caps | compression, web extract, light vision |
-| `kimi-sub` | api.kimi.com/coding (annual) | k3, k3-256k, kimi-for-coding (K2.7), K2.7-highspeed | $0 marginal, hourly/daily/weekly quota | main agent, delegation, design forks, MoA aggregate |
-| `copilot` | api.githubcopilot.com (gh token) | claude-sonnet-5, claude-opus-5, gemini-3.6-flash, gpt-5.6 family | subscription quota | antagonistic review, anthropic-tier w/o Anthropic balance |
-| `workhorse` | openrouter / deepseek / openai-api | DeepSeek Flash, gpt-5.6-luna | <= $0.20/M input | broad majority of remote work; automatic fallback permitted |
-| `reserve` | any provider | K3, GLM, MiMo, MiniMax, Gemini above threshold, Terra/Sol, every UNKNOWN-price route | > $0.20/M input or UNKNOWN | explicit authority packet only; never automatic fallback |
-| `zen-drain` | opencode zen | gpt-5.6-luna via zen | balance $25 | mid-chain fallback only; drain slowly |
-| `anthropic` | anthropic direct | claude (rare) | balance $33 | rare use cases only; copilot covers most anthropic-tier needs |
+| `kimi-k3` | Kimi Coding annual quota | K3 / K3-256k only | quota-limited | rare one-turn authority packets only; no K2/K2.7 in this quota |
+| `kimi-k2-external` | non-Kimi provider only | K2.6 / K2.7 | cost- and token-limited | fixed-packet specialist experiment; never automatic |
+| `copilot` | GitHub Copilot | disabled for Hngh by default | n/a | no Anthropic route |
+| `workhorse` | openrouter / deepseek | DeepSeek Flash | <= $0.20/M input | choose local first for deterministic work; then cheapest route with task-class evidence; automatic fallback permitted only within this known-price workhorse route |
+| `luna-coder` | openai-api | gpt-5.6-luna | current catalog price UNKNOWN | operator-named coding seat only; requires current budget evidence; never automatic |
+| `reserve` | selected provider | K3 via Kimi only as veto/countercheck; GLM preferred architecture design; Terra high-stakes; MiMo/K2 experimental; every UNKNOWN-price route | > $0.20/M input or UNKNOWN | explicit bounded packet only; never automatic fallback |
+| `sol` / `anthropic` | any | disabled | n/a | never select for Hngh |
 
 Dead: `xai` — account has no credits/licenses ("newly created team" error
-2026-08-01). Re-check if xAI opens a free tier. K2.6 is not on the Kimi for
-Coding endpoint; K2.7 (`kimi-for-coding`) replaces it on quota.
+2026-08-01). The Kimi Coding quota authorizes K3 only. K2/K2.7
+(`kimi-for-coding`) may be tested only through a non-Kimi provider as a
+cost- and token-limited specialist; they are never automatic.
 
-Local routes exempt from budget. Remote payg routes carry caps via
-`llm-budget`; quota routes (kimi-sub, copilot, gemini-free, or-free) are
-rate-limit-gated by the provider, fail over on 429.
+Local routes exempt from budget. Remote workhorse routes carry caps via
+`llm-budget`; the Kimi K3 quota and each specialist experiment carry their own
+packet, reservation, and measured-result record.
 
 ## Current automatic fallback policy (2026-08-10)
 
@@ -83,7 +85,8 @@ input. The live Hermes chain is:
 
 ```text
 openrouter/deepseek-v4-flash-0731 -> deepseek/deepseek-v4-flash ->
-openai-api/gpt-5.6-luna -> local Unsloth routes
+local Unsloth routes. `luna-coder` is an operator-named exception pending
+current price/budget evidence, not an automatic rung.
 ```
 
 Every remote route above the threshold or with unknown price is omitted from
