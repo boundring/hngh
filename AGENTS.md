@@ -14,19 +14,26 @@
 
 ## Local-model & quota policy
 
-Primary driver: `deepseek/deepseek-v4-flash-0731` via openrouter — cheapest
-capable, highest intelligence per $ (1M ctx). Fallbacks in order:
-deepseek-v4-flash -> gpt-5.6-luna -> xiaomi/mimo-v2.5 -> minimax/minimax-m3 ->
-gemini-3.5-flash -> tencent/hy3-preview -> z-ai/glm-5.2 (when not primary) ->
-nemotron-3-ultra:free -> Qwythos-9B 1M (local) -> gemma-4-12b (local;
-queued/procedural only, never PM/Artist/critical-path). GLM-5.2 is primary for
-deep-thinking roles (PM, Designer, planning/critique). Vision/recognition:
-qwen3.7-flash with vision-capable fallbacks. Remote API spend capped at
-$20/week (OpenRouter); free/local models are fallbacks, not the daily driver.
-Avoid Qwen3.6-27B. K3 is reserved for novel design forks and critical reviews
-(native API back Aug 8); distribute other non-local work via the deepseek chain
-(openai-provided gpt-5.6-luna sits in the fallback chain on its own merits,
-not Copilot quota).
+Primary driver: `deepseek/deepseek-v4-flash-0731` via OpenRouter after local
+procedural routes. The only automatic remote fallback candidate is direct
+DeepSeek Flash; then local routes. Luna is operator-named only until current
+price/budget evidence is recorded. Do not automatically select GLM, MiMo,
+K2, Terra, Sol, Anthropic, Gemini, MiniMax, or an unknown-price route.
+
+- **Kimi quota** is K3-only. K3 uses a Kimi-family provider, one compact,
+  no-tools authority packet, and the quota gate. Never spend the Kimi quota on
+  K2/K2.7 or any other model; never call K3 through another provider.
+- **GLM 5.2** is the preferred bounded architecture teacher, ahead of K3 for
+  design advice. **Terra** is a high-stakes reserve review. **MiMo** and
+  external **K2.6/K2.7** are
+  cost-/token-limited fixed-packet experiments. Each needs a named task,
+  bounded packet, actual-route attribution, and measured outcome.
+- **GPT-5.6 Sol** and all **Anthropic** routes are disabled for Hngh.
+  **Luna** is an opt-in coding seat (`squad-up luna-coder`) that needs current
+  price/budget evidence; it is never a default squad seat.
+- Local models execute procedural, fixture-backed, and queued work. The case
+  base, adoption map, tests, and review gates preserve higher-tier structure;
+  a lower-cost seat never receives authority merely from a model name.
 
 ## Repo notes
 

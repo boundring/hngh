@@ -180,6 +180,16 @@ No routine claims an agent is working from a single busy frame. No routine
 retries a failed delivery as though it were delivered. A situation event is
 append-only and feeds watcher, dashboard, and future optimizer from one source.
 
+## Default selection cost floor
+
+Default selection begins with the lowest-cost route that has evidence it can
+pass the task class. Local execution is first for deterministic/procedural
+work, fixture probes, extraction, and queued maintenance. DeepSeek Flash is
+the default interactive remote workhorse. Another workhorse may follow only
+when the current route has named capability or provider-failure evidence;
+specialists and reserves never appear in that fallback walk. Benchmark results,
+not model reputation, promote a route for a task class.
+
 ## Tiered guidance expansion
 
 Hngh treats scarce high-capability completions as curriculum, not substitute
@@ -188,9 +198,11 @@ reusable evidence and make the next comparable task cheaper.
 
 | Tier | Role | Durable output | Must not do |
 |---|---|---|---|
-| K3 | authority/veto | bounded decision, invariants, counterexamples, unknowns | agentic implementation or coordination |
-| Sol | systems synthesis | adoption map, competing interpretations, ordered proof obligations | broad execution or unsourced certainty |
-| Terra | program steward | narrow cards, fixture plan, review order, escalation boundary | absorb an old transcript or repeat the authority call |
+| K3 | Kimi-quota veto/countercheck | bounded decision, invariants, counterexamples, unknowns | architecture-first selection; any Kimi model other than K3; agentic implementation or coordination |
+| K2.6/K2.7 | external-provider specialist experiment | measured fixed-packet result or counterexample | Kimi-quota use, automatic selection, or self-promotion |
+| Terra | high-stakes reserve review | narrow architecture or unresolved-contradiction decision | broad program management or automatic fallback |
+| GLM 5.2 | preferred architecture teacher | adoption map, competing interpretations, ordered proof obligations | unsourced certainty or open-ended continuation |
+| MiMo/other candidate | fixed-packet experiment | measured specialist result or counterexample | automatic selection or self-promotion |
 | workhorse | expansion/verifier | one implementation or fixture result with exact evidence | silently broaden authority or promote itself |
 | local | mechanical execution/probe | deterministic output, measurements, counterexamples | judge semantic quality from prose |
 
