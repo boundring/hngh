@@ -92,9 +92,18 @@ boundary ships regardless.
 ## ACCEPTANCE (this design)
 
 - Boundary doc (this page) + fixture contract — done here.
-- Operator pick on CHOICES (A/B/C) — recommendation C.
-- cibo implements: scan() interface + adapter + fixture, wired into
-  the prompt-lint gate fail-closed; make test green.
+- Operator pick on CHOICES (A/B/C) — RESOLVED (operator 20:10:
+  "make the right decision and carry on. Lisp-preferred, match our
+  stack"). Implemented as a deterministic LISP rule scanner (no
+  Python dep) — commit 7220317: scan-content, run-scan-file, CLI
+  `hngh prompt-lint --scan FILE` (exit 0/1/2). Verified: benign=ok,
+  injection=blocked with named fragments, fail-closed on errors.
+  The NeMo adapter path stays an optional plugin behind the same
+  scan() boundary — the C-choice guarantee preserved.
+- cibo implements: scan() wiring into seat-up PRE-SPAWN (card 106
+  pre-spawn prompt-lint gate + scan); fixture exactly per design
+  (benign -> ok, injection -> blocked, backend error -> blocked);
+  make test green.
 
 ## Open questions (operator)
 

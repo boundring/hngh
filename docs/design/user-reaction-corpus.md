@@ -75,27 +75,30 @@ REACTION: <ts> <source: steer|oob|correction|timing-judgment>
 
 The card's owner-gated item: scope/privacy of user-generated text
 recorded across sessions; storage location. Per 115 this is a
-bounded brief (drafted, awaiting operator return):
+bounded brief. RECOMMENDED DEFAULT (operator 20:10, per design):
+TEXT DISABLED, VALENCE+ACTION ONLY — verbatim user text is not
+recorded; the corpus captures the classified reaction (approve/
+correct/flag/steer-new-work) + the paired action, without the
+operator's raw words.
 
 ```
 DECISION: what user-generated text may be recorded in the corpus,
 and where it lives.
 CHOICES:
-  A. Verbatim local-only, 30d archive — text recorded as-is,
-     never leaves the machine, archived after 30d. (privacy:
-     strongest; evidence: full fidelity)
-  B. Redacted local-only — names/secrets/identifiers scrubbed by
-     the existing secrets-guard before recording. (privacy:
-     strong; evidence: full but scrubbed)
-  C. Verbatim + synced (backup-manager tree) — crosses devices
-     with the state tree. (privacy: weaker; evidence: available
-     everywhere)
-SIZE: M   URGENCY: today   BLOCKS: 118 design-final, 117 tuner
-REVIEWED: (pending 2-seat)
+  A. VALENCE+ACTION ONLY (RECOMMENDED) — no verbatim TEXT; the
+     corpus holds classified reaction + paired action. Privacy:
+     strongest; evidence: patterns preserved, exact words not.
+  B. Verbatim local-only, 30d archive — text recorded as-is,
+     never leaves the machine, archived after 30d. Privacy: strong;
+     evidence: full fidelity.
+  C. Verbatim + synced (backup-manager tree) — crosses devices.
+     Privacy: weaker; evidence: available everywhere.
+SIZE: S   URGENCY: today   BLOCKS: 118 design-final, 117 tuner
+REVIEWED: seu rec A; cibo 17:21 agreed (TEXT disabled interim)
 DEADLINE: none
-IF NO DECISION: fail-closed — NO verbatim recording; corpus starts
-empty, only VALENCE+ACTION (no TEXT) is captured. Nothing sensitive
-is recorded until the operator chooses.
+IF NO DECISION: fail-closed — no verbatim recording; corpus stays
+VALENCE+ACTION-only (which is also the recommended default, so the
+default IS the safe state).
 ```
 
 ## 6. Acceptance

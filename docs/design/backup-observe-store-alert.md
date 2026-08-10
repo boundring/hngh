@@ -75,6 +75,10 @@ conflict-file. D2 adds TWO surfaces on top, nothing mutating:
 ## ACCEPTANCE
 
 - This scope doc (done) → cibo's impl gate after review.
+- SCOPE CONFIRMED (operator 20:10): observe+store+alert, no
+  auto-restart. The D2-A decision is final; the watcher layer
+  remains within Hngh's scope and control (directive folded into
+  117, commit 57d33a5).
 - Store: append-only observation log, bounded, fixture-tested.
 - Alert: bounded-brief to operator inbox, persistence window M=3,
   no auto-restart (unit-tested), 2-seat review per 115.
