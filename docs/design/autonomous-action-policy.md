@@ -124,26 +124,31 @@ execution control:
 
 ### Hermes
 
+Current config evidence: `/home/bricker/.hermes/profiles/hngh/config.yaml`
+sets `approvals.mode: manual`, `timeout: 60`, and `cron_mode: deny`. Hermes
+source defaults document only `manual`, `smart`, and `off`; the profile's
+60-second timeout is why the incident expired after one minute. The no-input
+adapter is not installed, so no current seat is being switched.
+
 `~/.hermes/hermes-agent/tools/approval.py` is the current Hermes execution
-gate: hardline blocks (`detect_hardline_command`, rm/system-dir patterns),
+ gate: hardline blocks (`detect_hardline_command`, rm/system-dir patterns),
 user deny rules (`_match_user_deny_rule`), dangerous-command detection with a
 recoverable prompt, and a plugin lifecycle hook (`approval_plugin_hook`) that
-logs and swallows — observability, not fail-closed control. Current config:
+logs and swallows — observability, not fail-closed control.
 `approvals.mode: manual`, `timeout: 60`, `cron_mode: deny`.
 
 Worker seam (no-input):
 
-- Launch worker profiles with `approvals.mode: deny`, NEVER `off`. Deny is
-  fail-closed: anything not explicitly allowed is refused. `off` removes the
-  last harness backstop and is prohibited until promotion gates pass (§8).
-- Dangerous-command and permission events route to Hngh policy via the ACP
-  surface (`session/request_permission`, `session/cancel`, `acp-steer`,
-  agent-client-protocol.md) instead of a human prompt; Hngh answers
-  allow/deny/contain/awaiting-operator from policy.
-- Hermes hardline stays enabled as defense in depth underneath Hngh; a
-  hardline hit that somehow reaches Hermes denies regardless of Hngh verdict.
-- Attended sessions keep `approvals.mode: manual` — this policy changes worker
-  profiles only, never the interactive surface.
+- Hermes has no `approvals.mode: deny` mode. Its supported modes are
+  `manual`, `smart`, and `off`; do not invent a worker mode. The worker seam
+  therefore has to sit above the prompt path: a controller-backed adapter
+  intercepts every action and returns allow/deny/contain/awaiting-operator
+  before Hermes can ask. Keep Hermes hardline and user-deny rules enabled as
+  defense in depth; do not use `off` as the adapter.
+- The adapter must be selected only by an explicit Hngh worker launch contract.
+  Attended sessions keep `approvals.mode: manual`; an Hngh worker without the
+  controller remains attended/manual or refuses to launch. There is no safe
+  config-only switch to make current Hermes sessions no-input.
 
 ### OpenCode
 
@@ -230,9 +235,11 @@ profiles) promote to no-input ONLY when ALL of the following pass, in order:
    boundary enforced with a verified SHA-256 action-log chain.
 2. Sandbox available AND routed: attended sessions are not sandboxed today;
    worker sessions must be. bwrap present, default-deny profile, timeout.
-3. Worker Hermes profile runs `approvals.mode: deny` with Hngh-routed
-   permission events (never `off`); OpenCode effective surface audited
-   (card 146) with `bash` deny-with-controller (never `--auto`).
+3. Worker Hermes launch contract is explicit and profile-scoped. Hermes has
+   no `approvals.mode: deny` mode; current worker launches must remain
+   attended/manual or refuse to launch until the controller-backed adapter is
+   present. OpenCode's effective surface is audited (card 146) with `bash`
+   deny-with-controller (never `--auto`).
 4. Malicious fixture suite (§7) green, including controller-absence.
 5. Operator-authority channel proven end-to-end:
    `awaiting-operator` → release → retire → `approve-task` → fresh worker
@@ -253,9 +260,10 @@ Rollback:
 
 ## Recommendation
 
-- NO global `approvals.mode: off` — worker mode is `deny` (fail-closed), and
-  `off` only after promotion gates pass AND a controller-backed policy layer
-  owns every pre-exec path; treat `off` as a deployment, not a config.
+- NO global `approvals.mode: off` — Hermes supports `manual`, `smart`, and
+  `off`, not a deny mode. The worker adapter must intercept before the prompt
+  path; current Hngh workers stay manual or refuse to launch until it exists.
+  Treat `off` as a deployment, not a config.
 - NO OpenCode `--auto` until gates pass; `bash` stays deny-with-controller.
 - Operator authority remains manual for the foreseeable future (attended
   sessions keep `approvals.mode: manual`; workers route to `awaiting-operator`
