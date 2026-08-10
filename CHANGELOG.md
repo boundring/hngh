@@ -19,6 +19,21 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Added evidence and continuation gates to the coordination contract so
   finished seats reconcile claims, lanes, and the deck before resting.
 
+### Added — model economy and context lifecycle
+- Added `docs/design/model-economy-and-context-lifecycle.md`: every remote
+  route above $0.20/M input or with UNKNOWN price is reserve-only; reserve
+  calls use explicit admission, compact packets, reservations, and actual-use
+  reconciliation. Added 12/18/25% context lifecycle, minimal capability
+  profiles, prompt-component ledger, and local/cheap benchmark discipline.
+
+### Changed — Hermes cost and prompt surface
+- Disabled DeepInfra/FAL video plugins plus browser, image generation, vision,
+  voice, and GUI toolsets for new sessions. Reduced compression to 18%/10%,
+  reduced protected history, capped turns at 80, and removed strategic routes
+  from automatic fallbacks. Fresh-seat screenshot evidence still showed 72.6K
+  context with 48 tools, 74 skills, and 4 MCP servers; card 130 audits the
+  remaining static surface.
+
 ### Changed — K3 quota sequencing
 - Seu's bounded review found the shipped predicate is not yet an authoritative
   gate: no effective 5-hour default, marginal amount ignored, no ledger rollup
