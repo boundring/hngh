@@ -11,6 +11,8 @@ Current boundary:
   assertion; paren lint and diff check pass.
 - Independent card-147 review was still pending at the boundary; the operator
   chose to record the boundary and stop without committing card 147.
+- The delayed delegated PASS covered the prior 59-check diff only; it is BASE
+  VERSION ONLY, not fresh review of the current 60-check diff.
 - No successor seat was launched. Cibo and Seu remain alive; Killy's pane is
   dead. The watcher remains active.
 - Do not begin card 127, commit card 147, or launch a successor until the
