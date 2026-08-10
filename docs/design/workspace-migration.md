@@ -44,6 +44,49 @@ COMPATIBILITY: until the migration wave completes, keep
 live seats + scripts that reference old paths keep resolving. Retire
 symlinks after ~6 months (owner option, default).
 
+## SEAM-FIRST (card 123 gap 3, seu 23:58 — 114's first deliverable)
+
+The migration must NOT be a move that breaks hardcoded consumers.
+Today three components hardcode the workbench root:
+- src/plugins/dashboard-tui.lisp: *watch-root*, *seat-registry-
+  path*, *owner-inbox-path*, *seat-lanes-root*,
+  *claims-register-path* (all /home/bricker/.hngh-night/...)
+- /home/bricker/.local/bin/hngh-watch: HNGH_HOME env with default
+  /home/bricker/.hngh-night (SCHEDULES/CONTROL/OUTCOME_LOG under
+  HNGH_WATCH_CONFIG)
+- src/plugins/hngh-coord/coord.lisp: *lane-root*
+  /home/bricker/.hngh-night
+
+SEAM DESIGN (do this FIRST, before any file moves):
+1. Introduce ONE config point: `*hngh-home*` (Lisp) /
+   `HNGH_HOME` (env, already used by hngh-watch) resolved from:
+   env > ~/.config/hngh/config (or ~/.hngh/config) > default
+   (~/.hngh). Every consumer reads the seam; NO hardcoded paths
+   remain in code.
+2. The seam is a getter, not a constant — tests bind it to a
+   scratch HOME (see fixture shape below), the real code binds it
+   to the canonical root at startup. Same pattern as the
+   configurable feed paths in the dashboard (already defvars).
+3. Once the seam exists, the migration becomes a DATA move: point
+   the seam at ~/.hngh, symlink the old roots for the 6-month
+   compat window, verify every consumer still resolves.
+4. Acceptance for the seam: `grep -rn '/home/bricker/.hngh-night'
+   src/ ~/.local/bin/*.py` returns ZERO code hits (docs + lane
+   history may retain them; code must not).
+
+SCRATCH-HOME FIXTURE SHAPE (the migration harness):
+- A fixture HOME (tmp dir) with a minimal ~/.hngh tree (state/,
+  tasks/queue.lisp stub, registry/, sessions/) + symlinks
+  night/day -> the fixture root.
+- Tests bind *hngh-home*/HNGH_HOME to the fixture, then exercise:
+  seat-up scratch spawn (already in 114 §Verification), lane-write
+  via the append helper, dashboard render-to-string reading the
+  fixture feeds, hngh-watch SCHEDULES/CONTROL resolution under the
+  fixture config dir.
+- The harness proves the move is SAFE on a fake root before any
+  real ~/.hngh-night mutation (cibo 23:10 recommendation, agreed:
+  scratch-HOME migration harness before the real move).
+
 ## Migration steps (executed by live seats as the plan's ordered work)
 
 Owner 11:55: "live seats make live changes in an organized manner: we'll
