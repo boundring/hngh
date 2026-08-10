@@ -150,7 +150,9 @@ the harness brand.
 2. Mark it `AUTHORITY INPUT`, with model/provider, observed quota delta, packet
    fingerprint, and any unknowns.
 3. Workhorse seats translate every ordered action into a card, design change,
-   guard, or explicit rejection with reason.
+   guard, or explicit rejection with reason. They first write an adoption map:
+   every authority claim becomes `accepted`, `adapted`, or `rejected` with a
+   named fixture or evidence path; unmapped prose has no execution authority.
 4. Do not re-research verified findings merely because they came from K3.
 5. A verifier audits that every finding was consumed or rejected; the K3 call
    is not complete when the prose artifact lands.

@@ -37,7 +37,9 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 target and 40 as a safety cap; continuation is evidence-gated. Added the
 strict local-only `hngh-opencode` adapter: bounded implement/review/probe
 roles, named command authority, pruned compaction, and a fixture-first
-benchmark path. Measured
+benchmark path. Added a tiered guidance loop: reserve-model decisions become
+fingerprinted teaching packets, lower-cost adoption maps, fixture proof,
+independent challenge, and case-base/benchmark evidence. Measured
 fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped standard Hngh sessions at 40 turns, and

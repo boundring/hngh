@@ -180,6 +180,37 @@ No routine claims an agent is working from a single busy frame. No routine
 retries a failed delivery as though it were delivered. A situation event is
 append-only and feeds watcher, dashboard, and future optimizer from one source.
 
+## Tiered guidance expansion
+
+Hngh treats scarce high-capability completions as curriculum, not substitute
+labor. A reserve call has value only when lower-cost agents convert it into
+reusable evidence and make the next comparable task cheaper.
+
+| Tier | Role | Durable output | Must not do |
+|---|---|---|---|
+| K3 | authority/veto | bounded decision, invariants, counterexamples, unknowns | agentic implementation or coordination |
+| Sol | systems synthesis | adoption map, competing interpretations, ordered proof obligations | broad execution or unsourced certainty |
+| Terra | program steward | narrow cards, fixture plan, review order, escalation boundary | absorb an old transcript or repeat the authority call |
+| workhorse | expansion/verifier | one implementation or fixture result with exact evidence | silently broaden authority or promote itself |
+| local | mechanical execution/probe | deterministic output, measurements, counterexamples | judge semantic quality from prose |
+
+Every authority artifact carries a fingerprint, actual route/model, authority
+class, packet evidence, claims, invariants, counterexamples, uncertainty, and
+expiry/revisit condition. A lower-tier **adoption map** must account for each
+claim as `accepted`, `adapted`, or `rejected`, with a named card, fixture, or
+evidence path. Unmapped prose has no execution authority.
+
+A separate verifier challenges the adoption map against source and tests. If a
+lower-tier result contradicts guidance, it records the counterexample and
+escalates only the narrow unresolved question; it does not spend another
+reserve call to seek agreement. The case-base normalizer records the outcome in
+`:meta` with the authority fingerprint, teacher route, lesson disposition, and
+evidence path. Card 134 then measures whether the packet/fixture improved
+cheap-route quality, retries, or cost against a fixed baseline.
+
+This is a descent in cost, not a descent in rigor: the durable artifact and
+verification gates carry the teacher's useful structure after its context ends.
+
 ## Hot-swappable adapters
 
 Hngh owns a narrow `model-control` contract; Hermes and OpenCode are adapters,
@@ -219,6 +250,8 @@ benefit and a bounded cost record.
 6. Card 133: model-control adapter contract plus Hermes/OpenCode launch seams.
 7. Card 134: fixture-first, local/cheap context/profile benchmark runner,
    including `hngh-opencode` JSON-event measurements.
+8. Card 136: structured tiered-teaching packets, adoption maps, and case-base
+   attribution for reserve-to-workhorse guidance descent.
 
 No autonomous reserve escalation, paid benchmark fan-out, or permanent shell
 watcher feature is part of this design.
