@@ -190,6 +190,42 @@ when the current route has named capability or provider-failure evidence;
 specialists and reserves never appear in that fallback walk. Benchmark results,
 not model reputation, promote a route for a task class.
 
+OpenCode's nominal Hngh config is not its effective surface. `hngh-opencode`
+sets `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`, but `opencode debug config`
+1.18.15 still resolved additional global/plugin MCP entries, including
+websearch/context7/grep_app/LSP and an OMC bridge. The resolved inventory—not
+the intended source file—is the security and token budget. Card 146 audits the
+merge and selects a precedence fix or Hngh controller before no-input
+promotion.
+
+## Autonomous action without session input gates
+
+A worker is not a place to wait for a human. Hngh handles ordinary tool
+admission procedurally: allow safe reads, deny hardline and secret actions,
+contain recoverable risk, and retire on unresolved ambiguity. Privileged,
+self-modifying, irreversible, and publication actions remain operator-authority
+gates, but the worker records `awaiting-operator`, releases its claim, and dies;
+it does not sit on a prompt. `approvals.mode: off`, OpenCode `--auto`, RTK,
+llmtrim, and content scanners are not equivalent safeguards. No-input mode
+promotes only after every pre-exec path is covered by Hngh policy, fixtures,
+audit events, and fail-closed controller absence.
+
+## Cost telemetry and scenario forecasts
+
+`llmtrim status --json` is Hngh's primary observed-cost source: it records
+priced spend, savings, token classes, per-model aggregates, daemon health, and
+unpriced coverage. Its documented optional `--breakdown` is an explicit bounded
+audit, never a dashboard-refresh dependency. OpenRouter credit polling remains
+a coarse reconciliation source. A missing price, unpriced turn, stale snapshot,
+or unmapped session stays UNKNOWN; it is not zero.
+
+Forecasts use observed route/session ranges plus a declared task-packet count.
+They report local cost separately, include input and output, and show confidence
+from sample count and attribution coverage. They compare local-first, bounded
+Flash, explicitly named workhorse, specialist packet, and avoided reserve-
+misroute scenarios. Until launch metadata maps llmtrim sessions to Hngh seats
+and task ids, a per-seat/card allocation is prohibited.
+
 ## Hngh persists; agents retire
 
 An agent session is a disposable execution process, never Hngh's memory. At a
