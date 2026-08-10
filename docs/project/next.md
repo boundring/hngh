@@ -89,6 +89,10 @@ Starting work on Hngh from a fresh session: read this, then
 13. **Effective OpenCode surface** — card 146: audit resolved config after
     global/plugin merge; the nominal Hngh file is not the effective MCP/tool
     surface. Fix precedence or add a controller before no-input promotion.
+14. **Current bounded review** — `docs/review/project-review-2026-08-10.md`
+    records the pause boundary: card 147 stays uncommitted pending independent
+    review; no successor seat or card-127 implementation starts from this
+    review.
 
 **Launch context (squads):** `squad-up` launches seats; PM/Designer default to
 deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 92
