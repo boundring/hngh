@@ -43,6 +43,11 @@ Plugin sources: `src/plugins/`. Do not commit without the owner's explicit go-ah
 - **Lanes merged**: lane-a3 → main (H-A2 eligibility, H-A3 pause/resume, H-B1 maintenance, H-U1 systemd fixes)
 - **Security**: `*read-eval* nil` at wire-protocol.lisp:135
 - **Night queue**: 58 tasks processed (artifacts in ~/.hngh-night/artifacts/)
+- **Hngh Hermes profile:** `hngh` is mandatory for all Hngh Hermes launchers;
+  it starts at 33.8 KB before dynamic MCP schemas, uses state files rather
+  than generic memory/session recall, and permits only terminal, file, skills,
+  context control, Hngh MCP, and MisakaNet. `hngh-minimal` is the local-only
+  sub-class, not an alternative default.
 - **Cost routing**: canonical fallback chain active (deepseek-v4-flash-0731 →
   deepseek-v4-flash → gpt-5.6-luna → mimo-v2.5 → minimax-m3 → gemini-3.5-flash
   → hy3-preview → glm-5.2 → nemotron-3-ultra:free → Qwythos-9B → gemma-4-12b);
