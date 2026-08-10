@@ -346,6 +346,9 @@ The default runner owns the TUI lifecycle; tests may inject a scratch runner."
 (defun default-dashboard-runner ()
   "Run the dashboard TUI without starting the daemon loop."
   (hngh.plugins.dashboard-tui:init)
+  ;; The input thread only handles keys; it does not emit the first frame.
+  ;; Render once before waiting so `hngh dash` is visible immediately.
+  (hngh.plugins.dashboard-tui:render)
   (unwind-protect
        (loop while (tui-running-p) do
          (sleep 1))
