@@ -16,15 +16,18 @@ Immediate ordered work:
    work-root seam/referencer sweep + bounded backup-manager capture.
 2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
    authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
-3. Card 131: procedural context budget lifecycle (12/18/25% stages) over a
+3. Card 147: repair the planner fixture around the now-established card-135
+   baseline (52/56): use a fixture-local numeric quota envelope, preserve
+   production UNKNOWN refusal, and reach 56/56 before planner routing.
+4. Card 131: procedural context budget lifecycle (12/18/25% stages) over a
    component ledger, replacing fixed 256K-only pressure reporting.
-4. Card 132: prompt component budgets and compact handoff generator.
-5. Card 130: audit/apply minimal Hermes/OpenCode capability profiles; then
+5. Card 132: prompt component budgets and compact handoff generator.
+6. Card 130: audit/apply minimal Hermes/OpenCode capability profiles; then
    remove non-purposeful MCP/tool schemas from worker sessions.
-6. Card 127: wire the planner/router to the hardened predicate; automatic K3
+7. Card 127: wire the planner/router to the hardened predicate; automatic K3
    remains refused until quota observation/config supplies the cap.
-7. Build completion packet/fingerprint and manual quota observation gate.
-8. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
+8. Build completion packet/fingerprint and manual quota observation gate.
+9. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
 
 ## Current Status
 
@@ -71,16 +74,17 @@ Starting work on Hngh from a fresh session: read this, then
 8. **Cost telemetry and scenarios** — cards 142 → 143: ingest documented
    llmtrim JSON with attribution gaps explicit, then compare local/Flash/
    specialist/reset scenarios before work is launched.
-9. **llmtrim attribution/export decision** — card 144: adapter-first audit,
-   then consider an upstream-quality trusted attribution and incremental-export
-   seam only if its security and maintenance cost beat Hngh-side uncertainty.
-10. **Autonomous action policy** — card 145: remove model-facing waits, keep
-    operator authority gates out of live worker sessions, and promote no-input
-    execution only after Hngh owns every pre-exec action path.
-11. **Compression discipline** — Hermes Hngh now has an absolute 120,000-token
+9. **Planner baseline before consumer** — card 135 is established as a
+   committed fixture defect (52/56), not a quota-source regression. Card 147
+   repairs the fixture-local numeric envelope and proves production UNKNOWN
+   remains fail-closed; only then does card 127 wire planner K3 consumption.
+10. **131 -> 132** — procedural context lifecycle, then compact handoff.
+11. **145 + 146** — local no-input action policy and effective OpenCode surface
+    audits are designed; promotion still waits for pre-exec fixtures/controller.
+12. **Compression discipline** — Hermes Hngh now has an absolute 120,000-token
     compression cap. OpenCode needs a version-verified trigger/controller seam;
     do not guess at undocumented config keys.
-12. **Effective OpenCode surface** — card 146: audit resolved config after
+13. **Effective OpenCode surface** — card 146: audit resolved config after
     global/plugin merge; the nominal Hngh file is not the effective MCP/tool
     surface. Fix precedence or add a controller before no-input promotion.
 
