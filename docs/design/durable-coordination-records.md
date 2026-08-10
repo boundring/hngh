@@ -548,3 +548,54 @@ pipeline exists.
 
 Attribution (20:15): tandem seu — owner 14:25 + killy 14:26 vision —
 steer dispatch design; seam handed to cibo's Lisp plan.
+
+### 7.6 Transport roles — ONE delivery contract, three roles (card 123 seam 1, seu 23:55)
+
+The three-writer incoherence (MCP coord, seat-steer, hngh-watch all
+append to lanes) is killed by assigning ROLES — not by banning
+writers. Every transport is an implementation of the SAME contract
+(§7.5): compose-check → stranded-detect → busy-retry → consume-
+verify, with one writer per message.
+
+ROLES (the seam):
+- MCP = NOTIFICATION + TOOL SURFACE. `post_message`/`steer` are the
+  programmatic way to raise an event and have the coordinator
+  journal it. MCP messages are NOT the storage; they carry a
+  pointer to the lane record.
+- LANES = STORAGE (the durable record). The inbox/outbox files are
+  the single source of truth for what happened. Everything that
+  must survive the session lives here. Append-only, lane-append
+  helper, attribution footers.
+- seat-steer = DELIVERY ADAPTER (the only writer that touches a
+  pane). It implements the §7.5 contract end-to-end (composer-
+  check, stranded-detect, busy-retry exit-4, consume-verify) and
+  is the ONLY component allowed to send keystrokes to a seat's
+  input. It appends to the lane as its durable record.
+
+WRITER RULES (fail-closed):
+1. One message = one writer = one lane append. MCP steer may
+   journal + notify; it does NOT also append the lane unless the
+   delivery adapter did (dedupe key = message id).
+2. Only seat-steer writes a pane. hngh-watch, the coordinator, and
+   other seats never inject keystrokes directly — they call
+   seat-steer (or an equivalent adapter implementing the same
+   contract per §7.4 swapability).
+3. Lane appends are idempotent by message id: a re-delivery (busy-
+   retry) does not double-append. If the adapter recorded delivery
+   failure (exit 4), the lane carries the message once and the
+   retry updates status, not text.
+4. Consumers (dashboard, watcher, seats) read the LANE, not the
+   transport. Nobody greps MCP history for state; the lane is the
+   read surface. This is the feed-compat principle (§7.4/117)
+   applied to lanes.
+
+CONSEQUENCE: the (hngh-watch) marker coupling (card-123 gap 6) is
+solved by role 3 — hngh-watch calls seat-steer for pane delivery,
+and its lane appends use the standard STEER format with
+FROM=hngh-watch. Dashboard reads the lane with the standard
+parser; no implementation-specific marker filter survives.
+
+This clause supersedes any earlier "MCP also mirrors into the
+inbox" behavior (cibo 15:44): the mirror was a stopgap before
+roles existed. With one-writer-per-message, MCP's job is notify +
+journal; the delivery adapter owns the lane append.
