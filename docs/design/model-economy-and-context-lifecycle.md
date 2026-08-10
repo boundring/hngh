@@ -147,15 +147,16 @@ Measurements on 2026-08-10:
 | Profile | Fixed system | Tool schemas | Skills | Route |
 |---|---:|---:|---:|---|
 | `default` | 29.3 KB | 63.7 KB / 37 tools | 93 indexed | workhorse/coder |
-| `hngh-lean` | 29.6 KB | 29.9 KB / 13 tools | 93 indexed | coordination/review |
+| `hngh` | 17.0 KB | 16.8 KB / 9 tools | 32 indexed | standard Hngh agent |
 | `hngh-minimal` | 7.1 KB | 13.3 KB / 7 tools | 0 | local procedural only |
 
-`hngh-minimal` is configured to Unsloth Gemma 4 12B with no remote fallback;
-its enabled surfaces are terminal, file, and code execution. Its fixed prompt
-is about 20.4 KB, roughly 78% below the default fixed prompt. It is the
-baseline for local sweeps, procedural classification, and fixture benchmarks.
-It must not be used for tasks requiring retained skills, web research, or
-operator interaction.
+`hngh` is the mandatory standard Hngh agent profile. It keeps terminal, file,
+skills, and context control; its only MCPs are Hngh and MisakaNet. It disables
+generic memory, user-profile injection, session recall, and all broad worker
+toolsets; Hngh lanes/state/beans are the durable truth. Its fixed core prompt
+is about 33.8 KB before dynamic MCP schemas. Every Hngh launcher selects it by
+default. `hngh-minimal` is configured to Unsloth Gemma 4 12B with no remote
+fallback; it has no MCPs and is the local procedural sub-class.
 
 ## Accuracy and situation routines
 

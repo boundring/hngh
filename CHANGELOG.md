@@ -31,9 +31,9 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   voice, and GUI toolsets for new sessions. Removed Blender, Unreal Engine,
   and NotHumanSearch MCP servers; Hngh, MisakaNet, and DepScope remain pending
   profile audit. OpenCode removed NotHumanSearch and unfiltered DepScope;
-  only local MisakaNet remains. Created `hngh-lean` and local-only
-  `hngh-minimal` profiles; the lean profile now retains only coordinator/review
-  toolsets and has a 59.5KB fixed prompt; measured budgets are documented in
+  only local MisakaNet remains. Created mandatory standard `hngh` and
+  local-only `hngh-minimal` profiles; Hngh launchers now select `hngh`, which
+  retains only core Hngh capabilities. Measured fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped turns at 80, and removed strategic routes
   from automatic fallbacks. Fresh-seat screenshot evidence still showed 72.6K
