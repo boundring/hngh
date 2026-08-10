@@ -68,6 +68,21 @@ Starting work on Hngh from a fresh session: read this, then
 7. **Session economy** — cards 131 → 132 → 140 → 141: context lifecycle,
    compact factual handoff, procedural reset packet, then fail-closed retirement
    and fresh successor control. Agents retire by default; Hngh state persists.
+8. **Cost telemetry and scenarios** — cards 142 → 143: ingest documented
+   llmtrim JSON with attribution gaps explicit, then compare local/Flash/
+   specialist/reset scenarios before work is launched.
+9. **llmtrim attribution/export decision** — card 144: adapter-first audit,
+   then consider an upstream-quality trusted attribution and incremental-export
+   seam only if its security and maintenance cost beat Hngh-side uncertainty.
+10. **Autonomous action policy** — card 145: remove model-facing waits, keep
+    operator authority gates out of live worker sessions, and promote no-input
+    execution only after Hngh owns every pre-exec action path.
+11. **Compression discipline** — Hermes Hngh now has an absolute 120,000-token
+    compression cap. OpenCode needs a version-verified trigger/controller seam;
+    do not guess at undocumented config keys.
+12. **Effective OpenCode surface** — card 146: audit resolved config after
+    global/plugin merge; the nominal Hngh file is not the effective MCP/tool
+    surface. Fix precedence or add a controller before no-input promotion.
 
 **Launch context (squads):** `squad-up` launches seats; PM/Designer default to
 deepseek flash (cost policy). Task cards live in `~/.hngh-night/tasks/`; task 92
