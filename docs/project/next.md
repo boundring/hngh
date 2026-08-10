@@ -16,10 +16,15 @@ Immediate ordered work:
    work-root seam/referencer sweep + bounded backup-manager capture.
 2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
    authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
-3. Card 127: wire the planner/router to the hardened predicate; automatic K3
+3. Card 131: procedural context budget lifecycle (12/18/25% stages) over a
+   component ledger, replacing fixed 256K-only pressure reporting.
+4. Card 132: prompt component budgets and compact handoff generator.
+5. Card 130: audit/apply minimal Hermes/OpenCode capability profiles; then
+   remove non-purposeful MCP/tool schemas from worker sessions.
+6. Card 127: wire the planner/router to the hardened predicate; automatic K3
    remains refused until quota observation/config supplies the cap.
-4. Build completion packet/fingerprint and manual quota observation gate.
-5. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
+7. Build completion packet/fingerprint and manual quota observation gate.
+8. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
 
 ## Current Status
 
