@@ -116,7 +116,7 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 | KDE notification protocol | M1.13 (B10, optional) |
 | **Encoded filename metadata for agent direction** | Design seed — `docs/design/encoded-filename-metadata.md`. Evaluate later: prior art, decode-primitive prototype, token-scope ROI, beans/dispatch-tree interplay. Not on any current build path. |
 | **Public vetting — self-optimization / parity / cost accounting** | `docs/design/public-vetting.md` (assessment framing before going public). Researcher: Odysseus & Agent Zero docs-first feature-parity matrix → `docs/research/`; public cost-vs-capability dashboard over the existing ledger; ACP/MCP/A2A multi-tool surface; multi-instance network kept as a design seed (security-first, post-v1). Not scheduled build. |
-| **Bounded K3 completion harness** | Design: `docs/design/k3-bounded-completions.md`. Sequence: wire planner to K3 driver → packet schema/fingerprint → manual quota observation → no-tools one-turn adapter → Pi feasibility spike → dashboard admission view. No unconstrained K3 agentic session. |
+| **Bounded K3 completion harness** | Design: `docs/design/k3-bounded-completions.md`. Sequence: harden quota truth (128) → planner consumption (127) → packet schema/fingerprint → manual quota observation → no-tools one-turn adapter → Pi feasibility spike → dashboard admission view. No unconstrained K3 agentic session. |
 | **Workbench-root consolidation** | Card 125 / `docs/design/workspace-migration.md` v3. Preserve whole trees under `~/.hngh/.hngh-night` and `.hngh-day`; scratch-HOME fixture, atomic move, old-root compatibility links, then work-root seam/referencer sweep. |
 
 ## MisakaNet lesson candidates (submission backlog)

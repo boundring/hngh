@@ -65,6 +65,22 @@ Default completion limits:
 These are conservative starting limits, not provider facts. Outcome and quota
 telemetry tune them; agents may not silently raise them.
 
+## Implementation status: automatic routing is still blocked
+
+The shipped predicate is a useful seam, not yet an authoritative gate. Review
+against the current source found these gaps:
+
+- no effective 5-hour bucket in the default route envelope;
+- marginal `amount` is ignored by admission;
+- production usage is caller-supplied rather than rolled up from the ledger;
+- two callers can admit concurrently against the same headroom;
+- reservation pacing and configured safety margin are not enforced as designed;
+- reset advancement depends on bucket order.
+
+Card 128 hardens quota truth. Card 127 (planner consumption) is blocked on it.
+Until 128 passes, `should-route-to-k3-p` is advisory and automatic K3 routing
+remains disabled.
+
 ## Three-window admission gate
 
 A call is admitted only when all active envelopes allow it:

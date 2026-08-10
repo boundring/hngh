@@ -13,9 +13,11 @@ Immediate ordered work:
 1. Card 125: scratch-HOME workspace migration script; then Killy runs the live
    whole-tree move to `~/.hngh/.hngh-night` + `.hngh-day` with compatibility
    links.
-2. Wire the planner/router to consume the shipped K3 admission predicate.
-3. Build completion packet/fingerprint and manual quota observation.
-4. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
+2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
+   authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
+3. Card 127: only then wire the planner/router to consume the K3 predicate.
+4. Build completion packet/fingerprint and manual quota observation.
+5. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
 
 ## Current Status
 
