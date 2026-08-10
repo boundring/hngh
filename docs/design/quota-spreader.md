@@ -211,6 +211,20 @@ explicit selection, capped, and configurable — never by default or accident.
 
 ---
 
+## 4. K3 quota-distribution driver
+
+The driver is opt-in routing, not a new scheduler. Only authority situations
+(`code-final-review`, `plan-veto`, and `design-authority`) may call
+`should-route-to-k3-p`; it returns true only while the reservation and every
+route bucket remain within the even-rate envelope. `quota-available-p` and
+`quota-status` expose the current `available-now` signal to planner and
+watcher consumers. The kimi-sub envelope includes hour, day, week, and
+30-day month buckets; the month bucket is a long-horizon guard, while the
+shorter windows preserve rate-limit discipline. Unknown situations and
+failures refuse routing rather than silently spending the reserve.
+
+---
+
 ## 5. What this is NOT (scope guard)
 
 - Not a new scheduler — it reuses `core/scheduler.lisp` and the existing

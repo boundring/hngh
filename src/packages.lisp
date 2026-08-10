@@ -758,6 +758,9 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:quota-ok-p
            #:quota-reserved-ok-p
            #:quota-general-ok-p
+           #:should-route-to-k3-p
+           #:quota-available-p
+           #:quota-status
            ;; Accounting + reset
            #:quota-consumed
            #:maybe-advance-reset

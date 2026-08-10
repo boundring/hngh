@@ -27,7 +27,8 @@ configuration.")
   '((kimi-sub
      (:buckets ((:period :week :cap 2000000 :units :tokens)
                 (:period :day  :cap 300000 :units :tokens)
-                (:period :hour :cap 40000  :units :tokens))))
+                (:period :hour :cap 40000  :units :tokens)
+                (:period :month :cap 8000000 :units :tokens))))
     (frontier
      (:strategic t
       :buckets ((:period :week :cap 5.0 :units :cents))))
@@ -139,7 +140,8 @@ reservation; we flatten so each situation is independently addressable."
   (hngh.core.state-store:write-state *quota-usage-path* usage))
 
 (defparameter *period-seconds*
-  '((:hour . 3600) (:day . 86400) (:week . 604800) (:month . 2592000))
+  '((:five-hour . 18000) (:hour . 3600) (:day . 86400)
+    (:week . 604800) (:month . 2592000))
   "Nominal period durations in seconds.")
 
 (defun %period-duration (period)
@@ -191,6 +193,30 @@ by symbol-name, so callers in any package can pass 'code-final-review."
     (if (null cap)
         nil
         (<= used (* cap 0.9)))))
+
+(defun should-route-to-k3-p (situation &key (used 0) (elapsed-seconds 0)
+                                      (amount 0))
+  "Return T when SITUATION is K3 authority work and its reservation is
+within the even-rate envelope. Unknown situations and over-budget draws
+refuse; this is opt-in routing, never a silent default."
+  (and (member situation '(:code-final-review :plan-veto :design-authority)
+                 :test #'string-equal :key #'symbol-name)
+       (quota-reserved-ok-p 'kimi-sub situation :amount amount :used used)
+       (quota-ok-p 'kimi-sub :amount amount :used used
+                   :elapsed-seconds elapsed-seconds)))
+
+(defun quota-available-p (route &key (used 0) (elapsed-seconds 0)
+                                  (amount 0))
+  "Return T when ROUTE has room for AMOUNT under its even-rate envelope."
+  (quota-ok-p route :amount amount :used used :elapsed-seconds elapsed-seconds))
+
+(defun quota-status (route &key (used 0) (elapsed-seconds 0))
+  "Return a readable route availability status for planner/watchers."
+  (let ((available (quota-available-p route :used used
+                                      :elapsed-seconds elapsed-seconds)))
+    (format nil "~A: ~A (used=~A elapsed=~A)"
+            route (if available "available-now" "over-even-rate")
+            used elapsed-seconds)))
 
 (defun quota-general-ok-p (route &key (amount 0) (used 0) (elapsed-seconds 0))
   "Return T when a one-off / general draw on ROUTE is within the general pool's
