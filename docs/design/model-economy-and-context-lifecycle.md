@@ -83,10 +83,15 @@ agent owns a small context budget relative to its configured window.
 | `:compact` | >=18% | summarize and respawn before accepting unrelated work |
 | `:refuse-continuation` | >=25% | reject new work unless an explicit continuation gate names why the old transcript is indispensable |
 
-The immediate Hermes configuration mirrors the compact stage: compression at
-18%, 10% target ratio, 8 recent and 3 opening messages protected, 120-message
-hygiene cap, and 80 maximum turns. These are operational guardrails, not
-provider facts; Hngh must measure outcomes and tune them conservatively.
+The immediate Hermes configuration treats 20 turns as a sprint target and 40
+as a safety cap, not a blind stop. Compression begins at 18% with a 10% target
+ratio, and only the phase handoff—not broad history—crosses a reset. A `:warn`
+event prepares a phase-boundary reset; `:compact` normally requires it before
+unrelated work. Hngh may grant a continuation only from a recorded decision:
+one active claim/write boundary, recent evidence-producing progress, a named
+next verification action, measured context/budget headroom, and a reason a
+fresh handoff would lose material task coherence. Idle polling, broad
+reorientation, phase changes, or missing evidence refuse continuation.
 
 The component ledger has no model in its hot path:
 
@@ -127,9 +132,10 @@ why it is present, its estimate, a maximum, and an omission fallback.
 
 | Profile | Enabled surfaces | Forbidden by default |
 |---|---|---|
-| `hngh-worker` | terminal, file, code execution, narrow web, skills, memory, session search, delegation/cron when task requires | browser, media, voice, GUI, unrelated MCP |
-| `research` | worker + web extraction | mutation tools and broad media |
-| `operator-ui` | worker + computer use/browser only for named UI task | automatic remote vision/media |
+| `hngh` | terminal, file, skills, context control, Hngh/MisakaNet MCP | generic memory/profile/session recall, web, code execution, delegation, cron, remote supply-chain MCP |
+| `hngh-minimal` | terminal, file, code execution; local model only | all MCP, remote fallback, skills, memory, interaction tools |
+| `research` | explicit temporary profile with extraction surfaces | mutation tools and broad media |
+| `operator-ui` | explicit temporary profile with computer use/browser for named UI task | automatic remote vision/media |
 | `media` | explicit operator task only | all normal Hngh work |
 
 Disabled toolsets and MCPs must not load their schemas into the profile. The
