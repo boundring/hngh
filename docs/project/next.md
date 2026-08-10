@@ -14,8 +14,10 @@ Immediate ordered work:
    now reside at `~/.hngh/.hngh-night` + `.hngh-day`, old roots are
    compatibility links, manifests and watcher health verified. Follow-up:
    work-root seam/referencer sweep + bounded backup-manager capture.
-2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
-   authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
+2. ~~Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
+   authoritative ledger rollup, call reservation, fail-closed UNKNOWN).~~
+   **VERIFIED + committed** at `472737d`; focused 65/65 PASS, full gate has
+   only the four card-135 planner fixture failures.
 3. Card 147: repair the planner fixture around the now-established card-135
    baseline (52/56): use a fixture-local numeric quota envelope, preserve
    production UNKNOWN refusal, and reach 56/56 before planner routing.
