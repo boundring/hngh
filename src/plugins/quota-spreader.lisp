@@ -25,7 +25,8 @@ configuration.")
 
 (defparameter *route-defaults*
   '((kimi-sub
-     (:buckets ((:period :week :cap 2000000 :units :tokens)
+     (:buckets ((:period :five-hour :cap :unknown :units :tokens)
+                (:period :week :cap 2000000 :units :tokens)
                 (:period :day  :cap 300000 :units :tokens)
                 (:period :hour :cap 40000  :units :tokens)
                 (:period :month :cap 8000000 :units :tokens))))
@@ -41,8 +42,9 @@ rubrics; every field is overridable via ~/.hngh/quotas.lisp.")
 
 (defparameter *reservation-defaults*
   '((kimi-authority
-     (:route kimi-sub :cap 333000 :units :tokens :even-over 7
-      :situations (:code-final-review :plan-veto :design-authority))))
+   (:route kimi-sub :cap 333000 :units :tokens :even-over 7
+    :situations (:code-final-review :plan-veto :design-author
+                  :sanity-review))))
   "Code defaults for recurring-authority reservations. Each reservation is a
 situation-CLASS name mapped to a route + cap; the class stays available all
 period via even drawdown and never spills into the general pool.")
@@ -160,24 +162,6 @@ closed: unknown period or unusable math treats used > cap as over."
          (margin (* fair 1.1)))
     (<= used margin)))
 
-(defun quota-ok-p (route &key (amount 0) (used 0) (elapsed-seconds 0))
-  "Return T when spending AMOUNT on ROUTE now is within its even-sparse
-drawdown across every relevant bucket. Fail closed: strategic routes refuse
-unless an explicit trigger (handled by the caller via route-strategic-p or an
-open trigger) is present; unknown routes refuse; an over-bucket refuses."
-  (declare (ignore amount))
-  (let ((env (quota-envelope route)))
-    (when (getf env :strategic)
-      (return-from quota-ok-p nil))
-    (let ((buckets (getf env :buckets)))
-      (if (null buckets)
-          t                          ; no quota known -> allowed (cheap/local)
-          (every (lambda (b)
-                   (%even-rate-ok-p (getf b :period)
-                                    (getf b :cap)
-                                    used
-                                    elapsed-seconds))
-                 buckets)))))
 
 (defun quota-reserved-ok-p (route situation &key (amount 0) (used 0))
   "Return T when drawing AMOUNT from ROUTE's reservation for SITUATION stays
@@ -194,16 +178,6 @@ by symbol-name, so callers in any package can pass 'code-final-review."
         nil
         (<= used (* cap 0.9)))))
 
-(defun should-route-to-k3-p (situation &key (used 0) (elapsed-seconds 0)
-                                      (amount 0))
-  "Return T when SITUATION is K3 authority work and its reservation is
-within the even-rate envelope. Unknown situations and over-budget draws
-refuse; this is opt-in routing, never a silent default."
-  (and (member situation '(:code-final-review :plan-veto :design-authority)
-                 :test #'string-equal :key #'symbol-name)
-       (quota-reserved-ok-p 'kimi-sub situation :amount amount :used used)
-       (quota-ok-p 'kimi-sub :amount amount :used used
-                   :elapsed-seconds elapsed-seconds)))
 
 (defun quota-available-p (route &key (used 0) (elapsed-seconds 0)
                                   (amount 0))
@@ -224,19 +198,6 @@ even share. Strategic routes refuse here (general pool never auto-opens them)."
   (and (not (route-strategic-p route))
        (quota-ok-p route :amount amount :used used
                    :elapsed-seconds elapsed-seconds)))
-
-(defun quota-consumed (route &key (amount 0) situation)
-  "Record consumption of AMOUNT on ROUTE, optionally attributed to SITUATION
-(authority class). Returns the updated usage table. Keep it cheap and
-idempotent; exact accounting is rolled up at read time."
-  (declare (ignore situation amount))
-  (when (< amount 0)
-    (error "Negative consumption: ~S" amount))
-  ;; Simplified ledger: append a {route, amount, at} record.
-  (let* ((usage (%read-usage))
-         (entry (list :route route :amount amount :at (get-universal-time))))
-    (%write-usage (append usage (list entry)))
-    usage))
 
 (defun %read-anchors ()
   "Read the per-route reset-anchor table, or '() when absent/corrupt."
@@ -279,3 +240,192 @@ reset on first sight)."
                                           (symbol-name route)))
                                (%read-usage))))
     reset?))
+
+;;; --- Card 128 authoritative settlement ------------------------------------
+
+(defparameter *quota-reservations-path* "quota-reservations.lisp")
+(defparameter *quota-lock-holder* "quota-spreader")
+
+(defun %number-p (value)
+  (and (numberp value) (not (minusp value))))
+
+(defun %known-buckets-p (buckets)
+  (and buckets
+       (every (lambda (bucket)
+               (and (keywordp (getf bucket :period))
+                    (%number-p (getf bucket :cap))
+                    (keywordp (getf bucket :units))))
+             buckets)))
+
+(defun %read-reservations ()
+  (handler-case
+      (or (hngh.core.state-store:read-state *quota-reservations-path*) '())
+    (error () nil)))
+
+(defun %write-reservations (reservations)
+  (hngh.core.state-store:write-state *quota-reservations-path* reservations))
+
+(defun %with-quota-lock (thunk)
+  (if (hngh.core.state-store:acquire-lock
+       "quota-reservations" :holder *quota-lock-holder* :ttl 60)
+      (unwind-protect
+           (funcall thunk)
+        (hngh.core.state-store:release-lock
+         "quota-reservations" :holder *quota-lock-holder*))
+      nil))
+
+(defun %reservation-by-id (id reservations)
+  (find id reservations :key (lambda (entry) (getf entry :reservation-id))
+        :test #'equal))
+
+(defun %actual-usage (route now)
+  (loop for entry in (%read-usage)
+        when (and (string= (symbol-name route)
+                           (symbol-name (getf entry :route)))
+                  (numberp (getf entry :actual-amount))
+                  (<= (- now (or (getf entry :at) now))
+                      (%period-duration :month)))
+        sum (getf entry :actual-amount)))
+
+(defun %active-reserved-usage (route reservations)
+  (loop for entry in reservations
+        when (and (string= (symbol-name route)
+                           (symbol-name (getf entry :route)))
+                  (member (getf entry :status) '(:reserved :unresolved)))
+        sum (getf entry :projected-amount)))
+
+(defun %route-blocked-p (route reservations now)
+  (some (lambda (entry)
+          (and (string= (symbol-name route)
+                        (symbol-name (getf entry :route)))
+               (member (getf entry :status) '(:unresolved :overage))
+               (< now (or (getf entry :blocked-until) most-positive-fixnum))))
+        reservations))
+
+(defun %admission-amount-ok-p (route amount elapsed-seconds used)
+  (let ((buckets (getf (quota-envelope route) :buckets)))
+    (and (%number-p amount)
+         (%known-buckets-p buckets)
+         (every (lambda (bucket)
+                  (let ((cap (getf bucket :cap)))
+                    (and (<= (+ used amount) cap)
+                         (%even-rate-ok-p (getf bucket :period) cap
+                                          (+ used amount) elapsed-seconds))))
+                buckets))))
+
+(defun quota-reserve (route situation &key reservation-id (amount 0)
+                                             (elapsed-seconds 0))
+  "Atomically reserve a projected call amount, keyed by RESERVATION-ID."
+  (unless (and reservation-id
+               (member situation (getf (first (reservations-for route)) :situations)
+                       :test (lambda (a b) (string= (symbol-name a)
+                                                    (symbol-name b)))))
+    (unless (find situation (reservations-for route)
+                  :key (lambda (entry) (getf entry :situation))
+                  :test (lambda (a b) (string= (symbol-name a)
+                                                (symbol-name b))))
+      (return-from quota-reserve nil)))
+  (%with-quota-lock
+   (lambda ()
+     (let* ((now (get-universal-time))
+            (reservations (%read-reservations))
+            (existing (%reservation-by-id reservation-id reservations))
+            (buckets (getf (quota-envelope route) :buckets)))
+       (when (or (not (%known-buckets-p buckets))
+                 (not (%number-p amount)))
+         (return-from quota-reserve nil))
+       (when existing
+         (return-from quota-reserve
+           (and (equal route (getf existing :route))
+                (equal situation (getf existing :situation))
+                (= amount (getf existing :projected-amount))
+                existing)))
+       (when (%route-blocked-p route reservations now)
+         (return-from quota-reserve nil))
+       (let ((used (+ (%actual-usage route now)
+                      (%active-reserved-usage route reservations))))
+         (unless (%admission-amount-ok-p route amount elapsed-seconds used)
+           (return-from quota-reserve nil))
+         (let ((entry (list :reservation-id reservation-id
+                            :route route :situation situation
+                            :projected-amount amount :actual-amount nil
+                            :status :reserved :created-at now)))
+           (%write-reservations (append reservations (list entry)))
+           entry))))))
+
+(defun quota-settle (reservation-id &key actual-amount provider-response-id)
+  "Settle a reservation with provider-measured usage, fail-closed on absence."
+  (%with-quota-lock
+   (lambda ()
+     (let* ((reservations (%read-reservations))
+            (entry (%reservation-by-id reservation-id reservations)))
+       (unless entry (return-from quota-settle nil))
+       (when (member (getf entry :status) '(:settled :overage))
+         (return-from quota-settle entry))
+       (unless (%number-p actual-amount)
+         (setf (getf entry :status) :unresolved)
+         (%write-reservations reservations)
+         (return-from quota-settle nil))
+       (let* ((route (getf entry :route))
+              (now (get-universal-time))
+              (projected (getf entry :projected-amount))
+              (overage (> actual-amount projected))
+              (status (if overage :overage :settled))
+              (updated (list :reservation-id reservation-id
+                             :route route
+                             :situation (getf entry :situation)
+                             :projected-amount projected
+                             :actual-amount actual-amount
+                             :provider-response-id provider-response-id
+                             :status status :settled-at now
+                             :blocked-until
+                             (and overage (+ now (%period-duration :five-hour))))))
+         (%write-usage
+          (append (%read-usage)
+                  (list (list :route route
+                              :situation (getf entry :situation)
+                              :amount actual-amount
+                              :actual-amount actual-amount
+                              :units :tokens :at now
+                              :reservation-id reservation-id))))
+         (%write-reservations
+          (mapcar (lambda (item)
+                    (if (equal reservation-id (getf item :reservation-id))
+                        updated
+                        item))
+                  reservations))
+         updated)))))
+
+(defun quota-ok-p (route &key (amount 0) (used 0) (elapsed-seconds 0))
+  "Return T only for a known, resolved envelope and measured/test usage."
+  (declare (ignore used))
+  (let ((buckets (getf (quota-envelope route) :buckets)))
+    (and (not (route-strategic-p route))
+         (%known-buckets-p buckets)
+         (%admission-amount-ok-p route amount elapsed-seconds 0))))
+
+(defun should-route-to-k3-p (situation &key (used 0) (elapsed-seconds 0)
+                                      (amount 0))
+  (and (member situation '(:code-final-review :plan-veto :design-authority
+                           :sanity-review)
+                 :test #'string-equal :key #'symbol-name)
+       (quota-reserved-ok-p 'kimi-sub situation :amount amount :used used)
+       (quota-ok-p 'kimi-sub :amount amount :used used
+                   :elapsed-seconds elapsed-seconds)))
+
+(defun quota-consumed (route &key (amount 0) situation actual-amount
+                                      provider-response-id reservation-id)
+  "Record measured consumption; caller projections are never accounting truth."
+  (let ((measured (or actual-amount amount)))
+    (unless (%number-p measured)
+      (error "Invalid measured consumption: ~S" measured))
+    (if reservation-id
+        (quota-settle reservation-id :actual-amount measured
+                      :provider-response-id provider-response-id)
+        (%with-quota-lock
+         (lambda ()
+           (let ((entry (list :route route :situation situation
+                              :amount measured :actual-amount measured
+                              :units :tokens :at (get-universal-time))))
+             (%write-usage (append (%read-usage) (list entry)))
+             entry))))))
