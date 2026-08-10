@@ -117,7 +117,7 @@ Procedural Portrait Generator, Multi-user Support, Inbound Network Listener.
 | **Encoded filename metadata for agent direction** | Design seed — `docs/design/encoded-filename-metadata.md`. Evaluate later: prior art, decode-primitive prototype, token-scope ROI, beans/dispatch-tree interplay. Not on any current build path. |
 | **Public vetting — self-optimization / parity / cost accounting** | `docs/design/public-vetting.md` (assessment framing before going public). Researcher: Odysseus & Agent Zero docs-first feature-parity matrix → `docs/research/`; public cost-vs-capability dashboard over the existing ledger; ACP/MCP/A2A multi-tool surface; multi-instance network kept as a design seed (security-first, post-v1). Not scheduled build. |
 | **Bounded K3 completion harness** | Design: `docs/design/k3-bounded-completions.md`. Sequence: harden quota truth (128) → planner integration (127, default refuse) → packet schema/fingerprint → manual quota observation gate → no-tools one-turn adapter → Pi feasibility spike → dashboard admission view. No automatic K3 call before observation/config supplies the cap; no unconstrained K3 agentic session. |
-| **Workbench-root consolidation** | Card 125 / `docs/design/workspace-migration.md` v3. Preserve whole trees under `~/.hngh/.hngh-night` and `.hngh-day`; scratch-HOME fixture, atomic move, old-root compatibility links, then work-root seam/referencer sweep. |
+| **Workbench-root consolidation** | **Migration DONE** (`2de5875`, 70 fixture checks; 316+33 file manifests matched; watcher/lane verified). Follow-up: introduce work-root seams, sweep active referencers, and capture the hidden trees in backup-manager without sweeping unrelated dirty runtime state. |
 
 ## MisakaNet lesson candidates (submission backlog)
 

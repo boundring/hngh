@@ -29,6 +29,8 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Replaced the flattened migration plan with whole-tree preservation under
   `~/.hngh/.hngh-night/` and `~/.hngh/.hngh-day/`, scratch-HOME verification,
   atomic moves, compatibility symlinks, and rollback.
+- Executed the live migration after 70 fixture checks: 316 night and 33 day
+  file manifests matched; old-root symlinks and watcher health verified.
 
 ### Fixed — dashboard interactive startup
 - The dashboard runner renders the initial frame before entering its input wait loop.

@@ -1,6 +1,24 @@
 # Workspace-root migration
 
-Status: READY — v3, operator-directed 2026-08-10. Supersedes v2's flattened layout.
+Status: MIGRATED — v3 executed and verified 2026-08-10.
+
+Execution evidence:
+- card 125 implementation `2de5875`;
+- focused fixture: 70 checks passed; bash syntax and diff checks passed;
+- live preflight: both sources ready, both targets absent, filesystem device 56;
+- old roots now exact symlinks to the canonical hidden targets;
+- relative manifests matched (316 night files, 33 day files; link manifests matched);
+- watcher restarted: `ActiveState=active`, `MainPID=460980`,
+  `ExecMainStatus=0`;
+- lane/task reads verified through both old and new paths;
+- full `make test`: 19 suites, 976/976 pass, 0 fail, 0 skip on code at
+  `2de5875` (migration-record docs were the only dirty files).
+
+The work-root seam/referencer sweep and backup-manager capture remain follow-up
+work. The canonical state repo already contained unrelated dirty runtime state,
+so this wave did not create an indiscriminate backup commit.
+
+Supersedes v2's flattened layout.
 
 ## Decision
 

@@ -10,9 +10,10 @@ completions, and coupled 5h/7d/30d quota admission. Design:
 `docs/design/k3-bounded-completions.md`.
 
 Immediate ordered work:
-1. Card 125: scratch-HOME workspace migration script; then Killy runs the live
-   whole-tree move to `~/.hngh/.hngh-night` + `.hngh-day` with compatibility
-   links.
+1. ~~Card 125: migrate workbench roots.~~ **DONE** at `2de5875`; live trees
+   now reside at `~/.hngh/.hngh-night` + `.hngh-day`, old roots are
+   compatibility links, manifests and watcher health verified. Follow-up:
+   work-root seam/referencer sweep + bounded backup-manager capture.
 2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
    authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
 3. Card 127: wire the planner/router to the hardened predicate; automatic K3
