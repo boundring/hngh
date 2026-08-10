@@ -932,7 +932,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:classify-lane-line))
 
 (defpackage :hngh.plugins.model-routes
-  (:documentation "M8 model route table + task-class→model routing seed (docs/design/model-routing.md). Data: the route table (id/backend/model/price/class) + the 2026-08 two-role split (agentic→deepseek-v4-flash, coding→gpt-5.6-luna). Accessors: route-model, role-model. Read-only — this seeds M8's routing data without committing to full selection logic.")
+  (:documentation "M8 model route table + task-class→model routing seed (docs/design/model-routing.md). Data: route id/backend/model/price/class plus the cost-floor split (agentic/coding→deepseek-v4-flash). Kimi quota is K3-only; Sol/Anthropic are excluded. Accessors: route-model, role-model. Read-only — this seeds M8's routing data without committing to full selection logic.")
   (:use :cl :hngh.core)
   (:export #:*routes*
            #:*primary-agents*
