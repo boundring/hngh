@@ -10,6 +10,20 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Added — bounded K3 authority completions
+- Added `docs/design/k3-bounded-completions.md`: compact one-turn packets,
+  no tools by default, strict context/output caps, and coupled 5h/7d/30d
+  admission so a fresh short window cannot exhaust weekly/monthly reserves.
+- Added a Pi-like thin-harness feasibility spike to the backlog without
+  selecting or depending on Pi.
+- Added evidence and continuation gates to the coordination contract so
+  finished seats reconcile claims, lanes, and the deck before resting.
+
+### Changed — workspace migration target
+- Replaced the flattened migration plan with whole-tree preservation under
+  `~/.hngh/.hngh-night/` and `~/.hngh/.hngh-day/`, scratch-HOME verification,
+  atomic moves, compatibility symlinks, and rollback.
+
 ### Fixed — dashboard interactive startup
 - The dashboard runner renders the initial frame before entering its input wait loop.
 - Dashboard Watch now reads live `watch/outcomes.jsonl` and falls back to the retired shell feed only when the live output is absent.

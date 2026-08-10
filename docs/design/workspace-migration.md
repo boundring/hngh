@@ -1,181 +1,105 @@
-# Workspace migration: ~/.hngh-night + ~/.hngh-day → ~/.hngh/ (existing canonical root)
+# Workspace-root migration
 
-Status: DESIGN v2 (Sanakan 2026-08-09 12:00; owner-directed, live seats
-execute the plan in action).
-Owner: "night" never meant night — background queue work done whenever.
-Merge day/night workbenches INTO the existing ~/.hngh/ root (already
-git-tracked by backup-manager, already holds tasks/queue.lisp, agents/,
-state/, journal/). Date-time-tagged subdirectories for session work;
-stable paths for persistent state. Live seats organize their own
-moves as ordered parts of the plan.
+Status: READY — v3, operator-directed 2026-08-10. Supersedes v2's flattened layout.
 
-## Ground truth (inventory 2026-08-09 12:00)
+## Decision
 
-EXISTING root `~/.hngh/` (git: backup-manager hourly auto-commit):
-- tasks/queue.lisp (73.6K — machine-readable runner queue)
-- tasks/night/, tasks/.done/, tasks/.blocked/
-- agents/{1,2,3}/transcript.lisp  (session transcripts)
-- state/ (hardware.lisp, mc-layout.lisp, locks/, plugins/, observations/)
-- journal/ (coord/, events/, hnghbeats/)
-- config/, plugins/, knowledge-base/, prompts/, runs/, secrets/
-  (vault.lisp), sources/, sessions/ (EMPTY — the landing zone), tests/
+Preserve both workbench trees intact under Hngh's canonical state root:
 
-TO MIGRATE (workbench content):
-- ~/.hngh-night/tasks/ → ~/.hngh/tasks/night/ merge (dedupe, one deck)
-- ~/.hngh-day/tasks/ → ~/.hngh/tasks/day/ (staged queue; per its
-  QUEUE.md contract, becomes queue.lisp when Day-Ralph authority lands)
-- ~/.hngh-night/artifacts/ → ~/.hngh/artifacts/history/
-  (608K dated research/design artifacts)
-- ~/.hngh-night/runs/ → ~/.hngh/runs/history/
-- ~/.hngh-night/prompts/ sources/ tests/ → corresponding ~/.hngh/
-- ~/.hngh-night/seat-names.md → ~/.hngh/registry/seat-names.md
-  (registry/ exists, empty — landing zone)
-- ~/.hngh-night/tandem-*/ (session lanes) → ~/.hngh/sessions/<ts>/
-  (sessions/ exists, EMPTY — the designed landing zone)
-- ~/.hngh-night/missions/ → ~/.hngh/sessions/<ts>/missions/ per session
-  OR ~/.hngh/prompts/briefs/ (stable) — seat decides per content
-- ~/.hngh-night/{benchmark-log,crash-recovery,plan-*,tandem-breadcrumbs,
-  worklog, ralph logs, QUEUE.md} → ~/.hngh/sessions/<ts>/
-- ~/.hngh-day/{QUEUE.md, day-ralph.log, supervisor_log.md,
-  day-ralph.lock} → ~/.hngh/queue/, ~/.hngh/daemon/ respectively
+```text
+~/.hngh-night/  -> ~/.hngh/.hngh-night/
+~/.hngh-day/    -> ~/.hngh/.hngh-day/
+```
 
-COMPATIBILITY: until the migration wave completes, keep
-`~/.hngh-night -> ~/.hngh` and `~/.hngh-day -> ~/.hngh` as symlinks so
-live seats + scripts that reference old paths keep resolving. Retire
-symlinks after ~6 months (owner option, default).
+After each atomic move, the old root becomes a compatibility symlink to the
+new target. Internal paths do not change. A consumer using
+`~/.hngh-night/tandem-cibo/inbox.md` therefore keeps working during the
+referencer migration.
 
-## SEAM-FIRST (card 123 gap 3, seu 23:58 — 114's first deliverable)
+Do not flatten workbench files into `~/.hngh/tasks`, `sessions`, `artifacts`,
+or other existing state directories. The workbenches and Hngh's runtime state
+have different contracts; merging them creates collision and rollback risk.
+The earlier flattened mapping is retained only as superseded history in git.
 
-The migration must NOT be a move that breaks hardcoded consumers.
-Today three components hardcode the workbench root:
-- src/plugins/dashboard-tui.lisp: *watch-root*, *seat-registry-
-  path*, *owner-inbox-path*, *seat-lanes-root*,
-  *claims-register-path* (all /home/bricker/.hngh-night/...)
-- /home/bricker/.local/bin/hngh-watch: HNGH_HOME env with default
-  /home/bricker/.hngh-night (SCHEDULES/CONTROL/OUTCOME_LOG under
-  HNGH_WATCH_CONFIG)
-- src/plugins/hngh-coord/coord.lisp: *lane-root*
-  /home/bricker/.hngh-night
+## Scope
 
-SEAM DESIGN (do this FIRST, before any file moves):
-1. Introduce ONE config point: `*hngh-home*` (Lisp) /
-   `HNGH_HOME` (env, already used by hngh-watch) resolved from:
-   env > ~/.config/hngh/config (or ~/.hngh/config) > default
-   (~/.hngh). Every consumer reads the seam; NO hardcoded paths
-   remain in code.
-2. The seam is a getter, not a constant — tests bind it to a
-   scratch HOME (see fixture shape below), the real code binds it
-   to the canonical root at startup. Same pattern as the
-   configurable feed paths in the dashboard (already defvars).
-3. Once the seam exists, the migration becomes a DATA move: point
-   the seam at ~/.hngh, symlink the old roots for the 6-month
-   compat window, verify every consumer still resolves.
-4. Acceptance for the seam: `grep -rn '/home/bricker/.hngh-night'
-   src/ ~/.local/bin/*.py` returns ZERO code hits (docs + lane
-   history may retain them; code must not).
+This wave moves data and installs compatibility links. It does not redesign
+the queue, archive old artifacts, rename lane files, or prune workbench
+content. Those are separate reviewed waves.
 
-SCRATCH-HOME FIXTURE SHAPE (the migration harness):
-- A fixture HOME (tmp dir) with a minimal ~/.hngh tree (state/,
-  tasks/queue.lisp stub, registry/, sessions/) + symlinks
-  night/day -> the fixture root.
-- Tests bind *hngh-home*/HNGH_HOME to the fixture, then exercise:
-  seat-up scratch spawn (already in 114 §Verification), lane-write
-  via the append helper, dashboard render-to-string reading the
-  fixture feeds, hngh-watch SCHEDULES/CONTROL resolution under the
-  fixture config dir.
-- The harness proves the move is SAFE on a fake root before any
-  real ~/.hngh-night mutation (cibo 23:10 recommendation, agreed:
-  scratch-HOME migration harness before the real move).
+Current inventory includes active task/artifact/lane trees under night and a
+smaller day queue/artifact tree. Empty directories and old artifacts move with
+their parent; no per-file classification occurs during migration.
 
-## Migration steps (executed by live seats as the plan's ordered work)
+## Safety contract
 
-Owner 11:55: "live seats make live changes in an organized manner: we'll
-have them handle this as orderly parts of the design's progression, its
-plan in action."
+The migration script is `scripts/hngh-workspace-migrate.sh` (card 125).
 
-1. SEU (coordinator): turn this doc into ordered subtasks with
-   ownership — the deck. Confirm the target mapping above; anything
-   ambiguous gets decided documentation-first (read the root's git log
-   + file headers before choosing).
-2. CIBO (coder): write the migration script `scripts/hngh-workspace-
-   migrate.sh` — moves content per the mapping, creates symlinks,
-   updates the 19 script referencers (seat-up, lane-watch, seat-steer,
-   apollo-up, tandem-*, day-ralph, hngh-status, squad-*) to the new
-   stable paths, and the 13 design-doc references. Test on a scratch
-   HOME (bad idea to churn the real one) → verify → then run for real.
-3. Both: post-migration, verify seat-up still spawns (scratch), lane-
-   watch reads seats, make test green, seats' lanes resolve via new
-   paths, backup-manager git commit captures the change.
-4. SUPPORT: after the move, seat briefs (missions/*) point at new
-   paths; update the breadcrumbs + future briefs to the canonical
-   layout so no future session starts from stale paths.
+- `--home PATH` makes every test hermetic; default is `$HOME`.
+- `--check` is read-only.
+- `--migrate` uses same-filesystem rename only. No copy/delete fallback.
+- The canonical `~/.hngh` root must already exist.
+- An existing destination, unexpected symlink, conflicting source, or partial
+  state that cannot be proven safe fails before mutation.
+- Correctly migrated state is idempotent.
+- `--rollback` works only when each old root is the expected compatibility
+  symlink and no conflicting source exists.
+- Representative lane and artifact bytes must survive a scratch-HOME
+  migrate/rollback round trip.
 
-## Verification (all must pass)
-- ~/.hngh/sessions/<ts>/ contains dated session lanes from night/day.
-- registry/seat-names.md exists; tasks deck merged with no dupes.
-- old paths resolve via symlink; new paths work direct.
-- make test exit 0; seat-up scratch spawn OK.
-- git status of ~/.hngh shows the migration as one backup-manager wave.
+Killy alone runs the live migration after Cibo's implementation and an
+independent review. Cibo must not mutate the live home from its task.
 
-## Coordination rule (owner: "smooth change")
-- Never rename a lane mid-turn. Moves happen at phase boundaries only.
-- The seats were already notified (inbox, 11:52). They ack in outbox;
-  the migration proceeds per their phase rhythm.
+## Execution sequence
 
-## Owner decisions (defaults noted)
-- Retire old roots after symlink stabilizes: DEFAULT keep ~6mo, then
-  delete (ask owner at that time).
-- Unified queue contract: sea/deck merge ≡ queue; queue.lisp stays the
-  runner's machine form. Day QUEUE.md's staged-only contract holds until
-  Day-Ralph authority lands.
+1. Build and pass the scratch-HOME fixture.
+2. Review the script for fail-closed preflight, atomicity, idempotence, and
+   rollback.
+3. Ensure active seats are at a phase boundary. A lane may move only between
+   turns, never while a seat is writing it.
+4. Pause the user watcher briefly so it cannot observe the rename/link gap.
+5. Run `--check`, then `--migrate` once against the real home.
+6. Verify both new roots directly and both old roots through exact symlinks.
+7. Restart the watcher and verify `ActiveState=active`, a new `MainPID`, and
+   `ExecMainStatus=0`.
+8. Verify each seat can read and append through the old compatibility path and
+   the new direct path.
+9. Record the backup-manager state wave. Do not remove the compatibility links.
 
-Attribution: Sanakan (deepseek-v4-flash-0731), hermes TUI, 2026-08-09.
----
+If a gate fails, run no later step. Use `--rollback` only after inspecting the
+reported state; never improvise file moves.
 
-## Task deck (Seu decomposition, 2026-08-09 12:35 — card 112 step 1)
+## Follow-up: one work-root seam
 
-Ownership split per the card: SEU = coordination/deck/missions call,
-CIBO = migration script + referencer updates, KILLY = verification.
+Compatibility links make the move safe; they are not the final interface.
+Introduce a work-root getter distinct from Hngh's runtime-state root:
 
-T-SEU-1 (DONE, this section): mapping confirmed against live
-inventory 12:35 — root/registry/sessions landing zones all present and
-empty; ~/.hngh-day has artifacts/ + tasks/ beyond the doc's explicit
-list (fold them with night -> history/ + tasks/day/). `night/datasets`,
-`night/research` are EMPTY (0 bytes) — nothing to move; keep the dirs
-or drop per owner, default DROP (git tracks the layout; empty dirs
-vanish). `night/ralph-tasks/.done` (12K) = stable done-stack → keep as
-`~/.hngh/ralph-tasks/` alongside tasks/ (persistent queue artifact, not
-dated-session content). `tandem-live` symlink points at tandem-apollo
-which is a CLOSED morning lane — Cibo: point it at nothing/remove, or
-at the current active seat lane (killy) per the "live" concept; pick
-killy, note in the script.
+```text
+HNGH_WORK_ROOT
+  env override
+  -> config
+  -> ~/.hngh/.hngh-night/
+```
 
-T-SEU-2: missions placement decision — active missions (crash-resume
-for cibo/seu/killy) are SESSION content → land in
-`~/.hngh/sessions/<ts>/missions/`; stable evergreen briefs (none today
-except plan-2026-08-09) → `~/.hngh/prompts/briefs/`. Migration moment:
-at the NEXT phase boundary per seat, so nobody loses their lane
-mid-turn (owner's smooth-change rule). Until then missions stay put,
-symlink keeps them resolvable.
+Consumers include the dashboard, coordinator lanes, watcher, seat tools,
+squad configuration, and task/artifact helpers. Day-Ralph uses an explicit
+`HNGH_DAY_ROOT`, defaulting to `~/.hngh/.hngh-day/`.
 
-T-CIBO-1: write scripts/hngh-workspace-migrate.sh for the mapping in
-the design doc + the deltas above (day/artifacts, day/tasks,
-ralph-tasks, tandem-live fix). Symlink ~/.hngh-night -> ~/.hngh and
-~/.hngh-day -> ~/.hngh. Update the 19 script referencers + 13 design
-docs. ALL moves guarded: refuse to move when a source path is a live
-lane mid-turn (check tmux sockets), refuse to clobber an existing
-destination. Test on scratch HOME first.
+After all live consumers use these seams, a referencer sweep may remove direct
+old-root literals from active code and configuration. Historical journals and
+migration docs keep old paths as facts. Compatibility symlink retirement is a
+later operator decision, not part of this wave.
 
-T-CIBO-2: referencer sweep acceptance — grep for ~/.hngh-night/day
-must return only symlink definitions + this doc's history after the
-migrate + referencer updates.
+## Acceptance
 
-T-KILLY-1: verify post-migration: seat-up scratch spawn OK, lane-watch
-reads seats via NEW paths, make test exit 0, ~/.hngh git (backup-
-manager) shows one wave, ~/.hngh/sessions/<ts>/ has the dated lanes.
+- Scratch-HOME fixture covers check, migrate, idempotence, refusal cases, and
+  rollback.
+- `~/.hngh/.hngh-night/` and `~/.hngh/.hngh-day/` contain the complete source
+  trees after the live wave.
+- `~/.hngh-night` and `~/.hngh-day` are exact symlinks to those targets.
+- Watcher and lane reads work after migration.
+- No data is flattened, merged, pruned, or overwritten.
+- Rollback remains available while compatibility links remain.
 
-Owner-gated (no blocking): retire-old-roots at ~6mo; queue.lisp
-contract until Day-Ralph authority.
-
-ACK: seats were notified 11:52 (design doc) + this deck supersedes;
-ack this in your lanes before running script on the real HOME.
+Attribution: operator direction; Killy design authority; Cibo implementation;
+K3 artifact 95 priority signal. 2026-08-10.

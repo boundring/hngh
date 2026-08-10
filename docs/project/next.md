@@ -1,6 +1,21 @@
 # Next — Current Work
 
-**Last updated**: 2026-08-08
+**Last updated**: 2026-08-10
+
+## 2026-08-10 reorientation
+
+K3 sanity review artifact 95 is now consumed into the development method:
+evidence-gated state claims, completion-to-reorientation, bounded authority
+completions, and coupled 5h/7d/30d quota admission. Design:
+`docs/design/k3-bounded-completions.md`.
+
+Immediate ordered work:
+1. Card 125: scratch-HOME workspace migration script; then Killy runs the live
+   whole-tree move to `~/.hngh/.hngh-night` + `.hngh-day` with compatibility
+   links.
+2. Wire the planner/router to consume the shipped K3 admission predicate.
+3. Build completion packet/fingerprint and manual quota observation.
+4. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
 
 ## Current Status
 
