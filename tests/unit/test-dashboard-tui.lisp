@@ -110,6 +110,34 @@
       (when (probe-file tmp)
         (delete-file tmp)))))
 
+(test tui-reads-live-watch-outcomes
+  (let ((tmp (make-pathname :name "outcomes" :type "jsonl"
+                            :defaults (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (with-open-file (stream tmp :direction :output :if-exists :supersede)
+             (format stream "{\"ts\":1,\"seat\":\"cibo\",\"cycle\":\"heartbeat\",\"result\":\"fired\"}~%")
+             (format stream "{\"ts\":2,\"seat\":\"cibo\",\"cycle\":\"lanes-scout\",\"result\":\"fired\"}~%"))
+           (let ((outcomes (hngh.plugins.dashboard-tui:read-watch-outcomes tmp)))
+             (is (= 1 (length outcomes)))
+             (is (equal "lanes-scout"
+                        (getf (cdr (assoc "cibo" outcomes :test #'string=)) :cycle)))))
+      (when (probe-file tmp) (delete-file tmp)))))
+
+(test tui-reads-watcher-steers-from-lanes
+  (let ((root (merge-pathnames "watch-lanes/" (uiop:temporary-directory))))
+    (unwind-protect
+         (progn
+           (ensure-directories-exist (merge-pathnames "tandem-cibo/" root))
+           (with-open-file (stream (merge-pathnames "tandem-cibo/inbox.md" root)
+                                   :direction :output :if-exists :supersede)
+             (format stream "old line~%")
+             (format stream "STEER 22:00 (hngh-watch) — live~%"))
+           (let ((lines (hngh.plugins.dashboard-tui::read-watch-steers root)))
+             (is (= 1 (length lines)))
+             (is (search "live" (first lines)))))
+      (when (probe-file root)
+        (uiop:delete-directory-tree root :validate #'identity)))))
 (test tui-renders-live-watch-state
   (let ((tmp (make-pathname :name "watch-state-render" :type "txt"
                             :defaults (uiop:temporary-directory))))
@@ -120,7 +148,10 @@
            (hngh.core.event-bus:init :hngh-home (make-tmp-home))
            (hngh.plugins.dashboard-tui:init :headless t)
            (hngh.plugins.dashboard-tui:handle-key #\4)
-           (let ((hngh.plugins.dashboard-tui::*watch-state-path* tmp))
+           (let ((hngh.plugins.dashboard-tui::*watch-root*
+                   (merge-pathnames "missing-watch-root/"
+                                    (uiop:temporary-directory)))
+                 (hngh.plugins.dashboard-tui::*legacy-watch-state-path* tmp))
              (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
                (is (search "Live Watch" output))
                (is (search "cibo" output))

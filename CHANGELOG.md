@@ -10,6 +10,10 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Fixed — live watcher dashboard feeds
+- Dashboard Watch now reads live `watch/outcomes.jsonl` and falls back to the retired shell feed only when the live output is absent.
+- Dashboard Steers now reads watcher-generated lane entries, with the legacy centralized log retained as fallback.
+
 ### Added — MisakaNet lesson pipeline (card 113, owner 14:51)
 - Backlog card for queueing/processing/submitting failure lessons to
   MisakaNet at scale (deferred execution; deck first).

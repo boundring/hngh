@@ -301,6 +301,7 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
            #:render-to-string
            #:handle-key
            #:read-watch-state
+           #:read-watch-outcomes
            #:read-steers-log
            #:read-owner-inbox
            #:read-seat-status

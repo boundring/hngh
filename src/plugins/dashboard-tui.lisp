@@ -45,8 +45,11 @@
 (defvar *input-thread* nil
   "Background thread reading keyboard input.")
 
-(defvar *watch-state-path* "/tmp/hngh-live-watch.state"
-  "Path to the live-watch state feed consumed by the dashboard.")
+(defvar *watch-root* "/home/bricker/.hngh-night/watch"
+  "Root containing the live Python watcher's outputs.")
+
+(defvar *legacy-watch-state-path* "/tmp/hngh-live-watch.state"
+  "Compatibility path for the retired shell watcher feed.")
 
 (defvar *steers-log-path* "/tmp/hngh-steers.log"
   "Path to the centralized steer delivery log.")
@@ -209,13 +212,28 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
   "Read owner inbox lines from PATH."
   (uiop:read-file-lines path))
 
+(defun read-watch-steers (lanes-root)
+  "Read watcher-generated STEER lines from all seat inboxes."
+  (let ((lines nil))
+    (dolist (seat '("cibo" "seu" "killy"))
+      (let ((path (merge-pathnames (format nil "tandem-~A/inbox.md" seat)
+                                   lanes-root)))
+        (when (probe-file path)
+          (dolist (line (uiop:read-file-lines path))
+            (when (search "(hngh-watch)" line)
+              (push line lines))))))
+    (subseq (nreverse lines) 0 (min 30 (length lines)))))
+
 (defun render-steers ()
-  "Render the centralized steer feed."
+  "Render the live watcher steers, with legacy feed fallback."
   (render-header "Steers")
-  (if (probe-file *steers-log-path*)
-      (dolist (line (last (read-steers-log *steers-log-path*) 30))
-        (format t "  ~A~%" line))
-      (format t "  ~A(no steer log)~A~%" +ansi-dim+ +ansi-reset+)))
+  (let ((lines (read-watch-steers (merge-pathnames "../" *watch-root*))))
+    (if lines
+        (dolist (line lines) (format t "  ~A~%" line))
+        (if (probe-file *steers-log-path*)
+            (dolist (line (last (read-steers-log *steers-log-path*) 30))
+              (format t "  ~A~%" line))
+            (format t "  ~A(no steer log)~A~%" +ansi-dim+ +ansi-reset+)))))
 
 (defun render-owner-inbox ()
   "Render the owner-facing decision inbox."
@@ -277,16 +295,23 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
 (defun render-watch-state ()
   "Render the latest live-watch state for each seat."
   (format t "~A~%Live Watch~A~%" +ansi-bold+ +ansi-reset+)
-  (if (probe-file *watch-state-path*)
-      (dolist (entry (read-watch-state *watch-state-path*))
-        (let ((seat (car entry))
-              (state (cdr entry)))
-          (format t "  ~A  ~A ~A idle=~Ds~%"
-                  seat
-                  (or (getf state :status) "unknown")
-                  (or (getf state :action) "none")
-                  (getf state :idle-s 0))))
-      (format t "  ~A(no watcher state)~A~%" +ansi-dim+ +ansi-reset+)))
+  (let ((outcomes (merge-pathnames "outcomes.jsonl" *watch-root*)))
+    (if (probe-file outcomes)
+        (dolist (entry (read-watch-outcomes outcomes))
+          (format t "  ~A  ~A ~A~%"
+                  (car entry)
+                  (or (getf (cdr entry) :status) "unknown")
+                  (or (getf (cdr entry) :cycle) "none")))
+        (let ((legacy *legacy-watch-state-path*))
+          (if (probe-file legacy)
+              (dolist (entry (read-watch-state legacy))
+                (format t "  ~A  ~A ~A idle=~Ds~%"
+                        (car entry)
+                        (or (getf (cdr entry) :status) "unknown")
+                        (or (getf (cdr entry) :action) "none")
+                        (getf (cdr entry) :idle-s 0)))
+              (format t "  ~A(no watcher outcomes)~A~%"
+                      +ansi-dim+ +ansi-reset+))))))
 
 (defun render-overview ()
   "Render the overview view."
@@ -391,6 +416,20 @@ If HEADLESS is T, subscribes to events but doesn't render TUI."
     (concatenate 'string
      (make-string filled :initial-element #\█)
      (make-string (- 10 filled) :initial-element #\░))))
+
+(defun read-watch-outcomes (path)
+  "Read JSONL watcher outcomes as latest per-seat status."
+  (let ((latest (make-hash-table :test #'equal)))
+    (dolist (line (uiop:read-file-lines path))
+      (handler-case
+          (let ((entry (yason:parse line)))
+            (setf (gethash (gethash "seat" entry) latest) entry))
+        (error () nil)))
+    (loop for seat being the hash-keys of latest
+          using (hash-value entry)
+          collect (cons seat (list :status (gethash "result" entry)
+                                   :cycle (gethash "cycle" entry)
+                                   :ts (gethash "ts" entry))))))
 
 (defun read-watch-state (path)
   "Read the latest state entry for each seat from PATH."
