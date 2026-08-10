@@ -109,6 +109,11 @@
              (hngh:dashboard-pair-arguments)))
   (is (search "scratch" (hngh:dashboard-startup-script :session "scratch"))))
 
+(test default-dashboard-runner-renders-before-waiting
+  (let ((text (uiop:read-file-string "src/core/main.lisp")))
+    (is (< (search "(hngh.plugins.dashboard-tui:init)" text)
+           (search "(hngh.plugins.dashboard-tui:render)" text)))))
+
 (test dashboard-subcommand-delegates-to-runner
   (let ((called nil))
     (hngh:dashboard-subcommand

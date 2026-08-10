@@ -10,7 +10,8 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
-### Fixed — live watcher dashboard feeds
+### Fixed — dashboard interactive startup
+- The dashboard runner renders the initial frame before entering its input wait loop.
 - Dashboard Watch now reads live `watch/outcomes.jsonl` and falls back to the retired shell feed only when the live output is absent.
 - Dashboard Steers now reads watcher-generated lane entries, with the legacy centralized log retained as fallback.
 
