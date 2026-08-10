@@ -34,15 +34,38 @@
   (let ((env (hngh.plugins.quota-spreader:quota-envelope 'kimi-sub)))
     (is (eq 'kimi-sub (getf env :route)))
     (is-true (getf env :buckets))
-    ;; Buckets preserve declared order (week, day, hour); assert each period/cap.
+    ;; Buckets preserve declared order (week, day, hour, month); assert each period/cap.
     (let ((buckets (getf env :buckets)))
-      (is (= 3 (length buckets)))
-      (is (eql :week (getf (first buckets) :period)))
+      (is (= 4 (length buckets)))
+      (is (eql :month (getf (fourth buckets) :period)))
+      (is (= 8000000 (getf (fourth buckets) :cap)))
       (is (= 2000000 (getf (first buckets) :cap)))
       (is (eql :hour (getf (third buckets) :period)))
       (is (= 40000 (getf (third buckets) :cap))))))
 
-;;; --- Even-sparse drawdown -------------------------------------------------
+(test k3-driver-routes-authority-situations
+  (is-true (hngh.plugins.quota-spreader:should-route-to-k3-p
+            :code-final-review :used 0 :elapsed-seconds 3600))
+  (is-true (hngh.plugins.quota-spreader:should-route-to-k3-p
+            :plan-veto :used 0 :elapsed-seconds 3600))
+  (is-false (hngh.plugins.quota-spreader:should-route-to-k3-p
+             :tool-preview :used 0 :elapsed-seconds 3600))
+  (is-false (hngh.plugins.quota-spreader:should-route-to-k3-p
+             :code-final-review :used 400000 :elapsed-seconds 3600)))
+
+(test k3-driver-surfaces-availability
+  (is-true (hngh.plugins.quota-spreader:quota-available-p
+            'kimi-sub :used 0 :elapsed-seconds 3600))
+  (is (search "available-now"
+              (hngh.plugins.quota-spreader:quota-status
+               'kimi-sub :used 0 :elapsed-seconds 3600))))
+
+
+(test even-rate-five-hour-window
+  (is-true (hngh.plugins.quota-spreader::%even-rate-ok-p
+            :five-hour 1000 100 9000))
+  (is-false (hngh.plugins.quota-spreader::%even-rate-ok-p
+             :five-hour 1000 600 9000)))
 
 (test even-rate-ok-early-in-period
   ;; Day 2 of a weekly bucket (mostly time left) -> room.
