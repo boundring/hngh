@@ -19,6 +19,12 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 - Added evidence and continuation gates to the coordination contract so
   finished seats reconcile claims, lanes, and the deck before resting.
 
+### Changed — K3 quota sequencing
+- Seu's bounded review found the shipped predicate is not yet an authoritative
+  gate: no effective 5-hour default, marginal amount ignored, no ledger rollup
+  or call reservation. Card 128 now hardens quota truth before card 127 wires
+  the planner.
+
 ### Changed — workspace migration target
 - Replaced the flattened migration plan with whole-tree preservation under
   `~/.hngh/.hngh-night/` and `~/.hngh/.hngh-day/`, scratch-HOME verification,

@@ -153,7 +153,7 @@ and benchmark squads; nightly cron turns that into a real dataset.
 | 1 | C1 AGENTS.md discovery/merge, C5 fragment journal | **Done** (837/837 fast) |
 | 2 | C3 questionnaire-from-AGENTS.md, C2 resource-gate preflight | **Done** (C2 + C3, 837/837 fast; wired main.lisp) |
 | 3 | C4 start-now/pause-on-cause, C7 self-written prompts, C10 MisakaNet Failure Shield | **In progress** (C7 done: generate-pm-prompt exported, tested, squad-up wired, now delegates to W5 generate-prompt; C4 + C10 design-only) |
-| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** (per-route envelopes, authority reservations, strategic reserve) | **In progress** (W0-W3 done @ b3c5274; K3 driver `b94d00d` adds 5h/7d/30d admission predicates, but planner consumption remains open; bounded-completion design: `k3-bounded-completions.md`) |
+| 4 | C6 planner cycle (roadmap → task queue → squad dispatch) + **signals layer** + **quota-spreader cost gate** | **In progress** — predicate seam shipped at `b94d00d`, but review found quota truth incomplete (no effective 5h default, amount ignored, no ledger rollup/reservation). Card 128 hardens it; card 127 wires planner consumption afterward. |
 | 5 | C8 benchmark-runner strategy, C9 nightly benchmark cron | Not started |
 | 6 | **Live orchestration** (observe → guard-rail → steer → plugins → optimize): hngh-mc observe + TUI peep depth, procedural evidence-check + multi-pass dev/review, priority-scored /steer + opencode-correct, Hermes/opencode plugins, shadow-then-promote param optimizer | **Not started** (design `live-orchestration.md` L1–L5; **steering surface de-risked 2026-08-07: ACP servers on both Hermes + opencode + opencode HTTP/SSE control plane** — build the plugin as an ACP client; L2 guard-rails + L5 param opt ride on C4/C10 + C8/C9 gating) |
 
@@ -170,7 +170,7 @@ The design phase produced four artifacts, version-controlled in `docs/design/`:
 | `integrations.md` | 4 | Integration map, event schema, contracts, 8 sequence diagrams |
 | `hngh-design-spec.md` | 5 | Single source of truth (compiles all phases) |
 | `planner-design-roadmap.md` | M9+ | How far/how well we can roadmap; squad consumption contract; external procedural guidance (self-improvement survey + dispatch heuristics); the senses→planner feedback + config hot-swap interface (designed now, gated later) |
-| `quota-spreader.md` | M9+ | Per-route quota envelopes with 5h/7d/30d even drawdown; K3 driver shipped, planner consumption open |
+| `quota-spreader.md` | M9+ | Predicate seam shipped; card 128 must add authoritative 5h/7d/30d rollup, amount-aware admission, and call reservation before planner use |
 | `k3-bounded-completions.md` | M9+ | One-turn, no-tools K3 authority lane: compact packets, strict context/output caps, three-window admission, durable consumption, Pi feasibility spike |
 | `squad-autonomy.md` | M9 | AGENTS.md-oriented, resource-aware, self-continuing squads; recursive planner cycle |
 | `social-senses.md` | M9+ | Social/relational layer on the sense taxonomy: instant agent↔agent signals ("emotes"), 1:1 talks + message boards, thought-trace procedural intent layer, relationship graph + rapport; multi-device horizon kept node-agnostic |
