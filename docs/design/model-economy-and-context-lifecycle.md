@@ -137,7 +137,25 @@ runtime controls profile selection at launch; it does not rely on agents to
 ignore unused affordances. On 2026-08-10 the active Hermes config removed
 Blender, Unreal Engine, and NotHumanSearch MCPs; only Hngh, MisakaNet, and
 DepScope remain pending profile audit. OpenCode likewise retains only MisakaNet
-and DepScope after removing NotHumanSearch.
+after its unfiltered DepScope and NotHumanSearch MCPs were removed.
+
+## Measured Hermes profiles
+
+`hermes prompt-size` is the fixed-prompt acceptance probe; it runs offline.
+Measurements on 2026-08-10:
+
+| Profile | Fixed system | Tool schemas | Skills | Route |
+|---|---:|---:|---:|---|
+| `default` | 29.3 KB | 63.7 KB / 37 tools | 93 indexed | workhorse/coder |
+| `hngh-lean` | 29.6 KB | 45.5 KB / 18 tools | 93 indexed | coordination/review |
+| `hngh-minimal` | 7.1 KB | 13.3 KB / 7 tools | 0 | local procedural only |
+
+`hngh-minimal` is configured to Unsloth Gemma 4 12B with no remote fallback;
+its enabled surfaces are terminal, file, and code execution. Its fixed prompt
+is about 20.4 KB, roughly 78% below the default fixed prompt. It is the
+baseline for local sweeps, procedural classification, and fixture benchmarks.
+It must not be used for tasks requiring retained skills, web research, or
+operator interaction.
 
 ## Accuracy and situation routines
 
