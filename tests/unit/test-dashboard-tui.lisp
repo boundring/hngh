@@ -202,7 +202,10 @@
              (format stream "DECISION: choose the safe route~%"))
            (hngh.core.event-bus:init :hngh-home (make-tmp-home))
            (hngh.plugins.dashboard-tui:init :headless t)
-           (let ((hngh.plugins.dashboard-tui::*steers-log-path* steers)
+           (let ((hngh.plugins.dashboard-tui::*watch-root*
+                   (merge-pathnames "missing-watch-root/"
+                                    (uiop:temporary-directory)))
+                 (hngh.plugins.dashboard-tui::*steers-log-path* steers)
                  (hngh.plugins.dashboard-tui::*owner-inbox-path* owner))
              (hngh.plugins.dashboard-tui:handle-key #\5)
              (let ((output (hngh.plugins.dashboard-tui:render-to-string)))
