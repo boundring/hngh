@@ -7,8 +7,10 @@ Current boundary:
 
 - Card 128 is verified and committed at `472737d`.
 - Card 147 remains uncommitted in `tests/unit/test-hngh-planner.lisp`.
-- Card 147 focused suite: 59/59 pass; paren lint and diff check pass.
-- Independent card-147 review is pending.
+- Card 147 focused suite: 60/60 pass after the explicit UNKNOWN-envelope
+  assertion; paren lint and diff check pass.
+- Independent review passed; the operator chose to record the boundary and
+  stop without committing card 147.
 - No successor seat was launched. Cibo and Seu remain alive; Killy's pane is
   dead. The watcher remains active.
 - Do not begin card 127, commit card 147, or launch a successor until the
