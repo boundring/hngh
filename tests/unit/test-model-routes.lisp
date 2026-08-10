@@ -34,11 +34,23 @@
                (hngh.plugins.model-routes:route-model :local-12b)))
   (is (null (hngh.plugins.model-routes:route-model :does-not-exist))))
 
+(test kimi-route-is-k3-only-and-anthropic-is-absent
+  "Route data permits K3 only for Kimi and never exposes an Anthropic model."
+  (let ((routes hngh.plugins.model-routes:*routes*))
+    (is (string= "k3" (hngh.plugins.model-routes:route-model :kimi-k3)))
+    (is (notany (lambda (route)
+                  (search "kimi-for-coding" (getf route :model)
+                          :test #'char-equal))
+                routes))
+    (is (notany (lambda (route)
+                  (search "claude" (getf route :model) :test #'char-equal))
+                routes))))
+
 (test two-role-split-primary-models
-  ;; 2026-08 human steer: agentic → deepseek-v4-flash, coding → gpt-5.6-luna
+  ;; Cost floor: interactive agentic and coding work start on DeepSeek Flash.
   (is (string= "deepseek-v4-flash"
                (hngh.plugins.model-routes:role-model :agentic)))
-  (is (string= "gpt-5.6-luna"
+  (is (string= "deepseek-v4-flash"
                (hngh.plugins.model-routes:role-model :coding))))
 
 (test role-model-backstop
