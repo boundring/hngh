@@ -15,8 +15,9 @@ Immediate ordered work:
    links.
 2. Card 128: harden K3 quota truth (5h bucket, amount-aware admission,
    authoritative ledger rollup, call reservation, fail-closed UNKNOWN).
-3. Card 127: only then wire the planner/router to consume the K3 predicate.
-4. Build completion packet/fingerprint and manual quota observation.
+3. Card 127: wire the planner/router to the hardened predicate; automatic K3
+   remains refused until quota observation/config supplies the cap.
+4. Build completion packet/fingerprint and manual quota observation gate.
 5. Resume cards 120/122/124: meaningful seat reorientation and TUI health.
 
 ## Current Status
