@@ -271,7 +271,11 @@ Each plugin loads into hngh.plugins.<name> to enforce package-level isolation.")
   (:documentation "Procedural lint for agent-to-agent prompt requests (card 103).")
   (:use :cl :hngh.core)
   (:export #:run-file
-           #:lint-text))
+           #:lint-text
+           #:scan-content
+           #:run-scan-file
+           #:*scan-hard-block-patterns*
+           #:*scan-risk-patterns*))
 
 (defpackage :hngh.plugins.dbus-bridge
   (:documentation "dbus Bridge (B13) — translates between internal bus and systemd dbus.")

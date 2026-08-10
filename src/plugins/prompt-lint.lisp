@@ -222,6 +222,117 @@ The optional CONFIG-PATH overrides the Hermes model configuration source."
                      producer))
     (nreverse findings)))
 
+(defun scan-content (text &key adapter)
+  "Content-safety verdict for TEXT (card 109 D1 boundary).
+
+Returns a report object: {'verdict': 'ok'|'blocked', 'risk': 0..1,
+'scanner': <name>, 'reason': <string>, 'fragments': [...]}.
+
+Fail-closed: any error in any backend -> blocked with scanner named
+'fail-closed'. The ADAPTER keyword selects the backend:
+  nil / \"rules\"  — deterministic Lisp rule scanner (default; no deps)
+  \"nemo\"        — NeMo Guardrails adapter (Python subprocess; only
+                    used when installed per the plugin path)
+Unknown adapters are treated as fail-closed blocked."
+  (handler-case
+      (let ((backend (or (and adapter (string-downcase adapter)) "rules")))
+        (cond ((string= backend "rules") (%scan-rules text))
+              ((string= backend "nemo") (%scan-nemo text))
+              (t (error "unknown scan adapter: ~A" adapter))))
+    (error (condition)
+      (%object "verdict" "blocked"
+               "risk" 1.0
+               "scanner" "fail-closed"
+               "reason" (format nil "scan backend error: ~A" condition)
+               "fragments" #()))))
+
+(defparameter *scan-hard-block-patterns*
+  '((:injection . "ignore (?:all |any )?(?:previous |prior )?instructions")
+    (:injection . "ignore (?:everything|all) (?:above|below)")
+    (:injection . "system ?prompt")
+    (:injection . "you are now (?:dan|developer mode)")
+    (:injection . "do anything now")
+    (:injection . "reveal (?:your|the) (?:system )?prompt")
+    (:injection . "disregard (?:your|the) (?:guidelines|instructions|rules)")
+    (:exfiltration . "(?:post|send|exfiltrat|upload)[^\\n]{0,40}(?:secret|api[ _-]?key|token|password|credential)")
+    (:threat . "kill you|bomb|shoot (?:you|them)|terrorist")
+    (:unsafe . "how (?:do|can) i (?:make|build) (?:a )?(?:bomb|explosive|weapon)")))
+
+(defparameter *scan-risk-patterns*
+  '((:injection . "prompt injection")
+    (:injection . "override")
+    (:misuse . "(?:access|read) (?:secret|private|internal) (?:files|data)")
+    (:misuse . "delete (?:the )?(?:repo|repository|directory|database)")
+    (:toxicity . "hate|idiot|stupid (?:you|user)|shut ?up")
+    (:secrets . "(?:api[ _-]?key|password|secret)\\s*=")))
+
+(defun %scan-rules (text)
+  "Deterministic rule scanner. Hard-block patterns immediately block;
+risk patterns accumulate a risk score. Best-effort content gate, not
+a trust boundary (per D1 design)."
+  (let ((down (string-downcase text))
+        (hard nil)
+        (risk 0.0)
+        (hard-fragments nil)
+        (risk-fragments nil))
+    (dolist (pair *scan-hard-block-patterns*)
+      (let ((fragment (%match-fragment (cdr pair) down)))
+        (when fragment
+          (setf hard t)
+          (push (format nil "~A: ~A" (car pair) fragment) hard-fragments))))
+    (dolist (pair *scan-risk-patterns*)
+      (let ((fragment (%match-fragment (cdr pair) down)))
+        (when fragment
+          (incf risk 0.25)
+          (push (format nil "~A: ~A" (car pair) fragment) risk-fragments))))
+    (let ((risk (min 1.0 risk)))
+      (if hard
+          (%object "verdict" "blocked"
+                   "risk" risk
+                   "scanner" "rules"
+                   "reason" "hard-block pattern matched"
+                   "fragments" (coerce (nreverse hard-fragments) 'vector))
+          (%object "verdict" (if (>= risk 0.75) "blocked" "ok")
+                   "risk" risk
+                   "scanner" "rules"
+                   "reason" (if (>= risk 0.75)
+                                "cumulative risk threshold"
+                                "no content-safety hard-block")
+                   "fragments" (coerce (nreverse risk-fragments) 'vector))))))
+
+(defun %scan-nemo (text)
+  "NeMo Guardrails adapter: shell out to a small Python helper that
+returns a JSON verdict. Only reachable when :adapter \"nemo\" — the
+plugin path (installed per the design brief). Fail-closed on error
+propagates to scan-content's handler-case."
+  (let ((helper (merge-pathnames
+                 "scan_nemo.py"
+                 (or (uiop:getenv "HNGH_SCAN_HELPER_DIR")
+                     (uiop:getenv "HOME")))))
+    (unless (probe-file helper)
+      (error "NeMo helper not found: ~A" helper))
+    (let ((output (uiop:run-program
+                   (list "python3" (namestring helper) text)
+                   :output :string :error-output :string)))
+      (yason:parse output))))
+
+(defun run-scan-file (file &key adapter)
+  "Scan FILE, print one structured JSON verdict, return process status
+(0 ok, 1 blocked, 2 error)."
+  (handler-case
+      (let* ((text (uiop:read-file-string file))
+             (verdict (scan-content text :adapter adapter)))
+        (%emit (%object "file" file "verdict" verdict))
+        (if (string= (gethash "verdict" verdict) "ok") 0 1))
+    (error (condition)
+      (%emit (%object "file" file
+                      "verdict" (%object "verdict" "blocked"
+                                         "risk" 1.0
+                                         "scanner" "fail-closed"
+                                         "reason" (format nil "~A" condition)
+                                         "fragments" #())))
+      2)))
+
 (defun %emit (report)
   (yason:encode report *standard-output*)
   (terpri)
