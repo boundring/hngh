@@ -23,8 +23,10 @@ Current evidence:
   other observed suites passed. The four planner failures were the known
   UNKNOWN five-hour quota fixture seam.
 - Card 147 currently changes only `tests/unit/test-hngh-planner.lisp`.
-- Card-147 focused evidence: 59/59 pass; paren lint and `git diff --check`
-  pass. It remains uncommitted pending independent review.
+- Card-147 focused evidence: 60/60 pass after adding the explicit
+  unoverridden `:five-hour :unknown` assertion; paren lint and
+  `git diff --check` pass. It remains uncommitted pending the operator's
+  review-boundary decision.
 - `hngh-watch.service`: active.
 - Live seats: cibo and seu panes alive; killy pane dead. No successor seat was
   launched.
