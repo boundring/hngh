@@ -599,3 +599,40 @@ This clause supersedes any earlier "MCP also mirrors into the
 inbox" behavior (cibo 15:44): the mirror was a stopgap before
 roles existed. With one-writer-per-message, MCP's job is notify +
 journal; the delivery adapter owns the lane append.
+
+### 7.7 Evidence and continuation gates (K3 review 95)
+
+A seat may report `working`, `live`, `fixed`, or `done` only with an
+evidence block appropriate to the claim:
+
+```text
+FINDING: <state>
+EVIDENCE: <pane capture | command output | probe | rendered frame | commit>
+OBSERVED AT: <timestamp>
+UNKNOWN: <anything the artifact does not prove>
+```
+
+A sentence without its evidence object is a claim, not a finding. The
+coordinator may relay an unverified sibling statement only when labelled
+`RELAYED — NOT VERIFIED`; it may not turn it into its own finding.
+
+Completion is a transition, not a stop:
+
+1. Write the result and evidence to the outbox/worklog.
+2. Release completed surface claims.
+3. Re-read the inbox, sibling outboxes, live claims, and open deck.
+4. Perform standing ACK/review duties first.
+5. Select the next unclaimed, nonconflicting card, or declare a machine-
+   verifiable WAIT-GATE / genuine rest condition.
+6. End the turn. The watcher reactivates the seat when its gate or lane moves.
+
+A seat does not manufacture work to appear active. Rest is correct when the
+reconciled deck has no suitable work, the remaining work is claimed or gated,
+or the model budget says to stand down. The defect is an unexamined stop: a
+seat finishing one card and returning to `ready` without the reconciliation
+transaction.
+
+Authority reviews such as K3 artifact 95 are inputs to this transaction. Seats
+convert each action into a card, design change, guardrail, or an explicit
+rejection with evidence. They do not spend workhorse or reserve calls
+re-confirming already verified findings.
