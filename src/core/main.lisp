@@ -268,14 +268,18 @@ Used when building a standalone executable via `make build`."
       ((and args (string= (first args) "dash"))
        (dashboard-subcommand))
       ((and args (string= (first args) "prompt-lint"))
-       (let ((scanp (member "--scan" args :test #'string=))
-             (file (find-if (lambda (a) (and (not (string= a "--scan"))))
-                            (rest args))))
-         (unless file
+       (let* ((scanp (member "--scan" args :test #'string=))
+              (adapter (parse-option args "--adapter" #'identity))
+              (file (car (last (rest args)))))
+         (unless (and file
+                      (not (string= file "--scan"))
+                      (not (string= file "--adapter"))
+                      (not (and adapter (string= file adapter))))
            (format t "Usage: hngh prompt-lint [--scan] FILE~%")
            (uiop:quit 1))
          (if scanp
-             (uiop:quit (hngh.plugins.prompt-lint:run-scan-file file))
+             (uiop:quit (hngh.plugins.prompt-lint:run-scan-file file
+                                                                      :adapter adapter))
              (uiop:quit (hngh.plugins.prompt-lint:run-file file)))))
       ((member "acp" args :test #'string=)
        (acp-subcommand args) (uiop:quit 0))
