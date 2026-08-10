@@ -40,7 +40,8 @@ roles, named command authority, pruned compaction, and a fixture-first
 benchmark path. Measured
 fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
-  reduced protected history, capped turns at 80, and removed strategic routes
+  reduced protected history, capped standard Hngh sessions at 40 turns, and
+  removed strategic routes
   from automatic fallbacks. Fresh-seat screenshot evidence still showed 72.6K
   context with 48 tools, 74 skills, and 4 MCP servers; card 130 audits the
   remaining static surface.
