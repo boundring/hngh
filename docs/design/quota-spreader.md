@@ -213,15 +213,139 @@ explicit selection, capped, and configurable — never by default or accident.
 
 ## 4. K3 quota-distribution driver
 
-The driver is opt-in routing, not a new scheduler. Only authority situations
-(`code-final-review`, `plan-veto`, and `design-authority`) may call
-`should-route-to-k3-p`; it returns true only while the reservation and every
-route bucket remain within the even-rate envelope. `quota-available-p` and
-`quota-status` expose the current `available-now` signal to planner and
-watcher consumers. The kimi-sub envelope includes hour, day, week, and
-30-day month buckets; the month bucket is a long-horizon guard, while the
-shorter windows preserve rate-limit discipline. Unknown situations and
-failures refuse routing rather than silently spending the reserve.
+The driver is opt-in routing, not a new scheduler. It exists
+because a GATE alone distributes nothing: zero K3 today means no
+call ever routes to K3, so the even-rate envelope never draws down
+(verified killy 20:30). The driver's job: FLAG K3-appropriate
+work, ROUTE it when the envelope has room, and GUARANTEE
+availability across all three reset windows (5h / 7d / 30d).
+
+### 4.1 Flagging — what counts as K3-appropriate work
+
+A situation class is K3-appropriate iff it is an authority
+situation AND the judgment is high-stakes enough to justify the
+reserve. Deterministic situation classes (matches the L2/L3
+situation vocabulary, cross-agent-normalization §3):
+
+| Situation class | Route to K3? | Why |
+|---|---|---|
+| `code-final-review` | YES (reserved) | highest-stakes code gate; the reservation exists for it |
+| `plan-veto` | YES (reserved) | stopping/redirecting work; cost justified |
+| `design-authority` | YES (reserved) | the design call the group cannot make on workhorses |
+| everything else | NO | workhorses are the default; K3 is strategic reserve (doctrine) |
+
+Flagging is a pure function of the situation class — the planner
+tags a task with its class at creation (existing mechanism), the
+driver reads the tag. No heuristic "is this important enough"
+scan; the class IS the flag. Unknown classes refuse (fail-closed).
+
+### 4.2 Routing decision — even-rate iff within envelope
+
+```
+should-route-to-k3-p (situation-class):
+  1. class in {code-final-review, plan-veto, design-authority}? else NO
+  2. reservation not exhausted? else NO (strategic reserve refusal)
+  3. every bucket (hour/day/week/30d) within even-rate envelope
+     (%even-rate-ok-p: used <= f*cap with safety margin)? else NO
+  4. else YES
+```
+
+- The spreader math stays untouched — the driver only calls
+  `quota-ok-p` + `%even-rate-ok-p` through `should-route-to-k3-p`.
+- REFUSED does not mean cancelled: the caller falls back to the
+  workhorse route (gpt-5.6-luna etc.) with a ledger note
+  "k3-refused-over-envelope". The task still completes; only the
+  route changes. This is opt-in, not a hard dependency.
+- Consumption is ledgered (`quota-consumed`) exactly as today.
+
+### 4.3 The 30-day window
+
+The kimi-sub envelope gains a MONTH/30d bucket (config gap,
+killy 20:30). Semantics:
+
+- Three horizons, three purposes:
+  - hour/day/week buckets = rate-limit discipline + near-term
+    evenness (existing).
+  - 30d bucket = the OPERATOR's reset horizon: K3's monthly quota
+    must spread across the month, not burst early.
+- Month bucket math is the same even-rate formula with window =
+  30d: by time-fraction f of the month, used <= f*month_cap
+  (safety margin applies). Reset-anchor tracking extends to the
+  month anchor (maybe-advance-reset already handles anchors; the
+  month anchor is one more).
+- The 30d bucket is a LONG-HORIZON GUARD — it rarely fires alone,
+  but it is the backstop against "exhausted the month by the 10th".
+
+### 4.4 Availability guarantee — floor + spend-if-idle
+
+The operator's both-wrongs: zero use all day AND exhausted-early.
+Two complementary policies:
+
+1. FLOOR-TO-AVOID-EARLY-EXHAUST: the reservation (kimi-authority
+   cap 333000, even over 7) is a hard ceiling per period. The
+   driver never exceeds it; when the floor is hit, routing refuses
+   until the next period anchor. This is the "never exhaust early"
+   half — enforced by refusing over-envelope routes (4.2.3).
+2. SPEND-IF-IDLE: the other half — K3 must not sit unused while
+   the envelope has room. Two mechanisms:
+   a. AVAILABILITY SIGNAL: `quota-status` exposes
+      `available-now` + `projected-until` (projection from
+      current usage + even-rate: when will the envelope run out
+      at fair share). The planner/watcher READS this signal; if
+      `projected-until` > some horizon and the envelope is under-
+      consumed, the planner is encouraged to schedule an
+      authority-class task now ("the budget is available — use
+      it or lose the fair share").
+   b. IDLE-SWEEP: when a period's even-rate share is materially
+      under-consumed near the window end (e.g. day-6 of 7 at
+      40% of even share), the driver suggests (never forces) an
+      authority-class review of the current design/plan backlog —
+      a "K3 has budget; candidate tasks: <list>" nudge to the
+      planner. This is the "weird delays / awkward thoughts"
+      judgment surface (tie to 120): the driver notices the
+      budget idling and redirects, same family as the watcher's
+      self-adjustment.
+   c. DEFAULT IS OPT-IN (operator-gated): spend-if-idle SUGGESTS,
+      never silently routes; the planner decides. Matches
+      strategic-reserve doctrine — K3 is used deliberately, not
+      burned because it's there.
+
+### 4.5 Signal surface (readable by planner + watcher)
+
+`quota-status (route)` returns:
+
+```
+(:route kimi-sub
+ :available-now <tokens>
+ :projected-until <iso or nil>
+ :envelope-percent <0..100>
+ :reservation-left <tokens>
+ :windows ((:hour <pct>) (:day <pct>) (:week <pct>) (:30d <pct>)))
+```
+
+Consumers: the planner (before scheduling an authority task), the
+watcher layer (117 — the idle-sweep suggestion feeds a wake cycle
+of kind "realign" per 120 §G), and the dashboard (116 — a K3
+budget view, one number the operator can glance at).
+
+### 4.6 Tie to 120 (self-adjustment, judgment layer)
+
+The driver is a judgment layer of the same family as the watcher's
+self-adjustment: it notices (budget idling), decides (an
+authority-class task is due), and redirects (suggests to the
+planner) — without being asked. The outcome log (117 §3) records
+the suggestion + whether it was acted on, feeding the tuner: if
+spend-if-idle suggestions are consistently ignored, the driver
+raises the bar (suggests only when the idleness is material); if
+acted on and useful, it keeps the cadence. Same closed loop as
+watcher knob tuning.
+
+### 4.7 Scope guard (what the driver is NOT)
+
+- Not a scheduler — routes via the existing routing table.
+- Not a silent spender — suggestions and opt-in only.
+- Not a cost model — envelope math unchanged.
+- Not per-task metering — route-level pacing, complementary.
 
 ---
 
