@@ -5,7 +5,13 @@ Status: seed design, 2026-07-31. Author: moonshotai/kimi-k3 via OpenRouter
 below); hngh M2 (configurable baseURL) + M4 (model-runtime) provide the
 substrate.
 
-## Problem
+## Policy status
+
+The original routing seed is retained for its one-router pattern, but its
+2026-07/08 cost ladder and fallback examples are superseded by
+`model-economy-and-context-lifecycle.md` for any live selection. Do not
+promote stale provider prices or fallback chains from this document into
+configuration.
 
 Today each caller picks a model ad hoc: the task driver hard-prefers
 `:local-openai-api` (unsloth :8888), Hermes/opencode pick per-flag, and cost
@@ -25,8 +31,12 @@ chain. We adopt the *pattern*, not the Docker stack:
   router refuses or degrades when a route is over. Hook: `llm-budget`
   (rolling 60-min OpenRouter spend) for remote routes; local routes are
   exempt ($0 by construction).
-- **Fallback chain** — a route lists alternates in preference order; the
-  router walks down on unavailability (health check) or budget exhaustion.
+- **Reserve admission:** routes classified `:reserve` never enter a fallback
+  walk. `model-economy-and-context-lifecycle.md` requires authority, compact
+  packet, coupled quota gate, reservation, and actual-use reconciliation.
+- `llm-budget` is consulted for workhorse payg routes before dispatch;
+  unavailable budget data degrades to local/cheap workhorse rather than
+  escalating to reserve.
 
 We do NOT run LiteLLM itself. hngh already has the pieces: model-runtime
 (spawn/health/unload for ollama + llama.cpp + unsloth-API), the tool hub
@@ -53,9 +63,8 @@ sprinkles, careful pay-as-you-go last. Verified live against each endpoint.
 | `gemini-free` | AI Studio key | gemini-3.5-flash / 3.5-flash-lite / 3.1-flash-lite | $0, daily/RPM caps | compression, web extract, light vision |
 | `kimi-sub` | api.kimi.com/coding (annual) | k3, k3-256k, kimi-for-coding (K2.7), K2.7-highspeed | $0 marginal, hourly/daily/weekly quota | main agent, delegation, design forks, MoA aggregate |
 | `copilot` | api.githubcopilot.com (gh token) | claude-sonnet-5, claude-opus-5, gemini-3.6-flash, gpt-5.6 family | subscription quota | antagonistic review, anthropic-tier w/o Anthropic balance |
-| `cheap` | openai-api / openrouter | gpt-5.6-luna, z-ai/glm-5.2 | ~$0.10–$0.60/M | bulk aux (title, approval, mcp), design-tier aux |
-| `or-dsv4` | openrouter | deepseek-v4-flash-0731 | $0.09/M flash tier | primary for most classes (2026-08-05 mandate) |
-| `frontier` | openai-api / openrouter | gpt-5.6-terra/sol | $1–$6/M | architecture forks, novel debugging only |
+| `workhorse` | openrouter / deepseek / openai-api | DeepSeek Flash, gpt-5.6-luna | <= $0.20/M input | broad majority of remote work; automatic fallback permitted |
+| `reserve` | any provider | K3, GLM, MiMo, MiniMax, Gemini above threshold, Terra/Sol, every UNKNOWN-price route | > $0.20/M input or UNKNOWN | explicit authority packet only; never automatic fallback |
 | `zen-drain` | opencode zen | gpt-5.6-luna via zen | balance $25 | mid-chain fallback only; drain slowly |
 | `anthropic` | anthropic direct | claude (rare) | balance $33 | rare use cases only; copilot covers most anthropic-tier needs |
 
@@ -67,19 +76,20 @@ Local routes exempt from budget. Remote payg routes carry caps via
 `llm-budget`; quota routes (kimi-sub, copilot, gemini-free, or-free) are
 rate-limit-gated by the provider, fail over on 429.
 
-## Fallback chains (health + budget driven)
+## Current automatic fallback policy (2026-08-10)
 
-- `local-12b` → `local-heavy` → `or-free` → `gemini-free` → `kimi-sub`
-- `or-free` → `local-12b` (rate-limited, degrade to free local)
-- `kimi-sub` → `copilot` → `gemini-free` → `cheap` → `local-12b`
-- `copilot` → `kimi-sub` (quota) or `anthropic` (rare, balance-gated)
-- `frontier` → `kimi-sub` → `copilot`
+The only automatic remote fallback candidates are routes at or below $0.20/M
+input. The live Hermes chain is:
 
-Live Hermes fallback chain (2026-08-05): deepseek-v4-flash-0731 (openrouter) →
-deepseek-v4-flash (deepseek) → z-ai/glm-5.2 (openrouter) → gpt-5.6-luna (openai)
-→ gemini-3.5-flash (gemini) → xiaomi/mimo-v2.5 (openrouter) → gemma-4-12b
-(unsloth) → nemotron-3-ultra:free (openrouter) → tencent/hy3-preview
-(openrouter). Mirror of `~/.hermes/config.yaml` `fallback_providers`.
+```text
+openrouter/deepseek-v4-flash-0731 -> deepseek/deepseek-v4-flash ->
+openai-api/gpt-5.6-luna -> local Unsloth routes
+```
+
+Every remote route above the threshold or with unknown price is omitted from
+automatic fallback. `model-economy-and-context-lifecycle.md` owns its explicit
+admission path. A provider error must degrade to a workhorse/local route, not
+spend a reserve route by accident.
 
 Health: model-runtime's `health` per backend; unsloth empty (`unsloth: []`)
 means "no model resident — route to ollama instead" until warm.
