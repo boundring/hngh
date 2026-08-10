@@ -158,13 +158,17 @@ the harness brand.
 
 ## Roadmap slices
 
-1. Wire planner routing to the existing K3 driver.
-2. Add a completion-packet schema and fingerprint.
-3. Add manual/screenshot quota observations to the quota ledger.
-4. Build a no-tools, one-turn adapter with strict caps.
-5. Spike Pi against the stable adapter requirements.
-6. Add a dashboard view showing admission state across 5h/7d/30d.
-7. Shadow-run on workhorse-generated packets; promote only after measured quota
+1. Harden quota truth (card 128): 5-hour window, amount-aware checks,
+   authoritative ledger rollup, call reservation, fail-closed UNKNOWN.
+2. Wire planner routing to the hardened K3 driver (card 127). Default remains
+   refuse until a real quota observation/config cap exists.
+3. Add a completion-packet schema and fingerprint.
+4. Add manual/screenshot quota observations to the quota ledger; this gate
+   must be live before any automatic K3 completion.
+5. Build a no-tools, one-turn adapter with strict caps.
+6. Spike Pi against the stable adapter requirements.
+7. Add a dashboard view showing admission state across 5h/7d/30d.
+8. Shadow-run on workhorse-generated packets; promote only after measured quota
    use matches the envelope.
 
 Attribution: operator direction, K3 artifact 95, Killy design authority.
