@@ -147,7 +147,7 @@ Measurements on 2026-08-10:
 | Profile | Fixed system | Tool schemas | Skills | Route |
 |---|---:|---:|---:|---|
 | `default` | 29.3 KB | 63.7 KB / 37 tools | 93 indexed | workhorse/coder |
-| `hngh-lean` | 29.6 KB | 45.5 KB / 18 tools | 93 indexed | coordination/review |
+| `hngh-lean` | 29.6 KB | 29.9 KB / 13 tools | 93 indexed | coordination/review |
 | `hngh-minimal` | 7.1 KB | 13.3 KB / 7 tools | 0 | local procedural only |
 
 `hngh-minimal` is configured to Unsloth Gemma 4 12B with no remote fallback;
