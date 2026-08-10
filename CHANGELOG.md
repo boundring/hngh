@@ -45,7 +45,8 @@ are disabled; K2/MiMo/Terra remain explicit packeted specialists. Input and
 output tokens are jointly budgeted: compact evidence packets replace transcript
 replay and routine status prose. Fresh sessions are normal: a procedural
 handoff, evidence-backed retirement reason, and cheap successor replace
-open-ended continuation. Measured
+open-ended continuation. Continuation compares bounded retained-context cost to
+verified reset loss and is admitted only when reset loss is higher. Measured
 fixed-prompt budgets are documented in
   `model-economy-and-context-lifecycle.md`. Reduced compression to 18%/10%,
   reduced protected history, capped standard Hngh sessions at 40 turns, and

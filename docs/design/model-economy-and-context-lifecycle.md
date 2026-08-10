@@ -199,11 +199,14 @@ claim, evidence, route/cost record, decision, and next verification; a fresh
 cheap agent receives that packet if work remains. Keeping a session alive to
 preserve chat context is forbidden.
 
-Continuation or resurrection is an exceptional gate. It needs a named,
-non-reconstructible value; a bounded purpose; measured input/output cost; an
-active evidence-producing action; and a recorded reason a fresh packet cannot
-suffice. Missing any field means retire. Procedural lifecycle rules make this
-decision; models do not vote themselves more turns.
+Continuation or resurrection is an exceptional gate. It compares bounded
+continuation cost—retained input, likely output/retries, drift risk, and the
+next verification—with verified reset loss: missing non-reconstructible state
+plus fresh-packet startup. Continue only when reset loss is demonstrably higher.
+It also needs a named non-reconstructible value; a bounded purpose; measured
+input/output cost; an active evidence-producing action; and a recorded reason a
+fresh packet cannot suffice. Missing any field means retire. Procedural
+lifecycle rules make this decision; models do not vote themselves more turns.
 
 ## Bilateral token discipline
 
