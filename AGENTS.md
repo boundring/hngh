@@ -31,6 +31,11 @@ K2, Terra, Sol, Anthropic, Gemini, MiniMax, or an unknown-price route.
 - **GPT-5.6 Sol** and all **Anthropic** routes are disabled for Hngh.
   **Luna** is an opt-in coding seat (`squad-up luna-coder`) that needs current
   price/budget evidence; it is never a default squad seat.
+- **Token cost is bilateral.** Bound both prompt input and generated output:
+  pass compact factual packets with source references, not transcript replay;
+  use a short message class rather than status narrative; do not repeat
+  background another recipient already has. A higher-tier call declares both
+  input and output caps before dispatch.
 - Local models execute procedural, fixture-backed, and queued work. The case
   base, adoption map, tests, and review gates preserve higher-tier structure;
   a lower-cost seat never receives authority merely from a model name.
