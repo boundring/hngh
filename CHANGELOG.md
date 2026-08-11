@@ -10,6 +10,13 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
 
 ## [Unreleased]
 
+### Fixed — planner quota pacing
+- Planner admission now derives bucket pacing from the locked quota ledger and
+  reset anchors rather than treating caller-supplied zero elapsed time as
+  authority. Added a fixture that distinguishes live derived pacing from that
+  forced-zero path; `docs/records/2026-08-11-card-127-planner-quota-truth.md`
+  carries the review and test receipts.
+
 ### Added — bounded K3 authority completions
 - Added `docs/design/k3-bounded-completions.md`: compact one-turn packets,
   no tools by default, strict context/output caps, and coupled 5h/7d/30d

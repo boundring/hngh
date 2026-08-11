@@ -238,9 +238,10 @@ so callers in any package can pass 'code-final-review."
             route (if available "available-now" "over-even-rate")
             used elapsed-seconds)))
 
-(defun quota-general-ok-p (route &key (amount 0) (used 0) (elapsed-seconds 0))
+(defun quota-general-ok-p (route &key (amount 0) (used 0) (elapsed-seconds :derive))
   "Return T when a one-off / general draw on ROUTE is within the general pool's
-even share. Strategic routes refuse here (general pool never auto-opens them)."
+live even-rate envelope. Strategic routes refuse here (general pool never
+auto-opens them)."
   (and (not (route-strategic-p route))
        (quota-ok-p route :amount amount :used used
                    :elapsed-seconds elapsed-seconds)))

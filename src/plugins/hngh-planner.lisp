@@ -364,8 +364,7 @@ planner-sourced task (dedup)."
   "Return T when the quota envelope allows emitting more work now. Fail
 closed: unknown envelope or over-even-rate refuses. Uses the general pool
 (one-off/emission, not an authority reservation unless caller names one)."
-  (hngh.plugins.quota-spreader:quota-general-ok-p route :used 0
-                                                  :elapsed-seconds 0))
+  (hngh.plugins.quota-spreader:quota-general-ok-p route))
 
 (defun planner-cycle (cwd &key (dry-run nil) (emit t)
                              (max-emissions *max-tasks-per-cycle*))

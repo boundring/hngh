@@ -139,6 +139,7 @@
                  (:file "test-squad-dispatch")
                  (:file "test-beans")
                  (:file "test-hngh-planner")
+                 (:file "test-planner-quota-admission")
                  (:file "test-quota-spreader")
                  (:file "test-signals")
                  (:file "test-acp-client")
