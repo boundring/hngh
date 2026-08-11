@@ -17,6 +17,19 @@ Releases are not yet used (pre-alpha); entries are grouped by date.
   forced-zero path; `docs/records/2026-08-11-card-127-planner-quota-truth.md`
   carries the review and test receipts.
 
+### Changed — documentation reorientation
+- Moved 130 legacy design, project, journal, research, review, session, and
+  Hermes-plan files to `docs/archive/2026-08-10-pre-consolidation/` without
+  content edits. The consolidation manifest records content-set receipts and
+  recovery paths.
+- Replaced the former overlapping working surface with `docs/core/` for the
+  charter, system boundary, session operations, delivery system, and records
+  governance; `docs/records/` now carries the live backlog and dated work log.
+- Added compatibility aliases for documented and programmatic legacy paths.
+  They preserve access while new work uses the compact core set.
+- Updated the test-count lint to inspect current core documents rather than
+  the archived roadmap.
+
 ### Added — bounded K3 authority completions
 - Added `docs/design/k3-bounded-completions.md`: compact one-turn packets,
   no tools by default, strict context/output caps, and coupled 5h/7d/30d

@@ -1,90 +1,34 @@
 # Contributing to Hngh
 
-## Design Principle
+## Authority and scope
 
-**Human directs and decides; AI assistants draft and implement.**
+Human directs and decides. Agents and contributors may research, design, implement, and verify only within their named work package and write boundary. The operator approves scope, budget, privileged action, release, and any safety-boundary change.
 
-Hngh is developed using the same agentic tools it orchestrates at runtime. The
-boundary between "using Hngh" and "developing Hngh" is deliberately blurred — this
-is the dogfooding substrate principle. However, a human is always in the loop for
-decisions, reviews, and approvals.
+Start with [`docs/README.md`](docs/README.md). The five documents under `docs/core/` are the current project rules. Material in `docs/archive/` is preserved history and does not grant execution authority.
 
-## Design Artifacts
+## Workflow
 
-All architectural decisions are documented in:
-- `docs/design/architecture-decision-record.md` — locked decisions (D1–D11)
-- `docs/design/components.md` — component specifications
-- `docs/design/integrations.md` — integration and data flow design
-- `docs/design/hngh-design-spec.md` — the single source of truth
+1. Read the active hold and work order in `docs/core/delivery.md`.
+2. Check claims, lanes, dependencies, and the exact write boundary.
+3. Create or accept a bounded work package with a verifier and acceptance evidence.
+4. Implement the smallest coherent change. Do not modify unrelated dirty files.
+5. Run the named focused verification. Report the actual command and result.
+6. Record the result in `docs/records/` and update `CHANGELOG.md` for user-visible or architecture-relevant changes.
+7. Release the claim visibly. Do not commit or push without operator approval.
 
-Changes to architecture require updating these documents first, then implementing.
+## Ideas and designs
 
-## Development Workflow
+Capture a new idea in `docs/records/backlog.md`, not in a new free-standing design file. A backlog entry names the problem, smallest useful outcome, evidence/source, risk/cost/privacy note, dependency, and review trigger.
 
-1. Pick a session from `docs/project/work-sessions.md`
-2. Create a feature branch: `git checkout -b session/M0.X-short-name`
-3. Implement, committing atomically per logical unit
-4. Write a journal entry in `docs/journal/YYYY-MM-DD.md`
-5. Update the changelog (`CHANGELOG.md`) — add a dated, categorized entry for
-   any user-visible or architecture-relevant change
-6. Push and open a PR
-7. Review (human or AI-assisted)
-8. Merge to `main`
+A design becomes a work package only after its owner, source set, acceptance evidence, and stop condition are explicit. Keep speculative material out of the default agent context.
 
-## Capturing early ideas (design seeds)
+## Engineering conventions
 
-Early / half-formed ideas (user riffs, session observations, speculative
-directions) are captured as **design seeds** — lightweight, non-committal
-records — so they are not lost to conversation and are available for a later,
-proper evaluation. The convention:
-
-- Write a short `docs/design/<topic>.md` file: **Status: Idea capture — NOT
-  a build spec**, the idea in the originator's words, a rough (illustrative,
-  non-committal) shape, **open questions** (not answered in the seed), a
-  **review gate** (conditions under which it gets a proper evaluation), and
-  attribution.
-- Register it in `docs/project/backlog.md` under Open Design Questions with a
-  pointer, so it is tracked rather than orphaned.
-- A seed is **never folded into the current build path** until the review
-  gate is met: prior art research, a fixtured prototype of the smallest
-  useful primitive, and a clear motivated use case. Do not force seeds into
-  unrelated work.
-
-This keeps the development cycle rigorous: research + scaffold from
-documentation first, no forced experimentation, pieces that suit each other,
-and ideas either blossom under Hngh's later self-development work or are
-deliberately dropped.
-
-## Commit Convention
-
-```
-<type>(<scope>): <description>
-
-<body — what and why>
-
-<footer — refs, breaking changes>
-```
-
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`
-Scope: component name (e.g., `event-bus`, `plugin-host`, `system-daemon`)
-
-## Language Conventions
-
-- **Common Lisp**: follow existing package structure; use `hngh.<component>` package names; package-level isolation enforced
-- **C**: follow the system daemon's existing style; minimal, audit-friendly
-- **Python**: follow PEP 8; subprocess plugins communicate via JSON-RPC
-
-## Testing
-
-Every component has unit tests. Integration tests for critical flows live in
-`tests/integration/`. The end-to-end test (M0.10) must pass before any M1 work
-begins.
-
-## Journal
-
-Every work session ends with a journal entry. This is part of hnghbeats — the
-narrative record of Hngh's development. Journals are version-controlled and
-human-readable.
+- Common Lisp follows existing package boundaries and focused fixtures.
+- C remains minimal and audit-friendly at the privileged boundary.
+- Python follows the project style and makes subprocess contracts explicit.
+- Secrets, raw transcripts, and private operational evidence do not enter public Git.
+- Agent/model/provider/harness attribution accompanies generated session records and material cost where known.
 
 ## License
 
