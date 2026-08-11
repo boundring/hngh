@@ -194,6 +194,32 @@ Some prose with **Status**: relevant but the table is what matters.
 "))
   tmp)
 
+(defparameter *planner-test-route-defaults*
+  '((kimi-sub
+     (:buckets ((:period :five-hour :cap 100000 :units :tokens)
+                (:period :week :cap 2000000 :units :tokens)
+                (:period :day :cap 300000 :units :tokens)
+                (:period :hour :cap 40000 :units :tokens)
+                (:period :month :cap 8000000 :units :tokens)))))
+  "Fixture-only numeric envelope; production UNKNOWN must still refuse.")
+
+(defmacro with-planner-test-quota (&body body)
+  `(let ((hngh.plugins.quota-spreader::*route-defaults*
+           *planner-test-route-defaults*))
+     ,@body))
+
+(test planner-quota-unknown-fails-closed
+  (with-aio-light (tmp)
+    (let ((hngh.plugins.quota-spreader::*overrides* nil))
+      (declare (ignore tmp))
+      (is (eql :unknown
+               (getf (first (getf
+                             (hngh.plugins.quota-spreader:quota-envelope
+                              'kimi-sub)
+                             :buckets))
+                    :cap)))
+      (is-false (hngh.plugins.hngh-planner::%quota-gate-open-p)))))
+
 (test planner-cycle-no-roadmap-fails-closed
   (with-aio-light (tmp)
     (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
@@ -214,28 +240,37 @@ Some prose with **Status**: relevant but the table is what matters.
 
 (test planner-cycle-emits-when-open
   (with-aio-light (tmp)
-    (%write-tmp-roadmap tmp)
-    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
-                                                      :emit t)))
-      (is (plusp (getf r :gaps)))
-      ;; Emits at most max-emissions and returns ids.
-      (is (plusp (length (getf r :emitted))))
-      (is (= (length (getf r :emitted))
-             (getf r :new)))
-      ;; The queue now has planner-sourced tasks.
-      (is (some (lambda (e)
-                  (eql :planner (getf e :source)))
-                (hngh.plugins.ai-orchestrator:list-tasks))))))
+    (with-planner-test-quota
+      (%write-tmp-roadmap tmp)
+      (is (= 100000
+             (getf (first (getf
+                           (hngh.plugins.quota-spreader:quota-envelope 'kimi-sub)
+                           :buckets))
+                   :cap)))
+      (is-true (hngh.plugins.quota-spreader:quota-general-ok-p
+                'kimi-sub :used 0 :elapsed-seconds 0))
+      (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp
+                                                        :emit t)))
+        (is (plusp (getf r :gaps)))
+        ;; Emits at most max-emissions and returns ids.
+        (is (plusp (length (getf r :emitted))))
+        (is (= (length (getf r :emitted))
+               (getf r :new)))
+        ;; The queue now has planner-sourced tasks.
+        (is (some (lambda (e)
+                    (eql :planner (getf e :source)))
+                  (hngh.plugins.ai-orchestrator:list-tasks)))))))
 
 (test planner-cycle-dedups-reopen
   (with-aio-light (tmp)
-    (%write-tmp-roadmap tmp)
-    ;; First cycle emits.
-    (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)
-    ;; Second cycle sees the same gaps already open -> dedup, no new emit.
-    (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)))
-      (is (zerop (length (getf r :emitted))))
-      (is (>= (getf r :skipped-dupe) 1)))))
+    (with-planner-test-quota
+      (%write-tmp-roadmap tmp)
+      ;; First cycle emits.
+      (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)
+      ;; Second cycle sees the same gaps already open -> dedup, no new emit.
+      (let ((r (hngh.plugins.hngh-planner:planner-cycle tmp :emit t)))
+        (is (zerop (length (getf r :emitted))))
+        (is (>= (getf r :skipped-dupe) 1))))))
 
 (test planner-cycle-refrains-when-paused
   (with-aio-light (tmp)
