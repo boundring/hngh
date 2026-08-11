@@ -106,17 +106,15 @@ check_file \
   '^\s*- \*\*Tests\*\*' \
   "AGENTS.md"
 
-# roadmap.md — the Status line (starts with **) and M-table rows
-check_file \
-  "$REPO_ROOT/docs/project/roadmap.md" \
-  '^\*\*Status\*\*|tests (green|passing) @' \
-  "docs/project/roadmap.md"
-
-# roadmap.md wave table — lines with "tests @" that claim current state
-check_file \
-  "$REPO_ROOT/docs/project/roadmap.md" \
-  'tests @' \
-  "docs/project/roadmap.md"
+# Core documents are the current documentation surface. The former roadmap
+# is archived and available only through a compatibility alias, so it is
+# historical evidence rather than a current-state test-count claim.
+for filepath in "$REPO_ROOT"/docs/core/*.md; do
+  check_file \
+    "$filepath" \
+    'tests (green|passing) @|[0-9]+/[0-9]+ (tests|checks)' \
+    "docs/core/$(basename "$filepath")"
+done
 
 # --- Report ---
 
