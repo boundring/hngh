@@ -20,8 +20,10 @@ deployment form.
 
 `hngh.domain` is active. Its public API validates profile, mission, role,
 loadout, run, and evidence values, plus the closed run transition policy.
-`hngh:validate-profile` is a compatibility facade over the domain validator. No
-outer component in the table exists in active source yet.
+`hngh.application` is active with `create-run`, explicit creation ports, and
+closed application results. `hngh:validate-profile` is a compatibility facade
+over the domain validator. No adapter, presentation package, composition root,
+or runtime outer component exists in active source.
 
 ## Dependency and deployment rules
 

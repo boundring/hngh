@@ -9,6 +9,8 @@ authorize a future action.
   boundary publication.
 - `2026-08-11-task-2-run-domain.md` records the pure domain lifecycle and
   evidence boundary.
+- `2026-08-12-task-3.1-create-run.md` records the first application use case,
+  its callback boundary, and atomic recording contract.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

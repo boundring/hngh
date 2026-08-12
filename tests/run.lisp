@@ -10,6 +10,8 @@
 (load (project-file "src/domain/loadout.lisp"))
 (load (project-file "src/domain/run.lisp"))
 (load (project-file "src/domain/outcome.lisp"))
+(load (project-file "src/application/ports.lisp"))
+(load (project-file "src/application/create-run.lisp"))
 
 (in-package :hngh.tests)
 
@@ -29,6 +31,8 @@
 
 (load (cl-user::project-file "tests/domain/test-loadout.lisp"))
 (load (cl-user::project-file "tests/domain/test-run-state.lisp"))
+(load (cl-user::project-file "tests/support/fakes.lisp"))
+(load (cl-user::project-file "tests/application/test-create-run.lisp"))
 
 (defun read-fixture (relative)
   (with-open-file (stream (cl-user::project-file relative))

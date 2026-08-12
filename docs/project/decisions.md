@@ -42,6 +42,14 @@ they do not receive a run, state, actor, capability, or transition operation and
 cannot create authority. The domain accepts no path, environment, clock,
 subprocess, or provider payload.
 
+## 2026-08-12 — Application callback and outcome boundary
+
+`hngh.application` use cases handle a callback error or malformed callback
+return only at that callback invocation. Domain and application failures remain
+visible to the test gate. A successful application result contains the exact
+run-and-receipt pair passed to the single atomic `record-run` callback; refused,
+invalid, and conflict results contain neither. Recording is never retried unless
+a later use-case contract explicitly admits it.
 
 Canonical states, receipts, CLI flags, configuration, and use-case outcomes use
 plain technical terms. Optional reference lexicons provide display copy with an
