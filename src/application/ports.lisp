@@ -63,3 +63,50 @@
    (ensure-callback next-identifier "next identifier callback")
    (ensure-callback clock-now "clock callback")
    (ensure-callback record-run "record callback")))
+
+(defparameter +admission-statuses+ '(:confirmed :unknown :refused))
+
+(defun ensure-admission-status (status name)
+  (unless (member status +admission-statuses+)
+    (error "~A must be a known admission status" name))
+  status)
+
+(defstruct (admission-facts
+            (:constructor %make-admission-facts
+                (authority ledger loadout exclusive-write))
+            (:conc-name %admission-facts-))
+  (authority nil :read-only t)
+  (ledger nil :read-only t)
+  (loadout nil :read-only t)
+  (exclusive-write nil :read-only t))
+
+(defun make-admission-facts (&key authority ledger loadout exclusive-write)
+  (%make-admission-facts
+   (ensure-admission-status authority "authority")
+   (ensure-admission-status ledger "ledger")
+   (ensure-admission-status loadout "loadout")
+   (ensure-admission-status exclusive-write "exclusive write")))
+
+(defun admission-facts-authority (facts)
+  (%admission-facts-authority facts))
+
+(defun admission-facts-ledger (facts)
+  (%admission-facts-ledger facts))
+
+(defun admission-facts-loadout (facts)
+  (%admission-facts-loadout facts))
+
+(defun admission-facts-exclusive-write (facts)
+  (%admission-facts-exclusive-write facts))
+
+(defstruct (run-admission-ports
+            (:constructor %make-run-admission-ports
+                (admission-facts record-run))
+            (:conc-name %run-admission-ports-))
+  (admission-facts nil :read-only t)
+  (record-run nil :read-only t))
+
+(defun make-run-admission-ports (&key admission-facts record-run)
+  (%make-run-admission-ports
+   (ensure-callback admission-facts "admission facts callback")
+   (ensure-callback record-run "record callback")))

@@ -17,6 +17,8 @@ All notable changes to Hngh are documented here.
   evidence values.
 - A pure application create-run slice with explicit identifier, clock, and
   atomic recording capabilities.
+- A pure application arm-run slice with explicit admission facts and atomic
+  recording capabilities.
 
 ### Changed
 

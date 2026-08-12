@@ -20,6 +20,8 @@ product. The active kernel contains pure profile and run-domain policy only.
 - Added the read-only reader guard to the fast gate.
 - Added `create-run` with capability-specific fake ports, atomic run-and-receipt
   recording, closed callback refusals, and visible domain/application failures.
+- Added `arm-run` with four closed admission facts; only full confirmation can
+  create an armed replacement run and atomic receipt.
 
 ### Next
 
