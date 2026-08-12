@@ -40,7 +40,14 @@
            #:application-result-facts
            #:application-result-labels
            #:make-run-creation-ports
-           #:create-run))
+           #:make-admission-facts
+           #:admission-facts-authority
+           #:admission-facts-ledger
+           #:admission-facts-loadout
+           #:admission-facts-exclusive-write
+           #:make-run-admission-ports
+           #:create-run
+           #:arm-run))
 
 (defpackage #:hngh.tests
   (:use #:cl))
