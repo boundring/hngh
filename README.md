@@ -5,10 +5,14 @@ starts no daemon and owns no background process.
 
 ## Status
 
-The active baseline exposes `hngh.domain`: pure profile, mission, role,
-loadout, run, receipt, score, and afterlife values. Runs begin in `created` and
-advance only through a closed, fail-closed lifecycle. Receipts, scores, and
-lessons are evidence only; they cannot grant authority or change run state.
+The active baseline exposes `hngh.domain` plus `hngh.application:create-run`.
+The domain supplies pure profile, mission, role, loadout, run, receipt, score,
+and afterlife values. `create-run` receives only explicit identifier, clock, and
+atomic recording callbacks. It returns closed application results; callback
+failures refuse, while domain and application faults remain visible to the test
+gate. Runs begin in `created` and advance only through a closed, fail-closed
+lifecycle. Receipts, scores, and lessons are evidence only; they cannot grant
+authority or change run state.
 
 `hngh:validate-profile` remains a compatibility facade over the domain policy.
 Malformed, unknown, or duplicate values fail closed. Integration adapters arrive

@@ -30,5 +30,17 @@
   (:import-from #:hngh.domain #:validate-profile)
   (:export #:validate-profile))
 
+(defpackage #:hngh.application
+  (:use #:cl)
+  (:export #:application-result
+           #:application-result-p
+           #:application-result-status
+           #:application-result-run
+           #:application-result-receipt
+           #:application-result-facts
+           #:application-result-labels
+           #:make-run-creation-ports
+           #:create-run))
+
 (defpackage #:hngh.tests
   (:use #:cl))

@@ -5,6 +5,7 @@ HNGH_ARCHIVE_ROOT ?=
 .PHONY: test check-archive
 
 test:
+	python3 tests/scripts/test-lint-parens.py
 	sbcl --script tests/run.lisp
 	sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd "$(CURDIR)/hngh.asd")' --eval '(asdf:load-system :hngh)'
 

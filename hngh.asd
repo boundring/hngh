@@ -7,4 +7,6 @@
                (:file "src/domain/mission")
                (:file "src/domain/loadout")
                (:file "src/domain/run")
-               (:file "src/domain/outcome")))
+               (:file "src/domain/outcome")
+               (:file "src/application/ports")
+               (:file "src/application/create-run")))

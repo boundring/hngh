@@ -17,12 +17,16 @@ product. The active kernel contains pure profile and run-domain policy only.
   reference lexicons.
 - Specified and tested the pure run domain: closed lifecycle, typed refusal,
   validated mission/role/loadout values, and non-authoritative evidence values.
+- Added the read-only reader guard to the fast gate.
+- Added `create-run` with capability-specific fake ports, atomic run-and-receipt
+  recording, closed callback refusals, and visible domain/application failures.
 
 ### Next
 
-1. Add application use cases and inward port contracts against fakes.
-2. Add restricted filesystem persistence only after the domain and port
-   contracts are fixture-backed.
+1. Add the remaining application use cases and their inward port contracts
+   against fakes.
+2. Add restricted filesystem persistence only after the application contracts
+   are fixture-backed.
 
 No daemon, provider, watcher, scheduler, dashboard, or adapter is admitted by
 this roadmap stage.

@@ -37,8 +37,11 @@ The current suite includes Task 1 and Task 2 fixtures:
 
 Tests call public inward APIs. A future use case receives time, identifiers,
 stores, ledger facts, tool execution, completion, and rendering through ports
-or injected values. It does not read globals, resolve a home directory, or
-start a process to make a test pass.
+or injected values. A callback boundary catches only callback errors and
+malformed returns; domain and application failures stay visible. An accepted
+application result carries its recorded run-and-receipt pair, and any
+non-accepted result carries neither. A use case does not read globals, resolve
+a home directory, or start a process to make a test pass.
 
 Randomness, clock time, process output, network responses, and filesystem roots
 are fixture inputs. Unknown or missing evidence is a refusal case, never a
@@ -46,7 +49,10 @@ reason to query a live default.
 
 ## Gates
 
-`make test` is the current fast required gate. It runs the focused Common Lisp
-checks and loads the ASDF system. There is no slow or live-service gate yet.
-When one is admitted, it must be separately named and must not become a
-prerequisite for the fast policy suite.
+`make test` is the current fast required gate. It first runs the standard-library
+fixture suite for `scripts/lint-parens.py`, a read-only guard for balanced Common
+Lisp source. The guard reports only; the Common Lisp reader and ASDF load remain
+authoritative. It then runs the focused Common Lisp checks and loads the ASDF
+system. There is no slow or live-service gate yet. When one is admitted, it
+must be separately named and must not become a prerequisite for the fast policy
+suite.

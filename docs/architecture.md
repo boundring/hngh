@@ -24,8 +24,9 @@ Every other transition refuses. Receipts, score records, and afterlife records
 hold evidence only; they cannot change state or grant authority.
 
 `hngh:validate-profile` remains a compatibility facade over the domain policy.
-The active source has no application package, scheduler, socket listener,
-systemd unit, MCP server, adapter, persistence root, or implicit state root.
+`hngh.application` currently contains only the pure `create-run` use case and
+its inward port contract. It has no adapter, persistence root, clock,
+environment, provider payload, subprocess, service, or background process.
 
 ## Planned outer boundaries
 
