@@ -8,6 +8,7 @@
                (:file "src/domain/loadout")
                (:file "src/domain/run")
                (:file "src/domain/outcome")
+               (:file "src/domain/governance")
                (:file "src/application/ports")
                (:file "src/application/create-run")
                (:file "src/application/arm-run")

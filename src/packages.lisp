@@ -23,7 +23,31 @@
            #:score-record
            #:make-score-record
            #:afterlife-record
-           #:make-afterlife-record))
+           #:make-afterlife-record
+           #:validate-proposal-class
+           #:validate-principle-identifier
+           #:validate-failure-category
+           #:validate-failure-disposition
+           #:source-manifest-entry
+           #:make-source-manifest-entry
+           #:source-manifest-entry-relative-path
+           #:source-manifest-entry-content-hash
+           #:source-manifest-entry-source-role
+           #:evidence-fact
+           #:make-evidence-fact
+           #:evidence-fact-kind
+           #:evidence-fact-fingerprint
+           #:evidence-fact-state
+           #:principle-result
+           #:make-principle-result
+           #:principle-result-principle
+           #:principle-result-state
+           #:principle-result-evidence-fingerprints
+           #:policy-verdict
+           #:make-policy-verdict
+           #:policy-verdict-state
+           #:policy-verdict-principle-results
+           #:policy-verdict-reason-labels))
 
 (defpackage #:hngh
   (:use #:cl)
