@@ -51,7 +51,9 @@ run-and-receipt pair passed to the single atomic `record-run` callback; refused,
 invalid, and conflict results contain neither. Recording is never retried unless
 a later use-case contract explicitly admits it. `arm-run` advances only a
 created run after authority, ledger, loadout, and exclusive-write facts are all
-`:confirmed`; every other fact status refuses without recording.
+`:confirmed`; every other fact status refuses without recording. `start-run`
+advances only an armed run to `:running` through its one-slot atomic recording
+port; an invalid transition refuses without recording.
 
 Canonical states, receipts, CLI flags, configuration, and use-case outcomes use
 plain technical terms. Optional reference lexicons provide display copy with an

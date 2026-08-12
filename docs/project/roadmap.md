@@ -22,6 +22,8 @@ product. The active kernel contains pure profile and run-domain policy only.
   recording, closed callback refusals, and visible domain/application failures.
 - Added `arm-run` with four closed admission facts; only full confirmation can
   create an armed replacement run and atomic receipt.
+- Added `start-run` so only the application boundary can make an armed run
+  running and record its receipt.
 
 ### Next
 

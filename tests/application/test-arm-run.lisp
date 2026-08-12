@@ -23,13 +23,6 @@
                     :loadout loadout
                     :exclusive-write exclusive-write))
 
-(defun created-application-run ()
-  (hngh.domain:make-run
-   :identifier "run-admission-1"
-   :mission (make-application-mission)
-   :role (make-application-role)
-   :loadout (make-application-loadout)))
-
 (dolist (status '(:confirmed :unknown :refused))
   (let ((facts (admission-facts-with
                 :authority status

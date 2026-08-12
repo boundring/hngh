@@ -67,7 +67,7 @@ path.
 
 The active implementation contains `hngh.domain`: pure profile, mission, role,
 loadout, run, and evidence values with a closed lifecycle. `hngh.application`
-contains `create-run` and `arm-run` with capability-specific inward ports and
-closed results. `hngh:validate-profile` remains a compatibility facade. Adapter,
-presentation, and main component names remain planned boundaries, not installed
-runtime packages.
+contains `create-run`, `arm-run`, and `start-run` with capability-specific inward
+ports and closed results. `hngh:validate-profile` remains a compatibility facade.
+Adapter, presentation, and main component names remain planned boundaries, not
+installed runtime packages.

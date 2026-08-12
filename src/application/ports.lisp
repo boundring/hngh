@@ -110,3 +110,12 @@
   (%make-run-admission-ports
    (ensure-callback admission-facts "admission facts callback")
    (ensure-callback record-run "record callback")))
+
+(defstruct (run-start-ports
+            (:constructor %make-run-start-ports (record-run))
+            (:conc-name %run-start-ports-))
+  (record-run nil :read-only t))
+
+(defun make-run-start-ports (&key record-run)
+  (%make-run-start-ports
+   (ensure-callback record-run "record callback")))

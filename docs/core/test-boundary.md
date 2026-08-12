@@ -35,7 +35,9 @@ The current suite includes Task 1 through Task 3.2 fixtures:
 - creation validates all top-level values before callbacks and records one
   run-and-receipt pair atomically;
 - admission requires authority, ledger, loadout, and exclusive-write facts to
-  be `:confirmed` before an armed replacement run can be recorded.
+  be `:confirmed` before an armed replacement run can be recorded;
+- an armed run transitions to running only through `start-run` and one atomic
+  run-and-receipt recording callback.
 
 ## Testing API and nondeterminism
 

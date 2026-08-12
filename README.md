@@ -5,12 +5,13 @@ starts no daemon and owns no background process.
 
 ## Status
 
-The active baseline exposes `hngh.domain` plus `hngh.application:create-run`
-and `hngh.application:arm-run`.
+The active baseline exposes `hngh.domain` plus `hngh.application:create-run`,
+`hngh.application:arm-run`, and `hngh.application:start-run`.
 The domain supplies pure profile, mission, role, loadout, run, receipt, score,
 and afterlife values. `create-run` receives only explicit identifier, clock, and
 atomic recording callbacks. `arm-run` receives only explicit admission facts and
-atomic recording callbacks. They return closed application results; callback
+atomic recording callbacks. `start-run` receives only an atomic recording
+callback. They return closed application results; callback
 failures refuse, while domain and application faults remain visible to the test
 gate. Runs begin in `created` and advance only through a closed, fail-closed
 lifecycle. Receipts, scores, and lessons are evidence only; they cannot grant

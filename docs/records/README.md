@@ -13,6 +13,8 @@ authorize a future action.
   its callback boundary, and atomic recording contract.
 - `2026-08-12-task-3.2-arm-run.md` records closed admission evidence and the
   created-to-armed application transition.
+- `2026-08-12-task-3.3-start-run.md` records the armed-to-running application
+  transition and its one-slot recording boundary.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 
