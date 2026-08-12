@@ -11,13 +11,17 @@ product. The active kernel validates ordered, duplicate-free profile modes.
 - Retired the obsolete Mission Control desktop launcher.
 - Preserved the launcher's bytes and parent configuration in a supplemental
   archive receipt.
+- Published the Clean Architecture charter, component map, test boundary, and
+  presentation boundary.
+- Added fixture guards for inward dependency direction and renderer-only
+  reference lexicons.
 
 ### Next
 
-1. Publish the Clean Architecture charter and component map.
-2. Add a dependency-guard fixture and presentation-only reference-lexicon
-   fixture.
-3. Specify the run domain before persisting state.
+1. Specify the run domain before persisting state.
+2. Add application use cases and inward port contracts against fakes.
+3. Add restricted filesystem persistence only after the domain and port
+   contracts are fixture-backed.
 
 No daemon, provider, watcher, scheduler, dashboard, or adapter is admitted by
 this roadmap stage.

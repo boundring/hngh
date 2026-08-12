@@ -9,6 +9,9 @@ All notable changes to Hngh are documented here.
 - Compact, side-effect-free kernel baseline with explicit profile validation.
 - Read-only archive receipt verification through `make check-archive`.
 - Compact active documentation and cutover record.
+- Clean Architecture charter, component map, test boundary, and
+  presentation/reference-lexicon boundaries.
+- Fixture guards for inward dependency direction and renderer-only lexicons.
 
 ### Changed
 

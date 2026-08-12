@@ -9,6 +9,8 @@
 
 (in-package :hngh.tests)
 
+(load (cl-user::project-file "tests/support/boundary-guards.lisp"))
+
 (defun check (condition description)
   (unless condition
     (error "check failed: ~A" description)))
@@ -17,6 +19,11 @@
   (handler-case
       (progn (funcall thunk) nil)
     (error () t)))
+
+(defun read-fixture (relative)
+  (with-open-file (stream (cl-user::project-file relative))
+    (let ((*read-eval* nil))
+      (read stream))))
 
 (check (equal '(:work :observe)
               (hngh:validate-profile '(:work :observe)))
@@ -28,4 +35,20 @@
 (check (signals-error-p (lambda () (hngh:validate-profile :work)))
        "non-list profile fails closed")
 
-(format t "4 checks passed.~%")
+(check (not (dependency-fixture-allowed-p
+             (read-fixture "tests/fixtures/dependency-guard/inward-imports-presentation.lisp")))
+       "inward package importing presentation fails the dependency guard")
+(check (not (dependency-fixture-allowed-p
+             (read-fixture "tests/fixtures/dependency-guard/inward-imports-adapter.lisp")))
+       "inward package importing an adapter fails the dependency guard")
+(check (dependency-fixture-allowed-p
+        (read-fixture "tests/fixtures/dependency-guard/inward-dependencies-clean.lisp"))
+       "inward package with core-only dependencies passes the dependency guard")
+(check (reference-lexicon-safe-p
+        (read-fixture "tests/fixtures/reference-lexicon/presentation-only.lisp"))
+       "presentation-only lexicon passes review")
+(check (not (reference-lexicon-safe-p
+             (read-fixture "tests/fixtures/reference-lexicon/attempts-canonical-control.lisp")))
+       "lexicon cannot carry canonical control fields")
+
+(format t "9 checks passed.~%")
