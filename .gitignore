@@ -1,44 +1,4 @@
-# Build artifacts
-bin/
-.build/
 *.fasl
-*.o
-*.so
-*.a
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# SBCL/CL
-*.lx64fsl
-*.x86fsl
-.fasl/
-
-# State (never version-control runtime state)
-state/locks.db
-secrets/
-*.age
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# OMC
-.omc/build/
-.hngh-night/
-.omc/
-.omo/
-# fetched corpus — regenerated via scripts/gen-hngh-acronyms.py (curated
-# pools inline); the raw download stays local, not committed
-data/wordlists/
-# qlot project-local dep cache (task 93 / Wave C) — lockfile is the source of truth
-.qlot/
+*.dfsl
+*.log
+/.cache/

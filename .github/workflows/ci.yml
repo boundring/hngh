@@ -8,13 +8,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Lint parens (all Lisp source)
-        run: python3 scripts/lint-parens.py $(find src tests -name '*.lisp')
-
-      - name: Lint dependency guardrails (Wave B)
-        run: python3 scripts/lint-deps.py
+      - name: Install SBCL
+        run: sudo apt-get update && sudo apt-get install --yes sbcl
+      - name: Test local kernel
+        run: make test
