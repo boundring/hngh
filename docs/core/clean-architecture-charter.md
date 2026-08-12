@@ -49,8 +49,10 @@ The dependency fixture guard rejects an inward package that imports
 4. Add one adapter with fixture-backed failure behavior and a restricted data
    boundary.
 5. Add manual presentation that renders application output without mutation.
-6. Consider an external action only after the operator approves its authority,
-   evidence, rollback, and containment contract.
+6. Consider an external action only after a current policy certificate validates
+   its authority, evidence, rollback, containment, and exact action class. A
+   human-approval deployment profile may add a human gate; it is not the
+   internal control mechanism.
 
 A later step does not excuse a missing earlier step. Unknown or malformed input
 refuses advance.

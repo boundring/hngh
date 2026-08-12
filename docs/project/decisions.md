@@ -42,6 +42,28 @@ they do not receive a run, state, actor, capability, or transition operation and
 cannot create authority. The domain accepts no path, environment, clock,
 subprocess, or provider payload.
 
+## 2026-08-12 — Autonomous policy certificate
+
+Routine feature, scope, capability, failure-disposition, review, staging,
+commit, and push decisions are policy-driven. Operators guide policy, select
+deployment profiles, and receive evidence; their perception is not the routine
+approval mechanism. Each proposal is evaluated against closed principles and a
+source manifest. Missing, conflicting, malformed, stale, or unverifiable
+evidence refuses.
+
+A current certificate binds one action class to its repository identity, base
+revision, ordered candidate manifest, content hash, evidence hashes, principle
+verdicts, reviewer findings, source manifest, policy profile, and expiry. It
+must be rechecked immediately before the named action. A commit certificate does
+not authorize a push. A human-approval profile remains available for deployments
+that need it, while policy-authorized self-approval is Hngh's intended routine
+path.
+
+Deterministic policy evidence is authoritative for structural facts. Local and
+alternate-provider model reviewers may issue closed, source-cited challenges;
+they cannot override deterministic refusal, mint a certificate, or mutate a
+repository.
+
 ## 2026-08-12 — Application callback and outcome boundary
 
 `hngh.application` use cases handle a callback error or malformed callback

@@ -62,6 +62,19 @@ reason to query a live default.
 fixture suite for `scripts/lint-parens.py`, a read-only guard for balanced Common
 Lisp source. The guard reports only; the Common Lisp reader and ASDF load remain
 authoritative. It then runs the focused Common Lisp checks and loads the ASDF
-system. There is no slow or live-service gate yet. When one is admitted, it
-must be separately named and must not become a prerequisite for the fast policy
-suite.
+system. `python3 tests/scripts/test-verify-candidate.py` is the focused fixture
+suite for the separate read-only candidate report. The report invokes `make
+test` as evidence; it is deliberately not called by `make test`, which prevents
+recursive verification. There is no slow or live-service gate yet. When one is
+admitted, it must be separately named and must not become a prerequisite for
+the fast policy suite.
+
+`make verify-candidate CANDIDATE_MANIFEST=path/to/manifest` admits only a
+sorted, duplicate-free list of repository-relative regular files. It records
+revision and whole-tree dirty, staged, and untracked facts but never derives a
+candidate from them. It refuses ignored, excluded, escaping, unreadable, or
+unknown paths; `.hermes/**` is never admitted. It reads candidate files and
+runs only fixed local checks: the parenthesis guard for declared Lisp files,
+the inward dependency rule, public-content, whitespace, relative-link, and
+`make test` evidence. It never stages, commits, pushes, starts a process,
+contacts a provider, or reads the retirement archive.

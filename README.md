@@ -27,8 +27,16 @@ only with named ports and fixture-backed contracts.
 
 ```sh
 make test
+python3 tests/scripts/test-verify-candidate.py
+make verify-candidate CANDIDATE_MANIFEST=path/to/manifest
 HNGH_ARCHIVE_ROOT=/absolute/path/to/retirement-archive make check-archive
 ```
+
+`make verify-candidate` requires an explicit, sorted manifest of regular
+repository-relative files. It reports whole-tree state as evidence but never
+uses it to infer candidate scope. It refuses excluded `.hermes/**`, ignored,
+unknown, escaping, malformed, or unsafe candidate input and performs no Git
+mutation, provider call, service start, or archive read.
 
 `check-archive` verifies the configured local retirement archive. It has no
 default archive location and does not write to the archive.

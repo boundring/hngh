@@ -23,9 +23,18 @@ All notable changes to Hngh are documented here.
   capability.
 - A pure application checkpoint slice with closed verification and manifest
   evidence callbacks plus one atomic transition recording capability.
+- A policy-only autonomous-development-control design: source-grounded
+  principle evaluation, closed proposal and authorization classes, bounded
+  reviewer challenges, and certificate-gated future mutations.
+- A read-only candidate evidence bundle with an explicit manifest, fixed local
+  checks, whole-tree observation, hash-bound output, and closed refusals for
+  unsafe or out-of-scope input.
 
 ### Changed
 
+- Routine design, review, and future mutation decisions move from
+  approval-by-perception to source-grounded, fail-closed certificates; human
+  approval is a deployment profile.
 - Application callback failures now refuse at the invocation boundary while
   domain and application errors remain visible to the test gate.
 - Retired the previous daemon, plugin, watcher, dashboard, mission-control,
