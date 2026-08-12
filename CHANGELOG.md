@@ -19,6 +19,8 @@ All notable changes to Hngh are documented here.
   atomic recording capabilities.
 - A pure application arm-run slice with explicit admission facts and atomic
   recording capabilities.
+- A pure application start-run slice with one atomic transition recording
+  capability.
 
 ### Changed
 

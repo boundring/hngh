@@ -46,8 +46,10 @@
            #:admission-facts-loadout
            #:admission-facts-exclusive-write
            #:make-run-admission-ports
+           #:make-run-start-ports
            #:create-run
-           #:arm-run))
+           #:arm-run
+           #:start-run))
 
 (defpackage #:hngh.tests
   (:use #:cl))

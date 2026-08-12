@@ -1,33 +1,5 @@
 (in-package :hngh.tests)
 
-(defun make-application-mission ()
-  (hngh.domain:make-mission
-   :objective "Create a valid run"
-   :non-objectives '("Persist a partial record")
-   :source-references '("docs/core/run-contract.md")
-   :acceptance-criteria '("One atomic record")
-   :writable-scopes '("repository")
-   :verification "make test"
-   :evacuation-condition "Creation is refused"))
-
-(defun make-application-role ()
-  (hngh.domain:make-role-template
-   :name "builder"
-   :capabilities '("edit")
-   :required-review-role "reviewer"
-   :permitted-loadout-classes '("manual")))
-
-(defun make-application-loadout ()
-  (hngh.domain:make-loadout
-   :route-label :local
-   :context-limit 1
-   :token-limit 2
-   :cost-limit 3
-   :time-limit 4
-   :tool-labels '("make-test")
-   :network-labels '("none")
-   :writable-scopes '("repository")))
-
 (defun application-result-value (name result)
   (application-call name result))
 
