@@ -52,8 +52,13 @@ invalid, and conflict results contain neither. Recording is never retried unless
 a later use-case contract explicitly admits it. `arm-run` advances only a
 created run after authority, ledger, loadout, and exclusive-write facts are all
 `:confirmed`; every other fact status refuses without recording. `start-run`
-advances only an armed run to `:running` through its one-slot atomic recording
-port; an invalid transition refuses without recording.
+advances only an armed run to `:running` through its one-slot atomic
+recording port; an invalid transition refuses without recording. `checkpoint`
+advances only a running run to `:checkpointed` after the tool executor returns
+`:passed` verification and the repository inspector returns a `:complete`
+manifest. Both callbacks receive only a closed request containing the domain
+run. Any failed, unknown, incomplete, malformed, or callback-faulted evidence
+refuses without recording. A checkpoint record conflict does not retry.
 
 Canonical states, receipts, CLI flags, configuration, and use-case outcomes use
 plain technical terms. Optional reference lexicons provide display copy with an

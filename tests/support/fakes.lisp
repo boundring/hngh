@@ -125,3 +125,47 @@
        (list :record-calls record-calls
              :runs (copy-list runs)
              :receipts (copy-list receipts))))))
+
+(defun make-checkpoint-fake (&key
+                              (verification
+                               (application-call
+                                "MAKE-VERIFICATION-RESULT"
+                                :status :passed
+                                :labels '("tests-pass")))
+                              (manifest
+                               (application-call
+                                "MAKE-MANIFEST-RESULT"
+                                :status :complete
+                                :labels '("manifest-complete")))
+                              (record-result :recorded))
+  (let ((tool-calls 0)
+        (repository-calls 0)
+        (record-calls 0)
+        (runs '())
+        (receipts '()))
+    (values
+     (application-call
+      "MAKE-RUN-CHECKPOINT-PORTS"
+      :tool-executor
+      (lambda (request)
+        (declare (ignore request))
+        (incf tool-calls)
+        verification)
+      :repository-inspector
+      (lambda (request)
+        (declare (ignore request))
+        (incf repository-calls)
+        manifest)
+      :record-run
+      (lambda (run receipt)
+        (incf record-calls)
+        (when (eql record-result :recorded)
+          (setf runs (append runs (list run))
+                receipts (append receipts (list receipt))))
+        record-result))
+     (lambda ()
+       (list :tool-calls tool-calls
+             :repository-calls repository-calls
+             :record-calls record-calls
+             :runs (copy-list runs)
+             :receipts (copy-list receipts))))))

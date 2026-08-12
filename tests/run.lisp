@@ -14,6 +14,7 @@
 (load (project-file "src/application/create-run.lisp"))
 (load (project-file "src/application/arm-run.lisp"))
 (load (project-file "src/application/start-run.lisp"))
+(load (project-file "src/application/checkpoint.lisp"))
 
 (in-package :hngh.tests)
 
@@ -37,6 +38,7 @@
 (load (cl-user::project-file "tests/application/test-create-run.lisp"))
 (load (cl-user::project-file "tests/application/test-arm-run.lisp"))
 (load (cl-user::project-file "tests/application/test-start-run.lisp"))
+(load (cl-user::project-file "tests/application/test-checkpoint.lisp"))
 
 (defun read-fixture (relative)
   (with-open-file (stream (cl-user::project-file relative))

@@ -23,7 +23,7 @@ write root. Malformed input, unknown fields, duplicate values, and path escape
 cases are first-class fixtures. Fixtures contain no provider credentials,
 private transcripts, local project paths, or live machine state.
 
-The current suite includes Task 1 through Task 3.2 fixtures:
+The current suite includes Task 1 through Task 3.4 fixtures:
 
 - an inward package may not import presentation or adapter packages;
 - a reference lexicon record may contain renderer copy and provenance, but not
@@ -37,7 +37,10 @@ The current suite includes Task 1 through Task 3.2 fixtures:
 - admission requires authority, ledger, loadout, and exclusive-write facts to
   be `:confirmed` before an armed replacement run can be recorded;
 - an armed run transitions to running only through `start-run` and one atomic
-  run-and-receipt recording callback.
+  run-and-receipt recording callback;
+- a running run checkpoints only after closed `:passed` verification and
+  `:complete` manifest evidence, each received through a run-only request,
+  then one atomic run-and-receipt recording callback.
 
 ## Testing API and nondeterminism
 

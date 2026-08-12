@@ -24,10 +24,11 @@ Every other transition refuses. Receipts, score records, and afterlife records
 hold evidence only; they cannot change state or grant authority.
 
 `hngh:validate-profile` remains a compatibility facade over the domain policy.
-`hngh.application` currently contains the pure `create-run`, `arm-run`, and
-`start-run` use cases with their inward port contracts. It has no adapter, persistence root,
-clock, environment, provider payload, subprocess, service, or background
-process.
+`hngh.application` currently contains the pure `create-run`, `arm-run`,
+`start-run`, and `checkpoint` use cases with their inward port contracts.
+`checkpoint` admits only closed verification and manifest evidence through a
+run-only request value. It has no adapter, persistence root, clock,
+environment, provider payload, subprocess, service, or background process.
 
 ## Planned outer boundaries
 

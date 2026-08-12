@@ -3,7 +3,8 @@
 ## Current: clean-slate baseline
 
 The retired daemon and plugin system is archived and not part of the active
-product. The active kernel contains pure profile and run-domain policy only.
+product. The active kernel contains pure profile and run-domain policy plus
+three fake-backed application use cases.
 
 ### Completed
 
@@ -24,6 +25,8 @@ product. The active kernel contains pure profile and run-domain policy only.
   create an armed replacement run and atomic receipt.
 - Added `start-run` so only the application boundary can make an armed run
   running and record its receipt.
+- Added `checkpoint` so only passed verification and complete manifest evidence
+  can advance a running run and record its receipt.
 
 ### Next
 
