@@ -1,0 +1,15 @@
+(in-package #:hngh)
+
+(defparameter +profile-modes+ '(:work :agents :machine :observe))
+
+(defun validate-profile (modes)
+  (unless (listp modes)
+    (error "profile modes must be a list"))
+  (let ((seen '()))
+    (dolist (mode modes)
+      (unless (member mode +profile-modes+)
+        (error "unknown profile mode: ~S" mode))
+      (when (member mode seen)
+        (error "duplicate profile mode: ~S" mode))
+      (push mode seen)))
+  (copy-list modes))
