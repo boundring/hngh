@@ -18,9 +18,10 @@ deployment form.
 
 ## Existing API
 
-`hngh:validate-profile` is the current kernel API. It belongs to the future
-domain boundary because it validates pure profile policy. No other component in
-the table exists in active source yet.
+`hngh.domain` is active. Its public API validates profile, mission, role,
+loadout, run, and evidence values, plus the closed run transition policy.
+`hngh:validate-profile` is a compatibility facade over the domain validator. No
+outer component in the table exists in active source yet.
 
 ## Dependency and deployment rules
 

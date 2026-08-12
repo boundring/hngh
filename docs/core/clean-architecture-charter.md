@@ -65,6 +65,7 @@ path.
 
 ## Current implementation
 
-The active implementation contains only `hngh:validate-profile` and its test
-runner. The component names in this charter and the component map are planned
-boundaries, not installed runtime packages.
+The active implementation contains `hngh.domain`: pure profile, mission, role,
+loadout, run, and evidence values with a closed lifecycle. `hngh:validate-profile`
+remains a compatibility facade. Application, adapter, presentation, and main
+component names remain planned boundaries, not installed runtime packages.

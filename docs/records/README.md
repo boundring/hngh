@@ -7,6 +7,8 @@ authorize a future action.
   archive and its active-state boundary.
 - `2026-08-11-task-1-boundaries.md` records the dependency and presentation
   boundary publication.
+- `2026-08-11-task-2-run-domain.md` records the pure domain lifecycle and
+  evidence boundary.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

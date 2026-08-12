@@ -23,11 +23,15 @@ write root. Malformed input, unknown fields, duplicate values, and path escape
 cases are first-class fixtures. Fixtures contain no provider credentials,
 private transcripts, local project paths, or live machine state.
 
-The current Task 1 fixtures prove two boundary rules:
+The current suite includes Task 1 and Task 2 fixtures:
 
 - an inward package may not import presentation or adapter packages;
 - a reference lexicon record may contain renderer copy and provenance, but not
-  canonical state, receipt, CLI, use-case, or outcome control.
+  canonical state, receipt, CLI, use-case, or outcome control;
+- domain constructors reject malformed values and infrastructure-shaped inputs;
+- every run-state pair has an explicit legal transition or a typed refusal;
+- receipt, score, and afterlife values cannot change run state or grant
+  authority.
 
 ## Testing API and nondeterminism
 

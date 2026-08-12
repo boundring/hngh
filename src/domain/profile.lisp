@@ -1,4 +1,4 @@
-(in-package #:hngh)
+(in-package #:hngh.domain)
 
 (defparameter +profile-modes+ '(:work :agents :machine :observe))
 
