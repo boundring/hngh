@@ -119,3 +119,82 @@
 (defun make-run-start-ports (&key record-run)
   (%make-run-start-ports
    (ensure-callback record-run "record callback")))
+
+(defparameter +verification-statuses+ '(:passed :failed :unknown))
+(defparameter +manifest-statuses+ '(:complete :incomplete :unknown))
+
+(defun ensure-result-status (status statuses name)
+  (unless (member status statuses)
+    (error "~A must be a known status" name))
+  status)
+
+(defun ensure-evidence-labels (labels name)
+  (unless (and (consp labels) (every #'nonempty-label-p labels))
+    (error "~A must be a nonempty list of nonempty strings" name))
+  (mapcar #'copy-seq labels))
+
+(defstruct (verification-result
+            (:constructor %make-verification-result (status labels))
+            (:conc-name %verification-result-))
+  (status nil :read-only t)
+  (labels nil :read-only t))
+
+(defun make-verification-result (&key status labels)
+  (%make-verification-result
+   (ensure-result-status status +verification-statuses+ "verification status")
+   (ensure-evidence-labels labels "verification labels")))
+
+(defun verification-result-status (result)
+  (%verification-result-status result))
+
+(defun verification-result-labels (result)
+  (ensure-evidence-labels (%verification-result-labels result) "verification labels"))
+
+(defstruct (manifest-result
+            (:constructor %make-manifest-result (status labels))
+            (:conc-name %manifest-result-))
+  (status nil :read-only t)
+  (labels nil :read-only t))
+
+(defun make-manifest-result (&key status labels)
+  (%make-manifest-result
+   (ensure-result-status status +manifest-statuses+ "manifest status")
+   (ensure-evidence-labels labels "manifest labels")))
+
+(defun manifest-result-status (result)
+  (%manifest-result-status result))
+
+(defun manifest-result-labels (result)
+  (ensure-evidence-labels (%manifest-result-labels result) "manifest labels"))
+
+(defun domain-run-p (value)
+  (handler-case
+      (progn (hngh.domain:run-state value) t)
+    (error () nil)))
+
+(defstruct (checkpoint-request
+            (:constructor %make-checkpoint-request (run))
+            (:conc-name %checkpoint-request-))
+  (run nil :read-only t))
+
+(defun make-checkpoint-request (&key run)
+  (unless (domain-run-p run)
+    (error "checkpoint request requires a run"))
+  (%make-checkpoint-request run))
+
+(defun checkpoint-request-run (request)
+  (%checkpoint-request-run request))
+
+(defstruct (run-checkpoint-ports
+            (:constructor %make-run-checkpoint-ports
+                (tool-executor repository-inspector record-run))
+            (:conc-name %run-checkpoint-ports-))
+  (tool-executor nil :read-only t)
+  (repository-inspector nil :read-only t)
+  (record-run nil :read-only t))
+
+(defun make-run-checkpoint-ports (&key tool-executor repository-inspector record-run)
+  (%make-run-checkpoint-ports
+   (ensure-callback tool-executor "tool executor callback")
+   (ensure-callback repository-inspector "repository inspector callback")
+   (ensure-callback record-run "record callback")))

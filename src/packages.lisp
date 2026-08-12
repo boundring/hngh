@@ -47,9 +47,19 @@
            #:admission-facts-exclusive-write
            #:make-run-admission-ports
            #:make-run-start-ports
+           #:make-verification-result
+           #:verification-result-status
+           #:verification-result-labels
+           #:make-manifest-result
+           #:manifest-result-status
+           #:manifest-result-labels
+           #:make-checkpoint-request
+           #:checkpoint-request-run
+           #:make-run-checkpoint-ports
            #:create-run
            #:arm-run
-           #:start-run))
+           #:start-run
+           #:checkpoint))
 
 (defpackage #:hngh.tests
   (:use #:cl))

@@ -15,6 +15,8 @@ authorize a future action.
   created-to-armed application transition.
 - `2026-08-12-task-3.3-start-run.md` records the armed-to-running application
   transition and its one-slot recording boundary.
+- `2026-08-12-task-3.4-checkpoint.md` records closed verification and manifest
+  evidence before the running-to-checkpointed application transition.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

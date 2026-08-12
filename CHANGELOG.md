@@ -21,6 +21,8 @@ All notable changes to Hngh are documented here.
   recording capabilities.
 - A pure application start-run slice with one atomic transition recording
   capability.
+- A pure application checkpoint slice with closed verification and manifest
+  evidence callbacks plus one atomic transition recording capability.
 
 ### Changed
 
