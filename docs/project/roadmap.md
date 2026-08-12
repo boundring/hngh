@@ -4,7 +4,7 @@
 
 The retired daemon and plugin system is archived and not part of the active
 product. The active kernel contains pure profile and run-domain policy plus
-three fake-backed application use cases.
+four fake-backed application use cases.
 
 ### Completed
 
@@ -27,13 +27,20 @@ three fake-backed application use cases.
   running and record its receipt.
 - Added `checkpoint` so only passed verification and complete manifest evidence
   can advance a running run and record its receipt.
+- Published source-grounded autonomous policy, closed principle and certificate
+  vocabulary, and a human-approval deployment profile without adding execution.
+- Added a read-only candidate evidence bundle with explicit manifest admission,
+  candidate-local policy scans, fixed local evidence commands, and closed status
+  output; it observes whole-tree state without inferring scope or mutating Git.
 
 ### Next
 
-1. Add the remaining application use cases and their inward port contracts
-   against fakes.
-2. Add restricted filesystem persistence only after the application contracts
-   are fixture-backed.
+1. Add pure governance values, principle evaluation, and failure-disposition
+   policy before candidate authorization or a concrete mutation adapter.
+2. Issue non-mutating candidate authorization certificates from the admitted
+   evidence bundle and governance policy.
+3. Resume remaining application use cases only under the admitted policy
+   proposal and evidence process.
 
-No daemon, provider, watcher, scheduler, dashboard, or adapter is admitted by
-this roadmap stage.
+No daemon, provider, watcher, scheduler, dashboard, adapter, or mutation
+executor is admitted by this roadmap stage.

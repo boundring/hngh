@@ -22,6 +22,10 @@ archive. It is evidence, not an implementation source. Verify it with
 - Write a failing test before production behavior.
 - Unknown, malformed, duplicate, or unauthorized input fails closed.
 - Do not change unrelated retirement-diff paths.
-- Do not commit, push, alter provider configuration, or enable a service
-  without operator approval.
+- Inspect the active policy sources, candidate state, and named verification
+  before editing.
+- Do not stage, commit, push, alter provider configuration, or enable a service
+  unless a current policy certificate authorizes that exact action. Until the
+  certificate executor exists, a transitional action requires a current explicit
+  instruction naming the exact mutation and target.
 - Record architecture-relevant work in `CHANGELOG.md` and `docs/records/`.

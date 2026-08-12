@@ -10,12 +10,14 @@ This directory is the active working surface.
    dependency direction and promotion rules.
 4. [Component map](core/component-map.md) — responsibilities and public APIs.
 5. [Test boundary](core/test-boundary.md) — fixture and gate rules.
-6. [Presentation boundary](design/presentation-boundary.md) — factual renderer
+6. [Autonomous development control](design/autonomous-development-control.md) —
+   source-grounded principle, review, and mutation-certificate policy.
+7. [Presentation boundary](design/presentation-boundary.md) — factual renderer
    and reference-lexicon limits.
-7. [Roadmap](project/roadmap.md) — the ordered rebuild frontier.
-8. [Decisions](project/decisions.md) — decisions already made.
-9. [Backlog](project/backlog.md) — work not yet admitted.
-10. [Records](records/README.md) — evidence and cutover records.
+8. [Roadmap](project/roadmap.md) — the ordered rebuild frontier.
+9. [Decisions](project/decisions.md) — decisions already made.
+10. [Backlog](project/backlog.md) — work not yet admitted.
+11. [Records](records/README.md) — evidence and cutover records.
 
 ## Archive boundary
 
