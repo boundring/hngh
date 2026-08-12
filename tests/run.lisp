@@ -5,20 +5,30 @@
   (merge-pathnames relative (project-root)))
 
 (load (project-file "src/packages.lisp"))
-(load (project-file "src/kernel/profile.lisp"))
+(load (project-file "src/domain/profile.lisp"))
+(load (project-file "src/domain/mission.lisp"))
+(load (project-file "src/domain/loadout.lisp"))
+(load (project-file "src/domain/run.lisp"))
+(load (project-file "src/domain/outcome.lisp"))
 
 (in-package :hngh.tests)
 
 (load (cl-user::project-file "tests/support/boundary-guards.lisp"))
 
+(defparameter *check-count* 0)
+
 (defun check (condition description)
   (unless condition
-    (error "check failed: ~A" description)))
+    (error "check failed: ~A" description))
+  (incf *check-count*))
 
 (defun signals-error-p (thunk)
   (handler-case
       (progn (funcall thunk) nil)
     (error () t)))
+
+(load (cl-user::project-file "tests/domain/test-loadout.lisp"))
+(load (cl-user::project-file "tests/domain/test-run-state.lisp"))
 
 (defun read-fixture (relative)
   (with-open-file (stream (cl-user::project-file relative))
@@ -28,6 +38,9 @@
 (check (equal '(:work :observe)
               (hngh:validate-profile '(:work :observe)))
        "profile preserves explicit mode order")
+(check (equal '(:work :observe)
+              (hngh.domain:validate-profile '(:work :observe)))
+       "domain profile validation preserves explicit mode order")
 (check (signals-error-p (lambda () (hngh:validate-profile '(:work :unknown))))
        "unknown mode fails closed")
 (check (signals-error-p (lambda () (hngh:validate-profile '(:work :work))))
@@ -51,4 +64,4 @@
              (read-fixture "tests/fixtures/reference-lexicon/attempts-canonical-control.lisp")))
        "lexicon cannot carry canonical control fields")
 
-(format t "9 checks passed.~%")
+(format t "~D checks passed.~%" *check-count*)

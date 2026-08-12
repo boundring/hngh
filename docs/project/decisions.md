@@ -22,7 +22,26 @@ The domain depends on Common Lisp only. Application code depends inward on the
 domain and reaches details through ports. Adapters and presentation remain outer
 components. `hngh.main` is the only future composition root.
 
-## 2026-08-11 — Reference language is renderer-only
+## 2026-08-11 — Run lifecycle is closed and evidence is non-authoritative
+
+`hngh.domain` owns pure run policy and values. A new run is `created`; only the
+following transitions are legal:
+
+| From | To |
+|---|---|
+| `created` | `armed`, `cancelled`, `dead` |
+| `armed` | `running`, `cancelled`, `dead` |
+| `running` | `checkpointed`, `cancelled`, `evacuated`, `dead` |
+| `checkpointed` | `running`, `cancelled`, `evacuated`, `dead` |
+| `cancelled`, `evacuated`, `dead` | `afterlife` |
+| `afterlife` | `scored` |
+| `scored` | `archived` |
+
+Every other pair refuses. Receipt, score, and afterlife values are evidence;
+they do not receive a run, state, actor, capability, or transition operation and
+cannot create authority. The domain accepts no path, environment, clock,
+subprocess, or provider payload.
+
 
 Canonical states, receipts, CLI flags, configuration, and use-case outcomes use
 plain technical terms. Optional reference lexicons provide display copy with an

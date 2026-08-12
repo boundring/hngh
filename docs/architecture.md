@@ -4,18 +4,30 @@ Hngh begins as a compact, side-effect-free kernel.
 
 ## Current kernel
 
-- `work` validates work intent and local receipts.
-- `agents` validates adapter contracts; it never starts agents.
-- `machine` validates approved machine operations; it never self-activates.
-- `observe` renders local evidence without changing state.
+`hngh.domain` is an active Common Lisp-only library. It validates ordered
+profile modes and creates pure mission, role, loadout, run, receipt, score, and
+afterlife values. It does not read a clock, environment, path, provider payload,
+or subprocess value.
 
-A profile is an ordered, duplicate-free list of these modes. Malformed, unknown,
-or duplicate input fails closed. The active source has no scheduler, socket
-listener, systemd unit, MCP server, adapter, or implicit state root.
+A run always starts in `created`. Its closed lifecycle is:
 
-## Planned boundaries
+```text
+created -> armed -> running -> checkpointed
+created -> cancelled | dead
+armed -> cancelled | dead
+running -> cancelled | evacuated | dead
+checkpointed -> running | cancelled | evacuated | dead
+cancelled | evacuated | dead -> afterlife -> scored -> archived
+```
 
-The next components are policy boundaries, not active runtime packages:
+Every other transition refuses. Receipts, score records, and afterlife records
+hold evidence only; they cannot change state or grant authority.
+
+`hngh:validate-profile` remains a compatibility facade over the domain policy.
+The active source has no application package, scheduler, socket listener,
+systemd unit, MCP server, adapter, persistence root, or implicit state root.
+
+## Planned outer boundaries
 
 ```text
 hngh.main -> hngh.presentation / hngh.adapters.*

@@ -3,7 +3,7 @@
 ## Current: clean-slate baseline
 
 The retired daemon and plugin system is archived and not part of the active
-product. The active kernel validates ordered, duplicate-free profile modes.
+product. The active kernel contains pure profile and run-domain policy only.
 
 ### Completed
 
@@ -15,12 +15,13 @@ product. The active kernel validates ordered, duplicate-free profile modes.
   presentation boundary.
 - Added fixture guards for inward dependency direction and renderer-only
   reference lexicons.
+- Specified and tested the pure run domain: closed lifecycle, typed refusal,
+  validated mission/role/loadout values, and non-authoritative evidence values.
 
 ### Next
 
-1. Specify the run domain before persisting state.
-2. Add application use cases and inward port contracts against fakes.
-3. Add restricted filesystem persistence only after the domain and port
+1. Add application use cases and inward port contracts against fakes.
+2. Add restricted filesystem persistence only after the domain and port
    contracts are fixture-backed.
 
 No daemon, provider, watcher, scheduler, dashboard, or adapter is admitted by

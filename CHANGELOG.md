@@ -12,6 +12,8 @@ All notable changes to Hngh are documented here.
 - Clean Architecture charter, component map, test boundary, and
   presentation/reference-lexicon boundaries.
 - Fixture guards for inward dependency direction and renderer-only lexicons.
+- A pure run domain with validated mission, role, loadout, lifecycle, and
+  evidence values.
 
 ### Changed
 

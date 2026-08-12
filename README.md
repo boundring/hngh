@@ -5,9 +5,14 @@ starts no daemon and owns no background process.
 
 ## Status
 
-The active baseline validates ordered profile modes: `work`, `agents`,
-`machine`, and `observe`. Malformed, unknown, or duplicate modes fail closed.
-Integration adapters arrive only with named ports and fixture-backed contracts.
+The active baseline exposes `hngh.domain`: pure profile, mission, role,
+loadout, run, receipt, score, and afterlife values. Runs begin in `created` and
+advance only through a closed, fail-closed lifecycle. Receipts, scores, and
+lessons are evidence only; they cannot grant authority or change run state.
+
+`hngh:validate-profile` remains a compatibility facade over the domain policy.
+Malformed, unknown, or duplicate values fail closed. Integration adapters arrive
+only with named ports and fixture-backed contracts.
 
 ## Verify
 
