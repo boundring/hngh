@@ -797,3 +797,257 @@
           :normalize-to-refusal-at-callback :normalize-to-conflict-without-retry
           :refuse :needs-escalation :stop-and-record-evidence))
        "evaluate-failure-disposition returns a validated disposition")
+
+;; ---------------------------------------------------------------------------
+;; C3: candidate authorization certificate — pure, non-mutating value issued
+;; from an :admitted policy verdict. The issuer is mechanical: it binds one
+;; closed action and the supplied facts into an immutable certificate.
+;; Action-admission policy (e.g. commit never authorizing push) is deferred to
+;; the future executor, so any of the five closed actions is issuable here.
+;; ---------------------------------------------------------------------------
+
+(defun make-fixture-admitted-verdict ()
+  (let ((principles '(:closed-authority :least-authority :dependency-direction
+                      :fail-closed :evidence-before-claim :atomic-mutation
+                      :reversibility :no-hidden-execution
+                      :cost-and-route-discipline :source-grounding)))
+    (hngh.domain:evaluate-policy-proposal
+     (make-fixture-proposal
+      (loop for principle in principles
+            for n from 1
+            collect (make-fixture-requirement
+                     principle (if (member principle '(:purpose :caller))
+                                   :purpose :claim-proof)
+                     (list (format nil "fp-~D" n))
+                     (list (hngh.domain:make-evidence-fact
+                            :kind :fixture
+                            :fingerprint (format nil "fp-~D" n)
+                            :state :current))))))))
+
+;; (a) every closed action mints a certificate from an admitted verdict.
+(dolist (action '(:none :prepare-candidate :stage :commit :push))
+  (let ((cert (apply #'hngh.domain:issue-candidate-certificate
+                     (make-fixture-admitted-verdict)
+                     (list :action action :repository-identity "repo"
+                           :base-revision "base"
+                           :candidate-paths '("a.lisp")
+                           :content-hash "content"
+                           :evidence-hashes '("ev-1")
+                           :review-findings '("review")
+                           :source-manifest
+                           (list (hngh.domain:make-source-manifest-entry
+                                  :relative-path "policy.md"
+                                  :content-hash "mhash"
+                                  :source-role "policy"))
+                           :policy-profile "profile"
+                           :expiry "2026-08-18T00:00:00Z"))))
+    (check (eql action (hngh.domain:candidate-certificate-action cert))
+           "issue admits each closed certificate action")))
+
+;; (b) accessors round-trip the issued certificate fields.
+(let* ((verdict (make-fixture-admitted-verdict))
+       (manifest (list (hngh.domain:make-source-manifest-entry
+                        :relative-path "policy.md" :content-hash "mhash"
+                        :source-role "policy")))
+       (cert (hngh.domain:issue-candidate-certificate
+              verdict :action :commit :repository-identity "repo"
+              :base-revision "base" :candidate-paths '("a.lisp" "b.lisp")
+              :content-hash "content" :evidence-hashes '("ev-1" "ev-2")
+              :review-findings '("review")
+              :source-manifest manifest
+              :policy-profile "profile" :expiry "2026-08-18T00:00:00Z")))
+  (check (eql :commit (hngh.domain:candidate-certificate-action cert))
+         "certificate preserves the action")
+  (check (string= "repo"
+                  (hngh.domain:candidate-certificate-repository-identity cert))
+         "certificate preserves repository identity")
+  (check (string= "base"
+                  (hngh.domain:candidate-certificate-base-revision cert))
+         "certificate preserves base revision")
+  (check (equal '("a.lisp" "b.lisp")
+                (hngh.domain:candidate-certificate-candidate-paths cert))
+         "certificate preserves ordered candidate paths")
+  (check (string= "content"
+                  (hngh.domain:candidate-certificate-content-hash cert))
+         "certificate preserves content hash")
+  (check (equal '("ev-1" "ev-2")
+                (hngh.domain:candidate-certificate-evidence-hashes cert))
+         "certificate preserves evidence hashes")
+  (check (and (eql verdict
+                   (first (hngh.domain:candidate-certificate-principle-verdicts
+                           cert)))
+              (= 1 (length
+                    (hngh.domain:candidate-certificate-principle-verdicts cert))))
+         "certificate carries the admitting verdict")
+  (check (equal '("review")
+                (hngh.domain:candidate-certificate-review-findings cert))
+         "certificate preserves review findings")
+  (check (equal manifest
+                (hngh.domain:candidate-certificate-source-manifest cert))
+         "certificate preserves the source manifest")
+  (check (string= "profile"
+                  (hngh.domain:candidate-certificate-policy-profile cert))
+         "certificate preserves policy profile")
+  (check (string= "2026-08-18T00:00:00Z"
+                  (hngh.domain:candidate-certificate-expiry cert))
+         "certificate preserves expiry"))
+
+;; (c) issuing refuses a non-:admitted or non-verdict input.
+(let ((verdict (hngh.domain:make-policy-verdict
+                :state :refused :principle-results '() :reason-labels '("no"))))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes '("ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest
+             (list (hngh.domain:make-source-manifest-entry
+                    :relative-path "policy.md" :content-hash "mhash"
+                    :source-role "policy"))
+             :expiry "2026-08-18T00:00:00Z")))
+         "issuing from a non-admitted verdict refuses"))
+(check (signals-error-p
+        (lambda ()
+          (hngh.domain:issue-candidate-certificate
+           :not-a-verdict :action :commit :repository-identity "repo"
+           :base-revision "base" :candidate-paths '("a.lisp")
+           :content-hash "content" :evidence-hashes '("ev-1")
+           :review-findings '() :policy-profile "profile"
+           :source-manifest
+           (list (hngh.domain:make-source-manifest-entry
+                  :relative-path "policy.md" :content-hash "mhash"
+                  :source-role "policy"))
+           :expiry "2026-08-18T00:00:00Z")))
+       "issuing without a policy verdict input refuses")
+
+;; (d) unknown action refuses.
+(check (signals-error-p
+        (lambda ()
+          (hngh.domain:issue-candidate-certificate
+           (make-fixture-admitted-verdict)
+           :action :publish :repository-identity "repo"
+           :base-revision "base" :candidate-paths '("a.lisp")
+           :content-hash "content" :evidence-hashes '("ev-1")
+           :review-findings '() :policy-profile "profile"
+           :source-manifest
+           (list (hngh.domain:make-source-manifest-entry
+                  :relative-path "policy.md" :content-hash "mhash"
+                  :source-role "policy"))
+           :expiry "2026-08-18T00:00:00Z")))
+       "issuing an unknown action refuses")
+
+;; (e) empty and duplicate candidate paths refuse.
+(dolist (paths '(nil ("a.lisp" "a.lisp")))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             (make-fixture-admitted-verdict)
+             :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths paths
+             :content-hash "content" :evidence-hashes '("ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest
+             (list (hngh.domain:make-source-manifest-entry
+                    :relative-path "policy.md" :content-hash "mhash"
+                    :source-role "policy"))
+             :expiry "2026-08-18T00:00:00Z")))
+         "empty or duplicate candidate paths refuse"))
+
+;; (f) missing content hash and missing/duplicate evidence hashes refuse.
+;; NB: SBCL &key uses the leftmost occurrence of a duplicated keyword, so each
+;; case is a direct call rather than a base-plist + override.
+(let ((verdict (make-fixture-admitted-verdict))
+      (manifest (list (hngh.domain:make-source-manifest-entry
+                       :relative-path "policy.md" :content-hash "mhash"
+                       :source-role "policy"))))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash nil :evidence-hashes '("ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest manifest :expiry "2026-08-18T00:00:00Z")))
+         "missing content hash refuses")
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes nil
+             :review-findings '() :policy-profile "profile"
+             :source-manifest manifest :expiry "2026-08-18T00:00:00Z")))
+         "missing evidence hashes refuse")
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes '("ev-1" "ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest manifest :expiry "2026-08-18T00:00:00Z")))
+         "duplicate evidence hashes refuse"))
+
+;; (g) duplicate verdicts, empty source manifest, and missing expiry refuse.
+(let ((verdict (make-fixture-admitted-verdict)))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:make-candidate-certificate
+             :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes '("ev-1")
+             :principle-verdicts (list verdict verdict)
+             :review-findings '() :policy-profile "profile"
+             :source-manifest
+             (list (hngh.domain:make-source-manifest-entry
+                    :relative-path "policy.md" :content-hash "mhash"
+                    :source-role "policy"))
+             :expiry "2026-08-18T00:00:00Z")))
+         "duplicate admitting verdicts refuse")
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes '("ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest nil
+             :expiry "2026-08-18T00:00:00Z")))
+         "empty source manifest refuses")
+  (check (signals-error-p
+          (lambda ()
+            (hngh.domain:issue-candidate-certificate
+             verdict :action :commit :repository-identity "repo"
+             :base-revision "base" :candidate-paths '("a.lisp")
+             :content-hash "content" :evidence-hashes '("ev-1")
+             :review-findings '() :policy-profile "profile"
+             :source-manifest
+             (list (hngh.domain:make-source-manifest-entry
+                    :relative-path "policy.md" :content-hash "mhash"
+                    :source-role "policy"))
+             :expiry nil)))
+         "missing expiry refuses"))
+
+;; (h) defensive copies: mutating the caller's list does not alter the cert.
+(let* ((paths (list "a.lisp" "b.lisp"))
+       (hashes (list "ev-1"))
+       (cert (hngh.domain:issue-candidate-certificate
+              (make-fixture-admitted-verdict)
+              :action :commit :repository-identity "repo"
+              :base-revision "base" :candidate-paths paths
+              :content-hash "content" :evidence-hashes hashes
+              :review-findings '() :policy-profile "profile"
+              :source-manifest
+              (list (hngh.domain:make-source-manifest-entry
+                     :relative-path "policy.md" :content-hash "mhash"
+                     :source-role "policy"))
+              :expiry "2026-08-18T00:00:00Z")))
+  (setf (first paths) "changed" (first hashes) "changed")
+  (check (equal '("a.lisp" "b.lisp")
+                (hngh.domain:candidate-certificate-candidate-paths cert))
+         "certificate copies candidate paths on issue")
+  (check (equal '("ev-1")
+                (hngh.domain:candidate-certificate-evidence-hashes cert))
+         "certificate copies evidence hashes on issue"))

@@ -384,3 +384,109 @@ default in this pure policy."
      :principle-results (nreverse principle-results)
      :reason-labels (nreverse reason-labels))))
 
+(defun ensure-nonempty-label-list (value name)
+  (unless value
+    (error "~A must be nonempty" name))
+  (ensure-label-list value name))
+
+(defun validate-certificate-action (value)
+  (validate-closed-value value '(:none :prepare-candidate :stage :commit :push)
+                         "certificate action"))
+
+(defstruct (candidate-certificate
+            (:constructor %make-candidate-certificate
+                (action repository-identity base-revision candidate-paths
+                 content-hash evidence-hashes principle-verdicts
+                 review-findings source-manifest policy-profile expiry))
+            (:conc-name %candidate-certificate-))
+  (action nil :read-only t)
+  (repository-identity nil :read-only t)
+  (base-revision nil :read-only t)
+  (candidate-paths nil :read-only t)
+  (content-hash nil :read-only t)
+  (evidence-hashes nil :read-only t)
+  (principle-verdicts nil :read-only t)
+  (review-findings nil :read-only t)
+  (source-manifest nil :read-only t)
+  (policy-profile nil :read-only t)
+  (expiry nil :read-only t))
+
+(defun candidate-certificate-action (cert) (%candidate-certificate-action cert))
+(defun candidate-certificate-repository-identity (cert)
+  (copy-seq (%candidate-certificate-repository-identity cert)))
+(defun candidate-certificate-base-revision (cert)
+  (copy-seq (%candidate-certificate-base-revision cert)))
+(defun candidate-certificate-candidate-paths (cert)
+  (mapcar #'copy-seq (%candidate-certificate-candidate-paths cert)))
+(defun candidate-certificate-content-hash (cert)
+  (copy-seq (%candidate-certificate-content-hash cert)))
+(defun candidate-certificate-evidence-hashes (cert)
+  (mapcar #'copy-seq (%candidate-certificate-evidence-hashes cert)))
+(defun candidate-certificate-principle-verdicts (cert)
+  (copy-list (%candidate-certificate-principle-verdicts cert)))
+(defun candidate-certificate-review-findings (cert)
+  (mapcar #'copy-seq (%candidate-certificate-review-findings cert)))
+(defun candidate-certificate-source-manifest (cert)
+  (copy-list (%candidate-certificate-source-manifest cert)))
+(defun candidate-certificate-policy-profile (cert)
+  (copy-seq (%candidate-certificate-policy-profile cert)))
+(defun candidate-certificate-expiry (cert)
+  (copy-seq (%candidate-certificate-expiry cert)))
+
+(defun ensure-candidate-certificate-verdicts (value)
+  (unless (and (listp value) value
+               (every #'policy-verdict-p value)
+               (= (length value)
+                  (length (remove-duplicates value :test #'eq))))
+    (error "Principle verdicts must be a nonempty duplicate-free list of policy verdicts"))
+  (copy-list value))
+
+(defun make-candidate-certificate
+    (&key (action nil action-p) (repository-identity nil repository-identity-p)
+       (base-revision nil base-revision-p) (candidate-paths nil candidate-paths-p)
+       (content-hash nil content-hash-p) (evidence-hashes nil evidence-hashes-p)
+       (principle-verdicts nil principle-verdicts-p)
+       (review-findings nil review-findings-p)
+       (source-manifest nil source-manifest-p)
+       (policy-profile nil policy-profile-p) (expiry nil expiry-p))
+  (unless (and action-p repository-identity-p base-revision-p candidate-paths-p
+               content-hash-p evidence-hashes-p principle-verdicts-p
+               review-findings-p source-manifest-p policy-profile-p expiry-p)
+    (error "Candidate certificate fields are required"))
+  (%make-candidate-certificate
+   (validate-certificate-action action)
+   (ensure-nonempty-string repository-identity "repository identity")
+   (ensure-nonempty-string base-revision "base revision")
+   (ensure-nonempty-label-list candidate-paths "candidate paths")
+   (ensure-nonempty-string content-hash "content hash")
+   (ensure-nonempty-label-list evidence-hashes "evidence hashes")
+   (ensure-candidate-certificate-verdicts principle-verdicts)
+   (ensure-label-list review-findings "review findings")
+   (ensure-source-manifest source-manifest)
+   (ensure-nonempty-string policy-profile "policy profile")
+   (ensure-nonempty-string expiry "expiry")))
+
+(defun issue-candidate-certificate (verdict &key action repository-identity
+                                       base-revision candidate-paths content-hash
+                                       evidence-hashes review-findings
+                                       source-manifest policy-profile expiry)
+  "Mint a non-mutating candidate authorization certificate from an :admitted
+policy verdict. The issuer is mechanical: it binds one closed action and the
+supplied facts into an immutable certificate. Action-admission policy (for
+example a commit certificate never authorizing a push) is enforced later by
+the executor, not here."
+  (unless (policy-verdict-p verdict)
+    (error "Issue requires a policy verdict, got: ~S" verdict))
+  (unless (eql :admitted (policy-verdict-state verdict))
+    (error "Certificate requires an admitted verdict, got: ~S"
+           (policy-verdict-state verdict)))
+  (make-candidate-certificate
+   :action action :repository-identity repository-identity
+   :base-revision base-revision :candidate-paths candidate-paths
+   :content-hash content-hash :evidence-hashes evidence-hashes
+   :principle-verdicts (list verdict)
+   :review-findings review-findings
+   :source-manifest source-manifest
+   :policy-profile policy-profile
+   :expiry expiry))
+

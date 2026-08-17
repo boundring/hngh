@@ -25,6 +25,8 @@ authorize a future action.
   principle evaluator over the proposal ledger and its closed refusals.
 - `2026-08-17-task-c2-failure-disposition.md` records the closed
   failure-disposition policy and the list-valued-constant redefinition note.
+- `2026-08-17-task-c3-candidate-certificate.md` records the non-mutating
+  candidate authorization certificate and its mechanical pure issuer.
 - `2026-08-12-task-3.4-checkpoint.md` records closed verification and manifest
   evidence before the running-to-checkpointed application transition.
 - `2026-08-13-pi-worker-and-delegation-survey.md` records the future Pi worker
