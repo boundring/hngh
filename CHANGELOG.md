@@ -38,6 +38,9 @@ All notable changes to Hngh are documented here.
   matrix-ordered principle results and closed refusals for missing, stale,
   malformed, conflicting, or unverifiable evidence; `:admitted` only when every
   principle passes.
+- A closed failure-disposition policy: each of the eight failure categories
+  maps to one deterministic disposition, unknown categories refuse, and
+  conditional rows resolve to their primary default.
 
 ### Changed
 

@@ -72,7 +72,8 @@
            #:policy-proposal-dependency
            #:policy-proposal-evidence-trigger
            #:policy-proposal-evidence-requirements
-           #:evaluate-policy-proposal))
+           #:evaluate-policy-proposal
+           #:evaluate-failure-disposition))
 
 (defpackage #:hngh
   (:use #:cl)

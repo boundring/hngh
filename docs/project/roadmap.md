@@ -38,14 +38,15 @@ four fake-backed application use cases.
   `policy-verdict` per proposal with ten matrix-ordered principle results and
   closed refusals for missing, stale, malformed, conflicting, or unverifiable
   evidence.
-
+- Added the closed failure-disposition policy: one deterministic disposition
+  per failure category, refusing unknown categories and resolving the two
+  conditionally worded rows to their primary default.
 
 ### Next
 
-1. Add the separate closed failure-disposition policy.
-2. Issue non-mutating candidate authorization certificates from admitted
+1. Issue non-mutating candidate authorization certificates from admitted
    evidence and governance policy.
-3. Resume remaining application use cases only under the admitted policy
+2. Resume remaining application use cases only under the admitted policy
    proposal and evidence process.
 
 No daemon, provider, watcher, scheduler, dashboard, adapter, or mutation
