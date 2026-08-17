@@ -11,12 +11,13 @@
            :failure-disposition :review-request :commit-request :push-request)
    "proposal class"))
 
+(defconstant +matrix-principles+
+  '(:closed-authority :least-authority :dependency-direction
+    :fail-closed :evidence-before-claim :atomic-mutation :reversibility
+    :no-hidden-execution :cost-and-route-discipline :source-grounding))
+
 (defun validate-principle-identifier (value)
-  (validate-closed-value
-   value '(:closed-authority :least-authority :dependency-direction
-           :fail-closed :evidence-before-claim :atomic-mutation :reversibility
-           :no-hidden-execution :cost-and-route-discipline :source-grounding)
-   "principle identifier"))
+  (validate-closed-value value +matrix-principles+ "principle identifier"))
 
 (defun validate-failure-category (value)
   (validate-closed-value
@@ -280,3 +281,80 @@
    (validate-policy-verdict-state state)
    (ensure-principle-results principle-results)
    (ensure-label-list reason-labels "reason labels")))
+
+
+(defun evidence-requirement-passed-p (requirement)
+  "Return (values passed-p refusal-labels) for one evidence requirement."
+  (let ((facts (evidence-requirement-evidence-facts requirement))
+        (fingerprints (evidence-requirement-required-fingerprints requirement))
+        (labels '()))
+    (dolist (fact facts)
+      (case (evidence-fact-state fact)
+        (:current nil)
+        (:stale (pushnew "stale-evidence" labels :test #'string=))
+        (:missing (pushnew "missing-evidence" labels :test #'string=))
+        (:malformed (pushnew "malformed-evidence" labels :test #'string=))
+        (:conflicting (pushnew "conflicting-evidence" labels :test #'string=))
+        (:unverifiable (pushnew "unverifiable-evidence" labels :test #'string=))))
+    (dolist (required fingerprints)
+      (unless (member required (mapcar #'evidence-fact-fingerprint facts)
+                      :test #'string=)
+        (pushnew "missing-evidence" labels :test #'string=)))
+    (values (and (every (lambda (fact)
+                          (eql :current (evidence-fact-state fact)))
+                        facts)
+                 (every (lambda (required)
+                          (member required
+                                  (mapcar #'evidence-fact-fingerprint facts)
+                                  :test #'string=))
+                        fingerprints))
+            (nreverse labels))))
+
+(defun evaluate-policy-proposal (proposal)
+  (unless (policy-proposal-p proposal)
+    (error "Policy proposal must be a policy proposal: ~S" proposal))
+  (let ((requirements (policy-proposal-evidence-requirements proposal))
+        (principle-results '())
+        (reason-labels '()))
+    (dolist (principle +matrix-principles+)
+      (let ((for-principle
+              (remove-if-not (lambda (requirement)
+                               (eql principle
+                                    (evidence-requirement-principle requirement)))
+                             requirements)))
+        (if (null for-principle)
+            (progn
+              (push (make-principle-result
+                     :principle principle :state :refused
+                     :evidence-fingerprints '())
+                    principle-results)
+              (pushnew "missing-principle-result" reason-labels :test #'string=))
+            (let ((fingerprints '())
+                  (labels '())
+                  (all-passed t))
+              (dolist (requirement for-principle)
+                (multiple-value-bind (passed-p refusal-labels)
+                    (evidence-requirement-passed-p requirement)
+                  (unless passed-p
+                    (setf all-passed nil))
+                  (dolist (label refusal-labels)
+                    (pushnew label labels :test #'string=))
+                  (dolist (fingerprint
+                           (evidence-requirement-required-fingerprints
+                            requirement))
+                    (pushnew fingerprint fingerprints :test #'string=))))
+              (push (make-principle-result
+                     :principle principle
+                     :state (if all-passed :passed :refused)
+                     :evidence-fingerprints (nreverse fingerprints))
+                    principle-results)
+              (dolist (label labels)
+                (pushnew label reason-labels :test #'string=))))))
+    (make-policy-verdict
+     :state (if (every (lambda (result)
+                         (eql :passed (principle-result-state result)))
+                       principle-results)
+                :admitted :refused)
+     :principle-results (nreverse principle-results)
+     :reason-labels (nreverse reason-labels))))
+

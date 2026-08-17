@@ -514,3 +514,256 @@
              :dependency "domain" :evidence-trigger "trigger"
              :evidence-requirements (list requirement "not-a-requirement"))))
          "wrong-typed evidence requirement member refuses"))
+
+;; ---------------------------------------------------------------------------
+;; C1: evaluate-policy-proposal — pure deterministic principle evaluator
+;; ---------------------------------------------------------------------------
+
+(defun make-fixture-requirement (principle kind required-fingerprints facts)
+  (hngh.domain:make-evidence-requirement
+   :principle principle :kind kind
+   :required-fingerprints required-fingerprints
+   :evidence-facts facts))
+
+(defun make-fixture-proposal (requirements)
+  (hngh.domain:make-policy-proposal
+   :class :feature :problem "problem" :outcome "outcome"
+   :purpose "purpose" :caller "caller" :input-contract "input"
+   :output-contract "output" :failure-contract "failure"
+   :declared-capabilities '() :capability-diff "none"
+   :source-manifest (list (hngh.domain:make-source-manifest-entry
+                           :relative-path "policy.md" :content-hash "hash"
+                           :source-role "policy"))
+   :risk-note "risk" :dependency "domain" :evidence-trigger "trigger"
+   :evidence-requirements requirements))
+
+;; (a) ten-principle proposal, one requirement each, every required fingerprint
+;; supplied once by a :current fact -> :admitted, 10 principle-results all
+;; :passed, reason-labels '().
+(let* ((principles '(:closed-authority :least-authority :dependency-direction
+                     :fail-closed :evidence-before-claim :atomic-mutation
+                     :reversibility :no-hidden-execution
+                     :cost-and-route-discipline :source-grounding))
+       (requirements
+         (loop for principle in principles
+               for n from 1
+               collect (make-fixture-requirement
+                        principle (if (member principle '(:purpose :caller))
+                                      :purpose :claim-proof)
+                        (list (format nil "fp-~D" n))
+                        (list (hngh.domain:make-evidence-fact
+                               :kind :fixture
+                               :fingerprint (format nil "fp-~D" n)
+                               :state :current)))))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+  (check (eql :admitted (hngh.domain:policy-verdict-state verdict))
+         "evaluate-policy-proposal admits a ten-principle fully-evidenced proposal")
+  (check (= 10 (length (hngh.domain:policy-verdict-principle-results verdict)))
+         "evaluate-policy-proposal returns one principle-result per matrix principle")
+  (check (every (lambda (result)
+                  (eql :passed (hngh.domain:principle-result-state result)))
+                (hngh.domain:policy-verdict-principle-results verdict))
+         "evaluate-policy-proposal marks every supplied principle-result passed")
+  (check (every (lambda (result)
+                  (= 1 (length
+                        (hngh.domain:principle-result-evidence-fingerprints result))))
+                (hngh.domain:policy-verdict-principle-results verdict))
+         "each passed principle-result carries its required fingerprint")
+  (check (null (hngh.domain:policy-verdict-reason-labels verdict))
+         "admitted proposal carries no reason labels"))
+
+;; (b) nine principles present -> :refused, label "missing-principle-result",
+;; that principle-result state :refused fingerprints '().
+(let* ((principles '(:closed-authority :least-authority :dependency-direction
+                     :fail-closed :evidence-before-claim :atomic-mutation
+                     :reversibility :no-hidden-execution
+                     :cost-and-route-discipline))
+       (requirements
+         (loop for principle in principles
+               for n from 1
+               collect (make-fixture-requirement
+                        principle :claim-proof
+                        (list (format nil "fp-~D" n))
+                        (list (hngh.domain:make-evidence-fact
+                               :kind :fixture
+                               :fingerprint (format nil "fp-~D" n)
+                               :state :current)))))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (missing (find :source-grounding
+                      (hngh.domain:policy-verdict-principle-results verdict)
+                      :key #'hngh.domain:principle-result-principle)))
+  (check (eql :refused (hngh.domain:policy-verdict-state verdict))
+         "a proposal missing one matrix principle is refused")
+  (check (and missing
+              (eql :refused (hngh.domain:principle-result-state missing))
+              (null (hngh.domain:principle-result-evidence-fingerprints missing)))
+         "missing principle yields a refused result with no fingerprints")
+  (check (member "missing-principle-result"
+                 (hngh.domain:policy-verdict-reason-labels verdict)
+                 :test #'string=)
+         "missing principle records the missing-principle-result label"))
+
+;; (c) required fingerprint absent for one principle -> :refused,
+;; "missing-evidence".
+(let* ((fact (hngh.domain:make-evidence-fact :kind :fixture
+                                             :fingerprint "present" :state :current))
+       (requirements (list (make-fixture-requirement
+                            :closed-authority :claim-proof
+                            '("absent" "present") (list fact))))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (result (first (hngh.domain:policy-verdict-principle-results verdict))))
+  (check (eql :refused (hngh.domain:policy-verdict-state verdict))
+         "an absent required fingerprint refuses the proposal")
+  (check (eql :refused (hngh.domain:principle-result-state result))
+         "an absent required fingerprint refuses its principle result")
+  (check (member "missing-evidence"
+                 (hngh.domain:policy-verdict-reason-labels verdict)
+                 :test #'string=)
+         "absent required fingerprint records the missing-evidence label"))
+
+;; (d) required fingerprint supplied only by a :stale fact -> :refused,
+;; "stale-evidence".
+(let* ((fact (hngh.domain:make-evidence-fact :kind :fixture
+                                             :fingerprint "fp" :state :stale))
+       (proposal (make-fixture-proposal
+                  (list (make-fixture-requirement
+                         :closed-authority :claim-proof '("fp") (list fact)))))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+  (check (eql :refused (hngh.domain:policy-verdict-state verdict))
+         "stale evidence refuses the proposal")
+  (check (member "stale-evidence"
+                 (hngh.domain:policy-verdict-reason-labels verdict)
+                 :test #'string=)
+         "stale evidence records the stale-evidence label"))
+
+;; (e) malformed / conflicting / unverifiable fact states -> matching labels.
+(dolist (case '(("malformed-evidence" :malformed)
+                ("conflicting-evidence" :conflicting)
+                ("unverifiable-evidence" :unverifiable)))
+  (destructuring-bind (label state) case
+    (let* ((fact (hngh.domain:make-evidence-fact :kind :fixture
+                                                 :fingerprint "fp" :state state))
+           (proposal (make-fixture-proposal
+                      (list (make-fixture-requirement
+                             :closed-authority :claim-proof '("fp") (list fact)))))
+           (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+      (check (eql :refused (hngh.domain:policy-verdict-state verdict))
+             (format nil "~A evidence refuses the proposal" label))
+      (check (member label
+                     (hngh.domain:policy-verdict-reason-labels verdict)
+                     :test #'string=)
+             (format nil "~A fact records the ~A label" label label)))))
+
+;; (f) fact with state :missing -> "missing-evidence".
+(let* ((fact (hngh.domain:make-evidence-fact :kind :fixture
+                                             :fingerprint "fp" :state :missing))
+       (proposal (make-fixture-proposal
+                  (list (make-fixture-requirement
+                         :closed-authority :claim-proof '("fp") (list fact)))))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+  (check (member "missing-evidence"
+                 (hngh.domain:policy-verdict-reason-labels verdict)
+                 :test #'string=)
+         "missing fact records the missing-evidence label"))
+
+;; (g) a principle with two requirements, one passes one fails -> that
+;; principle-result :refused, other principles :passed, verdict :refused.
+(let* ((good-fact (hngh.domain:make-evidence-fact :kind :fixture
+                                                  :fingerprint "good" :state :current))
+       (bad-fact (hngh.domain:make-evidence-fact :kind :fixture
+                                                 :fingerprint "bad" :state :stale))
+       (other-fact (hngh.domain:make-evidence-fact :kind :fixture
+                                                   :fingerprint "other" :state :current))
+       (requirements (list
+                      (make-fixture-requirement :closed-authority :purpose
+                                                '("good") (list good-fact))
+                      (make-fixture-requirement :closed-authority :caller
+                                                '("bad") (list bad-fact))
+                      (make-fixture-requirement :least-authority :purpose
+                                                '("other") (list other-fact))))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (closed (find :closed-authority
+                     (hngh.domain:policy-verdict-principle-results verdict)
+                     :key #'hngh.domain:principle-result-principle))
+       (least (find :least-authority
+                    (hngh.domain:policy-verdict-principle-results verdict)
+                    :key #'hngh.domain:principle-result-principle)))
+  (check (eql :refused (hngh.domain:principle-result-state closed))
+         "a principle with one failing requirement is refused")
+  (check (eql :passed (hngh.domain:principle-result-state least))
+         "a sibling principle with only passing requirements stays passed")
+  (check (eql :refused (hngh.domain:policy-verdict-state verdict))
+         "proposal with any failing principle is refused"))
+
+;; (h) cross-principle isolation: A requires "X" supplied by a current fact; B
+;; also requires "X" but supplies NO facts -> B :refused with
+;; "missing-evidence" (A's fact must NOT satisfy B).
+(let* ((fact (hngh.domain:make-evidence-fact :kind :fixture
+                                             :fingerprint "X" :state :current))
+       (requirements (list
+                      (make-fixture-requirement :closed-authority :purpose
+                                                '("X") (list fact))
+                      (make-fixture-requirement :least-authority :purpose
+                                                '("X") '())))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (least (find :least-authority
+                    (hngh.domain:policy-verdict-principle-results verdict)
+                    :key #'hngh.domain:principle-result-principle)))
+  (check (eql :refused (hngh.domain:principle-result-state least))
+         "a principle's evidence does not satisfy another principle's requirement")
+  (check (member "missing-evidence"
+                 (hngh.domain:policy-verdict-reason-labels verdict)
+                 :test #'string=)
+         "un-evidenced sibling principle records missing-evidence"))
+
+;; (i) scrambled requirement order -> principle-results in matrix order.
+(let* ((requirements
+         (list
+          (make-fixture-requirement :source-grounding :purpose
+                                    '("sg")
+                                    (list (hngh.domain:make-evidence-fact
+                                           :kind :fixture :fingerprint "sg"
+                                           :state :current)))
+          (make-fixture-requirement :closed-authority :purpose
+                                    '("ca")
+                                    (list (hngh.domain:make-evidence-fact
+                                           :kind :fixture :fingerprint "ca"
+                                           :state :current)))))
+       (proposal (make-fixture-proposal requirements))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (results (hngh.domain:policy-verdict-principle-results verdict)))
+  (check (eql :closed-authority
+              (hngh.domain:principle-result-principle (first results)))
+         "evaluate-policy-proposal orders principle-results in matrix order (first)")
+  (check (eql :source-grounding
+              (hngh.domain:principle-result-principle (car (last results))))
+         "evaluate-policy-proposal orders principle-results in matrix order (last)"))
+
+;; (j) evaluate-policy-proposal on nil and on a non-proposal object ->
+;; signals-error-p.
+(check (signals-error-p
+        (lambda () (hngh.domain:evaluate-policy-proposal nil)))
+       "nil proposal refuses evaluation")
+(check (signals-error-p
+        (lambda () (hngh.domain:evaluate-policy-proposal :not-a-proposal)))
+       "non-proposal object refuses evaluation")
+
+;; (k) an extra :current fact beyond required fingerprints does not refuse.
+(let* ((extra (hngh.domain:make-evidence-fact :kind :fixture
+                                              :fingerprint "extra" :state :current))
+       (required (hngh.domain:make-evidence-fact :kind :fixture
+                                                 :fingerprint "required"
+                                                 :state :current))
+       (proposal (make-fixture-proposal
+                  (list (make-fixture-requirement
+                         :closed-authority :claim-proof
+                         '("required") (list required extra)))))
+       (verdict (hngh.domain:evaluate-policy-proposal proposal))
+       (result (first (hngh.domain:policy-verdict-principle-results verdict))))
+  (check (eql :passed (hngh.domain:principle-result-state result))
+         "extra current fact does not refuse a satisfied requirement"))

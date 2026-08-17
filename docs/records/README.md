@@ -21,6 +21,8 @@ authorize a future action.
   candidate evidence bundle and its closed admission boundary.
 - `2026-08-12-task-c0-proposal-ledger.md` records the pure proposal and
   evidence-requirement ledger needed before deterministic principle evaluation.
+- `2026-08-17-task-c1-principle-evaluation.md` records the deterministic
+  principle evaluator over the proposal ledger and its closed refusals.
 - `2026-08-12-task-3.4-checkpoint.md` records closed verification and manifest
   evidence before the running-to-checkpointed application transition.
 - `2026-08-13-pi-worker-and-delegation-survey.md` records the future Pi worker

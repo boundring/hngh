@@ -71,7 +71,8 @@
            #:policy-proposal-risk-note
            #:policy-proposal-dependency
            #:policy-proposal-evidence-trigger
-           #:policy-proposal-evidence-requirements))
+           #:policy-proposal-evidence-requirements
+           #:evaluate-policy-proposal))
 
 (defpackage #:hngh
   (:use #:cl)

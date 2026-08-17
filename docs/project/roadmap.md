@@ -34,11 +34,15 @@ four fake-backed application use cases.
   output; it observes whole-tree state without inferring scope or mutating Git.
 - Added pure governance values for closed policy vocabulary, source-manifest
   entries, evidence facts, principle results, and policy verdicts.
+- Added deterministic principle evaluation over the proposal ledger: one
+  `policy-verdict` per proposal with ten matrix-ordered principle results and
+  closed refusals for missing, stale, malformed, conflicting, or unverifiable
+  evidence.
+
 
 ### Next
 
-1. Add deterministic principle evaluation over the proposal ledger, then the
-   separate closed failure-disposition policy.
+1. Add the separate closed failure-disposition policy.
 2. Issue non-mutating candidate authorization certificates from admitted
    evidence and governance policy.
 3. Resume remaining application use cases only under the admitted policy
