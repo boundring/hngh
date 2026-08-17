@@ -38,6 +38,17 @@
                          '(:current :stale :missing :malformed :conflicting :unverifiable)
                          "evidence state"))
 
+(defun validate-evidence-requirement-kind (value)
+  (validate-closed-value
+   value '(:purpose :caller :input-contract :output-contract :failure-contract
+           :capability-set :capability-diff :static-source
+           :closed-failure-disposition :claim-proof :base-revision
+           :candidate-manifest :content-hash :reversion-or-containment
+           :component-import :route :budget :token-limit :expiry
+           :source-manifest :conclusion-link)
+   "evidence requirement kind"))
+
+
 (defun validate-principle-result-state (value)
   (validate-closed-value value '(:passed :refused :needs-escalation)
                          "principle result state"))
@@ -83,6 +94,145 @@
    (ensure-keyword kind "evidence kind")
    (ensure-nonempty-string fingerprint "evidence fingerprint")
    (validate-evidence-state state)))
+
+(defun ensure-evidence-facts (value)
+  (unless (and (listp value) (every #'evidence-fact-p value)
+               (= (length value)
+                  (length (remove-duplicates value :test #'string=
+                                             :key #'evidence-fact-fingerprint))))
+    (error "Evidence facts must be a duplicate-free list of evidence facts"))
+  (copy-list value))
+
+(defstruct (evidence-requirement
+            (:constructor %make-evidence-requirement
+                (principle kind required-fingerprints evidence-facts))
+            (:conc-name %evidence-requirement-))
+  (principle nil :read-only t)
+  (kind nil :read-only t)
+  (required-fingerprints nil :read-only t)
+  (evidence-facts nil :read-only t))
+
+(defun evidence-requirement-principle (requirement)
+  (%evidence-requirement-principle requirement))
+(defun evidence-requirement-kind (requirement)
+  (%evidence-requirement-kind requirement))
+(defun evidence-requirement-required-fingerprints (requirement)
+  (mapcar #'copy-seq (%evidence-requirement-required-fingerprints requirement)))
+(defun evidence-requirement-evidence-facts (requirement)
+  (copy-list (%evidence-requirement-evidence-facts requirement)))
+
+(defun make-evidence-requirement
+    (&key (principle nil principle-p) (kind nil kind-p)
+       (required-fingerprints nil required-fingerprints-p)
+       (evidence-facts nil evidence-facts-p))
+  (unless (and principle-p kind-p required-fingerprints-p evidence-facts-p)
+    (error "Evidence requirement fields are required"))
+  (let ((fingerprints (ensure-label-list required-fingerprints
+                                         "required fingerprints")))
+    (unless fingerprints
+      (error "Required fingerprints must be nonempty"))
+    (%make-evidence-requirement
+     (validate-principle-identifier principle)
+     (validate-evidence-requirement-kind kind)
+     fingerprints
+     (ensure-evidence-facts evidence-facts))))
+
+(defun ensure-source-manifest (value)
+  (unless (and (listp value) value (every #'source-manifest-entry-p value)
+               (= (length value)
+                  (length (remove-duplicates value :test #'string=
+                                             :key #'source-manifest-entry-relative-path))))
+    (error "Source manifest must be a nonempty duplicate-free list of entries"))
+  (copy-list value))
+
+(defun ensure-evidence-requirements (value)
+  (unless (and (listp value) value (every #'evidence-requirement-p value)
+               (= (length value)
+                  (length (remove-duplicates
+                           value :test #'equal
+                           :key (lambda (requirement)
+                                  (list (evidence-requirement-principle requirement)
+                                        (evidence-requirement-kind requirement)))))))
+    (error "Evidence requirements must be a nonempty duplicate-free list"))
+  (copy-list value))
+
+(defstruct (policy-proposal
+            (:constructor %make-policy-proposal
+                (class problem outcome purpose caller input-contract output-contract
+                 failure-contract declared-capabilities capability-diff source-manifest
+                 risk-note dependency evidence-trigger evidence-requirements))
+            (:conc-name %policy-proposal-))
+  (class nil :read-only t)
+  (problem nil :read-only t)
+  (outcome nil :read-only t)
+  (purpose nil :read-only t)
+  (caller nil :read-only t)
+  (input-contract nil :read-only t)
+  (output-contract nil :read-only t)
+  (failure-contract nil :read-only t)
+  (declared-capabilities nil :read-only t)
+  (capability-diff nil :read-only t)
+  (source-manifest nil :read-only t)
+  (risk-note nil :read-only t)
+  (dependency nil :read-only t)
+  (evidence-trigger nil :read-only t)
+  (evidence-requirements nil :read-only t))
+
+(defun policy-proposal-class (proposal) (%policy-proposal-class proposal))
+(defun policy-proposal-problem (proposal) (copy-seq (%policy-proposal-problem proposal)))
+(defun policy-proposal-outcome (proposal) (copy-seq (%policy-proposal-outcome proposal)))
+(defun policy-proposal-purpose (proposal) (copy-seq (%policy-proposal-purpose proposal)))
+(defun policy-proposal-caller (proposal) (copy-seq (%policy-proposal-caller proposal)))
+(defun policy-proposal-input-contract (proposal)
+  (copy-seq (%policy-proposal-input-contract proposal)))
+(defun policy-proposal-output-contract (proposal)
+  (copy-seq (%policy-proposal-output-contract proposal)))
+(defun policy-proposal-failure-contract (proposal)
+  (copy-seq (%policy-proposal-failure-contract proposal)))
+(defun policy-proposal-declared-capabilities (proposal)
+  (mapcar #'copy-seq (%policy-proposal-declared-capabilities proposal)))
+(defun policy-proposal-capability-diff (proposal)
+  (copy-seq (%policy-proposal-capability-diff proposal)))
+(defun policy-proposal-source-manifest (proposal)
+  (copy-list (%policy-proposal-source-manifest proposal)))
+(defun policy-proposal-risk-note (proposal) (copy-seq (%policy-proposal-risk-note proposal)))
+(defun policy-proposal-dependency (proposal) (copy-seq (%policy-proposal-dependency proposal)))
+(defun policy-proposal-evidence-trigger (proposal)
+  (copy-seq (%policy-proposal-evidence-trigger proposal)))
+(defun policy-proposal-evidence-requirements (proposal)
+  (copy-list (%policy-proposal-evidence-requirements proposal)))
+
+(defun make-policy-proposal
+    (&key (class nil class-p) (problem nil problem-p) (outcome nil outcome-p)
+       (purpose nil purpose-p) (caller nil caller-p)
+       (input-contract nil input-contract-p) (output-contract nil output-contract-p)
+       (failure-contract nil failure-contract-p)
+       (declared-capabilities nil declared-capabilities-p)
+       (capability-diff nil capability-diff-p) (source-manifest nil source-manifest-p)
+       (risk-note nil risk-note-p) (dependency nil dependency-p)
+       (evidence-trigger nil evidence-trigger-p)
+       (evidence-requirements nil evidence-requirements-p))
+  (unless (and class-p problem-p outcome-p purpose-p caller-p input-contract-p
+               output-contract-p failure-contract-p declared-capabilities-p
+               capability-diff-p source-manifest-p risk-note-p dependency-p
+               evidence-trigger-p evidence-requirements-p)
+    (error "Policy proposal fields are required"))
+  (%make-policy-proposal
+   (validate-proposal-class class)
+   (ensure-nonempty-string problem "problem")
+   (ensure-nonempty-string outcome "outcome")
+   (ensure-nonempty-string purpose "purpose")
+   (ensure-nonempty-string caller "caller")
+   (ensure-nonempty-string input-contract "input contract")
+   (ensure-nonempty-string output-contract "output contract")
+   (ensure-nonempty-string failure-contract "failure contract")
+   (ensure-label-list declared-capabilities "declared capabilities")
+   (ensure-nonempty-string capability-diff "capability diff")
+   (ensure-source-manifest source-manifest)
+   (ensure-nonempty-string risk-note "risk note")
+   (ensure-nonempty-string dependency "dependency")
+   (ensure-nonempty-string evidence-trigger "evidence trigger")
+   (ensure-evidence-requirements evidence-requirements)))
 
 (defstruct (principle-result
             (:constructor %make-principle-result (principle state evidence-fingerprints))

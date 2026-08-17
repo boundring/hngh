@@ -69,6 +69,34 @@ A capability exceeding a task's declared set is a `scope-broadening`, not an
 ordinary feature. Process, provider, network, filesystem, and mutation
 capabilities require named containment and rollback evidence.
 
+### Deterministic proposal evidence ledger
+
+A pure `policy-proposal` is required before deterministic evaluation. It
+contains the closed proposal class; problem; smallest useful outcome; named
+purpose, caller, input, output, and failure contract; declared capability set
+and capability diff; source manifest; risk note; dependency; evidence trigger;
+and ordered evidence requirements. It is immutable policy data, not a
+certificate or execution request.
+
+Each `evidence-requirement` binds exactly one matrix principle to a closed
+requirement kind, duplicate-free required fingerprints, and supplied immutable
+evidence facts. The requirement kinds are:
+
+`purpose`, `caller`, `input-contract`, `output-contract`, `failure-contract`,
+`capability-set`, `capability-diff`, `static-source`,
+`closed-failure-disposition`, `claim-proof`, `base-revision`,
+`candidate-manifest`, `content-hash`, `reversion-or-containment`,
+`component-import`, `route`, `budget`, `token-limit`, `expiry`,
+`source-manifest`, and `conclusion-link`.
+
+The requirement kind, not `evidence-fact.kind`, supplies closed evaluator
+meaning. `evidence-fact.kind` remains an open producer/category label. A
+requirement passes only when every required fingerprint is supplied exactly
+once by a `:current` fact. Missing, duplicate, stale, malformed, conflicting,
+or unverifiable facts refuse. A supplied fact cannot satisfy a requirement for
+a different principle. The evaluator receives immutable values only; it does
+not inspect a repository, process, provider, clock, environment, or network.
+
 ### Failure disposition
 
 | Category | Default |
@@ -114,12 +142,13 @@ cannot pass a principle. No reviewer may call a mutation executor.
 
 The control plane follows the existing inward promotion ladder:
 
-1. Pure governance values and policies with fixtures.
-2. Fake-backed application authorization use case.
-3. Read-only evidence adapter.
-4. Scratch-repository mutation adapter.
-5. Bounded model-review adapters.
-6. Explicit composition only after the lower contracts exist.
+1. Pure proposal and evidence-ledger values with fixtures.
+2. Pure deterministic principle evaluation and failure-disposition policy.
+3. Fake-backed application authorization use case.
+4. Read-only evidence adapter.
+5. Scratch-repository mutation adapter.
+6. Bounded model-review adapters.
+7. Explicit composition only after the lower contracts exist.
 
 ## Verification gates
 

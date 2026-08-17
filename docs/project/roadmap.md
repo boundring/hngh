@@ -32,13 +32,15 @@ four fake-backed application use cases.
 - Added a read-only candidate evidence bundle with explicit manifest admission,
   candidate-local policy scans, fixed local evidence commands, and closed status
   output; it observes whole-tree state without inferring scope or mutating Git.
+- Added pure governance values for closed policy vocabulary, source-manifest
+  entries, evidence facts, principle results, and policy verdicts.
 
 ### Next
 
-1. Add pure governance values, principle evaluation, and failure-disposition
-   policy before candidate authorization or a concrete mutation adapter.
-2. Issue non-mutating candidate authorization certificates from the admitted
-   evidence bundle and governance policy.
+1. Add deterministic principle evaluation over the proposal ledger, then the
+   separate closed failure-disposition policy.
+2. Issue non-mutating candidate authorization certificates from admitted
+   evidence and governance policy.
 3. Resume remaining application use cases only under the admitted policy
    proposal and evidence process.
 

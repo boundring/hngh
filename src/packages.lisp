@@ -28,6 +28,7 @@
            #:validate-principle-identifier
            #:validate-failure-category
            #:validate-failure-disposition
+           #:validate-evidence-requirement-kind
            #:source-manifest-entry
            #:make-source-manifest-entry
            #:source-manifest-entry-relative-path
@@ -47,7 +48,30 @@
            #:make-policy-verdict
            #:policy-verdict-state
            #:policy-verdict-principle-results
-           #:policy-verdict-reason-labels))
+           #:policy-verdict-reason-labels
+           #:evidence-requirement
+           #:make-evidence-requirement
+           #:evidence-requirement-principle
+           #:evidence-requirement-kind
+           #:evidence-requirement-required-fingerprints
+           #:evidence-requirement-evidence-facts
+           #:policy-proposal
+           #:make-policy-proposal
+           #:policy-proposal-class
+           #:policy-proposal-problem
+           #:policy-proposal-outcome
+           #:policy-proposal-purpose
+           #:policy-proposal-caller
+           #:policy-proposal-input-contract
+           #:policy-proposal-output-contract
+           #:policy-proposal-failure-contract
+           #:policy-proposal-declared-capabilities
+           #:policy-proposal-capability-diff
+           #:policy-proposal-source-manifest
+           #:policy-proposal-risk-note
+           #:policy-proposal-dependency
+           #:policy-proposal-evidence-trigger
+           #:policy-proposal-evidence-requirements))
 
 (defpackage #:hngh
   (:use #:cl)
