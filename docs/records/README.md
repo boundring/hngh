@@ -19,8 +19,12 @@ authorize a future action.
   contract for future review and mutation authorization.
 - `2026-08-12-task-e-candidate-evidence.md` records the read-only explicit
   candidate evidence bundle and its closed admission boundary.
+- `2026-08-12-task-c0-proposal-ledger.md` records the pure proposal and
+  evidence-requirement ledger needed before deterministic principle evaluation.
 - `2026-08-12-task-3.4-checkpoint.md` records closed verification and manifest
   evidence before the running-to-checkpointed application transition.
+- `2026-08-13-pi-worker-and-delegation-survey.md` records the future Pi worker
+  boundary, extension triage, and fixture gates; it admits no runtime adapter.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 
