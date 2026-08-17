@@ -2,3 +2,4 @@
 *.dfsl
 *.log
 /.cache/
+/.codegraph/
