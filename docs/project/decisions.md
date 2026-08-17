@@ -86,6 +86,34 @@ authority, provider execution detail, port, callback, filesystem, Git, process,
 clock, environment, or network field. External verification produces facts in a
 later adapter; the evaluator only consumes immutable values.
 
+## 2026-08-17 — Deterministic principle evaluation
+
+`evaluate-policy-proposal` consumes one immutable `policy-proposal` and returns
+a `policy-verdict` with exactly ten principle results in matrix order, one per
+closed principle: `closed-authority`, `least-authority`,
+`dependency-direction`, `fail-closed`, `evidence-before-claim`,
+`atomic-mutation`, `reversibility`, `no-hidden-execution`,
+`cost-and-route-discipline`, and `source-grounding`. The order is fixed by the
+matrix, never by requirement order in the proposal.
+
+A principle with no evidence requirement is a refusal: a `:refused` principle
+result with no fingerprints and the reason label `missing-principle-result`; a
+missing principle result is a refusal. A single evidence requirement passes
+only when every required fingerprint is supplied exactly once by a `:current`
+fact. Missing, stale, malformed, conflicting, or unverifiable facts refuse
+with the labels `missing-evidence`, `stale-evidence`, `malformed-evidence`,
+`conflicting-evidence`, and `unverifiable-evidence`. A fact supplied under one
+principle never satisfies a requirement of another principle. The verdict is
+`:admitted` only when every principle result is `:passed`; otherwise
+`:refused` with the deduplicated union of refusal labels in matrix order.
+
+Evaluation is deterministic, side-effect-free, and independent of requirement
+order. The pure evaluator never emits `:needs-escalation`; that state remains
+reserved for later reviewer and failure-disposition policy. Extra `:current`
+facts beyond a requirement's required fingerprints do not refuse: the closed
+refusal vocabulary names only missing, duplicate, stale, malformed,
+conflicting, and unverifiable facts.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

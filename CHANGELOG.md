@@ -34,6 +34,10 @@ All notable changes to Hngh are documented here.
 - A deterministic proposal-evidence-ledger policy: closed requirement kinds
   bind evidence facts to principles without making fact producers or adapters
   domain policy.
+- A deterministic principle evaluator over the proposal ledger: ten
+  matrix-ordered principle results and closed refusals for missing, stale,
+  malformed, conflicting, or unverifiable evidence; `:admitted` only when every
+  principle passes.
 
 ### Changed
 
