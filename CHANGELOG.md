@@ -44,6 +44,12 @@ All notable changes to Hngh are documented here.
 - A non-mutating candidate authorization certificate: an immutable value
   binding one closed action plus the admitting verdict and recorded facts,
   minted by a pure mechanical issuer.
+- The policy-gated `close-run` use case: a run reaches a terminal state only
+  under an `:admitted` policy verdict, with closed transition refusals and one
+  atomic run-and-receipt record.
+- The policy-gated `close-run` use case: a run reaches a terminal state only
+  under an `:admitted` policy verdict, with closed transition refusals and one
+  atomic run-and-receipt record.
 
 ### Changed
 

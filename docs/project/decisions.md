@@ -148,6 +148,21 @@ by the domain issuer. Missing, unknown, malformed, or duplicate facts refuse.
 The certificate contains no action, callback, port, filesystem, Git, process,
 clock, or network execution.
 
+## 2026-08-17 — Policy-gated run close
+
+`close-run` advances a run to a terminal state (`:cancelled`, `:evacuated`, or
+`:dead`) only under the admitted policy proposal and evidence process. The
+request carries the run, a closed terminal target, and a policy proposal; the
+use case evaluates the proposal deterministically and refuses the close with
+the verdict reason labels unless the verdict is `:admitted`. An illegal target
+for the run's state refuses with the closed `invalid-transition` label, and
+recording stays one atomic run-and-receipt callback.
+
+`close-run` issues no certificate: the hash-bound certificate vocabulary
+serves the future mutation executor, not run-state transitions. Action-admission
+policy (such as a commit certificate never authorizing a push) remains with
+that executor.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

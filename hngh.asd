@@ -13,4 +13,5 @@
                (:file "src/application/create-run")
                (:file "src/application/arm-run")
                (:file "src/application/start-run")
-               (:file "src/application/checkpoint")))
+               (:file "src/application/checkpoint")
+               (:file "src/application/close-run")))

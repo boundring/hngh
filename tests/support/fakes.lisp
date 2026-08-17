@@ -169,3 +169,22 @@
              :record-calls record-calls
              :runs (copy-list runs)
              :receipts (copy-list receipts))))))
+
+(defun make-close-fake (&key (record-result :recorded))
+  (let ((record-calls 0)
+        (runs '())
+        (receipts '()))
+    (values
+     (application-call
+      "MAKE-RUN-CLOSE-PORTS"
+      :record-run
+      (lambda (run receipt)
+        (incf record-calls)
+        (when (eql record-result :recorded)
+          (setf runs (append runs (list run))
+                receipts (append receipts (list receipt))))
+        record-result))
+     (lambda ()
+       (list :record-calls record-calls
+             :runs (copy-list runs)
+             :receipts (copy-list receipts))))))
