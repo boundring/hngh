@@ -41,12 +41,13 @@ four fake-backed application use cases.
 - Added the closed failure-disposition policy: one deterministic disposition
   per failure category, refusing unknown categories and resolving the two
   conditionally worded rows to their primary default.
+- Added a non-mutating candidate authorization certificate: an immutable value
+  binding one closed action and the admitting verdict and facts, issued by a
+  mechanical pure issuer; action-admission policy is deferred to the executor.
 
 ### Next
 
-1. Issue non-mutating candidate authorization certificates from admitted
-   evidence and governance policy.
-2. Resume remaining application use cases only under the admitted policy
+1. Resume remaining application use cases only under the admitted policy
    proposal and evidence process.
 
 No daemon, provider, watcher, scheduler, dashboard, adapter, or mutation

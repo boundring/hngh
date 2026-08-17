@@ -132,6 +132,22 @@ refinement). An unknown category refuses. The policy is pure and
 deterministic; a use case never decides a disposition by catch-all condition
 handling.
 
+## 2026-08-17 — Non-mutating candidate authorization certificate
+
+`issue-candidate-certificate` mints an immutable `candidate-certificate` from
+an `:admitted` policy verdict. The certificate authorizes one action only
+(`:none`, `:prepare-candidate`, `:stage`, `:commit`, or `:push`) and records
+repository identity, base revision, ordered candidate paths, content hash,
+evidence hashes, the admitting principle verdict, review findings, source
+manifest, policy profile, and expiry.
+
+The pure issuer is mechanical: it binds one closed action and the supplied
+facts into the immutable value. Action-admission policy (for example a commit
+certificate never authorizing a push) is enforced later by the executor, not
+by the domain issuer. Missing, unknown, malformed, or duplicate facts refuse.
+The certificate contains no action, callback, port, filesystem, Git, process,
+clock, or network execution.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

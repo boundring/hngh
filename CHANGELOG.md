@@ -41,6 +41,9 @@ All notable changes to Hngh are documented here.
 - A closed failure-disposition policy: each of the eight failure categories
   maps to one deterministic disposition, unknown categories refuse, and
   conditional rows resolve to their primary default.
+- A non-mutating candidate authorization certificate: an immutable value
+  binding one closed action plus the admitting verdict and recorded facts,
+  minted by a pure mechanical issuer.
 
 ### Changed
 

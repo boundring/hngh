@@ -73,7 +73,23 @@
            #:policy-proposal-evidence-trigger
            #:policy-proposal-evidence-requirements
            #:evaluate-policy-proposal
-           #:evaluate-failure-disposition))
+           #:evaluate-failure-disposition
+           #:validate-certificate-action
+           #:candidate-certificate
+           #:make-candidate-certificate
+           #:candidate-certificate-p
+           #:candidate-certificate-action
+           #:candidate-certificate-repository-identity
+           #:candidate-certificate-base-revision
+           #:candidate-certificate-candidate-paths
+           #:candidate-certificate-content-hash
+           #:candidate-certificate-evidence-hashes
+           #:candidate-certificate-principle-verdicts
+           #:candidate-certificate-review-findings
+           #:candidate-certificate-source-manifest
+           #:candidate-certificate-policy-profile
+           #:candidate-certificate-expiry
+           #:issue-candidate-certificate))
 
 (defpackage #:hngh
   (:use #:cl)
