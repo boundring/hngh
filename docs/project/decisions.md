@@ -114,6 +114,24 @@ facts beyond a requirement's required fingerprints do not refuse: the closed
 refusal vocabulary names only missing, duplicate, stale, malformed,
 conflicting, and unverifiable facts.
 
+## 2026-08-17 — Closed failure-disposition policy
+
+`evaluate-failure-disposition` maps each of the eight closed failure categories
+to exactly one closed disposition. Domain and application invariants propagate
+to the test gate; port-callback faults and malformed returns normalize to a
+refusal at that callback only; atomic recording conflicts normalize to conflict
+without retry; insufficient or stale evidence refuses; tool and environment
+faults refuse; review disagreement escalates; and mutation precondition
+mismatches stop and record evidence.
+
+The two conditionally worded table rows resolve to their primary default in
+the pure policy: a domain-policy-or-invariant failure propagates to the test
+gate (a typed domain refusal refines this at a later layer), and a tool or
+environment fault refuses (named evidence-policy escalation is a later
+refinement). An unknown category refuses. The policy is pure and
+deterministic; a use case never decides a disposition by catch-all condition
+handling.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

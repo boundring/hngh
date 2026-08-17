@@ -11,7 +11,12 @@
            :failure-disposition :review-request :commit-request :push-request)
    "proposal class"))
 
-(defconstant +matrix-principles+
+;; List-valued vocabularies use defparameter, not defconstant: SBCL evaluates
+;; defconstant at compile time and again when the fasl loads, and the two
+;; literal objects are not eql, so an ASDF recompile raises
+;; DEFCONSTANT-UNEQL. Immutability is enforced by the closed-vocabulary
+;; tests, not the Lisp constant mechanism.
+(defparameter +matrix-principles+
   '(:closed-authority :least-authority :dependency-direction
     :fail-closed :evidence-before-claim :atomic-mutation :reversibility
     :no-hidden-execution :cost-and-route-discipline :source-grounding))
@@ -19,13 +24,14 @@
 (defun validate-principle-identifier (value)
   (validate-closed-value value +matrix-principles+ "principle identifier"))
 
+(defparameter +failure-categories+
+  '(:domain-policy-or-invariant :application-invariant
+    :port-callback-fault-or-malformed-return :atomic-recording-conflict
+    :insufficient-or-stale-evidence :tool-or-environment-fault
+    :review-disagreement :mutation-precondition-mismatch-or-failure))
+
 (defun validate-failure-category (value)
-  (validate-closed-value
-   value '(:domain-policy-or-invariant :application-invariant
-           :port-callback-fault-or-malformed-return :atomic-recording-conflict
-           :insufficient-or-stale-evidence :tool-or-environment-fault
-           :review-disagreement :mutation-precondition-mismatch-or-failure)
-   "failure category"))
+  (validate-closed-value value +failure-categories+ "failure category"))
 
 (defun validate-failure-disposition (value)
   (validate-closed-value
@@ -33,6 +39,26 @@
            :normalize-to-refusal-at-callback :normalize-to-conflict-without-retry
            :refuse :needs-escalation :stop-and-record-evidence)
    "failure disposition"))
+
+(defparameter +failure-dispositions+
+  '((:domain-policy-or-invariant . :propagate-to-test-gate)
+    (:application-invariant . :propagate-to-test-gate)
+    (:port-callback-fault-or-malformed-return
+     . :normalize-to-refusal-at-callback)
+    (:atomic-recording-conflict . :normalize-to-conflict-without-retry)
+    (:insufficient-or-stale-evidence . :refuse)
+    (:tool-or-environment-fault . :refuse)
+    (:review-disagreement . :needs-escalation)
+    (:mutation-precondition-mismatch-or-failure
+     . :stop-and-record-evidence)))
+
+(defun evaluate-failure-disposition (category)
+  "Return the closed disposition for a failure category, refusing unknown
+categories. The two conditionally worded table rows resolve to their primary
+default in this pure policy."
+  (validate-failure-category category)
+  (or (cdr (assoc category +failure-dispositions+))
+      (error "No failure disposition for category: ~S" category)))
 
 (defun validate-evidence-state (value)
   (validate-closed-value value

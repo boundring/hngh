@@ -767,3 +767,33 @@
        (result (first (hngh.domain:policy-verdict-principle-results verdict))))
   (check (eql :passed (hngh.domain:principle-result-state result))
          "extra current fact does not refuse a satisfied requirement"))
+
+;; C2: evaluate-failure-disposition maps each closed failure category to exactly
+;; one disposition, refusing unknown categories. The two conditionally worded
+;; table rows (domain-policy-or-invariant, tool-or-environment-fault) resolve to
+;; their primary default in the pure policy.
+(dolist (pair '((:domain-policy-or-invariant . :propagate-to-test-gate)
+                (:application-invariant . :propagate-to-test-gate)
+                (:port-callback-fault-or-malformed-return
+                 . :normalize-to-refusal-at-callback)
+                (:atomic-recording-conflict . :normalize-to-conflict-without-retry)
+                (:insufficient-or-stale-evidence . :refuse)
+                (:tool-or-environment-fault . :refuse)
+                (:review-disagreement . :needs-escalation)
+                (:mutation-precondition-mismatch-or-failure
+                 . :stop-and-record-evidence))
+          pair)
+  (let ((category (car pair))
+        (disposition (cdr pair)))
+    (check (eql disposition
+                (hngh.domain:evaluate-failure-disposition category))
+           "evaluate-failure-disposition maps a failure category to its disposition")))
+(check (signals-error-p
+        (lambda () (hngh.domain:evaluate-failure-disposition :unknown)))
+       "unknown failure category refuses disposition evaluation")
+(check (member
+        (hngh.domain:evaluate-failure-disposition :review-disagreement)
+        '(:propagate-to-test-gate :typed-domain-refusal
+          :normalize-to-refusal-at-callback :normalize-to-conflict-without-retry
+          :refuse :needs-escalation :stop-and-record-evidence))
+       "evaluate-failure-disposition returns a validated disposition")
