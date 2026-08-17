@@ -24,8 +24,11 @@ archive. It is evidence, not an implementation source. Verify it with
 - Do not change unrelated retirement-diff paths.
 - Inspect the active policy sources, candidate state, and named verification
   before editing.
-- Do not stage, commit, push, alter provider configuration, or enable a service
-  unless a current policy certificate authorizes that exact action. Until the
-  certificate executor exists, a transitional action requires a current explicit
-  instruction naming the exact mutation and target.
+- Commit a work slice as soon as it is verified: the full gate (`make test`)
+  passes, the change is confined to the task's stated scope, docs/records are
+  updated, the first-commit message matches the slice, and the working tree
+  carries no unrelated changes. Verified commits need no prior operator
+  instruction. Pushing to a remote, altering provider configuration, or
+  enabling a service still requires a current policy certificate or an
+  explicit operator instruction naming the exact action and target.
 - Record architecture-relevant work in `CHANGELOG.md` and `docs/records/`.
