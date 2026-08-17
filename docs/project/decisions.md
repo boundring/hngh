@@ -64,6 +64,43 @@ alternate-provider model reviewers may issue closed, source-cited challenges;
 they cannot override deterministic refusal, mint a certificate, or mutate a
 repository.
 
+## 2026-08-12 — Deterministic proposal evidence ledger
+
+The pure evaluator receives one immutable `policy-proposal`, not an untyped bag
+of evidence labels. A proposal records its closed class; problem; smallest
+useful outcome; named purpose, caller, input, output, and failure contract;
+declared capability set and capability diff; source manifest; risk note;
+dependency; evidence trigger; and an ordered ledger of evidence requirements.
+
+Each immutable `evidence-requirement` binds one closed principle to one closed
+requirement kind, its required fingerprints, and supplied immutable evidence
+facts. The requirement-kind vocabulary, rather than the intentionally open
+evidence-fact kind, defines evaluator meaning. A requirement is complete only
+when every required fingerprint is supplied exactly once by a current fact.
+Missing, duplicate, stale, malformed, conflicting, or unverifiable facts
+refuse. A reviewer result remains a fact that cannot pass a principle unless a
+later policy explicitly admits its requirement kind.
+
+This ledger is policy data only. It contains no certificate action, repository
+authority, provider execution detail, port, callback, filesystem, Git, process,
+clock, environment, or network field. External verification produces facts in a
+later adapter; the evaluator only consumes immutable values.
+
+## 2026-08-12 — Recover partial delegated lanes before retrying
+
+A delegated lane that stops after writing code, including on a syntax or
+compilation failure, leaves a recovery candidate rather than disposable state.
+The next worker first reads the brief, inspects the actual worktree, and
+identifies the smallest canonical repair. It preserves valid fixtures and
+coverage, reconciles overlapping partial definitions, and does not reset,
+stash, or replace the lane without an explicit decision.
+
+Recovery ends only after the whole affected gate passes again and a fresh
+reviewer checks the frozen candidate. A clean compilation alone is not
+recovery: missing refusal cases, defensive-copy proofs, or scope boundaries
+remain failures. This keeps a failed delegation from becoming either silent
+data loss or an unreviewed reimplementation.
+
 ## 2026-08-12 — Application callback and outcome boundary
 
 `hngh.application` use cases handle a callback error or malformed callback

@@ -29,6 +29,11 @@ All notable changes to Hngh are documented here.
 - A read-only candidate evidence bundle with an explicit manifest, fixed local
   checks, whole-tree observation, hash-bound output, and closed refusals for
   unsafe or out-of-scope input.
+- Pure governance values for closed proposal, principle, failure, evidence, and
+  verdict vocabulary; they remain non-authoritative policy data.
+- A deterministic proposal-evidence-ledger policy: closed requirement kinds
+  bind evidence facts to principles without making fact producers or adapters
+  domain policy.
 
 ### Changed
 
