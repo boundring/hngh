@@ -3,3 +3,5 @@
 *.log
 /.cache/
 /.codegraph/
+__pycache__/
+.hermes/
