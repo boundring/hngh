@@ -198,3 +198,45 @@
    (ensure-callback tool-executor "tool executor callback")
    (ensure-callback repository-inspector "repository inspector callback")
    (ensure-callback record-run "record callback")))
+
+(defparameter +close-targets+ '(:cancelled :evacuated :dead))
+
+(defun ensure-close-target (target)
+  (unless (member target +close-targets+)
+    (error "~A is not a close target" target))
+  target)
+
+(defun domain-proposal-p (value)
+  (handler-case
+      (progn (hngh.domain:policy-proposal-class value) t)
+    (error () nil)))
+
+(defstruct (close-request
+            (:constructor %make-close-request (run target proposal))
+            (:conc-name %close-request-))
+  (run nil :read-only t)
+  (target nil :read-only t)
+  (proposal nil :read-only t))
+
+(defun make-close-request (&key run target proposal)
+  (unless (and (domain-run-p run) (domain-proposal-p proposal))
+    (error "close request requires a domain run and a policy proposal"))
+  (%make-close-request run (ensure-close-target target) proposal))
+
+(defun close-request-run (request)
+  (%close-request-run request))
+
+(defun close-request-target (request)
+  (%close-request-target request))
+
+(defun close-request-proposal (request)
+  (%close-request-proposal request))
+
+(defstruct (run-close-ports
+            (:constructor %make-run-close-ports (record-run))
+            (:conc-name %run-close-ports-))
+  (record-run nil :read-only t))
+
+(defun make-run-close-ports (&key record-run)
+  (%make-run-close-ports
+   (ensure-callback record-run "record callback")))

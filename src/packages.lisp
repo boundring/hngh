@@ -125,7 +125,15 @@
            #:create-run
            #:arm-run
            #:start-run
-           #:checkpoint))
+           #:checkpoint
+           #:close-request
+           #:make-close-request
+           #:close-request-run
+           #:close-request-target
+           #:close-request-proposal
+           #:run-close-ports
+           #:make-run-close-ports
+           #:close-run))
 
 (defpackage #:hngh.tests
   (:use #:cl))

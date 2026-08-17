@@ -44,11 +44,20 @@ four fake-backed application use cases.
 - Added a non-mutating candidate authorization certificate: an immutable value
   binding one closed action and the admitting verdict and facts, issued by a
   mechanical pure issuer; action-admission policy is deferred to the executor.
+- Added the policy-gated `close-run`: a run advances to a terminal state
+  (`:cancelled`, `:evacuated`, or `:dead`) only under an `:admitted` policy
+  verdict, with closed transition refusals and one atomic run-and-receipt
+  record; no certificate is issued for run-state transitions.
 
 ### Next
 
-1. Resume remaining application use cases only under the admitted policy
-   proposal and evidence process.
+1. Add the read-only evidence adapter (promotion rung 4): fixed local
+   evidence commands and repository facts feeding the proposal ledger.
+2. Add the mutation executor (promotion rung 5): rechecks every certificate
+   fact immediately before its named action, refusing changed content,
+   unexpected paths, stale base revision, expired certificate, malformed
+   input, command failure, and disabled action classes.
+3. Add bounded model-review adapters only after the lower contracts exist.
 
 No daemon, provider, watcher, scheduler, dashboard, adapter, or mutation
 executor is admitted by this roadmap stage.
