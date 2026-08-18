@@ -189,5 +189,28 @@
            #:mutation-result-stderr
            #:execute-mutation))
 
+(defpackage #:hngh.adapters.review
+  (:use #:cl)
+  (:export #:review-request
+           #:review-request-p
+           #:make-review-request
+           #:review-request-candidate-paths
+           #:review-request-content-hash
+           #:review-request-policy-context
+           #:review-finding
+           #:review-finding-p
+           #:review-finding-label
+           #:review-finding-citation
+           #:review-ports
+           #:review-ports-p
+           #:make-review-ports
+           #:review-result
+           #:review-result-p
+           #:review-result-status
+           #:review-result-findings
+           #:review-result-fact
+           #:review-result-refusal-labels
+           #:request-review))
+
 (defpackage #:hngh.tests
   (:use #:cl))

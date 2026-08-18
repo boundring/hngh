@@ -22,6 +22,7 @@
 (load (project-file "src/application/close-run.lisp"))
 (load (project-file "src/adapter/evidence.lisp"))
 (load (project-file "src/adapter/mutation.lisp"))
+(load (project-file "src/adapter/review.lisp"))
 
 (in-package :hngh.tests)
 
@@ -50,6 +51,7 @@
 (load (cl-user::project-file "tests/application/test-close-run.lisp"))
 (load (cl-user::project-file "tests/adapter/test-evidence.lisp"))
 (load (cl-user::project-file "tests/adapter/test-mutation.lisp"))
+(load (cl-user::project-file "tests/adapter/test-review.lisp"))
 
 (defun read-fixture (relative)
   (with-open-file (stream (cl-user::project-file relative))

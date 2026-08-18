@@ -10,6 +10,7 @@ deployment form.
 | `hngh.application` | A named use case or port changes | Use-case input and output records; ports | `hngh.domain` | Library | Use-case builder / boundary reviewer |
 | `hngh.adapters.evidence` | The fixed read-only evidence command set or its closed output mapping changes | `gather-evidence` over a fixed command set: `:repository-revision`, `:working-tree-status`, `:file-sha256` | Domain evidence values and an injected process transport | Library, manually composed | Adapter builder / boundary reviewer |
 | `hngh.adapters.mutation` | Certificate-bound repository mutation commands or refusal mapping change | `execute-mutation` over one current candidate certificate and fresh evidence | Domain certificate/evidence values and injected evidence/process transports | Library, manually composed | Adapter builder / boundary reviewer |
+| `hngh.adapters.review` | The review request contract or the closed structured-output mapping changes | `request-review` over a closed review request (candidate paths, content hash, policy-context labels) returning sanitized findings and one review evidence fact | Domain evidence values and an injected reviewer transport | Library, manually composed | Adapter builder / boundary reviewer |
 | `hngh.adapters.filesystem` | Restricted local record transport changes | Application port implementations | Application ports and Common Lisp I/O | Library, manually composed | Adapter builder / fixture reviewer |
 | `hngh.adapters.git` | Repository fact collection changes | Repository-inspection port implementation | Application ports and Git transport detail | Library, manually composed | Adapter builder / fixture reviewer |
 | `hngh.adapters.model.*` | A model transport changes | Completion-port implementation | Application ports and transport detail | Disabled library, manually composed | Adapter builder / cost reviewer |
@@ -28,9 +29,13 @@ results. `hngh.adapters.evidence` is active with the fixed read-only evidence
 command set and `gather-evidence` through an injected process transport.
 `hngh.adapters.mutation` is active with `execute-mutation`: it rechecks every
 certificate fact and emits only the certificate-bound fixed Git command through
-an injected process transport. `hngh:validate-profile` is a compatibility facade
+an injected process transport. `hngh.adapters.review` is active with
+`request-review`: it sends one closed review request through an injected
+reviewer transport and maps the structured output into sanitized findings and
+one deterministic review evidence fact; reviewers advise but never decide.
+`hngh:validate-profile` is a compatibility facade
 over the domain validator. No presentation package, composition root, or
-runtime outer component exists in active source.
+runtime model or terminal transport exists in active source.
 
 ## Dependency and deployment rules
 

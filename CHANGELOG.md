@@ -59,6 +59,15 @@ All notable changes to Hngh are documented here.
   certificate-bound fixed Git action through an injected transport; stale facts,
   expiry, disabled actions, malformed evidence, command failures, and transport
   faults refuse without mutation.
+- A fixture-backed bounded model-review adapter (promotion rung 6):
+  `hngh.adapters.review` sends one closed review request (candidate paths, content
+  hash, policy-context labels) through an injected reviewer transport and maps the
+  model's structured output into sanitized, duplicate-free finding labels and
+  citations plus one deterministic review evidence fact. Malformed JSON, unknown
+  fields, unsafe citations, oversized or overlong findings, duplicate labels, and
+  transport faults refuse closed; a failed review call becomes an `:unverifiable`
+  fact. Reviewers advise, never decide; the adapter is pure (no provider defaults,
+  no network, no subprocess calls).
 
 ### Changed
 

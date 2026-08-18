@@ -42,6 +42,9 @@ authorize a future action.
 - `2026-08-18-task-r5-mutation-executor.md` records the certificate-bound
   mutation executor, fixed action templates, injected process transport, and
   point-of-action refusal checks.
+- `2026-08-18-task-r6-review-adapter.md` records the bounded model-review
+  adapter, its fixed prompt, closed JSON output contract, deterministic
+  review evidence facts, and provider-free injected transport.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

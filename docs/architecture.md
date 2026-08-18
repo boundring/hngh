@@ -36,6 +36,12 @@ adapter with a fixed command set (repository revision, working-tree status,
 file content hashing) and an injected process transport. It never decides
 policy and cannot mutate anything.
 
+`hngh.adapters.review` is a bounded model-review boundary: it turns a closed
+review request into one fixed prompt, sends it through an injected reviewer
+transport, and maps the structured output into sanitized findings and one
+deterministic review evidence fact. Reviewers advise, never decide, and no
+default provider transport exists.
+
 ## Planned outer boundaries
 
 ```text
