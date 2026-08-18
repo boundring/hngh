@@ -47,6 +47,13 @@ All notable changes to Hngh are documented here.
 - The policy-gated `close-run` use case: a run reaches a terminal state only
   under an `:admitted` policy verdict, with closed transition refusals and one
   atomic run-and-receipt record.
+- A read-only evidence adapter (promotion rung 4): a fixed, enumerable set of
+  read-only local evidence commands — repository revision, whole-tree
+  working-tree status, and file content hashing — gathered through an
+  injected process transport and mapped to domain evidence facts and source
+  manifest entries with closed states; unknown commands, malformed output,
+  escaping targets, and duplicate evidence fail closed, and the adapter
+  never decides policy or mutates anything.
 
 ### Changed
 

@@ -25,10 +25,16 @@ hold evidence only; they cannot change state or grant authority.
 
 `hngh:validate-profile` remains a compatibility facade over the domain policy.
 `hngh.application` currently contains the pure `create-run`, `arm-run`,
-`start-run`, and `checkpoint` use cases with their inward port contracts.
+`start-run`, `checkpoint`, and `close-run` use cases with their inward port
+contracts.
 `checkpoint` admits only closed verification and manifest evidence through a
-run-only request value. It has no adapter, persistence root, clock,
+run-only request value. It has no persistence root, clock,
 environment, provider payload, subprocess, service, or background process.
+
+`hngh.adapters.evidence` is the first outer boundary: a read-only evidence
+adapter with a fixed command set (repository revision, working-tree status,
+file content hashing) and an injected process transport. It never decides
+policy and cannot mutate anything.
 
 ## Planned outer boundaries
 

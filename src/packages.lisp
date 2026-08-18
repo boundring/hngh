@@ -135,5 +135,26 @@
            #:make-run-close-ports
            #:close-run))
 
+(defpackage #:hngh.adapters.evidence
+  (:use #:cl)
+  (:export #:+evidence-commands+
+           #:evidence-request
+           #:evidence-request-p
+           #:make-evidence-request
+           #:evidence-request-command
+           #:evidence-request-targets
+           #:evidence-request-source-role
+           #:evidence-ports
+           #:evidence-ports-p
+           #:make-evidence-ports
+           #:evidence-result
+           #:evidence-result-p
+           #:evidence-result-status
+           #:evidence-result-facts
+           #:evidence-result-manifest
+           #:evidence-result-refusal-labels
+           #:gather-evidence
+           #:process-run))
+
 (defpackage #:hngh.tests
   (:use #:cl))
