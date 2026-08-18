@@ -32,12 +32,12 @@ Retry means a new run, never a silent continuation of an old one.
 - Certificates: permission for exactly one action (prepare, stage, commit, or push), bound to
   specific files and evidence, re-checked immediately before the action.
 - Clean architecture: the core logic depends on nothing external; the outside world plugs in at
-  the edges through explicit ports.
+  the edges through explicit ports — the read-only evidence adapter is the first such edge.
 
 ## Status
 
 Today the kernel is a pure library with fixture tests (`make test` runs 8 reader-guard checks
-plus 717 checks). Implemented:
+plus 824 checks). Implemented:
 
 - Pure domain values — profile, mission, role, loadout, run, receipt, score, afterlife — with a
   closed lifecycle.
@@ -45,11 +45,16 @@ plus 717 checks). Implemented:
   terminal close is policy-gated).
 - Governance: proposal-evidence ledger, deterministic evaluation of ten principles, closed
   failure-disposition policy, non-mutating candidate authorization certificate.
+- Read-only evidence adapter: a fixed command set (repository revision, working-tree status,
+  file content hashing) gathers evidence facts and source manifest entries through an injected
+  process transport; unknown commands, malformed output, escaping targets, and duplicate
+  evidence fail closed. The kernel itself stays pure — no subprocess, clock, or environment
+  access reaches domain or application code.
 - Read-only candidate evidence bundle (`make verify-candidate`) and a read-only retirement-archive verifier (`make check-archive`).
 
-Not yet: any adapter, persistence, CLI, clock, environment access, subprocess, daemon, model or
-provider call, Pi worker, or mutation executor — the kernel decides what is valid but cannot yet
-touch the outside world.
+Not yet: persistence, CLI, clock, environment access in the kernel, daemon, model or
+provider call, Pi worker, or mutation executor — the kernel decides what is valid but nothing
+can yet be changed through it.
 
 ## Verify
 
@@ -70,8 +75,6 @@ location and does not write to the archive.
 
 ## Where this is going
 
-- Read-only evidence adapter: fixed local evidence commands feed the proposal ledger — evidence
-  before claims.
 - Mutation executor: re-checks every certificate fact immediately before its named action; it
   refuses changed content, unexpected paths, stale bases, expired certificates, malformed input,
   command failure, and disabled action classes.

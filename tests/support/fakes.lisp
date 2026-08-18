@@ -12,6 +12,50 @@
 (defun application-call (name &rest arguments)
   (apply (application-function name) arguments))
 
+(defun adapter-symbol (name)
+  (let ((package (find-package :hngh.adapters.evidence)))
+    (unless package
+      (error "adapter package is unavailable"))
+    (multiple-value-bind (symbol status) (find-symbol name package)
+      (unless (and symbol (eq status :external))
+        (error "adapter symbol is unavailable: ~A" name))
+      symbol)))
+
+(defun adapter-value (name)
+  (symbol-value (adapter-symbol name)))
+
+(defun adapter-function (name)
+  (let ((symbol (adapter-symbol name)))
+    (unless (fboundp symbol)
+      (error "adapter function is unavailable: ~A" name))
+    (symbol-function symbol)))
+
+(defun adapter-call (name &rest arguments)
+  (apply (adapter-function name) arguments))
+
+(defun make-evidence-ports-fake (&key responses)
+  "Evidence transport fake. RESPONSES is a list; each element is
+(:return exit-code stdout stderr) or (:error message). Answers are
+consumed in order; the reporter returns call count, argv history,
+and remaining response count."
+  (let ((calls 0)
+        (argv-seen '())
+        (remaining (copy-list responses)))
+    (values
+     (lambda (argv)
+       (incf calls)
+       (push (copy-list argv) argv-seen)
+       (let ((response (pop remaining)))
+         (ecase (first response)
+           (:error (error (second response)))
+           (:return (values (second response)
+                            (third response)
+                            (fourth response))))))
+     (lambda ()
+       (list :calls calls
+             :argv-seen (nreverse argv-seen)
+             :remaining (length remaining))))))
+
 (defun make-application-mission ()
   (hngh.domain:make-mission
    :objective "Create a valid run"

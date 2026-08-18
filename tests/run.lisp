@@ -1,9 +1,12 @@
-(defun project-root ()
-  (merge-pathnames "../" (make-pathname :name nil :type nil :defaults *load-truename*)))
+(defparameter *project-root*
+  (merge-pathnames "../"
+                   (make-pathname :name nil :type nil
+                                  :defaults *load-truename*)))
 
 (defun project-file (relative)
-  (merge-pathnames relative (project-root)))
+  (merge-pathnames relative *project-root*))
 
+(require :asdf)
 (load (project-file "src/packages.lisp"))
 (load (project-file "src/domain/profile.lisp"))
 (load (project-file "src/domain/mission.lisp"))
@@ -17,6 +20,7 @@
 (load (project-file "src/application/start-run.lisp"))
 (load (project-file "src/application/checkpoint.lisp"))
 (load (project-file "src/application/close-run.lisp"))
+(load (project-file "src/adapter/evidence.lisp"))
 
 (in-package :hngh.tests)
 
@@ -43,6 +47,7 @@
 (load (cl-user::project-file "tests/application/test-start-run.lisp"))
 (load (cl-user::project-file "tests/application/test-checkpoint.lisp"))
 (load (cl-user::project-file "tests/application/test-close-run.lisp"))
+(load (cl-user::project-file "tests/adapter/test-evidence.lisp"))
 
 (defun read-fixture (relative)
   (with-open-file (stream (cl-user::project-file relative))

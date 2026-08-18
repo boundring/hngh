@@ -163,6 +163,27 @@ serves the future mutation executor, not run-state transitions. Action-admission
 policy (such as a commit certificate never authorizing a push) remains with
 that executor.
 
+## 2026-08-18 — Read-only evidence adapter
+
+`hngh.adapters.evidence` gathers fixed read-only local evidence through an
+injected process transport (composition supplies the real `process-run`
+callback) and maps the results to domain evidence facts and source manifest
+entries with closed states. The command set is fixed and enumerable:
+repository revision, whole-tree working-tree status, and file content
+hashing. A request names one command plus relative, duplicate-free targets
+and a source role; no caller-supplied command string is ever built.
+
+The adapter fails closed on unknown commands, malformed or unparseable
+command output, escaping, absolute, home-relative, or option-like targets,
+duplicate evidence, and thrown or malformed transport returns. Command
+failures are recorded as evidence with closed states: a missing file is
+`:missing`, an unreadable or unverifiable command result is
+`:unverifiable`, and a successful fixed command yields `:current` facts.
+The adapter never decides policy, never reads a requirement ledger, and
+never mutates anything; all subprocess and filesystem access stays behind
+its transport callback so tests use fixture responses. The mutation
+executor remains its first consumer.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

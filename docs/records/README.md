@@ -36,6 +36,9 @@ authorize a future action.
 - `2026-08-18-docs-intent-framing.md` records the documentation-only
   reframing around intent and direction: the new vision document, plain
   root README, directional roadmap, and two-audience documentation index.
+- `2026-08-18-task-r4-evidence-adapter.md` records the read-only evidence
+  adapter (promotion rung 4): its fixed command set, injected process
+  transport, closed refusal vocabulary, and evidence-state mapping.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

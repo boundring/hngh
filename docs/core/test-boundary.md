@@ -23,7 +23,8 @@ write root. Malformed input, unknown fields, duplicate values, and path escape
 cases are first-class fixtures. Fixtures contain no provider credentials,
 private transcripts, local project paths, or live machine state.
 
-The current suite includes Task 1 through Task 3.4 fixtures:
+The current suite includes Task 1 through Task 3.4 fixtures and the Rung 4
+adapter fixtures:
 
 - an inward package may not import presentation or adapter packages;
 - a reference lexicon record may contain renderer copy and provenance, but not
@@ -40,7 +41,12 @@ The current suite includes Task 1 through Task 3.4 fixtures:
   run-and-receipt recording callback;
 - a running run checkpoints only after closed `:passed` verification and
   `:complete` manifest evidence, each received through a run-only request,
-  then one atomic run-and-receipt recording callback.
+  then one atomic run-and-receipt recording callback;
+- the read-only evidence adapter admits only its fixed command set
+  (:repository-revision, :working-tree-status, :file-sha256), refuses
+  unknown commands, malformed output, escaping or option-like targets, and
+  duplicate evidence, and maps fixture-backed process responses to domain
+  evidence facts and source manifest entries with closed states.
 
 ## Testing API and nondeterminism
 
