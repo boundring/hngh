@@ -80,5 +80,10 @@ injected process transport; it maps a fixed command set to domain evidence
 values and decides no policy. `hngh.adapters.mutation` is an installed
 certificate-bound mutation adapter behind an injected process transport; it
 rechecks current evidence and emits only fixed argv for the named action.
+`hngh.adapters.review` is an installed bounded model-review adapter behind an
+injected reviewer transport; it sends one closed prompt, sanitizes the
+structured output into finding labels and citations, and maps the result to a
+deterministic domain evidence fact — reviewers advise, never decide, and no
+default provider transport exists.
 Presentation and main component names remain planned boundaries, not installed
 runtime packages.

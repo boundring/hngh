@@ -37,7 +37,7 @@ Retry means a new run, never a silent continuation of an old one.
 ## Status
 
 Today the kernel is a pure library with fixture tests (`make test` runs 8 reader-guard checks
-plus 888 checks). Implemented:
+plus 1059 checks). Implemented:
 
 - Pure domain values — profile, mission, role, loadout, run, receipt, score, afterlife — with a
   closed lifecycle.
@@ -54,10 +54,17 @@ plus 888 checks). Implemented:
   evidence, then sends only the certificate-bound fixed Git action through an injected process
   transport; stale facts, expiry, disabled actions, command failures, and transport faults
   refuse without mutation.
+- Bounded model-review adapter: `hngh.adapters.review` turns a closed review request (candidate
+  paths, content hash, policy-context labels) into one fixed prompt, sends it through an
+  injected reviewer transport, and maps the structured output into sanitized, duplicate-free
+  finding labels and citations plus one deterministic review evidence fact. Malformed JSON,
+  unknown fields, unsafe citations, oversized output, and transport faults refuse closed; a
+  failed review call becomes an `:unverifiable` fact. Reviewers advise — they never decide —
+  and the adapter supplies no default provider transport.
 - Read-only candidate evidence bundle (`make verify-candidate`) and a read-only retirement-archive verifier (`make check-archive`).
 
-Not yet: persistence, CLI, clock, environment access in the kernel, daemon, model or
-provider call, Pi worker, or bounded model-review adapters.
+Not yet: persistence, CLI, clock, environment access in the kernel, daemon, real model or
+provider transport, or Pi worker.
 
 ## Verify
 
@@ -78,9 +85,11 @@ location and does not write to the archive.
 
 ## Where this is going
 
-- Mutation executor: implemented as the certificate-bound, fixture-backed adapter described above.
-- Bounded model-review adapters, only after the lower contracts exist — reviewers advise, they
-  never decide.
+- Bounded model-review adapters: implemented as the closed-prompt, fixture-backed adapter
+  described above — reviewers advise, they never decide.
+- Explicit composition and operator-visible presentation, only after the lower contracts
+  exist; real model or terminal transports stay disabled until a separately approved run
+  loadout admits them.
 - Pi as the replaceable outer worker behind a port: read-only by default, while Hngh keeps
   authority, evidence, and termination. Pi and oh-my-pi are under consideration, not installed,
   not decided.

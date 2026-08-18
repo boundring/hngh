@@ -78,6 +78,31 @@ output; GATHER-RESULT, when supplied, is returned by the evidence callback."
      (lambda ()
        (list :calls calls :argv-seen (nreverse argv-seen))))))
 
+(defun make-review-ports-fake (&key responses)
+  "Reviewer transport fake. RESPONSES is a list; each element is
+(:return exit-code stdout stderr) or (:error message). The callback records
+every prompt it receives; the reporter returns call count, prompt history,
+and remaining response count."
+  (let ((calls 0)
+        (prompts '())
+        (remaining (copy-list responses)))
+    (values
+     (hngh.adapters.review:make-review-ports
+      :invoke-reviewer
+      (lambda (prompt)
+        (incf calls)
+        (push (copy-seq prompt) prompts)
+        (let ((response (pop remaining)))
+          (ecase (first response)
+            (:error (error (second response)))
+            (:return (values (second response)
+                             (third response)
+                             (fourth response)))))))
+     (lambda ()
+       (list :calls calls
+             :prompts (nreverse prompts)
+             :remaining (length remaining))))))
+
 (defun make-application-mission ()
   (hngh.domain:make-mission
    :objective "Create a valid run"

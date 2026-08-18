@@ -23,7 +23,7 @@ write root. Malformed input, unknown fields, duplicate values, and path escape
 cases are first-class fixtures. Fixtures contain no provider credentials,
 private transcripts, local project paths, or live machine state.
 
-The current suite includes Task 1 through Task 3.4 fixtures and the Rung 4
+The current suite includes Task 1 through Task 3.4 fixtures and the Rung 4–6
 adapter fixtures:
 
 - an inward package may not import presentation or adapter packages;
@@ -46,7 +46,17 @@ adapter fixtures:
   (:repository-revision, :working-tree-status, :file-sha256), refuses
   unknown commands, malformed output, escaping or option-like targets, and
   duplicate evidence, and maps fixture-backed process responses to domain
-  evidence facts and source manifest entries with closed states.
+  evidence facts and source manifest entries with closed states;
+- the mutation executor rechecks every certificate fact against fresh
+  evidence before emitting any command, and refuses `:none`, action
+  escalation, stale facts, expiry, malformed evidence, command failures,
+  and transport faults without a mutation;
+- the model-review adapter sends a closed review request through an injected
+  reviewer transport, accepts only structured output with bounded, duplicate-
+  free finding labels and citations, and refuses malformed JSON, unknown
+  fields, unsafe citations, oversized or overlong findings, and transport
+  faults; failed review calls map to an `:unverifiable` review fact and no
+  test contacts a provider.
 
 ## Testing API and nondeterminism
 
