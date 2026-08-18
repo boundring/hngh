@@ -47,9 +47,6 @@ All notable changes to Hngh are documented here.
 - The policy-gated `close-run` use case: a run reaches a terminal state only
   under an `:admitted` policy verdict, with closed transition refusals and one
   atomic run-and-receipt record.
-- The policy-gated `close-run` use case: a run reaches a terminal state only
-  under an `:admitted` policy verdict, with closed transition refusals and one
-  atomic run-and-receipt record.
 
 ### Changed
 
@@ -60,3 +57,7 @@ All notable changes to Hngh are documented here.
   domain and application errors remain visible to the test gate.
 - Retired the previous daemon, plugin, watcher, dashboard, mission-control,
   launcher, and unit architecture into an external local archive.
+- Root README, documentation index, and roadmap now frame Hngh's intent and
+  direction in plain language, recovered from the archived pre-refactor plans;
+  added `docs/intent.md` as the human-facing vision document. Documentation
+  only; no source or behavior change.

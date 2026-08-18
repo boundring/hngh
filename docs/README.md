@@ -2,8 +2,14 @@
 
 This directory is the active working surface.
 
+These documents serve two audiences. People read [Intent](intent.md) first:
+it explains why Hngh exists and where it is going in plain language.
+Engineers and agents then read the contracts, which freeze the facts of how
+things work today. Intent frames direction; contracts pin down details.
+
 ## Read in this order
 
+0. [Intent](intent.md) — why Hngh exists and where it is going.
 1. [Architecture](architecture.md) — the current kernel and planned boundary map.
 2. [Run contract](core/run-contract.md) — domain values, lifecycle, and refusals.
 3. [Clean Architecture charter](core/clean-architecture-charter.md) —
