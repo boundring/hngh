@@ -56,6 +56,28 @@ and remaining response count."
              :argv-seen (nreverse argv-seen)
              :remaining (length remaining))))))
 
+(defun make-mutation-ports-fake (&key (exit-code 0) (stdout "ok\n")
+                                      (stderr "") fault gather-result)
+  "Mutation transport fake. It records exact argv and returns bounded fixture
+output; GATHER-RESULT, when supplied, is returned by the evidence callback."
+  (let ((calls 0)
+        (argv-seen '()))
+    (values
+     (hngh.adapters.mutation:make-mutation-ports
+      :run-process
+      (lambda (argv)
+        (incf calls)
+        (push (copy-list argv) argv-seen)
+        (when fault (error "mutation transport fault"))
+        (values exit-code stdout stderr))
+      :gather-evidence
+      (when gather-result
+        (lambda (certificate)
+          (declare (ignore certificate))
+          gather-result)))
+     (lambda ()
+       (list :calls calls :argv-seen (nreverse argv-seen))))))
+
 (defun make-application-mission ()
   (hngh.domain:make-mission
    :objective "Create a valid run"

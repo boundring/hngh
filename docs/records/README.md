@@ -39,6 +39,9 @@ authorize a future action.
 - `2026-08-18-task-r4-evidence-adapter.md` records the read-only evidence
   adapter (promotion rung 4): its fixed command set, injected process
   transport, closed refusal vocabulary, and evidence-state mapping.
+- `2026-08-18-task-r5-mutation-executor.md` records the certificate-bound
+  mutation executor, fixed action templates, injected process transport, and
+  point-of-action refusal checks.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 
