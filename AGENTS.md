@@ -28,7 +28,8 @@ archive. It is evidence, not an implementation source. Verify it with
   passes, the change is confined to the task's stated scope, docs/records are
   updated, the first-commit message matches the slice, and the working tree
   carries no unrelated changes. Verified commits need no prior operator
-  instruction. Pushing to a remote, altering provider configuration, or
+  instruction, and may be pushed to the configured `origin` remote
+  (`git@github.com:boundring/hngh.git`). Altering provider configuration or
   enabling a service still requires a current policy certificate or an
   explicit operator instruction naming the exact action and target.
 - Record architecture-relevant work in `CHANGELOG.md` and `docs/records/`.
