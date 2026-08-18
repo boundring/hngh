@@ -33,6 +33,9 @@ authorize a future action.
   evidence before the running-to-checkpointed application transition.
 - `2026-08-13-pi-worker-and-delegation-survey.md` records the future Pi worker
   boundary, extension triage, and fixture gates; it admits no runtime adapter.
+- `2026-08-18-docs-intent-framing.md` records the documentation-only
+  reframing around intent and direction: the new vision document, plain
+  root README, directional roadmap, and two-audience documentation index.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 
