@@ -77,5 +77,8 @@ callbacks return closed success values. `hngh:validate-profile` remains a
 compatibility facade.
 `hngh.adapters.evidence` is an installed read-only evidence adapter behind an
 injected process transport; it maps a fixed command set to domain evidence
-values and decides no policy. Presentation and main component names remain
-planned boundaries, not installed runtime packages.
+values and decides no policy. `hngh.adapters.mutation` is an installed
+certificate-bound mutation adapter behind an injected process transport; it
+rechecks current evidence and emits only fixed argv for the named action.
+Presentation and main component names remain planned boundaries, not installed
+runtime packages.

@@ -37,7 +37,7 @@ Retry means a new run, never a silent continuation of an old one.
 ## Status
 
 Today the kernel is a pure library with fixture tests (`make test` runs 8 reader-guard checks
-plus 824 checks). Implemented:
+plus 888 checks). Implemented:
 
 - Pure domain values — profile, mission, role, loadout, run, receipt, score, afterlife — with a
   closed lifecycle.
@@ -50,11 +50,14 @@ plus 824 checks). Implemented:
   process transport; unknown commands, malformed output, escaping targets, and duplicate
   evidence fail closed. The kernel itself stays pure — no subprocess, clock, or environment
   access reaches domain or application code.
+- Mutation executor: `hngh.adapters.mutation` rechecks every certificate fact against fresh
+  evidence, then sends only the certificate-bound fixed Git action through an injected process
+  transport; stale facts, expiry, disabled actions, command failures, and transport faults
+  refuse without mutation.
 - Read-only candidate evidence bundle (`make verify-candidate`) and a read-only retirement-archive verifier (`make check-archive`).
 
 Not yet: persistence, CLI, clock, environment access in the kernel, daemon, model or
-provider call, Pi worker, or mutation executor — the kernel decides what is valid but nothing
-can yet be changed through it.
+provider call, Pi worker, or bounded model-review adapters.
 
 ## Verify
 
@@ -75,9 +78,7 @@ location and does not write to the archive.
 
 ## Where this is going
 
-- Mutation executor: re-checks every certificate fact immediately before its named action; it
-  refuses changed content, unexpected paths, stale bases, expired certificates, malformed input,
-  command failure, and disabled action classes.
+- Mutation executor: implemented as the certificate-bound, fixture-backed adapter described above.
 - Bounded model-review adapters, only after the lower contracts exist — reviewers advise, they
   never decide.
 - Pi as the replaceable outer worker behind a port: read-only by default, while Hngh keeps

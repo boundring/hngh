@@ -9,6 +9,7 @@ deployment form.
 | `hngh.domain` | Run policy and immutable values change | Domain values and pure policy functions | Common Lisp | Library | Domain builder / boundary reviewer |
 | `hngh.application` | A named use case or port changes | Use-case input and output records; ports | `hngh.domain` | Library | Use-case builder / boundary reviewer |
 | `hngh.adapters.evidence` | The fixed read-only evidence command set or its closed output mapping changes | `gather-evidence` over a fixed command set: `:repository-revision`, `:working-tree-status`, `:file-sha256` | Domain evidence values and an injected process transport | Library, manually composed | Adapter builder / boundary reviewer |
+| `hngh.adapters.mutation` | Certificate-bound repository mutation commands or refusal mapping change | `execute-mutation` over one current candidate certificate and fresh evidence | Domain certificate/evidence values and injected evidence/process transports | Library, manually composed | Adapter builder / boundary reviewer |
 | `hngh.adapters.filesystem` | Restricted local record transport changes | Application port implementations | Application ports and Common Lisp I/O | Library, manually composed | Adapter builder / fixture reviewer |
 | `hngh.adapters.git` | Repository fact collection changes | Repository-inspection port implementation | Application ports and Git transport detail | Library, manually composed | Adapter builder / fixture reviewer |
 | `hngh.adapters.model.*` | A model transport changes | Completion-port implementation | Application ports and transport detail | Disabled library, manually composed | Adapter builder / cost reviewer |
@@ -23,11 +24,13 @@ deployment form.
 loadout, run, and evidence values, plus the closed run transition policy.
 `hngh.application` is active with `create-run`, `arm-run`, `start-run`, and
 `checkpoint`, capability-specific ports, and closed application and evidence
-results. `hngh.adapters.evidence` is active with the fixed read-only
-evidence command set and `gather-evidence` through an injected process
-transport. `hngh:validate-profile` is a compatibility facade over the domain
-validator. No other adapter, presentation package, composition root,
-or runtime outer component exists in active source.
+results. `hngh.adapters.evidence` is active with the fixed read-only evidence
+command set and `gather-evidence` through an injected process transport.
+`hngh.adapters.mutation` is active with `execute-mutation`: it rechecks every
+certificate fact and emits only the certificate-bound fixed Git command through
+an injected process transport. `hngh:validate-profile` is a compatibility facade
+over the domain validator. No presentation package, composition root, or
+runtime outer component exists in active source.
 
 ## Dependency and deployment rules
 

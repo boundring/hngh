@@ -54,6 +54,11 @@ All notable changes to Hngh are documented here.
   manifest entries with closed states; unknown commands, malformed output,
   escaping targets, and duplicate evidence fail closed, and the adapter
   never decides policy or mutates anything.
+- A fixture-backed mutation executor (promotion rung 5): `hngh.adapters.mutation`
+  rechecks every certificate fact against fresh evidence and emits only the
+  certificate-bound fixed Git action through an injected transport; stale facts,
+  expiry, disabled actions, malformed evidence, command failures, and transport
+  faults refuse without mutation.
 
 ### Changed
 

@@ -30,6 +30,7 @@
            #:validate-failure-disposition
            #:validate-evidence-requirement-kind
            #:source-manifest-entry
+           #:source-manifest-entry-p
            #:make-source-manifest-entry
            #:source-manifest-entry-relative-path
            #:source-manifest-entry-content-hash
@@ -40,11 +41,13 @@
            #:evidence-fact-fingerprint
            #:evidence-fact-state
            #:principle-result
+           #:principle-result-p
            #:make-principle-result
            #:principle-result-principle
            #:principle-result-state
            #:principle-result-evidence-fingerprints
            #:policy-verdict
+           #:policy-verdict-p
            #:make-policy-verdict
            #:policy-verdict-state
            #:policy-verdict-principle-results
@@ -155,6 +158,36 @@
            #:evidence-result-refusal-labels
            #:gather-evidence
            #:process-run))
+
+(defpackage #:hngh.adapters.mutation
+  (:use #:cl)
+  (:export #:+mutation-actions+
+           #:mutation-evidence
+           #:mutation-evidence-p
+           #:make-mutation-evidence
+           #:mutation-evidence-repository-identity
+           #:mutation-evidence-base-revision
+           #:mutation-evidence-candidate-paths
+           #:mutation-evidence-content-hash
+           #:mutation-evidence-evidence-hashes
+           #:mutation-evidence-principle-verdicts
+           #:mutation-evidence-review-findings
+           #:mutation-evidence-source-manifest
+           #:mutation-evidence-policy-profile
+           #:mutation-evidence-now
+           #:mutation-ports
+           #:mutation-ports-p
+           #:make-mutation-ports
+           #:mutation-result
+           #:mutation-result-p
+           #:mutation-result-status
+           #:mutation-result-action
+           #:mutation-result-command
+           #:mutation-result-refusal-labels
+           #:mutation-result-exit-code
+           #:mutation-result-stdout
+           #:mutation-result-stderr
+           #:execute-mutation))
 
 (defpackage #:hngh.tests
   (:use #:cl))

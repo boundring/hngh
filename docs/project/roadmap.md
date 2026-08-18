@@ -6,7 +6,7 @@ Hngh is being rebuilt as a small, predictable core that decides what is valid, w
 
 ## Now
 
-Current frontier: the clean-slate baseline. The retired daemon and plugin system is archived and not part of the active product. The active kernel contains pure profile and run-domain policy, five fake-backed application use cases, governance C0–C3: the proposal-evidence ledger, deterministic principle evaluation, the failure-disposition policy, and the candidate authorization certificate, plus the read-only evidence adapter (promotion rung 4).
+Current frontier: the clean-slate baseline. The retired daemon and plugin system is archived and not part of the active product. The active kernel contains pure profile and run-domain policy, five fake-backed application use cases, governance C0–C3: the proposal-evidence ledger, deterministic principle evaluation, the failure-disposition policy, and the candidate authorization certificate, plus the read-only evidence adapter (promotion rung 4) and the fixture-backed mutation executor (promotion rung 5).
 
 ### Completed
 
@@ -28,10 +28,10 @@ Current frontier: the clean-slate baseline. The retired daemon and plugin system
   - a non-mutating candidate authorization certificate binding one closed action to the admitting verdict and facts, issued by a mechanical pure issuer (action-admission policy deferred to the executor).
 - Published source-grounded autonomous development policy, the closed principle and certificate vocabulary, and a human-approval deployment profile — documentation only, no execution added.
 - Added the read-only evidence adapter (promotion rung 4): a fixed, enumerable set of read-only local evidence commands — repository revision, whole-tree working-tree status, and file content hashing — gathered through an injected process transport and mapped to domain evidence facts and source manifest entries with closed states. Unknown commands, malformed output, escaping or option-like paths, and duplicate evidence fail closed; the kernel stays pure and the adapter never decides policy.
+- Added the mutation executor (promotion rung 5): `hngh.adapters.mutation` accepts a current certificate and fresh evidence, rechecks repository identity, base revision, candidate paths, content and evidence hashes, principle verdicts, source manifest, review findings, policy profile, and expiry, then issues only the certificate-bound fixed Git action through an injected transport. `:none`, action escalation, stale facts, malformed evidence, command failures, and transport faults refuse without a mutation.
 
 ## Next
 
-1. **Mutation executor (promotion rung 5).** Rechecks every certificate fact immediately before its named action, refusing changed content, unexpected paths, stale base revision, expired certificate, malformed input, command failure, and disabled action classes. Why it matters: permission re-checked at the moment of action — a certificate is not a free pass.
-2. **Bounded model-review adapters.** Added only after the lower contracts exist. Why it matters: reviewers advise, never decide — a model can propose and comment, but the policy verdict stays in the kernel.
+1. **Bounded model-review adapters.** Added only after the lower contracts exist. Why it matters: reviewers advise, never decide — a model can propose and comment, but the policy verdict stays in the kernel.
 
-No daemon, provider, watcher, scheduler, dashboard, or mutation executor is admitted by this roadmap stage.
+No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
