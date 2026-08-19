@@ -7,9 +7,19 @@ retired. The active product begins with a compact, side-effect-free kernel.
 
 ## 2026-08-11 — Archive is evidence, not a dependency
 
-The retirement archive lives outside the repository. `make check-archive`
-checks its immutable receipts when the local archive is available. Active
-source must not import, launch, or configure archived components.
+The retirement archive lives outside the repository, in the operator's local
+archive. Active source must not import, launch, or configure archived
+components. The archive is not consulted by any active gate, provider, or
+runtime.
+
+## 2026-08-19 — Archive gate retired
+
+The `make check-archive` verifier and its `HNGH_ARCHIVE_ROOT` contract are
+retired. The prior state is fully represented by the refactor records; the
+archive itself remains operator-preserved outside the repository but is no
+longer verified, referenced, or needed by the active project. Meaningful
+material from it is harvested into the operator's separate llm-wiki
+knowledge base for reference.
 
 ## 2026-08-11 — Fail closed by default
 

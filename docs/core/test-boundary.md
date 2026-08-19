@@ -101,4 +101,4 @@ unknown paths; `.hermes/**` is never admitted. It reads candidate files and
 runs only fixed local checks: the parenthesis guard for declared Lisp files,
 the inward dependency rule, public-content, whitespace, relative-link, and
 `make test` evidence. It never stages, commits, pushes, starts a process,
-contacts a provider, or reads the retirement archive.
+or contacts a provider.

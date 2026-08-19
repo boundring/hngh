@@ -101,7 +101,7 @@ plus 1137 checks). Implemented:
   injected or fail-closed default port adapters, wires the installed evidence, mutation, and
   review adapters through injected transports, keeps an in-memory record root, and renders
   every result through presentation.
-- Read-only candidate evidence bundle (`make verify-candidate`) and a read-only retirement-archive verifier (`make check-archive`).
+- Read-only candidate evidence bundle (`make verify-candidate`).
 
 Not yet: persistence, CLI, clock or environment access in the kernel, daemon, real model or
 provider transport, or Pi worker. Each will be admitted the way everything else is: through a
@@ -114,17 +114,12 @@ at a time.
 make test
 python3 tests/scripts/test-verify-candidate.py
 make verify-candidate CANDIDATE_MANIFEST=path/to/manifest
-HNGH_ARCHIVE_ROOT=/absolute/path/to/retirement-archive make check-archive
 ```
 
 `make verify-candidate` requires an explicit, sorted manifest of regular repository-relative
 files. It reports whole-tree state as evidence but never uses it to infer candidate scope. It
 refuses excluded (`.hermes/**`), ignored, unknown, escaping, malformed, or unsafe candidate
 input, and performs no Git mutation, provider call, service start, or archive read.
-
-`check-archive` verifies the configured local retirement archive. It has no default archive
-location and does not write to the archive. The archive is evidence of where this project has
-been; nothing in it runs here.
 
 ## Where this is going
 
@@ -151,5 +146,5 @@ No daemon, provider, watcher, scheduler, or background process is admitted by th
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md), which separates the active baseline from the
-external retirement archive in two document hops.
+Start at [docs/README.md](docs/README.md). Records and the external retirement
+archive cover the project's prior state; the active baseline lives here.

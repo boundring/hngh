@@ -7,7 +7,6 @@ All notable changes to Hngh are documented here.
 ### Added
 
 - Compact, side-effect-free kernel baseline with explicit profile validation.
-- Read-only archive receipt verification through `make check-archive`.
 - Compact active documentation and cutover record.
 - Clean Architecture charter, component map, test boundary, and
   presentation/reference-lexicon boundaries.
@@ -108,3 +107,9 @@ All notable changes to Hngh are documented here.
   MCP update), and Where-this-is-going names the corridor: local and remote
   models, priced routes, pooled hardware, all behind the same bounded, recorded,
   human-closable cycle. Documentation only; no source or behavior change.
+- Retired the `make check-archive` archive gate and the archive-boundary
+  framing: the external retirement archive is historical evidence only, no
+  active gate verifies it, and meaningful archive material is harvested
+  into the operator's separate llm-wiki knowledge base. The archive itself
+  is untouched. Makefile and documentation only; no source or behavior
+  change.
