@@ -184,6 +184,30 @@ never mutates anything; all subprocess and filesystem access stays behind
 its transport callback so tests use fixture responses. The mutation
 executor remains its first consumer.
 
+## 2026-08-18 — Composition root and operator-visible presentation
+
+`hngh.presentation` is a renderer-only component. It renders application
+results, domain runs and governance values, and installed adapter results
+into plain factual strings, keeps refusals literal, and never mutates a
+canonical value. It imports no adapter. The optional reference lexicon is
+display copy at a named surface only: a pack is accepted only as a flat
+plist carrying exactly a `:render` list of four-field
+(`:surface`, `:original`, `:reference`, `:provenance`) entries, cannot carry
+canonical control fields, and removing it leaves the original term in
+place.
+
+`hngh.main` is the composition root. `make-run-harness` composes the five
+use cases over injected port callbacks; defaults fail closed — an
+in-memory record store, a per-harness identifier source, a clock, and
+`unknown` admission, verification, and manifest evidence — so no authority
+is invented at composition. The installed evidence, mutation, and review
+adapters compose through coordinator functions behind injected transports;
+only the read-only evidence transport has a real default, and no default
+provider transport exists. `display` renders every result through
+`hngh.presentation`. `hngh.main` starts no background work by import; a
+real model or terminal transport stays disabled until a separately approved
+run loadout admits it.
+
 ## 2026-08-12 — Recover partial delegated lanes before retrying
 
 A delegated lane that stops after writing code, including on a syntax or

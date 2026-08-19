@@ -17,4 +17,6 @@
                (:file "src/application/close-run")
                (:file "src/adapter/evidence")
                (:file "src/adapter/mutation")
-               (:file "src/adapter/review")))
+               (:file "src/adapter/review")
+               (:file "src/presentation/render")
+               (:file "src/main")))

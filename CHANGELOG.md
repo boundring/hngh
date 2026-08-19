@@ -68,6 +68,25 @@ All notable changes to Hngh are documented here.
   transport faults refuse closed; a failed review call becomes an `:unverifiable`
   fact. Reviewers advise, never decide; the adapter is pure (no provider defaults,
   no network, no subprocess calls).
+- An operator-visible presentation layer (promotion rung 7):
+  `hngh.presentation` renders application results, runs, receipts, evidence facts,
+  policy verdicts, candidate certificates, and installed adapter results into
+  plain factual strings without mutating canonical state or importing an adapter;
+  refusals stay literal, and the optional reference lexicon applies display copy
+  only at a named surface and can never carry canonical control.
+- A composition root (promotion rung 7): `hngh.main` composes the five use cases
+  into one `run-harness` with injected or fail-closed default port adapters
+  (in-memory record store, per-harness identifier source, clock, and `unknown`
+  admission, verification, and manifest evidence), wires the installed evidence,
+  mutation, and review adapters through injected transports, keeps an
+  operator-visible in-memory record root, and renders every result through
+  `hngh.presentation`. It starts no background work by import and supplies no
+  default model or terminal transport.
+- Public read-only accessors on domain run and receipt values
+  (`run-identifier`, `run-mission`, `run-role`, `run-loadout`, `receipt-kind`,
+  `receipt-facts`) so presentation renders without touching canonical state,
+  and a dependency-guard extension that rejects any inward package importing an
+  adapter.
 
 ### Changed
 

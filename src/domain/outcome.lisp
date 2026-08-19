@@ -11,6 +11,12 @@
    (ensure-keyword kind "receipt kind")
    (ensure-label-list facts "receipt facts")))
 
+(defun receipt-kind (receipt)
+  (%receipt-kind receipt))
+
+(defun receipt-facts (receipt)
+  (mapcar #'copy-seq (%receipt-facts receipt)))
+
 (defstruct (score-record
             (:constructor %make-score-record
                 (delivery cost headroom turnaround lesson-reuse))

@@ -45,6 +45,10 @@ authorize a future action.
 - `2026-08-18-task-r6-review-adapter.md` records the bounded model-review
   adapter, its fixed prompt, closed JSON output contract, deterministic
   review evidence facts, and provider-free injected transport.
+- `2026-08-18-task-r7-presentation-and-composition.md` records the
+  operator-visible presentation layer, the `hngh.main` composition root,
+  the fail-closed default port adapters, and the inward dependency-guard
+  extension to presentation.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 

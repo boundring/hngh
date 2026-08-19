@@ -23,8 +23,8 @@ write root. Malformed input, unknown fields, duplicate values, and path escape
 cases are first-class fixtures. Fixtures contain no provider credentials,
 private transcripts, local project paths, or live machine state.
 
-The current suite includes Task 1 through Task 3.4 fixtures and the Rung 4–6
-adapter fixtures:
+The current suite includes Task 1 through Task 3.4 fixtures and the Rung 4–7
+adapter and presentation fixtures:
 
 - an inward package may not import presentation or adapter packages;
 - a reference lexicon record may contain renderer copy and provenance, but not
@@ -56,7 +56,15 @@ adapter fixtures:
   free finding labels and citations, and refuses malformed JSON, unknown
   fields, unsafe citations, oversized or overlong findings, and transport
   faults; failed review calls map to an `:unverifiable` review fact and no
-  test contacts a provider.
+  test contacts a provider;
+- presentation renders every application, domain, and adapter result into a
+  factual string without mutating canonical state, keeps refusals literal,
+  accepts only the four-field reference lexicon and rejects any pack
+  carrying canonical control, and imports no adapter;
+- the composition root composes the five use cases into one harness with
+  injected or default port adapters, records one atomic run-and-receipt pair
+  per accepted use case, refuses through fail-closed defaults, and renders
+  every result through presentation with fake transports only.
 
 ## Testing API and nondeterminism
 
