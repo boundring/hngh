@@ -85,5 +85,13 @@ injected reviewer transport; it sends one closed prompt, sanitizes the
 structured output into finding labels and citations, and maps the result to a
 deterministic domain evidence fact — reviewers advise, never decide, and no
 default provider transport exists.
-Presentation and main component names remain planned boundaries, not installed
-runtime packages.
+`hngh.presentation` is installed as a renderer-only component: it renders
+application results, domain runs and governance values, and adapter results
+into plain factual strings, keeps refusals literal, applies the optional
+reference lexicon only as display copy at a named surface, and imports no
+adapter. `hngh.main` is installed as the composition root: `make-run-harness`
+composes the five use cases over injected or fail-closed default port
+adapters, coordinator functions wire the installed evidence, mutation, and
+review adapters through injected transports, and `display` renders any
+result through `hngh.presentation`. It starts no background work by import
+and supplies no default model or terminal transport.

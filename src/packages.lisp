@@ -14,12 +14,18 @@
            #:loadout-time-limit
            #:run
            #:make-run
+           #:run-identifier
+           #:run-mission
+           #:run-role
+           #:run-loadout
            #:run-state
            #:allowed-transition-p
            #:advance-run
            #:invalid-run-transition
            #:receipt
            #:make-receipt
+           #:receipt-kind
+           #:receipt-facts
            #:score-record
            #:make-score-record
            #:afterlife-record
@@ -117,9 +123,11 @@
            #:make-run-admission-ports
            #:make-run-start-ports
            #:make-verification-result
+           #:verification-result
            #:verification-result-status
            #:verification-result-labels
            #:make-manifest-result
+           #:manifest-result
            #:manifest-result-status
            #:manifest-result-labels
            #:make-checkpoint-request
@@ -211,6 +219,45 @@
            #:review-result-fact
            #:review-result-refusal-labels
            #:request-review))
+
+(defpackage #:hngh.presentation
+  (:use #:cl)
+  (:export #:render
+           #:render-run
+           #:render-receipt
+           #:render-evidence-fact
+           #:render-source-manifest-entry
+           #:render-principle-result
+           #:render-policy-verdict
+           #:render-candidate-certificate
+           #:render-application-result
+           #:render-evidence-result
+           #:render-verification-result
+           #:render-manifest-result
+           #:render-mutation-result
+           #:render-review-result
+           #:render-review-finding
+           #:render-report
+           #:render-status-label
+           #:reference-lexicon-p
+           #:render-with-lexicon))
+
+(defpackage #:hngh.main
+  (:use #:cl)
+  (:export #:run-harness
+           #:make-run-harness
+           #:harness-create-run
+           #:harness-arm-run
+           #:harness-start-run
+           #:harness-checkpoint
+           #:harness-close-run
+           #:harness-records
+           #:default-evidence-ports
+           #:default-mutation-ports
+           #:gather-run-evidence
+           #:request-run-review
+           #:execute-run-mutation
+           #:display))
 
 (defpackage #:hngh.tests
   (:use #:cl))

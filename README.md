@@ -37,7 +37,7 @@ Retry means a new run, never a silent continuation of an old one.
 ## Status
 
 Today the kernel is a pure library with fixture tests (`make test` runs 8 reader-guard checks
-plus 1059 checks). Implemented:
+plus 1137 checks). Implemented:
 
 - Pure domain values — profile, mission, role, loadout, run, receipt, score, afterlife — with a
   closed lifecycle.
@@ -61,9 +61,17 @@ plus 1059 checks). Implemented:
   unknown fields, unsafe citations, oversized output, and transport faults refuse closed; a
   failed review call becomes an `:unverifiable` fact. Reviewers advise — they never decide —
   and the adapter supplies no default provider transport.
+- Operator-visible presentation: `hngh.presentation` renders application results, runs,
+  receipts, evidence facts, policy verdicts, certificates, and adapter results as plain
+  factual strings — refusals stay literal, rendering never mutates canonical state, and the
+  optional reference lexicon is display copy only.
+- Composition root: `hngh.main` composes the five use cases into one run harness with
+  injected or fail-closed default port adapters, wires the installed evidence, mutation, and
+  review adapters through injected transports, keeps an in-memory record root, and renders
+  every result through presentation.
 - Read-only candidate evidence bundle (`make verify-candidate`) and a read-only retirement-archive verifier (`make check-archive`).
 
-Not yet: persistence, CLI, clock, environment access in the kernel, daemon, real model or
+Not yet: persistence, CLI, clock or environment access in the kernel, daemon, real model or
 provider transport, or Pi worker.
 
 ## Verify
@@ -87,9 +95,9 @@ location and does not write to the archive.
 
 - Bounded model-review adapters: implemented as the closed-prompt, fixture-backed adapter
   described above — reviewers advise, they never decide.
-- Explicit composition and operator-visible presentation, only after the lower contracts
-  exist; real model or terminal transports stay disabled until a separately approved run
-  loadout admits them.
+- Composition and operator-visible presentation: implemented as `hngh.main` + `hngh.presentation`
+  (above); an explicit operator command entry and real model or terminal transports stay future
+  rungs, admitted only under a separately approved run loadout.
 - Pi as the replaceable outer worker behind a port: read-only by default, while Hngh keeps
   authority, evidence, and termination. Pi and oh-my-pi are under consideration, not installed,
   not decided.

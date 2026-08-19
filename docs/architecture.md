@@ -42,6 +42,20 @@ transport, and maps the structured output into sanitized findings and one
 deterministic review evidence fact. Reviewers advise, never decide, and no
 default provider transport exists.
 
+`hngh.presentation` is the operator-visible renderer boundary: it turns
+application results, domain runs and governance values, and adapter results
+into plain factual strings, keeps refusals literal, and never mutates a
+canonical value. The optional reference lexicon supplies display copy only
+at a named surface; it cannot carry canonical control. Presentation imports
+no adapter.
+
+`hngh.main` is the composition root. `make-run-harness` composes the five
+use cases into one run harness over injected or fail-closed default port
+adapters (an in-memory record store, a per-harness identifier source, and a
+clock), the coordinator functions wire the installed evidence, mutation, and
+review adapters through injected transports, and `display` renders any
+result through `hngh.presentation`. It starts no background work by import.
+
 ## Planned outer boundaries
 
 ```text
@@ -55,4 +69,6 @@ The dependency direction, promotion ladder, and composition rule live in the
 responsibilities and allowed dependencies live in the
 [component map](core/component-map.md). Tests and presentation data follow the
 [test boundary](core/test-boundary.md) and
-[presentation boundary](design/presentation-boundary.md).
+[presentation boundary](design/presentation-boundary.md). A real model or
+terminal transport remains a future boundary, admitted only under a
+separately approved run loadout.

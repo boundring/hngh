@@ -1,7 +1,7 @@
 (in-package :hngh.tests)
 
 (defparameter +inward-package-prefixes+
-  '("HNGH.DOMAIN" "HNGH.APPLICATION"))
+  '("HNGH.DOMAIN" "HNGH.APPLICATION" "HNGH.PRESENTATION"))
 
 (defparameter +forbidden-dependency-prefixes+
   '("HNGH.ADAPTERS." "HNGH.PRESENTATION"))

@@ -34,7 +34,15 @@ an injected process transport. `hngh.adapters.review` is active with
 reviewer transport and maps the structured output into sanitized findings and
 one deterministic review evidence fact; reviewers advise but never decide.
 `hngh:validate-profile` is a compatibility facade
-over the domain validator. No presentation package, composition root, or
+over the domain validator. `hngh.presentation` is active with pure render
+functions over application results, domain runs and governance values, and
+installed adapter results; it renders plain factual strings, keeps refusals
+literal, applies the optional reference lexicon only as display copy at a
+named surface, and imports no adapter. `hngh.main` is active as the
+composition root: `make-run-harness` composes the five use cases over
+injected or default port adapters, the coordinator functions wire the
+installed evidence, mutation, and review adapters through injected
+transports, and `display` renders any result through presentation. No
 runtime model or terminal transport exists in active source.
 
 ## Dependency and deployment rules

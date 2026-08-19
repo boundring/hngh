@@ -23,6 +23,8 @@
 (load (project-file "src/adapter/evidence.lisp"))
 (load (project-file "src/adapter/mutation.lisp"))
 (load (project-file "src/adapter/review.lisp"))
+(load (project-file "src/presentation/render.lisp"))
+(load (project-file "src/main.lisp"))
 
 (in-package :hngh.tests)
 
@@ -40,6 +42,11 @@
       (progn (funcall thunk) nil)
     (error () t)))
 
+(defun read-fixture (relative)
+  (with-open-file (stream (cl-user::project-file relative))
+    (let ((*read-eval* nil))
+      (read stream))))
+
 (load (cl-user::project-file "tests/domain/test-loadout.lisp"))
 (load (cl-user::project-file "tests/domain/test-run-state.lisp"))
 (load (cl-user::project-file "tests/domain/test-governance.lisp"))
@@ -52,11 +59,8 @@
 (load (cl-user::project-file "tests/adapter/test-evidence.lisp"))
 (load (cl-user::project-file "tests/adapter/test-mutation.lisp"))
 (load (cl-user::project-file "tests/adapter/test-review.lisp"))
-
-(defun read-fixture (relative)
-  (with-open-file (stream (cl-user::project-file relative))
-    (let ((*read-eval* nil))
-      (read stream))))
+(load (cl-user::project-file "tests/presentation/test-presentation.lisp"))
+(load (cl-user::project-file "tests/main/test-main.lisp"))
 
 (check (equal '(:work :observe)
               (hngh:validate-profile '(:work :observe)))
@@ -80,6 +84,15 @@
 (check (dependency-fixture-allowed-p
         (read-fixture "tests/fixtures/dependency-guard/inward-dependencies-clean.lisp"))
        "inward package with core-only dependencies passes the dependency guard")
+(check (not (dependency-fixture-allowed-p
+             (read-fixture "tests/fixtures/dependency-guard/presentation-imports-adapter.lisp")))
+       "presentation importing an adapter fails the dependency guard")
+(check (dependency-fixture-allowed-p
+        (read-fixture "tests/fixtures/dependency-guard/presentation-dependencies-clean.lisp"))
+       "presentation with core-only dependencies passes the dependency guard")
+(check (dependency-fixture-allowed-p
+        (read-fixture "tests/fixtures/dependency-guard/composition-root-imports-all.lisp"))
+       "composition root may import presentation and the installed adapters")
 (check (reference-lexicon-safe-p
         (read-fixture "tests/fixtures/reference-lexicon/presentation-only.lisp"))
        "presentation-only lexicon passes review")

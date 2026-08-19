@@ -36,6 +36,18 @@
 (defun run-state (run)
   (%run-state run))
 
+(defun run-identifier (run)
+  (copy-seq (%run-identifier run)))
+
+(defun run-mission (run)
+  (%run-mission run))
+
+(defun run-role (run)
+  (%run-role run))
+
+(defun run-loadout (run)
+  (%run-loadout run))
+
 (defun make-run (&key identifier mission role loadout)
   (unless (and (stringp identifier) (plusp (length identifier)))
     (error "run identifier must be a nonempty string"))
