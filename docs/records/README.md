@@ -49,6 +49,10 @@ authorize a future action.
   operator-visible presentation layer, the `hngh.main` composition root,
   the fail-closed default port adapters, and the inward dependency-guard
   extension to presentation.
+- `2026-08-19-readme-harness-framing.md` records the root README `Why` and
+  `Where` revision framing Hngh as a record-first system harness against the
+  throughput-first harness-mainstream, grounded in the arXiv 2604.18071
+  empirical harness study and the 2026-07-28 stateless MCP update.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
 
