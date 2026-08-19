@@ -101,3 +101,10 @@ All notable changes to Hngh are documented here.
   direction in plain language, recovered from the archived pre-refactor plans;
   added `docs/intent.md` as the human-facing vision document. Documentation
   only; no source or behavior change.
+- Root README `Why` and `Where this is going` rewritten to frame Hngh as a
+  growing system harness: the Why contrasts Hngh's record-first posture with
+  the throughput-first agent-harness mainstream (grounded in a 2026
+  empirical study of 70 agent-harness projects and the 2026-07-28 stateless
+  MCP update), and Where-this-is-going names the corridor: local and remote
+  models, priced routes, pooled hardware, all behind the same bounded, recorded,
+  human-closable cycle. Documentation only; no source or behavior change.
