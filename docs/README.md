@@ -23,16 +23,5 @@ things work today. Intent frames direction; contracts pin down details.
 8. [Roadmap](project/roadmap.md) — the ordered rebuild frontier.
 9. [Decisions](project/decisions.md) — decisions already made.
 10. [Backlog](project/backlog.md) — work not yet admitted.
-11. [Records](records/README.md) — evidence and cutover records.
-
-## Archive boundary
-
-The retired Hngh system is outside the repository in an operator-configured
-local archive.
-
-Read [the crystallized cutover record](records/2026-08-11-crystallized-cutover.md)
-before consulting it. The archive is historical evidence only. It does not
-supply a runtime, configuration, or implementation dependency.
-
-Run `HNGH_ARCHIVE_ROOT=/absolute/path/to/archive make check-archive` to verify
-the external archive when it is available.
+11. [Records](records/README.md) — evidence, decisions, and cutover records; the
+    prior state's retirement archive is covered there.

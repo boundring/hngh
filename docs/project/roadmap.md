@@ -10,7 +10,10 @@ Current frontier: the clean-slate baseline. The retired daemon and plugin system
 
 ### Completed
 
-- Sealed the retirement boundary with a read-only archive verifier (`make check-archive`); retired the obsolete Mission Control desktop launcher, preserving its bytes and parent configuration in a supplemental archive receipt.
+- Sealed the retirement boundary: the archived prior system is external and
+  no longer verified (`make check-archive` retired 2026-08-19); the obsolete
+  Mission Control desktop launcher was retired, its bytes preserved in a
+  supplemental archive receipt.
 - Published the Clean Architecture charter, component map, test boundary, and presentation boundary; added fixture guards for inward dependency direction and renderer-only reference lexicons.
 - Specified and tested the pure run domain: closed lifecycle, typed refusal, validated mission/role/loadout values, and non-authoritative evidence values.
 - Added the read-only reader guard to the fast gate (`make test` runs 8 reader-guard checks plus the domain suite).

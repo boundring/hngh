@@ -146,8 +146,9 @@ is a "no" until known.
 
 Today Hngh is a small library plus fixture tests: a pure kernel with closed run lifecycles,
 five application use cases, governance policy, and read-only verifiers for candidate evidence
-and the retirement archive. There is no daemon and no agent yet. The direction ahead is set
-out in the [roadmap](project/roadmap.md) — read it for what gets built next and in what order.
+(and, historically, the retirement archive). There is no daemon and no agent yet. The
+direction ahead is set out in the [roadmap](project/roadmap.md) — read it for what gets built
+next and in what order.
 
 ---
 

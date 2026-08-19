@@ -13,8 +13,11 @@ Hngh is a side-effect-free local kernel. Do not start a daemon, service,
 provider, watcher, scheduler, agent, or process. Do not write to `~/.hngh`.
 
 The retired system is outside this repository in an operator-configured local
-archive. It is evidence, not an implementation source. Verify it with
-`HNGH_ARCHIVE_ROOT=/absolute/path/to/archive make check-archive`.
+archive. It is evidence, not an implementation source, and no active gate
+verifies it anymore; the archive verifier was retired on 2026-08-19. Meaningful
+archive material is harvested into the operator's separate llm-wiki knowledge
+base, not imported back into this repository. Treat prior-state records
+(`docs/records/`) as the authoritative history of the refactor.
 
 ## Engineering rules
 

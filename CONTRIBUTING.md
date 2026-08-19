@@ -7,8 +7,9 @@ privileged work, release posture, and safety-boundary changes. Routine scope and
 mutation decisions use source-grounded policy certificates; a human-approval
 profile remains available where a deployment requires it.
 
-Read `docs/README.md` before working. The external retirement archive is
-historical evidence; it does not authorize restoring retired architecture.
+Read `docs/README.md` before working. The retired system's archive is
+historical evidence; it does not authorize restoring retired architecture,
+and no archive content is imported back into this repository.
 
 ## Workflow
 
