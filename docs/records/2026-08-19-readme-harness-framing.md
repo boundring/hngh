@@ -37,8 +37,9 @@ The Why comparison cites one external study and one protocol trend; both
 verified by reading primary sources this session:
 
 - Hu Wei, "Architectural Design Decisions in AI Agent Harnesses"
-  (arXiv 2604.18071, April 2026), an empirical study of 70 public
-  agent-system projects. Its stated findings ground HnGH's position:
+  (arXiv 2604.18071, April 2026; https://arxiv.org/abs/2604.18071), an
+  empirical study of 70 public agent-system projects. Its stated findings
+  ground HnGH's position:
   intermediate isolation (sandboxing) is common, but high-assurance audit is
   rare; capability growth does not reliably co-occur with governance
   maturity; MCP- and plugin-oriented tool systems are emerging alongside

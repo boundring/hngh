@@ -29,10 +29,12 @@ length later, floor by floor, and see what each room was for.
 
 That is why Hngh exists. Automation that acts without a record is a machine you can only
 judge by what came back, not by what was decided on the way. When it goes wrong, and a model
-eventually will, you cannot reconstruct the decision. A 2026 empirical study of 70 public
-agent-harness projects puts it in soberer terms: intermediate isolation (sandboxing) is
-common, but high-assurance audit is rare, and growing a harness does not reliably grow its
-governance. Capability and accountability do not move in lockstep.
+eventually will, you cannot reconstruct the decision. A 2026
+[empirical study of 70 public agent-harness projects](https://arxiv.org/abs/2604.18071)
+(H. Wei, "Architectural Design Decisions in AI Agent Harnesses", arXiv:2604.18071, April
+2026) puts it in soberer terms: intermediate isolation (sandboxing) is common, but
+high-assurance audit is rare, and growing a harness does not reliably grow its governance.
+Capability and accountability do not move in lockstep.
 
 Hngh is built the other way around. It prizes the smallest property most harnesses defer:
 that every decision is a fact you can walk back to. Automation should work like careful
