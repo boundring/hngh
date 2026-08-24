@@ -374,8 +374,8 @@ commands:~%~
   create-run OBJECTIVE ROLE [key=value...]  admit-transport RUN TRANSPORT [SCOPE]~%~
   arm-run RUN   start-run RUN~%~
   checkpoint RUN VERIFICATION MANIFEST   close-run RUN DISPOSITION~%~
-  propose [key=value...]  issue-cert ACTION RUN [PATH...]~%~
-  mutation-check ACTION RUN [EVIDENCE...]  present [RUN]~%~
+  propose [key=value...]  issue-cert ACTION RUN VERDICT-FILE [PATH...]~%~
+  mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -908,7 +908,157 @@ IDENTIFIER, candidate paths from PATHS."
         (values (format nil "malformed propose: ~A~%~A" condition (command-usage))
                 2)))))
 
-(defun dispatch-issue-cert (args store clock)
+(defun real-run-evidence (candidate-paths cwd gather-ports)
+  "Genuine candidate evidence: runs scripts/verify-candidate.py in
+CWD through the injected or default process transport and completes
+repository identity and per-file content hashes. Returns (values
+evidence nil) or (values nil refusal-label); fails closed."
+  (hngh.adapters.run-gather:run-candidate-evidence
+   candidate-paths cwd gather-ports))
+
+(defun parse-verdict-report (text)
+  "Strict closed parser for a rendered policy verdict (as emitted by
+hngh.presentation:render): a verdict header, one line per principle
+result, then a reasons line. Any deviation yields (values nil
+\"malformed-verdict-evidence\")."
+  (handler-case
+      (let* ((lines (remove-if (lambda (line)
+                                 (uiop:emptyp (string-trim
+                                               '(#\Space #\Tab) line)))
+                               (uiop:split-string (or text "")
+                                                  :separator '(#\Newline))))
+             (head (first lines)))
+        (unless (and lines head)
+          (return-from parse-verdict-report
+            (values nil "malformed-verdict-evidence")))
+        (let* ((tokens (uiop:split-string (string-trim '(#\Space #\Tab) head)
+                                          :separator '(#\Space)))
+               (state (and (= 3 (length tokens))
+                           (string= "verdict" (first tokens))
+                           (string= "state=" (second tokens) :end2 6)
+                           (intern (string-upcase (subseq (second tokens) 6))
+                                   :keyword)))
+               (count-text (and (= 3 (length tokens))
+                                (string= "principles=" (third tokens) :end2 11)
+                                (subseq (third tokens) 11)))
+               (count (and count-text
+                           (every #'digit-char-p count-text)
+                           (parse-integer count-text))))
+          (unless (and state
+                       (member state '(:admitted :refused :needs-escalation))
+                       count (plusp count))
+            (return-from parse-verdict-report
+              (values nil "malformed-verdict-evidence")))
+          (let ((principle-lines (butlast (rest lines)))
+                (reasons-line (car (last lines))))
+            (unless (and (string= "reasons=" reasons-line :end2 8)
+                         (= (length principle-lines) count))
+              (return-from parse-verdict-report
+                (values nil "malformed-verdict-evidence")))
+            (let ((results '()))
+              (dolist (line principle-lines)
+                (let* ((trimmed (string-trim '(#\Space #\Tab) line))
+                       (state-at (search " state=" trimmed))
+                       (name (and state-at
+                                  (subseq trimmed (length "principle ") state-at)))
+                       (suffix (and state-at
+                                    (subseq trimmed (+ state-at (length " state="))))))
+                  (unless (and state-at
+                               (string= trimmed "principle "
+                                        :end1 (length "principle ")
+                                        :end2 (length "principle "))
+                               name (plusp (length name))
+                               suffix (plusp (length suffix))
+                               (not (position #\Space suffix)))
+                    (return-from parse-verdict-report
+                      (values nil "malformed-verdict-evidence")))
+                  (push (hngh.domain:make-principle-result
+                         :principle (intern (string-upcase name) :keyword)
+                         :state (intern (string-upcase suffix) :keyword)
+                         :evidence-fingerprints '())
+                        results)))
+              (let* ((reasons-text (subseq reasons-line (length "reasons=")))
+                     (reason-labels
+                       (if (or (zerop (length (string-trim '(#\Space #\Tab)
+                                                            reasons-text)))
+                               (string-equal (string-trim '(#\Space #\Tab)
+                                                          reasons-text)
+                                             "none"))
+                           '()
+                           (mapcar (lambda (label)
+                                     (string-trim '(#\Space #\Tab) label))
+                                   (uiop:split-string reasons-text
+                                                      :separator '(#\;))))))
+                (values (hngh.domain:make-policy-verdict
+                         :state state
+                         :principle-results (nreverse results)
+                         :reason-labels reason-labels)
+                        nil))))))
+    (error ()
+      (values nil "malformed-verdict-evidence"))))
+
+(defun read-verdict-report (path)
+  "Read and parse the operator-produced verdict report at PATH.
+Returns (values verdict nil), (values nil \"missing-verdict-file\"),
+or (values nil \"malformed-verdict-evidence\")."
+  (handler-case
+      (progn
+        (unless (probe-file path)
+          (return-from read-verdict-report
+            (values nil "missing-verdict-file")))
+        (parse-verdict-report (uiop:read-file-string path)))
+    (error ()
+      (values nil "malformed-verdict-evidence"))))
+
+(defun real-certificate (verdict action paths evidence)
+  "Mint a candidate certificate from the operator-produced VERDICT
+and the real candidate EVIDENCE. Nothing fixture-grade reaches the
+certificate."
+  (hngh.domain:issue-candidate-certificate
+   verdict
+   :action action
+   :repository-identity (getf evidence :repository-identity)
+   :base-revision (getf evidence :base-revision)
+   :candidate-paths paths
+   :content-hash (getf evidence :content-hash)
+   :evidence-hashes (getf evidence :evidence-hashes)
+   :review-findings '()
+   :source-manifest (getf evidence :source-manifest)
+   :policy-profile "real"
+   :expiry (format-utc-timestamp (+ (get-universal-time) 86400))))
+
+(defun report-mutation-result (result)
+  "Map a MUTATION-RESULT to the operator-visible output and exit."
+  (case (hngh.adapters.mutation:mutation-result-status result)
+    (:executed (values (hngh.presentation:render result) 0))
+    (:mismatch (values (hngh.presentation:render result) 1))
+    (:refused (values (hngh.presentation:render result) 1))
+    (:transport-fault (values (hngh.presentation:render result) 3))
+    (:command-failed (values (hngh.presentation:render result) 1))))
+
+(defun real-issue-cert (action verdict-file paths gather-ports)
+  "Issue a genuine certificate: only an operator-produced verdict
+report (READ-VERDICT-REPORT) and real candidate evidence
+(REAL-RUN-EVIDENCE) may mint one. Anything missing, unadmitted, or
+malformed is refused."
+  (multiple-value-bind (verdict verdict-label)
+      (read-verdict-report verdict-file)
+    (unless verdict
+      (return-from real-issue-cert
+        (values (format nil "certificate refused: ~A" verdict-label) 1)))
+    (unless (eq :admitted (hngh.domain:policy-verdict-state verdict))
+      (return-from real-issue-cert
+        (values "certificate refused: unadmitted-verdict" 1)))
+    (multiple-value-bind (evidence evidence-label)
+        (real-run-evidence paths (uiop:getcwd) gather-ports)
+      (unless evidence
+        (return-from real-issue-cert
+          (values (format nil "certificate refused: ~A" evidence-label) 1)))
+      (values (hngh.presentation:render
+               (real-certificate verdict action paths evidence))
+              0))))
+
+(defun dispatch-issue-cert (args store clock gather-ports)
   (declare (ignore clock))
   (multiple-value-bind (positionals options) (collect-options args)
     (when (or options (< (length positionals) 2))
@@ -932,15 +1082,103 @@ IDENTIFIER, candidate paths from PATHS."
                             identifier)
                     1)))
         (handler-case
-            (values
-             (hngh.presentation:render (dogfood-certificate store identifier action
-                                           (or (cddr positionals)
-                                               '("candidate.lisp"))))
-             0)
+            (if (third positionals)
+                (real-issue-cert action (third positionals)
+                                 (or (cdddr positionals) '("candidate.lisp"))
+                                 gather-ports)
+                (values "certificate refused: missing-verdict-evidence" 1))
           (error (condition)
             (values (format nil "malformed issue-cert: ~A" condition) 2)))))))
 
-(defun dispatch-mutation-check (args store clock mutation-ports)
+
+(defun fixture-mutation-check (store identifier action positionals mutation-ports clock)
+  "Fixture-grade mutation check kept for the pre-verdict-report
+workflow; superseded by REAL-MUTATION-CHECK once a verdict file is
+passed."
+  (multiple-value-bind (content-hash evidence-hashes manifest)
+      (dogfood-payload identifier action)
+    (let* ((certificate
+             (dogfood-certificate store identifier action
+                                  '("candidate.lisp")))
+           (evidence
+             (hngh.adapters.mutation:make-mutation-evidence
+              :repository-identity
+              (car (last (pathname-directory
+                          (uiop:ensure-directory-pathname
+                           (hngh.adapters.filesystem::
+                            filesystem-store-root-directory store)))))
+              :base-revision identifier
+              :candidate-paths '("candidate.lisp")
+              :content-hash content-hash
+              :evidence-hashes (append evidence-hashes
+                                       (cddr positionals))
+              :principle-verdicts (list (dogfood-verdict))
+              :review-findings '()
+              :source-manifest manifest
+              :policy-profile "dogfood"
+              :now (funcall clock)))
+           (result
+             (hngh.main:execute-run-mutation
+              certificate evidence
+              (or mutation-ports (default-mutation-ports))
+              :action action)))
+      (case (hngh.adapters.mutation:mutation-result-status result)
+        (:executed (values (hngh.presentation:render result) 0))
+        (:mismatch (values (hngh.presentation:render result) 1))
+        (:refused (values (hngh.presentation:render result) 1))
+        (:transport-fault (values (hngh.presentation:render result) 3))
+        (:command-failed (values (hngh.presentation:render result) 1))))))
+
+
+(defun real-mutation-check (store identifier action verdict-file
+                            positionals mutation-ports gather-ports clock)
+  "Mutation-check backed by the operator-verified verdict report and
+the real runner evidence. Anything missing, unadmitted, or malformed
+is refused."
+  (declare (ignore store identifier))
+  (multiple-value-bind (verdict verdict-label)
+      (read-verdict-report verdict-file)
+    (unless verdict
+      (return-from real-mutation-check
+        (values (format nil "mutation-check refused: ~A" verdict-label) 1)))
+    (unless (eq :admitted (hngh.domain:policy-verdict-state verdict))
+      (return-from real-mutation-check
+        (values "mutation-check refused: unadmitted-verdict" 1)))
+    (multiple-value-bind (evidence evidence-label)
+        (real-run-evidence (or (cdddr positionals) '("candidate.lisp"))
+                           (uiop:getcwd) gather-ports)
+      (unless evidence
+        (return-from real-mutation-check
+          (values (format nil "mutation-check refused: ~A" evidence-label) 1)))
+      (let* ((certificate
+               (real-certificate verdict action
+                                 (or (cdddr positionals) '("candidate.lisp"))
+                                 evidence))
+             (evidence
+               (hngh.adapters.mutation:make-mutation-evidence
+                :repository-identity (getf evidence :repository-identity)
+                :base-revision (getf evidence :base-revision)
+                :candidate-paths (getf evidence :candidate-paths)
+                :content-hash (getf evidence :content-hash)
+                :evidence-hashes (getf evidence :evidence-hashes)
+                :principle-verdicts (list verdict)
+                :review-findings '()
+                :source-manifest (getf evidence :source-manifest)
+                :policy-profile "real"
+                :now (funcall clock)))
+             (result
+               (hngh.main:execute-run-mutation
+                certificate evidence
+                (or mutation-ports (default-mutation-ports))
+                :action action)))
+        (case (hngh.adapters.mutation:mutation-result-status result)
+          (:executed (values (hngh.presentation:render result) 0))
+          (:mismatch (values (hngh.presentation:render result) 1))
+          (:refused (values (hngh.presentation:render result) 1))
+          (:transport-fault (values (hngh.presentation:render result) 3))
+          (:command-failed (values (hngh.presentation:render result) 1)))))))
+
+(defun dispatch-mutation-check (args store clock mutation-ports gather-ports)
   (multiple-value-bind (positionals options) (collect-options args)
     (when (or options (< (length positionals) 2))
       (return-from dispatch-mutation-check (values (command-usage) 2)))
@@ -963,43 +1201,15 @@ IDENTIFIER, candidate paths from PATHS."
                             identifier)
                     1)))
         (handler-case
-            (multiple-value-bind (content-hash evidence-hashes manifest)
-                (dogfood-payload identifier action)
-              (let* ((certificate
-                       (dogfood-certificate store identifier action
-                                            '("candidate.lisp")))
-                     (evidence
-                       (hngh.adapters.mutation:make-mutation-evidence
-                        :repository-identity
-                        (car (last (pathname-directory
-                                    (uiop:ensure-directory-pathname
-                                     (hngh.adapters.filesystem::
-                                      filesystem-store-root-directory store)))))
-                        :base-revision identifier
-                        :candidate-paths '("candidate.lisp")
-                        :content-hash content-hash
-                        :evidence-hashes (append evidence-hashes
-                                                 (cddr positionals))
-                        :principle-verdicts (list (dogfood-verdict))
-                        :review-findings '()
-                        :source-manifest manifest
-                        :policy-profile "dogfood"
-                        :now (funcall clock)))
-                     (result
-                   (hngh.main:execute-run-mutation
-                    certificate evidence
-                    (or mutation-ports (default-mutation-ports))
-                    :action action)))
-                (case (hngh.adapters.mutation:mutation-result-status result)
-                  (:executed (values (hngh.presentation:render result) 0))
-                  (:mismatch (values (hngh.presentation:render result) 1))
-                  (:refused (values (hngh.presentation:render result) 1))
-                  (:transport-fault (values (hngh.presentation:render result) 3))
-                  (:command-failed (values (hngh.presentation:render result) 1)))))
+            (if (third positionals)
+                (real-mutation-check store identifier action
+                                     (third positionals) positionals
+                                     mutation-ports gather-ports clock)
+                (fixture-mutation-check store identifier action positionals
+                                        mutation-ports clock))
           (error (condition)
             (values (format nil "malformed mutation-check: ~A" condition) 2)))))))
-
-(defun dispatch-command* (positionals store clock mutation-ports)
+(defun dispatch-command* (positionals store clock mutation-ports gather-ports)
   (let ((command (first positionals))
         (args (rest positionals)))
     (cond
@@ -1013,21 +1223,24 @@ IDENTIFIER, candidate paths from PATHS."
     ((string= command "close-run") (dispatch-close-run args store clock))
     ((string= command "propose") (dispatch-propose args store clock))
     ((string= command "issue-cert")
-     (dispatch-issue-cert args store clock))
+     (dispatch-issue-cert args store clock gather-ports))
     ((string= command "mutation-check")
-     (dispatch-mutation-check args store clock mutation-ports))
+     (dispatch-mutation-check args store clock mutation-ports gather-ports))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))
 
-(defun dispatch-command (argv &key clock-now mutation-ports)
+(defun dispatch-command (argv &key clock-now mutation-ports gather-ports)
   "Parse the operator ARGV list, execute the named command, and return
 (values output-string exit-code). Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
 option, transport, or verb); 3 transport fault. CLOCK-NOW may inject a
 timestamp callback for deterministic tests. MUTATION-PORTS injects the
 mutation adapter ports for mutation-check, so the command never spawns
-a subprocess when fakes are supplied."
+a subprocess when fakes are supplied. GATHER-PORTS injects
+   the candidate-evidence process transport for issue-cert and
+   mutation-check, so real evidence gathering also never spawns a
+   subprocess when fakes are supplied."
   (multiple-value-bind (positionals store-path bad-option)
       (split-argv argv)
     (when bad-option
@@ -1040,12 +1253,12 @@ a subprocess when fakes are supplied."
               (dispatch-command* positionals
                                  (hngh.adapters.filesystem:make-filesystem-store
                                   :root store-path)
-                                 clock mutation-ports)
+                                 clock mutation-ports gather-ports)
             (hngh.adapters.filesystem:transport-fault (condition)
               (values (format nil "transport fault: ~A" condition) 3))
             (hngh.adapters.filesystem:store-refusal (condition)
               (values (format nil "store refusal: ~A" condition) 2)))
-          (dispatch-command* positionals nil clock mutation-ports)))))
+          (dispatch-command* positionals nil clock mutation-ports gather-ports)))))
 
 ;;; Operator-visible root ----------------------------------------------------
 
