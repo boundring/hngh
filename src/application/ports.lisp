@@ -101,14 +101,16 @@
 
 (defstruct (run-admission-ports
             (:constructor %make-run-admission-ports
-                (admission-facts record-run))
+                (admission-facts clock-now record-run))
             (:conc-name %run-admission-ports-))
   (admission-facts nil :read-only t)
+  (clock-now nil :read-only t)
   (record-run nil :read-only t))
 
-(defun make-run-admission-ports (&key admission-facts record-run)
+(defun make-run-admission-ports (&key admission-facts clock-now record-run)
   (%make-run-admission-ports
    (ensure-callback admission-facts "admission facts callback")
+   (when clock-now (ensure-callback clock-now "clock callback"))
    (ensure-callback record-run "record callback")))
 
 (defstruct (run-start-ports

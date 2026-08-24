@@ -35,6 +35,7 @@
            #:validate-failure-category
            #:validate-failure-disposition
            #:validate-evidence-requirement-kind
+           #:+admitted-transports+
            #:source-manifest-entry
            #:source-manifest-entry-p
            #:make-source-manifest-entry
@@ -121,6 +122,7 @@
            #:admission-facts-loadout
            #:admission-facts-exclusive-write
            #:make-run-admission-ports
+           #:admit-transport
            #:make-run-start-ports
            #:make-verification-result
            #:verification-result
@@ -220,6 +222,16 @@
            #:review-result-refusal-labels
            #:request-review))
 
+(defpackage #:hngh.adapters.filesystem
+  (:use #:cl)
+  (:export #:filesystem-store
+           #:filesystem-store-p
+           #:make-filesystem-store
+           #:store-record-run
+           #:store-entries
+           #:store-refusal
+           #:transport-fault))
+
 (defpackage #:hngh.presentation
   (:use #:cl)
   (:export #:render
@@ -257,6 +269,8 @@
            #:gather-run-evidence
            #:request-run-review
            #:execute-run-mutation
+           #:harness-admit-transport
+           #:dispatch-command
            #:display))
 
 (defpackage #:hngh.tests

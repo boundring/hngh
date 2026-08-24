@@ -29,6 +29,7 @@
     :port-callback-fault-or-malformed-return :atomic-recording-conflict
     :insufficient-or-stale-evidence :tool-or-environment-fault
     :review-disagreement :mutation-precondition-mismatch-or-failure))
+(defparameter +admitted-transports+ '(:filesystem))
 
 (defun validate-failure-category (value)
   (validate-closed-value value +failure-categories+ "failure category"))

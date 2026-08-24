@@ -1,0 +1,17 @@
+#!/usr/bin/env -S sbcl --script
+
+(require :asdf)
+
+(let* ((script-path (or *load-truename* *compile-file-truename*
+                        (truename (first sb-ext:*posix-argv*))))
+       (repo-root (make-pathname :directory (butlast (pathname-directory script-path))))
+       (asd-file (merge-pathnames "hngh.asd" repo-root)))
+  (asdf:load-asd asd-file)
+  (asdf:load-system :hngh))
+
+(multiple-value-bind (output exit-code)
+    (hngh.main:dispatch-command (cdr sb-ext:*posix-argv*))
+  (if (= 0 exit-code)
+      (format *standard-output* "~A~%" output)
+      (format *error-output* "~A~%" output))
+  (uiop:quit exit-code))
