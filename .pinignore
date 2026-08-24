@@ -1,0 +1,11 @@
+# Candidate-manifest exclusions: paths a candidate must not pin.
+# Build and session noise only; no source, test, or record file is excluded.
+# A manifest that pins an ignored or excluded path is refused, never trimmed.
+*.fasl
+*.dfsl
+*.log
+__pycache__/
+.hermes/
+/.cache/
+/.codegraph/
+/.omp/

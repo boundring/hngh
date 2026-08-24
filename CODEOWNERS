@@ -1,0 +1,9 @@
+# Kernel and authority-record paths are owned by the operator.
+# These paths bind review: changes here must not land unexamined.
+src/domain/ @boundring
+src/application/ @boundring
+src/adapter/run-gather.lisp @boundring
+src/adapter/mutation.lisp @boundring
+src/adapter/evidence.lisp @boundring
+docs/records/ @boundring
+docs/project/decisions.md @boundring

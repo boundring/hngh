@@ -7,6 +7,8 @@ it explains why Hngh exists and where it is going in plain language.
 Engineers and agents then read the contracts, which freeze the facts of how
 things work today. Intent frames direction; contracts pin down details.
 
+For newcomers: read [README.md](../README.md) at the repository root first.
+
 ## Read in this order
 
 0. [Intent](intent.md) — why Hngh exists and where it is going.
