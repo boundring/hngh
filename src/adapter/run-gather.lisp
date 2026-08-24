@@ -9,11 +9,14 @@
 
 (defun process-run-at (cwd argv)
   "Run ARGV with CWD as the process directory. Returns (values
-exit-code stdout stderr); never signals."
-  (uiop:run-program argv
-                    :directory cwd
-                    :output :string :error-output :string
-                    :ignore-error-status t))
+exit-code stdout stderr); never signals. UIOP returns (stdout stderr
+exit-code) when both streams are strings, so the values are reordered."
+  (multiple-value-bind (stdout stderr exit-code)
+      (uiop:run-program argv
+                        :directory cwd
+                        :output :string :error-output :string
+                        :ignore-error-status t)
+    (values exit-code stdout stderr)))
 
 (defun trimmed (text)
   (string-right-trim '(#\Newline #\Return) text))

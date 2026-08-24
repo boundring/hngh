@@ -1019,7 +1019,7 @@ certificate."
    :action action
    :repository-identity (getf evidence :repository-identity)
    :base-revision (getf evidence :base-revision)
-   :candidate-paths paths
+   :candidate-paths (sort (copy-list paths) #'string<)
    :content-hash (getf evidence :content-hash)
    :evidence-hashes (getf evidence :evidence-hashes)
    :review-findings '()
