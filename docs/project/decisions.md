@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-08-24 — License: AGPL-3.0-or-later affirmed
+
+`CONTRIBUTING.md` already binds contributions to AGPL-3.0-or-later. Reviewed
+during public-face planning, the binding is affirmed as deliberate rather than
+defaulted: strong copyleft fits the project's posture, because the governance
+kernel's value is its fail-closed authority and AGPL requires disclosure when
+the kernel is offered as a network service. The repository is single-author
+today; affirming now closes the license question before any external
+contribution would make re-licensing impractical.
+
+## 2026-08-24 — Governance documents are the first dogfood-loop mutation
+
+`GOVERNANCE.md`, `SECURITY.md`, and the `CONTRIBUTING.md` amendment are
+sequenced as the first change governed end-to-end by Hngh itself (proposal,
+evidence, verdict, certificate, commit) under the dogfood development loop
+rung. The mutation is documentation-only, so it exercises the full pipeline
+with zero kernel risk, and the documents have no external deadline, so waiting
+for the dogfood machinery costs nothing.
+
+## 2026-08-24 — Budget ledger starts as an outer CSV script
+
+Cost and quota tracking for delegated sessions begins as a Stage-1
+stdlib-only CSV ledger script outside the repository core (procedural tooling
+design synthesis, operator wiki). A `budget-ledger` domain value is deferred
+until real usage stabilizes the schema; promotion follows the normal
+proposal-and-evidence path. The Pi delegation spike's cost/loadout-policy
+dependency is satisfied by a paper policy plus CSV receipts.
+
+## 2026-08-24 — Public intake submissions are claims, not attestations
+
+The future public intake lane (issue tracker, email, web form) receives
+E0-level candidate records: claims to be investigated, never authoritative
+evidence. Promoting an intake submission means the operator's machine
+re-verifies locally — recomputed hashes, reproduced runs. Public intake
+therefore does not trigger the 2026-08-24 no-PKI revisit; that trigger is
+reserved for honoring remote certificates or attestations at face value,
+which stays gated on the distributed-attestation rung.
+
 ## 2026-08-24 — No PKI; hash self-certification is a single-machine decision
 
 Hngh certificates use hash self-certification instead of a public key
