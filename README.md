@@ -16,89 +16,76 @@ is paperwork. That is not a contradiction; paperwork is the building material.
 ## Why
 
 Most open-source agent harnesses are built to move fast. Their winning trait is normally
-throughput, how many tokens a model can burn in a loop, in a session, in an agent fan-out.
+throughput: how many tokens a model can burn in a loop, in a session, in an agent fan-out.
 They optimize capability and autonomy, and they are honest about it: sandbox you, hand you a
 long tool list, and let the loop run.
 
-Consider a furnace. Fuel in, work out, hard to inspect from inside, and nobody plans to live
-in it. The furnace is not wrong; a furnace gets hot, and that is useful. But it is a machine
-you watch from outside, and when it fails you learn about it after the fact. Hngh is built
-like a building instead: load-bearing rules, corridors between floors, and a fire door you
-can point at. The point of a building is that it stays up, and that you can walk its full
-length later, floor by floor, and see what each room was for.
-
-That is why Hngh exists. Automation that acts without a record is a machine you can only
-judge by what came back, not by what was decided on the way. When it goes wrong, and a model
-eventually will, you cannot reconstruct the decision. A 2026
+A furnace is a useful machine, and so is a busy agent. But a furnace is a machine you watch
+from outside; when it fails you learn about it after the fact. When an agent acts without a
+record, you can only judge it by what came back, never by what was decided on the way. A 2026
 [empirical study of 70 public agent-harness projects](https://arxiv.org/abs/2604.18071)
-(H. Wei, "Architectural Design Decisions in AI Agent Harnesses", arXiv:2604.18071, April
-2026) puts it in soberer terms: intermediate isolation (sandboxing) is common, but
-high-assurance audit is rare, and growing a harness does not reliably grow its governance.
-Capability and accountability do not move in lockstep.
+(H. Wei, "Architectural Design Decisions in AI Agent Harnesses", April 2026) puts it
+soberly: sandboxing is common, high-assurance audit is rare, and growing a harness does not
+reliably grow its governance. Capability and accountability do not move in lockstep.
 
 Hngh is built the other way around. It prizes the smallest property most harnesses defer:
-that every decision is a fact you can walk back to. Automation should work like careful
-humans do. Decide what is valid first, record what happened, keep a person's final say. Not
-the agent that can do the most; the agent whose every step leaves a trace.
-
-The kernel enforces that by refusing to guess at the outside world at all. It reads no clock,
-no file, no network, no subprocess; the outside world plugs in later through explicit ports.
-That asymmetry against the mainstream is deliberate, and it is what keeps Hngh small enough
-to reason about as it grows into a harness.
+that every decision is a fact you can walk back to. Decide what is valid first, record what
+happened, keep a person's final say. The kernel enforces that by refusing to guess at the
+outside world at all. It reads no clock, no file, no network, no subprocess; the outside
+world plugs in later through explicit ports. Not the agent that can do the most; the agent
+whose every step leaves a trace.
 
 ## How it works
 
-A run is one bounded work cycle with a clear lifecycle:
-
-- created: defined, but has done nothing yet
-- armed: given permission and evidence for one specific job
-- running: the work happens
-- checkpointed: verified progress is recorded
-- closed: cancelled, evacuated, or finished; terminal states are permanent
-
-Retry means a new run, never a silent continuation of an old one.
+A run is one bounded work cycle with a clear lifecycle: created, armed (given one job and
+the evidence for it), running, checkpointed (verified progress), closed (cancelled,
+evacuated, or finished). Terminal states are permanent. Retry means a new run, never a
+silent continuation of an old one.
 
 - Fail-closed: unknown, malformed, duplicate, or unverified input is refused, never guessed,
   never skipped.
 - Evidence: receipts record what happened; they justify but never grant power.
 - Certificates: permission for exactly one action (prepare, stage, commit, or push), bound to
-  specific files and evidence, re-checked immediately before the action.
-- Clean architecture: the core logic depends on nothing external; the outside world plugs in at
-  the edges through explicit ports, and the read-only evidence adapter is the first such edge.
+  specific files and evidence, rechecked immediately before the action.
+- Clean architecture: the core logic depends on nothing external; the outside world plugs in
+  at the edges through explicit ports, and the read-only evidence adapter is the first edge.
+- The harness governs its own repository: every merged change to Hngh has gone through its
+  own proposal → verdict → certificate → executor loop, under real evidence.
 
 ## Status
 
-Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 1334
+Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2353
 checks) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
   closed lifecycle.
-- Five application use cases: create-run, arm-run, start-run, checkpoint, and close-run (the
-  terminal close is policy-gated).
+- Six application use cases: create-run, admit-transport, arm-run, start-run, checkpoint, and
+  (policy-gated) close-run.
 - Governance: proposal-evidence ledger, deterministic evaluation of ten principles, closed
-  failure-disposition policy, non-mutating candidate authorization certificate.
-- Read-only evidence adapter: a fixed command set (repository revision, working-tree status,
-  file content hashing) gathers evidence facts and source manifest entries through an injected
-  process transport; unknown commands, malformed output, escaping targets, and duplicate
-  evidence fail closed.
-- Mutation executor: `hngh.adapters.mutation` rechecks every certificate fact against fresh
-  evidence, then sends only the certificate-bound fixed Git action through an injected process
-  transport.
-- Bounded model-review adapter: `hngh.adapters.review` turns a closed review request into one
-  fixed prompt, and maps the structured output into sanitized finding labels and citations.
-  Reviewers advise; they never decide.
+  failure-disposition policy, non-mutating candidate authorization certificate, and
+  exhaustive property tests (totality over the closed vocabularies; monotonicity: ignoring
+  evidence never flips refused to admitted).
+- Read-only evidence adapter through an injected process transport; unknown commands,
+  malformed output, escaping targets, and duplicate evidence fail closed.
+- Mutation executor: rechecks every candidate-certificate fact against fresh evidence, then
+  sends only the certificate-bound fixed Git action; stale facts, expiry, disabled actions,
+  and transport faults refuse without a mutation.
+- Bounded model review adapter: one closed review request → one fixed prompt → sanitized,
+  duplicate-free finding labels and citations; absent, malformed, unsafe, duplicate, or
+  oversized output refuses; a failed call becomes an `:unverifiable` fact. Reviewers advise;
+  they never decide, and no default provider transport exists.
 - Operator command surface (`scripts/hngh`): `create-run`, `admit-transport`, `arm-run`,
-  `start-run`, `checkpoint`, `close-run`, `present`, `propose`, `issue-cert`, and
-  `mutation-check` with strict exit codes (0 accepted, 1 refusal or conflict, 2 malformed
-  invocation, 3 transport fault). Persistence happens only under an explicit `--store=PATH`.
+  `start-run`, `checkpoint`, `close-run`, `present`, `propose`, `issue-cert`,
+  `mutation-check`; strict exit codes (0 accepted, 1 refused/conflict, 2 malformed, 3
+  transport fault); persistence only under an explicit `--store=PATH`.
 - Real evidence chain: certificates mint only from an operator-produced verdict file plus
-  genuine repository evidence (`git` revision, content hashes, working-tree state), gathered
-  through an injectable transport that validates the result.
+  genuine repository evidence (git revision, content hashes, working-tree state).
 - Read-only candidate evidence bundle (`make verify-candidate`).
 
-Not yet: daemon, watcher, scheduler, real model or provider transport, and no ambient state.
-Each will be admitted the same way everything else is: through a proposal, a check, and a
-record. The megastructure can wait; it is built one verified stretch at a time.
+Not yet: daemon, watcher, scheduler, model or terminal transports behind loadout admission
+(rung 10 in progress), and no ambient state. Each will be admitted the same way everything
+else is: through a proposal, a check, and a record. The megastructure is built one verified
+stretch at a time.
 
 ## Verify
 
@@ -106,12 +93,12 @@ record. The megastructure can wait; it is built one verified stretch at a time.
 make test
 python3 tests/scripts/test-verify-candidate.py
 make verify-candidate CANDIDATE_MANIFEST=path/to/manifest
-./scripts/hngh --help   # or run `scripts/hngh` with no arguments
 ```
 
-The verify-candidate bundle requires an explicit, ordered manifest of regular
-repository-relative files. It reports whole-tree state as evidence and performs no Git
-mutation, provider call, service start, or archive read.
+The verify-candidate bundle requires an explicit, ordered manifest of regular repository-
+relative files. It reports whole-tree state as evidence, refuses escaping/malformed/
+unsafe/duplicate candidates, and performs no Git mutation, provider call, service start, or
+archive read.
 
 ## Public posture
 
@@ -122,15 +109,11 @@ tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Where this is going
 
-Hngh is not headed toward a busier agent. It is headed toward a wider corridor: a system
-that routes many kinds of work, local and remote models, priced routes, and eventually pooled
+Hngh is not headed toward a busier agent. It is headed toward a wider corridor: a system that
+routes many kinds of work, local and remote models, priced routes, and eventually pooled
 hardware, through the same ledger, the same certificate, and the same human-closable cycle.
-The megastructure is mostly paperwork. That is not a concession; that is the premise.
-
-What changes at each step is the machine on the outside, never the rule the core holds. The
-kernel stays the single spine the harness can always rebuild around, and the read-only
-evidence adapter is the first edge: every external claim is verified against real
-repository state before it can bind.
+What changes at each step is the machine on the outside, never the rule the core holds; a
+kernel stays the spine the harness can always rebuild around.
 
 ## Documentation
 
