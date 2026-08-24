@@ -22,9 +22,10 @@ deployment form.
 ## Existing API
 
 `hngh.domain` is active. Its public API validates profile, mission, role,
-loadout, run, and evidence values, plus the closed run transition policy.
-`hngh.application` is active with `create-run`, `arm-run`, `start-run`, and
-`checkpoint`, capability-specific ports, and closed application and evidence
+loadout, run, governance, and evidence values, plus the closed run transition
+policy and `+admitted-transports+`. `hngh.application` is active with
+`create-run`, `admit-transport`, `arm-run`, `start-run`, `checkpoint`, and
+`close-run`, capability-specific ports, and closed application and evidence
 results. `hngh.adapters.evidence` is active with the fixed read-only evidence
 command set and `gather-evidence` through an injected process transport.
 `hngh.adapters.mutation` is active with `execute-mutation`: it rechecks every
@@ -33,18 +34,20 @@ an injected process transport. `hngh.adapters.review` is active with
 `request-review`: it sends one closed review request through an injected
 reviewer transport and maps the structured output into sanitized findings and
 one deterministic review evidence fact; reviewers advise but never decide.
-`hngh:validate-profile` is a compatibility facade
-over the domain validator. `hngh.presentation` is active with pure render
-functions over application results, domain runs and governance values, and
-installed adapter results; it renders plain factual strings, keeps refusals
-literal, applies the optional reference lexicon only as display copy at a
-named surface, and imports no adapter. `hngh.main` is active as the
-composition root: `make-run-harness` composes the five use cases over
-injected or default port adapters, the coordinator functions wire the
-installed evidence, mutation, and review adapters through injected
-transports, and `display` renders any result through presentation. No
-runtime model or terminal transport exists in active source.
-
+`hngh.adapters.filesystem` is active: it records canonical run-and-receipt
+lines under an explicit root path and reports store refusals and transport
+faults without importing domain types.
+`hngh:validate-profile` is a compatibility facade over the domain validator.
+`hngh.presentation` is active with pure render functions over application
+results, domain runs and governance values, and installed adapter results; it
+renders plain factual strings, keeps refusals literal, applies the optional
+reference lexicon only as display copy at a named surface, and imports no
+adapter. `hngh.main` is active as the composition root and CLI entry point:
+`make-run-harness` composes the use cases over injected or default port
+adapters, coordinator functions wire installed adapters through injected
+transports, `dispatch-command` processes the 7 CLI operations, and
+`scripts/hngh` provides an executable SBCL wrapper. No runtime model or
+terminal transport exists in active source.
 ## Dependency and deployment rules
 
 - Component dependencies follow

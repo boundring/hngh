@@ -11,6 +11,14 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- Added the operator-facing command surface and transport admission (promotion rung 8):
+  - `hngh.domain:+admitted-transports+` (`(:filesystem)`) in `src/domain/governance.lisp`.
+  - `hngh.application:admit-transport` in `src/application/admit-transport.lisp` creating `:admission` receipts with facts `transport`, `scope`, `route`, `run`, and `timestamp`.
+  - `hngh.adapters.filesystem` in `src/adapter/filesystem.lisp` recording canonical run-and-receipt lines under an explicit `--store=PATH` without domain imports.
+  - `hngh.main:dispatch-command` exposing the 7 CLI operations (`create-run`, `admit-transport`, `arm-run`, `start-run`, `checkpoint`, `close-run`, `present`) with a closed exit code protocol (0 accepted, 1 refusal/conflict, 2 malformed, 3 fault).
+  - `scripts/hngh` executable SBCL wrapper.
+  - Test suites: `tests/application/test-admit-transport.lisp`, `tests/adapter/test-filesystem.lisp`, `tests/main/test-dispatch.lisp`.
+  - Record: `docs/records/2026-08-24-command-surface-and-transport-admission.md`.
 - Recorded the 2026-08-24 prior-art research session:
   `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
   art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
