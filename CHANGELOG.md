@@ -46,6 +46,13 @@ lives under Pre-release / early development until the first release.
   (`process-run-at` value-order; certificate path sorting) under a real
   evidence certificate (`33b8d94 hngh: candidate 1befdda9...`), then pushed
   to origin. Record: `docs/records/2026-08-24-second-self-governed-commit.md`.
+- Added exhaustive governance property tests (backlog item): totality
+  over the 7 proposal classes x 21 evidence-requirement kinds (147
+  combinations; absent-matrix-principle refuses rather than errors) and
+  monotonicity of the deterministic evaluator (ignoring evidence never
+  flips refused to admitted; single- and double-ignore exercised).
+  suite total 2353 checks. Record:
+  `docs/records/2026-08-24-governance-property-tests.md`.
 - Recorded the 2026-08-24 prior-art research session:
   `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
   art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
