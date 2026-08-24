@@ -11,6 +11,23 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- Added the bounded model and terminal worker transports (promotion rung
+  10): `hngh.adapters.model:make-model-transports` returns the transport
+  `complete` callback shape so the existing bounded review adapter can
+  drive a real provider (advisory only, no default provider); 
+  `hngh.adapters.terminal` captures one bounded operator statement as a
+  `:terminal` evidence fact with an in-process SHA-256 fingerprint
+  (advisory only, no subprocess, no default input);
+  `hngh.domain:+admitted-transports+` is now `(:filesystem :model :terminal)`
+  and `hngh.application:admit-transport` reuses the run loadout for the two
+  new kinds (`:model` needs a non-`local` route plus the `model-review`
+  network label; `:terminal` needs the `terminal-input` tool label) with
+  the closed `loadout-refuses-transport` refusal;
+  `hngh.main:dispatch-command` gains the `review` and `terminal` operations,
+  both fail-closed without injected ports
+  (`no-review-transport`/`no-terminal-transport`) and both served only to a
+  run holding the matching admission receipt;
+  `hngh.presentation` adds the one outward renderer `render-operator-result`.
 - Added the operator-facing command surface and transport admission (promotion rung 8):
   - `hngh.domain:+admitted-transports+` (`(:filesystem)`) in `src/domain/governance.lisp`.
   - `hngh.application:admit-transport` in `src/application/admit-transport.lisp` creating `:admission` receipts with facts `transport`, `scope`, `route`, `run`, and `timestamp`.
