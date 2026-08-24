@@ -169,6 +169,13 @@
            #:gather-evidence
            #:process-run))
 
+(defpackage #:hngh.adapters.run-gather
+  (:use #:cl)
+  (:export #:candidate-gather-ports
+           #:make-candidate-gather-ports
+           #:parse-candidate-report
+           #:run-candidate-evidence))
+
 (defpackage #:hngh.adapters.mutation
   (:use #:cl)
   (:export #:+mutation-actions+

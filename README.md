@@ -68,8 +68,8 @@ Retry means a new run, never a silent continuation of an old one.
 
 ## Status
 
-Today the kernel is a pure library with fixture tests (`make test` runs 8 reader-guard checks
-plus 1137 checks). Implemented:
+Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 1334
+checks) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
   closed lifecycle.
@@ -80,33 +80,25 @@ plus 1137 checks). Implemented:
 - Read-only evidence adapter: a fixed command set (repository revision, working-tree status,
   file content hashing) gathers evidence facts and source manifest entries through an injected
   process transport; unknown commands, malformed output, escaping targets, and duplicate
-  evidence fail closed. The kernel itself stays pure: no subprocess, clock, or environment
-  access reaches domain or application code.
+  evidence fail closed.
 - Mutation executor: `hngh.adapters.mutation` rechecks every certificate fact against fresh
   evidence, then sends only the certificate-bound fixed Git action through an injected process
-  transport; stale facts, expiry, disabled actions, command failures, and transport faults
-  refuse without mutation.
-- Bounded model-review adapter: `hngh.adapters.review` turns a closed review request (candidate
-  paths, content hash, policy-context labels) into one fixed prompt, sends it through an
-  injected reviewer transport, and maps the structured output into sanitized, duplicate-free
-  finding labels and citations plus one deterministic review evidence fact. Malformed JSON,
-  unknown fields, unsafe citations, oversized output, and transport faults refuse closed; a
-  failed review call becomes an `:unverifiable` fact. Reviewers advise, they never decide,
-  and the adapter supplies no default provider transport.
-- Operator-visible presentation: `hngh.presentation` renders application results, runs,
-  receipts, evidence facts, policy verdicts, certificates, and adapter results as plain
-  factual strings; refusals stay literal, rendering never mutates canonical state, and the
-  optional reference lexicon is display copy only.
-- Composition root: `hngh.main` composes the five use cases into one run harness with
-  injected or fail-closed default port adapters, wires the installed evidence, mutation, and
-  review adapters through injected transports, keeps an in-memory record root, and renders
-  every result through presentation.
+  transport.
+- Bounded model-review adapter: `hngh.adapters.review` turns a closed review request into one
+  fixed prompt, and maps the structured output into sanitized finding labels and citations.
+  Reviewers advise; they never decide.
+- Operator command surface (`scripts/hngh`): `create-run`, `admit-transport`, `arm-run`,
+  `start-run`, `checkpoint`, `close-run`, `present`, `propose`, `issue-cert`, and
+  `mutation-check` with strict exit codes (0 accepted, 1 refusal or conflict, 2 malformed
+  invocation, 3 transport fault). Persistence happens only under an explicit `--store=PATH`.
+- Real evidence chain: certificates mint only from an operator-produced verdict file plus
+  genuine repository evidence (`git` revision, content hashes, working-tree state), gathered
+  through an injectable transport that validates the result.
 - Read-only candidate evidence bundle (`make verify-candidate`).
 
-Not yet: persistence, CLI, clock or environment access in the kernel, daemon, real model or
-provider transport, or Pi worker. Each will be admitted the way everything else is: through a
-proposal, a check, and a record. The megastructure can wait; it is built one verified stretch
-at a time.
+Not yet: daemon, watcher, scheduler, real model or provider transport, and no ambient state.
+Each will be admitted the same way everything else is: through a proposal, a check, and a
+record. The megastructure can wait; it is built one verified stretch at a time.
 
 ## Verify
 
@@ -114,37 +106,33 @@ at a time.
 make test
 python3 tests/scripts/test-verify-candidate.py
 make verify-candidate CANDIDATE_MANIFEST=path/to/manifest
+./scripts/hngh --help   # or run `scripts/hngh` with no arguments
 ```
 
-`make verify-candidate` requires an explicit, sorted manifest of regular repository-relative
-files. It reports whole-tree state as evidence but never uses it to infer candidate scope. It
-refuses excluded (`.hermes/**`), ignored, unknown, escaping, malformed, or unsafe candidate
-input, and performs no Git mutation, provider call, service start, or archive read.
+The verify-candidate bundle requires an explicit, ordered manifest of regular
+repository-relative files. It reports whole-tree state as evidence and performs no Git
+mutation, provider call, service start, or archive read.
+
+## Public posture
+
+The project is AGPL-3.0-or-later ([LICENSE](LICENSE)). Governance and contribution rules are
+in [GOVERNANCE.md](GOVERNANCE.md), [CONTRIBUTING.md](CONTRIBUTING.md) (DCO sign-off on every
+commit), and [SECURITY.md](SECURITY.md) (private coordinated disclosure). Pre-release state is
+tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Where this is going
 
 Hngh is not headed toward a busier agent. It is headed toward a wider corridor: a system
-harness that routes many kinds of work, local and remote models, priced routes, and
-eventually pooled hardware, through the same ledger, certificate, and human-closable cycle.
+that routes many kinds of work, local and remote models, priced routes, and eventually pooled
+hardware, through the same ledger, the same certificate, and the same human-closable cycle.
 The megastructure is mostly paperwork. That is not a concession; that is the premise.
 
-The near horizon stays deliberately small:
-
-- Real transports (a model provider, a terminal, a process boundary) enter only under a
-  separately approved run profile; the kernel supplies no default.
-- A replaceable worker, possibly Pi, sits behind a port: read-only by default, while Hngh
-  keeps authority, evidence, and the power to end anything. Pi and oh-my-pi remain under
-  consideration, not installed, not decided.
-- Cross-route cost discipline: the cheapest workable route first; expensive routes require a
-  named reason and evidence; unknown cost is a "no."
-- The harness grows from what already holds: the ledger, the certificate, the reader guard.
-
-What changes at each step is the machine on the outside, never the rule that the core holds.
-The kernel stays the single spine the harness can always rebuild around.
-
-No daemon, provider, watcher, scheduler, or background process is admitted by this stage.
+What changes at each step is the machine on the outside, never the rule the core holds. The
+kernel stays the single spine the harness can always rebuild around, and the read-only
+evidence adapter is the first edge: every external claim is verified against real
+repository state before it can bind.
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md). Records and the external retirement
-archive cover the project's prior state; the active baseline lives here.
+Start at [docs/README.md](docs/README.md). Records and the external retirement archive cover
+the project's prior state; the active baseline lives here.

@@ -25,6 +25,7 @@
 (load (project-file "src/adapter/mutation.lisp"))
 (load (project-file "src/adapter/review.lisp"))
 (load (project-file "src/adapter/filesystem.lisp"))
+(load (project-file "src/adapter/run-gather.lisp"))
 (load (project-file "src/presentation/render.lisp"))
 (load (project-file "src/main.lisp"))
 
@@ -60,6 +61,7 @@
 (load (cl-user::project-file "tests/application/test-close-run.lisp"))
 (load (cl-user::project-file "tests/application/test-admit-transport.lisp"))
 (load (cl-user::project-file "tests/adapter/test-evidence.lisp"))
+(load (cl-user::project-file "tests/adapter/test-run-gather.lisp"))
 (load (cl-user::project-file "tests/adapter/test-mutation.lisp"))
 (load (cl-user::project-file "tests/adapter/test-review.lisp"))
 (load (cl-user::project-file "tests/adapter/test-filesystem.lisp"))
