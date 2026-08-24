@@ -7,6 +7,35 @@ lives under Pre-release / early development until the first release.
 ## Pre-release / early development
 
 
+### 2026-08-24
+
+#### Added
+
+- Recorded the 2026-08-24 prior-art research session:
+  `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
+  art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
+  AgentSpec arXiv:2503.18666), the four deliberate divergences from
+  in-toto/SLSA/DSSE (no PKI / hash self-certification, duplicate facts
+  refuse, moment-of-action freshness recheck as a novel property, no
+  multi-party machinery), the adopted invariants (monotonicity, deny with
+  structured reason, totality over closed kinds, DSSE as a YAGNI-gated
+  future export grammar), harness-landscape positioning (Claude Code,
+  Codex CLI, mini-swe-agent, Aider, OpenHands/ACP), the no-public-
+  governance-benchmark gap, and the strategy sequencing ending in
+  federation as a scope-broadening proposal class.
+- `docs/project/decisions.md` records the no-PKI / hash self-certification
+  stance as a single-machine decision with an explicit revisit trigger:
+  multi-machine evidence sharing.
+- `docs/project/backlog.md` gains four entries: governance property tests
+  (matrix totality over closed kinds plus monotonicity), a DSSE envelope
+  export serializer (YAGNI-gated), a governance-benchmark research lane
+  (AgentDojo / InjecAgent / R-Judge prior-art scan; tamper-evidence,
+  approved equals executed, reconstruction-from-record metrics), and the
+  dogfood loop as a future rung candidate (Hngh proposes, evaluates, and
+  commits changes to itself via its own harness). Documentation only; no
+  source or behavior change.
+
+
 ### 2026-08-19
 
 #### Changed

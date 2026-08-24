@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-08-24 — No PKI; hash self-certification is a single-machine decision
+
+Hngh certificates use hash self-certification instead of a public key
+infrastructure: content-addressed hashes bind the certificate; there is no
+external key hierarchy. This is one of the four deliberate divergences from
+the in-toto/SLSA/DSSE attestation stack Hngh's certificate grammar
+otherwise mirrors (see `docs/records/2026-08-24-prior-art-landscape.md`).
+
+This is a single-machine decision, not a universal stance. The revisit
+trigger is multi-machine evidence sharing: if evidence must be accepted
+from or shared with another machine, the no-PKI divergence is reopened and
+the key hierarchy question is decided then. Hash content-addressing stays
+the substrate regardless (git provides most of it).
+
 ## 2026-08-11 — Clean-slate kernel
 
 The former daemon, plugin, watcher, dashboard, and mission-control system is
