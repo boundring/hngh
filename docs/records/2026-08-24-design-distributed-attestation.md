@@ -255,7 +255,12 @@ within the expiry window — nothing weaker ever passes a policy requirement.
 
 ---
 
-# Remaining unknowns / open questions for the operator
+# Open questions — resolved 2026-08-24
+
+Resolved in `docs/project/decisions.md` ("2026-08-24 — Distributed attestation
+design forks"): immediate-refusal key rotation, evidence-first, JSON envelope,
+extended `+evidence-requirement-kinds+`, carrier-bundle-only pull. Multi-hop
+chains remain out of scope. Original questions preserved below for the record.
 
 1. **Key rotation.** No revocation machinery: what happens when a pinned key
    is replaced — immediate refusal of all old attestations, or a one-window
