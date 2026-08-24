@@ -36,6 +36,11 @@ lives under Pre-release / early development until the first release.
     test suite `tests/main/test-governance-dispatch.lisp` asserts no real
     process is ever spawned.
   - Record: `docs/records/2026-08-24-command-surface-dogfood.md`.
+- Completed the first self-governed development loop (promotion rung 9):
+  Hngh proposed, reviewed, certified, and committed its own documentation
+  change (`propose`, `issue-cert`, `mutation-check` against live repository
+  evidence), then pushed the certificate-bound commit to origin.
+  Record: `docs/records/2026-08-24-first-self-governed-commit.md`.
 - Recorded the 2026-08-24 prior-art research session:
   `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
   art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
