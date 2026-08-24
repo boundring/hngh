@@ -325,3 +325,26 @@ Canonical states, receipts, CLI flags, configuration, and use-case outcomes use
 plain technical terms. Optional reference lexicons provide display copy with an
 original fallback and provenance; they cannot carry control fields or change
 behavior.
+
+## 2026-08-24 — Distributed attestation design forks
+
+Resolves the open questions in
+`docs/records/2026-08-24-design-distributed-attestation.md`:
+
+1. **Key rotation: immediate refusal plus operator re-pin.** A rotated or
+   unknown peer key lands on the `unknown-peer-key` refusal; there is no grace
+   window. Revocation is removing the pin. No time-dependent authority.
+2. **Evidence-first.** Remote capability admits evidence claims only — remote
+   facts enter the proposal ledger as claims verified via signature, pin, and
+   expiry. Remote re-verification (fresh remote runs) is not admitted.
+3. **Envelope format: JSON** parsed by the adapter's own strict reader. The
+   kernel never parses; it sees domain values only.
+4. **Requirement kinds: extend `+evidence-requirement-kinds+`.** Remote
+   evidence requirements join the existing closed set; the evaluator's shape
+   is unchanged.
+5. **Pull direction: carrier-bundle only.** v1 admits no network fetch
+   methods; bundles move between machines by operator action. Network claim
+   methods may be added later behind the same federation port without kernel
+   change.
+
+Multi-hop chains remain out of scope (two-party only), as the record states.
