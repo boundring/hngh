@@ -37,7 +37,7 @@ Current frontier: the clean-slate baseline. The retired daemon and plugin system
 
 ## Next
 
-1. **Dogfood development loop.** Exercise the complete kernel, evidence adapter, model review adapter, and mutation executor in a self-governed loop where Hngh proposes, reviews, and commits changes to its own repository under verified certificates.
+1. **Dogfood development loop.** The operator surface commands have landed: `propose`, `issue-cert`, `mutation-check` in `scripts/hngh` run the proposal-to-verdict-to-certificate-to-preflight pipeline in-process with fixture-gated evidence and injected ports (promotion rung 9, 2026-08-24). Next: exercise the complete kernel, evidence adapter, model review adapter, and mutation executor in a self-governed loop where Hngh proposes, reviews, and commits changes to its own repository under verified certificates.
 2. **Bounded agent worker transports.** Admit real model and terminal transport implementations behind explicit run loadout configurations.
 3. **Distributed attestation & evidence federation.** Paper-first design for remote evidence ports and cross-machine certificate verification.
 
