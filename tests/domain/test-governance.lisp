@@ -36,8 +36,17 @@
                      (hngh.domain:source-manifest-entry-source-role entry)))
          "manifest entry isolates every public string reader result"))
 
-(let ((fact (hngh.domain:make-evidence-fact
-             :kind :fixture :fingerprint "fp-1" :state :current)))
+(check (equal '(:filesystem :model :terminal)
+                   hngh.domain:+admitted-transports+)
+       "+admitted-transports+ is exactly the three closed transport kinds")
+(dolist (kind '(:filesystem :model :terminal))
+  (check (member kind hngh.domain:+admitted-transports+)
+         (format nil "~A is an admitted transport kind" kind)))
+(check (not (member :network hngh.domain:+admitted-transports+))
+       "an unadmitted transport kind stays outside the closed set")
+
+(let* ((fact (hngh.domain:make-evidence-fact
+        :kind :fixture :fingerprint "fp-1" :state :current)))
   (check (and (eql :fixture (hngh.domain:evidence-fact-kind fact))
               (equal "fp-1" (hngh.domain:evidence-fact-fingerprint fact))
               (eql :current (hngh.domain:evidence-fact-state fact)))
