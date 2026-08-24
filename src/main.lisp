@@ -374,7 +374,8 @@ commands:~%~
   create-run OBJECTIVE ROLE [key=value...]  admit-transport RUN TRANSPORT [SCOPE]~%~
   arm-run RUN   start-run RUN~%~
   checkpoint RUN VERIFICATION MANIFEST   close-run RUN DISPOSITION~%~
-  present [RUN]~%~
+  propose [key=value...]  issue-cert ACTION RUN [PATH...]~%~
+  mutation-check ACTION RUN [EVIDENCE...]  present [RUN]~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -435,10 +436,10 @@ key=value options pass through as positionals for the command parser."
   "Map an application result to (values output exit-code): 0 accepted,
 1 conflict or refusal, 2 malformed (unknown transport)."
   (case (hngh.application:application-result-status result)
-    (:accepted (values (display result) 0))
-    (:conflict (values (display result) 1))
+    (:accepted (values (hngh.presentation:render result) 0))
+    (:conflict (values (hngh.presentation:render result) 1))
     (:refused
-     (values (display result)
+     (values (hngh.presentation:render result)
              (if (member "unknown-transport"
                          (hngh.application:application-result-labels result)
                          :test #'string=)
@@ -730,49 +731,321 @@ so the verdict is :admitted and the close advances."
          (values (format nil "recorded runs: ~{~A~^, ~}" identifiers) 0)))
       (t (let ((run (run-from-store store (first positionals))))
            (if run
-               (values (display run) 0)
+               (values (hngh.presentation:render run) 0)
                (missing-run-output (first positionals))))))))
 
-(defun dispatch-command* (positionals store clock)
+;;; Governance command surface ----------------------------------------------
+;;; The in-process dogfood loop for an operator: propose forms a closed
+;;; policy proposal from operator fields, issue-cert binds a stored run
+;;; and mints a candidate certificate under an admitted verdict, and
+;;; mutation-check replays the mutation against fresh fixture evidence
+;;; through injected mutation ports. No subprocess is ever spawned by
+;;; these commands: mutation-check runs against the injected ports object.
+;;; Exit codes match the operator surface: 0 admitted/executed, 1 refused
+;;; or mismatched, 2 malformed invocation, 3 transport fault.
+
+(defparameter +propose-option-keys+
+  '(:class :problem :outcome :purpose :caller
+    :input-contract :output-contract :failure-contract
+    :declared-capabilities :capability-diff :source-manifest
+    :risk-note :dependency :evidence-trigger :evidence-requirements))
+
+(defun parse-comma-labels (value)
+  (let ((parts (uiop:split-string value :separator ",")))
+    (if (some #'uiop:emptyp parts) nil parts)))
+
+(defun parse-dogfood-manifest (value)
+  "PATH=HASH:ROLE"
+  (let ((eq (position #\= value)))
+    (unless eq
+      (error "source-manifest must be PATH=HASH:ROLE"))
+    (let* ((path (subseq value 0 eq))
+           (hash-role (subseq value (1+ eq)))
+           (colon (position #\: hash-role)))
+      (unless colon
+        (error "source-manifest must be PATH=HASH:ROLE"))
+      (list (hngh.domain:make-source-manifest-entry
+             :relative-path path
+             :content-hash (subseq hash-role 0 colon)
+             :source-role (subseq hash-role (1+ colon)))))))
+
+(defun parse-evidence-requirement (value)
+  "PRINCIPLE:KIND:FINGERPRINTS"
+  (let ((parts (uiop:split-string value :separator ":")))
+    (unless (= 3 (length parts))
+      (error "evidence-requirements must be PRINCIPLE:KIND:FINGERPRINTS"))
+    (destructuring-bind (principle kind fingerprints) parts
+      (let ((fingerprints (remove-if #'uiop:emptyp
+                                     (uiop:split-string fingerprints
+                                                       :separator ","))))
+        (unless fingerprints
+          (error "evidence-requirements must name a fingerprint"))
+        (hngh.domain:make-evidence-requirement
+         :principle (intern (string-upcase principle) :keyword)
+         :kind (intern (string-upcase kind) :keyword)
+         :required-fingerprints fingerprints
+         :evidence-facts
+         (mapcar (lambda (fingerprint)
+                   (hngh.domain:make-evidence-fact
+                    :kind :fixture :fingerprint fingerprint :state :current))
+                 fingerprints))))))
+
+(defun dogfood-verdict ()
+  "The deterministic admitted verdict behind the certificate surface: every
+matrix principle carries one current fixture-tagged evidence requirement,
+so the verdict is :admitted."
+  (hngh.domain:evaluate-policy-proposal
+   (hngh.domain:make-policy-proposal
+    :class :feature
+    :problem "operator dogfood" :outcome "governed mutation"
+    :purpose "exercise the surface" :caller "operator"
+    :input-contract "run" :output-contract "certificate"
+    :failure-contract "refusal" :declared-capabilities '("mutation")
+    :capability-diff "none"
+    :source-manifest (list (hngh.domain:make-source-manifest-entry
+                            :relative-path "operator.md"
+                            :content-hash "operator"
+                            :source-role "surface"))
+    :risk-note "none" :dependency "domain" :evidence-trigger "operator"
+    :evidence-requirements
+    (mapcar (lambda (principle)
+              (hngh.domain:make-evidence-requirement
+               :principle principle
+               :kind (if (member principle '(:purpose :caller))
+                         :purpose :claim-proof)
+               :required-fingerprints '("operator")
+               :evidence-facts
+               (list (hngh.domain:make-evidence-fact
+                      :kind :fixture :fingerprint "operator"
+                      :state :current))))
+            hngh.domain::+matrix-principles+))))
+
+(defun dogfood-payload (identifier action)
+  "Shared fresh facts for the certificate and its fresh evidence."
+  (declare (ignore identifier))
+  (let ((content-hash (format nil "dogfood-~(~A~)" action)))
+    (values content-hash
+            (list content-hash)
+            (list (hngh.domain:make-source-manifest-entry
+                   :relative-path "operator.md"
+                   :content-hash content-hash
+                   :source-role "surface")))))
+
+(defun dogfood-certificate (store identifier action paths)
+  "Mint the candidate certificate for the dogfood loop: repository
+identity comes from STORE's root name, the base revision from the
+IDENTIFIER, candidate paths from PATHS."
+  (let ((root-directory
+          (hngh.adapters.filesystem::filesystem-store-root-directory store))
+        (content-hash (format nil "dogfood-~(~A~)" action)))
+    (hngh.domain:issue-candidate-certificate
+     (dogfood-verdict)
+     :action action
+     :repository-identity
+     (car (last (pathname-directory
+                 (uiop:ensure-directory-pathname root-directory))))
+     :base-revision identifier
+     :candidate-paths paths
+     :content-hash content-hash
+     :evidence-hashes (list content-hash)
+     :review-findings '()
+     :source-manifest (list (hngh.domain:make-source-manifest-entry
+                             :relative-path "operator.md"
+                             :content-hash content-hash
+                             :source-role "surface"))
+     :policy-profile "dogfood"
+     :expiry "2026-08-25T00:00:00Z")))
+
+(defun dispatch-propose (args store clock)
+  (declare (ignore store clock))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when positionals
+      (return-from dispatch-propose
+        (values (format nil "propose takes key=value pieces only~%~A"
+                        (command-usage))
+                2)))
+    (let ((unknown (find-if (lambda (pair)
+                              (not (member (car pair) +propose-option-keys+)))
+                            options)))
+      (when unknown
+        (return-from dispatch-propose
+          (values (format nil "unknown propose key: ~A~%~A"
+                          (cdr unknown) (command-usage))
+                  2))))
+    (handler-case
+        (let* ((plist (options-plist options))
+               (requirements
+                 (mapcar #'parse-evidence-requirement
+                         (mapcar #'cdr
+                                 (remove-if-not
+                                  (lambda (pair)
+                                    (eq :evidence-requirements (car pair)))
+                                  options))))
+               (proposal (hngh.domain:make-policy-proposal
+                          :class (intern (string-upcase (getf plist :class))
+                                         :keyword)
+                          :problem (getf plist :problem)
+                          :outcome (getf plist :outcome)
+                          :purpose (getf plist :purpose)
+                          :caller (getf plist :caller)
+                          :input-contract (getf plist :input-contract)
+                          :output-contract (getf plist :output-contract)
+                          :failure-contract (getf plist :failure-contract)
+                          :declared-capabilities
+                          (parse-comma-labels (getf plist :declared-capabilities))
+                          :capability-diff (getf plist :capability-diff)
+                          :source-manifest
+                          (parse-dogfood-manifest (getf plist :source-manifest))
+                          :risk-note (getf plist :risk-note)
+                          :dependency (getf plist :dependency)
+                          :evidence-trigger (getf plist :evidence-trigger)
+                          :evidence-requirements requirements))
+               (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+          (if (eq :admitted (hngh.domain:policy-verdict-state verdict))
+              (values (hngh.presentation:render verdict) 0)
+              (values (hngh.presentation:render verdict) 1)))
+      (error (condition)
+        (values (format nil "malformed propose: ~A~%~A" condition (command-usage))
+                2)))))
+
+(defun dispatch-issue-cert (args store clock)
+  (declare (ignore clock))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (< (length positionals) 2))
+      (return-from dispatch-issue-cert (values (command-usage) 2)))
+    (let ((action (intern (string-upcase (first positionals)) :keyword))
+          (identifier (second positionals)))
+      (unless (member action hngh.adapters.mutation::+mutation-actions+)
+        (return-from dispatch-issue-cert
+          (values (format nil "issue-cert action: ~{~A~^|~}~%~A"
+                          (mapcar (lambda (a)
+                                    (string-downcase (symbol-name a)))
+                                  hngh.adapters.mutation::+mutation-actions+)
+                          (command-usage))
+                  2)))
+      (let ((run (run-from-store store identifier)))
+        (unless run
+          (return-from dispatch-issue-cert (missing-run-output identifier)))
+        (unless (store-has-admission-receipt-p store identifier)
+          (return-from dispatch-issue-cert
+            (values (format nil "certificate refused: run ~A not admitted"
+                            identifier)
+                    1)))
+        (handler-case
+            (values
+             (hngh.presentation:render (dogfood-certificate store identifier action
+                                           (or (cddr positionals)
+                                               '("candidate.lisp"))))
+             0)
+          (error (condition)
+            (values (format nil "malformed issue-cert: ~A" condition) 2)))))))
+
+(defun dispatch-mutation-check (args store clock mutation-ports)
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (< (length positionals) 2))
+      (return-from dispatch-mutation-check (values (command-usage) 2)))
+    (let* ((action (intern (string-upcase (first positionals)) :keyword))
+           (identifier (second positionals)))
+      (unless (member action hngh.adapters.mutation::+mutation-actions+)
+        (return-from dispatch-mutation-check
+          (values (format nil "mutation-check action: ~{~A~^|~}~%~A"
+                          (mapcar (lambda (a)
+                                    (string-downcase (symbol-name a)))
+                                  hngh.adapters.mutation::+mutation-actions+)
+                          (command-usage))
+                  2)))
+      (let ((run (run-from-store store identifier)))
+        (unless run
+          (return-from dispatch-mutation-check (missing-run-output identifier)))
+        (unless (store-has-admission-receipt-p store identifier)
+          (return-from dispatch-mutation-check
+            (values (format nil "mutation-check refused: run ~A not admitted"
+                            identifier)
+                    1)))
+        (handler-case
+            (multiple-value-bind (content-hash evidence-hashes manifest)
+                (dogfood-payload identifier action)
+              (let* ((certificate
+                       (dogfood-certificate store identifier action
+                                            '("candidate.lisp")))
+                     (evidence
+                       (hngh.adapters.mutation:make-mutation-evidence
+                        :repository-identity
+                        (car (last (pathname-directory
+                                    (uiop:ensure-directory-pathname
+                                     (hngh.adapters.filesystem::
+                                      filesystem-store-root-directory store)))))
+                        :base-revision identifier
+                        :candidate-paths '("candidate.lisp")
+                        :content-hash content-hash
+                        :evidence-hashes (append evidence-hashes
+                                                 (cddr positionals))
+                        :principle-verdicts (list (dogfood-verdict))
+                        :review-findings '()
+                        :source-manifest manifest
+                        :policy-profile "dogfood"
+                        :now (funcall clock)))
+                     (result
+                   (hngh.main:execute-run-mutation
+                    certificate evidence
+                    (or mutation-ports (default-mutation-ports))
+                    :action action)))
+                (case (hngh.adapters.mutation:mutation-result-status result)
+                  (:executed (values (hngh.presentation:render result) 0))
+                  (:mismatch (values (hngh.presentation:render result) 1))
+                  (:refused (values (hngh.presentation:render result) 1))
+                  (:transport-fault (values (hngh.presentation:render result) 3))
+                  (:command-failed (values (hngh.presentation:render result) 1)))))
+          (error (condition)
+            (values (format nil "malformed mutation-check: ~A" condition) 2)))))))
+
+(defun dispatch-command* (positionals store clock mutation-ports)
   (let ((command (first positionals))
         (args (rest positionals)))
     (cond
-      ((null command) (values (command-usage) 2))
-      ((string= command "create-run") (dispatch-create-run args store clock))
-      ((string= command "admit-transport")
-       (dispatch-admit-transport args store clock))
-      ((string= command "arm-run") (dispatch-arm-run args store clock))
-      ((string= command "start-run") (dispatch-start-run args store clock))
-      ((string= command "checkpoint") (dispatch-checkpoint args store clock))
-      ((string= command "close-run") (dispatch-close-run args store clock))
-      ((string= command "present") (dispatch-present args store clock))
-      (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
-                 2)))))
+    ((null command) (values (command-usage) 2))
+    ((string= command "create-run") (dispatch-create-run args store clock))
+    ((string= command "admit-transport")
+     (dispatch-admit-transport args store clock))
+    ((string= command "arm-run") (dispatch-arm-run args store clock))
+    ((string= command "start-run") (dispatch-start-run args store clock))
+    ((string= command "checkpoint") (dispatch-checkpoint args store clock))
+    ((string= command "close-run") (dispatch-close-run args store clock))
+    ((string= command "propose") (dispatch-propose args store clock))
+    ((string= command "issue-cert")
+     (dispatch-issue-cert args store clock))
+    ((string= command "mutation-check")
+     (dispatch-mutation-check args store clock mutation-ports))
+    ((string= command "present") (dispatch-present args store clock))
+    (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
+               2)))))
 
-(defun dispatch-command (argv &key clock-now)
+(defun dispatch-command (argv &key clock-now mutation-ports)
   "Parse the operator ARGV list, execute the named command, and return
 (values output-string exit-code). Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
 option, transport, or verb); 3 transport fault. CLOCK-NOW may inject a
-timestamp callback for deterministic tests."
-  (multiple-value-bind (positionals store bad-option)
+timestamp callback for deterministic tests. MUTATION-PORTS injects the
+mutation adapter ports for mutation-check, so the command never spawns
+a subprocess when fakes are supplied."
+  (multiple-value-bind (positionals store-path bad-option)
       (split-argv argv)
     (when bad-option
       (return-from dispatch-command
         (values (format nil "unknown option: ~A~%~A" bad-option (command-usage))
                 2)))
     (let ((clock (or clock-now (default-clock-callback))))
-      (if store
+      (if store-path
           (handler-case
               (dispatch-command* positionals
                                  (hngh.adapters.filesystem:make-filesystem-store
-                                  :root store)
-                                 clock)
+                                  :root store-path)
+                                 clock mutation-ports)
             (hngh.adapters.filesystem:transport-fault (condition)
               (values (format nil "transport fault: ~A" condition) 3))
             (hngh.adapters.filesystem:store-refusal (condition)
               (values (format nil "store refusal: ~A" condition) 2)))
-          (dispatch-command* positionals nil clock)))))
+          (dispatch-command* positionals nil clock mutation-ports)))))
 
 ;;; Operator-visible root ----------------------------------------------------
 

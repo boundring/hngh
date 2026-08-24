@@ -19,6 +19,23 @@ lives under Pre-release / early development until the first release.
   - `scripts/hngh` executable SBCL wrapper.
   - Test suites: `tests/application/test-admit-transport.lisp`, `tests/adapter/test-filesystem.lisp`, `tests/main/test-dispatch.lisp`.
   - Record: `docs/records/2026-08-24-command-surface-and-transport-admission.md`.
+- Added the operator governance command surface for the dogfood loop
+  (`scripts/hngh`, promotion rung 9):
+  - `propose [key=value...]` forms a closed `policy-proposal` from operator
+    fields and renders the deterministic `policy-verdict` (0 admitted,
+    1 refused with labels, 2 malformed).
+  - `issue-cert ACTION RUN [PATH...]` reads the stored run from `--store`,
+    binds repository identity/base revision/candidate paths to it, and mints
+    a candidate certificate under an admitted verdict (refuses runs without
+    an admission receipt).
+  - `mutation-check ACTION RUN [EVIDENCE...]` builds fresh fixture evidence
+    and executes the certificate-bound mutation through injected ports, so
+    the loop runs fully in-process with no subprocess (0 executed, 1
+    mismatch/refused, 2 malformed, 3 transport fault).
+  - `hngh.main:dispatch-command` gained a `:mutation-ports` injection key;
+    test suite `tests/main/test-governance-dispatch.lisp` asserts no real
+    process is ever spawned.
+  - Record: `docs/records/2026-08-24-command-surface-dogfood.md`.
 - Recorded the 2026-08-24 prior-art research session:
   `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
   art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
