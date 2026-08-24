@@ -153,6 +153,60 @@
   (check (search "review status=complete" (hngh.main:display result))
          "operator display renders the review result"))
 
+;;; Rung 10: the review coordinator maps every closed provider outcome --------
+
+(let* ((ports (multiple-value-bind (transport)
+                   (make-review-ports-fake
+                    :responses (list (list :return 500 "provider error" "")))
+                 transport))
+       (result (hngh.main:request-run-review
+                ports
+                :candidate-paths '("src/a.lisp")
+                :content-hash "hash-1"
+                :policy-context '("policy-1"))))
+  (check (eq :complete (hngh.adapters.review:review-result-status result))
+         "a provider failure still completes the review bundle")
+  (check (eql :unverifiable
+              (hngh.domain:evidence-fact-state
+               (hngh.adapters.review:review-result-fact result)))
+         "a provider 500 becomes an unverifiable review fact")
+  (check (equal "unavailable"
+                (hngh.domain:evidence-fact-fingerprint
+                 (hngh.adapters.review:review-result-fact result)))
+         "the provider failure fact carries the unavailable fingerprint"))
+
+(let* ((ports (multiple-value-bind (transport)
+                   (make-review-ports-fake
+                    :responses (list (list :error "provider blew up")))
+                 transport))
+       (result (hngh.main:request-run-review
+                ports
+                :candidate-paths '("src/a.lisp")
+                :content-hash "hash-1"
+                :policy-context '("policy-1"))))
+  (check (eq :refused (hngh.adapters.review:review-result-status result))
+         "a thrown provider fault refuses at the coordinator")
+  (check (member "transport-fault"
+                 (hngh.adapters.review:review-result-refusal-labels result)
+                 :test #'string=)
+         "the thrown provider fault names transport-fault"))
+
+(let* ((ports (multiple-value-bind (transport)
+                   (make-review-ports-fake
+                    :responses (list (list :return 0 "not json" "")))
+                 transport))
+       (result (hngh.main:request-run-review
+                ports
+                :candidate-paths '("src/a.lisp")
+                :content-hash "hash-1"
+                :policy-context '("policy-1"))))
+  (check (eq :refused (hngh.adapters.review:review-result-status result))
+         "malformed provider output refuses at the coordinator")
+  (check (member "malformed-output"
+                 (hngh.adapters.review:review-result-refusal-labels result)
+                 :test #'string=)
+         "malformed output names the closed refusal"))
+
 (let* ((certificate (make-mutation-certificate))
        (evidence (make-mutation-evidence))
        (ports (multiple-value-bind (transport) (make-mutation-fake) transport))

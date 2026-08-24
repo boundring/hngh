@@ -174,6 +174,17 @@ manifest=~D policy-profile=~A expiry=~A"
              (hngh.adapters.review:review-result-status result)
              (hngh.adapters.review:review-result-refusal-labels result)))))
 
+(defun render-operator-result (result)
+  (case (hngh.adapters.terminal:operator-result-status result)
+    (:complete
+     (format nil "operator status=complete statement=~A fact=~A"
+             (hngh.adapters.terminal:operator-result-statement result)
+             (render-evidence-fact (hngh.adapters.terminal:operator-result-fact result))))
+    (otherwise
+     (format nil "operator status=~(~A~) labels=~{~A~^; ~}"
+             (hngh.adapters.terminal:operator-result-status result)
+             (hngh.adapters.terminal:operator-result-refusal-labels result)))))
+
 ;;; Dispatch, reports, and fallback ------------------------------------------
 
 (defun render (value)
@@ -208,6 +219,8 @@ factual string. Unknown values render as their printed representation."
      (render-review-result value))
     ((hngh.adapters.review:review-finding-p value)
      (render-review-finding value))
+    ((hngh.adapters.terminal:operator-result-p value)
+     (render-operator-result value))
     (t (format nil "~S" value))))
 
 (defun render-report (&rest values)

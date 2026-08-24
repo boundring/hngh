@@ -20,6 +20,8 @@
                (:file "src/adapter/run-gather")
                (:file "src/adapter/mutation")
                (:file "src/adapter/review")
+               (:file "src/adapter/model")
+               (:file "src/adapter/terminal")
                (:file "src/adapter/filesystem")
                (:file "src/presentation/render")
                (:file "src/main")))

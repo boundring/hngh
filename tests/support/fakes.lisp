@@ -103,6 +103,26 @@ and remaining response count."
              :prompts (nreverse prompts)
              :remaining (length remaining))))))
 
+(defun make-operator-ports-fake (&key responses)
+  "Operator statement input fake. RESPONSES is a list; each element is
+(:return statement), (:cancel), or (:error message). Answers are consumed
+in order; the reporter returns call count and remaining response count."
+  (let ((calls 0)
+        (remaining (copy-list responses)))
+    (values
+     (hngh.adapters.terminal:make-operator-ports
+      :read-statement
+      (lambda ()
+        (incf calls)
+        (let ((response (pop remaining)))
+          (ecase (first response)
+            (:cancel nil)
+            (:error (error (second response)))
+            (:return (second response))))))
+     (lambda ()
+       (list :calls calls
+             :remaining (length remaining))))))
+
 (defun make-application-mission ()
   (hngh.domain:make-mission
    :objective "Create a valid run"
