@@ -41,6 +41,11 @@ lives under Pre-release / early development until the first release.
   change (`propose`, `issue-cert`, `mutation-check` against live repository
   evidence), then pushed the certificate-bound commit to origin.
   Record: `docs/records/2026-08-24-first-self-governed-commit.md`.
+- Completed the second self-governed development loop: Hngh proposed,
+  certified, staged, gated, and committed its own adapter bug fixes
+  (`process-run-at` value-order; certificate path sorting) under a real
+  evidence certificate (`33b8d94 hngh: candidate 1befdda9...`), then pushed
+  to origin. Record: `docs/records/2026-08-24-second-self-governed-commit.md`.
 - Recorded the 2026-08-24 prior-art research session:
   `docs/records/2026-08-24-prior-art-landscape.md` maps the closest prior
   art (Progent arXiv:2504.11703 closest, CaMeL arXiv:2503.18813,
