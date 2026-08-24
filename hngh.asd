@@ -17,6 +17,7 @@
                (:file "src/application/close-run")
                (:file "src/application/admit-transport")
                (:file "src/adapter/evidence")
+               (:file "src/adapter/run-gather")
                (:file "src/adapter/mutation")
                (:file "src/adapter/review")
                (:file "src/adapter/filesystem")

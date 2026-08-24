@@ -17,15 +17,16 @@
 (defun gn-clock ()
   "2026-08-24T00:00:00Z")
 
-(defun gn-dispatch (argv &key root mutation-ports)
-  "Run ARGV through the operator surface with a fixed clock and an
-optional injected mutation ports object."
+(defun gn-dispatch (argv &key root mutation-ports gather-ports)
+  "Run ARGV through the operator surface with a fixed clock and
+optional injected mutation and candidate-evidence ports."
   (let ((*error-output* (make-string-output-stream)))
     (multiple-value-list
      (hngh.main:dispatch-command
       (if root (cons (format nil "--store=~A" root) argv) argv)
       :clock-now #'gn-clock
-      :mutation-ports mutation-ports))))
+      :mutation-ports mutation-ports
+      :gather-ports gather-ports))))
 
 (defun gn-ports ()
   "A fixture mutation ports object; the reporter is discarded."
@@ -33,6 +34,36 @@ optional injected mutation ports object."
       (make-mutation-ports-fake)
     (declare (ignore reporter))
     ports))
+
+(defun gn-verdict (kind)
+  "A temporary verdict report path: \"admitted\", \"refused\", or
+anything else for a malformed file."
+  (uiop:with-temporary-file (:pathname path :keep t)
+    (with-open-file (stream path :direction :output :if-exists :supersede)
+      (cond ((string= kind "admitted")
+             (format stream "verdict state=admitted principles=1~%principle fail-closed state=passed~%reasons=none~%"))
+            ((string= kind "refused")
+             (format stream "verdict state=refused principles=1~%principle fail-closed state=passed~%reasons=missing evidence~%"))
+            (t (format stream "not a verdict report~%"))))
+    (namestring path)))
+
+(defun gn-gather ()
+  "A fixture candidate-evidence transport: mocks git identity, sha256
+subprocesses, and the verify-candidate closed report."
+  (hngh.adapters.run-gather::make-candidate-gather-ports
+   :process-run
+   (lambda (cwd argv)
+     (declare (ignore cwd))
+     (cond ((string= (first argv) "git")
+            (values 0 (format nil "https://example.invalid/repo~%") ""))
+           ((and (third argv) (search "hashlib" (third argv)))
+            (values 0 (format nil "~A~%"
+                              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                    ""))
+           (t
+            (values 0
+                    (format nil "base-revision:0123456789abcdef0123456789abcdef01234567~%candidate-hash:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa~%working-tree-dirty:no~%working-tree-staged:no~%working-tree-untracked:no~%parenthesis-guard:passed~%manifest:candidate.lisp~%:passed~%")
+                    ""))))))
 
 (defun gn-exit (result)
   (second result))
@@ -129,10 +160,10 @@ optional injected mutation ports object."
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
   (let ((result (gn-dispatch '("issue-cert" "stage" "run-1") :root root)))
-    (check (= 0 (gn-exit result))
-           "issue-cert mints under an admitted run")
-    (check (gn-has "certificate action=stage" result)
-           "certificate renders"))
+    (check (= 1 (gn-exit result))
+           "issue-cert refuses without an operator verdict file")
+    (check (gn-has "missing-verdict-evidence" result)
+           "refusal names the missing verdict evidence"))
   (let ((result (gn-dispatch '("issue-cert" "bogus" "run-1") :root root)))
     (check (= 2 (gn-exit result)) "issue-cert rejects an unknown action"))
   (uiop:delete-directory-tree root :validate t))
@@ -160,9 +191,10 @@ optional injected mutation ports object."
            "executed mutation renders"))
   (let ((result (gn-dispatch '("mutation-check" "stage" "run-1" "stale-a")
                              :root root :mutation-ports (gn-ports))))
-    (check (= 1 (gn-exit result)) "mutation-check mismatch exits 1")
-    (check (gn-has "mutation status=mismatch" result)
-           "mismatch status renders"))
+    (check (= 1 (gn-exit result))
+           "mutation-check refuses a missing verdict file")
+    (check (gn-has "missing-verdict-file" result)
+           "refusal names the missing verdict file"))
   (uiop:delete-directory-tree root :validate t))
 
 ;;; mutation-check never spawns a subprocess
@@ -194,6 +226,57 @@ optional injected mutation ports object."
   (let ((result (gn-dispatch '("mutation-check" "stage" "ghost-9")
                              :root root :mutation-ports (gn-ports))))
     (check (= 1 (gn-exit result)) "mutation-check reports a missing run"))
+  (uiop:delete-directory-tree root :validate t))
+
+
+
+;;; issue-cert real evidence chain: mint only from an operator verdict
+;;; file and a genuine gather ------------------------------------------
+
+(let ((root (gn-dispatch-root)))
+  (gn-admitted-run root)
+  (let* ((verdict-file (gn-verdict "admitted"))
+         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
+                              :root root :gather-ports (gn-gather))))
+    (check (= 0 (gn-exit result))
+           "issue-cert mints from an operator verdict file")
+    (check (gn-has "certificate action=stage" result)
+           "certificate renders")
+    (check (gn-has "policy-profile=real" result)
+           "certificate carries the real policy profile"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-admitted-run root)
+  (let* ((verdict-file (gn-verdict "refused"))
+         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
+                              :root root :gather-ports (gn-gather))))
+    (check (= 1 (gn-exit result))
+           "issue-cert refuses an unadmitted verdict file")
+    (check (gn-has "unadmitted-verdict" result)
+           "refusal names the unadmitted verdict"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-admitted-run root)
+  (let* ((verdict-file (gn-verdict "malformed"))
+         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
+                              :root root :gather-ports (gn-gather))))
+    (check (= 1 (gn-exit result))
+           "issue-cert refuses a malformed verdict file")
+    (check (gn-has "malformed-verdict-evidence" result)
+           "refusal names the malformed verdict evidence"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-admitted-run root)
+  (let ((result (gn-dispatch (list "mutation-check" "stage" "run-1" (gn-verdict "admitted"))
+                             :root root :mutation-ports (gn-ports)
+                             :gather-ports (gn-gather))))
+    (check (= 0 (gn-exit result))
+           "mutation-check executes on real evidence")
+    (check (gn-has "mutation status=executed" result)
+           "real-path mutation renders"))
   (uiop:delete-directory-tree root :validate t))
 
 (terpri)
