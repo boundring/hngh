@@ -227,7 +227,27 @@
            #:review-result-findings
            #:review-result-fact
            #:review-result-refusal-labels
-           #:request-review))
+           #:request-review
+           #:json-escape-string))
+
+(defpackage #:hngh.adapters.model
+  (:use #:cl)
+  (:export #:make-model-transports
+           #:model-request-body))
+
+(defpackage #:hngh.adapters.terminal
+  (:use #:cl)
+  (:export #:operator-ports
+           #:operator-ports-p
+           #:make-operator-ports
+           #:operator-result
+           #:operator-result-p
+           #:operator-result-status
+           #:operator-result-statement
+           #:operator-result-fact
+           #:operator-result-refusal-labels
+           #:capture-operator-statement
+           #:sha256-hex))
 
 (defpackage #:hngh.adapters.filesystem
   (:use #:cl)
@@ -255,6 +275,7 @@
            #:render-manifest-result
            #:render-mutation-result
            #:render-review-result
+           #:render-operator-result
            #:render-review-finding
            #:render-report
            #:render-status-label
