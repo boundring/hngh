@@ -20,6 +20,45 @@
 (defun admit-with (ports run transport &optional scope)
   (application-call "ADMIT-TRANSPORT" ports run transport scope))
 
+(defun make-model-run ()
+  "A created run whose loadout carries the model route and network label."
+  (hngh.domain:make-run
+   :identifier "run-application-model"
+   :mission (make-application-mission)
+   :role (make-application-role)
+   :loadout (hngh.domain:make-loadout
+             :route-label :model
+             :context-limit 1 :token-limit 2 :cost-limit 3 :time-limit 4
+             :tool-labels '("make-test")
+             :network-labels '("model-review")
+             :writable-scopes '("repository"))))
+
+(defun make-remote-run ()
+  "A created run on a non-local route without the model-review label."
+  (hngh.domain:make-run
+   :identifier "run-application-remote"
+   :mission (make-application-mission)
+   :role (make-application-role)
+   :loadout (hngh.domain:make-loadout
+             :route-label :remote
+             :context-limit 1 :token-limit 2 :cost-limit 3 :time-limit 4
+             :tool-labels '("make-test")
+             :network-labels '("none")
+             :writable-scopes '("repository"))))
+
+(defun make-terminal-run ()
+  "A created run whose loadout carries the terminal-input tool label."
+  (hngh.domain:make-run
+   :identifier "run-application-terminal"
+   :mission (make-application-mission)
+   :role (make-application-role)
+   :loadout (hngh.domain:make-loadout
+             :route-label :local
+             :context-limit 1 :token-limit 2 :cost-limit 3 :time-limit 4
+             :tool-labels '("make-test" "terminal-input")
+             :network-labels '("none")
+             :writable-scopes '("repository"))))
+
 (defun make-admit-fake (&key (timestamp "2026-08-23T00:00:00Z")
                           (record-results '(:recorded)))
   (let ((clock-calls 0)
@@ -258,6 +297,80 @@
            "clockless admission carries no run")
     (check (null (admit-result-receipt result))
            "clockless admission carries no receipt")))
+
+;;; Rung 10: model and terminal transport admission ----------------------------
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (make-model-run) :model "repository")))
+    (check (eq :accepted (admit-result-status result))
+           "the model transport is admitted on a model loadout")
+    (check (null (admit-result-labels result))
+           "accepted model admission carries no labels")
+    (check (equal '("transport: model"
+                    "scope: repository"
+                    "route: model"
+                    "run: run-application-model"
+                    "timestamp: 2026-08-23T00:00:00Z")
+                  (admission-receipt-facts result))
+           "model admission receipt records transport, scope, route, run, timestamp")
+    (let ((state (funcall reporter)))
+      (check (= 1 (getf state :record-calls))
+             "model admission records exactly one pair"))))
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (make-terminal-run) :terminal "repository")))
+    (check (eq :accepted (admit-result-status result))
+           "the terminal transport is admitted on a terminal-input load")
+    (check (null (admit-result-labels result))
+           "accepted terminal admission carries no labels")
+    (check (equal '("transport: terminal"
+                    "scope: repository"
+                    "route: local"
+                    "run: run-application-terminal"
+                    "timestamp: 2026-08-23T00:00:00Z")
+                  (admission-receipt-facts result))
+           "terminal admission receipt records transport, scope, route, run, timestamp")
+    (let ((state (funcall reporter)))
+      (check (= 1 (getf state :record-calls))
+             "terminal admission records exactly one pair"))))
+
+;;; A loadout that misses the required route or label refuses ----------------
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (created-application-run) :model "repository")))
+    (check (eq :refused (admit-result-status result))
+           "a local route without the model-review label is refused")
+    (check (member "loadout-refuses-transport" (admit-result-labels result)
+                   :test #'string=)
+           "route refusal carries the loadout-refuses-transport label")
+    (check (null (admit-result-run result))
+           "route refusal carries no run")
+    (let ((state (funcall reporter)))
+      (check (zerop (getf state :clock-calls))
+             "route refusal does not consult the clock")
+      (check (zerop (getf state :record-calls))
+             "route refusal records nothing"))))
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (make-remote-run) :model "repository")))
+    (check (eq :refused (admit-result-status result))
+           "a non-local route without the model-review label is refused")
+    (check (member "loadout-refuses-transport" (admit-result-labels result)
+                   :test #'string=)
+           "missing network label names the loadout refusal")))
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (created-application-run) :terminal "repository")))
+    (check (eq :refused (admit-result-status result))
+           "a load without the terminal-input tool label is refused")
+    (check (member "loadout-refuses-transport" (admit-result-labels result)
+                   :test #'string=)
+           "terminal load refusal carries the loadout-refuses-transport label")))
+
+(multiple-value-bind (ports reporter) (make-admit-fake)
+  (let ((result (admit-with ports (created-application-run) :filesystem "repository")))
+    (check (eq :accepted (admit-result-status result))
+           "filesystem admission is unchanged by the rung-ten loadout checks")))
 
 (check (signals-error-p
         (lambda () (admit-with :not-ports (created-application-run)

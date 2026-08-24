@@ -265,6 +265,40 @@
                      "review status=refused" "transport-fault")
          "refused review rendering keeps the literal refusal"))
 
+;;; Operator (terminal capture) results -------------------------------------
+
+(let* ((ports (multiple-value-bind (transport)
+                   (make-operator-ports-fake
+                    :responses (list (list :return "operator statement")))
+                 transport))
+       (result (hngh.adapters.terminal:capture-operator-statement ports)))
+  (check (eq :complete (hngh.adapters.terminal:operator-result-status result))
+         "operator fixture completes before rendering")
+  (check (rendered-p (hngh.presentation:render-operator-result result)
+                     "operator status=complete" "statement=operator statement"
+                     "kind=terminal" "state=current"
+                     "fingerprint=sha256:")
+         "complete operator rendering shows the statement and terminal fact"))
+
+(let* ((ports (multiple-value-bind (transport)
+                         (make-operator-ports-fake :responses (list (list :cancel)))
+                       transport))
+       (result (hngh.adapters.terminal:capture-operator-statement ports)))
+  (check (eq :refused (hngh.adapters.terminal:operator-result-status result))
+         "operator refusal happens before rendering")
+  (check (rendered-p (hngh.presentation:render-operator-result result)
+                     "operator status=refused" "malformed-statement")
+         "refused operator rendering keeps the literal refusal"))
+
+(let* ((ports (multiple-value-bind (transport)
+                 (make-operator-ports-fake
+                  :responses (list (list :return "operator statement")))
+               transport))
+       (result (hngh.adapters.terminal:capture-operator-statement ports)))
+  (check (rendered-p (hngh.presentation:render result)
+                     "operator status=complete" "statement=operator statement")
+         "default render dispatches to the operator renderer"))
+
 ;;; Dispatch, reports, and fallback ----------------------------------------
 
 (let ((run (created-application-run))

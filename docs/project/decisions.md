@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-08-24 — Bounded model & terminal transports are loadout-admitted advisors only
+
+`hngh.adapters.model` and `hngh.adapters.terminal` are input/advisor
+transports, never executors: a model review result is bound only as a
+`review` evidence fact and a captured operator statement only as a
+`:terminal` evidence fact, and neither can issue a certificate, advance a
+run, or mutate a repository. Both are admitted per-run through
+`admit-transport` reusing the existing loadout — `:model` needs a
+non-`local` route label plus the `model-review` network label, `:terminal`
+needs the `terminal-input` tool label — and both refuse closed
+(`loadout-refuses-transport`) otherwise. There is no default provider and
+no ambient input: the `review` and `terminal` CLI operations refuse
+`no-review-transport`/`no-terminal-transport` unless ports are injected at
+the composition root, so plain `scripts/hngh` never touches a model
+provider or reads a terminal. This keeps the reviewers-advise rule at the
+transport boundary: claims from these adapters are evidence, not
+attestations, and can never create authority.
+
 ## 2026-08-24 — License: AGPL-3.0-or-later affirmed
 
 `CONTRIBUTING.md` already binds contributions to AGPL-3.0-or-later. Reviewed

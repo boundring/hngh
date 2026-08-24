@@ -13,8 +13,8 @@ deployment form.
 | `hngh.adapters.review` | The review request contract or the closed structured-output mapping changes | `request-review` over a closed review request (candidate paths, content hash, policy-context labels) returning sanitized findings and one review evidence fact | Domain evidence values and an injected reviewer transport | Library, manually composed | Adapter builder / boundary reviewer |
 | `hngh.adapters.filesystem` | Restricted local record transport changes | Application port implementations | Application ports and Common Lisp I/O | Library, manually composed | Adapter builder / fixture reviewer |
 | `hngh.adapters.git` | Repository fact collection changes | Repository-inspection port implementation | Application ports and Git transport detail | Library, manually composed | Adapter builder / fixture reviewer |
-| `hngh.adapters.model.*` | A model transport changes | Completion-port implementation | Application ports and transport detail | Disabled library, manually composed | Adapter builder / cost reviewer |
-| `hngh.adapters.terminal` | Allowlisted command transport changes | Tool-executor port implementation | Application ports and process detail | Disabled library, manually composed | Adapter builder / safety reviewer |
+| `hngh.adapters.model.*` | A model transport changes | `make-model-transports` completion factory returning the transport callback shape consumed by `hngh.adapters.review` | Application ports and transport detail | Library, manually composed (active behind loadout admission) | Adapter builder / cost reviewer |
+| `hngh.adapters.terminal` | Bounded operator statement input changes | `capture-operator-statement` over `make-operator-ports`, returning `operator-result` values and `:terminal` evidence facts | Domain evidence values and an injected read callback | Library, manually composed (active behind loadout admission) | Adapter builder / safety reviewer |
 | `hngh.presentation` | Operator-facing rendering changes | Render functions over application output | Application output and renderer resources | Manual CLI or report library | Presentation builder / factual-status reviewer |
 | `hngh.main` | Composition and explicit entry behavior change | One operator command entry | All outer components | Executable entrypoint | Integrator / release reviewer |
 | `hngh.test-support` | Fakes and deterministic fixtures change | Fixture constructors and fake ports | Public inward APIs | Test-only library | Test builder / independent reviewer |
@@ -37,17 +37,29 @@ one deterministic review evidence fact; reviewers advise but never decide.
 `hngh.adapters.filesystem` is active: it records canonical run-and-receipt
 lines under an explicit root path and reports store refusals and transport
 faults without importing domain types.
+`hngh.adapters.model` is active as a manually composed library: the
+`make-model-transports` completion factory returns the transport callback
+shape every consumer uses so it can wrap as `make-review-ports` and drive
+`hngh.main:request-run-review`; it is admitted behind a run loadout with a
+non-`local` route and the `model-review` network label, and no default
+provider transport exists.
+`hngh.adapters.terminal` is a manually composed library: `make-operator-ports`
+captures one bounded operator statement through an injected `read-statement`
+callback and binds it only as a `:terminal` evidence fact with an in-process
+SHA-256 fingerprint; it is admitted behind a run loadout carrying the
+`terminal-input` tool label, and no default input source exists.
 `hngh:validate-profile` is a compatibility facade over the domain validator.
-`hngh.presentation` is active with pure render functions over application
-results, domain runs and governance values, and installed adapter results; it
+`hngh.presentation` is active with pure render functions over admission
+results, run and governance values, and installed adapter results; it
 renders plain factual strings, keeps refusals literal, applies the optional
 reference lexicon only as display copy at a named surface, and imports no
 adapter. `hngh.main` is active as the composition root and CLI entry point:
 `make-run-harness` composes the use cases over injected or default port
 adapters, coordinator functions wire installed adapters through injected
-transports, `dispatch-command` processes the 7 CLI operations, and
-`scripts/hngh` provides an executable SBCL wrapper. No runtime model or
-terminal transport exists in active source.
+transports, `dispatch-command` processes the 9 CLI operations, and
+`scripts/hngh` provides an executable SBCL wrapper. No default model or
+terminal transport exists in active source: both routes are composed
+manually and only serve runs holding the matching admission receipt.
 ## Dependency and deployment rules
 
 - Component dependencies follow
@@ -57,4 +69,6 @@ terminal transport exists in active source.
 - An adapter remains a library until a use case, fake-backed fixture, and
   operator-visible composition rule justify it.
 - Deployment form is not a right to run. In particular, a model or terminal
-  adapter remains disabled until a separately approved run loadout admits it.
+  transport is only composed manually behind a run loadout that carries the
+  required route and labels; no default provider or input exists by import
+  or in plain `scripts/hngh` invocations.

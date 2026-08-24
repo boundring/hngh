@@ -17,16 +17,19 @@
 (defun gn-clock ()
   "2026-08-24T00:00:00Z")
 
-(defun gn-dispatch (argv &key root mutation-ports gather-ports)
+(defun gn-dispatch (argv &key root mutation-ports gather-ports
+                        review-ports terminal-ports)
   "Run ARGV through the operator surface with a fixed clock and
-optional injected mutation and candidate-evidence ports."
+optional injected mutation, candidate-evidence, review, and terminal ports."
   (let ((*error-output* (make-string-output-stream)))
     (multiple-value-list
      (hngh.main:dispatch-command
       (if root (cons (format nil "--store=~A" root) argv) argv)
       :clock-now #'gn-clock
       :mutation-ports mutation-ports
-      :gather-ports gather-ports))))
+      :gather-ports gather-ports
+      :review-ports review-ports
+      :terminal-ports terminal-ports))))
 
 (defun gn-ports ()
   "A fixture mutation ports object; the reporter is discarded."
@@ -113,6 +116,36 @@ subprocesses, and the verify-candidate closed report."
     "dependency=domain"
     "evidence-trigger=operator"
     "evidence-requirements=closed-authority:claim-proof:operator-close"))
+
+(defparameter +model-create-args+
+  '("create-run" "Create a valid run" "builder"
+    "loadout-route-label=model" "loadout-context-limit=1" "loadout-token-limit=2"
+    "loadout-cost-limit=3" "loadout-time-limit=4" "loadout-tool-labels=make-test"
+    "loadout-network-labels=model-review" "loadout-writable-scopes=repository"))
+
+(defparameter +terminal-create-args+
+  '("create-run" "Create a valid run" "builder"
+    "loadout-route-label=local" "loadout-context-limit=1" "loadout-token-limit=2"
+    "loadout-cost-limit=3" "loadout-time-limit=4"
+    "loadout-tool-labels=make-test/terminal-input"
+    "loadout-network-labels=none" "loadout-writable-scopes=repository"))
+
+(defun gn-review-ports ()
+  "A fixture model-review ports object; the reporter is discarded."
+  (multiple-value-bind (ports reporter)
+      (make-review-ports-fake
+       :responses (list (list :return 0
+                              "{\"findings\":[{\"label\":\"ok\",\"citation\":\"src/a.lisp\"}]}"
+                              "")))
+    (declare (ignore reporter))
+    ports))
+
+(defun gn-terminal-ports ()
+  "A fixture operator statement ports object; the reporter is discarded."
+  (multiple-value-bind (ports reporter)
+      (make-operator-ports-fake :responses (list (list :return "operator statement")))
+    (declare (ignore reporter))
+    ports))
 
 (defun gn-admitted-run (root)
   "Drive a run to admitted state under ROOT and return its identifier."
@@ -277,6 +310,153 @@ subprocesses, and the verify-candidate closed report."
            "mutation-check executes on real evidence")
     (check (gn-has "mutation status=executed" result)
            "real-path mutation renders"))
+  (uiop:delete-directory-tree root :validate t))
+
+;;; review and terminal: bounded worker transports -----------------------
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +model-create-args+ nil) :root root)
+  (let ((result (gn-dispatch '("admit-transport" "run-1" "model" "repository")
+                             :root root)))
+    (check (= 0 (gn-exit result))
+           "admit-transport accepts the model transport on a model loadout"))
+  (let ((result (gn-dispatch '("review" "run-1" "content-hash=hash-1"
+                               "paths=src/a.lisp")
+                             :root root :review-ports (gn-review-ports))))
+    (check (= 0 (gn-exit result))
+           "review runs through the injected fake ports")
+    (check (gn-has "review status=complete" result)
+           "review renders the complete review result")
+    (check (gn-has "finding label=ok" result)
+           "review renders the provider finding"))
+  (let ((result (gn-dispatch '("review" "run-1")
+                             :root root :review-ports (gn-review-ports))))
+    (check (= 2 (gn-exit result))
+           "review without content-hash and paths is malformed"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +model-create-args+ nil) :root root)
+  (gn-dispatch '("admit-transport" "run-1" "model" "repository") :root root)
+  (let ((result (gn-dispatch '("review" "run-1" "content-hash=abc"
+                               "paths=src/a.lisp")
+                             :root root)))
+    (check (= 1 (gn-exit result))
+           "review without injected ports refuses")
+    (check (gn-has "no-review-transport" result)
+           "review refusal names no-review-transport"))
+  (let ((result (gn-dispatch '("review" "run-1" "content-hash=abc"
+                               "paths=src/a.lisp")
+                             :root root :review-ports nil)))
+    (check (= 1 (gn-exit result))
+           "review with nil ports refuses no-review-transport"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +create-args+ nil) :root root)
+  (let ((result (gn-dispatch '("review" "run-1" "content-hash=abc"
+                               "paths=src/a.lisp")
+                             :root root :review-ports (gn-review-ports))))
+    (check (= 1 (gn-exit result))
+           "review refuses a run without a model admission receipt")
+    (check (gn-has "not admitted for model" result)
+           "review refusal names the missing model admission"))
+  (let ((result (gn-dispatch '("admit-transport" "run-1" "model" "repository")
+                             :root root)))
+    (check (= 1 (gn-exit result))
+           "admit-transport refuses model on a plain loadout")
+    (check (gn-has "loadout-refuses-transport" result)
+           "the loadout refusal carries its closed label"))
+  (uiop:delete-directory-tree root :validate t))
+
+;;; the admitted transport set stays closed: model outside refuses ------------
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +model-create-args+ nil) :root root)
+  (let ((hngh.domain:+admitted-transports+ '(:filesystem)))
+    (let ((result (gn-dispatch '("admit-transport" "run-1" "model" "repository")
+                               :root root)))
+      (check (= 2 (gn-exit result))
+             "a transport outside the admitted set exits 2")
+      (check (gn-has "unknown-transport" result)
+             "the closed-set refusal names unknown-transport")))
+  (let ((hngh.domain:+admitted-transports+ '(:filesystem)))
+    (let ((result (gn-dispatch '("admit-transport" "run-1" "terminal" "repository")
+                               :root root)))
+      (check (= 2 (gn-exit result))
+             "a terminal outside the admitted set exits 2")))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +terminal-create-args+ nil) :root root)
+  (let ((result (gn-dispatch '("admit-transport" "run-1" "terminal" "repository")
+                             :root root)))
+    (check (= 0 (gn-exit result))
+           "admit-transport accepts the terminal transport on a terminal load"))
+  (let ((result (gn-dispatch '("terminal" "run-1")
+                             :root root :terminal-ports (gn-terminal-ports))))
+    (check (= 0 (gn-exit result))
+           "terminal capture runs through the injected fake ports")
+    (check (gn-has "operator status=complete" result)
+           "terminal capture renders the operator result")
+    (check (gn-has "sha256:" result)
+           "terminal capture renders the fingerprint binding"))
+  (let ((result (gn-dispatch '("terminal" "run-1") :root root)))
+    (check (= 1 (gn-exit result))
+           "terminal without injected ports refuses")
+    (check (gn-has "no-terminal-transport" result)
+           "terminal refusal names no-terminal-transport"))
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +terminal-create-args+ nil) :root root)
+  (let ((result (gn-dispatch '("terminal" "run-1")
+                             :root root :terminal-ports (gn-terminal-ports))))
+    (check (= 1 (gn-exit result))
+           "terminal capture refuses a run without a terminal receipt")
+    (check (gn-has "not admitted for terminal" result)
+           "terminal refusal names the missing terminal admission"))
+  (uiop:delete-directory-tree root :validate t))
+
+;;; review and terminal never spawn a subprocess with injected ports -------
+
+(let ((root (gn-dispatch-root))
+      (spawns 0))
+  (gn-dispatch (append +model-create-args+ nil) :root root)
+  (gn-dispatch '("admit-transport" "run-1" "model" "repository") :root root)
+  (let ((original (symbol-function 'uiop:run-program)))
+    (setf (symbol-function 'uiop:run-program)
+          (lambda (&rest args)
+            (declare (ignore args))
+            (incf spawns)))
+    (unwind-protect
+         (let ((result (gn-dispatch '("review" "run-1" "content-hash=abc"
+                                      "paths=src/a.lisp")
+                                    :root root :review-ports (gn-review-ports))))
+           (check (= 0 (gn-exit result))
+                  "review with injected ports completes"))
+      (setf (symbol-function 'uiop:run-program) original)))
+  (check (zerop spawns)
+         "no real subprocess is spawned by the review command")
+  (uiop:delete-directory-tree root :validate t))
+
+(let ((root (gn-dispatch-root))
+      (spawns 0))
+  (gn-dispatch (append +terminal-create-args+ nil) :root root)
+  (gn-dispatch '("admit-transport" "run-1" "terminal" "repository") :root root)
+  (let ((original (symbol-function 'uiop:run-program)))
+    (setf (symbol-function 'uiop:run-program)
+          (lambda (&rest args)
+            (declare (ignore args))
+            (incf spawns)))
+    (unwind-protect
+         (let ((result (gn-dispatch '("terminal" "run-1")
+                                    :root root :terminal-ports (gn-terminal-ports))))
+           (check (= 0 (gn-exit result))
+                  "terminal capture with injected ports completes"))
+      (setf (symbol-function 'uiop:run-program) original)))
+  (check (zerop spawns)
+         "no real subprocess is spawned by the terminal command")
   (uiop:delete-directory-tree root :validate t))
 
 (terpri)

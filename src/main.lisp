@@ -119,6 +119,26 @@ admit-transport is what turns a run into an admitted run."
                       (store-entries-of store))
               t))))
 
+(defun store-has-transport-admission-receipt-p (store identifier transport)
+  "True when STORE holds an :admission receipt naming IDENTIFIER for the
+given TRANSPORT kind (its receipt carries the transport fact from the
+admission use case). A run admitted for :filesystem does not admit :model
+or :terminal capture."
+  (and store
+       (let ((needle-run (format nil "run: ~A" identifier))
+             (needle-transport
+               (format nil "transport: ~A"
+                       (string-downcase (symbol-name transport)))))
+         (and (find-if (lambda (entry)
+                         (and (eq :admission (entry-receipt-kind entry))
+                              (member needle-run (entry-receipt-facts entry)
+                                      :test #'string=)
+                              (member needle-transport
+                                      (entry-receipt-facts entry)
+                                      :test #'string=)))
+                       (store-entries-of store))
+              t))))
+
 (defun default-admission-callback (&optional store)
   "Admission facts consult STORE's recorded receipts: a run with a
 recorded :admission receipt naming it is :confirmed on all four axes;
@@ -376,6 +396,7 @@ commands:~%~
   checkpoint RUN VERIFICATION MANIFEST   close-run RUN DISPOSITION~%~
   propose [key=value...]  issue-cert ACTION RUN VERDICT-FILE [PATH...]~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
+  review RUN content-hash=HASH paths=PATH,...  terminal RUN~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -733,6 +754,114 @@ so the verdict is :admitted and the close advances."
            (if run
                (values (hngh.presentation:render run) 0)
                (missing-run-output (first positionals))))))))
+
+;;; Bounded worker transport commands -----------------------------------------
+;;; Rung 10: review and terminal capture. The review command sends a closed
+;;; model-review request through the injected review ports (no default
+;;; provider: without :review-ports it refuses no-review-transport) and is
+;;; served only to a run holding a :model admission receipt. The terminal
+;;; command captures one operator statement through the injected operator
+;;; ports (no default input: without :terminal-ports it refuses
+;;; no-terminal-transport) and serves only a run holding a :terminal
+;;; admission receipt. Neither command ever spawns a subprocess when the
+;;; injected ports are fakes: the terminal digest is computed in-process.
+;;; Exit codes match the operator surface: 0 complete/captured, 1 refused
+;;; (not admitted, missing transport, closed refusal), 2 malformed
+;;; invocation, 3 transport fault.
+
+(defparameter +review-option-keys+
+  '(:content-hash :paths :policy-context))
+
+(defun report-review-result (result)
+  "Map a REVIEW-RESULT to (values output exit-code): 0 complete, 1 refused,
+3 transport fault."
+  (case (hngh.adapters.review:review-result-status result)
+    (:complete (values (hngh.presentation:render result) 0))
+    (:refused
+     (values (hngh.presentation:render result)
+             (if (member "transport-fault"
+                         (hngh.adapters.review:review-result-refusal-labels
+                          result)
+                         :test #'string=)
+                 3 1)))))
+
+(defun dispatch-review (args store clock review-ports)
+  (declare (ignore clock))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (let ((unknown (find-if (lambda (pair)
+                              (not (member (car pair) +review-option-keys+)))
+                            options)))
+      (when unknown
+        (return-from dispatch-review
+          (values (format nil "unknown review key: ~A~%~A"
+                          (cdr unknown) (command-usage))
+                  2)))
+    (unless (= 1 (length positionals))
+      (return-from dispatch-review (values (command-usage) 2)))
+    (let* ((identifier (first positionals))
+           (run (run-from-store store identifier)))
+      (unless run
+        (return-from dispatch-review (missing-run-output identifier)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :model)
+        (return-from dispatch-review
+          (values (format nil "review refused: run ~A not admitted for model"
+                          identifier)
+                  1)))
+      (unless review-ports
+        (return-from dispatch-review
+          (values "review refused: no-review-transport" 1)))
+      (handler-case
+          (let* ((plist (options-plist options))
+                 (result (request-run-review
+                          review-ports
+                          :content-hash (getf plist :content-hash)
+                          :candidate-paths
+                          (parse-comma-labels (getf plist :paths))
+                          :policy-context
+                          (or (parse-comma-labels
+                               (getf plist :policy-context))
+                              (list "operator")))))
+            (report-review-result result))
+        (error (condition)
+          (values (format nil "malformed review: ~A" condition) 2)))))))
+
+(defun report-operator-result (result)
+  "Map an OPERATOR-RESULT to (values output exit-code): 0 captured, 1
+refused, 3 transport fault."
+  (case (hngh.adapters.terminal:operator-result-status result)
+    (:complete (values (hngh.presentation:render result) 0))
+    (:refused
+     (values (hngh.presentation:render result)
+             (if (member "transport-fault"
+                         (hngh.adapters.terminal:operator-result-refusal-labels
+                          result)
+                         :test #'string=)
+                 3 1)))))
+
+(defun dispatch-terminal (args store clock terminal-ports)
+  (declare (ignore clock))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (not (= 1 (length positionals))))
+      (return-from dispatch-terminal (values (command-usage) 2)))
+    (let* ((identifier (first positionals))
+           (run (run-from-store store identifier)))
+      (unless run
+        (return-from dispatch-terminal (missing-run-output identifier)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :terminal)
+        (return-from dispatch-terminal
+          (values (format nil "terminal refused: run ~A not admitted for terminal"
+                          identifier)
+                  1)))
+      (unless terminal-ports
+        (return-from dispatch-terminal
+          (values "terminal refused: no-terminal-transport" 1)))
+      (handler-case
+          (report-operator-result
+           (hngh.adapters.terminal:capture-operator-statement terminal-ports))
+        (error (condition)
+          (values (format nil "malformed terminal: ~A" condition) 2))))))
 
 ;;; Governance command surface ----------------------------------------------
 ;;; The in-process dogfood loop for an operator: propose forms a closed
@@ -1209,7 +1338,8 @@ is refused."
                                         mutation-ports clock))
           (error (condition)
             (values (format nil "malformed mutation-check: ~A" condition) 2)))))))
-(defun dispatch-command* (positionals store clock mutation-ports gather-ports)
+(defun dispatch-command* (positionals store clock mutation-ports gather-ports
+                              review-ports terminal-ports)
   (let ((command (first positionals))
         (args (rest positionals)))
     (cond
@@ -1226,21 +1356,29 @@ is refused."
      (dispatch-issue-cert args store clock gather-ports))
     ((string= command "mutation-check")
      (dispatch-mutation-check args store clock mutation-ports gather-ports))
+    ((string= command "review") (dispatch-review args store clock review-ports))
+    ((string= command "terminal")
+     (dispatch-terminal args store clock terminal-ports))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))
 
-(defun dispatch-command (argv &key clock-now mutation-ports gather-ports)
+(defun dispatch-command (argv &key clock-now mutation-ports gather-ports
+                              review-ports terminal-ports)
   "Parse the operator ARGV list, execute the named command, and return
 (values output-string exit-code). Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
 option, transport, or verb); 3 transport fault. CLOCK-NOW may inject a
 timestamp callback for deterministic tests. MUTATION-PORTS injects the
 mutation adapter ports for mutation-check, so the command never spawns
-a subprocess when fakes are supplied. GATHER-PORTS injects
-   the candidate-evidence process transport for issue-cert and
-   mutation-check, so real evidence gathering also never spawns a
-   subprocess when fakes are supplied."
+a subprocess when fakes are supplied. GATHER-PORTS injects the
+candidate-evidence process transport for issue-cert and mutation-check,
+so real evidence gathering also never spawns a subprocess when fakes are
+supplied. REVIEW-PORTS injects the model-review adapter ports for the
+review command (no default provider exists; without injection the command
+refuses no-review-transport). TERMINAL-PORTS injects the operator
+statement ports for the terminal command (no default input exists;
+without injection the command refuses no-terminal-transport)."
   (multiple-value-bind (positionals store-path bad-option)
       (split-argv argv)
     (when bad-option
@@ -1253,12 +1391,14 @@ a subprocess when fakes are supplied. GATHER-PORTS injects
               (dispatch-command* positionals
                                  (hngh.adapters.filesystem:make-filesystem-store
                                   :root store-path)
-                                 clock mutation-ports gather-ports)
+                                 clock mutation-ports gather-ports
+                                 review-ports terminal-ports)
             (hngh.adapters.filesystem:transport-fault (condition)
               (values (format nil "transport fault: ~A" condition) 3))
             (hngh.adapters.filesystem:store-refusal (condition)
               (values (format nil "store refusal: ~A" condition) 2)))
-          (dispatch-command* positionals nil clock mutation-ports gather-ports)))))
+          (dispatch-command* positionals nil clock mutation-ports gather-ports
+                             review-ports terminal-ports)))))
 
 ;;; Operator-visible root ----------------------------------------------------
 

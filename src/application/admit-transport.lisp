@@ -17,6 +17,24 @@
       value
       (string-downcase (symbol-name value))))
 
+(defun transport-loadout-refused-p (transport run)
+  "True when TRANSPORT cannot be admitted because the run's loadout lacks
+the required route or label. :terminal requires the terminal-input tool
+label; :model requires a non-local route label and the model-review network
+label. Other admitted kinds (filesystem) have no loadout requirement."
+  (let ((loadout (hngh.domain:run-loadout run)))
+    (case transport
+      (:terminal
+       (not (member "terminal-input" (hngh.domain::%loadout-tool-labels
+                                      loadout)
+                    :test #'string=)))
+      (:model
+       (or (eq :local (hngh.domain:loadout-route-label loadout))
+           (not (member "model-review" (hngh.domain::%loadout-network-labels
+                                         loadout)
+                        :test #'string=))))
+      (t nil))))
+
 (defun transport-admission-receipt (run transport scope timestamp)
   (hngh.domain:make-receipt
    :kind :admission
@@ -38,6 +56,9 @@
   (unless (member (hngh.domain:run-state run) '(:created :armed))
     (return-from admit-transport
       (make-application-result :refused :labels '("invalid-transition"))))
+  (when (transport-loadout-refused-p transport run)
+    (return-from admit-transport
+      (make-application-result :refused :labels '("loadout-refuses-transport"))))
   (let* ((writable-scopes (hngh.domain::%loadout-writable-scopes
                             (hngh.domain:run-loadout run)))
          (effective-scope (or scope (first writable-scopes))))
