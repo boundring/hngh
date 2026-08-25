@@ -37,10 +37,27 @@ Current frontier: the clean-slate baseline. The retired daemon and plugin system
 - Completed the dogfood development loop (promotion rung 9, 2026-08-24): the operator governance surface (`propose`, `issue-cert`, `mutation-check` in `scripts/hngh`) forms closed policy proposals, binds candidate certificates under admitted verdicts, and executes the certificate-bound mutation against real repository evidence including live base revision, per-file content hashes, and the installed verify-candidate script. Two self-governed commits were produced, reviewed, and committed by Hngh under its own certificates and pushed to origin: the documentation change that completed this rung (`2a16a69`) and the two adapter bug fixes the first ceremony surfaced (`33b8d94`).
 - Completed the bounded agent worker transports (promotion rung 10, 2026-08-24): `hngh.adapters.model:make-model-transports` supplies the transport `complete` callback shape so the existing bounded review adapter can drive a real provider (advisory only, no default provider, closed route admission), and `hngh.adapters.terminal` captures one bounded operator statement as a `:terminal` evidence fact (advisory only, in-process SHA-256 fingerprint, no subprocess, no default input). `hngh.application:admit-transport` reuses the run loadout for the two new kinds — `:model` needs a non-`local` route plus the `model-review` network label, `:terminal` needs the `terminal-input` tool label — with the closed `loadout-refuses-transport` refusal. `hngh.main:dispatch-command` exposes the `review` and `terminal` operations, both fail-closed without injected ports (no-review-transport / no-terminal-transport) and both served only to a run holding the matching admission receipt; `hngh.presentation` stays outward-only with the added `render-operator-result`.
 - Completed the distributed attestation & evidence federation slice (promotion rung 11, 2026-08-24): `hngh.domain` adds the pure `remote-attestation` value and `verify-attestation-shape` checker in `src/domain/attestation.lisp`; `hngh.adapters.federation` gathers carrier-bundle claims into evidence facts (`fetch-remote` port; `:current`/`:unverifiable`/`:malformed`/`:missing`/`:conflicting` states) and verifies attestation envelopes through `resolve-pinned-key` + `verify-signature` ports with the closed refusal taxonomy; `:federation` joins `+admitted-transports+` under the `remote-evidence` network label or `carrier-bundle` tool label; `hngh.main` threads `fetch-evidence` / `verify-attestation` behind `:federation-ports` / `:attestation-ports` with no default transport, so plain `scripts/hngh` still never touches a wire.
+- Added the operator pinned-key registry and signature-verification
+  transport (promotion rung 12, 2026-08-25): `hngh.domain` adds the pure
+  `key-pin` value and immutable `key-pin-registry`
+  (`src/domain/attestation.lisp`); `hngh.adapters.federation` adds the
+  strict `parse-pinned-keys` line parser, the pure `hex-decode` signature
+  codec, and `make-pinned-attestation-ports`, which resolves keys from the
+  operator's registry and verifies one envelope signature through a single
+  bounded `openssl dgst -sha256 -verify` invocation on the injected
+  process transport — no default transport, nothing pinned refuses
+  `unknown-peer-key`. `verify-attestation RUN FILE [pins=PATH]` admits the
+  operator pins file as the trust anchor and `list-pins PATH` renders the
+  registry; both refuse malformed pins closed. Verified live with a real
+  RSA-2048/SHA-256 keypair (`:verified` / `bad-signature` /
+  `unknown-peer-key`) and through three self-governed ceremony commits.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
-1. **(Next slice).** Distributed attestation follow-on: network claim methods behind the existing federation port and revocation policy refinement.
+1. **(Next slice).** Signature-transport hardening (key-type coverage
+   beyond digest-signature keys, e.g. Ed25519 via `pkeyutl -rawin`) and
+   network claim methods behind the existing federation port (both
+   deferred by the 2026-08-24 decision 5 evidence-first fork).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.

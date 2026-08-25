@@ -732,3 +732,87 @@ transport; returns (values result call-count)."
                        attempt))))
     (check (= 2 calls)
            "each verification issues its own transport call")))
+
+;;; Operator surface: pins file on verify-attestation + list-pins ----------
+
+(defun fed-write-file (contents)
+  "Write CONTENTS to a kept temp file; returns its namestring."
+  (uiop:with-temporary-file (:pathname path :keep t)
+    (with-open-file (stream path :direction :output :if-exists :supersede)
+      (write-string contents stream))
+    (namestring path)))
+
+;; verify-attestation: the pins file is validated before anything else
+(let ((root (fed-dispatch-root)))
+  (let ((result (fed-dispatch
+                 (list "verify-attestation" "run-1" "/tmp/hngh-missing-pins.txt"
+                       "pins=/tmp/hngh-missing-pins.txt")
+                 :root root)))
+    (check (= 2 (fed-exit result))
+           "a missing pins file is a malformed invocation")
+    (check (fed-has "cannot read pins file" result)
+           "the refusal names the unreadable pins file"))
+  (let* ((path (fed-write-file "key-b /no-tab-here\n"))
+         (result (fed-dispatch
+                  (list "verify-attestation" "run-1" "/tmp/no-envelope.json"
+                        (format nil "pins=~A" path))
+                  :root root)))
+    (check (= 2 (fed-exit result))
+           "a malformed pins file is a malformed invocation")
+    (check (fed-has "malformed pins file" result)
+           "the refusal names the malformed pins file"))
+  (let ((result (fed-dispatch
+                 (list "verify-attestation" "run-1" "envelope.json"
+                       "bogus=x")
+                 :root root)))
+    (check (= 2 (fed-exit result))
+           "an unknown verify-attestation option is malformed"))
+  (uiop:delete-directory-tree root :validate t))
+
+;; list-pins: pure operator utility over the strict parser
+(let* ((path (fed-write-file
+              (concatenate 'string
+                           "# operator pins" '(#\Newline)
+                           "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub" '(#\Newline)
+                           '(#\Newline)
+                           "key-c" '(#\Tab) "/etc/hngh/keys/key-c.pub" '(#\Newline))))
+       (result (fed-dispatch (list "list-pins" path))))
+  (check (= 0 (fed-exit result))
+         "list-pins renders a valid pins file")
+  (check (and (fed-has (concatenate 'string
+                                    "key-b" '(#\Tab)
+                                    "/etc/hngh/keys/key-b.pub")
+                       result)
+              (fed-has (concatenate 'string
+                                    "key-c" '(#\Tab)
+                                    "/etc/hngh/keys/key-c.pub")
+                       result)
+              (not (fed-has "operator pins" result)))
+         "list-pins prints one tab-joined line per pin and no comments"))
+
+(let ((result (fed-dispatch (list "list-pins" "/tmp/hngh-missing-pins.txt"))))
+  (check (= 2 (fed-exit result))
+         "list-pins on a missing file is malformed")
+  (check (fed-has "cannot read pins file" result)
+         "list-pins names the unreadable file"))
+
+(let* ((path (fed-write-file "key-b relative-key.pub\n"))
+       (result (fed-dispatch (list "list-pins" path))))
+  (check (= 2 (fed-exit result))
+         "list-pins on a malformed file is malformed")
+  (check (fed-has "malformed pins file" result)
+         "list-pins names the malformed file"))
+
+(let ((result (fed-dispatch (list "list-pins"))))
+  (check (= 2 (fed-exit result))
+         "list-pins without a path is malformed"))
+
+(let ((result (fed-dispatch (list "list-pins" "/tmp/a" "/tmp/b"))))
+  (check (= 2 (fed-exit result))
+         "list-pins with two paths is malformed"))
+
+(let* ((path (fed-write-file "# only comments\n"))
+       (result (fed-dispatch (list "list-pins" path))))
+  (check (and (= 0 (fed-exit result))
+              (string= "" (first result)))
+         "list-pins renders an empty registry as no lines"))
