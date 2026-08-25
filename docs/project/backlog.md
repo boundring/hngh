@@ -97,3 +97,47 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts the self-committed
   change and its certificate chain.
 
+## Operator policy profiles (policy-profile rung)
+
+- **Problem:** rungs 6/11/12/13 added verified, real transports (model
+  review, attestation envelopes, pinned keys, operator reviewer files)
+  but no shipped policy profile *consumes* their fingerprints. The
+  dogfood proposal profile is still the fixture-grade "one requirement
+  per matrix principle"; review facts and `:remote-attestation` facts are
+  recorded evidence with no requirement kind that can demand them.
+- **Smallest useful outcome:** an operator-tunable policy profile — a
+  named, parsable, fail-closed spec that maps requirement kinds
+  (`:claim-proof`, `:review`, `:remote-attestation`, `:purpose`,
+  `:caller`) to matrix principles, admitted via the existing `propose`
+  surface (profile=FILE, mirroring the verdict/pins/reviewer file
+  precedents), with the closed evaluator unchanged.
+- **Evidence:** `docs/records/2026-08-25-r13-operator-reviewer-transport.md`
+  (reviewer transport live); `docs/records/2026-08-24-design-distributed-attestation.md`.
+- **Risk:** a profile must never *broaden* admission beyond the matrix;
+  it only *narrows* which requirement kinds a proposal must satisfy.
+- **Dependencies:** the deterministic principle evaluator and its closed
+  vocabularies (present); rung-13 reviewer transport (present).
+- **Review trigger:** an independent reviewer accepts (a) a profile
+  file that demands `:review` evidence fails a proposal lacking review
+  facts, and (b) the same profile admits a proposal carrying them.
+
+## Bridge-backed continual worker (worker-rung candidate)
+
+- **Problem:** the intent document names a worker behind a port — "likely
+  one called Pi" — but the scaffolded hngh-omp bridge plugin (7/7 smoke)
+  drives nothing, and the only continual workers are the shell jobs in
+  hngh-automation, which cannot exercise Hngh's own run lifecycle.
+- **Smallest useful outcome:** a disposable, read-only worker omp session
+  (local Ornith/Qwen via the automation's own model chain) that can
+  open one run, gather read-only candidate evidence, run one `review`
+  through the operator reviewer transport, and close the run — driven
+  through the hngh-omp bridge tools, with the run ledger as the record.
+- **Evidence:** `docs/records/2026-08-13-pi-worker-and-delegation-survey.md`
+  (Pi survey); hngh-omp plugin scaffold; rung-13 reviewer transport.
+- **Risk:** the worker is read-only by default and never carries a
+  mutation certificate; a worker self-report is not acceptance.
+- **Dependencies:** the bridge plugin (present); rung-13 operator
+  reviewer file (present); a loadout that admits `:model` transport.
+- **Review trigger:** an independent reviewer accepts the disposable
+  worker's run receipt, its review evidence, and an unchanged fixture
+  manifest — the same gates the Pi survey named.
