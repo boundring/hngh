@@ -99,3 +99,13 @@ next rotation or tomorrow, whichever comes first.
   gantt can place. Next spine item: dashboard-readouts, once the
   spine has >= 5 timeline/ETA rows.
 - **Outcome:** ETA section + queue-eta done + this entry, committed.
+
+## 2026-08-25 — check-in #6
+
+- **State:** clean, synced (`90b1624`); gate green.
+- **Steering (timeline growth):** the timeline stream is the
+  dashboard spine but had only 2 rows. Appended the rotation/event
+  rows for timeline-events and queue-eta — the spine is now 4
+  committed rows, one short of the dashboard-readouts threshold (≥5).
+  Next check-in reaches it by recording the next event/rotation row.
+- **Outcome:** timeline 2→4 rows; this entry.
