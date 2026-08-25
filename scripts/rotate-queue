@@ -1,0 +1,207 @@
+#!/usr/bin/env -S sbcl --script
+;;; scripts/rotate-queue --- close one queued item through the loop.
+;;;
+;;; Rotation is the continual-worker cadence: a session does the slice
+;;; work (code + tests), then rotate-queue closes the governance loop
+;;; around it: flip the queue row to done, gather REAL candidate
+;;; evidence, run the operator REVIEWER (a real local/remote model
+;;; session via the reviewer file), propose under the ten principles,
+;;; capture the verdict to a file, bind the certificate, execute the
+;;; mutation (git add + git commit), and land the queue ledger in the
+;;; same candidate commit.
+;;;
+;;; The periodic invocation belongs to the operator's scheduler, never
+;;; inside Hngh (no daemon, no watcher). The script adds no authority:
+;;; every step is the same closed command an operator would run by hand.
+;;;
+;;; Usage:
+;;;   sbcl --script scripts/rotate-queue \
+;;;        --store=PATH --item=QUEUE_ID --reviewer=REVIEWER_FILE \
+;;;        OBJECTIVE FILES...
+;;; Exit: 0 rotated (committed), 1 refused/verdict-not-admitted,
+;;; 2 malformed invocation, 3 transport fault.
+
+(require :asdf)
+(require :uiop)
+
+(let* ((script-path (or *load-truename* *compile-file-truename*
+                        (truename (first sb-ext:*posix-argv*))))
+       (repo-root (make-pathname :directory (butlast (pathname-directory script-path))))
+       (asd-file (merge-pathnames "hngh.asd" repo-root)))
+  (asdf:load-asd asd-file)
+  (asdf:load-system :hngh))
+
+;;; --- argv --------------------------------------------------------------
+
+(defun split-argv (argv)
+  "Pull --key=value options out of ARGV; returns (values plist positionals)."
+  (let ((options '())
+        (positionals '()))
+    (dolist (arg argv)
+      (let ((eq (position #\= arg)))
+        (if (and eq (> eq 2) (char= (char arg 0) #\-) (char= (char arg 1) #\-))
+            (let ((key (intern (string-upcase (subseq arg 2 eq)) :keyword)))
+              (setf options (list* key (subseq arg (1+ eq)) options)))
+            (push arg positionals))))
+    (values options (nreverse positionals))))
+
+;;; --- queue ledger -------------------------------------------------------
+
+(defun queue-row-flip (item-id)
+  "Flip ITEM-ID's status to done in docs/project/queue.md in place.
+Returns the new queue file namestring."
+  (let ((path "docs/project/queue.md"))
+    (let ((lines (uiop:read-file-lines path))
+          (seen nil))
+      (with-open-file (stream path :direction :output :if-exists :supersede)
+        (dolist (line lines)
+          (let ((fields (uiop:split-string line :separator '(#\Tab))))
+            (when (and (= 4 (length fields))
+                       (string= item-id (first fields)))
+              (setf seen t)
+              (format stream "~A~Cdone~C~A~Crotated 2026-08-25~%"
+                      (first fields) #\Tab #\Tab (third fields) #\Tab))
+            (when (not (and (= 4 (length fields))
+                            (string= item-id (first fields))))
+              (format stream "~A~%" line)))))
+      (unless seen
+        (error "rotate-queue: queue item ~A not found" item-id))
+      path)))
+
+;;; --- real evidence ------------------------------------------------------
+
+(defun gather-evidence (files)
+  "Real candidate evidence: repository identity, base revision, content
+hash, per-file source-manifest entries with live SHA-256s."
+  (multiple-value-bind (evidence refusal)
+      (hngh.adapters.run-gather:run-candidate-evidence
+       files (uiop:getcwd) nil)
+    (unless evidence
+      (error "rotate-queue: evidence refused: ~A" refusal))
+    evidence))
+
+(defun manifest-pieces (evidence)
+  "PATH=HASH:ROLE per candidate file, colon-joined (propose source-manifest)."
+  (format nil "~{~A~^:~}"
+          (mapcar (lambda (entry)
+                    (format nil "~A=~A:~A"
+                            (hngh.domain:source-manifest-entry-relative-path entry)
+                            (hngh.domain:source-manifest-entry-content-hash entry)
+                            (hngh.domain:source-manifest-entry-source-role entry)))
+                  (getf evidence :source-manifest))))
+
+;;; --- the steps ----------------------------------------------------------
+
+(defun run-step (store argv)
+  "Run one closed command; returns (values output exit-code)."
+  (hngh.main:dispatch-command
+   (cons (format nil "--store=~A" store) argv)))
+
+(defun rotate (store item-id reviewer objective files)
+  "The full rotation. Returns the final exit code."
+  (let* ((queue-file (queue-row-flip item-id))
+         (all-files (append files (list queue-file)))
+         (evidence (gather-evidence all-files))
+         (content-hash (getf evidence :content-hash)))
+    (labels ((do-step (argv)
+               (multiple-value-bind (out code) (run-step store argv)
+                 (format t "~A~%" out)
+                 code)))
+      ;; 1. run + model admission (filesystem store is implicit)
+      (let ((code
+              (do-step (list "create-run" objective "builder"
+                          "loadout-route-label=model"
+                          "loadout-context-limit=2000"
+                          "loadout-token-limit=2000"
+                          "loadout-cost-limit=2000"
+                          "loadout-time-limit=2000"
+                          "loadout-tool-labels=worker-task,mutation"
+                          "loadout-network-labels=model-review"
+                          "loadout-writable-scopes=repository"))))
+        (when (plusp code) (return-from rotate code))
+        (let ((code (do-step (list "admit-transport" "run-1" "model"
+                                "repository"))))
+          (when (plusp code) (return-from rotate code))
+          ;; 2. the model session: one closed review of the content hash
+          (let ((code
+                  (do-step (list "review" "run-1"
+                              (format nil "content-hash=~A" content-hash)
+                              (format nil "paths=~{~A~^,~}" all-files)
+                              (format nil "reviewer=~A" reviewer)))))
+            (when (plusp code) (return-from rotate code))
+            ;; 3. propose under the ten principles, real evidence; the
+            ;;    rendered verdict IS the operator verdict file
+            (multiple-value-bind (out code)
+                (run-step store
+                 (append
+                  (list "propose"
+                        "class=feature"
+                        (format nil "problem=~A" objective)
+                        (format nil "outcome=rotate queue item ~A" item-id)
+                        "purpose=continual queue rotation"
+                        "caller=rotate-queue"
+                        "input-contract=closed queue slice"
+                        "output-contract=certificate-bound commit"
+                        "failure-contract=refusal halts the rotation"
+                        "declared-capabilities=queue-rotation"
+                        "capability-diff=+one rotated item"
+                        (format nil "source-manifest=~A"
+                                (manifest-pieces evidence))
+                        "risk-note=reviewer is advisory; the verdict is the gate"
+                        "dependency=queued item and the day's rungs"
+                        "evidence-trigger=operator queue rotation")
+                  (loop for principle in
+                          '("closed-authority" "least-authority"
+                            "dependency-direction" "fail-closed"
+                            "evidence-before-claim" "atomic-mutation"
+                            "reversibility" "no-hidden-execution"
+                            "cost-and-route-discipline" "source-grounding")
+                        collect
+                        (format nil "evidence-requirements=~A:claim-proof:~A"
+                                principle content-hash))))
+              (if (plusp code)
+                  (return-from rotate code)
+                  ;; 4. write the verdict file, bind, execute
+                  (let ((verdict-file
+                          (uiop:with-temporary-file
+                              (:pathname path :keep t :type "txt")
+                            (with-open-file (s path :direction :output
+                                                :if-exists :supersede)
+                              (write-string out s))
+                            (namestring path))))
+                    (labels ((execute (action)
+                               (let ((code
+                                       (do-step (append
+                                              (list "issue-cert" action "run-1"
+                                                    verdict-file)
+                                              all-files))))
+                                 (when (plusp code)
+                                   (return-from rotate code))
+                                 (let ((code
+                                         (do-step (append
+                                                (list "mutation-check" action
+                                                      "run-1" verdict-file)
+                                                all-files))))
+                                   (when (plusp code)
+                                     (return-from rotate code))))))
+                      (execute "prepare-candidate")
+                      (execute "commit")
+                      (ignore-errors (delete-file verdict-file))
+                      (format t "rotation complete: ~A committed (item ~A)~%"
+                              content-hash item-id)
+                      (return-from rotate 0)))))))))))
+
+;;; --- entry --------------------------------------------------------------
+
+(multiple-value-bind (options positionals)
+    (split-argv (rest (uiop:raw-command-line-arguments)))
+  (let ((store (getf options :store))
+        (item-id (getf options :item))
+        (reviewer (getf options :reviewer)))
+    (unless (and store item-id reviewer (>= (length positionals) 2))
+      (format *standard-output*
+              "usage: sbcl --script scripts/rotate-queue --store=PATH --item=ID --reviewer=FILE OBJECTIVE FILES...~%")
+      (uiop:quit 2))
+    (let ((code (rotate store item-id reviewer
+                        (first positionals) (rest positionals))))
+      (uiop:quit code))))
