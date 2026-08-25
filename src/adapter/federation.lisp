@@ -14,10 +14,13 @@
 ;;; refuses closed. The adapter never decides policy, never reads a
 ;;; requirement ledger, and never uses a clock of its own.
 
-(defparameter +federation-methods+ '(:carrier-bundle)
-  "The closed method set. v1 admits carrier-bundle-only pull (bundles move
-between machines by operator action); network claim methods may be added
-later behind the same port without kernel change.")
+(defparameter +federation-methods+ '(:carrier-bundle :http-claim)
+  "The closed method set. carrier-bundle pulls evidence bundles that move
+between machines by operator action; http-claim is the network claim
+method — the same carrier-bundle document fetched from a peer endpoint
+over HTTP. The peer stays a plain identifier on the request; endpoint
+resolution is the injected transport's job, so nothing here knows a
+URL or touches a wire by default.")
 
 (defparameter +max-bundle-length+ 65536
   "Bound on one fetched bundle document; larger output refuses closed.")
