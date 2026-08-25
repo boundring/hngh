@@ -70,4 +70,4 @@ repo, the dashboard draws from committed data).
 ```
 2026-08-25	rotation	dashboard-readout	6d10a4493b52cff07e74eb10f48347b83b068c34620551e525d536f3f477049c
 2026-08-25	event	check-in-8	6d10a4493b52cff07e74eb10f48347b83b068c34620551e525d536f3f477049c
-2026-08-25	event	check-in-11	<HASH>
+2026-08-25	event	check-in-11	1311706e5db1dd3c50976ffea7b7ea6e5180e8b6
