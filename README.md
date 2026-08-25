@@ -134,6 +134,11 @@ the current number) and an operator command surface. Implemented:
   the `worker-task` tool label. A completed task binds a `:worker` evidence fact —
   a worker self-report is evidence, never acceptance, and a worker never carries a
   mutation certificate. No default transport.
+- Continual-worker driver: `scripts/worker-driver --store=PATH OBJECTIVE TASK
+  [PAYLOAD]` runs the one-shot worker cycle (create-run with the worker-task label →
+  admit worker → run-worker → close) as a single explicit operator invocation.
+  It is glue over the existing surface, adds no authority, and the periodic
+  invocation belongs to the operator's scheduler, never a daemon.
 
 Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built

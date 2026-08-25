@@ -108,5 +108,7 @@ authorize a future action.
   session arc: the extension repair, the consistency pass, rungs
   14–18, the external re-review and the loop-history guard, the bridge
   finalization, and the live worker proof.
+- `2026-08-25-worker-driver.md` records the one-shot continual-worker
+  driver (`scripts/worker-driver`) and its exit-code contract.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
