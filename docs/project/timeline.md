@@ -53,3 +53,15 @@ opportunity and shrinks by done.
 
 The first structured zoom-out pass (market-opportunity framing) is
 recorded in the queue ledger and the 2026-08-25 records.
+## Timeline events
+
+Machine-readable rows appended per rotation/event:
+`DATE<TAB>KIND<TAB>ITEM<TAB>HASH`. `scripts/rotate-queue` appends a
+row per rotation; check-ins may append `event` rows. This is the raw
+spine a future dashboard reads (no daemon — lines accumulate in the
+repo, the dashboard draws from committed data).
+
+```
+2026-08-25	rotation	doc-sync-loop	bbd1d598794e82fcab767354b6220a97e87f790495fb921ba17871cd739242bf
+2026-08-25	event	queue-scale	04a4446dbc9499a7c5348b6df0683b16a042cfe1e5f3bef08ef4709babda264
+```

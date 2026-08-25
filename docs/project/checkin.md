@@ -73,3 +73,18 @@ next rotation or tomorrow, whichever comes first.
   small, the *next* check-in could take one. Everything else waits
   for its rotation.
 - **Outcome:** queue.md Scale section; this entry. No code changed.
+
+## 2026-08-25 — check-in #4
+
+- **State:** clean, synced (`7a880a8`); gate green.
+- **Steering (check-in-scale, taken):** implemented the first
+  check-in-scale dashboard-spine item — **timeline-events**. The
+  timeline now carries machine-readable rows
+  (`DATE<TAB>KIND<TAB>ITEM<TAB>HASH`) with a test
+  (`tests/scripts/test-timeline-events.py`) wired into `make test`
+  that asserts the 4-field shape and rejects malformed rows. The
+  dashboard's raw spine exists as a committed, testable data stream.
+- **Queue:** timeline-events → done. Next for the spine: queue-eta
+  (also check-in-scale), then dashboard-readouts (rotation-scale).
+- **Outcome:** timeline events + test wired + queue updated + this
+  entry, committed through the ceremony.

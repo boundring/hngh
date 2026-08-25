@@ -17,7 +17,7 @@ tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
 dashboard-readouts	queued	Dashboard readouts (gantt over runs/queue/commits)	timeline.md; queue ledger
-timeline-events	queued	Machine-readable timeline events per rotation	timeline.md
+timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired
 queue-eta	queued	Planned-window (ETA) column on queue rows	timeline.md
 ux-hardening	queued	UX/interface pass (Emacs-style extensible operator surface)	imeline.md
 ecosystem-integrations	queued	(CachyOS/Linux/dbus/system-harness/device integrations)	vision.md
