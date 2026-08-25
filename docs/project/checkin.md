@@ -141,3 +141,12 @@ next rotation or tomorrow, whichever comes first.
   Appended those rows (7 now), so the readout's view matches the
   commits. Small, keeps the narrative honest.
 - **Outcome:** timeline 7 rows; this entry.
+
+## 2026-08-25 — check-in #10
+
+- **State:** clean, synced; 7-row spine; readout live.
+- **Steering (readout honesty):** the readout promised a `.` queued
+  window but never rendered one. Now every queued item shows `...`
+  and active shows `+` — the whole queue is visible, not just done
+  rows. Smoke still green.
+- **Outcome:** readout honors its legend; this entry.
