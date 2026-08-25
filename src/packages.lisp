@@ -126,6 +126,8 @@
            #:make-key-pin
            #:key-pin-key-identifier
            #:key-pin-key-path
+           #:key-pin-algorithm
+           #:+key-algorithms+
            #:key-pin-registry
            #:key-pin-registry-p
            #:make-key-pin-registry
