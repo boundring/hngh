@@ -595,3 +595,140 @@ thrown verifier; EXIT-CODE drives the bad-signature path."
     (check (fed-has "expired-attestation" result)
            "the refusal names expired-attestation"))
   (uiop:delete-directory-tree root :validate t))
+
+;;; Adapter: pinned-key parsing and the signature transport -----------------
+
+(let ((registry (hngh.adapters.federation:parse-pinned-keys
+                 (concatenate 'string
+                              "# operator pins" '(#\Newline)
+                              "key-b" '(#\Tab)
+                              "/etc/hngh/keys/key-b.pub" '(#\Newline)
+                              '(#\Newline)
+                              "key-c" '(#\Tab)
+                              "/etc/hngh/keys/key-c.pub" '(#\Newline)))))
+  (check (and (hngh.domain:key-pin-registry-p registry)
+              (equal "/etc/hngh/keys/key-b.pub"
+                     (hngh.domain:key-pin-key-path
+                      (hngh.domain:lookup-key-pin registry "key-b")))
+              (equal "/etc/hngh/keys/key-c.pub"
+                     (hngh.domain:key-pin-key-path
+                      (hngh.domain:lookup-key-pin registry "key-c")))
+              (null (hngh.domain:lookup-key-pin registry "key-d")))
+         "parse-pinned-keys builds a registry skipping comments and blanks"))
+
+(dolist (bad-line (list "key-b /etc/hngh/keys/key-b.pub"
+                        "key-b\trelative/key.pub"
+                        "key-b\t/etc/-option-like.pub"
+                        "\t/etc/hngh/keys/key-b.pub"
+                        "key-b\t/etc/hngh/keys/key-b.pub\textra"))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.adapters.federation:parse-pinned-keys bad-line)))
+         (format nil "malformed pins line refuses: ~S" bad-line)))
+
+(check (signals-error-p
+        (lambda ()
+          (hngh.adapters.federation:parse-pinned-keys
+           (concatenate 'string
+                        "key-b" '(#\Tab) "/etc/hngh/keys/b.pub" '(#\Newline)
+                        "key-b" '(#\Tab) "/etc/hngh/keys/b2.pub"))))
+       "duplicate pins refuse")
+
+(check (equalp #(222 173 190 239)
+               (hngh.adapters.federation:hex-decode "deadbeef"))
+       "hex-decode decodes lowercase hex to bytes")
+(check (equalp #() (hngh.adapters.federation:hex-decode ""))
+       "hex-decode accepts the empty signature")
+(dolist (bad-hex (list "abc" "zz" "deadbee" 42))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.adapters.federation:hex-decode bad-hex)))
+         (format nil "malformed hex refuses: ~S" bad-hex)))
+
+(defparameter *fed-pinned-registry*
+  (hngh.adapters.federation:parse-pinned-keys
+   (concatenate 'string "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub")))
+
+(defun fed-pinned-result (&key (key-identifier "key-b") (signature "deadbeef")
+                             (exit-code 0) (fault nil))
+  "Run verify-remote-attestation through PINNED ports over a fake process
+transport; returns (values result call-count)."
+  (let ((calls 0))
+    (let ((ports (hngh.adapters.federation:make-pinned-attestation-ports
+                  *fed-pinned-registry*
+                  (lambda (argv)
+                    (declare (ignore argv))
+                    (incf calls)
+                    (when fault (error "transport fault"))
+                    (values exit-code "Verified OK" "")))))
+      (values
+       (hngh.adapters.federation:verify-remote-attestation
+        (make-fixture-attestation :key-identifier key-identifier
+                                  :signature signature)
+        "2026-08-15T00:00:00Z" ports)
+       calls))))
+
+(multiple-value-bind (result calls)
+    (fed-pinned-result)
+  (check (and (eq :verified (att-status result))
+              (equal "key-b"
+                     (hngh.adapters.federation:attestation-result-key-identifier
+                      result)))
+         "pinned ports verify a good signature end to end")
+  (check (= 1 calls)
+         "the verified path runs exactly one transport call"))
+
+(multiple-value-bind (result calls)
+    (fed-pinned-result :exit-code 1)
+  (check (and (eq :refused (att-status result))
+              (equal '("bad-signature") (att-labels result)))
+         "an openssl verification failure maps to bad-signature")
+  (check (= 1 calls)
+         "the bad-signature path ran the transport once"))
+
+(multiple-value-bind (result calls)
+    (fed-pinned-result :key-identifier "key-z")
+  (check (and (eq :refused (att-status result))
+              (equal '("unknown-peer-key") (att-labels result)))
+         "an unpinned key refuses before any transport call")
+  (check (zerop calls)
+         "the unknown-peer-key path never reached the transport"))
+
+(multiple-value-bind (result calls)
+    (fed-pinned-result :signature "not-hex!")
+  (check (and (eq :refused (att-status result))
+              (equal '("bad-signature") (att-labels result)))
+         "a malformed hex signature refuses closed")
+  (check (zerop calls)
+         "the malformed-signature path never reached the transport"))
+
+(multiple-value-bind (result calls)
+    (fed-pinned-result :fault t)
+  (check (and (eq :fault (att-status result))
+              (equal '("signature-fault") (att-labels result)))
+         "a thrown transport maps to the signature fault")
+  (check (= 1 calls)
+         "the fault path attempted the transport once"))
+
+(check (signals-error-p
+        (lambda ()
+          (hngh.adapters.federation:make-pinned-attestation-ports
+           *fed-pinned-registry* "not-a-function")))
+       "pinned ports refuse a non-function transport")
+
+(let ((calls 0)
+      (registry *fed-pinned-registry*))
+  (let ((ports (hngh.adapters.federation:make-pinned-attestation-ports
+                registry
+                (lambda (argv)
+                  (incf calls)
+                  (values 0 "Verified OK" "")))))
+    (dolist (attempt '(1 2))
+      (let ((result (hngh.adapters.federation:verify-remote-attestation
+                     (make-fixture-attestation :signature "deadbeef")
+                     "2026-08-15T00:00:00Z" ports)))
+        (check (eq :verified (att-status result))
+               (format nil "verification ~A through shared ports still verifies"
+                       attempt))))
+    (check (= 2 calls)
+           "each verification issues its own transport call")))
