@@ -10,6 +10,23 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- Added the operator reviewer transport (promotion rung 13):
+  - `review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]` admits
+    an operator reviewer-transport file (endpoint, model, max-tokens,
+    timeout, token-file; strict parsing, closed refusals) that replaces
+    injected review ports with the real curl-backed provider transport;
+    the provider token travels only in the one Authorization header.
+  - `hngh.adapters.model:make-model-transports` now works against real
+    OpenAI-compatible servers: stdin is a string stream (not a filename),
+    the request envelope is a chat message with `enable_thinking:false`,
+    and the model's completion document is extracted from the provider
+    response envelope by a minimal JSON scanner (`model-response-content`;
+    numbers/booleans/nulls consumed opaquely).
+  - The rung-6 fixed review prompt carries an explicit advisory-reviewer
+    instruction; output contract unchanged.
+  - Verified live against the local Unsloth server with Ornith-1.0-35B
+    (`status=complete`, closed findings document, `:current` review fact).
+
 - Added the operator pinned-key registry and signature-verification
   transport (promotion rung 12, the "revocation policy refinement" named
   in the roadmap):

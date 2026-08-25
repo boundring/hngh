@@ -460,3 +460,74 @@ subprocesses, and the verify-candidate closed report."
   (uiop:delete-directory-tree root :validate t))
 
 (terpri)
+
+;;; reviewer transport admission -------------------------------------------
+;;; review RUN ... reviewer=PATH admits an operator reviewer-transport file
+;;; (endpoint/model/max-tokens/timeout/token-file); the file is validated
+;;; before any run or transport work.
+
+(defun gn-reviewer-file (contents)
+  "Write CONTENTS to a kept temp file; returns its namestring."
+  (uiop:with-temporary-file (:pathname path :keep t)
+    (with-open-file (stream path :direction :output :if-exists :supersede)
+      (write-string contents stream))
+    (namestring path)))
+
+(defparameter +gn-valid-reviewer+
+  (concatenate 'string
+               "endpoint=http://127.0.0.1:1/v1/chat/completions" '(#\Newline)
+               "model=test/model" '(#\Newline)
+               "max-tokens=512" '(#\Newline)
+               "timeout=60" '(#\Newline)
+               "token-file=/tmp/hngh-missing-token"))
+
+(let ((root (gn-dispatch-root)))
+  (gn-dispatch (append +model-create-args+ nil) :root root)
+  (gn-dispatch '("admit-transport" "run-1" "model" "repository") :root root)
+  (let ((result (gn-dispatch (list "review" "run-1" "content-hash=abc"
+                                   "paths=src/a.lisp"
+                                   "reviewer=/tmp/hngh-missing-reviewer.conf")
+                             :root root)))
+    (check (= 2 (gn-exit result))
+           "a missing reviewer file is a malformed invocation")
+    (check (gn-has "cannot read reviewer file" result)
+           "the refusal names the unreadable reviewer file"))
+  (let ((result (gn-dispatch (list "review" "run-1" "content-hash=abc"
+                                   "paths=src/a.lisp"
+                                   (format nil "reviewer=~A"
+                                           (gn-reviewer-file +gn-valid-reviewer+)))
+                             :root root)))
+    (check (= 2 (gn-exit result))
+           "a reviewer file whose token file is missing is malformed")
+    (check (gn-has "cannot read reviewer file" result)
+           "the refusal names the unreadable token file"))
+  (dolist (bad (list
+                ;; missing required keys
+                "endpoint=http://127.0.0.1:1/v1/chat/completions"
+                ;; unknown key
+                (concatenate 'string +gn-valid-reviewer+ '(#\Newline) "extra=1")
+                ;; duplicate key
+                (concatenate 'string +gn-valid-reviewer+ '(#\Newline)
+                             "timeout=90")
+                ;; non-integer numeric field
+                (concatenate 'string
+                             "endpoint=http://127.0.0.1:1/v1/chat/completions" '(#\Newline)
+                             "model=test/model" '(#\Newline)
+                             "max-tokens=abc" '(#\Newline)
+                             "timeout=60" '(#\Newline)
+                             "token-file=/tmp/hngh-missing-token")
+                ;; line without =
+                (concatenate 'string +gn-valid-reviewer+ '(#\Newline) "endpoint")
+                ;; empty value
+                (concatenate 'string +gn-valid-reviewer+ '(#\Newline) "model=")))
+    (let ((result (gn-dispatch (list "review" "run-1" "content-hash=abc"
+                                     "paths=src/a.lisp"
+                                     (format nil "reviewer=~A"
+                                             (gn-reviewer-file bad)))
+                               :root root)))
+      (check (= 2 (gn-exit result))
+             (format nil "malformed reviewer file refuses: ~S"
+                     (subseq bad 0 (min 40 (length bad)))))
+      (check (gn-has "malformed reviewer file" result)
+             "the refusal names the malformed reviewer file")))
+  (uiop:delete-directory-tree root :validate t))

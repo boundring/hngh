@@ -415,7 +415,7 @@ commands:~%~
   checkpoint RUN VERIFICATION MANIFEST   close-run RUN DISPOSITION~%~
   propose [key=value...]  issue-cert ACTION RUN VERDICT-FILE [PATH...]~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
-  review RUN content-hash=HASH paths=PATH,...  terminal RUN~%~
+  review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
   list-pins PATH~%~
 options: --store=PATH record the run ledger under PATH"))
@@ -791,7 +791,7 @@ so the verdict is :admitted and the close advances."
 ;;; invocation, 3 transport fault.
 
 (defparameter +review-option-keys+
-  '(:content-hash :paths :policy-context))
+  '(:content-hash :paths :policy-context :reviewer))
 
 (defun report-review-result (result)
   "Map a REVIEW-RESULT to (values output exit-code): 0 complete, 1 refused,
@@ -806,6 +806,70 @@ so the verdict is :admitted and the close advances."
                          :test #'string=)
                  3 1)))))
 
+(defparameter +reviewer-config-keys+
+  '(:endpoint :model :max-tokens :timeout :token-file)
+  "The closed reviewer-transport file vocabulary.")
+
+(defun parse-reviewer-config (text)
+  "Strict-parse operator reviewer-transport text: KEY=VALUE lines over the
+five closed keys, `#` comments and blank lines skipped; unknown, duplicate,
+missing, empty, or non-integer fields refuse. Returns a plist."
+  (unless (stringp text)
+    (error "reviewer config must be text"))
+  (let ((plist '())
+        (seen '()))
+    (dolist (line (uiop:split-string text :separator '(#\Newline)))
+      (let ((line (string-right-trim '(#\Return) line)))
+        (unless (or (uiop:emptyp line) (char= (char line 0) #\#))
+          (let ((eq (position #\= line)))
+            (unless eq
+              (error "malformed reviewer line: ~S" line))
+            (let* ((key-text (subseq line 0 eq))
+                   (key (intern (string-upcase key-text) :keyword))
+                   (value (subseq line (1+ eq))))
+              (unless (member key +reviewer-config-keys+)
+                (error "unknown reviewer key: ~A" key-text))
+              (when (member key seen)
+                (error "duplicate reviewer key: ~A" key-text))
+              (unless (plusp (length value))
+                (error "empty reviewer value: ~A" key-text))
+              (push key seen)
+              (push value plist)
+              (push key plist))))))
+    (dolist (key +reviewer-config-keys+)
+      (unless (member key seen)
+        (error "missing reviewer key: ~A"
+               (string-downcase (symbol-name key)))))
+    (dolist (key '(:max-tokens :timeout))
+      (setf (getf plist key) (parse-integer (getf plist key))))
+    plist))
+
+(defun read-reviewer-file (path)
+  "Read and strict-parse an operator reviewer-transport file, then read the
+provider token from its named token-file. Returns (values ports nil) or
+(values nil refusal-text). The token reaches only the one curl
+Authorization header (see MAKE-MODEL-TRANSPORTS); it never enters the
+prompt, a result, or the store."
+  (handler-case
+      (let* ((config (parse-reviewer-config (uiop:read-file-string path)))
+             (token (string-trim '(#\Newline #\Return #\Space #\Tab)
+                                 (uiop:read-file-string
+                                  (getf config :token-file)))))
+        (unless (plusp (length token))
+          (error "empty provider token"))
+        (values
+         (hngh.adapters.review:make-review-ports
+          :invoke-reviewer
+          (hngh.adapters.model:make-model-transports
+           :endpoint (getf config :endpoint)
+           :model-name (getf config :model)
+           :max-tokens (getf config :max-tokens)
+           :timeout (getf config :timeout)
+           :provider-token token))
+         nil))
+    (file-error () (values nil "cannot read reviewer file"))
+    (error () (values nil "malformed reviewer file"))))
+
 (defun dispatch-review (args store clock review-ports)
   (declare (ignore clock))
   (multiple-value-bind (positionals options) (collect-options args)
@@ -819,7 +883,21 @@ so the verdict is :admitted and the close advances."
                   2)))
     (unless (= 1 (length positionals))
       (return-from dispatch-review (values (command-usage) 2)))
-    (let* ((identifier (first positionals))
+    ;; The operator reviewer file is the transport admission: when present
+    ;; it replaces any injected review ports with the real curl-backed
+    ;; provider transport from the operator's config.
+    (let* ((reviewer-path (cdr (assoc :reviewer options)))
+           (ports
+             (if reviewer-path
+                 (multiple-value-bind (reviewer-ports refusal)
+                     (read-reviewer-file reviewer-path)
+                   (when refusal
+                     (return-from dispatch-review
+                       (values (format nil "review refused: ~A" refusal)
+                               2)))
+                   reviewer-ports)
+                 review-ports))
+           (identifier (first positionals))
            (run (run-from-store store identifier)))
       (unless run
         (return-from dispatch-review (missing-run-output identifier)))
@@ -829,13 +907,13 @@ so the verdict is :admitted and the close advances."
           (values (format nil "review refused: run ~A not admitted for model"
                           identifier)
                   1)))
-      (unless review-ports
+      (unless ports
         (return-from dispatch-review
           (values "review refused: no-review-transport" 1)))
       (handler-case
           (let* ((plist (options-plist options))
                  (result (request-run-review
-                          review-ports
+                          ports
                           :content-hash (getf plist :content-hash)
                           :candidate-paths
                           (parse-comma-labels (getf plist :paths))

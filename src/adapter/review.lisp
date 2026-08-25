@@ -219,6 +219,8 @@ stderr) or (values nil nil nil nil) for a thrown error or a malformed return."
 
 (defun build-review-prompt (request)
   (with-output-to-string (out)
+    (write-string
+      "You are an advisory reviewer for a policy-gated development harness. Below is one review request as JSON: the candidate content hash, the candidate paths, and the policy context labels. List any advisory review findings for this candidate as concise label/citation pairs. Reply with ONLY one JSON object of exactly this form and nothing else: {\"findings\":[{\"label\":\"<short finding>\",\"citation\":\"<path or reference>\"}]}. An empty findings array is a valid answer. No markdown, no explanations, no trailing text. The request follows.\n\n" out)
     (write-string "{\"content-hash\":" out)
     (write-string (json-escape-string (%review-request-content-hash request)) out)
     (write-string ",\"candidate-paths\":[" out)
