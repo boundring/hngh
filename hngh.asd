@@ -25,5 +25,6 @@
                (:file "src/adapter/terminal")
                (:file "src/adapter/filesystem")
                (:file "src/adapter/federation")
+               (:file "src/adapter/worker")
                (:file "src/presentation/render")
                (:file "src/main")))

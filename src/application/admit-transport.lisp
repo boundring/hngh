@@ -42,6 +42,9 @@ loadout requirement."
             (not (member "carrier-bundle"
                          (hngh.domain::%loadout-tool-labels loadout)
                          :test #'string=))))
+      (:worker
+       (not (member "worker-task" (hngh.domain::%loadout-tool-labels loadout)
+                    :test #'string=)))
       (t nil))))
 
 (defun transport-admission-receipt (run transport scope timestamp)

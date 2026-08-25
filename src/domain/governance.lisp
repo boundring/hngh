@@ -30,7 +30,7 @@
     :insufficient-or-stale-evidence :tool-or-environment-fault
     :review-disagreement :mutation-precondition-mismatch-or-failure))
 (defparameter +admitted-transports+
-  '(:filesystem :model :terminal :federation)
+  '(:filesystem :model :terminal :federation :worker)
   "The closed set of transport kinds a run may be admitted for. :filesystem is the local record transport; :model is the bounded
 model-review transport (advisory only, requires a non-local route and
 the model-review network label on the run loadout); :terminal is the
