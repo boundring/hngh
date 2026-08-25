@@ -145,10 +145,24 @@ is a "no" until known.
 ## Today and next
 
 Today Hngh is a small library plus fixture tests: a pure kernel with closed run lifecycles,
-five application use cases, governance policy, and read-only verifiers for candidate evidence
+six application use cases, governance policy, and read-only verifiers for candidate evidence
 (and, historically, the retirement archive). There is no daemon and no agent yet. The
 direction ahead is set out in the [roadmap](project/roadmap.md) — read it for what gets built
 next and in what order.
+
+The long horizon is a mesh, not a bigger machine. Each Hngh node guards its own small
+boundary — a machine on a shelf, a hand-held that mostly sleeps, a laptop whose network card
+is older than the person using it — and each runs the same narrow rulebook: evidence first,
+then a place. What one node learns (this bridge drops at three in the morning, this tunnel
+has held for a year, this load draws this power, this device woke when asked and stayed quiet
+otherwise) is written down as a fact a neighbor can cite, not buried in a ledger only one
+wall will ever read. A node wakes a neighbor before it is needed, keeps the corridors open
+without a watching process, and admits a new low-powered peer the only way anything is ever
+admitted here: through a proposal, a check, and a record. One machine learns only what its
+own wall taught it; a lattice of small ledgered machines is how a city crosses a lawn, then
+the next lawn, then the planet — and no wall stands that does not say who raised it. None of
+that exists yet. It is the direction, and the direction is admitted one verified stretch at a
+time, the same as everything else.
 
 ---
 
