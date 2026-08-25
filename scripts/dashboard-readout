@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""dashboard-readouts: a first minimal readout over the timeline spine.
+"""dashboard-readouts: gantt-style readouts over the timeline spine.
 
-Renders the committed timeline rows (DATE<TAB>KIND<TAB>ITEM<TAB>HASH)
-as plain gantt-style bars: each item gets a row, its timeline events
-map to '#' on the axis, and the ETA windows from queue.md map to '.'.
-Reads only committed data — no daemon, no process. This is the thinnest
-view that makes the spine observable.
+Reads only committed data (no daemon). Two renderers:
+- default: plain bars (past '#' done, '...' queued, '-' ETA window)
+- --spiral: a text Archimedean spiral — past winds inward from the
+  outside, future unwinds outward to the rim. The spiral is drawn on a
+  coarse character grid; each item's timeline rows are sectors marked
+  with a letter, and the future items' ETA windows sit on the outer arm.
+
+This is deliberately small and a little silly — "practical nonsense"
+is the point. A denser version (real geometry, colors, live music
+dance) is the rotation-scale item in the queue.
 """
 
 import sys
+import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,7 +32,6 @@ def timeline_rows():
 
 
 def queue_items():
-    """(id, status) pairs from the TSV block."""
     items = []
     for line in QUEUE.read_text().splitlines():
         parts = line.split("\t")
@@ -35,30 +40,82 @@ def queue_items():
     return items
 
 
+def queue_etas():
+    etas = {}
+    text = QUEUE.read_text()
+    section = text.split("## ETA", 1)[-1]
+    for line in section.splitlines():
+        if "\t" in line or line.startswith("#") or "- " not in line:
+            continue
+        name = line.split("- ", 1)[1].split(" —", 1)[0]
+        window = line.split("—", 1)[1].strip() if "—" in line else ""
+        if name and "—" in line and not name.startswith("DONE"):
+            etas[name] = window
+    return etas
+
+
+def linear_render(items, rows, etas):
+    print("hngh timeline (gantt-ish)")
+    print("legend: # = timeline event  ... = queued  - = planned window (ETA)")
+    for i, status in items:
+        eta = etas.get(i, "")
+        if i not in [r[2] for r in rows]:
+            marker = "-" * 3 if eta else ("..." if status == "queued" else " .....")
+            print(f"{i:22s} {marker}  {eta}")
+            continue
+        n = sum(1 for r in rows if r[2] == i)
+        bar = "#" * n
+        if status == "queued":
+            bar += " ..."
+        elif status == "active":
+            bar += " +"
+        eta_suffix = f"  {eta}" if eta else ""
+        print(f"{i:22s} {bar}{eta_suffix}")
+    for r in rows:
+        if r[2] not in [i for i, _ in items] and r[1] != "rotation":
+            print(f"{r[2]:22s} # (event)")
+    print(f"\n{len(rows)} timeline rows; {len(items)} queue items")
+
+
+def spiral_render(rows, items):
+    """A coarse Archimedean spiral: past winds inward, future outward."""
+    width, height = 60, 30
+    grid = [[" "] * width for _ in range(height)]
+    center = (width // 2, height // 2)
+    # theta from 0 (outer) inward for past rows, outward for future items
+    n_done = sum(1 for r in rows)
+    n_future = sum(1 for i, s in items if s == "queued") or 1
+    total = n_done + n_future
+    for idx, r in enumerate(rows[:n_done]):
+        theta = 2 * math.pi * (1 - idx / max(total, 1))  # inner → clockwise
+        radius = 1.0 + 2.5 * (1 - idx / max(n_done, 1))
+        x = int(center[0] + radius * math.cos(theta))
+        y = int(center[1] + radius * 0.5 * math.sin(theta))
+        if 0 <= x < width and 0 <= y < height:
+            grid[y][x] = "#"
+    for idx, (name, status) in enumerate(
+        [(a, b) for a, b in items if b == "queued"]):
+        theta = 2.0 * math.pi * (0.05 + idx / max(n_future, 1))
+        radius = 3.0 + 2.0 * (idx / max(n_future, 1))
+        x = int(center[0] + radius * math.cos(theta))
+        y = int(center[1] + radius * 0.5 * math.sin(theta))
+        if 0 <= x < width and 0 <= y < height:
+            grid[y][x] = "."
+    print("hngh spiral (past in, future out)")
+    print("legend: '#' = timeline event  'o' = queued/future")
+    for line in grid:
+        print("".join(line).rstrip())
+    print(f"{len(rows)} timeline rows; {len(items)} queue items")
+
+
 def main():
     rows = timeline_rows()
     items = queue_items()
-    print("hngh timeline (gantt-ish)")
-    print("legend: # = timeline event  . = queued window")
-    # order: all queue items, then any timeline-only items
-    ids = [i for i, _ in items]
-    for i in ids:
-        if i not in [r[2] for r in rows]:
-            # queued item with no timeline row yet: show the '.' window + status
-            status = next(s for item, s in items if item == i)
-            print(f"{i:22s} {'...' if status == 'queued' else ' .....'}")
-            continue
-        status = next(s for item, s in items if item == i)
-        n = sum(1 for r in rows if r[2] == i)
-        bar = ("#" * n) + (" ..." if status == "queued"
-                           else " +" if status == "active" else "")
-        print(f"{i:22s} {bar}")
-    # timeline rows not in the queue (events like check-ins)
-    seen = set(ids)
-    for r in rows:
-        if r[2] not in seen and r[1] != "rotation":
-            print(f"{r[2]:22s} # (event)")
-    print(f"\n{len(rows)} timeline rows; {len(items)} queue items")
+    if "--spiral" in sys.argv:
+        spiral_render(rows, items)
+    else:
+        etas = queue_etas()
+        linear_render(items, rows, etas)
 
 
 if __name__ == "__main__":

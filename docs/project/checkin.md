@@ -159,3 +159,24 @@ next rotation or tomorrow, whichever comes first.
   dashboard can show "checked-in on ..." per day). Legend made to
   match reality (`...` for queued).
 - **Outcome:** check-in rows in the spine; legend fixed; this entry.
+
+## 2026-08-25 — check-in #12
+
+- **State:** clean, synced; 8-row spine; gate green.
+- **Steering (future in the gantt):** the ETA windows defined in
+  queue.md were never drawn. The readout now parses the ETA section
+  and renders planned-window items as `---` bars with their window —
+  the gantt finally shows future as well as past/present. Smoke green.
+- **Outcome:** ETA bars in the readout; this entry, committed.
+
+## 2026-08-25 — check-in #12 (revised by operator)
+
+- **State:** clean, synced; 8-row spine; gate green.
+- **Steering (operator direction):** the operator wanted "practical
+  nonsense" — a spiraling, expanding dashboard. `scripts/dashboard-readout`
+  now has BOTH: the linear gantt (ETA `---` bars, done `#`, queued `...`)
+  AND a `--spiral` view (Archimedean spiral, past winds inward, future
+  unwinds outward as dots). Smoke covers both. The crazy/gantt-port
+  ideas (axial/circular gantt options, interfaces dancing to system
+  music) go into the queue as rotation-scale candidates.
+- **Outcome:** spiral renderer + smoke + this entry, committed.

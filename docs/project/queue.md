@@ -98,3 +98,14 @@ Gives "future" a date so a gantt can place bars.
 - others — on rotation, roughly one per cadence
 - dashboard-readouts — once the spine (timeline-events + queue-eta) has
   >= 5 committed rows
+
+## Interface-spec candidates (operator-requested "practical nonsense")
+
+- **gantt-ports** — port the dashboard for many gantt options:
+  axial/circular (clock-face rings), animated spirals, "crazy, dancing,
+  wobbling" variants. Rotation-scale, after dashboard-readouts densifies.
+- **dancing-ui** — interfaces that "dance" in time to music playing on
+  the system, intensity varying with the track. Cross-project (omp +
+  Hngh + local UI), a real UX-experiment backlog item; feasibility
+  first probe (read system music source, map intensity to a CSS/js
+  amplitude) before committing to the full dance.
