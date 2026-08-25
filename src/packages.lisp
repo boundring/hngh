@@ -335,6 +335,7 @@
   (:use #:cl)
   (:export #:render
            #:render-run
+           #:render-pin-list
            #:render-receipt
            #:render-evidence-fact
            #:render-source-manifest-entry
