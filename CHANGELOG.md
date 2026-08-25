@@ -91,6 +91,17 @@ lives under Pre-release / early development until the first release.
   HTTP server through an injected transport (`status=complete` with the
   closed claim states) and committed through the self-governed ceremony.
 
+- Operator policy profiles (promotion rung 16): the domain gains the
+  pure `evidence-profile` value (principle → permitted requirement
+  kinds; duplicate principles and non-closed kinds refuse) and
+  `evaluate-policy-proposal-under-profile`, which narrows a proposal's
+  requirements to a listed principle's permitted kinds — a profile only
+  narrows, never broadens. The requirement-kind vocabulary admits
+  `:review`, so a profile can demand review evidence; `propose` gains
+  `profile=PATH` (strict `PRINCIPLE<TAB>KIND` lines; missing or
+  malformed files are malformed invocations). Committed through the
+  self-governed ceremony (chore export lane for `src/packages.lisp`).
+
 ### 2026-08-24
 
 #### Added
