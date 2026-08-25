@@ -100,7 +100,9 @@ safe to reason about, no matter what real-world machinery gets attached later.
 ## Agents: Pi and beyond
 
 Long-term, Hngh is meant to orchestrate an automated worker — likely one called Pi — that
-actually carries out runs. Today that is a survey and a plan, not an installed system.
+actually carries out runs. Today the bounded read-only worker task (`run-worker`, rung 18)
+and the one-shot `scripts/worker-driver` cycle are installed behind a port; the durable
+Pi RPC compiler agent remains a survey and a plan.
 
 When a worker arrives, it will sit behind a port: a replaceable outer layer that Hngh can
 swap out. The worker is read-only by default. Hngh keeps authority, holds the evidence,
@@ -145,8 +147,9 @@ is a "no" until known.
 ## Today and next
 
 Today Hngh is a small library plus fixture tests: a pure kernel with closed run lifecycles,
-six application use cases, governance policy, and read-only verifiers for candidate evidence
-(and, historically, the retirement archive). There is no daemon and no agent yet. The
+six application use cases, governance policy, a bounded read-only worker task behind a port,
+and read-only verifiers for candidate evidence (and, historically, the retirement archive).
+There is no daemon; the worker is task-scoped, not a persistent agent. The
 direction ahead is set out in the [roadmap](project/roadmap.md) — read it for what gets built
 next and in what order.
 

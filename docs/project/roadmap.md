@@ -102,8 +102,10 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
 ## Next
 
 1. **(Next slice).** The worker-driver surface (the hngh-omp bridge
-   tools that run a disposable worker session through run-worker), or
-   the node-lattice boundary amendments (ambient tunnels,
+   tools that run a disposable worker session through run-worker) —
+   the one-shot `scripts/worker-driver` cycle is done; the bridge-hosted
+   end-to-end session (run → worker → review → certify) is the open
+   half — or the node-lattice boundary amendments (ambient tunnels,
    certificate-bound wake) that must clear their own policy proposals
    first.
 
