@@ -90,13 +90,21 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
   evidence is the pins registry, the run needs a `:federation` receipt,
   and there is no default transport or daemon. Unpinned peers refuse
   `unknown-peer-key`. Committed through the self-governed ceremony.
+- Completed the bounded read-only worker task (promotion rung 18,
+  2026-08-25): the worker-rung first slice. `run-worker RUN task=LABEL
+  [payload=TEXT]` runs one closed worker task through an injected
+  transport; `:worker` is admitted behind the `worker-task` tool label,
+  and a completed task binds a `:worker` evidence fact (a worker
+  self-report is evidence, never acceptance). Committed through the
+  self-governed ceremony.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
-1. **(Next slice).** The bridge-backed continual worker (worker-rung
-   candidate) from the backlog, or the node-lattice boundary
-   amendments (ambient tunnels, certificate-bound wake) that must
-   clear their own policy proposals first.
+1. **(Next slice).** The worker-driver surface (the hngh-omp bridge
+   tools that run a disposable worker session through run-worker), or
+   the node-lattice boundary amendments (ambient tunnels,
+   certificate-bound wake) that must clear their own policy proposals
+   first.
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.

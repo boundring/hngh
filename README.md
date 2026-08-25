@@ -129,6 +129,11 @@ the current number) and an operator command surface. Implemented:
   operator's injected transport decides what "wake" means. Unpinned peers refuse
   `unknown-peer-key`; ambient tunnels and certificate-bound wake remain boundary
   amendments.
+- Bounded read-only worker (rung 18): `run-worker RUN task=LABEL [payload=TEXT]` runs
+  one closed worker task through an injected transport; `:worker` is admitted behind
+  the `worker-task` tool label. A completed task binds a `:worker` evidence fact —
+  a worker self-report is evidence, never acceptance, and a worker never carries a
+  mutation certificate. No default transport.
 
 Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
