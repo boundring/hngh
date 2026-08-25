@@ -224,3 +224,13 @@ next rotation or tomorrow, whichever comes first.
   consistent exit codes).
 - **Queue:** gantt-ports near-delivered (7 style/flags); dancing-ui
   probe live; theme system is the new QoL knob.
+
+## 2026-08-25 — check-in #17 (dashboard-readouts rotated)
+
+- **rotation:** dashboard-readouts flipped done through the full
+  ceremony (model review + admitted verdict + committed
+  a120ff6…). The gantt family (7 dialects + tone/theme/banner/quiet
+  + audio dance) is a real shipped surface. Timeline row added; stale
+  ETA line removed. Gate 23/1/0.
+- **next:** wake-mutation-lane (the pinned gov-lane) waits its full
+  session; more dashboards or the UX pass on other scripts stand by.
