@@ -359,7 +359,9 @@ the two parts of that sentence so the exception is a rule, not a mood:
    manifest by the dependency guard**, and land as plain commits labeled
    `(excluded from cert manifest by dependency guard)`. The label is the
    rule's visible signature; an unlabeled code-surface commit is a
-   violation.
+   violation. The label is whitelisted to `src/packages.lisp` only — a
+   labeled commit touching any other code-surface file is caught by the
+   guard's diff inspection.
 2. **Every code-surface commit (src/, tests/, scripts/, Makefile, asd)
    is machine-checked** by `tests/scripts/test-loop-history-guard.py`
    from the restatement commit `1915713` onward: each must be a
