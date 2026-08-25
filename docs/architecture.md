@@ -56,6 +56,13 @@ clock), the coordinator functions wire the installed evidence, mutation, and
 review adapters through injected transports, and `display` renders any
 result through `hngh.presentation`. It starts no background work by import.
 
+The installed outer boundaries beyond evidence and review are: the mutation
+executor (rung 5), the filesystem record store (rung 8), the bounded `:model`
+and `:terminal` transports behind loadout admission (rung 10), the federation
+and attestation adapter (rungs 11–12, 14–15), and the bounded `:worker`
+transport (rung 18). None of them runs by default: every one sits behind an
+injected transport or an explicit admission receipt.
+
 ## Planned outer boundaries
 
 ```text
@@ -69,6 +76,7 @@ The dependency direction, promotion ladder, and composition rule live in the
 responsibilities and allowed dependencies live in the
 [component map](core/component-map.md). Tests and presentation data follow the
 [test boundary](core/test-boundary.md) and
-[presentation boundary](design/presentation-boundary.md). A real model or
-terminal transport remains a future boundary, admitted only under a
-separately approved run loadout.
+[presentation boundary](design/presentation-boundary.md). Real model and
+terminal transports are admitted only under a separately approved run
+loadout (rung 10), and the operator reviewer transport (rung 13) is
+admitted by an explicit operator reviewer file.

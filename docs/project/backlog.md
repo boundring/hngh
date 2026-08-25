@@ -57,10 +57,11 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   no-daemon boundary is a kernel invariant — any future "keep the tunnels
   open" mechanism must first amend that boundary through its own policy
   proposal, not smuggle a watcher in through an adapter.
-- **Dependencies:** the policy-profile rung (operator-tunable requirement
-  kinds), the network claim methods behind the federation port, and a
-  boundary-amendment proposal that names exactly which ambient operation
-  (if any) is admitted and under what evidence.
+- **Dependencies:** the federation surface (rungs 11–15) and policy
+  profiles (rung 16) are in place; the pending pieces are the
+  certificate-bound wake chain and a boundary-amendment proposal that
+  names exactly which ambient operation (if any) is admitted and under
+  what evidence.
 - **Review trigger:** an independent reviewer accepts the admission and
   wake flows against fixtures (pinned peer identity, stale or missing
   last-seen refuses, one-request-one-certificate, no ambient process
@@ -84,8 +85,9 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Risk:** a wake must never be a blanket "wake anything" — the
   certificate binds peer, method, and evidence; the evidence-first and
   atomic-mutation principles apply unchanged.
-- **Dependencies:** the rung-17 wake surface, the mutation vocabulary,
-  the policy-profile rung for the new action's requirements.
+- **Dependencies:** the rung-17 wake surface and the mutation vocabulary
+  (the policy-profile rung is complete and available for the new
+  action's requirement map).
 - **Review trigger:** an independent reviewer accepts that a stale,
   missing, or extra-evidence wake certificate refuses; only the
   certificate-bound single wake executes.
@@ -115,7 +117,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   one-shot invocation with a receipt, and the policy names endpoints
   exactly.
 
-## Governance property tests
+## Governance property tests — COMPLETED (2026-08-24)
 
 - **Problem:** the principle matrix must be total over the closed kinds and
   monotone with respect to evidence, but neither property is explicitly
@@ -166,7 +168,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts the survey and the
   metric definitions as a sound basis for a later benchmark proposal.
 
-## Dogfood loop (future rung candidate)
+## Dogfood loop — COMPLETED (promotion rung 9, 2026-08-24; hardened by the loop-history guard 2026-08-25)
 
 - **Problem:** Hngh has never governed a real change to its own repository
   end to end, so the evidence -> review -> certification -> mutation cycle
@@ -184,7 +186,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts the self-committed
   change and its certificate chain.
 
-## Operator policy profiles (policy-profile rung)
+## Operator policy profiles — COMPLETED (promotion rung 16, 2026-08-25)
 
 - **Problem:** rungs 6/11/12/13 added verified, real transports (model
   review, attestation envelopes, pinned keys, operator reviewer files)
@@ -211,9 +213,10 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 ## Bridge-backed continual worker (worker-rung candidate)
 
 - **Problem:** the intent document names a worker behind a port — "likely
-  one called Pi" — but the scaffolded hngh-omp bridge plugin (7/7 smoke)
-  drives nothing, and the only continual workers are the shell jobs in
-  hngh-automation, which cannot exercise Hngh's own run lifecycle.
+  one called Pi" — and the bridge now surfaces the worker lane
+  (`hngh_run_worker`, `worker-driver`), but no agent thread yet drives
+  the full ceremony through the bridge end to end, and the only
+  continual workers are the shell jobs in hngh-automation.
 - **Smallest useful outcome:** a disposable, read-only worker omp session
   (local Ornith/Qwen via the automation's own model chain) that can
   open one run, gather read-only candidate evidence, run one `review`
@@ -228,3 +231,103 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts the disposable
   worker's run receipt, its review evidence, and an unchanged fixture
   manifest — the same gates the Pi survey named.
+
+## Node-lattice admission rung (implementation) — queued 2026-08-25
+
+- **Problem:** a single Hngh node learns only from its own wall; the
+  operator's planned fleet (an old Android phone, a Steam Deck, a
+  tired-NIC laptop) has no admission path, and the two capabilities
+  that make a fleet useful (waking a peer, keeping tunnels open
+  without a watcher) both touch the outside world in ways the current
+  boundary does not admit.
+- **Smallest useful outcome:** one operator command admits a second
+  node as a pinned federation peer with an offline fingerprint;
+  bounded remote-attestation facts flow both ways (each a citable
+  claim); the first wake-on-demand rides the certificate machinery; no
+  daemon, no scheduler — every request is a single explicit, recorded,
+  human-closable step.
+- **Evidence:** README `Where this is going` node-lattice vision
+  (2026-08-25); intent.md; the federation port, pinned-key registry,
+  and signature-verification transport (rungs 11–12); http-claim
+  (r15); wake-peer (r17).
+- **Risk:** the network surface grows again — federation fetch is the
+  watch-item the 2026-08-25 external re-review named; low-powered
+  peers are unattended, so key rotation and evidence freshness need
+  closed handling; the no-daemon boundary stays a kernel invariant.
+- **Dependencies:** the certificate-bound wake lane (so a wake rides
+  the certificate); a boundary amendment naming exactly which ambient
+  operation (if any) is admitted; the policy-profile map for admission
+  requirement kinds.
+- **Review trigger:** an independent reviewer accepts the two-node
+  admission and wake flow against fixtures (pinned identity,
+  stale/missing last-seen refuses, one-request-one-certificate) and
+  sees no watcher, scheduler, or background process in the diff.
+
+## Documentation-sync loop — queued 2026-08-25
+
+- **Problem:** the check count and command/rung lists in README and
+  the roadmap drifted three separate times across 2026-08-25 and were
+  hand-corrected; the loop-history guard watches commits, not the
+  docs' numbers.
+- **Smallest useful outcome:** a `make numbers` target that recomputes
+  the live check count, rung prose, and CLI command list from the
+  committed suite and surface, plus a small guard test asserting the
+  README/roadmap numbers match ground truth — drift is caught by
+  `make test` instead of by a human.
+- **Evidence:** the 2026-08-25 consistency pass (README count and
+  command surface hand-corrected across the day); the records-index
+  gap fixed the same day.
+- **Risk:** the guard must only verify, never auto-rewrite; docs stay
+  human-folded, the guard fails loudly on divergence.
+- **Dependencies:** the existing `make test` suite (whose count is an
+  input) and the surface the numbers describe.
+- **Review trigger:** an independent reviewer sees a deliberately
+  desynced README number fail the guard, and a synced one pass.
+
+## Bridge-as-operator-host — queued 2026-08-25
+
+- **Problem:** the bridge has the full 10-tool surface (including
+  `hngh_run_worker`) and its own repo, but no thread drives the whole
+  ceremony from it — the disposable lane named in the session record
+  (run → worker → review → certify) is still unlaunched on the bridge.
+- **Smallest useful outcome:** an operator in the bridge drives the
+  full step-set — open a run, admit the worker, run the worker, bind
+  the review, certify one mutation — with the ledger as the sole
+  receipt; the session stays disposable (nothing persists beyond the
+  ledger).
+- **Evidence:** the hngh-omp bridge README; the 2026-08-25 live
+  worker lifecycle; r13 operator reviewer file.
+- **Risk:** a host surface is not free flexibility — the bridge is a
+  trusted operator seat; each certificate still binds one action, and
+  no daemon or ambient automation sits behind the tools.
+- **Dependencies:** the bridge (present); the worker-driver
+  no-transport refusal (present); the r13 reviewer file (present); a
+  loadout admitting `:model` for the review step.
+- **Review trigger:** an independent reviewer accepts a run receipt
+  that flowed run → worker → review → certify, and a repeat step
+  refuses minimally when an admission is missing.
+
+## Evidence-freshness + key-rotation rung — queued 2026-08-25
+
+- **Problem:** the lattice peers are unattended, and the node-lattice
+  risk names key rotation and evidence freshness as closed concerns —
+  today the pinned registry supports changing keys but nothing rotates
+  them atomically or marks a peer stale by last-seen age.
+- **Smallest useful outcome:** closed key rotation on the pinned
+  registry (one key per peer replaced, never reduced to zero, refused
+  if the resulting set is unrecognizable) plus a stale-evidence rule
+  on remote-attestation facts — a peer whose last-seen fact is older
+  than an operator-set bound flips `:stale` and refuses wake,
+  fail-closed.
+- **Evidence:** the node-lattice and the two boundary proposals (key
+  rotation, evidence freshness); `parse-pinned-keys` (r12) as the
+  rotation substrate.
+- **Risk:** rotation is a state-mutating operator action — ride the
+  mutation lane, one certificate per rotation; a stale peer must not
+  cascade into refusing healthy-peer wake.
+- **Dependencies:** the mutation lane (or the existing candidate
+  certificate for a pure registry rotation); the pinned registry and
+  remote-attestation values.
+- **Review trigger:** a test suite proves an old peer refuses wake,
+  a rotation that would empty the registry refuses, and a healthy,
+  fresh, rotated peer passes.

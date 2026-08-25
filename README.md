@@ -62,7 +62,7 @@ silent continuation of an old one.
 ## Status
 
 Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus a
-suite past 2,690 checks — the count grows with every closed vocabulary, and the run prints
+suite past 2,774 checks — the count grows with every closed vocabulary, and the run prints
 the current number) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
@@ -84,7 +84,8 @@ the current number) and an operator command surface. Implemented:
   they never decide, and no default provider transport exists.
 - Operator command surface (`scripts/hngh`): `create-run`, `admit-transport`, `arm-run`,
   `start-run`, `checkpoint`, `close-run`, `present`, `review`, `terminal`, `propose`,
-  `issue-cert`, `mutation-check`, `fetch-evidence`, `verify-attestation`, `list-pins`;
+  `issue-cert`, `mutation-check`, `fetch-evidence`, `verify-attestation`, `list-pins`,
+  `wake-peer`, `run-worker`;
   strict exit codes (0 accepted, 1 refused/conflict, 2 malformed, 3 transport fault);
   persistence only under an explicit `--store=PATH`.
 - Real evidence chain: certificates mint only from an operator-produced verdict file plus
