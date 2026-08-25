@@ -161,3 +161,20 @@ result seen-args)."
     (check (worker-has "not admitted for worker" result)
            "the refusal names the missing admission"))
   (uiop:delete-directory-tree root :validate t))
+
+;; The continual cycle refuses the untransported halves closed:
+;; a worker-admitted run that has no model admission cannot review, and a
+;; reviewed run still carries no mutation authority.
+(let ((root (worker-dispatch-root)))
+  (worker-dispatch +worker-create-args+ :root root)
+  (worker-dispatch '("admit-transport" "run-1" "worker" "repository")
+                   :root root)
+  (let ((result (worker-dispatch
+                 '("review" "run-1" "content-hash=abc"
+                   "paths=src/main.lisp")
+                 :root root)))
+    (check (= 1 (worker-exit result))
+           "a worker-admitted run without model admission refuses review")
+    (check (worker-has "not admitted for model" result)
+           "the refusal names the missing model admission"))
+  (uiop:delete-directory-tree root :validate t))
