@@ -35,6 +35,8 @@ def test_dance():
     for style in ([], ["--spiral"], ["--circular"]):
         out = run([*style, "--dance", "5"])
         assert out.returncode == 0, out.stderr
+        out = run([*style, "--dance", "auto"])
+        assert out.returncode == 0, out.stderr
 
 
 if __name__ == "__main__":

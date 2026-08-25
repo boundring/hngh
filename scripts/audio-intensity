@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""audio-intensity: probe the system's playing music for a 0..10 intensity.
+
+Lives the edge of the system: reads active PulseAudio/PipeWire
+sink-inputs via pactl. When something is actually playing it returns a
+beat-synced 1..10 (sin of the wall clock — a stand-in for real BPM
+tracking); when nothing plays it returns 0. No daemon, one call one job;
+the caller polls it, never a watcher.
+"""
+
+import math
+import subprocess
+import sys
+import time
+
+
+def playing():
+    try:
+        out = subprocess.run(
+            ["pactl", "list", "short", "sink-inputs"],
+            capture_output=True, text=True, timeout=2,
+        )
+        return len([l for l in out.stdout.splitlines() if l.strip()]) > 0
+    except Exception:
+        return False
+
+
+def intensity():
+    if not playing():
+        return 0
+    beat = (math.sin(time.time() / 2.0) + 1) / 2  # 0..1
+    return max(1, min(10, round(1 + beat * 9)))
+
+
+if __name__ == "__main__":
+    print(intensity())

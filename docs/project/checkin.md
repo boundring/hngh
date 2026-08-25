@@ -192,3 +192,13 @@ next rotation or tomorrow, whichever comes first.
   stays queued (music-source amplitude is the next probe).
 - **Outcome:** three gantt styles + dance + smoke + this entry,
   committed through the ceremony.
+
+## 2026-08-25 — check-in #14 (the machine dances)
+
+- **Steering (operator):** real dancing, not flagwork.
+  `scripts/audio-intensity` probes the system's active music → 0..10
+  (live: 2/10 at build time); the readout's `--dance auto` polls it,
+  so the gantt dances in time with what's actually playing, silent
+  when quiet. Probe + hook + smoke (incl. auto) green.
+- **Queue:** dancing-ui probe done; amplitude-animation and real FFT
+  BPM stay the deeper steps.
