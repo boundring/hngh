@@ -59,3 +59,17 @@ next rotation or tomorrow, whichever comes first.
   work so future passes don't overreach.
 - **Outcome:** this entry; no code changed. The next action for
   wake-mutation-lane is a full rotate-queue session, operator-invoked.
+
+## 2026-08-25 — check-in #3
+
+- **State:** clean, synced (`4fb0407`); queue stable; gate green.
+- **Steering (small, direct):** made the check-in #2 calibration
+  *usable* — the queue ledger now carries a `## Scale` appendix
+  marking each item check-in-scale vs rotation-scale, so the cadence
+  picks the right instrument without re-reading each item. The TSV
+  stays 4-field so `rotate-queue`'s parser is untouched.
+- **Note:** timeline-events and queue-eta are the two check-in-scale
+  items that most directly build the dashboard spine; given they are
+  small, the *next* check-in could take one. Everything else waits
+  for its rotation.
+- **Outcome:** queue.md Scale section; this entry. No code changed.
