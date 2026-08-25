@@ -63,6 +63,10 @@
             (when (plusp code) (return-from run-cycle code))
             (do-step (list "close-run" "run-1" "evacuated"))))))))
 
+(when (member "--help" (uiop:raw-command-line-arguments) :test #'string=)
+  (format *standard-output* "--help: run one continuous worker cycle; see header.~%")
+  (uiop:quit 0))
+
 (multiple-value-bind (store positionals)
     (split-argv (uiop:raw-command-line-arguments))
   (unless (and store (>= (length positionals) 2))

@@ -193,6 +193,10 @@ hash, per-file source-manifest entries with live SHA-256s."
 
 ;;; --- entry --------------------------------------------------------------
 
+(when (member "--help" (uiop:raw-command-line-arguments) :test #'string=)
+    (format *standard-output* "--help: this driver runs a closed slice; see the header comments.~%")
+    (uiop:quit 0))
+
 (multiple-value-bind (options positionals)
     (split-argv (rest (uiop:raw-command-line-arguments)))
   (let ((store (getf options :store))
