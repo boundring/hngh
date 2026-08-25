@@ -429,7 +429,7 @@ commands:~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
   review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
-  list-pins PATH~%~
+  list-pins PATH  wake-peer RUN PINS-FILE PEER~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -1653,6 +1653,39 @@ touches no run ledger and spawns no process."
           (values (format nil "list-pins refused: ~A" refusal) 2)
           (values (hngh.presentation:render-pin-list registry) 0)))))
 
+(defun dispatch-wake-peer (args store wake-ports)
+  "wake-peer RUN PINS-FILE PEER: one explicit wake-on-demand request for
+PEER (a pinned lattice peer) through the injected wake transport. The
+pins file is the admission evidence; the run must hold a
+:federation admission receipt. No default transport exists — without
+injection the command refuses no-wake-transport."
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (/= 3 (length positionals)))
+      (return-from dispatch-wake-peer (values (command-usage) 2)))
+    (let ((identifier (first positionals))
+          (pins-path (second positionals))
+          (peer (third positionals)))
+      (multiple-value-bind (registry refusal)
+          (read-pins-file pins-path)
+        (when refusal
+          (return-from dispatch-wake-peer
+            (values (format nil "wake-peer refused: ~A" refusal) 2)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :federation)
+        (return-from dispatch-wake-peer
+          (values (format nil "wake-peer refused: run ~A not admitted for federation"
+                          identifier)
+                  1)))
+      (unless wake-ports
+        (return-from dispatch-wake-peer
+          (values "wake-peer refused: no-wake-transport" 1)))
+      (let ((result (hngh.adapters.federation:wake-peer-request
+                     registry peer wake-ports)))
+        (case (hngh.adapters.federation:wake-result-status result)
+          (:issued (values (hngh.presentation:render result) 0))
+          (:refused (values (hngh.presentation:render result) 1))
+          (:fault (values (hngh.presentation:render result) 3))))))))
+
 (defun report-federation-result (result)
   "Map a FEDERATION-RESULT to (values output exit-code): 0 complete,
 1 refused, 3 transport fault."
@@ -1675,7 +1708,7 @@ touches no run ledger and spawns no process."
 
 (defun dispatch-command* (positionals store clock mutation-ports gather-ports
                               review-ports terminal-ports
-                              federation-ports attestation-ports)
+                              federation-ports attestation-ports wake-ports)
   (let ((command (first positionals))
         (args (rest positionals)))
     (cond
@@ -1700,13 +1733,15 @@ touches no run ledger and spawns no process."
     ((string= command "verify-attestation")
      (dispatch-verify-attestation args store clock attestation-ports))
     ((string= command "list-pins") (dispatch-list-pins args))
+    ((string= command "wake-peer")
+     (dispatch-wake-peer args store wake-ports))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))
 
 (defun dispatch-command (argv &key clock-now mutation-ports gather-ports
                               review-ports terminal-ports
-                              federation-ports attestation-ports)
+                              federation-ports attestation-ports wake-ports)
   "Parse the operator ARGV list, execute the named command, and return
 (values output-string exit-code). Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
@@ -1725,7 +1760,8 @@ FEDERATION-PORTS and ATTESTATION-PORTS inject the federation adapter
 ports for the fetch-evidence and verify-attestation commands; no default
 exists, so without injection the commands refuse no-federation-transport
 and no-attestation-transport and plain scripts/hngh never touches a
-wire."
+wire. WAKE-PORTS injects the wake transport for the wake-peer command;
+without injection the command refuses no-wake-transport."
   (multiple-value-bind (positionals store-path bad-option)
       (split-argv argv)
     (when bad-option
@@ -1740,14 +1776,14 @@ wire."
                                   :root store-path)
                                  clock mutation-ports gather-ports
                                  review-ports terminal-ports
-                                 federation-ports attestation-ports)
+                                 federation-ports attestation-ports wake-ports)
             (hngh.adapters.filesystem:transport-fault (condition)
               (values (format nil "transport fault: ~A" condition) 3))
             (hngh.adapters.filesystem:store-refusal (condition)
               (values (format nil "store refusal: ~A" condition) 2)))
           (dispatch-command* positionals nil clock mutation-ports gather-ports
                              review-ports terminal-ports
-                             federation-ports attestation-ports)))))
+                             federation-ports attestation-ports wake-ports)))))
 
 ;;; Operator-visible root ----------------------------------------------------
 

@@ -474,14 +474,16 @@ method it was given; returns (values result seen-method)."
                 (ensure-directories-exist (uiop:ensure-directory-pathname path)))))
     path))
 
-(defun fed-dispatch (argv &key root federation-ports attestation-ports clock)
+(defun fed-dispatch (argv &key root federation-ports attestation-ports
+                            wake-ports clock)
   (let ((*error-output* (make-string-output-stream)))
     (multiple-value-list
      (hngh.main:dispatch-command
       (if root (cons (format nil "--store=~A" root) argv) argv)
       :clock-now (or clock (lambda () "2026-08-15T00:00:00Z"))
       :federation-ports federation-ports
-      :attestation-ports attestation-ports))))
+      :attestation-ports attestation-ports
+      :wake-ports wake-ports))))
 
 (defun fed-exit (result) (second result))
 (defun fed-has (needle result) (search needle (first result)))
@@ -936,6 +938,65 @@ transport; returns (values result call-count)."
               (string= "" (first result)))
          "list-pins renders an empty registry as no lines"))
 
+;;;; Rung 17: wake-peer — one explicit wake request behind injected ports --
+
+(check (signals-error-p
+        (lambda ()
+          (hngh.adapters.federation:make-wake-ports "not-a-function")))
+       "wake ports refuse a non-function transport")
+
+(defun fed-wake (&key (key-identifier "key-b") (exit-code 0) (fault nil))
+  "Run wake-peer-request through a fake wake transport recording argv;
+returns (values result argv)."
+  (let ((captured nil))
+    (let ((ports (hngh.adapters.federation:make-wake-ports
+                  (lambda (argv)
+                    (setf captured argv)
+                    (when fault (error "wake transport fault"))
+                    (values exit-code "wake sent" "")))))
+      (values
+       (hngh.adapters.federation:wake-peer-request
+        *fed-pinned-registry* key-identifier ports)
+       captured))))
+
+(multiple-value-bind (result captured)
+    (fed-wake)
+  (check (and (eq :issued (hngh.adapters.federation:wake-result-status result))
+              (equal "key-b"
+                     (hngh.adapters.federation:wake-result-key-identifier result)))
+         "a pinned peer wake issues")
+  (check (and (equal "key-b" (first captured))
+              (search "/etc/hngh/keys/key-b.pub"
+                      (second captured) :test #'string=))
+         "the wake transport sees the peer and its pinned key path"))
+
+(multiple-value-bind (result captured)
+    (fed-wake :key-identifier "key-z")
+  (check (and (eq :refused (hngh.adapters.federation:wake-result-status result))
+              (equal '("unknown-peer-key")
+                     (hngh.adapters.federation:wake-result-refusal-labels result)))
+         "an unpinned peer refuses before any transport call")
+  (check (null captured)
+         "the unknown-peer-key path never reached the transport"))
+
+(multiple-value-bind (result captured)
+    (fed-wake :exit-code 1)
+  (check (and (eq :refused (hngh.adapters.federation:wake-result-status result))
+              (equal '("wake-refused")
+                     (hngh.adapters.federation:wake-result-refusal-labels result)))
+         "a nonzero wake transport exit refuses")
+  (check (and captured (= 2 (length captured)))
+         "the refused wake reached the transport once"))
+
+(multiple-value-bind (result captured)
+    (fed-wake :fault t)
+  (check (and (eq :fault (hngh.adapters.federation:wake-result-status result))
+              (equal '("wake-fault")
+                     (hngh.adapters.federation:wake-result-refusal-labels result)))
+         "a thrown wake transport faults the result")
+  (check (and captured (= 2 (length captured)))
+         "the fault path reached the transport once"))
+
 (let* ((path (fed-write-file
               (concatenate 'string
                            "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub"
@@ -953,3 +1014,67 @@ transport; returns (values result call-count)."
                                     "rsa-sha256")
                        result))
          "list-pins prints the resolved algorithm per pin"))
+
+;; wake-peer: admitted run + injected wake ports
+(let ((root (fed-dispatch-root)))
+  (fed-dispatch +fed-fetch-create-args+ :root root)
+  (fed-dispatch '("admit-transport" "run-1" "federation" "repository")
+                :root root)
+  (let* ((pins (fed-write-file
+                (concatenate 'string "machine-b" '(#\Tab)
+                             "/etc/hngh/keys/machine-b.pub")))
+         (result (fed-dispatch
+                  (list "wake-peer" "run-1" pins "machine-b")
+                  :root root
+                  :wake-ports
+                  (hngh.adapters.federation:make-wake-ports
+                   (lambda (argv) (declare (ignore argv))
+                     (values 0 "wake sent" ""))))))
+    (check (= 0 (fed-exit result))
+           "wake-peer issues for an admitted run with a pinned peer")
+    (check (fed-has "wake status=issued" result)
+           "the issued wake renders"))
+  (uiop:delete-directory-tree root :validate t))
+
+;; wake-peer refuses without injected ports
+(let ((root (fed-dispatch-root)))
+  (fed-dispatch +fed-fetch-create-args+ :root root)
+  (fed-dispatch '("admit-transport" "run-1" "federation" "repository")
+                :root root)
+  (let* ((pins (fed-write-file
+                (concatenate 'string "machine-b" '(#\Tab)
+                             "/etc/hngh/keys/machine-b.pub")))
+         (result (fed-dispatch (list "wake-peer" "run-1" pins "machine-b")
+                               :root root)))
+    (check (= 1 (fed-exit result))
+           "wake-peer without ports refuses")
+    (check (fed-has "no-wake-transport" result)
+           "the refusal names no-wake-transport"))
+  (uiop:delete-directory-tree root :validate t))
+
+;; wake-peer: unpinned peer refuses; malformed pins exits 2
+(let ((root (fed-dispatch-root)))
+  (fed-dispatch +fed-fetch-create-args+ :root root)
+  (fed-dispatch '("admit-transport" "run-1" "federation" "repository")
+                :root root)
+  (let* ((pins (fed-write-file
+                (concatenate 'string "machine-b" '(#\Tab)
+                             "/etc/hngh/keys/machine-b.pub")))
+         (ports (hngh.adapters.federation:make-wake-ports
+                 (lambda (argv) (declare (ignore argv))
+                   (values 0 "wake sent" ""))))
+         (result (fed-dispatch
+                  (list "wake-peer" "run-1" pins "machine-z")
+                  :root root :wake-ports ports)))
+    (check (= 1 (fed-exit result))
+           "wake-peer refuses an unpinned peer")
+    (check (fed-has "unknown-peer-key" result)
+           "the refusal names unknown-peer-key"))
+  (let* ((bad (fed-write-file "machine-b no-tab-here\n"))
+         (result (fed-dispatch (list "wake-peer" "run-1" bad "machine-b")
+                               :root root)))
+    (check (= 2 (fed-exit result))
+           "wake-peer with a malformed pins file is malformed")
+    (check (fed-has "malformed pins file" result)
+           "the refusal names the malformed pins file"))
+  (uiop:delete-directory-tree root :validate t))
