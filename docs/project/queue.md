@@ -27,6 +27,10 @@ compliance-dashboard	queued	Freemium-hosted compliance dashboard + report export
 ledger-format-standard	queued	Publish the ledger/cert format as an open standard	market-scope-2026-08-25.md
 self-funding-plan	queued	Self-funding plan (sponsorship, hosted compliance, docs-first)	market-scope-2026-08-25.md
 ```
+## Next
+
+- **wake-mutation-lane** — rotate next (pins wake to the certificate lane; unblocks node-lattice admission). Set by check-in #1 2026-08-25.
+
 ## Scheduling
 
 The rotation runner is operator-owned (the no-daemon boundary): install
