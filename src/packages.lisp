@@ -355,6 +355,24 @@
            #:wake-result-key-identifier
            #:wake-result-refusal-labels))
 
+(defpackage #:hngh.adapters.worker
+  (:use #:cl)
+  (:export #:worker-request
+           #:worker-request-p
+           #:make-worker-request
+           #:worker-request-task
+           #:worker-request-payload
+           #:worker-ports
+           #:worker-ports-p
+           #:make-worker-ports
+           #:worker-result
+           #:worker-result-p
+           #:worker-result-status
+           #:worker-result-task
+           #:worker-result-fact
+           #:worker-result-refusal-labels
+           #:run-worker-task))
+
 (defpackage #:hngh.presentation
   (:use #:cl)
   (:export #:render
