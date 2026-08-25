@@ -71,3 +71,38 @@ measured end-to-end against real sessions; the live session at time of
 writing predates the tuned file (next `omp`/`pi` launch picks it up).
 Watching the proxy log or its web UI during a long session is the follow-up
 that validates (or re-tunes) the value.
+
+## Addendum 2026-08-25 — toolchain reliability: the guardrail outage
+
+The operator toolchain had silently lost its `edit` tool: every
+apply_patch-format edit in every omp session was blocked with "Cannot
+determine the files targeted by this edit.", regardless of path form or
+patch validity. Root cause was not the harness core but a plugin — the
+llm-wiki extension (`@zosmaai/pi-llm-wiki` 0.11.4) hooks every `edit`
+call to protect its vault, and its patch scanner understood only the
+hashline patch format, so apply_patch envelopes parsed as "no determinable
+targets" and failed closed.
+
+Lessons for the Hngh operator toolchain:
+
+1. **A middleware guardrail that fails closed on an unrecognized input
+   format silently disables an entire tool surface.** The failure
+   presented as an edit-tool bug; three sessions of agents burned turns
+   retrying path styles against a deterministic block.
+2. **Error messages must name their owning layer.** The blocking message
+   identified neither the plugin nor the format mismatch. The diagnosis
+   that worked in seconds: grep the exact error string across all
+   installed packages (harness core, proxy, `~/.omp/plugins`) — the
+   string existed only in the plugin's `guardrails.js`. This mirrors
+   Hngh's own design rule: refusals carry named labels at the boundary
+   that produced them.
+3. **Durable local fixes need re-application paths.** The plugin was
+   patched in place (dist + TS source) with pristine backups and
+   re-appliable diffs kept in `~/.omp/patches/`; a plugin reinstall
+   reverts the fix until upstream lands it.
+
+Fix upstream: zosmaai/pi-llm-wiki#162 (envelope-header parsing matched on
+the raw untrimmed line so patch body rows quoting envelope syntax are
+never misread; hashline parsing unchanged; vault protection verified
+still blocking absolute and relative paths). Public failure-case lesson:
+MisakaNet intake `contrib_4d2ef67f9a`.
