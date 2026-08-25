@@ -64,6 +64,22 @@ lives under Pre-release / early development until the first release.
   persistent tunnels without a watching daemon, evidence-first
   admission of low-powered peers).
 
+#### Added
+
+- Ed25519 signature-transport hardening (promotion rung 14): the pins
+  file gains an optional closed ALGORITHM column
+  (`rsa-sha256` default, `ed25519` admitted; unknown, empty, or extra
+  columns refuse), the `key-pin` domain value carries the algorithm, and
+  signature verification routes per pin — digest signatures via
+  `openssl dgst -sha256 -verify`, raw Ed25519 signatures via
+  `openssl pkeyutl -verify -pubin -inkey -rawin -sigfile -in`.
+  `list-pins` renders each pin's resolved algorithm. Verified live end
+  to end with a real Ed25519 keypair (`status=verified key=ed-key` exit
+  0; tampered payload refuses `bad-signature`) and committed through the
+  self-governed ceremony (chore export lane for `src/packages.lisp`,
+  excluded by the dependency guard; candidate commit bound to the
+  implementation and tests).
+
 ### 2026-08-24
 
 #### Added
