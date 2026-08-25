@@ -1,0 +1,10 @@
+┌─────────────────────────────────────────────────────┐│hngh wave (equalizer)  ::dance                     │
+│wake-muta  ######                                  │
+│node-latt  ######                                  │
+│bridge-op  ######                                  │
+│doc-sync-  ######|                                 │
+│key-rotat  ######                                  │
+│pooled-ha  ######                                  │
+│tunnel-au  ######                                  │
+│                                                   │
+│9 timeline rows; 19 queue items; equalizer to music│└─────────────────────────────────────────────────────┘

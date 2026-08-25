@@ -201,7 +201,12 @@ narrative you can follow as the megastructure grows outward. The
 project's long-form memoir and the public site (journal, moderated
 comments, leaderboards, and the dashboards this README describes) are
 the same build pipeline as the code — every public byte is a committed,
-checked artifact.
+checked artifact. The first entry is already here:
+[2026-08-25](docs/journal/2026-08-25.md) — and the themed
+readout renders live from the same data.
+
+Screens of the dashboards live in `docs/media/` (linear/spiral/
+circular/wave, themed); the `--dance` motion is best seen live.
 
 ## Contributors & attribution
 

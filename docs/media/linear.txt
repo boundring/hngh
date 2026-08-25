@@ -1,0 +1,27 @@
+┌────────────────────────────────────────────────────────────────────────────┐│hngh timeline (gantt-ish)                                                 │
+│legend: '#' done  '...' queued  '---' ETA window  '+' active              │
+│wake-mutation-lane     ---  next rotation (after a full session is carved,│
+│node-lattice-admission ---  after wake-mutation-lane                      │
+│bridge-operator-host   ---  after node-lattice                            │
+│doc-sync-loop          #                                                  │
+│key-rotation-freshness ...                                                │
+│pooled-hardware        ...                                                │
+│tunnel-automation      ...                                                │
+│governance-benchmark   ...                                                │
+│dss-e-export           ...                                                │
+│dashboard-readouts     #                                                  │
+│timeline-events        #  DONE (2026-08-25)                               │
+│queue-eta              #  DONE today (this widget is the item)            │
+│ux-hardening           ...                                                │
+│ecosystem-integrations ...                                                │
+│zoom-out-loop          ...                                                │
+│marketplace-governance ...                                                │
+│compliance-dashboard   ...                                                │
+│ledger-format-standard ...                                                │
+│self-funding-plan      ...                                                │
+│queue-scale            # (event)                                          │
+│check-in-7             # (event)                                          │
+│check-in-8             # (event)                                          │
+│check-in-11            # (event)                                          │
+│                                                                          │
+│9 timeline rows; 19 queue items                                           │└────────────────────────────────────────────────────────────────────────────┘
