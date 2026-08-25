@@ -78,12 +78,18 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
   endpoint resolution stays transport-owned — no default wire. Verified
   live over a real local HTTP server through an injected transport and
   bound through the self-governed ceremony.
+- Completed the operator policy profiles (promotion rung 16,
+  2026-08-25): the pure `evidence-profile` value narrows which
+  requirement kinds a listed principle may carry, the requirement-kind
+  vocabulary admits `:review`, and `propose` accepts `profile=PATH`
+  (strict `PRINCIPLE<TAB>KIND` lines). A profile only narrows, never
+  broadens. Committed through the self-governed ceremony.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
-1. **(Next slice).** Review-fed policy profiles (operator-tunable
-   requirement kinds consuming review and `:remote-attestation`
-   fingerprints).
+1. **(Next slice).** The bridge-backed continual worker (worker-rung
+   candidate) or the node-lattice admission rung from the backlog;
+   nothing remains deferred on the core federation/governance lane.
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.

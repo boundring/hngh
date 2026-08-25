@@ -91,5 +91,8 @@ authorize a future action.
 - `2026-08-25-r15-http-claim-method.md` records the network claim method
   joining the closed federation method set (promotion rung 15), with
   live proof over a local HTTP server through an injected transport.
+- `2026-08-25-r16-policy-profiles.md` records the operator policy
+  profile value, the `:review` requirement kind, and the `profile=`
+  admission on `propose` (promotion rung 16).
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

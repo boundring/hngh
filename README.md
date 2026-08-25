@@ -115,6 +115,11 @@ the current number) and an operator command surface. Implemented:
   no default wire, and an unadmitted method is malformed. Verified live over a real
   local HTTP server through an injected transport (`status=complete`, claims mapped
   with the closed state vocabulary).
+- Operator policy profiles (rung 16): `propose` gains `profile=PATH` — a strict,
+  operator-tunable `PRINCIPLE<TAB>KIND` file that narrows which requirement kinds a
+  listed principle may carry (the `:review` kind is now admitted, so a profile can
+  demand review evidence). A profile never broadens admission; a listed principle
+  whose kinds are all dropped refuses as `missing-principle-result`.
 
 Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
