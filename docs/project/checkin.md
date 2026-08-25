@@ -44,3 +44,18 @@ rotation that looks in). One entry per check-in, appended dated.
 
 Nothing else required attention — healthy. Next check-in: after the
 next rotation or tomorrow, whichever comes first.
+## 2026-08-25 — check-in #2
+
+- **State:** clean, synced (`3c25df9`); queue `Next` still
+  wake-mutation-lane; gate green.
+- **A real calibration hit:** wake-mutation-lane is a genuine
+  multi-slice implementation (new `:wake-mutation` action in the
+  closed mutation vocabulary + executor path + verification + CLI +
+  tests), not a small steer. A check-in must stay gentle — so the
+  steering here is *calibration*: this item belongs to the rotation
+  cadence with a full session, not to a check-in. No partial slice was
+  forced; the item stays pinned as next-with-a-full-session, and the
+  check-in log now distinguishes "check-in-scale" from "rotation-scale"
+  work so future passes don't overreach.
+- **Outcome:** this entry; no code changed. The next action for
+  wake-mutation-lane is a full rotate-queue session, operator-invoked.
