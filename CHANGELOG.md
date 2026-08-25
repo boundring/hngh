@@ -133,6 +133,11 @@ lives under Pre-release / early development until the first release.
   operator surface. A worker self-report is evidence, never acceptance,
   and a worker never carries a mutation certificate. Committed through
   the self-governed ceremony (chore export lane for `src/packages.lisp`).
+- Live worker proof (2026-08-25): the full lifecycle ran through the
+  dispatch surface with a real subprocess worker transport —
+  create-run (worker-task label) → admit worker → run-worker
+  (`worker status=complete task=scout candidates`) → present — with
+  the `:worker` `:current` evidence fact bound from real output.
 
 ### 2026-08-24
 
