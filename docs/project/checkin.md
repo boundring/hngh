@@ -119,3 +119,16 @@ next rotation or tomorrow, whichever comes first.
   actionable as the next rotation-scale item.
 - **Outcome:** timeline 5 rows; dashboard-readouts unblocked; this
   entry.
+
+## 2026-08-25 — check-in #8
+
+- **State:** clean, synced; 5-row spine; gate green.
+- **Steering (taken, check-in-scale):** first thin readout —
+  `scripts/dashboard-readout` renders the timeline spine as plain
+  gantt-style bars (legend # event / . queued), reads only committed
+  data (no daemon). Smoke-tested and wired into `make test`. The
+  readout view you asked for now has a working first cut; the
+  rotation-scale item (denser gantt, ETA windows, session views) is
+  next.
+- **Outcome:** scripts/dashboard-readout + smoke test + queue item
+  active + this entry, committed through the ceremony.

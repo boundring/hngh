@@ -16,7 +16,7 @@ pooled-hardware	queued	Pooled hardware / priced routes rung	README Where this is
 tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
-dashboard-readouts	queued	Dashboard readouts (gantt over runs/queue/commits)	timeline.md; queue ledger
+dashboard-readouts	active	Dashboard readouts (gantt over runs/queue/commits)	first thin readout (scripts/dashboard-readout) by check-in #8; queue ledger
 timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired
 queue-eta	done	Planned-window (ETA) column on queue rows	implemented by check-in #5 2026-08-25
 ux-hardening	queued	UX/interface pass (Emacs-style extensible operator surface)	imeline.md

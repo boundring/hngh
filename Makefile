@@ -9,6 +9,7 @@ test:
 	python3 tests/scripts/test-loop-history-guard.py
 	python3 tests/scripts/test-doc-numbers.py
 	python3 tests/scripts/test-timeline-events.py
+	python3 tests/scripts/test-dashboard-readout.py
 	python3 scripts/lint-parens.py $(LISP_SOURCES)
 	sbcl --script tests/run.lisp
 	sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd "$(CURDIR)/hngh.asd")' --eval '(asdf:load-system :hngh)'
