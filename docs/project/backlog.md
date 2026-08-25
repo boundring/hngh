@@ -377,3 +377,122 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts that the `--dance`
   mode pulses to an injected fake intensity, is disabled by default,
   and renders the data identically when off.
+
+## Project journal + daily narrative (journal-daily)
+
+- **Problem:** the project should be publicly observable day by day, but
+  the raw record (records, check-ins, timeline) is not consumable prose.
+- **Smallest useful outcome:** one automation renders each day's
+  committed record/check-in/timeline into a dated narrative post
+  (`docs/journal/YYYY-MM-DD.md`), the "accompanying the project"
+  long-form description that a blog can publish.
+- **Evidence:** `docs/records/2026-08-25-session.md`, checkin.md,
+  timeline.md — the raw spine that becomes the story.
+- **Risk:** narration must stay honest to the ledger — the automation
+  only re-orders verified facts, never invents.
+- **Dependencies:** the timeline events stream; a template over it.
+- **Review trigger:** an independent read of a rendered journal entry
+  matches the underlying record with no added claims.
+
+## Long-form ebook: the megastructure memoir (ebook longform)
+
+- **Problem:** the operator wants one long-form ebook documenting
+  Hngh's development, self-bootstrapping, and the expansion into a
+  megastructure, produced reproducibly.
+- **Smallest useful outcome:** a `make journal` pipeline that
+  assembles the day-by-day journal + the key records + the vision into
+  one long-form document (Markdown → epub/mobi via pandoc or a script),
+  versioned like any candidate.
+- **Evidence:** the journal-daily piece; the session record; the
+  intent/vision docs; `docs/records/*` as chapter seams.
+- **Risk:** scope creep — the memoir must auto-assemble from existing
+  prose, not demand new writing each run.
+- **Dependencies:** journal-daily; a pandoc/asciidoc step.
+- **Review acceptance:** `make journal-ebook` produces a deterministic
+  document whose TOC maps the records.
+
+## Self-hosted public surface (public-surface rung)
+
+- **Problem:** the operator wants a public web on their own cloud
+  (budget-scaled) — blog posting, comment collection/moderation,
+  organization of practical interfaces to remote Hngh instances,
+  leaderboards, and interaction between Hngh users/instances.
+- **Smallest useful outcome:** one static+tiny-server site — journal
+  posts (from journal-daily), a comment intake (moderated), a public
+  readout of the Hngh queue (the dashboard), and a
+  leaderboard-like "instances" page — self-hosted on a cheap VPS.
+- **Evidence:** dashboard-readout (has the data), journal-daily, the
+  self-funding scan.
+- **Risk:** a public surface is a responsibility — moderation and
+  rate-limits first; never expose secrets/stores.
+- **Dependencies:** journal-daily, dashboard-readout, a hosting plan
+  (budget-scaled).
+- **Review acceptance:** the site serves the journal + readout from
+  committed data, has a moderated intake, and no Hngh store is
+  exposed.
+
+## Device fleet bring-up (device-fleet)
+
+- **Problem:** old hardware (an Android phone, a Steam Deck, a tired
+  laptop with a slow NIC) can become local helper peers for Hngh's
+  network and hardware-resource work.
+- **Smallest useful outcome:** each device joins the local tailnet +
+  an Hngh node (wake-peer ready), contributing bounded facts (uptime,
+  load, network state) as evidence, with the same admission rules as
+  the node lattice.
+- **Evidence:** the node-lattice rung; wake-on-demand; the fleet
+  vision.
+- **Risk:** unattended low-power peers need the evidence-freshness /
+  key-rotation story first.
+- **Dependency:** node-lattice admission, key-rotation-freshness.
+- **Review acceptance:** a device's facts appear in a ledger and it
+  can be wake-peer'd under a certificate.
+
+## Self-publishing / royalties pipeline (royalty-pipeline)
+
+- **Problem:** income is a prerogative; automation should produce
+  marketable fiction and nonfiction ebooks for royalties.
+- **Smallest useful outcome:** a repeatable "book machine": prose
+  pipelines (outline → draft → edit → cover → metadata) driving
+  PDF/epub builds for Amazon KDP + direct sale, run the same way we
+  run rotation slices.
+- **Evidence:** the journal + the science-fiction worldbuilding for
+  Hngh's megastructure; the world the operator wants to see built.
+- **Risk:** royalties are speculative — the pipeline must produce
+  *good* books, not just books; writer-reviewer separation applies.
+- **Dependency:** the longform assembler; a build toolchain.
+- **Review acceptance:** a produced book passes an independent read;
+  the build reproduces from committed sources.
+
+## Funding rails (funding-rails) — bootstrap income
+
+- **Problem:** income is the prerogative; the scan names the cheapest
+  immediate rails.
+- **Smallest useful outcome:** stand up Shieldz (zero-fee crypto
+  intake) + asterpay (x402→EUR/SEPA) for donations/royalty routes;
+  a `pricing` page stub; the rails documented in the site.
+- **Evidence:** self-funding-scan-2026-08-25.md.
+- **Risk:** compliance — use the free complia screening before
+  accepting counterparties; keep rails non-custodial until volume.
+- **Dependency:** the public-site rung; an x402 receiving wallet.
+- **Review trigger:** an independent reviewer accepts a test x402/
+  crypto payment flows to the operator wallet end to end.
+
+## Royalty catalog APIs (royalty-apis)
+
+- **Problem:** the scan's abundance/listing pattern shows cheap
+  pay-per-query AP
+  easily monetized; a Hngh-derived small catalog can bring recurring
+  royalties.
+- **Smallest useful outcome:** 2-4 tiny, boring utility APIs (e.g.
+  a policy-gate checker demo, a check-count, a timeline rendering)
+  published as pay-per-query x402 on abundance / RapidAPI-style, each
+  smoke-tested and priced.
+- **Evidence:** self-funding-scan; the dashboard-readout / timeline
+  functions are ready leaf-APIs.
+- **Risk:** keep the public catalog read-only and sandboxed — the real
+  ledger never leaves Hngh; the catalog is a *surface*, not an
+  export.
+- **Dependency:** funding-rail receipts; a stateless micro-API.
+- **Review trigger:** an independent consumer calls the catalog API,
+  pays, and gets a correct public result.
