@@ -109,3 +109,13 @@ next rotation or tomorrow, whichever comes first.
   committed rows, one short of the dashboard-readouts threshold (≥5).
   Next check-in reaches it by recording the next event/rotation row.
 - **Outcome:** timeline 2→4 rows; this entry.
+
+## 2026-08-25 — check-in #7
+
+- **State:** clean, synced (`154af78`); gate green.
+- **Steering (threshold-cross):** the timeline stream is at 4 rows —
+  one short of the dashboard-readouts bar. This check-in appends its
+  own event row, crossing to **5**, so dashboard-readouts becomes
+  actionable as the next rotation-scale item.
+- **Outcome:** timeline 5 rows; dashboard-readouts unblocked; this
+  entry.
