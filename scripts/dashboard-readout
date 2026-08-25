@@ -63,6 +63,42 @@ def dance_mark(intensity, base="---"):
     return base[0] + ("-") * (len(base) - 1)  + ("·" * widen)
 
 
+def tone(code):
+    """Wrap with an ANSI color if tone is on, else identity."""
+    return (lambda s: f"\x1b[{code}m{s}\x1b[0m") if TONE else (lambda s: s)
+
+
+TONE = "--tone" in sys.argv
+
+
+def paint(marker):
+    """Colorize the common markers when --tone is on."""
+    if not TONE:
+        return marker
+    if marker.startswith("#"):
+        return tone(32)(marker)      # green done
+    if "+" in marker:
+        return tone(36)(marker)      # cyan active
+    if marker.startswith("-"):
+        return tone(33)(marker)      # amber ETA
+    if marker.startswith("…") or marker.startswith("..."):
+        return tone(90)(marker)      # dim queued
+    return marker
+
+
+def animated_bar(label, count, status, tone_on):
+    """A colorized bar for the wave renderer."""
+    body = "#" * count
+    if status == "queued":
+        body += " ..."
+    elif status == "active":
+        body += " +"
+    if tone_on:
+        ch = len(body) % 3
+        body = tone(["32", "36", "33"][ch])(body)
+    return f"{label} {body}"
+
+
 def linear_render(items, rows, etas, dance=0):
     print("hngh timeline (gantt-ish)" + ("  ::dance" if dance else ""))
     print("legend: '#' done  '...' queued  '---' ETA window  '+' active")
@@ -74,9 +110,9 @@ def linear_render(items, rows, etas, dance=0):
                 print(f"{i:22s} {dm}  {eta}")
                 continue
             if status == "queued":
-                print(f"{i:22s} …")
+                print(f"{i:22s} {paint('...')}")
             else:
-                print(f"{i:22s} …. ")
+                print(f"{i:22s} {paint('....')}")
             continue
         n = sum(1 for r in rows if r[2] == i)
         bar = "#" * n
@@ -86,10 +122,10 @@ def linear_render(items, rows, etas, dance=0):
             bar += " +"
         if eta:
             bar += f"  {eta}"
-        print(f"{i:22s} {bar}")
+        print(f"{i:22s} {paint(bar)}")
     for r in rows:
         if r[2] not in [i for i, _ in items] and r[1] != "rotation":
-            print(f"{r[2]:22s} # (event)")
+            print(f"{r[2]:22s} {paint('#')} (event)")
     print(f"\n{len(rows)} timeline rows; {len(items)} queue items")
 
 
@@ -147,6 +183,43 @@ def circular_render(rows, items, etas, intensity=0):
     print(f"{len(rows)} timeline rows; {len(items)} queue items; rings inner→outer")
 
 
+def burst_render(rows, items, etas, intensity=0):
+    """A radial starburst: done items near center, future items at the rim."""
+    size = 36
+    cx = cy = size
+    grid = [[" "] * (2 * size + 1) for _ in range(2 * size + 1)]
+    done = [r for r in rows if r[1] == "rotation"]
+    future = [a for a, b in items if b == "queued"]
+    all_items = [(r[2], "#") for r in done] + [("queued:" + a, "o") for a in future]
+    n = max(1, len(all_items))
+    for idx, (name, ch) in enumerate(all_items):
+        ang = 2 * math.pi * idx / n
+        radius = 2 + 1.4 * idx
+        x = int(cx + radius * math.cos(ang))
+        y = int(cy + radius * 0.7 * math.sin(ang))
+        if 0 <= x < 2 * size and 0 <= y < 2 * size:
+            grid[y][x] = paint("#") if ch == "#" else "o"
+    print("hngh burst (radial)" + ("  # dance" if intensity else ""))
+    for line in grid:
+        print("".join(line).rstrip())
+    print(f"{len(rows)} timeline rows; {len(items)} queue items")
+
+
+def wave_render(items, rows, etas, intensity=0):
+    """A bouncing equalizer: each item's bar is a column whose height
+    rides the music intensity (the equalizer that dances)."""
+    print("hngh wave (equalizer)" + ("  ::dance" if intensity else ""))
+    col = ""
+    for i, status in items[:int(len(items) * 0.4)]:
+        h = (intensity or 1)
+        bar = "#" * min(6, h + (2 if status == "active" else 0))
+        if status == "done":
+            bar += "|"
+        col += f"{i[:9]:10s} {bar}\n"
+    print(col)
+    print(f"{len(rows)} timeline rows; {len(items)} queue items; equalizer to music")
+
+
 def main():
     rows = timeline_rows()
     items = queue_items()
@@ -168,6 +241,10 @@ def main():
         circular_render(rows, items, etas, dance)
     elif "--spiral" in sys.argv:
         spiral_render(rows, items, etas, dance)
+    elif "--burst" in sys.argv:
+        burst_render(rows, items, etas, dance)
+    elif "--wave" in sys.argv:
+        wave_render(items, rows, etas, dance)
     else:
         linear_render(items, rows, etas, dance)
 
