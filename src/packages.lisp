@@ -344,7 +344,16 @@
            ;; pinned-key registry parsing + signature transport (rung 12)
            #:parse-pinned-keys
            #:hex-decode
-           #:make-pinned-attestation-ports))
+           #:make-pinned-attestation-ports
+           ;; wake-on-demand (rung 17)
+           #:make-wake-ports
+           #:wake-ports-p
+           #:wake-peer-request
+           #:wake-result
+           #:wake-result-p
+           #:wake-result-status
+           #:wake-result-key-identifier
+           #:wake-result-refusal-labels))
 
 (defpackage #:hngh.presentation
   (:use #:cl)
