@@ -109,3 +109,10 @@ Gives "future" a date so a gantt can place bars.
   Hngh + local UI), a real UX-experiment backlog item; feasibility
   first probe (read system music source, map intensity to a CSS/js
   amplitude) before committing to the full dance.
+
+## dancing-ui — status
+
+- Probe (scripts/audio-intensity) is LIVE: reads the system's playing
+  audio and returns 0..10; 0 when silent. Wire `--dance auto` in
+  dashboard-readout to poll it; the full dance (amplitude to CSS/js,
+  cross-project) is the next step after the readout hook.
