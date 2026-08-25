@@ -213,3 +213,14 @@ next rotation or tomorrow, whichever comes first.
   linear/burst/circular. Smoke covers all 5 styles + tone + dance.
 - **Queue:** gantt-ports partially delivered (now 5 dialects);
   dancing-ui probe live; amplitude-animation + raytm BPM stay deeper.
+
+## 2026-08-25 — check-in #16 (flourishes + QoL)
+
+- **Steering (operator "all flourishes, QoL everywhere"):** the
+  readout gained `--theme` (matrix/sunset/ocean/paper + framed
+  unicode panel), `--banner` (ASCII banner, themed), and `--quiet`
+  (data-only output). Smoke now covers every style/flag. The
+  operator-touching scripts each get a QoL pass next (usage lines,
+  consistent exit codes).
+- **Queue:** gantt-ports near-delivered (7 style/flags); dancing-ui
+  probe live; theme system is the new QoL knob.
