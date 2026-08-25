@@ -122,6 +122,18 @@ lives under Pre-release / early development until the first release.
   one pre-guard violation (`915e0e3`, comment-only) named rather than
   rewritten. Committed through the self-governed ceremony.
 
+- Bounded read-only worker task (promotion rung 18): the worker-rung
+  first slice. `hngh.adapters.worker` supplies a closed `worker-request`
+  (bounded task label plus optional bounded payload), `worker-ports`
+  (one injected `execute-worker` callback, no default transport), and
+  `run-worker-task`, which binds a `:worker` `:current` evidence fact
+  on a zero exit and refuses/faults closed otherwise. `:worker` joins
+  `+admitted-transports+` behind the `worker-task` tool label on the
+  run loadout; `run-worker RUN task=LABEL [payload=TEXT]` is the
+  operator surface. A worker self-report is evidence, never acceptance,
+  and a worker never carries a mutation certificate. Committed through
+  the self-governed ceremony (chore export lane for `src/packages.lisp`).
+
 ### 2026-08-24
 
 #### Added

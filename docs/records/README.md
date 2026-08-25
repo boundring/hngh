@@ -101,5 +101,8 @@ authorize a future action.
   self-governance guard: every code-surface commit since the
   restatement must be candidate-bound or rule-labeled, with the one
   pre-guard violation named.
+- `2026-08-25-r18-worker-transport.md` records the bounded read-only
+  worker task (promotion rung 18): `run-worker`, the `:worker`
+  admission label, and the closed worker evidence fact.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
