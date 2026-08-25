@@ -15,7 +15,8 @@
     :closed-failure-disposition :claim-proof :base-revision
     :candidate-manifest :content-hash :reversion-or-containment
     :component-import :route :budget :token-limit :expiry
-    :source-manifest :conclusion-link))
+    :source-manifest :conclusion-link
+    :remote-attestation :federated-claim))
 
 (defun prop-matrix ()
   "The ten closed matrix principles, in matrix order."
@@ -69,12 +70,12 @@ kept)."
 
 (check (= 7 (length +property-proposal-classes+))
        "property tests cover all 7 proposal classes")
-(check (= 21 (length +property-requirement-kinds+))
-       "property tests cover all 21 evidence requirement kinds")
+(check (= 23 (length +property-requirement-kinds+))
+       "property tests cover all 23 evidence requirement kinds")
 (check (= 10 (length (prop-matrix)))
        "property tests cover all 10 matrix principles")
 
-;;; (a) Totality: 7 classes x 21 kinds, each admitted with one result
+;;; (a) Totality: 7 classes x 23 kinds, each admitted with one result
 ;;; per matrix principle.
 
 (let ((combinations 0))
@@ -90,8 +91,8 @@ kept)."
         (check (= 10 (length (hngh.domain:policy-verdict-principle-results verdict)))
                (format nil "totality yields one result per principle for ~S with ~S"
                        class kind)))))
-  (check (= combinations 147)
-         "totality enumerates 7 classes x 21 kinds"))
+  (check (= combinations 161)
+         "totality enumerates 7 classes x 23 kinds"))
 
 ;;; Total refusal: with one matrix principle absent, every class refuses
 ;;; with the missing-principle label, never an error.

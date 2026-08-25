@@ -11,6 +11,48 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+### 2026-08-24
+
+#### Added
+
+- Added the distributed attestation & evidence federation slice (promotion
+  rung 11):
+  - `hngh.domain` adds the pure `remote-attestation` envelope value and the
+    closed structural checker `verify-attestation-shape` plus `utc-string-p`
+    in `src/domain/attestation.lisp` (no clock, no network, no key store).
+  - `hngh.adapters.federation` is a bounded federation adapter with two
+    injected-port entry points: `gather-federated-evidence` reads an
+    operator-carried carrier bundle through the `fetch-remote` callback and
+    maps its claims into domain evidence facts with the closed
+    evidence-state vocabulary (`:current` when locally re-hashable,
+    `:unverifiable`, `:malformed`, `:missing`, `:conflicting`); and
+    `verify-remote-attestation` runs the kernel shape gate, resolves the
+    signing key against the operator-pinned list, checks the signature
+    through `verify-signature`, and checks the expiry window against the
+    injected `now`, binding a `:remote-attestation` fact only on a fully
+    verified envelope. The closed refusal taxonomy names `unknown-peer-key`,
+    `bad-signature`, `signature-fault`, `malformed-attestation`,
+    `malformed-expiry`, `expired-attestation`, `attestation-clock-skew`,
+    `transport-fault`, and `output-too-large`.
+  - `hngh.domain:+admitted-transports+` is now
+    `(:filesystem :model :terminal :federation)`; 
+    `hngh.domain:+evidence-requirement-kinds+` gains `:remote-attestation`
+    and `:federated-claim`.
+  - `hngh.application:admit-transport` admits `:federation` only under a
+    loadout carrying the `remote-evidence` network label or the
+    `carrier-bundle` tool label, else the closed
+    `loadout-refuses-transport` refusal.
+  - `hngh.main:dispatch-command` gains `fetch-evidence` and
+    `verify-attestation`, threaded through `&key federation-ports
+    attestation-ports` with no defaults: un-injected, the operations refuse
+    `no-federation-transport` / `no-attestation-transport`, so plain
+    `scripts/hngh` never touches a wire; both serve only a run holding a
+    `:federation` admission receipt.
+  - `hngh.presentation` adds the two outward renderers
+    `render-federation-result` and `render-attestation-result`.
+  - Test suite `tests/adapter/test-federation.lisp` and updated vocabulary
+    coverage in `tests/domain/test-governance.lisp` (closed transport set)
+    and `tests/domain/test-governance-properties.lisp` (requirement kinds).
 - Added the bounded model and terminal worker transports (promotion rung
   10): `hngh.adapters.model:make-model-transports` returns the transport
   `complete` callback shape so the existing bounded review adapter can

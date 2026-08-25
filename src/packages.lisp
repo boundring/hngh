@@ -99,7 +99,27 @@
            #:candidate-certificate-source-manifest
            #:candidate-certificate-policy-profile
            #:candidate-certificate-expiry
-           #:issue-candidate-certificate))
+           #:issue-candidate-certificate
+           ;; distributed attestation (src/domain/attestation.lisp)
+           #:remote-attestation
+           #:remote-attestation-p
+           #:make-remote-attestation
+           #:remote-attestation-peer
+           #:remote-attestation-key-identifier
+           #:remote-attestation-payload
+           #:remote-attestation-signature
+           #:remote-attestation-claims
+           #:remote-attestation-not-before
+           #:remote-attestation-not-after
+           #:remote-attestation-skew
+           #:remote-claim
+           #:remote-claim-p
+           #:make-remote-claim
+           #:remote-claim-kind
+           #:remote-claim-fingerprint
+           #:verify-attestation-shape
+           #:utc-string-p
+           #:+remote-claim-kinds+))
 
 (defpackage #:hngh
   (:use #:cl)
@@ -259,6 +279,43 @@
            #:store-refusal
            #:transport-fault))
 
+(defpackage #:hngh.adapters.federation
+  (:use #:cl)
+  (:export #:+federation-methods+
+           ;; request
+           #:federation-request
+           #:federation-request-p
+           #:make-federation-request
+           #:federation-request-peer
+           #:federation-request-method
+           #:federation-request-time-window
+           #:federation-request-max-facts
+           ;; gather ports + result
+           #:federation-ports
+           #:federation-ports-p
+           #:make-federation-ports
+           #:federation-result
+           #:federation-result-p
+           #:federation-result-status
+           #:federation-result-facts
+           #:federation-result-manifest
+           #:federation-result-refusal-labels
+           #:gather-federated-evidence
+           ;; attestation ports + result
+           #:attestation-ports
+           #:attestation-ports-p
+           #:make-attestation-ports
+           #:attestation-result
+           #:attestation-result-p
+           #:attestation-result-status
+           #:attestation-result-verified
+           #:attestation-result-key-identifier
+           #:attestation-result-fact
+           #:attestation-result-refusal-labels
+           #:verify-remote-attestation
+           #:parse-attestation-envelope
+           #:utc-seconds))
+
 (defpackage #:hngh.presentation
   (:use #:cl)
   (:export #:render
@@ -276,6 +333,8 @@
            #:render-mutation-result
            #:render-review-result
            #:render-operator-result
+           #:render-federation-result
+           #:render-attestation-result
            #:render-review-finding
            #:render-report
            #:render-status-label
@@ -297,8 +356,12 @@
            #:gather-run-evidence
            #:request-run-review
            #:execute-run-mutation
+           #:gather-federated-evidence
+           #:verify-remote-attestation
            #:harness-admit-transport
            #:dispatch-command
+           #:fetch-evidence
+           #:verify-attestation
            #:display))
 
 (defpackage #:hngh.tests
