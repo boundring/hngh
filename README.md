@@ -54,7 +54,7 @@ silent continuation of an old one.
 
 ## Status
 
-Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2353
+Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2616
 checks) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
@@ -75,17 +75,25 @@ checks) and an operator command surface. Implemented:
   oversized output refuses; a failed call becomes an `:unverifiable` fact. Reviewers advise;
   they never decide, and no default provider transport exists.
 - Operator command surface (`scripts/hngh`): `create-run`, `admit-transport`, `arm-run`,
-  `start-run`, `checkpoint`, `close-run`, `present`, `propose`, `issue-cert`,
-  `mutation-check`; strict exit codes (0 accepted, 1 refused/conflict, 2 malformed, 3
-  transport fault); persistence only under an explicit `--store=PATH`.
+  `start-run`, `checkpoint`, `close-run`, `present`, `review`, `terminal`, `propose`,
+  `issue-cert`, `mutation-check`, `fetch-evidence`, `verify-attestation`; strict exit codes
+  (0 accepted, 1 refused/conflict, 2 malformed, 3 transport fault); persistence only under
+  an explicit `--store=PATH`.
 - Real evidence chain: certificates mint only from an operator-produced verdict file plus
   genuine repository evidence (git revision, content hashes, working-tree state).
 - Read-only candidate evidence bundle (`make verify-candidate`).
+- Model and terminal transports behind loadout admission (rung 10): a bounded `:model`
+  route for the review adapter and a single-statement `:terminal` evidence capture, both
+  advisory with no default provider or input.
+- Distributed attestation & evidence federation (rung 11): `hngh.adapters.federation`
+  gathers carrier-bundle claims into evidence facts (`fetch-evidence`), verifies
+  attestation envelopes through pinned-key/signature ports (`verify-attestation`), and
+  admits `:federation` behind the `remote-evidence`/`carrier-bundle` labels.
 
-Not yet: daemon, watcher, scheduler, model or terminal transports behind loadout admission
-(rung 10 in progress), and no ambient state. Each will be admitted the same way everything
-else is: through a proposal, a check, and a record. The megastructure is built one verified
-stretch at a time.
+Not yet: daemon, watcher, scheduler, the network claim methods and revocation policy that
+extend the federation port, and no ambient state. Each will be admitted the same way
+everything else is: through a proposal, a check, and a record. The megastructure is built
+one verified stretch at a time.
 
 ## Verify
 
@@ -119,3 +127,6 @@ kernel stays the spine the harness can always rebuild around.
 
 Start at [docs/README.md](docs/README.md). Records and the external retirement archive cover
 the project's prior state; the active baseline lives here.
+## Contributors & attribution
+
+Who builds Hngh and how it is attributed is in [CONTRIBUTORS.md](CONTRIBUTORS.md).
