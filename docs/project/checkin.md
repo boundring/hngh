@@ -234,3 +234,15 @@ next rotation or tomorrow, whichever comes first.
   ETA line removed. Gate 23/1/0.
 - **next:** wake-mutation-lane (the pinned gov-lane) waits its full
   session; more dashboards or the UX pass on other scripts stand by.
+
+## 2026-08-25 — check-in #18 (QoL heartbeat across scripts)
+
+- **State:** clean, synced; gate 24/1/0-ish.
+- **Steering (continual-progress heartbeat):** extended the QoL
+  polish to every operator-touching script: audio-intensity gained
+  `--help`/`--check` (reports playing + intensity); worker-driver and
+  rotate-queue gained `--help` early-exit. Consistent exit/usage
+  across the CLI family.
+- **New steady-state:** audio-intensity @ live intensity 10/10
+  (music playing) — the dance has a real source and the probe tells
+  the operator at a glance.

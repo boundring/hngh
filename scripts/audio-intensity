@@ -33,4 +33,13 @@ def intensity():
 
 
 if __name__ == "__main__":
+    import sys
+    if "--help" in sys.argv:
+        print("audio-intensity [--help] [--check]")
+        print("  reads system music (pactl) -> 0..10 intensity")
+        print("  --check  prints playing/intensity detail")
+        sys.exit(0)
+    if "--check" in sys.argv:
+        print(f"playing={playing()} intensity={intensity()}/10")
+        sys.exit(0)
     print(intensity())
