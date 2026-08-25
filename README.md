@@ -49,13 +49,19 @@ silent continuation of an old one.
   specific files and evidence, rechecked immediately before the action.
 - Clean architecture: the core logic depends on nothing external; the outside world plugs in
   at the edges through explicit ports, and the read-only evidence adapter is the first edge.
-- The harness governs its own repository: every merged change to Hngh has gone through its
-  own proposal → verdict → certificate → executor loop, under real evidence.
+- The harness governs its own repository. The past stays honest: commits that predate
+  the loop are recorded as history, not rewritten as ceremony. The present bootstraps:
+  behavior changes ride the loop — proposal → verdict → certificate → executor, under
+  real evidence — and where the loop itself refuses a binding (the dependency guard
+  will not certify a commit that changes no behavior), the exception is by rule, not by
+  mood. The direction is one track: a change the loop can bind, the loop binds; a change
+  it cannot, it declares.
 
 ## Status
 
-Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2663
-checks) and an operator command surface. Implemented:
+Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus a
+suite past 2,690 checks — the count grows with every closed vocabulary, and the run prints
+the current number) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
   closed lifecycle.
@@ -129,6 +135,20 @@ routes many kinds of work, local and remote models, priced routes, and eventuall
 hardware, through the same ledger, the same certificate, and the same human-closable cycle.
 What changes at each step is the machine on the outside, never the rule the core holds; a
 kernel stays the spine the harness can always rebuild around.
+
+At full width, the corridor is a megastructure: not one machine, but a lattice of small
+machines, each an Hngh node running the same narrow rulebook, each guarding its own
+boundary — the bedroom corner, the hand-held that spends most of its life on a shelf, the
+old laptop whose NIC is slower than its patience. None of them is large in anything except
+evidence. A node learns what its own wall taught it, and the lesson is not buried in the
+ledger where only that node will ever look; it is shared as a fact a neighbor can cite:
+this bridge goes down at three in the morning, this tunnel has held for a year, this load
+draws this power, this device woke when it was asked and was quiet otherwise. Wake a machine
+before you need it. Keep the tunnels open without a watching daemon. Admit the new
+low-powered friend the way any new peer is admitted: evidence first, then a place. One
+machine never learns what a thousand machines each failed once; a mesh of small ledgered
+machines is how a city covers a lawn, then the next lawn, then the planet — and never a
+wall that does not say who raised it.
 
 ## Documentation
 

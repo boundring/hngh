@@ -51,6 +51,19 @@ lives under Pre-release / early development until the first release.
     verifies `status=verified key=live-key-1` exit 0; a tampered payload
     refuses `bad-signature`; an unpinned key refuses `unknown-peer-key`.
 
+#### Changed
+
+- Root README restated the self-governance claim honestly: the loop is
+  the default lane for behavior changes, closed exceptions (the
+  dependency guard refusing to certify a no-behavior commit) are by
+  rule, and pre-loop history is recorded rather than rewritten as
+  ceremony. Fixed the stale check-count line (now "a suite past 2,690
+  checks; the run prints the current number") and expanded the
+  `Where this is going` section with the node-lattice megastructure
+  vision (small ledgered machines sharing learned facts, wake-on-demand,
+  persistent tunnels without a watching daemon, evidence-first
+  admission of low-powered peers).
+
 ### 2026-08-24
 
 #### Added
