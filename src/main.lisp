@@ -989,10 +989,11 @@ refused, 3 transport fault."
 ;;; or mismatched, 2 malformed invocation, 3 transport fault.
 
 (defparameter +propose-option-keys+
-  '(:class :problem :outcome :purpose :caller
+  (list :class :problem :outcome :purpose :caller
     :input-contract :output-contract :failure-contract
     :declared-capabilities :capability-diff :source-manifest
-    :risk-note :dependency :evidence-trigger :evidence-requirements))
+        :risk-note :dependency :evidence-trigger :evidence-requirements
+        :profile))
 
 (defun parse-comma-labels (value)
   (let ((parts (uiop:split-string value :separator ",")))
@@ -1033,6 +1034,41 @@ refused, 3 transport fault."
                    (hngh.domain:make-evidence-fact
                     :kind :fixture :fingerprint fingerprint :state :current))
                  fingerprints))))))
+
+(defun parse-evidence-profile (data)
+  "Strict-parse operator policy-profile text into an EVIDENCE-PROFILE.
+One entry per line: PRINCIPLE<TAB>KIND. `#` comments and blank lines are
+skipped; any other deviation refuses."
+  (let ((entries '()))
+    (dolist (line (uiop:split-string (or data "") :separator '(#\Newline)))
+      (let ((line (string-right-trim '(#\Return) line)))
+        (unless (or (uiop:emptyp line) (char= (char line 0) #\#))
+          (let ((tab (position #\Tab line)))
+            (unless tab
+              (error "malformed profile line: ~S" line))
+            (let* ((principle (subseq line 0 tab))
+                   (kind (subseq line (1+ tab))))
+              (when (or (position #\Tab kind)
+                        (uiop:emptyp (string-trim '(#\Space #\Tab) kind)))
+                (error "malformed profile line: ~S" line))
+              (push (hngh.domain:make-evidence-profile-entry
+                     :principle (intern (string-upcase principle) :keyword)
+                     :kinds (list (intern (string-upcase kind) :keyword)))
+                    entries))))))
+    (hngh.domain:make-evidence-profile (nreverse entries))))
+
+(defun read-profile-file (path)
+  "Read and strict-parse the operator policy-profile file at PATH.
+Returns (values profile nil), (values nil \"cannot read profile file\"),
+or (values nil \"malformed profile file\")."
+  (handler-case
+      (progn
+        (unless (probe-file path)
+          (return-from read-profile-file
+            (values nil "cannot read profile file")))
+        (values (parse-evidence-profile (uiop:read-file-string path)) nil))
+    (error ()
+      (values nil "malformed profile file"))))
 
 (defun dogfood-verdict ()
   "The deterministic admitted verdict behind the certificate surface: every
@@ -1144,7 +1180,16 @@ IDENTIFIER, candidate paths from PATHS."
                           :dependency (getf plist :dependency)
                           :evidence-trigger (getf plist :evidence-trigger)
                           :evidence-requirements requirements))
-               (verdict (hngh.domain:evaluate-policy-proposal proposal)))
+               (verdict
+                 (if (getf plist :profile)
+                     (multiple-value-bind (profile label)
+                         (read-profile-file (getf plist :profile))
+                       (unless profile
+                         (return-from dispatch-propose
+                           (values (format nil "propose refused: ~A" label) 2)))
+                       (hngh.domain:evaluate-policy-proposal-under-profile
+                        proposal profile))
+                     (hngh.domain:evaluate-policy-proposal proposal))))
           (if (eq :admitted (hngh.domain:policy-verdict-state verdict))
               (values (hngh.presentation:render verdict) 0)
               (values (hngh.presentation:render verdict) 1)))

@@ -188,6 +188,7 @@ subprocesses, and the verify-candidate closed report."
     (check (= 2 (gn-exit result)) "unknown propose key exits 2"))
   (uiop:delete-directory-tree root :validate t))
 
+
 ;;; issue-cert ------------------------------------------------------------
 
 (let ((root (gn-dispatch-root)))
@@ -530,4 +531,56 @@ subprocesses, and the verify-candidate closed report."
                      (subseq bad 0 (min 40 (length bad)))))
       (check (gn-has "malformed reviewer file" result)
              "the refusal names the malformed reviewer file")))
+  (uiop:delete-directory-tree root :validate t))
+;;; propose profile=FILE: the profile narrows, never broadens --------------
+
+(defun gn-write-profile (contents)
+  "A temporary profile file carrying CONTENTS; returns its namestring."
+  (let* ((directory (uiop:temporary-directory))
+         (path (uiop:native-namestring
+                (merge-pathnames
+                 (make-pathname :name (format nil "gn-profile-~A"
+                                              (gensym "p"))
+                                :type "txt")
+                 directory))))
+    (with-open-file (stream path :direction :output :if-exists :supersede)
+      (write-string contents stream))
+    path))
+
+(defun gn-propose-with-profile (root profile-path review-p)
+  "The ten-principle fixture proposal; source-grounding uses :review
+when REVIEW-P and :claim-proof otherwise."
+  (let ((pieces
+          (append '("propose")
+                  (substitute
+                   (format nil "evidence-requirements=source-grounding:~A:fp-r"
+                           (if review-p "review" "claim-proof"))
+                   "evidence-requirements=source-grounding:claim-proof:fp-10"
+                   +gn-propose-pieces+
+                   :test #'string=)
+                  (list (format nil "profile=~A" profile-path)))))
+    (gn-dispatch pieces :root root)))
+
+(let ((root (gn-dispatch-root))
+      (profile (gn-write-profile
+                (concatenate 'string "source-grounding"
+                             (string #\Tab) "review"))))
+  (let ((result (gn-propose-with-profile root profile nil)))
+    (check (= 1 (gn-exit result))
+           "a review-only profile refuses a claim-proof proposal")
+    (check (gn-has "missing-principle-result" result)
+           "the refusal names the missing principle result"))
+  (let ((result (gn-propose-with-profile root profile t)))
+    (check (= 0 (gn-exit result))
+           "a review profile admits a proposal carrying review evidence")
+    (check (gn-has "verdict state=admitted" result)
+           "the admitted verdict renders"))
+  (let* ((path (gn-write-profile
+                (concatenate 'string "source-grounding"
+                             (string #\Tab) "bogus")))
+         (result (gn-dispatch (append '("propose") +gn-propose-pieces+
+                                      (list (format nil "profile=~A" path)))
+                              :root root)))
+    (check (= 2 (gn-exit result))
+           "a malformed profile file is a malformed invocation"))
   (uiop:delete-directory-tree root :validate t))
