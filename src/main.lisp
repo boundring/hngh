@@ -1467,7 +1467,7 @@ is refused."
 ;;; 0 complete/verified, 1 refused, 2 malformed invocation or file,
 ;;; 3 transport fault.
 
-(defparameter +fetch-option-keys+ '(:peer :max-facts :time-window))
+(defparameter +fetch-option-keys+ '(:peer :max-facts :time-window :method))
 
 (defun dispatch-fetch-evidence (args store clock federation-ports)
   (declare (ignore clock))
@@ -1498,15 +1498,26 @@ is refused."
       (handler-case
           (let* ((plist (options-plist options))
                  (peer (getf plist :peer))
+                 (method (and (getf plist :method)
+                              (intern (string-upcase (getf plist :method))
+                                      :keyword)))
                  (max-facts (and (getf plist :max-facts)
                                  (parse-integer (getf plist :max-facts)))))
             (unless peer
               (return-from dispatch-fetch-evidence
                 (values "fetch-evidence refused: missing peer" 2)))
+            (unless (or (null method)
+                        (member method
+                                hngh.adapters.federation::+federation-methods+))
+              (return-from dispatch-fetch-evidence
+                (values (format nil "fetch-evidence refused: unadmitted method: ~A"
+                                (string-downcase (symbol-name method)))
+                        2)))
             (let ((result
                     (gather-federated-evidence
                      federation-ports
                      :peer peer
+                     :method (or method :carrier-bundle)
                      :max-facts max-facts
                      :time-window (and (getf plist :time-window)
                                        (uiop:split-string

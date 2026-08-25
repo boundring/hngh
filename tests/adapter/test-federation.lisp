@@ -288,8 +288,38 @@ thrown verifier; EXIT-CODE drives the bad-signature path."
          "a claim missing its fingerprint is a :missing fact"))
 
 (check (signals-error-p
-        (lambda () (fed-gather *fed-valid-bundle* :method :http-claim)))
+        (lambda () (fed-gather *fed-valid-bundle* :method :gopher)))
        "an unadmitted method refuses closed at request construction")
+
+(let ((result (fed-gather *fed-valid-bundle* :method :http-claim)))
+  (check (eq :complete (fed-status result))
+         "an http-claim method gathers through the same closed mapping")
+  (check (equal '(:current :current :unverifiable)
+                (fed-fact-states result))
+         "an http-claim bundle maps claims exactly like carrier-bundle"))
+
+(defun fed-gather-method-seen (&key method)
+  "Run gather-federated-evidence with a transport that records the
+method it was given; returns (values result seen-method)."
+  (let ((seen nil))
+    (let ((ports (hngh.adapters.federation:make-federation-ports
+                  :fetch-remote
+                  (lambda (request)
+                    (setf seen (hngh.adapters.federation:federation-request-method
+                                request))
+                    (values 0 *fed-valid-bundle* "")))))
+      (values
+       (hngh.adapters.federation:gather-federated-evidence
+        (hngh.adapters.federation:make-federation-request
+         :peer "machine-b" :method method)
+        ports)
+       seen))))
+
+(multiple-value-bind (result seen)
+    (fed-gather-method-seen :method :http-claim)
+  (check (and (eq :complete (fed-status result))
+              (eql :http-claim seen))
+         "the transport sees the http-claim method on the request"))
 
 (check (signals-error-p
         (lambda () (fed-gather *fed-valid-bundle* :peer "http://host")))
@@ -530,6 +560,31 @@ thrown verifier; EXIT-CODE drives the bad-signature path."
                               :federation-ports (fed-federation-ports))))
     (check (= 2 (fed-exit result))
            "fetch-evidence without a peer is malformed"))
+  (uiop:delete-directory-tree root :validate t))
+
+;; fetch-evidence: method= plumbing
+(let ((root (fed-dispatch-root)))
+  (fed-dispatch +fed-fetch-create-args+ :root root)
+  (fed-dispatch '("admit-transport" "run-1" "federation" "repository")
+                :root root)
+  (let ((result (fed-dispatch '("fetch-evidence" "run-1" "peer=machine-b"
+                                "method=http-claim")
+                              :root root
+                              :federation-ports (fed-federation-ports))))
+    (check (= 0 (fed-exit result))
+           "fetch-evidence admits the http-claim method"))
+  (let ((result (fed-dispatch '("fetch-evidence" "run-1" "peer=machine-b"
+                                "method=gopher")
+                              :root root
+                              :federation-ports (fed-federation-ports))))
+    (check (= 2 (fed-exit result))
+           "fetch-evidence refuses an unadmitted method as malformed"))
+  (let ((result (fed-dispatch '("fetch-evidence" "run-1" "peer=machine-b"
+                                "method=carrier-bundle" "max-facts=3")
+                              :root root
+                              :federation-ports (fed-federation-ports))))
+    (check (= 0 (fed-exit result))
+           "fetch-evidence keeps the carrier-bundle default and max-facts"))
   (uiop:delete-directory-tree root :validate t))
 
 ;; verify-attestation: verified through injected ports + envelope file
