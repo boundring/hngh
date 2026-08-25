@@ -826,3 +826,71 @@ openssl call. Nothing here reads a clock or runs a process by default."
                   process-transport payload signature-bytes
                  (hngh.domain:key-pin-key-path pin)
                  (hngh.domain:key-pin-algorithm pin)))))))))
+
+;;; Wake-on-demand -----------------------------------------------------------
+;;; Rung 17: one explicit wake request for a pinned lattice peer, behind an
+;;; injected transport. The pins registry is the admission evidence (a peer
+;;; is admitted by pinning its key); WAKE-PEER-REQUEST rechecks the pin,
+;;; then issues exactly one bounded transport call. No default transport,
+;;; no daemon, no ambient execution: the operator's injected transport
+;;; decides what "wake" means (e.g. a Wake-on-LAN magic packet). The
+;;; certificate-bound mutation lane and any ambient tunnel remain
+;;; boundary-amendment proposals per the backlog.
+
+(defstruct (wake-ports
+            (:constructor %make-wake-ports (wake-transport))
+            (:conc-name %wake-ports-))
+  (wake-transport nil :read-only t))
+
+(defun make-wake-ports (wake-transport)
+  (unless (functionp wake-transport)
+    (error "wake ports require a wake-transport callback"))
+  (%make-wake-ports wake-transport))
+
+(defstruct (wake-result
+            (:constructor %make-wake-result (status key-identifier refusal-labels))
+            (:conc-name %wake-result-))
+  (status nil :read-only t)             ;; :issued | :refused | :fault
+  (key-identifier nil :read-only t)
+  (refusal-labels nil :read-only t))
+
+(defun wake-result-status (result) (%wake-result-status result))
+(defun wake-result-key-identifier (result)
+  (let ((id (%wake-result-key-identifier result)))
+    (and id (copy-seq id))))
+(defun wake-result-refusal-labels (result)
+  (mapcar #'copy-seq (%wake-result-refusal-labels result)))
+
+(defun issued-wake (key-identifier)
+  (%make-wake-result :issued key-identifier nil))
+(defun refused-wake (labels)
+  (%make-wake-result :refused nil labels))
+(defun faulted-wake (labels)
+  (%make-wake-result :fault nil labels))
+
+(defun wake-peer-request (registry peer-identifier ports)
+  "One explicit wake request for PEER-IDENTIFIER through the injected
+wake transport. The peer must be pinned in REGISTRY (admission evidence);
+the transport receives (PEER-IDENTIFIER KEY-PATH). A zero exit issues; a
+nonzero exit refuses; a throw faults."
+  (unless (and (hngh.domain:key-pin-registry-p registry)
+               (wake-ports-p ports))
+    (error "wake-peer-request requires a pin registry and wake ports"))
+  (let ((pin (handler-case
+                 (hngh.domain:lookup-key-pin registry peer-identifier)
+               (error () nil))))
+    (when (null pin)
+      (return-from wake-peer-request (refused-wake '("unknown-peer-key"))))
+    (multiple-value-bind (exit-code stdout stderr)
+        (handler-case
+            (funcall (%wake-ports-wake-transport ports)
+                     (list peer-identifier
+                           (hngh.domain:key-pin-key-path pin)))
+          (error ()
+            (values nil nil nil)))
+      (declare (ignore stdout stderr))
+      (unless (integerp exit-code)
+        (return-from wake-peer-request (faulted-wake '("wake-fault"))))
+      (unless (zerop exit-code)
+        (return-from wake-peer-request (refused-wake '("wake-refused"))))
+      (issued-wake peer-identifier))))
