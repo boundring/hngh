@@ -49,7 +49,7 @@ canonical value. The optional reference lexicon supplies display copy only
 at a named surface; it cannot carry canonical control. Presentation imports
 no adapter.
 
-`hngh.main` is the composition root. `make-run-harness` composes the five
+`hngh.main` is the composition root. `make-run-harness` composes the six
 use cases into one run harness over injected or fail-closed default port
 adapters (an in-memory record store, a per-harness identifier source, and a
 clock), the coordinator functions wire the installed evidence, mutation, and
