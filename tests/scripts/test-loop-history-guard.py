@@ -13,6 +13,12 @@ scripts/, Makefile, hngh.asd) must either be a certificate-bound
 candidate commit or carry the rule-based exemption label. Anything else
 is a violation and fails the gate.
 
+The exemption label is not a free pass: a labeled commit may touch ONLY
+src/packages.lisp (the single export-only file the dependency guard
+refuses to bind). A labeled commit touching any other code-surface file
+is a violation — a behavior change hiding behind the label is caught by
+diff inspection, not just the message.
+
 The single known pre-guard violation is 915e0e3 (comment-only alignment
 of composition-root references, committed before this guard existed); it
 is exempted by name below and recorded in docs/project/decisions.md.
@@ -33,6 +39,7 @@ KNOWN_EXEMPTIONS = {
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
 CANDIDATE = re.compile(r"^hngh: candidate [0-9a-f]{64}$")
 EXEMPT = "excluded from cert manifest by dependency guard"
+EXEMPT_ALLOWED_FILES = {"src/packages.lisp"}
 
 
 def run(argv):
@@ -49,6 +56,11 @@ def touches_code(sha):
     return any(p.startswith(prefix) for p in out.splitlines()
                for prefix in CODE_SURFACE)
 
+def code_files(sha):
+    out = run(["git", "diff", "--name-only", f"{sha}^", sha]).stdout
+    return [p for p in out.splitlines()
+            if any(p.startswith(prefix) for prefix in CODE_SURFACE)]
+
 
 def main():
     violations = []
@@ -61,13 +73,21 @@ def main():
         if sha in KNOWN_EXEMPTIONS:
             exempted += 1
             continue
-        if CANDIDATE.match(subject) or EXEMPT in subject:
+        if CANDIDATE.match(subject):
+            continue
+        if EXEMPT in subject:
+            files = code_files(sha)
+            if files and not set(files) <= EXEMPT_ALLOWED_FILES:
+                violations.append((sha, subject,
+                    f"labeled exemption touches {files}"))
             continue
         violations.append((sha, subject))
     if violations:
         print(f"loop-history guard: {len(violations)} violation(s):")
-        for sha, subject in violations:
-            print(f"  {sha} {subject}")
+        for item in violations:
+            sha, subject, *extra = item
+            print(f"  {sha} {subject}"
+                  + (f" [{extra[0]}]" if extra else ""))
         print("every code-surface commit must be 'hngh: candidate <hash>' "
               "or a labeled rule-based exemption")
         return 1
