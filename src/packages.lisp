@@ -264,7 +264,8 @@
 (defpackage #:hngh.adapters.model
   (:use #:cl)
   (:export #:make-model-transports
-           #:model-request-body))
+           #:model-request-body
+           #:model-response-content))
 
 (defpackage #:hngh.adapters.terminal
   (:use #:cl)
