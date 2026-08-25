@@ -645,6 +645,70 @@ thrown verifier; EXIT-CODE drives the bad-signature path."
             (hngh.adapters.federation:hex-decode bad-hex)))
          (format nil "malformed hex refuses: ~S" bad-hex)))
 
+;;; Rung 14: pins file algorithm column and the signature transport --------
+
+(let ((registry (hngh.adapters.federation:parse-pinned-keys
+                 (concatenate 'string
+                              "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub"
+                              '(#\Tab) "ed25519" '(#\Newline)
+                              "key-c" '(#\Tab) "/etc/hngh/keys/key-c.pub"))))
+  (check (and (eql :ed25519
+                   (hngh.domain:key-pin-algorithm
+                    (hngh.domain:lookup-key-pin registry "key-b")))
+              (eql :rsa-sha256
+                   (hngh.domain:key-pin-algorithm
+                    (hngh.domain:lookup-key-pin registry "key-c"))))
+         "the pins parser reads an explicit algorithm and defaults the rest"))
+
+(dolist (bad-line (list "key-b\t/etc/hngh/keys/key-b.pub\tbogus"
+                        "key-b\t/etc/hngh/keys/key-b.pub\ted25519\textra"
+                        "key-b\t/etc/hngh/keys/key-b.pub\t"))
+  (check (signals-error-p
+          (lambda ()
+            (hngh.adapters.federation:parse-pinned-keys bad-line)))
+         (format nil "an unknown, extra, or empty algorithm column refuses: ~S"
+                 bad-line)))
+
+(defun fed-pinned-argv (&key (algorithm "rsa-sha256") (exit-code 0))
+  "Run one verify through pinned ports whose fake transport records the
+exact openssl argv; returns (values result argv)."
+  (let ((captured nil))
+    (let* ((registry (hngh.adapters.federation:parse-pinned-keys
+                      (concatenate 'string "key-b" '(#\Tab)
+                                   "/etc/hngh/keys/key-b.pub" '(#\Tab)
+                                   algorithm)))
+           (ports (hngh.adapters.federation:make-pinned-attestation-ports
+                   registry
+                   (lambda (argv)
+                     (setf captured argv)
+                     (values exit-code "Verified OK" "")))))
+      (values
+       (hngh.adapters.federation:verify-remote-attestation
+        (make-fixture-attestation :signature "deadbeef")
+        "2026-08-15T00:00:00Z" ports)
+       captured))))
+
+(multiple-value-bind (result captured)
+    (fed-pinned-argv :algorithm "rsa-sha256")
+  (check (eq :verified (att-status result))
+         "an rsa-sha256 pin still verifies through the dgst path")
+  (check (and (equal "openssl" (first captured))
+              (member "-sha256" captured :test #'string=)
+              (member "-verify" captured :test #'string=)
+              (member "-signature" captured :test #'string=))
+         "an rsa-sha256 pin verifies through dgst -sha256 -verify"))
+
+(multiple-value-bind (result captured)
+    (fed-pinned-argv :algorithm "ed25519")
+  (check (eq :verified (att-status result))
+         "an ed25519 pin verifies through the pkeyutl path")
+  (check (and (equal "openssl" (first captured))
+              (member "pkeyutl" captured :test #'string=)
+              (member "-verify" captured :test #'string=)
+              (member "-rawin" captured :test #'string=)
+              (member "-sigfile" captured :test #'string=))
+         "an ed25519 pin verifies through pkeyutl -verify -rawin -sigfile"))
+
 (defparameter *fed-pinned-registry*
   (hngh.adapters.federation:parse-pinned-keys
    (concatenate 'string "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub")))
@@ -816,3 +880,21 @@ transport; returns (values result call-count)."
   (check (and (= 0 (fed-exit result))
               (string= "" (first result)))
          "list-pins renders an empty registry as no lines"))
+
+(let* ((path (fed-write-file
+              (concatenate 'string
+                           "key-b" '(#\Tab) "/etc/hngh/keys/key-b.pub"
+                           '(#\Tab) "ed25519" '(#\Newline)
+                           "key-c" '(#\Tab) "/etc/hngh/keys/key-c.pub")))
+       (result (fed-dispatch (list "list-pins" path))))
+  (check (= 0 (fed-exit result))
+         "list-pins renders pins carrying explicit algorithms")
+  (check (and (fed-has (concatenate 'string "key-b" '(#\Tab)
+                                    "/etc/hngh/keys/key-b.pub" '(#\Tab)
+                                    "ed25519")
+                       result)
+              (fed-has (concatenate 'string "key-c" '(#\Tab)
+                                    "/etc/hngh/keys/key-c.pub" '(#\Tab)
+                                    "rsa-sha256")
+                       result))
+         "list-pins prints the resolved algorithm per pin"))

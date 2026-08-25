@@ -38,6 +38,13 @@ this set.")
 (defparameter +max-attestation-skew-seconds+ 86400
   "Bound on the issuer-supplied clock skew window (one day).")
 
+(defparameter +key-algorithms+
+  '(:rsa-sha256 :ed25519)
+  "The closed key-algorithm vocabulary a pin may name. rsa-sha256 is the
+digest-signature scheme (openssl dgst -sha256 -verify); ed25519 is the
+raw-signature scheme (openssl pkeyutl -verify -rawin), deferred from rung
+12 and admitted here.")
+
 (defun ensure-plain-identifier (value name)
   "A peer or key identifier is a bounded, printable, plain string: no URL
 scheme, no path separators, no whitespace or control characters."
@@ -281,10 +288,12 @@ naming one, with no option-like path component (none starting with `-`)."
     (copy-seq text)))
 
 (defstruct (key-pin
-            (:constructor %make-key-pin (key-identifier key-path))
+            (:constructor %make-key-pin
+                (key-identifier key-path algorithm))
             (:conc-name %key-pin-))
   (key-identifier nil :read-only t)
-  (key-path nil :read-only t))
+  (key-path nil :read-only t)
+  (algorithm :rsa-sha256 :read-only t))
 
 (defun key-pin-key-identifier (pin)
   (copy-seq (%key-pin-key-identifier pin)))
@@ -292,10 +301,17 @@ naming one, with no option-like path component (none starting with `-`)."
 (defun key-pin-key-path (pin)
   (copy-seq (%key-pin-key-path pin)))
 
-(defun make-key-pin (&key key-identifier key-path)
+(defun key-pin-algorithm (pin)
+  (%key-pin-algorithm pin))
+
+(defun make-key-pin (&key key-identifier key-path
+                          (algorithm :rsa-sha256))
+  (unless (member algorithm +key-algorithms+)
+    (error "key pin algorithm must be a closed member: ~S" algorithm))
   (%make-key-pin
    (ensure-plain-identifier key-identifier "key pin identifier")
-   (ensure-absolute-key-path key-path "key pin path")))
+   (ensure-absolute-key-path key-path "key pin path")
+   algorithm))
 
 (defstruct (key-pin-registry
             (:constructor %make-key-pin-registry (pins))

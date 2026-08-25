@@ -689,9 +689,11 @@ never authority: it never admits a mutation."
 
 (defun parse-pinned-keys (data)
   "Strict-parse operator pins text into a KEY-PIN-REGISTRY. One pin per
-line: KEY-IDENTIFIER<TAB>ABSOLUTE-KEY-PATH. `#`-prefixed comment lines
-and blank lines are skipped; any malformed line, wrong field count,
-empty identifier, relative path, or option-like path refuses."
+line: KEY-IDENTIFIER<TAB>ABSOLUTE-KEY-PATH[<TAB>ALGORITHM], where
+ALGORITHM is a closed key-algorithm token (default rsa-sha256 when
+omitted). `#`-prefixed comment lines and blank lines are skipped; any
+malformed line, wrong field count, empty identifier, unknown algorithm,
+relative path, or option-like path refuses."
   (unless (stringp data)
     (error "pinned keys must be text"))
   (let ((pins '()))
@@ -701,13 +703,20 @@ empty identifier, relative path, or option-like path refuses."
           (let ((tab (position #\Tab line)))
             (unless tab
               (error "malformed pins line: ~S" line))
-            (let ((identifier (subseq line 0 tab))
-                  (key-path (subseq line (1+ tab))))
-              (when (position #\Tab key-path)
+            (let* ((algorithm-tab (position #\Tab line :start (1+ tab)))
+                   (identifier (subseq line 0 tab))
+                   (key-path (subseq line (1+ tab)
+                                     (or algorithm-tab (length line))))
+                   (algorithm (if algorithm-tab
+                                  (subseq line (1+ algorithm-tab))
+                                  "rsa-sha256")))
+              (when (position #\Tab algorithm)
                 (error "malformed pins line: ~S" line))
               (push (hngh.domain:make-key-pin
                      :key-identifier identifier
-                     :key-path key-path)
+                     :key-path key-path
+                     :algorithm (intern (string-upcase algorithm)
+                                        :keyword))
                     pins))))))
     (hngh.domain:make-key-pin-registry (nreverse pins))))
 
@@ -752,12 +761,26 @@ under the temporary directory; returns their namestrings."
       (write-sequence signature-bytes stream))
     (values payload-path signature-path)))
 
+(defun signature-verification-argv (algorithm key-path signature-path
+                                    payload-path)
+  "The bounded openssl argv for one verification, closed on ALGORITHM.
+:rsa-sha256 verifies a digest signature via dgst -sha256 -verify;
+:ed25519 verifies a raw Ed25519 signature via pkeyutl -verify -rawin
+(Ed25519 signs the message itself, so no digest is involved)."
+  (case algorithm
+    (:rsa-sha256
+     (list "openssl" "dgst" "-sha256" "-verify" key-path
+           "-signature" signature-path payload-path))
+    (:ed25519
+     (list "openssl" "pkeyutl" "-verify" "-pubin" "-inkey" key-path
+           "-rawin" "-sigfile" signature-path "-in" payload-path))
+    (t (error "unknown key algorithm: ~S" algorithm))))
+
 (defun verify-signature-via-openssl (process-transport payload
-                                      signature-bytes key-path)
-  "One bounded openssl invocation through PROCESS-TRANSPORT:
-dgst -sha256 -verify KEY-PATH -signature SIG-FILE PAYLOAD-FILE. Returns
-the transport's (values exit-code stdout stderr); the temp files are
-always removed."
+                                      signature-bytes key-path algorithm)
+  "One bounded openssl invocation through PROCESS-TRANSPORT for the pin's
+ALGORITHM (see SIGNATURE-VERIFICATION-ARGV). Returns the transport's
+(values exit-code stdout stderr); the temp files are always removed."
   (let ((payload-path nil)
         (signature-path nil))
     (unwind-protect
@@ -767,8 +790,8 @@ always removed."
           (setf payload-path payload-file
                 signature-path signature-file)
           (funcall process-transport
-                   (list "openssl" "dgst" "-sha256" "-verify" key-path
-                         "-signature" signature-path payload-path)))
+                   (signature-verification-argv
+                    algorithm key-path signature-path payload-path)))
       (when signature-path (ignore-errors (delete-file signature-path)))
       (when payload-path (ignore-errors (delete-file payload-path))))))
 
@@ -798,4 +821,5 @@ openssl call. Nothing here reads a clock or runs a process by default."
                  (values 1 "" "unknown-peer-key")
                  (verify-signature-via-openssl
                   process-transport payload signature-bytes
-                  (hngh.domain:key-pin-key-path pin)))))))))
+                 (hngh.domain:key-pin-key-path pin)
+                 (hngh.domain:key-pin-algorithm pin)))))))))
