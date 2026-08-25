@@ -68,8 +68,8 @@
 (let ((body (model-call "MODEL-REQUEST-BODY"
                         "{\"content-hash\":\"h\"}"
                         "llama-1" 512)))
-  (check (search "{\"model\":\"llama-1\",\"max_tokens\":512,\"prompt\":" body)
-         "request envelope names the model and token bound")
+  (check (search "{\"model\":\"llama-1\",\"max_tokens\":512,\"enable_thinking\":false,\"messages\":[{\"role\":\"user\",\"content\":" body)
+         "request envelope names the model, token bound, and chat turn")
   (check (search "content-hash" body)
          "request envelope embeds the review prompt")
   (check (not (search "token-abc" body))
@@ -90,3 +90,41 @@
   (declare (ignore complete))
   (check (functionp complete)
          "construction performs no provider call and returns the callback"))
+
+;;; model-response-content: provider envelope -> completion document ----------
+
+(check (not (null (find-symbol "MODEL-RESPONSE-CONTENT" "HNGH.ADAPTERS.MODEL")))
+       "model-response-content resolves in the model adapter package")
+
+(check (equal "PONG."
+              (model-call "MODEL-RESPONSE-CONTENT"
+                          "{\"choices\":[{\"text\":\"PONG.\",\"index\":0}]}"))
+       "completions-shape envelope extracts the first choice text")
+
+(check (equal "hello findings"
+              (model-call "MODEL-RESPONSE-CONTENT"
+                          "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"hello findings\"}}]}"))
+       "chat-shape envelope extracts the message content")
+
+(check (equal "first"
+              (model-call "MODEL-RESPONSE-CONTENT"
+                          "{\"choices\":[{\"message\":{\"content\":\"first\"}},{\"text\":\"second-choice-text\"}]}"))
+       "the FIRST choice wins even when a later choice carries text")
+
+(dolist (bad (list ""
+                   "not json"
+                   "{}"
+                   "{\"choices\":[]}"
+                   "{\"choices\":[{}]}"
+                   "{\"choices\":[{\"text\":42}]}"
+                   "{\"choices\":[{\"message\":{\"content\":null}}]}"
+                   "[{\"text\":\"root-is-array\"}]"
+                   "{\"unexpected\":\"root\"}"))
+  (check (null (model-call "MODEL-RESPONSE-CONTENT" bad))
+         (format nil "malformed provider envelope yields no content: ~S"
+                 (subseq bad 0 (min 40 (length bad))))))
+
+(check (equal "escaped \"quoted\" text"
+              (model-call "MODEL-RESPONSE-CONTENT"
+                          "{\"choices\":[{\"text\":\"escaped \\\"quoted\\\" text\"}]}"))
+       "escaped strings in the envelope unescape into the document")

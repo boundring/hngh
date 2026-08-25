@@ -51,13 +51,26 @@ Current frontier: the clean-slate baseline. The retired daemon and plugin system
   registry; both refuse malformed pins closed. Verified live with a real
   RSA-2048/SHA-256 keypair (`:verified` / `bad-signature` /
   `unknown-peer-key`) and through three self-governed ceremony commits.
+- Added the operator reviewer transport (promotion rung 13, 2026-08-25):
+  `review ... reviewer=PATH` admits an operator reviewer-transport file as
+  the real model-review transport (strict five-key parsing, closed
+  refusals, token confined to the one curl Authorization header);
+  `hngh.adapters.model` gained the real-path fixes the first live call
+  surfaced (string-stream stdin, chat envelope with `enable_thinking`
+  disabled, completion-document extraction from the provider envelope via
+  its own minimal JSON scanner) and the rung-6 fixed review prompt became
+  self-sufficient for real reviewers. Verified live against the operator's
+  local Unsloth server (Ornith-1.0-35B): `status=complete` with the closed
+  findings document and a `:current` review fact.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
-1. **(Next slice).** Signature-transport hardening (key-type coverage
-   beyond digest-signature keys, e.g. Ed25519 via `pkeyutl -rawin`) and
-   network claim methods behind the existing federation port (both
-   deferred by the 2026-08-24 decision 5 evidence-first fork).
+1. **(Next slice).** Review-fed policy profiles (operator-tunable
+   requirement kinds consuming review and `:remote-attestation`
+   fingerprints) and signature-transport hardening (key-type coverage
+   beyond digest-signature keys, e.g. Ed25519 via `pkeyutl -rawin`);
+   network claim methods behind the existing federation port (deferred by
+   the 2026-08-24 decision 5 evidence-first fork).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
