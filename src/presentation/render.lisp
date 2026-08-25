@@ -219,6 +219,16 @@ manifest=~D policy-profile=~A expiry=~A"
              (hngh.adapters.federation:wake-result-status result)
              (hngh.adapters.federation:wake-result-refusal-labels result)))))
 
+(defun render-worker-result (result)
+  "One factual line for a worker result."
+  (case (hngh.adapters.worker:worker-result-status result)
+    (:complete (format nil "worker status=complete task=~A"
+                       (hngh.adapters.worker:worker-result-task result)))
+    (otherwise
+     (format nil "worker status=~(~A~) labels=~{~A~^; ~}"
+             (hngh.adapters.worker:worker-result-status result)
+             (hngh.adapters.worker:worker-result-refusal-labels result)))))
+
 ;;; Dispatch, reports, and fallback ------------------------------------------
 
 (defun render (value)
@@ -261,6 +271,8 @@ factual string. Unknown values render as their printed representation."
      (render-attestation-result value))
     ((hngh.adapters.federation:wake-result-p value)
      (render-wake-result value))
+    ((hngh.adapters.worker:worker-result-p value)
+     (render-worker-result value))
     (t (format nil "~S" value))))
 
 (defun render-report (&rest values)

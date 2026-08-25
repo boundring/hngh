@@ -30,6 +30,7 @@
 (load (project-file "src/adapter/filesystem.lisp"))
 (load (project-file "src/adapter/run-gather.lisp"))
 (load (project-file "src/adapter/federation.lisp"))
+(load (project-file "src/adapter/worker.lisp"))
 (load (project-file "src/presentation/render.lisp"))
 (load (project-file "src/main.lisp"))
 
@@ -74,6 +75,7 @@
 (load (cl-user::project-file "tests/adapter/test-terminal.lisp"))
 (load (cl-user::project-file "tests/adapter/test-filesystem.lisp"))
 (load (cl-user::project-file "tests/adapter/test-federation.lisp"))
+(load (cl-user::project-file "tests/adapter/test-worker.lisp"))
 (load (cl-user::project-file "tests/presentation/test-presentation.lisp"))
 (load (cl-user::project-file "tests/main/test-main.lisp"))
 (load (cl-user::project-file "tests/main/test-dispatch.lisp"))
