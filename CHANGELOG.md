@@ -146,6 +146,18 @@ lives under Pre-release / early development until the first release.
   and the periodic invocation stays with the operator's scheduler.
   Committed through the self-governed ceremony.
 
+- Queue rotation (2026-08-25): `scripts/rotate-queue` closes one
+  queued item through the full loop — queue-row flip, real evidence,
+  a real local-model review via the operator reviewer file, a
+  ten-principle proposal, certificate binding, and the certificate-
+  bound commit. The first rotation (doc-sync-loop, the doc-numbers
+  guard) ran live end to end: review `status=complete findings=4`
+  (advisory), verdict admitted 10/10, `git add` + `git commit`
+  executed as `hngh: candidate bbd1d598…`, queue ledger flipped in
+  the same commit. The queue ledger lives in
+  `docs/project/queue.md`; a scheduler (operator-owned) may invoke
+  rotate-queue periodically.
+
 ### 2026-08-24
 
 #### Added
