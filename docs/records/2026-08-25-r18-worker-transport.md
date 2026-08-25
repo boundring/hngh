@@ -47,3 +47,18 @@ toward "the loop that runs itself" begin here, read-only.
   omp session behind the bridge) remain the next worker-rung slice;
   this rung ships the harness side only.
 - A worker self-report stays evidence, never acceptance.
+
+## Live end-to-end proof (2026-08-25, same day)
+
+A full lifecycle ran through the dispatch surface with a real worker
+transport (a bounded python3 subprocess doing read-only scan work):
+
+- `create-run` (with the `worker-task` tool label) exit 0;
+- `admit-transport run-1 worker repository` exit 0;
+- `run-worker run-1 task=scout candidates payload=candidate.lisp` exit 0
+  with `worker status=complete task=scout candidates`;
+- `present run-1` exit 0, rendering the run in the ledger.
+
+The adapter-level call bound the `:worker` `:current` evidence fact
+(fingerprint = the task label) from the same real subprocess. The lane
+from run to worker evidence is exercised end to end.
