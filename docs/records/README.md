@@ -85,5 +85,8 @@ authorize a future action.
 - `2026-08-25-r13-operator-reviewer-transport.md` records the operator
   reviewer-transport file and the live review against the local model
   server, verified end to end (promotion rung 13).
+- `2026-08-25-r14-ed25519-signature-transport.md` records the closed
+  key-algorithm vocabulary on pins and the Ed25519 raw-signature
+  verification transport (promotion rung 14), with live end-to-end proof.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

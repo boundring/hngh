@@ -101,10 +101,16 @@ the current number) and an operator command surface. Implemented:
   `openssl dgst -sha256 -verify` invocation on the injected process transport —
   `verify-attestation ... pins=PATH` admits the operator's pins file as the trust anchor
   and `list-pins` renders it; anything unpinned refuses `unknown-peer-key`.
+- Ed25519 signature-transport hardening (rung 14): the pins file gains an optional
+  closed ALGORITHM column (`rsa-sha256` default, `ed25519` admitted); verification
+  routes per pin — digest signatures through `openssl dgst -sha256 -verify`, raw
+  Ed25519 signatures through `openssl pkeyutl -verify -rawin` — so `verify-attestation`
+  accepts modern keys and `list-pins` renders each pin's algorithm. Verified live
+  end to end with a real Ed25519 keypair (`status=verified`, tampered payload
+  `bad-signature`).
 
-Not yet: daemon, watcher, scheduler, the network claim methods and signature-transport
-hardening (Ed25519 keys beyond the digest-signature pairing) that extend the federation
-port, and no ambient state. Each will be admitted the same way
+Not yet: daemon, watcher, scheduler, the network claim methods that extend the
+federation port, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
 one verified stretch at a time.
 

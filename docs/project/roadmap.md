@@ -62,15 +62,22 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
   self-sufficient for real reviewers. Verified live against the operator's
   local Unsloth server (Ornith-1.0-35B): `status=complete` with the closed
   findings document and a `:current` review fact.
+- Completed the Ed25519 signature-transport hardening (promotion rung 14,
+  2026-08-25): the pins file gains an optional closed ALGORITHM column
+  (`rsa-sha256` default, `ed25519` admitted); verification routes per pin —
+  digest signatures via `openssl dgst -sha256 -verify`, raw Ed25519
+  signatures via `openssl pkeyutl -verify -rawin -in`; `list-pins` renders
+  each pin's algorithm. Verified live end to end with a real Ed25519
+  keypair (`status=verified key=ed-key` exit 0; tampered payload refuses
+  `bad-signature`) and bound through the self-governed ceremony.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
 1. **(Next slice).** Review-fed policy profiles (operator-tunable
    requirement kinds consuming review and `:remote-attestation`
-   fingerprints) and signature-transport hardening (key-type coverage
-   beyond digest-signature keys, e.g. Ed25519 via `pkeyutl -rawin`);
-   network claim methods behind the existing federation port (deferred by
-   the 2026-08-24 decision 5 evidence-first fork).
+   fingerprints) and the network claim methods behind the existing
+   federation port (deferred by the 2026-08-24 decision 5
+   evidence-first fork).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
