@@ -119,7 +119,18 @@
            #:remote-claim-fingerprint
            #:verify-attestation-shape
            #:utc-string-p
-           #:+remote-claim-kinds+))
+           #:+remote-claim-kinds+
+           ;; pinned-key registry (src/domain/attestation.lisp)
+           #:key-pin
+           #:key-pin-p
+           #:make-key-pin
+           #:key-pin-key-identifier
+           #:key-pin-key-path
+           #:key-pin-registry
+           #:key-pin-registry-p
+           #:make-key-pin-registry
+           #:lookup-key-pin
+           #:key-pin-registry-pins))
 
 (defpackage #:hngh
   (:use #:cl)
