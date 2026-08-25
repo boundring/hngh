@@ -348,3 +348,26 @@ Resolves the open questions in
    change.
 
 Multi-hop chains remain out of scope (two-party only), as the record states.
+
+## 2026-08-25 — The rule-based carve-out is a recorded decision, machine-checked
+
+The root README restates self-governance as: "a change the loop can
+bind, the loop binds; a change it cannot, it declares." This entry pins
+the two parts of that sentence so the exception is a rule, not a mood:
+
+1. **Export-only / no-behavior changes are excluded from the cert
+   manifest by the dependency guard**, and land as plain commits labeled
+   `(excluded from cert manifest by dependency guard)`. The label is the
+   rule's visible signature; an unlabeled code-surface commit is a
+   violation.
+2. **Every code-surface commit (src/, tests/, scripts/, Makefile, asd)
+   is machine-checked** by `tests/scripts/test-loop-history-guard.py`
+   from the restatement commit `1915713` onward: each must be a
+   `hngh: candidate <hash>` commit or carry the exemption label. The
+   guard runs in `make test`.
+
+Known pre-guard violation, named rather than rewritten: `915e0e3`
+(comment-only alignment of composition-root references, committed as a
+plain docs commit after the restatement). It is exempted by name in the
+guard and stands as history, proving the guard is not a whitewash of the
+past.
