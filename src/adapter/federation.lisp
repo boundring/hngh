@@ -674,3 +674,128 @@ never authority: it never admits a mutation."
         (return-from verify-remote-attestation
           (refused-attestation '("expired-attestation")))))
     (verified-attestation attestation key-identifier)))
+
+;;; Pinned-key parsing and the signature transport -------------------------
+;;; Rung 12: the operator's pins file and the real signature verifier.
+;;; PARSE-PINNED-KEYS is a strict line parser over operator-supplied text
+;;; (IDENTIFIER<TAB>ABSOLUTE-KEY-PATH, `#` comments, blank lines skipped;
+;;; every other deviation refuses); HEX-DECODE is the pure envelope
+;;; signature codec; MAKE-PINNED-ATTESTATION-PORTS builds the
+;;; ATTESTATION-PORTS pair the verify path already consumes — keys resolve
+;;; from the registry, signatures verify through one bounded openssl
+;;; invocation (dgst -sha256 -verify) run on the injected process
+;;; transport. No default transport exists: nothing here runs a process
+;;; unless the caller injects one.
+
+(defun parse-pinned-keys (data)
+  "Strict-parse operator pins text into a KEY-PIN-REGISTRY. One pin per
+line: KEY-IDENTIFIER<TAB>ABSOLUTE-KEY-PATH. `#`-prefixed comment lines
+and blank lines are skipped; any malformed line, wrong field count,
+empty identifier, relative path, or option-like path refuses."
+  (unless (stringp data)
+    (error "pinned keys must be text"))
+  (let ((pins '()))
+    (dolist (line (uiop:split-string data :separator '(#\Newline)))
+      (let ((line (string-right-trim '(#\Return) line)))
+        (unless (or (uiop:emptyp line) (char= (char line 0) #\#))
+          (let ((tab (position #\Tab line)))
+            (unless tab
+              (error "malformed pins line: ~S" line))
+            (let ((identifier (subseq line 0 tab))
+                  (key-path (subseq line (1+ tab))))
+              (when (position #\Tab key-path)
+                (error "malformed pins line: ~S" line))
+              (push (hngh.domain:make-key-pin
+                     :key-identifier identifier
+                     :key-path key-path)
+                    pins))))))
+    (hngh.domain:make-key-pin-registry (nreverse pins))))
+
+(defun hex-decode (hex)
+  "Decode HEX (lowercase hex string) into a fresh unsigned-byte vector.
+Odd length or any non-hex character refuses."
+  (unless (and (stringp hex) (evenp (length hex)))
+    (error "malformed-signature"))
+  (let ((bytes (make-array (floor (length hex) 2)
+                           :element-type '(unsigned-byte 8))))
+    (loop for index below (length bytes)
+          for high = (hex-digit-value (char hex (* 2 index)))
+          for low = (hex-digit-value (char hex (1+ (* 2 index))))
+          do (unless (and high low)
+               (error "malformed-signature"))
+             (setf (aref bytes index) (+ (* 16 high) low)))
+    bytes))
+
+(defun write-verification-inputs (unique payload signature-bytes)
+  "Write the exact payload string and signature bytes to two temp files
+under the temporary directory; returns their namestrings."
+  (let* ((directory (uiop:temporary-directory))
+         (payload-path
+           (uiop:native-namestring
+            (merge-pathnames
+             (make-pathname :name (format nil "~A-payload" unique)
+                            :type "tmp")
+             directory)))
+         (signature-path
+           (uiop:native-namestring
+            (merge-pathnames
+             (make-pathname :name (format nil "~A-signature" unique)
+                            :type "tmp")
+             directory))))
+    (with-open-file (stream payload-path :direction :output
+                             :if-exists :supersede
+                             :external-format :utf-8)
+      (write-string payload stream))
+    (with-open-file (stream signature-path :direction :output
+                             :element-type '(unsigned-byte 8)
+                             :if-exists :supersede)
+      (write-sequence signature-bytes stream))
+    (values payload-path signature-path)))
+
+(defun verify-signature-via-openssl (process-transport payload
+                                      signature-bytes key-path)
+  "One bounded openssl invocation through PROCESS-TRANSPORT:
+dgst -sha256 -verify KEY-PATH -signature SIG-FILE PAYLOAD-FILE. Returns
+the transport's (values exit-code stdout stderr); the temp files are
+always removed."
+  (let ((payload-path nil)
+        (signature-path nil))
+    (unwind-protect
+        (multiple-value-bind (payload-file signature-file)
+            (write-verification-inputs (gensym "hngh-sig")
+                                       payload signature-bytes)
+          (setf payload-path payload-file
+                signature-path signature-file)
+          (funcall process-transport
+                   (list "openssl" "dgst" "-sha256" "-verify" key-path
+                         "-signature" signature-path payload-path)))
+      (when signature-path (ignore-errors (delete-file signature-path)))
+      (when payload-path (ignore-errors (delete-file payload-path))))))
+
+(defun make-pinned-attestation-ports (registry process-transport)
+  "ATTESTATION-PORTS over an operator KEY-PIN-REGISTRY and one injected
+PROCESS-TRANSPORT (a function of one argv returning the adapter-wide
+(values exit-code stdout stderr) shape). The pinned key resolves from
+the registry; the signature is hex-decoded and verified by one bounded
+openssl call. Nothing here reads a clock or runs a process by default."
+  (unless (functionp process-transport)
+    (error "pinned attestation ports require a process transport"))
+  (make-attestation-ports
+   :resolve-pinned-key
+   (lambda (key-id)
+     (let ((pin (hngh.domain:lookup-key-pin registry key-id)))
+       (and pin (hngh.domain:key-pin-key-path pin))))
+   :verify-signature
+   (lambda (payload signature key-id)
+     (let ((signature-bytes (handler-case (hex-decode signature)
+                               (error () nil))))
+       (if (null signature-bytes)
+           (values 1 "" "malformed-signature")
+           (let ((pin (handler-case
+                          (hngh.domain:lookup-key-pin registry key-id)
+                        (error () nil))))
+             (if (null pin)
+                 (values 1 "" "unknown-peer-key")
+                 (verify-signature-via-openssl
+                  process-transport payload signature-bytes
+                  (hngh.domain:key-pin-key-path pin)))))))))
