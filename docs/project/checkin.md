@@ -150,3 +150,12 @@ next rotation or tomorrow, whichever comes first.
   and active shows `+` — the whole queue is visible, not just done
   rows. Smoke still green.
 - **Outcome:** readout honors its legend; this entry.
+
+## 2026-08-25 — check-in #11
+
+- **State:** clean, synced; readout shows the full queue; gate green.
+- **Steering (traceability):** every check-in now accrues a timeline
+  row, so the spine records the check-ins themselves (a future
+  dashboard can show "checked-in on ..." per day). Legend made to
+  match reality (`...` for queued).
+- **Outcome:** check-in rows in the spine; legend fixed; this entry.
