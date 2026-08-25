@@ -53,3 +53,18 @@ queue candidates or reprioritization. Record each pass here (dated).
   `docs/project/market-scope-2026-08-25.md`; added marketplace-
   governance, compliance-dashboard, ledger-format-standard, and
   self-funding-plan candidates to the ledger.
+
+## Scale (calibration from check-in #2)
+
+Which items are check-in-scale (small, one-session fix, could ride a
+check-in) vs rotation-scale (a full rotate-queue session with model
+review). Helps the cadence pick the right instrument.
+
+- **check-in-scale:** timeline-events (machine-readable rotation
+  events), queue-eta (ETA column), doc-number refreshes.
+- **rotation-scale:** wake-mutation-lane, node-lattice-admission,
+  bridge-operator-host, key-rotation-freshness, pooled-hardware,
+  tunnel-automation, dashboard-readouts, ux-hardening,
+  ecosystem-integrations, governance-benchmark, dss-e-export,
+  marketplace-governance, compliance-dashboard,
+  ledger-format-standard, self-funding-plan.
