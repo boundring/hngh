@@ -43,6 +43,12 @@ def test_wave():
     assert "wave" in out.stdout
 
 
+def test_themes():
+    for extra in (["--theme=matrix"], ["--banner", "--theme=ocean"], ["--quiet"]):
+        out = run(extra)
+        assert out.returncode == 0, out.stderr
+
+
 def test_tone():
     for style in (["--tone"], ["--tone", "--circular"], ["--tone", "--wave"]):
         out = run(style)
@@ -65,4 +71,4 @@ if __name__ == "__main__":
     test_wave()
     test_tone()
     test_dance()
-    print("dashboard-readout smoke OK (linear + spiral + circular + burst + wave + tone + dance)")
+    print("dashboard-readout smoke OK (linear+spiral+circular+burst+wave+tone+theme+banner+quiet+dance)")

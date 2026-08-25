@@ -15,6 +15,8 @@ point; the shorthand for our bigger crazy is real but honed.
 
 import sys
 import math
+import io
+import contextlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -71,12 +73,65 @@ def tone(code):
 TONE = "--tone" in sys.argv
 
 
+def theme_set():
+    """--theme=NAME maps names to accent codes; default plain."""
+    name = "plain"
+    for arg in sys.argv:
+        if arg.startswith("--theme="):
+            name = arg.split("=", 1)[1]
+            break
+    if "--theme" in sys.argv:
+        i = sys.argv.index("--theme")
+        if i + 1 < len(sys.argv):
+            name = sys.argv[i + 1]
+    table = {
+        "matrix": {"accent": 92, "dim": 90, "bg": 40},
+        "sunset": {"accent": 93, "dim": 33, "bg": 41},
+        "ocean":  {"accent": 96, "dim": 34, "bg": 44},
+        "paper":  {"accent": 97, "dim": 90, "bg": 40},
+    }
+    return table.get(name, {})
+
+
+THEME = theme_set()
+
+
+BANNER = "--banner" in sys.argv
+QUIET = "--quiet" in sys.argv
+
+
+def banner():
+    if not BANNER:
+        return ""
+    art = r"""
+   _   _   _   _   _   _   _   _   _   _   _  _
+  / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \/ \
+ ( H|n|g|h | t|r|a|c|e|d | d|a|s|h|b|o|a|r|d )
+  \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/\_/
+"""
+    return art if not THEME else tone(THEME.get("accent", 92))(art)
+
+
+def framed(text, accent=None):
+    """Draw TEXT inside a unicode panel when a theme is on."""
+    if not THEME:
+        return text
+    a = THEME.get("accent", 92)
+    lines = text.splitlines()
+    w = max((len(l) for l in lines), default=0)
+    bar = tone(a)("─" * (w + 2))
+    return (tone(a)("┌") + bar + tone(a)("┐")
+            + "\n".join(tone(a)("│") + l.ljust(w) + tone(a)("│") for l in lines)
+            + tone(a)("└") + bar + tone(a)("┘"))
+
+
 def paint(marker):
     """Colorize the common markers when --tone is on."""
     if not TONE:
         return marker
+    accent = THEME.get("accent", 32)
     if marker.startswith("#"):
-        return tone(32)(marker)      # green done
+        return tone(accent)(marker)  # done (theme accent)
     if "+" in marker:
         return tone(36)(marker)      # cyan active
     if marker.startswith("-"):
@@ -238,15 +293,25 @@ def main():
         elif i + 1 < len(sys.argv):
             dance = int(sys.argv[i + 1])
     if "--circular" in sys.argv:
-        circular_render(rows, items, etas, dance)
+        func = lambda: circular_render(rows, items, etas, dance)
     elif "--spiral" in sys.argv:
-        spiral_render(rows, items, etas, dance)
+        func = lambda: spiral_render(rows, items, etas, dance)
     elif "--burst" in sys.argv:
-        burst_render(rows, items, etas, dance)
+        func = lambda: burst_render(rows, items, etas, dance)
     elif "--wave" in sys.argv:
-        wave_render(items, rows, etas, dance)
+        func = lambda: wave_render(items, rows, etas, dance)
     else:
-        linear_render(items, rows, etas, dance)
+        func = lambda: linear_render(items, rows, etas, dance)
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        func()
+    body = buf.getvalue()
+    if BANNER:
+        body = banner() + "\n" + body
+    if QUIET:
+        body = "\n".join(l for l in body.splitlines()
+                         if not (l.startswith("hngh ") or l.startswith("legend")))
+    sys.stdout.write(framed(body) if THEME else body)
 
 
 if __name__ == "__main__":
