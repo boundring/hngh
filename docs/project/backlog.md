@@ -331,3 +331,49 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** a test suite proves an old peer refuses wake,
   a rotation that would empty the registry refuses, and a healthy,
   fresh, rotated peer passes.
+
+## Gantt ports (gantt-ports) — interface-expansion rung
+
+- **Problem:** one dashboard readout is a fine start, but the operator
+  wants gantts like they want weather: all kinds. Axial and circular
+  clock-face rings, animated spirals, wobbling, dancing, "crazy" —
+  the whole instrument panel should be portable to any gantt dialect
+  the operator fancies, each reading the same committed timeline
+  spine.
+- **Smallest useful outcome:** the readout gains a `--style` switch
+  with (at least) `linear`, `circular` (clock-face rings), and
+  `spiral` (already exists) renderers, all over the same spine; each
+  renderer smoke-tested like `--spiral` is today.
+- **Evidence:** `scripts/dashboard-readout` (linear + spiral both
+  live); the timeline spine (`docs/project/timeline.md`) + ETA
+  windows as the shared data.
+- **Risk:** rendering options multiply — keep each style a tiny pure
+  function over the same rows; don't let styling infect data.
+- **Dependencies:** the dashboard-readout spine (present); each new
+  style is check-in-scale.
+- **Review trigger:** an independent run of each style renders the
+  same rows/ETAs, and the smoke test covers every style (fails on a
+  missing/renamed renderer).
+
+## Dancing interfaces (dancing-ui) — the music runs the room
+
+- **Problem (deliberately weird):** interfaces are static; the
+  operator wants the whole system to *dance in time to music playing
+  on the machine*, intensity varying with the track — a UI that
+  breathes, pulses, and glides with the beat. Pure delight; it must
+  never obscure the data.
+- **Smallest useful outcome:** one probe reads the system's audio
+  signal (pulse audio/pipewire intensity, or when unavailable a
+  constant BPM/no-op) and maps it to an intensity value; the
+  dashboard applies it as a set of `--dance` amplitude classes
+  (subtle pulse on the ETA bars). A human can toggle it off; it never
+  changes a decision.
+- **Why probe first:** feasibility (reading system music, mapping to a
+  UI amplitude) before committing the full dance to all interfaces.
+- **Risk:** music-driven motion must not become motion-sickness or
+  performance drag; it is a display-only layer under the pass-thru
+  data, no daemon.
+- **Dependencies:** the dashboard-readout; the audio source probe.
+- **Review trigger:** an independent reviewer accepts that the `--dance`
+  mode pulses to an injected fake intensity, is disabled by default,
+  and renders the data identically when off.
