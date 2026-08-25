@@ -132,7 +132,19 @@
            #:key-pin-registry-p
            #:make-key-pin-registry
            #:lookup-key-pin
-           #:key-pin-registry-pins))
+           #:key-pin-registry-pins
+           ;; operator policy profiles (src/domain/governance.lisp)
+           #:evidence-profile
+           #:evidence-profile-p
+           #:make-evidence-profile
+           #:evidence-profile-entries
+           #:evidence-profile-entry
+           #:evidence-profile-entry-p
+           #:make-evidence-profile-entry
+           #:evidence-profile-entry-principle
+           #:evidence-profile-entry-kinds
+           #:profile-permitted-kinds
+           #:evaluate-policy-proposal-under-profile))
 
 (defpackage #:hngh
   (:use #:cl)
