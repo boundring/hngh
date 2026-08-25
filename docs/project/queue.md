@@ -18,7 +18,7 @@ governance-benchmark	queued	Governance-benchmark research lane	backlog entry
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
 dashboard-readouts	queued	Dashboard readouts (gantt over runs/queue/commits)	timeline.md; queue ledger
 timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired
-queue-eta	queued	Planned-window (ETA) column on queue rows	timeline.md
+queue-eta	done	Planned-window (ETA) column on queue rows	implemented by check-in #5 2026-08-25
 ux-hardening	queued	UX/interface pass (Emacs-style extensible operator surface)	imeline.md
 ecosystem-integrations	queued	(CachyOS/Linux/dbus/system-harness/device integrations)	vision.md
 zoom-out-loop	queued	Quarterly zoom-out market/news poll + candidate intake	timeline.md
@@ -68,3 +68,33 @@ review). Helps the cadence pick the right instrument.
   ecosystem-integrations, governance-benchmark, dss-e-export,
   marketplace-governance, compliance-dashboard,
   ledger-format-standard, self-funding-plan.
+
+## ETA
+
+Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
+Gives "future" a date so a gantt can place bars.
+
+- wake-mutation-lane — next rotation (after a full session is carved,
+  target ~this week)
+- node-lattice-admission — after wake-mutation-lane
+- queue-eta — DONE today (this widget is the item)
+- bridge-operator-host — after node-lattice
+- timeline-events — DONE (2026-08-25)
+- others — on rotation, roughly one per cadence
+- dashboard-readouts — once the spine (timeline-events + queue-eta) has
+  >= 5 committed rows
+
+## ETA
+
+Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
+Gives "future" a date so a gantt can place bars.
+
+- wake-mutation-lane — next rotation (after a full session is carved,
+  target ~this week)
+- node-lattice-admission — after wake-mutation-lane
+- queue-eta — DONE today (this widget is the item)
+- bridge-operator-host — after node-lattice
+- timeline-events — DONE (2026-08-25)
+- others — on rotation, roughly one per cadence
+- dashboard-readouts — once the spine (timeline-events + queue-eta) has
+  >= 5 committed rows

@@ -88,3 +88,14 @@ next rotation or tomorrow, whichever comes first.
   (also check-in-scale), then dashboard-readouts (rotation-scale).
 - **Outcome:** timeline events + test wired + queue updated + this
   entry, committed through the ceremony.
+
+## 2026-08-25 — check-in #5
+
+- **State:** clean, synced (`bf9eb11`); gate green; timeline stream
+  live.
+- **Steering (check-in-scale, taken):** rotated **queue-eta** — the
+  queue ledger now carries an ETA section (planned windows per item,
+  the TSV stays 4-field for rotate-queue), so "future" has dates a
+  gantt can place. Next spine item: dashboard-readouts, once the
+  spine has >= 5 timeline/ETA rows.
+- **Outcome:** ETA section + queue-eta done + this entry, committed.
