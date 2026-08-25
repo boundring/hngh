@@ -94,5 +94,8 @@ authorize a future action.
 - `2026-08-25-r16-policy-profiles.md` records the operator policy
   profile value, the `:review` requirement kind, and the `profile=`
   admission on `propose` (promotion rung 16).
+- `2026-08-25-r17-wake-peer.md` records the wake-on-demand slice for
+  pinned lattice peers (promotion rung 17): the wake ports/result, the
+  `wake-peer` command, and the closed refusal vocabulary.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

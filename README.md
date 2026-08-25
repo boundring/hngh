@@ -120,6 +120,13 @@ the current number) and an operator command surface. Implemented:
   listed principle may carry (the `:review` kind is now admitted, so a profile can
   demand review evidence). A profile never broadens admission; a listed principle
   whose kinds are all dropped refuses as `missing-principle-result`.
+- Wake-on-demand (rung 17): `wake-peer RUN PINS-FILE PEER` issues one explicit wake
+  request for a pinned lattice peer behind an injected transport — the pins registry
+  is the admission evidence (a peer is admitted by pinning its key) and the run must
+  hold a `:federation` admission receipt. No default transport, no daemon: the
+  operator's injected transport decides what "wake" means. Unpinned peers refuse
+  `unknown-peer-key`; ambient tunnels and certificate-bound wake remain boundary
+  amendments.
 
 Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built

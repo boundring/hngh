@@ -102,6 +102,16 @@ lives under Pre-release / early development until the first release.
   malformed files are malformed invocations). Committed through the
   self-governed ceremony (chore export lane for `src/packages.lisp`).
 
+- Wake-on-demand (promotion rung 17): `wake-peer RUN PINS-FILE PEER`
+  issues one explicit wake request for a pinned lattice peer behind an
+  injected transport. The pins registry is the admission evidence; the
+  transport receives `(PEER KEY-PATH)`; a zero exit issues, a nonzero
+  exit refuses `wake-refused`, a throw faults `wake-fault`; an unpinned
+  peer refuses `unknown-peer-key` before any transport call. No default
+  transport — without injection the command refuses
+  `no-wake-transport`. Committed through the self-governed ceremony
+  (chore export lane for `src/packages.lisp`).
+
 ### 2026-08-24
 
 #### Added
