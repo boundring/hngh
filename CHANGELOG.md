@@ -80,6 +80,17 @@ lives under Pre-release / early development until the first release.
   excluded by the dependency guard; candidate commit bound to the
   implementation and tests).
 
+- Network claim method (promotion rung 15): `+federation-methods+` gains
+  `:http-claim` (carrier-bundle and http-claim are the closed method
+  set; anything else still refuses at request construction).
+  `fetch-evidence RUN peer=ID [method=carrier-bundle|http-claim]
+  [max-facts=N]` accepts the closed method option (unadmitted methods
+  are malformed exit 2); the transport sees the method on the request,
+  and the peer remains a plain identifier with endpoint resolution
+  transport-owned — no default wire. Verified live over a real local
+  HTTP server through an injected transport (`status=complete` with the
+  closed claim states) and committed through the self-governed ceremony.
+
 ### 2026-08-24
 
 #### Added

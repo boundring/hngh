@@ -108,9 +108,15 @@ the current number) and an operator command surface. Implemented:
   accepts modern keys and `list-pins` renders each pin's algorithm. Verified live
   end to end with a real Ed25519 keypair (`status=verified`, tampered payload
   `bad-signature`).
+- Network claim method (rung 15): `fetch-evidence` gains `method=carrier-bundle|http-claim`
+  (default carrier-bundle); the `:http-claim` method fetches the same closed bundle
+  document from a peer endpoint over HTTP. The peer stays a plain identifier on the
+  request and endpoint resolution belongs to the injected transport — there is still
+  no default wire, and an unadmitted method is malformed. Verified live over a real
+  local HTTP server through an injected transport (`status=complete`, claims mapped
+  with the closed state vocabulary).
 
-Not yet: daemon, watcher, scheduler, the network claim methods that extend the
-federation port, and no ambient state. Each will be admitted the same way
+Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
 one verified stretch at a time.
 
