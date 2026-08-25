@@ -6,10 +6,33 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
-
-### 2026-08-24
+### 2026-08-25
 
 #### Added
+
+- Added the operator pinned-key registry and signature-verification
+  transport (promotion rung 12, the "revocation policy refinement" named
+  in the roadmap):
+  - `hngh.domain` adds the pure `key-pin` value (plain bounded identifier
+    plus absolute key path; option-like path components refuse) and the
+    immutable `key-pin-registry` (duplicate identifiers refuse, defensive
+    copies, `lookup-key-pin`) in `src/domain/attestation.lisp`.
+  - `hngh.adapters.federation` adds `parse-pinned-keys` (strict
+    `IDENTIFIER<TAB>ABSOLUTE-KEY-PATH` line parser over operator text;
+    comments and blanks skipped, everything else refuses),
+    `hex-decode` (the pure envelope signature codec), and
+    `make-pinned-attestation-ports` (attestation ports that resolve keys
+    from the registry and verify signatures through one bounded
+    `openssl dgst -sha256 -verify` invocation on the injected process
+    transport; no default transport).
+  - `verify-attestation RUN FILE [pins=PATH]` admits the operator pins
+    file — the trust anchor that replaces injected ports with the real
+    pinned registry and process transport; a missing or malformed pins
+    file is a malformed invocation. New `list-pins PATH` renders one
+    tab-joined line per pinned key through `render-pin-list`.
+  - Live proof (RSA-2048/SHA-256 throwaway keypair): a real signature
+    verifies `status=verified key=live-key-1` exit 0; a tampered payload
+    refuses `bad-signature`; an unpinned key refuses `unknown-peer-key`.
 
 ### 2026-08-24
 
@@ -35,7 +58,7 @@ lives under Pre-release / early development until the first release.
     `malformed-expiry`, `expired-attestation`, `attestation-clock-skew`,
     `transport-fault`, and `output-too-large`.
   - `hngh.domain:+admitted-transports+` is now
-    `(:filesystem :model :terminal :federation)`; 
+    `(:filesystem :model :terminal :federation)`;
     `hngh.domain:+evidence-requirement-kinds+` gains `:remote-attestation`
     and `:federated-claim`.
   - `hngh.application:admit-transport` admits `:federation` only under a
@@ -56,7 +79,7 @@ lives under Pre-release / early development until the first release.
 - Added the bounded model and terminal worker transports (promotion rung
   10): `hngh.adapters.model:make-model-transports` returns the transport
   `complete` callback shape so the existing bounded review adapter can
-  drive a real provider (advisory only, no default provider); 
+  drive a real provider (advisory only, no default provider);
   `hngh.adapters.terminal` captures one bounded operator statement as a
   `:terminal` evidence fact with an in-process SHA-256 fingerprint
   (advisory only, no subprocess, no default input);

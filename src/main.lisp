@@ -416,7 +416,8 @@ commands:~%~
   propose [key=value...]  issue-cert ACTION RUN VERDICT-FILE [PATH...]~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
   review RUN content-hash=HASH paths=PATH,...  terminal RUN~%~
-  fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE~%~
+  fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
+  list-pins PATH~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -1421,11 +1422,49 @@ is refused."
         (error (condition)
           (values (format nil "malformed fetch-evidence: ~A" condition) 2))))))
 
+(defparameter +verify-option-keys+ '(:pins)
+  "verify-attestation accepts only the operator pins file option.")
+
+(defun read-pins-file (path)
+  "Read and strict-parse an operator pins file. Returns
+(values registry nil) or (values nil refusal-text)."
+  (handler-case
+      (values (hngh.adapters.federation:parse-pinned-keys
+               (uiop:read-file-string path))
+              nil)
+    (file-error () (values nil "cannot read pins file"))
+    (error () (values nil "malformed pins file"))))
+
 (defun dispatch-verify-attestation (args store clock attestation-ports)
   (multiple-value-bind (positionals options) (collect-options args)
-    (when (or options (/= 2 (length positionals)))
-      (return-from dispatch-verify-attestation (values (command-usage) 2)))
-    (let* ((identifier (first positionals))
+    (let ((unknown (find-if (lambda (pair)
+                              (not (member (car pair) +verify-option-keys+)))
+                            options)))
+      (when (or unknown (/= 2 (length positionals)))
+        (return-from dispatch-verify-attestation
+          (values
+           (if unknown
+               (format nil "unknown verify-attestation option: ~A~%~A"
+                       (cdr unknown) (command-usage))
+               (command-usage))
+           2))))
+    ;; The operator pins file is the trust anchor: when present it
+    ;; replaces any injected attestation ports with the real pinned
+    ;; registry over the installed read-only process transport.
+    (let* ((pins-path (cdr (assoc :pins options)))
+           (ports
+             (if pins-path
+                 (multiple-value-bind (registry refusal)
+                     (read-pins-file pins-path)
+                   (when refusal
+                     (return-from dispatch-verify-attestation
+                       (values (format nil "verify-attestation refused: ~A"
+                                       refusal)
+                               2)))
+                   (hngh.adapters.federation:make-pinned-attestation-ports
+                    registry #'hngh.adapters.evidence:process-run))
+                 attestation-ports))
+           (identifier (first positionals))
            (path (second positionals))
            (run (run-from-store store identifier)))
       (unless run
@@ -1436,7 +1475,7 @@ is refused."
           (values (format nil "verify-attestation refused: run ~A not admitted for federation"
                           identifier)
                   1)))
-      (unless attestation-ports
+      (unless ports
         (return-from dispatch-verify-attestation
           (values "verify-attestation refused: no-attestation-transport" 1)))
       (handler-case
@@ -1445,11 +1484,24 @@ is refused."
                    (hngh.adapters.federation:parse-attestation-envelope text)))
             (let ((result
                     (verify-remote-attestation
-                     attestation-ports attestation (funcall clock))))
+                     ports attestation (funcall clock))))
               (report-attestation-result result)))
         (error (condition)
           (values (format nil "malformed verify-attestation: ~A" condition)
                   2))))))
+
+(defun dispatch-list-pins (args)
+  "list-pins PATH: read and strict-parse an operator pins file, then
+render one line per pin. The command is a pure operator utility: it
+touches no run ledger and spawns no process."
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (/= 1 (length positionals)))
+      (return-from dispatch-list-pins (values (command-usage) 2)))
+    (multiple-value-bind (registry refusal)
+        (read-pins-file (first positionals))
+      (if refusal
+          (values (format nil "list-pins refused: ~A" refusal) 2)
+          (values (hngh.presentation:render-pin-list registry) 0)))))
 
 (defun report-federation-result (result)
   "Map a FEDERATION-RESULT to (values output exit-code): 0 complete,
@@ -1497,6 +1549,7 @@ is refused."
      (dispatch-fetch-evidence args store clock federation-ports))
     ((string= command "verify-attestation")
      (dispatch-verify-attestation args store clock attestation-ports))
+    ((string= command "list-pins") (dispatch-list-pins args))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))

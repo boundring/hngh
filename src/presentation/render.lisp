@@ -253,3 +253,12 @@ factual string. Unknown values render as their printed representation."
 
 (defun render-report (&rest values)
   (format nil "~{~A~^~%~}" (mapcar #'render values)))
+
+(defun render-pin-list (registry)
+  "One factual line per pinned key: IDENTIFIER<TAB>ABSOLUTE-KEY-PATH."
+  (with-output-to-string (stream)
+    (dolist (pin (hngh.domain:key-pin-registry-pins registry))
+      (format stream "~A~C~A~%"
+              (hngh.domain:key-pin-key-identifier pin)
+              #\Tab
+              (hngh.domain:key-pin-key-path pin)))))
