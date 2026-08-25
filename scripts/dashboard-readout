@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""dashboard-readouts: a first minimal readout over the timeline spine.
+
+Renders the committed timeline rows (DATE<TAB>KIND<TAB>ITEM<TAB>HASH)
+as plain gantt-style bars: each item gets a row, its timeline events
+map to '#' on the axis, and the ETA windows from queue.md map to '.'.
+Reads only committed data — no daemon, no process. This is the thinnest
+view that makes the spine observable.
+"""
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TIMELINE = ROOT / "docs" / "project" / "timeline.md"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+
+
+def timeline_rows():
+    rows = []
+    for line in TIMELINE.read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[1] in {"done", "event", "rotation"}:
+            rows.append(parts)
+    return rows
+
+
+def queue_items():
+    """(id, status) pairs from the TSV block."""
+    items = []
+    for line in QUEUE.read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[1] in {"queued", "done", "active"}:
+            items.append((parts[0], parts[1]))
+    return items
+
+
+def main():
+    rows = timeline_rows()
+    items = queue_items()
+    print("hngh timeline (gantt-ish)")
+    print("legend: # = timeline event  . = queued window")
+    # order: all queue items, then any timeline-only items
+    ids = [i for i, _ in items]
+    for i in ids:
+        if i not in [r[2] for r in rows]:
+            continue
+        n = sum(1 for r in rows if r[2] == i)
+        status = next(s for item, s in items if item == i)
+        bar = "#" * n if status == "done" else "#" * n + " ..."
+        print(f"{i:22s} {bar}")
+    # timeline rows not in the queue (events like check-ins)
+    seen = set(ids)
+    for r in rows:
+        if r[2] not in seen and r[1] != "rotation":
+            print(f"{r[2]:22s} # (event)")
+    print(f"\n{len(rows)} timeline rows; {len(items)} queue items")
+
+
+if __name__ == "__main__":
+    sys.exit(main())
