@@ -191,6 +191,18 @@ wall that does not say who raised it.
 
 Start at [docs/README.md](docs/README.md). Records and the external retirement archive cover
 the project's prior state; the active baseline lives here.
+
+## For the public
+
+The project publishes a daily journal of its own construction — the
+same ledger that governs its releases, written for people to read. Each
+day's entry assembles the record, the queue, and the timeline into a
+narrative you can follow as the megastructure grows outward. The
+project's long-form memoir and the public site (journal, moderated
+comments, leaderboards, and the dashboards this README describes) are
+the same build pipeline as the code — every public byte is a committed,
+checked artifact.
+
 ## Contributors & attribution
 
 Who builds Hngh and how it is attributed is in [CONTRIBUTORS.md](CONTRIBUTORS.md).
