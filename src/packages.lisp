@@ -325,7 +325,11 @@
            #:attestation-result-refusal-labels
            #:verify-remote-attestation
            #:parse-attestation-envelope
-           #:utc-seconds))
+           #:utc-seconds
+           ;; pinned-key registry parsing + signature transport (rung 12)
+           #:parse-pinned-keys
+           #:hex-decode
+           #:make-pinned-attestation-ports))
 
 (defpackage #:hngh.presentation
   (:use #:cl)
