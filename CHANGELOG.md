@@ -133,11 +133,18 @@ lives under Pre-release / early development until the first release.
   operator surface. A worker self-report is evidence, never acceptance,
   and a worker never carries a mutation certificate. Committed through
   the self-governed ceremony (chore export lane for `src/packages.lisp`).
-- Live worker proof (2026-08-25): the full lifecycle ran through the
+- Live worker proof (2026-08-25): the full cycle ran through the
   dispatch surface with a real subprocess worker transport —
   create-run (worker-task label) → admit worker → run-worker
   (`worker status=complete task=scout candidates`) → present — with
   the `:worker` `:current` evidence fact bound from real output.
+- Continual-worker driver (2026-08-25): `scripts/worker-driver` runs
+  the one-shot worker cycle as a single explicit invocation
+  (`--store=PATH OBJECTIVE TASK [PAYLOAD]`: create-run with the
+  worker-task label → admit worker → run-worker → close). It is glue
+  over the existing dispatch surface, adds no transport or authority,
+  and the periodic invocation stays with the operator's scheduler.
+  Committed through the self-governed ceremony.
 
 ### 2026-08-24
 
