@@ -202,3 +202,14 @@ next rotation or tomorrow, whichever comes first.
   when quiet. Probe + hook + smoke (incl. auto) green.
 - **Queue:** dancing-ui probe done; amplitude-animation and real FFT
   BPM stay the deeper steps.
+
+## 2026-08-25 — check-in #15 (aesthetic expansion)
+
+- **Steering (operator "look around for aesthetic additions"):** the
+  readout family grew: **burst** (radial starburst: done near center,
+  queued at the rim) and **wave** (bouncing equalizer whose bar height
+  rides the music intensity — the dance made visible), plus **--tone**
+  ANSI color (done green, active cyan, ETA amber, queued dim) on
+  linear/burst/circular. Smoke covers all 5 styles + tone + dance.
+- **Queue:** gantt-ports partially delivered (now 5 dialects);
+  dancing-ui probe live; amplitude-animation + raytm BPM stay deeper.

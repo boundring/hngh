@@ -31,6 +31,24 @@ def test_circular():
     assert "circular" in out.stdout and "timeline rows" in out.stdout
 
 
+def test_burst():
+    out = run(["--burst"])
+    assert out.returncode == 0, out.stderr
+    assert "burst" in out.stdout
+
+
+def test_wave():
+    out = run(["--wave"])
+    assert out.returncode == 0, out.stderr
+    assert "wave" in out.stdout
+
+
+def test_tone():
+    for style in (["--tone"], ["--tone", "--circular"], ["--tone", "--wave"]):
+        out = run(style)
+        assert out.returncode == 0, out.stderr
+
+
 def test_dance():
     for style in ([], ["--spiral"], ["--circular"]):
         out = run([*style, "--dance", "5"])
@@ -43,5 +61,8 @@ if __name__ == "__main__":
     test_linear()
     test_spiral()
     test_circular()
+    test_burst()
+    test_wave()
+    test_tone()
     test_dance()
-    print("dashboard-readout smoke OK (linear + spiral + circular + dance)")
+    print("dashboard-readout smoke OK (linear + spiral + circular + burst + wave + tone + dance)")
