@@ -56,5 +56,34 @@ authorize a future action.
   `Where` revision framing Hngh as a record-first system harness against the
   throughput-first harness-mainstream, grounded in the arXiv 2604.18071
   empirical harness study and the 2026-07-28 stateless MCP update.
+- `2026-08-24-prior-art-landscape.md` records the prior-art survey (in-toto,
+  DSSE, Sigstore, SCITT) and the invariants Hngh adopted from it, including
+  evidence monotonicity.
+- `2026-08-24-governance-property-tests.md` records the totality and
+  monotonicity property tests over the governance vocabularies.
+- `2026-08-24-first-self-governed-commit.md` records the first commit
+  produced, reviewed, and committed by Hngh under its own certificate.
+- `2026-08-24-second-self-governed-commit.md` records the second
+  self-governed commit and the adapter bug fixes the first ceremony surfaced.
+- `2026-08-24-command-surface-and-transport-admission.md` records the
+  operator command surface (promotion rung 8), filesystem transport
+  admission, and the strict exit-code protocol.
+- `2026-08-24-command-surface-dogfood.md` records the dogfood development
+  loop (promotion rung 9): the propose → issue-cert → mutation-check
+  ceremony against real repository evidence.
+- `2026-08-24-task-r10-bounded-worker-transports.md` records the bounded
+  `:model` and `:terminal` transports behind closed loadout admission.
+- `2026-08-24-design-distributed-attestation.md` records the distributed
+  attestation design (promotion rung 11): envelope bounds, pinned keys, and
+  signature verification ports.
+- `2026-08-24-context-budget-and-toolchain.md` records the operator's
+  context-budget preference (~40% of the model window through
+  billion-context) and the omp/pi toolchain wiring through `bili`.
+- `2026-08-25-r12-pin-registry-and-signature-transport.md` records the
+  operator pinned-key registry, the strict pins-file parser, and the live
+  RSA/SHA-256 signature-verification proof (promotion rung 12).
+- `2026-08-25-r13-operator-reviewer-transport.md` records the operator
+  reviewer-transport file and the live review against the local model
+  server, verified end to end (promotion rung 13).
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
