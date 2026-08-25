@@ -247,3 +247,80 @@ ordering; bounded nonnegative skew; and a duplicate-free claim set."
                    (<= skew +max-attestation-skew-seconds+))
         (bad-at "malformed-attestation"))
       (values t nil))))
+
+;;; Operator-pinned keys -----------------------------------------------------
+;;; The pinned-key registry is the trust anchor for cross-machine
+;;; attestation (design record 2026-08-24): a closed list of named
+;;; public-key paths the operator explicitly admitted. Pure values only —
+;;; reading key bytes, running openssl, or consulting a clock stays in the
+;;; federation adapter behind injected ports. Anything absent from the
+;;; registry lands on the adapter's unknown-peer-key refusal.
+
+(defun key-path-components (text)
+  "The nonempty components of an absolute POSIX path string, filename
+included (unlike PATHNAME-DIRECTORY, which excludes it)."
+  (remove ""
+          (loop for start = 1 then (1+ end)
+                for end = (position #\/ text :start start)
+                collect (subseq text start (or end (length text)))
+                while end)
+          :test #'string=))
+
+(defun ensure-absolute-key-path (value name)
+  "A pinned key path is an absolute POSIX path: a pathname or namestring
+naming one, with no option-like path component (none starting with `-`)."
+  (let ((text (cond ((pathnamep value) (namestring value))
+                    ((stringp value) value)
+                    (t nil))))
+    (unless (and text (plusp (length text)) (char= (char text 0) #\/))
+      (error "~A must be an absolute key path: ~S" name value))
+    (dolist (component (key-path-components text))
+      (when (char= (char component 0) #\-)
+        (error "~A must not contain option-like path components: ~S"
+               name value)))
+    (copy-seq text)))
+
+(defstruct (key-pin
+            (:constructor %make-key-pin (key-identifier key-path))
+            (:conc-name %key-pin-))
+  (key-identifier nil :read-only t)
+  (key-path nil :read-only t))
+
+(defun key-pin-key-identifier (pin)
+  (copy-seq (%key-pin-key-identifier pin)))
+
+(defun key-pin-key-path (pin)
+  (copy-seq (%key-pin-key-path pin)))
+
+(defun make-key-pin (&key key-identifier key-path)
+  (%make-key-pin
+   (ensure-plain-identifier key-identifier "key pin identifier")
+   (ensure-absolute-key-path key-path "key pin path")))
+
+(defstruct (key-pin-registry
+            (:constructor %make-key-pin-registry (pins))
+            (:conc-name %key-pin-registry-))
+  (pins nil :read-only t))
+
+(defun key-pin-registry-pins (registry)
+  (copy-list (%key-pin-registry-pins registry)))
+
+(defun make-key-pin-registry (pins)
+  "An immutable registry over a list of key pins; duplicate key
+identifiers refuse. The registry copies the caller-owned list."
+  (unless (and (listp pins) (every #'key-pin-p pins))
+    (error "Key pin registry requires a list of key pins"))
+  (let ((seen '()))
+    (dolist (pin pins)
+      (let ((identifier (key-pin-key-identifier pin)))
+        (when (member identifier seen :test #'string=)
+          (error "duplicate pin: ~A" identifier))
+        (push identifier seen))))
+  (%make-key-pin-registry (copy-list pins)))
+
+(defun lookup-key-pin (registry key-identifier)
+  "The pinned key for KEY-IDENTIFIER, or NIL when nothing is pinned
+under that identifier."
+  (find key-identifier (%key-pin-registry-pins registry)
+        :test #'string=
+        :key #'%key-pin-key-identifier))

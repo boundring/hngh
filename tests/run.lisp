@@ -57,6 +57,7 @@
 (load (cl-user::project-file "tests/domain/test-loadout.lisp"))
 (load (cl-user::project-file "tests/domain/test-run-state.lisp"))
 (load (cl-user::project-file "tests/domain/test-governance.lisp"))
+(load (cl-user::project-file "tests/domain/test-attestation.lisp"))
 (load (cl-user::project-file "tests/domain/test-governance-properties.lisp"))
 (load (cl-user::project-file "tests/support/fakes.lisp"))
 (load (cl-user::project-file "tests/application/test-create-run.lisp"))
