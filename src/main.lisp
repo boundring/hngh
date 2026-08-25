@@ -381,18 +381,29 @@ injected object the operator surface refuses no-attestation-transport."
    :writable-scopes (getf plist :writable-scopes)))
 
 (defun rebuild-run (plist)
-  "Reconstruct the run recorded in PLIST, at its recorded state."
-  (let ((run (hngh.domain:make-run
+  "Reconstruct the run recorded in PLIST, at its recorded state. Walks
+the domain's linear run-state chain, but skips the :cancelled sibling
+branch when rebuilding :evacuated or :dead (a run reaches those from
+:running/:checkpointed directly, never through :cancelled)."
+  (let* ((recorded (getf plist :state))
+         (run (hngh.domain:make-run
               :identifier (getf plist :identifier)
               :mission (rebuild-mission (getf plist :mission))
               :role (rebuild-role (getf plist :role))
               :loadout (rebuild-loadout (getf plist :loadout)))))
-    (if (eq :created (getf plist :state))
+    (if (eq :created recorded)
         run
-        (dolist (step (cdr +state-chain+) run)
-          (setf run (hngh.domain:advance-run run step))
-          (when (eq step (getf plist :state))
-            (return run))))))
+        ;; advance the linear progression (states before the terminal
+        ;; siblings), stopping at the recorded non-terminal state, then
+        ;; jump directly to the recorded terminal.
+        (let ((progressed
+                (dolist (step '(:armed :running :checkpointed) run)
+                  (setf run (hngh.domain:advance-run run step))
+                  (when (eq step recorded)
+                    (return run)))))
+          (if (member recorded '(:cancelled :evacuated :dead))
+              (hngh.domain:advance-run progressed recorded)
+              progressed)))))
 
 (defun record-line-for (run receipt &key transport scope)
   "The canonical store line for recording RUN with RECEIPT."
@@ -464,13 +475,17 @@ key=value options pass through as positionals for the command parser."
       (default-admission-callback)))
 
 (defun run-from-store (store identifier)
-  "The newest recorded run for IDENTIFIER, rebuilt from STORE's lines."
+  "The newest recorded run for IDENTIFIER, rebuilt from STORE's lines.
+Ranking uses the domain's run-state order (the single source of truth),
+so terminal states like :cancelled and :dead outrank any non-terminal
+line for the same run."
   (when store
     (let ((best nil) (best-rank -1))
       (dolist (line (hngh.adapters.filesystem:store-entries store))
         (when (string= identifier (getf line :identifier))
-          (let ((rank (position (getf line :state) +state-chain+)))
-            (when (> rank best-rank)
+          (let ((rank (position (getf line :state)
+                                hngh.domain::+run-states+)))
+            (when (and rank (> rank best-rank))
               (setf best line best-rank rank)))))
       (and best (rebuild-run (getf best :run))))))
 

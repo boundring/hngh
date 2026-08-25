@@ -141,3 +141,17 @@ is captured so malformed-invocation tests stay quiet."
 (let ((file (uiop:with-temporary-file (:pathname p :keep t) p)))
   (check (= 3 (exit-code (dispatch '("present") :root file)))
          "a store root that is a file is a transport fault"))
+
+
+;;; A cancelled (out-of-chain terminal) run must survive recomposition ------
+
+(let ((root (dispatch-root)))
+  (dispatch +create-args+ :root root)
+  (dispatch '("admit-transport" "run-1" "filesystem" "repository") :root root)
+  (dispatch '("close-run" "run-1" "cancelled") :root root)
+  (let ((presented (dispatch '("present" "run-1") :root root)))
+    (check (= 0 (exit-code presented))
+           "present survives a cancelled (out-of-chain) terminal run")
+    (check (has-output "state=cancelled" presented)
+           "present renders the cancelled terminal state"))
+  (uiop:delete-directory-tree root :validate t))
