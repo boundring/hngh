@@ -104,5 +104,9 @@ authorize a future action.
 - `2026-08-25-r18-worker-transport.md` records the bounded read-only
   worker task (promotion rung 18): `run-worker`, the `:worker`
   admission label, and the closed worker evidence fact.
+- `2026-08-25-session.md` records the 2026-08-25 continual-progress
+  session arc: the extension repair, the consistency pass, rungs
+  14–18, the external re-review and the loop-history guard, the bridge
+  finalization, and the live worker proof.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
