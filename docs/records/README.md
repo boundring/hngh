@@ -88,5 +88,8 @@ authorize a future action.
 - `2026-08-25-r14-ed25519-signature-transport.md` records the closed
   key-algorithm vocabulary on pins and the Ed25519 raw-signature
   verification transport (promotion rung 14), with live end-to-end proof.
+- `2026-08-25-r15-http-claim-method.md` records the network claim method
+  joining the closed federation method set (promotion rung 15), with
+  live proof over a local HTTP server through an injected transport.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

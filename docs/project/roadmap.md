@@ -70,14 +70,20 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
   each pin's algorithm. Verified live end to end with a real Ed25519
   keypair (`status=verified key=ed-key` exit 0; tampered payload refuses
   `bad-signature`) and bound through the self-governed ceremony.
+- Completed the network claim method (promotion rung 15, 2026-08-25):
+  `:http-claim` joins `:carrier-bundle` in the closed federation method
+  set; `fetch-evidence` accepts `method=carrier-bundle|http-claim`
+  (default carrier-bundle) and the method reaches the injected
+  transport on the request. The peer stays a plain identifier and
+  endpoint resolution stays transport-owned — no default wire. Verified
+  live over a real local HTTP server through an injected transport and
+  bound through the self-governed ceremony.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
 1. **(Next slice).** Review-fed policy profiles (operator-tunable
    requirement kinds consuming review and `:remote-attestation`
-   fingerprints) and the network claim methods behind the existing
-   federation port (deferred by the 2026-08-24 decision 5
-   evidence-first fork).
+   fingerprints).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
