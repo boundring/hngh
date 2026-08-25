@@ -132,3 +132,12 @@ next rotation or tomorrow, whichever comes first.
   next.
 - **Outcome:** scripts/dashboard-readout + smoke test + queue item
   active + this entry, committed through the ceremony.
+
+## 2026-08-25 — check-in #9
+
+- **State:** clean, synced (`4a9c272`); readout live; gate green.
+- **Steering (honest timeline):** the spine had gone stale — the
+  dashboard-readout rotation and check-in #8 were not in the stream.
+  Appended those rows (7 now), so the readout's view matches the
+  commits. Small, keeps the narrative honest.
+- **Outcome:** timeline 7 rows; this entry.
