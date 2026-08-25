@@ -180,3 +180,15 @@ next rotation or tomorrow, whichever comes first.
   ideas (axial/circular gantt options, interfaces dancing to system
   music) go into the queue as rotation-scale candidates.
 - **Outcome:** spiral renderer + smoke + this entry, committed.
+
+## 2026-08-25 — check-in #13 (gantt-ports push)
+
+- **Steering (operator, loud):** any number of gantt options, crazy,
+  dancing, wobbling. Delivered the first port: `scripts/dashboard-readout`
+  now has **linear, spiral, circular** renderers and a `--dance N`
+  music-intensity wobble (ETA markers pulse). All smoke-tested; the
+  circular draws done-rings inner + queued-rings outer.
+- **Queue:** gantt-ports deliverables partially live; dancing-ui probe
+  stays queued (music-source amplitude is the next probe).
+- **Outcome:** three gantt styles + dance + smoke + this entry,
+  committed through the ceremony.
