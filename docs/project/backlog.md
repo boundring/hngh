@@ -28,6 +28,44 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an independent reviewer accepts the fixture results,
   child-process cleanup proof, route/cost receipt, and unchanged fixture
   repository manifest. A successful worker self-report is not acceptance.
+
+## Node lattice rung (megastructure mesh)
+
+- **Problem:** a single Hngh node can only learn from its own wall. The
+  operator's planned fleet — an old Android phone, a Steam Deck, a slow
+  laptop with a tired NIC — has no admission path today, and the two
+  capabilities that make a fleet useful (waking a machine on demand,
+  keeping tunnels open without a watching daemon) both touch the outside
+  world in ways the current boundary explicitly does not admit: ambient
+  execution and network side effects.
+- **Smallest useful outcome:** one operator command that admits a second
+  node as a pinned federation peer, exchanges bounded learned facts in
+  both directions (each fact a citable `:remote-attestation` claim), and
+  issues a single wake-on-demand request through the same one-action
+  certificate machinery — still no daemon, no scheduler, no ambient
+  execution; every request is an explicit, recorded, human-closable step.
+- **Source or evidence:** the root README `Where this is going` section
+  (node-lattice vision, 2026-08-25); the federation port, pinned-key
+  registry, and signature-verification transport (promotion rungs
+  11–12) as the admitted substrate; this entry.
+- **Risk:** the network surface grows again — federation fetch is the
+  watch-item the 2026-08-25 external sanity check named for exactly this
+  moment; wake-on-LAN is an external side effect that must ride the
+  mutation lane with real evidence (MAC, current lease, last-seen fact);
+  low-powered peers are unattended, so key rotation and evidence
+  freshness need closed handling before any ambient trust; and the
+  no-daemon boundary is a kernel invariant — any future "keep the tunnels
+  open" mechanism must first amend that boundary through its own policy
+  proposal, not smuggle a watcher in through an adapter.
+- **Dependencies:** the policy-profile rung (operator-tunable requirement
+  kinds), the network claim methods behind the federation port, and a
+  boundary-amendment proposal that names exactly which ambient operation
+  (if any) is admitted and under what evidence.
+- **Review trigger:** an independent reviewer accepts the admission and
+  wake flows against fixtures (pinned peer identity, stale or missing
+  last-seen refuses, one-request-one-certificate, no ambient process
+  after the request completes) and sees no watcher, scheduler, or
+  background process in the diff.
 ## Governance property tests
 
 - **Problem:** the principle matrix must be total over the closed kinds and
