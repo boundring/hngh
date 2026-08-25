@@ -44,10 +44,14 @@ def main():
     ids = [i for i, _ in items]
     for i in ids:
         if i not in [r[2] for r in rows]:
+            # queued item with no timeline row yet: show the '.' window + status
+            status = next(s for item, s in items if item == i)
+            print(f"{i:22s} {'...' if status == 'queued' else ' .....'}")
             continue
-        n = sum(1 for r in rows if r[2] == i)
         status = next(s for item, s in items if item == i)
-        bar = "#" * n if status == "done" else "#" * n + " ..."
+        n = sum(1 for r in rows if r[2] == i)
+        bar = ("#" * n) + (" ..." if status == "queued"
+                           else " +" if status == "active" else "")
         print(f"{i:22s} {bar}")
     # timeline rows not in the queue (events like check-ins)
     seen = set(ids)
