@@ -97,5 +97,9 @@ authorize a future action.
 - `2026-08-25-r17-wake-peer.md` records the wake-on-demand slice for
   pinned lattice peers (promotion rung 17): the wake ports/result, the
   `wake-peer` command, and the closed refusal vocabulary.
+- `2026-08-25-loop-history-guard.md` records the machine-checked
+  self-governance guard: every code-surface commit since the
+  restatement must be candidate-bound or rule-labeled, with the one
+  pre-guard violation named.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

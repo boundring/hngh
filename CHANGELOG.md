@@ -112,6 +112,16 @@ lives under Pre-release / early development until the first release.
   `no-wake-transport`. Committed through the self-governed ceremony
   (chore export lane for `src/packages.lisp`).
 
+- Machine-checked self-governance (2026-08-25): the README's restated
+  claim is now falsifiable by construction.
+  `tests/scripts/test-loop-history-guard.py` walks every code-surface
+  commit since the restatement `1915713` and fails the gate on any
+  commit that is neither `hngh: candidate <hash>` nor labeled
+  `(excluded from cert manifest by dependency guard)`. The carve-out is
+  recorded as a decision entry in `docs/project/decisions.md`, with the
+  one pre-guard violation (`915e0e3`, comment-only) named rather than
+  rewritten. Committed through the self-governed ceremony.
+
 ### 2026-08-24
 
 #### Added

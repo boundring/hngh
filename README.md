@@ -55,7 +55,9 @@ silent continuation of an old one.
   real evidence — and where the loop itself refuses a binding (the dependency guard
   will not certify a commit that changes no behavior), the exception is by rule, not by
   mood. The direction is one track: a change the loop can bind, the loop binds; a change
-  it cannot, it declares.
+  it cannot, it declares. That sentence is machine-checked: `make test` runs a
+  loop-history guard over every code-surface commit since the restatement, and a
+  labeled exemption is the only way a change lands outside the loop.
 
 ## Status
 
