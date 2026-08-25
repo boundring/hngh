@@ -84,12 +84,19 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
   vocabulary admits `:review`, and `propose` accepts `profile=PATH`
   (strict `PRINCIPLE<TAB>KIND` lines). A profile only narrows, never
   broadens. Committed through the self-governed ceremony.
+- Completed the wake-on-demand slice (promotion rung 17, 2026-08-25):
+  `wake-peer RUN PINS-FILE PEER` issues one explicit wake request for a
+  pinned lattice peer behind an injected transport — admission
+  evidence is the pins registry, the run needs a `:federation` receipt,
+  and there is no default transport or daemon. Unpinned peers refuse
+  `unknown-peer-key`. Committed through the self-governed ceremony.
 - No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
 
 ## Next
 
 1. **(Next slice).** The bridge-backed continual worker (worker-rung
-   candidate) or the node-lattice admission rung from the backlog;
-   nothing remains deferred on the core federation/governance lane.
+   candidate) from the backlog, or the node-lattice boundary
+   amendments (ambient tunnels, certificate-bound wake) that must
+   clear their own policy proposals first.
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
