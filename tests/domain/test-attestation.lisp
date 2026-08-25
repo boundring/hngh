@@ -50,3 +50,31 @@
                  (hngh.domain:make-key-pin
                   :key-identifier "peer-1" :key-path "/tmp/two.pub")))))
        "duplicate key identifiers refuse")
+
+;;; Rung 14: the key algorithm is a closed vocabulary on every pin --------
+
+(check (member :ed25519 hngh.domain:+key-algorithms+)
+       "ed25519 is a closed key algorithm")
+(check (member :rsa-sha256 hngh.domain:+key-algorithms+)
+       "rsa-sha256 is a closed key algorithm")
+
+(let* ((pin (hngh.domain:make-key-pin
+             :key-identifier "peer-1" :key-path "/tmp/peer-1.pub"
+             :algorithm :ed25519)))
+  (check (and (hngh.domain:key-pin-p pin)
+              (eql :ed25519 (hngh.domain:key-pin-algorithm pin)))
+         "a key pin carries its explicit algorithm"))
+
+(check (eql :rsa-sha256
+            (hngh.domain:key-pin-algorithm
+                 (hngh.domain:make-key-pin
+              :key-identifier "peer-1" :key-path "/tmp/peer-1.pub")))
+       "a key pin defaults to rsa-sha256")
+
+(dolist (bad '(:bogus "ed25519" nil 42))
+(check (signals-error-p
+        (lambda ()
+                 (hngh.domain:make-key-pin
+             :key-identifier "peer-1" :key-path "/tmp/peer-1.pub"
+             :algorithm bad)))
+         (format nil "an unknown key algorithm refuses: ~S" bad)))
