@@ -66,5 +66,5 @@ repo, the dashboard draws from committed data).
 2026-08-25	event	queue-scale	04a4446dbc9499a7c5348b6df0683b16a042cfe1e5f3bef08ef4709babda264
 2026-08-25	rotation	timeline-events	e96e7d0c4d87955d02569dac7375a1d5ee50a40f8023d84c314528ffadaf866f
 2026-08-25	rotation	queue-eta	c688853068c4770785de875104752bc8c588fe8a662e647d7440aa01b94d73af
-2026-08-25	event	check-in-7	<HASH>
+2026-08-25	event	check-in-7	5939041cf954243d949cd60943887ee63dc3ef4d
 ```
