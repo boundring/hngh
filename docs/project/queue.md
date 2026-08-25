@@ -81,8 +81,6 @@ Gives "future" a date so a gantt can place bars.
 - bridge-operator-host — after node-lattice
 - timeline-events — DONE (2026-08-25)
 - others — on rotation, roughly one per cadence
-- dashboard-readouts — once the spine (timeline-events + queue-eta) has
-  >= 5 committed rows
 
 ## ETA
 
@@ -96,8 +94,6 @@ Gives "future" a date so a gantt can place bars.
 - bridge-operator-host — after node-lattice
 - timeline-events — DONE (2026-08-25)
 - others — on rotation, roughly one per cadence
-- dashboard-readouts — once the spine (timeline-events + queue-eta) has
-  >= 5 committed rows
 
 ## Interface-spec candidates (operator-requested "practical nonsense")
 
