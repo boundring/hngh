@@ -48,6 +48,12 @@ captures one bounded operator statement through an injected `read-statement`
 callback and binds it only as a `:terminal` evidence fact with an in-process
 SHA-256 fingerprint; it is admitted behind a run loadout carrying the
 `terminal-input` tool label, and no default input source exists.
+`hngh.adapters.federation` is active: `gather-federated-evidence` collects
+carrier-bundle claims into evidence facts (`fetch-evidence`), attestation
+envelopes are verified through `resolve-pinned-key` and `verify-signature`
+ports (`verify-attestation`), the operator pinned-key registry is parsed
+strictly and rendered (`list-pins`), and `:federation` is admitted behind
+the `remote-evidence`/`carrier-bundle` labels with no default transport.
 `hngh:validate-profile` is a compatibility facade over the domain validator.
 `hngh.presentation` is active with pure render functions over admission
 results, run and governance values, and installed adapter results; it
@@ -56,7 +62,9 @@ reference lexicon only as display copy at a named surface, and imports no
 adapter. `hngh.main` is active as the composition root and CLI entry point:
 `make-run-harness` composes the use cases over injected or default port
 adapters, coordinator functions wire installed adapters through injected
-transports, `dispatch-command` processes the 9 CLI operations, and
+transports, `dispatch-command` processes the closed CLI operation set
+(15 commands across the run lifecycle, evidence, review, governance,
+federation, and attestation — enumerated in the root README), and
 `scripts/hngh` provides an executable SBCL wrapper. No default model or
 terminal transport exists in active source: both routes are composed
 manually and only serve runs holding the matching admission receipt.
