@@ -83,7 +83,7 @@ default in this pure policy."
            :closed-failure-disposition :claim-proof :base-revision
            :candidate-manifest :content-hash :reversion-or-containment
            :component-import :route :budget :token-limit :expiry
-           :source-manifest :conclusion-link
+           :source-manifest :conclusion-link :review
            :remote-attestation :federated-claim)
    "evidence requirement kind"))
 
@@ -348,11 +348,10 @@ default in this pure policy."
                         fingerprints))
             (nreverse labels))))
 
-(defun evaluate-policy-proposal (proposal)
-  (unless (policy-proposal-p proposal)
-    (error "Policy proposal must be a policy proposal: ~S" proposal))
-  (let ((requirements (policy-proposal-evidence-requirements proposal))
-        (principle-results '())
+(defun %evaluate-matrix (requirements)
+  "The shared evaluator body: per-principle results and reason labels
+over REQUIREMENTS (the principle grouping works on any closed subset)."
+  (let ((principle-results '())
         (reason-labels '()))
     (dolist (principle +matrix-principles+)
       (let ((for-principle
@@ -388,13 +387,102 @@ default in this pure policy."
                     principle-results)
               (dolist (label labels)
                 (pushnew label reason-labels :test #'string=))))))
+    (values (nreverse principle-results) (nreverse reason-labels))))
+
+(defun make-verdict-from-results (principle-results reason-labels)
     (make-policy-verdict
      :state (if (every (lambda (result)
                          (eql :passed (principle-result-state result)))
                        principle-results)
                 :admitted :refused)
-     :principle-results (nreverse principle-results)
-     :reason-labels (nreverse reason-labels))))
+   :principle-results principle-results
+   :reason-labels reason-labels))
+
+(defun evaluate-policy-proposal (proposal)
+  (unless (policy-proposal-p proposal)
+    (error "Policy proposal must be a policy proposal: ~S" proposal))
+  (multiple-value-bind (results labels)
+      (%evaluate-matrix (policy-proposal-evidence-requirements proposal))
+    (make-verdict-from-results results labels)))
+
+;;; Operator policy profiles ------------------------------------------------
+;;; A profile narrows which requirement kinds a proposal must satisfy for a
+;;; listed principle. It never broadens admission: a principle without a
+;;; profile entry is unrestricted (the plain evaluator behavior); a listed
+;;; principle permits only its named kinds, so a proposal whose requirement
+;;; kind falls outside them is refused as missing under the profile.
+
+(defstruct (evidence-profile-entry
+            (:constructor %make-evidence-profile-entry (principle kinds))
+            (:conc-name %evidence-profile-entry-))
+  (principle nil :read-only t)
+  (kinds nil :read-only t))
+
+(defun evidence-profile-entry-principle (entry)
+  (%evidence-profile-entry-principle entry))
+(defun evidence-profile-entry-kinds (entry)
+  (copy-list (%evidence-profile-entry-kinds entry)))
+
+(defun make-evidence-profile-entry (&key principle (kinds nil kinds-p))
+  (unless kinds-p
+    (error "Evidence profile entry kinds are required"))
+  (unless (and (listp kinds) kinds)
+    (error "Evidence profile entry kinds must be a nonempty list"))
+  (dolist (kind kinds)
+    (validate-evidence-requirement-kind kind))
+  (%make-evidence-profile-entry
+   (validate-principle-identifier principle)
+   (remove-duplicates (copy-list kinds))))
+
+(defstruct (evidence-profile
+            (:constructor %make-evidence-profile (entries))
+            (:conc-name %evidence-profile-))
+  (entries nil :read-only t))
+
+(defun evidence-profile-entries (profile)
+  (copy-list (%evidence-profile-entries profile)))
+
+(defun make-evidence-profile (entries)
+  "An immutable profile over evidence-profile-entry values; duplicate
+principle entries refuse."
+  (unless (and (listp entries) (every #'evidence-profile-entry-p entries))
+    (error "Evidence profile requires a list of profile entries"))
+  (let ((seen '()))
+    (dolist (entry entries)
+      (let ((principle (evidence-profile-entry-principle entry)))
+        (when (member principle seen)
+          (error "duplicate profile principle: ~A" principle))
+        (push principle seen)))
+    (%make-evidence-profile (copy-list entries))))
+
+(defun profile-permitted-kinds (profile principle)
+  "The closed kinds PROFILE permits for PRINCIPLE, or NIL when the
+profile does not constrain the principle (plain evaluator behavior)."
+  (let ((entry (find principle (%evidence-profile-entries profile)
+                     :test #'eq :key #'evidence-profile-entry-principle)))
+    (and entry (copy-list (%evidence-profile-entry-kinds entry)))))
+
+(defun %filtered-requirements (proposal profile)
+  "PROPOSAL's requirements with every kind outside PROFILE's permitted
+set for its principle dropped (unlisted principles keep all their kinds).
+A listed principle whose kinds are all dropped leaves no requirement, so
+the evaluator refuses it as missing."
+  (remove-if-not
+   (lambda (requirement)
+     (let ((permitted (profile-permitted-kinds
+                       profile (evidence-requirement-principle requirement))))
+       (or (null permitted)
+           (member (evidence-requirement-kind requirement) permitted))))
+   (policy-proposal-evidence-requirements proposal)))
+
+(defun evaluate-policy-proposal-under-profile (proposal profile)
+  "Evaluate PROPOSAL under PROFILE: each listed principle keeps only its
+permitted requirement kinds. The profile only narrows."
+  (unless (evidence-profile-p profile)
+    (error "Policy proposal profile must be a policy profile: ~S" profile))
+  (multiple-value-bind (results labels)
+      (%evaluate-matrix (%filtered-requirements proposal profile))
+    (make-verdict-from-results results labels)))
 
 (defun ensure-nonempty-label-list (value name)
   (unless value

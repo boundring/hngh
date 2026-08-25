@@ -1060,3 +1060,73 @@
   (check (equal '("ev-1")
                 (hngh.domain:candidate-certificate-evidence-hashes cert))
          "certificate copies evidence hashes on issue"))
+
+;;;; Rung 16: operator policy profiles --------------------------------------
+
+(check (not (signals-error-p
+             (lambda ()
+               (hngh.domain:make-evidence-requirement
+                :principle :source-grounding :kind :review
+                :required-fingerprints '("fp") :evidence-facts nil))))
+       "the review requirement kind is admitted")
+
+(defun rung16-requirement (principle kind)
+  (hngh.domain:make-evidence-requirement
+   :principle principle :kind kind
+   :required-fingerprints '("fp")
+   :evidence-facts
+   (list (hngh.domain:make-evidence-fact
+          :kind kind :fingerprint "fp" :state :current))))
+
+(defun rung16-proposal (source-grounding-kind)
+  (hngh.domain:make-policy-proposal
+   :class :feature :problem "p" :outcome "o" :purpose "u" :caller "c"
+   :input-contract "i" :output-contract "o" :failure-contract "f"
+   :declared-capabilities nil :capability-diff "d"
+   :source-manifest
+   (list (hngh.domain:make-source-manifest-entry
+          :relative-path "a.lisp" :content-hash "h"
+          :source-role "candidate"))
+   :risk-note "r" :dependency "d" :evidence-trigger "e"
+   :evidence-requirements
+   (append
+    (loop for p in hngh.domain::+matrix-principles+
+          unless (eql p :source-grounding)
+            collect (rung16-requirement p :claim-proof))
+    (list (rung16-requirement :source-grounding source-grounding-kind)))))
+
+(let* ((profile (hngh.domain:make-evidence-profile
+                 (list (hngh.domain:make-evidence-profile-entry
+                        :principle :source-grounding :kinds '(:review))))))
+  (check (hngh.domain:evidence-profile-p profile)
+         "a profile over one constraint is a profile value")
+  (check (equal '(:review)
+                (hngh.domain:profile-permitted-kinds profile :source-grounding))
+         "source-grounding permits only review in the profile")
+  (check (null (hngh.domain:profile-permitted-kinds
+                profile :least-authority))
+         "an unlisted principle has no permitted kinds")
+  (check (eq :refused
+             (hngh.domain:policy-verdict-state
+              (hngh.domain:evaluate-policy-proposal-under-profile
+               (rung16-proposal :claim-proof) profile)))
+         "a review-only profile refuses a claim-proof proposal")
+  (check (eq :admitted
+             (hngh.domain:policy-verdict-state
+              (hngh.domain:evaluate-policy-proposal-under-profile
+               (rung16-proposal :review) profile)))
+         "a review profile admits a proposal carrying review evidence"))
+
+(check (signals-error-p
+        (lambda ()
+          (hngh.domain:make-evidence-profile
+           (list (hngh.domain:make-evidence-profile-entry
+                  :principle :source-grounding :kinds '(:review))
+                 (hngh.domain:make-evidence-profile-entry
+                  :principle :source-grounding :kinds '(:claim-proof))))))
+       "duplicate profile principles refuse")
+(check (signals-error-p
+        (lambda ()
+          (hngh.domain:make-evidence-profile-entry
+           :principle :source-grounding :kinds '(:bogus))))
+       "a non-closed kind in a profile refuses")
