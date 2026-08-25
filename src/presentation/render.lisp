@@ -185,6 +185,30 @@ manifest=~D policy-profile=~A expiry=~A"
              (hngh.adapters.terminal:operator-result-status result)
              (hngh.adapters.terminal:operator-result-refusal-labels result)))))
 
+(defun render-federation-result (result)
+  (case (hngh.adapters.federation:federation-result-status result)
+    (:complete
+     (format nil "federation status=complete facts=~D~%~{~A~%~}"
+             (length (hngh.adapters.federation:federation-result-facts result))
+             (mapcar #'render-evidence-fact
+                     (hngh.adapters.federation:federation-result-facts result))))
+    (otherwise
+     (format nil "federation status=~(~A~) labels=~{~A~^; ~}"
+             (hngh.adapters.federation:federation-result-status result)
+             (hngh.adapters.federation:federation-result-refusal-labels result)))))
+
+(defun render-attestation-result (result)
+  (case (hngh.adapters.federation:attestation-result-status result)
+    (:verified
+     (format nil "attestation status=verified key=~A fact=~A"
+             (hngh.adapters.federation:attestation-result-key-identifier result)
+             (render-evidence-fact
+              (hngh.adapters.federation:attestation-result-fact result))))
+    (otherwise
+     (format nil "attestation status=~(~A~) labels=~{~A~^; ~}"
+             (hngh.adapters.federation:attestation-result-status result)
+             (hngh.adapters.federation:attestation-result-refusal-labels result)))))
+
 ;;; Dispatch, reports, and fallback ------------------------------------------
 
 (defun render (value)
@@ -221,6 +245,10 @@ factual string. Unknown values render as their printed representation."
      (render-review-finding value))
     ((hngh.adapters.terminal:operator-result-p value)
      (render-operator-result value))
+    ((hngh.adapters.federation:federation-result-p value)
+     (render-federation-result value))
+    ((hngh.adapters.federation:attestation-result-p value)
+     (render-attestation-result value))
     (t (format nil "~S" value))))
 
 (defun render-report (&rest values)

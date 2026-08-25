@@ -36,10 +36,10 @@
                      (hngh.domain:source-manifest-entry-source-role entry)))
          "manifest entry isolates every public string reader result"))
 
-(check (equal '(:filesystem :model :terminal)
+(check (equal '(:filesystem :model :terminal :federation)
                    hngh.domain:+admitted-transports+)
-       "+admitted-transports+ is exactly the three closed transport kinds")
-(dolist (kind '(:filesystem :model :terminal))
+       "+admitted-transports+ is exactly the four closed transport kinds")
+(dolist (kind '(:filesystem :model :terminal :federation))
   (check (member kind hngh.domain:+admitted-transports+)
          (format nil "~A is an admitted transport kind" kind)))
 (check (not (member :network hngh.domain:+admitted-transports+))

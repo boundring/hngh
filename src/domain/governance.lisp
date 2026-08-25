@@ -30,12 +30,15 @@
     :insufficient-or-stale-evidence :tool-or-environment-fault
     :review-disagreement :mutation-precondition-mismatch-or-failure))
 (defparameter +admitted-transports+
-  '(:filesystem :model :terminal)
+  '(:filesystem :model :terminal :federation)
   "The closed set of transport kinds a run may be admitted for. :filesystem is the local record transport; :model is the bounded
 model-review transport (advisory only, requires a non-local route and
 the model-review network label on the run loadout); :terminal is the
 bounded operator statement input (advisory only, requires the
-terminal-input tool label on the run loadout).")
+terminal-input tool label on the run loadout); :federation is the
+bounded remote-evidence / carrier-bundle transport (advisory only,
+requires the remote-evidence network label or the carrier-bundle tool
+label on the run loadout).")
 
 
 (defun validate-failure-category (value)
@@ -80,7 +83,8 @@ default in this pure policy."
            :closed-failure-disposition :claim-proof :base-revision
            :candidate-manifest :content-hash :reversion-or-containment
            :component-import :route :budget :token-limit :expiry
-           :source-manifest :conclusion-link)
+           :source-manifest :conclusion-link
+           :remote-attestation :federated-claim)
    "evidence requirement kind"))
 
 

@@ -21,7 +21,9 @@
   "True when TRANSPORT cannot be admitted because the run's loadout lacks
 the required route or label. :terminal requires the terminal-input tool
 label; :model requires a non-local route label and the model-review network
-label. Other admitted kinds (filesystem) have no loadout requirement."
+label; :federation requires the remote-evidence network label or the
+carrier-bundle tool label. Other admitted kinds (filesystem) have no
+loadout requirement."
   (let ((loadout (hngh.domain:run-loadout run)))
     (case transport
       (:terminal
@@ -33,6 +35,13 @@ label. Other admitted kinds (filesystem) have no loadout requirement."
            (not (member "model-review" (hngh.domain::%loadout-network-labels
                                          loadout)
                         :test #'string=))))
+      (:federation
+       (and (not (member "remote-evidence"
+                         (hngh.domain::%loadout-network-labels loadout)
+                         :test #'string=))
+            (not (member "carrier-bundle"
+                         (hngh.domain::%loadout-tool-labels loadout)
+                         :test #'string=))))
       (t nil))))
 
 (defun transport-admission-receipt (run transport scope timestamp)

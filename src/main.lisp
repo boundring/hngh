@@ -291,6 +291,25 @@ See hngh.adapters.mutation:execute-mutation for the closed contract."
   (hngh.adapters.mutation:execute-mutation
    certificate fresh-evidence ports :action action))
 
+(defun gather-federated-evidence (ports &key peer method time-window
+                                        max-facts)
+  "Build the closed federation request and gather remote evidence through
+PORTS. PORTS must be a federation-ports object; no default exists, so a
+run without an admitted and composed federation transport is refused
+upstream before this is reached."
+  (hngh.adapters.federation:gather-federated-evidence
+   (hngh.adapters.federation:make-federation-request
+    :peer peer :method (or method :carrier-bundle)
+    :time-window time-window :max-facts max-facts)
+   ports))
+
+(defun verify-remote-attestation (ports attestation now)
+  "Verify a parsed REMOTE-ATTESTATION envelope through PORTS against the
+injected NOW timestamp. No default attestation ports exist; without an
+injected object the operator surface refuses no-attestation-transport."
+  (hngh.adapters.federation:verify-remote-attestation
+   attestation now ports))
+
 ;;; Record serialization ----------------------------------------------------
 ;;; Domain structs have no print/read round-trip, so the operator store
 ;;; keeps canonical plist lines. MAIN owns the struct <-> plist mapping;
@@ -397,6 +416,7 @@ commands:~%~
   propose [key=value...]  issue-cert ACTION RUN VERDICT-FILE [PATH...]~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
   review RUN content-hash=HASH paths=PATH,...  terminal RUN~%~
+  fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -1338,8 +1358,122 @@ is refused."
                                         mutation-ports clock))
           (error (condition)
             (values (format nil "malformed mutation-check: ~A" condition) 2)))))))
+
+;;; Federation commands --------------------------------------------------
+;;; Rung 11: fetch-evidence gathers remote evidence through the injected
+;;; federation ports (no default transport: without :federation-ports it
+;;; refuses no-federation-transport) and is served only to a run holding
+;;; a :federation admission receipt. verify-attestation reads an
+;;; operator-provided carrier bundle FILE, parses and verifies it through
+;;; the injected attestation ports (no default: without :attestation-ports
+;;; it refuses no-attestation-transport) against the harness clock.
+;;; Neither command ever spawns a subprocess or touches a wire when the
+;;; injected ports are fakes. Exit codes match the operator surface:
+;;; 0 complete/verified, 1 refused, 2 malformed invocation or file,
+;;; 3 transport fault.
+
+(defparameter +fetch-option-keys+ '(:peer :max-facts :time-window))
+
+(defun dispatch-fetch-evidence (args store clock federation-ports)
+  (declare (ignore clock))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (let ((unknown (find-if (lambda (pair)
+                              (not (member (car pair) +fetch-option-keys+)))
+                            options)))
+      (when unknown
+        (return-from dispatch-fetch-evidence
+          (values (format nil "unknown fetch-evidence key: ~A~%~A"
+                          (cdr unknown) (command-usage))
+                  2))))
+    (unless (= 1 (length positionals))
+      (return-from dispatch-fetch-evidence (values (command-usage) 2)))
+    (let* ((identifier (first positionals))
+           (run (run-from-store store identifier)))
+      (unless run
+        (return-from dispatch-fetch-evidence (missing-run-output identifier)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :federation)
+        (return-from dispatch-fetch-evidence
+          (values (format nil "fetch-evidence refused: run ~A not admitted for federation"
+                          identifier)
+                  1)))
+      (unless federation-ports
+        (return-from dispatch-fetch-evidence
+          (values "fetch-evidence refused: no-federation-transport" 1)))
+      (handler-case
+          (let* ((plist (options-plist options))
+                 (peer (getf plist :peer))
+                 (max-facts (and (getf plist :max-facts)
+                                 (parse-integer (getf plist :max-facts)))))
+            (unless peer
+              (return-from dispatch-fetch-evidence
+                (values "fetch-evidence refused: missing peer" 2)))
+            (let ((result
+                    (gather-federated-evidence
+                     federation-ports
+                     :peer peer
+                     :max-facts max-facts
+                     :time-window (and (getf plist :time-window)
+                                       (uiop:split-string
+                                        (getf plist :time-window)
+                                        :separator ",")))))
+              (report-federation-result result)))
+        (error (condition)
+          (values (format nil "malformed fetch-evidence: ~A" condition) 2))))))
+
+(defun dispatch-verify-attestation (args store clock attestation-ports)
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (/= 2 (length positionals)))
+      (return-from dispatch-verify-attestation (values (command-usage) 2)))
+    (let* ((identifier (first positionals))
+           (path (second positionals))
+           (run (run-from-store store identifier)))
+      (unless run
+        (return-from dispatch-verify-attestation (missing-run-output identifier)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :federation)
+        (return-from dispatch-verify-attestation
+          (values (format nil "verify-attestation refused: run ~A not admitted for federation"
+                          identifier)
+                  1)))
+      (unless attestation-ports
+        (return-from dispatch-verify-attestation
+          (values "verify-attestation refused: no-attestation-transport" 1)))
+      (handler-case
+          (let* ((text (uiop:read-file-string path))
+                 (attestation
+                   (hngh.adapters.federation:parse-attestation-envelope text)))
+            (let ((result
+                    (verify-remote-attestation
+                     attestation-ports attestation (funcall clock))))
+              (report-attestation-result result)))
+        (error (condition)
+          (values (format nil "malformed verify-attestation: ~A" condition)
+                  2))))))
+
+(defun report-federation-result (result)
+  "Map a FEDERATION-RESULT to (values output exit-code): 0 complete,
+1 refused, 3 transport fault."
+  (case (hngh.adapters.federation:federation-result-status result)
+    (:complete (values (hngh.presentation:render result) 0))
+    (:refused
+     (values (hngh.presentation:render result)
+             (if (member "transport-fault"
+                         (hngh.adapters.federation:federation-result-refusal-labels result)
+                         :test #'string=)
+                 3 1)))))
+
+(defun report-attestation-result (result)
+  "Map an ATTESTATION-RESULT to (values output exit-code): 0 verified,
+1 refused, 3 transport fault."
+  (case (hngh.adapters.federation:attestation-result-status result)
+    (:verified (values (hngh.presentation:render result) 0))
+    (:refused (values (hngh.presentation:render result) 1))
+    (:fault (values (hngh.presentation:render result) 3))))
+
 (defun dispatch-command* (positionals store clock mutation-ports gather-ports
-                              review-ports terminal-ports)
+                              review-ports terminal-ports
+                              federation-ports attestation-ports)
   (let ((command (first positionals))
         (args (rest positionals)))
     (cond
@@ -1359,12 +1493,17 @@ is refused."
     ((string= command "review") (dispatch-review args store clock review-ports))
     ((string= command "terminal")
      (dispatch-terminal args store clock terminal-ports))
+    ((string= command "fetch-evidence")
+     (dispatch-fetch-evidence args store clock federation-ports))
+    ((string= command "verify-attestation")
+     (dispatch-verify-attestation args store clock attestation-ports))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))
 
 (defun dispatch-command (argv &key clock-now mutation-ports gather-ports
-                              review-ports terminal-ports)
+                              review-ports terminal-ports
+                              federation-ports attestation-ports)
   "Parse the operator ARGV list, execute the named command, and return
 (values output-string exit-code). Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
@@ -1378,7 +1517,12 @@ supplied. REVIEW-PORTS injects the model-review adapter ports for the
 review command (no default provider exists; without injection the command
 refuses no-review-transport). TERMINAL-PORTS injects the operator
 statement ports for the terminal command (no default input exists;
-without injection the command refuses no-terminal-transport)."
+without injection the command refuses no-terminal-transport).
+FEDERATION-PORTS and ATTESTATION-PORTS inject the federation adapter
+ports for the fetch-evidence and verify-attestation commands; no default
+exists, so without injection the commands refuse no-federation-transport
+and no-attestation-transport and plain scripts/hngh never touches a
+wire."
   (multiple-value-bind (positionals store-path bad-option)
       (split-argv argv)
     (when bad-option
@@ -1392,13 +1536,15 @@ without injection the command refuses no-terminal-transport)."
                                  (hngh.adapters.filesystem:make-filesystem-store
                                   :root store-path)
                                  clock mutation-ports gather-ports
-                                 review-ports terminal-ports)
+                                 review-ports terminal-ports
+                                 federation-ports attestation-ports)
             (hngh.adapters.filesystem:transport-fault (condition)
               (values (format nil "transport fault: ~A" condition) 3))
             (hngh.adapters.filesystem:store-refusal (condition)
               (values (format nil "store refusal: ~A" condition) 2)))
           (dispatch-command* positionals nil clock mutation-ports gather-ports
-                             review-ports terminal-ports)))))
+                             review-ports terminal-ports
+                             federation-ports attestation-ports)))))
 
 ;;; Operator-visible root ----------------------------------------------------
 

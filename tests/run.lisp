@@ -14,6 +14,7 @@
 (load (project-file "src/domain/run.lisp"))
 (load (project-file "src/domain/outcome.lisp"))
 (load (project-file "src/domain/governance.lisp"))
+(load (project-file "src/domain/attestation.lisp"))
 (load (project-file "src/application/ports.lisp"))
 (load (project-file "src/application/create-run.lisp"))
 (load (project-file "src/application/arm-run.lisp"))
@@ -28,6 +29,7 @@
 (load (project-file "src/adapter/terminal.lisp"))
 (load (project-file "src/adapter/filesystem.lisp"))
 (load (project-file "src/adapter/run-gather.lisp"))
+(load (project-file "src/adapter/federation.lisp"))
 (load (project-file "src/presentation/render.lisp"))
 (load (project-file "src/main.lisp"))
 
@@ -70,6 +72,7 @@
 (load (cl-user::project-file "tests/adapter/test-model.lisp"))
 (load (cl-user::project-file "tests/adapter/test-terminal.lisp"))
 (load (cl-user::project-file "tests/adapter/test-filesystem.lisp"))
+(load (cl-user::project-file "tests/adapter/test-federation.lisp"))
 (load (cl-user::project-file "tests/presentation/test-presentation.lisp"))
 (load (cl-user::project-file "tests/main/test-main.lisp"))
 (load (cl-user::project-file "tests/main/test-dispatch.lisp"))
