@@ -54,7 +54,7 @@ silent continuation of an old one.
 
 ## Status
 
-Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2616
+Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus 2663
 checks) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
@@ -76,9 +76,9 @@ checks) and an operator command surface. Implemented:
   they never decide, and no default provider transport exists.
 - Operator command surface (`scripts/hngh`): `create-run`, `admit-transport`, `arm-run`,
   `start-run`, `checkpoint`, `close-run`, `present`, `review`, `terminal`, `propose`,
-  `issue-cert`, `mutation-check`, `fetch-evidence`, `verify-attestation`; strict exit codes
-  (0 accepted, 1 refused/conflict, 2 malformed, 3 transport fault); persistence only under
-  an explicit `--store=PATH`.
+  `issue-cert`, `mutation-check`, `fetch-evidence`, `verify-attestation`, `list-pins`;
+  strict exit codes (0 accepted, 1 refused/conflict, 2 malformed, 3 transport fault);
+  persistence only under an explicit `--store=PATH`.
 - Real evidence chain: certificates mint only from an operator-produced verdict file plus
   genuine repository evidence (git revision, content hashes, working-tree state).
 - Read-only candidate evidence bundle (`make verify-candidate`).
@@ -89,9 +89,16 @@ checks) and an operator command surface. Implemented:
   gathers carrier-bundle claims into evidence facts (`fetch-evidence`), verifies
   attestation envelopes through pinned-key/signature ports (`verify-attestation`), and
   admits `:federation` behind the `remote-evidence`/`carrier-bundle` labels.
+- Operator pinned-key registry and signature-verification transport (rung 12): a pure
+  `key-pin-registry` domain value, a strict pins-file parser, and attestation ports that
+  verify one envelope signature through a single bounded
+  `openssl dgst -sha256 -verify` invocation on the injected process transport —
+  `verify-attestation ... pins=PATH` admits the operator's pins file as the trust anchor
+  and `list-pins` renders it; anything unpinned refuses `unknown-peer-key`.
 
-Not yet: daemon, watcher, scheduler, the network claim methods and revocation policy that
-extend the federation port, and no ambient state. Each will be admitted the same way
+Not yet: daemon, watcher, scheduler, the network claim methods and signature-transport
+hardening (Ed25519 keys beyond the digest-signature pairing) that extend the federation
+port, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
 one verified stretch at a time.
 
