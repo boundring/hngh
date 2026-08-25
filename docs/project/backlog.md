@@ -66,6 +66,55 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   last-seen refuses, one-request-one-certificate, no ambient process
   after the request completes) and sees no watcher, scheduler, or
   background process in the diff.
+
+## Certificate-bound wake mutation lane (boundary amendment)
+
+- **Problem:** rung 17's `wake-peer` issues an explicit request through
+  an injected transport, but the request itself is not certificate-
+  bound — a wake is an external side effect and ought to ride the same
+  one-action certificate machinery as a commit, with real evidence
+  (MAC, current lease, last-seen fact) rechecked immediately before the
+  action, exactly as the node-lattice entry's risk section demands.
+- **Smallest useful outcome:** a `:wake-mutation` action in the
+  mutation vocabulary: one certificate for one wake of one pinned
+  peer, rechecked against fresh evidence, executed behind the mutation
+  executor port, refused on stale or missing facts.
+- **Source or evidence:** `docs/records/2026-08-25-r17-wake-peer.md`;
+  the mutation executor (rung 5) and the candidate certificate.
+- **Risk:** a wake must never be a blanket "wake anything" — the
+  certificate binds peer, method, and evidence; the evidence-first and
+  atomic-mutation principles apply unchanged.
+- **Dependencies:** the rung-17 wake surface, the mutation vocabulary,
+  the policy-profile rung for the new action's requirements.
+- **Review trigger:** an independent reviewer accepts that a stale,
+  missing, or extra-evidence wake certificate refuses; only the
+  certificate-bound single wake executes.
+
+## Ambient-free tunnel keepalive (boundary amendment)
+
+- **Problem:** "keeping the tunnels open without a watching daemon"
+  touches ambient execution, which the no-daemon boundary does not
+  admit; the node-lattice vision needs a mechanism that keeps a
+  persistent tunnel (Tailscale) alive without a watcher, scheduler, or
+  background process.
+- **Smallest useful outcome:** a bounded, explicit, operator-invoked
+  keepalive policy file that names which tunnel endpoints may be
+  refreshed, and a single `keepalive` command that checks the tunnel
+  state, refreshes only if the certificate binds the exact endpoint,
+  and records the receipt — no process runs after the command exits
+  (the operator's own scheduler/tee runs the periodic invocation).
+- **Evidence:** the intent doc's "keep the corridors open without a
+  watching process"; the wake-on-demand precedent (rung 17).
+- **Risk:** any ambient process would violate the boundary; the command
+  stays explicit and process-local, the periodic invocation lives
+  outside Hngh (the operator's scheduler), never inside it.
+- **Dependencies:** the tunnel tooling (Tailscale), the mutation lane
+  once it exists, the network admission surface.
+- **Review trigger:** an independent reviewer accepts that no daemon,
+  watcher, or scheduler is installed by Hngh; keepalive is a plain
+  one-shot invocation with a receipt, and the policy names endpoints
+  exactly.
+
 ## Governance property tests
 
 - **Problem:** the principle matrix must be total over the closed kinds and
