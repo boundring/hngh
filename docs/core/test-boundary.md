@@ -61,7 +61,7 @@ adapter and presentation fixtures:
   factual string without mutating canonical state, keeps refusals literal,
   accepts only the four-field reference lexicon and rejects any pack
   carrying canonical control, and imports no adapter;
-- the composition root composes the five use cases into one harness with
+- the composition root composes the six use cases into one harness with
   injected or default port adapters, records one atomic run-and-receipt pair
   per accepted use case, refuses through fail-closed defaults, and renders
   every result through presentation with fake transports only.

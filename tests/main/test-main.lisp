@@ -1,6 +1,6 @@
 (in-package :hngh.tests)
 
-;;; Rung 7 composition root tests. The harness composes the five use cases
+;;; Rung 7 composition root tests. The harness composes the six use cases
 ;;; with injected or default port adapters, main's coordinator functions wire
 ;;; the installed evidence, review, and mutation adapters through injected
 ;;; transports, and every result renders through hngh.presentation. Nothing

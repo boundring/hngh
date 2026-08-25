@@ -90,7 +90,7 @@ application results, domain runs and governance values, and adapter results
 into plain factual strings, keeps refusals literal, applies the optional
 reference lexicon only as display copy at a named surface, and imports no
 adapter. `hngh.main` is installed as the composition root: `make-run-harness`
-composes the five use cases over injected or fail-closed default port
+composes the six use cases over injected or fail-closed default port
 adapters, coordinator functions wire the installed evidence, mutation, and
 review adapters through injected transports, and `display` renders any
 result through `hngh.presentation`. It starts no background work by import

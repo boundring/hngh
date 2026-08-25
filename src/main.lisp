@@ -3,16 +3,17 @@
 ;;; Rung 7: composition root. MAIN is the only package that depends on
 ;;; presentation, the installed adapters, application, and domain together.
 ;;; It starts no background work and has zero side effects on load. The
-;;; run harness composes the five application use cases over injected or
+;;; run harness composes the six application use cases over injected or
 ;;; default port adapters; the coordinator functions wire the installed
 ;;; evidence, review, and mutation adapters through injected transports;
 ;;; `display` renders any result through hngh.presentation. Default ports
 ;;; fail closed: no authority, verification, or manifest is invented here.
 ;;;
-;;; Rung 8: operator command surface. DISPATCH-COMMAND is the closed,
+;;; Rung 8+: operator command surface. DISPATCH-COMMAND is the closed,
 ;;; process-local entry point for scripts/hngh: it parses an argv list
-;;; into one of the seven commands, routes --store=PATH to the installed
-;;; filesystem adapter, and returns (values output exit-code). Exit codes:
+;;; into one of the closed commands (run lifecycle, evidence, review,
+;;; governance, federation, attestation), routes --store=PATH to the
+;;; installed filesystem adapter, and returns (values output exit-code). Exit codes:
 ;;; 0 accepted, 1 refused/conflict, 2 malformed (unknown command, arity,
 ;;; unknown option/transport/verb), 3 transport fault. The default
 ;;; admission facts consult the operator store's recorded receipts, so a
