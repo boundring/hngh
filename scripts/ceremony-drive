@@ -7,7 +7,12 @@
 ;;; captured into a file) -> issue-cert + mutation-check
 ;;; prepare-candidate -> issue-cert + mutation-check commit. The
 ;;; certificate binds the real manifest at both gates; the commit
-;;; message is the certificate's content hash.
+;;; message is the certificate's content hash. After a successful
+;;; commit, a deliberate certificate-gated push step re-proposes under
+;;; class=push-request into a fresh verdict and drives issue-cert +
+;;; mutation-check push (git push origin HEAD). The push is skipped
+;;; cleanly (exit 0) when the repository has no origin remote; it never
+;;; runs as a git hook, so half-ceremonies are never pushed.
 ;;;
 ;;; Review is advisory by policy; the verdict gate here is the
 ;;; deterministic principle evaluation. The operator may run the model
@@ -58,31 +63,51 @@
 
 ;;; the closed steps -------------------------------------------------------
 
-(defun propose-argv (objective content-hash manifest-text)
-  (append
-   (list "propose" "class=feature"
-         (format nil "problem=~A" objective)
-         "outcome=ceremony-driven candidate"
-         "purpose=ceremony-glued candidate"
-         "caller=ceremony-drive"
-         "input-contract=explicit file candidate"
-         "output-contract=certificate-bound commit"
-         "failure-contract=refusal halts the drive"
-         "declared-capabilities=ceremony"
-         "capability-diff=+one candidate"
-         (format nil "source-manifest=~A" manifest-text)
-         "risk-note=reviewer is advisory; the verdict is the gate"
-         "dependency=working tree"
-         "evidence-trigger=planned phase completion")
-   (loop for principle in
-           '("closed-authority" "least-authority"
-             "dependency-direction" "fail-closed"
-             "evidence-before-claim" "atomic-mutation"
-             "reversibility" "no-hidden-execution"
-             "cost-and-route-discipline" "source-grounding")
-         collect
-         (format nil "evidence-requirements=~A:claim-proof:~A"
-                 principle content-hash))))
+(defun propose-argv (class objective content-hash manifest-text)
+  (let ((pushp (string= class "push-request")))
+    (append
+      (list "propose" (format nil "class=~A" class)
+            (format nil "problem=~A" objective)
+            (if pushp
+                "outcome=ceremony-driven self-sufficient push"
+                "outcome=ceremony-driven candidate")
+            (if pushp
+                "purpose=post-commit certificate-gated push"
+                "purpose=ceremony-glued candidate")
+            "caller=ceremony-drive"
+            "input-contract=explicit file candidate"
+            (if pushp
+                "output-contract=certificate-bound push"
+                "output-contract=certificate-bound commit")
+            "failure-contract=refusal halts the drive"
+            (if pushp
+                "declared-capabilities=ceremony-push"
+                "declared-capabilities=ceremony")
+            (if pushp
+                "capability-diff=+push"
+                "capability-diff=+one candidate")
+            (format nil "source-manifest=~A" manifest-text)
+            "risk-note=reviewer is advisory; the verdict is the gate"
+            "dependency=working tree"
+            "evidence-trigger=planned phase completion")
+     (loop for principle in
+             '("closed-authority" "least-authority"
+               "dependency-direction" "fail-closed"
+               "evidence-before-claim" "atomic-mutation"
+               "reversibility" "no-hidden-execution"
+               "cost-and-route-discipline" "source-grounding")
+           collect
+           (format nil "evidence-requirements=~A:claim-proof:~A"
+                   principle content-hash)))))
+
+(defun origin-present-p ()
+  "True when the repository declares an origin remote (git push target)."
+  (multiple-value-bind (stdout stderr exit-code)
+      (uiop:run-program '("git" "remote" "get-url" "origin")
+                        :output :string :error-output :string
+                        :ignore-error-status t)
+    (declare (ignore stdout stderr))
+    (zerop exit-code)))
 
 (defun drive-loop (store objective files)
   (let* ((evidence (gather-evidence files))
@@ -117,7 +142,8 @@
                       (multiple-value-bind (out code)
                           (hngh.main:dispatch-command
                            (cons (format nil "--store=~A" store)
-                                 (propose-argv objective content-hash
+                                 (propose-argv "feature" objective
+                                               content-hash
                                                (manifest-pieces evidence))))
                         (format t "~A~%" out)
                         (when (plusp code)
@@ -143,8 +169,51 @@
               (execute "prepare-candidate")
               (execute "commit")
               (ignore-errors (delete-file verdict-file))
-              (format t "ceremony drive complete: ~A committed~%" content-hash)
-              (return-from drive-loop 0))))))))
+              ;; 4 -- deliberate post-commit push (never a git hook):
+              ;; only after the commit succeeded, re-propose under
+              ;; class=push-request into a fresh verdict and drive the
+              ;; push certificate. Skip cleanly when no origin exists.
+              (if (origin-present-p)
+                  (let ((push-verdict-file
+                          (uiop:with-temporary-file
+                              (:pathname path :keep t :type "txt")
+                            (with-open-file (stream path :direction :output
+                                                      :if-exists :supersede)
+                              (multiple-value-bind (out code)
+                                  (hngh.main:dispatch-command
+                                   (cons (format nil "--store=~A" store)
+                                         (propose-argv
+                                          "push-request" objective
+                                          content-hash
+                                          (manifest-pieces evidence))))
+                                (format t "~A~%" out)
+                                (when (plusp code)
+                                  (return-from drive-loop code))
+                                (write-string out stream)))
+                            (namestring path))))
+                    (let ((code
+                            (cmd (append
+                                     (list "issue-cert" "push" "run-1"
+                                           push-verdict-file)
+                                     files))))
+                      (when (plusp code)
+                        (return-from drive-loop code))
+                      (let ((code
+                              (cmd (append
+                                      (list "mutation-check" "push" "run-1"
+                                            push-verdict-file)
+                                      files))))
+                        (when (plusp code)
+                          (return-from drive-loop code))))
+                    (ignore-errors (delete-file push-verdict-file))
+                    (format t "ceremony drive complete: ~A committed and pushed~%"
+                            content-hash)
+                    (return-from drive-loop 0))
+                  (progn
+                    (format t
+                            "ceremony drive complete: ~A committed (no origin; push skipped)~%"
+                            content-hash)
+                    (return-from drive-loop 0))))))))))
 
 ;;; entry ----------------------------------------------------------------
 
