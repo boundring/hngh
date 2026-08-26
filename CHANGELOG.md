@@ -10,6 +10,25 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- Added the autonomy reporting layer:
+  - `scripts/report-queue` — append-only report ledger (progress /
+    expense / optimization / scheduled / alert kinds) with body files,
+    a read cursor, newest-first `--list`/`--unread` table rows, and a
+    `--json` dashboard payload.
+  - `scripts/run-autonomous` — one no-prompt ceremony tick for the
+    hourly cadence: journal generation when absent, one check-in-scale
+    ceremony slice when the queue/lane/card gates open (fresh
+    `/tmp/hngh-auto-*` store), scheduled reporting, fail-closed exits
+    (2 malformed card, 3 refusing sub-step, 0 nothing-due).
+  - Hermetic suites `tests/scripts/test-report-queue.py` (8 checks)
+    and `tests/scripts/test-run-autonomous.py` (6 checks), wired into
+    `make test`.
+
+#### Fixed
+
+- `scripts/generate-publication`: restored the missing `import os`
+  (NameError at import; suite 4/4 green again).
+
 - Added the autonomous scheduling & heartbeat layer (the machine-level
   heartbeat pipeline):
   - `scripts/schedule-heartbeat` — one non-daemon scheduler tick that
