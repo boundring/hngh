@@ -57,86 +57,104 @@ _spec = importlib.util.spec_from_loader("dashboard_readout", _loader)
 dash = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dash)
 
-# The operative — sprite-evolution generation 3 (operative-v3,
-# docs/design/operative-frames.md, scripts/evolve-operative --gen 3
-# --frames 4 --seed 7): a rounded feathered head with an off-center
-# eye-slit mote, shoulder pads, belt line, open coat with seams and
-# hem accents, cuffs, and a lit ground slab with cast shadow — answers
-# the crude-placeholder critique. Four-beat loop in block/quadrant
-# characters: idle-0 base, idle-1 arm-bend and tilt, idle-2 arms
-# raised, idle-3 coat settle. Embedded verbatim from the generator's
-# JSON. Rendered in the theme accent and cycled once a second
-# (independent of the data refresh interval); every frame is 17 rows
-# tall so cycling never reflows.
+# The operative — sprite-evolution generation 4 (operative-v4,
+# docs/design/operative-frames.md, scripts/evolve-operative --gen 4
+# --frames 4 --seed 7): anticipation → action → settle motion arcs with
+# anti-aliased edges — rounded head with the eye-slit mote, shoulder
+# pads, open coat with belt and hem accents, lit ground slab with cast
+# shadow. Four-beat loop: idle-0 base, idle-1 weight shift, idle-2
+# motion/breath, idle-3 settle. Embedded verbatim from the generator's
+# JSON, driven by the ANIM sequence player below (dwells + breathe
+# overlay); every frame is 17 rows tall so cycling never reflows.
 FIGURES = [
-    """       ▄██████▄
-      █▒██████▒█
-      █▀▀▀▀•▀▀▀█
-       ▀██████▀
+    """        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """         ██████
+        █▀▀•▀▀█
           ██
-    ▄████████████▄
-  ▐  ████████████  ▌
-  ▐   ██████████   ▌
-  ▐    ████████    ▌
-    ▄▄ ████████ ▄▄
-        ██▓▓▓▓██
-       ██░█  █░██
-       ░██░█  █░██░
-         ██    ██
-         ██    ██
-         ███  ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
-    """       ▄██████▄
-      █▒██████▒█
-      █▀▀▀▀•▀▀▀█
-       ▀██████▀
           ██
-    ▄████████████▄
-     ████████████
-  ▐   ██████████   ▌
-  ▐    ████████    ▌
-  ▐ ▄▄ ████████ ▄▄ ▌
-        ██▓▓▓▓██
-       ██░░  █░░█
-       ░██░█  █░██░
-         ██    ██
-         ██    ██
-         ███  ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
-    """       ▄██████▄
-      █▒██████▒█
-      █▀▀▀▀•▀▀▀█
-       ▀██████▀
-          ██
-  ▐ ▄████████████▄ ▌
-  ▐  ████████████  ▌
-  ▐   ██████████   ▌
-       ████████
-    ▄▄ ████████ ▄▄
-        ██▓▓▓▓██
-       ██░█  █░██
-       ░██░    ░██░
-         ██    ██
-         ██    ██
-         ███  ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
-    """       ▄██████▄
-      █▒██████▒█
-      █▀▀▀▀•▀▀▀█
-       ▀██████▀
-          ██
-    ▄████████████▄
-  ▐  ████████████  ▌
-  ▐   ██████████   ▌
-  ▐    ████████    ▌
-    ▄▄ ████████ ▄▄
-        ██▓▓▓▓██
-       ██░█  █░██ ░
-      ░ ██░█  █░██ ░
-         ██    ██
-         ██    ██
-         ███  ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    ▐     ██     ▌
+    ▐   ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄""",
+    """        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓███░░███▓▓
+     ████▓░░ ▓▓████
+     ▒███▓░░  ▓███▒
+     ▓██░ ░░   ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+    ██           ██
+    ██           ██
+    ███          ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+]
+
+# The sequence player. Each step picks a frame (int index into FIGURES,
+# or an inline multi-line art string) and a dwell in seconds; the player
+# advances on a monotonic deadline, independent of the data refresh
+# interval, and wraps around to loop the idle. v4 is a phase loop —
+# base → anticipation → action → settle — with per-phase dwells; long
+# base/settle dwells carry the breathe overlay so the figure is never
+# frozen, reading anticipation→action→settle rather than a 1s blink.
+ANIM_IDLE = [
+    {"frame": 0, "dwell": 1.4},   # base
+    {"frame": 1, "dwell": 0.25},  # anticipation (lean right, coat lags)
+    {"frame": 2, "dwell": 0.3},   # action (seams open)
+    {"frame": 3, "dwell": 1.2},   # settle (stance wide)
+]
+ANIM_ACTIVE = [
+    {"frame": 1, "dwell": 0.12},   # anticipation, quickened
+    {"frame": 2, "dwell": 0.2},    # action
+    {"frame": 3, "dwell": 0.18},   # settle
+    {"frame": 0, "dwell": 0.3},    # base
 ]
 
 # Theme presets: quiet dark is the default; the rest are the named
@@ -195,6 +213,56 @@ def _kw_text(text, accent):
 def _styled(text, style):
     """Render TEXT with an explicit style as a rich Text cell."""
     return Text(text, style=style) if style else text
+
+
+def _frame_art(step):
+    """Resolve an ANIM step's frame: an int indexes FIGURES, a string is
+    inline art used as-is."""
+    f = step["frame"]
+    return f if isinstance(f, str) else FIGURES[f]
+
+
+def _breathe_art(base, inhale):
+    """A subtle 2-frame breathe overlay: find the rows (torso band) whose
+    longest contiguous █ run is widest and widen/narrow it by one cell
+    per side. Only the single widest torso row changes, so the figure
+    breathes ±1 cell without mangling the fragmented ▓░▒ garment rows.
+    Lines are left as-is (already uniform width), so the panel never
+    reflows."""
+    rows = base.splitlines()
+    width = max(len(r) for r in rows)
+    best = None  # (run_len, row_idx, start, end) of the widest clean run
+    for idx in range(5, 10):
+        row = rows[idx]
+        start = run = 0
+        for col, ch in enumerate(row):
+            if ch == "█":
+                if run == 0:
+                    start = col
+                run += 1
+            elif run:
+                hit = (run >= 6 and start > 0
+                       and col < len(row.rstrip()))
+                if hit and (best is None or run > best[0]):
+                    best = (run, idx, start, col)
+                run = 0
+        if run and (best is None or run > best[0]) \
+                and start > 0 and len(row.rstrip()) > start + run:
+            best = (run, idx, start, start + run)
+    out = []
+    for idx, row in enumerate(rows):
+        if best and idx == best[1]:
+            _, _, start, end = best
+            if inhale:
+                # widen one each side: swap the flanking spaces to █
+                row = row[: start - 1] + "█" + row[start:]
+                row = row[:end] + "█" + row[end:]
+            else:
+                # narrow one each side: swap a run-edge █ to space
+                row = row[:start] + " " + row[start + 1:]
+                row = row[: end - 1] + " " + row[end - 1:]
+        out.append(row.ljust(width))
+    return "\n".join(out)
 
 
 def _dance_level():
@@ -288,8 +356,15 @@ class HnghTUI(App):
         yield Footer()
 
     def on_mount(self):
-        self._fig = 0
-        self.set_interval(1.0, self._anim_tick)
+        # Sequence-player state (UI thread): the anim sequence, a
+        # monotonic deadline, and the last art shown (dedupe).
+        self._anim_seq = ANIM_IDLE
+        self._anim_index = 0
+        self._anim_next_at = 0.0
+        self._state_now = "idle"
+        self._pace = 1.0
+        self._last_art = FIGURES[0]
+        self.set_interval(0.1, self._anim_tick)
         self.query_one("#operative").border_title = "operative"
         queue = self.query_one("#queue", DataTable)
         queue.border_title = "queue"
@@ -305,11 +380,39 @@ class HnghTUI(App):
         self.refresh_tick()
 
     def _anim_tick(self):
-        """Cycle the operative figure once a second, on the UI thread.
-        Static.update is cheap; the frames share dimensions so nothing
-        reflows."""
-        self._fig = (self._fig + 1) % len(FIGURES)
-        self.query_one("#figure", Static).update(FIGURES[self._fig])
+        """Sequence player, on the UI thread (10Hz decision tick).
+        Static.update fires only when the art actually changes, so the
+        tick never churns the screen. Beats advance on a monotonic
+        deadline; between long base dwells a 3s breathe overlay keeps the
+        figure moving."""
+        now = time.monotonic()
+        step = self._anim_seq[self._anim_index]
+        dwell = step["dwell"] * self._pace
+        if now >= self._anim_next_at:
+            # advance to the next beat (wraps around to loop the idle)
+            self._anim_index = (self._anim_index + 1) % len(self._anim_seq)
+            self._anim_next_at = now + dwell
+            self._show(_frame_art(step))
+        elif step["frame"] in (0, 3) and dwell >= 0.8:
+            # long base/settle dwell: breathe (torso ±1 on a 3s cycle)
+            age = now - (self._anim_next_at - dwell)
+            self._show(_breathe_art(_frame_art(step), (age % 3.0) < 1.5))
+
+    def _show(self, art):
+        if art != self._last_art:
+            self._last_art = art
+            self.query_one("#figure", Static).update(art)
+
+    def _switch_seq(self, active):
+        """Restart the sequence at a pace matching the session state:
+        running = quicker, more energetic beats; idle = long dwells."""
+        want = ANIM_ACTIVE if active else ANIM_IDLE
+        pace = 0.65 if active else 1.0
+        if want is not self._anim_seq or pace != self._pace:
+            self._anim_seq = want
+            self._pace = pace
+            self._anim_index = 0
+            self._anim_next_at = 0.0  # restart on the next tick
 
     def refresh_tick(self):
         # Heavy reads (session_rows can spawn sbcl) stay off the UI
@@ -356,6 +459,10 @@ class HnghTUI(App):
         queued = [i for i, st in items if st == "queued"]
         done = [i for i, st in items if st == "done"]
         state = _state(queued, done, sessions)
+        # state-reactive pacing: running sessions pick the energetic
+        # sequence and a quicker pulse (UI thread; timer only reads it)
+        self._state_now = state
+        self._switch_seq(state == "active")
         line = dash.SPEECH[state][self._tick % len(dash.SPEECH[state])]
         caption = self.query_one("#caption", Static)
         caption.update(line + (f"  music {dance}/10" if dance else ""))

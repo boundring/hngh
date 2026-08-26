@@ -73,21 +73,31 @@ class DashboardTUI(unittest.TestCase):
                     data += chunk
                 return data.decode("utf-8", "replace")
 
-            # first render settles in; the operative head glyph (a v3
-            # frame fragment) is shared by every frame, so it is a stable
-            # presence check for the operative panel.
-            first = snapshot(2.2)
-            self.assertIn("▄██████▄", first, "operative figure renders")
+            # boot: poll until the first frame is fully painted — both
+            # the operative eye-slit glyph (v4, shared by every frame)
+            # and the queue table (same paint pass) — bounded, so a slow
+            # first paint under load never flakes.
+            first = ""
+            deadline = time.time() + 8
+            while ("▀▀•▀▀" not in first or "queue" not in first) \
+                    and time.time() < deadline:
+                first += snapshot(0.4)
+            self.assertIn("▀▀•▀▀", first, "operative figure renders")
             self.assertIn("hngh", first, "header renders")
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
 
-            # frame cycling: a later read still shows the figure and the
-            # screen moved on (operative animation + live data tick), so
-            # the operative is not a frozen still.
-            second = snapshot(1.6)
-            self.assertIn("▄██████▄", second, "figure persists across frames")
-            self.assertNotEqual(first, second, "animation cycles")
+            # sequence/breathe animation: three reads ~0.6s apart must
+            # show the figure throughout and differ somewhere — beats are
+            # 0.12-0.3s so a capture gap of 0.6s lands on a change, and
+            # the 3s breathe overlay guarantees movement between long
+            # base dwells. Tolerant: any consecutive pair may differ.
+            second = snapshot(0.6)
+            third = snapshot(0.6)
+            self.assertIn("▀▀•▀▀", second, "figure persists (2nd)")
+            self.assertIn("▀▀•▀▀", third, "figure persists (3rd)")
+            self.assertTrue(first != second or second != third,
+                            "animation is not frozen (sequence/breathe)")
         finally:
             try:
                 os.kill(pid, 15)
