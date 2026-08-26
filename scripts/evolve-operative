@@ -1,17 +1,31 @@
 #!/usr/bin/env python3
 """evolve-operative: breed evolutionary pixel-art frame-sets for the operative.
 
-A seeded mutation walk over a block-char humanoid template. The base figure is
-a slender, faceless silhouette in the Nihei register — a dark slit head, coat
-flaring into the void, legs stanced on a clean floor line. Every frame is a
-monospace-safe grid (<=24 cols, <=18 rows) drawn only from the approved
-glyph set; mutations nudge limbs, breath, coat, head tilt, and slit blink.
+Two generations, selected with --gen:
+
+  --gen 1 (default) — "operative-v1": a seeded mutation walk over a dark
+      slab humanoid (family operative-v1, unchanged since v1).
+
+  --gen 2 — "operative-v2": the evolved template. Reads as a human figure at
+      a glance: small head well below shoulder width, visible neck, arms as
+      thin limbs hanging OUTSIDE the torso with negative space and bent
+      elbows, a coat that opens into two panels, stanced legs with a clear
+      gap, boots, and a ground line. New mutation vocabulary: neck-gap,
+      arm-bend (elbow), leg-split / visible stance gap, head-small,
+      coat-open (two panels), plus the carried set (blink, breath, tilt,
+      coat-flare, arm height, props).
+
+Every frame is a monospace-safe grid (<=24 cols, <=18 rows) drawn only from
+the approved glyph set; every generation is deterministic per seed.
 
 Determinism contract: the ONLY entropy is random.Random(seed) — same seed,
-same JSON, byte for byte.
+same generation, same JSON, byte for byte. The rng call sequence per
+generation is fixed: randint(1,3) mutation count, then per mutation
+randrange(len(mutations)), and randrange(len(props)) inside the prop
+mutation. Gen 1's sequence is preserved exactly, so its output is unchanged.
 
 Usage:
-    evolve-operative [--frames N] [--seed S] [--out FILE]
+    evolve-operative [--gen 1|2] [--frames N] [--seed S] [--out FILE]
     evolve-operative --help
 """
 
@@ -20,7 +34,10 @@ import json
 import random
 import sys
 
-# Canvas — fixed width grid so mutations are pure cell writes; art rstrip()s.
+# ---------------------------------------------------------------------------
+# generation 1 — the original slab operative (family "operative-v1")
+# ---------------------------------------------------------------------------
+
 CANVAS_W = 20
 
 # The base pose ("idle-0"). All offspring are mutations of this grid.
@@ -54,14 +71,6 @@ def to_art(grid):
     """Grid -> multi-line art string, trailing whitespace stripped."""
     return "\n".join("".join(row).rstrip() for row in grid)
 
-
-def bounds(grid):
-    """Global min/max non-space column across the grid (art bounding box)."""
-    xs = [x for row in grid for x, c in enumerate(row) if c != " "]
-    return min(xs), max(xs)
-
-
-# --- mutations: each (grid) -> None, pure cell writes on the fixed canvas ---
 
 def blink(grid):
     """Eye slit darkens: the pale slot closes to solid head."""
@@ -174,21 +183,238 @@ MUTATIONS = (
     ("prop", lambda g, r: prop(g, r)),
 )
 
+# ---------------------------------------------------------------------------
+# generation 2 — the humanoid operative (family "operative-v2")
+# ---------------------------------------------------------------------------
+#
+# Anatomy (20-col canvas):
+#   rows 0-2   head: crown / slab / eye-slit (7 wide — smaller than shoulders)
+#   row 3      neck (2 wide)
+#   row 4      shoulders / traps (10 wide — clearly wider than the head)
+#   rows 5-6   chest + upper arms; arms are thin ▐/▌ columns at cols 2/17
+#              with a 2-col negative-space gap to the torso
+#   row 7      waist (8 wide — narrower than shoulders: a clean V-taper)
+#   row 8      hips + forearms bent one column inward at the elbow (▄▄)
+#   rows 9-10  coat, two panels with a center gap ("open front")
+#   rows 11-12 legs: two 2-wide columns, 6-col gap between
+#   row 13     boots (feet wider than shins)
+#   row 14     ground slab
 
-def breed(seed, frames_n):
-    """Produce the full frame-set document for a seed."""
+BASE2 = (
+    "      ▄█████▄      ",   #  0 crown
+    "      ███████      ",   #  1 head slab
+    "      █▀▀▀▀▀█      ",   #  2 eye slit (pale slot)
+    "        ██         ",   #  3 neck
+    "     ▄████████▄     ",   #  4 shoulders / traps
+    "  ▐  ██████████  ▌  ",   #  5 chest + upper arms (gap between)
+    "  ▐  ██████████  ▌  ",   #  6 chest + upper arms
+    "  ▐   ████████   ▌  ",   #  7 waist (V-taper) + arms
+    "   ▄▄ ████████ ▄▄   ",   #  8 hips + forearms bent in at the elbow
+    "     ████  ████     ",   #  9 coat, two panels, center gap
+    "    ░███  ███░      ",   # 10 coat flare
+    "    ██      ██      ",   # 11 legs (6-col gap)
+    "    ██      ██      ",   # 12 legs
+    "    ███    ███      ",   # 13 boots
+    " ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ",   # 14 ground
+)
+
+# v2 geometry: rows 11-13 legs at left cols 4-5, right cols 12-13; boots at
+# left 4-6 / right 11-13; coat panels rows 9-10; forearms at row 8.
+V2 = {"w": CANVAS_W, "legs_l": (4, 5), "legs_r": (12, 13),
+      "boots_l": (4, 6), "boots_r": (11, 13)}
+
+
+def to_grid2():
+    return [list(row) for row in BASE2]
+
+
+def blink2(grid):
+    """Eye slit closes: the pale ▀ slot darkens to solid head."""
+    for x, c in enumerate(grid[2]):
+        if c == "▀":
+            grid[2][x] = "█"
+
+
+def neck_gap(grid):
+    """The neck clears: head floats above the shoulders (visible void)."""
+    for x in range(8, 10):
+        grid[3][x] = " "
+
+
+def arms2(grid, rows):
+    """Upper arms: thin ▐/▌ columns at cols 2/17 across ROWS."""
+    for y in range(4, 9):
+        grid[y][2] = " "
+        grid[y][17] = " "
+    for y in rows:
+        grid[y][2] = "▐"
+        grid[y][17] = "▌"
+
+
+def arm_bend(grid):
+    """Elbow: forearms straighten to hang directly under the upper arms
+    (the base keeps them bent inward at the hip). Clears only the arm zone
+    (cols 2-5 and 14-17 on row 8); the hip row is never touched."""
+    for x in range(2, 6):
+        grid[8][x] = " "
+    for x in range(14, 18):
+        grid[8][x] = " "
+    grid[8][2], grid[8][3], grid[8][16], grid[8][17] = "▄", "▄", "▄", "▄"
+
+
+def legs2(grid, left, right):
+    """Legs + boots at (LEFT, RIGHT) 2-wide column pairs; boots widen to
+    (L-1..R+1) on the boot row."""
+    l1, l2 = left
+    r1, r2 = right
+    for y in (11, 12):
+        row = grid[y]
+        for x in range(1, 18):
+            if row[x] in "█":
+                row[x] = " "
+        row[l1], row[l2], row[r1], row[r2] = "█", "█", "█", "█"
+    boot = grid[13]
+    for x in range(1, 18):
+        if boot[x] in "█":
+            boot[x] = " "
+    for x in range(l1 - 1, l2 + 1):
+        boot[x] = "█"
+    for x in range(r1 - 1, r2 + 1):
+        boot[x] = "█"
+
+
+def coat_open(grid):
+    """Coat gap widens: both panels clear one more column toward center."""
+    for y, ls, le, rs, re in ((9, 4, 7, 12, 15), (10, 3, 6, 11, 14)):
+        row = grid[y]
+        for x in range(2, 17):
+            if row[x] in "█░":
+                row[x] = " "
+        for x in range(ls, le + 1):
+            row[x] = "█"
+        for x in range(rs, re + 1):
+            row[x] = "█"
+
+
+def coat_flare2(grid):
+    """Coat hem flares: panels shift one column outward, ░ at the outer
+    edge of each panel."""
+    for y, ls, le, rs, re, d in ((9, 4, 9, 11, 16, "░"),
+                                 (10, 3, 8, 10, 15, "░")):
+        row = grid[y]
+        for x in range(2, 17):
+            if row[x] in "█░":
+                row[x] = " "
+        for x in range(ls, le + 1):
+            row[x] = "█"
+        for x in range(rs, re + 1):
+            row[x] = "█"
+        row[ls] = d
+        row[re] = d
+
+
+def head_small(grid):
+    """Head shrinks to 2 rows and lifts to the top of the canvas (no
+    leading void): the slab and eye-slit move to rows 0-1, the crown row
+    and the vacated slit row clear."""
+    grid[0] = grid[1][:]
+    grid[1] = grid[2][:]
+    for x in range(len(grid[2])):
+        grid[2][x] = " "
+
+
+def tilt2(grid, dx):
+    """Head + neck (rows 0-3) shift one column left/right."""
+    for y in range(0, 4):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row) if c != " "]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            nx = x + dx
+            if 0 <= nx < V2["w"]:
+                row[nx] = c
+
+
+def breath2(grid, direction):
+    """Chest (rows 5-6, the solid 10-wide rows) breathes: ±1 column each
+    edge. Waist, coat, and arms are untouched."""
+    for y in (5, 6):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c == "█"]
+        if not xs:
+            continue
+        if direction == "in":
+            for side in (-1, 1):
+                edge = min(xs) if side == -1 else max(xs)
+                tgt = edge + side
+                if 0 <= tgt < V2["w"] and row[tgt] == " ":
+                    row[tgt] = "█"
+        else:
+            a, b = min(xs), max(xs)
+            if b - a + 1 <= 6:
+                continue  # never narrower than a 6-cell chest
+            row[a] = " "
+            row[b] = " "
+
+
+PROPS2 = (
+    ("mote", ((1, 15, "•"),)),
+    ("ember", ((10, 18, "▓"),)),
+    ("glint", ((14, 2, "▖"), (14, 17, "▗"))),
+)
+
+
+def prop2(grid, rng):
+    kind, cells = PROPS2[rng.randrange(len(PROPS2))]
+    for y, x, ch in cells:
+        grid[y][x] = ch
+    return "prop:" + kind
+
+
+MUTATIONS2 = (
+    ("blink", lambda g, r: blink2(g)),
+    ("neck-gap", lambda g, r: neck_gap(g)),
+    ("arm-up", lambda g, r: arms2(g, (4, 5, 6))),
+    ("arm-down", lambda g, r: arms2(g, (6, 7, 8))),
+    ("arm-bend", lambda g, r: arm_bend(g)),
+    ("stance-wide", lambda g, r: legs2(g, (3, 4), (13, 14))),
+    ("stance-narrow", lambda g, r: legs2(g, (5, 6), (10, 11))),
+    ("leg-split", lambda g, r: legs2(g, (3, 4), (13, 14))),
+    ("head-small", lambda g, r: head_small(g)),
+    ("coat-open", lambda g, r: coat_open(g)),
+    ("coat-flare", lambda g, r: coat_flare2(g)),
+    ("tilt-left", lambda g, r: tilt2(g, -1)),
+    ("tilt-right", lambda g, r: tilt2(g, 1)),
+    ("breath-in", lambda g, r: breath2(g, "in")),
+    ("breath-out", lambda g, r: breath2(g, "out")),
+    ("prop", lambda g, r: prop2(g, r)),
+)
+
+GENERATIONS = {
+    "1": {"family": "operative-v1", "canvas_w": CANVAS_W, "base": BASE,
+          "grid": to_grid, "mutations": MUTATIONS},
+    "2": {"family": "operative-v2", "canvas_w": CANVAS_W, "base": BASE2,
+          "grid": to_grid2, "mutations": MUTATIONS2},
+}
+
+
+def breed(seed, frames_n, gen="1"):
+    """Produce the full frame-set document for a seed and generation."""
+    spec = GENERATIONS[gen]
     rng = random.Random(seed)
-    doc = {"family": "operative-v1", "seed": seed, "frames": []}
+    doc = {"family": spec["family"], "seed": seed, "frames": []}
     doc["frames"].append({
         "name": "idle-0",
-        "art": to_art(to_grid()),
+        "art": to_art(spec["grid"]()),
         "mutations": ["base"],
     })
     for i in range(1, frames_n):
-        grid = to_grid()
+        grid = spec["grid"]()
         applied = []
+        # fixed rng call sequence: count, then one pick per mutation
         for _ in range(rng.randint(1, 3)):
-            name, fn = MUTATIONS[rng.randrange(len(MUTATIONS))]
+            name, fn = spec["mutations"][rng.randrange(len(spec["mutations"]))]
             fn(grid, rng)
             applied.append(name)
         doc["frames"].append({
@@ -235,6 +461,9 @@ def main(argv=None):
         prog="evolve-operative",
         description="Breed evolutionary pixel-art frame-sets for the "
                     "hngh operative (deterministic per seed).")
+    ap.add_argument("--gen", choices=("1", "2"), default="1",
+                    help="generation: 1 = operative-v1 slab (default), "
+                         "2 = operative-v2 humanoid")
     ap.add_argument("--frames", type=positive_int, default=3,
                     help="number of frames in the mutation walk (default 3)")
     ap.add_argument("--seed", type=int, default=1,
@@ -243,7 +472,7 @@ def main(argv=None):
                     help="write the JSON document to FILE instead of stdout")
     args = ap.parse_args(argv)
 
-    doc = breed(args.seed, args.frames)
+    doc = breed(args.seed, args.frames, args.gen)
     check_bounds(doc)
     payload = doc_to_json(doc) + "\n"
     if args.out:
