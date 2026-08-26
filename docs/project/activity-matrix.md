@@ -54,3 +54,27 @@ The tick exits 0 in every expected path and files an `alert` row on a
 genuine fault. When a row's smallest increment is undefined (the skip
 condition), the tick files a report naming the activity instead of
 inventing work.
+
+## Timing-window evaluation
+
+The cadence-continuum tiers (month/week/day/hour/10m/5m/1m + ad-hoc)
+aren't interchangeable — each window admits a different cost and
+trust profile. Standard placement:
+
+- **event-fire (any time)** — the cheapest instrument: an on-change or
+  notification-triggered single tick (a heartbeat, an incoming signal).
+  Use it for anything that only reacts, never for work that needs new
+  evidence.
+- **1m / 5m (cheap)** — lightweight non-mutating probes and health reads;
+  keep them read-only and let them exit 0 when nothing is due.
+- **10m+ (medium)** — small mutating increments (a report row, a drafted
+  candidate) that still need fresh evidence; a bounded tick's worth.
+- **hourly+ (expensive)** — the heavyweight, evidence-gathering, or
+  review-a-batch work; anything that touches the certificate gates.
+- **agentic (gated)** — any tick whose leg would mutate runs behind the
+  existing certificate gates and rechecks every evidence fact at the
+  moment of action; no self-mutation outside those gates.
+
+Rule of thumb: put a tick on the longest window that still turns the work
+over, and prefer event-fire over polling where an event exists. A window
+that never fires because nothing is due is a correct no-op, not a gap.

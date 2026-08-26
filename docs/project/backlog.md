@@ -795,3 +795,48 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** a fixture where the selector's ranking differs
   from the static queue Next produces a justified choice report, and
   the mounted slice still passes the full certificate gate.
+
+## Webapp dashboard (operator directive 2026-08-26)
+
+- **Problem:** the current terminal dashboard is an eyesore and pops up
+  automatically; the operator wants a browser-window webapp dashboard
+  only when requested, handled deliberately, not a periodic popup.
+- **Smallest useful outcome:** a webapp dashboard (browser window) that
+  consolidates the hngh dashboard surfaces (lanes, reports, live
+  agents, cadence) behind the existing hngh-automation
+  dashboard service (or a successor), never auto-launching; opening it
+  is an explicit operator action or an explicit timer-wired trigger.
+- **Evidence:** operator directive 2026-08-26; hngh-automation
+  dashboard.json + index.html; hngh scripts/dashboard-readout /
+  dashboard-tui.
+- **Risk:** duplicating the existing readout; reuse the --json spine as
+  the only data source.
+- **Dependencies:** agent-live-view roster; cadence-continuum.
+- **Review trigger:** an operator opens the dashboard in a browser by
+  intent; nothing auto-pops it; data matches the readout spine.
+
+## Self-optimization continuum (operator directive 2026-08-26)
+
+- **Problem:** the evolution/grading/steering loops target operator-facing
+  surfaces and work slices, but Hngh's own operations (cadence placement,
+  probe costs, timer hygiene, credential rotation, drop-in design) only get
+  optimized reactively when a failure surfaces.
+- **Smallest useful outcome:** a standing principle + mechanism where Hngh
+  self-optimizes every part of its operations continually: the oversight
+  tick's agentic leg gains a self-review mode that evaluates its own
+  ticking costs/placement (which probes fit which windows, what fired
+  on-change vs by-poll, what new cheap event hooks exist) and emits
+  `optimize: <suggestion>` breadcrumbs; a 10m cadence drop-in collects
+  them into a self-optimization ledger (`docs/project/self-optimize.md`)
+  whose accepted suggestions ride the normal queue→card→ceremony path;
+  nothing changes its own timer/unit definitions without a ceremony.
+- **Evidence:** operator directive 2026-08-26; oversight-tick (agentic
+  leg); cadence-continuum; surface-evolution-loop pattern.
+- **Risk:** self-modification runaway — every change to Hngh's own
+  operation still clears the same gates (proposal→verdict→certificate→
+  mutation); suggestions are advisory until then.
+- **Dependencies:** oversight-tick agentic leg; cadence tiers; queue/card
+  ceremony path.
+- **Review trigger:** a suggestion raised by the self-review mode is
+  recorded, ranked with the queue, and only lands as a mutation through
+  the certificate gate; the ledger shows a continual series.
