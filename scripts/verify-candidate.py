@@ -4,9 +4,11 @@
 import argparse
 import hashlib
 from pathlib import Path
+import os
 import re
 import subprocess
 import sys
+import time
 
 
 EXCLUDED_PREFIXES = (".hermes/",)
@@ -55,6 +57,7 @@ def working_tree_state():
     "dirty": bool(rows),
     "staged": any(row[:1] not in (" ", "?") for row in rows),
     "untracked": any(row.startswith("??") for row in rows),
+    "porcelain": output,
   }, None
 
 
@@ -134,6 +137,43 @@ def candidate_hash(entries):
   except OSError as error:
     return None, f"cannot read candidate: {error}"
   return digest.hexdigest(), None
+
+
+def fast_test_marker(base_revision, candidate_hash_value, state):
+  normalized = state["porcelain"]
+  key = f"{base_revision}|{candidate_hash_value}|{normalized}"
+  repo = Path.cwd().resolve().name or "repo"
+  digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+  return os.path.join(
+    os.environ.get("TMPDIR", "/tmp"), f"hngh-fasttest-{repo}-{digest}.ok"
+  )
+
+
+def write_fast_test_marker(marker, base_revision, candidate_hash_value, rc, duration):
+  try:
+    with open(marker, "w", encoding="utf-8") as handle:
+      handle.write(f"base-revision: {base_revision}\n")
+      handle.write(f"candidate-hash: {candidate_hash_value}\n")
+      handle.write(f"rc: {rc}\n")
+      handle.write(f"duration: {duration}\n")
+  except OSError:
+    pass
+
+
+def fast_test_passes_from_cache(marker, candidate_hash_value):
+  if marker is None:
+    return False
+  try:
+    with open(marker, encoding="utf-8") as handle:
+      contents = handle.read()
+  except (OSError, UnicodeError):
+    return False
+  fields = {}
+  for line in contents.splitlines():
+    if ":" in line:
+      name, _, value = line.partition(":")
+      fields[name.strip()] = value.strip()
+  return fields.get("candidate-hash") == candidate_hash_value and fields.get("rc") == "0"
 
 
 def whitespace_error(entry, text):
@@ -280,17 +320,26 @@ def main(arguments):
     print(":refused relative-link evidence failed")
     return 1
 
-  _, error = run_command(["make", "test"])
-  if error:
-    print(error)
-    print(":refused candidate evidence failed")
-    return 1
-
   candidate_hash_value, error = candidate_hash(entries)
   if error or candidate_hash_value is None:
     print(error or "candidate hash is unavailable")
     print(":refused candidate evidence failed")
     return 1
+
+  marker = fast_test_marker(base_revision.strip(), candidate_hash_value, state)
+  cached = fast_test_passes_from_cache(marker, candidate_hash_value)
+  if cached:
+    print("trace: fast-test passed (cached)")
+  else:
+    started = time.time()
+    _, error = run_command(["make", "test"])
+    duration = time.time() - started
+    if error:
+      write_fast_test_marker(marker, base_revision.strip(), candidate_hash_value, 1, duration)
+      print(error)
+      print(":refused candidate evidence failed")
+      return 1
+    write_fast_test_marker(marker, base_revision.strip(), candidate_hash_value, 0, duration)
 
   print(f"base-revision: {base_revision.strip()}")
   print(f"working-tree-dirty: {'yes' if state['dirty'] else 'no'}")
