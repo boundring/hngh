@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""Grade the hngh dashboard: capture its window, ask a local vision model, log to the ledger.
+
+One-shot, stdlib-only, read-only (except the screenshot file and the ledger append).
+Fails closed: any unverifiable step reports honestly and exits non-zero; a low grade
+still exits 0 — the loop wants honest low grades.
+"""
+import argparse
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+CONF = Path.home() / ".hngh-automation" / "reviewer-local.conf"
+WINDOW_NAME = "hngh grade"
+OUT_DEFAULT = "/tmp/hngh-grade.png"
+LEDGER = REPO / "docs" / "project" / "ui-grades.md"
+LEDGER_HEADER = "| timestamp | target | grade | first finding |"
+RUBRIC = (
+    "You are grading a terminal dashboard (hngh TUI, dark minimal megastructure aesthetic "
+    "with a slender faceless ASCII character). Be a ruthless design critic. Report ONLY what "
+    "you actually see: 1) title/header text (quote verbatim), 2) panels/tables: alignment, "
+    "borders, spacing, 3) any ASCII-art figure and its quality, 4) colors/contrast, 5) "
+    "ugly/cramped/broken elements, 6) overall: impressive or amateur. End with GRADE: N/10."
+)
+
+
+def fail(msg, code):
+    print(f"grade-interface: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def target_kind():
+    """Which dashboard surface we grade: dashboard-tui if present, else dashboard-readout."""
+    return "dashboard-tui" if (REPO / "scripts" / "dashboard-tui").exists() else "dashboard-readout"
+
+
+def xdotool_search(args):
+    """Run xdotool search; return (first_id_or_None, err_or_None)."""
+    try:
+        p = subprocess.run(["xdotool", "search"] + args,
+                           capture_output=True, text=True, timeout=10)
+    except FileNotFoundError:
+        return None, "xdotool not found (install xdotool)"
+    except subprocess.TimeoutExpired:
+        return None, "xdotool search timed out"
+    if p.returncode != 0:
+        return None, p.stderr.strip() or "xdotool search failed"
+    ids = [ln.strip() for ln in p.stdout.splitlines() if ln.strip()]
+    return (ids[0], None) if ids else (None, None)
+
+
+def launch_target():
+    """Launch the dashboard in a konsole window tagged 'hngh grade' if not already up.
+
+    Konsole mangles --title, so we tag the window via its own process id.
+    Returns the konsole subprocess.
+    """
+    target = target_kind()
+    inner = ("python3 scripts/dashboard-tui --theme=matrix" if target == "dashboard-tui"
+             else "python3 scripts/dashboard-readout --watch 90 --theme=matrix")
+    cmd = ["konsole", "--title", WINDOW_NAME, "-e", "bash", "-c",
+           f"cd {REPO} && {inner}"]
+    try:
+        return subprocess.Popen(cmd)
+    except FileNotFoundError:
+        fail("konsole not found (install konsole) — cannot open the dashboard window", 2)
+
+
+def wait_for_window(proc, retries=1):
+    """Poll xdotool search --pid for the konsole window; one extra retry after 4s."""
+    for _ in range(2):
+        wid, err = xdotool_search(["--pid", str(proc.pid)])
+        if wid is not None:
+            return wid, None
+        if retries > 0:
+            retries -= 1
+            time.sleep(4)
+    return None, err
+
+
+def capture(out_path):
+    """Locate (or launch) the dashboard window and capture it to out_path."""
+    target = target_kind()
+    # A pre-existing window tagged 'hngh grade' (title-capable terminal) wins.
+    wid, err = xdotool_search(["--name", WINDOW_NAME])
+    if wid is None:
+        proc = launch_target()
+        time.sleep(7)  # render time
+        wid, err = wait_for_window(proc)
+        if wid is None:
+            # one retry after a longer settle pause
+            time.sleep(4)
+            wid, err = wait_for_window(proc, retries=0)
+        if wid is None:
+            fail(f"no dashboard window appeared in time ({target}) ({err})", 2)
+    try:
+        p = subprocess.run(["import", "-window", wid, out_path],
+                           capture_output=True, text=True, timeout=30)
+    except FileNotFoundError:
+        fail("import (ImageMagick) not found — cannot capture the window", 2)
+    if p.returncode != 0:
+        fail(f"import failed: {p.stderr.strip() or p.stdout.strip() or 'unknown error'}", 2)
+    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        fail(f"capture produced no image at {out_path}", 2)
+    return target
+
+
+def load_conf():
+    """Parse reviewer-local.conf into {key: value}."""
+    if not CONF.exists():
+        fail(f"missing config {CONF}", 1)
+    kv = {}
+    for line in CONF.read_text().splitlines():
+        line = line.strip()
+        if line and "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("=")
+            kv[k.strip()] = v.strip()
+    endpoint = kv.get("endpoint")
+    token_file = kv.get("token-file")
+    if not endpoint or not token_file:
+        fail(f"{CONF} must define endpoint and token-file", 1)
+    return kv
+
+
+def models_api(endpoint):
+    """Derive the models list URL from the chat-completions endpoint."""
+    if "/v1/" in endpoint:
+        base = endpoint.split("/v1/", 1)[0]
+    else:
+        base = endpoint.rstrip("/")
+    return base + "/v1/models"
+
+
+def get_json(url, token, timeout=30):
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def pick_model(model_ids, override=None):
+    """Auto-pick a vision-capable model: prefer gemma, else vl/vision, else qwen."""
+    if override:
+        return override
+    ids = [m["id"] for m in model_ids if isinstance(m, dict) and m.get("id")]
+    for key in ("gemma", "vl", "vision", "qwen"):
+        for mid in ids:
+            if key in mid.lower():
+                return mid
+    return None
+
+
+def ask_vision(model_id, endpoint, token, b64):
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": RUBRIC},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+        ]}],
+        "max_tokens": 2048,
+    }
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
+    content = ""
+    for attempt in range(2):  # thinking models sometimes return empty; retry once
+        try:
+            with urllib.request.urlopen(req, timeout=180) as r:
+                body = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")[:300] if e.fp else ""
+            fail(f"vision server returned HTTP {e.code}: {detail}", 1)
+        except Exception as e:  # timeout, connection refused, etc.
+            fail(f"vision request failed: {e}", 1)
+        msg = body.get("choices", [{}])[0].get("message", {})
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            content = "".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("text"))
+        if isinstance(content, str) and content.strip():
+            return content
+        # empty: try the model's reasoning trace rather than failing
+        reason = msg.get("reasoning_content") or ""
+        if isinstance(reason, str) and reason.strip():
+            content = reason
+    return content
+
+
+def append_ledger(target, grade, critique):
+    ts = time.strftime("%Y-%m-%d %H:%M")
+    first = next((ln.strip() for ln in critique.splitlines() if ln.strip()), "")
+    finding = first.replace("|", "\\|")[:120]
+    row = f"| {ts} | {target} | {grade} | {finding} |"
+    if not LEDGER.exists():
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        LEDGER.write_text(LEDGER_HEADER + "\n|---|---|---|---|\n")
+    with LEDGER.open("a", encoding="utf-8") as fh:
+        fh.write(row + "\n")
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Capture the hngh dashboard and grade it with a local vision model.")
+    ap.add_argument("--out", default=OUT_DEFAULT, help=f"screenshot path (default {OUT_DEFAULT})")
+    ap.add_argument("--model", default=None, help="override auto-picked vision model id")
+    args = ap.parse_args()
+
+    conf = load_conf()
+    endpoint = conf["endpoint"]
+    token = Path(conf["token-file"]).read_text().strip()
+
+    try:
+        models = get_json(models_api(endpoint), token)
+    except Exception as e:
+        fail(f"cannot list models at {models_api(endpoint)}: {e}", 1)
+    model_ids = [m.get("id") for m in models.get("data", []) if isinstance(m, dict)]
+    model_id = pick_model(models.get("data", []), args.model)
+    if not model_id:
+        listed = ", ".join(model_ids) if model_ids else "(none returned)"
+        fail(f"no vision-capable model found (need id containing gemma/vl/vision/qwen); "
+             f"available: {listed}. Use --model=<id> to override.", 2)
+
+    target = capture(args.out)
+    b64 = base64.b64encode(Path(args.out).read_bytes()).decode("ascii")
+
+    critique = ask_vision(model_id, endpoint, token, b64)
+    print(critique)
+
+    m = re.search(r"GRADE:\s*(\d+)/10", critique)
+    grade = f"{m.group(1)}/10" if m else "unparsed"
+    if not m:
+        print("GRADE: unparsed")
+    append_ledger(target, grade, critique)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
