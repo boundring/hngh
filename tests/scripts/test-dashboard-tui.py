@@ -73,18 +73,20 @@ class DashboardTUI(unittest.TestCase):
                     data += chunk
                 return data.decode("utf-8", "replace")
 
-            # first render settles in; the operative head glyph is shared
-            # by every frame, so it is a stable presence check.
+            # first render settles in; the operative head glyph (a seed-7
+            # frame fragment) is shared by every frame, so it is a stable
+            # presence check for the operative panel.
             first = snapshot(2.2)
-            self.assertIn("▄██▄", first, "operative figure renders")
+            self.assertIn("▄▄████▄▄", first, "operative figure renders")
             self.assertIn("hngh", first, "header renders")
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
 
             # frame cycling: a later read still shows the figure and the
-            # screen moved on (animation + live data tick).
+            # screen moved on (operative animation + live data tick), so
+            # the operative is not a frozen still.
             second = snapshot(1.6)
-            self.assertIn("▄██▄", second, "figure persists across frames")
+            self.assertIn("▄▄████▄▄", second, "figure persists across frames")
             self.assertNotEqual(first, second, "animation cycles")
         finally:
             try:
