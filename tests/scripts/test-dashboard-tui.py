@@ -81,19 +81,20 @@ class DashboardTUI(unittest.TestCase):
                 return data.decode("utf-8", "replace")
 
             # boot: poll until the first frame is fully painted — the
-            # operative eye-slit glyph (v4, shared by every frame), the
-            # queue table, an active-lanes row, and the beacon/scheduled
-            # strip (real store: beacon runs + "7 timers") all land in
-            # the same refresh — bounded, so a slow first paint under
-            # load never flakes. "node" is a known lane-id fragment.
+            # operative head glyph (v5 head fragment, shared by every
+            # frame), the queue table, an active-lanes row, and the
+            # beacon/scheduled strip (real store: beacon runs + "7
+            # timers") all land in the same refresh — bounded, so a slow
+            # first paint under load never flakes. "node" is a known
+            # lane-id fragment.
             first = ""
             deadline = time.time() + 8
-            while ("▀▀•▀▀" not in first or "queue" not in first
+            while ("██████" not in first or "queue" not in first
                    or "node" not in first or "beacon" not in first
                    or "7 timers" not in first) \
                     and time.time() < deadline:
                 first += snapshot(0.4)
-            self.assertIn("▀▀•▀▀", first, "operative figure renders")
+            self.assertIn("██████", first, "operative figure renders")
             self.assertIn("hngh", first, "header renders")
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
@@ -108,8 +109,8 @@ class DashboardTUI(unittest.TestCase):
             # base dwells. Tolerant: any consecutive pair may differ.
             second = snapshot(0.6)
             third = snapshot(0.6)
-            self.assertIn("▀▀•▀▀", second, "figure persists (2nd)")
-            self.assertIn("▀▀•▀▀", third, "figure persists (3rd)")
+            self.assertIn("██████", second, "figure persists (2nd)")
+            self.assertIn("██████", third, "figure persists (3rd)")
             self.assertTrue(first != second or second != third,
                             "animation is not frozen (sequence/breathe)")
         finally:
