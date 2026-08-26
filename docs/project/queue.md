@@ -68,6 +68,8 @@ For a systemd user timer unit instead of crontab, see
 [docs/project/heartbeat-service.md](heartbeat-service.md).
 ## Zoom-out pass log
 
+- **2026-08-26** — zoom-out pass via activity cadence: digest 2026-08-26.md; candidate intake to queue ledger
+
 A zoom-out pass polls market/news/opportunity sources and feeds new
 queue candidates or reprioritization. Record each pass here (dated).
 
