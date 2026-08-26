@@ -119,13 +119,15 @@ class DashboardTUI(unittest.TestCase):
             deadline = time.time() + 8
             while ("██████" not in first or "queue" not in first
                    or "node" not in first or "beacon" not in first
-                   or "7 timers" not in first) \
+                   or "7 timers" not in first
+                   or "live agents" not in first) \
                     and time.time() < deadline:
                 first += snapshot(0.4)
             self.assertIn("██████", first, "operative figure renders")
             self.assertIn("hngh", first, "header renders")
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
+            self.assertIn("live agents", first, "roster panel renders")
             self.assertIn("node", first, "active-lanes row renders")
             self.assertIn("beacon", first, "beacon state label renders")
             self.assertIn("7 timers", first, "scheduled strip renders")
