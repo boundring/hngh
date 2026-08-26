@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""backlog-lanes — parse docs/project/backlog.md into lane rows.
+
+Read-only one-shot. Each `## <name> — <subtitle>` heading is one lane.
+Status is derived from the heading and body text: `done` when the lane
+says COMPLETED, `queued` when it says queued (with the date), else
+`open`. A lane maps to a running queue row (in_queue) when its prose id
+token-covers a queue.md row id — best-effort, because lane ids are
+prose while queue ids are slugs (see a note below).
+
+Emits either aligned text columns or a stable JSON document designed
+for a downstream "active lanes" panel: stable keys, short ids, one
+record per lane.
+
+Read-only: it never writes, and it never edits the backlog or queue.
+"""
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+BACKLOG = ROOT / "docs" / "project" / "backlog.md"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+
+DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+def lane_heading(line):
+    """Return (id, subtitle) for a `## ...` heading, else (None, None).
+
+    The em dash splits id from subtitle; a heading without one has no
+    subtitle and the whole trimmed heading is the id.
+    """
+    text = line.strip().lstrip("#").strip()
+    if "\u2014" in text:            # em dash U+2014
+        left, right = text.split("\u2014", 1)
+        return left.strip(), right.strip()
+    return text, ""
+
+
+def first_date(text):
+    m = DATE.search(text)
+    return m.group(1) if m else None
+
+
+def lane_status(id_text, body, heading):
+    """status + date for a lane from its heading and body text."""
+    window = f"{heading} {body}"
+    if "COMPLETED" in window:
+        return "done", first_date(heading) or first_date(body)
+    if "queued" in window or "queued" in heading.lower():
+        return "queued", first_date(heading) or first_date(body)
+    return "open", None
+
+
+def tokens(text):
+    """Lowercased alphanumeric tokens of a normalized string."""
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def queue_ids():
+    """Row ids from the queue.md TSV fenced block (column 1, skips header)."""
+    ids = []
+    for line in QUEUE.read_text().splitlines():
+        if "\t" not in line or line.startswith("id\t"):
+            continue
+        ids.append(line.split("\t", 1)[0].strip())
+    return ids
+
+
+def lane_covers_queue_id(lane_id, queue_id):
+    """True when every token of queue_id prefixes (or equals) a token of lane_id.
+
+    Lane ids are prose ("Evidence-freshness + key-rotation rung") while
+    queue ids are slug ids ("key-rotation-freshness"); exact equality
+    never matches. Token coverage tolerates the mismatch: each slug
+    token must be a prefix of (or identical to) some lane token. e.g.
+    key-rotation-freshness is covered by ... key-rotation rung.
+    """
+    qtoks = tokens(queue_id)
+    ltoks = tokens(lane_id)
+    for qtok in qtoks:
+        if not any(qtok == ltok or ltok.startswith(qtok)
+                   for ltok in ltoks):
+            return False
+    return True
+
+
+def parse_backlog(filters):
+    lanes = []
+    current = None
+    qids = queue_ids()
+    for line in BACKLOG.read_text().splitlines():
+        if line.startswith("## "):
+            if current:
+                current["status"], current["date"] = \
+                    lane_status(current["id"], current["_body"], current["_heading"])
+                current["in_queue"] = any(
+                    lane_covers_queue_id(current["id"], qid) for qid in qids)
+                if not filters or current["status"] in filters:
+                    lanes.append({k: v for k, v in current.items()
+                                  if not k.startswith("_")})
+            head = line
+            ident, sub = lane_heading(head)
+            if ident:
+                current = {"id": ident, "subtitle": sub,
+                           "_body": "", "_heading": head}
+            else:
+                current = None
+        elif current is not None and not line.startswith("#"):
+            current["_body"] += " " + line
+    if current:
+        current["status"], current["date"] = \
+            lane_status(current["id"], current["_body"], current["_heading"])
+        current["in_queue"] = any(
+            lane_covers_queue_id(current["id"], qid) for qid in qids)
+        if not filters or current["status"] in filters:
+            lanes.append({k: v for k, v in current.items()
+                          if not k.startswith("_")})
+    return lanes
+
+
+def render_text(lanes):
+    rows = [(l["id"], l["status"], l["date"] or "-",
+             "Y" if l["in_queue"] else "N") for l in lanes]
+    widths = [max(len(r[i]) for r in rows + [("id", "status", "date", "queue")])
+              for i in range(4)]
+    out = ["  ".join(h.ljust(w) for h, w in zip(("id", "status", "date", "queue"), widths))]
+    for r in rows:
+        out.append("  ".join(r[i].ljust(widths[i]) for i in range(4)))
+    return "\n".join(out)
+
+
+def summary(lanes):
+    return {
+        "total": len(lanes),
+        "done": sum(1 for l in lanes if l["status"] == "done"),
+        "queued": sum(1 for l in lanes if l["status"] == "queued"),
+        "open": sum(1 for l in lanes if l["status"] == "open"),
+        "in_queue": sum(1 for l in lanes if l["in_queue"]),
+    }
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(
+        prog="backlog-lanes",
+        description="Parse backlog.md into lane rows.")
+    p.add_argument("--json", action="store_true",
+                   help="emit a stable JSON document")
+    p.add_argument("--done", action="store_true", help="only done lanes")
+    p.add_argument("--queued", action="store_true", help="only queued lanes")
+    p.add_argument("--open", action="store_true", help="only open lanes")
+    args = p.parse_args(argv)
+
+    filters = {s for s, flag in (("done", args.done),
+                                 ("queued", args.queued),
+                                 ("open", args.open)) if flag}
+    lanes = parse_backlog(filters)
+    summ = summary(lanes)
+
+    if args.json:
+        doc = {
+            "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "lanes": lanes,
+            "summary": summ,
+        }
+        print(json.dumps(doc, indent=2, sort_keys=True))
+    else:
+        print(render_text(lanes))
+        print(f"{summ['total']} lanes: {summ['done']} done, "
+              f"{summ['queued']} queued, {summ['open']} open; "
+              f"{summ['in_queue']} in queue")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
