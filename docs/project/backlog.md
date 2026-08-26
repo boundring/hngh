@@ -496,3 +496,58 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependency:** funding-rail receipts; a stateless micro-API.
 - **Review trigger:** an independent consumer calls the catalog API,
   pays, and gets a correct public result.
+
+## Interface mocks (interface-mocks) — the mock matrix lane
+
+- **Problem:** the operative layer is an interface *family* (panels,
+  TUI, overlay, web, Emacs-style surface, voice), but only the TUI is
+  real; the others are unproven concepts. We need cheap, graded mocks
+  to pick which surfaces earn a build.
+- **Smallest useful outcome:** one compact llm-trim-style panel mock
+  (menubar/card popover), then the KDE overlay operative — each run
+  through the automated interface grading loop before the next.
+- **Dependencies:** the `grade-interface` loop (landed); the family
+  matrix in `docs/design/assistant-interface.md`.
+- **Review trigger:** an independent reviewer accepts the graded mock
+  screenshots and ledger rows, not just the code.
+
+## Operative overlay (operative-overlay) — qml6 floating operative
+
+- **Problem:** the operative should float above the desktop — sprites,
+  speech, buttons, scrolling text — not live only in a terminal. A
+  plasmoid draws *under* windows; a standalone qml6 window is the
+  correct X11 recipe.
+- **Smallest useful outcome:** a frameless always-on-top transparent
+  qml6 window showing the operative as an `AnimatedSprite` sprite
+  sheet with speech, graded by the loop.
+- **Dependencies:** the sprite-sheet assets (`pixel-agent-assets`);
+  qt6-declarative (present); a research record exists.
+- **Review trigger:** an independent reviewer accepts a captured
+  overlay frame with a ledger grade and no daemon.
+
+## Operative voice (operative-voice) — local character voices
+
+- **Problem:** the operative is silent; speech should be a local,
+  character-driven *rendering* of the textual record, never a gate.
+- **Smallest useful outcome:** 3–5 distinct local neural TTS voices
+  (piper / kokoro-82m) plus STT (whisper.cpp / sherpa-onnx) with
+  push-to-talk, each operative persona voiced; record stays textual.
+- **Dependencies:** a chosen TTS engine; the tts-research record.
+- **Review trigger:** an independent reviewer accepts a rendered
+  speech sample matching the persona, with the textual record
+  unchanged.
+
+## Pixel-agent assets (pixel-agent-assets) — the sprite sheet lane
+
+- **Problem:** the operative's block-char figure is Atari-adjacent; the
+  goal is a stick-figure-plus humanoid (head, neck, torso, arms, legs)
+  with subtle motion — idle breathe, blink, coat sway — past that floor
+  toward sprite animations.
+- **Smallest useful outcome:** frame art for the operative's animation
+  set, consumable by both the TUI and the overlay
+  (`AnimatedSprite`); a comfyui image-gen practice lane refines the
+  look.
+- **Dependencies:** the family matrix; `interface-mocks` for where the
+  frames render first.
+- **Review trigger:** an independent reviewer accepts an animated
+  frame sequence (idle/breathe/blink/sway) graded by the loop.
