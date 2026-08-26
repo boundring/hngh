@@ -649,3 +649,149 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** a reviewer accepts a fixture where a
   notification maps to a prepared, non-mutating artifact and never
   fires an ambient action.
+
+## Push self-sufficiency (autonomy continuum 2026-08-26)
+
+- **Problem:** verified commits stop at the local repo — pushing is an
+  operator step, so origin lags the ceremony.
+- **Smallest useful outcome:** hngh-automation's sweep pushes its own
+  artifact commits once an origin remote exists; hngh's verified
+  candidate commits push on ceremony completion (post-ceremony step,
+  never a hook that could push a half-ceremony).
+- **Evidence:** operator directive 2026-08-26; sweep ritual record
+  (`sweep: 2026-08-26 0946` commits in hngh-automation).
+- **Risk:** pushing unpublished or credential-bearing material; the
+  sweep surface already excludes code dirs, and hngh pushes only
+  certificate-bound commits.
+- **Dependencies:** an origin remote for hngh-automation (operator
+  account action once); nothing new in hngh.
+- **Review trigger:** a push receipt in the sweep breadcrumb and a
+  ceremony record whose commit is visible on origin without operator
+  action.
+
+## Credential rotation automation (autonomy continuum 2026-08-26)
+
+- **Problem:** single-use refresh tokens and pinned keys decay; today a
+  decayed token surfaces as a 401 in STATE.md that only an operator
+  resolves (2026-08-26 13:00Z token-refresh FAILED).
+- **Smallest useful outcome:** a rotation/health job probes every
+  credential the jobs use, refreshes or re-derives what it can
+  unattended, files an `alert` report via report-queue for what it
+  cannot, and never widens a trust boundary to work around a failure.
+- **Evidence:** operator directive 2026-08-26; STATE.md 401 entry;
+  existing `key-rotation-freshness` backlog entry (this folds into it).
+- **Risk:** automated rotation failing open (new credential accepted
+  without verification) — must fail closed and alert instead.
+- **Dependencies:** key-rotation-freshness rung; the reviewer-transport
+  file format (strict five-key parsing).
+- **Review trigger:** a decayed-token fixture rotates unattended and a
+  second fixture (unverifiable refresh) produces an alert report with
+  no trust-boundary change.
+
+## Cadence continuum (autonomy continuum 2026-08-26)
+
+- **Problem:** periodicity exists only at the hourly/daily/night tiers;
+  the continuum (month/week/day/hour/10m/5m/1m + ad-hoc) has no
+  mounted surface.
+- **Smallest useful outcome:** a tier router script + systemd units for
+  each tier, each invocation exactly one tick, `make adhoc TIER=...`
+  for manual firing; tiers with no mounted work exit 0 immediately.
+- **Evidence:** operator directive 2026-08-26; existing unit pattern
+  (hngh-automation/systemd).
+- **Risk:** timer sprawl and overlapping ticks; single-tick + flock
+  keeps each tier serial.
+- **Dependencies:** hngh-automation job conventions; flock or
+  equivalent single-instance guard.
+- **Review trigger:** each tier fires its tick exactly once per period
+  in a fixture, and an empty tier exits 0 with a breadcrumb only.
+
+## Activity cadence (autonomy continuum 2026-08-26)
+
+- **Problem:** routine project activities (roadmap review, planning,
+  design, expansion, implementation, review, refactor, cleanup,
+  inward/outward communication) run only when remembered, not on a
+  continual schedule.
+- **Smallest useful outcome:** an activity matrix mapping each activity
+  to a cadence-continuum tier and an existing artifact
+  (roadmap.md, queue.md, active-work.md, reports.md), with a
+  single-tick runner that performs or files the next increment of each
+  due activity; fleet-aware (fleet-manager peers can adopt rows).
+- **Evidence:** operator directive 2026-08-26; queue.md Scheduling
+  section; fleet-manager.
+- **Risk:** busywork generation — each activity's smallest increment
+  must be defined or the tick files a report instead of acting.
+- **Dependencies:** cadence-continuum; report-queue; rotate-queue.
+- **Review trigger:** one full week of the matrix running produces at
+  least one real increment per activity and zero empty ceremonial
+  writes.
+
+## Governance vocabulary (autonomy continuum 2026-08-26)
+
+- **Problem:** "ritual"/"ceremony" are fussy and over-fixed for a
+  governance vocabulary that should be flexible about governance,
+  validation, and acceptance terms.
+- **Smallest useful outcome:** docs use the flexible vocabulary
+  (governance, validation, acceptance, admission) in prose; code
+  symbols and CLI verbs stay stable until a check-in-scale candidate
+  renames one surface deliberately.
+- **Evidence:** operator directive 2026-08-26.
+- **Risk:** symbol renames breaking scripts/tests — prose-only first.
+- **Dependencies:** none.
+- **Review trigger:** a terminology inventory shows no prose-only uses
+  of the fixed terms without a deliberate governance meaning.
+
+## Agent live view (autonomy continuum 2026-08-26)
+
+- **Problem:** subagent work is visible only through the disjoint `hub`
+  surface, not the dashboard, and the dashboard itself is insufficient
+  for continual oversight.
+- **Smallest useful outcome:** the dashboard reads a live agent/session
+  roster (from the hngh store sessions plus any mounted agent
+  transcripts) and renders working/idle/parked agents alongside the
+  existing lanes; the roster refresh rides the existing watch/live
+  loop.
+- **Evidence:** operator directive 2026-08-26; dashboard-readout
+  --live/--watch; `scripts/hngh present` store rendering.
+- **Risk:** reading live transcripts as authoritative — display only,
+  never governance input.
+- **Dependencies:** ux-hardening; dashboard-readout spine.
+- **Review trigger:** a running worker session appears in the live
+  dashboard within one refresh period and disappears on close.
+
+## Surface evolution loop (autonomy continuum 2026-08-26)
+
+- **Problem:** operator-facing surfaces and megastructure parts evolve
+  only by hand; there is no evolutionary design/development pressure.
+- **Smallest useful outcome:** one evolution loop for one surface
+  (dashboard style): candidate variants are generated, graded by the
+  existing grade machinery, the fittest is promoted through a
+  check-in-scale candidate; loop parameters live in a heartbeat card so
+  the cadence drives generations.
+- **Evidence:** operator directive 2026-08-26; dancing-ui probe,
+  grade-interface, evolve-operative, ui-grades.md.
+- **Risk:** runaway generation cost — bounded generations per tick via
+  the card.
+- **Dependencies:** cadence-continuum; grade-interface.
+- **Review trigger:** N generations produce a measurably higher-graded
+  variant promoted through the normal gates.
+
+## Machine-steered backlog (autonomy continuum 2026-08-26)
+
+- **Problem:** the next course is picked by fixed rules (queue Next +
+  lane counts); Hngh does not determine its own best course on a
+  continual basis.
+- **Smallest useful outcome:** a course-selection step in the
+  autonomous tick that reads the queue, lanes, reports, and roadmap as
+  evidence, ranks next actions by a written policy, and mounts the
+  chosen card — still behind the existing certificate gates for any
+  mutation; its choice and reasons land in a report row.
+- **Evidence:** operator directive 2026-08-26; run-autonomous tick;
+  rotate-queue; backlog-lanes.
+- **Risk:** self-steering circumventing policy — the selector may only
+  mount work, never bypass a gate; every mutation still needs its own
+  certificate.
+- **Dependencies:** run-autonomous; report-queue; the activity cadence
+  matrix as its input.
+- **Review trigger:** a fixture where the selector's ranking differs
+  from the static queue Next produces a justified choice report, and
+  the mounted slice still passes the full certificate gate.
