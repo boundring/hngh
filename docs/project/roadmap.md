@@ -108,5 +108,34 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
    half — or the node-lattice boundary amendments (ambient tunnels,
    certificate-bound wake) that must clear their own policy proposals
    first.
+2. **The autonomy continuum (operator directive 2026-08-26, folded
+   into the queue ledger).** Eight queued rungs that turn the hourly
+   cadence into a self-governing continuum — no slice of which admits
+   a daemon; every tier stays an operator-installed timer invoking
+   single-tick scripts:
+   - `push-self-sufficiency` — both repos land and push their own
+     verified commits (sweep + post-ceremony push).
+   - `credential-rotation-auto` (folds into `key-rotation-freshness`)
+     — token/key rotation, health probes, and alert reports with zero
+     operator intervention; fail closed, never fail open.
+   - `cadence-continuum` — the timing tiers (month/week/day/hour/
+     10m/5m/1m + ad-hoc) as systemd units over single-tick jobs.
+   - `activity-cadence` — the routine project activities (roadmap
+     review, planning, design, expansion, implementation, review,
+     refactor, cleanup, inward/outward communication) riding those
+     tiers, scaled to the observed fleet.
+   - `governance-vocabulary` — relax the ritual/ceremony terms to a
+     flexible governance vocabulary (prose first; symbol renames only
+     where a check-in-scale ceremony covers them).
+   - `agent-live-view` (folds into `ux-hardening`) — an automatic
+     on-screen view of all working subagents, integrated into the
+     dashboard rather than disjoint from it.
+   - `surface-evolution-loop` (extends `dancing-ui` + grade-interface)
+     — evolutionary design/development for every operator-facing
+     surface and every part of the megastructure, graded continually.
+   - `machine-steered-backlog` — machine-gated governance where Hngh
+     determines its own best-course continually (run-autonomous +
+     rotate-queue grow a course-selection step behind the existing
+     certificate gates).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
