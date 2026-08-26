@@ -1,0 +1,7 @@
+12:15 lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests + ceremony + automation hook. Plan written; next: ground-read ceremony/backlog/generate-publication/Makefile, then write scripts/report-queue
+08:16 lane: hngh-report-display — started: reports UI (dashboard-tui modal+table, osd status), tolerant tests, ceremony, relaunch. Next: verify report-queue presence + env facts, then edit dashboard-tui.
+08:20 lane: hngh-report-display — env verified: report-queue ABSENT (fail-closed live path), textual 8.2.8 ModalScreen OK, ceremony-drive=sbcl --store=.. OBJECTIVE FILES. Next: edit dashboard-tui (reader/table/strip), then modal.
+12:20 lane: contracts grounded (heartbeat/backlog/generate/ceremony/loop-guard/tests/systemd). Now writing scripts/report-queue + generate-publication env override
+08:24 lane: hngh-report-display — impl done: TUI reports table+strip+ReportModal (seen-set, fail-closed), osd report_status enrich. Modal/pty/osd unit tests pass; positive modal smoke OK. Next: make test, then ceremony.
+08:28 lane: hngh-report-display — make test fully green (2774 lisp checks, 16 python files rc=0). Next: ceremony commit (dashboard-tui, osd-operative, tests, active-work.md).
+12:25 lane: report-queue done (add/list/unread/mark-read/json, exit 2 guards). Next: run-autonomous; its journal generation must be test-hermetic — will add HNGH_GEN_ROOT override style after checking generate-publication git deps
