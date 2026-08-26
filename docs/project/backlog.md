@@ -551,3 +551,101 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   frames render first.
 - **Review trigger:** an independent reviewer accepts an animated
   frame sequence (idle/breathe/blink/sway) graded by the loop.
+
+## CI governance gate (ci-governance-gate)
+
+- **Problem:** CI failures surface as unstructured logs; nothing
+  parses or resolves them, ceremonies do not auto-complete, and a
+  pending commit can sit unevaluated. The operator wants any CI
+  failure parsed and resolved through the ceremony, no pending commit
+  left un-evaluated.
+- **Smallest useful outcome:** a GitHub Actions adapter consumes an
+  exported failure log as downstream evidence, runs the dogfood
+  ceremony to complete or reject the pending commit, and refuses to
+  re-run until the event is ceremony-resolved.
+- **Evidence:** the ceremony-drive script and the promotion rung 18
+  worker evidence fact; this entry.
+- **Risk:** CI logs are untrusted input; parsing must refuse closed
+  on malformed or oversized logs; the gate must not become an ambient
+  watcher (operator-owned cron and state, no daemon).
+- **Dependencies:** the ceremony loop (rung 9); a Gitea/Forgejo
+  Actions second adapter once a pinned peer really runs Forgejo.
+- **Review trigger:** an independent reviewer accepts a fixture where
+  a failure log maps to one certificate-bound completion or rejection
+  and a re-run refuses without a new event.
+
+## Resource pool view (resource-pool-view)
+
+- **Problem:** the fleet (local plus wide-area machines) is not yet a
+  single pool; per-node status, duty, health, and capabilities are not
+  surfaced together.
+- **Smallest useful outcome:** one on-demand dashboard panel listing
+  each admitted node as a row with status, duty, health, and
+  capabilities; no ambient collector — the operator-owned heartbeat
+  tick refreshes it.
+- **Evidence:** the node-lattice groundwork (pinned peers, wake-peer,
+  attestation); `dashboard-readouts`; this entry.
+- **Risk:** rows must trace only pinned, evidence-backed claims; a
+  node stays untrusted until pinned through the existing ceremony.
+- **Dependencies:** node-lattice admission (`node-lattice-admission`),
+  `pooled-hardware`, the dashboard panel machinery.
+- **Review trigger:** a reviewer accepts a rendered pool page whose
+  rows all trace to pinned, evidence-backed claims.
+
+## Config manager (config-manager)
+
+- **Problem:** system configuration is edited in place; rollouts are
+  not evidence-backed or reversible.
+- **Smallest useful outcome:** a per-node declared-config bundle whose
+  intended state after apply is read back into evidence, a
+  certificate-bound apply, and reversibility by reverting the
+  declaration.
+- **Evidence:** the mutation executor (`:commit` action); the worker
+  substrate; this entry.
+- **Risk:** configuration changes are high-band actions — the apply
+  must recheck every evidence fact at the moment of mutation, and the
+  revert path must exist without an untracked daemon.
+- **Dependencies:** the mutation executor, the per-node worker,
+  optional model patterns (NixOS, home-manager, apt-adjacent).
+- **Review trigger:** an independent reviewer accepts a fixture where
+  an applied and reverted config binds to evidence facts and a drift
+  from the declared bundle refuses.
+
+## Security manager (security-manager)
+
+- **Problem:** key rotation freshness, secret hygiene, patch-state
+  evidence, and incident-response evidence chains are not surfaced
+  across nodes.
+- **Smallest useful outcome:** per-node patch-state and key-freshness
+  evidence rows (vintage of the secret scan, date of last rotate,
+  patch delta) as machine-checkable facts; incident response is a
+  transparent event-to-record-to-certify chain.
+- **Evidence:** the `key-rotation-freshness` workload;
+  `secret-scan-report`; this entry.
+- **Risk:** patch and rotate metadata is perishable and must carry its
+  own evidence; freshness attestations are easy to fake if the chain
+  is not pinned.
+- **Dependencies:** the resource pool view; the key-pin registry
+  (rung 12).
+- **Review trigger:** a reviewer accepts a freshness or secret finding
+  that, alone or in a chain, refuses to certify a stale key.
+
+## Notify agent (notify-agent)
+
+- **Problem:** mail and job-search signals sit in inboxes; nothing
+  reacts. The preparatory agentic work (draft a reply, first evidence,
+  ceremony proposal) is manual.
+- **Smallest useful outcome:** a KDE notification reaction agent —
+  via `org.freedesktop.Notifications` and the probed notification
+  daemon — receives an event and prepares a draft reply, evidence, and
+  a ceremony proposal.
+- **Evidence:** the desktop overlay and notification-daemon research;
+  the tts/voice `omp say` note; this entry.
+- **Risk:** notification payloads are untrusted UI content; the agent
+  must treat them as hints, never as authorization, and stay
+  operator-confirmed before any external side effect.
+- **Dependencies:** a bounded reaction worker (Pi survey and the
+  rung-18 worker); push via ntfy / Apprise as a follow-on.
+- **Review trigger:** a reviewer accepts a fixture where a
+  notification maps to a prepared, non-mutating artifact and never
+  fires an ambient action.
