@@ -51,12 +51,48 @@ lives under Pre-release / early development until the first release.
 - Added `scripts/ceremony-drive` — a closed ceremony glue for explicit
   file candidates (create-run → admit → deterministic verdict →
   prepare-candidate → commit) used to land the milestone.
+- Added the full-screen dashboard TUI (`scripts/dashboard-tui`): a
+  textual (rich) read-only TUI with an animated operative, an
+  active-lanes panel, and live session tables, fed from the operator
+  store through the same read-only renderer as `dashboard-readout`
+  (`--watch`/`--live` foreground loop, `--json` spine, `--export-html`).
+- Added the interface grading loop (`scripts/grade-interface` +
+  `docs/project/ui-grades.md`): a deterministic first-finding grade
+  (target + grade + first finding) per interface, feeding every UI
+  iteration.
+- Added the operative evolution story (`scripts/evolve-operative`,
+  generations 1–4/5) with `docs/design/operative-frames.md` (the
+  frame/animation spec) and the operative layer framed in
+  `docs/design/assistant-interface.md`.
+- Added the desktop OSD overlay (`scripts/osd-operative` +
+  `osd-operative.qml`): a frameless always-on-top Plasma 6 webview that
+  floats the operative above app windows, backed by
+  `tests/scripts/test-osd-operative.py`.
+- Added backlog tooling: `scripts/backlog-lanes` parses
+  `docs/project/backlog.md` into lane rows (json/text, status + date,
+  in-queue mapping) for any "active lanes" surface; `scripts/notify-agent`
+  is a bounded KDE notification reaction agent
+  (`org.freedesktop.Notifications`) that classifies job-search signals
+  and appends hits to `docs/project/notify-log.md` — one-shot, no
+  daemon, stdlib only.
+- Added research docs: `docs/project/integrations-marketplace.md` (where
+  Hngh's governance pattern binds to CI, agent harnesses, ops, and
+  security tooling, each with a ranked now/next/later first slice) and
+  `docs/project/system-harness-roadmap.md` (a resource pool of nodes
+  under one governance: pool view, config manager, security manager).
+- Added the scheduled-runs investigation record
+  (`docs/records/2026-08-26-scheduled-runs-investigation.md`): the
+  hngh-automation schedule is healthy (7 systemd user timers firing),
+  the cancelled store runs were beacons closed `cancelled` by design,
+  and exit-0 runs now close `evacuated`.
 
 #### Changed
 
 - The queue ledger's Scheduling section documents the heartbeat cron;
   the fleet observation record and heartbeat card mounts land in
-  `docs/project/`.
+  `docs/project/`. The dashboard documentation now covers the
+  full-screen TUI, the grading loop, the operative evolution, and the OSD
+  overlay.
 
 ### 2026-08-25
 

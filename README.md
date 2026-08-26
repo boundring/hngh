@@ -140,6 +140,31 @@ the current number) and an operator command surface. Implemented:
   admit worker → run-worker → close) as a single explicit operator invocation.
   It is glue over the existing surface, adds no authority, and the periodic
   invocation belongs to the operator's scheduler, never a daemon.
+- Full-screen dashboard TUI (`scripts/dashboard-tui`): a textual (rich)
+  read-only TUI with an animated operative, an active-lanes panel, and
+  live session tables, fed from the operator store through the same
+  read-only renderer as `dashboard-readout`.
+- Interface grading loop (`scripts/grade-interface` + `docs/project/ui-grades.md`):
+  a deterministic first-finding grade for each interface, feeding every
+  UI iteration — the seed of the federated UI/UX validation the
+  assistant-interface design names.
+- Operative evolution (`scripts/evolve-operative`): a generated operative
+  (generations 1–4/5) with the animation spec in
+  `docs/design/operative-frames.md` and the operative layer framed in
+  `docs/design/assistant-interface.md`.
+- Desktop OSD overlay (`scripts/osd-operative` + `osd-operative.qml`): a
+  frameless, always-on-top Plasma 6 webview that floats the operative
+  above the desktop, backed by `tests/scripts/test-osd-operative.py`.
+- Backlog tooling: `scripts/backlog-lanes` parses `docs/project/backlog.md`
+  into lane rows (json/text, status + date, in-queue mapping) so any
+  surface can render an active-lanes view; `scripts/notify-agent` is a
+  bounded KDE notification reaction agent (`org.freedesktop.Notifications`)
+  that classifies job-search signals and appends hits to
+  `docs/project/notify-log.md` — one-shot, no daemon, stdlib only.
+- Research docs: `docs/project/integrations-marketplace.md` (where the
+  governance pattern binds to CI/agent-harness/ops/security tooling) and
+  `docs/project/system-harness-roadmap.md` (a fleet of nodes under one
+  governance: resource pool, config manager, security manager).
 
 Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
@@ -186,6 +211,18 @@ low-powered friend the way any new peer is admitted: evidence first, then a plac
 machine never learns what a thousand machines each failed once; a mesh of small ledgered
 machines is how a city covers a lawn, then the next lawn, then the planet — and never a
 wall that does not say who raised it.
+
+That lattice is a resource pool, not just a mesh: each node is an
+addressable component with a status, a duty, a health readout, and a
+capability set, surfaced in the dashboard as a row or panel — from a
+static line to a full "dance-able" animated surface, the interface-level
+grading in [ui-grades.md](docs/project/ui-grades.md). Declared per-node
+configuration applies evidence-backed and reverses cleanly; key rotation,
+secret hygiene, and patch-state are security-manager duties with the same
+certificate-bound evidence chain. The direction is concrete
+([system-harness-roadmap.md](docs/project/system-harness-roadmap.md)):
+wide-area, low-powered machines are first-class citizens of the harness,
+never second-class peers bolted on later.
 
 ## Documentation
 

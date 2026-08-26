@@ -27,3 +27,22 @@ For newcomers: read [README.md](../README.md) at the repository root first.
 10. [Backlog](project/backlog.md) — work not yet admitted.
 11. [Records](records/README.md) — evidence, decisions, and cutover records; the
     prior state's retirement archive is covered there.
+
+### Interface and research reads
+
+The operator-facing surface and the integrations roadmap read as
+companions to the contracts above, after the core read order:
+
+- [Assistant interfaces](design/assistant-interface.md) — the operative
+  layer (the dark-coat presence, aesthetic, voice, interface family).
+- [Interface grading](design/interface-grading.md) — the automated grade
+  loop (`grade-interface`) and the graded surface each interface must
+  pass.
+- [Operative frames](design/operative-frames.md) — the animation/frame
+  spec behind `evolve-operative`'s generated operative.
+- [Integrations marketplace](project/integrations-marketplace.md) — where
+  Hngh's governance pattern binds to CI, agent harnesses, ops, and
+  security tooling.
+- [System-harness roadmap](project/system-harness-roadmap.md) — a fleet of
+  nodes under one governance: resource pool, config manager, security
+  manager.

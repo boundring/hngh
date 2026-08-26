@@ -122,5 +122,12 @@ authorize a future action.
   3 of 7 jobs wrote runs, and the applied fixes (exit-0 closes
   `evacuated`; the night-agent/morning-report/model-bench/night-research
   jobs now beacon).
+- `2026-08-26-osd-and-dashboard.md` records the operator-facing visual
+  surface that landed in the last 24 hours: the `dashboard-tui` full-
+  screen TUI, the `grade-interface` grading loop with `ui-grades.md`,
+  the `evolve-operative` animation/evolution story and
+  `operative-frames.md`, and the Plasma `osd-operative` overlay — all
+  candidate-bound through the ceremony, with the kernel's governance
+  surface unchanged.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
