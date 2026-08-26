@@ -78,3 +78,12 @@ These precepts are aspirational direction, not a spec: each becomes
 concrete when a slice proposes a design that realizes one. The wired-
 state lens checks that such slices land with an eye toward the
 watch/cadence/unified-logging/continuity dimensions.
+## 10. Model tiering — cost/context-optimized calls
+Primary functions rely on local models and the cheapest remote models.
+Occasionally call smarter/more expensive models, but only in the most
+context-optimized and cost-optimized manner. Even local/cheap calls are
+context- and cost-optimized; advanced (expensive) calls are held to a
+higher bar — bounded payloads, right-sized context, one-shot where
+possible, gated to the cadence beat that can afford them. The route
+ladder (local < cheap-remote < expensive-remote) is decided by the
+evaluation's cost window, not by habit (precept 2).
