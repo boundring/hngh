@@ -19,6 +19,7 @@ import io
 import json
 import contextlib
 import os
+import re
 import select
 import signal
 import subprocess
@@ -118,6 +119,39 @@ def queue_items():
 _session_cache = {"at": 0.0, "rows": None}
 
 
+def _strip_nesting(value):
+    """Scrub bracket/quote nesting from a field value so no cell ever
+    shows raw plist/array text (e.g. station=['0','0',0,'1'])."""
+    return re.sub(r"[\[\](){}'\"]", "", value)
+
+
+def _parse_present(fields, store_name):
+    """Parse one `present run-1` line's whitespace tokens into a session
+    dict. Every `key=value` token becomes its own field (state/role/
+    loadout/route/station/...), and values are scrubbed of bracket/quote
+    nesting so nothing raw leaks to a column. `mission` is the explicit
+    mission= value joined with the trailing non-field prose, in order —
+    a value carrying spaces (mission=deploy the thing) reads back whole.
+    `store_name` (the store directory base name) is kept so repeated
+    run-N rows stay distinguishable."""
+    info = {"run": fields[1], "store": store_name}
+    mission_value = None
+    prose = []
+    for tok in fields[2:]:
+        key, eq, value = tok.partition("=")
+        if eq and key and not any(ch in key for ch in "[](){}'\""):
+            value = _strip_nesting(value)
+            if key == "mission":
+                mission_value = value
+            else:
+                info[key] = value
+        else:
+            prose.append(_strip_nesting(tok))
+    mission = ([mission_value] if mission_value is not None else []) + prose
+    info["mission"] = " ".join(m for m in mission if m)
+    return info
+
+
 def session_rows(limit=5, ttl=0.0):
     """Live session store: the newest STORE_ROOT sub-stores rendered
     through scripts/hngh present (the canonical renderer). Read-only,
@@ -156,14 +190,7 @@ def session_rows(limit=5, ttl=0.0):
         fields = text.split()
         if len(fields) < 4 or fields[0] != "run":
             continue
-        info = {"run": fields[1]}
-        parts = []
-        for field in fields[2:]:
-            if "=" in field and (not parts or " " not in field):
-                info[field.split("=", 1)[0]] = field.split("=", 1)[1]
-            else:
-                parts.append(field)
-        info["mission"] = " ".join(parts).lstrip("mission=")
+        info = _parse_present(fields, store.name)
         info["age"] = age
         rows.append(info)
     _session_cache.update(at=time.time(), rows=rows)
