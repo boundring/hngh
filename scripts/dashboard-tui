@@ -248,6 +248,36 @@ THEMES = [
 ]
 PRESETS = [t.name for t in THEMES]
 
+# Evolve-dashboard-style mount: if a fittest overlay was bred, apply its
+# color fields to the matching preset so the accepted variant is live.
+EVOLVE_OVERLAY = ROOT / "docs" / "design" / "ui-evolve" / "current-overlay.json"
+
+
+def _apply_overlay():
+    if not EVOLVE_OVERLAY.exists():
+        return
+    try:
+        doc = json.loads(EVOLVE_OVERLAY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    fields = doc.get("fields") or {}
+    name = doc.get("preset")
+    if not name:
+        return
+    for t in THEMES:
+        if t.name == name:
+            for attr in ("primary", "secondary", "accent", "foreground",
+                         "background", "surface", "panel", "warning",
+                         "error", "success"):
+                if attr in fields:
+                    setattr(t, attr, fields[attr])
+            if "dark" in fields:
+                t.dark = bool(fields["dark"])
+            break
+
+
+_apply_overlay()
+
 # State coloring for sessions. Beacon runs (scheduled pings that
 # lib/hngh-record.sh closes cancelled BY DESIGN) render dim/green as
 # "beacon" so the panel doesn't read as a wall of alarming cancellations;
