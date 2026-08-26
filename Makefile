@@ -5,6 +5,7 @@ SHELL := /bin/bash
 LISP_SOURCES := $(shell find src tests -name '*.lisp' -not -path '*/.git/*' -not -path '*/fixtures/lint-parens/*')
 
 test:
+	python3 tests/scripts/test-notify-agent.py
 	python3 tests/scripts/test-backlog-lanes.py
 	python3 tests/scripts/test-lint-parens.py
 	python3 tests/scripts/test-loop-history-guard.py

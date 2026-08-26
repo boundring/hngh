@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""notify-agent — KDE notification reaction agent (job-search signals).
+
+Grounded: the mail client is Firefox webmail; job-search notifications
+arrive via org.freedesktop.Notifications. This agent watches the
+notification bus for a bounded window, classifies each notification
+against job-search keywords, and appends timestamped hits to
+docs/project/notify-log.md — one-shot, no daemon.
+
+Classifying is pure and offline-testable (--classify); listening runs
+`dbus-monitor "interface='org.freedesktop.Notifications'"` for N
+seconds and parses Notify method calls into app + summary + body.
+Notifications are untrusted UI content: this agent only records an
+evidence line; it never authorizes or fires an external action, and it
+never reads mail itself.
+"""
+
+import argparse
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+NOTIFY_LOG = ROOT / "docs" / "project" / "notify-log.md"
+
+KEYWORDS = [
+    "application", "interview", "job", "position", "resume", "cv",
+    "offer", "rejection", "rejected", "callback", "recruiter",
+    "hiring", "freelance", "contract",
+]
+
+KEYWORD_RE = re.compile(r"\b(?:%s)\b" % "|".join(
+    re.escape(k) for k in KEYWORDS), re.IGNORECASE)
+
+
+def classify(text):
+    """First job-search keyword matched, else None."""
+    m = KEYWORD_RE.search(text or "")
+    return m.group(0).lower() if m else None
+
+
+def parse_notify_blocks(monitor_text):
+    """Yield (app, summary, body) tuples from dbus-monitor Notify output.
+
+    A Notify method call prints a `member=Notify` line followed by the
+    args: string app_name, uint32 id, string icon, string summary,
+    string body — so the first, third, and fourth string captures are
+    the app, summary, and body. Blocks run until a blank line or the
+    next member= line.
+    """
+    lines = monitor_text.splitlines()
+    i = 0
+    while i < len(lines):
+        if "member=Notify" in lines[i]:
+            strings = []
+            j = i + 1
+            while j < len(lines) and lines[j].strip():
+                if '"' in lines[j]:
+                    m = re.search(r'"((?:[^"\\]|\\.)*)"', lines[j])
+                    if m:
+                        strings.append(m.group(1))
+                j += 1
+            if len(strings) >= 4:
+                yield strings[0], strings[2], strings[3]
+            i = j
+        else:
+            i += 1
+
+
+def listen(seconds):
+    """Run dbus-monitor for `seconds`, collecting job-search hits.
+
+    Returns a list of (timestamp, app, keyword, summary) rows.
+    Uses select on the pipe with the remaining budget so the process
+    is bounded and never lingers past the window. All output is
+    captured, then parsed once, so each block is yielded exactly once.
+    """
+    import select
+    proc = subprocess.Popen(
+        ["dbus-monitor", "interface='org.freedesktop.Notifications'"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+        cwd=ROOT)
+    buf = []
+    hits = []
+    deadline = time.monotonic() + seconds
+    try:
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            ready, _, _ = select.select([proc.stdout], [], [], remaining)
+            if not ready:
+                break
+            line = proc.stdout.readline()
+            if not line:
+                break
+            buf.append(line)
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    for app, summary, body in parse_notify_blocks("".join(buf)):
+        kw = classify(f"{summary} {body}")
+        if kw:
+            hits.append((datetime.now().strftime("%Y-%m-%d %H:%M"),
+                         app, kw, summary[:100]))
+    return hits
+
+
+def append_hits(hits):
+    """Append hit rows to notify-log.md, creating it with a header first."""
+    NEW = not NOTIFY_LOG.exists()
+    rows = []
+    for when, app, kw, summary in hits:
+        rows.append(f"| {when} | {app} | {kw} | {summary} |")
+    if not rows:
+        return NEW
+    header = ("# Notify log — job-search signals\n\n"
+              "Timestamped hits from the KDE notification reaction "
+              "agent (`scripts/notify-agent --listen`). Appended by the "
+              "agent; read-only evidence, never an authority.\n\n"
+              "| time | app | keyword | summary |\n"
+              "|---|---|---|---|\n")
+    with NOTIFY_LOG.open("a", encoding="utf-8") as fh:
+        if NEW:
+            fh.write(header)
+        for row in rows:
+            fh.write(row + "\n")
+    return NEW
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(
+        prog="notify-agent",
+        description="KDE notification reaction agent for job-search "
+                    "signals; one-shot, no daemon.")
+    p.add_argument("--listen", type=int, default=60, metavar="N",
+                   help="watch the notification bus for N seconds "
+                        "(default 60), classify, append hits")
+    p.add_argument("--classify", metavar="TEXT",
+                   help="print hit:<keyword> or none for one text "
+                        "(offline-testable)")
+    args = p.parse_args(argv)
+
+    if args.classify is not None:
+        kw = classify(args.classify)
+        sys.stdout.write(f"hit:{kw}\n" if kw else "none\n")
+        return 0
+
+    hits = listen(args.listen)
+    if hits:
+        append_hits(hits)
+    sys.stdout.write(f"{len(hits)} job-search hit(s) in {args.listen}s\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
