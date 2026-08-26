@@ -975,3 +975,462 @@ Regenerate the adopted JSON for the TUI worker:
 ```
 python3 scripts/evolve-operative --gen 3 --frames 4 --seed 7 --out operative-frames.json
 ```
+
+---
+
+## Generation 4 — `operative-v4` (Nihei-proportion fluid)
+
+The flagship pass. The fitness signal was the overnight review of the live
+animation:
+
+> "still pretty Atari, not terribly well animated ... no more ball-shaped heads on
+> awkward-proportioned Atari-style figures. We're doing fluid but pixellated renders
+> with all kinds of artistic tricks and finesse points in an evolutionary manner."
+
+This critique IS the gen-4 fitness journal (also captured by `--self-grade --gen 4`).
+The response studies Nihei's proportion and scale — the gaunt, elongated figures, tiny
+heads, huge coats, vast negative space — and makes a near-miss render that mimics
+proportion and scale, not just bumps a shape:
+
+- **Nihei proportions** — a genuinely tiny head (2 rows, flat slab — never a ball),
+  a long neck with huge void either side, narrow sloping shoulders, and a coat that
+  dominates roughly half the canvas (rows 5-12 of 17 = vertical rhythm 1 head / 2
+  neck / ~6 coat / 3 legs / 1 ground). The coat flares wide while the body and legs
+  stay narrow, so the figure reads tall-and-thin even at 17 rows.
+- **Fluid pixel tricks** — `▒` anti-aliased feathering on the shoulder/chest diagonals,
+  motion-blur `░` drag-tails off the coat hem during flares, squash-and-stretch on
+  breath, an anticipation lean that LAGS the coat and SHIFTS the shadow opposite, and
+  staggered limb motion (the arm columns follow the shoulder catch-up).
+- **No ball head** — the head is a flat tilted slab / helmet wedge with an eye-slit,
+  never rounded.
+- **Detail finesse** — interior coat shading (`▓` lit core → `▒` edge light → `░` dark
+  hems), a secondary light source on one side, the `•` eye mote persisting through a
+  blink, and a ground contact shadow that shifts with the motion.
+- **Looped motion arc** — `--frames 4` is a closed loop: anticipation → action →
+  settle. Each frame draws mutations from its phase pool.
+
+Reproduce any family: `python3 scripts/evolve-operative --gen 4 --frames 4 --seed N`.
+
+### Pairwise self-review — v3 seed 7 vs v4 seed 7 (base frames side by side)
+
+```
+   v3 7/0 (deliberate)            |  v4 7/0 (Nihei fluid)
+   ----------------------------|------------------------
+          ▄██████▄             |         ██████
+         █▒██████▒█            |        █▀▀•▀▀█
+         █▀▀▀▀•▀▀▀█            |          ██
+          ▀██████▀             |          ██
+             ██                |     ▐    ██     ▌
+       ▄████████████▄          |     ▐  ▄██████▄ ▌
+     ▐  ████████████  ▌        |     ▐ ██████████ ▌
+     ▐   ██████████   ▌        |     ▐ ▓████████▓ ▌
+     ▐    ████████    ▌        |      ▓▓████████▓▓
+       ▄▄ ████████ ▄▄          |      ████▓▓  ▓▓████
+           ██▓▓▓▓██            |      ▒███▓    ▓███▒
+          ██░█  █░██           |      ▓██░      ░██▓
+          ░██░█  █░██░         |     ░░██        ██░░
+            ██    ██           |      ██          ██
+            ██    ██           |      ██          ██
+            ███  ███           |      ███        ███
+     ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄      |   ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+
+**Verdict: v4 is past the "Atari" bar and beats v3.** v3 is a clean, detailed sprite, but
+it still reads as a compact video-game character: a 4-row rounded head, wide 12-cell
+shoulders, a moderate coat, legs only a few cells apart, a small shadow — proportionally
+"normal", which is exactly the Atari register the critic flagged. v4 is proportionally
+*wrong* in the deliberate Nihei direction: a tiny flat wedge head on a long, empty neck,
+shoulders narrower than the coat, a coat that dominates half the frame with an interior
+gradient and seams, narrow legs with a huge void between them, and a shadow that cleaves
+to the ground. Vast negative space reads as the megastructure register; the flicker of
+the eye mote, the shaded coat, the feathered edges and the anticipation lean are the
+"fluid but pixellated" tricks. The operator's targets — no ball heads, Nihei proportions,
+artistic finesse — are met. The loop (lean right → seams open → stance widen) is a clear
+anticipation → action → settle arc, not a static bump.
+
+### Families (each is a 4-frame loop: base + anticipate + action + settle)
+
+---
+
+#### family `operative-v4` · seed 7
+
+**frames**
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+         ██████
+        █▀▀•▀▀█
+          ██
+          ██
+    ▐     ██     ▌
+    ▐   ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄
+```
+`idle-1` · `[lean-right, shadow-shift]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓███░░███▓▓
+     ████▓░░ ▓▓████
+     ▒███▓░░  ▓███▒
+     ▓██░ ░░   ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[seams]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+    ██           ██
+    ██           ██
+    ███          ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[stance-wide]`
+
+**rationale** — The head of the pack and the recommended loop: `idle-1` `lean-right`+`shadow-shift` is a clean anticipation (coat lags, shadow cleaves opposite), `idle-2` `seams` opens the coat panels as the action, `idle-3` `stance-wide` settles onto the planted legs. The balance of tiny head, coat, and leg void is the purest Nihei read.
+
+---
+
+#### family `operative-v4` · seed 42
+
+**frames**
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+      ██████
+     █▀▀•▀▀█
+       ██
+       ██
+   ▐   ██     ▌    ▌
+   ▐ ▄██████▄ ▌    ▌
+   ▐  ██████████ ▌ ▌
+   ▐  ▓████████▓ ▌ ▌
+   ▐ ▓▓████████▓▓  ▌
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄
+```
+`idle-1` · `[lean-left, lean-left, arm-follow]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+    ░▓██░      ░██▓░
+   ░░░██        ██░░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[drag-tail]`
+
+```
+        ██████
+       ██•████
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[mote-drift, prop, blink]`
+
+**rationale** — Detail-forward: the loop exercises `feather` + `edgelight` + `mote-drift` in the settle phase, so the shading gradient and the drifting eye-mote stay visible — the strongest showcase of the finesse techniques.
+
+---
+
+#### family `operative-v4` · seed 1337
+
+**frames**
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+   ▐ ▐   ██     ▌  ▌ ▌
+   ▐ ▐ ▄██████▄ ▌  ▌ ▌
+   ▐ ▐██████████ ▌ ▌ ▌
+   ▐ ▐▓████████▓ ▌ ▌ ▌
+   ▐ ▐▓████████▓▓  ▌ ▌
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[arm-follow, arm-follow, arm-follow]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐████████████▌
+    ▐█▓████████▓█▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+    ░▓██░      ░██▓░
+   ░  ██        ██  ░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[drag-tail, breath-in]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+      ██     ██
+      ██     ██
+      ███    ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[stance-narrow]`
+
+**rationale** — Squash-and-stretch: `breath-in`/`breath-out` dominate, so the coat visibly compresses and lengthens across the loop — the clearest squash-and-stretch proof on a coat-dominant body.
+
+---
+
+#### family `operative-v4` · seed 2049
+
+**frames**
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+       ██████
+      █▀▀•▀▀█
+        ██
+        ██
+  ▐     ██     ▌  ▌
+  ▐   ▄██████▄ ▌  ▌
+   ▐  ██████████ ▌ ▌
+   ▐  ▓████████▓ ▌ ▌
+   ▐ ▓▓████████▓▓  ▌
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄
+```
+`idle-1` · `[arm-follow, shadow-shift, lean-left]`
+
+```
+        ██████
+       █▀▀•▀▀█
+         ██
+         ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓░
+     ▓███▓▓  ▓▓███░
+     ▓███▓    ▓███░
+     ▓██░      ░██░
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[edgelight]`
+
+```
+          ██████
+         █▀▀•▀▀█
+           ██
+           ██
+    ▐    ██     ▌
+    ▐  ▄██████▄ ▌
+    ▐ ██████████ ▌
+    ▐ ▓████████▓ ▌
+     ▓▓████████▓▓
+     ████▓▓  ▓▓████
+     ▒███▓    ▓███▒
+     ▓██░      ░██▓
+    ░░██        ██░░
+     ██          ██
+     ██          ██
+     ███        ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[tilt-right, tilt-right]`
+
+**rationale** — Motion-heavy: `coat-flare`+`drag-tail` put visible motion-blur smear off the hem, and `arm-follow` gives the staggered-limb beat — the most "animated" family.
+
+---
+
+## Current pick (v4) — supersedes operative-v3
+
+Adopt **family `operative-v4`, seed 7** (`--gen 4 --frames 4`). It is the flagship:
+the tiny wedge head, coat-dominant void, interior shading, edge light, feathering,
+and the anticipation → action → settle loop together make a figure a harsh critic
+would describe as a *fluid pixellated near-miss render in the Nihei register*, not an
+Atari placeholder or a ball-headed sprite. Runner-up: **seed 1337** if the squash-and-
+stretch of the coat is the primary statement.
+
+Regenerate the adopted JSON for the TUI worker:
+
+```
+python3 scripts/evolve-operative --gen 4 --frames 4 --seed 7 --out operative-frames.json
+```

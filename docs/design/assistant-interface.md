@@ -27,14 +27,21 @@ sci-fi both (Tower Dungeon's stone, Blame!'s silicon).
    character studies, palette chips, frame test sheets, and fold the
    good ones into the sprite assets. Quantity first; the canon
    emerges from the pile.
-6. **The pixel-art figure is stick-figure-plus.** The operative is a
-   properly humanoid pixel figure — head, neck, torso, arms, legs —
-   slightly more advanced than a plain stick figure and past the
-   Atari-era floor. The goal is subtle animated motion: idle breathe,
-   blink, coat sway. The current block-char construction is the
-   Atari-adjacent starting point; each slice moves it toward sprite
-   animations (frame sheets in the TUI, `AnimatedSprite` in the
-   overlay).
+6. **The operative is a fluid pixellated near-miss render, Nihei in
+   proportion and scale.** Not an Atari-style ball-headed sprite: the
+   figure is gaunt and elongated — a genuinely tiny head (a flat slab /
+   helmet wedge, never round), a long neck with void, narrow sloping
+   shoulders, a coat that dominates the canvas, and narrow legs with vast
+   negative space between them — mimicking Tsutomu Nihei prose/scale
+   (tiny heads, huge coats, empty megastructure, near-miss lines) rather
+   than bumping out shapes. The art leans on artistic finesse techniques:
+   anti-aliased `▒` feathering on all diagonals, motion-blur `░` drag-tails
+   off the coat hem, squash-and-stretch on breath, anticipation before a
+   motion, staggered limb travel, a secondary edge light, interior coat
+   shading (a `▓▒░` gradient), a persistent eye-slit mote, and a ground
+   contact shadow that shifts with the motion. The reference breed is
+   `scripts/evolve-operative --gen 4` (families in the operative-frames
+   catalog); the TUI consumes its frame sheets via `AnimatedSprite`.
 
 ## Current state (committed)
 
