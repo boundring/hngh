@@ -64,13 +64,14 @@ authorize a future action.
 - `2026-08-24-first-self-governed-commit.md` records the first commit
   produced, reviewed, and committed by Hngh under its own certificate.
 - `2026-08-24-second-self-governed-commit.md` records the second
-  self-governed commit and the adapter bug fixes the first ceremony surfaced.
+  self-governed commit and the adapter bug fixes the first governance loop
+  surfaced.
 - `2026-08-24-command-surface-and-transport-admission.md` records the
   operator command surface (promotion rung 8), filesystem transport
   admission, and the strict exit-code protocol.
 - `2026-08-24-command-surface-dogfood.md` records the dogfood development
   loop (promotion rung 9): the propose → issue-cert → mutation-check
-  ceremony against real repository evidence.
+  validation against real repository evidence.
 - `2026-08-24-task-r10-bounded-worker-transports.md` records the bounded
   `:model` and `:terminal` transports behind closed loadout admission.
 - `2026-08-24-design-distributed-attestation.md` records the distributed
@@ -127,7 +128,7 @@ authorize a future action.
   screen TUI, the `grade-interface` grading loop with `ui-grades.md`,
   the `evolve-operative` animation/evolution story and
   `operative-frames.md`, and the Plasma `osd-operative` overlay — all
-  candidate-bound through the ceremony, with the kernel's governance
+  candidate-bound through the governance loop, with the kernel's governance
   surface unchanged.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

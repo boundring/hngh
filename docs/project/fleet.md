@@ -3,7 +3,7 @@
 Dated observations from `scripts/fleet-manager --record`. This file is
 an operator-side record, never an authority: a node named here becomes
 a trusted peer only after the operator pins it through the existing
-ceremony (the `attestation.lisp` registry is source and is never
+governance (the `attestation.lisp` registry is source and is never
 edited by a script).
 
 The `NAME=MAC` lines below are the wake-on-LAN ledger; wake is a

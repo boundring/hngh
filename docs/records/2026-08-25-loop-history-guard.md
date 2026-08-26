@@ -33,7 +33,7 @@ ceases to be prose and becomes a checked invariant.
   the restatement, plus the named `915e0e3`.
 - The README now says the sentence is machine-checked; CHANGELOG and
   decisions.md record the carve-out and the pre-guard blemish.
-- Committed through the self-governed ceremony (code: Makefile + guard;
+- Committed through the self-governed validation loop (code: Makefile + guard;
   docs: decisions, changelog, README, this record) — the guard's own
   introduction commits are themselves candidate-bound.
 

@@ -34,7 +34,7 @@ toward "the loop that runs itself" begin here, read-only.
   to the five closed kinds.
 - The gate was run after every change; the final gate passed on the
   candidate commit.
-- Committed through the self-governed ceremony: `src/packages.lisp`
+- Committed through the self-governed validation loop: `src/packages.lisp`
   exports via the chore lane excluded by the dependency guard
   (`5574943`); implementation and tests proposed (admitted 10/10),
   certified against real evidence, committed as

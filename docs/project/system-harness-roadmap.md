@@ -17,7 +17,7 @@ signature transport.
 **Dependencies:** promotional rungs 11–18.
 **Queue mapping:** `node-lattice-admission` (queued extension),
 `wake-mutation-lane` (next rotation), `bridge-operator-host`
-(run → worker → review → certify, already the ceremony driver),
+(run → worker → review → certify, already the governance driver),
 `key-rotation-freshness`.
 
 ## Rung B — resource pool view
@@ -90,6 +90,6 @@ recorded facts), not an ambient controller.
 ## Review indexing for the roadmap
 New rungs (`resource-pool-view`, `config-manager`, `security-manager`,
 `notify-agent`, `ci-governance-gate`) must land as backlog entries in
-[backlog.md](..) before any ceremony binding; each carries the
+[backlog.md](..) before any governance binding; each carries the
 established Problem/Smallest/Evidence/Risk/Dependencies/Review trigger
 shape.

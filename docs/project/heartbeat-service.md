@@ -14,7 +14,7 @@ path, and enable with your own systemd timer or crontab entry.
 
 1. Reads the queue ledger, selects the `Next` item, and checks whether
    a closed action card is mounted under `docs/project/heartbeat/`
-   (`<id>.rotation` → rotate-queue ceremony; `<id>.worker` → bounded
+   (`<id>.rotation` → rotate-queue governance; `<id>.worker` → bounded
    worker-driver cycle).
 2. Probes preconditions: working tree, model route (route probe over
    the operator reviewer transports), origin network reachability, and
@@ -93,7 +93,7 @@ tick contract the unit invokes.
   work, then the next period fires clean.
 - When the queue's `Next` has no card mounted, the tick records its
   probes and takes no action — cadence without busywork.
-- Rotations triggered by the heartbeat run the full ceremony with
+- Rotations triggered by the heartbeat run the full governance loop with
   their own fresh store: real evidence → real model review →
   ten-principle verdict → certificate → candidate commit.
 

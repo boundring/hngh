@@ -44,7 +44,7 @@ operator cron/systemd; no script backgrounds itself).
    operator-pinned MACs (unpinned/malformed refuse), dated record
    appends to `docs/project/fleet.md` + queue. The source pin registry
    is never written by a script.
-7. **ceremony-drive**: closed ceremony glue for explicit candidates
+7. **ceremony-drive**: closed governance glue for explicit candidates
    (create-run → admit → deterministic verdict → prepare-candidate →
    commit), used to land this milestone.
 
@@ -66,7 +66,7 @@ operator cron/systemd; no script backgrounds itself).
 - `scripts/fleet-manager --discover` live: honest "no tailscale peers
   (logged out / no mesh)" with live system probes; unpinned wake
   refused exit 1.
-- The ceremony smoke (scripts/audio-intensity as a bare candidate)
+- The governance smoke (scripts/audio-intensity as a bare candidate)
   drove the full loop; commit on an unchanged path failed closed as
   `command-failed` — the honest behavior for a no-op candidate.
 

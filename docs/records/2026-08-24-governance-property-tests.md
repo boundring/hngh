@@ -46,8 +46,8 @@ the evidence-before-claim direction the monotonic principle describes.
   `tests/domain/test-governance.lisp`.
 - `make test`: 8 reader guards + **2353 checks** passed (up from 1334),
   ASDF load clean.
-- Recorded in `CHANGELOG.md` and this record; ceremony commit bound to
-  the change (see ceremony record if a separate commit).
+- Recorded in `CHANGELOG.md` and this record; governance commit bound to
+  the change (see governance record if a separate commit).
 
 ## Remaining unknowns
 

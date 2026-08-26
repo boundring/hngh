@@ -98,7 +98,7 @@ stays textual and the voice is a rendering of it.
 ## Feedback loops
 
 Every iteration of the operative layer is shown live to the operator
-(terminal tour, then overlay) and committed through the ceremony — the
+(terminal tour, then overlay) and committed through the governance loop — the
 loop is the product. The federated-governance vision (validating
 successful operator UI/UX examples across the mesh) is a later rung;
 today the iteration loop is the seed.

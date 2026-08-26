@@ -32,7 +32,7 @@ and endpoint resolution stays transport-owned — no default wire.
   the carrier-bundle document; `gather-federated-evidence` with
   `:method :http-claim` through an injected urllib transport returned
   `status=COMPLETE facts=3 states=(:CURRENT :CURRENT :UNVERIFIABLE)`.
-- Committed through the self-governed ceremony: proposal admitted
+- Committed through the self-governed validation loop: proposal admitted
   10/10, certificate bound to real evidence, `git add` + `git commit`
   executed as `hngh: candidate 9719f324…` (`14e8e95`), pushed; gate
   green after the mutation.
