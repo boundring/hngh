@@ -57,77 +57,86 @@ _spec = importlib.util.spec_from_loader("dashboard_readout", _loader)
 dash = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dash)
 
-# The operative — sprite-evolution generation 2 (operative-v2,
-# docs/design/operative-frames.md, scripts/evolve-operative --gen 2
-# --frames 4 --seed 7): a proper humanoid — small head under broad
-# shoulders, visible neck void, arms with elbow bend, V-taper torso,
-# open two-panel coat, legs apart with a real gap, ground slab. Four-
-# beat loop in block/quadrant characters: idle-0 base, idle-1 arm-bend
-# and tilt, idle-2 arms raised, idle-3 coat settle. Embedded verbatim
-# from the generator's JSON. Rendered in the theme accent and cycled
-# once a second (independent of the data refresh interval); every frame
-# is 15 rows tall so cycling never reflows.
+# The operative — sprite-evolution generation 3 (operative-v3,
+# docs/design/operative-frames.md, scripts/evolve-operative --gen 3
+# --frames 4 --seed 7): a rounded feathered head with an off-center
+# eye-slit mote, shoulder pads, belt line, open coat with seams and
+# hem accents, cuffs, and a lit ground slab with cast shadow — answers
+# the crude-placeholder critique. Four-beat loop in block/quadrant
+# characters: idle-0 base, idle-1 arm-bend and tilt, idle-2 arms
+# raised, idle-3 coat settle. Embedded verbatim from the generator's
+# JSON. Rendered in the theme accent and cycled once a second
+# (independent of the data refresh interval); every frame is 17 rows
+# tall so cycling never reflows.
 FIGURES = [
-    """      ▄█████▄
-      ███████
-      █▀▀▀▀▀█
-        ██
-     ▄████████▄
-  ▐  ██████████  ▌
-  ▐  ██████████  ▌
-  ▐   ████████   ▌
-   ▄▄ ████████ ▄▄
-     ████  ████
-    ░███  ███░
-    ██      ██
-    ██      ██
-    ███    ███
- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀""",
-    """       ▄█████▄
-       ███████
-       █▀▀▀▀▀█
-         ██
-     ▄████████▄
-  ▐  ██████████  ▌
-  ▐  ██████████  ▌
-  ▐   ████████   ▌
-  ▄▄  ████████  ▄▄
-     ████  ████
-    ░███  ███░
-    ██      ██
-    ██      ██
-    ███    ███
- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀""",
-    """      ▄█████▄
-      ███████
-      █▀▀▀▀▀█
-
-     ▄████████▄
-     ██████████
-  ▐  ██████████  ▌
-  ▐   ████████   ▌
-  ▐▄▄ ████████ ▄▄▌
-     ████  ████
-    ░███  ███░
-    ██      ██
-    ██      ██
-    ███    ███
- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀""",
-    """      ▄█████▄
-      ███████
-      █▀▀▀▀▀█
-
-     ▄████████▄
-  ▐  ██████████  ▌
-  ▐  ██████████  ▌
-  ▐   ████████   ▌
-   ▄▄ ████████ ▄▄
-     ████  ████
-    ░███  ███░
-     ██   ██
-     ██   ██
-    ███  ███
- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀""",
+    """       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+     ████████████
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+  ▐ ▄▄ ████████ ▄▄ ▌
+        ██▓▓▓▓██
+       ██░░  █░░█
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+  ▐ ▄████████████▄ ▌
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+       ████████
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░    ░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██ ░
+      ░ ██░█  █░██ ░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
 ]
 
 # Theme presets: quiet dark is the default; the rest are the named
@@ -216,7 +225,7 @@ class HnghTUI(App):
     TITLE = "hngh"
     CSS = """
     #operative {
-        width: 26;
+        width: 28;
         border: round $primary;
         padding: 0 1 1 1;
     }
