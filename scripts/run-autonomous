@@ -10,11 +10,15 @@ itself). Each invocation performs ONE tick and exits. The tick:
       report whose first line is the journal's first narrative sentence;
 
   (b) read the Next item from docs/project/queue.md; when it exists AND
-      the backlog-lanes summary shows >= 2 open lanes AND a check-in
-      scale card (heartbeat/<id>.slice) is mounted, run ONE
-      ceremony-drive slice over the card's files from a fresh ephemeral
-      /tmp/hngh-auto-<ts> store, then record progress (or optimization
-      when the slice is a grade/bench change).
+      the backlog-lanes summary shows >= 2 open lanes, choose a course:
+      score the in-queue lanes by (mounted .slice card first), then
+      ascending recency of last increment (report-queue --json rows),
+      tiebreak by queue Next order then TSV order. Record the choice as
+      a `course <id>: <reasons>` progress report, mount its card, and —
+      when a check-in-scale card exists — run ONE ceremony-drive slice
+      over the card's files from a fresh ephemeral /tmp/hngh-auto-<ts>
+      store, then record progress (or optimization when the slice is a
+      grade/bench change). Choice + mount only; a gate is never bypassed.
 
   (c) append a scheduled report whenever any timer-driven piece ran;
 
@@ -48,6 +52,7 @@ CEREMONY = ROOT / "scripts" / "ceremony-drive"
 
 NEXT_RE = re.compile(r"## Next\s*\n(?:.*\n)*?- \*\*(?P<id>[^*\n]+)\*\*")
 KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
+NEVER = "0000-01-01T00:00:00Z"  # never-incremented lanes rank as most due
 
 
 def today():
@@ -127,6 +132,83 @@ def open_lane_count():
         return 0
 
 
+def queue_order():
+    """In-queue lane ids in priority order: the `## Next` block items
+    first (in block order), then queued TSV rows (in file order). Empty
+    when the queue is unreadable."""
+    if not QUEUE.exists():
+        return []
+    text = QUEUE.read_text()
+    order, seen = [], set()
+    m = re.search(r"## Next\s*\n(.*?)(?=\n## |\Z)", text, re.S)
+    next_text = m.group(1) if m else ""
+    for mm in re.finditer(r"^- \*\*([^*\n]+)\*\*", next_text, re.M):
+        lane = mm.group(1).strip()
+        if lane and lane not in seen:
+            seen.add(lane)
+            order.append(lane)
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[1] == "queued":
+            lane = parts[0].strip()
+            if lane and lane not in seen:
+                seen.add(lane)
+                order.append(lane)
+    return order
+
+
+def last_increment_ts(lanes):
+    """Map lane id -> ts of its most recent report-queue row whose body
+    names the lane (its last increment). Rows are newest-first, so the
+    first match per lane wins. A lane with no match stays unmapped and
+    therefore ranks as most-due; a failing parser yields {} (nothing
+    incremented)."""
+    out = subprocess.run([sys.executable, str(REPORT), "--json"],
+                         capture_output=True, text=True, cwd=ROOT)
+    if out.returncode != 0:
+        return {}
+    try:
+        reports = json.loads(out.stdout).get("reports", [])
+    except ValueError:
+        return {}
+    inc = {}
+    for row in reports:
+        ts = row.get("ts")
+        body = row.get("body", "")
+        for lane in lanes:
+            if lane in inc:
+                continue
+            if re.search(r"(?<![A-Za-z0-9-])" + re.escape(lane)
+                         + r"(?![A-Za-z0-9-])", body):
+                inc[lane] = ts
+    return inc
+
+
+def choose_course():
+    """Machine-steered pick among in-queue lanes; returns (lane, reasons)
+    or (None, "") when nothing is courseable. Scores by mounted .slice
+    card (carded first), then ascending recency of last increment (most
+    due first), tiebreaking by queue Next order then TSV order. Choice +
+    card mount only — never bypasses a gate."""
+    lanes = queue_order()
+    if not lanes:
+        return None, ""
+    mounted = {p.name[:-len(".slice")] for p in CARDS.glob("*.slice")}
+    inc = last_increment_ts(lanes)
+    rank = {lane: i for i, lane in enumerate(lanes)}
+
+    def key(lane):
+        return (0 if lane in mounted else 1,
+                inc.get(lane, NEVER),
+                rank[lane])
+
+    chosen = min(lanes, key=key)
+    ts = inc.get(chosen)
+    reasons = ("card mounted" + (f", last increment {ts}" if ts
+                                 else ", never incremented"))
+    return chosen, reasons
+
+
 def slice_card(item):
     """The check-in-scale ceremony card for ITEM, or None. A card is
     heartbeat/<id>.slice: line 1 = objective, line 2 = kind
@@ -170,30 +252,39 @@ def tick(day):
         ran = True
         body += f"journal {day} generated; "
 
-    # (b) one check-in-scale ceremony slice
+    # (b) one machine-coursed check-in-scale ceremony slice
     next_id = queue_next()
     if next_id and open_lane_count() >= 2:
+        chosen, reasons = choose_course()
+        item = chosen or next_id
         try:
-            card = slice_card(next_id)
+            card = slice_card(item)
         except ValueError as exc:
             print(f"run-autonomous: malformed card: {exc}", file=sys.stderr)
             return 2
         if card is not None:
+            if chosen:
+                code, text = run_report(
+                    "progress", f"course {chosen}: {reasons}")
+                if code != 0:
+                    print(f"run-autonomous: course report failed:\n{text}",
+                          file=sys.stderr)
+                    return 3
             _, objective, kind, files = card
             store = f"/tmp/hngh-auto-{int(time.time())}"
             os.makedirs(store, exist_ok=True)
-            code, text = drive_ceremony(store, next_id, objective, kind, files)
+            code, text = drive_ceremony(store, item, objective, kind, files)
             if code != 0:
                 print(f"run-autonomous: ceremony refused:\n{text}",
                       file=sys.stderr)
                 return 3
-            code, text = run_report(kind, f"ceremony {next_id} complete")
+            code, text = run_report(kind, f"ceremony {item} complete")
             if code != 0:
                 print(f"run-autonomous: ceremony report failed:\n{text}",
                       file=sys.stderr)
                 return 3
             ran = True
-            body += f"ceremony {next_id} complete; "
+            body += f"ceremony {item} complete; "
 
     # (c) a scheduled report when any timer-driven piece ran
     if ran:

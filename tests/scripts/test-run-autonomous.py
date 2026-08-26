@@ -88,6 +88,22 @@ class RunAutonomousTick(unittest.TestCase):
         p = self.root / "docs" / "project" / "reports.md"
         return p.read_text() if p.exists() else ""
 
+    def prewrite_report(self, ts, kind, body):
+        """Seed reports.md (header + one row) plus its body file, so
+        report-queue --json returns a row naming the lane in BODY."""
+        proj = self.root / "docs" / "project"
+        proj.mkdir(parents=True, exist_ok=True)
+        rf = proj / "reports.md"
+        if not rf.exists():
+            rf.write_text("| timestamp | kind | id | first line | body |\n")
+        rid = body[:8]
+        name = f"{ts}-{kind}-{rid}.md"
+        (proj / "report-bodies").mkdir(parents=True, exist_ok=True)
+        (proj / "report-bodies" / name).write_text(
+            f"# {kind} \u2014 {rid}\n\n{body}\n")
+        with rf.open("a") as fh:
+            fh.write(f"| {ts} | {kind} | {rid} | {body} | {name} |\n")
+
     def test_help(self):
         out = subprocess.run([sys.executable, str(SCRIPT), "--help"],
                              capture_output=True, text=True)
@@ -138,6 +154,48 @@ class RunAutonomousTick(unittest.TestCase):
         reports = self.reports_text()
         self.assertIn("progress", reports)
         self.assertIn("ceremony slice-a complete", reports)
+
+    def test_course_prefers_mounted_older_lane_over_static_next(self):
+        """Queue Next names lane-a, but lane-b shares a mounted card and
+        has the older increment, so choose_course must steer to lane-b:
+        a justified `course lane-b:` progress row lands and lane-b's
+        slice (not lane-a's) runs through the ceremony stub."""
+        q = self.root / "docs" / "project" / "queue.md"
+        q.parent.mkdir(parents=True, exist_ok=True)
+        q.write_text(
+            "# Queue\n\n"
+            "id\tstatus\ttitle\tevidence\n"
+            "lane-a\tqueued\tA\tx\n"
+            "lane-b\tqueued\tB\ty\n\n"
+            "## Next\n\n"
+            "- **lane-a** do A\n")
+        for lane in ("lane-a", "lane-b"):
+            (self.root / "docs" / "project" / "heartbeat"
+             / f"{lane}.slice").write_text(
+                f"objective {lane}\nprogress\nsrc/{lane}.lisp\n"
+                f"tests/{lane}.lisp\n")
+        # lane-a's last increment is NEWER than lane-b's → lane-b most due
+        self.prewrite_report("2026-01-02T00:00:00Z", "progress",
+                             "increment lane-a")
+        self.prewrite_report("2026-01-01T00:00:00Z", "progress",
+                             "increment lane-b")
+        self.write_lanes_stub(2)
+        (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
+            f"# {DAY}\n\npresent\n")
+
+        out = self.tick()
+
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("ceremony lane-b complete", out.stdout)
+        argv = self.argv_log.read_text()
+        self.assertIn("--store=", argv)
+        self.assertIn("src/lane-b.lisp", argv)
+        self.assertNotIn("src/lane-a.lisp", argv)
+        reports = self.reports_text()
+        self.assertIn("course lane-b:", reports)
+        self.assertIn("last increment 2026-01-01T00:00:00Z", reports)
+        self.assertIn("ceremony lane-b complete", reports)
+        self.assertIn("scheduled", reports)
 
     def test_malformed_card_fails_closed(self):
         card = self.mount_card(kind="bogus")
