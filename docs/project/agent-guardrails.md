@@ -110,3 +110,18 @@ after the commit it should precede) slips through unobserved.
 **Provenance:** the agent caught the breadcrumb-after-commit flaw — a gate
 passed, but the breadcrumb watchdog declared the commit before it was
 committed; state review caught the ordering, not the exit code.
+## 7) Repeated-expensive-identical-work (loops) — prevent, else interrupt at start
+
+- **Class:** the same expensive operation re-runs on identical inputs
+  (ceremony drove verify-candidate ~5×, each re-running `make test`
+  ~33s on the same tree).
+- **Prevent:** cache deterministic full-gate results keyed on
+  (base-revision | candidate-hash | normalized-porcelain) — the
+  first run pays, repeats are ~0s, fail closed on any marker problem
+  (provenance: verify-candidate fasttest cache, 31.58s→0.1s).
+- **Recognize as it starts:** 3+ byte-identical same-job breadcrumbs in
+  30 min, or 3+ same-key /tmp/hngh-fasttest markers in 5 min →
+  oversight fires `loop-signal` alert; the agentic steer leg is
+  instructed to interrupt-and-redirect with a concrete next action
+  (provenance: loop-recognition probe + fixture).
+- **Never** silence the alert to make the loop quiet; fix the loop.

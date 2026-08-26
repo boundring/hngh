@@ -26,3 +26,5 @@
 | 2026-08-26T16:13:59Z | alert | 81d488c8 | [oversight] stale-store: /tmp/hngh-cer-99434T record.lisp untouched 30min+ | 2026-08-26T16:13:59Z-alert-81d488c8.md |
 | 2026-08-26T16:13:59Z | alert | 7e750587 | [oversight] stale-store: /tmp/hngh-cer-agent-19711 record.lisp untouched 30min+ | 2026-08-26T16:13:59Z-alert-7e750587.md |
 | 2026-08-26T16:13:59Z | alert | abb8e869 | [oversight] stale-store: /tmp/hngh-cer-cs-1498778 record.lisp untouched 30min+ | 2026-08-26T16:13:59Z-alert-abb8e869.md |
+| 2026-08-26T16:56:12Z | alert | 71a5a5e9 | [oversight] loop-signal:  /tmp/hngh-fasttest hngh (3 markers in 5m) | 2026-08-26T16:56:12Z-alert-71a5a5e9.md |
+| 2026-08-26T16:57:47Z | alert | 77c23af0 | [oversight] loop-signal: STATE 3x identical crumb from credential-health.sh: credential-health.sh | credential-health | loop retry /tmp/hngh-fasttest looprepo (3 markers in 5m) | 2026-08-26T16:57:47Z-alert-77c23af0.md |
