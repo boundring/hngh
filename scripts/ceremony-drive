@@ -112,26 +112,43 @@
 (defun drive-loop (store objective files)
   (let* ((evidence (gather-evidence files))
          (content-hash (getf evidence :content-hash)))
-    (labels ((cmd (argv)
+    (labels ((now-ms ()
+               (multiple-value-bind (sec usec)
+                   (get-internal-real-time)
+                 (declare (ignore sec usec))
+                 (round (* (get-internal-real-time)
+                           (/ 1000.0 internal-time-units-per-second)))))
+             (timed (label thunk)
+               (let ((t0 (get-internal-real-time)))
+                 (multiple-value-prog1 (funcall thunk)
+                   (format t "~&[ceremony-timing] ~A ~A ms~%"
+                           label
+                           (round (* (- (get-internal-real-time) t0)
+                                     (/ 1000.0 internal-time-units-per-second)))))))
+             (cmd (argv)
                (multiple-value-bind (out code)
                    (hngh.main:dispatch-command
                     (cons (format nil "--store=~A" store) argv))
                  (format t "~A~%" out)
-                 code)))
+                 code))
+             (cmd-timed (label argv)
+               (timed label (lambda () (cmd argv)))))
       ;; 1 -- run + model admission
       (let ((code
-              (cmd (list "create-run" objective "builder"
-                        "loadout-route-label=model"
-                        "loadout-context-limit=2000"
-                        "loadout-token-limit=2000"
-                        "loadout-cost-limit=2000"
-                        "loadout-time-limit=2000"
-                        "loadout-tool-labels=worker-task,mutation"
-                        "loadout-network-labels=model-review"
-                        "loadout-writable-scopes=repository"))))
+              (cmd-timed "create-run"
+                         (list "create-run" objective "builder"
+                               "loadout-route-label=model"
+                               "loadout-context-limit=2000"
+                               "loadout-token-limit=2000"
+                               "loadout-cost-limit=2000"
+                               "loadout-time-limit=2000"
+                               "loadout-tool-labels=worker-task,mutation"
+                               "loadout-network-labels=model-review"
+                               "loadout-writable-scopes=repository"))))
         (when (plusp code) (return-from drive-loop code))
-        (let ((code (cmd (list "admit-transport" "run-1" "model"
-                              "repository"))))
+        (let ((code (cmd-timed "admit-transport"
+                               (list "admit-transport" "run-1" "model"
+                                     "repository"))))
           (when (plusp code) (return-from drive-loop code))
           ;; 2 -- deterministic verdict; capture its rendered text
           (let ((verdict-file
@@ -140,11 +157,13 @@
                     (with-open-file (stream path :direction :output
                                               :if-exists :supersede)
                       (multiple-value-bind (out code)
-                          (hngh.main:dispatch-command
-                           (cons (format nil "--store=~A" store)
-                                 (propose-argv "feature" objective
-                                               content-hash
-                                               (manifest-pieces evidence))))
+                          (timed "propose-feature"
+                                 (lambda ()
+                                   (hngh.main:dispatch-command
+                                    (cons (format nil "--store=~A" store)
+                                          (propose-argv "feature" objective
+                                                        content-hash
+                                                        (manifest-pieces evidence))))))
                         (format t "~A~%" out)
                         (when (plusp code)
                           (return-from drive-loop code))
@@ -153,17 +172,21 @@
             ;; 3 -- bind + execute: prepare then commit, each re-gathered
             (labels ((execute (action)
                        (let ((code
-                               (cmd (append
-                                        (list "issue-cert" action
-                                              "run-1" verdict-file)
-                                        files))))
+                               (cmd-timed
+                                (format nil "issue-cert-~A" action)
+                                (append
+                                 (list "issue-cert" action
+                                       "run-1" verdict-file)
+                                 files))))
                          (when (plusp code)
                            (return-from drive-loop code))
                          (let ((code
-                                 (cmd (append
-                                         (list "mutation-check" action
-                                               "run-1" verdict-file)
-                                         files))))
+                                 (cmd-timed
+                                  (format nil "mutation-check-~A" action)
+                                  (append
+                                   (list "mutation-check" action
+                                         "run-1" verdict-file)
+                                   files))))
                            (when (plusp code)
                              (return-from drive-loop code))))))
               (execute "prepare-candidate")
@@ -180,29 +203,35 @@
                             (with-open-file (stream path :direction :output
                                                       :if-exists :supersede)
                               (multiple-value-bind (out code)
-                                  (hngh.main:dispatch-command
-                                   (cons (format nil "--store=~A" store)
-                                         (propose-argv
-                                          "push-request" objective
-                                          content-hash
-                                          (manifest-pieces evidence))))
+                                  (timed "propose-push"
+                                         (lambda ()
+                                           (hngh.main:dispatch-command
+                                            (cons (format nil "--store=~A" store)
+                                                  (propose-argv
+                                                   "push-request" objective
+                                                   content-hash
+                                                   (manifest-pieces evidence))))))
                                 (format t "~A~%" out)
                                 (when (plusp code)
                                   (return-from drive-loop code))
                                 (write-string out stream)))
                             (namestring path))))
                     (let ((code
-                            (cmd (append
-                                     (list "issue-cert" "push" "run-1"
-                                           push-verdict-file)
-                                     files))))
+                            (cmd-timed
+                             "issue-cert-push"
+                             (append
+                              (list "issue-cert" "push" "run-1"
+                                    push-verdict-file)
+                              files))))
                       (when (plusp code)
                         (return-from drive-loop code))
                       (let ((code
-                              (cmd (append
-                                      (list "mutation-check" "push" "run-1"
-                                            push-verdict-file)
-                                      files))))
+                              (cmd-timed
+                               "mutation-check-push"
+                               (append
+                                (list "mutation-check" "push" "run-1"
+                                      push-verdict-file)
+                                files))))
                         (when (plusp code)
                           (return-from drive-loop code))))
                     (ignore-errors (delete-file push-verdict-file))
