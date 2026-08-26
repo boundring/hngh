@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""dashboard-tui: the full-screen watch (textual).
+
+A quiet, minimal full-screen TUI over the same committed spine
+dashboard-readout renders: the queue ledger, live sessions, the lone
+operative with a state-driven caption, and a one-line status. No
+daemon, no watcher: one read per tick, read-only.
+
+Data readers are imported from scripts/dashboard-readout (same
+SourceFileLoader pattern as generate-publication) so the data layer is
+never duplicated. Import safety: that module's top level only scans
+sys.argv for its own flags (--watch/--json/--export-html/--theme/...);
+none of those match this script's argv, and even a hit would only set
+a boolean or dict, never print or read stdin — loading it here cannot
+crash or emit.
+
+Usage:
+  dashboard-tui [--theme=hngh|matrix|ocean|paper] [--interval N]
+                [--no-sessions] [--help]
+
+Bindings: q quit, r refresh now, t cycle theme. Exit 2 when textual
+is not importable.
+"""
+
+import argparse
+import importlib.machinery
+import importlib.util
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+_HINT = ("dashboard-tui: textual not available — pip install --user "
+         "--break-system-packages textual (or pacman -S python-textual)")
+
+if os.environ.get("HNGH_NO_TEXTUAL") == "1":
+    sys.stderr.write(_HINT + "\n")
+    sys.exit(2)
+try:
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Horizontal, Vertical
+    from textual.theme import Theme
+    from textual.widgets import DataTable, Footer, Header, Static
+except ImportError:
+    sys.stderr.write(_HINT + "\n")
+    sys.exit(2)
+
+_loader = importlib.machinery.SourceFileLoader(
+    "dashboard_readout", str(ROOT / "scripts" / "dashboard-readout"))
+_spec = importlib.util.spec_from_loader("dashboard_readout", _loader)
+dash = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(dash)
+
+# The operative — an animated pixel-art stick figure rising from a long
+# coat. Four frames, all 16x14 so cycling is layout-stable: idle breath,
+# chest rise, a glowing eye-slit blink, and a subtle hem/leg sway. The
+# coat is the █ core with ▓/▒/░ shading; the head keeps the faceless
+# glowing slit. Rendered in the theme accent and cycled once a second
+# (independent of the data refresh interval).
+_H0 = "      ▄██▄      "
+_H1 = "     █▀▀▀▀█     "
+_NK = "       ██       "
+_FRAMES = [
+    # idle — breathe out, slender
+    [ _H0,
+      "     █ ▄▄ █     ",
+      _H1, _NK,
+      "    ▄▀▀▀▀▀▀▄    ",
+      "   ▄████████▄   ",
+      "   ██▓▓▓▓▓▓██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██░▒▒▒▒░██   ",
+      "   ██░░░░░░██   ",
+      "    █▄▄▄▄▄▄▄█   ",
+      "    ██     ██   ",
+      "    ██     ██   " ],
+    # breathe in — shoulders lift and the chest broadens
+    [ _H0,
+      "     █ ▄▄ █     ",
+      _H1, _NK,
+      "   ▄▀▀▀▀▀▀▀▀▄   ",
+      "  ▄██████████▄  ",
+      "  ██▓▓▓▓▓▓▓▓██  ",
+      "  ██▒▒▒▒▒▒▒▒██  ",
+      "  ██▒▒▒▒▒▒▒▒██  ",
+      "  ██░▒▒▒▒▒▒░██  ",
+      "  ████████████  ",
+      "   █▄▄▄▄▄▄▄▄█   ",
+      "   ██     ██    ",
+      "   ██     ██    " ],
+    # blink — the slit widens and glows, coat settles
+    [ _H0,
+      "     █▀▒▒▀█     ",
+      _H1, _NK,
+      "    ▄▀▀▀▀▀▀▄    ",
+      "   ▄████████▄   ",
+      "   ██▓▓▓▓▓▓██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██░▒▒▒▒░██   ",
+      "   ██░░░░░░██   ",
+      "    █▄▄▄▄▄▄▄█   ",
+      "    ██     ██   ",
+      "    ██     ██   " ],
+    # sway — the hem and legs ease to one side, subtle posture
+    [ _H0,
+      "     █ ▄▄ █     ",
+      _H1, _NK,
+      "    ▄▀▀▀▀▀▀▄    ",
+      "   ▄████████▄   ",
+      "   ██▓▓▓▓▓▓██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██▒▒▒▒▒▒██   ",
+      "   ██░▒▒▒▒░██   ",
+      "   █▄▀▀▀▀▀▀▄█   ",
+      "   ▄█▄▄▄▄▄▄█▄   ",
+      "   ██     █     ",
+      "   ██     █     " ],
+]
+# Each frame is a single multi-line string (all 16x14) for Static.
+FIGURES = ["\n".join(f) for f in _FRAMES]
+
+# Theme presets: quiet dark is the default; the rest are the named
+# alternatives. All four are registered so `t` is native theme switching.
+THEMES = [
+    Theme(name="hngh", primary="#5af78e", secondary="#3d9c78",
+          accent="#5af78e", foreground="#c8d0d8", background="#0b0e11",
+          surface="#11151a", panel="#14181e", warning="#e6b450",
+          error="#e06c6c", success="#5af78e", dark=True),
+    Theme(name="matrix", primary="#00ff9f", secondary="#00b36b",
+          accent="#00ff9f", foreground="#9fffbf", background="#050805",
+          surface="#08120b", panel="#0a160d", warning="#d4ff00",
+          error="#ff4444", success="#00ff9f", dark=True),
+    Theme(name="ocean", primary="#4fc3ff", secondary="#2d7dab",
+          accent="#4fc3ff", foreground="#a8d8f0", background="#04121f",
+          surface="#071d2e", panel="#082336", warning="#ffb454",
+          error="#ff6b6b", success="#4fc3ff", dark=True),
+    Theme(name="paper", primary="#2f6fb0", secondary="#4a90c2",
+          accent="#b03030", foreground="#1f2328", background="#f4f1ea",
+          surface="#ffffff", panel="#efece4", warning="#8a6d1a",
+          error="#b03030", success="#2f6fb0", dark=False),
+]
+PRESETS = [t.name for t in THEMES]
+
+# State coloring for sessions; everything else stays plain.
+_STATE_COLOR = {"running": None, "evacuated": "warning",
+                "cancelled": "text-muted", "dead": "error"}
+
+
+def _cut(text, n):
+    """Truncate to N cells with an ellipsis; None-safe."""
+    if not text:
+        return ""
+    text = str(text)
+    return text if len(text) <= n else text[: max(0, n - 1)] + "…"
+
+
+def _kw_text(text, accent):
+    """Render TEXT with domain keywords tinted in the accent."""
+    out = []
+    words = sorted(dash.KEYWORD_HIGHLIGHT, key=len, reverse=True)
+    i, n = 0, len(text)
+    while i < n:
+        for w in words:
+            if text.startswith(w, i):
+                out.append((w, f"bold {accent}"))
+                i += len(w)
+                break
+        else:
+            out.append(text[i])
+            i += 1
+    return out
+
+
+def _dance_level():
+    """Audio pulse 0..10, mirroring dashboard-readout.dance_level()'s
+    auto branch (not importable as-is: it keys off --dance in argv).
+    Fails safe to 0 — no sound system, no number, no crash."""
+    try:
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "audio-intensity")],
+            capture_output=True, text=True, timeout=2)
+        return int(out.stdout.strip() or 0)
+    except Exception:
+        return 0
+
+
+def _state(queued, done, sessions):
+    """Same state selection dashboard-readout's rich watch uses."""
+    if any(s.get("state") == "running" for s in sessions):
+        return "active"
+    if not queued and done:
+        return "done"
+    if queued:
+        return "idle"
+    return "empty"
+
+
+class HnghTUI(App):
+    TITLE = "hngh"
+    CSS = """
+    #operative {
+        width: 22;
+        border: round $primary;
+        padding: 0 1 1 1;
+    }
+    #figure {
+        color: $primary;
+        text-style: bold;
+        height: auto;
+    }
+    #caption {
+        color: $text-muted;
+        height: auto;
+        text-wrap: wrap;
+    }
+    #right {
+        height: 1fr;
+    }
+    DataTable {
+        border: hkey $primary;
+        height: 1fr;
+    }
+    #status {
+        color: $text-muted;
+        height: 1;
+    }
+    """
+    BINDINGS = [
+        Binding("q", "quit", "quit"),
+        Binding("ctrl+c", "quit", "quit", show=False),
+        Binding("r", "refresh", "refresh"),
+        Binding("t", "cycle_theme", "theme"),
+    ]
+
+    def __init__(self, interval=4, no_sessions=False, theme="hngh"):
+        super().__init__()
+        for preset in THEMES:
+            self.register_theme(preset)
+        self.theme = theme if theme in PRESETS else "hngh"
+        self.interval = max(1, int(interval))
+        self.no_sessions = no_sessions
+        self._tick = 0
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        with Horizontal():
+            with Vertical(id="operative"):
+                yield Static(FIGURES[0], id="figure")
+                yield Static("", id="caption")
+            with Vertical(id="right"):
+                yield DataTable(id="queue", cursor_type="none")
+                yield DataTable(id="sessions", cursor_type="none")
+                yield Static("", id="status")
+        yield Footer()
+
+    def on_mount(self):
+        self._fig = 0
+        self.set_interval(1.0, self._anim_tick)
+        self.query_one("#operative").border_title = "operative"
+        queue = self.query_one("#queue", DataTable)
+        queue.border_title = "queue"
+        _, _, eta_key = queue.add_columns("ID", "glyph", "ETA")
+        queue.columns[eta_key].width = 50
+        sessions = self.query_one("#sessions", DataTable)
+        sessions.border_title = "sessions"
+        sessions.add_columns("run", "state", "age", "mission")
+        self.set_interval(self.interval, self.refresh_tick)
+        self.refresh_tick()
+
+    def _anim_tick(self):
+        """Cycle the operative figure once a second, on the UI thread.
+        Static.update is cheap; the frames share dimensions so nothing
+        reflows."""
+        self._fig = (self._fig + 1) % len(FIGURES)
+        self.query_one("#figure", Static).update(FIGURES[self._fig])
+
+    def refresh_tick(self):
+        # Heavy reads (session_rows can spawn sbcl) stay off the UI
+        # thread; exclusive so slow ticks never stack.
+        self.run_worker(self._gather, thread=True, exclusive=True)
+
+    def _gather(self):
+        items = dash.queue_items()
+        etas = dash.queue_etas()
+        # ttl=15 leans on dashboard-readout's own session cache.
+        sessions = ([] if self.no_sessions
+                    else dash.session_rows(limit=5, ttl=15))
+        dance = _dance_level()
+        self.call_from_thread(self._paint, items, etas, sessions, dance)
+
+    def _paint(self, items, etas, sessions, dance):
+        self._tick += 1
+        vars_ = self.theme_variables
+        accent = vars_.get("primary", "#5af78e")
+        dim = vars_.get("text-muted", "#888888")
+        glyph = {"queued": ("▪", dim), "active": ("+", f"bold {accent}"),
+                 "done": ("✓", accent)}
+
+        queue = self.query_one("#queue", DataTable)
+        queue.clear()
+        for i, status in items:
+            mark, style = glyph.get(status, ("▪", dim))
+            eta = _kw_text(_cut(etas.get(i, ""), 50), accent)
+            queue.add_row(i, (mark, style), eta)
+
+        sessions_w = self.query_one("#sessions", DataTable)
+        sessions_w.clear()
+        for s in sessions:
+            state = s.get("state", "?")
+            color = _STATE_COLOR.get(state)
+            state_text = (state, color) if color else state
+            mission = _kw_text(_cut(s.get("mission", ""), 60), accent)
+            sessions_w.add_row(s.get("run", "?"), state_text,
+                               f"age {dash.age_text(s.get('age'))}", mission)
+
+        queued = [i for i, st in items if st == "queued"]
+        done = [i for i, st in items if st == "done"]
+        state = _state(queued, done, sessions)
+        line = dash.SPEECH[state][self._tick % len(dash.SPEECH[state])]
+        caption = self.query_one("#caption", Static)
+        caption.update(line + (f"  music {dance}/10" if dance else ""))
+
+        status = (f"updated {datetime.now().strftime('%H:%M:%S')} · "
+                  f"every {self.interval}s · dance {dance}/10 · "
+                  f"{len(sessions)} session(s)")
+        self.query_one("#status", Static).update(status)
+
+    def action_cycle_theme(self):
+        self.theme = PRESETS[(PRESETS.index(self.theme) + 1) % len(PRESETS)]
+
+    def action_refresh(self):
+        self.refresh_tick()
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False, prog="dashboard-tui")
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--theme",
+                        help="initial preset: hngh|matrix|ocean|paper")
+    parser.add_argument("--interval", type=int, default=4,
+                        help="refresh seconds (default 4)")
+    parser.add_argument("--no-sessions", action="store_true",
+                        help="omit the live sessions table")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    HnghTUI(interval=args.interval, no_sessions=args.no_sessions,
+            theme=args.theme or "hngh").run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
