@@ -60,6 +60,38 @@ class DashboardExport(unittest.TestCase):
         rows = mod.session_rows()
         self.assertIsInstance(rows, list)
 
+    def test_session_present_parsing(self):
+        """present output parses into clean per-field keys: bracket/
+        quote nesting never reaches a value, mission keeps its whole
+        prose (no dropped prefix), and the store base name is kept so
+        repeated run-N rows stay distinguishable."""
+        import importlib.machinery
+        import importlib.util
+        loader = importlib.machinery.SourceFileLoader("dash_live", str(SCRIPT))
+        spec = importlib.util.spec_from_loader("dash_live", loader)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        rich = mod._parse_present(
+            "run run-1 state=running role=builder loadout=model "
+            "station=['0','0',0,'1'] route=worker "
+            "mission=deploy the thing now".split(),
+            "run-20260825T030202Z-461636")
+        self.assertEqual(rich["state"], "running")
+        self.assertEqual(rich["role"], "builder")
+        self.assertEqual(rich["station"], "0,0,0,1", "nesting stripped")
+        self.assertNotIn("[", rich["station"])
+        self.assertNotIn("'", rich["station"])
+        self.assertEqual(rich["route"], "worker")
+        self.assertEqual(rich["mission"], "deploy the thing now",
+                         "mission value with spaces reads whole")
+        self.assertEqual(rich["store"], "run-20260825T030202Z-461636")
+        plain = mod._parse_present(
+            "run run-1 state=cancelled role=operator loadout=automation "
+            "mission=hourly research ping 2026-08-25 2200".split(), "s")
+        self.assertEqual(plain["mission"],
+                         "hourly research ping 2026-08-25 2200",
+                         "mission prefix is not dropped")
+
     def test_quiet_with_sessions(self):
         out = run(["--quiet"])
         self.assertEqual(out.returncode, 0, out.stderr)

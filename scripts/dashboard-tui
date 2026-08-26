@@ -162,8 +162,9 @@ def _cut(text, n):
 
 
 def _kw_text(text, accent):
-    """Render TEXT with domain keywords tinted in the accent."""
-    out = []
+    """Render TEXT with domain keywords tinted in the accent, with a
+    leading space for column breathing room."""
+    out = [(" ", "")]
     words = sorted(dash.KEYWORD_HIGHLIGHT, key=len, reverse=True)
     i, n = 0, len(text)
     while i < n:
@@ -224,8 +225,16 @@ class HnghTUI(App):
         height: 1fr;
     }
     DataTable {
-        border: hkey $primary;
+        border: round $primary;
         height: 1fr;
+        padding: 0 1;
+    }
+    DataTable > .datatable--header {
+        text-style: bold;
+        color: $primary;
+    }
+    DataTable > .datatable--cursor {
+        background: $primary 12%;
     }
     #status {
         color: $text-muted;
@@ -266,11 +275,14 @@ class HnghTUI(App):
         self.query_one("#operative").border_title = "operative"
         queue = self.query_one("#queue", DataTable)
         queue.border_title = "queue"
-        _, _, eta_key = queue.add_columns("ID", "glyph", "ETA")
+        id_key, _, eta_key = queue.add_columns("ID", "glyph", "ETA")
+        queue.columns[id_key].width = 26
         queue.columns[eta_key].width = 50
         sessions = self.query_one("#sessions", DataTable)
         sessions.border_title = "sessions"
-        sessions.add_columns("run", "state", "age", "mission")
+        keys = sessions.add_columns("run", "store", "state", "age", "mission")
+        for key, width in zip(keys[:4], (6, 26, 11, 7)):
+            sessions.columns[key].width = width
         self.set_interval(self.interval, self.refresh_tick)
         self.refresh_tick()
 
@@ -308,17 +320,19 @@ class HnghTUI(App):
         for i, status in items:
             mark, style = glyph.get(status, ("▪", dim))
             eta = _kw_text(_cut(etas.get(i, ""), 50), accent)
-            queue.add_row(i, (mark, style), eta)
+            queue.add_row(f" {_cut(i, 24)}", (f" {mark}", style), eta)
 
         sessions_w = self.query_one("#sessions", DataTable)
         sessions_w.clear()
         for s in sessions:
             state = s.get("state", "?")
             color = _STATE_COLOR.get(state)
-            state_text = (state, color) if color else state
-            mission = _kw_text(_cut(s.get("mission", ""), 60), accent)
-            sessions_w.add_row(s.get("run", "?"), state_text,
-                               f"age {dash.age_text(s.get('age'))}", mission)
+            state_text = (f" {state}", color) if color else f" {state}"
+            store = s.get("store", "").removeprefix("run-")
+            mission = _kw_text(_cut(s.get("mission", ""), 44), accent)
+            sessions_w.add_row(f" {_cut(s.get('run', '?'), 6)}",
+                               f" {_cut(store, 24)}", state_text,
+                               f" {dash.age_text(s.get('age'))}", mission)
 
         queued = [i for i, st in items if st == "queued"]
         done = [i for i, st in items if st == "done"]
