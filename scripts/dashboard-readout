@@ -18,9 +18,13 @@ import math
 import io
 import json
 import contextlib
+import os
+import select
 import signal
 import subprocess
 import time
+import termios
+import tty
 from datetime import datetime
 from pathlib import Path
 
@@ -29,6 +33,68 @@ TIMELINE = ROOT / "docs" / "project" / "timeline.md"
 QUEUE = ROOT / "docs" / "project" / "queue.md"
 STORE_ROOT = Path.home() / ".hngh-automation" / "store"
 PRESENT = ROOT / "scripts" / "hngh"
+
+# Rich is the quality-of-life TUI layer (optional): when present the
+# watch loop renders framed panels, colored states, and the assistant;
+# when absent (or --plain) the stdlib renderer takes over. The gate
+# stays green in both worlds.
+try:
+    from rich.console import Console, Group
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.live import Live
+    from rich.markup import escape as r_escape
+    RICH = True
+except ImportError:
+    RICH = False
+
+# The lone operative — slender, tall, faceless: the coat flares into
+# the void and the head is a clean slit of dark. Nihei minimalism:
+# no face to read, no need to. Rendered above the speech bubble.
+KILLY = (
+    "      ▄▄████▄▄\n"
+    "     ████████\n"
+    "     ▀██████▀\n"
+    "       ████\n"
+    "        ██\n"
+    "        ██\n"
+    "        ██\n"
+    "       █  █\n"
+    "      █    █\n"
+    "     █      █\n"
+    "    █        █\n"
+    "   ██        ██\n"
+    "  █            █\n"
+    " █▄▄▄▄▄▄▄▄▄▄▄▄▄▄█"
+)
+
+SPEECH = {
+    "idle": [
+        "The queue holds its breath. The lattice listens.",
+        "Nothing turning. The wall is quiet.",
+        "Evidence sleeps until it is asked.",
+    ],
+    "active": [
+        "A cycle turns. Evidence before noise.",
+        "The record is being written. Do not interrupt it.",
+        "One slice at a time. That is the discipline.",
+    ],
+    "done": [
+        "Rotation complete. The record is sealed.",
+        "Another candidate bound. The ledger grows.",
+        "Sealed with a certificate. That is how the world ends quietly.",
+    ],
+    "empty": [
+        "The queue is empty. This is also a fact.",
+        "Nothing queued. The city is still.",
+    ],
+}
+
+KEYWORD_HIGHLIGHT = {
+    "rotation": "bold cyan", "candidate": "bold magenta",
+    "certificate": "bold yellow", "heartbeat": "bold green",
+    "wake": "bold red", "commit": "bold cyan",
+}
 
 
 def timeline_rows():
@@ -531,6 +597,141 @@ def watch_loop(interval):
     return 0
 
 
+def keyword_mark(text):
+    """Highlight domain keywords in a line via rich markup; everything
+    else is escaped so operator data can never inject markup."""
+    out = r_escape(text)
+    for word, style in KEYWORD_HIGHLIGHT.items():
+        out = out.replace(word, f"[{style}]{word}[/{style.split()[0]}]")
+    return out
+
+
+def rich_theme_colors():
+    name = "plain"
+    for arg in sys.argv:
+        if arg.startswith("--theme="):
+            name = arg.split("=", 1)[1]
+    return {
+        "matrix": "green", "sunset": "orange_red1", "ocean": "cyan",
+        "paper": "white", "plain": "cyan",
+    }.get(name, "cyan")
+
+
+def rich_dashboard(rows, items, etas, sessions, dance):
+    """The framed, width-aware watch render: queue, timeline, sessions,
+    and the lone operative with a state-driven line."""
+    accent = rich_theme_colors()
+    header = Panel.fit(
+        f"[bold {accent}]hngh[/] — the queue runs itself",
+        border_style=accent)
+
+    queue_table = Table(box=None, show_header=False, expand=True,
+                        padding=(0, 1))
+    queue_table.add_column(style="bold")   # id
+    queue_table.add_column(width=3)        # glyph
+    queue_table.add_column()               # eta
+    queued = [i for i, s in items if s == "queued"]
+    done = [i for i, s in items if s == "done"]
+    active = [i for i, s in items if s == "active"]
+    for i in active:
+        queue_table.add_row(i, "[bold yellow]+[/]", "")
+    for i in queued:
+        queue_table.add_row(i, "[dim]·[/]",
+                            etas.get(i, "")[:60])
+    for i in done:
+        queue_table.add_row(f"[dim]{i}[/]", "[green]✓[/]", "")
+    queue_panel = Panel(
+        queue_table, title=f"[{accent}]queue[/]", border_style=accent,
+        subtitle=f"{len(queued)} queued · {len(active)} active · "
+                 f"{len(done)} done")
+
+    recent = [r for r in rows if r[1] in ("rotation", "event")][-6:]
+    t_table = Table(box=None, show_header=False, expand=True, padding=(0, 1))
+    t_table.add_column(width=10)
+    t_table.add_column(width=8)
+    t_table.add_column()
+    for date, kind, item, h in recent:
+        t_table.add_row(date, kind, f"{item[:24]} [dim]{h[:8]}[/]")
+    timeline_panel = Panel(t_table, title=f"[{accent}]timeline[/]",
+                           border_style=accent)
+
+    s_table = Table(box=None, show_header=False, expand=True, padding=(0, 1))
+    s_table.add_column(width=7)
+    s_table.add_column(width=12)
+    s_table.add_column(width=9)
+    s_table.add_column()
+    for s in sessions:
+        state = s.get("state", "?")
+        color = {"running": "bold green", "created": "cyan",
+                 "armed": "cyan", "checkpointed": "cyan",
+                 "evacuated": "yellow", "cancelled": "dim",
+                 "dead": "red"}.get(state, "dim")
+        s_table.add_row(s.get("run", "?"), f"[{color}]{state}[/]",
+                        f"age {age_text(s.get('age'))}",
+                        keyword_mark(s.get("mission", ""))[:70])
+    sessions_panel = Panel(s_table, title=f"[{accent}]sessions[/]",
+                           border_style=accent,
+                           subtitle=f"{len(sessions)} recent")
+
+    state = "active" if any(s.get("state") == "running" for s in sessions) \
+        else "done" if not queued and done else \
+        "idle" if queued else "empty"
+    line = SPEECH[state][dance % len(SPEECH[state])]
+    if dance:
+        line = f"{line}  [dim]music {dance}/10[/]"
+    assistant = Panel(
+        Group(
+            f"[{accent}]{KILLY}[/]",
+            Panel.fit(keyword_mark(line), border_style=accent,
+                      title="[dim]operative[/]")),
+        border_style=accent)
+
+    return Group(header, queue_panel, timeline_panel, sessions_panel,
+                 assistant)
+
+
+def rich_watch(interval):
+    """The Live watch loop: one repaint per tick, 'q'/'ESC' quits,
+    cursor restored on exit. Falls back gracefully when stdin is not
+    an interactive terminal."""
+    console = Console()
+    last_sessions = None
+    last_at = 0.0
+    try:
+        old = termios.tcgetattr(sys.stdin.fileno())
+        tty.setraw(sys.stdin.fileno())
+    except (OSError, ValueError, termios.error):
+        # not an interactive terminal: the stdlib loop keeps the
+        # refresh contract without the raw-key layer
+        return watch_loop(interval)
+    try:
+        with Live(console=console, refresh_per_second=4, screen=False) as live:
+            while True:
+                if time.time() - last_at >= 15:
+                    last_sessions = session_rows(ttl=15)
+                    last_at = time.time()
+                dance = dance_level()
+                sessions = [] if NO_SESSIONS else last_sessions or []
+                body = rich_dashboard(timeline_rows(), queue_items(),
+                                      queue_etas(), sessions, dance)
+                footer = (f"[dim]{datetime.now().strftime('%H:%M:%S')} · "
+                          f"every {interval}s · q to quit[/]")
+                live.update(Group(body, footer))
+                r, _, _ = select.select([sys.stdin], [], [], interval)
+                if r:
+                    key = os.read(sys.stdin.fileno(), 1)
+                    if key in (b"q", b"Q", b"\x1b"):
+                        break
+    except (OSError, ValueError):
+            pass
+    finally:
+        try:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old)
+        except (OSError, ValueError):
+            pass
+    return 0
+
+
 def main():
     if AS_JSON:
         sys.stdout.write(render_json(data_spine()) + "\n")
@@ -541,6 +742,8 @@ def main():
         print(f"exported dashboard HTML -> {target}")
         return 0
     if WATCH_ARG:
+        if RICH and "--plain" not in sys.argv:
+            return rich_watch(max(1, WATCH_SECONDS))
         return watch_loop(max(1, WATCH_SECONDS))
     sys.stdout.write(render_body(
         timeline_rows(), queue_items(), queue_etas(), dance_level(),
