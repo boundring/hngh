@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""run-autonomous — one no-prompt ceremony tick for the continual cadence.
+
+A single-tick orchestration layer, invoked by the operator's hourly
+systemd timer (the no-daemon boundary: this script never backgrounds
+itself). Each invocation performs ONE tick and exits. The tick:
+
+  (a) if today's docs/journal/YYYY-MM-DD.md is absent, generate it by
+      running `generate-publication --daily`, then record a progress
+      report whose first line is the journal's first narrative sentence;
+
+  (b) read the Next item from docs/project/queue.md; when it exists AND
+      the backlog-lanes summary shows >= 2 open lanes AND a check-in
+      scale card (heartbeat/<id>.slice) is mounted, run ONE
+      ceremony-drive slice over the card's files from a fresh ephemeral
+      /tmp/hngh-auto-<ts> store, then record progress (or optimization
+      when the slice is a grade/bench change).
+
+  (c) append a scheduled report whenever any timer-driven piece ran;
+
+  (d) exit 0 even when nothing was due.
+
+Fail closed: a report-cursor/body that disappears mid-run is treated as
+empty, a malformed card fails the tick, and the date for "today" can be
+overridden with HNGH_TICK_TS (used by the tests). No network is
+required; the only subprocesses are the sibling scripts in this repo.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(os.environ.get("HNGH_RUN_ROOT")
+            or Path(__file__).resolve().parent.parent)
+JOURNAL_DIR = ROOT / "docs" / "journal"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+LANES = ROOT / "scripts" / "backlog-lanes"
+CARDS = ROOT / "docs" / "project" / "heartbeat"
+GEN = ROOT / "scripts" / "generate-publication"
+REPORT = ROOT / "scripts" / "report-queue"
+CEREMONY = ROOT / "scripts" / "ceremony-drive"
+
+NEXT_RE = re.compile(r"## Next\s*\n(?:.*\n)*?- \*\*(?P<id>[^*\n]+)\*\*")
+KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
+
+
+def today():
+    return os.environ.get("HNGH_TICK_TS") \
+        or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def git(*cmd):
+    out = subprocess.run(["git", *cmd], capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, out.stdout.strip(), out.stderr.strip()
+
+
+def worktree_clean():
+    code, out, err = git("status", "--porcelain")
+    if code != 0:
+        return False, f"git status failed: {err}"
+    return (not out), (out or "clean")
+
+
+def journal_exists(day):
+    return (JOURNAL_DIR / f"{day}.md").exists()
+
+
+def first_narrative_line(day):
+    """The journal's first narrative sentence: the first non-heading,
+    non-empty line. Falls back to a neutral clause when unreadable."""
+    path = JOURNAL_DIR / f"{day}.md"
+    try:
+        for line in path.read_text().splitlines():
+            s = line.strip()
+            if s and not s.startswith("#"):
+                return s
+    except OSError:
+        pass
+    return f"journal {day} generated"
+
+
+def run_report(kind, text):
+    out = subprocess.run(
+        [sys.executable, str(REPORT), "--add", kind, text],
+        capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, (out.stdout or "") + (out.stderr or "")
+
+
+def generate_daily(day):
+    out = subprocess.run(
+        [sys.executable, str(GEN), "--daily", day],
+        capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, (out.stdout or "") + (out.stderr or "")
+
+
+def queue_next():
+    if not QUEUE.exists():
+        return None
+    m = NEXT_RE.search(QUEUE.read_text())
+    if m:
+        return m.group("id").strip()
+    # fall back to the first queued TSV row, like schedule-heartbeat
+    for line in QUEUE.read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[1] == "queued":
+            return parts[0].strip()
+    return None
+
+
+def open_lane_count():
+    """Open backlog lane count via the canonical parser (summary.open).
+    Fail closed: an unreadable/erroring parser yields 0 open lanes, so
+    the ceremony gate stays shut."""
+    out = subprocess.run([sys.executable, str(LANES), "--json"],
+                         capture_output=True, text=True, cwd=ROOT)
+    if out.returncode != 0:
+        return 0
+    try:
+        return json.loads(out.stdout).get("summary", {}).get("open", 0)
+    except ValueError:
+        return 0
+
+
+def slice_card(item):
+    """The check-in-scale ceremony card for ITEM, or None. A card is
+    heartbeat/<id>.slice: line 1 = objective, line 2 = kind
+    (progress|optimization), rest = candidate files (one per line).
+    Malformed cards fail closed (raise)."""
+    card = CARDS / f"{item}.slice"
+    if not card.exists():
+        return None
+    lines = [l.strip() for l in card.read_text().splitlines()
+             if l.strip() and not l.strip().startswith("#")]
+    if len(lines) < 3 or lines[1] not in KINDS:
+        raise ValueError(f"{card.name}: needs objective + kind + file list")
+    return ("ceremony-drive", lines[0], lines[1], lines[2:])
+
+
+def drive_ceremony(store, item, objective, kind, files):
+    out = subprocess.run(
+        [str(CEREMONY), f"--store={store}", objective, *files],
+        capture_output=True, text=True, cwd=ROOT, timeout=1800)
+    return out.returncode, (out.stdout or "") + (out.stderr or "")
+
+
+def tick(day):
+    """One tick; returns exit code."""
+    ran = False
+    body = ""
+
+    # (a) journal generation
+    if not journal_exists(day):
+        code, text = generate_daily(day)
+        if code != 0:
+            print(f"run-autonomous: journal generation refused:\n{text}",
+                  file=sys.stderr)
+            return 3
+        first = first_narrative_line(day)
+        code, text = run_report("progress", first)
+        if code != 0:
+            print(f"run-autonomous: progress report failed:\n{text}",
+                  file=sys.stderr)
+            return 3
+        ran = True
+        body += f"journal {day} generated; "
+
+    # (b) one check-in-scale ceremony slice
+    next_id = queue_next()
+    if next_id and open_lane_count() >= 2:
+        try:
+            card = slice_card(next_id)
+        except ValueError as exc:
+            print(f"run-autonomous: malformed card: {exc}", file=sys.stderr)
+            return 2
+        if card is not None:
+            _, objective, kind, files = card
+            store = f"/tmp/hngh-auto-{int(time.time())}"
+            os.makedirs(store, exist_ok=True)
+            code, text = drive_ceremony(store, next_id, objective, kind, files)
+            if code != 0:
+                print(f"run-autonomous: ceremony refused:\n{text}",
+                      file=sys.stderr)
+                return 3
+            code, text = run_report(kind, f"ceremony {next_id} complete")
+            if code != 0:
+                print(f"run-autonomous: ceremony report failed:\n{text}",
+                      file=sys.stderr)
+                return 3
+            ran = True
+            body += f"ceremony {next_id} complete; "
+
+    # (c) a scheduled report when any timer-driven piece ran
+    if ran:
+        code, text = run_report("scheduled",
+                                f"autonomous cadence tick ran ({day})")
+        if code != 0:
+            print(f"run-autonomous: scheduled report failed:\n{text}",
+                  file=sys.stderr)
+            return 3
+
+    # (d) exit 0 even when nothing was due
+    print(f"run-autonomous ({day}): {'ran: ' + body if ran else 'nothing due'}")
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--help", action="store_true")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    try:
+        return tick(today())
+    except OSError as exc:
+        print(f"run-autonomous: {exc}", file=sys.stderr)
+        return 3
+
+
+if __name__ == "__main__":
+    sys.exit(main())

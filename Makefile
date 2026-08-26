@@ -20,6 +20,8 @@ test:
 	python3 tests/scripts/test-generate-publication.py
 	python3 tests/scripts/test-fleet-manager.py
 	python3 tests/scripts/test-osd-operative.py
+	python3 tests/scripts/test-report-queue.py
+	python3 tests/scripts/test-run-autonomous.py
 	python3 scripts/lint-parens.py $(LISP_SOURCES)
 	sbcl --script tests/run.lisp
 	sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd "$(CURDIR)/hngh.asd")' --eval '(asdf:load-system :hngh)'
