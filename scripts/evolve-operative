@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""evolve-operative: breed evolutionary pixel-art frame-sets for the operative.
+
+A seeded mutation walk over a block-char humanoid template. The base figure is
+a slender, faceless silhouette in the Nihei register — a dark slit head, coat
+flaring into the void, legs stanced on a clean floor line. Every frame is a
+monospace-safe grid (<=24 cols, <=18 rows) drawn only from the approved
+glyph set; mutations nudge limbs, breath, coat, head tilt, and slit blink.
+
+Determinism contract: the ONLY entropy is random.Random(seed) — same seed,
+same JSON, byte for byte.
+
+Usage:
+    evolve-operative [--frames N] [--seed S] [--out FILE]
+    evolve-operative --help
+"""
+
+import argparse
+import json
+import random
+import sys
+
+# Canvas — fixed width grid so mutations are pure cell writes; art rstrip()s.
+CANVAS_W = 20
+
+# The base pose ("idle-0"). All offspring are mutations of this grid.
+# head: crown / slab / pale eye-slit / jaw — neck, shoulders with arm tips,
+# torso band, coat flare, split legs, floor feet.
+BASE = (
+    "     ▄▄████▄▄       ",   #  0 crown
+    "    ██████████      ",   #  1 head slab
+    "    █▒▒▒▒▒▒▒▒█     ",   #  2 eye slit (dim slot between solid)
+    "    ▀████████▀     ",   #  3 jaw
+    "       ▐█▌         ",   #  4 neck
+    "  ▐████████████▌   ",   #  5 shoulders + arm tips (raised baseline)
+    "   ████████████    ",   #  6 torso top
+    "    ██████████     ",   #  7 torso
+    "    ░███████░      ",   #  8 waist (coat shading)
+    "   ░██████████░    ",   #  9 coat
+    "  ░████████████░   ",   # 10 coat hem (widest)
+    "    ██     ██      ",   # 11 left / right leg
+    "    ██     ██      ",   # 12
+    "    ██     ██      ",   # 13
+    "    ▀▀     ▀▀      ",   # 14 boots
+)
+
+
+def to_grid():
+    """BASE -> mutable char grid."""
+    return [list(row) for row in BASE]
+
+
+def to_art(grid):
+    """Grid -> multi-line art string, trailing whitespace stripped."""
+    return "\n".join("".join(row).rstrip() for row in grid)
+
+
+def bounds(grid):
+    """Global min/max non-space column across the grid (art bounding box)."""
+    xs = [x for row in grid for x, c in enumerate(row) if c != " "]
+    return min(xs), max(xs)
+
+
+# --- mutations: each (grid) -> None, pure cell writes on the fixed canvas ---
+
+def blink(grid):
+    """Eye slit darkens: the pale slot closes to solid head."""
+    for x, c in enumerate(grid[2]):
+        if c == "▒":
+            grid[2][x] = "█"
+
+
+def arm_row(grid, target):
+    """Lift or drop the arm tips: ▐/▌ sit at the shoulder band (5),
+    raised toward the neck (4), or lowered along the torso (6)."""
+    for y in (4, 5, 6):
+        grid[y][2] = " "
+        grid[y][17] = " "
+    grid[target][2] = "▐"
+    grid[target][17] = "▌"
+
+
+def stance(grid, delta):
+    """Leg spread: delta -1 wide, 0 base, +1 narrow. Rewrites rows 11-14."""
+    left, right = 4 + delta, 11 - delta
+    for y in range(11, 15):
+        row = grid[y]
+        for x in range(3, 14):
+            row[x] = " "
+        ch = "▀" if y == 14 else "█"
+        row[left], row[left + 1] = ch, ch
+        row[right], row[right + 1] = ch, ch
+
+
+def coat_flare(grid):
+    """Coat hem and mid-coat flare one cell wider on both edges."""
+    for y in (9, 10):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█░"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        if row[a - 1] == " ":
+            row[a - 1] = "░"
+        if row[b + 1] == " ":
+            row[b + 1] = "░"
+
+
+def tilt(grid, dx):
+    """Head cluster (rows 0-4) shifts one column left/right. Arm tips on the
+    outer rails are excluded so a raised hand does not ride the tilt."""
+    for y in range(5):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row)
+                 if c != " " and not (c in "▐▌" and (x <= 3 or x >= 16))]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            nx = x + dx
+            if 0 <= nx < CANVAS_W:
+                row[nx] = c
+
+
+def breath(grid, direction):
+    """Torso band (rows 6-7) breathes: +1 column each edge on in, -1 on out.
+    Only the solid torso rows breathe — the shaded waist row (8) is left
+    alone so breath-in/out never hollow a notch between the ░ shading."""
+    for y in (6, 7):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c == "█"]
+        if not xs:
+            continue
+        if direction == "in":
+            for side in (-1, 1):
+                edge = min(xs) if side == -1 else max(xs)
+                tgt = edge + side
+                if 0 <= tgt < CANVAS_W and row[tgt] == " ":
+                    row[tgt] = "█"
+        else:
+            a, b = min(xs), max(xs)
+            if b - a + 1 <= 4:
+                continue  # never narrower than a 4-cell core
+            row[a] = " "
+            row[b] = " "
+
+
+PROPS = (
+    ("mote", ((2, 1, "•"),)),
+    ("ember", ((11, 18, "▓"),)),
+    ("glint", ((14, 2, "▖"), (14, 17, "▗"))),
+)
+
+
+def prop(grid, rng):
+    """A minimal glow adjunct: floating mote, ember beside the coat, or a
+    boot-edge glint on the floor line."""
+    kind, cells = PROPS[rng.randrange(len(PROPS))]
+    for y, x, ch in cells:
+        grid[y][x] = ch
+    return "prop:" + kind
+
+
+MUTATIONS = (
+    ("blink", lambda g, r: blink(g)),
+    ("arm-up", lambda g, r: arm_row(g, 4)),
+    ("arm-down", lambda g, r: arm_row(g, 6)),
+    ("stance-wide", lambda g, r: stance(g, -1)),
+    ("stance-narrow", lambda g, r: stance(g, 1)),
+    ("coat-flare", lambda g, r: coat_flare(g)),
+    ("tilt-left", lambda g, r: tilt(g, -1)),
+    ("tilt-right", lambda g, r: tilt(g, 1)),
+    ("breath-in", lambda g, r: breath(g, "in")),
+    ("breath-out", lambda g, r: breath(g, "out")),
+    ("prop", lambda g, r: prop(g, r)),
+)
+
+
+def breed(seed, frames_n):
+    """Produce the full frame-set document for a seed."""
+    rng = random.Random(seed)
+    doc = {"family": "operative-v1", "seed": seed, "frames": []}
+    doc["frames"].append({
+        "name": "idle-0",
+        "art": to_art(to_grid()),
+        "mutations": ["base"],
+    })
+    for i in range(1, frames_n):
+        grid = to_grid()
+        applied = []
+        for _ in range(rng.randint(1, 3)):
+            name, fn = MUTATIONS[rng.randrange(len(MUTATIONS))]
+            fn(grid, rng)
+            applied.append(name)
+        doc["frames"].append({
+            "name": f"idle-{i}",
+            "art": to_art(grid),
+            "mutations": applied,
+        })
+    return doc
+
+
+def doc_to_json(doc):
+    return json.dumps(doc, indent=2, ensure_ascii=False)
+
+
+def check_bounds(doc):
+    """Fail closed: every frame must fit the terminal safety envelope
+    (<=18 rows, <=24 cols) using only the approved glyph set."""
+    allowed = set(" █▀▄░▒▓▐ ▌▗▖▝▘•")
+    for frame in doc["frames"]:
+        rows = frame["art"].splitlines()
+        if len(rows) > 18:
+            raise SystemExit(
+                f"evolve-operative: frame {frame['name']} is {len(rows)} rows")
+        for row in rows:
+            if len(row) > 24:
+                raise SystemExit(
+                    f"evolve-operative: frame {frame['name']} row exceeds "
+                    f"24 cols: {len(row)}")
+            if any(c not in allowed for c in row):
+                raise SystemExit(
+                    f"evolve-operative: frame {frame['name']} has a "
+                    f"disallowed glyph: {row!r}")
+
+
+def positive_int(raw):
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be >= 1")
+    return value
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        prog="evolve-operative",
+        description="Breed evolutionary pixel-art frame-sets for the "
+                    "hngh operative (deterministic per seed).")
+    ap.add_argument("--frames", type=positive_int, default=3,
+                    help="number of frames in the mutation walk (default 3)")
+    ap.add_argument("--seed", type=int, default=1,
+                    help="random seed; same seed -> identical JSON")
+    ap.add_argument("--out", metavar="FILE", default=None,
+                    help="write the JSON document to FILE instead of stdout")
+    args = ap.parse_args(argv)
+
+    doc = breed(args.seed, args.frames)
+    check_bounds(doc)
+    payload = doc_to_json(doc) + "\n"
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        print(f"wrote {args.out}", file=sys.stderr)
+    else:
+        sys.stdout.write(payload)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
