@@ -46,6 +46,7 @@ try:
     from textual.containers import Horizontal, Vertical
     from textual.theme import Theme
     from textual.widgets import DataTable, Footer, Header, Static
+    from rich.text import Text
 except ImportError:
     sys.stderr.write(_HINT + "\n")
     sys.exit(2)
@@ -167,19 +168,24 @@ def _cut(text, n):
 def _kw_text(text, accent):
     """Render TEXT with domain keywords tinted in the accent, with a
     leading space for column breathing room."""
-    out = [(" ", "")]
+    out = Text(" ")
     words = sorted(dash.KEYWORD_HIGHLIGHT, key=len, reverse=True)
     i, n = 0, len(text)
     while i < n:
         for w in words:
             if text.startswith(w, i):
-                out.append((w, f"bold {accent}"))
+                out.append(w, f"bold {accent}")
                 i += len(w)
                 break
         else:
             out.append(text[i])
             i += 1
     return out
+
+
+def _styled(text, style):
+    """Render TEXT with an explicit style as a rich Text cell."""
+    return Text(text, style=style) if style else text
 
 
 def _dance_level():
@@ -323,14 +329,15 @@ class HnghTUI(App):
         for i, status in items:
             mark, style = glyph.get(status, ("▪", dim))
             eta = _kw_text(_cut(etas.get(i, ""), 50), accent)
-            queue.add_row(f" {_cut(i, 24)}", (f" {mark}", style), eta)
+            queue.add_row(f" {_cut(i, 24)}",
+                          _styled(f" {mark}", style), eta)
 
         sessions_w = self.query_one("#sessions", DataTable)
         sessions_w.clear()
         for s in sessions:
             state = s.get("state", "?")
             color = _STATE_COLOR.get(state)
-            state_text = (f" {state}", color) if color else f" {state}"
+            state_text = _styled(f" {state}", color)
             store = s.get("store", "").removeprefix("run-")
             mission = _kw_text(_cut(s.get("mission", ""), 44), accent)
             sessions_w.add_row(f" {_cut(s.get('run', '?'), 6)}",
