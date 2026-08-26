@@ -89,8 +89,9 @@ environment.
 
 ## Commits
 
-- hngh (ceremony, fresh store): <hash>
-- hngh-automation (plain): <hash>
+- hngh (ceremony, certificate-bound, pushed): `f478f18` (evolve-dashboard-style)
+  and `51cbd3d` (dashboard-tui + test + Makefile + ui-grades + overlay + record).
+- hngh-automation (plain): `f87c5a4` (cadence/10m/01-evolve-ui.sh).
 
 ## Next
 
