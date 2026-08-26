@@ -917,3 +917,59 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   commit through Hngh's certificate gate and its session is visible in
   the watchdog/handoff ledger; the same rules apply whether the agent
   is working in Hngh or on Hngh.
+
+## Command center — CLI + GUI operator surfaces (operator directive 2026-08-26)
+
+- **Problem:** there's no real "command center": no flexible ever-
+  expanding agentic interface for a system harness; we use oh-my-pi
+  ad-hoc. The operator needs BOTH a command-line and a GUI Hngh
+  interface, each with flexible readouts and simple controls for
+  summoning and scheduling agents for various purposes.
+- **Smallest useful outcome (needs-first):**
+  - CLI: `scripts/hngh` grows a `schedule` / `summon` surface (see
+    agentic-interface rung) — operator types an ask, sees it considered
+    + contrasted with existing features, sees it slotted into the
+    active schedule.
+  - GUI: the webapp becomes the command center (see webapp rungs +
+    agentic-interface) — same surfaces, clickable.
+  - **Expedite visibility:** a user can ask for an expedite and SEE the
+    impact (what it accelerates, any cascading delay to other scheduled
+    work/maintenance) at any degree of expedite.
+  - **Subagent view+control:** subagent views accessible alongside any
+    main Hngh instance / attached session; users can identify and PAUSE
+    a misbehaving subagent, highlight/name the unwanted behavior for
+    Hngh's correction.
+- **Evidence:** operator directive 2026-08-26; webapp (live :8890);
+  roguelike watchdog + agent-handoffs; `hosted agentic interface`,
+  `OMP↔Hngh bridge plugin`, `machine-steered-backlog` backlog entries.
+- **Risk:** scope creep — needs-first: build what the operator must SEE
+  first (awareness: runs/schedule/subagents/system), then what's nice;
+  no daemon until the bridge rung proves it needs one.
+- **Dependencies:** machine-steered-backlog (scheduling+completing own
+  development), hosted agentic interface + OMP↔Hngh bridge (summon/
+  schedule controls), system awareness rung (harnessing hardware/
+  software/network), watchdog pause/highlight surface.
+- **Review trigger:** an operator opens either interface, types an ask
+  about Hngh's development, sees it considered, expedited with visible
+  ripple impact, and can pause+label a misbehaving subagent from the
+  subagent view — all without leaving the interface.
+
+## System awareness rung (operator directive 2026-08-26)
+
+- **Problem:** Hngh should maintain steady awareness of its surrounding
+  system, using hardware/software/network resources to suit its own
+  development and expansion — currently it only sees its stores/timers.
+- **Smallest useful outcome:** the oversight tick + dashboard surface
+  live system health (CPU/mem/disk/net, tailscale/fleet peers, model
+  server health, resource headroom) as read-only awareness
+  (fleet-manager already probes some); the agentic leg can name
+  resource-based steers (e.g. "network down — pause network-labeled
+  jobs").
+- **Evidence:** operator directive; fleet-manager --discover;
+  probe-model-route; credentialed network probes.
+- **Risk:** awareness becoming ambient control — keep it read-only
+  awareness feeding steer suggestions, never implicit mutation.
+- **Dependencies:** cadence-continuum + oversight tick; fleet-manager.
+- **Review trigger:** the dashboard shows live system-resource state,
+  and a resource change (e.g. network loss) produces a steer/alert
+  without any hidden action.
