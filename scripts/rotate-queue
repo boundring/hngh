@@ -16,7 +16,7 @@
 ;;;
 ;;; Usage:
 ;;;   sbcl --script scripts/rotate-queue \
-;;;        --store=PATH --item=QUEUE_ID --reviewer=REVIEWER_FILE \
+;;;        --store=PATH --item=QUEUE_ID (--reviewer=REVIEWER_FILE | --route=auto|local|remote) \
 ;;;        OBJECTIVE FILES...
 ;;; Exit: 0 rotated (committed), 1 refused/verdict-not-admitted,
 ;;; 2 malformed invocation, 3 transport fault.
@@ -80,6 +80,36 @@ hash, per-file source-manifest entries with live SHA-256s."
       (error "rotate-queue: evidence refused: ~A" refusal))
     evidence))
 
+(defun route-reviewer (route)
+  "Resolve the operator reviewer-transport for ROUTE by probing the
+configured endpoints (one bounded read-only probe). Returns
+(values path nil) or (values nil refusal-text)."
+  (let ((home (parse-namestring (uiop:getenv "HOME"))))
+    (multiple-value-bind (out exit-code)
+        (uiop:run-program
+         (list "python3" "scripts/probe-model-route"
+               (format nil "--route=~A" route))
+         :output :string :error-output :string :ignore-error-status t)
+      (let ((choice (string-trim '(#\Newline #\Return #\Space) out)))
+        (cond
+         ((not (zerop exit-code))
+          (values nil (format nil "no reachable reviewer route (~A): ~A"
+                              route choice)))
+         ((string= choice "local")
+          (values
+           (merge-pathnames ".hngh-automation/reviewer-local.conf" home)
+           nil))
+         ((string= choice "remote")
+          (values
+           (merge-pathnames ".hngh-automation/reviewer-remote.conf" home)
+           nil))
+         (t (values nil "route probe answered none")))))))
+
+(defun route-loadout-label (route)
+  "The loadout's route label for a --route choice: remote routes carry
+the remote label; local and auto keep the ceremony-tested model label."
+  (if (string= route "remote") "remote" "model"))
+
 (defun manifest-pieces (evidence)
   "PATH=HASH:ROLE per candidate file, colon-joined (propose source-manifest)."
   (format nil "~{~A~^:~}"
@@ -97,7 +127,7 @@ hash, per-file source-manifest entries with live SHA-256s."
   (hngh.main:dispatch-command
    (cons (format nil "--store=~A" store) argv)))
 
-(defun rotate (store item-id reviewer objective files)
+(defun rotate (store item-id reviewer objective files route)
   "The full rotation. Returns the final exit code."
   (let* ((queue-file (queue-row-flip item-id))
          (all-files (append files (list queue-file)))
@@ -110,7 +140,8 @@ hash, per-file source-manifest entries with live SHA-256s."
       ;; 1. run + model admission (filesystem store is implicit)
       (let ((code
               (do-step (list "create-run" objective "builder"
-                          "loadout-route-label=model"
+                          (format nil "loadout-route-label=~A"
+                                  (route-loadout-label route))
                           "loadout-context-limit=2000"
                           "loadout-token-limit=2000"
                           "loadout-cost-limit=2000"
@@ -201,11 +232,26 @@ hash, per-file source-manifest entries with live SHA-256s."
     (split-argv (rest (uiop:raw-command-line-arguments)))
   (let ((store (getf options :store))
         (item-id (getf options :item))
+        (route (getf options :route))
         (reviewer (getf options :reviewer)))
-    (unless (and store item-id reviewer (>= (length positionals) 2))
+    (when (and route (not (member route '("auto" "local" "remote")
+                                   :test #'string=)))
       (format *standard-output*
-              "usage: sbcl --script scripts/rotate-queue --store=PATH --item=ID --reviewer=FILE OBJECTIVE FILES...~%")
+              "usage: --route must be auto, local, or remote (got ~A)~%" route)
       (uiop:quit 2))
+    (when (or (not store) (not item-id) (< (length positionals) 2)
+              (and (not reviewer) (not route)))
+      (format *standard-output*
+              "usage: sbcl --script scripts/rotate-queue --store=PATH --item=ID (--reviewer=FILE | --route=auto|local|remote) OBJECTIVE FILES...~%")
+      (uiop:quit 2))
+    (when (and (not reviewer) route)
+      (multiple-value-bind (path refusal)
+          (route-reviewer route)
+        (when refusal
+          (format *standard-output* "review refused: ~A~%" refusal)
+          (uiop:quit 1))
+        (setf reviewer path)))
     (let ((code (rotate store item-id reviewer
-                        (first positionals) (rest positionals))))
+                        (first positionals) (rest positionals)
+                        (or route "local"))))
       (uiop:quit code))))

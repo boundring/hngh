@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""fleet-manager: node discovery and wake utilities for the device fleet.
+
+Read-only over the mesh, never a daemon and never a watcher. One
+invocation, one job. Modes:
+
+  --discover         list tailscale peers (or the honest logged-out
+                     state), ping each reachable address, and report
+                     system primitives: audio playing, tailscale state,
+                     D-Bus session, local interfaces.
+  --json             the same discovery as machine-readable JSON.
+  --wake PEER        send one wake-on-LAN magic packet (UDP 9 to the
+                     /24 broadcast) for a peer whose MAC is in the
+                     operator-owned fleet record. An unpinned or
+                     malformed MAC refuses: pinning a peer is a
+                     ceremony action, never a script write.
+  --record           append today's observed node facts to
+                     docs/project/fleet.md (dated, non-authoritative)
+                     and add a dated note to the queue ledger. The
+                     source pin registry is never touched.
+
+Exit codes: 0 done, 1 done with a refused/absent condition (no mesh,
+unpinned wake), 2 malformed invocation.
+
+The Hngh boundary holds: discovery is evidence-gathering, never
+authority. Nothing observed here becomes a trusted peer until the
+operator pins it through the existing ceremony.
+"""
+
+import argparse
+import json
+import re
+import socket
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+FLEET_FACTS = ROOT / "docs" / "project" / "fleet.md"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+MAX_PING = 2
+WOL_PORT = 9
+
+
+def run(cmd, timeout=4):
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return out.returncode, (out.stdout or "") + (out.stderr or "")
+    except FileNotFoundError:
+        return 127, f"{cmd[0]} not installed"
+    except subprocess.TimeoutExpired:
+        return 1, f"{cmd[0]} timed out"
+
+
+def tailscale_nodes():
+    """Tailscale peers from the daemon status; logged-out -> []."""
+    code, text = run(["tailscale", "status", "--json"])
+    if code != 0 or not text.strip():
+        return []
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return []
+    nodes = []
+    for peer in data.get("peer", {}).values():
+        ips = peer.get("tailscaleIPs") or peer.get("addresses") or [""]
+        nodes.append({
+            "name": peer.get("hostname") or peer.get("dnsName") or "?",
+            "ip": ips[0] if ips else "",
+            "online": peer.get("active", False),
+            "os": peer.get("os", "") or peer.get("OS", ""),
+        })
+    return nodes
+
+
+def net_addrs():
+    code, text = run(["ip", "-4", "addr"])
+    if code != 0:
+        return []
+    return [m.group(1) for m in re_findall_inet(text)]
+
+
+def re_findall_inet(text):
+    import re
+    return re.finditer(r"inet (\d+\.\d+\.\d+\.\d+/\d+)", text)
+
+
+def net_broadcast():
+    """The /24 broadcast of the first non-loopback IPv4, else 255.0..."""
+    for line in net_addrs():
+        ip, _, bits = line.partition("/")
+        try:
+            b = int(bits)
+        except ValueError:
+            continue
+        if b == 24 and not ip.startswith("127."):
+            parts = ip.split(".")
+            parts[3] = "255"
+            return ".".join(parts)
+    return "255.255.255.255"
+
+
+def probe_ping(target, timeout=MAX_PING):
+    code, _ = run(["ping", "-c", "1", "-W", "1", target], timeout=timeout + 1)
+    return code == 0
+
+
+def wake_peer(name, macs):
+    """Send one WOL magic packet; returns (values results refusal)."""
+    mac = macs.get(name)
+    if not mac:
+        return None, f"no MAC recorded for {name}; refusing to invent one"
+    mac = mac.replace(":", "").replace("-", "")
+    if len(mac) != 12 or not all(c in "0123456789abcdefABCDEF" for c in mac):
+        return None, f"malformed MAC for {name}: {mac!r}"
+    magic = bytes.fromhex("ff" * 6 + mac * 16)
+    results = []
+    for brd in ("255.255.255.255", net_broadcast()):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            s.sendto(magic, (brd, WOL_PORT))
+            results.append(f"{brd}:sent")
+            s.close()
+        except OSError as exc:
+            results.append(f"{brd}:ERR({exc})")
+    return results, None
+
+
+def fleet_macs():
+    """Operator-owned NAME=MAC ledger lines in fleet.md."""
+    if not FLEET_FACTS.exists():
+        return {}
+    macs = {}
+    for line in FLEET_FACTS.read_text().splitlines():
+        if "=" in line and not line.strip().startswith("#"):
+            name, _, mac = line.partition("=")
+            macs[name.strip()] = mac.strip()
+    return macs
+
+
+def system_probe():
+    facts = {}
+    code, out = run(["pactl", "list", "short", "sink-inputs"])
+    facts["audio"] = len([l for l in out.splitlines() if l.strip()]) if code == 0 else 0
+    code, out = run(["tailscale", "status"])
+    facts["tailscale"] = (out.strip() or "logged-out") if code == 0 else "logged-out"
+    code, out = run(["gdbus", "introspect", "--session",
+                     "--dest", "org.freedesktop.Notifications",
+                     "--object-path", "/org/freedesktop/Notifications"])
+    facts["dbus"] = "up" if code == 0 and "interface" in out else "unavailable"
+    facts["interfaces"] = net_addrs()
+    return facts
+
+
+def record_fleet(nodes, facts):
+    FLEET_FACTS.parent.mkdir(parents=True, exist_ok=True)
+    with FLEET_FACTS.open("a") as fh:
+        fh.write(f"\n## {facts['date']} — observed\n\n")
+        if nodes:
+            fh.write("- " + "\n- ".join(
+                f"**{n['name']}** {n['ip']} state="
+                f"{'online' if n['online'] else 'offline'}"
+                for n in nodes) + "\n")
+        else:
+            fh.write("- no tailscale peers observed\n")
+        fh.write(f"- audio: {facts['audio']} sink-input; tailscale: "
+                 f"{facts['tailscale']}; dbus: {facts['dbus']}\n")
+    with QUEUE.open("a") as fh:
+        fh.write("\n## Fleet observation\n\n"
+                 f"- {facts['date']} — fleet scan recorded {len(nodes)} "
+                 f"node(s); see docs/project/fleet.md\n")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--discover", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--wake", metavar="PEER")
+    parser.add_argument("--record", action="store_true")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    try:
+        if args.discover or args.json:
+            nodes = tailscale_nodes()
+            facts = system_probe()
+            if args.json:
+                print(json.dumps(
+                    {"nodes": nodes, "facts": facts,
+                     "generated": datetime.now(timezone.utc)
+                         .isoformat(timespec="seconds")},
+                    indent=2))
+                return 0
+            for n in nodes:
+                if n["ip"]:
+                    mark = "up" if probe_ping(n["ip"]) else "down"
+                else:
+                    mark = "unaddressed"
+                print(f"{n['name']:28s} {n['ip'] or '-':16s} "
+                      f"{mark:12s} {n['os']}")
+            if not nodes:
+                print("no tailscale peers (logged out / no mesh)")
+            print(f"system: audio={facts['audio']} tailscale="
+                  f"{facts['tailscale']} dbus={facts['dbus']} "
+                  f"interfaces={','.join(facts['interfaces']) or 'none'}")
+            return 0
+        if args.wake:
+            macs = fleet_macs()
+            sent, refusal = wake_peer(args.wake, macs)
+            if refusal:
+                print(f"fleet-manager: wake {args.wake} refused: {refusal}",
+                      file=sys.stderr)
+                return 1
+            print(f"wol {args.wake} -> {'; '.join(sent)}")
+            return 0
+        if args.record:
+            facts = system_probe()
+            facts["date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            nodes = tailscale_nodes()
+            record_fleet(nodes, facts)
+            print(f"fleet facts recorded -> {FLEET_FACTS}")
+            return 0
+        print("usage: --discover | --json | --wake PEER | --record | --help",
+              file=sys.stderr)
+        return 2
+    except (OSError, ValueError) as exc:
+        print(f"fleet-manager: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

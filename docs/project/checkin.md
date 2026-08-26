@@ -246,3 +246,19 @@ next rotation or tomorrow, whichever comes first.
 - **New steady-state:** audio-intensity @ live intensity 10/10
   (music playing) — the dance has a real source and the probe tells
   the operator at a glance.
+## 2026-08-26 — check-in #19 (continual scheduling milestone)
+
+- **State:** pre-commit working tree; full milestone verified before
+  the ceremony (`make test` green at every phase boundary).
+- **Steering (approved plan executing):** the autonomous
+  scheduling & heartbeat layer landed — schedule-heartbeat
+  (dry-run live: 15 queued, model reachable, audio 8/10),
+  probe-model-route (route vocabulary closed), driver `--route`
+  fallback, dashboard `--watch/--json/--export-html` + live session
+  telemetry, generate-publication (daily/check/ebook/site), and
+  fleet-manager (discovery/wake/record). All under the no-daemon
+  boundary: the period lives in operator cron/systemd, never in a
+  script.
+- **Next:** wake-mutation-lane stays the top rotation; the
+  heartbeat's mounted-card trigger is one operator cron line plus a
+  card file away.

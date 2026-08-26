@@ -110,5 +110,10 @@ authorize a future action.
   finalization, and the live worker proof.
 - `2026-08-25-worker-driver.md` records the one-shot continual-worker
   driver (`scripts/worker-driver`) and its exit-code contract.
+- `2026-08-26-continual-scheduling.md` records the scheduling &
+  heartbeat milestone: schedule-heartbeat, probe-model-route, driver
+  `--route` fallback, dashboard live/export modes, generate-publication,
+  fleet-manager, and the ceremony-drive helper — all inside the
+  no-daemon boundary.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

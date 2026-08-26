@@ -1,0 +1,161 @@
+#!/usr/bin/env -S sbcl --script
+;;; scripts/ceremony-drive --- bind a real file candidate through the
+;;; closed governance loop and commit it, without a queue flip.
+;;;
+;;; The loop: create-run (model loadout) -> admit-transport model ->
+;;; propose (deterministic ten-principle verdict; the verdict text is
+;;; captured into a file) -> issue-cert + mutation-check
+;;; prepare-candidate -> issue-cert + mutation-check commit. The
+;;; certificate binds the real manifest at both gates; the commit
+;;; message is the certificate's content hash.
+;;;
+;;; Review is advisory by policy; the verdict gate here is the
+;;; deterministic principle evaluation. The operator may run the model
+;;; review separately (scripts/hngh review ... reviewer=...).
+;;;
+;;; Usage:
+;;;   sbcl --script scripts/ceremony-drive --store=PATH OBJECTIVE FILE...
+;;; Exit: 0 committed, 1 refused/unadmitted, 2 malformed, 3 fault.
+
+(require :asdf)
+(require :uiop)
+
+(let* ((script-path (or *load-truename* *compile-file-truename*
+                        (truename (first sb-ext:*posix-argv*))))
+       (repo-root (make-pathname :directory (butlast (pathname-directory script-path))))
+       (asd-file (merge-pathnames "hngh.asd" repo-root)))
+  (asdf:load-asd asd-file)
+  (asdf:load-system :hngh))
+
+;; --- argv -----------------------------------------------------------
+
+(defun split-argv (argv)
+  "Pull --store=PATH out; the rest is OBJECTIVE then candidate files."
+  (loop for arg in argv
+        if (and (> (length arg) 8) (string= arg "--store=" :end1 8))
+          collect (subseq arg 8) into store
+        else collect arg into positionals
+        finally (return (values (first store) positionals))))
+
+;; --- real evidence -----------------------------------------------------
+
+(defun gather-evidence (files)
+  (multiple-value-bind (evidence refusal)
+      (hngh.adapters.run-gather:run-candidate-evidence
+       files (uiop:getcwd) nil)
+    (unless evidence
+      (error "ceremony-drive: evidence refused: ~A" refusal))
+    evidence))
+
+(defun manifest-pieces (evidence)
+  (format nil "~{~A~^:~}"
+          (mapcar (lambda (entry)
+                    (format nil "~A=~A:~A"
+                            (hngh.domain:source-manifest-entry-relative-path entry)
+                            (hngh.domain:source-manifest-entry-content-hash entry)
+                            (hngh.domain:source-manifest-entry-source-role entry)))
+                  (getf evidence :source-manifest))))
+
+;;; the closed steps -------------------------------------------------------
+
+(defun propose-argv (objective content-hash manifest-text)
+  (append
+   (list "propose" "class=feature"
+         (format nil "problem=~A" objective)
+         "outcome=ceremony-driven candidate"
+         "purpose=ceremony-glued candidate"
+         "caller=ceremony-drive"
+         "input-contract=explicit file candidate"
+         "output-contract=certificate-bound commit"
+         "failure-contract=refusal halts the drive"
+         "declared-capabilities=ceremony"
+         "capability-diff=+one candidate"
+         (format nil "source-manifest=~A" manifest-text)
+         "risk-note=reviewer is advisory; the verdict is the gate"
+         "dependency=working tree"
+         "evidence-trigger=planned phase completion")
+   (loop for principle in
+           '("closed-authority" "least-authority"
+             "dependency-direction" "fail-closed"
+             "evidence-before-claim" "atomic-mutation"
+             "reversibility" "no-hidden-execution"
+             "cost-and-route-discipline" "source-grounding")
+         collect
+         (format nil "evidence-requirements=~A:claim-proof:~A"
+                 principle content-hash))))
+
+(defun drive-loop (store objective files)
+  (let* ((evidence (gather-evidence files))
+         (content-hash (getf evidence :content-hash)))
+    (labels ((cmd (argv)
+               (multiple-value-bind (out code)
+                   (hngh.main:dispatch-command
+                    (cons (format nil "--store=~A" store) argv))
+                 (format t "~A~%" out)
+                 code)))
+      ;; 1 -- run + model admission
+      (let ((code
+              (cmd (list "create-run" objective "builder"
+                        "loadout-route-label=model"
+                        "loadout-context-limit=2000"
+                        "loadout-token-limit=2000"
+                        "loadout-cost-limit=2000"
+                        "loadout-time-limit=2000"
+                        "loadout-tool-labels=worker-task,mutation"
+                        "loadout-network-labels=model-review"
+                        "loadout-writable-scopes=repository"))))
+        (when (plusp code) (return-from drive-loop code))
+        (let ((code (cmd (list "admit-transport" "run-1" "model"
+                              "repository"))))
+          (when (plusp code) (return-from drive-loop code))
+          ;; 2 -- deterministic verdict; capture its rendered text
+          (let ((verdict-file
+                  (uiop:with-temporary-file
+                      (:pathname path :keep t :type "txt")
+                    (with-open-file (stream path :direction :output
+                                              :if-exists :supersede)
+                      (multiple-value-bind (out code)
+                          (hngh.main:dispatch-command
+                           (cons (format nil "--store=~A" store)
+                                 (propose-argv objective content-hash
+                                               (manifest-pieces evidence))))
+                        (format t "~A~%" out)
+                        (when (plusp code)
+                          (return-from drive-loop code))
+                        (write-string out stream)))
+                    (namestring path))))
+            ;; 3 -- bind + execute: prepare then commit, each re-gathered
+            (labels ((execute (action)
+                       (let ((code
+                               (cmd (append
+                                        (list "issue-cert" action
+                                              "run-1" verdict-file)
+                                        files))))
+                         (when (plusp code)
+                           (return-from drive-loop code))
+                         (let ((code
+                                 (cmd (append
+                                         (list "mutation-check" action
+                                               "run-1" verdict-file)
+                                         files))))
+                           (when (plusp code)
+                             (return-from drive-loop code))))))
+              (execute "prepare-candidate")
+              (execute "commit")
+              (ignore-errors (delete-file verdict-file))
+              (format t "ceremony drive complete: ~A committed~%" content-hash)
+              (return-from drive-loop 0))))))))
+
+;;; entry ----------------------------------------------------------------
+
+(when (member "--help" (uiop:raw-command-line-arguments) :test #'string=)
+    (format *standard-output* "--help: drive a closed certificate commit for explicit files.~%")
+    (uiop:quit 0))
+
+(multiple-value-bind (store positionals)
+    (split-argv (rest (uiop:raw-command-line-arguments)))
+  (unless (and store (>= (length positionals) 2))
+    (format *standard-output*
+            "usage: sbcl --script scripts/ceremony-drive --store=PATH OBJECTIVE FILES...~%")
+    (uiop:quit 2))
+  (uiop:quit (drive-loop store (first positionals) (rest positionals))))

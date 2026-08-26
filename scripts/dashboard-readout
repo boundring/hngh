@@ -16,12 +16,18 @@ point; the shorthand for our bigger crazy is real but honed.
 import sys
 import math
 import io
+import json
 import contextlib
+import subprocess
+import time
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TIMELINE = ROOT / "docs" / "project" / "timeline.md"
 QUEUE = ROOT / "docs" / "project" / "queue.md"
+STORE_ROOT = Path.home() / ".hngh-automation" / "store"
+PRESENT = ROOT / "scripts" / "hngh"
 
 
 def timeline_rows():
@@ -41,6 +47,127 @@ def queue_items():
             items.append((parts[0], parts[1]))
     return items
 
+
+_session_cache = {"at": 0.0, "rows": None}
+
+
+def session_rows(limit=3, ttl=0.0):
+    """Live session store: the newest STORE_ROOT sub-stores rendered
+    through scripts/hngh present (the canonical renderer). Read-only,
+    bounded, and non-fatal — a missing store or a failed render yields
+    an empty list, never a crash. TTL lets the watch loop avoid
+    hammering the store on every tick."""
+    if ttl > 0 and _session_cache["rows"] is not None \
+            and time.time() - _session_cache["at"] < ttl:
+        return _session_cache["rows"]
+    if not STORE_ROOT.is_dir():
+        _session_cache.update(at=time.time(), rows=[])
+        return []
+    stores = sorted(
+        (d for d in STORE_ROOT.iterdir()
+         if d.is_dir() and (d / "record.lisp").exists()),
+        key=lambda d: (d / "record.lisp").stat().st_mtime_ns, reverse=True)
+    rows = []
+    for store in stores[:limit]:
+        try:
+            out = subprocess.run(
+                ["sbcl", "--script", str(PRESENT), f"--store={store}",
+                 "present", "run-1"],
+                capture_output=True, text=True, timeout=4)
+        except Exception:
+            continue
+        line = (out.stdout or "").strip().splitlines()
+        if not line:
+            continue
+        text = line[0]
+        if not text.startswith("run "):
+            continue
+        fields = text.split()
+        if len(fields) < 4 or fields[0] != "run":
+            continue
+        info = {"run": fields[1]}
+        parts = []
+        for field in fields[2:]:
+            if "=" in field and (not parts or " " not in field):
+                info[field.split("=", 1)[0]] = field.split("=", 1)[1]
+            else:
+                parts.append(field)
+        info["mission"] = " ".join(parts).lstrip("mission=")
+        rows.append(info)
+    _session_cache.update(at=time.time(), rows=rows)
+    return rows
+
+
+def data_spine():
+    """The shared read-only data dict for JSON, HTML, and live modes."""
+    return {
+        "timeline": timeline_rows(),
+        "queue": [{"id": i, "status": s} for i, s in queue_items()],
+        "etas": queue_etas(),
+        "sessions": session_rows(),
+        "generated": datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+
+
+def render_json(spine):
+    return json.dumps(spine, indent=2, ensure_ascii=False)
+
+
+def render_html(spine):
+    timeline = "".join(
+        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td>"
+        f"<td><code>{r[3]}</code></td></tr>"
+        for r in spine["timeline"])
+    qrows = "".join(
+        f"<tr><td>{q['id']}</td><td>{q['status']}</td>"
+        f"<td>{spine['etas'].get(q['id'], '')}</td></tr>"
+        for q in spine["queue"])
+    srows = "".join(
+        f"<tr><td>{s.get('run', '')}</td><td>{s.get('state', '')}</td>"
+        f"<td>{s.get('loadout', '')}</td><td>{s.get('mission', '')}</td></tr>"
+        for s in spine["sessions"])
+    return f"""<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8">
+<title>hngh dashboard</title>
+<style>
+body {{ font-family: monospace; margin: 2em; }}
+table {{ border-collapse: collapse; width: 100%; }}
+th, td {{ border: 1px solid #ccc; padding: 4px 8px; text-align: left; }}
+</style></head>
+<body>
+<h1>hngh dashboard</h1>
+<p>generated <code>{spine['generated']}</code></p>
+<h2>timeline</h2>
+<table><tr><th>date</th><th>kind</th><th>item</th><th>hash</th></tr>{timeline}
+</table>
+<h2>queue</h2>
+<table><tr><th>id</th><th>status</th><th>eta</th></tr>{qrows}
+</table>
+<h2>live sessions</h2>
+<table><tr><th>run</th><th>state</th><th>loadout</th><th>mission</th></tr>{srows}
+</table>
+</body></html>"""
+
+
+def flag_value(flag, argv=sys.argv):
+    """Read --flag=N or --flag N from ARGV; None when absent."""
+    for arg in argv:
+        if arg.startswith(flag + "="):
+            return arg.split("=", 1)[1]
+        if arg == flag:
+            i = argv.index(arg)
+            if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
+                return argv[i + 1]
+            return ""
+    return None
+
+
+WATCH_ARG = "--watch" if "--watch" in sys.argv else "--live" if "--live" in sys.argv else None
+WATCH_SECONDS = int(flag_value(WATCH_ARG) or 5) if WATCH_ARG else None
+NO_SESSIONS = "--no-sessions" in sys.argv
+EXPORT_HTML = flag_value("--export-html")
+AS_JSON = "--json" in sys.argv
 
 def queue_etas():
     etas = {}
@@ -275,30 +402,46 @@ def wave_render(items, rows, etas, intensity=0):
     print(f"{len(rows)} timeline rows; {len(items)} queue items; equalizer to music")
 
 
-def main():
-    rows = timeline_rows()
-    items = queue_items()
-    etas = queue_etas()
-    dance = 0
-    if "--dance" in sys.argv:
-        i = sys.argv.index("--dance")
-        if i + 1 < len(sys.argv) and sys.argv[i + 1] == "auto":
-            import subprocess as _sp
-            try:
-                dance = int(_sp.run([sys.executable,
-                                     str(ROOT / "scripts" / "audio-intensity")],
-                                    capture_output=True, text=True, timeout=2).stdout.strip() or 0)
-            except Exception:
-                dance = 0
-        elif i + 1 < len(sys.argv):
-            dance = int(sys.argv[i + 1])
+def dance_level():
+    if "--dance" not in sys.argv:
+        return 0
+    i = sys.argv.index("--dance")
+    if i + 1 < len(sys.argv) and sys.argv[i + 1] == "auto":
+        try:
+            return int(subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "audio-intensity")],
+                capture_output=True, text=True, timeout=2).stdout.strip() or 0)
+        except Exception:
+            return 0
+    if i + 1 < len(sys.argv):
+        try:
+            return int(sys.argv[i + 1])
+        except ValueError:
+            return 0
+    return 0
+
+
+def choose_renderer():
     if "--circular" in sys.argv:
+        return "circular"
+    if "--spiral" in sys.argv:
+        return "spiral"
+    if "--burst" in sys.argv:
+        return "burst"
+    if "--wave" in sys.argv:
+        return "wave"
+    return "linear"
+
+
+def render_body(rows, items, etas, dance, sessions):
+    style = choose_renderer()
+    if style == "circular":
         func = lambda: circular_render(rows, items, etas, dance)
-    elif "--spiral" in sys.argv:
+    elif style == "spiral":
         func = lambda: spiral_render(rows, items, etas, dance)
-    elif "--burst" in sys.argv:
+    elif style == "burst":
         func = lambda: burst_render(rows, items, etas, dance)
-    elif "--wave" in sys.argv:
+    elif style == "wave":
         func = lambda: wave_render(items, rows, etas, dance)
     else:
         func = lambda: linear_render(items, rows, etas, dance)
@@ -306,12 +449,49 @@ def main():
     with contextlib.redirect_stdout(buf):
         func()
     body = buf.getvalue()
+    if sessions:
+        body += "\n" + "\n".join(
+            f"session {s.get('run', '?')} state={s.get('state', '?')} "
+            f"loadout={s.get('loadout', '?')} {s.get('mission', '')}".rstrip()
+            for s in sessions)
     if BANNER:
         body = banner() + "\n" + body
     if QUIET:
         body = "\n".join(l for l in body.splitlines()
                          if not (l.startswith("hngh ") or l.startswith("legend")))
-    sys.stdout.write(framed(body) if THEME else body)
+    return framed(body) if THEME else body
+
+
+def main():
+    if AS_JSON:
+        sys.stdout.write(render_json(data_spine()) + "\n")
+        return 0
+    if EXPORT_HTML:
+        target = Path(EXPORT_HTML)
+        target.write_text(render_html(data_spine()))
+        print(f"exported dashboard HTML -> {target}")
+        return 0
+    if WATCH_ARG:
+        interval = max(1, WATCH_SECONDS)
+        try:
+            last_sessions = None
+            last_at = 0.0
+            while True:
+                if time.time() - last_at >= 15:
+                    last_sessions = session_rows(ttl=15)
+                    last_at = time.time()
+                body = render_body(
+                    timeline_rows(), queue_items(), queue_etas(),
+                    dance_level(), [] if NO_SESSIONS else last_sessions or [])
+                sys.stdout.write("\x1b[H\x1b[2J" + body)
+                sys.stdout.flush()
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            return 0
+    sys.stdout.write(render_body(
+        timeline_rows(), queue_items(), queue_etas(), dance_level(),
+        [] if NO_SESSIONS else session_rows()) + "\n")
+    return 0
 
 
 if __name__ == "__main__":

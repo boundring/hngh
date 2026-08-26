@@ -6,6 +6,58 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-08-26
+
+#### Added
+
+- Added the autonomous scheduling & heartbeat layer (the machine-level
+  heartbeat pipeline):
+  - `scripts/schedule-heartbeat` — one non-daemon scheduler tick that
+    reads the queue ledger, probes system preconditions (working tree,
+    model route, network, audio), triggers a mounted driver (heartbeat
+    cards in `docs/project/heartbeat/`), records a dated heartbeat entry
+    with SHA-256 verification, and commits the ledger docs. `--dry-run`
+    probes without mutating; `--loop N` re-ticks in the foreground.
+  - `scripts/probe-model-route` — one bounded read-only reachability
+    probe over the operator reviewer-transport files (local/remote/auto),
+    resolving a route choice to a live endpoint.
+  - `docs/project/heartbeat-service.md` — cron one-liner and systemd
+    user timer specification; the queue's Scheduling section carries
+    the cron example.
+- Added dynamic model route fallback to the drivers:
+  - `scripts/rotate-queue --route=auto|local|remote` resolves the
+    reviewer transport by probe when no `--reviewer=` file is given;
+    the loadout route label follows the choice.
+  - `scripts/worker-driver --route=auto|local|remote` names the session
+    compute family (local default); `auto` probes once.
+- Extended `scripts/dashboard-readout` with live/export surfaces:
+  - `--watch [N]` / `--live [N]` foreground TUI refresh loop;
+    `--json` machine-readable spine; `--export-html=FILE` self-contained
+    page; live session telemetry read from the operator store through
+    `scripts/hngh present` (read-only, bounded, non-fatal).
+- Added `scripts/generate-publication` (journal, e-book, site):
+  - `--daily [DATE]` compiles `docs/journal/YYYY-MM-DD.md` from the
+    verified git/checkin/timeline record (refuses to overwrite an
+    operator journal); `--check [DATE]` verifies machine journals;
+    `--ebook [DIR]` assembles book.md + a stdlib zipfile EPUB;
+    `--site [DIR]` exports the dashboard HTML plus a lane leaderboard.
+- Added `scripts/fleet-manager` (device-fleet discovery):
+  - `--discover`/`--json` report tailscale peers, per-peer ping state,
+    audio/tailscale/D-Bus/interfaces probes; `--wake PEER` sends one
+    WOL magic packet for an operator-pinned MAC (unpinned/malformed
+    MACs refuse); `--record` appends dated observations to
+    `docs/project/fleet.md` and the queue ledger. The source pin
+    registry is never touched by a script.
+- Added `scripts/ceremony-drive` — a closed ceremony glue for explicit
+  file candidates (create-run → admit → deterministic verdict →
+  prepare-candidate → commit) used to land the milestone.
+
+#### Changed
+
+- The queue ledger's Scheduling section documents the heartbeat cron;
+  the fleet observation record and heartbeat card mounts land in
+  `docs/project/`.
+
 ### 2026-08-25
 
 #### Added

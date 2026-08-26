@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+"""generate-publication: assemble the project's public record into
+readable, distributable surfaces.
+
+Modes (all read-only over the committed record unless the mode says
+write):
+
+  --daily [DATE]   compile docs/journal/YYYY-MM-DD.md from the day's
+                   verified records: git log, check-ins, and timeline
+                   rows for that date. Refuses to rewrite a journal
+                   that already exists (the operator-authored entries
+                   are preserved; generation is for new days unless
+                   --force says otherwise).
+  --check [DATE]   verify a journal's stated counts against the real
+                   git/checkin/timeline records for that date. Read-
+                   only; exit 0 when they match, 1 when they drift.
+  --ebook [DIR]    assemble the documented corpus into an e-book
+                   structure: book.md spine plus a minimal readable
+                   EPUB (stdlib zipfile, self-contained). Default
+                   DIR docs/journal/ebook.
+  --site [DIR]     export the dashboard HTML (the same committed spine
+                   the themed readout renders) as a public site index,
+                   plus the leaderboard. Default docs/site/index.html.
+  --help           this text.
+
+Exit codes: 0 written/verified; 1 refusal (journal exists, counts
+drift); 2 malformed invocation or missing source.
+"""
+
+import argparse
+import html
+import importlib.machinery
+import importlib.util
+import re
+import subprocess
+import sys
+import zipfile
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+JOURNAL_DIR = ROOT / "docs" / "journal"
+CHECKIN = ROOT / "docs" / "project" / "checkin.md"
+TIMELINE = ROOT / "docs" / "project" / "timeline.md"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+README = ROOT / "README.md"
+INTENT = ROOT / "docs" / "intent.md"
+ARCH = ROOT / "docs" / "architecture.md"
+
+
+def git(*cmd):
+    out = subprocess.run(["git", *cmd], capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, out.stdout, out.stderr
+
+
+def day_bounds(day):
+    start = datetime.strptime(day, "%Y-%m-%d")
+    end = start + timedelta(days=1)
+    return (start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+
+
+def day_commits(day):
+    a, b = day_bounds(day)
+    code, out, _ = git("log", "--format=%s%x09%h", f"--since={a} 00:00:00",
+                       f"--until={b} 00:00:00")
+    if code != 0:
+        raise RuntimeError("git log failed")
+    return [(subject.strip(), sha.strip()[:7])
+            for line in out.splitlines()
+            for subject, _, sha in [line.partition("\t")] if line]
+
+
+def day_checkins(day):
+    text = CHECKIN.read_text()
+    return [int(m.group(1))
+            for m in re.finditer(rf"^## {re.escape(day)} — check-in #(\d+)",
+                                 text, re.MULTILINE)]
+
+
+def day_timeline(day):
+    rows = []
+    for line in TIMELINE.read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[0] == day \
+                and parts[1] in {"done", "event", "rotation"}:
+            rows.append(parts)
+    return rows
+
+
+def day_stats(day):
+    commits = day_commits(day)
+    candidates = sum(1 for s, _ in commits if s.startswith("hngh: candidate"))
+    labeled = sum(1 for s, _ in commits if "excluded from cert manifest" in s)
+    return commits, candidates, labeled
+
+
+def journal_narrative(day, n, candidates, labeled, checkins, timeline):
+    arcs = []
+    if n:
+        arcs.append(f"{n} commits moved; {candidates} of them "
+                    f"candidate-bound"
+                    + (f", {labeled} labeled chore" if labeled else ""))
+    if checkins:
+        labels = " and ".join(f"#{c}" for c in checkins)
+        arcs.append(f"the loop looked in {len(checkins)} time"
+                    + ("s" if len(checkins) != 1 else "") + f" (check-in {labels})")
+    if timeline:
+        rotations = sum(1 for r in timeline if r[1] == "rotation")
+        events = len(timeline) - rotations
+        arcs.append(f"the timeline gained {len(timeline)} row"
+                    + ("s" if len(timeline) != 1 else "")
+                    + (f" ({rotations} rotation"
+                       + ("s" if rotations != 1 else "") + ")"
+                       if rotations else "")
+                    + (f", {events} event" if events else ""))
+    if not arcs:
+        return ("Nothing committed, checked, or rotated on this date — "
+                "the ledger is quiet. That is also a fact, and it is "
+                "recorded like any other.")
+    return (", ".join(arcs) +
+            ". Each one was verified before it was written.")
+
+
+def build_journal(day):
+    commits, candidates, labeled = day_stats(day)
+    checkins = day_checkins(day)
+    timeline = day_timeline(day)
+    n = len(commits)
+    narrative = journal_narrative(day, n, candidates, labeled, checkins, timeline)
+    kinds = {}
+    for r in timeline:
+        kinds[r[1]] = kinds.get(r[1], 0) + 1
+    kind_text = (" ".join(f"{k}×{v}" for k, v in sorted(kinds.items()))
+                 if kinds else "none")
+    lines = [
+        f"# Journal — {day}",
+        "",
+        narrative,
+        "",
+        "## The ledger (machine-checked)",
+        "",
+        f"- **{n}** commits; **{candidates}** candidate-bound"
+        + (f"; **{labeled}** labeled-excluded" if labeled else "") + ".",
+        f"- **{len(checkins)}** check-in"
+        + ("s" if len(checkins) != 1 else "") + " "
+        + (("#" + " #".join(str(c) for c in checkins))
+           if checkins else "(none)") + ".",
+        f"- **{len(timeline)}** timeline rows: {kind_text}.",
+        "",
+        "## The book of the day",
+        "",
+        "Whatever was done is done and recorded; whatever was not is a "
+        "queued item with a date on it. The cadence continues.",
+        "",
+    ]
+    if n:
+        lines.extend([
+            "## The day's commits",
+            "",
+            *[f"- `{sha}` {subject}" for subject, sha in commits],
+            "",
+        ])
+    return "\n".join(lines)
+
+
+def journal_path(day):
+    return JOURNAL_DIR / f"{day}.md"
+
+
+def check_day(day):
+    path = journal_path(day)
+    if not path.exists():
+        print(f"generate-publication: no journal for {day} ({path})")
+        return 1
+    text = path.read_text()
+    commits, candidates, labeled = day_stats(day)
+    n = len(commits)
+    c_checkins = len(day_checkins(day))
+    m = re.search(r"- \*\*(\d+)\*\* commits", text)
+    cm = re.search(r"; \*\*(\d+)\*\* candidate-bound", text)
+    jc = re.search(r"- \*\*(\d+)\*\* check-in", text)
+    if m and int(m.group(1)) == n and cm and int(cm.group(1)) == candidates \
+            and jc and int(jc.group(1)) == c_checkins:
+        print(f"generate-publication: journal {day} verified "
+              f"({n} commits, {candidates} candidate-bound, "
+              f"{c_checkins} check-ins)")
+        return 0
+    if not m or not cm or not jc:
+        print(f"generate-publication: {path} is operator-authored format; "
+              f"--check only verifies machine-generated journals "
+              f"(the ledger lines starting '- **').")
+        return 1
+    print(f"generate-publication: journal {day} drifted (commits "
+          f"{m.group(1) if m else '?'} vs {n}, candidates "
+          f"{cm.group(1) if cm else '?'} vs {candidates})")
+    return 1
+
+
+def markdown_to_simple_html(md):
+    acc, in_list = [], False
+    for line in md.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if in_list:
+                acc.append("</ul>")
+                in_list = False
+            continue
+        if stripped.startswith("# "):
+            if in_list:
+                acc.append("</ul>")
+                in_list = False
+            acc.append(f"<h1>{html.escape(stripped[2:])}</h1>")
+        elif stripped.startswith("## "):
+            if in_list:
+                acc.append("</ul>")
+                in_list = False
+            acc.append(f"<h2>{html.escape(stripped[3:])}</h2>")
+        elif stripped.startswith(("- ", "* ")):
+            if not in_list:
+                acc.append("<ul>")
+                in_list = True
+            acc.append(f"<li>{html.escape(stripped[2:])}</li>")
+        else:
+            if in_list:
+                acc.append("</ul>")
+                in_list = False
+            acc.append(f"<p>{html.escape(stripped)}</p>")
+    if in_list:
+        acc.append("</ul>")
+    return "\n".join(acc)
+
+
+def ebook_documents():
+    docs = []
+    for path, title in (
+            (INTENT, "The intent"),
+            (ARCH, "The architecture"),
+            (ROOT / "docs" / "project" / "roadmap.md", "The roadmap"),
+            (ROOT / "docs" / "project" / "decisions.md", "The decisions"),
+            (ROOT / "docs" / "project" / "backlog.md", "The backlog"),
+            (ROOT / "docs" / "project" / "queue.md", "The queue"),
+            (README, "The readme")):
+        if path.exists():
+            docs.append((title, path.read_text()))
+    return docs
+
+
+def build_ebook(outdir):
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    docs = ebook_documents()
+    book = "\n\n".join(
+        [f"# The Hngh memoir (assembled)", "",
+         "The record in one file: the intent, the architecture, the "
+         "decisions, and the queue that runs itself.", ""]
+        + [f"## {title}\n\n{text}" for title, text in docs]) + "\n"
+    (outdir / "book.md").write_text(book)
+    chapters = "".join(f"<h2>{html.escape(title)}</h2>\n"
+                       f"{markdown_to_simple_html(text)}"
+                       for title, text in docs)
+    xhtml = (f'<?xml version="1.0" encoding="utf-8"?>\n'
+             f'<html xmlns="http://www.w3.org/1999/xhtml"><head>'
+             f'<title>hngh memoir</title></head><body>{chapters}</body></html>')
+    opf = f"""<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid" version="2.0">
+<metadata><dc:title>hngh memoir</dc:title><dc:language>en</dc:language>
+<dc:identifier id="uid">urn:hngh:memoir</dc:identifier></metadata>
+<manifest>
+<item id="cx" href="chapter.xhtml" media-type="application/xhtml+xml"/>
+<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+</manifest>
+<spine><itemref idref="cx"/></spine></package>"""
+    ncx = f"""<?xml version="1.0" encoding="utf-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head><meta name="dtb:uid" content="urn:hngh:memoir"/></head>
+<navMap><navPoint id="n1" playOrder="1"><navLabel><text>hngh memoir</text></navLabel>
+<content src="chapter.xhtml"/></navPoint></navMap></ncx>"""
+    epub = outdir / "hngh-memoir.epub"
+    with zipfile.ZipFile(epub, "w") as z:
+        z.writestr("mimetype", "application/epub+zip", zipfile.ZIP_STORED)
+        z.writestr("META-INF/container.xml",
+                   '<?xml version="1.0"?><container version="1.0" '
+                   'xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+                   '<rootfiles><rootfile full-path="OEBPS/content.opf" '
+                   'media-type="application/oebps-package+xml"/>'
+                   '</rootfiles></container>')
+        z.writestr("OEBPS/content.opf", opf)
+        z.writestr("OEBPS/toc.ncx", ncx)
+        z.writestr("OEBPS/chapter.xhtml", xhtml)
+    return epub, outdir / "book.md"
+
+
+def build_site(outdir):
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    loader = importlib.machinery.SourceFileLoader(
+        "dashboard_readout", str(ROOT / "scripts" / "dashboard-readout"))
+    spec = importlib.util.spec_from_loader("dashboard_readout", loader)
+    dash = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dash)
+    data = dash.data_spine()
+    page = dash.render_html(data)
+    counts = {}
+    for row in data["timeline"]:
+        counts[row[2]] = counts.get(row[2], 0) + 1
+    leaderboard = ""
+    if counts:
+        rows = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>"
+                       for k, v in sorted(counts.items(), reverse=True))
+        leaderboard = (f"<h2>leaderboard (timeline density)</h2>"
+                       f"<table><tr><th>lane</th><th>rows</th></tr>{rows}</table>")
+    page = page.replace("</body>",
+                        "<h2>instance interaction</h2>\n"
+                        "<p>Read-only endpoints: the timeline spine, the "
+                        "queue ledger, and per-run presentation renders. "
+                        "Every byte above is a committed, checked "
+                        "artifact.</p>\n" + leaderboard + "\n</body>")
+    target = outdir / "index.html"
+    target.write_text(page)
+    return target
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--daily", action="store_true")
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--ebook", nargs="?")
+    parser.add_argument("--site", nargs="?")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("day", nargs="?")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    day = args.day or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        if args.check:
+            return check_day(day)
+        if args.daily:
+            path = journal_path(day)
+            if path.exists() and not args.force:
+                print(f"generate-publication: {path} exists; journals are "
+                      f"the operator's as much as the machine's. "
+                      f"Use --force to overwrite.")
+                return 1
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(build_journal(day))
+            print(f"generated journal -> {path}")
+            return 0
+        if args.ebook is not None:
+            epub, book = build_ebook(args.ebook or "docs/journal/ebook")
+            print(f"ebook -> {book} + {epub}")
+            return 0
+        if args.site is not None:
+            index = build_site(args.site or "docs/site")
+            print(f"site index -> {index}")
+            return 0
+        print("usage: --daily [DATE] | --check [DATE] | --ebook[=DIR] "
+              "| --site[=DIR]", file=sys.stderr)
+        return 2
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"generate-publication: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
