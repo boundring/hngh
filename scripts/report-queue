@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""report-queue — append-only report ledger with a dashboard / body split.
+
+A report queue over repo files. Each report appends one markdown row to
+docs/project/reports.md (table header `| timestamp | kind | id | first
+line | body |`, one row per line), and its full body goes to
+docs/project/report-bodies/<ts>-<kind>-<id>.md. KIND ∈
+progress|expense|optimization|scheduled|alert.
+
+Commands (exit 2 on malformed input, never crash on a missing
+cursor/body — fail closed):
+
+  --add KIND TEXT      append a row and write the body file; id = first 8
+                       hex of sha256(TEXT); ts = UTC ISO second. Refuses a
+                       bad KIND or empty TEXT (exit 2).
+  --list [KIND]        rows, newest-first, optional KIND filter.
+  --unread [KIND]      rows newer than the cursor (docs/project/
+                       report-cursor). With no cursor file present, every
+                       row is unread. The DISPLAY layer advances the
+                       cursor, never the writer; --mark-read is how.
+  --mark-read ID       write ID to the cursor (advance it past a report).
+                       Refuses an unknown ID (exit 2).
+  --json               dashboard payload: {"reports":[{ts, kind, id,
+                       first, body}, ...], "unread": N, "summary":{kind: n}}.
+
+Fail closed: a missing cursor yields every row, a missing body yields
+empty text, and any file fault exits 2. Paths are overridable for
+tests via HNGH_REPORT_ROOT (points at the repo root).
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
+
+ROOT = Path(os.environ.get("HNGH_REPORT_ROOT")
+            or Path(__file__).resolve().parent.parent)
+REPORTS = ROOT / "docs" / "project" / "reports.md"
+BODIES = ROOT / "docs" / "project" / "report-bodies"
+CURSOR = ROOT / "docs" / "project" / "report-cursor"
+
+HEADER = "| timestamp | kind | id | first line | body |"
+HEADER_CELLS = [c.strip() for c in HEADER.strip("|").split("|")]
+
+
+def sha8(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
+
+
+def now_ts():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def read_rows():
+    """Return the report rows in file order (oldest first).
+
+    Each row is a list of 5 strings parsed from a `| … ` line. Non-table
+    lines (header, blank, prose) are skipped, so extra markdown never
+    breaks the ledger.
+    """
+    if not REPORTS.exists():
+        return []
+    rows = []
+    for line in REPORTS.read_text().splitlines():
+        line = line.strip()
+        if not (line.startswith("|") and line.endswith("|")):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) == 5 and cells != HEADER_CELLS:
+            rows.append(cells)  # [ts, kind, id, first, body-name]
+    return rows
+
+
+def body_path(ts, kind, rid):
+    return BODIES / f"{ts}-{kind}-{rid}.md"
+
+
+def body_name(ts, kind, rid):
+    return f"{ts}-{kind}-{rid}.md"
+
+
+def write_body(ts, kind, rid, first, full):
+    BODIES.mkdir(parents=True, exist_ok=True)
+    body_path(ts, kind, rid).write_text(
+        f"# {kind} — {rid}\n\n- **timestamp:** {ts}\n"
+        f"- **kind:** {kind}\n- **first line:** {first}\n\n{full}\n")
+
+
+def ensure_header():
+    if not REPORTS.exists():
+        REPORTS.parent.mkdir(parents=True, exist_ok=True)
+        REPORTS.write_text(HEADER + "\n")
+    elif not REPORTS.read_text().startswith(HEADER):
+        REPORTS.write_text(HEADER + "\n" + REPORTS.read_text())
+
+
+def add(kind, text):
+    if kind not in KINDS:
+        print(f"report-queue: bad kind {kind!r} (expected "
+              f"{'/'.join(sorted(KINDS))})", file=sys.stderr)
+        return 2
+    if not text.strip():
+        print("report-queue: empty TEXT refused", file=sys.stderr)
+        return 2
+    text = text.strip()
+    rid = sha8(text)
+    first = text.splitlines()[0].strip()
+    ts = now_ts()
+    ensure_header()
+    write_body(ts, kind, rid, first, text)
+    with REPORTS.open("a") as fh:
+        fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
+    return 0
+
+
+def newest_first(rows):
+    return list(reversed(rows))
+
+
+def filtered(rows, kind):
+    if kind is None:
+        return rows
+    if kind not in KINDS:
+        raise ValueError(f"report-queue: bad kind {kind!r}")
+    return [r for r in rows if r[1] == kind]
+
+
+def cursor_id():
+    """The id stord in the cursor file, or None when absent."""
+    if not CURSOR.exists():
+        return None
+    return CURSOR.read_text().strip() or None
+
+
+def unread_rows(rows):
+    """Rows newer than the cursor; every row when the cursor is absent.
+
+    The cursor stores one report id; everything after that id's position
+    in file order (newer writes) is unread. An unknown cursor id fails
+    open — no report is silently hidden by a stale cursor.
+    """
+    cid = cursor_id()
+    if cid is None:
+        return list(rows)
+    for i, r in enumerate(rows):
+        if r[2] == cid:
+            return list(rows[i + 1:])
+    return list(rows)
+
+
+def body_text(ts, kind, rid):
+    p = body_path(ts, kind, rid)
+    if not p.exists():
+        return ""
+    return p.read_text()
+
+
+def mark_read(rid):
+    rows = read_rows()
+    if rid not in {r[2] for r in rows}:
+        raise ValueError(f"report-queue: unknown report id {rid!r}")
+    CURSOR.write_text(rid + "\n")
+
+
+def list_cmd(kind):
+    for cells in newest_first(filtered(read_rows(), kind)):
+        print("| " + " | ".join(cells) + " |")
+    return 0
+
+
+def unread_cmd(kind):
+    for cells in newest_first(filtered(unread_rows(read_rows()), kind)):
+        print("| " + " | ".join(cells) + " |")
+    return 0
+
+
+def json_cmd():
+    rows = read_rows()
+    unread = unread_rows(rows)
+    summary = {}
+    for r in rows:
+        summary[r[1]] = summary.get(r[1], 0) + 1
+    reports = [{
+        "ts": r[0], "kind": r[1], "id": r[2],
+        "first": r[3], "body": body_text(r[0], r[1], r[2]),
+    } for r in newest_first(unread)]
+    print(json.dumps({
+        "generated": now_ts(),
+        "reports": reports,
+        "unread": len(unread),
+        "summary": summary,
+    }))
+    return 0
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(
+        prog="report-queue", add_help=False,
+        description="append-only report queue (see module docstring)")
+    p.add_argument("--help", action="store_true")
+    p.add_argument("--add", nargs=2, metavar=("KIND", "TEXT"))
+    p.add_argument("--list", nargs="?", const="")
+    p.add_argument("--unread", nargs="?", const="")
+    p.add_argument("--mark-read", metavar="ID")
+    p.add_argument("--json", action="store_true")
+    args = p.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    if args.add:
+        return add(args.add[0], args.add[1])
+    if args.list is not None:
+        return list_cmd(args.list or None)
+    if args.unread is not None:
+        return unread_cmd(args.unread or None)
+    if args.mark_read:
+        try:
+            mark_read(args.mark_read)
+            return 0
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+    if args.json:
+        return json_cmd()
+    print("usage: report-queue --add KIND TEXT | --list[=KIND] | "
+          "--unread[=KIND] | --json | --mark-read ID | --help",
+          file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -31,6 +31,7 @@ import argparse
 import html
 import importlib.machinery
 import importlib.util
+import os
 import re
 import subprocess
 import sys
@@ -38,7 +39,8 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("HNGH_PUB_ROOT")
+            or Path(__file__).resolve().parent.parent)
 JOURNAL_DIR = ROOT / "docs" / "journal"
 CHECKIN = ROOT / "docs" / "project" / "checkin.md"
 TIMELINE = ROOT / "docs" / "project" / "timeline.md"
