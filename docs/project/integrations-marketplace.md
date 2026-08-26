@@ -22,8 +22,8 @@ first slice (`now` / `next` / `later`).
 
 - **GitHub Actions** — a workflow runs on `check-suite`/`workflow_run`;
   `scripts/hngh` parses the failure log as downstream evidence, runs the
-  dogfood ceremony to complete or reject pending commits, and refuses to
-  re-run until the event is ceremony-resolved. The gate is a Hook; the
+  dogfood governance loop to complete or reject pending commits, and refuses to
+  re-run until the event is governance-resolved. The gate is a Hook; the
   failure log is Downstream evidence. **Now:** a `ci-governance-gate`
   adapter that consumes an exported Actions failure log and emits a
   `:federation`-style evidence fact.
@@ -81,7 +81,7 @@ Infra-as-code manifolds **later**.
 - **KDE / org.freedesktop.Notifications (qdbus)** — Hook: desktop
   notifications carry mail/job-search events into an agentic reaction
   chain; the notify-agent listens and prepares (draft reply, first
-  evidence, ceremony proposal). **now.**
+  evidence, governance proposal). **now.**
 - **Notifier for push (ntfy / Apprise)** — an Outbound notifier for
   pushed results; broadcast channel, not an authority. **next.**
 

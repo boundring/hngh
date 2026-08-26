@@ -42,10 +42,10 @@ operator-pinned trust anchor verified by a real openssl invocation.
 
 - `make test` green after each stage: 8 reader guards and 2,663 checks
   (baseline 2,616 + 6 domain + 27 adapter + 14 operator-surface checks).
-- Three self-governed commits through the dogfood ceremony, pushed to
+- Three self-governed commits through the dogfood governance loop, pushed to
   `origin/main`: `7186333` (domain slice, candidate `48eea853...`),
   `1916bee` (adapter slice, candidate `b1ce3eea...`), and this slice's
-  ceremony commit; plus the two `chore:` export commits (`b773651`,
+  governance commit; plus the two `chore:` export commits (`b773651`,
   `5851273`).
 - Live end-to-end proof (not a test — real subprocess, real key), run
   from the repository root against a scratch store with a throwaway

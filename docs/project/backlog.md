@@ -215,7 +215,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Problem:** the intent document names a worker behind a port — "likely
   one called Pi" — and the bridge now surfaces the worker lane
   (`hngh_run_worker`, `worker-driver`), but no agent thread yet drives
-  the full ceremony through the bridge end to end, and the only
+  the full governance loop through the bridge end to end, and the only
   continual workers are the shell jobs in hngh-automation.
 - **Smallest useful outcome:** a disposable, read-only worker omp session
   (local Ornith/Qwen via the automation's own model chain) that can
@@ -288,7 +288,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 - **Problem:** the bridge has the full 10-tool surface (including
   `hngh_run_worker`) and its own repo, but no thread drives the whole
-  ceremony from it — the disposable lane named in the session record
+  governance loop from it — the disposable lane named in the session record
   (run → worker → review → certify) is still unlaunched on the bridge.
 - **Smallest useful outcome:** an operator in the bridge drives the
   full step-set — open a run, admit the worker, run the worker, bind
@@ -557,18 +557,18 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Problem:** CI failures surface as unstructured logs; nothing
   parses or resolves them, ceremonies do not auto-complete, and a
   pending commit can sit unevaluated. The operator wants any CI
-  failure parsed and resolved through the ceremony, no pending commit
+  failure parsed and resolved through the governance loop, no pending commit
   left un-evaluated.
 - **Smallest useful outcome:** a GitHub Actions adapter consumes an
   exported failure log as downstream evidence, runs the dogfood
-  ceremony to complete or reject the pending commit, and refuses to
-  re-run until the event is ceremony-resolved.
+  governance loop to complete or reject the pending commit, and refuses to
+  re-run until the event is governance-resolved.
 - **Evidence:** the ceremony-drive script and the promotion rung 18
   worker evidence fact; this entry.
 - **Risk:** CI logs are untrusted input; parsing must refuse closed
   on malformed or oversized logs; the gate must not become an ambient
   watcher (operator-owned cron and state, no daemon).
-- **Dependencies:** the ceremony loop (rung 9); a Gitea/Forgejo
+- **Dependencies:** the governance loop (rung 9); a Gitea/Forgejo
   Actions second adapter once a pinned peer really runs Forgejo.
 - **Review trigger:** an independent reviewer accepts a fixture where
   a failure log maps to one certificate-bound completion or rejection
@@ -586,7 +586,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Evidence:** the node-lattice groundwork (pinned peers, wake-peer,
   attestation); `dashboard-readouts`; this entry.
 - **Risk:** rows must trace only pinned, evidence-backed claims; a
-  node stays untrusted until pinned through the existing ceremony.
+  node stays untrusted until pinned through the existing governance loop.
 - **Dependencies:** node-lattice admission (`node-lattice-admission`),
   `pooled-hardware`, the dashboard panel machinery.
 - **Review trigger:** a reviewer accepts a rendered pool page whose
@@ -634,11 +634,11 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 - **Problem:** mail and job-search signals sit in inboxes; nothing
   reacts. The preparatory agentic work (draft a reply, first evidence,
-  ceremony proposal) is manual.
+  governance proposal) is manual.
 - **Smallest useful outcome:** a KDE notification reaction agent —
   via `org.freedesktop.Notifications` and the probed notification
   daemon — receives an event and prepares a draft reply, evidence, and
-  a ceremony proposal.
+  a governance proposal.
 - **Evidence:** the desktop overlay and notification-daemon research;
   the tts/voice `omp say` note; this entry.
 - **Risk:** notification payloads are untrusted UI content; the agent
@@ -653,12 +653,12 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 ## Push self-sufficiency (autonomy continuum 2026-08-26)
 
 - **Problem:** verified commits stop at the local repo — pushing is an
-  operator step, so origin lags the ceremony.
+  operator step, so origin lags the governance loop.
 - **Smallest useful outcome:** hngh-automation's sweep pushes its own
   artifact commits once an origin remote exists; hngh's verified
-  candidate commits push on ceremony completion (post-ceremony step,
-  never a hook that could push a half-ceremony).
-- **Evidence:** operator directive 2026-08-26; sweep ritual record
+  candidate commits push on governance completion (post-validation step,
+  never a hook that could push a half-validated commit).
+- **Evidence:** operator directive 2026-08-26; sweep governance record
   (`sweep: 2026-08-26 0946` commits in hngh-automation).
 - **Risk:** pushing unpublished or credential-bearing material; the
   sweep surface already excludes code dirs, and hngh pushes only
@@ -666,7 +666,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** an origin remote for hngh-automation (operator
   account action once); nothing new in hngh.
 - **Review trigger:** a push receipt in the sweep breadcrumb and a
-  ceremony record whose commit is visible on origin without operator
+  governance record whose commit is visible on origin without operator
   action.
 
 ## Credential rotation automation (autonomy continuum 2026-08-26)
@@ -722,7 +722,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   must be defined or the tick files a report instead of acting.
 - **Dependencies:** cadence-continuum; report-queue; rotate-queue.
 - **Review trigger:** one full week of the matrix running produces at
-  least one real increment per activity and zero empty ceremonial
+  least one real increment per activity and zero empty governance
   writes.
 
 ## Governance vocabulary (autonomy continuum 2026-08-26)

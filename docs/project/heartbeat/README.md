@@ -7,8 +7,8 @@ cadence-only and takes no action.
 
 Card files are named after the queue item id:
 
-- `<id>.rotation` — mount the rotate-queue ceremony for this item.
-  - line 1: the objective string (passed to the ceremony).
+- `<id>.rotation` — mount the rotate-queue governance loop for this item.
+  - line 1: the objective string (passed to the governance loop).
   - lines 2+: repository-relative candidate files, one per line
     (`#` comments and blank lines skipped).
   - A rotation card means "when this item is Next, close its slice

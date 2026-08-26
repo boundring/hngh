@@ -16,7 +16,7 @@ credential-rotation-auto	queued	Full no-operator credential/token rotation + hea
 pooled-hardware	queued	Pooled hardware / priced routes rung	README Where this is going
 tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
-push-self-sufficiency	queued	Repos push their own verified commits (sweep + post-ceremony)	operator directive 2026-08-26
+push-self-sufficiency	queued	Repos push their own verified commits (sweep + post-validation)	operator directive 2026-08-26
 cadence-continuum	queued	Timing tiers: month/week/day/hour/10m/5m/1m + ad-hoc	operator directive 2026-08-26
 activity-cadence	queued	Routine project activities on the continuum (review→comms), fleet-scaled	operator directive 2026-08-26
 governance-vocabulary	queued	Relax ritual/ceremony terms to flexible governance vocabulary	operator directive 2026-08-26; check-in-scale
@@ -49,8 +49,8 @@ item. Example (every 6 hours, in the repo):
 0 */6 * * * cd ~/Projects/etc/hngh && STORE=$(mktemp -d -u /tmp/hngh-rotation-XXXX) && mkdir -p "$STORE" && sbcl --script scripts/rotate-queue --store="$STORE" --item=NEXT_ITEM --reviewer=~/.hngh-automation/reviewer-local.conf "Objective for NEXT_ITEM" <files> >> /tmp/hngh-rotation.log 2>&1
 ```
 
-Each rotated item commits its own candidate through the full ceremony
-(real evidence → real model review → ten-principle verdict →
+Each rotated item commits its own candidate through the full governance
+loop (real evidence → real model review → ten-principle verdict →
 certificate → mutation). The ledger flip rides in the same commit.
 
 The autonomous heartbeat layer sits in front of that same runner: one

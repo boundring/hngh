@@ -50,7 +50,7 @@ silent continuation of an old one.
 - Clean architecture: the core logic depends on nothing external; the outside world plugs in
   at the edges through explicit ports, and the read-only evidence adapter is the first edge.
 - The harness governs its own repository. The past stays honest: commits that predate
-  the loop are recorded as history, not rewritten as ceremony. The present bootstraps:
+  the loop are recorded as history, not rewritten as governance. The present bootstraps:
   behavior changes ride the loop — proposal → verdict → certificate → executor, under
   real evidence — and where the loop itself refuses a binding (the dependency guard
   will not certify a commit that changes no behavior), the exception is by rule, not by

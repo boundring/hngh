@@ -4,7 +4,7 @@
 
 Completing the half-finished autonomy slice left uncommitted by the
 prior session: the append-only report queue, the single-tick
-`run-autonomous` ceremony driver, and their hermetic tests. No new
+`run-autonomous` governance driver, and their hermetic tests. No new
 features.
 
 ## What landed
@@ -19,7 +19,7 @@ features.
 3. **run-autonomous** (`scripts/run-autonomous`): the finished
    single-tick autonomy driver — journal generation when today's
    journal is absent (progress + scheduled reports), one check-in-scale
-   ceremony slice when the queue Next + >=2 open lanes + a valid
+   validation slice when the queue Next + >=2 open lanes + a valid
    heartbeat `.slice` card align (fresh `/tmp/hngh-auto-*` store),
    malformed cards fail closed (exit 2), refusing sub-steps exit 3,
    nothing-due exits 0. Date override `HNGH_TICK_TS` for tests.

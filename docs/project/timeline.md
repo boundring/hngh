@@ -27,7 +27,7 @@ Current and near-future data that a gantt/readout dashboard could draw:
 - **Queue rows** — the ledger (id, status, title, evidence, and, once
   added, ETA). A gantt's left-of-now columns are `queued`, its now
   bar is `active`, its right-of-now is `done` on the timeline.
-- **Candidate commits** — every ceremony produces one; the commit
+- **Candidate commits** — every governance run produces one; the commit
   graph is the completeness/momentum view.
 - **Rotation events** — a future machine-readable `timeline` line per
   rotation (id, state, timestamp) unlocks past/present/future session

@@ -57,7 +57,7 @@ divergences:
 - **Codex CLI** (sandbox × approval) has the best boundary enforcement
   among harnesses but no hash binding.
 - **mini-swe-agent** (~100 lines, bash-only, >74% SWE-bench Verified) is
-  the anti-ceremony refutation: the sharpest skeptic attack on Hngh's
+  the anti-governance refutation: the sharpest skeptic attack on Hngh's
   machinery.
 - **Aider** is the git-is-enough-audit thesis.
 - **OpenHands / ACP** are the architecturally nearest integration surfaces;

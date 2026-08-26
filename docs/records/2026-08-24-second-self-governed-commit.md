@@ -4,7 +4,7 @@
 
 Records the second commit produced, certified, and executed by Hngh's own
 governance loop — this time a pair of genuine code fixes found by the first
-ceremony, committed under a new certificate from the real evidence chain and
+governance loop, committed under a new certificate from the real evidence chain and
 pushed to origin.
 
 ## Decision
@@ -45,5 +45,5 @@ pushed to `origin/main` (`aa9cb64..33b8d94`).
 
 Push was performed directly by the executor transport as in run 1; an
 operator-facing push-policy tightening of the closed `:push` action vocabulary
-remains future work. The two real bugs prove the loop's value: the ceremony
-is now a genuine integration test of the evidence chain.
+remains future work. The two real bugs prove the loop's value: the governance
+loop is now a genuine integration test of the evidence chain.

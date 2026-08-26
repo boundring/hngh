@@ -40,7 +40,7 @@ gate are unchanged.
   `attestation status=verified key=ed-key ... state=current` exit 0;
   a tampered payload → `attestation status=refused labels=bad-signature`;
   `list-pins` renders `ed-key<TAB>...<TAB>ed25519`.
-- Committed through the self-governed ceremony: `src/packages.lisp`
+- Committed through the self-governed validation loop: `src/packages.lisp`
   exports landed via the chore lane excluded by the dependency guard
   (`545b4bc`); the implementation and tests were proposed (admitted
   10/10 principles), certified against real evidence, and committed as

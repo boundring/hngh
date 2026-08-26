@@ -20,7 +20,7 @@ rotation that looks in). One entry per check-in, appended dated.
 - Gently. One small, reversible adjustment per check-in when genuinely
   warranted (a stale number, a queue reorder, a missing "next").
 - Never manufacture work: no-change entries are a valid outcome.
-- Every check-in that changes anything rides the ceremony like any doc
+- Every check-in that changes anything rides the governance loop like any doc
   slice.
 
 ---
@@ -28,7 +28,7 @@ rotation that looks in). One entry per check-in, appended dated.
 ## 2026-08-25 — check-in #1
 
 - **State:** clean, synced (`6953808`). Recent history is
-  ceremony-dense (rotation + zoom-out + worker-driver + guard), all
+  governance-dense (rotation + zoom-out + worker-driver + guard), all
   candidate-bound, loop guards green (2774 checks, 15/1/0).
 - **Queue:** 15 open items, 1 done (doc-sync-loop). Nothing stuck;
   `wake-mutation-lane` sits at the top as the natural next rotation.
@@ -87,7 +87,7 @@ next rotation or tomorrow, whichever comes first.
 - **Queue:** timeline-events → done. Next for the spine: queue-eta
   (also check-in-scale), then dashboard-readouts (rotation-scale).
 - **Outcome:** timeline events + test wired + queue updated + this
-  entry, committed through the ceremony.
+  entry, committed through the governance loop.
 
 ## 2026-08-25 — check-in #5
 
@@ -131,7 +131,7 @@ next rotation or tomorrow, whichever comes first.
   rotation-scale item (denser gantt, ETA windows, session views) is
   next.
 - **Outcome:** scripts/dashboard-readout + smoke test + queue item
-  active + this entry, committed through the ceremony.
+  active + this entry, committed through the governance loop.
 
 ## 2026-08-25 — check-in #9
 
@@ -191,7 +191,7 @@ next rotation or tomorrow, whichever comes first.
 - **Queue:** gantt-ports deliverables partially live; dancing-ui probe
   stays queued (music-source amplitude is the next probe).
 - **Outcome:** three gantt styles + dance + smoke + this entry,
-  committed through the ceremony.
+  committed through the governance loop.
 
 ## 2026-08-25 — check-in #14 (the machine dances)
 
@@ -228,7 +228,7 @@ next rotation or tomorrow, whichever comes first.
 ## 2026-08-25 — check-in #17 (dashboard-readouts rotated)
 
 - **rotation:** dashboard-readouts flipped done through the full
-  ceremony (model review + admitted verdict + committed
+  governance loop (model review + admitted verdict + committed
   a120ff6…). The gantt family (7 dialects + tone/theme/banner/quiet
   + audio dance) is a real shipped surface. Timeline row added; stale
   ETA line removed. Gate 23/1/0.
@@ -249,7 +249,7 @@ next rotation or tomorrow, whichever comes first.
 ## 2026-08-26 — check-in #19 (continual scheduling milestone)
 
 - **State:** pre-commit working tree; full milestone verified before
-  the ceremony (`make test` green at every phase boundary).
+  the governance loop (`make test` green at every phase boundary).
 - **Steering (approved plan executing):** the autonomous
   scheduling & heartbeat layer landed — schedule-heartbeat
   (dry-run live: 15 queued, model reachable, audio 8/10),

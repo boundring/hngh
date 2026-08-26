@@ -38,7 +38,7 @@ only narrows admission, never broadens it.
   `dispatch-command`: a profile permitting only `:review` refuses a
   claim-proof proposal (exit 1, `missing-principle-result`) and admits
   one carrying review evidence (exit 0).
-- Committed through the self-governed ceremony: `src/packages.lisp`
+- Committed through the self-governed validation loop: `src/packages.lisp`
   exports via the chore lane excluded by the dependency guard
   (`e8bfaad`); the implementation and tests were proposed (admitted
   10/10), certified against real evidence, and committed as

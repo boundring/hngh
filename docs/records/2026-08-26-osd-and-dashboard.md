@@ -33,7 +33,7 @@ family — without touching the kernel's refusal vocabulary.
 These are operator-facing surfaces, not governance surfaces: the
 kernel's evidence-before-claim, fail-closed, and certificate-bound
 invariants are unchanged. The record documents that the surfaces were
-shipped candidate-bound through the ceremony (each `hngh: candidate`
+shipped candidate-bound through the governance loop (each `hngh: candidate`
 commit below), and that the grade loop is the seed of the federated
 UI/UX validation the assistant-interface design names.
 

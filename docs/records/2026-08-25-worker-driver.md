@@ -30,7 +30,7 @@ authority, no new transport, no daemon.
   refuses `no-worker-transport` (bare script); the injected variant
   completes the full cycle (create=0, admit=0, work=0) in the live
   shell proof.
-- Committed through the self-governed ceremony (`6da05b9`), gate green,
+- Committed through the self-governed validation loop (`6da05b9`), gate green,
   pushed.
 
 ## Remaining unknowns
