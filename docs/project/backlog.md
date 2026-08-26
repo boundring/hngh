@@ -891,3 +891,29 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an operator-browser gantt shows today's real
   rotation events + future queued ghosts with ETA tooltips, and a
   session host tiles all open Hngh runs (navigable, live).
+
+## OMP↔Hngh bridge plugin (operator directive 2026-08-26 — Hngh improves Hngh)
+
+- **Problem:** Hngh is bootstrapped by OMP ad-hoc (launch an omp instance
+  in the project dir, ask agents to orient); we're not taking advantage
+  of Hngh itself to improve Hngh. The operator is OK using a plugin that
+  directly interfaces oh-my-pi with Hngh while Hngh grows toward hosting
+  its own sessions.
+- **Smallest useful outcome:** an omp plugin that connects oh-my-pi
+  sessions to Hngh's governance surfaces directly — so work ON Hngh
+  runs through Hngh's own rules (ceremony-gated commits, roguelike
+  watchdog visibility, wired-state lens, oversight alerts) rather than
+  as a parallel ad-hoc lane. Reuse oh-my-pi's existing session/tool
+  structure; add a thin Hngh-facing adapter, not a rewrite.
+- **Evidence:** operator directive 2026-08-26; precept 11 (Hngh improves
+  Hngh); worker-driver r18; `hosted agentic interface` + `bridge-operator
+  -host` backlog entries; the roguelike watchdog + agent-handoffs ledger.
+- **Risk:** coupling omp to hngh too early — the plugin must be a sided
+  adapter (omp keeps its structure; hngh kernel stays side-effect-free),
+  failures fail closed, no new daemon.
+- **Dependencies:** `bridge-operator-host` rung; worker-driver; the
+  watchdog/handoff surfaces.
+- **Review trigger:** a session invoked through the plugin lands its
+  commit through Hngh's certificate gate and its session is visible in
+  the watchdog/handoff ledger; the same rules apply whether the agent
+  is working in Hngh or on Hngh.

@@ -87,3 +87,15 @@ higher bar — bounded payloads, right-sized context, one-shot where
 possible, gated to the cadence beat that can afford them. The route
 ladder (local < cheap-remote < expensive-remote) is decided by the
 evaluation's cost window, not by habit (precept 2).
+
+## 11. Hngh improves Hngh (dogfood the whole loop)
+We do not want to use other tools to work WITH Hngh forever; the goal is
+Hngh governing its own development. While OMP/oh-my-pi bootstraps Hngh,
+the direction is: a plugin interfaces oh-my-pi directly with Hngh
+(reusing oh-my-pi's structure while Hngh grows), and Hngh advances toward
+hosting its own sessions and applying the same clean-architecture and
+roguelike-development rules to its own development that it enforces
+in-kernel. Agents working ON Hngh run under the same roguelike death rule
+and the same wired-state lens as agents working IN Hngh — a stalled
+build-session is as dead as a stalled ceremony, and its replacement is as
+failure-informed.
