@@ -15,6 +15,9 @@ import subprocess
 import sys
 import time
 import unittest
+import fcntl
+import struct
+import termios
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -54,6 +57,10 @@ class DashboardTUI(unittest.TestCase):
     def test_pty_renders_and_quits_cleanly(self):
         pid, fd = pty.fork()
         if pid == 0:
+            # a tall terminal so every table AND the status/scheduled
+            # strip (bottom line) are on-screen for the assertions.
+            fcntl.ioctl(1, termios.TIOCSWINSZ,
+                        struct.pack("HHHH", 46, 120, 0, 0))
             os.execvp(sys.executable,
                       [sys.executable, str(SCRIPT), "--interval", "1"])
         try:
@@ -75,13 +82,15 @@ class DashboardTUI(unittest.TestCase):
 
             # boot: poll until the first frame is fully painted — the
             # operative eye-slit glyph (v4, shared by every frame), the
-            # queue table, and an active-lanes row all land in the same
-            # refresh — bounded, so a slow first paint under load never
-            # flakes. "node" is a known lane-id fragment in the backlog.
+            # queue table, an active-lanes row, and the beacon/scheduled
+            # strip (real store: beacon runs + "7 timers") all land in
+            # the same refresh — bounded, so a slow first paint under
+            # load never flakes. "node" is a known lane-id fragment.
             first = ""
             deadline = time.time() + 8
             while ("▀▀•▀▀" not in first or "queue" not in first
-                   or "node" not in first) \
+                   or "node" not in first or "beacon" not in first
+                   or "7 timers" not in first) \
                     and time.time() < deadline:
                 first += snapshot(0.4)
             self.assertIn("▀▀•▀▀", first, "operative figure renders")
@@ -89,6 +98,8 @@ class DashboardTUI(unittest.TestCase):
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
             self.assertIn("node", first, "active-lanes row renders")
+            self.assertIn("beacon", first, "beacon state label renders")
+            self.assertIn("7 timers", first, "scheduled strip renders")
 
             # sequence/breathe animation: three reads ~0.6s apart must
             # show the figure throughout and differ somewhere — beats are

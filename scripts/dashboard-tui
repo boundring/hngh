@@ -26,6 +26,7 @@ import argparse
 import importlib.machinery
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import time
@@ -190,9 +191,38 @@ THEMES = [
 ]
 PRESETS = [t.name for t in THEMES]
 
-# State coloring for sessions; everything else stays plain.
-_STATE_COLOR = {"running": None, "evacuated": "warning",
-                "cancelled": "text-muted", "dead": "error"}
+# State coloring for sessions. Beacon runs (scheduled pings that
+# lib/hngh-record.sh closes cancelled BY DESIGN) render dim/green as
+# "beacon" so the panel doesn't read as a wall of alarming cancellations;
+# true failures (dead/evacuated/non-beacon cancelled) stay distinctly
+# colored so they still read.
+_STATE_COLOR = {"running": "bold", "evacuated": "warning",
+                "dead": "error"}
+
+# Scheduled-beacon mission kinds (from the research: 42 store runs, all
+# hourly-ping beacons closed cancelled by design; 7 healthy timers). The
+# first three are known; any other mission that reads as a timed beacon
+# (clock tail) is classified generically so the newer automation labels
+# are covered without knowing their names.
+BEACON_KINDS = ("hourly research ping", "morning digest", "security check")
+_CLOCK_TAIL = re.compile(r"\s(\d{1,2}[:.]?\d{2}(?::\d{2})?)\s*$")
+
+
+def _beacon_kind(mission):
+    """Return the beacon kind text (string) when MISSION is a scheduled
+    ping/check, else None. Known kinds match by prefix; every other
+    mission ending in a clock token (e.g. 'security check 2000',
+    'nightly audit 02:00') is a beacon whose kind is the leading prose."""
+    m = (mission or "").strip()
+    if not m:
+        return None
+    low = m.lower()
+    for kind in BEACON_KINDS:
+        if low.startswith(kind):
+            return kind
+    if _CLOCK_TAIL.search(m):
+        return m[:_CLOCK_TAIL.search(m).start()].strip() or "scheduled check"
+    return None
 
 
 def _cut(text, n):
@@ -350,7 +380,7 @@ class HnghTUI(App):
     }
     #status {
         color: $text-muted;
-        height: 1;
+        height: 2;
     }
     """
     BINDINGS = [
@@ -478,12 +508,23 @@ class HnghTUI(App):
 
         sessions_w = self.query_one("#sessions", DataTable)
         sessions_w.clear()
+        kinds_seen = set()
         for s in sessions:
             state = s.get("state", "?")
-            color = _STATE_COLOR.get(state)
-            state_text = _styled(f" {state}", color)
             store = s.get("store", "").removeprefix("run-")
-            mission = _kw_text(_cut(s.get("mission", ""), 44), accent)
+            mission_text = s.get("mission", "")
+            kind = _beacon_kind(mission_text)
+            if state == "cancelled" and kind:
+                # a scheduled beacon closed cancelled BY DESIGN: dim/green
+                # "beacon", mission truncated to its kind prefix + time
+                kinds_seen.add(kind)
+                state_text = _styled(" beacon", "dim")
+                mission = _kw_text(
+                    _cut(mission_text[: len(kind) + 6], 44), accent)
+            else:
+                color = _STATE_COLOR.get(state, "text-muted")
+                state_text = _styled(f" {state}", color)
+                mission = _kw_text(_cut(mission_text, 44), accent)
             sessions_w.add_row(f" {_cut(s.get('run', '?'), 6)}",
                                f" {_cut(store, 24)}", state_text,
                                f" {dash.age_text(s.get('age'))}", mission)
@@ -513,7 +554,16 @@ class HnghTUI(App):
         status = (f"updated {datetime.now().strftime('%H:%M:%S')} · "
                   f"every {self.interval}s · dance {dance}/10 · "
                   f"{len(sessions)} session(s)")
-        self.query_one("#status", Static).update(status)
+        # scheduled strip: the healthy timer set, driven by beacon kinds
+        # present this refresh; the known job set is hardcoded for now
+        # (7 timers) and any extra present kind is appended generically.
+        known = [k for k in BEACON_KINDS if k in kinds_seen]
+        extra = sorted(k for k in kinds_seen if k not in BEACON_KINDS)
+        jobs = known + extra
+        strip = f"7 timers · " + " · ".join(f"{k} ✓" for k in jobs) \
+            if jobs else "7 timers"
+        self.query_one("#status", Static).update(
+            f"{status}\n{strip}")
 
     def action_cycle_theme(self):
         self.theme = PRESETS[(PRESETS.index(self.theme) + 1) % len(PRESETS)]
