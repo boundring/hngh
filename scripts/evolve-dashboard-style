@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""evolve-dashboard-style: breed dashboard-tui THEMES overlay variants.
+
+A single-surface evolution loop (modeled on evolve-operative's loop
+shape): deterministic-per-seed mutation over the dashboard-tui color
+presets, one generation batch per invocation, each generation emits a
+candidate THEMES overlay and grades it, and the fittest overlay is left
+mounted for dashboard-tui to consume.
+
+Determinism contract: the ONLY entropy is random.Random(seed) — same
+seed, same preset, same gens, same candidate sequence and grades, byte
+for byte. The rng call sequence per generation is fixed: randint(1,3)
+mutation count, then per mutation randrange(field) + randrange(2) sign.
+
+Grading modes:
+  --self-grade (default) : deterministic aesthetic metrics — WCAG
+      contrast of foreground/primary against background, distinctness
+      of accent vs error and surface/panel layering — no vision model,
+      no capture. Used when the vision capture surface is unavailable
+      (e.g. no multimodal model on the local server).
+  --grade                : invoke scripts/grade-interface (live vision
+      capture against the running dashboard) for each candidate
+      overlay. Requires a working capture+VL environment.
+      evolve-dashboard-style keeps the fittest by grade either way.
+
+Every graded generation appends one row to docs/project/ui-grades.md in
+the ledger's existing format (| timestamp | target | grade | finding |);
+target carries the generation so the shared 4-column header (also written
+by grade-interface) stays parseable. The fittest overlay is written to
+docs/design/ui-evolve/current-overlay.json, which dashboard-tui applies
+to the matching preset at startup (see dashboard-tui `_apply_overlay`).
+
+Usage:
+    evolve-dashboard-style [--preset hngh|matrix|ocean|paper] \
+        [--gens N] [--seed S] [--grade] [--no-mount] [--help]
+"""
+import argparse
+import json
+import os
+import random
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OVERLAY = ROOT / "docs" / "design" / "ui-evolve" / "current-overlay.json"
+LEDGER = ROOT / "docs" / "project" / "ui-grades.md"
+LEDGER_HEADER = "| timestamp | target | grade | first finding |"
+
+MAX_GENS = 12  # hard cap: an invocation never produces more than this
+
+# The base presets, mirroring scripts/dashboard-tui THEMES. Only the
+# mutable color surface is bred here (colors + dark flag); layout values
+# of the theme preset are entirely color-driven, so none exist yet.
+PRESETS = {
+    "hngh": dict(primary="#5af78e", secondary="#3d9c78",
+                 accent="#5af78e", foreground="#c8d0d8",
+                 background="#0b0e11", surface="#11151a",
+                 panel="#14181e", warning="#e6b450",
+                 error="#e06c6c", success="#5af78e", dark=True),
+    "matrix": dict(primary="#00ff9f", secondary="#00b36b",
+                   accent="#00ff9f", foreground="#9fffbf",
+                   background="#050805", surface="#08120b",
+                   panel="#0a160d", warning="#d4ff00",
+                   error="#ff4444", success="#00ff9f", dark=True),
+    "ocean": dict(primary="#4fc3ff", secondary="#2d7dab",
+                  accent="#4fc3ff", foreground="#a8d8f0",
+                  background="#04121f", surface="#071d2e",
+                  panel="#082336", warning="#ffb454",
+                  error="#ff6b6b", success="#4fc3ff", dark=True),
+    "paper": dict(primary="#2f6fb0", secondary="#4a90c2",
+                  accent="#b03030", foreground="#1f2328",
+                  background="#f4f1ea", surface="#ffffff",
+                  panel="#efece4", warning="#8a6d1a",
+                  error="#b03030", success="#2f6fb0", dark=False),
+}
+
+COLOR_FIELDS = ("primary", "secondary", "accent", "foreground",
+                "background", "surface", "panel", "warning",
+                "error", "success")
+
+
+# ---------------------------------------------------------------------------
+# color helpers
+# ---------------------------------------------------------------------------
+
+def parse_hex(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def to_hex(rgb):
+    r, g, b = (max(0, min(255, int(c))) for c in rgb)
+    return "#%02x%02x%02x" % (r, g, b)
+
+
+def _lum(rgb):
+    """Relative luminance (WCAG / IEC 61966-2-1)."""
+    def chan(c):
+        c /= 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (chan(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+    """WCAG contrast ratio between two hex colors (1..21)."""
+    la, lb = _lum(parse_hex(a)), _lum(parse_hex(b))
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def _dist(a, b):
+    """Perceptual-ish RGB distance between two hex colors."""
+    pa, pb = parse_hex(a), parse_hex(b)
+    return sum((x - y) ** 2 for x, y in zip(pa, pb)) ** 0.5
+
+
+# ---------------------------------------------------------------------------
+# mutation
+# ---------------------------------------------------------------------------
+
+def _shift_channel(hexcolor, rng):
+    """Bump one RGB channel by +/-8 (clip to 0..255)."""
+    rgb = list(parse_hex(hexcolor))
+    idx = rng.randrange(3)
+    rgb[idx] += 8 if rng.randrange(2) else -8
+    return to_hex(rgb)
+
+
+def _swap_pair(fields, rng):
+    """Swap two distinct color field values."""
+    a = COLOR_FIELDS[rng.randrange(len(COLOR_FIELDS))]
+    b = COLOR_FIELDS[rng.randrange(len(COLOR_FIELDS))]
+    if a == b:
+        return
+    fields[a], fields[b] = fields[b], fields[a]
+
+
+def mutate(fields, rng):
+    """Apply one directed mutation to a candidate field dict."""
+    if rng.randrange(4) == 0:
+        _swap_pair(fields, rng)
+        return
+    field = COLOR_FIELDS[rng.randrange(len(COLOR_FIELDS))]
+    if field in fields:
+        fields[field] = _shift_channel(fields[field], rng)
+
+
+def breed(seed, preset, gens):
+    """Produce the candidate overlay sequence for a seed/preset/gens."""
+    rng = random.Random(seed)
+    out = []
+    base = dict(PRESETS[preset])
+    for gen in range(1, gens + 1):
+        fields = dict(base)
+        for _ in range(rng.randint(1, 3)):
+            mutate(fields, rng)
+        out.append({"preset": preset, "gen": gen, "fields": fields,
+                    "mutations": []})
+    return out
+
+
+# ---------------------------------------------------------------------------
+# grading
+# ---------------------------------------------------------------------------
+
+def self_grade(fields):
+    """Deterministic aesthetic grade 1..10 from the overlay's own colors.
+
+    Pure and dimensionless — no timestamps, no model, no capture.
+    Rubric:
+      fg/bg contrast >=4.5 (AA body)            -> +4 else +1
+      primary/bg contrast >=3                    -> +2 else +0.5
+      accent vs error distinct (dist >= 40)      -> +1.5
+      surface vs background distinct (>8)        -> +1
+      panel vs surface distinct (>4)             -> +1
+      warning != error (dist >= 20)              -> +0.5
+    Rounded to the nearest integer; empty palette grades 1.
+    """
+    fg = fields.get("foreground")
+    bg = fields.get("background")
+    score = 0.0
+    if fg and bg:
+        score += 4 if contrast(fg, bg) >= 4.5 else 1
+    prim = fields.get("primary", bg)
+    if prim and bg:
+        score += 2 if contrast(prim, bg) >= 3 else 0.5
+    accent = fields.get("accent")
+    err = fields.get("error")
+    if accent and err and _dist(accent, err) >= 40:
+        score += 1.5
+    surface = fields.get("surface")
+    if surface and bg and _dist(surface, bg) > 8:
+        score += 1
+    panel = fields.get("panel")
+    if panel and surface and _dist(panel, surface) > 4:
+        score += 1
+    warn = fields.get("warning")
+    if warn and err and _dist(warn, err) >= 20:
+        score += 0.5
+    return max(1, min(10, int(round(score))))
+
+
+def _finding(fields, grade):
+    fg = fields.get("foreground"); bg = fields.get("background")
+    cr = contrast(fg, bg) if fg and bg else 0.0
+    return (f"self-grade {grade}/10 fg/bg contrast {cr:.1f}:1 "
+            f"mutations={','.join(fields.get('_mutations', [])) or 'channel-shift'}")
+
+
+# ---------------------------------------------------------------------------
+# ledger + mount
+# ---------------------------------------------------------------------------
+
+def append_ledger(target, grade, finding):
+    ts = time.strftime("%Y-%m-%d %H:%M")
+    finding = finding.replace("|", "\\|")[:120]
+    row = f"| {ts} | {target} | {grade} | {finding} |"
+    LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    if not LEDGER.exists():
+        LEDGER.write_text(LEDGER_HEADER + "\n|---|---|---|---|\n")
+    with LEDGER.open("a", encoding="utf-8") as fh:
+        fh.write(row + "\n")
+
+
+def mount_fittest(overlay):
+    OVERLAY.parent.mkdir(parents=True, exist_ok=True)
+    OVERLAY.write_text(json.dumps(overlay, indent=2, ensure_ascii=False) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+def positive_int(raw):
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be >= 1")
+    return value
+
+
+def run_grade_interface(fields, preset, gen, seed):
+    """Live vision grade via scripts/grade-interface (capture + VL model).
+
+    The overlay can't reach the running dashboard directly here (this
+    script is headless and bounded), so it writes a temporary overlay for
+    dashboard-tui to consume, briefs grade-interface against the running
+    window, and reports the parsed grade or 'unparsed'."""
+    tmp = Path(os.environ.get("TMPDIR", "/tmp")) / f"evolve-dash-{seed}-{gen}.json"
+    tmp.write_text(json.dumps({"preset": preset, "fields": fields}, indent=2))
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "grade-interface")],
+            capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        return "unparsed", "grade-interface timed out"
+    m = None
+    for ln in proc.stdout.splitlines():
+        if "GRADE:" in ln:
+            import re
+            m = re.search(r"(\d+)/10", ln)
+            break
+    grade = f"{m.group(1)}/10" if m else "unparsed"
+    finding = next((l.strip() for l in proc.stdout.splitlines() if l.strip()),
+                   proc.stderr.strip() or "no critique")
+    return grade, finding[:100]
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        prog="evolve-dashboard-style",
+        description="Breed dashboard-tui THEMES overlays (deterministic per "
+                    "seed) and keep the fittest mounted.")
+    ap.add_argument("--preset", choices=sorted(PRESETS), default="hngh",
+                    help="base preset to breed (default hngh)")
+    ap.add_argument("--gens", type=positive_int, default=3,
+                    help=f"generations per invocation, bounded [1..{MAX_GENS}] "
+                         f"(default 3)")
+    ap.add_argument("--seed", type=int, default=1,
+                    help="random seed; same seed -> identical candidates")
+    ap.add_argument("--grade", action="store_true",
+                    help="use live vision grade-interface instead of "
+                         "--self-grade (needs a capturing VL env)")
+    ap.add_argument("--no-mount", action="store_true",
+                    help="do not write the fittest overlay to the mount path")
+    args = ap.parse_args(argv)
+
+    gens = min(args.gens, MAX_GENS)
+    candidates = breed(args.seed, args.preset, gens)
+    graded = []
+    for cand in candidates:
+        fields = dict(cand["fields"])
+        if args.grade:
+            grade, finding = run_grade_interface(
+                fields, args.preset, cand["gen"], args.seed)
+        else:
+            grade_val = self_grade(fields)
+            grade = f"{grade_val}/10"
+            finding = (f"self-grade {grade_val}/10 fg/bg contrast "
+                       f"{contrast(fields['foreground'], fields['background']):.1f}:1")
+        cand["grade"] = grade
+        graded.append(cand)
+        target = f"dashboard-tui-{args.preset}-gen{cand['gen']}"
+        append_ledger(target, grade, finding)
+        print(f"gen {cand['gen']}: {grade}  {target}")
+
+    # fittest by parsed numeric grade; 'unparsed' sorts last.
+    def key(c):
+        try:
+            return float(c["grade"].split("/")[0])
+        except (ValueError, IndexError, AttributeError):
+            return -1
+    fittest = max(graded, key=key)
+
+    if not args.no_mount:
+        mount_fittest({
+            "preset": fittest["preset"], "gen": fittest["gen"],
+            "grade": fittest["grade"], "seed": args.seed,
+            "fields": fittest["fields"],
+        })
+        print(f"mounted fittest (gen {fittest['gen']}, {fittest['grade']}) "
+              f"-> {OVERLAY}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
