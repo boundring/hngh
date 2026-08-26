@@ -7,3 +7,4 @@
 12:25 lane: report-queue done (add/list/unread/mark-read/json, exit 2 guards). Next: run-autonomous; its journal generation must be test-hermetic — will add HNGH_GEN_ROOT override style after checking generate-publication git deps
 08:31 lane: hngh-report-display — ceremony committed e86f4cf4db7a5fe21c896e42719059bfa38fe0efdbf624c1b918d3350d8bed2c (commit 1eff057). Sibling's scripts/report-queue landed (empty ledger -> fail-closed ok). Next: relaunch live TUI + OSD.
 08:33 lane: hngh-report-display — DONE. Live screens relaunched: TUI window 48234504 (pid 1493561), OSD window 56623121/hngh-osd (pid 1493503). 8/8 complete.
+12:28 lane: run-autonomous done (journal gen + slice cards + scheduled + exit 0 nothing-due; removed unused, canonical lanes). generate-publication got HNGH_PUB_ROOT. Next: write both test files hermetically
