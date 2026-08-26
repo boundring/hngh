@@ -3,6 +3,7 @@
 
 import subprocess
 import sys
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -63,6 +64,33 @@ def test_dance():
         assert out.returncode == 0, out.stderr
 
 
+def load_readout():
+    import importlib.machinery
+    import importlib.util
+    loader = importlib.machinery.SourceFileLoader(
+        "dashboard_readout_under_test", str(ROOT / "scripts" / "dashboard-readout"))
+    spec = importlib.util.spec_from_loader("dashboard_readout_under_test", loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_json_carries_roster_key():
+    out = run(["--json"])
+    assert out.returncode == 0, out.stderr
+    doc = json.loads(out.stdout)
+    assert "roster" in doc
+    assert isinstance(doc["roster"], list)
+
+
+def test_roster_fails_closed_on_missing_store():
+    mod = load_readout()
+    # a store root that cannot exist yields an empty roster, never a crash
+    mod._roster_sources = lambda: (("automation", [ROOT / "no-such-store"]),)
+    mod._roster_cache.update(at=0.0, rows=None)
+    assert mod.roster_rows() == []
+
+
 if __name__ == "__main__":
     test_linear()
     test_spiral()
@@ -71,4 +99,6 @@ if __name__ == "__main__":
     test_wave()
     test_tone()
     test_dance()
-    print("dashboard-readout smoke OK (linear+spiral+circular+burst+wave+tone+theme+banner+quiet+dance)")
+    test_json_carries_roster_key()
+    test_roster_fails_closed_on_missing_store()
+    print("dashboard-readout smoke OK (linear+spiral+circular+burst+wave+tone+theme+banner+quiet+dance+roster)")

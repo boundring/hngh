@@ -553,6 +553,10 @@ class HnghTUI(App):
         height: auto;
         max-height: 8;
     }
+    #roster {
+        height: auto;
+        max-height: 10;
+    }
     #status {
         color: $text-muted;
         height: 2;
@@ -587,6 +591,7 @@ class HnghTUI(App):
                 yield DataTable(id="sessions", cursor_type="none")
                 yield DataTable(id="lanes", cursor_type="none")
                 yield DataTable(id="reports", cursor_type="none")
+                yield DataTable(id="roster", cursor_type="none")
                 yield Static("", id="status")
         yield Footer()
 
@@ -618,6 +623,11 @@ class HnghTUI(App):
         reports.border_title = "reports"
         keys = reports.add_columns("kind", "latest")
         reports.columns[keys[0]].width = 6
+        roster = self.query_one("#roster", DataTable)
+        roster.border_title = "live agents"
+        keys = roster.add_columns("id", "state", "source", "mission")
+        for key, width in zip(keys[:3], (20, 11, 11)):
+            roster.columns[key].width = width
         self.set_interval(self.interval, self.refresh_tick)
         self.refresh_tick()
 
@@ -667,13 +677,15 @@ class HnghTUI(App):
         # ttl=15 leans on dashboard-readout's own session cache.
         sessions = ([] if self.no_sessions
                     else dash.session_rows(limit=5, ttl=15))
+        roster = dash.roster_rows(ttl=15)
         lanes = _lanes()
         dance = _dance_level()
         reports, unread, alive = _reports()
-        self.call_from_thread(self._paint, items, etas, sessions, lanes,
+        self.call_from_thread(self._paint, items, etas, sessions, roster,
+                              lanes,
                               dance, reports, unread, alive)
 
-    def _paint(self, items, etas, sessions, lanes, dance,
+    def _paint(self, items, etas, sessions, roster, lanes, dance,
                reports, unread, alive):
         self._tick += 1
         vars_ = self.theme_variables
@@ -734,6 +746,24 @@ class HnghTUI(App):
             reports_w.add_row(_styled(f" {glyph}", style),
                               _kw_text(_cut(r.get("first_line") or "", 50),
                                        accent))
+
+        roster_w = self.query_one("#roster", DataTable)
+        roster_w.clear()
+        for rr in roster:
+            state = rr.get("state", "?")
+            mission_text = rr.get("mission", "")
+            if state in ("cancelled", "evacuated") \
+                    and _beacon_kind(mission_text):
+                # a scheduled beacon closed cancelled/evacuated BY DESIGN
+                state_text = _styled(" beacon", "dim")
+                mission = _kw_text(_cut(mission_text, 44), accent)
+            else:
+                color = _STATE_COLOR.get(state, "text-muted")
+                state_text = _styled(f" {state}", color)
+                mission = _kw_text(_cut(mission_text, 44), accent)
+            roster_w.add_row(f" {_cut(rr.get('id', '?'), 20)}", state_text,
+                             f" {rr.get('source', '')}",
+                             mission)
 
         queued = [i for i, st in items if st == "queued"]
         done = [i for i, st in items if st == "done"]
