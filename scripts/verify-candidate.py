@@ -151,7 +151,12 @@ def fast_test_marker(base_revision, candidate_hash_value, state):
   # separately, so the gate is not weakened.
   tracked = sorted(line for line in state["porcelain"].splitlines()
                    if line and not line.startswith("??"))
-  key = f"{candidate_hash_value}|{'/'.join(tracked)}"
+  # Exclude the candidate's OWN porcelain: the candidate flips
+  # `M file` -> clean at the commit boundary, which would otherwise
+  # cold-miss the push phase's verify on an identical tree.
+  candidates = {line[3:] for line in tracked}
+  others = [line for line in tracked if line[3:] not in candidates]
+  key = f"{candidate_hash_value}|{'/'.join(sorted(others))}"
   repo = Path.cwd().resolve().name or "repo"
   digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
   return os.path.join(
