@@ -8,6 +8,8 @@ robust — the PTY run is let alone for ~4s, captured, then SIGTERMed,
 and any of 0/-15/143 counts as a clean exit.
 """
 
+import importlib.machinery
+import importlib.util
 import os
 import pty
 import select
@@ -22,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "dashboard-tui"
+REPORT_QUEUE = ROOT / "scripts" / "report-queue"
 
 
 def textual_present():
@@ -38,6 +41,31 @@ def run_env(env):
     return subprocess.run([sys.executable, str(SCRIPT)],
                           capture_output=True, text=True, cwd=ROOT,
                           env=full)
+
+
+def report_queue_present():
+    """True only when the sibling's report-queue script exists AND
+    answers --json --unread successfully at test time. Mid-build it is
+    absent or half-written; skipping keeps the suite flake-free."""
+    if not REPORT_QUEUE.is_file():
+        return False
+    try:
+        out = subprocess.run([sys.executable, str(REPORT_QUEUE),
+                              "--json", "--unread"],
+                             capture_output=True, text=True, cwd=ROOT,
+                             timeout=10)
+        return out.returncode == 0 and '"reports"' in out.stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def load_tui_module():
+    loader = importlib.machinery.SourceFileLoader("dashboard_tui_under_test",
+                                                  str(SCRIPT))
+    spec = importlib.util.spec_from_loader("dashboard_tui_under_test", loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 class DashboardTUI(unittest.TestCase):
@@ -101,6 +129,12 @@ class DashboardTUI(unittest.TestCase):
             self.assertIn("node", first, "active-lanes row renders")
             self.assertIn("beacon", first, "beacon state label renders")
             self.assertIn("7 timers", first, "scheduled strip renders")
+            if report_queue_present():
+                # tolerant: only asserted when the sibling's queue is
+                # actually answering; when it is, the strip must carry
+                # the unread count and the table border its header.
+                self.assertIn("reports", first,
+                              "reports indicator renders in PTY")
 
             # sequence/breathe animation: three reads ~0.6s apart must
             # show the figure throughout and differ somewhere — beats are
@@ -122,6 +156,26 @@ class DashboardTUI(unittest.TestCase):
         self.assertIn(os.waitstatus_to_exitcode(rc),
                       (0, -15, 143),
                       f"clean exit, got {rc}")
+
+    @unittest.skipUnless(textual_present(), "textual not importable")
+    def test_report_modal_seen_logic(self):
+        mod = load_tui_module()
+        reports = [{"id": "r3", "kind": "alert"},
+                   {"id": "r2", "kind": "progress"},
+                   {"id": "r1", "kind": "scheduled"}]
+        # newest unseen wins (reports are newest-first)
+        self.assertEqual(mod._newest_unseen(set(), reports)["id"], "r3")
+        self.assertEqual(mod._newest_unseen({"r3"}, reports)["id"], "r2")
+        # all seen -> None, the pop-in stays closed
+        self.assertIsNone(mod._newest_unseen({"r1", "r2", "r3"}, reports))
+
+    @unittest.skipUnless(textual_present(), "textual not importable")
+    def test_report_reader_fails_closed(self):
+        mod = load_tui_module()
+        # a report-queue that does not exist cannot yield a crash
+        mod.REPORT_QUEUE = ROOT / "scripts" / "no-such-report-queue"
+        reports, unread, alive = mod._reports()
+        self.assertEqual((reports, unread, alive), ([], 0, False))
 
 
 if __name__ == "__main__":

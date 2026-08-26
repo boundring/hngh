@@ -124,6 +124,31 @@ def latest_line(sessions, queue_lines):
     return "no sessions"
 
 
+def report_status(timeout=4):
+    """The latest report tail for the status strip, or ''. Fail
+    closed: a missing queue script, timeout, or bad payload yields ''
+    (the strip just omits the reports bit — no crash)."""
+    queue = ROOT / "scripts" / "report-queue"
+    try:
+        out = subprocess.run(
+            [sys.executable, str(queue), "--json", "--unread"],
+            capture_output=True, text=True, timeout=timeout)
+        if out.returncode != 0:
+            return ""
+        doc = json.loads(out.stdout)
+        reports = doc.get("reports") or []
+        if not reports:
+            unread = int(doc.get("unread") or 0)
+            return f" · reports {unread}" if unread else ""
+        r = reports[0]
+        kind = r.get("kind") or "?"
+        first = r.get("first_line") or ""
+        return (f" · {kind} {first[:40]}" if first
+                else f" · reports {len(reports)}")
+    except Exception:
+        return ""
+
+
 def build_snapshot(frames, tick):
     """Assemble the JSON document; raise on any missing piece so the
     caller can fail closed with a plain message."""
@@ -137,7 +162,7 @@ def build_snapshot(frames, tick):
     speech = state_and_speech(items, sessions, tick)
     clock = datetime.now().strftime("%H:%M:%S")
     status = (f"{clock} · queue {queue_queued} · lanes {lanes} · "
-              f"{latest_line(sessions, queue_lines)}")
+              f"{latest_line(sessions, queue_lines)}{report_status()}")
     return {
         "ts": int(time.time()),
         "queue_queued": queue_queued,

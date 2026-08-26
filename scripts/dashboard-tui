@@ -18,13 +18,14 @@ Usage:
   dashboard-tui [--theme=hngh|matrix|ocean|paper] [--interval N]
                 [--no-sessions] [--help]
 
-Bindings: q quit, r refresh now, t cycle theme. Exit 2 when textual
-is not importable.
+Bindings: q quit, r refresh now, t cycle theme; while a report pop-in
+is open, r/ESC dismiss it. Exit 2 when textual is not importable.
 """
 
 import argparse
 import importlib.machinery
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -45,6 +46,7 @@ try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
+    from textual.screen import ModalScreen
     from textual.theme import Theme
     from textual.widgets import DataTable, Footer, Header, Static
     from rich.text import Text
@@ -392,6 +394,60 @@ def _lanes(max_rows=10):
     return lanes[:max_rows]
 
 
+REPORT_QUEUE = ROOT / "scripts" / "report-queue"
+_REPORT_BODIES = ROOT / "docs" / "project" / "report-bodies"
+_REPORT_GLYPH = {"progress": "⚙", "expense": "₹", "optimization": "↑",
+                 "scheduled": "⏰", "alert": "⚠"}
+
+
+def _reports(maxrows=5, timeout=4):
+    """The newest report rows, the unread count, and whether the queue
+    answered at all. Fail closed: a missing script, timeout, or bad
+    payload yields ([], 0, False) — the dashboards never crash on the
+    queue's absence (it is another lane's in-flight work)."""
+    try:
+        out = subprocess.run(
+            [sys.executable, str(REPORT_QUEUE), "--json", "--unread"],
+            capture_output=True, text=True, timeout=timeout)
+        if out.returncode != 0:
+            return [], 0, False
+        doc = json.loads(out.stdout)
+        reports = doc.get("reports") or []
+        unread = int(doc.get("unread") or len(reports))
+    except Exception:
+        return [], 0, False
+    return reports[:maxrows], unread, True
+
+
+def _newest_unseen(seen, reports):
+    """The newest report whose id is not in SEEN (REPORTS are
+    newest-first), else None. Pure, so the unit test drives it without
+    a running TUI."""
+    for r in reports:
+        if r.get("id") not in seen:
+            return r
+    return None
+
+
+def _report_body_text(report):
+    """The full body of REPORT: the report-bodies file named by the
+    body key when present, else the first line. Fail closed — any
+    missing/unreadable body falls back to the first line."""
+    first = report.get("first_line") or ""
+    key = report.get("body")
+    if key:
+        name = Path(str(key).removesuffix(".md")).name
+        for cand in (_REPORT_BODIES / f"{name}.md", Path(str(key))):
+            try:
+                if cand.is_file():
+                    text = cand.read_text(encoding="utf-8").strip()
+                    if text:
+                        return text
+            except OSError:
+                pass
+    return first
+
+
 def _state(queued, done, sessions):
     """Same state selection dashboard-readout's rich watch uses."""
     if any(s.get("state") == "running" for s in sessions):
@@ -401,6 +457,63 @@ def _state(queued, done, sessions):
     if queued:
         return "idle"
     return "empty"
+
+
+class ReportModal(ModalScreen):
+    """Pop-in report viewer: rounded border, keyword-tinted full body.
+    Dismiss with r / ESC / a click on the dimmed backdrop. Nothing here
+    ever advances the queue cursor (the operator's --mark-read owns
+    that) — the app records the id in its in-session seen set."""
+    CSS = """
+    ReportModal {
+        align: center middle;
+    }
+    #report-modal {
+        width: 78;
+        max-height: 80%;
+        border: round $primary;
+        padding: 1 2;
+        background: $surface;
+        color: $text;
+    }
+    #report-title {
+        text-style: bold;
+        color: $primary;
+    }
+    #report-body {
+        height: auto;
+        text-wrap: wrap;
+        margin-top: 1;
+    }
+    """
+    BINDINGS = [
+        Binding("r", "dismiss_modal", "close"),
+        Binding("escape", "dismiss_modal", "close", show=False),
+    ]
+
+    def __init__(self, report, accent):
+        super().__init__()
+        self._report = report
+        self._accent = accent
+        self._text = _report_body_text(report)
+
+    def compose(self) -> ComposeResult:
+        kind = (self._report.get("kind") or "report").upper()
+        with Vertical(id="report-modal"):
+            yield Static(f"report · {kind}", id="report-title")
+            yield Static("", id="report-body")
+
+    def on_mount(self):
+        self.query_one("#report-body", Static).update(
+            _kw_text(self._text, self._accent))
+
+    def action_dismiss_modal(self):
+        self.dismiss(self._report)
+
+    def on_click(self, event):
+        # a click on the dimmed backdrop (not the box) dismisses
+        if event.widget is self:
+            self.dismiss(self._report)
 
 
 class HnghTUI(App):
@@ -436,6 +549,10 @@ class HnghTUI(App):
     DataTable > .datatable--cursor {
         background: $primary 12%;
     }
+    #reports {
+        height: auto;
+        max-height: 8;
+    }
     #status {
         color: $text-muted;
         height: 2;
@@ -456,6 +573,8 @@ class HnghTUI(App):
         self.interval = max(1, int(interval))
         self.no_sessions = no_sessions
         self._tick = 0
+        self._seen_reports = set()
+        self._modal_open = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -467,6 +586,7 @@ class HnghTUI(App):
                 yield DataTable(id="queue", cursor_type="none")
                 yield DataTable(id="sessions", cursor_type="none")
                 yield DataTable(id="lanes", cursor_type="none")
+                yield DataTable(id="reports", cursor_type="none")
                 yield Static("", id="status")
         yield Footer()
 
@@ -494,6 +614,10 @@ class HnghTUI(App):
         lanes = self.query_one("#lanes", DataTable)
         lanes.border_title = "active lanes"
         lanes.add_columns("id", "glyph", "Q", "date")
+        reports = self.query_one("#reports", DataTable)
+        reports.border_title = "reports"
+        keys = reports.add_columns("kind", "latest")
+        reports.columns[keys[0]].width = 6
         self.set_interval(self.interval, self.refresh_tick)
         self.refresh_tick()
 
@@ -545,10 +669,12 @@ class HnghTUI(App):
                     else dash.session_rows(limit=5, ttl=15))
         lanes = _lanes()
         dance = _dance_level()
+        reports, unread, alive = _reports()
         self.call_from_thread(self._paint, items, etas, sessions, lanes,
-                              dance)
+                              dance, reports, unread, alive)
 
-    def _paint(self, items, etas, sessions, lanes, dance):
+    def _paint(self, items, etas, sessions, lanes, dance,
+               reports, unread, alive):
         self._tick += 1
         vars_ = self.theme_variables
         accent = vars_.get("primary", "#5af78e")
@@ -599,6 +725,16 @@ class HnghTUI(App):
                             " Q" if ln.get("in_queue") else " ",
                             f" {ln.get('date') or '—'}")
 
+        reports_w = self.query_one("#reports", DataTable)
+        reports_w.clear()
+        for r in reports:
+            kind = r.get("kind") or "?"
+            glyph = _REPORT_GLYPH.get(kind, "•")
+            style = f"bold {accent}" if kind == "alert" else accent
+            reports_w.add_row(_styled(f" {glyph}", style),
+                              _kw_text(_cut(r.get("first_line") or "", 50),
+                                       accent))
+
         queued = [i for i, st in items if st == "queued"]
         done = [i for i, st in items if st == "done"]
         state = _state(queued, done, sessions)
@@ -621,8 +757,36 @@ class HnghTUI(App):
         jobs = known + extra
         strip = f"7 timers · " + " · ".join(f"{k} ✓" for k in jobs) \
             if jobs else "7 timers"
-        self.query_one("#status", Static).update(
-            f"{status}\n{strip}")
+        status_t = Text(f"{status}\n{strip}")
+        if alive:
+            # unread count; the ⚠ glyph, accent-styled, when an alert
+            # kind is among the shown reports
+            tail = Text(f" · reports {unread}")
+            if any(r.get("kind") == "alert" for r in reports):
+                tail = Text(f" · reports ⚠{unread}")
+                tail.stylize(f"bold {accent}")
+            status_t.append_text(tail)
+        self.query_one("#status", Static).update(status_t)
+        self._maybe_report_modal(reports)
+
+    def _maybe_report_modal(self, reports):
+        """Pop-in: the newest unseen report opens once as a modal. The
+        first run may open the newest unread once; afterwards only new
+        ids. Seen ids are remembered in-session only — the queue cursor
+        stays the operator's, never touched here."""
+        if self._modal_open or not reports:
+            return
+        report = _newest_unseen(self._seen_reports, reports)
+        if report is None:
+            return
+        self._seen_reports.add(report.get("id"))
+        self._modal_open = True
+        accent = self.theme_variables.get("primary", "#5af78e")
+        self.push_screen(ReportModal(report, accent),
+                         callback=self._modal_closed)
+
+    def _modal_closed(self, _=None):
+        self._modal_open = False
 
     def action_cycle_theme(self):
         self.theme = PRESETS[(PRESETS.index(self.theme) + 1) % len(PRESETS)]
