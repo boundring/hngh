@@ -57,6 +57,17 @@ _spec = importlib.util.spec_from_loader("dashboard_readout", _loader)
 dash = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dash)
 
+# Active-lanes reader — reuse backlog-lanes' parser via the same
+# SourceFileLoader pattern (like dashboard-readout above). Import-safe:
+# the module only defines functions and ROOT/BACKLOG/QUEUE path
+# constants at top level; main() runs only under __main__, never reads
+# sys.argv at import, so loading it here cannot crash or emit.
+_loader = importlib.machinery.SourceFileLoader(
+    "backlog_lanes", str(ROOT / "scripts" / "backlog-lanes"))
+_spec = importlib.util.spec_from_loader("backlog_lanes", _loader)
+lanes_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(lanes_mod)
+
 # The operative — sprite-evolution generation 4 (operative-v4,
 # docs/design/operative-frames.md, scripts/evolve-operative --gen 4
 # --frames 4 --seed 7): anticipation → action → settle motion arcs with
@@ -278,6 +289,21 @@ def _dance_level():
         return 0
 
 
+def _lanes(max_rows=10):
+    """Active backlog lanes (done ✓ / queued ▪ / open ·, Q = in queue,
+    date). Bounded and non-fatal: a missing backlog or parse error yields
+    an empty list, never a crash. Open lanes (the active-development
+    view) first, then queued, then done."""
+    try:
+        lanes = lanes_mod.parse_backlog([])
+    except Exception:
+        return []
+    order = {"open": 0, "queued": 1, "done": 2}
+    lanes.sort(key=lambda l: (order.get(l.get("status"), 3),
+                              l.get("date") or ""))
+    return lanes[:max_rows]
+
+
 def _state(queued, done, sessions):
     """Same state selection dashboard-readout's rich watch uses."""
     if any(s.get("state") == "running" for s in sessions):
@@ -352,6 +378,7 @@ class HnghTUI(App):
             with Vertical(id="right"):
                 yield DataTable(id="queue", cursor_type="none")
                 yield DataTable(id="sessions", cursor_type="none")
+                yield DataTable(id="lanes", cursor_type="none")
                 yield Static("", id="status")
         yield Footer()
 
@@ -376,6 +403,9 @@ class HnghTUI(App):
         keys = sessions.add_columns("run", "store", "state", "age", "mission")
         for key, width in zip(keys[:4], (6, 26, 11, 7)):
             sessions.columns[key].width = width
+        lanes = self.query_one("#lanes", DataTable)
+        lanes.border_title = "active lanes"
+        lanes.add_columns("id", "glyph", "Q", "date")
         self.set_interval(self.interval, self.refresh_tick)
         self.refresh_tick()
 
@@ -425,10 +455,12 @@ class HnghTUI(App):
         # ttl=15 leans on dashboard-readout's own session cache.
         sessions = ([] if self.no_sessions
                     else dash.session_rows(limit=5, ttl=15))
+        lanes = _lanes()
         dance = _dance_level()
-        self.call_from_thread(self._paint, items, etas, sessions, dance)
+        self.call_from_thread(self._paint, items, etas, sessions, lanes,
+                              dance)
 
-    def _paint(self, items, etas, sessions, dance):
+    def _paint(self, items, etas, sessions, lanes, dance):
         self._tick += 1
         vars_ = self.theme_variables
         accent = vars_.get("primary", "#5af78e")
@@ -455,6 +487,17 @@ class HnghTUI(App):
             sessions_w.add_row(f" {_cut(s.get('run', '?'), 6)}",
                                f" {_cut(store, 24)}", state_text,
                                f" {dash.age_text(s.get('age'))}", mission)
+
+        lanes_w = self.query_one("#lanes", DataTable)
+        lanes_w.clear()
+        lg = {"done": ("✓", accent), "queued": ("▪", dim),
+              "open": ("·", dim)}
+        for ln in lanes:
+            mark, style = lg.get(ln.get("status", "open"), ("·", dim))
+            lanes_w.add_row(f" {_cut(ln.get('id', ''), 30)}",
+                            _styled(f" {mark}", style),
+                            " Q" if ln.get("in_queue") else " ",
+                            f" {ln.get('date') or '—'}")
 
         queued = [i for i, st in items if st == "queued"]
         done = [i for i, st in items if st == "done"]

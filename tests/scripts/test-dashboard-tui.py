@@ -73,19 +73,22 @@ class DashboardTUI(unittest.TestCase):
                     data += chunk
                 return data.decode("utf-8", "replace")
 
-            # boot: poll until the first frame is fully painted — both
-            # the operative eye-slit glyph (v4, shared by every frame)
-            # and the queue table (same paint pass) — bounded, so a slow
-            # first paint under load never flakes.
+            # boot: poll until the first frame is fully painted — the
+            # operative eye-slit glyph (v4, shared by every frame), the
+            # queue table, and an active-lanes row all land in the same
+            # refresh — bounded, so a slow first paint under load never
+            # flakes. "node" is a known lane-id fragment in the backlog.
             first = ""
             deadline = time.time() + 8
-            while ("▀▀•▀▀" not in first or "queue" not in first) \
+            while ("▀▀•▀▀" not in first or "queue" not in first
+                   or "node" not in first) \
                     and time.time() < deadline:
                 first += snapshot(0.4)
             self.assertIn("▀▀•▀▀", first, "operative figure renders")
             self.assertIn("hngh", first, "header renders")
             self.assertIn("queue", first, "queue table renders")
             self.assertIn("sessions", first, "sessions table renders")
+            self.assertIn("node", first, "active-lanes row renders")
 
             # sequence/breathe animation: three reads ~0.6s apart must
             # show the figure throughout and differ somewhere — beats are
