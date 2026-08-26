@@ -156,3 +156,31 @@ committed; state review caught the ordering, not the exit code.
   `[data-open]`; nothing expanded; the operator (not the machine)
   reported it. The watchdog should have caught it via a rendered-
   surface probe.
+
+## 10) Trust self-reported evidence as claims, not facts
+
+- **Class:** a subagent's final report contains hashes, counts, or
+  "verified" claims that are corrupted/mangled/unverifiable (SysAware's
+  sha256 transcription broke mid-report: "wait use e0bc3b..."). A
+  report is a claim; the tree/disk is the fact.
+- **Reaction (works):** re-verify any self-reported identifier against
+  the actual artifact on disk (the file's real hash, the real ledger
+  line, the real commit) before accepting it; when a report mangles an
+  identifier, read the file directly instead of trusting it.
+- **Provenance:** 2026-08-26 — SysAware reported unreliable hashes; the
+  on-disk `system.json` was the ground truth.
+
+## 11) A periodic heartbeat is not a loop
+
+- **Class:** loop-detectors flag healthy periodicity as a loop — 756
+  identical `mode=timer` crumbs tripped the 3x-identical rule on the
+  oversight tick's own heartbeat (a false positive the watchdog caught
+  catching itself).
+- **Reaction (works):** an identical periodic crumb with no alert/error/
+  fail signal is healthy cadence, not a loop; require a NON-periodic
+  signal (alert/error/loop/fail keyword) inside the repeated crumb, and
+  mind the split between "repeats by design" and "repeats without
+  progress."
+- **Provenance:** 2026-08-26 — the loop-signal fired on the watchdog's
+  own house; fixed by requiring an alert/error/loop marker in the
+  repeated body.
