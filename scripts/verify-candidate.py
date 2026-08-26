@@ -140,8 +140,15 @@ def candidate_hash(entries):
 
 
 def fast_test_marker(base_revision, candidate_hash_value, state):
-  normalized = state["porcelain"]
-  key = f"{base_revision}|{candidate_hash_value}|{normalized}"
+  # The full gate's outcome depends on the tracked content at BASE plus
+  # the candidate's own content, not on the staged/untracked byte state
+  # (git's index tracks the working tree). Excluding the porcelain keeps
+  # the marker stable across issue-cert prepare/commit/push transitions —
+  # the action that `git add`s flips --untracked-files=all porcelain and
+  # previously caused a cold miss + full 30-50s make test per action.
+  # The mutation executor re-verifies working-tree state separately, so
+  # the gate is not weakened.
+  key = f"{base_revision}|{candidate_hash_value}"
   repo = Path.cwd().resolve().name or "repo"
   digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
   return os.path.join(
