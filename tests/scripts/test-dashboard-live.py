@@ -10,9 +10,13 @@ a real store is only read through scripts/hngh present.
 """
 
 import json
+import os
+import pty
+import select
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -89,7 +93,6 @@ class DashboardExport(unittest.TestCase):
                          "no theme and no --tone stays colorless")
 
     def test_watch_cursor_contract(self):
-        import time
         p = subprocess.Popen(
             [sys.executable, str(SCRIPT), "--watch", "1"],
             stdout=subprocess.PIPE, text=True, cwd=ROOT)
@@ -100,6 +103,53 @@ class DashboardExport(unittest.TestCase):
         self.assertIn("\x1b[H\x1b[0J", out, "watch repaints in place")
         self.assertIn("updated", out, "watch shows a live status footer")
         self.assertIn("\x1b[?25h", out, "watch restores the cursor on exit")
+
+    def _rich_present(self):
+        try:
+            import rich  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    def test_rich_watch_renders_operative_and_quits(self):
+        if not self._rich_present():
+            self.skipTest("rich not installed; stdlib renderer covers the gate")
+        master, slave = pty.openpty()
+        p = subprocess.Popen(
+            [sys.executable, str(SCRIPT), "--watch", "1"],
+            stdout=slave, stderr=slave, stdin=slave, cwd=ROOT)
+        out = b""
+        t0 = time.time()
+        while time.time() - t0 < 3.0:
+            r, _, _ = select.select([master], [], [], 0.3)
+            if r:
+                try:
+                    chunk = os.read(master, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                out += chunk
+        os.write(master, b"q")
+        p.wait(timeout=5)
+        try:
+            while True:
+                r, _, _ = select.select([master], [], [], 0.2)
+                if not r:
+                    break
+                chunk = os.read(master, 4096)
+                if not chunk:
+                    break
+                out += chunk
+        except OSError:
+            pass
+        os.close(master)
+        os.close(slave)
+        text = out.decode(errors="replace")
+        self.assertIn("▄▄████▄▄", text, "the operative renders")
+        self.assertIn("queue runs itself", text, "header renders")
+        self.assertIn("operative", text, "speech bubble renders")
+        self.assertEqual(p.returncode, 0, "q quits the loop cleanly")
 
 
 if __name__ == "__main__":
