@@ -115,5 +115,12 @@ authorize a future action.
   `--route` fallback, dashboard live/export modes, generate-publication,
   fleet-manager, and the ceremony-drive helper — all inside the
   no-daemon boundary.
+- `2026-08-26-scheduled-runs-investigation.md` records the read-only
+  investigation of the hngh-automation schedule: the 7 systemd user
+  timers are healthy and firing, the 42/42 `cancelled` store runs were
+  beacons closed `cancelled` by design in `lib/hngh-record.sh`, only
+  3 of 7 jobs wrote runs, and the applied fixes (exit-0 closes
+  `evacuated`; the night-agent/morning-report/model-bench/night-research
+  jobs now beacon).
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
