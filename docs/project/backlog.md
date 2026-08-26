@@ -840,3 +840,54 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** a suggestion raised by the self-review mode is
   recorded, ranked with the queue, and only lands as a mutation through
   the certificate gate; the ledger shows a continual series.
+
+## Hosted agentic interface (operator directive 2026-08-26 — "Hngh as an application")
+
+- **Problem:** Hngh is a sidecar (kernel + timers + dashboard), not yet
+  an application in its own right: a user cannot sit down with Hngh
+  directly and have it fire up sessions and host its own instanced
+  oh-my-pi / pi surface for interfacing with agentic Hngh.
+- **Smallest useful outcome:** Hngh visibly firing up new sessions
+  itself and hosting its own oh-my-pi/pi instance — an agentic
+  interface where requests and steers reach the running Hngh as its
+  own interactive session, not only through ceremony/timer paths.
+- **Evidence:** operator directive 2026-08-26; r18 worker transport +
+  worker-driver (bounded read-only worker lane exists); the omp/pi
+  bridge concept; the nervous-system control-plane precept (#7).
+- **Risk:** an agentic interface is an ambient process — the biggest
+  departure from "no daemon." Mitigate: the interface itself stays an
+  on-demand session host (fired by an explicit start / a steered
+  event), never a background service; every action it takes still
+  flows through the certificate gates.
+- **Dependencies:** worker-driver/bridge-hosted end-to-end session
+  (roadmap Next), the pi/oh-my-pi host surface, the dashboard webapp
+  as the read side.
+- **Review trigger:** a user opens the hosted interface, watches Hngh
+  fire up a new worker session from it, and the session's actions land
+  only with their certificates; nothing ambient runs without an
+  explicit start.
+
+## Hosted agentic interface — navigable + auto-tiling sessions (operator refinement 2026-08-26)
+
+- **Problem (extends `hosted agentic interface`):** beyond firing sessions,
+  the operator wants *readouts for all scheduled agent runs* (a navigable
+  gantt) and *navigable, auto-tiling sessions* for the agentic interface —
+  short-term and long-term views of Hngh runs, so Hngh visibly builds and
+  uses itself rather than relying on oh-my-pi as the builder.
+- **Smallest useful outcome:** the webapp gains the navigable gantt
+  (scheduled runs readout — the ASAP slice); the hosted interface
+  (backlog `hosted agentic interface`) then gains navigable sessions
+  with auto-tiling (tmux-like tiles per run), gantt-adjoining the
+  schedule, both driven by the same evidence/spine (never fabricate
+  dates; timeline events anchor, queue items are planned ghosts).
+- **Evidence:** operator directive 2026-08-26; `queue-eta` widget;
+  `timeline-events`; the webapp (a2ae5fc) + spine; `hosted agentic
+  interface` entry.
+- **Risk:** fabricating dates/claims — the gantt renders only real
+  timeline events + planned (ghost, ETA tooltip) queue rows; the
+  tiling sessions are read-only views of runs, never governance input.
+- **Dependencies:** gantt panel (dispatch in flight); hosted agentic
+  interface (bridge/worker-driver rung); webapp panels.
+- **Review trigger:** an operator-browser gantt shows today's real
+  rotation events + future queued ghosts with ETA tooltips, and a
+  session host tiles all open Hngh runs (navigable, live).
