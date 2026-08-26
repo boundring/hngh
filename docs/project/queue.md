@@ -44,6 +44,20 @@ item. Example (every 6 hours, in the repo):
 Each rotated item commits its own candidate through the full ceremony
 (real evidence → real model review → ten-principle verdict →
 certificate → mutation). The ledger flip rides in the same commit.
+
+The autonomous heartbeat layer sits in front of that same runner: one
+`scripts/schedule-heartbeat` tick probes the ledger + system preconditions
+and triggers the mounted driver when an item is eligible, then records a
+dated heartbeat entry with SHA-256 verification. It is the same
+no-daemon rule — a cron or systemd timer invokes the tick, the tick
+never backgrounds itself. Example (every 3 hours, in the repo):
+
+```
+0 */3 * * * cd ~/Projects/etc/hngh && python3 scripts/schedule-heartbeat --route=auto >> /tmp/hngh-heartbeat.log 2>&1
+```
+
+For a systemd user timer unit instead of crontab, see
+[docs/project/heartbeat-service.md](heartbeat-service.md).
 ## Zoom-out pass log
 
 A zoom-out pass polls market/news/opportunity sources and feeds new
@@ -112,3 +126,9 @@ Gives "future" a date so a gantt can place bars.
   audio and returns 0..10; 0 when silent. Wire `--dance auto` in
   dashboard-readout to poll it; the full dance (amplitude to CSS/js,
   cross-project) is the next step after the readout hook.
+
+## Fleet observation
+
+- 2026-08-26 — fleet scan: no mesh session (tailscale logged out);
+  system probes live (audio sink-inputs, D-Bus up, interfaces view).
+  See [fleet.md](fleet.md).

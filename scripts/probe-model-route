@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""probe-model-route: reachability probe for a reviewer-transport file.
+
+One bounded read-only call: loads an operator reviewer transport config
+(the same five-key shape as hngh's reviewer files: endpoint, model,
+max-tokens, timeout, token-file), strips the provider URL down to its
+base, and makes one authenticated GET to <base>/v1/models with a short
+timeout. ANY HTTP answer (2xx, 3xx, 401, 403, 404) means the endpoint
+is reachable; a refusal to connect, a timeout, a malformed config, or
+a missing token-file means it is not. The provider token travels only
+inside this one in-memory Authorization header; nothing here prints it.
+
+Usage:
+  probe-model-route CONF_FILE
+  probe-model-route [--route=auto] [--local=FILE] [--remote=FILE]
+
+The one-file form prints local|remote|none and exits 0/1. The route
+form probes both and --route=auto picks the first reachable one (local
+first), printing its name. Exit: 0 reachable, 1 none, 2 bad input.
+One call, one job, no watcher, no default provider.
+"""
+
+import argparse
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
+
+REVIEWER_KEYS = ("endpoint", "model", "max-tokens", "timeout", "token-file")
+DEFAULT_LOCAL = Path.home() / ".hngh-automation" / "reviewer-local.conf"
+DEFAULT_REMOTE = Path.home() / ".hngh-automation" / "reviewer-remote.conf"
+
+
+def parse_config(path):
+    """Strict simple parse of reviewer transport lines: KEY=VALUE on the
+    closed five keys; blank lines and # comments skipped. Unknown, missing,
+    duplicate, empty, or non-integer fields raise (fail closed)."""
+    text = Path(path).read_text()
+    config = {}
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line or not line.partition("=")[0].strip().replace("-", "").isalnum():
+            raise ValueError(f"{path}:{lineno}: expected KEY=VALUE")
+        key, _, value = line.partition("=")
+        key = key.strip().lower()
+        value = value.strip()
+        if key not in REVIEWER_KEYS:
+            raise ValueError(f"{path}:{lineno}: unknown reviewer key: {key}")
+        if key in config:
+            raise ValueError(f"{path}:{lineno}: duplicate reviewer key: {key}")
+        if not value:
+            raise ValueError(f"{path}:{lineno}: empty reviewer key: {key}")
+        if key in ("max-tokens", "timeout") and not value.isdigit():
+            raise ValueError(f"{path}:{lineno}: {key} must be an integer")
+        config[key] = value
+    missing = [k for k in REVIEWER_KEYS if k not in config]
+    if missing:
+        raise ValueError(f"{path}: missing reviewer keys: {', '.join(missing)}")
+    return config
+
+
+def probe_endpoint(endpoint):
+    """Trim a /v1/chat/completions-style endpoint URL down to its probe
+    base URL (scheme://host:port) with the /v1/models suffix added."""
+    parts = urlsplit(endpoint)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        raise ValueError(f"endpoint is not an absolute http(s) URL: {endpoint!r}")
+    base = urlunsplit((parts.scheme, parts.netloc, "", "", ""))
+    return base.rstrip("/") + "/v1/models"
+
+
+def reachable(config, timeout=2.0):
+    """True when the configured endpoint answers ANY HTTP status."""
+    token = Path(config["token-file"]).read_text().strip()
+    if not token:
+        raise ValueError("empty provider token")
+    url = probe_endpoint(config["endpoint"])
+    request = urllib.request.Request(
+        url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response.read(1024)
+        return True
+    except urllib.error.HTTPError:
+        return True  # an HTTP answer, even 401/403/404, is a live server
+    except Exception:
+        return False
+
+
+def probe(config_path):
+    """Return (values ok-p err-text)."""
+    try:
+        return (reachable(parse_config(config_path)), None)
+    except FileNotFoundError as exc:
+        return (False, f"{config_path}: not present")
+    except ValueError as exc:
+        return (False, str(exc))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False, description="probe a reviewer route")
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--route", default=None)
+    parser.add_argument("--local", default=str(DEFAULT_LOCAL))
+    parser.add_argument("--remote", default=str(DEFAULT_REMOTE))
+    parser.add_argument("conf", nargs="?")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    try:
+        if args.route is not None:
+            if args.route not in ("auto", "local", "remote"):
+                raise ValueError(f"route must be auto|local|remote, got {args.route!r}")
+            local_ok, local_err = probe(args.local)
+            remote_ok, remote_err = probe(args.remote)
+            if args.route == "auto":
+                choice = "local" if local_ok else "remote" if remote_ok else "none"
+                chosen, err = (args.local, local_err) if choice == "local" else \
+                              (args.remote, remote_err) if choice == "remote" else (None, "none")
+            elif args.route == "local":
+                choice = "local" if local_ok else "none"
+                chosen, err = args.local, local_err
+            else:
+                choice = "remote" if remote_ok else "none"
+                chosen, err = args.remote, remote_err
+            if choice != "none":
+                print(choice)
+                return 0
+            print("none")
+            print(f"route {args.route} unreachable: {err}", file=sys.stderr)
+            return 1
+        if args.conf:
+            ok, err = probe(args.conf)
+            print("reachable" if ok else "unreachable")
+            if err:
+                print(err, file=sys.stderr)
+            return 0 if ok else 1
+        raise ValueError("usage: probe-model-route CONF_FILE | --route=auto|local|remote [--local=FILE] [--remote=FILE]")
+    except ValueError as exc:
+        print(f"probe-model-route: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

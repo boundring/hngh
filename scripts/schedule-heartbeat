@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""schedule-heartbeat: one autonomous scheduler tick for the continual cadence.
+
+A single-tick, non-daemon scheduler entrypoint. The operator's cron or
+systemd timer invokes it; this script never backgrounds itself, mounts
+no watcher, and starts nothing by default. One tick:
+
+  1. reads the queue ledger, picks the next item, and checks which closed
+     action is mounted for it (docs/project/heartbeat/<id>.rotation or
+     <id>.worker);
+  2. probes system preconditions: working tree, model route
+     (probe-model-route), network reachability, audio level;
+  3. triggers the mounted driver when eligible, from a fresh ephemeral
+     /tmp/hngh-heartbeat-* store (state-isolated per run);
+  4. records a dated heartbeat entry (checkin.md + a machine-readable
+     timeline row) whose SHA-256 is verified by re-reading the written
+     bytes, then commits the two ledger docs as one plain docs commit.
+
+--dry-run performs steps 1-2 and prints the whole decision, mutating
+nothing and creating no store. --loop N re-ticks every N seconds while
+the operator keeps it in the foreground (it never backgrounds).
+
+Exit codes follow the CLI family: 0 tick complete; 1 tick complete
+with a reported condition (postponed, unverifiable route, refused
+driver); 2 malformed ledger or card; 3 telemetry/commit fault.
+"""
+
+import argparse
+import hashlib
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlsplit
+
+ROOT = Path(__file__).resolve().parent.parent
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+TIMELINE = ROOT / "docs" / "project" / "timeline.md"
+CHECKIN = ROOT / "docs" / "project" / "checkin.md"
+RECIPE_DIR = ROOT / "docs" / "project" / "heartbeat"
+LOCAL_REVIEWER = Path.home() / ".hngh-automation" / "reviewer-local.conf"
+REMOTE_REVIEWER = Path.home() / ".hngh-automation" / "reviewer-remote.conf"
+AUDIO_PROBE = ROOT / "scripts" / "audio-intensity"
+ROUTE_PROBE = ROOT / "scripts" / "probe-model-route"
+ROTATE_DRIVER = ROOT / "scripts" / "rotate-queue"
+WORKER_DRIVER = ROOT / "scripts" / "worker-driver"
+
+TODAY = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+CANDIDATE_RE = re.compile(r"rotation complete: ([0-9a-f]{64})")
+NEXT_RE = re.compile(r"## Next\s*\n(?:.*\n)*?- \*\*(?P<id>[^*\n]+)\*\*")
+
+
+def git(*cmd):
+    out = subprocess.run(["git", *cmd], capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, out.stdout.strip(), out.stderr.strip()
+
+
+def worktree_clean():
+    code, out, err = git("status", "--porcelain")
+    if code != 0:
+        return False, f"git status failed: {err}"
+    return (not out), (out or "clean")
+
+
+def origin_host():
+    code, url, _ = git("config", "get", "remote.origin.url")
+    if code != 0 or not url:
+        return None
+    url = url.strip()
+    if url.startswith(("https://", "http://")):
+        return urlsplit(url).hostname
+    if "@" in url:
+        return url.split("@", 1)[1].split(":", 1)[0]
+    return url.split(":", 1)[0]
+
+
+def network_reachable(timeout=3.0):
+    """True when the origin host accepts a TCP connection on 443.
+    ponytail: TCP reachability, not a TLS roundtrip; enough for a
+    scheduler precondition and cheap."""
+    host = origin_host()
+    if not host:
+        return True  # no origin configured: nothing to reach
+    try:
+        socket.create_connection((host, 443), timeout)
+        return True
+    except Exception:
+        return False
+
+
+def audio_level():
+    try:
+        out = subprocess.run([sys.executable, str(AUDIO_PROBE)],
+                             capture_output=True, text=True, timeout=2)
+        return out.stdout.strip() or "0"
+    except Exception:
+        return "0"
+
+
+def queue_state():
+    """Return (values queued-ids, done-count, next-id-or-None)."""
+    text = QUEUE.read_text()
+    queued, done = [], 0
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[1] in {"queued", "done", "active", "queued"}:
+            if parts[1] == "queued":
+                queued.append(parts[0])
+            elif parts[1] == "done":
+                done += 1
+    nxt = None
+    m = NEXT_RE.search(text)
+    if m:
+        nxt = m.group("id").strip()
+    elif queued:
+        nxt = queued[0]
+    return queued, done, nxt
+
+
+def mounted_action(item):
+    """The closed action card for ITEM-ID: ('rotation', objective, files)
+    or ('worker', objective, task), or None. A card is a file under
+    heartbeat/ named <id>.rotation or <id>.worker; malformed cards fail
+    closed (raise)."""
+    rotation = RECIPE_DIR / f"{item}.rotation"
+    worker = RECIPE_DIR / f"{item}.worker"
+    if rotation.exists():
+        lines = [l.strip() for l in rotation.read_text().splitlines()
+                 if l.strip() and not l.strip().startswith("#")]
+        if len(lines) < 2:
+            raise ValueError(f"{rotation.name}: needs objective + file list")
+        return ("rotation", lines[0], lines[1:])
+    if worker.exists():
+        lines = [l.strip() for l in worker.read_text().splitlines()
+                 if l.strip() and not l.strip().startswith("#")]
+        if len(lines) < 2:
+            raise ValueError(f"{worker.name}: needs objective + task")
+        return ("worker", lines[0], lines[1])
+    return None
+
+
+def resolve_reviewer(route):
+    """Map a route choice to a reviewer transport path, or return None
+    when no configured route is reachable (the tick logs
+    'unverifiable-review' and skips the rotation)."""
+    probe = subprocess.run([sys.executable, str(ROUTE_PROBE),
+                            f"--route={route}"],
+                           capture_output=True, text=True, timeout=10)
+    if probe.returncode != 0:
+        return None
+    choice = probe.stdout.strip()
+    if choice == "local":
+        return str(LOCAL_REVIEWER)
+    if choice == "remote":
+        return str(REMOTE_REVIEWER)
+    return None
+
+
+def heartbeat_number():
+    text = TIMELINE.read_text()
+    numbers = [int(m) for m in re.findall(r"heartbeat-(\d+)", text)]
+    return (max(numbers) + 1) if numbers else 1
+
+
+def entry_block(number, next_id, queued, done, model, network, audio, action):
+    return (f"## {TODAY} — heartbeat #{number} (schedule-heartbeat)\n"
+            f"\n"
+            f"- **State:** clean; queue {queued} queued / {done} done; "
+            f"next={next_id or '(none)'}.\n"
+            f"- **Probes:** model={model}; network={network}; audio={audio}/10.\n"
+            f"- **Action:** {action}\n")
+
+
+def record_telemetry(number, next_id, queued, done, model, network, audio, action):
+    """Append the entry to checkin.md + timeline.md, then verify by
+    re-reading: the checkin tail must hash to the recorded digest and
+    the timeline row must match exactly. Returns the digest; raises on
+    mismatch (the caller treats it as a tick fault)."""
+    block = entry_block(number, next_id, queued, done, model, network, audio, action)
+    digest = hashlib.sha256(block.encode("utf-8")).hexdigest()
+    marker = f"## {TODAY} — heartbeat #{number} (schedule-heartbeat)"
+    with CHECKIN.open("a") as fh:
+        fh.write("\n" + block)
+    row = f"{TODAY}\tevent\theartbeat-{number}\t{digest}\n"
+    with TIMELINE.open("a") as fh:
+        fh.write(row)
+    text = CHECKIN.read_text()
+    if text.rfind(marker) < 0 or hashlib.sha256(
+            text[text.rfind(marker):].encode("utf-8")).hexdigest() != digest:
+        raise RuntimeError(f"checkin SHA-256 mismatch for heartbeat #{number}")
+    if row not in TIMELINE.read_text():
+        raise RuntimeError(f"timeline row mismatch for heartbeat #{number}")
+    return digest
+
+
+def drive_rotation(store, item, reviewer, objective, files):
+    argv = [str(ROTATE_DRIVER), f"--store={store / 'rotate'}",
+            f"--item={item}", f"--reviewer={reviewer}", objective, *files]
+    out = subprocess.run(argv, capture_output=True, text=True, cwd=ROOT,
+                         timeout=1800)
+    return out.returncode, (out.stdout or "") + (out.stderr or "")
+
+
+def drive_worker(store, objective, task):
+    out = subprocess.run(
+        [str(WORKER_DRIVER), f"--store={store / 'worker'}", objective, task],
+        capture_output=True, text=True, cwd=ROOT, timeout=1800)
+    return out.returncode, (out.stdout or "") + (out.stderr or "")
+
+
+def commit_ledger(number):
+    """One plain docs commit of the two ledger files; the working tree
+    was clean when the tick started, so only these two change."""
+    code, _, err = git("add", "--", "docs/project/checkin.md",
+                       "docs/project/timeline.md")
+    if code != 0:
+        raise RuntimeError(f"stage failed: {err}")
+    code, _, err = git("commit", "-m", f"docs: heartbeat #{number} (schedule-heartbeat tick)")
+    if code != 0:
+        raise RuntimeError(f"commit failed: {err}")
+    code, subject, _ = git("log", "-1", "--format=%s")
+    if code != 0 or subject != f"docs: heartbeat #{number} (schedule-heartbeat tick)":
+        raise RuntimeError("commit verification failed")
+
+
+def tick(dry_run, route):
+    """One full tick; returns (values exit-code digest-or-None)."""
+    queued, done, next_id = queue_state()
+    if dry_run:
+        print(f"schedule-heartbeat dry-run ({TODAY})")
+        print(f"  next:    {next_id or '(none)'}; {len(queued)} queued, {done} done")
+        print(f"  tree:    {worktree_clean()[1]}")
+        if next_id:
+            try:
+                print(f"  card:    {'mounted' if mounted_action(next_id) else 'none'}")
+            except ValueError as exc:
+                print(f"  card:    INVALID ({exc})")
+        print(f"  model:   {'reachable' if resolve_reviewer(route) else 'unreachable'}"
+              f" (route={route})")
+        print(f"  network: {'reachable' if network_reachable() else 'unreachable'}")
+        print(f"  audio:   {audio_level()}/10")
+        print("  store:   /tmp/hngh-heartbeat-* (ephemeral, provisioned on a real tick)")
+        return 0, None
+
+    clean, detail = worktree_clean()
+    if not clean:
+        print(f"schedule-heartbeat: postponed — tree not clean ({detail})")
+        return 1, None
+
+    if next_id:
+        try:
+            action = mounted_action(next_id)
+        except ValueError as exc:
+            print(f"schedule-heartbeat: malformed card: {exc}")
+            return 2, None
+    else:
+        action = None
+
+    reviewer = resolve_reviewer(route)
+    model = "unreachable" if reviewer is None else \
+        "local" if reviewer == str(LOCAL_REVIEWER) else "remote"
+    network = "reachable" if network_reachable() else "unreachable"
+    audio = audio_level()
+
+    result = "none — nothing mounted"
+    exit_code = 0
+    if not next_id:
+        result = "none — queue empty"
+    elif action is None:
+        result = f"none — no action card mounted for {next_id}"
+    elif action[0] == "rotation":
+        if reviewer is None:
+            # the plan's assumption: unverifiable-review is non-fatal; a
+            # rotation without a reviewer route is refused, not crashed
+            result = f"unverifiable-review ({next_id}) — no reachable reviewer route"
+            exit_code = 1
+        else:
+            store = Path(tempfile.mkdtemp(prefix="hngh-heartbeat-"))
+            (store / "rotate").mkdir(exist_ok=True)
+            code, text = drive_rotation(store, next_id, reviewer, action[1], action[2])
+            if code == 0:
+                m = CANDIDATE_RE.search(text)
+                candidate = m.group(1) if m else "(unknown)"
+                result = f"rotation {next_id} → candidate {candidate}"
+            else:
+                result = f"rotation {next_id} refused (exit {code})"
+                exit_code = 1
+    else:  # worker
+        store = Path(tempfile.mkdtemp(prefix="hngh-heartbeat-"))
+        (store / "worker").mkdir(exist_ok=True)
+        code, text = drive_worker(store, action[1], action[2])
+        if code == 0:
+            result = f"worker {next_id} cycle complete"
+        else:
+            result = f"worker {next_id} refused (exit {code})"
+            exit_code = 1
+
+    number = heartbeat_number()
+    try:
+        digest = record_telemetry(number, next_id, len(queued), done,
+                                  model, network, audio, result)
+        commit_ledger(number)
+    except (OSError, RuntimeError) as exc:
+        print(f"schedule-heartbeat: telemetry/commit fault: {exc}")
+        return 3, None
+    print(f"Heartbeat #{number}: {result} [sha256 {digest[:16]}…]")
+    return exit_code, digest
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        add_help=False,
+        description="one autonomous scheduler tick (see module docstring)")
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--route", default="auto", choices=("auto", "local", "remote"))
+    parser.add_argument("--loop", nargs="?", type=int, const=3600, default=None)
+    parser.add_argument("--quiet", action="store_true")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    route = args.route
+    try:
+        if args.loop:
+            interval = max(1, args.loop)
+            last = 0
+            try:
+                while True:
+                    try:
+                        code, _ = tick(False, route)
+                        last = code
+                    except KeyboardInterrupt:
+                        raise
+                    time.sleep(interval)
+            except KeyboardInterrupt:
+                return last if last else 0
+        return tick(args.dry_run, route)[0]
+    except FileNotFoundError as exc:
+        print(f"schedule-heartbeat: missing ledger: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
+        print(f"schedule-heartbeat: malformed: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
