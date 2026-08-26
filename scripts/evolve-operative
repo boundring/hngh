@@ -391,11 +391,345 @@ MUTATIONS2 = (
     ("prop", lambda g, r: prop2(g, r)),
 )
 
+# ---------------------------------------------------------------------------
+# generation 3 — the deliberate operative (family "operative-v3")
+# ---------------------------------------------------------------------------
+#
+# Fitness journal (generation 3) — the critique that drives this pass:
+#   "grey pixelated faceless humanoid, crude low-resolution sprite, jagged
+#    edges, lacks detail, feels like a placeholder."
+# Targets, mapped to concrete art decisions:
+#   smooth silhouette  -> rounded head (crown narrower than slab, ▄ corners),
+#                         head sides feathered with ▒, shoulder pads with ▄
+#                         corners and ░ feathering — no hard 90-degree runs
+#   visible detail     -> • mote of light inside the eye-slit, ░ seam lines
+#                         inside the coat panels, ▓ belt line, ▀ cuffs and
+#                         ▒ hem accents
+#   deliberate art     -> subtle asymmetry (seams sit at different panel
+#                         offsets; mote is off-center), shading gradation
+#   grounded           -> bright ▄ ground slab with a ▒ cast shadow under
+#                         the figure, wider than the boots
+#   terminal-safe      -> <=18 rows, <=24 cols, approved glyphs only
+#   deterministic      -> same seed, same JSON (sole entropy is the rng)
+
+BASE3 = (
+    "       ▄██████▄         ",   #  0 crown (rounded, ▄ corners)
+    "      █▒██████▒█        ",   #  1 head slab (▒ feathers the hard edges)
+    "      █▀▀▀▀•▀▀▀█        ",   #  2 eye-slit with an off-center • mote
+    "       ▀██████▀         ",   #  3 jaw
+    "          ██            ",   #  4 neck
+    "    ▄████████████▄      ",   #  5 traps / shoulder pads
+    "  ▐  ████████████  ▌    ",   #  6 chest + upper arms (gap between)
+    "  ▐   ██████████   ▌    ",   #  7 chest (V-taper)
+    "  ▐    ████████    ▌    ",   #  8 waist + arms
+    "    ▄▄ ████████ ▄▄      ",   #  9 hips + forearms bent in at the elbow
+    "        ██▓▓▓▓██       ",   # 10 belt line (▓ band)
+    "       ██░█  █░██       ",   # 11 coat panels, open front, ░ seams
+    "       ░██░█  █░██░     ",   # 12 coat hem flaring, ░ hem accents
+    "         ██    ██       ",   # 13 legs (clear gap)
+    "         ██    ██       ",   # 14 legs
+    "         ███  ███       ",   # 15 boots (wider than the shins)
+    "  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄  ",   # 16 bright ground slab + ▒ cast shadow
+)
+
+V3 = {
+    "w": 24,
+    "head_rows": (0, 1, 2, 3),
+    "neck_row": 4,
+    "traps_row": 5,
+    "chest_rows": (6, 7),
+    "waist_row": 8,
+    "hip_row": 9,
+    "belt_row": 10,
+    "coat_rows": (11, 12),
+    "leg_rows": (13, 14),
+    "boot_row": 15,
+    "ground_row": 16,
+    "arm_l": 2,
+    "arm_r": 19,
+    "legs_base": ((9, 10), (15, 16)),
+    "legs_wide": ((7, 8), (17, 18)),
+    "legs_narrow": ((10, 11), (13, 14)),
+}
+
+
+def to_grid3():
+    return [list(row) for row in BASE3]
+
+
+def _find_mote(grid):
+    for y in V3["head_rows"]:
+        for x, c in enumerate(grid[y]):
+            if c == "•":
+                return y, x
+    return None
+
+
+def blink3(grid, rng):
+    """Eye-slit closes: every pale ▀ in the head darkens to █; the • mote
+    persists as eyelight through the closed slit."""
+    for y in V3["head_rows"]:
+        for x, c in enumerate(grid[y]):
+            if c == "▀":
+                grid[y][x] = "█"
+
+
+def mote_shift(grid, rng):
+    """The eye mote drifts one cell left or right (off-center glint)."""
+    pos = _find_mote(grid)
+    if pos is None:
+        return
+    y, x = pos
+    dx = 1 if rng.randrange(2) else -1
+    nx = x + dx
+    if 0 <= nx < V3["w"] and grid[y][nx] == " ":
+        grid[y][x] = " "
+        grid[y][nx] = "•"
+
+
+def neck_gap3(grid, rng):
+    """The neck clears: head floats above the shoulders."""
+    for x in range(10, 12):
+        grid[V3["neck_row"]][x] = " "
+
+
+def arms3(grid, rows):
+    """Upper-arm columns at the outer rails across ROWS."""
+    for y in range(5, 10):
+        grid[y][V3["arm_l"]] = " "
+        grid[y][V3["arm_r"]] = " "
+    for y in rows:
+        grid[y][V3["arm_l"]] = "▐"
+        grid[y][V3["arm_r"]] = "▌"
+
+
+def arm_bend3(grid, rng):
+    """Elbow straightens: forearms hang directly under the upper arms."""
+    for x in (4, 5, 16, 17):
+        grid[V3["hip_row"]][x] = " "
+    grid[V3["hip_row"]][3] = "▄"
+    grid[V3["hip_row"]][4] = "▄"
+    grid[V3["hip_row"]][18] = "▄"
+    grid[V3["hip_row"]][19] = "▄"
+
+
+def legs3(grid, left, right):
+    """Legs + boots at (LEFT, RIGHT) 2-wide column pairs; boots widen to
+    L-1..L+1 / R-1..R+1 on the boot row."""
+    l1, l2 = left
+    r1, r2 = right
+    for y in V3["leg_rows"]:
+        row = grid[y]
+        for x in range(4, 20):
+            if row[x] == "█":
+                row[x] = " "
+        row[l1], row[l2], row[r1], row[r2] = "█", "█", "█", "█"
+    boot = grid[V3["boot_row"]]
+    for x in range(4, 20):
+        if boot[x] == "█":
+            boot[x] = " "
+    for x in range(max(0, l1 - 1), min(V3["w"] - 1, l2 + 1) + 1):
+        boot[x] = "█"
+    for x in range(max(0, r1 - 1), min(V3["w"] - 1, r2 + 1) + 1):
+        boot[x] = "█"
+
+
+def head_small3(grid, rng):
+    """Head shrinks to 2 rows and lifts to the top of the canvas."""
+    grid[0] = grid[1][:]
+    grid[1] = grid[2][:]
+    for x in range(len(grid[2])):
+        grid[2][x] = " "
+
+
+def round_head(grid, rng):
+    """Feather the head silhouette: slab and jaw outer edges go ▒."""
+    grid[1][6] = "▒"
+    grid[1][15] = "▒"
+    grid[3][7] = "▒"
+    grid[3][14] = "▒"
+
+
+def smooth_shoulders(grid, rng):
+    """Shoulder pads feather: the ▄ corners soften to ▒ with ░ outside."""
+    row = grid[V3["traps_row"]]
+    row[4] = "▒"
+    row[17] = "▒"
+    if row[3] == " ":
+        row[3] = "░"
+    if row[18] == " ":
+        row[18] = "░"
+
+
+def _seam_cells():
+    return ((11, 10), (11, 15), (12, 10), (12, 15))
+
+
+def seam_toggle(grid, rng):
+    """Coat seam lines (░ inside the panels) appear or disappear."""
+    on = grid[11][10] == "░"
+    for y, x in _seam_cells():
+        grid[y][x] = "█" if on else "░"
+
+
+def belt_toggle(grid, rng):
+    """Belt line appears or disappears."""
+    row = grid[V3["belt_row"]]
+    if row[10] == "▓":
+        for x in range(10, 14):
+            row[x] = "█"
+    else:
+        for x in range(10, 14):
+            row[x] = "▓"
+
+
+def hem_cuff(grid, rng):
+    """Cuffs (arm tips become ▀) and a brighter ▒ hem on the coat."""
+    for arm_x in (V3["arm_l"], V3["arm_r"]):
+        for y in reversed(range(6, 10)):
+            if grid[y][arm_x] in "▐▌":
+                grid[y][arm_x] = "▀"
+                break
+    for x in (7, 18):
+        if grid[12][x] == "░":
+            grid[12][x] = "▒"
+
+
+def shadow_extend(grid, rng):
+    """The cast shadow widens one cell per side."""
+    row = grid[V3["ground_row"]]
+    xs = [x for x, c in enumerate(row) if c == "▒"]
+    if not xs:
+        return
+    a, b = min(xs), max(xs)
+    if a > 0 and row[a - 1] == "▄":
+        row[a - 1] = "▒"
+    if b < V3["w"] - 1 and row[b + 1] == "▄":
+        row[b + 1] = "▒"
+
+
+def shadow_shrink(grid, rng):
+    """The cast shadow narrows one cell per side (never below 4 wide)."""
+    row = grid[V3["ground_row"]]
+    xs = [x for x, c in enumerate(row) if c == "▒"]
+    if len(xs) <= 4:
+        return
+    a, b = min(xs), max(xs)
+    row[a] = "▄"
+    row[b] = "▄"
+
+
+def coat_open3(grid, rng):
+    """The coat gap widens: each panel's inner edge clears one column."""
+    for x in (11, 14):
+        if grid[11][x] == "█":
+            grid[11][x] = " "
+        if grid[12][x] == "█":
+            grid[12][x] = " "
+
+
+def coat_flare3(grid, rng):
+    """The coat hem bells outward: ░ accents move one column further out."""
+    row11 = grid[11]
+    if row11[7] == " ":
+        row11[7] = "░"
+    if row11[18] == " ":
+        row11[18] = "░"
+    row12 = grid[12]
+    for x in (7, 18):
+        if row12[x] == "░":
+            row12[x] = " "
+    if row12[6] == " ":
+        row12[6] = "░"
+    if row12[19] == " ":
+        row12[19] = "░"
+
+
+def tilt3(grid, dx):
+    """Head + neck (rows 0-4) shift one column left/right."""
+    for y in range(5):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row) if c != " "]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            nx = x + dx
+            if 0 <= nx < V3["w"]:
+                row[nx] = c
+
+
+def breath3(grid, direction):
+    """Chest (rows 6-7) breathes: ±1 column each edge; waist, coat, arms
+    and the belt are untouched."""
+    for y in V3["chest_rows"]:
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c == "█"]
+        if not xs:
+            continue
+        if direction == "in":
+            for side in (-1, 1):
+                edge = min(xs) if side == -1 else max(xs)
+                tgt = edge + side
+                if 0 <= tgt < V3["w"] and row[tgt] == " ":
+                    row[tgt] = "█"
+        else:
+            a, b = min(xs), max(xs)
+            if b - a + 1 <= 8:
+                continue  # never narrower than an 8-cell chest
+            row[a] = " "
+            row[b] = " "
+
+
+PROPS3 = (
+    ("mote", ((1, 17, "•"),)),
+    ("ember", ((12, 21, "▓"),)),
+    ("glint", ((16, 1, "▖"), (16, 22, "▗"))),
+)
+
+
+def prop3(grid, rng):
+    """A minimal glow adjunct: floating mote, ember beside the coat, or a
+    spark at the ground-slab edge."""
+    kind, cells = PROPS3[rng.randrange(len(PROPS3))]
+    for y, x, ch in cells:
+        grid[y][x] = ch
+    return "prop:" + kind
+
+
+MUTATIONS3 = (
+    ("blink", lambda g, r: blink3(g, r)),
+    ("mote-shift", lambda g, r: mote_shift(g, r)),
+    ("neck-gap", lambda g, r: neck_gap3(g, r)),
+    ("arm-up", lambda g, r: arms3(g, (5, 6, 7))),
+    ("arm-down", lambda g, r: arms3(g, (7, 8, 9))),
+    ("arm-bend", lambda g, r: arm_bend3(g, r)),
+    ("stance-wide", lambda g, r: legs3(g, *V3["legs_wide"])),
+    ("stance-narrow", lambda g, r: legs3(g, *V3["legs_narrow"])),
+    ("leg-split", lambda g, r: legs3(g, *V3["legs_wide"])),
+    ("head-small", lambda g, r: head_small3(g, r)),
+    ("round-head", lambda g, r: round_head(g, r)),
+    ("smooth-shoulders", lambda g, r: smooth_shoulders(g, r)),
+    ("seam-toggle", lambda g, r: seam_toggle(g, r)),
+    ("belt-toggle", lambda g, r: belt_toggle(g, r)),
+    ("hem-cuff", lambda g, r: hem_cuff(g, r)),
+    ("shadow-extend", lambda g, r: shadow_extend(g, r)),
+    ("shadow-shrink", lambda g, r: shadow_shrink(g, r)),
+    ("coat-open", lambda g, r: coat_open3(g, r)),
+    ("coat-flare", lambda g, r: coat_flare3(g, r)),
+    ("tilt-left", lambda g, r: tilt3(g, -1)),
+    ("tilt-right", lambda g, r: tilt3(g, 1)),
+    ("breath-in", lambda g, r: breath3(g, "in")),
+    ("breath-out", lambda g, r: breath3(g, "out")),
+    ("prop", lambda g, r: prop3(g, r)),
+)
+
 GENERATIONS = {
     "1": {"family": "operative-v1", "canvas_w": CANVAS_W, "base": BASE,
           "grid": to_grid, "mutations": MUTATIONS},
     "2": {"family": "operative-v2", "canvas_w": CANVAS_W, "base": BASE2,
           "grid": to_grid2, "mutations": MUTATIONS2},
+    "3": {"family": "operative-v3", "canvas_w": V3["w"], "base": BASE3,
+          "grid": to_grid3, "mutations": MUTATIONS3},
 }
 
 
@@ -427,6 +761,51 @@ def breed(seed, frames_n, gen="1"):
 
 def doc_to_json(doc):
     return json.dumps(doc, indent=2, ensure_ascii=False)
+
+
+def self_grade(gen, seed, frames):
+    """The fitness journal: the exact critique as the target, plus a
+    computable self-check for the requested generation (bounds, glyphs,
+    dimensions, live determinism). Pure and deterministic — no timestamps."""
+    doc = breed(seed, frames, gen)
+    first = doc["frames"][0]["art"].splitlines()
+    bounds_ok = True
+    try:
+        check_bounds(doc)
+    except SystemExit:
+        bounds_ok = False
+    max_cols = max((len(r) for f in doc["frames"]
+                    for r in f["art"].splitlines()), default=0)
+    return {
+        "mode": "self-grade",
+        "journal": "generation-3 fitness journal",
+        "critique": "grey pixelated faceless humanoid, crude low-resolution "
+                    "sprite, jagged edges, lacks detail, feels like a "
+                    "placeholder",
+        "targets": [
+            "smooth silhouette: no hard 90-degree corners; rounded head and "
+            "shoulders, feathered edges",
+            "visible detail: mote of light in the eye-slit, coat seams, belt "
+            "line, cuffs and hem accents",
+            "deliberate art: subtle asymmetry and shading gradation, not a "
+            "uniform block",
+            "grounded: bright ground slab with a cast shadow under the "
+            "figure",
+            "terminal-safe: <=18 rows, <=24 cols, approved glyphs only",
+            "deterministic: same seed -> byte-identical JSON",
+        ],
+        "generation": gen,
+        "family": doc["family"],
+        "seed": seed,
+        "frames": len(doc["frames"]),
+        "self_check": {
+            "bounds": "pass" if bounds_ok else "fail",
+            "max_cols": max_cols,
+            "rows": len(first),
+            "deterministic": doc_to_json(doc) == doc_to_json(
+                breed(seed, frames, gen)),
+        },
+    }
 
 
 def check_bounds(doc):
@@ -461,16 +840,26 @@ def main(argv=None):
         prog="evolve-operative",
         description="Breed evolutionary pixel-art frame-sets for the "
                     "hngh operative (deterministic per seed).")
-    ap.add_argument("--gen", choices=("1", "2"), default="1",
+    ap.add_argument("--gen", choices=("1", "2", "3"), default="1",
                     help="generation: 1 = operative-v1 slab (default), "
-                         "2 = operative-v2 humanoid")
+                         "2 = operative-v2 humanoid, "
+                         "3 = operative-v3 deliberate")
     ap.add_argument("--frames", type=positive_int, default=3,
                     help="number of frames in the mutation walk (default 3)")
     ap.add_argument("--seed", type=int, default=1,
                     help="random seed; same seed -> identical JSON")
     ap.add_argument("--out", metavar="FILE", default=None,
                     help="write the JSON document to FILE instead of stdout")
+    ap.add_argument("--self-grade", action="store_true",
+                    help="print the fitness journal (critique, targets, "
+                         "self-check) for the requested generation")
     args = ap.parse_args(argv)
+
+    if args.self_grade:
+        sys.stdout.write(
+            json.dumps(self_grade(args.gen, args.seed, args.frames),
+                       indent=2, ensure_ascii=False) + "\n")
+        return 0
 
     doc = breed(args.seed, args.frames, args.gen)
     check_bounds(doc)
