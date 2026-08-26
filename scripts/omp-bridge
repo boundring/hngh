@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""omp-bridge — the Hngh-facing half of an oh-my-pi session bridge.
+
+A session invoked THROUGH the bridge (an omp plugin, not yet built, calls
+this script) gets three things without re-discovering them:
+
+  (a) `--orient`   one project-state brief already ground from the repo —
+                   roadmap Next, queue Next, working-tree dirty check, and
+                   the last ceremony commit — so the agent does not waste
+                   turns re-walking files it can simply be handed;
+  (b) `--register` a ledger line proving the session became watchdog-
+                   visible — written into the SAME handoff ledger the
+                   roguelike watchdog (hngh-automation/jobs/agent-watchdog
+                   .sh) appends to on detection, so this session is never
+                   an invisible lane;
+  (c) `--ceremony` a ceremony-invoke wrapper that commits FILES through
+             scripts/ceremony-drive under a global flock (serial), a
+             FRESH ephemeral store, and a generous timeout — certificate-
+             gated, and ceremony-drive auto-pushes when origin exists.
+
+The bridge is an outer adapter: it only invokes the existing ceremony /
+watchdog surfaces. It never imports or mutates the hngh kernel, and it
+records no side effect beyond the handoff ledger line it is asked to
+write. No daemon, no scheduler — every run is one explicit command.
+
+Exit protocol (matches repo convention): 0 ok, 1 refused/conflict
+(ceremony refused, lock held), 2 malformed input, 3 fault (ceremony
+fault/lock stuck).
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from fcntl import flock, LOCK_EX, LOCK_NB, LOCK_UN
+from pathlib import Path
+
+ROOT = Path(os.environ.get("HNGH_BRIDGE_ROOT")
+            or Path(__file__).resolve().parent.parent)
+SCRIPTS = ROOT / "scripts"
+CEREMONY_DRIVE = SCRIPTS / "ceremony-drive"
+QUEUE = ROOT / "docs" / "project" / "queue.md"
+ROADMAP = ROOT / "docs" / "project" / "roadmap.md"
+
+# Where the roguelike watchdog writes the handoff it AND the operator /
+# steering leg read. Default is the sibling hngh-automation repo's ledger;
+# override for tests / alternate mounts.
+AUTOMATION_ROOT = Path(os.environ.get("HNGH_AUTOMATION_ROOT")
+                       or ROOT.parent / "hngh-automation")
+LEDGER = Path(os.environ.get("OMP_HANDOFF_LEDGER")
+              or AUTOMATION_ROOT / "agent-handoffs.md")
+LOCK = Path(os.environ.get("OMP_CEREMONY_LOCK") or "/tmp/hngh-ceremony.lock")
+CEREMONY_TIMEOUT = int(os.environ.get("OMP_CEREMONY_TIMEOUT") or 1800)
+
+NEXT_RE = re.compile(r"## Next\s*\n(.*?)(?=\n## |\Z)", re.S)
+BULLET_ITEM = re.compile(r"^\s*(?:-\s*\*\*|1\.\s*\*\*|-\s+|1\.\s+)"
+                         r"(?P<item>[^\n]+)", re.M)
+
+
+def now_ts():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def git(*cmd):
+    out = subprocess.run(["git", *cmd], capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, out.stdout.strip(), out.stderr.strip()
+
+
+# --- orient ----------------------------------------------------------------
+
+def queue_next():
+    """The current queue Next item id (from the `## Next` block)."""
+    if not QUEUE.exists():
+        return None
+    m = next(iter(NEXT_RE.finditer(QUEUE.read_text())), None)
+    if m is None:
+        return None
+    mm = BULLET_ITEM.search(m.group(0))
+    item = mm.group("item").strip() if mm else None
+    return item.split("**")[0].strip() if item else None
+
+
+def roadmap_next():
+    """The roadmap `## Next` block's first item, trimmed to a line."""
+    if not ROADMAP.exists():
+        return None
+    m = next(iter(NEXT_RE.finditer(ROADMAP.read_text())), None)
+    if m is None:
+        return None
+    body = m.group(0)
+    mm = next(iter(BULLET_ITEM.finditer(body)), None)
+    if mm is None:
+        return None
+    item = re.sub(r"\s+", " ", mm.group("item")).strip()
+    return item.split("**")[0].strip()[:220]
+
+
+def dirty_state():
+    """Working-tree dirty summary: (bool_dirty, first_line)."""
+    code, out, err = git("status", "--porcelain")
+    if code != 0:
+        return None, f"git status failed: {err}"
+    if not out:
+        return False, "clean"
+    lines = out.splitlines()
+    return True, f"{len(lines)} uncommitted path{'s' if len(lines) != 1 else ''} (e.g. {lines[0][:60]}...)"
+
+
+def last_ceremony():
+    """The last ceremony commit: subject starts word-on 'hngh: candidate'
+    (the certificate-bound commit message ceremony-drive writes)."""
+    code, out, _ = git(
+        "log", "--format=%H|%cs|%s", "-50")
+    if code != 0:
+        return None
+    for line in out.splitlines():
+        pieces = line.split("|", 2)
+        if len(pieces) == 3 and pieces[2].startswith("hngh: candidate"):
+            return {"hash": pieces[0], "date": pieces[1], "subject": pieces[2]}
+    return None
+
+
+def orient_cmd():
+    """Emit the project-state brief the calling session is handed."""
+    qn = queue_next()
+    rm = roadmap_next()
+    dirty, dirty_first = dirty_state()
+    cer = last_ceremony()
+
+    print(f"# hngh project brief ({ROOT}) — {now_ts()}")
+    print()
+    print("## Queue Next")
+    print(qn if qn else "(none)")
+    print()
+    print("## Roadmap Next")
+    print(rm if rm else "(none)")
+    print()
+    print("## Working tree")
+    print(dirty_first if dirty is not None else "(unreadable)")
+    print()
+    print("## Last ceremony commit")
+    if cer:
+        print(f"{cer['date']}  {cer['hash']}")
+        print(cer["subject"])
+    else:
+        print("(no ceremony commit found)")
+    return 0
+
+
+# --- register --------------------------------------------------------------
+
+def register_cmd(session, note):
+    """Append one session lane to the watchdog-visible handoff ledger.
+
+    Same ledger the roguelike watchdog appends `session-drop` lines to; the
+    class is `bridge-session-start` so an operator/steering reader sees a
+    governed session going live, distinct from (and never colliding with) a
+    death handoff. The subject is project-slug|session-id so it matches the
+    watchdog's `| slug|session |` cells.
+    """
+    slug = os.environ.get("OMP_PROJECT", ROOT.name)
+    sid = session or os.environ.get("OMP_SESSION", "")
+    subj = f"{slug}|{sid}" if sid else slug
+    note = (note or "session entered through omp-bridge").strip()
+    if "|" in note:
+        print("omp-bridge: note must not contain '|' (pipe-delimited ledger)",
+              file=sys.stderr)
+        return 2
+    lead = ""
+    if LEDGER.exists() and LEDGER.read_text() and not LEDGER.read_text().endswith("\n"):
+        lead = "\n"
+    line = (lead
+            + f"bridge-register | {now_ts()} | {subj} | session-start: {note}\n")
+    try:
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        with LEDGER.open("a") as fh:
+            fh.write(line)
+    except OSError as exc:
+        print(f"omp-bridge: cannot write ledger {LEDGER}: {exc}",
+              file=sys.stderr)
+        return 3
+    print(line.rstrip())
+    return 0
+
+
+# --- ceremony --------------------------------------------------------------
+
+def ceremony_cmd(objective, files):
+    """Run scripts/ceremony-drive over FILES from a fresh store, serialized.
+
+    Global flock (default /tmp/hngh-ceremony.lock, non-blocking) keeps
+    concurrent ceremony wraps from racing; a fresh ephemeral store
+    (/tmp/hngh-cer-<ts>-<rand>) means no two runs share a receipt root; the
+    generous timeout lets a full model-review loop finish. ceremony-drive
+    auto-pushes when origin exists.
+    """
+    if not CEREMONY_DRIVE.exists():
+        print(f"omp-bridge: ceremony-drive not found at {CEREMONY_DRIVE}",
+              file=sys.stderr)
+        return 3
+    if not objective.strip():
+        print("omp-bridge: empty OBJECTIVE refused", file=sys.stderr)
+        return 2
+    if not files:
+        print("omp-bridge: no FILES given to commit", file=sys.stderr)
+        return 2
+    now = now_ts().replace(":", "").replace("-", "").replace("T", "-")[:-1]
+    store = Path(os.environ.get("OMP_CEREMONY_STORE") or f"/tmp/hngh-cer-{now}")
+    try:
+        store.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"omp-bridge: cannot create store {store}: {exc}",
+              file=sys.stderr)
+        return 3
+    lockfd = None
+    try:
+        lockfd = open(str(LOCK), "w")
+    except OSError as exc:
+        print(f"omp-bridge: cannot open lock {LOCK}: {exc}", file=sys.stderr)
+        return 3
+    try:
+        try:
+            flock(lockfd.fileno(), LOCK_EX | LOCK_NB)
+        except BlockingIOError:
+            print("omp-bridge: ceremony already in progress "
+                  f"(lock {LOCK} held); try again when it lands",
+                  file=sys.stderr)
+            return 1
+        cmd = [str(CEREMONY_DRIVE), f"--store={store}", objective, *files]
+        try:
+            proc = subprocess.run(cmd, cwd=ROOT, timeout=CEREMONY_TIMEOUT,
+                                  capture_output=True, text=True)
+        except subprocess.TimeoutExpired:
+            print(f"omp-bridge: ceremony exceeded {CEREMONY_TIMEOUT}s; "
+                  "store left at " + str(store), file=sys.stderr)
+            return 3
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if out:
+            print(out, end="" if out.endswith("\n") else "\n")
+        if proc.returncode not in (0,):
+            print(f"omp-bridge: ceremony refused (exit {proc.returncode})",
+                  file=sys.stderr)
+        return proc.returncode
+    finally:
+        try:
+            flock(lockfd.fileno(), LOCK_UN)
+        except OSError:
+            pass
+        lockfd.close()
+
+
+# --- main ------------------------------------------------------------------
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="omp-bridge", add_help=False)
+    p.add_argument("--help", action="store_true")
+    p.add_argument("--orient", action="store_true")
+    p.add_argument("--register", metavar="SESSION",
+                   help="register SESSION (or $OMP_SESSION) into the handoff ledger")
+    p.add_argument("--note", metavar="TEXT")
+    p.add_argument("--ceremony", action="store_true",
+                   help="ceremony-commit the following OBJECTIVE and FILES")
+    p.add_argument("rest", nargs="*")
+    args = p.parse_args(argv)
+
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    if args.orient:
+        return orient_cmd()
+    if args.register:
+        return register_cmd(args.register, args.note)
+    if args.ceremony:
+        if not args.rest:
+            print("usage: omp-bridge --ceremony OBJECTIVE FILE...",
+                  file=sys.stderr)
+            return 2
+        return ceremony_cmd(args.rest[0], args.rest[1:])
+    print("usage: omp-bridge --orient | --register[=SESSION] [--note TEXT] | "
+          "--ceremony OBJECTIVE FILE... | --help", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
