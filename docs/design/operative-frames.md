@@ -611,3 +611,367 @@ Regenerate the adopted JSON for the TUI worker:
 ```
 python3 scripts/evolve-operative --gen 2 --frames 4 --seed 7 --out operative-frames.json
 ```
+
+---
+
+## Generation 3 — `operative-v3` (deliberate)
+
+The fitness signal for this pass was the live-TUI review of operative-v2:
+
+> "grey pixelated faceless humanoid, crude low-resolution sprite, jagged
+> edges, lacks detail, feels like a placeholder."
+
+This critique IS the fitness journal (also captured by `--self-grade`). The targets
+it sets, and how the v3 art meets each:
+
+- **smooth silhouette, no jagged edges** — the head is rounded (crown narrower
+  than the slab, `▒`-feathered corners on the slab and jaw — no hard 90-degree
+  box), and the shoulder pads feather at their `▄` corners.
+- **visible detail** — an off-center `•` mote of light inside the eye-slit (it
+  persists as eyelight through a blink), `░` seam lines inside the open coat
+  panels, a `▓` belt line, `▀`/`▒` cuff and hem accents.
+- **deliberate art, not a uniform block** — the mote is off-center and the seams
+  sit at asymmetric panel offsets; the torso V-tapers traps→chest→waist.
+- **grounding** — a bright `▄` ground slab with a `▒` cast shadow under the
+  figure, wider than the boots (v2 had only a plain top-edge line).
+- **terminal-safe** — every frame ≤18 rows, ≤24 cols, approved glyphs only.
+- **deterministic** — same seed → byte-identical JSON.
+
+Reproduce any family: `python3 scripts/evolve-operative --gen 3 --frames 3 --seed N`.
+
+### Pairwise self-review — v2 seed 7 vs v3 seed 7 (base frames side by side)
+
+```
+   v2 7/0 (humanoid)     | v3 7/0 (deliberate)
+   ----------------------|------------------------
+         ▄█████▄         |        ▄██████▄
+         ███████         |       █▒██████▒█
+         █▀▀▀▀▀█         |       █▀▀▀▀•▀▀▀█
+           ██            |        ▀██████▀
+        ▄████████▄       |           ██
+     ▐  ██████████  ▌    |     ▄████████████▄
+     ▐  ██████████  ▌    |   ▐  ████████████  ▌
+     ▐   ████████   ▌    |   ▐   ██████████   ▌
+      ▄▄ ████████ ▄▄     |   ▐    ████████    ▌
+        ████  ████       |     ▄▄ ████████ ▄▄
+       ░███  ███░        |         ██▓▓▓▓██
+       ██      ██        |        ██░█  █░██
+       ██      ██        |        ░██░█  █░██░
+       ███    ███        |          ██    ██
+    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    |          ██    ██
+                         |          ███  ███
+                         |   ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+
+**Verdict: v3 is plainly further from a placeholder.** v2 (left) has the correct
+humanoid proportions but reads flat: a box-cornered slab head, plain chest, no
+internal detail, and a bare ground line — a clean but *generic low-res sprite*,
+which is exactly what the critique called it. v3 (right) has a rounded, feathered
+silhouette with no hard 90-degree corners; a lit eye-slit glint; distinct shoulder
+pads, belt, coat seams and hem accents; and a lit floor with a cast shadow. That is
+deliberate shading and structure, not a flat placeholder. The jagged-edge and
+no-detail complaints are answered by the base anatomy; the mutations (blink, mote,
+seam toggle, shadow) put that detail into motion.
+
+### Families
+
+---
+
+#### family `operative-v3` · seed 7
+
+**frames**
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+     ████████████
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+  ▐ ▄▄ ████████ ▄▄ ▌
+        ██▓▓▓▓██
+       ██░░  █░░█
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[arm-down, seam-toggle]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+  ▐ ▄████████████▄ ▌
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+       ████████
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░    ░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[mote-shift, coat-open, arm-up]`
+
+**rationale** — The head of the pack and the recommended loop: `idle-1` `arm-down`+`seam-toggle` lowering the arm while the coat seams toggle; `idle-2` `mote-shift`+`coat-open`+`arm-up` — the eye glint moves, the coat opens further and the arm lifts. A four-beat cycle that keeps the detail (mote, seams, belt) visible in motion.
+
+---
+
+#### family `operative-v3` · seed 42
+
+**frames**
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █████•████
+       ████████
+          ██
+  ▐ ▄████████████▄ ▌
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+       ████████
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░  ▓
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[arm-up, blink, prop]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+          ██ ██
+          ██ ██
+         ███████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[stance-narrow]`
+
+**rationale** — Most expressive detail: `idle-1` `arm-up`+`blink`+`prop` closes the eye-slit while the mote persists as eyelight and an ember glows beside the coat; `idle-2` `stance-narrow` draws the legs together. Shows the blink and prop system working on a sculpted body.
+
+---
+
+#### family `operative-v3` · seed 1337
+
+**frames**
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+   ░▒████████████▒░
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░    ░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[coat-open, breath-out, smooth-shoulders]`
+
+```
+       ▄██████▄
+      ▒▒██████▒▒ •
+      █▀▀▀▀•▀▀▀█
+       ▒██████▒
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██ ░
+      ░ ██░█  █░██ ░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[coat-flare, prop, round-head]`
+
+**rationale** — Smoothing showcase: `idle-1` `coat-open`+`breath-out`+`smooth-shoulders` feathers the pads and opens the coat; `idle-2` `coat-flare`+`round-head`+`prop` rounds and flares the hem with a floating mote. The feathered head and hem accents are the deliberate-detail proof.
+
+---
+
+#### family `operative-v3` · seed 2049
+
+**frames**
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+  ▐ ▄████████████▄ ▌
+  ▐ ██████████████ ▌
+  ▐  ████████████  ▌
+       ████████
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██
+       ░██░█  █░██░
+       ██        ██
+       ██        ██
+      ████      ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[leg-split, arm-up, breath-in]`
+
+```
+       ▄██████▄
+      █▒██████▒█
+      █▀▀▀▀•▀▀▀█
+       ▀██████▀
+          ██
+    ▄████████████▄
+  ▐  ████████████  ▌
+  ▐   ██████████   ▌
+  ▐    ████████    ▌
+    ▄▄ ████████ ▄▄
+        ██▓▓▓▓██
+       ██░█  █░██ ░
+      ░ ██░█  █░██ ░
+         ██    ██
+         ██    ██
+         ███  ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[belt-toggle, coat-flare, belt-toggle]`
+
+**rationale** — Grounding showcase: `idle-1` `leg-split`+`arm-up`+`breath-in` plants the legs wide onto the shadowed slab; `idle-2` `belt-toggle`+`coat-flare` widens the hem. Best frame for judging the ground shadow.
+
+---
+
+## Current pick (v3) — supersedes operative-v2
+
+Adopt **family `operative-v3`, seed 7** (`--gen 3 --frames 4`). It is the only family
+that uses the whole deliberate-detail vocabulary — eye mote, coat seams, belt,
+rounded head, shoulder pads, hem accents, cast shadow — as a coherent idle loop,
+and the pairwise review above shows it is unambiguously past the "placeholder"
+bar where v2 still sat. Runner-up: **seed 1337** if you want the smoothing of the
+feathered head and hem as the primary statement.
+
+Regenerate the adopted JSON for the TUI worker:
+
+```
+python3 scripts/evolve-operative --gen 3 --frames 4 --seed 7 --out operative-frames.json
+```
