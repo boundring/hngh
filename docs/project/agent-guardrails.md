@@ -125,3 +125,16 @@ committed; state review caught the ordering, not the exit code.
   instructed to interrupt-and-redirect with a concrete next action
   (provenance: loop-recognition probe + fixture).
 - **Never** silence the alert to make the loop quiet; fix the loop.
+
+## 8) Wired-state lens (every refactor, not a failure class)
+
+- **Class:** a refactor that works in isolation but regresses the
+  now-live observation/cadence/security/governance surfaces.
+- **Reaction (works):** before touching any slice, read
+  `docs/project/wired-state-lens.md` and check the 9 lenses
+  (observability, cadence fit, cost/loops, self-healing, governance,
+  fleet shape, operator surfaces, index continuity, simplicity).
+  A change that a watcher cannot see is a wiring regression even green.
+- **Provenance:** 2026-08-26 — ceremony was 111s invisible until
+  per-phase timing; the fix only landed after self-observation.
+  Codified as the standing refactor checklist.
