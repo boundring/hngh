@@ -723,6 +723,346 @@ MUTATIONS3 = (
     ("prop", lambda g, r: prop3(g, r)),
 )
 
+# ---------------------------------------------------------------------------
+# generation 4 — the Nihei-proportion fluid operative (family "operative-v4")
+# ---------------------------------------------------------------------------
+#
+# Fitness journal (generation 4):
+#   "still pretty Atari, not terribly well animated ... no more ball-shaped
+#    heads on awkward-proportioned Atari-style figures. We're doing fluid but
+#    pixellated renders with all kinds of artistic tricks and finesse points
+#    in an evolutionary manner."
+# Targets, mapped to concrete art decisions:
+#   Nihei proportions  -> tiny 2-row flat wedge head (never round); long neck
+#                         with void; narrow sloping shoulders; the coat
+#                         dominates ~half the height and reaches wide while
+#                         the body stays narrow (vast negative space);
+#                         narrow legs with a huge gap between them
+#   fluid pixel tricks -> anti-aliased ▒ feathering on all diagonal edges,
+#                         motion-blur ░ drag-tails off the coat hem during a
+#                         flare, squash-and-stretch on breath, anticipation
+#                         (a 1-frame lean before the flare) and staggered
+#                         limb motion (the arm follows the shoulder with a
+#                         frame delay)
+#   no ball heads       -> the head is a flat tilted slab / helmet wedge
+#   detail finesse      -> interior coat shading (▓▒░ gradient, lit center to
+#                         dark hems), a secondary edge light on one side, an
+#                         off-center eye mote that persists through a blink,
+#                         a ground contact shadow that SHIFTS with motion
+#   loop arc            -> frames cycle anticipation -> action -> settle so
+#                         --frames 4 is a closed motion loop
+#   terminal-safe       -> <=18 rows, <=24 cols, approved glyphs only
+#   deterministic       -> same seed, same JSON (sole entropy is the rng)
+
+BASE4 = (
+    "        ██████        ",   #  0 tiny flat slab head (6 wide, no curve)
+    "       █▀▀•▀▀█        ",   #  1 eye-slit wedge (tilted, off-center • mote)
+    "         ██           ",   #  2 neck band 1
+    "         ██           ",   #  3 neck band 2 (long neck, void either side)
+    "    ▐    ██     ▌     ",   #  4 narrow shoulders + outer arm starts
+    "    ▐  ▄██████▄ ▌     ",   #  5 sloping traps (▄ corners)
+    "    ▐ ██████████ ▌    ",   #  6 chest / coat top
+    "    ▐ ▓████████▓ ▌    ",   #  7 coat, ▓ gradient (lit centre)
+    "     ▓▓████████▓▓     ",   #  8 coat, ▓ widens; arms fold in
+    "     ████▓▓  ▓▓████   ",   #  9 coat opens into two panels (▓ seams)
+    "     ▒███▓    ▓███▒   ",   # 10 panels, ▓ + edge light ▒
+    "     ▓██░      ░██▓   ",   # 11 panels, dark ░ hems
+    "    ░░██        ██░░  ",   # 12 hem flare with ░ drag-tails
+    "     ██          ██   ",   # 13 narrow legs (wide gap)
+    "     ██          ██   ",   # 14 legs
+    "     ███        ███   ",   # 15 small boots
+    "  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄  ",   # 16 ground slab + ▒ cast shadow
+)
+
+V4 = {
+    "w": 24,
+    "head_rows": (0, 1),
+    "neck_rows": (2, 3),
+    "upper_rows": (4, 5),
+    "chest_rows": (6, 7),
+    "coat_rows": (8, 9, 10, 11),
+    "hem_row": 12,
+    "leg_rows": (13, 14),
+    "boot_row": 15,
+    "ground_row": 16,
+    "arm_l": 4,
+    "arm_r": 20,
+    "legs_base": ((5, 6), (15, 16)),
+    "legs_wide": ((4, 5), (17, 18)),
+    "legs_narrow": ((6, 7), (13, 14)),
+}
+
+
+def to_grid4():
+    return [list(row) for row in BASE4]
+
+
+def _put(grid, y, x, ch):
+    """Bounds-safe cell write: no-op when x is outside the row. Keeps every
+    mutation safe against the fixed-width rows of the v4 canvas."""
+    if 0 <= y < len(grid) and 0 <= x < len(grid[y]):
+        grid[y][x] = ch
+
+
+def _find_mote4(grid):
+    for y in V4["head_rows"]:
+        for x, c in enumerate(grid[y]):
+            if c == "•":
+                return y, x
+    return None
+
+
+def lean4(grid, dx):
+    """Anticipation: the head + neck + shoulders shift one column DX while
+    the coat (rows 6+) LAGS behind, and the ground shadow shifts opposite.
+    The arm columns stay put — a 1-frame staggered delay awaiting a follow."""
+    for y in range(0, 6):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row)
+                 if c != " " and not (c in "▐▌" and x in (V4["arm_l"], V4["arm_r"]))]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            _put(grid, y, x + dx, c)
+    shadow_shift(grid, -dx)
+
+
+def arm_follow(grid, rng):
+    """Staggered limb catch-up: the outer arm columns slide one column either
+    side (a deferred follow after a lean)."""
+    dx = 1 if rng.randrange(2) else -1
+    for y in range(4, 9):
+        grid[y][V4["arm_l"]] = " "
+        grid[y][V4["arm_r"]] = " "
+    for y in range(4, 9):
+        _put(grid, y, V4["arm_l"] + dx, "▐")
+        _put(grid, y, V4["arm_r"] + dx, "▌")
+
+
+def coat_flare4(grid, rng):
+    """Action: the coat hem bells outward and leaves motion-blur ░ drag-tails
+    off both outer edges."""
+    hem = grid[V4["hem_row"]]
+    xs = [x for x, c in enumerate(hem) if c in "░█"]
+    if xs:
+        a, b = min(xs), max(xs)
+        if a > 0 and hem[a - 1] == " ":
+            hem[a - 1] = "░"
+        if b < len(hem) - 1 and hem[b + 1] == " ":
+            hem[b + 1] = "░"
+    for y in (11, 12):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓░"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        if a > 0 and row[a - 1] == " ":
+            row[a - 1] = "░"
+        if b < len(row) - 1 and row[b + 1] == " ":
+            row[b + 1] = "░"
+
+
+def drag_tail(grid, rng):
+    """Motion blur: extra ░ smear cells beyond the hem's outer edge."""
+    for y in (11, 12):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓░"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        if a > 1 and row[a - 1] == " ":
+            row[a - 1] = "░"
+        if b < len(row) - 1 and row[b + 1] == " ":
+            row[b + 1] = "░"
+
+
+def breath_in4(grid, rng):
+    """Squash: the chest widens and the hem panels move inward (flatter),
+    reading as the body compressing."""
+    for y in V4["chest_rows"]:
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        if a > 0 and row[a - 1] == " ":
+            row[a - 1] = "█"
+        if b < len(row) - 1 and row[b + 1] == " ":
+            row[b + 1] = "█"
+    hem = grid[V4["hem_row"]]
+    for x, c in enumerate(hem):
+        if c == "░" and (x in (4, 5, 18, 19)):
+            hem[x] = " "
+
+
+def breath_out4(grid, rng):
+    """Stretch: the chest narrows and a ░ hem row is appended below (a taller
+    spread), guarded to keep the frame within 18 rows."""
+    for y in V4["chest_rows"]:
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓"]
+        if len(xs) <= 8:
+            continue
+        a, b = min(xs), max(xs)
+        row[a] = " "
+        row[b] = " "
+    if len(grid) < 18:
+        grid.append(list("     ░░░        ░░░   "))
+
+
+def feather4(grid, rng):
+    """Anti-aliased edges: shoulder ▄ corners soften to ▒ and the chest / hem
+    outer cells gain ░ feathering — no hard 90-degree corners."""
+    row5 = grid[5]
+    for x, c in enumerate(row5):
+        if c == "▄":
+            row5[x] = "▒"
+    for y in (6, 7):
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        _put(grid, y, a - 1, "▒")
+        _put(grid, y, b + 1, "▒")
+
+
+def edgelight4(grid, rng):
+    """Secondary light source: a ▓ highlight down one coat-panel edge and a
+    ░ shadow down the other (lit from the left)."""
+    for y in V4["coat_rows"]:
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c in "█▓▒░"]
+        if not xs:
+            continue
+        a, b = min(xs), max(xs)
+        _put(grid, y, a, "▓")
+        _put(grid, y, b, "░")
+
+
+def shadow_shift(grid, dx):
+    """The cast shadow slides DX cells, rewriting the ground ▒ band (held to
+    at least 4 wide, within the row)."""
+    row = grid[V4["ground_row"]]
+    xs = [x for x, c in enumerate(row) if c == "▒"]
+    if not xs:
+        return
+    a, b = min(xs), max(xs)
+    for x in range(a, b + 1):
+        row[x] = "▄"
+    na, nb = a + dx, b + dx
+    if na < 0 or nb >= len(row) or (nb - na + 1) < 4:
+        return
+    for x in range(na, nb + 1):
+        row[x] = "▒"
+
+
+def mote_drift4(grid, rng):
+    """The eye mote drifts one cell either side (off-centre glint)."""
+    pos = _find_mote4(grid)
+    if pos is None:
+        return
+    y, x = pos
+    dx = 1 if rng.randrange(2) else -1
+    if 0 <= x + dx < len(grid[y]) and grid[y][x + dx] in " ▀":
+        _put(grid, y, x, "▀")
+        _put(grid, y, x + dx, "•")
+
+
+def blink4(grid, rng):
+    """Eye-slit closes: the pale ▀ darkens to █; the mote persists as eyelight."""
+    for y in V4["head_rows"]:
+        for x, c in enumerate(grid[y]):
+            if c == "▀":
+                grid[y][x] = "█"
+
+
+def tilt4(grid, dx):
+    """Head + neck (rows 0-3) shift one column."""
+    for y in range(4):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row) if c != " "]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            _put(grid, y, x + dx, c)
+
+
+def legs4(grid, left, right):
+    """Legs + boots at (LEFT, RIGHT) 2-wide column pairs."""
+    l1, l2 = left
+    r1, r2 = right
+    for y in V4["leg_rows"]:
+        row = grid[y]
+        for x in range(1, len(row) - 1):
+            if row[x] == "█":
+                row[x] = " "
+        _put(grid, y, l1, "█")
+        _put(grid, y, l2, "█")
+        _put(grid, y, r1, "█")
+        _put(grid, y, r2, "█")
+    boot = grid[V4["boot_row"]]
+    for x in range(1, len(boot) - 1):
+        if boot[x] == "█":
+            boot[x] = " "
+    for x in range(l1, l2 + 2):
+        _put(grid, V4["boot_row"], x, "█")
+    for x in range(r1, r2 + 2):
+        _put(grid, V4["boot_row"], x, "█")
+
+
+def seams4(grid, rng):
+    """Coat panel seams appear or disappear (▓ join becomes an open ░ gap)."""
+    seam = grid[9][10]
+    for y in (8, 9, 10, 11):
+        _put(grid, y, 10, "░" if seam == "▓" else "▓")
+        _put(grid, y, 11, "░" if seam == "▓" else "▓")
+
+
+def prop4(grid, rng):
+    """A minimal glow adjunct: mote, hem ember, or a ground-edged spark."""
+    kinds = (("mote", ((1, 16, "•"),)),
+             ("ember", ((12, 22, "▓"),)),
+             ("glint", ((16, 1, "▖"), (16, 22, "▗"))))
+    kind, cells = kinds[rng.randrange(len(kinds))]
+    for y, x, ch in cells:
+        _put(grid, y, x, ch)
+    return "prop:" + kind
+
+
+MUTATIONS4 = (
+    ("blink", lambda g, r: blink4(g, r)),
+    ("mote-drift", lambda g, r: mote_drift4(g, r)),
+    ("neck-gap", lambda g, r: _put(g, 2, 9, " ") and _put(g, 2, 10, " ") and None),
+    ("lean-left", lambda g, r: lean4(g, -1)),
+    ("lean-right", lambda g, r: lean4(g, 1)),
+    ("arm-follow", lambda g, r: arm_follow(g, r)),
+    ("coat-flare", lambda g, r: coat_flare4(g, r)),
+    ("drag-tail", lambda g, r: drag_tail(g, r)),
+    ("breath-in", lambda g, r: breath_in4(g, r)),
+    ("breath-out", lambda g, r: breath_out4(g, r)),
+    ("feather", lambda g, r: feather4(g, r)),
+    ("edgelight", lambda g, r: edgelight4(g, r)),
+    ("shadow-shift", lambda g, r: shadow_shift(g, 1 if r.randrange(2) else -1)),
+    ("stance-wide", lambda g, r: legs4(g, *V4["legs_wide"])),
+    ("stance-narrow", lambda g, r: legs4(g, *V4["legs_narrow"])),
+    ("leg-split", lambda g, r: legs4(g, *V4["legs_wide"])),
+    ("seams", lambda g, r: seams4(g, r)),
+    ("tilt-left", lambda g, r: tilt4(g, -1)),
+    ("tilt-right", lambda g, r: tilt4(g, 1)),
+    ("prop", lambda g, r: prop4(g, r)),
+)
+
+# The looped motion arc: frame i draws only from the phase cycle
+# (anticipation -> action -> settle), so --frames 4 is a closed loop with a
+# clear motion arc off the base pose.
+PHASES4 = (
+    ("lean-left", "lean-right", "arm-follow", "shadow-shift"),  # anticipation
+    ("coat-flare", "drag-tail", "breath-in", "edgelight", "seams"),  # action
+    ("breath-out", "feather", "mote-drift", "blink", "stance-narrow",
+     "stance-wide", "tilt-left", "tilt-right", "prop", "shadow-shift"),  # settle
+)
+
 GENERATIONS = {
     "1": {"family": "operative-v1", "canvas_w": CANVAS_W, "base": BASE,
           "grid": to_grid, "mutations": MUTATIONS},
@@ -730,6 +1070,8 @@ GENERATIONS = {
           "grid": to_grid2, "mutations": MUTATIONS2},
     "3": {"family": "operative-v3", "canvas_w": V3["w"], "base": BASE3,
           "grid": to_grid3, "mutations": MUTATIONS3},
+    "4": {"family": "operative-v4", "canvas_w": V4["w"], "base": BASE4,
+          "grid": to_grid4, "mutations": MUTATIONS4, "phases": PHASES4},
 }
 
 
@@ -746,9 +1088,15 @@ def breed(seed, frames_n, gen="1"):
     for i in range(1, frames_n):
         grid = spec["grid"]()
         applied = []
+        pool = spec["mutations"]
+        phases = spec.get("phases")
+        if phases:
+            # looped motion arc: draw from the phase for this frame index
+            phase = phases[(i - 1) % len(phases)]
+            pool = [m for m in spec["mutations"] if m[0] in phase]
         # fixed rng call sequence: count, then one pick per mutation
         for _ in range(rng.randint(1, 3)):
-            name, fn = spec["mutations"][rng.randrange(len(spec["mutations"]))]
+            name, fn = pool[rng.randrange(len(pool))]
             fn(grid, rng)
             applied.append(name)
         doc["frames"].append({
@@ -776,8 +1124,29 @@ def self_grade(gen, seed, frames):
         bounds_ok = False
     max_cols = max((len(r) for f in doc["frames"]
                     for r in f["art"].splitlines()), default=0)
-    return {
-        "mode": "self-grade",
+    journal4 = {
+        "journal": "generation-4 fitness journal",
+        "critique": "still pretty Atari, not terribly well animated ... no "
+                    "more ball-shaped heads on awkward-proportioned "
+                    "Atari-style figures; fluid but pixellated renders with "
+                    "artistic tricks and finesse points in an evolutionary "
+                    "manner",
+        "targets": [
+            "Nihei proportions: tiny 2-row flat wedge head, long neck with "
+            "void, narrow sloping shoulders, coat-dominant body, narrow legs "
+            "with a huge gap",
+            "fluid pixel tricks: anti-aliased feathered edges, motion-blur "
+            "drag-tails, squash-and-stretch breath, anticipation lean, "
+            "staggered limb motion",
+            "no ball heads: a flat helmet wedge, never round",
+            "detail finesse: interior coat shading gradient, secondary edge "
+            "light, persistent eye mote, shifting ground shadow",
+            "loop arc: anticipation -> action -> settle across 4 frames",
+            "terminal-safe: <=18 rows, <=24 cols, approved glyphs only",
+            "deterministic: same seed -> byte-identical JSON",
+        ],
+    }
+    journal = journal4 if gen == "4" else {
         "journal": "generation-3 fitness journal",
         "critique": "grey pixelated faceless humanoid, crude low-resolution "
                     "sprite, jagged edges, lacks detail, feels like a "
@@ -794,6 +1163,12 @@ def self_grade(gen, seed, frames):
             "terminal-safe: <=18 rows, <=24 cols, approved glyphs only",
             "deterministic: same seed -> byte-identical JSON",
         ],
+    }
+    return {
+        "mode": "self-grade",
+        "journal": journal["journal"],
+        "critique": journal["critique"],
+        "targets": journal["targets"],
         "generation": gen,
         "family": doc["family"],
         "seed": seed,
@@ -840,10 +1215,11 @@ def main(argv=None):
         prog="evolve-operative",
         description="Breed evolutionary pixel-art frame-sets for the "
                     "hngh operative (deterministic per seed).")
-    ap.add_argument("--gen", choices=("1", "2", "3"), default="1",
+    ap.add_argument("--gen", choices=("1", "2", "3", "4"), default="1",
                     help="generation: 1 = operative-v1 slab (default), "
                          "2 = operative-v2 humanoid, "
-                         "3 = operative-v3 deliberate")
+                         "3 = operative-v3 deliberate, "
+                         "4 = operative-v4 fluid Nihei")
     ap.add_argument("--frames", type=positive_int, default=3,
                     help="number of frames in the mutation walk (default 3)")
     ap.add_argument("--seed", type=int, default=1,
