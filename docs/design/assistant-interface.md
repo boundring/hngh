@@ -27,20 +27,22 @@ sci-fi both (Tower Dungeon's stone, Blame!'s silicon).
    character studies, palette chips, frame test sheets, and fold the
    good ones into the sprite assets. Quantity first; the canon
    emerges from the pile.
-6. **The operative is a fluid pixellated near-miss render, Nihei in
-   proportion and scale.** Not an Atari-style ball-headed sprite: the
-   figure is gaunt and elongated — a genuinely tiny head (a flat slab /
-   helmet wedge, never round), a long neck with void, narrow sloping
-   shoulders, a coat that dominates the canvas, and narrow legs with vast
-   negative space between them — mimicking Tsutomu Nihei prose/scale
-   (tiny heads, huge coats, empty megastructure, near-miss lines) rather
-   than bumping out shapes. The art leans on artistic finesse techniques:
-   anti-aliased `▒` feathering on all diagonals, motion-blur `░` drag-tails
-   off the coat hem, squash-and-stretch on breath, anticipation before a
-   motion, staggered limb travel, a secondary edge light, interior coat
-   shading (a `▓▒░` gradient), a persistent eye-slit mote, and a ground
-   contact shadow that shifts with the motion. The reference breed is
-   `scripts/evolve-operative --gen 4` (families in the operative-frames
+6. **The operative is a standardized two-arm / two-leg rig, recognizable
+   as a person at a glance.** Not a ball-headed or coat-shape sprite: the
+   figure has EXACTLY two arms (each a distinct upper arm + lower arm with
+   a visible elbow bend) and EXACTLY two separated legs (thigh + shin +
+   boot, with a clear gap between them), in a symmetric default pose —
+   central vertical axis, bilateral symmetry, balanced 1:1:1 head-torso-
+   legs proportion. The small head carries a flat eye-slit with a `•` mote,
+   and there is a visible shoulder line. The art leans on artistic finesse
+   techniques: anti-aliased `▒` feathering on all diagonals, motion-blur
+   `░` drag-tails, squash-and-stretch on breath, anticipation before a
+   motion, staggered limb travel, a secondary edge light, interior shading
+   (a `▓▒░` gradient), a persistent eye-slit mote, and a ground contact
+   shadow that shifts with the motion. Animation runs 6-8-frame loops with
+   clearly distinct poses at 0.3-0.5 s — walk-cycle-style weight transfer,
+   arm-raise gestures, blink, and breathe. The reference breed is
+   `scripts/evolve-operative --gen 5` (families in the operative-frames
    catalog); the TUI consumes its frame sheets via `AnimatedSprite`.
 
 ## Current state (committed)

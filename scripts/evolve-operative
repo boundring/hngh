@@ -1063,6 +1063,301 @@ PHASES4 = (
      "stance-wide", "tilt-left", "tilt-right", "prop", "shadow-shift"),  # settle
 )
 
+# ---------------------------------------------------------------------------
+# generation 5 — the standardized rig (family "operative-v5")
+# ---------------------------------------------------------------------------
+#
+# Fitness journal (generation 5):
+#   "slightly more interesting avatar, but still not animated enough, not
+#    recognizable enough, needs more of a standardized appearance — as in two
+#    arms and two legs."
+# Targets, mapped to concrete art decisions:
+#   standardized rig  -> a fixed, readable humanoid skeleton with EXACTLY two
+#                        arms (upper + lower arm, visible elbow bend on both
+#                        sides in the default pose) and EXACTLY two separated
+#                        legs (thigh + shin + boot, a hard gap between them).
+#                        Symmetric default pose: reads as "person" instantly.
+#   recognizable      -> small head with the eye-slit mote, a visible shoulder
+#                        line, central vertical axis, bilateral symmetry,
+#                        balanced 1:1:1 head-torso-legs height (the coat-heavy
+#                        1:2:1 shape is gone — no flared coat).
+#   animation louder  -> an 8-phase loop (not 4): weight transfer (legs
+#                        together -> legs apart), a two-arm raise gesture,
+#                        blink + inhale, an asymmetric arm swing, a stepping
+#                        foot, exhale + tilt, then a settle back to the base
+#                        pose. Every frame is clearly different at 0.3-0.5 s.
+#   terminal-safe     -> <=18 rows, <=24 cols, approved glyphs only
+#   deterministic     -> same seed, same JSON (sole entropy is the rng)
+
+BASE5 = (
+    "        ██████          ",   #  0 head slab (6 wide, centered)
+    "        █▀▀•▀▀█         ",   #  1 eye-slit with off-center • mote
+    "           ██           ",   #  2 neck (2 wide)
+    "     ▄████████████▄     ",   #  3 shoulder line / traps
+    "  ▐    ████████████   ▌ ",   #  4 chest + upper arms (cols 2/21)
+    "   ▐   ██████████    ▌  ",   #  5 chest (V-taper) + arms (cols 3/20)
+    "  ▐     ████████      ▌ ",   #  6 waist + forearms bent in (elbow)
+    "        ██▓▓▓▓▓▓██      ",   #  7 belt
+    "        ██      ██      ",   #  8 hips (legs start, separated)
+    "        ██      ██      ",   #  9 thigh
+    "        ██      ██      ",   # 10 shin
+    "        ██      ██      ",   # 11 shin
+    "       ███      ███     ",   # 12 boots (3 wide, clear of shins)
+    "  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄    ",   # 13 bright ground + ▒ cast shadow
+)
+
+V5 = {
+    "w": 24,
+    "head_rows": (0, 1),
+    "neck_row": 2,
+    "shoulder_row": 3,
+    "chest_rows": (4, 5),
+    "waist_row": 6,
+    "belt_row": 7,
+    "hip_row": 8,
+    "leg_rows": (9, 10, 11),
+    "boot_row": 12,
+    "ground_row": 13,
+    "legs_base": ((8, 9), (16, 17)),
+    "legs_together": ((9, 10), (15, 16)),
+    "legs_apart": ((6, 7), (18, 19)),
+}
+
+
+def to_grid5():
+    rows = [list(row) for row in BASE5]
+    if any(len(r) != V5["w"] for r in rows):
+        raise SystemExit("evolve-operative: BASE5 rows must be 24 cols")
+    return rows
+
+
+def _mote5(grid):
+    for y in V5["head_rows"]:
+        for x, c in enumerate(grid[y]):
+            if c == "•":
+                return y, x
+    return None
+
+
+def _arm_zone(grid):
+    for y in range(3, 8):
+        for x in range(5):
+            grid[y][x] = " "
+        for x in range(19, 24):
+            grid[y][x] = " "
+
+
+def _arms_default(grid):
+    """Two arms, upper + forearm, visible elbow jog on both sides."""
+    _arm_zone(grid)
+    grid[4][2], grid[4][21] = "▐", "▌"
+    grid[5][3], grid[5][20] = "▐", "▌"
+    grid[6][2], grid[6][21] = "▐", "▌"
+
+
+def _arms_raised(grid):
+    """Both arms raised high (a clear gesture)."""
+    _arm_zone(grid)
+    grid[3][1], grid[3][22] = "▐", "▌"
+    grid[4][1], grid[4][22] = "▐", "▌"
+    grid[5][1], grid[5][22] = "▐", "▌"
+    grid[5][3], grid[5][20] = "▄", "▄"  # bent forearms
+    grid[6][3], grid[6][20] = "▄", "▄"
+
+
+def _arms_swing(grid):
+    """Left arm raised, right arm lowered (asymmetric swing beat)."""
+    _arm_zone(grid)
+    grid[3][1], grid[4][1], grid[5][1] = "▐", "▐", "▐"
+    grid[5][3], grid[6][3] = "▄", "▄"
+    grid[5][21], grid[6][21], grid[7][21] = "▌", "▌", "▌"
+    grid[4][22] = "▌"
+
+
+def _legs_place(grid, left, right):
+    """Exactly two separated legs at (LEFT, RIGHT) 2-wide column pairs with
+    3-wide boots on the boot row. Keeps the pelvis (row 8) and clears only
+    the leg rows below it."""
+    # keep the base pelvis so legs stay attached to the torso
+    grid[V5["hip_row"]][8] = "█"
+    grid[V5["hip_row"]][9] = "█"
+    grid[V5["hip_row"]][16] = "█"
+    grid[V5["hip_row"]][17] = "█"
+    for y in range(9, 13):
+        for x in range(3, 21):
+            if grid[y][x] == "█":
+                grid[y][x] = " "
+    l1, l2 = left
+    r1, r2 = right
+    for y in V5["leg_rows"]:
+        grid[y][l1], grid[y][l2] = "█", "█"
+        grid[y][r1], grid[y][r2] = "█", "█"
+    b = V5["boot_row"]
+    for x in range(max(0, l1 - 1), min(23, l2 + 1) + 1):
+        grid[b][x] = "█"
+    for x in range(max(0, r1 - 1), min(23, r2 + 1) + 1):
+        grid[b][x] = "█"
+
+
+def _step_left(grid):
+    """The left foot steps down a row ahead of the right (asymmetric stride):
+    left leg rides rows 10/11 with its boot on the boot row, the right leg
+    rides 9/10 with its boot one row higher."""
+    # keep the base pelvis
+    grid[V5["hip_row"]][8] = "█"
+    grid[V5["hip_row"]][9] = "█"
+    grid[V5["hip_row"]][16] = "█"
+    grid[V5["hip_row"]][17] = "█"
+    for y in range(9, 13):
+        for x in range(3, 21):
+            if grid[y][x] == "█":
+                grid[y][x] = " "
+    # left (forward) leg rides rows 9/10, planted boot on the ground row
+    for y in (9, 10):
+        grid[y][8], grid[y][9] = "█", "█"
+    for x in (7, 8, 9):
+        grid[12][x] = "█"
+    # right (back) leg rides rows 9/10, boot raised one row
+    for y in (9, 10):
+        grid[y][16], grid[y][17] = "█", "█"
+    for x in (15, 16, 17):
+        grid[11][x] = "█"
+    _shadow5(grid, -1)
+
+
+def _head_shift(grid, dx):
+    # set-to-absolute: reset the head/neck from the base, then shift once
+    for y in V5["head_rows"] + (V5["neck_row"],):
+        grid[y] = list(BASE5[y])
+    for y in V5["head_rows"] + (V5["neck_row"],):
+        row = grid[y]
+        cells = [(x, c) for x, c in enumerate(row) if c != " "]
+        for x, _ in cells:
+            row[x] = " "
+        for x, c in cells:
+            _put(grid, y, x + dx, c)
+
+
+def _chest_breath(grid, direction):
+    # set-to-absolute: reset the chest rows from the base, then one step
+    for y in V5["chest_rows"]:
+        grid[y] = list(BASE5[y])
+    for y in V5["chest_rows"]:
+        row = grid[y]
+        xs = [x for x, c in enumerate(row) if c == "█"]
+        if not xs:
+            continue
+        if direction == "in":
+            a, b = min(xs), max(xs)
+            _put(grid, y, a - 1, "█")
+            _put(grid, y, b + 1, "█")
+        else:
+            a, b = min(xs), max(xs)
+            if b - a + 1 <= 8:
+                continue
+            row[a] = " "
+            row[b] = " "
+
+
+def _chest_reset(grid):
+    for y, (a, b) in ((4, (7, 18)), (5, (7, 16))):
+        row = grid[y]
+        for x in range(4, 20):
+            if row[x] == "█" and not (a <= x <= b):
+                row[x] = " "
+
+
+def _shadow5(grid, dx):
+    """Shift the v5 cast shadow (ground row 13) DX columns."""
+    row = grid[V5["ground_row"]]
+    xs = [x for x, c in enumerate(row) if c == "▒"]
+    if not xs:
+        return
+    a, b = min(xs), max(xs)
+    for x in range(a, b + 1):
+        row[x] = "▄"
+    na, nb = a + dx, b + dx
+    if na < 0 or nb >= len(row) or (nb - na + 1) < 4:
+        return
+    for x in range(na, nb + 1):
+        row[x] = "▒"
+
+
+def frame_close(grid, rng):
+    """Pose A: legs together, arms hanging bent."""
+    _legs_place(grid, *V5["legs_together"])
+    _arms_default(grid)
+
+
+def gesture_raise(grid, rng):
+    """A distinct two-arm raise with a head cant."""
+    _arms_raised(grid)
+    _head_shift(grid, -1)
+
+
+def blink_inhale(grid, rng):
+    """Blink (slit closes, the mote persists as eyelight) + an inhale."""
+    for x, c in enumerate(grid[1]):
+        if c == "▀":
+            grid[1][x] = "█"
+    _chest_breath(grid, "in")
+
+
+def frame_open(grid, rng):
+    """Pose B: legs apart (weight transfer), arms back to hanging."""
+    _legs_place(grid, *V5["legs_apart"])
+    _arms_default(grid)
+
+
+def swing_arms(grid, rng):
+    """Asymmetric arm swing with a shadow shift."""
+    _arms_swing(grid)
+    _shadow5(grid, -1)
+
+
+def step_left(grid, rng):
+    """The left foot steps forward; shadow shifts with it."""
+    _step_left(grid)
+
+
+def exhale_tilt(grid, rng):
+    """Exhale (chest narrows) and the head tilts the other way."""
+    _chest_breath(grid, "out")
+    _head_shift(grid, 1)
+
+
+def settle(grid, rng):
+    """Return to the symmetric base pose, closing the loop."""
+    for y in range(len(grid)):
+        grid[y] = list(BASE5[y])
+
+
+MUTATIONS5 = (
+    ("frame-close", frame_close),
+    ("gesture-raise", gesture_raise),
+    ("blink-inhale", blink_inhale),
+    ("frame-open", frame_open),
+    ("swing-arms", swing_arms),
+    ("step-left", step_left),
+    ("exhale-tilt", exhale_tilt),
+    ("settle", settle),
+)
+
+# The 8-beat loop: weight transfer (A/B), an arm-raise gesture, blink +
+# breathe, an arm swing, a stepping foot, and a settle back to base. Each
+# phase pool is a single composite so the rng draw pattern (and gens 1-4
+# output) is untouched: every frame is base + exactly one directed pose.
+PHASES5 = (
+    ("frame-close",),   # pose A: legs together
+    ("gesture-raise",),  # raise both arms
+    ("blink-inhale",),   # blink + inhale
+    ("frame-open",),     # pose B: legs apart (weight transfer)
+    ("swing-arms",),     # asymmetric arm swing
+    ("step-left",),      # foot steps forward
+    ("exhale-tilt",),    # exhale + tilt
+    ("settle",),         # return to base
+)
+
 GENERATIONS = {
     "1": {"family": "operative-v1", "canvas_w": CANVAS_W, "base": BASE,
           "grid": to_grid, "mutations": MUTATIONS},
@@ -1072,6 +1367,8 @@ GENERATIONS = {
           "grid": to_grid3, "mutations": MUTATIONS3},
     "4": {"family": "operative-v4", "canvas_w": V4["w"], "base": BASE4,
           "grid": to_grid4, "mutations": MUTATIONS4, "phases": PHASES4},
+    "5": {"family": "operative-v5", "canvas_w": V5["w"], "base": BASE5,
+          "grid": to_grid5, "mutations": MUTATIONS5, "phases": PHASES5},
 }
 
 
@@ -1111,6 +1408,47 @@ def doc_to_json(doc):
     return json.dumps(doc, indent=2, ensure_ascii=False)
 
 
+def rig_check(doc):
+    """Automated standardized-rig audit: every frame must show exactly two
+    separated legs, both arm sides with a visible elbow bend, the head +
+    eye mote, and the ground + cast shadow."""
+    problems = []
+    for frame in doc["frames"]:
+        rows = frame["art"].splitlines()
+        # legs: cluster non-space █ columns in the leg band (rows 8-12)
+        cols = set()
+        for y in range(8, 13):
+            if y < len(rows):
+                for x, ch in enumerate(rows[y]):
+                    if ch == "█" and 3 <= x <= 20:
+                        cols.add(x)
+        runs = []
+        for x in sorted(cols):
+            if runs and x == runs[-1][-1] + 1:
+                runs[-1].append(x)
+            else:
+                runs.append([x])
+        if len(runs) != 2:
+            problems.append(f"{frame['name']}: {len(runs)} leg clusters")
+        elif runs[1][0] - runs[0][-1] - 1 < 2:
+            problems.append(f"{frame['name']}: leg gap < 2 cols")
+        # arms: at least one upper/forearm cell per side, bend on a side
+        left = {x for y in range(3, 8) for x, c in enumerate(rows[y])
+                if c in "▐▌▄" and x < 12}
+        right = {x for y in range(3, 8) for x, c in enumerate(rows[y])
+                 if c in "▐▌▄" and x >= 12}
+        if not left or not right:
+            problems.append(f"{frame['name']}: missing arm side")
+        elif not (len(left) > 1 or len(right) > 1):
+            problems.append(f"{frame['name']}: no visible elbow bend")
+        # head, mote, ground, shadow
+        if not rows[0].strip() or "•" not in rows[1]:
+            problems.append(f"{frame['name']}: head/mote missing")
+        if "▄" not in rows[-1] or "▒" not in rows[-1]:
+            problems.append(f"{frame['name']}: ground/shadow missing")
+    return "pass" if not problems else "fail: " + "; ".join(problems)
+
+
 def self_grade(gen, seed, frames):
     """The fitness journal: the exact critique as the target, plus a
     computable self-check for the requested generation (bounds, glyphs,
@@ -1124,6 +1462,26 @@ def self_grade(gen, seed, frames):
         bounds_ok = False
     max_cols = max((len(r) for f in doc["frames"]
                     for r in f["art"].splitlines()), default=0)
+    journal5 = {
+        "journal": "generation-5 fitness journal",
+        "critique": "slightly more interesting avatar, but still not "
+                    "animated enough, not recognizable enough, needs more "
+                    "of a standardized appearance — as in two arms and two "
+                    "legs",
+        "targets": [
+            "standardized rig: exactly two arms (upper + lower arm with a "
+            "visible elbow bend) and exactly two separated legs (thigh + "
+            "shin + boot, clear gap)",
+            "recognizable at a glance: small head with eye-slit mote, "
+            "visible shoulder line, central axis, bilateral symmetry, "
+            "balanced 1:1:1 head-torso-legs (no coat-heavy shape)",
+            "animation louder: an 8-phase loop with weight transfer, an "
+            "arm-raise gesture, blink + breathe, arm swing, a stepping "
+            "foot, and a settle — clearly different frames at 0.3-0.5 s",
+            "terminal-safe: <=18 rows, <=24 cols, approved glyphs only",
+            "deterministic: same seed -> byte-identical JSON",
+        ],
+    }
     journal4 = {
         "journal": "generation-4 fitness journal",
         "critique": "still pretty Atari, not terribly well animated ... no "
@@ -1146,7 +1504,7 @@ def self_grade(gen, seed, frames):
             "deterministic: same seed -> byte-identical JSON",
         ],
     }
-    journal = journal4 if gen == "4" else {
+    journal = journal5 if gen == "5" else journal4 if gen == "4" else {
         "journal": "generation-3 fitness journal",
         "critique": "grey pixelated faceless humanoid, crude low-resolution "
                     "sprite, jagged edges, lacks detail, feels like a "
@@ -1164,7 +1522,7 @@ def self_grade(gen, seed, frames):
             "deterministic: same seed -> byte-identical JSON",
         ],
     }
-    return {
+    base_self = {
         "mode": "self-grade",
         "journal": journal["journal"],
         "critique": journal["critique"],
@@ -1173,14 +1531,18 @@ def self_grade(gen, seed, frames):
         "family": doc["family"],
         "seed": seed,
         "frames": len(doc["frames"]),
-        "self_check": {
-            "bounds": "pass" if bounds_ok else "fail",
-            "max_cols": max_cols,
-            "rows": len(first),
-            "deterministic": doc_to_json(doc) == doc_to_json(
-                breed(seed, frames, gen)),
-        },
     }
+    self_check = {
+        "bounds": "pass" if bounds_ok else "fail",
+        "max_cols": max_cols,
+        "rows": len(first),
+        "deterministic": doc_to_json(doc) == doc_to_json(
+            breed(seed, frames, gen)),
+    }
+    if gen == "5":
+        self_check["rig"] = rig_check(doc)
+    base_self["self_check"] = self_check
+    return base_self
 
 
 def check_bounds(doc):
@@ -1215,11 +1577,12 @@ def main(argv=None):
         prog="evolve-operative",
         description="Breed evolutionary pixel-art frame-sets for the "
                     "hngh operative (deterministic per seed).")
-    ap.add_argument("--gen", choices=("1", "2", "3", "4"), default="1",
+    ap.add_argument("--gen", choices=("1", "2", "3", "4", "5"), default="1",
                     help="generation: 1 = operative-v1 slab (default), "
                          "2 = operative-v2 humanoid, "
                          "3 = operative-v3 deliberate, "
-                         "4 = operative-v4 fluid Nihei")
+                         "4 = operative-v4 fluid Nihei, "
+                         "5 = operative-v5 standardized rig")
     ap.add_argument("--frames", type=positive_int, default=3,
                     help="number of frames in the mutation walk (default 3)")
     ap.add_argument("--seed", type=int, default=1,

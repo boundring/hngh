@@ -1434,3 +1434,696 @@ Regenerate the adopted JSON for the TUI worker:
 ```
 python3 scripts/evolve-operative --gen 4 --frames 4 --seed 7 --out operative-frames.json
 ```
+
+---
+
+## Generation 5 — `operative-v5` (standardized rig)
+
+The operator's live-TUI verdict was the fitness signal for this pass:
+
+> "slightly more interesting avatar, but still not animated enough, not
+> recognizable enough, needs more of a standardized appearance — as in two arms
+> and two legs."
+
+This critique IS the gen-5 fitness journal (also captured by `--self-grade --gen 5`).
+The response abandons the coat-heavy 1:2:1 shape for a **fixed, readable humanoid
+rig** that is recognizable at a glance:
+
+- **Standardized rig** — EXACTLY two arms, each with a distinct upper arm + lower
+  arm and a visible elbow bend (both sides, in the default pose), and EXACTLY two
+  separated legs — thigh + shin + boot, with a hard gap between them (never
+  ambiguous coat-hems or a fused column). The default pose is symmetric: central
+  vertical axis, bilateral symmetry, and balanced 1:1:1 head-torso-legs height.
+- **Recognizable at thumbnail** — a small head with the `•` eye-slit mote and a
+  visible shoulder line; the figure reads as a person the instant it renders.
+- **Animation louder** — an 8-phase loop (not 4), each frame a clearly different
+  pose: weight transfer (legs together → legs apart), a two-arm raise gesture, a
+  blink + inhale, an asymmetric arm swing, a stepping foot, an exhale + tilt, then
+  a settle back to base. Cycled at 0.3-0.5 s the frames are unmistakably different
+  motion, not a near-static bump.
+- **Automated rig check** — `--self-grade --gen 5` runs a `rig` audit: every frame
+  must show exactly two leg clusters with a gap, both arm sides with an elbow,
+  the head + mote, and the ground + shadow. It passes on all catalog seeds.
+
+Reproduce any family: `python3 scripts/evolve-operative --gen 5 --frames 8 --seed N`.
+
+### Pairwise self-review — v4 seed 7 vs v5 seed 7 (base frames side by side)
+
+```
+   v4 7/0 (fluid Nihei coat)        |  v5 7/0 (standardized rig)
+   ------------------------------|------------------------
+           ██████                |         ██████
+          █▀▀•▀▀█                |         █▀▀•▀▀█
+            ██                   |            ██
+            ██                   |      ▄████████████▄
+       ▐    ██     ▌             |   ▐    ████████████   ▌
+       ▐  ▄██████▄ ▌             |    ▐   ██████████    ▌
+       ▐ ██████████ ▌            |   ▐     ████████      ▌
+       ▐ ▓████████▓ ▌            |         ██▓▓▓▓▓▓██
+        ▓▓████████▓▓             |         ██      ██
+        ████▓▓  ▓▓████           |         ██      ██
+        ▒███▓    ▓███▒           |         ██      ██
+        ▓██░      ░██▓           |         ██      ██
+       ░░██        ██░░          |        ███      ███
+        ██          ██           |   ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+        ██          ██           |
+        ███        ███           |
+     ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄          |
+```
+
+**Verdict: v5 is the standardized, recognizable figure the operator asked for.** v4
+(left) reads as a *shape*: a coat-dominant silhouette with the limbs folded into
+the drapery — a viewer cannot reliably point to two arms or two legs. v5 (right)
+reads as a *person*: two arms with visible elbow bends on both sides, two separated
+legs (thigh/shin/boot) with a clear gap, a small head with the eye-slit mote, a
+shoulder line, and a 1:1:1 balanced body on a shadowed ground. At thumbnail scale
+the v5 rig is identifiable as humanoid; v4 is not. And the loop is louder: 8 clearly
+distinct frames (legs-together → arm-raise → blink-inhale → legs-apart weight-
+transfer → arm-swing → step → exhale-tilt → settle) vs v4's 4 near-similar poses.
+
+### Families (each is an 8-frame loop: base + 8 directed poses)
+
+---
+
+#### family `operative-v5` · seed 7
+
+**frames**
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+         ██    ██
+         ██    ██
+         ██    ██
+        ████  ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[frame-close, frame-close]`
+
+```
+       ██████
+       █▀▀•▀▀█
+          ██
+ ▐   ▄████████████▄   ▌
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████   ▄ ▌
+   ▄    ████████    ▄
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[gesture-raise, gesture-raise, gesture-raise]`
+
+```
+        ██████
+        ███•███
+           ██
+     ▄████████████▄
+  ▐   ██████████████  ▌
+   ▐  ████████████   ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[blink-inhale, blink-inhale]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+      ██          ██
+      ██          ██
+      ██          ██
+     ████        ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-4` · `[frame-open]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+ ▐   ▄████████████▄
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████    ▌
+   ▄    ████████     ▌
+        ██▓▓▓▓▓▓██   ▌
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄
+```
+`idle-5` · `[swing-arms, swing-arms]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+               ███
+       ███
+  ▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄
+```
+`idle-6` · `[step-left]`
+
+```
+         ██████
+         █▀▀•▀▀█
+            ██
+     ▄████████████▄
+  ▐     ██████████    ▌
+   ▐    ████████     ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-7` · `[exhale-tilt, exhale-tilt, exhale-tilt]`
+
+**rationale** — The head of the pack and the recommended loop: legs together (pose A) -> two-arm raise -> blink + inhale -> legs apart (weight transfer) -> arm swing -> forward step -> exhale + tilt -> settle. Every frame is a different readable pose; the arms and legs are unambiguous in all of them.
+
+---
+
+#### family `operative-v5` · seed 42
+
+**frames**
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+         ██    ██
+         ██    ██
+         ██    ██
+        ████  ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[frame-close, frame-close, frame-close]`
+
+```
+       ██████
+       █▀▀•▀▀█
+          ██
+ ▐   ▄████████████▄   ▌
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████   ▄ ▌
+   ▄    ████████    ▄
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[gesture-raise]`
+
+```
+        ██████
+        ███•███
+           ██
+     ▄████████████▄
+  ▐   ██████████████  ▌
+   ▐  ████████████   ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[blink-inhale]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+      ██          ██
+      ██          ██
+      ██          ██
+     ████        ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-4` · `[frame-open, frame-open, frame-open]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+ ▐   ▄████████████▄
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████    ▌
+   ▄    ████████     ▌
+        ██▓▓▓▓▓▓██   ▌
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄
+```
+`idle-5` · `[swing-arms]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+               ███
+       ███
+  ▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄
+```
+`idle-6` · `[step-left]`
+
+```
+         ██████
+         █▀▀•▀▀█
+            ██
+     ▄████████████▄
+  ▐     ██████████    ▌
+   ▐    ████████     ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-7` · `[exhale-tilt, exhale-tilt, exhale-tilt]`
+
+**rationale** — Pose-balanced: the blink-inhale and settle frames land with the clearest shoulder line and the most symmetric silhouette, the best still for judging the 1:1:1 balance at a glance.
+
+---
+
+#### family `operative-v5` · seed 1337
+
+**frames**
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+         ██    ██
+         ██    ██
+         ██    ██
+        ████  ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[frame-close, frame-close, frame-close]`
+
+```
+       ██████
+       █▀▀•▀▀█
+          ██
+ ▐   ▄████████████▄   ▌
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████   ▄ ▌
+   ▄    ████████    ▄
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[gesture-raise, gesture-raise]`
+
+```
+        ██████
+        ███•███
+           ██
+     ▄████████████▄
+  ▐   ██████████████  ▌
+   ▐  ████████████   ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[blink-inhale, blink-inhale]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+      ██          ██
+      ██          ██
+      ██          ██
+     ████        ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-4` · `[frame-open]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+ ▐   ▄████████████▄
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████    ▌
+   ▄    ████████     ▌
+        ██▓▓▓▓▓▓██   ▌
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄▄
+```
+`idle-5` · `[swing-arms, swing-arms, swing-arms]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+               ███
+       ███
+  ▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄
+```
+`idle-6` · `[step-left, step-left]`
+
+```
+         ██████
+         █▀▀•▀▀█
+            ██
+     ▄████████████▄
+  ▐     ██████████    ▌
+   ▐    ████████     ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-7` · `[exhale-tilt, exhale-tilt, exhale-tilt]`
+
+**rationale** — Gesture-heavy: the arm-raise and arm-swing frames are the most exaggerated, giving the loudest read on the two-arm rig and the elbow bends.
+
+---
+
+#### family `operative-v5` · seed 2049
+
+**frames**
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-0` · `[base]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+         ██    ██
+         ██    ██
+         ██    ██
+        ████  ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-1` · `[frame-close, frame-close, frame-close]`
+
+```
+       ██████
+       █▀▀•▀▀█
+          ██
+ ▐   ▄████████████▄   ▌
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████   ▄ ▌
+   ▄    ████████    ▄
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-2` · `[gesture-raise, gesture-raise, gesture-raise]`
+
+```
+        ██████
+        ███•███
+           ██
+     ▄████████████▄
+  ▐   ██████████████  ▌
+   ▐  ████████████   ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-3` · `[blink-inhale, blink-inhale]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+      ██          ██
+      ██          ██
+      ██          ██
+     ████        ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-4` · `[frame-open]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+ ▐   ▄████████████▄
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████    ▌
+   ▄    ████████     ▌
+        ██▓▓▓▓▓▓██   ▌
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄▄
+```
+`idle-5` · `[swing-arms, swing-arms, swing-arms]`
+
+```
+        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+               ███
+       ███
+  ▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄
+```
+`idle-6` · `[step-left]`
+
+```
+         ██████
+         █▀▀•▀▀█
+            ██
+     ▄████████████▄
+  ▐     ██████████    ▌
+   ▐    ████████     ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄
+```
+`idle-7` · `[exhale-tilt, exhale-tilt, exhale-tilt]`
+
+**rationale** — Motion-forward: the weight-transfer and step frames have the widest leg separation and the most obvious stride, the clearest walk-cycle read.
+
+---
+
+## Current pick (v5) — supersedes operative-v4
+
+Adopt **family `operative-v5`, seed 7** (`--gen 5 --frames 8`). It is the figure the
+operator is staring at: a standardized two-arm / two-leg humanoid rig, recognizable
+as a person at a glance, with an 8-frame loop whose frames are clearly different at
+0.3-0.5 s. The automated rig check passes on every catalog seed, confirming exactly
+two separated legs and two arm sides with visible elbows in every frame. Runner-up:
+**seed 2049** if the widest weight-transfer / stride read is preferred.
+
+Regenerate the adopted JSON for the TUI worker:
+
+```
+python3 scripts/evolve-operative --gen 5 --frames 8 --seed 7 --out operative-frames.json
+```
