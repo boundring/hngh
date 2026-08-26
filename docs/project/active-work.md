@@ -5,3 +5,5 @@
 08:24 lane: hngh-report-display — impl done: TUI reports table+strip+ReportModal (seen-set, fail-closed), osd report_status enrich. Modal/pty/osd unit tests pass; positive modal smoke OK. Next: make test, then ceremony.
 08:28 lane: hngh-report-display — make test fully green (2774 lisp checks, 16 python files rc=0). Next: ceremony commit (dashboard-tui, osd-operative, tests, active-work.md).
 12:25 lane: report-queue done (add/list/unread/mark-read/json, exit 2 guards). Next: run-autonomous; its journal generation must be test-hermetic — will add HNGH_GEN_ROOT override style after checking generate-publication git deps
+08:31 lane: hngh-report-display — ceremony committed e86f4cf4db7a5fe21c896e42719059bfa38fe0efdbf624c1b918d3350d8bed2c (commit 1eff057). Sibling's scripts/report-queue landed (empty ledger -> fail-closed ok). Next: relaunch live TUI + OSD.
+08:33 lane: hngh-report-display — DONE. Live screens relaunched: TUI window 48234504 (pid 1493561), OSD window 56623121/hngh-osd (pid 1493503). 8/8 complete.
