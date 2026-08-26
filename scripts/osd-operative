@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""osd-operative — feed the desktop on-screen display (OSD) overlay.
+
+A foreground feeder for the standalone qml6 operative window
+(`scripts/osd-operative.qml`). It writes a small snapshot JSON that the
+QML polls, so the overlay itself stays a dumb renderer:
+
+    /tmp/hngh-osd.json   (override with $HNGH_OSD_OUT for tests)
+
+The snapshot carries the operative's v4 frame art (verbatim from
+`evolve-operative --gen 4 --frames 4 --seed 7`), one state speech line
+(same state machine as dashboard-tui), the queue counts, a backlog
+summary (backlog-lanes --json), and a one-line status. No daemon, no
+new deps: --watch runs in the foreground under the operator's session.
+
+Fail closed: if any data source is missing or unparseable the snapshot
+is still written, with "ok": false and a plain message — the feeder
+never crashes on bad inputs. The QML keeps its last good frame.
+
+Usage:
+    python3 scripts/osd-operative [--watch N | --once] [--help]
+
+    --watch N   refresh the snapshot every N seconds (default 15),
+                foreground; Ctrl-C exits cleanly.
+    --once      write one snapshot and exit.
+    --help      show this message and exit 0.
+
+The overlay itself is launched separately, from the repo root:
+
+    QML_XHR_ALLOW_FILE_READ=1 qml6 scripts/osd-operative.qml
+
+(Qt 6 / qt6-declarative — `qml6`. The `QML_XHR_ALLOW_FILE_READ=1` env
+is required: Qt disables file:// XHR reads by default, and the window
+polls this snapshot over a file:// XHR.) The window floats bottom-right
+of the primary screen; shift it with trailing args, e.g.
+
+    QML_XHR_ALLOW_FILE_READ=1 qml6 scripts/osd-operative.qml -- --x=40 --y=40
+"""
+
+import importlib.machinery
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT_PATH = Path(os.environ.get("HNGH_OSD_OUT", "/tmp/hngh-osd.json"))
+
+# The operative v4 (operative-frames.md, evolve-operative --gen 4
+# --frames 4 --seed 7). Frames are static per seed: evolve them once at
+# startup and reuse them for every tick.
+EVOLVE = [sys.executable, str(ROOT / "scripts" / "evolve-operative"),
+          "--gen", "4", "--frames", "4", "--seed", "7"]
+
+# Same data readers dashboard-tui uses; SourceFileLoader pattern from
+# generate-publication. Import-safe: the module only scans argv for its
+# own flags at top level and prints nothing on import.
+_loader = importlib.machinery.SourceFileLoader(
+    "dashboard_readout", str(ROOT / "scripts" / "dashboard-readout"))
+_spec = importlib.util.spec_from_loader("dashboard_readout", _loader)
+dash = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(dash)
+
+_loader = importlib.machinery.SourceFileLoader(
+    "backlog_lanes", str(ROOT / "scripts" / "backlog-lanes"))
+_spec = importlib.util.spec_from_loader("backlog_lanes", _loader)
+lanes_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(lanes_mod)
+
+
+def evolve_frames():
+    """The 4 frame art strings, verbatim from the generator."""
+    out = subprocess.run(EVOLVE, capture_output=True, text=True, timeout=20)
+    if out.returncode != 0:
+        raise RuntimeError(f"evolve-operative exited {out.returncode}")
+    doc = json.loads(out.stdout)
+    frames = [f["art"] for f in doc["frames"]]
+    if len(frames) != 4 or not all(isinstance(f, str) and f for f in frames):
+        raise RuntimeError(f"evolve-operative returned {len(frames)} frames")
+    return frames
+
+
+def backlog_summary():
+    """Lane summary dict {total,done,queued,open,in_queue} or zeros."""
+    out = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "backlog-lanes"), "--json"],
+        capture_output=True, text=True, timeout=20)
+    if out.returncode != 0:
+        raise RuntimeError(f"backlog-lanes exited {out.returncode}")
+    summary = json.loads(out.stdout)["summary"]
+    return {k: summary.get(k, 0)
+            for k in ("total", "done", "queued", "open", "in_queue")}
+
+
+def state_and_speech(items, sessions, tick):
+    """Same state machine dashboard-tui uses; one caption line."""
+    queued = [i for i, st in items if st == "queued"]
+    done = [i for i, st in items if st == "done"]
+    if any(s.get("state") == "running" for s in sessions):
+        state = "active"
+    elif not queued and done:
+        state = "done"
+    elif queued:
+        state = "idle"
+    else:
+        state = "empty"
+    return dash.SPEECH[state][tick % len(dash.SPEECH[state])]
+
+
+def latest_line(sessions, queue_lines):
+    """The 'latest session or heartbeat' tail for the status strip."""
+    if sessions:
+        s = sessions[0]
+        mission = s.get("mission", "").strip()
+        return (f"session {s.get('run', '?')} state={s.get('state', '?')} "
+                f"age={dash.age_text(s.get('age'))}"
+                + (f" {mission}" if mission else ""))
+    if queue_lines:
+        return queue_lines[0]
+    return "no sessions"
+
+
+def build_snapshot(frames, tick):
+    """Assemble the JSON document; raise on any missing piece so the
+    caller can fail closed with a plain message."""
+    items = dash.queue_items()
+    sessions = dash.session_rows(limit=1, ttl=15)
+    backlog = backlog_summary()
+    queue_queued = sum(1 for _, st in items if st == "queued")
+    queue_done = sum(1 for _, st in items if st == "done")
+    lanes = backlog["total"]
+    queue_lines = [f"{i} {s}" for i, s in items]
+    speech = state_and_speech(items, sessions, tick)
+    clock = datetime.now().strftime("%H:%M:%S")
+    status = (f"{clock} · queue {queue_queued} · lanes {lanes} · "
+              f"{latest_line(sessions, queue_lines)}")
+    return {
+        "ts": int(time.time()),
+        "queue_queued": queue_queued,
+        "queue_done": queue_done,
+        "backlog": backlog,
+        "speech": speech,
+        "status": status,
+        "frames": frames,
+        "ok": True,
+    }
+
+
+def write_atomic(doc):
+    """Atomic snapshot write: temp file in the same dir, then rename."""
+    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = OUT_PATH.with_name(OUT_PATH.name + ".tmp")
+    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+    os.replace(tmp, OUT_PATH)
+
+
+def main(argv=None):
+    argv = argv if argv is not None else sys.argv[1:]
+    if "--help" in argv or "-h" in argv:
+        print(__doc__.strip())
+        return 0
+
+    watch = 15
+    once = False
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--once":
+            once = True
+        elif arg == "--watch":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("-"):
+                print("osd-operative: --watch needs a number", file=sys.stderr)
+                return 2
+            try:
+                watch = max(1, int(argv[i + 1]))
+                i += 1
+            except ValueError:
+                print("osd-operative: --watch needs a number", file=sys.stderr)
+                return 2
+        elif arg.startswith("--watch="):
+            try:
+                watch = max(1, int(arg.split("=", 1)[1]))
+            except ValueError:
+                print("osd-operative: --watch needs a number", file=sys.stderr)
+                return 2
+        elif arg == "--x" or arg == "--y":
+            # documented in --help but consumed by the QML env; accept
+            # and ignore here so the launcher can pass both to qml6
+            pass
+        else:
+            print(f"osd-operative: unknown argument {arg!r}", file=sys.stderr)
+            return 2
+        i += 1
+
+    try:
+        frames = evolve_frames()
+    except Exception as exc:  # noqa: BLE001 - fail closed, never crash
+        write_atomic({"ts": int(time.time()), "ok": False,
+                      "msg": f"no operative frames: {exc}"})
+        print(f"osd-operative: {exc}", file=sys.stderr)
+        return 1
+
+    tick = 0
+    while True:
+        try:
+            doc = build_snapshot(frames, tick)
+        except Exception as exc:  # noqa: BLE001 - fail closed, never crash
+            write_atomic({"ts": int(time.time()), "ok": False,
+                          "msg": f"snapshot failed: {exc}"})
+            print(f"osd-operative: {exc}", file=sys.stderr)
+            return 1
+        try:
+            write_atomic(doc)
+        except OSError as exc:
+            print(f"osd-operative: cannot write {OUT_PATH}: {exc}",
+                  file=sys.stderr)
+            return 1
+        tick += 1
+        if once:
+            return 0
+        try:
+            time.sleep(watch)
+        except KeyboardInterrupt:
+            return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
