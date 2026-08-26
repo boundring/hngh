@@ -138,3 +138,21 @@ committed; state review caught the ordering, not the exit code.
 - **Provenance:** 2026-08-26 — ceremony was 111s invisible until
   per-phase timing; the fix only landed after self-observation.
   Codified as the standing refactor checklist.
+
+## 9) Rendered-but-inert surfaces (serves but doesn't function)
+
+- **Class:** a delivered surface (webapp, dashboard, UI) returns 200 /
+  looks present but its interactions are dead — panels don't expand,
+  controls don't click, a chart doesn't render. HTTP-200 + assets =
+  NOT proof of function.
+- **Reaction (works):** drive the actual rendered surface (browser
+  relay / interactive probe) and CLICK the widgets, assert DOM
+  state changes (data-open flip, body display, chart nodes), never
+  trust a fetch status alone. Watch for contract mismatches between
+  the HTML/CSS/JS layers (class vs data-attribute toggles, one
+  mechanism per layer).
+- **Provenance:** 2026-08-26 — the webapp served fine (200 on all
+  assets) but app.js toggled a `.open` class while HTML+CSS used
+  `[data-open]`; nothing expanded; the operator (not the machine)
+  reported it. The watchdog should have caught it via a rendered-
+  surface probe.
