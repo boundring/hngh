@@ -252,14 +252,17 @@ PRESETS = [t.name for t in THEMES]
 # true failures (dead/evacuated/non-beacon cancelled) stay distinctly
 # colored so they still read.
 _STATE_COLOR = {"running": "bold", "evacuated": "warning",
-                "dead": "error"}
+                "cancelled": "warning", "dead": "error"}
 
 # Scheduled-beacon mission kinds (from the research: 42 store runs, all
 # hourly-ping beacons closed cancelled by design; 7 healthy timers). The
-# first three are known; any other mission that reads as a timed beacon
-# (clock tail) is classified generically so the newer automation labels
-# are covered without knowing their names.
-BEACON_KINDS = ("hourly research ping", "morning digest", "security check")
+# known jobs were cancelled; the automation fix now closes exit-0 runs
+# evacuated, so both states classify as beacon. Any other mission that
+# reads as a timed beacon (clock tail) is classified generically so
+# newer automation labels are covered without knowing their names.
+BEACON_KINDS = ("hourly research ping", "morning digest", "security check",
+                "night agent", "night research", "model benchmark",
+                "morning report")
 _CLOCK_TAIL = re.compile(r"\s(\d{1,2}[:.]?\d{2}(?::\d{2})?)\s*$")
 
 
@@ -569,8 +572,9 @@ class HnghTUI(App):
             store = s.get("store", "").removeprefix("run-")
             mission_text = s.get("mission", "")
             kind = _beacon_kind(mission_text)
-            if state == "cancelled" and kind:
-                # a scheduled beacon closed cancelled BY DESIGN: dim/green
+            if state in ("cancelled", "evacuated") and kind:
+                # a scheduled beacon closed cancelled/evacuated BY DESIGN
+                # (the automation records exit-0 jobs either way): dim
                 # "beacon", mission truncated to its kind prefix + time
                 kinds_seen.add(kind)
                 state_text = _styled(" beacon", "dim")
