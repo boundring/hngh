@@ -27,6 +27,14 @@ sci-fi both (Tower Dungeon's stone, Blame!'s silicon).
    character studies, palette chips, frame test sheets, and fold the
    good ones into the sprite assets. Quantity first; the canon
    emerges from the pile.
+6. **The pixel-art figure is stick-figure-plus.** The operative is a
+   properly humanoid pixel figure — head, neck, torso, arms, legs —
+   slightly more advanced than a plain stick figure and past the
+   Atari-era floor. The goal is subtle animated motion: idle breathe,
+   blink, coat sway. The current block-char construction is the
+   Atari-adjacent starting point; each slice moves it toward sprite
+   animations (frame sheets in the TUI, `AnimatedSprite` in the
+   overlay).
 
 ## Current state (committed)
 
@@ -85,6 +93,29 @@ Every iteration of the operative layer is shown live to the operator
 loop is the product. The federated-governance vision (validating
 successful operator UI/UX examples across the mesh) is a later rung;
 today the iteration loop is the seed.
+
+## Interface family & mock matrix
+
+Hngh is an interface *family*, not one TUI. We mock and iterate each
+surface incrementally, one slice at a time, alongside the automated
+grading loop (`scripts/grade-interface`).
+
+- **Compact llm-trim-style panels** — menubar/card popovers; simple,
+  practical, slick, elegant. State: mocked (concept). Next increment:
+  one compact panel mock.
+- **Terminal TUI (textual)** — the current `dashboard-tui`/readout
+  surfaces. State: landed (`rich`; `textual` next). Next increment:
+  the animated pixel operative.
+- **KDE qml6 overlay operative** — floating sprites, speech, buttons,
+  scrolling text over the desktop. State: researched. Next increment:
+  build the standalone qml6 window + sprite sheet.
+- **Web dashboard** — the existing `--export-html`. State: landed.
+  Next increment: reuse the grade loop against it.
+- **Emacs-style extensible surface** — the operative as an extensible
+  operator surface. State: backlog (`ux-hardening`). Next increment:
+  define the extension model.
+- **Local voice (TTS/STT)** — character voices, push-to-talk. State:
+  backlog (`operative-voice`). Next increment: pick the TTS engine.
 
 ## Backlog hooks
 
