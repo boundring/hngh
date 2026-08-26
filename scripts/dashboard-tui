@@ -69,104 +69,159 @@ _spec = importlib.util.spec_from_loader("backlog_lanes", _loader)
 lanes_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(lanes_mod)
 
-# The operative — sprite-evolution generation 4 (operative-v4,
-# docs/design/operative-frames.md, scripts/evolve-operative --gen 4
-# --frames 4 --seed 7): anticipation → action → settle motion arcs with
-# anti-aliased edges — rounded head with the eye-slit mote, shoulder
-# pads, open coat with belt and hem accents, lit ground slab with cast
-# shadow. Four-beat loop: idle-0 base, idle-1 weight shift, idle-2
-# motion/breath, idle-3 settle. Embedded verbatim from the generator's
-# JSON, driven by the ANIM sequence player below (dwells + breathe
-# overlay); every frame is 17 rows tall so cycling never reflows.
+# The operative — sprite-evolution generation 5 (operative-v5,
+# docs/design/operative-frames.md, scripts/evolve-operative --gen 5
+# --frames 8 --seed 7): a standardized two-arm/two-leg humanoid rig —
+# distinct upper/lower arms with elbows, separated thigh+shin+boot legs
+# with a clear gap, recognizable at a glance. An 8-frame loop: idle-0
+# base, idle-1 frame-close, idle-2 gesture-raise (two-arm), idle-3
+# blink-inhale, idle-4 frame-open, idle-5 swing-arms, idle-6 step-left,
+# idle-7 exhale-tilt. Embedded verbatim from the generator's JSON,
+# driven by the ANIM sequence player below (8-frame walk-cycle dwells +
+# breathe overlay on base/exhale); every frame is 14 rows tall so
+# cycling never reflows.
 FIGURES = [
     """        ██████
-       █▀▀•▀▀█
-         ██
-         ██
-    ▐    ██     ▌
-    ▐  ▄██████▄ ▌
-    ▐ ██████████ ▌
-    ▐ ▓████████▓ ▌
-     ▓▓████████▓▓
-     ████▓▓  ▓▓████
-     ▒███▓    ▓███▒
-     ▓██░      ░██▓
-    ░░██        ██░░
-     ██          ██
-     ██          ██
-     ███        ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
-    """         ██████
         █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+         ██    ██
+         ██    ██
+         ██    ██
+        ████  ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """       ██████
+       █▀▀•▀▀█
           ██
-          ██
-    ▐     ██     ▌
-    ▐   ▄██████▄ ▌
-    ▐ ██████████ ▌
-    ▐ ▓████████▓ ▌
-     ▓▓████████▓▓
-     ████▓▓  ▓▓████
-     ▒███▓    ▓███▒
-     ▓██░      ░██▓
-    ░░██        ██░░
-     ██          ██
-     ██          ██
-     ███        ███
+ ▐   ▄████████████▄   ▌
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████   ▄ ▌
+   ▄    ████████    ▄
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """        ██████
+        ███•███
+           ██
+     ▄████████████▄
+  ▐   ██████████████  ▌
+   ▐  ████████████   ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """        ██████
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████  ▌
+   ▐   ██████████   ▌
+  ▐     ████████     ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+      ██          ██
+      ██          ██
+      ██          ██
+     ████        ████
+  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
+    """        ██████
+        █▀▀•▀▀█
+           ██
+ ▐   ▄████████████▄
+ ▐     ████████████   ▌
+ ▐ ▄   ██████████    ▌
+   ▄    ████████     ▌
+        ██▓▓▓▓▓▓██   ▌
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
   ▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄▄""",
     """        ██████
-       █▀▀•▀▀█
-         ██
-         ██
-    ▐    ██     ▌
-    ▐  ▄██████▄ ▌
-    ▐ ██████████ ▌
-    ▐ ▓████████▓ ▌
-     ▓▓███░░███▓▓
-     ████▓░░ ▓▓████
-     ▒███▓░░  ▓███▒
-     ▓██░ ░░   ░██▓
-    ░░██        ██░░
-     ██          ██
-     ██          ██
-     ███        ███
-  ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
-    """        ██████
-       █▀▀•▀▀█
-         ██
-         ██
-    ▐    ██     ▌
-    ▐  ▄██████▄ ▌
-    ▐ ██████████ ▌
-    ▐ ▓████████▓ ▌
-     ▓▓████████▓▓
-     ████▓▓  ▓▓████
-     ▒███▓    ▓███▒
-     ▓██░      ░██▓
-    ░░██        ██░░
-    ██           ██
-    ██           ██
-    ███          ███
+        █▀▀•▀▀█
+           ██
+     ▄████████████▄
+  ▐    ████████████   ▌
+   ▐   ██████████    ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+               ███
+       ███
+  ▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄▄""",
+    """         ██████
+         █▀▀•▀▀█
+            ██
+     ▄████████████▄
+  ▐     ██████████    ▌
+   ▐    ████████     ▌
+  ▐     ████████      ▌
+        ██▓▓▓▓▓▓██
+        ██      ██
+        ██      ██
+        ██      ██
+        ██      ██
+       ███      ███
   ▄▄▄▄▒▒▒▒▒▒▒▒▒▒▄▄▄▄""",
 ]
 
 # The sequence player. Each step picks a frame (int index into FIGURES,
 # or an inline multi-line art string) and a dwell in seconds; the player
 # advances on a monotonic deadline, independent of the data refresh
-# interval, and wraps around to loop the idle. v4 is a phase loop —
-# base → anticipation → action → settle — with per-phase dwells; long
-# base/settle dwells carry the breathe overlay so the figure is never
-# frozen, reading anticipation→action→settle rather than a 1s blink.
+# interval, and wraps around to loop the idle. v5 is the full 8-frame
+# walk-cycle rig: base → frame-close → gesture-raise → blink-inhale →
+# frame-open → swing-arms → step-left → exhale-tilt, all frames active
+# with beat dwells so the loop visibly moves (not a 4-frame + breathe
+# blink). Breathe overlays the long base/exhale dwells only.
 ANIM_IDLE = [
-    {"frame": 0, "dwell": 1.4},   # base
-    {"frame": 1, "dwell": 0.25},  # anticipation (lean right, coat lags)
-    {"frame": 2, "dwell": 0.3},   # action (seams open)
-    {"frame": 3, "dwell": 1.2},   # settle (stance wide)
+    {"frame": 0, "dwell": 0.45},  # base
+    {"frame": 1, "dwell": 0.3},   # frame-close
+    {"frame": 2, "dwell": 0.35},  # gesture-raise (two-arm)
+    {"frame": 3, "dwell": 0.3},   # blink-inhale
+    {"frame": 4, "dwell": 0.35},  # frame-open
+    {"frame": 5, "dwell": 0.3},   # swing-arms
+    {"frame": 6, "dwell": 0.35},  # step-left
+    {"frame": 7, "dwell": 0.45},  # exhale-tilt
 ]
 ANIM_ACTIVE = [
-    {"frame": 1, "dwell": 0.12},   # anticipation, quickened
-    {"frame": 2, "dwell": 0.2},    # action
-    {"frame": 3, "dwell": 0.18},   # settle
-    {"frame": 0, "dwell": 0.3},    # base
+    {"frame": 1, "dwell": 0.14},   # frame-close, quickened
+    {"frame": 2, "dwell": 0.2},    # gesture-raise
+    {"frame": 5, "dwell": 0.18},   # swing-arms
+    {"frame": 6, "dwell": 0.22},   # step-left
+    {"frame": 3, "dwell": 0.2},    # blink-inhale
+    {"frame": 0, "dwell": 0.24},   # base
+    {"frame": 4, "dwell": 0.18},   # frame-open
+    {"frame": 7, "dwell": 0.26},   # exhale-tilt
 ]
 
 # Theme presets: quiet dark is the default; the rest are the named
@@ -349,7 +404,7 @@ class HnghTUI(App):
     TITLE = "hngh"
     CSS = """
     #operative {
-        width: 28;
+        width: 32;
         border: round $primary;
         padding: 0 1 1 1;
     }
@@ -453,8 +508,8 @@ class HnghTUI(App):
             self._anim_index = (self._anim_index + 1) % len(self._anim_seq)
             self._anim_next_at = now + dwell
             self._show(_frame_art(step))
-        elif step["frame"] in (0, 3) and dwell >= 0.8:
-            # long base/settle dwell: breathe (torso ±1 on a 3s cycle)
+        elif step["frame"] in (0, len(FIGURES) - 1) and dwell >= 0.4:
+            # long base/exhale dwell: breathe (torso ±1 on a 3s cycle)
             age = now - (self._anim_next_at - dwell)
             self._show(_breathe_art(_frame_art(step), (age % 3.0) < 1.5))
 
