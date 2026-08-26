@@ -18,6 +18,7 @@ import math
 import io
 import json
 import contextlib
+import signal
 import subprocess
 import time
 from datetime import datetime
@@ -51,7 +52,7 @@ def queue_items():
 _session_cache = {"at": 0.0, "rows": None}
 
 
-def session_rows(limit=3, ttl=0.0):
+def session_rows(limit=5, ttl=0.0):
     """Live session store: the newest STORE_ROOT sub-stores rendered
     through scripts/hngh present (the canonical renderer). Read-only,
     bounded, and non-fatal — a missing store or a failed render yields
@@ -69,6 +70,10 @@ def session_rows(limit=3, ttl=0.0):
         key=lambda d: (d / "record.lisp").stat().st_mtime_ns, reverse=True)
     rows = []
     for store in stores[:limit]:
+        try:
+            age = time.time() - (store / "record.lisp").stat().st_mtime
+        except OSError:
+            age = None
         try:
             out = subprocess.run(
                 ["sbcl", "--script", str(PRESENT), f"--store={store}",
@@ -93,6 +98,7 @@ def session_rows(limit=3, ttl=0.0):
             else:
                 parts.append(field)
         info["mission"] = " ".join(parts).lstrip("mission=")
+        info["age"] = age
         rows.append(info)
     _session_cache.update(at=time.time(), rows=rows)
     return rows
@@ -172,13 +178,17 @@ AS_JSON = "--json" in sys.argv
 def queue_etas():
     etas = {}
     text = QUEUE.read_text()
-    section = text.split("## ETA", 1)[-1]
-    for line in section.splitlines():
+    # the LAST ETA section wins; a stray duplicate can never split the parse
+    section = text.rsplit("## ETA", 1)[-1]
+    # the section ends at the next '## ' heading, never at EOF
+    tail = section.split("\n## ", 1)[0]
+    for line in tail.splitlines():
         if "\t" in line or line.startswith("#") or line.startswith("```") or "- " not in line:
             continue
         name = line.split("- ", 1)[1].split(" —", 1)[0]
         window = line.split("—", 1)[1].strip() if "—" in line else ""
-        if name and "—" in line and not name.startswith("DONE"):
+        # a completed item's ETA reads "DONE ..." — never draw it as a bar
+        if name and "—" in line and not window.startswith("DONE"):
             etas[name.strip()] = window
     return etas
 
@@ -195,9 +205,6 @@ def dance_mark(intensity, base="---"):
 def tone(code):
     """Wrap with an ANSI color if tone is on, else identity."""
     return (lambda s: f"\x1b[{code}m{s}\x1b[0m") if TONE else (lambda s: s)
-
-
-TONE = "--tone" in sys.argv
 
 
 def theme_set():
@@ -221,6 +228,7 @@ def theme_set():
 
 
 THEME = theme_set()
+TONE = "--tone" in sys.argv or bool(THEME)
 
 
 BANNER = "--banner" in sys.argv
@@ -433,6 +441,37 @@ def choose_renderer():
     return "linear"
 
 
+SESSION_STATE_COLORS = {
+    "created": "36", "armed": "36", "running": "92", "checkpointed": "36",
+    "evacuated": "33", "cancelled": "90", "dead": "91",
+}
+
+
+def age_text(seconds):
+    if seconds is None:
+        return "?"
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    if seconds < 3600:
+        return f"{int(seconds // 60)}m"
+    return f"{seconds / 3600:.1f}h"
+
+
+def session_block(sessions):
+    """Live session lines: state color-coded when tone is on, age shown."""
+    lines = []
+    for s in sessions:
+        state = s.get("state", "?")
+        color = SESSION_STATE_COLORS.get(state)
+        state_text = tone(color)(state) if color else state
+        mission = s.get("mission", "").strip()
+        lines.append(
+            f"session {s.get('run', '?')} state={state_text} "
+            f"loadout={s.get('loadout', '?')} age={age_text(s.get('age'))}"
+            + (f" {mission}" if mission else ""))
+    return "\n".join(lines)
+
+
 def render_body(rows, items, etas, dance, sessions):
     style = choose_renderer()
     if style == "circular":
@@ -450,16 +489,46 @@ def render_body(rows, items, etas, dance, sessions):
         func()
     body = buf.getvalue()
     if sessions:
-        body += "\n" + "\n".join(
-            f"session {s.get('run', '?')} state={s.get('state', '?')} "
-            f"loadout={s.get('loadout', '?')} {s.get('mission', '')}".rstrip()
-            for s in sessions)
+        body += "\n" + session_block(sessions)
     if BANNER:
         body = banner() + "\n" + body
     if QUIET:
         body = "\n".join(l for l in body.splitlines()
                          if not (l.startswith("hngh ") or l.startswith("legend")))
     return framed(body) if THEME else body
+
+
+def watch_loop(interval):
+    """One foreground TUI refresh loop: cursor hidden, in-place repaint,
+    no scrollback wipe, a live status footer; Ctrl-C restores the cursor."""
+    sys.stdout.write("\x1b[?25l")  # hide cursor
+    sys.stdout.flush()
+    last_sessions = None
+    last_at = 0.0
+    def _term(signum, frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, _term)
+    try:
+        while True:
+            if time.time() - last_at >= 15:
+                last_sessions = session_rows(ttl=15)
+                last_at = time.time()
+            dance = dance_level()
+            sessions = [] if NO_SESSIONS else last_sessions or []
+            body = render_body(timeline_rows(), queue_items(), queue_etas(),
+                               dance, sessions)
+            footer = (f"updated {datetime.now().strftime('%H:%M:%S')} "
+                      f"· every {interval}s · dance {dance}/10 "
+                      f"· {len(sessions)} session(s) · Ctrl-C to exit")
+            sys.stdout.write("\x1b[H\x1b[0J" + body + "\n" + footer)
+            sys.stdout.flush()
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sys.stdout.write("\x1b[?25h\n")  # restore cursor
+        sys.stdout.flush()
+    return 0
 
 
 def main():
@@ -472,22 +541,7 @@ def main():
         print(f"exported dashboard HTML -> {target}")
         return 0
     if WATCH_ARG:
-        interval = max(1, WATCH_SECONDS)
-        try:
-            last_sessions = None
-            last_at = 0.0
-            while True:
-                if time.time() - last_at >= 15:
-                    last_sessions = session_rows(ttl=15)
-                    last_at = time.time()
-                body = render_body(
-                    timeline_rows(), queue_items(), queue_etas(),
-                    dance_level(), [] if NO_SESSIONS else last_sessions or [])
-                sys.stdout.write("\x1b[H\x1b[2J" + body)
-                sys.stdout.flush()
-                time.sleep(interval)
-        except KeyboardInterrupt:
-            return 0
+        return watch_loop(max(1, WATCH_SECONDS))
     sys.stdout.write(render_body(
         timeline_rows(), queue_items(), queue_etas(), dance_level(),
         [] if NO_SESSIONS else session_rows()) + "\n")
