@@ -96,19 +96,6 @@ Gives "future" a date so a gantt can place bars.
 - timeline-events — DONE (2026-08-25)
 - others — on rotation, roughly one per cadence
 
-## ETA
-
-Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
-Gives "future" a date so a gantt can place bars.
-
-- wake-mutation-lane — next rotation (after a full session is carved,
-  target ~this week)
-- node-lattice-admission — after wake-mutation-lane
-- queue-eta — DONE today (this widget is the item)
-- bridge-operator-host — after node-lattice
-- timeline-events — DONE (2026-08-25)
-- others — on rotation, roughly one per cadence
-
 ## Interface-spec candidates (operator-requested "practical nonsense")
 
 - **gantt-ports** — port the dashboard for many gantt options:

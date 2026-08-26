@@ -61,6 +61,46 @@ class DashboardExport(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("session", out.stdout)
 
+    def test_etas_stop_at_next_heading(self):
+        out = run(["--json"])
+        data = json.loads(out.stdout)
+        self.assertIn("wake-mutation-lane", data["etas"])
+        # the ETA section ends at the next '## ' heading: no interface-spec
+        # or fleet lines may leak in
+        for key in data["etas"]:
+            self.assertFalse(key.startswith("**"),
+                             f"ETA key leaked from another section: {key!r}")
+            self.assertFalse(key.startswith("20"),
+                             f"date line leaked into ETAs: {key!r}")
+
+    def test_done_eta_never_drawn(self):
+        out = run(["--json"])
+        data = json.loads(out.stdout)
+        for value in data["etas"].values():
+            self.assertFalse(value.startswith("DONE"),
+                             f"completed-item ETA leaked into bars: {value!r}")
+
+    def test_theme_implies_tone(self):
+        themed = run(["--theme=ocean", "--quiet"])
+        plain = run(["--quiet"])
+        self.assertIn("\x1b[", themed.stdout,
+                      "--theme must imply ANSI tone")
+        self.assertNotIn("\x1b[", plain.stdout,
+                         "no theme and no --tone stays colorless")
+
+    def test_watch_cursor_contract(self):
+        import time
+        p = subprocess.Popen(
+            [sys.executable, str(SCRIPT), "--watch", "1"],
+            stdout=subprocess.PIPE, text=True, cwd=ROOT)
+        time.sleep(1.8)
+        p.terminate()
+        out = p.stdout.read()
+        self.assertIn("\x1b[?25l", out, "watch hides the cursor")
+        self.assertIn("\x1b[H\x1b[0J", out, "watch repaints in place")
+        self.assertIn("updated", out, "watch shows a live status footer")
+        self.assertIn("\x1b[?25h", out, "watch restores the cursor on exit")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
