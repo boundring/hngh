@@ -13,6 +13,7 @@ test:
 	python3 tests/scripts/test-timeline-events.py
 	python3 tests/scripts/test-dashboard-readout.py
 	python3 tests/scripts/test-dashboard-tui.py
+	python3 tests/scripts/test-evolve-dashboard-style.py
 	python3 tests/scripts/test-schedule-heartbeat.py
 	python3 tests/scripts/test-probe-model-route.py
 	python3 tests/scripts/test-driver-routes.py
