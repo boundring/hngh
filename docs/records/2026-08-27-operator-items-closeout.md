@@ -39,6 +39,15 @@ certificate commits landed 2026-08-27).
    are kept, prose degrades to the item-id placeholder (+1 regression
    test); the wedged card was removed and the loop re-provisions it
    correctly on the next tick.
+   Second pass, same evening: the wedge re-appeared through the
+   placeholder path itself — a re-provisioned card whose only candidate
+   is the item id can never drive (`invalid candidate manifest` on
+   every ceremony attempt). Fixed at the drive step: the tick now
+   defers (`exit 0`, "ceremony deferred — candidates missing from
+   disk") whenever card candidates don't exist, keeping the card
+   mounted as a declaration of intent until real paths replace the
+   placeholder (+1 regression test; live-verified twice on the failed
+   unit, which now runs clean).
 
 ## Evidence
 

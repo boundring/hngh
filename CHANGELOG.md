@@ -64,6 +64,13 @@ lives under Pre-release / early development until the first release.
     `invalid candidate manifest`, exit 3): only real repo-relative
     paths are kept, prose degrades to the item-id placeholder (+1
     regression test; wedged card removed).
+  - `scripts/run-autonomous` defers ceremonies whose card candidates
+    are missing from disk (a placeholder card is a declaration of
+    intent, not a drivable manifest — the re-wedged
+    `hngh-autonomy.service` tick proved the first fix incomplete):
+    exit 0 with a deferral line instead of exit 3, card stays mounted
+    until real paths replace the placeholder (+1 regression test,
+    suite 9).
   - `scripts/report-queue` ledger hygiene: `--add --identity KEY
     [--window S]` collapses repeated entries into one row with a `×N`
     marker and per-occurrence body lines; `--prune --before TS --kinds
