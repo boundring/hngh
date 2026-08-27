@@ -973,3 +973,99 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** the dashboard shows live system-resource state,
   and a resource change (e.g. network loss) produces a steer/alert
   without any hidden action.
+
+## Time ledger & delay flagging (self-optimization telemetry)
+
+- **Problem:** Hngh aims to be self-optimizing, but operation wall-times
+  live in scattered places (ceremony-drive `[ceremony-timing]` lines,
+  systemd journal, suite walls, agent-wave reports) and get reviewed
+  only when a human notices slowness. Excessive delays — like the
+  2026-08-27 autonomy-tick wedge that sat failed for hours — should be
+  noticed procedurally.
+- **Smallest useful outcome:** one rolling time-ledger artifact
+  (per-unit last/p50/max wall seconds, per-ceremony-step milliseconds)
+  plus one oversight check that flags any operation exceeding
+  max(2× its trailing median, floor) as a flap-suppressed alert row
+  feeding the existing steer path.
+- **Evidence:** the 2026-08-27 delay-ledger review
+  (`records/2026-08-27-operator-items-closeout.md`,
+  `records/2026-08-27-acceleration-wave.md`); measured wins already
+  banked (untracked-artifact tax 6312→25 rows; ceremonies 40s→~3s).
+- **Risk:** measurement load; alert noise; thresholds tuned to hide
+  real drift — flap suppression and a small fixed floor keep it honest.
+- **Dependencies:** oversight-tick alert path; systemd unit metadata;
+  ceremony-timing lines; the report ledger.
+- **Review trigger:** a seeded synthetic delay in a fixture run is
+  flagged once, flap-suppressed after, and the ledger round-trips
+  real unit timings.
+
+## Session observatory (live subagent runs page)
+
+- **Problem:** delegated agent runs are invisible while they run: the
+  watchdog sees deaths, the roster shows counts, and neither offers an
+  operator a navigable view of live sessions with their output.
+- **Smallest useful outcome:** a read-only webapp page listing every
+  session with state filters and a per-session detail pane (fields +
+  bounded, redacted transcript tail), syntax highlighting, two themes,
+  auto-refresh with honest staleness stamps.
+- **Evidence:** operator directive 2026-08-27 (dedicated browser window
+  welcome; multiple pages/styles/purposes intended); interface-plan
+  S4/M6; master plan P4 navigable sessions.
+- **Risk:** transcript surfaces touch operator home directories —
+  read-only, bounded tails, secret-redaction at the feed boundary; the
+  page must never render, let alone feed, governance input.
+- **Dependencies:** `readout.json` roster spine; omp session surfaces;
+  the refresh-dashboard feed pattern; browser relay for operator view.
+- **Review trigger:** the page renders fixture sessions byte-identical
+  to store records, redaction provably fires, and no canonical field
+  is consumed for any decision.
+
+## Browser notification surface
+
+- **Problem:** attention-worthy events (alert rows, verdict flips)
+  reach the operator only when a dashboard pane is being watched.
+- **Smallest useful outcome:** opt-in browser notifications via the
+  relay page for alert-class rows and verdict flips — digest-level,
+  one-shot, flap-suppressed, zero default-on.
+- **Evidence:** operator directive 2026-08-27 (browser notifications
+  welcome alongside other channels).
+- **Risk:** nagging; notification permission creep — the buddy rule
+  (summoned, never nagging) applies: one notification per flap window.
+- **Dependencies:** session observatory page host; report ledger
+  cursor.
+- **Review trigger:** a fixture alert produces exactly one
+  notification and the toggle defaults off.
+
+## Emacs-style surface configurability
+
+- **Problem:** surface behavior (themes, refresh intervals, panel
+  toggles, thresholds) is hard-coded per script; the operator wants
+  declarative, layered configuration across all Hngh interfaces.
+- **Smallest useful outcome:** one user config file
+  (`~/.config/hngh/ui-config.*`) read at render/feed time, layering
+  operator overrides over built-in defaults for display preferences —
+  theme, refresh interval, visible panels, alert thresholds.
+- **Evidence:** operator directive 2026-08-27 ("emacs-style
+  configurability intended").
+- **Risk:** config becoming a second authority — config is
+  display/ops-preference only and can never carry governance fields
+  (presentation-boundary law applies to configuration too).
+- **Dependencies:** the dashboard/observatory surfaces it configures.
+- **Review trigger:** the first config key ships with a fixture test
+  proving governance fields in the config file are refused.
+
+## Model-tier refresh cadence
+
+- **Problem:** route and cost assumptions drift as providers change
+  pricing and capability (the GLM 5.3 Flash workhorse window ends
+  2026-09-09); BENCH_MODELS rot was already observed (MiniMax-H3 0/5).
+- **Smallest useful outcome:** a quarterly re-bench + route review
+  that lands a `route:` report row naming the current workhorse,
+  runner-ups, and any model dropped from BENCH_MODELS.
+- **Evidence:** `7a4041e` (MiniMax-H3 drop); the 2026-08-27 workhorse
+  directive (GLM 5.3 Flash through Sept 9).
+- **Risk:** benchmark churn; over-fitting to single-run scores —
+  keep 0/5-twice as the drop rule.
+- **Dependencies:** model-bench job; probe-model-route.
+- **Review trigger:** the next quarterly bench lands a route report
+  row even when nothing changes.

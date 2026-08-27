@@ -60,6 +60,12 @@ the above mounts): `webapp-dashboard` (browser dashboard, never auto-launch)
 and `self-optimization-continuum` (a standing self-review that emits
 `optimize: <suggestion>` breadcrumbs; nothing changes its own timer definitions
 without a ceremony).
+The 2026-08-27 directive adds five rungs to the backlog (prose only, not yet
+queue rows): `time-ledger` (self-optimization telemetry + delay flagging),
+`session-observatory` (live subagent runs page, S4 expansion),
+`browser-notifications`, `emacs-style-configurability`, and
+`model-tier-refresh` — see the matching `## ` headings in
+[backlog.md](project/backlog.md).
 
 ## P2 DESIGN contracts
 
