@@ -16,7 +16,14 @@ this script) gets three things without re-discovering them:
   (c) `--ceremony` a ceremony-invoke wrapper that commits FILES through
              scripts/ceremony-drive under a global flock (serial), a
              FRESH ephemeral store, and a generous timeout — certificate-
-             gated, and ceremony-drive auto-pushes when origin exists.
+            gated, and ceremony-drive auto-pushes when origin exists;
+  (d) `--run-start` opens a governed delegation: it creates a bounded
+            hngh run for SESSION (fixed worker loadout, whose token/time
+            limits ARE the session's delegated budget) and admits the
+            worker transport, so the session's work rides run governance;
+  (e) `--run-end`   closes the loop when that delegation dies or lands:
+            it runs scripts/hngh close-run with a client-validated
+            disposition (cancelled|evacuated|dead).
 
 The bridge is an outer adapter: it only invokes the existing ceremony /
 watchdog surfaces. It never imports or mutates the hngh kernel, and it
@@ -24,8 +31,8 @@ records no side effect beyond the handoff ledger line it is asked to
 write. No daemon, no scheduler — every run is one explicit command.
 
 Exit protocol (matches repo convention): 0 ok, 1 refused/conflict
-(ceremony refused, lock held), 2 malformed input, 3 fault (ceremony
-fault/lock stuck).
+(ceremony refused, lock held, hngh refusal), 2 malformed input, 3 fault
+(ceremony fault/lock stuck, bridge store unwritable).
 """
 
 import argparse
@@ -41,6 +48,7 @@ ROOT = Path(os.environ.get("HNGH_BRIDGE_ROOT")
             or Path(__file__).resolve().parent.parent)
 SCRIPTS = ROOT / "scripts"
 CEREMONY_DRIVE = SCRIPTS / "ceremony-drive"
+HNGH_BIN = Path(os.environ.get("HNGH_BIN") or SCRIPTS / "hngh")
 QUEUE = ROOT / "docs" / "project" / "queue.md"
 ROADMAP = ROOT / "docs" / "project" / "roadmap.md"
 
@@ -51,6 +59,13 @@ AUTOMATION_ROOT = Path(os.environ.get("HNGH_AUTOMATION_ROOT")
                        or ROOT.parent / "hngh-automation")
 LEDGER = Path(os.environ.get("OMP_HANDOFF_LEDGER")
               or AUTOMATION_ROOT / "agent-handoffs.md")
+# Where delegated runs are recorded so --run-end can close them. One
+# shared ledger: at check-in scale a single bridge run is in flight at a
+# time, so every start/end pair lands in the same store.
+# ponytail: single global bridge store; per-run stores if two delegated
+# sessions ever need to be open concurrently.
+BRIDGE_STORE = Path(os.environ.get("OMP_BRIDGE_STORE")
+                    or AUTOMATION_ROOT / "bridge")
 LOCK = Path(os.environ.get("OMP_CEREMONY_LOCK") or "/tmp/hngh-ceremony.lock")
 CEREMONY_TIMEOUT = int(os.environ.get("OMP_CEREMONY_TIMEOUT") or 1800)
 
@@ -251,6 +266,84 @@ def ceremony_cmd(objective, files):
         lockfd.close()
 
 
+# --- run lifecycle (delegation loop) -------------------------------------
+
+DISPOSITIONS = ("cancelled", "evacuated", "dead")
+
+
+def _run_hngh(label, argv):
+    """Invoke scripts/hngh with ARGV, relay its rendered output, and
+    return its exit code unchanged (the house 0/1/2/3 protocol).
+    No flock: run-start/run-end are independent, non-serial steps."""
+    proc = subprocess.run([str(HNGH_BIN), *argv], cwd=ROOT,
+                          capture_output=True, text=True)
+    out = (proc.stdout or "") + (proc.stderr or "")
+    if out:
+        print(out, end="" if out.endswith("\n") else "\n")
+    if proc.returncode not in (0,):
+        print(f"omp-bridge: {label} refused (exit {proc.returncode})",
+              file=sys.stderr)
+    return proc.returncode
+
+
+def run_start_cmd(session, objective, task_label):
+    """Gate SESSION behind hngh admission: create a bounded builder run
+    (whose loadout token/time limits are the session's delegated budget)
+    and admit its worker transport."""
+    session = session.strip()
+    objective = objective.strip()
+    if not session:
+        print("omp-bridge: empty SESSION refused", file=sys.stderr)
+        return 2
+    if not objective:
+        print("omp-bridge: empty OBJECTIVE refused", file=sys.stderr)
+        return 2
+    route = (task_label or "model").strip()
+    if not route:
+        print("omp-bridge: empty task label refused", file=sys.stderr)
+        return 2
+    try:
+        BRIDGE_STORE.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"omp-bridge: cannot create store {BRIDGE_STORE}: {exc}",
+              file=sys.stderr)
+        return 3
+    store_arg = f"--store={BRIDGE_STORE}"
+    code = _run_hngh("create-run", [
+        store_arg, "create-run", objective, "builder",
+        f"loadout-route-label={route}",
+        "loadout-context-limit=8000",
+        "loadout-token-limit=8000",
+        "loadout-cost-limit=2000",
+        "loadout-time-limit=3600",
+        "loadout-tool-labels=worker-task,mutation",
+        "loadout-network-labels=model-review",
+        "loadout-writable-scopes=repository"])
+    if code:
+        return code
+    code = _run_hngh("admit-transport",
+                     [store_arg, "admit-transport", "run-1", "worker"])
+    if code:
+        return code
+    print(f"run run-1 session {session}")
+    return 0
+
+
+def run_end_cmd(run, disposition):
+    """Close a dead/completed delegated run. DISPOSITION is validated
+    client-side; hngh close-run renders the governing close."""
+    run = run.strip()
+    if not run:
+        print("omp-bridge: empty RUN refused", file=sys.stderr)
+        return 2
+    if disposition not in DISPOSITIONS:
+        print(f"omp-bridge: disposition must be one of "
+              f"{'|'.join(DISPOSITIONS)}", file=sys.stderr)
+        return 2
+    return _run_hngh("close-run",
+                     [f"--store={BRIDGE_STORE}", "close-run", run, disposition])
+
+
 # --- main ------------------------------------------------------------------
 
 def main(argv=None):
@@ -260,6 +353,13 @@ def main(argv=None):
     p.add_argument("--register", metavar="SESSION",
                    help="register SESSION (or $OMP_SESSION) into the handoff ledger")
     p.add_argument("--note", metavar="TEXT")
+    p.add_argument("--task", metavar="LABEL",
+                   help="run-start route label (default model)")
+    p.add_argument("--run-start", nargs=2, metavar=("SESSION", "OBJECTIVE"),
+                   help="open a bounded hngh run for SESSION and admit its "
+                        "worker transport")
+    p.add_argument("--run-end", nargs=2, metavar=("RUN", "DISPOSITION"),
+                   help="close RUN with DISPOSITION (cancelled|evacuated|dead)")
     p.add_argument("--ceremony", action="store_true",
                    help="ceremony-commit the following OBJECTIVE and FILES")
     p.add_argument("rest", nargs="*")
@@ -272,6 +372,10 @@ def main(argv=None):
         return orient_cmd()
     if args.register:
         return register_cmd(args.register, args.note)
+    if args.run_start:
+        return run_start_cmd(args.run_start[0], args.run_start[1], args.task)
+    if args.run_end:
+        return run_end_cmd(args.run_end[0], args.run_end[1])
     if args.ceremony:
         if not args.rest:
             print("usage: omp-bridge --ceremony OBJECTIVE FILE...",
@@ -279,7 +383,9 @@ def main(argv=None):
             return 2
         return ceremony_cmd(args.rest[0], args.rest[1:])
     print("usage: omp-bridge --orient | --register[=SESSION] [--note TEXT] | "
-          "--ceremony OBJECTIVE FILE... | --help", file=sys.stderr)
+          "--ceremony OBJECTIVE FILE... | --run-start SESSION OBJECTIVE "
+          "[--task LABEL] | --run-end RUN DISPOSITION | --help",
+          file=sys.stderr)
     return 2
 
 
