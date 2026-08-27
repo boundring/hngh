@@ -13,6 +13,20 @@ cursor/body — fail closed):
   --add KIND TEXT      append a row and write the body file; id = first 8
                        hex of sha256(TEXT); ts = UTC ISO second. Refuses a
                        bad KIND or empty TEXT (exit 2).
+                       With --identity KEY, dedup: when the newest existing
+                       row of the same KIND stores the same identity AND is
+                       newer than --window SECONDS (default 86400; 0 =
+                       unlimited lookback), no new row is appended — the
+                       row's first line gains/updates a ` ×N` marker (N =
+                       total occurrences) and `- <UTC ts> occurrence` is
+                       appended to that row's body. The row keeps its
+                       original ts/id. The identity is stored in the body
+                       meta on first add (`identity: KEY`), so later adds
+                       match on kind + stored identity even if TEXT
+                       drifted. Naming: identity = stable kebab token
+                       (e.g. 'stale-store:<path>', 'slow-unit:<unit>');
+                       occurrences = body lines; count = the ×N marker.
+                       Without --identity, behavior is unchanged.
   --list [KIND]        rows, newest-first, optional KIND filter.
   --unread [KIND]      rows newer than the cursor (docs/project/
                        report-cursor). With no cursor file present, every
@@ -20,6 +34,14 @@ cursor/body — fail closed):
                        cursor, never the writer; --mark-read is how.
   --mark-read ID       write ID to the cursor (advance it past a report).
                        Refuses an unknown ID (exit 2).
+  --prune --before TS --kinds KIND[,KIND...] [--archive PATH]
+                       remove rows of the listed kinds older than TS from
+                       reports.md and delete their body files; never
+                       touches unlisted kinds. Refuses a missing or future
+                       TS (exit 2). With --archive PATH, first appends a
+                       `## pruned <TS>` section with the removed rows to
+                       PATH. Prints `pruned N rows, M bodies[, archived
+                       to PATH]`.
   --json               dashboard payload: {"reports":[{ts, kind, id,
                        first, body}, ...], "unread": N, "summary":{kind: n}}.
 
@@ -32,6 +54,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,11 +107,22 @@ def body_name(ts, kind, rid):
     return f"{ts}-{kind}-{rid}.md"
 
 
-def write_body(ts, kind, rid, first, full):
+def write_body(ts, kind, rid, first, full, identity=None):
     BODIES.mkdir(parents=True, exist_ok=True)
+    ident = f"- **identity:** {identity}\n" if identity else ""
     body_path(ts, kind, rid).write_text(
         f"# {kind} — {rid}\n\n- **timestamp:** {ts}\n"
-        f"- **kind:** {kind}\n- **first line:** {first}\n\n{full}\n")
+        f"- **kind:** {kind}\n- **first line:** {first}\n"
+        f"{ident}\n{full}\n")
+
+
+def parse_ts(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc)
+    except ValueError:
+        raise ValueError(f"report-queue: bad timestamp {s!r} "
+                         f"(expected YYYY-MM-DDTHH:MM:SSZ)")
 
 
 def ensure_header():
@@ -99,7 +133,49 @@ def ensure_header():
         REPORTS.write_text(HEADER + "\n" + REPORTS.read_text())
 
 
-def add(kind, text):
+def row_identity(row):
+    """The identity stored in a row's body meta, or None."""
+    for line in body_text(*row[:3]).splitlines():
+        if line.startswith("- **identity:** "):
+            return line[len("- **identity:** "):].strip()
+    return None
+
+
+def within_window(ts_str, window):
+    """True when the row ts is newer than now - window (0 = unlimited)."""
+    if window <= 0:
+        return True
+    try:
+        then = parse_ts(ts_str)
+    except ValueError:
+        return False
+    return (datetime.now(timezone.utc) - then).total_seconds() <= window
+
+
+def bump_row(row, ts):
+    """Fold one occurrence into an existing row: ×N marker + body line."""
+    ts0, kind, rid, first, _ = row
+    m = re.search(r" ×(\d+)$", first)
+    count = (int(m.group(1)) if m else 1) + 1
+    new_first = f"{first[:m.start()] if m else first} ×{count}"
+    lines = REPORTS.read_text().splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not (s.startswith("|") and s.endswith("|")):
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if len(cells) == 5 and cells[:3] == [ts0, kind, rid]:
+            cells[3] = new_first
+            lines[i] = "| " + " | ".join(cells) + " |\n"
+            break
+    else:
+        raise ValueError(f"report-queue: row {rid!r} vanished mid-bump")
+    REPORTS.write_text("".join(lines))
+    with body_path(ts0, kind, rid).open("a") as fh:
+        fh.write(f"- {ts} occurrence\n")
+
+
+def add(kind, text, identity=None, window=86400):
     if kind not in KINDS:
         print(f"report-queue: bad kind {kind!r} (expected "
               f"{'/'.join(sorted(KINDS))})", file=sys.stderr)
@@ -111,8 +187,19 @@ def add(kind, text):
     rid = sha8(text)
     first = text.splitlines()[0].strip()
     ts = now_ts()
+    if identity:
+        for r in reversed(read_rows()):
+            if r[1] == kind:
+                if row_identity(r) == identity and within_window(r[0], window):
+                    try:
+                        bump_row(r, ts)
+                        return 0
+                    except (OSError, ValueError) as exc:
+                        print(str(exc), file=sys.stderr)
+                        return 2
+                break
     ensure_header()
-    write_body(ts, kind, rid, first, text)
+    write_body(ts, kind, rid, first, text, identity)
     with REPORTS.open("a") as fh:
         fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
     return 0
@@ -198,6 +285,60 @@ def json_cmd():
     return 0
 
 
+def prune_cmd(before, kinds, archive):
+    if not before or not kinds:
+        print("report-queue: --prune requires --before TS and "
+              "--kinds KIND[,KIND...]", file=sys.stderr)
+        return 2
+    kind_list = [k.strip() for k in kinds.split(",") if k.strip()]
+    bad = [k for k in kind_list if k not in KINDS]
+    if bad:
+        print(f"report-queue: bad kind(s) {'/'.join(bad)} (expected "
+              f"{'/'.join(sorted(KINDS))})", file=sys.stderr)
+        return 2
+    try:
+        bt = parse_ts(before)
+        if bt > datetime.now(timezone.utc):
+            print("report-queue: --before is in the future", file=sys.stderr)
+            return 2
+        rows = read_rows()
+        doomed = [r for r in rows
+                  if r[1] in set(kind_list) and r[0] < before]
+        if doomed and archive:
+            ap = Path(archive)
+            ap.parent.mkdir(parents=True, exist_ok=True)
+            with ap.open("a") as fh:
+                fh.write(f"\n## pruned {before}\n\n{HEADER}\n")
+                for r in doomed:
+                    fh.write("| " + " | ".join(r) + " |\n")
+        bodies = 0
+        for r in doomed:
+            bp = body_path(*r[:3])
+            if bp.exists():
+                bp.unlink()
+                bodies += 1
+        if doomed:
+            drop = {tuple(r[:3]) for r in doomed}
+            out = []
+            for line in REPORTS.read_text().splitlines(keepends=True):
+                s = line.strip()
+                cells = ([c.strip() for c in s.strip("|").split("|")]
+                         if s.startswith("|") and s.endswith("|") else None)
+                if cells and len(cells) == 5 and tuple(cells[:3]) in drop:
+                    continue
+                out.append(line)
+            REPORTS.write_text("".join(out))
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f"report-queue: {exc}", file=sys.stderr)
+        return 2
+    tail = f", archived to {archive}" if archive else ""
+    print(f"pruned {len(doomed)} rows, {bodies} bodies{tail}")
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(
         prog="report-queue", add_help=False,
@@ -208,12 +349,21 @@ def main(argv=None):
     p.add_argument("--unread", nargs="?", const="")
     p.add_argument("--mark-read", metavar="ID")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--identity", metavar="KEY")
+    p.add_argument("--window", type=int, metavar="SECONDS")
+    p.add_argument("--prune", action="store_true")
+    p.add_argument("--before", metavar="TS")
+    p.add_argument("--kinds", metavar="KIND[,KIND...]")
+    p.add_argument("--archive", metavar="PATH")
     args = p.parse_args(argv)
     if args.help:
         print(__doc__.strip())
         return 0
+    if args.prune:
+        return prune_cmd(args.before, args.kinds, args.archive)
     if args.add:
-        return add(args.add[0], args.add[1])
+        return add(args.add[0], args.add[1], args.identity,
+                   86400 if args.window is None else args.window)
     if args.list is not None:
         return list_cmd(args.list or None)
     if args.unread is not None:
@@ -227,8 +377,10 @@ def main(argv=None):
             return 2
     if args.json:
         return json_cmd()
-    print("usage: report-queue --add KIND TEXT | --list[=KIND] | "
-          "--unread[=KIND] | --json | --mark-read ID | --help",
+    print("usage: report-queue --add KIND TEXT [--identity KEY] "
+          "[--window SECONDS] | --list[=KIND] | --unread[=KIND] | --json | "
+          "--mark-read ID | --prune --before TS --kinds KIND[,KIND...] "
+          "[--archive PATH] | --help",
           file=sys.stderr)
     return 2
 
