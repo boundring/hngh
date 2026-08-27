@@ -76,7 +76,7 @@ class OmpBridgeDelegation(unittest.TestCase):
         self.assertIn("loadout-token-limit=8000", lines[0])
         self.assertIn("loadout-cost-limit=2000", lines[0])
         self.assertIn("loadout-time-limit=3600", lines[0])
-        self.assertIn("loadout-tool-labels=worker-task,mutation", lines[0])
+        self.assertIn("loadout-tool-labels=worker-task/mutation", lines[0])
         self.assertIn("loadout-network-labels=model-review", lines[0])
         self.assertIn("loadout-writable-scopes=repository", lines[0])
         # admit-transport run-1 worker runs second, same store

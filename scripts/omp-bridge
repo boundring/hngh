@@ -24,6 +24,13 @@ this script) gets three things without re-discovering them:
   (e) `--run-end`   closes the loop when that delegation dies or lands:
             it runs scripts/hngh close-run with a client-validated
             disposition (cancelled|evacuated|dead).
+             Disposition honesty: a bridge run never enters :running in
+             the kernel (the external work happens outside it), so the
+             legal close from :created is `cancelled` (wrapped session
+             withdrawn) — `evacuated` is only legal once the run has
+             actually been driven through the lifecycle. The kernel
+            refuses illegal transitions by design; that refusal is the
+             contract working, not a bug (proven live 2026-08-27).
 
 The bridge is an outer adapter: it only invokes the existing ceremony /
 watchdog surfaces. It never imports or mutates the hngh kernel, and it
@@ -316,7 +323,7 @@ def run_start_cmd(session, objective, task_label):
         "loadout-token-limit=8000",
         "loadout-cost-limit=2000",
         "loadout-time-limit=3600",
-        "loadout-tool-labels=worker-task,mutation",
+        "loadout-tool-labels=worker-task/mutation",
         "loadout-network-labels=model-review",
         "loadout-writable-scopes=repository"])
     if code:
