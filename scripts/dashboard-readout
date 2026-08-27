@@ -2,8 +2,8 @@
 """dashboard-readouts: a growing family of gantt-style renderers.
 
 Reads only committed data (no daemon). Renderers all read the same
-timeline spine + ETA windows:
-  (default) linear  — bars: '#' done, '...' queued, '-' ETA
+timeline spine + depends-on windows:
+  (default) linear  — bars: '#' done, '...' queued, '-' depends-on window
   --spiral          — Archimedean spiral, past in / future out
   --circular        — clock-face rings: done rings inner, planned outer
   --dance N         — bump ANY renderer with a music intensity 0..9
@@ -289,7 +289,7 @@ def roster_rows(limit=15, ttl=0.0):
 
 def data_spine():
     """The shared read-only data dict for JSON, HTML, and live modes."""
-    return {
+    spine = {
         "timeline": timeline_rows(),
         "queue": [{"id": i, "status": s} for i, s in queue_items()],
         "etas": queue_etas(),
@@ -297,6 +297,101 @@ def data_spine():
         "roster": roster_rows(),
         "generated": datetime.now().astimezone().isoformat(timespec="seconds"),
     }
+    state, reasons = verdict(spine)
+    spine["verdict"] = {"state": state, "reasons": reasons}
+    return spine
+
+
+# ---------------------------------------------------------------------------
+# S1 truth-telling dashboard (interface-plan S1): verdict-first hero,
+# honest labels, reorder-by-usefulness, and staleness. Every function here
+# is display-layer: data derivation and machine-readable --json keys are
+# untouched except the additive `verdict` spine key.
+# ---------------------------------------------------------------------------
+STALE_SECONDS = 1800        # live panes (sessions/roster): reuse the
+#                            # existing 30min "stale-store" alert threshold
+STALE_SPINE_SECONDS = 86400  # committed spine (timeline/queue): a full day
+#                            # without a rotation is genuinely stale
+ATTENTION_STATES = {"dead", "unknown"}  # a died run needs salvage; an
+#                                         # unreadable one fails closed
+
+
+def _file_age(path):
+    """Source freshness in seconds; None when the file cannot be read."""
+    try:
+        return time.time() - path.stat().st_mtime
+    except OSError:
+        return None
+
+
+def order_queue(items):
+    """Reorder-by-usefulness (interface-plan S1): running/active work floats
+    above everything else, then the remaining rows keep their existing
+    queue/Next order. Stable, so nothing is dropped, added, or re-sequenced —
+    ordering only, never fabrication."""
+    return sorted(items, key=lambda it: (it is None) or (it[1] != "active"))
+
+
+def source_digest():
+    """(ok, reason) for the spine: the digest is healthy when every source
+    file reads cleanly."""
+    for name, path in (("timeline", TIMELINE), ("queue", QUEUE)):
+        try:
+            path.read_text()
+        except OSError:
+            return False, f"{name} unreadable"
+    return True, ""
+
+
+def headroom_reasons(roster):
+    """Failing-run reasons: a run's headroom is failing when it needs
+    attention (a died roguelike run needs salvage; an unreadable one cannot
+    be confirmed healthy, so it fails closed)."""
+    return [f"{r.get('id', '?')} ({r.get('state')})" for r in roster
+            if r.get("state") in ATTENTION_STATES]
+
+
+def verdict(spine):
+    """-> (state, reasons). The single S1 health verdict. Mirrors the
+    digest+headroom rule Owner B lands in hngh.main:match (interface-plan
+    M1/7): `all-clear` exactly when the digest is healthy AND no run's
+    headroom is failing; otherwise `attention` naming each failing reason."""
+    digest_ok, digest_reason = source_digest()
+    failing = headroom_reasons(spine.get("roster", []))
+    reasons = ([digest_reason] if not digest_ok else []) + failing
+    return ("all-clear" if (digest_ok and not failing) else "attention",
+            reasons)
+
+
+def verdict_line(spine):
+    """The one prominent health line (never the counts headline it)."""
+    state, reasons = verdict(spine)
+    if state == "all-clear":
+        return tone("32")("verdict: all clear")
+    return tone("33")("verdict: attention — " + ", ".join(reasons))
+
+
+def state_legend():
+    """Legend strip: defines the state colors once, per interface-plan
+    (evacuated = a finish, detached — not a crash)."""
+    return ("states: running=ok · evacuated=finished & detached · "
+            "cancelled=finished · dead=attention")
+
+
+def stale_span(age, threshold=STALE_SECONDS):
+    """`stale (Nm)` marker for a pane whose source last refreshed too long
+    ago (fresh panes stay silent)."""
+    if not age or age <= threshold:
+        return ""
+    return f' <span class="stale">stale ({age_text(age)})</span>'
+
+
+def spine_stale_note():
+    """Trailing caveat when the committed spine sources are stale."""
+    ages = [a for a in (_file_age(TIMELINE), _file_age(QUEUE)) if a]
+    if ages and min(ages) > STALE_SPINE_SECONDS:
+        return f"spine stale ({age_text(min(ages))})"
+    return ""
 
 
 def render_json(spine):
@@ -304,14 +399,26 @@ def render_json(spine):
 
 
 def render_html(spine):
+    vstate, vreasons = verdict(spine)
+    if vstate == "all-clear":
+        vhero = '<p class="verdict">verdict: all clear</p>'
+    else:
+        vhero = ('<p class="verdict">verdict: attention — '
+                 + ", ".join(vreasons) + "</p>")
+    legend = ('<p class="legend">states: running=ok &#183; '
+              'evacuated=finished &#38; detached &#183; '
+              'dead=attention</p>')
+    tl_stale = stale_span(_file_age(TIMELINE), STALE_SPINE_SECONDS)
+    q_stale = stale_span(_file_age(QUEUE), STALE_SPINE_SECONDS)
     timeline = "".join(
         f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td>"
         f"<td><code>{r[3]}</code></td></tr>"
         for r in spine["timeline"])
     qrows = "".join(
-        f"<tr><td>{q['id']}</td><td>{q['status']}</td>"
-        f"<td>{spine['etas'].get(q['id'], '')}</td></tr>"
-        for q in spine["queue"])
+        f"<tr><td>{i}</td><td>{s}</td>"
+        f"<td>{spine['etas'].get(i, '')}</td></tr>"
+        for i, s in order_queue([(q["id"], q["status"])
+                                 for q in spine["queue"]]))
     srows = "".join(
         f"<tr><td>{s.get('run', '')}</td><td>{s.get('state', '')}</td>"
         f"<td>{s.get('loadout', '')}</td><td>{s.get('mission', '')}</td></tr>"
@@ -321,28 +428,39 @@ def render_html(spine):
         f"<td>{r.get('source', '')}</td>"
         f"<td>{r.get('mission', '')}</td></tr>"
         for r in spine["roster"])
+    sessions_stale = stale_span(min(
+        (s.get("age") for s in spine["sessions"] if s.get("age") is not None),
+        default=None))
+    roster_stale = stale_span(min(
+        (r.get("age") for r in spine["roster"] if r.get("age") is not None),
+        default=None))
     return f"""<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8">
 <title>hngh dashboard</title>
 <style>
-body {{ font-family: monospace; margin: 2em; }}
+body {{ font-family: monospace; margin: 2em; background: #0b0e11; color: #c8d0d8; }}
 table {{ border-collapse: collapse; width: 100%; }}
-th, td {{ border: 1px solid #ccc; padding: 4px 8px; text-align: left; }}
+th, td {{ border: 1px solid #444; padding: 4px 8px; text-align: left; }}
+.verdict {{ font-weight: bold; font-size: 1.15em; }}
+.stale {{ color: #999; }}
+.legend {{ color: #999; font-size: 0.9em; }}
 </style></head>
 <body>
 <h1>hngh dashboard</h1>
+{vhero}
+{legend}
 <p>generated <code>{spine['generated']}</code></p>
-<h2>timeline</h2>
+<h2>timeline{tl_stale}</h2>
 <table><tr><th>date</th><th>kind</th><th>item</th><th>hash</th></tr>{timeline}
 </table>
-<h2>queue</h2>
-<table><tr><th>id</th><th>status</th><th>eta</th></tr>{qrows}
+<h2>queue{q_stale}</h2>
+<table><tr><th>id</th><th>status</th><th>depends on</th></tr>{qrows}
 </table>
-<h2>live sessions</h2>
+<h2>live sessions{sessions_stale}</h2>
 <table><tr><th>run</th><th>state</th><th>loadout</th><th>mission</th></tr>{srows}
 </table>
-<h2>live agents</h2>
+<h2>live agents{roster_stale}</h2>
 <table><tr><th>id</th><th>state</th><th>source</th><th>mission</th></tr>{rrows}
 </table>
 </body></html>"""
@@ -483,8 +601,9 @@ def animated_bar(label, count, status, tone_on):
 
 def linear_render(items, rows, etas, dance=0):
     print("hngh timeline (gantt-ish)" + ("  ::dance" if dance else ""))
-    print("legend: '#' done  '...' queued  '---' ETA window  '+' active")
+    print("legend: '#' done  '...' queued  '---' depends-on window  '+' active")
     dm = dance_mark(dance)
+    items = order_queue(items)  # running/active first (interface-plan S1)
     for i, status in items:
         eta = etas.get(i, "")
         if i not in [r[2] for r in rows]:
@@ -680,6 +799,11 @@ def render_body(rows, items, etas, dance, sessions):
     with contextlib.redirect_stdout(buf):
         func()
     body = buf.getvalue()
+    body = (verdict_line({"roster": roster_rows(ttl=15)}) + "\n"
+            + state_legend() + "\n" + body)
+    note = spine_stale_note()
+    if note:
+        body = body.rstrip("\n") + f"\n{note}\n"
     if sessions:
         body += "\n" + session_block(sessions)
     if BANNER:
@@ -750,6 +874,14 @@ def rich_dashboard(rows, items, etas, sessions, dance):
     header = Panel.fit(
         f"[bold {accent}]hngh[/] — the queue runs itself",
         border_style=accent)
+    vstate, vreasons = verdict({"roster": roster_rows(ttl=15)})
+    if vstate == "all-clear":
+        vtext = f"[bold {accent}]verdict: all clear[/]"
+    else:
+        vtext = (f"[bold yellow]verdict: attention — "
+                 f"{', '.join(vreasons)}[/]")
+    vpanel = Panel.fit(vtext, title="[dim]health[/]",
+                       border_style=accent)
 
     queue_table = Table(box=None, show_header=False, expand=True,
                         padding=(0, 1))
@@ -812,7 +944,7 @@ def rich_dashboard(rows, items, etas, sessions, dance):
                       title="[dim]operative[/]")),
         border_style=accent)
 
-    return Group(header, queue_panel, timeline_panel, sessions_panel,
+    return Group(header, vpanel, queue_panel, timeline_panel, sessions_panel,
                  assistant)
 
 
