@@ -430,7 +430,7 @@ commands:~%~
   review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
   list-pins PATH  wake-peer RUN PINS-FILE PEER  run-worker RUN task=T [payload=X]~%~
-  select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...~%~
+  select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...  status~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -1833,6 +1833,399 @@ spawns no process. Exit 0 accepted, 1 refused/invalid, 2 malformed."
                          result))
                     0 1))))))
 
+;;; S3 CLI status verb --------------------------------------------------------
+;;; `scripts/hngh status` (interface-plan slice S3 / command-center awareness
+;;; contract) is one truth-telling read of the spine in the terminal: the
+;;; single verdict first, then the bound facts. Sources are OPTIONAL and each
+;;; fails closed to `unavailable` -- a missing or malformed source never
+;;; fabricates a number:
+;;;   HNGH_STATUS_SYSTEM    -> system.json      cpu%/mem%/disk%, headroom
+;;;   HNGH_STATUS_DATA      -> data.json digest block (status + breadcrumb)
+;;;   HNGH_STATUS_READOUT   -> readout.json        = (queue next + roster)
+;;; A source carrying a `generated_at`/`g` UTC-Z stamp appends ` (stale Nm)`
+;;; when it is more than 10 minutes old against the injected clock (the
+;;; "wall-clock" callback every dispatch handler receives), so a stale pane
+;;; is labelled, never silently re-derived. The verb is a pure read: no
+;;; writes, no ledger, no subprocess.
+;;;
+;;; The verdict is the ONE headline first, per the contract. It is a single
+;;; `verdict:` line derived from BOTH contributing sources (the data.json
+;;; digest status AND the system.json headroom booleans):
+;;;   - digest.status == "ok" and every headroom value is the boolean true
+;;;     -> `verdict: all-clear`
+;;;   - otherwise `verdict: attention (<what>)`, <what> = "digest" when the
+;;;     digest status is not "ok", plus every headroom name whose value is
+;;;     not the boolean true (fail-closed: a non-true reads as attention)
+;;;   - either source missing/malformed -> `verdict: unavailable`
+;;;
+;;; The JSON reader below is main's own minimal
+;;; object/array/string/number/list scanner. hngh.adapters.model keeps a
+;;; scanner too, but its helpers are private and it consumes numbers and
+;;; booleans as :OPAQUE -- exactly the values this read needs -- so it cannot
+;;; be reused here (importing hngh.adapters.model from hngh.main is legal, it
+;;; just does not expose them).
+
+(defparameter *status-system-source* nil
+  "Path for the system.json source of the `status` verb. NIL reads the
+HNGH_STATUS_SYSTEM environment variable; a non-NIL value wins over the
+environment (the defparameter is what tests bind to hermetic fixtures).")
+(defparameter *status-data-source* nil
+  "Path for the data.json source of `status`. NIL reads HNGH_STATUS_DATA.")
+(defparameter *status-readout-source* nil
+  "Path for the readout.json source of `status`. NIL reads HNGH_STATUS_READOUT.")
+
+(defun %status-source-path (parameter env-name)
+  "Resolve one status source: the bound defparameter wins, else the named
+environment variable. NIL means the source is absent (fail-closed)."
+  (or parameter (uiop:getenv env-name)))
+
+;;; Minimal tolerant JSON reader ----------------------------------------------
+;;; Returns (:OBJECT . alist), (:ARRAY . items), plain strings, numbers, and
+;;; the literals t / nil / null. Any deviation signals; the document reader
+;;; catches it and returns nil (the "no usable source" sentinel), so callers
+;;; never crash on malformed spine JSON and fail closed to `unavailable`.
+
+(defun %status-json-ws (text index)
+  (loop while (and (< index (length text))
+                   (member (char text index)
+                           '(#\Space #\Tab #\Newline #\Return)))
+        do (incf index))
+  index)
+
+(defun %status-json-string (text index)
+  "Parse the JSON string starting at INDEX (its opening quote); returns
+(values string index-after)."
+  (let ((out (make-string-output-stream))
+        (i (1+ index))
+        (n (length text)))
+    (loop
+      (when (>= i n) (error "unterminated string"))
+      (let ((ch (char text i)))
+        (cond
+          ((char= ch #\")
+           (return (values (get-output-stream-string out) (1+ i))))
+          ((char= ch #\\)
+           (incf i)
+           (when (>= i n) (error "unterminated escape"))
+           (let ((esc (char text i)))
+             (case esc
+               ((#\" #\\ #\/) (write-char esc out))
+               ((#\b) (write-char #\Backspace out))
+               ((#\f) (write-char (code-char 12) out))
+               ((#\n) (write-char #\Newline out))
+               ((#\r) (write-char #\Return out))
+               ((#\t) (write-char #\Tab out))
+               ((#\u)
+                (when (> (+ i 4) (1- n)) (error "truncated unicode escape"))
+                (write-char
+                 (code-char
+                  (parse-integer text :start (1+ i) :end (+ i 5) :radix 16))
+                 out)
+                (incf i 4))
+               (t (error "unknown escape"))))
+           (incf i))
+          (t (write-char ch out) (incf i)))))))
+
+(defun %status-json-number (text index)
+  (let ((end index))
+    (loop while (and (< end (length text))
+                     (find (char text end) "0123456789+-.eE"))
+          do (incf end))
+    (when (= end index) (error "unrecognized number"))
+    (multiple-value-bind (value consumed) (read-from-string (subseq text index end))
+      (declare (ignore consumed))
+      (unless (numberp value) (error "not a number"))
+      (values value end))))
+
+(defun %status-json-value (text index)
+  "Parse one JSON value at INDEX into its tagged value; returns
+(values value index-after)."
+  (let ((index (%status-json-ws text index)))
+    (when (>= index (length text)) (error "empty value"))
+    (let ((ch (char text index)))
+      (cond
+        ((char= ch #\") (%status-json-string text index))
+        ((char= ch #\{)
+         (let ((alist '()) (i (%status-json-ws text (1+ index))))
+           (when (and (< i (length text)) (char= (char text i) #\}))
+             (return-from %status-json-value
+               (values (cons :object alist) (1+ i))))
+           (loop
+             (setq i (%status-json-ws text i))
+             (when (or (>= i (length text)) (char/= (char text i) #\"))
+               (error "object key expected"))
+             (multiple-value-bind (key after-key) (%status-json-string text i)
+               (setq i (%status-json-ws text after-key))
+               (when (or (>= i (length text)) (char/= (char text i) #\:))
+                 (error "colon expected"))
+               (multiple-value-bind (value after-value)
+                   (%status-json-value text (1+ i))
+                 (push (cons key value) alist)
+                 (setq i (%status-json-ws text after-value))
+                 (cond
+                   ((and (< i (length text)) (char= (char text i) #\,))
+                    (incf i))
+                   ((and (< i (length text)) (char= (char text i) #\}))
+                    (return (values (cons :object (nreverse alist)) (1+ i))))
+                   (t (error "comma or close-brace expected"))))))))
+        ((char= ch #\[)
+         (let ((items '()) (i (%status-json-ws text (1+ index))))
+           (when (and (< i (length text)) (char= (char text i) #\]))
+             (return-from %status-json-value
+               (values (cons :array items) (1+ i))))
+           (loop
+             (multiple-value-bind (value after-value)
+                 (%status-json-value text i)
+               (push value items)
+               (setq i (%status-json-ws text after-value))
+               (cond
+                 ((and (< i (length text)) (char= (char text i) #\,))
+                  (incf i))
+                 ((and (< i (length text)) (char= (char text i) #\]))
+                  (return (values (cons :array (nreverse items)) (1+ i))))
+                 (t (error "expected ',' or ']'")))))))
+        ((char= ch #\t)
+         (unless (equal "true" (subseq text index (min (length text) (+ index 4))))
+           (error "expected true"))
+         (values t (+ index 4)))
+        ((char= ch #\f)
+         (unless (equal "false" (subseq text index (min (length text) (+ index 5))))
+           (error "expected false"))
+         (values nil (+ index 5)))
+        ((char= ch #\n)
+         (unless (equal "null" (subseq text index (min (length text) (+ index 4))))
+           (error "expected null"))
+         (values 'null (+ index 4)))
+        (t (%status-json-number text index))))))
+
+(defun %status-json-document (text)
+  "Parse exactly one JSON document spanning all of TEXT; nil on error."
+  (handler-case
+      (multiple-value-bind (value index) (%status-json-value text 0)
+        (let ((tail (%status-json-ws text index)))
+          (unless (= tail (length text)) (error "trailing characters"))
+          value))
+    (error () nil)))
+
+;;; Document accessors (object = (:OBJECT . alist), array = (:ARRAY . items)).
+
+(defun %status-fields (value)
+  (and (consp value) (eq :object (car value)) (cdr value)))
+
+(defun %status-field (value name)
+  "Case-insensitive field lookup in an object VALUE; nil when VALUE is not an
+object or NAME is absent."
+  (cdr (assoc name (%status-fields value) :test #'string-equal)))
+
+(defun %status-array (value)
+  (and (consp value) (eq :array (car value)) (cdr value)))
+
+(defun %status-timestamp (document)
+  "The freshness stamp of DOCUMENT under `generated_at` or `g`."
+  (let ((generated (%status-field document "generated_at")))
+    (or (and (stringp generated) generated)
+        (let ((g (%status-field document "g")))
+          (and (stringp g) g)))))
+
+;;; Freshness -------------------------------------------------------------------
+;;; Equal-width ISO UTC stamps parse to UTC seconds via ENCODE-UNIVERSAL-TIME
+;;; (a plain integer subtraction); stamps that do not hold the exact shape
+;;; carry no freshness (an unstamped source is simply not timed). A pane older
+;;; than the stale bound is labelled ` (stale Nm)`, never re-derived.
+
+(defun %status-utc-seconds (stamp)
+  (when (and (stringp stamp) (= 20 (length stamp))
+             (char= #\T (char stamp 10)) (char= #\Z (char stamp 19))
+             (char= #\- (char stamp 4)) (char= #\- (char stamp 7))
+             (char= #\: (char stamp 13)) (char= #\: (char stamp 16)))
+    (handler-case
+        (encode-universal-time
+         (parse-integer stamp :start 17 :end 19)
+         (parse-integer stamp :start 14 :end 16)
+         (parse-integer stamp :start 11 :end 13)
+         (parse-integer stamp :start 8 :end 10)
+         (parse-integer stamp :start 5 :end 7)
+         (parse-integer stamp :start 0 :end 4)
+         0)
+      (error () nil))))
+
+(defun %status-stale-minutes (stamp now)
+  "Minutes STAMP is behind NOW (both UTC stamps), or nil when either is not a
+parseable equal-width stamp."
+  (let ((a (%status-utc-seconds stamp))
+        (b (%status-utc-seconds now)))
+    (when (and a b)
+      (max 0 (floor (- b a) 60)))))
+
+(defun %status-stale-suffix (minutes)
+  "The ` (stale Nm)` suffix when MINUTES exceeds the stale bound, else \"\"."
+  (if (and minutes (> minutes 10))
+      (format nil " (stale ~Dm)" minutes)
+      ""))
+
+(defun %status-max-stale (&rest minutes)
+  "The largest present stale minute count across MINUTES (nil when none)."
+  (let ((best nil))
+    (dolist (m minutes best)
+      (when (and m (or (null best) (> m best)))
+        (setf best m)))))
+
+(defun %status-source (path)
+  "Read and strict-parse the spine JSON at PATH; nil when PATH is nil, the
+file is unreadable, or the JSON is malformed (fail-closed = no usable
+source)."
+  (when path
+    (handler-case
+        (%status-json-document (uiop:read-file-string path))
+      (file-error () nil)
+      (error () nil))))
+
+(defun %status-percentage (value)
+  "A percent text for a numeric VALUE; numbers and numeric strings render and
+anything else is nil, so the system pane never prints a mangled token."
+  (cond ((numberp value) (princ-to-string value))
+        ((stringp value)
+         (handler-case
+             (let ((number (read-from-string value)))
+               (when (numberp number) value))
+           (error () nil)))
+        (t nil)))
+
+(defun %status-count (value)
+  "An integer count for a JSON number or numeric string; nil otherwise."
+  (cond ((integerp value) value)
+        ((realp value) (round value))
+        ((stringp value)
+         (handler-case (parse-integer value) (error () nil)))
+        (t nil)))
+
+(defun %status-digest-status (data)
+  "The data.json digest `status` string, or nil when the digest block lacks
+one."
+  (let ((status (%status-field (%status-field data "digest") "status")))
+    (and (stringp status) status)))
+
+(defun %status-headroom (system)
+  "Values (usable-p attention): USABLE-P is true when system.json carries a
+headroom OBJECT (possibly empty); ATTENTION lists the headroom names whose
+value is not the boolean true (fail-closed: any non-true reads attention)."
+  (let ((headroom (%status-fields (%status-field system "headroom"))))
+    (if headroom
+        (values t
+                (loop for (name . value) in headroom
+                      unless (eq t value)
+                      collect name))
+        (values nil nil))))
+
+(defun %status-queue-id (item)
+  "A queue item's id: a raw string item is its own id; an object item yields
+its `id` then `name` field."
+  (cond ((stringp item) item)
+        (t (let ((id (%status-field item "id"))
+                 (name (%status-field item "name")))
+             (cond ((stringp id) id)
+                   ((stringp name) name)
+                   (t nil))))))
+
+(defun %status-roster-count (fields names)
+  "An integer count for the first of NAMES in a roster FIELDS alist."
+  (let ((entry (loop for name in names
+                     thereis (assoc name fields :test #'string-equal))))
+    (%status-count (and entry (cdr entry)))))
+
+;;; The five lines ---------------------------------------------------------------
+
+(defun %status-verdict-line (data system now)
+  (multiple-value-bind (headroom-usable attention) (%status-headroom system)
+    (let ((digest-status (%status-digest-status data)))
+      (cond
+        ((and digest-status headroom-usable)
+         (let ((parts (append (unless (string= "ok" digest-status) (list "digest"))
+                             attention)))
+           (format nil "verdict: ~A~A"
+                   (if parts
+                       (format nil "attention (~{~A~^, ~})" parts)
+                       "all-clear")
+                   (%status-stale-suffix
+                    (%status-max-stale
+                     (%status-stale-minutes (%status-timestamp data) now)
+                     (%status-stale-minutes (%status-timestamp system) now))))))
+        (t "verdict: unavailable")))))
+
+(defun %status-system-line (system now)
+  (let ((cpu (%status-percentage (%status-field system "cpu")))
+        (mem (%status-percentage (%status-field system "mem")))
+        (disk (%status-percentage (%status-field system "disk"))))
+    (if (and cpu mem disk)
+        (format nil "system: ~A%/~A%/~A%~A"
+                cpu mem disk
+                (%status-stale-suffix
+                 (%status-stale-minutes (%status-timestamp system) now)))
+        "system: unavailable")))
+
+(defun %status-active-line (data now)
+  (let* ((mounted (%status-field data "mounted"))
+         (running (%status-field data "running"))
+         (bits (remove nil
+                       (list (when (stringp mounted) (format nil "mounted=~A" mounted))
+                             (when (stringp running) (format nil "running=~A" running))))))
+    (if bits
+        (format nil "active: ~{~A~^ ~}~A"
+                bits
+                (%status-stale-suffix
+                 (%status-stale-minutes (%status-timestamp data) now)))
+        "active: unavailable")))
+
+(defun %status-next-line (readout now)
+  (let ((next (and (%status-array (%status-field readout "queue"))
+                   (find-if #'%status-queue-id
+                            (%status-array (%status-field readout "queue"))))))
+    (if next
+        (format nil "next: ~A~A"
+                (%status-queue-id next)
+                (%status-stale-suffix
+                 (%status-stale-minutes (%status-timestamp readout) now)))
+        "next: unavailable")))
+
+(defun %status-roster-line (readout now)
+  (let* ((fields (%status-fields (%status-field readout "roster")))
+         (working (%status-roster-count fields '("working" "active")))
+         (idle (%status-roster-count fields '("idle")))
+         (parked (%status-roster-count fields '("parked"))))
+    (let ((bits (remove nil
+                        (list (when working (format nil "working=~A" working))
+                              (when idle (format nil "idle=~A" idle))
+                              (when parked (format nil "parked=~A" parked))))))
+      (if bits
+          (format nil "roster: ~{~A~^ ~}~A"
+                  bits
+                  (%status-stale-suffix
+                   (%status-stale-minutes (%status-timestamp readout) now)))
+          "roster: unavailable"))))
+
+(defun %status-report (now)
+  (let ((data (%status-source (%status-source-path *status-data-source* "HNGH_STATUS_DATA")))
+        (system (%status-source (%status-source-path *status-system-source* "HNGH_STATUS_SYSTEM")))
+        (readout (%status-source (%status-source-path *status-readout-source* "HNGH_STATUS_READOUT"))))
+    (format nil "~{~A~^~%~}"
+            (list (%status-verdict-line data system now)
+                  (%status-system-line system now)
+                  (%status-active-line data now)
+                  (%status-next-line readout now)
+                  (%status-roster-line readout now)))))
+
+(defun dispatch-status (args store clock)
+  "status: one no-argument read of the spine. No store, no options; anything
+besides a bare `status` is malformed (exit 2). Pure read: no mutation."
+  (declare (ignore store))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options positionals)
+      (return-from dispatch-status
+        (values (format nil "status takes no options or operands~%~A"
+                        (command-usage))
+                2)))
+    (values (%status-report (funcall clock)) 0)))
+
 (defun dispatch-command* (positionals store clock mutation-ports gather-ports
                               review-ports terminal-ports
                               federation-ports attestation-ports wake-ports
@@ -1867,6 +2260,7 @@ spawns no process. Exit 0 accepted, 1 refused/invalid, 2 malformed."
      (dispatch-run-worker args store worker-ports))
     ((string= command "select-course")
      (dispatch-select-course args store clock))
+    ((string= command "status") (dispatch-status args store clock))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))
