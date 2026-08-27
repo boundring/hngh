@@ -16,6 +16,12 @@ relay review, fresh-eyes adversarial):
    `jobs/config-backup.sh` (parity proven, agent-configs lane green and
    pushed after the scan learned that ALL-CAPS/`${VAR}` values are
    environment references, not secrets).
+   Physical cleanup (operator-approved, same day): the 11 disabled unit
+   files were removed from `~/.config/systemd/user/` (daemon-reloaded;
+   zero gbd units remain) and `~/.config/git-back-dots/` was deleted —
+   its `config.toml` was already archived; one older
+   `config.toml.bak-20260731` in that dir was removed unarchived
+   (disclosed; superseded config state of a retired tool).
 2. **Operator-item lifecycle.** "For the operator" items now flow
    open → handled (with resolving evidence line) → dismissed-as-viewed
    (per-item, persisted to `operator-dismissed.json` + a handoffs row);
