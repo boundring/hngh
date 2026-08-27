@@ -1103,6 +1103,11 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** `report-queue --prune`; the autonomy ceremony slice.
 - **Review trigger:** first prune runs inside a certificate loop with
   the archive attached to the candidate manifest.
+- **Path convention (2026-08-27):** ledger rows carry repo-relative or
+  `~/` paths, never absolute local paths — the public-content scan
+  refuses candidates containing any absolute home directory prefix, so
+  producers strip `$HOME` at emission (oversight-tick tree-skew was the
+  last offender; 58 uncommitted rows normalized in place).
 
 ## Widget grid + QoL evolution cadence (dashboard surfaces)
 
