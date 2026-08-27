@@ -29,7 +29,7 @@ Stages 5 and 6 run in alternation (grow beats and research/design beats per
 | **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **landing** |
 | **3 — Roguelike delegation live** | every delegated session wrapped: `omp-bridge --run-start` (budget loadout) → observatory `working` → `--run-end` disposition; self-supervision tick (transcript phase detection, stall flags, auto-replace); gantt renders actual bars beside estimates; per-lane medians | one full delegation cycle witnessed live end-to-end; a seeded stall is flagged and replaced without human intervention | **landing** |
 | **4 — System harness D/E** | config-manager (declared config lanes, governed updates), package-manager integration (updates inventory → certificate-gated upgrades), maintenance routines (orphans, caches, journal vacuum) — CachyOS first, per-host orientation generalizes | a governed package upgrade runs start-to-finish through the certificate loop on this host; config lanes declaratively listed and backed up on cadence | **queued** |
-| **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, R&D view grows into the alternation driver | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
+| **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
 | **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
 | **7 — Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
 
@@ -154,5 +154,13 @@ Working order, per the route:
    update lanes; config-backup generalizes into the config-manager.
 4. **Stage 5 beats** alternate with stage 3/4 grow work per the
    alternation rule; the research view makes the state visible.
+5. **Fold the third-evening intake** (eight observations, session-notes
+   §9) per the two new design docs: telemetry/records split + research
+   and session-cost capture ([ledger-and-records-spec.md](../design/ledger-and-records-spec.md)),
+   knowledge-base viewer/publisher posture
+   ([knowledge-base-spec.md](../design/knowledge-base-spec.md)), the
+   Schedule text-legibility floor in the display register's grade hooks,
+   and structured session identity (category, hierarchy, model, cost —
+   display side rides the SessionsTitles wave).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.

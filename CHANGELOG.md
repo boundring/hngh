@@ -152,6 +152,17 @@ lives under Pre-release / early development until the first release.
     (source-labelled tooltip; exact lane-unit identity, dense-band
     lanes included; embedded Schedule view now feeds the ledger to
     the engine).
+- Third-evening intake folded (eight operator observations):
+  `docs/design/ledger-and-records-spec.md` (telemetry/records split —
+  SQLite WAL store for high-frequency telemetry, git-tracked docs stay
+  curated; session-cost and research-beat capture feeding the Sessions
+  columns and the stage-5 tech-tree research view), and
+  `docs/design/knowledge-base-spec.md` (markdown vault as canon,
+  wiki-grade client-side viewer, thin adapters to whatever the host
+  has, publisher choice deferred, story-of-creation curation surface);
+  Schedule text-legibility floor added to the display register's grade
+  hooks; working-agreement standards noted (ADRs, Diátaxis, Shape Up
+  appetite/hill charts, Now/Next/Later); roadmap working order item 5.
 
 ### 2026-08-26
 

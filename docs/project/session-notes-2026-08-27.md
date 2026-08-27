@@ -306,3 +306,45 @@ share no canonical lane identity — make the lane name the join key at
 the feed level; and the dashboard is the only component without a
 selfcheck rung — a headless page-level selfcheck would collapse every
 UI verification loop into one command.
+
+## 9. Third evening intake — eight observations, folded
+
+Operator observations after the stage-3 wave landed, each tagged with its
+fold destination. Be careful as we proceed: capture before views, no
+daemons, nothing engine-locked.
+
+- Reporting appends a file every five minutes — separate telemetry from
+  the curated record: SQLite (WAL, stdlib, no daemon) or journald for
+  telemetry, git-tracked docs stay for curated rows. [design:
+  ledger-and-records-spec.md]
+- Standardized docs/planning/roadmap practices worth adapting to our
+  aesthetics: ADRs (decision records with immutable numbering — our
+  docs/records are already 80% of one), Diátaxis (tutorials/how-to/
+  reference/explanation split), C4/arc42 for architecture docs, Shape Up
+  (appetite + hill charts — honest progress fits the honesty law),
+  Now/Next/Later roadmap vocabulary. Adopt as working agreements, not
+  dependencies. [decision: working agreements, queued]
+- Knowledge base store vs engine: the markdown vault is the canon;
+  the KB tab is a bad viewer, not a bad store — wiki-grade reader
+  (client-side search index, backlinks, graph, TOC), thin adapters to
+  whatever the system has (Obsidian deep links, optional mkdocs/quartz
+  publish), publishers evaluated at first publication. [design:
+  knowledge-base-spec.md]
+- Schedule items illegible at 100% zoom (vertical squash, horizontal
+  clipping). [grade hooks: display-register-spec.md text-legibility
+  floor + name completeness]
+- Session names opaque: want category, type, creation hierarchy, age,
+  full readable names, when/why created, duration, cost, models.
+  [design: ledger-and-records-spec.md session-cost capture; display
+  side rides the SessionsTitles wave]
+- Research section opaque: want per-subject time, money, token cost,
+  models, references, searches/engines; linked to the knowledge map;
+  strategy-game-style presentation. [design: ledger-and-records-spec.md
+  research-beat capture; view rides stage 5]
+- Logs rework: apply known patterns (12-factor event streams, structured
+  events, severity/facet filtering, rate histograms, retention tiers,
+  redaction, safeguards) and decide what logs to produce for
+  self-optimization. [design: ledger-and-records-spec.md is the data
+  half; LogsView presentation is the wave]
+- KB "wiki but not as usable as any wiki" + long-term publications and
+  the story of Hngh's creation. [design: knowledge-base-spec.md]
