@@ -2298,23 +2298,28 @@ without injection the command refuses no-worker-transport."
         (values (format nil "unknown option: ~A~%~A" bad-option (command-usage))
                 2)))
     (let ((clock (or clock-now (default-clock-callback))))
-      (if store-path
-          (handler-case
-              (dispatch-command* positionals
-                                 (hngh.adapters.filesystem:make-filesystem-store
-                                  :root store-path)
-                                 clock mutation-ports gather-ports
-                                 review-ports terminal-ports
-                                 federation-ports attestation-ports wake-ports
-                                 worker-ports)
-            (hngh.adapters.filesystem:transport-fault (condition)
-              (values (format nil "transport fault: ~A" condition) 3))
-            (hngh.adapters.filesystem:store-refusal (condition)
-              (values (format nil "store refusal: ~A" condition) 2)))
-          (dispatch-command* positionals nil clock mutation-ports gather-ports
-                             review-ports terminal-ports
-                             federation-ports attestation-ports wake-ports
-                             worker-ports)))))
+      (cond ((and store-path (not (probe-file store-path)))
+             (values (format nil "store directory missing: ~A (create it first, or drop --store)"
+                             store-path)
+                     2))
+            (store-path
+             (handler-case
+               (dispatch-command* positionals
+                                  (hngh.adapters.filesystem:make-filesystem-store
+                                   :root store-path)
+                                  clock mutation-ports gather-ports
+                                  review-ports terminal-ports
+                                  federation-ports attestation-ports wake-ports
+                                  worker-ports)
+               (hngh.adapters.filesystem:transport-fault (condition)
+                 (values (format nil "transport fault: ~A" condition) 3))
+             (hngh.adapters.filesystem:store-refusal (condition)
+               (values (format nil "store refusal: ~A" condition) 2))))
+            (t
+             (dispatch-command* positionals nil clock mutation-ports gather-ports
+                                review-ports terminal-ports
+                                federation-ports attestation-ports wake-ports
+                                worker-ports))))))
 
 ;;; Operator-visible root ----------------------------------------------------
 
