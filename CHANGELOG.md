@@ -50,6 +50,17 @@ lives under Pre-release / early development until the first release.
     `invalid candidate manifest`, exit 3): only real repo-relative
     paths are kept, prose degrades to the item-id placeholder (+1
     regression test; wedged card removed).
+  - `scripts/report-queue` ledger hygiene: `--add --identity KEY
+    [--window S]` collapses repeated entries into one row with a `×N`
+    marker and per-occurrence body lines; `--prune --before TS --kinds
+    ... [--archive PATH]` removes aged rows/bodies with optional
+    archive. Suite 8 → 14 checks. Incident during development: a debug
+    repro seded the live reports.md ts cells (~2 min); repaired
+    in place (7,083/7,083 rows re-verified against body filenames and
+    body meta, 0 mismatches) and the lesson stored
+    (`debug-repro-sandboxes-only`).
+  - Host orientation + retention rungs added to the backlog (new-system
+    situating pass; report-ledger rotation policy).
 - Closed P1 #1.5: machine-steered course selection extracted from the
   service tick into the pure kernel:
   - `src/domain/course.lisp` — pure `course-candidate` value and the

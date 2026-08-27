@@ -43,8 +43,42 @@ class ReportQueueCLI(unittest.TestCase):
         d = self.root / "docs" / "project" / "report-bodies"
         return sorted(p.name for p in d.glob("*.md")) if d.exists() else []
 
-    def add(self, kind, text):
-        return run(self.root, "--add", kind, text)
+    def add(self, kind, text, identity=None, window=None):
+        args = ["--add", kind, text]
+        if identity is not None:
+            args += ["--identity", identity]
+        if window is not None:
+            args += ["--window", str(window)]
+        return run(self.root, *args)
+
+    def rows(self):
+        out = []
+        for line in self.reports_path().read_text().splitlines():
+            s = line.strip()
+            cells = ([c.strip() for c in s.strip("|").split("|")]
+                     if s.startswith("|") and s.endswith("|") else None)
+            if cells and len(cells) == 5 and cells[0] != "timestamp":
+                out.append(cells)
+        return out
+
+    def backdate_all(self, ts="2020-01-01T00:00:00Z"):
+        """Rewrite every row ts (and its body filename) to ts, for tests."""
+        p = self.reports_path()
+        d = self.root / "docs" / "project" / "report-bodies"
+        lines = p.read_text().splitlines()
+        for i, line in enumerate(lines):
+            s = line.strip()
+            cells = ([c.strip() for c in s.strip("|").split("|")]
+                     if s.startswith("|") and s.endswith("|") else None)
+            if (cells and len(cells) == 5 and cells[0] != ts
+                    and cells[0] != "timestamp"):
+                old = d / f"{cells[0]}-{cells[1]}-{cells[2]}.md"
+                new = d / f"{ts}-{cells[1]}-{cells[2]}.md"
+                if old.exists():
+                    old.rename(new)
+                cells[0] = ts
+                lines[i] = "| " + " | ".join(cells) + " |"
+        p.write_text("\n".join(lines) + "\n")
 
     def test_help_exits_zero(self):
         out = run(self.root, "--help")
@@ -129,6 +163,92 @@ class ReportQueueCLI(unittest.TestCase):
         self.assertIn("json progress", doc["reports"][1]["body"])
         # newest first in the dashboard payload too
         self.assertEqual(doc["reports"][0]["kind"], "alert")
+
+    def test_identity_dedup_bumps_count_and_body(self):
+        ident = "stale-store:/tmp/x"
+        self.assertEqual(self.add("alert", "stale store detected",
+                                  identity=ident).returncode, 0)
+        out = self.add("alert", "stale store detected again", identity=ident)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1, "no new row on identity dedup")
+        self.assertTrue(rows[0][3].endswith(" ×2"), rows[0])
+        body = self.bodies_md()
+        self.assertEqual(body.count(" occurrence"), 1, body)
+        self.assertIn("- **identity:** " + ident, body)
+        # third occurrence: ×3, and the marker replaces the old one
+        self.assertEqual(self.add("alert", "third time", identity=ident)
+                         .returncode, 0)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0][3].endswith(" ×3"))
+        self.assertEqual(self.bodies_md().count(" occurrence"), 2)
+
+    def test_identity_window_expiry_and_unlimited_zero(self):
+        ident = "slow-unit:u1"
+        self.assertEqual(self.add("progress", "slow unit", identity=ident,
+                                  window=60).returncode, 0)
+        self.backdate_all()  # row is now far older than any sane window
+        out = self.add("progress", "slow unit", identity=ident, window=60)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(len(self.rows()), 2, "expired window adds a new row")
+        new_body = self.bodies_md()
+        self.assertIn("- **identity:** " + ident, new_body)
+        # --window 0 = unlimited lookback: the expired row still dedups
+        out = self.add("progress", "slow unit again", identity=ident, window=0)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 2)
+        self.assertTrue(rows[-1][3].endswith(" ×2"))
+
+    def test_different_identity_adds_new_row(self):
+        self.add("alert", "same text", identity="stale-store:/a")
+        self.add("alert", "same text", identity="stale-store:/b")
+        self.assertEqual(len(self.rows()), 2)
+
+    def test_prune_removes_listed_kinds_deletes_bodies_and_archives(self):
+        self.add("alert", "old alert one")
+        self.add("alert", "old alert two")
+        self.add("expense", "old expense")
+        self.backdate_all()
+        self.add("progress", "fresh progress")
+        arch = self.root / "arch.md"
+        out = run(self.root, "--prune", "--before", "2021-01-01T00:00:00Z",
+                  "--kinds", "alert,expense", "--archive", str(arch))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("pruned 3 rows, 3 bodies, archived to", out.stdout)
+        remaining = self.rows()
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(remaining[0][1], "progress")
+        self.assertEqual(len(self.bodies()), 1, "pruned bodies deleted")
+        text = arch.read_text()
+        self.assertIn("## pruned 2021-01-01T00:00:00Z", text)
+        for gone in ("old alert one", "old alert two", "old expense"):
+            self.assertIn(gone, text)
+        self.assertNotIn("fresh progress", text)
+
+    def test_prune_refuses_future_missing_or_bad_input(self):
+        self.add("alert", "doomed")
+        out = run(self.root, "--prune", "--before", "2999-01-01T00:00:00Z",
+                  "--kinds", "alert")
+        self.assertEqual(out.returncode, 2)
+        self.assertIn("future", out.stderr)
+        out = run(self.root, "--prune", "--kinds", "alert")
+        self.assertEqual(out.returncode, 2)
+        out = run(self.root, "--prune", "--before", "2021-01-01T00:00:00Z",
+                  "--kinds", "bogus")
+        self.assertEqual(out.returncode, 2)
+        self.assertIn("bad kind", out.stderr)
+        out = run(self.root, "--prune", "--before", "not-a-ts",
+                  "--kinds", "alert")
+        self.assertEqual(out.returncode, 2)
+        self.assertEqual(len(self.rows()), 1, "nothing pruned on refusal")
+
+    def test_help_documents_identity_and_prune(self):
+        out = run(self.root, "--help")
+        for token in ("--identity", "--window", "--prune", "--before",
+                      "--kinds", "--archive", "occurrence"):
+            self.assertIn(token, out.stdout)
 
     def cursor(self):
         p = self.root / "docs" / "project" / "report-cursor"

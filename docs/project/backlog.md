@@ -1069,3 +1069,37 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** model-bench job; probe-model-route.
 - **Review trigger:** the next quarterly bench lands a route report
   row even when nothing changes.
+
+## Host orientation pass (new-system situating)
+
+- **Problem:** on any system Hngh gets installed on, it must investigate
+  what is present — packages and install sources (pacman, AUR/yay,
+  npm/bun/bunx/uv), agent tools and their config surfaces — before it
+  can interface with that system and help its operator.
+- **Smallest useful outcome:** one orientation pass producing a
+  host-inventory artifact plus a redacted config archive
+  (`~/.local/state/hngh-automation/config-archive/`) and lane
+  declarations for `config-backup.sh`, so config governance starts from
+  day one on every host.
+- **Evidence:** the 2026-08-27 CachyOS config archive (18 entries,
+  six agent tools) and the git-back-dots subsumption inventory.
+- **Risk:** inventories that leak secrets — scan classes only, values
+  never rendered; archives stay local unless a lane declares a remote.
+- **Dependencies:** config-backup lanes; system-awareness probe.
+- **Review trigger:** a fixture host (container/chroot) yields a
+  complete inventory + archive through the standard gates.
+
+## Report-ledger retention policy
+
+- **Problem:** the report ledger grows unboundedly (6,920 rows in two
+  days of cadence output); `--prune` exists but nothing schedules it.
+- **Smallest useful outcome:** a weekly ceremony-bound prune drop-in
+  that archives alert/scheduled rows older than 30 days and lands the
+  rotation as a check-in-scale commit, keeping the dashboard unread
+  signal meaningful.
+- **Evidence:** `report-queue --prune --archive` (this change set).
+- **Risk:** pruning evidence prematurely — the archive preserves every
+  pruned row verbatim; kinds are explicit.
+- **Dependencies:** `report-queue --prune`; the autonomy ceremony slice.
+- **Review trigger:** first prune runs inside a certificate loop with
+  the archive attached to the candidate manifest.
