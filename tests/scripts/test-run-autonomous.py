@@ -4,8 +4,10 @@
 The real script runs in a disposable temp repo root (HNGH_RUN_ROOT) with
 stub siblings for generate-publication / backlog-lanes / ceremony-drive,
 so no repo file is touched, no sbcl and no network are needed.
-Contract: --help exits 0; a missing journal is generated and reported
-(progress + scheduled rows land); journal present with no queue prints
+Contract: --help exits 0; a missing journal (for the PREVIOUS day — a
+same-day journal must never satisfy the tick, its counters are not
+final) is generated and reported (progress + scheduled rows land);
+journal present with no queue prints
 "nothing due"; a Next id + >=2 open lanes + valid heartbeat card runs the
 ceremony stub from a fresh /tmp/hngh-auto- store and records the card's
 kind; a malformed card exits 2 naming it; a refusing ceremony exits 3.
@@ -22,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "run-autonomous"
 DAY = "2026-01-02"
+PREV = "2026-01-01"
 
 GEN_STUB = """#!{python}
 import os, sys
@@ -114,19 +117,31 @@ class RunAutonomousTick(unittest.TestCase):
         out = self.tick()
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("ran: journal", out.stdout)
-        self.assertTrue((self.root / "docs" / "journal" / f"{DAY}.md").exists())
+        self.assertTrue(
+            (self.root / "docs" / "journal" / f"{PREV}.md").exists())
+        self.assertFalse(
+            (self.root / "docs" / "journal" / f"{DAY}.md").exists())
         reports = self.reports_text()
         self.assertIn("progress", reports)
         self.assertIn("scheduled", reports)
         self.assertIn("stub narrative", reports)
 
     def test_journal_present_nothing_due(self):
-        (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\nalready here\n")
+        (self.root / "docs" / "journal" / f"{PREV}.md").write_text(
+            f"# {PREV}\n\nalready here\n")
         out = self.tick()
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("nothing due", out.stdout)
         self.assertEqual(self.reports_text(), "")
+
+    def test_same_day_journal_does_not_satisfy(self):
+        (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
+            f"# {DAY}\n\nnot final\n")
+        out = self.tick()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("ran: journal", out.stdout)
+        self.assertTrue(
+            (self.root / "docs" / "journal" / f"{PREV}.md").exists())
 
     def mount_card(self, item="slice-a", kind="progress", body=None):
         q = self.root / "docs" / "project" / "queue.md"
@@ -149,7 +164,7 @@ class RunAutonomousTick(unittest.TestCase):
         self.mount_card()
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
         out = self.tick()
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("ceremony slice-a complete", out.stdout)
@@ -192,7 +207,7 @@ class RunAutonomousTick(unittest.TestCase):
                              "increment lane-b")
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
 
         out = self.tick()
 
@@ -212,7 +227,7 @@ class RunAutonomousTick(unittest.TestCase):
         card = self.mount_card(kind="bogus")
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
         out = self.tick()
         self.assertEqual(out.returncode, 2, out.stdout)
         self.assertIn(card.name, out.stderr)
@@ -221,7 +236,7 @@ class RunAutonomousTick(unittest.TestCase):
         self.mount_card()
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
         out = self.tick(exit_code=1)
         self.assertEqual(out.returncode, 3, out.stdout)
         self.assertIn("ceremony refused", out.stderr)
@@ -244,7 +259,7 @@ class RunAutonomousTick(unittest.TestCase):
         (real / "path.lisp").write_text("x\n")
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
 
         out = self.tick()
 
@@ -273,7 +288,7 @@ class RunAutonomousTick(unittest.TestCase):
         card.write_text("objective A\nprogress\nlane-a\n")
         self.write_lanes_stub(2)
         (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
-            f"# {DAY}\n\npresent\n")
+            f"# {PREV}\n\npresent\n")
 
         out = self.tick()
 

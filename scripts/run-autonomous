@@ -39,7 +39,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(os.environ.get("HNGH_RUN_ROOT")
@@ -61,6 +61,16 @@ NEVER = "0000-01-01T00:00:00Z"  # never-incremented lanes rank as most due
 def today():
     return os.environ.get("HNGH_TICK_TS") \
         or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def journal_day(day):
+    """The day whose journal may now be written: the PREVIOUS day.
+    Generating a journal on its own day's first tick (00:00Z) snapshots
+    zero counters for a day that has not happened yet (2026-08-27:
+    journal frozen at '0 commits' while 24 commits landed). The
+    previous day is over, so its counters are final."""
+    return (datetime.strptime(day, "%Y-%m-%d")
+            - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def git(*cmd):
@@ -297,21 +307,22 @@ def tick(day):
     ran = False
     body = ""
 
-    # (a) journal generation
-    if not journal_exists(day):
-        code, text = generate_daily(day)
+    # (a) journal generation (for the day that is over; see journal_day)
+    jday = journal_day(day)
+    if not journal_exists(jday):
+        code, text = generate_daily(jday)
         if code != 0:
             print(f"run-autonomous: journal generation refused:\n{text}",
                   file=sys.stderr)
             return 3
-        first = first_narrative_line(day)
+        first = first_narrative_line(jday)
         code, text = run_report("progress", first)
         if code != 0:
             print(f"run-autonomous: progress report failed:\n{text}",
                   file=sys.stderr)
             return 3
         ran = True
-        body += f"journal {day} generated; "
+        body += f"journal {jday} generated; "
 
     # (b) one machine-coursed check-in-scale ceremony slice
     next_id = queue_next()
