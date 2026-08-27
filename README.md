@@ -6,12 +6,21 @@ Hngh turns development work into short, bounded cycles, plan, check, record, clo
 automated agent can run while a human keeps the final say. Every cycle leaves a paper trail of
 evidence; nothing changes the system without passing a check and being recorded. The kernel
 (`hngh.domain` plus `hngh.application`) is side-effect-free: it does nothing on its own, owns no
-background process, refuses anything unknown or unverified, and today is a library with tests,
-not a finished tool.
+background process, refuses anything unknown or unverified. Around that kernel stands a
+working system: a governance loop that certifies and executes its own repository changes,
+a cadence of single-tick timers that drive, watch, and correct the machine on every tier
+from one minute to daily, a self-review that inspects Hngh's own dashboards hourly, a time
+ledger that measures every operation so delays are noticed procedurally, and a nerve-center
+webapp — Schedule, Sessions, System, Research, Logs — where the operator sees all of it in
+one honest view.
 
 Hngh's ambition is megastructure-scale: an environment that maintains and extends itself,
 with local and remote models doing the work and the cost of that work kept visible. Its method
 is paperwork. That is not a contradiction; paperwork is the building material.
+The near-term form of that ambition is concrete: harness system configuration and package
+management on the hosts it lands on (CachyOS first), govern delegated agent sessions as
+roguelike runs that die and hand their lessons forward, alternate growth with research
+beats on a fixed rhythm, and make every interface worth looking at.
 
 ## Why
 
@@ -140,6 +149,16 @@ the current number) and an operator command surface. Implemented:
   admit worker → run-worker → close) as a single explicit operator invocation.
   It is glue over the existing surface, adds no authority, and the periodic
   invocation belongs to the operator's scheduler, never a daemon.
+- Self-watch: a time ledger measuring every operation level, an hourly
+  dashboard self-review whose findings classify themselves
+  (`unacceptable-now` / `acceptable-for-now`), oversight alerts with
+  flap-suppression, a roguelike watchdog, and a nerve-center webapp
+  (Schedule / Sessions / System / Research / Logs) with a session
+  observatory that parses live agent transcripts — thinking, tool calls,
+  user and agent entries — into collapsible, searchable, highlighted
+  columns; window spawn and tiling from the browser; all read-only
+  observability plus certificate-gated action, per the consolidated
+  route in `docs/project/roadmap.md`.
 - Full-screen dashboard TUI (`scripts/dashboard-tui`): a textual (rich)
   read-only TUI with an animated operative, an active-lanes panel, and
   live session tables, fed from the operator store through the same
