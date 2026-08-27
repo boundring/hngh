@@ -332,6 +332,15 @@ def tick(day):
                           file=sys.stderr)
                     return 3
             _, objective, kind, files = card
+            # A provisioned card is a declaration of intent; the ceremony
+            # drives only when its candidates exist on disk (a placeholder
+            # item-id candidate can never drive — attempted 2026-08-27 and
+            # it wedged the tick on invalid-candidate refusals).
+            missing = [f for f in files if not (ROOT / f).exists()]
+            if missing:
+                print(f"run-autonomous ({day}): ceremony deferred — card "
+                      f"{item} candidates missing from disk ({len(missing)})")
+                return 0
             store = f"/tmp/hngh-auto-{int(time.time())}"
             os.makedirs(store, exist_ok=True)
             code, text = drive_ceremony(store, item, objective, kind, files)

@@ -135,6 +135,13 @@ class RunAutonomousTick(unittest.TestCase):
         card = self.root / "docs" / "project" / "heartbeat" / f"{item}.slice"
         lines = body or [f"objective for {item}", kind,
                          "src/a.lisp", "tests/a.lisp"]
+        # candidates must exist on disk now that the tick defers cards
+        # whose candidates are missing (placeholder-wedge fix)
+        for cand in lines[2:]:
+            f = self.root / cand
+            f.parent.mkdir(parents=True, exist_ok=True)
+            if not f.exists() and not cand.startswith(item):
+                f.write_text("; fixture candidate\n")
         card.write_text("\n".join(lines) + "\n")
         return card
 
@@ -174,6 +181,10 @@ class RunAutonomousTick(unittest.TestCase):
              / f"{lane}.slice").write_text(
                 f"objective {lane}\nprogress\nsrc/{lane}.lisp\n"
                 f"tests/{lane}.lisp\n")
+            for cand in (f"src/{lane}.lisp", f"tests/{lane}.lisp"):
+                f = self.root / cand
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text("; fixture candidate\n")
         # lane-a's last increment is NEWER than lane-b's → lane-b most due
         self.prewrite_report("2026-01-02T00:00:00Z", "progress",
                              "increment lane-a")
@@ -244,6 +255,31 @@ class RunAutonomousTick(unittest.TestCase):
         lines = card.read_text().splitlines()
         self.assertEqual(lines[0], "A")
         self.assertEqual(lines[2], "lane-a")
+
+    def test_placeholder_card_defers_ceremony_instead_of_failing(self):
+        """A card whose candidates don't exist on disk (placeholder
+        item-id) must defer the ceremony gracefully — exit 0, no
+        ceremony invocation, no crash (2026-08-27 autonomy wedge)."""
+        q = self.root / "docs" / "project" / "queue.md"
+        q.parent.mkdir(parents=True, exist_ok=True)
+        q.write_text(
+            "# Queue\n\n"
+            "id\tstatus\ttitle\tevidence\n"
+            "lane-a\tqueued\tA\tx\n"
+            "lane-b\tqueued\tB\ty\n\n"
+            "## Next\n\n- **lane-a** do A\n")
+        card = self.root / "docs" / "project" / "heartbeat" / "lane-a.slice"
+        card.parent.mkdir(parents=True, exist_ok=True)
+        card.write_text("objective A\nprogress\nlane-a\n")
+        self.write_lanes_stub(2)
+        (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
+            f"# {DAY}\n\npresent\n")
+
+        out = self.tick()
+
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("ceremony deferred", out.stdout)
+        self.assertEqual(self.argv_log.read_text() if self.argv_log.exists() else "", "")
 
 
 if __name__ == "__main__":
