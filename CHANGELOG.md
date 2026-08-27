@@ -6,6 +6,30 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-08-27
+
+#### Added
+
+- Closed P1 #1.5: machine-steered course selection extracted from the
+  service tick into the pure kernel:
+  - `src/domain/course.lisp` — pure `course-candidate` value and the
+    fixed written ranking policy (mounted card first, ascending last
+    increment with never-incremented most due, queue priority
+    tiebreak), with `select-course-candidate` reasons.
+  - `src/application/select-course.lisp` + ports — the `select-course`
+    use case over `course-selection-ports` (fetch/clock/record),
+    accepting only validated candidates, refusing empty sets as
+    `no-courseable-lanes`, failing closed on callback faults.
+  - `scripts/hngh select-course ID:MOUNTED:TS:RANK...` CLI dispatch
+    (exit 0 accepted / 1 refused / 2 malformed) and the
+    `course <id>: <reasons>` renderer.
+  - `scripts/run-autonomous` now asks the kernel selector first and
+    falls back to the internal rule only when the kernel is
+    unavailable or refuses (fail-closed, never fabricated).
+  - Unit suites `tests/domain/test-course.lisp` and
+    `tests/application/test-select-course.lisp` wired into
+    `tests/run.lisp`; `make test` green.
+
 ### 2026-08-26
 
 #### Added

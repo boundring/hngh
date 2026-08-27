@@ -430,6 +430,7 @@ commands:~%~
   review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
   list-pins PATH  wake-peer RUN PINS-FILE PEER  run-worker RUN task=T [payload=X]~%~
+  select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...~%~
 options: --store=PATH record the run ledger under PATH"))
 
 (defun parse-option (argument)
@@ -443,6 +444,19 @@ without = is (values NIL ARGUMENT). A leading -- is dropped so
           (values (intern (string-upcase name) :keyword)
                   (subseq argument (1+ eq))))
         (values nil argument))))
+
+(defun split-course-spec (spec)
+  "Split SPEC into (values identifier mounted-text last-increment-text
+rank-text) by ID:MOUNTED:TS:RANK, where TS may itself contain colons
+(ISO timestamps). Returns NIL when the spec lacks the required shape."
+  (let* ((first (position #\: spec))
+         (second (and first (position #\: spec :start (1+ first))))
+         (last (position #\: spec :from-end t)))
+    (when (and first second last (< first second) (<= second last))
+      (values (subseq spec 0 first)
+              (subseq spec (1+ first) second)
+              (subseq spec (1+ second) last)
+              (subseq spec (1+ last))))))
 
 (defun split-argv (args)
   "Separate operator ARGS into (values positionals store-path bad-option).
@@ -1743,6 +1757,82 @@ it never grants a mutation certificate."
     (:refused (values (hngh.presentation:render result) 1))
     (:fault (values (hngh.presentation:render result) 3))))
 
+(defun parse-course-candidate-spec (spec)
+  "Parse one ID:MOUNTED-P:LAST-INCREMENT:RANK candidate spec into a
+domain course candidate. Returns (values candidate error-text); exactly
+one of the two is non-nil."
+  (multiple-value-bind (identifier mounted-text last-text rank-text)
+      (split-course-spec spec)
+    (unless identifier
+      (return-from parse-course-candidate-spec
+        (values nil "expected id:mounted-p:last-increment:rank")))
+      (when (zerop (length identifier))
+        (return-from parse-course-candidate-spec
+          (values nil "candidate identifier is empty")))
+      (let ((mounted-p
+              (cond
+                ((member mounted-text '("true" "1") :test #'string-equal) t)
+                ((member mounted-text '("false" "0") :test #'string-equal) nil)
+                (t (return-from parse-course-candidate-spec
+                     (values nil
+                             (format nil "bad mounted flag: ~A"
+                                     mounted-text))))))
+            (last-increment-ts
+              (if (zerop (length last-text)) nil last-text))
+            (priority-rank
+              (handler-case (parse-integer rank-text)
+                (error () nil))))
+        (unless (and priority-rank (not (minusp priority-rank)))
+          (return-from parse-course-candidate-spec
+            (values nil (format nil "bad priority rank: ~A" rank-text))))
+        (handler-case
+            (values (hngh.domain:make-course-candidate
+                     :identifier identifier
+                     :mounted-p mounted-p
+                     :last-increment-ts last-increment-ts
+                     :priority-rank priority-rank)
+                    nil)
+          (error (condition)
+            (values nil (format nil "~A" condition)))))))
+
+(defun dispatch-select-course (args store clock)
+  "select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...: run the pure
+kernel course selector over explicit candidate specs and print the
+machine-steered choice. A pure advisory read: touches no ledger and
+spawns no process. Exit 0 accepted, 1 refused/invalid, 2 malformed."
+  (declare (ignore store))
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when options
+      (return-from dispatch-select-course
+        (values (format nil "unknown option: ~A~%~A" (cdar options)
+                        (command-usage))
+                2)))
+    (unless positionals
+      (return-from dispatch-select-course
+        (values (format nil "select-course needs candidate specs~%~A"
+                        (command-usage))
+                2)))
+    (let ((candidates '()))
+      (dolist (spec positionals)
+        (multiple-value-bind (candidate error-text)
+            (parse-course-candidate-spec spec)
+          (when error-text
+            (return-from dispatch-select-course
+              (values (format nil "malformed select-course: ~A~%~A"
+                              error-text (command-usage))
+                      2)))
+          (push candidate candidates)))
+      (let* ((ports (hngh.application:make-course-selection-ports
+                     :fetch-candidates (lambda () nil)
+                     :clock-now clock))
+             (result (hngh.application:select-course
+                      ports (nreverse candidates))))
+        (values (hngh.presentation:render result)
+                (if (eq :accepted
+                        (hngh.application:course-selection-result-status
+                         result))
+                    0 1))))))
+
 (defun dispatch-command* (positionals store clock mutation-ports gather-ports
                               review-ports terminal-ports
                               federation-ports attestation-ports wake-ports
@@ -1775,6 +1865,8 @@ it never grants a mutation certificate."
      (dispatch-wake-peer args store wake-ports))
     ((string= command "run-worker")
      (dispatch-run-worker args store worker-ports))
+    ((string= command "select-course")
+     (dispatch-select-course args store clock))
     ((string= command "present") (dispatch-present args store clock))
     (t (values (format nil "unknown command: ~A~%~A" command (command-usage))
                2)))))

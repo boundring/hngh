@@ -62,7 +62,7 @@ silent continuation of an old one.
 ## Status
 
 Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus a
-suite past 2,774 checks — the count grows with every closed vocabulary, and the run prints
+suite past 2,814 checks — the count grows with every closed vocabulary, and the run prints
 the current number) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
