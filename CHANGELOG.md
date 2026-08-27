@@ -10,6 +10,20 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Nerve center unification** (hngh-automation `e04b6be`, `6a5ee15`,
+  `f67f972`): the dashboard consolidates into one page with formal tabs
+  (Health, Counts, Timeline, Schedule, Queue, Lanes, Agents, Reports,
+  Digest, Sessions), fixing dead tabs (a triple state-system collision)
+  and a cold-load mount pairing bug. New: session-per-column transcript
+  observatory (2,688 parsed conversation entries across 24 omp
+  sessions, collapsible thinking/tool blocks, search, redaction),
+  unified Schedule view (recurring vs one-off, system backdrop
+  compaction, honesty-labelled estimates), `POST /tile` window tiling
+  (Phi 62/38 profiles, KWin-snapped, opt-in), and
+  `jobs/window-tile.py`.
+- **Operator session notes**: `docs/project/session-notes-2026-08-27.md`
+  — the day's direction, intent, designs, decisions, and forward work,
+  harvested and tagged `[landed]`/`[queued]`/`[decision-pending]`.
 - Acceleration wave (four parallel slices, each committed through its own
   certificate loop):
   - `scripts/omp-bridge` closes the roguelike delegation loop:
