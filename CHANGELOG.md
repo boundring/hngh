@@ -10,6 +10,34 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- Acceleration wave (four parallel slices, each committed through its own
+  certificate loop):
+  - `scripts/omp-bridge` closes the roguelike delegation loop:
+    `--run-start` gates a delegated session behind hngh admission
+    (create-run + admit-transport `:worker`, loadout token/time limits as
+    the delegated budget, persistent `OMP_BRIDGE_STORE`), `--run-end`
+    closes it with a client-validated disposition; `HNGH_BIN` env seam
+    for hermetic tests; suite `tests/scripts/test-omp-bridge.py`
+    (9 checks) wired into `make test`.
+  - Interface-plan S3: `scripts/hngh status` — one truth-telling spine
+    read (verdict-first: `all-clear`/`attention`/`unavailable` from the
+    data.json digest + system.json headroom booleans; system/active/next/
+    roster panes; `stale (Nm)` freshness; all panes fail closed to
+    `unavailable`). Optional sources via `HNGH_STATUS_*` env overrides;
+    +37 kernel checks (suite now past 2,851).
+  - Interface-plan S1: truth-telling dashboard on the readout spine —
+    verdict-first hero + state legend (evacuated = finished & detached),
+    display-only `ETA` → `Depends on` rename, reorder-by-usefulness
+    (active work floats, stable otherwise), unified `stale (Nm)` pane
+    labels, additive `verdict` key on `--json`.
+  - `docs/design/display-register-spec.md` — the slow-tier register
+    consolidation: one Nihei-register spec (voice/captions, gen-4 measured
+    proportions, palette discipline, perceptual-only vocabulary table,
+    dosage ladder, future grade hooks), consolidating the dormant
+    aesthetic decisions.
+  - `.gitignore` now excludes `docs/project/report-bodies/` (write-once
+    ledger artifacts, never committed): git porcelain scans drop from
+    6,312 rows to 25, speeding every evidence/ceremony/watchdog gate.
 - Closed P1 #1.5: machine-steered course selection extracted from the
   service tick into the pure kernel:
   - `src/domain/course.lisp` — pure `course-candidate` value and the

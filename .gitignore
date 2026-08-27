@@ -5,4 +5,4 @@
 /.codegraph/
 __pycache__/
 .hermes/
-/.omp/
+docs/project/report-bodies/

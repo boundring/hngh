@@ -63,7 +63,7 @@ adapter. `hngh.main` is active as the composition root and CLI entry point:
 `make-run-harness` composes the use cases over injected or default port
 adapters, coordinator functions wire installed adapters through injected
 transports, `dispatch-command` processes the closed CLI operation set
-(15 commands across the run lifecycle, evidence, review, governance,
+(19 commands across the run lifecycle, evidence, review, governance,
 federation, and attestation — enumerated in the root README), and
 `scripts/hngh` provides an executable SBCL wrapper. No default model or
 terminal transport exists in active source: both routes are composed

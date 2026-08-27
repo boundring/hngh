@@ -137,5 +137,9 @@ authorize a future action.
 - `2026-08-27-p2-design-contracts.md` records the four ceremony-ready
   P2 DESIGN contracts (command center architecture, system awareness
   map, buddy menu spec, gamified-run model) and their indexing.
+- `2026-08-27-acceleration-wave.md` records the four-slice acceleration
+  wave: the roguelike delegation wrap (`omp-bridge --run-start/--run-end`),
+  the S3 `status` verb, the S1 truth-telling dashboard, and the display
+  register spec — with the four lessons harvested to the llm-wiki.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

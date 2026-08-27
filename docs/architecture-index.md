@@ -73,6 +73,7 @@ gates a build phase in the [master plan](project/master-plan.md).
 | [System awareness map](design/system-awareness-map.md) | probe architecture, `system.json` flow, flap-suppressed alerts, headroom thresholds | S2 / system awareness rung |
 | [Pixel-RPG buddy menu spec](design/buddy-menu-spec.md) | summoned non-nagging overlay, quest ask, state→animation mapping, QML6 delivery | P6 operative surface |
 | [Gamified-run model](design/gamified-runs.md) | runs-as-stories events, roguelike death rule, honesty leash | P6 gamification |
+| [Display register](design/display-register-spec.md) | the Nihei register as one law: voice/captions, measured proportions, palette discipline, perceptual-only vocabulary, dosage ladder, grade hooks | every operator-facing surface (P3+) |
 
 ## Legend
 
