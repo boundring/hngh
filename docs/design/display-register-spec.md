@@ -170,6 +170,13 @@ the vision-rubric loop of [interface-grading.md](interface-grading.md).
   mote, not chrome or borders;
 - unmapped-state fallback: a state outside the event vocabulary renders its
   literal term.
+- text-legibility floor: at 100% zoom, no label, chip, or bar text clips
+  horizontally or renders vertically squashed below its own line height;
+  overflow truncates with an ellipsis and the full text rides the tooltip
+  (2026-08-27 intake: Schedule items are illegible at 100%);
+- name completeness: session and agent identifiers render in full on
+  demand — expandable line or tooltip — and are never permanently
+  truncated as the only readable form of the name.
 
 ## 8. Non-goals
 
