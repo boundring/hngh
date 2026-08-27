@@ -46,8 +46,10 @@ class DashboardExport(unittest.TestCase):
             self.assertEqual(out.returncode, 0, out.stderr)
             html = target.read_text()
             self.assertTrue(html.startswith("<!doctype html>"))
-            self.assertIn("<h2>timeline</h2>", html)
-            self.assertIn("<h2>queue</h2>", html)
+            # S1 staleness may decorate headings with a stale span;
+            # assert the section heading prefix, not an exact match.
+            self.assertIn("<h2>timeline", html)
+            self.assertIn("<h2>queue", html)
 
     def test_sessions_never_crash_without_store(self):
         import importlib.machinery
