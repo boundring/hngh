@@ -273,7 +273,12 @@ def provision_card(item, reason):
         if len(parts) == 4 and parts[0].strip() == item:
             title = parts[2].strip() or item
             evidence = parts[3].strip()
-    files = [p.strip() for p in evidence.split() if p.strip()]
+    # Only trust evidence words that are real repo-relative paths; a
+    # prose evidence field must degrade to the item-id placeholder, or
+    # the card wedges every future tick with an invalid candidate
+    # manifest (observed 2026-08-27: node-lattice-admission).
+    files = [w for w in (p.strip() for p in evidence.split())
+             if w and "/" in w and (ROOT / w).is_file()]
     card = CARDS / f"{item}.slice"
     card.write_text(f"{title}\nprogress\n" +
                     ("\n".join(files) if files else f"{item}") + "\n")
