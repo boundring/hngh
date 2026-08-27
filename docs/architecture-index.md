@@ -61,6 +61,19 @@ and `self-optimization-continuum` (a standing self-review that emits
 `optimize: <suggestion>` breadcrumbs; nothing changes its own timer definitions
 without a ceremony).
 
+## P2 DESIGN contracts
+
+The four P2 design contracts (2026-08-27) close the command-center,
+awareness, buddy, and gamification designs; each is ceremony-ready and
+gates a build phase in the [master plan](project/master-plan.md).
+
+| Contract | Covers | Gates |
+|---|---|---|
+| [Command center architecture](design/command-center.md) | CLI+GUI center over one spine, S1–S8 mapping, control & awareness contracts | P3 (S1–S5), P4 (S6–S8) |
+| [System awareness map](design/system-awareness-map.md) | probe architecture, `system.json` flow, flap-suppressed alerts, headroom thresholds | S2 / system awareness rung |
+| [Pixel-RPG buddy menu spec](design/buddy-menu-spec.md) | summoned non-nagging overlay, quest ask, state→animation mapping, QML6 delivery | P6 operative surface |
+| [Gamified-run model](design/gamified-runs.md) | runs-as-stories events, roguelike death rule, honesty leash | P6 gamification |
+
 ## Legend
 
 - **queue.tsv id** — rotation handle in [queue.tsv](project/queue.md); `id <tab> status <tab> title <tab> evidence` rows; `status` advances `queued → active → done`.

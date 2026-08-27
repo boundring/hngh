@@ -134,5 +134,8 @@ authorize a future action.
   selection extracted from the service tick into the pure kernel
   (domain policy, application use case, CLI dispatch, cadence wiring)
   with the full Lisp + Python gate green.
+- `2026-08-27-p2-design-contracts.md` records the four ceremony-ready
+  P2 DESIGN contracts (command center architecture, system awareness
+  map, buddy menu spec, gamified-run model) and their indexing.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
