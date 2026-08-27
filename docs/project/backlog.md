@@ -1162,3 +1162,29 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** dashboard-server; the ui-config layer.
 - **Review trigger:** every launcher key documented, validated, and
   demonstrated once against a live session.
+
+## Self-supervision tick (Hngh watches its own agents)
+
+- **Problem:** delegated-run supervision is currently performed by the
+  harness agent (reading transcripts, noticing stalls, debugging
+  integration seams). In the long run Hngh's operations are Hngh's:
+  every supervision pattern the harness agent exercised must become a
+  Hngh-native mechanism.
+- **Smallest useful outcome:** a supervision tick extending the
+  watchdog: parse delegated-run session transcripts (jsonl), compute
+  per-run phase (discovering / writing / fixing-own-regressions /
+  verifying — classified from tool-call patterns), detect stalls (no
+  tool-call progress beyond budget), and emit flap-suppressed alert
+  rows; roguelike replacement (close-run :dead + re-provision) for
+  budget-expired runs rides the existing loop.
+- **Evidence:** the 2026-08-27 transcript-analysis session proved the
+  pattern live (phase + tool-density computed for 30+ agent runs in one
+  pass); the watchdog already observes deaths — this adds progress
+  observation.
+- **Risk:** transcript formats vary by harness (omp schema derived from
+  LibScout/agent specimens; others differ) — per-harness parsers behind
+  one interface; phase classification is heuristic and stays advisory.
+- **Dependencies:** the roguelike wrap (runs to supervise);
+  sessions-feed transcript resolution; report-queue identities.
+- **Review trigger:** a seeded stalled fixture run is flagged with the
+  correct phase within one tick, and a healthy run is never flagged.

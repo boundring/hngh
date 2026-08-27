@@ -146,12 +146,15 @@ is a "no" until known.
 
 ## Today and next
 
-Today Hngh is a small library plus fixture tests: a pure kernel with closed run lifecycles,
-six application use cases, governance policy, a bounded read-only worker task behind a port,
-and read-only verifiers for candidate evidence (and, historically, the retirement archive).
-There is no daemon; the worker is task-scoped, not a persistent agent. The
-direction ahead is set out in the [roadmap](project/roadmap.md) — read it for what gets built
-next and in what order.
+Today Hngh is a self-watching control system: a pure kernel with closed run lifecycles,
+governance policy, nineteen operator verbs, a cadence of single-tick timers that drive and
+correct the machine on every tier from one minute to daily, a nerve-center webapp
+(Schedule, Sessions, System, Research, Logs) with a session observatory that reads live
+agent transcripts, and a time ledger that measures every operation so delays are noticed
+procedurally. There is no daemon; every timer is an operator-installed single tick. The
+direction ahead — seven named stages with exit criteria — is set out in the
+[consolidated route](project/roadmap.md); read it for what gets built next and in what
+order.
 
 The long horizon is a mesh, not a bigger machine. Each Hngh node guards its own small
 boundary — a machine on a shelf, a hand-held that mostly sleeps, a laptop whose network card
