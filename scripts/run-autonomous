@@ -224,6 +224,28 @@ def slice_card(item):
     return ("ceremony-drive", lines[0], lines[1], lines[2:])
 
 
+def provision_card(item, reason):
+    """Self-start leg: when choose_course picks a lane that has NO
+    mounted card, provision one so the NEXT beat can mount and drive it.
+    The card objective is the queue row's title (or the item id) and
+    kind is progress; the file list is the proposal's evidence paths
+    when found in the queue TSV, else the item id as a placeholder
+    candidate. Provisioning is advisory — the actual ceremony still
+    runs only through the certificate gates on a later tick."""
+    q = QUEUE.read_text().splitlines()
+    title, evidence = item, ""
+    for line in q:
+        parts = line.split("\t")
+        if len(parts) == 4 and parts[0].strip() == item:
+            title = parts[2].strip() or item
+            evidence = parts[3].strip()
+    files = [p.strip() for p in evidence.split() if p.strip()]
+    card = CARDS / f"{item}.slice"
+    card.write_text(f"{title}\nprogress\n" +
+                    ("\n".join(files) if files else f"{item}") + "\n")
+    return card
+
+
 def drive_ceremony(store, item, objective, kind, files):
     out = subprocess.run(
         [str(CEREMONY), f"--store={store}", objective, *files],
@@ -285,6 +307,24 @@ def tick(day):
                 return 3
             ran = True
             body += f"ceremony {item} complete; "
+        elif chosen:
+            # self-start: no card mounted for the chosen course — provision
+            # one now so the next beat drives it (advisory; ceremony stays
+            # certificate-gated on the later tick).
+            try:
+                provision_card(chosen, reasons)
+                code, text = run_report(
+                    "scheduled", f"course {chosen} provisioned: {reasons}")
+                if code != 0:
+                    print(f"run-autonomous: provision report failed:\n{text}",
+                          file=sys.stderr)
+                    return 3
+                ran = True
+                body += f"course {chosen} provisioned; "
+            except OSError as exc:
+                print(f"run-autonomous: provision refused:\n{exc}",
+                      file=sys.stderr)
+                return 3
 
     # (c) a scheduled report when any timer-driven piece ran
     if ran:
