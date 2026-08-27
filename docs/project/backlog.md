@@ -1188,3 +1188,55 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   sessions-feed transcript resolution; report-queue identities.
 - **Review trigger:** a seeded stalled fixture run is flagged with the
   correct phase within one tick, and a healthy run is never flagged.
+
+## Research lines: user controls
+
+- **Problem:** the Research view is read-only; the operator cannot add a
+  new line of research or attach notes/steering to existing lines.
+- **Smallest useful outcome:** from the Research tab, the operator adds
+  a research line (name + intent; lands in backlog as a proposal-ready
+  lane) and attaches notes or steering commentary — affecting (rides the
+  certificate gates like any steer) or non-affecting (annotation only) —
+  to lines in any state (active, completed, in-proposal).
+- **Evidence:** operator directive 2026-08-27 (evening, "first user
+  controls").
+- **Risk:** user-added lines bypassing governance — additions are
+  proposals by default; only the affecting class touches cadence or
+  gates, and only through the loop.
+- **Dependencies:** research view; report-queue identities; the
+  certificate loop for affecting steers.
+- **Review trigger:** an added line appears in backlog + Research view;
+  an affecting note lands as a deduped steer row; a non-affecting note
+  never touches a gate.
+
+## Memory surface (llm-wiki integration)
+
+- **Problem:** Hngh's harvested lessons and memory live in the llm-wiki
+  and session notes — invisible on any operator surface.
+- **Smallest useful outcome:** a Memory tab/panel listing wiki sources
+  and recent lessons (read-only first), searchable, linked to the runs
+  and waves that produced them.
+- **Evidence:** operator directive 2026-08-27 ("easy opportunity for
+  interfacing with llm-wiki").
+- **Risk:** memory display implying memory authority — lessons inform,
+  never decide (the wiki is already a record, not a gate input).
+- **Dependencies:** llm-wiki vault; research view patterns.
+- **Review trigger:** the panel renders the real vault index and every
+  displayed lesson links to its source record.
+
+## Startup launch flow
+
+- **Problem:** starting work means opening a terminal, an omp session,
+  and the dashboard separately, by hand.
+- **Smallest useful outcome:** from the dashboard (or one command), the
+  operator fires up a live agentic session for continuing Hngh and
+  system work — an omp/agent session spawned, wrapped by the roguelike
+  run-start, and visible in the observatory — with the dashboard open
+  beside it.
+- **Evidence:** operator directive 2026-08-27 ("dashboard at startup…
+  immediately fire up an agentic session").
+- **Risk:** desktop spawn is mutation — allowlisted launchers only
+  (existing pattern); the spawned session is wrapped, never raw.
+- **Dependencies:** the roguelike wrap; /spawn endpoint; ui-config.
+- **Review trigger:** one click spawns a session that appears in the
+  observatory within one feed tick, already run-wrapped.
