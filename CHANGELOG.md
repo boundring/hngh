@@ -44,6 +44,12 @@ lives under Pre-release / early development until the first release.
     (create it first, or drop --store)` exit 2 instead of a raw
     `transport-fault` exit 3; existing stores proceed unchanged, all
     other faults stay faults (+4 checks, suite past 2,855).
+  - `scripts/run-autonomous provision_card` no longer turns a prose
+    evidence field into garbage candidate paths (the
+    node-lattice-admission card wedged every autonomy tick with
+    `invalid candidate manifest`, exit 3): only real repo-relative
+    paths are kept, prose degrades to the item-id placeholder (+1
+    regression test; wedged card removed).
 - Closed P1 #1.5: machine-steered course selection extracted from the
   service tick into the pure kernel:
   - `src/domain/course.lisp` — pure `course-candidate` value and the

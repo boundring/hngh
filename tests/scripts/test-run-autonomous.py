@@ -215,6 +215,36 @@ class RunAutonomousTick(unittest.TestCase):
         self.assertEqual(out.returncode, 3, out.stdout)
         self.assertIn("ceremony refused", out.stderr)
 
+    def test_provision_degrades_prose_evidence_to_placeholder(self):
+        """A queue row whose evidence column is prose (not paths) must
+        provision a card with the item id as the placeholder candidate —
+        never prose words, which wedge every later tick with an invalid
+        candidate manifest (2026-08-27 node-lattice-admission wedge)."""
+        q = self.root / "docs" / "project" / "queue.md"
+        q.parent.mkdir(parents=True, exist_ok=True)
+        q.write_text(
+            "# Queue\n\n"
+            "id\tstatus\ttitle\tevidence\n"
+            "lane-a\tqueued\tA\tbacklog entry; README vision\n"
+            "lane-b\tqueued\tB\treal/path.lisp other\n\n"
+            "## Next\n\n- **lane-a** do A\n")
+        real = self.root / "real"
+        real.mkdir()
+        (real / "path.lisp").write_text("x\n")
+        self.write_lanes_stub(2)
+        (self.root / "docs" / "journal" / f"{DAY}.md").write_text(
+            f"# {DAY}\n\npresent\n")
+
+        out = self.tick()
+
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("course lane-a provisioned", out.stdout)
+        card = (self.root / "docs" / "project" / "heartbeat"
+                / "lane-a.slice")
+        lines = card.read_text().splitlines()
+        self.assertEqual(lines[0], "A")
+        self.assertEqual(lines[2], "lane-a")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

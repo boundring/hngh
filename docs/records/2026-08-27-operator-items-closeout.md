@@ -30,6 +30,15 @@ certificate commits landed 2026-08-27).
    secret scan is correctly refusing `~/.hermes/config.yaml`
    (token assignment) — reset-failed only, left enabled; the token
    needs an owner decision (remove from tracked set or ignore-list).
+5. **Autonomy-tick wedge (found during the unit sweep)** —
+   `hngh-autonomy.service` failed exit 3 every tick:
+   `provision_card` had turned the node-lattice-admission queue row's
+   prose evidence field ("backlog entry; README vision") into garbage
+   candidate paths, so the tick's ceremony always died on
+   `invalid candidate manifest`. Fixed: only real repo-relative paths
+   are kept, prose degrades to the item-id placeholder (+1 regression
+   test); the wedged card was removed and the loop re-provisions it
+   correctly on the next tick.
 
 ## Evidence
 
