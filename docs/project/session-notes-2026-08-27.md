@@ -284,3 +284,25 @@ responding to them:
 - **The horizon**: Hngh improving itself rather than oh-my-pi improving
   it — supervision, scheduling, and correction become Hngh-native
   (self-supervision tick rung). [landed rung]
+
+### Addendum — the stage-3 wrap wave (third evening session)
+
+All four stage-3 exit criteria witnessed; roadmap State moved `next` →
+`landing`. [landed] Fresh-eyes review of the acceleration wave returned
+sound-to-build-on with two nits — both fixed (AUTO `9a8d647`, `a004d74`).
+[landed] The 8,800-row stale-store alert backlog pruned through the
+ledger's own prune gate; every ceremony store from the flap archived or
+disposed (`M3` was receipts-only, never armed). [landed] Wrap witnessed
+live: run-1 ran start → observatory `working` → `cancelled` end-to-end
+(`b7d78f7`) — the persistent bridge store is single-use by kernel
+design, so closed records rotate into `bridge/<ts>-<run>/` subdirs.
+[landed] Auto-replace: seeded stall flagged + closed `dead` +
+re-provisioned in one unattended tick (`e44a09d`); found and fixed a
+real supervision bug — UTC record timestamps parsed as local time
+skewed stall ages by the UTC offset. [landed] Per-lane medians +
+actual bars rendered beside projections (`4ea4bdd`). [queued] The
+larger pattern behind four render bugs: schedule feed and time ledger
+share no canonical lane identity — make the lane name the join key at
+the feed level; and the dashboard is the only component without a
+selfcheck rung — a headless page-level selfcheck would collapse every
+UI verification loop into one command.

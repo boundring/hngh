@@ -125,6 +125,33 @@ lives under Pre-release / early development until the first release.
     `perceptual:true` honesty leash.
   - Indexed in `docs/architecture-index.md` and the
     `docs/README.md` read order.
+- Stage-3 "Roguelike delegation live" wave (hngh-automation
+  `9a8d647`, `a004d74`, `b7d78f7`, `e44a09d`, `4ea4bdd`; hngh
+  `600b993`), all four stage-3 exit criteria witnessed:
+  - Ledger hygiene + hardening: stale-store flap backlog pruned
+    (8,876 alert rows archived to the gitignored report-bodies/,
+    progress rows untouched), `journal_day` hardened against
+    full-ISO `HNGH_TICK_TS` (+1 regression test, suite 11),
+    AUTO `.gitignore` runtime markers, gantt theme-read guard.
+  - Wrap witnessed live: bridge runs render as observatory
+    `working` (terminal states pass through); a real delegation
+    cycle ran start → `working` → `cancelled` end-to-end with the
+    run visible in `dashboard/sessions.json` at every step.
+  - Roguelike auto-replace: a stalled bridge-store run is closed
+    `dead`, its record rotates into a timestamped bridge subdir,
+    and `omp-bridge --run-start` re-provisions the same mission in
+    one unattended tick (hermetic stub test + live seeded stall;
+    supervision UTC timestamp parse fixed — local `mktime` skewed
+    stall ages by the UTC offset).
+  - Per-lane medians + actuals: cadence drop-ins time themselves
+    into `logs/drop-in-timing.log`; the time ledger gains
+    `dropin:<name>` and `bridge:<slug>` walls (closed runs only —
+    hngh close receipts carry no timestamp, mtime is the close
+    moment); gantt draws one solid actual bar per anchored lane at
+    its real last-run epoch beside the dashed projections
+    (source-labelled tooltip; exact lane-unit identity, dense-band
+    lanes included; embedded Schedule view now feeds the ledger to
+    the engine).
 
 ### 2026-08-26
 
