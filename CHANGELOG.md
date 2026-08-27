@@ -38,6 +38,12 @@ lives under Pre-release / early development until the first release.
   - `.gitignore` now excludes `docs/project/report-bodies/` (write-once
     ledger artifacts, never committed): git porcelain scans drop from
     6,312 rows to 25, speeding every evidence/ceremony/watchdog gate.
+- Closed both upstream papercuts flagged by the automation digest:
+  - `create-run --store=/missing/dir` (and every command through
+    `dispatch-command`) now refuses with `store directory missing: PATH
+    (create it first, or drop --store)` exit 2 instead of a raw
+    `transport-fault` exit 3; existing stores proceed unchanged, all
+    other faults stay faults (+4 checks, suite past 2,855).
 - Closed P1 #1.5: machine-steered course selection extracted from the
   service tick into the pure kernel:
   - `src/domain/course.lisp` — pure `course-candidate` value and the

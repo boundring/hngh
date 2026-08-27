@@ -136,8 +136,22 @@ is captured so malformed-invocation tests stay quiet."
 
 ;;; Transport faults exit 3 --------------------------------------------------
 
-(let ((fault (dispatch '("present") :root "/nonexistent-hngh-root-xyz/")))
-  (check (= 3 (exit-code fault)) "a missing store root is a transport fault"))
+;;; A missing store directory is refused up front (exit 2), for every
+;;; command, since the check lives in DISPATCH-COMMAND itself. An existing
+;;; store root still proceeds; a root that exists but is a file remains a
+;;; transport fault.
+
+(let ((refusal (dispatch '("create-run" "M" "R") :root "/nonexistent-hngh-root-xyz/")))
+  (check (= 2 (exit-code refusal)) "create-run with a missing store is refused")
+  (check (has-output "store directory missing" refusal)
+         "the refusal names the missing store directory")
+  (check (has-output "/nonexistent-hngh-root-xyz" refusal)
+         "the refusal names the path"))
+(let ((refusal (dispatch '("present") :root "/nonexistent-hngh-root-xyz/")))
+  (check (= 2 (exit-code refusal)) "present with a missing store is refused too"))
+(let ((refusal (dispatch +create-args+ :root "/nonexistent-hngh-root-xyz/")))
+  (check (= 2 (exit-code refusal))
+         "a full create-run with a missing store is refused"))
 (let ((file (uiop:with-temporary-file (:pathname p :keep t) p)))
   (check (= 3 (exit-code (dispatch '("present") :root file)))
          "a store root that is a file is a transport fault"))

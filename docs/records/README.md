@@ -141,5 +141,10 @@ authorize a future action.
   wave: the roguelike delegation wrap (`omp-bridge --run-start/--run-end`),
   the S3 `status` verb, the S1 truth-telling dashboard, and the display
   register spec — with the four lessons harvested to the llm-wiki.
+- `2026-08-27-operator-items-closeout.md` records the dashboard's three
+  operator items closed at the source: the missing-store friendly
+  refusal (kernel, exit 2), the timestamped wake store, the MiniMax-H3
+  bench drop, and the failed-unit sweep (calligra reset,
+  gbd-agent-configs root-caused and flagged).
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
