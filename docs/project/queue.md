@@ -12,17 +12,17 @@ node-lattice-admission	queued	Node-lattice admission rung	backlog entry; README 
 bridge-operator-host	queued	Bridge-as-operator-host (run → worker → review → certify)	backlog entry; bridge README
 doc-sync-loop	done	Documentation-sync loop (make numbers guard)	rotated 2026-08-25 by rotate-queue
 key-rotation-freshness	queued	Evidence-freshness + key-rotation rung	backlog entry; node-lattice risk
-credential-rotation-auto	queued	Full no-operator credential/token rotation + health alerts	2026-08-26 STATE 401; folds into key-rotation-freshness
+credential-rotation-auto	done		folded into key-rotation-freshness (retirement lane) 2026-08-27 — Full no-operator credential/token rotation + health alerts	2026-08-26 STATE 401; folds into key-rotation-freshness
 pooled-hardware	queued	Pooled hardware / priced routes rung	README Where this is going
 tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
-push-self-sufficiency	queued	Repos push their own verified commits (sweep + post-validation)	operator directive 2026-08-26
+push-self-sufficiency	done		ceremony-drive auto-push proven both repos 2026-08-27 — Repos push their own verified commits (sweep + post-validation)	operator directive 2026-08-26
 cadence-continuum	queued	Timing tiers: month/week/day/hour/10m/5m/1m + ad-hoc	operator directive 2026-08-26
 activity-cadence	queued	Routine project activities on the continuum (review→comms), fleet-scaled	operator directive 2026-08-26
-governance-vocabulary	queued	Relax ritual/ceremony terms to flexible governance vocabulary	operator directive 2026-08-26; check-in-scale
-agent-live-view	queued	Automatic subagent work view integrated into the dashboard	operator directive 2026-08-26; folds into ux-hardening
+governance-vocabulary	done		vocabulary relaxed; records use governance terms 2026-08-27 — Relax ritual/ceremony terms to flexible governance vocabulary	operator directive 2026-08-26; check-in-scale
+agent-live-view	done		session observatory live on nerve center 2026-08-27 — Automatic subagent work view integrated into the dashboard	operator directive 2026-08-26; folds into ux-hardening
 surface-evolution-loop	queued	Evolutionary design/development loop for all operator surfaces	operator directive 2026-08-26; extends dancing-ui + grade-interface
-machine-steered-backlog	queued	Machine-gated governance: Hngh picks its own next-best-course continually	operator directive 2026-08-26; extends run-autonomous + rotate-queue
+machine-steered-backlog	done		select-course pure use case + cadence wiring landed 2026-08-27 — Machine-gated governance: Hngh picks its own next-best-course continually	operator directive 2026-08-26; extends run-autonomous + rotate-queue
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
 dashboard-readouts	done	Dashboard readouts (spiral + circular + dance styles live)	rotated 2026-08-25
 timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired

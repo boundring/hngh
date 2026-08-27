@@ -62,8 +62,8 @@ job; that is acceptable only as a sprint placeholder, not a home.
 - Anything Hngh does locally should shape to N nodes without a new
   architecture: rows adoptable-by-peer (fleet.md), duties/health
   evidence per node under the same gates, no ambient daemon.
-- As above, so below: a single-node insight (timing, cadence, steering)
-  is the prototype of the N-node pattern.
+- A single-node insight (timing, cadence, steering) is the prototype of
+  the N-node pattern — the fleet mirrors the single node.
 
 ## 7. Operator surfaces
 - Every new state must surface: the dashboard spine (timeline, queue,

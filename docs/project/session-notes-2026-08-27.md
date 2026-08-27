@@ -208,3 +208,79 @@ Spot-checked claims against sources (2026-08-27, this harvest):
 5. Cadence tiers 1m–month live — master-plan "cadence tiers 1m–month",
    `docs/project/activity-matrix.md` tier schedule (1m/5m/day/week/month
    drop-ins).
+
+## 7. Evening addendum — unification wave + new directives
+
+Captured live during the nerve-center unification wave:
+
+- **Session naming + density QoL.** Session ids (`run-20260827T140151Z-2449044`)
+  are nearly unreadable and truncation cutoffs are too aggressive. Target:
+  common-sense density everywhere — rich and compact, legible, use all
+  available space, small and reasonable margins. [queued]
+- **System + Research are the first user-control surfaces.** Add new lines
+  of research (optimized for Hngh, Hngh-on-system, other projects); add
+  practical notes and steering commentary — affecting and non-affecting —
+  to existing, active, completed, or in-proposal research lines. [queued]
+- **Startup flow.** Dashboard visible at startup; immediately fire up an
+  agentic session continuing Hngh work and system work. [queued]
+- **Dashboard purposes, staged.** Track work on Hngh + ongoing
+  operations/services; track research lines; interface with Hngh memory
+  (llm-wiki is the easy first integration); review system resources;
+  manage system configuration; CachyOS integration (packages + config);
+  KDE/Plasma/X11/Wayland depth; true system-harness aspirations. [queued]
+- **Self-supervision rung** added to backlog (Hngh watches its own agents:
+  transcript phase detection, stall flags, roguelike replacement) — the
+  harness agent must not be the permanent safety net. [landed rung]
+- **Schedule reconciliation (this check).** Overcome-by-events lanes found
+  in the oneoff list: machine-steered-backlog, agent-live-view,
+  push-self-sufficiency, governance-vocabulary (all landed — see §2),
+  credential-rotation-auto (folded into key-rotation-freshness). Queue
+  flips applied this session. [landed]
+- **Window-size law.** Operator's normal desktop window is a KWin
+  half-screen snap (~1035px); clean page behavior required at ANY size
+  (480/768/1035/1440/1920 sweep, geometry probes). [landed as rule;
+  breakpoint fix in flight]
+
+## 8. Second evening directive — dashboard QoL review + consolidation
+
+The operator adversarially reviewed the unified dashboard ("insufficient
+results so far, partial or impractical starts") and set the standard:
+rendered geometry at real sizes, not element counts. Findings + the wave
+responding to them:
+
+- **Tab chrome**: buttons separate from contents; want seamless join.
+  **Winamp-style skeuomorphism**: textured bezels, LED readouts, dense
+  chrome — CSS-first, libraries welcomed over reinvention. [wave:
+  ChromeSkin]
+- **Schedule**: leftover-looking items; clean/combine/reorganize or
+  determine what is still needed; recurring vs one-off must be obvious;
+  the dream is the cascade — new work items created and fitted into
+  place. [wave: SchedulePolish + the wrapped-delegation loop feeds it]
+- **Sessions**: titles unreadable, display cut off/partial; want more
+  QoL, navigable session views. [wave: SessionsTitles]
+- **System**: cut-off widgets by default, coarse uncompromising grid,
+  resize not useful — compact into a small dashboard; meaningful
+  controls: package management, system update, configuration
+  management, backups, syncing, local network status, connected Hngh
+  instances/clients. [wave: SystemV2; governed package ops = rung]
+- **Research**: controls for existing entries — reorder precedence,
+  review collected material, knowledge-base links. [queued: ResearchV2]
+- **Knowledge base**: review/navigate existing KB and researched
+  material; QoL for KB management, multiple sources, scraped data.
+  [wave: KBView]
+- **Logs**: unused left space; reorganize; auto-summarize by
+  category/source into subsections. [wave: LogsView]
+- **The route**: most parts exist but lack a coherent route guaranteeing
+  arrival. Roadmap rewritten to the seven-stage consolidated route with
+  exit criteria. [landed]
+- **Self-recognition**: Hngh should procedurally classify
+  sufficient/insufficient — "why is this acceptable for the moment but
+  intended for improvement later, and why is this unacceptable needing
+  immediate attention." [landed: self-review two-tier vocabulary;
+  extension rungs queued]
+- **Methods documentation**: qualitative + quantitative records of
+  methods and completed work, scheduled into routines. [landed: digest +
+  wave records; cadence formalization queued]
+- **The horizon**: Hngh improving itself rather than oh-my-pi improving
+  it — supervision, scheduling, and correction become Hngh-native
+  (self-supervision tick rung). [landed rung]
