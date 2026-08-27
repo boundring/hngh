@@ -84,6 +84,7 @@
 (load (cl-user::project-file "tests/presentation/test-presentation.lisp"))
 (load (cl-user::project-file "tests/main/test-main.lisp"))
 (load (cl-user::project-file "tests/main/test-dispatch.lisp"))
+(load (cl-user::project-file "tests/main/test-status.lisp"))
 (load (cl-user::project-file "tests/main/test-governance-dispatch.lisp"))
 
 (check (equal '(:work :observe)
