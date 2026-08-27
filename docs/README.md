@@ -55,6 +55,8 @@ companions to the contracts above, after the core read order:
   non-nagging operative overlay and its click-to-open menu.
 - [Gamified-run model](design/gamified-runs.md) — runs as stories, the
   roguelike death rule, and the honesty leash.
+- [Display register](design/display-register-spec.md) — the one Nihei
+  register law: voice, proportions, palette, perceptual-only aliases.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.
