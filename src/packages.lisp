@@ -133,6 +133,17 @@
            #:make-key-pin-registry
            #:lookup-key-pin
            #:key-pin-registry-pins
+           ;; machine-steered course selection (src/domain/course.lisp)
+           #:course-candidate
+           #:make-course-candidate
+           #:course-candidate-p
+           #:valid-course-candidate-p
+           #:course-candidate-identifier
+           #:course-candidate-mounted-p
+           #:course-candidate-last-increment-ts
+           #:course-candidate-priority-rank
+           #:course-candidate-<
+           #:select-course-candidate
            ;; operator policy profiles (src/domain/governance.lisp)
            #:evidence-profile
            #:evidence-profile-p
@@ -191,7 +202,17 @@
            #:close-request-proposal
            #:run-close-ports
            #:make-run-close-ports
-           #:close-run))
+           #:close-run
+           ;; machine-steered course selection (src/application/select-course.lisp)
+           #:course-selection-result
+           #:course-selection-result-p
+           #:course-selection-result-status
+           #:course-selection-result-chosen-identifier
+           #:course-selection-result-reasons
+           #:course-selection-result-labels
+           #:make-course-selection-result
+           #:make-course-selection-ports
+           #:select-course))
 
 (defpackage #:hngh.adapters.evidence
   (:use #:cl)
