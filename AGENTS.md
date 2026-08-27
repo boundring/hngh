@@ -1,5 +1,10 @@
 # Hngh agent notes
 
+- Always respond to the operator in English: every message, summary,
+  annotation, and title is English/ASCII, regardless of prompt language
+  or conversation content (bilingual-model language drift renders as
+  unreadable CJK in the operator's terminal).
+
 ## Start here
 
 1. Read `docs/README.md`.

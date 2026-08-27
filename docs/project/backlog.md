@@ -1214,6 +1214,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   an affecting note lands as a deduped steer row; a non-affecting note
   never touches a gate.
 
+- note (2026-08-27T20:36:05Z): What is this, a control for a note? Weird research line, seems like it should probably get resolved?
 ## Memory surface (llm-wiki integration)
 
 - **Problem:** Hngh's harvested lessons and memory live in the llm-wiki
@@ -1245,3 +1246,40 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** the roguelike wrap; /spawn endpoint; ui-config.
 - **Review trigger:** one click spawns a session that appears in the
   observatory within one feed tick, already run-wrapped.
+
+## System controls → governed package operations
+
+- **Problem:** the System view is observability-only; the operator named
+  package management, system update, configuration management, backups,
+  syncing, and network status as the controls they actually want.
+- **Smallest useful outcome:** v1 controls landed (refresh, check
+  updates, reset-failed, run-backup — safe ops, handoffs-logged). Next:
+  governed package upgrades ride the certificate loop (proposal →
+  verdict → executor runs the update in a declared window with
+  rollback evidence).
+- **Evidence:** operator directive 2026-08-27 (evening System review).
+- **Risk:** unattended upgrades break running work — upgrades are
+  certificate-gated, declared-window, rollback-evidenced, never ambient.
+- **Dependencies:** system-ops feed; the certificate loop; a declared
+  maintenance window lane.
+- **Review trigger:** one governed upgrade executes end-to-end with
+  pre/post manifests and rollback evidence.
+
+## Research precedence + collected material
+
+- **Problem:** research lines cannot be reordered by precedence, and
+  material already collected for a line (design docs, records, wiki
+  sources) is not linked from the line.
+- **Smallest useful outcome:** precedence order persisted and rendered
+  (up/down controls); each line links its collected material (design
+  docs, records, kb snapshots) with one-click navigation.
+- **Evidence:** operator directive 2026-08-27 (Research review).
+- **Risk:** precedence becoming a second priority system — it orders
+  display and attention only; the machine-steered selector keeps its
+  own policy.
+- **Dependencies:** research view; kb view.
+- **Review trigger:** reorder persists across reload; collected
+  material links resolve for every lane.
+
+
+- Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.
