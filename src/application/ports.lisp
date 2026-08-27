@@ -242,3 +242,65 @@
 (defun make-run-close-ports (&key record-run)
   (%make-run-close-ports
    (ensure-callback record-run "record callback")))
+
+(defparameter +course-selection-statuses+ '(:accepted :refused :invalid))
+
+(defun ensure-course-selection-status (status)
+  (unless (member status +course-selection-statuses+)
+    (error "~S is not a course selection status" status))
+  status)
+
+(defstruct (course-selection-result
+            (:constructor %make-course-selection-result
+                (status chosen-identifier reasons labels))
+            (:conc-name %course-selection-result-))
+  (status nil :read-only t)
+  (chosen-identifier nil :read-only t)
+  (reasons nil :read-only t)
+  (labels nil :read-only t))
+
+(defun make-course-selection-result (&key status chosen-identifier reasons
+                                          labels)
+  (let ((status (ensure-course-selection-status status)))
+    (if (eq status :accepted)
+        (unless (and (stringp chosen-identifier)
+                     (plusp (length chosen-identifier)))
+          (error "accepted course selection requires a chosen identifier"))
+        (when (or chosen-identifier reasons)
+          (error "non-accepted course selection cannot carry a choice")))
+    (%make-course-selection-result
+     status
+     (and chosen-identifier (copy-seq chosen-identifier))
+     (and reasons (copy-seq reasons))
+     (copy-labels labels "course selection labels"))))
+
+(defun course-selection-result-status (result)
+  (%course-selection-result-status result))
+
+(defun course-selection-result-chosen-identifier (result)
+  (let ((identifier (%course-selection-result-chosen-identifier result)))
+    (and identifier (copy-seq identifier))))
+
+(defun course-selection-result-reasons (result)
+  (let ((reasons (%course-selection-result-reasons result)))
+    (and reasons (copy-seq reasons))))
+
+(defun course-selection-result-labels (result)
+  (copy-labels (%course-selection-result-labels result)
+               "course selection labels"))
+
+(defstruct (course-selection-ports
+            (:constructor %make-course-selection-ports
+                (fetch-candidates clock-now record-selection))
+            (:conc-name %course-selection-ports-))
+  (fetch-candidates nil :read-only t)
+  (clock-now nil :read-only t)
+  (record-selection nil :read-only t))
+
+(defun make-course-selection-ports (&key fetch-candidates clock-now
+                                         record-selection)
+  (%make-course-selection-ports
+   (ensure-callback fetch-candidates "fetch candidates callback")
+   (when clock-now (ensure-callback clock-now "clock callback"))
+   (when record-selection
+     (ensure-callback record-selection "record selection callback"))))

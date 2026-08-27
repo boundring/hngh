@@ -130,5 +130,9 @@ authorize a future action.
   `operative-frames.md`, and the Plasma `osd-operative` overlay — all
   candidate-bound through the governance loop, with the kernel's governance
   surface unchanged.
+- `2026-08-27-task-1.5-select-course.md` records P1 #1.5: course
+  selection extracted from the service tick into the pure kernel
+  (domain policy, application use case, CLI dispatch, cadence wiring)
+  with the full Lisp + Python gate green.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

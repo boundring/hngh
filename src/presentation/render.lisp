@@ -229,6 +229,20 @@ manifest=~D policy-profile=~A expiry=~A"
              (hngh.adapters.worker:worker-result-status result)
              (hngh.adapters.worker:worker-result-refusal-labels result)))))
 
+(defun render-course-selection-result (result)
+  "One factual line for a machine-steered course selection: the chosen
+lane and its justification on acceptance, the refusal labels otherwise."
+  (case (hngh.application:course-selection-result-status result)
+    (:accepted
+     (format nil "course ~A: ~A"
+             (hngh.application:course-selection-result-chosen-identifier
+              result)
+             (hngh.application:course-selection-result-reasons result)))
+    (otherwise
+     (format nil "~(~A~): ~{~A~^; ~}"
+             (hngh.application:course-selection-result-status result)
+             (hngh.application:course-selection-result-labels result)))))
+
 ;;; Dispatch, reports, and fallback ------------------------------------------
 
 (defun render (value)
@@ -273,6 +287,8 @@ factual string. Unknown values render as their printed representation."
      (render-wake-result value))
     ((hngh.adapters.worker:worker-result-p value)
      (render-worker-result value))
+    ((hngh.application:course-selection-result-p value)
+     (render-course-selection-result value))
     (t (format nil "~S" value))))
 
 (defun render-report (&rest values)

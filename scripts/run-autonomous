@@ -11,10 +11,12 @@ itself). Each invocation performs ONE tick and exits. The tick:
 
   (b) read the Next item from docs/project/queue.md; when it exists AND
       the backlog-lanes summary shows >= 2 open lanes, choose a course:
-      score the in-queue lanes by (mounted .slice card first), then
-      ascending recency of last increment (report-queue --json rows),
-      tiebreak by queue Next order then TSV order. Record the choice as
-      a `course <id>: <reasons>` progress report, mount its card, and —
+      the pure kernel use case (`scripts/hngh select-course`, one
+      candidate per in-queue lane scored by mounted .slice card, then
+      ascending recency of last increment, tiebreak by queue priority)
+      picks the lane; when the kernel CLI is unavailable or refuses,
+      the internal rule falls back. Record the choice as a
+      `course <id>: <reasons>` progress report, mount its card, and —
       when a check-in-scale card exists — run ONE ceremony-drive slice
       over the card's files from a fresh ephemeral /tmp/hngh-auto-<ts>
       store, then record progress (or optimization when the slice is a
@@ -49,6 +51,7 @@ CARDS = ROOT / "docs" / "project" / "heartbeat"
 GEN = ROOT / "scripts" / "generate-publication"
 REPORT = ROOT / "scripts" / "report-queue"
 CEREMONY = ROOT / "scripts" / "ceremony-drive"
+HNGH = ROOT / "scripts" / "hngh"
 
 NEXT_RE = re.compile(r"## Next\s*\n(?:.*\n)*?- \*\*(?P<id>[^*\n]+)\*\*")
 KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
@@ -189,7 +192,9 @@ def choose_course():
     or (None, "") when nothing is courseable. Scores by mounted .slice
     card (carded first), then ascending recency of last increment (most
     due first), tiebreaking by queue Next order then TSV order. Choice +
-    card mount only — never bypasses a gate."""
+    card mount only — never bypasses a gate. The ranking is computed by
+    the pure kernel selector when scripts/hngh is available; the
+    internal rule serves as a fail-closed fallback."""
     lanes = queue_order()
     if not lanes:
         return None, ""
@@ -197,6 +202,13 @@ def choose_course():
     inc = last_increment_ts(lanes)
     rank = {lane: i for i, lane in enumerate(lanes)}
 
+    chosen, reasons = kernel_course_select(
+        [f"{lane}:{'true' if lane in mounted else 'false'}:"
+         f"{inc.get(lane, '')}:{rank[lane]}" for lane in lanes])
+    if chosen is not None:
+        return chosen, reasons
+
+    # kernel unavailable or refused: fall back to the internal rule
     def key(lane):
         return (0 if lane in mounted else 1,
                 inc.get(lane, NEVER),
@@ -207,6 +219,28 @@ def choose_course():
     reasons = ("card mounted" + (f", last increment {ts}" if ts
                                  else ", never incremented"))
     return chosen, reasons
+
+
+def kernel_course_select(specs):
+    """Ask the pure kernel selector (`scripts/hngh select-course`) for
+    the next course among SPECS (id:mounted-p:last-increment:rank).
+    Returns (chosen-id, reasons), or (None, None) when the kernel is
+    unavailable or refuses — the cadence then falls back to the
+    internal rule and never fabricates a choice."""
+    if not HNGH.exists():
+        return None, None
+    try:
+        out = subprocess.run([str(HNGH), "select-course", *specs],
+                             capture_output=True, text=True, cwd=ROOT,
+                             timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
+    if out.returncode != 0:
+        return None, None
+    m = re.match(r"course ([^:]+): (.*)", out.stdout.strip())
+    if not m:
+        return None, None
+    return m.group(1), m.group(2).strip()
 
 
 def slice_card(item):
