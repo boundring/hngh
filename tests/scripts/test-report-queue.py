@@ -206,6 +206,28 @@ class ReportQueueCLI(unittest.TestCase):
         self.add("alert", "same text", identity="stale-store:/b")
         self.assertEqual(len(self.rows()), 2)
 
+    def test_identity_dedup_scans_past_other_identities(self):
+        """Alternating identities in one window: dedup, never duplicate."""
+        ia, ib = "stale-store:/a", "slow-unit:/b"
+        self.add("alert", "alpha text", identity=ia)
+        self.add("alert", "beta text", identity=ib)
+        self.add("alert", "alpha again", identity=ia)
+        self.add("alert", "beta again", identity=ib)
+        rows = self.rows()
+        self.assertEqual(len(rows), 2, "no third row for a repeat identity")
+        markers = sorted(r[3].rsplit(" ×", 1) for r in rows)
+        self.assertEqual([base for base, _ in markers], ["alpha text", "beta text"])
+        self.assertEqual([n for _, n in markers], ["2", "2"])
+        for ident in (ia, ib):
+            hits = 0
+            for name in self.bodies():
+                text = (self.root / "docs" / "project" / "report-bodies"
+                        / name).read_text()
+                if "- **identity:** " + ident in text:
+                    hits += 1
+                    self.assertEqual(text.count(" occurrence"), 1, name)
+            self.assertEqual(hits, 1, ident)
+
     def test_prune_removes_listed_kinds_deletes_bodies_and_archives(self):
         self.add("alert", "old alert one")
         self.add("alert", "old alert two")

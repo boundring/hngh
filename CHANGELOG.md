@@ -59,6 +59,16 @@ lives under Pre-release / early development until the first release.
     in place (7,083/7,083 rows re-verified against body filenames and
     body meta, 0 mismatches) and the lesson stored
     (`debug-repro-sandboxes-only`).
+  - `scripts/report-queue` dedup widened: identity matching now scans
+    ALL same-kind rows within the window (newest match wins), not just
+    the newest row — multi-identity writers no longer spam duplicates
+    (+1 alternation check, suite 15).
+  - `jobs/dashboard-self-review.py` + hourly drop-in — Hngh checks its
+    own dashboard on schedule: feed freshness vs tiers, feed validity,
+    served-marker regression, ledger/body drift; every finding
+    classified `unacceptable-now` or `acceptable-for-now` (with the
+    planned improvement named), deduped via report-queue identities,
+    all-clear ticks silent.
   - Host orientation + retention rungs added to the backlog (new-system
     situating pass; report-ledger rotation policy).
 - Closed P1 #1.5: machine-steered course selection extracted from the
