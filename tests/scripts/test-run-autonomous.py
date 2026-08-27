@@ -77,10 +77,10 @@ class RunAutonomousTick(unittest.TestCase):
         p.write_text(text.replace("{python}", sys.executable))
         os.chmod(p, 0o755)
 
-    def tick(self, exit_code=0):
+    def tick(self, exit_code=0, tick_ts=DAY):
         env = dict(os.environ)
         env["HNGH_RUN_ROOT"] = str(self.root)
-        env["HNGH_TICK_TS"] = DAY
+        env["HNGH_TICK_TS"] = tick_ts
         env["STUB_ARGV_LOG"] = str(self.argv_log)
         env["STUB_EXIT"] = str(exit_code)
         out = subprocess.run([sys.executable, str(SCRIPT)],
@@ -140,6 +140,14 @@ class RunAutonomousTick(unittest.TestCase):
         out = self.tick()
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("ran: journal", out.stdout)
+        self.assertTrue(
+            (self.root / "docs" / "journal" / f"{PREV}.md").exists())
+
+    def test_full_iso_tick_ts_generates_previous_day(self):
+        """A full-ISO HNGH_TICK_TS (not just YYYY-MM-DD) must still land
+        in the documented {0,2,3} contract, journaling the PREVIOUS day."""
+        out = self.tick(tick_ts=f"{DAY}T03:04:05Z")
+        self.assertEqual(out.returncode, 0, out.stderr)
         self.assertTrue(
             (self.root / "docs" / "journal" / f"{PREV}.md").exists())
 
