@@ -2,7 +2,42 @@
 
 ## Direction
 
-Hngh is being rebuilt as a small, predictable core that decides what is valid, with the messy outside world — files, Git, models, terminals — plugged in later at the edges. Each step of the rebuild exists for a reason: evidence comes before claims, so nothing is believed without a record; permission is re-checked at the moment of action, so a certificate is never a free pass; and reviewers advise but never decide, so a model can suggest, but only a policy verdict can admit. The path runs from the pure kernel, to a read-only evidence adapter, to a mutation executor, to bounded model review and agent workers behind ports — all under policy verdicts and one-action certificates. For the vision in full, read [the intent document](../intent.md).
+Hngh is a small, predictable core that decides what is valid, with the
+messy outside world — files, Git, models, terminals, packages, desktops —
+plugged in at the edges. Evidence comes before claims, so nothing is
+believed without a record; permission is re-checked at the moment of
+action, so a certificate is never a free pass; reviewers advise but never
+decide. The kernel is built. The governance loop is built. The machine
+now watches itself: a time ledger measures every level, a self-review
+inspects its own dashboard hourly, and the oversight path flags drift
+before a human would. What remains is expansion — more system harnessed,
+more delegation governed, more surface polished — each expansion riding
+the same gates. For the vision in full, read [the intent
+document](../intent.md).
+
+## The consolidated route
+
+Seven stages, each with exit criteria; a stage is done when its exit
+criteria hold under the standing gates, not when its code merely exists.
+Stages 5 and 6 run in alternation (grow beats and research/design beats per
+[master-plan.md](master-plan.md) §4) rather than strictly in sequence.
+
+| Stage | Scope | Exit criteria | State |
+|---|---|---|---|
+| **0 — Kernel & governance** | pure spine, six use cases, governance C0–C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
+| **1 — Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
+| **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **landing** |
+| **3 — Roguelike delegation live** | every delegated session wrapped: `omp-bridge --run-start` (budget loadout) → observatory `working` → `--run-end` disposition; self-supervision tick (transcript phase detection, stall flags, auto-replace); gantt renders actual bars beside estimates; per-lane medians | one full delegation cycle witnessed live end-to-end; a seeded stall is flagged and replaced without human intervention | **next** |
+| **4 — System harness D/E** | config-manager (declared config lanes, governed updates), package-manager integration (updates inventory → certificate-gated upgrades), maintenance routines (orphans, caches, journal vacuum) — CachyOS first, per-host orientation generalizes | a governed package upgrade runs start-to-finish through the certificate loop on this host; config lanes declaratively listed and backed up on cadence | **queued** |
+| **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, R&D view grows into the alternation driver | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
+| **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
+| **7 — Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
+
+Sequencing rules: every stage feeds stage 1's ledger (timed, flagged,
+optimized); nothing skips the gates; research/design beats (stage 5
+output) gate the next grow stage when a grow run cannot proceed without
+a missing design — grow cannot outrun its designs, and designs do not
+exist without grow demanding them.
 
 ## Now
 
@@ -101,41 +136,23 @@ Current frontier: the clean-slate baseline, now self-governing. The retired daem
 
 ## Next
 
-1. **(Next slice).** The worker-driver surface (the hngh-omp bridge
-   tools that run a disposable worker session through run-worker) —
-   the one-shot `scripts/worker-driver` cycle is done; the bridge-hosted
-   end-to-end session (run → worker → review → certify) is the open
-   half — or the node-lattice boundary amendments (ambient tunnels,
-   certificate-bound wake) that must clear their own policy proposals
-   first.
-2. **The autonomy continuum (operator directive 2026-08-26, folded
-   into the queue ledger).** Eight queued rungs that turn the hourly
-   cadence into a self-governing continuum — no slice of which admits
-   a daemon; every tier stays an operator-installed timer invoking
-   single-tick scripts:
-   - `push-self-sufficiency` — both repos land and push their own
-     verified commits (sweep + post-validation push).
-   - `credential-rotation-auto` (folds into `key-rotation-freshness`)
-     — token/key rotation, health probes, and alert reports with zero
-     operator intervention; fail closed, never fail open.
-   - `cadence-continuum` — the timing tiers (month/week/day/hour/
-     10m/5m/1m + ad-hoc) as systemd units over single-tick jobs.
-   - `activity-cadence` — the routine project activities (roadmap
-     review, planning, design, expansion, implementation, review,
-     refactor, cleanup, inward/outward communication) riding those
-     tiers, scaled to the observed fleet.
-   - `governance-vocabulary` — relax the ritual/ceremony terms to a
-     flexible governance vocabulary (prose first; symbol renames only
-     where a check-in-scale validation covers them).
-   - `agent-live-view` (folds into `ux-hardening`) — an automatic
-     on-screen view of all working subagents, integrated into the
-     dashboard rather than disjoint from it.
-   - `surface-evolution-loop` (extends `dancing-ui` + grade-interface)
-     — evolutionary design/development for every operator-facing
-     surface and every part of the megastructure, graded continually.
-   - `machine-steered-backlog` — machine-gated governance where Hngh
-     determines its own best-course continually (run-autonomous +
-     rotate-queue grow a course-selection step behind the existing
-     certificate gates).
+The route table above supersedes the enumerated Next list (history: the
+autonomy-continuum directives live in the queue ledger and
+[architecture index](../architecture-index.md); the worker-driver E2E and
+node-lattice amendments roll into stage 3 and stage 7 respectively).
+
+Working order, per the route:
+
+1. **Land stage 2** (nerve-center consolidation is in final
+   verification) and schedule the config-backup lanes on the 30m tier —
+   the gbd takeover completes in the timetable.
+2. **Open stage 3** with the first live wrapped delegation: run-start →
+   observatory `working` → run-end, watched in the dashboard the
+   operator just shaped. Then the self-supervision tick.
+3. **Stage 4 spikes** in parallel once stage 3 is witnessed: CachyOS
+   package inventory feed (landed as system-ops v1) grows governed
+   update lanes; config-backup generalizes into the config-manager.
+4. **Stage 5 beats** alternate with stage 3/4 grow work per the
+   alternation rule; the research view makes the state visible.
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
