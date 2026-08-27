@@ -146,5 +146,9 @@ authorize a future action.
   refusal (kernel, exit 2), the timestamped wake store, the MiniMax-H3
   bench drop, and the failed-unit sweep (calligra reset,
   gbd-agent-configs root-caused and flagged).
+- `2026-08-27-dashboard-evolution-gbd-retirement.md` records the
+  dashboard evolution wave (operator-item lifecycle, server endpoints,
+  session-per-column observatory, cascading gantt) and the
+  git-back-dots retirement with its verified archive.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

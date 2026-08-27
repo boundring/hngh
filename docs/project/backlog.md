@@ -1103,3 +1103,62 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** `report-queue --prune`; the autonomy ceremony slice.
 - **Review trigger:** first prune runs inside a certificate loop with
   the archive attached to the candidate manifest.
+
+## Widget grid + QoL evolution cadence (dashboard surfaces)
+
+- **Problem:** dashboard panes are fixed-position; quality-of-life
+  improvements happen only when the operator demands them. The operator
+  wants moveable, flexible widgets (terminalfeed.io as the reference
+  example) and a scheduled, cyclical QoL research/development loop.
+- **Smallest useful outcome:** a draggable, persisting widget layout for
+  the dashboard pages (position/size per pane, per operator, layered
+  with the ui-config layer), plus a scheduled surface-evolution beat
+  that lands one graded QoL improvement per cycle without human
+  intervention.
+- **Evidence:** operator directive 2026-08-27 (terminalfeed.io named as
+  the example; "regular, cyclical research and development concern").
+- **Risk:** layout state becoming canonical — layout is display
+  preference only; the evolution beat may propose but never auto-mutate
+  cadence or governance surfaces.
+- **Dependencies:** ui-config layer (emacs-style configurability rung);
+  grade-interface; the observatory and gantt pages.
+- **Review trigger:** one cycle lands a graded, revertible QoL change
+  with before/after screenshots attached to the candidate.
+
+## Cascading gantt: run estimates + parallel cascade
+
+- **Problem:** the gantt rendered per-day granularity only; runs had no
+  duration estimates and parallelizable overlap was invisible.
+- **Smallest useful outcome:** first slice LANDED 2026-08-27
+  (`dashboard/gantt.html`: ESTIMATE-labelled bars from time-ledger p50
+  -> loadout time-limit -> 30m default, dependency connectors, zoom and
+  drag pan, relative projected starts). Remaining: per-lane medians once
+  wrapped sessions name lanes in their missions; live-run bars beside
+  projected ones; expedite-ripple projection (M5) drawn as an alternate
+  cascade.
+- **Evidence:** hngh-automation `f67f972`; adversarial review caught and
+  fixed an off-canvas connector artifact (double ms-conversion).
+- **Risk:** estimates read as schedule facts — every bar carries its
+  source; relative starts only, never fabricated dates.
+- **Dependencies:** time-ledger; readout spine; the roguelike wrap
+  (wrapped sessions name lanes).
+- **Review trigger:** a wrapped live session renders an actual bar next
+  to projected ones with the estimate source labelled.
+
+## Interface plurality + session spawn affordances
+
+- **Problem:** the operator works with Hngh through many surfaces — an
+  OMP session in Konsole is the primary one today — and the dashboard
+  should hand off to those surfaces, not replace them.
+- **Smallest useful outcome:** first slice LANDED 2026-08-27
+  (`POST /spawn`: configurable launchers from ui-config, Konsole tail
+  proven live). Remaining: per-surface presets (OMP collab windows,
+  browser windows), a session-page launcher menu, operator-editable
+  launcher documentation.
+- **Evidence:** operator directive 2026-08-27; the observatory flag
+  path (UI -> server -> ledger) as the established pattern.
+- **Risk:** spawn is desktop mutation — allowlisted templates only; the
+  client names a key, never a command.
+- **Dependencies:** dashboard-server; the ui-config layer.
+- **Review trigger:** every launcher key documented, validated, and
+  demonstrated once against a live session.
