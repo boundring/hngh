@@ -39,7 +39,26 @@ relay review, fresh-eyes adversarial):
    projected starts (never fabricated dates), zoom 6h/24h/72h, drag pan
    with now-clamp, past region showing actual day-precision timeline
    events. Adversarial review caught an off-canvas connector artifact
-   (double ms-conversion) — fixed and re-verified.
+   (double ms-conversion) — fixed and re-verified. A second pass by a
+   sibling owner found the deeper cause of the operator's "no bars at
+   all" report: the connectors SVG had no position rule and consumed
+   ~965px of normal flow, pushing every row ~1000px below the fold
+   (bars existed but were off-screen at every zoom). Fixed (`.glines`
+   absolute) plus a 6px min-width floor with outside labels for tiny
+   bars, 6h default zoom, and recurring chips (`∷ recurring ×N (every
+   ~interval)`) computed from the time ledger. Method note:
+   element-count probes matched the `gtoolbar` class and missed it
+   twice; only the rendered-geometry audit (bounding boxes at viewport
+   coordinates) caught it — geometry, not DOM presence, is the
+   verification standard.
+6. **Dashboard self-review (scheduled).** `jobs/dashboard-self-review.py`
+   + hourly drop-in: feed freshness vs tiers, feed validity, served
+   marker regression, ledger/body drift; findings classified
+   unacceptable-now / acceptable-for-now and deduped through
+   report-queue identities. Also surfaced + fixed a dedup defect
+   (newest-row-only matching) and a server gap (css/js/json are now
+   served `Cache-Control: no-cache` after two heuristic-cache
+   incidents).
 
 ## Evidence
 

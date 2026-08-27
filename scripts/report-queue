@@ -13,10 +13,10 @@ cursor/body — fail closed):
   --add KIND TEXT      append a row and write the body file; id = first 8
                        hex of sha256(TEXT); ts = UTC ISO second. Refuses a
                        bad KIND or empty TEXT (exit 2).
-                       With --identity KEY, dedup: when the newest existing
-                       row of the same KIND stores the same identity AND is
-                       newer than --window SECONDS (default 86400; 0 =
-                       unlimited lookback), no new row is appended — the
+                       With --identity KEY, dedup: when a row of the same
+                       KIND within --window SECONDS (default 86400; 0 =
+                       unlimited lookback) stores the same identity, no new
+                       row is appended (newest match wins) — the
                        row's first line gains/updates a ` ×N` marker (N =
                        total occurrences) and `- <UTC ts> occurrence` is
                        appended to that row's body. The row keeps its
@@ -189,15 +189,15 @@ def add(kind, text, identity=None, window=86400):
     ts = now_ts()
     if identity:
         for r in reversed(read_rows()):
-            if r[1] == kind:
-                if row_identity(r) == identity and within_window(r[0], window):
-                    try:
-                        bump_row(r, ts)
-                        return 0
-                    except (OSError, ValueError) as exc:
-                        print(str(exc), file=sys.stderr)
-                        return 2
-                break
+            if r[1] != kind:
+                continue
+            if row_identity(r) == identity and within_window(r[0], window):
+                try:
+                    bump_row(r, ts)
+                    return 0
+                except (OSError, ValueError) as exc:
+                    print(str(exc), file=sys.stderr)
+                    return 2
     ensure_header()
     write_body(ts, kind, rid, first, text, identity)
     with REPORTS.open("a") as fh:
