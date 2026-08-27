@@ -29,6 +29,20 @@ lives under Pre-release / early development until the first release.
   - Unit suites `tests/domain/test-course.lisp` and
     `tests/application/test-select-course.lisp` wired into
     `tests/run.lisp`; `make test` green.
+- Stood up the four P2 DESIGN contracts (ceremony-ready):
+  - `docs/design/command-center.md` — unified CLI+GUI command center
+    over one spine, S1–S8 mapping, control + awareness contracts.
+  - `docs/design/system-awareness-map.md` — read-only probe
+    architecture, `system.json` flow, flap-suppressed alerts,
+    headroom thresholds, fail-closed rules.
+  - `docs/design/buddy-menu-spec.md` — summoned non-nagging pixel-RPG
+    overlay: quest ask, toggles, shortcut lenses, state→animation
+    mapping, QML6 delivery over `/tmp/hngh-osd.json`.
+  - `docs/design/gamified-runs.md` — runs-as-stories model with the
+    closed event vocabulary, the roguelike death rule, and the
+    `perceptual:true` honesty leash.
+  - Indexed in `docs/architecture-index.md` and the
+    `docs/README.md` read order.
 
 ### 2026-08-26
 

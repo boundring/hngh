@@ -47,6 +47,14 @@ companions to the contracts above, after the core read order:
   pass.
 - [Operative frames](design/operative-frames.md) — the animation/frame
   spec behind `evolve-operative`'s generated operative.
+- [Command center architecture](design/command-center.md) — the unified
+  CLI + GUI command center (S1–S8) over one presentation spine.
+- [System awareness map](design/system-awareness-map.md) — the read-only
+  probe architecture, `system.json` flow, and flap-suppressed alerts.
+- [Pixel-RPG buddy menu spec](design/buddy-menu-spec.md) — the summoned,
+  non-nagging operative overlay and its click-to-open menu.
+- [Gamified-run model](design/gamified-runs.md) — runs as stories, the
+  roguelike death rule, and the honesty leash.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.
