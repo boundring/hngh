@@ -17,4 +17,4 @@ operator session; this ledger copy is the execution record.
 - [x] Winamp skin v2: classic tokens, radius/margin sweep, bevels, LCD insets, shade opt-in
 - [x] Verify: ui-audit 0 violations + screenshot reads as classic skin (fresh run 0 violations 08:55Z; screenshot passes all five classic cues — bevels, LCD insets, square corners, playlist stripes, charcoal+green)
 - [x] plans/README contract + this self-hosted ledger entry + plan-feed.py + 30m mount
-- [ ] HNGH ceremony: subsystem-anatomy doc + advancement-record framing correction + CHANGELOG + push (candidates staged uncommitted in working tree; runbook: docs/project/plans/2026-08-28-overnight-continuity.ceremony-runbook.md — blocked only by the delegated session's 1800s timeout, not by governance)
+- [x] HNGH ceremony: subsystem-anatomy doc + advancement-record framing correction + CHANGELOG + push (candidate `5fe88ae0`, commit `16f6344`, ceremony-driven 2026-08-28; whitespace normalization of the four research docs was the only gate refusal on the way)
