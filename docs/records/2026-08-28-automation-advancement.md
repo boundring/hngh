@@ -31,10 +31,19 @@ none for the mapping; the next-necessary list is forward work.
 ## Honest read
 
 The machine verifies, reviews, researches, prunes, watches itself, and
-evolves its own surface on cadence. The machine does not yet plan, drive
-its own certificate ceremonies, write its records, or route its docs —
-those steps keep a human in the loop by design, and the governance loop
-is the enforcement, not a limitation to engineer away.
+evolves its own surface on cadence. As of the overnight loop
+(hngh-automation `3f4ad10`) it also plans, accepts, executes, and lands
+its own work: the plan ledger (docs/project/plans/) is
+machine-accepted for normal-risk work, the overnight cycle executes
+accepted steps through bridge-gated delegated sessions, and landing is
+certificate-driven — plain commits in hngh-automation, the full
+ceremony loop in hngh. The only barrier is governance itself
+(certificates + green gates); human approval is reserved for the
+critical class: provider/credential configuration, systemd unit
+lifecycle beyond installed units, non-prune deletions, and security
+posture. Blocked work parks with an operator-facing alert and the
+cycle moves on — research lines are the filler, so the machine never
+idles on a human.
 
 ## Next-necessary (recorded, not built here)
 
