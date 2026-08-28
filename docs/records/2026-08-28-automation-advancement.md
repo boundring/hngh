@@ -40,7 +40,9 @@ overnight cycle executes the accepted steps through bridge-gated
 delegated sessions, and landing is certificate-driven — plain commits
 in hngh-automation, the full ceremony loop in hngh. The only barrier is
 governance itself (certificates + green gates); human approval covers
-plan authoring and acceptance at every risk class, and beyond that is
+plan authoring, and acceptance of critical-risk plans (normal-risk
+acceptance automated 2026-08-28 via plans/README.md's gate-driven
+rule), and beyond that is
 reserved for the critical class: provider/credential configuration,
 systemd unit lifecycle beyond installed units, non-prune deletions,
 and security posture. Blocked work parks with an operator-facing alert
