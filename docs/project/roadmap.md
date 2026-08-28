@@ -172,4 +172,14 @@ Working order, per the route:
    and structured session identity (category, hierarchy, model, cost —
    display side rides the SessionsTitles wave).
 
+Operator goals as design pressure (2026-08-28): the self-funding
+runway rides the publications pipeline — `scripts/generate-publication
+--ebook/--site` consuming the crystallized `docs/research/` lines, with
+the ebook-longform, public-surface, royalty-pipeline, and funding-rails
+backlog rows as the admission path. The Steam Deck is paired and
+hardened (hngh-automation REMOTE-ACCESS.md); deck-as-node federation
+stays in the device-fleet and node-lattice backlog rows. The remaining
+remote step is operator-side (`sudo tailscale serve --bg 8890`,
+documented in hngh-automation REMOTE-ACCESS.md; never from automation).
+
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.

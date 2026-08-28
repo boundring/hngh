@@ -33,6 +33,17 @@ lives under Pre-release / early development until the first release.
 - **Docs wave**: route-doc corrections (intent, architecture, index,
   roadmap), register framing across the dry docs, spec-triage bounds
   sentences, and the automation-advancement review record.
+- **Lessons consolidation** (hngh-automation evidence, hngh docs):
+  yesterday's and today's process lessons folded to their homes —
+  ceremony-loop lessons into autonomous-development-control.md
+  (timeout-split ceremonies hand off via a runbook, refusal surfaces
+  carry the refusal reason, expected-dirty ledger paths are not skew),
+  the ledger append invariant into ledger-and-records-spec.md, two
+  backlog rows (gated-red cadence watch fixes; report-queue escalation
+  caps), the operator-goals design-pressure paragraph in roadmap Next,
+  and the reports.md double-header repaired — the review digest's open
+  P1 (alert 31527cac), fixed at the source. Record:
+  docs/records/2026-08-28-lessons-consolidation.md.
 - **Continuous operation wave** (hngh-automation `362a10a`, `3007081`,
   `3f4ad10`, `6d6e837`, `6e772d9`): budgeted remote GLM leg in the
   model chain (OpenRouter-compatible, key-file gated, daily call cap);

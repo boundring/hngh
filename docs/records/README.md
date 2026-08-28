@@ -157,5 +157,9 @@ authorize a future action.
   working pattern (intake → plan → certificate-bound execution →
   verification → records → lessons) onto the machine's own mechanisms:
   what is automated, what stays operator-side, what is next-necessary.
+- `2026-08-28-lessons-consolidation.md` folds the day's and the prior
+  day's process lessons into their correct homes (governance doc,
+  ledger spec, backlog, roadmap) and repairs the reports.md double-header
+  flagged by the review digest.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

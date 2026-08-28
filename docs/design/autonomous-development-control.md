@@ -169,3 +169,30 @@ its disabled action classes. The fast suite stays local and deterministic.
   test suite.
 - No automatic remote-model escalation from uncertainty alone.
 - No claim that a record or evidence report authorizes a future action.
+
+## Ceremony-loop lessons (2026-08-28)
+
+Folded from the first autonomous overnight shift and the day's
+ceremonies; each changes how the loop behaves, not what it is.
+
+- **Timeout-split ceremonies hand off through a runbook.** The
+  overnight beat's delegated session hit its 1,800 s cap three times
+  (watchdog rows rc=124, 2026-08-28 03:29Z–07:00Z) with all candidates
+  staged and only the certificate loop remaining; the written runbook
+  (`docs/project/plans/2026-08-28-overnight-continuity.ceremony-runbook.md`)
+  let the next loop close it verbatim. A ceremony that cannot finish
+  stages its candidates and names the remaining loop — it does not
+  retry blind.
+- **Refusal surfaces carry the refusal reason.** "omp-bridge:
+  create-run refused (exit 1)" alerted with no cause (report row
+  a1fde252, 03:19:56Z), so the alert started a guessing loop instead of
+  naming the fix. Any refusal that surfaces as an operator-facing alert
+  quotes the refusal text. (Extends the self-improvement cadence
+  lesson: refusals name the fallback.)
+- **Expected-dirty ledger paths are not skew.** The oversight tree-skew
+  probe fired x64 on `Projects/etc/hngh` while the machine-maintained
+  ledger files (reports.md, ui-grades.md, current-overlay.json, plan
+  status transitions) sat uncommitted between ceremonies. The probe
+  must whitelist machine-maintained append paths, or ceremonies sweep
+  them on a fixed cadence; a watchdog that alerts on its own
+  housekeeping trains the operator to ignore it.

@@ -1,4 +1,3 @@
-| timestamp | kind | id | first line | body |
 # Report ledger
 
 Everything the routines saw fit to say, appended oldest-first; the
@@ -65,7 +64,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T00:25:53Z | progress | 31a45824 | agent-stall omp-2026-08-27T22-28-12-217Z_01a-43dd63: recovered | 2026-08-28T00:25:53Z-progress-31a45824.md |
 | 2026-08-28T00:34:59Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:34:59Z-progress-6f20e8cb.md |
 | 2026-08-28T00:34:59Z | alert | 171a4138 | [dash-selfreview] served:index.html: unacceptable-now — marker 'Health · verdict' absent from served body — served-stale or cache regression (style.css ?v= class of bug) ×2 | 2026-08-28T00:34:59Z-alert-171a4138.md |
-| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×17 | 2026-08-28T00:34:59Z-alert-f438818b.md |
+| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×18 | 2026-08-28T00:34:59Z-alert-f438818b.md |
 | 2026-08-28T00:40:31Z | alert | e9e3f4e3 | prune left tracked body deletions — operator ceremony needed | 2026-08-28T00:40:31Z-alert-e9e3f4e3.md |
 | 2026-08-28T00:43:47Z | progress | 84b1a73f | research beat: log-presentation patterns -> digest/RESEARCH-BEAT-2026-08-28.md | 2026-08-28T00:43:47Z-progress-84b1a73f.md |
 | 2026-08-28T00:49:50Z | alert | c04d2d6d | review P0/P1 (hngh): P1: `docs/design/ledger-and-records-spec.md` proposes a new SQLite store (`dashboard/telemetry.db`) and dual-write producers, which violates the roadmap's explicit constraint: "No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage." The spec must be revised to align with current constraints or the roadmap constraint updated. | 2026-08-28T00:49:50Z-alert-c04d2d6d.md |
@@ -75,7 +74,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T00:49:50Z | progress | 83387e21 | review: hngh-automation 3 findings (0 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T00:49:50Z-progress-83387e21.md |
 | 2026-08-28T00:52:51Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T00:52:51Z-progress-ad39f093.md |
 | 2026-08-28T00:53:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:53:02Z-progress-6f20e8cb.md |
-| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×16 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
+| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×17 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
 | 2026-08-28T01:00:50Z | progress | 9d520a33 | course bridge-operator-host: card mounted, last increment 2026-08-28T00:00:50Z | 2026-08-28T01:00:50Z-progress-9d520a33.md |
 | 2026-08-28T01:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T01:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:30:52Z-progress-6f20e8cb.md |
@@ -179,3 +178,13 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T18:00:50Z | progress | 22dca1ab | course bridge-operator-host: card mounted, last increment 2026-08-28T17:00:50Z | 2026-08-28T18:00:50Z-progress-22dca1ab.md |
 | 2026-08-28T18:00:53Z | progress | 3718401b | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-08-28T18:00:53Z-progress-3718401b.md |
 | 2026-08-28T18:12:13Z | progress | 935ea977 | plan 2026-08-28-remote-hardening executed (all steps checked) | 2026-08-28T18:12:13Z-progress-935ea977.md |
+| 2026-08-28T18:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T18:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T18:35:46Z | progress | 0c132557 | lesson (device-pairing): selector stalls on large candidate sets need timeout -k — SBCL ignores bare SIGTERM, so a bare 'timeout 60' hangs past its own cap while the process keeps running; the kill-after ('timeout -k 5 60') is the required pattern (landed overnight-cycle.sh select-course, automation 448e2d5). | 2026-08-28T18:35:46Z-progress-0c132557.md |
+| 2026-08-28T18:35:46Z | progress | e322ff4d | lesson (device-pairing): a Konsole profile whose referenced .colorscheme file is missing silently falls back to white — the profile loads without error, so pairing must copy the profile AND every scheme it references (deck-setup.sh mirrors Apu-s/Nordic/Ghost*), else the deck terminal renders default-white despite a 'successful' profile copy. | 2026-08-28T18:35:46Z-progress-e322ff4d.md |
+| 2026-08-28T18:35:46Z | progress | d460f9a4 | lesson (device-pairing): fd-inherited flock locks survive wrapper kills — 'flock -n 9' holds the lock on fd 9, which every spawned child inherits; killing the wrapper alone leaves the lock held by grandchildren, so a wrapper that must die needs a process-group kill (or the fd closed in children) or the next tick skips as 'already ticking'. | 2026-08-28T18:35:46Z-progress-d460f9a4.md |
+| 2026-08-28T18:35:46Z | progress | b185ea3c | lesson (device-pairing): alert dedup needs escalation caps, not infinite bumps — identity+window dedup collapsed the stale-store spam, but the xN occurrence marker grows unbounded and a permanently-deduped alert stops being information; escalation should cap the marker and surface to the operator past a threshold (future report-queue change). | 2026-08-28T18:35:46Z-progress-b185ea3c.md |
+| 2026-08-28T18:38:57Z | progress | dd4eba11 | plan 2026-08-28-device-pairing executed (all steps checked) | 2026-08-28T18:38:57Z-progress-dd4eba11.md |
+| 2026-08-28T19:00:50Z | progress | edef1a19 | course bridge-operator-host: card mounted, last increment 2026-08-28T18:00:50Z | 2026-08-28T19:00:50Z-progress-edef1a19.md |
+| 2026-08-28T19:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T19:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T19:03:30Z | progress | 22a2b295 | research line adversarial-review-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-adversarial-review-patterns.md | 2026-08-28T19:03:30Z-progress-22a2b295.md |
+| 2026-08-28T19:30:46Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T19:30:46Z-progress-6f20e8cb.md |
