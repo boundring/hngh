@@ -65,7 +65,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T00:25:53Z | progress | 31a45824 | agent-stall omp-2026-08-27T22-28-12-217Z_01a-43dd63: recovered | 2026-08-28T00:25:53Z-progress-31a45824.md |
 | 2026-08-28T00:34:59Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:34:59Z-progress-6f20e8cb.md |
 | 2026-08-28T00:34:59Z | alert | 171a4138 | [dash-selfreview] served:index.html: unacceptable-now — marker 'Health · verdict' absent from served body — served-stale or cache regression (style.css ?v= class of bug) ×2 | 2026-08-28T00:34:59Z-alert-171a4138.md |
-| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×4 | 2026-08-28T00:34:59Z-alert-f438818b.md |
+| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×9 | 2026-08-28T00:34:59Z-alert-f438818b.md |
 | 2026-08-28T00:40:31Z | alert | e9e3f4e3 | prune left tracked body deletions — operator ceremony needed | 2026-08-28T00:40:31Z-alert-e9e3f4e3.md |
 | 2026-08-28T00:43:47Z | progress | 84b1a73f | research beat: log-presentation patterns -> digest/RESEARCH-BEAT-2026-08-28.md | 2026-08-28T00:43:47Z-progress-84b1a73f.md |
 | 2026-08-28T00:49:50Z | alert | c04d2d6d | review P0/P1 (hngh): P1: `docs/design/ledger-and-records-spec.md` proposes a new SQLite store (`dashboard/telemetry.db`) and dual-write producers, which violates the roadmap's explicit constraint: "No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage." The spec must be revised to align with current constraints or the roadmap constraint updated. | 2026-08-28T00:49:50Z-alert-c04d2d6d.md |
@@ -75,14 +75,14 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T00:49:50Z | progress | 83387e21 | review: hngh-automation 3 findings (0 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T00:49:50Z-progress-83387e21.md |
 | 2026-08-28T00:52:51Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T00:52:51Z-progress-ad39f093.md |
 | 2026-08-28T00:53:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:53:02Z-progress-6f20e8cb.md |
-| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×3 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
+| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×8 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
 | 2026-08-28T01:00:50Z | progress | 9d520a33 | course bridge-operator-host: card mounted, last increment 2026-08-28T00:00:50Z | 2026-08-28T01:00:50Z-progress-9d520a33.md |
 | 2026-08-28T01:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T01:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:30:52Z-progress-6f20e8cb.md |
 | 2026-08-28T01:42:42Z | alert | 98c4f43a | ui-audit unavailable: Passed function cannot be serialized! | 2026-08-28T01:42:42Z-alert-98c4f43a.md |
 | 2026-08-28T01:43:13Z | alert | c518fa21 | ui-audit axe:color-contrast: 1 violation(s) — .gcount | .glabel-deferred.glabel-row:nth-child(38) > .gname | .glabel-deferred.glabel-row:nth-child(38) > .gchip-oneoff | 2026-08-28T01:43:13Z-alert-c518fa21.md |
 | 2026-08-28T01:43:13Z | alert | 70a44eb8 | ui-audit axe:region: 1 violation(s) — #tabs | .orient-line | 2026-08-28T01:43:13Z-alert-70a44eb8.md |
-| 2026-08-28T01:43:13Z | alert | 69886bba | ui-audit name-completeness: 1 violation(s) — arch-update ×2 | 2026-08-28T01:43:13Z-alert-69886bba.md |
+| 2026-08-28T01:43:13Z | alert | 69886bba | ui-audit name-completeness: 1 violation(s) — arch-update ×3 | 2026-08-28T01:43:13Z-alert-69886bba.md |
 | 2026-08-28T01:43:13Z | alert | 6979dc0d | ui-audit text-legibility-squash: 154 violation(s) — gname: hngh-cadence-1m | gest: ESTIMATE from ledger p50 (schedule feed) | gchip-recur: ∷ every ~60s · 7 runs/24h · 1m tier | 2026-08-28T01:43:13Z-alert-6979dc0d.md |
 | 2026-08-28T01:44:43Z | alert | d59b0b17 | ui-audit probe row (delete-me via 48h prune) | 2026-08-28T01:44:43Z-alert-d59b0b17.md |
 | 2026-08-28T01:45:08Z | alert | f547e48c | ui-audit text-legibility-squash: 154 violation(s) — gname: 01-activity-tick.sh | gname: 02-ledger-prune.sh | 2026-08-28T01:45:08Z-alert-f547e48c.md |
@@ -104,3 +104,45 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T03:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T03:30:52Z-progress-6f20e8cb.md |
 | 2026-08-28T03:31:50Z | progress | fdc9ac3c | research line gantt-legibility: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:31:50Z-progress-fdc9ac3c.md |
 | 2026-08-28T03:35:14Z | progress | 7a831e30 | research line gantt-legibility: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:35:14Z-progress-7a831e30.md |
+| 2026-08-28T04:00:50Z | progress | 7c4b2b9b | course bridge-operator-host: card mounted, last increment 2026-08-28T03:00:50Z | 2026-08-28T04:00:50Z-progress-7c4b2b9b.md |
+| 2026-08-28T04:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T04:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T04:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T04:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T04:40:37Z | progress | 13d72c20 | research line log-presentation-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-log-presentation-patterns.md | 2026-08-28T04:40:37Z-progress-13d72c20.md |
+| 2026-08-28T04:42:49Z | progress | 4055a781 | research line log-presentation-patterns: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-log-presentation-patterns.md | 2026-08-28T04:42:49Z-progress-4055a781.md |
+| 2026-08-28T04:45:17Z | progress | 8a41dadc | research line session-cost-display: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-session-cost-display.md | 2026-08-28T04:45:17Z-progress-8a41dadc.md |
+| 2026-08-28T04:46:58Z | progress | b457d7a6 | research line session-cost-display: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-session-cost-display.md | 2026-08-28T04:46:58Z-progress-b457d7a6.md |
+| 2026-08-28T04:49:06Z | progress | 31d4a933 | research line tech-tree-research-ux: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-tech-tree-research-ux.md | 2026-08-28T04:49:06Z-progress-31d4a933.md |
+| 2026-08-28T04:51:24Z | progress | 7c30a0f3 | research line tech-tree-research-ux: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-tech-tree-research-ux.md | 2026-08-28T04:51:24Z-progress-7c30a0f3.md |
+| 2026-08-28T04:54:21Z | progress | f61d15e8 | research line telemetry-schema-exemplars: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-telemetry-schema-exemplars.md | 2026-08-28T04:54:21Z-progress-f61d15e8.md |
+| 2026-08-28T04:56:41Z | progress | 8feb8845 | research line telemetry-schema-exemplars: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-telemetry-schema-exemplars.md | 2026-08-28T04:56:41Z-progress-8feb8845.md |
+| 2026-08-28T04:59:00Z | progress | 64c77007 | research line wiki-viewer-qol: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-wiki-viewer-qol.md | 2026-08-28T04:59:00Z-progress-64c77007.md |
+| 2026-08-28T05:00:00Z | progress | 3c0520ca | course bridge-operator-host: card mounted, last increment 2026-08-28T04:00:50Z | 2026-08-28T05:00:00Z-progress-3c0520ca.md |
+| 2026-08-28T05:00:03Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T05:00:03Z-progress-6f20e8cb.md |
+| 2026-08-28T05:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T05:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T06:00:50Z | progress | 2ed43793 | course bridge-operator-host: card mounted, last increment 2026-08-28T05:00:00Z | 2026-08-28T06:00:50Z-progress-2ed43793.md |
+| 2026-08-28T06:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T06:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T06:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T06:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T07:00:00Z | progress | 24d59d95 | course bridge-operator-host: card mounted, last increment 2026-08-28T06:00:50Z | 2026-08-28T07:00:00Z-progress-24d59d95.md |
+| 2026-08-28T07:00:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T07:00:02Z-progress-6f20e8cb.md |
+| 2026-08-28T07:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T07:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T07:55:50Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×33 | 2026-08-28T07:55:50Z-alert-96bd99de.md |
+| 2026-08-28T08:00:50Z | progress | ea249137 | course bridge-operator-host: card mounted, last increment 2026-08-28T07:00:00Z | 2026-08-28T08:00:50Z-progress-ea249137.md |
+| 2026-08-28T08:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T08:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T08:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T08:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T09:00:49Z | progress | 53b10471 | implementation: 2026-08-28 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-08-28T09:00:49Z-progress-53b10471.md |
+| 2026-08-28T09:00:49Z | progress | 2c15c12d | review: 2026-08-28 latest progress increment=53b10471 (implementation:2026-08-2810openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-08-28T09:00:49Z-progress-2c15c12d.md |
+| 2026-08-28T09:00:49Z | scheduled | 1314a70e | refactor: 2026-08-28 no refactor step defined (none scheduled) | 2026-08-28T09:00:49Z-scheduled-1314a70e.md |
+| 2026-08-28T09:00:50Z | progress | 36da7833 | cleanup: 2026-08-28 done markers present; cleanup due | 2026-08-28T09:00:50Z-progress-36da7833.md |
+| 2026-08-28T09:00:50Z | progress | 713671ba | inward: 2026-08-28 checkin awaits line (head: # Check-ins — gentle periodic look at the project) | 2026-08-28T09:00:50Z-progress-713671ba.md |
+| 2026-08-28T09:00:50Z | progress | 18f40b70 | course bridge-operator-host: card mounted, last increment 2026-08-28T08:00:50Z | 2026-08-28T09:00:50Z-progress-18f40b70.md |
+| 2026-08-28T09:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T09:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T09:01:29Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T09:01:29Z-progress-ad39f093.md |
+| 2026-08-28T09:06:56Z | alert | 31527cac | review P0/P1 (hngh): P1: `docs/project/reports.md` header block is malformed; the table header row (`| timestamp | kind | id | first line | body |`) appears twice, with the new title/description inserted between them, breaking the markdown table structure. | 2026-08-28T09:06:56Z-alert-31527cac.md |
+| 2026-08-28T09:06:56Z | alert | 5c530858 | review P0/P1 (hngh-automation): P1: `dashboard/data.json` contains a stale "Morning report 2026-08-26" nested inside the current digest string; this is dead weight that will confuse operators reading the dashboard and indicates a bug in the digest generation logic (likely concatenating old state). | 2026-08-28T09:06:56Z-alert-5c530858.md |
+| 2026-08-28T09:06:56Z | progress | c607ee1f | review: hngh 3 findings (1 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T09:06:56Z-progress-c607ee1f.md |
+| 2026-08-28T09:06:56Z | progress | 4acb4e44 | review: hngh-automation 2 findings (1 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T09:06:56Z-progress-4acb4e44.md |
+| 2026-08-28T09:09:07Z | progress | 1043e83e | research line wiki-viewer-qol: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-wiki-viewer-qol.md | 2026-08-28T09:09:07Z-progress-1043e83e.md |
+| 2026-08-28T09:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T09:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T10:00:50Z | progress | 8d339945 | course bridge-operator-host: card mounted, last increment 2026-08-28T09:00:50Z | 2026-08-28T10:00:50Z-progress-8d339945.md |
+| 2026-08-28T10:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T10:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T10:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T10:30:52Z-progress-6f20e8cb.md |

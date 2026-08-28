@@ -30,10 +30,15 @@ lives under Pre-release / early development until the first release.
   bridge-gated delegated GLM sessions with post-session critical-path
   audit); Winamp skin v2 (classic base-2.91 tokens, hard pixel bevels,
   visible playlist stripes, LCD insets, square everywhere); the plan
-  ledger (docs/project/plans/) with machine acceptance and
-  `dashboard/plans.json`; and docs/design/subsystem-anatomy.md — the
-  body vocabulary rooted in Clean Architecture, signals never flowing
-  outward.
+  ledger (docs/project/plans/, operator-authored and operator-accepted,
+  machine-executed) with `dashboard/plans.json`;
+  docs/design/subsystem-anatomy.md — the body vocabulary rooted in
+  Clean Architecture, signals never flowing outward; and the ceremony
+  commit landing the subsystem-anatomy update, the
+  automation-advancement framing correction (plans are operator-accepted,
+  not machine-accepted), and four newly-landed 2026-08-28 research docs
+  (log-presentation-patterns, session-cost-display, tech-tree-research-ux,
+  telemetry-schema-exemplars; gantt-legibility landed earlier).
 
 ### 2026-08-27
 
