@@ -1,4 +1,10 @@
 | timestamp | kind | id | first line | body |
+# Report ledger
+
+Everything the routines saw fit to say, appended oldest-first; the
+dashboard reads it newest-first and the bodies sit beside the table.
+
+| timestamp | kind | id | first line | body |
 | 2026-08-26T16:09:35Z | progress | f79758fd | implementation: 2026-08-26 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-08-26T16:09:35Z-progress-f79758fd.md |
 | 2026-08-26T16:09:35Z | progress | 69778e8e | review: 2026-08-26 latest progress increment=f79758fd (implementation:2026-08-2610openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-08-26T16:09:35Z-progress-69778e8e.md |
 | 2026-08-26T16:09:35Z | scheduled | 7c36db76 | refactor: 2026-08-26 no refactor step defined (none scheduled) | 2026-08-26T16:09:35Z-scheduled-7c36db76.md |
@@ -59,7 +65,7 @@
 | 2026-08-28T00:25:53Z | progress | 31a45824 | agent-stall omp-2026-08-27T22-28-12-217Z_01a-43dd63: recovered | 2026-08-28T00:25:53Z-progress-31a45824.md |
 | 2026-08-28T00:34:59Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:34:59Z-progress-6f20e8cb.md |
 | 2026-08-28T00:34:59Z | alert | 171a4138 | [dash-selfreview] served:index.html: unacceptable-now — marker 'Health · verdict' absent from served body — served-stale or cache regression (style.css ?v= class of bug) ×2 | 2026-08-28T00:34:59Z-alert-171a4138.md |
-| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×2 | 2026-08-28T00:34:59Z-alert-f438818b.md |
+| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×4 | 2026-08-28T00:34:59Z-alert-f438818b.md |
 | 2026-08-28T00:40:31Z | alert | e9e3f4e3 | prune left tracked body deletions — operator ceremony needed | 2026-08-28T00:40:31Z-alert-e9e3f4e3.md |
 | 2026-08-28T00:43:47Z | progress | 84b1a73f | research beat: log-presentation patterns -> digest/RESEARCH-BEAT-2026-08-28.md | 2026-08-28T00:43:47Z-progress-84b1a73f.md |
 | 2026-08-28T00:49:50Z | alert | c04d2d6d | review P0/P1 (hngh): P1: `docs/design/ledger-and-records-spec.md` proposes a new SQLite store (`dashboard/telemetry.db`) and dual-write producers, which violates the roadmap's explicit constraint: "No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage." The spec must be revised to align with current constraints or the roadmap constraint updated. | 2026-08-28T00:49:50Z-alert-c04d2d6d.md |
@@ -69,7 +75,32 @@
 | 2026-08-28T00:49:50Z | progress | 83387e21 | review: hngh-automation 3 findings (0 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T00:49:50Z-progress-83387e21.md |
 | 2026-08-28T00:52:51Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T00:52:51Z-progress-ad39f093.md |
 | 2026-08-28T00:53:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:53:02Z-progress-6f20e8cb.md |
-| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
+| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×3 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
 | 2026-08-28T01:00:50Z | progress | 9d520a33 | course bridge-operator-host: card mounted, last increment 2026-08-28T00:00:50Z | 2026-08-28T01:00:50Z-progress-9d520a33.md |
 | 2026-08-28T01:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T01:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T01:42:42Z | alert | 98c4f43a | ui-audit unavailable: Passed function cannot be serialized! | 2026-08-28T01:42:42Z-alert-98c4f43a.md |
+| 2026-08-28T01:43:13Z | alert | c518fa21 | ui-audit axe:color-contrast: 1 violation(s) — .gcount | .glabel-deferred.glabel-row:nth-child(38) > .gname | .glabel-deferred.glabel-row:nth-child(38) > .gchip-oneoff | 2026-08-28T01:43:13Z-alert-c518fa21.md |
+| 2026-08-28T01:43:13Z | alert | 70a44eb8 | ui-audit axe:region: 1 violation(s) — #tabs | .orient-line | 2026-08-28T01:43:13Z-alert-70a44eb8.md |
+| 2026-08-28T01:43:13Z | alert | 69886bba | ui-audit name-completeness: 1 violation(s) — arch-update ×2 | 2026-08-28T01:43:13Z-alert-69886bba.md |
+| 2026-08-28T01:43:13Z | alert | 6979dc0d | ui-audit text-legibility-squash: 154 violation(s) — gname: hngh-cadence-1m | gest: ESTIMATE from ledger p50 (schedule feed) | gchip-recur: ∷ every ~60s · 7 runs/24h · 1m tier | 2026-08-28T01:43:13Z-alert-6979dc0d.md |
+| 2026-08-28T01:44:43Z | alert | d59b0b17 | ui-audit probe row (delete-me via 48h prune) | 2026-08-28T01:44:43Z-alert-d59b0b17.md |
+| 2026-08-28T01:45:08Z | alert | f547e48c | ui-audit text-legibility-squash: 154 violation(s) — gname: 01-activity-tick.sh | gname: 02-ledger-prune.sh | 2026-08-28T01:45:08Z-alert-f547e48c.md |
+| 2026-08-28T01:45:08Z | alert | 1cefe5d5 | ui-audit axe:color-contrast: 1 violation(s) — .strip-counts ×5 | 2026-08-28T01:45:08Z-alert-1cefe5d5.md |
+| 2026-08-28T01:46:41Z | alert | 643e9f45 | ui-audit axe:region: 1 violation(s) — #tabs ¦ .orient-line ×3 | 2026-08-28T01:46:41Z-alert-643e9f45.md |
+| 2026-08-28T02:00:50Z | progress | cbac56f9 | course bridge-operator-host: card mounted, last increment 2026-08-28T01:00:50Z | 2026-08-28T02:00:50Z-progress-cbac56f9.md |
+| 2026-08-28T02:00:54Z | progress | 3718401b | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-08-28T02:00:54Z-progress-3718401b.md |
+| 2026-08-28T02:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T02:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T02:40:51Z | alert | 6475fa5c | agent-stall omp-2026-08-28T00-32-16-127Z_01a-d758cd: stalled, last tool-call 41m ago | 2026-08-28T02:40:51Z-alert-6475fa5c.md |
+| 2026-08-28T02:45:51Z | progress | 3c9458cb | agent-stall omp-2026-08-28T00-32-16-127Z_01a-d758cd: recovered | 2026-08-28T02:45:51Z-progress-3c9458cb.md |
+| 2026-08-28T03:00:50Z | progress | be5c331c | course bridge-operator-host: card mounted, last increment 2026-08-28T02:00:50Z | 2026-08-28T03:00:50Z-progress-be5c331c.md |
+| 2026-08-28T03:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T03:00:52Z-progress-6f20e8cb.md |
+| 2026-08-28T03:12:07Z | progress | abbdad27 | research line gantt-legibility: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:12:07Z-progress-abbdad27.md |
+| 2026-08-28T03:14:04Z | progress | c687db18 | research line log-presentation-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-log-presentation-patterns.md | 2026-08-28T03:14:04Z-progress-c687db18.md |
+| 2026-08-28T03:16:52Z | progress | 937cb1cc | research line session-cost-display: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-session-cost-display.md | 2026-08-28T03:16:52Z-progress-937cb1cc.md |
+| 2026-08-28T03:19:56Z | alert | a1fde252 | overnight beat 2026-08-28-overnight-continuity could not open a bridge run: omp-bridge: create-run refused (exit 1) | 2026-08-28T03:19:56Z-alert-a1fde252.md |
+| 2026-08-28T03:22:12Z | progress | de7d4ee9 | research line tech-tree-research-ux: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-tech-tree-research-ux.md | 2026-08-28T03:22:12Z-progress-de7d4ee9.md |
+| 2026-08-28T03:25:05Z | progress | cd95477e | research line telemetry-schema-exemplars: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-telemetry-schema-exemplars.md | 2026-08-28T03:25:05Z-progress-cd95477e.md |
+| 2026-08-28T03:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T03:30:52Z-progress-6f20e8cb.md |
+| 2026-08-28T03:31:50Z | progress | fdc9ac3c | research line gantt-legibility: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:31:50Z-progress-fdc9ac3c.md |
+| 2026-08-28T03:35:14Z | progress | 7a831e30 | research line gantt-legibility: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:35:14Z-progress-7a831e30.md |

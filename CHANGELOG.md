@@ -20,6 +20,20 @@ lives under Pre-release / early development until the first release.
 - **Docs wave**: route-doc corrections (intent, architecture, index,
   roadmap), register framing across the dry docs, spec-triage bounds
   sentences, and the automation-advancement review record.
+- **Continuous operation wave** (hngh-automation `362a10a`, `3007081`,
+  `3f4ad10`, `6d6e837`, `6e772d9`): budgeted remote GLM leg in the
+  model chain (OpenRouter-compatible, key-file gated, daily call cap);
+  the research-line lifecycle (beats advance lines
+  planned → expanding → contracting → crystallized, crystallizing into
+  docs/research/); the overnight work loop (`hngh-overnight.timer`:
+  accepted plan step → top queue lane → research beat, executed through
+  bridge-gated delegated GLM sessions with post-session critical-path
+  audit); Winamp skin v2 (classic base-2.91 tokens, hard pixel bevels,
+  visible playlist stripes, LCD insets, square everywhere); the plan
+  ledger (docs/project/plans/) with machine acceptance and
+  `dashboard/plans.json`; and docs/design/subsystem-anatomy.md — the
+  body vocabulary rooted in Clean Architecture, signals never flowing
+  outward.
 
 ### 2026-08-27
 
