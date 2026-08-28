@@ -10,6 +10,15 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Self-improvement cadence wave** (hngh-automation `34cd275`,
+  `232c5fe`): the orphaned 30m and hour cadence tiers wired (systemd
+  unit pairs, tick allowlist, make enable/disable); four day-tier
+  routines — ledger prune (48h alert retention, archived), daily kernel
+  gate check, fresh-eyes review over both repos' last 36h of commits,
+  and a daylight research beat (round-robin over
+  `research-subjects.txt`) — all fail-closed report-row writers;
+  telemetry store v0 (`jobs/telemetry.py`, SQLite WAL, capture-first);
+  the schedule and research feeds mounted on the 30m tier.
 - **Nerve center unification** (hngh-automation `e04b6be`, `6a5ee15`,
   `f67f972`): the dashboard consolidates into one page with formal tabs
   (Health, Counts, Timeline, Schedule, Queue, Lanes, Agents, Reports,

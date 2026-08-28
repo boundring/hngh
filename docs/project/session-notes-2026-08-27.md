@@ -348,3 +348,25 @@ daemons, nothing engine-locked.
   half; LogsView presentation is the wave]
 - KB "wiki but not as usable as any wiki" + long-term publications and
   the story of Hngh's creation. [design: knowledge-base-spec.md]
+
+## 10. Fourth evening intake — proceduralized scouting + arbitrary-event watching
+
+Two observations from the self-improvement cadence wave, folded by
+destination:
+
+- Delegated scouting is proceduralized: the harness auto-delivers scout
+  results to the orchestrating session the moment they settle — no
+  polling, no hand-carried reports. Hngh-side equivalents should treat
+  "result delivery" as a ledger append (report row + telemetry), not a
+  daemon or a watcher. [landed: the day-tier drop-ins file their
+  observables exactly this way]
+- Operator decision — arbitrary-event watching is a Hngh capability:
+  Hngh can and should be set up to watch for arbitrary events on demand,
+  supplying notifications in whatever pipeline the consuming agentic or
+  procedural function needs. Today's live views (session observatory,
+  schedule/feeds) are the first consumers; the discipline stays
+  fail-closed and bounded — on-demand watches with ledger-append
+  notification rows, never resident daemons. Harness-internal event
+  surfaces (omp spawn/admit/retire, kernel-side transitions) become
+  watchable sources under this same capability. [decision: capability
+  admitted; per-event wiring rides future waves]
