@@ -59,6 +59,11 @@ does not trade against the roadmap's no-unbounded-mutation line.
 - supervision stalls/recoveries land with their identity.
 - ceremony receipts land per step (create-run, prepare-candidate, commit,
   push — ms timings already exist).
+- **ledger append invariants** (new): table ledgers (reports.md) grow by
+  row append only — the single header block is structural; no writer
+  inserts above it or re-emits the header row. The 2026-08-28
+  double-header survived a full day before fresh-eyes review caught it,
+  which is one structural check too late.
 - **session-cost capture** (new): token usage parsed from omp transcripts
   plus the hngh loadout cost/time limits, one row per session — feeds the
   Sessions columns the operator asked for (model, duration, cost, purpose)

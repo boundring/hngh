@@ -1281,5 +1281,52 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** reorder persists across reload; collected
   material links resolve for every lane.
 
+## Cadence watch fixes — gated red, recorded not landed (2026-08-28)
+
+- **Problem:** the automation repo's own gate has no scheduled checker,
+  and its watch probes alert on the machine's own housekeeping. With
+  the kernel gate green, hngh-automation `make test` sat red on HEAD
+  (lint-identifiers: deck-setup.sh reports `$DESK_LAN_IP`/`$DESK_TS_IP`
+  as referenced-never-defined although both are defined inside the
+  `hngh-connect` heredoc — the scanner does not track heredoc-scoped
+  definitions; hngh-ufw-manage.sh carries a genuinely dead
+  `TS_SUBNET`), and no alert fired: `cadence/day/03-gate-check.sh`
+  sweeps only the kernel. Separately, the oversight tree-skew probe
+  fired x64 on machine-maintained append paths, and the fresh-eyes
+  digest ships the echoed prompt plus raw diffs instead of findings.
+- **Smallest useful outcome:** a day-tier drop-in gates hngh-automation
+  too (`make test` there, alert rows on red); the tree-skew probe
+  whitelists machine-maintained append paths (reports.md, ui-grades.md,
+  current-overlay.json, plan status transitions) or ceremonies sweep
+  them on a fixed cadence; lint-identifiers learns heredoc scoping (or
+  gains a scoped exclusion) and `TS_SUBNET` is removed; the review
+  digest keeps the findings section, not the prompt echo.
+- **Evidence:** hngh-automation `make test` red on HEAD 2026-08-28
+  (3 lint problems, run this day); oversight tree-skew alerts x64
+  (report rows 96bd99de, 07:55Z–08:00Z); digest/REVIEW-2026-08-28.md
+  prompt echo; `cadence/day/03-gate-check.sh` sources.
+- **Risk:** none beyond script edits in hngh-automation — no new
+  daemons; changes land as plain commits there once its gate is green.
+- **Dependencies:** cadence/day drop-ins; jobs/lint-identifiers.sh;
+  scripts/hngh-ufw-manage.sh; review-prep digest generation.
+- **Review trigger:** hngh-automation `make test` green on HEAD and a
+  gate-red alert reproducible in a fixture run.
+
+## report-queue escalation caps
+
+- **Problem:** identity+window dedup collapses repeat alerts, but the
+  xN occurrence marker grows unbounded and a permanently-deduped alert
+  stops being information (stale-store spam x12 per id at 11:10Z, rows
+  0582c2ca/4b0abe9a; dash-selfreview summary at x18, row f438818b).
+- **Smallest useful outcome:** cap the xN marker; past a threshold,
+  escalate to the operator-facing digest instead of bumping the count.
+- **Evidence:** report-ledger lesson row b185ea3c
+  (2026-08-28T18:35:46Z, device-pairing wave).
+- **Risk:** low — display and escalation policy only; identities and
+  windows unchanged.
+- **Dependencies:** scripts/report-queue; digest generation.
+- **Review trigger:** one deduped alert crosses its cap and surfaces
+  in the operator-facing digest.
+
 
 - Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.
