@@ -1,5 +1,8 @@
 # Presentation boundary
 
+The renderer shows the machine's face; it never speaks in the machine's
+voice.
+
 Presentation renders facts for the operator. It does not decide, authorize,
 mutate, start, spend, or conceal a system action.
 

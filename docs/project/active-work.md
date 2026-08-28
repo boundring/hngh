@@ -1,3 +1,8 @@
+# Active work
+
+The day's lanes, in the machine's own hand — started, verified, handed
+on.
+
 12:15 lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests + ceremony + automation hook. Plan written; next: ground-read ceremony/backlog/generate-publication/Makefile, then write scripts/report-queue
 08:16 lane: hngh-report-display — started: reports UI (dashboard-tui modal+table, osd status), tolerant tests, ceremony, relaunch. Next: verify report-queue presence + env facts, then edit dashboard-tui.
 08:20 lane: hngh-report-display — env verified: report-queue ABSENT (fail-closed live path), textual 8.2.8 ModalScreen OK, ceremony-drive=sbcl --store=.. OBJECTIVE FILES. Next: edit dashboard-tui (reader/table/strip), then modal.

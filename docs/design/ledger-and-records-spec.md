@@ -2,6 +2,9 @@
 
 Status: DESIGN — telemetry/records split, research and session-cost capture,
 from the operator's third-evening intake (session-notes §9), 2026-08-27.
+Partly LANDED (2026-08-28): the telemetry store exists (hngh-automation
+`232c5fe`, `jobs/telemetry.py` — capture-first, no readers yet); the
+report-queue dual-write producer in §3 is NOT yet landed.
 
 Source: `../../docs/project/session-notes-2026-08-27.md` §9; current surfaces:
 `report-queue`, `time-ledger.sh`, cadence breadcrumbs, oversight crumbs,
@@ -43,10 +46,15 @@ at write time, inheriting the credential pattern from
 curated permanent (git). The markdown prune command keeps its contract
 until the store is the sole reader, then retires.
 
+Bound, by design: the store is a single rebuildable file under tiered
+retention — growth is capped by the tiers themselves — so this design
+does not trade against the roadmap's no-unbounded-mutation line.
+
 ## 3. Producers (capture first, views second)
 
 - `report-queue` dual-writes: the git row is unchanged; the store gets an
   insert with the same identity (dedup/flap counting becomes SQL).
+  (Not yet landed — cadence producers capture first.)
 - cadence-tick walls (already in drop-in-timing.log) land as `wall_s` rows.
 - supervision stalls/recoveries land with their identity.
 - ceremony receipts land per step (create-run, prepare-candidate, commit,

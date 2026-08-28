@@ -1,5 +1,8 @@
 # Queue — rotating long-term work
 
+The rotation is the machine's patience: one row per item, and
+`rotate-queue` turns the crank.
+
 One row per queued item; `scripts/rotate-queue` advances rows through
 `queued → active → done`. TSV, first line is the header. The full
 proposal prose for each item lives in [backlog.md](backlog.md) (same

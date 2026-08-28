@@ -1,5 +1,8 @@
 # Clean Architecture charter
 
+The walls are the point: dependencies point inward, and the center never
+learns what the edge is doing.
+
 ## Purpose
 
 Hngh is a local kernel for bounded, evidenced work runs. Its source dependencies

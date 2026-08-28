@@ -1,5 +1,7 @@
 # Knowledge base
 
+The vault is canon; every reader is a lens over it, never a second vault.
+
 Status: DESIGN — vault canon, viewer QoL, publisher options, flexibility
 rule, from the operator's third-evening intake (session-notes §9),
 2026-08-27.
@@ -29,6 +31,9 @@ time (MiniSearch-class — no server, no dependency): full-text search,
 backlinks pane, tag/type facets, per-page table of contents, graph pane.
 The index is a generated artifact; a missing or stale index degrades to
 the current file list, never to silence.
+The index stays bounded: rebuilt per kb-feed run over the current vault,
+size-capped and regenerated on demand — a view artifact, gated behind
+capture, never a second store.
 
 ## 3. Flexibility rule
 

@@ -146,11 +146,15 @@ Working order, per the route:
 1. **Land stage 2** (nerve-center consolidation is in final
    verification); the config-backup lanes are scheduled on the 30m tier
    (landed: `hngh-cadence-30m.timer`, hngh-automation `34cd275`) — the
-   gbd takeover completes in the timetable. The self-improvement cadence
+   gbd subsumption is complete and retired
+   (`2026-08-27-dashboard-evolution-gbd-retirement`). The self-improvement cadence
    is routine: the day tier prunes the ledger, checks the kernel gate,
    runs the fresh-eyes review and a daylight research beat, with
    telemetry store v0 and the 30m schedule/research feeds wired
    (hngh-automation `232c5fe`).
+   The automation-advancement review
+   (`2026-08-28-automation-advancement`) tracks how much of this loop
+   the machine now runs itself.
 2. **Open stage 3** with the first live wrapped delegation: run-start →
    observatory `working` → run-end, watched in the dashboard the
    operator just shaped. Then the self-supervision tick.

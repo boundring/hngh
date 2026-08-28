@@ -39,6 +39,10 @@ companions to the contracts above, after the core read order:
 > `ceremony-drive` is a stable CLI name, not a doctrine — it names the
 > closed governance loop's driver, and the token stays as-is even as the
 > prose around it varies.
+>
+> "Nerve center" names the webapp surface; "command center" names the
+> CLI+GUI family it belongs to ([design/command-center.md](design/command-center.md)
+> is that family's hub). Both describe stage-2's one consolidation.
 
 - [Assistant interfaces](design/assistant-interface.md) — the operative
   layer (the dark-coat presence, aesthetic, voice, interface family).

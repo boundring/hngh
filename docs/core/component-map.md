@@ -1,5 +1,8 @@
 # Component map
 
+Every component is a guest with a named seat; nothing sits down
+uninvited.
+
 The map names the public boundaries Hngh may add. A component is admitted only
 when it has its stated reason to change, public API, allowed dependencies, and
 deployment form.

@@ -76,8 +76,8 @@ the current number) and an operator command surface. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
   closed lifecycle.
-- Six application use cases: create-run, admit-transport, arm-run, start-run, checkpoint, and
-  (policy-gated) close-run.
+- Seven application use cases: create-run, admit-transport, arm-run, start-run, checkpoint,
+  (policy-gated) close-run, and (queue-ranking) select-course.
 - Governance: proposal-evidence ledger, deterministic evaluation of ten principles, closed
   failure-disposition policy, non-mutating candidate authorization certificate, and
   exhaustive property tests (totality over the closed vocabularies; monotonicity: ignoring

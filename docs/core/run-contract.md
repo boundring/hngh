@@ -1,5 +1,8 @@
 # Run contract
 
+A run is a promise with a shape — admitted, armed, started, checkpointed,
+closed — and refusable at every gate along the way.
+
 `hngh.domain` defines pure run policy. It depends on Common Lisp only. It has
 no persistence, clock, environment lookup, path resolution, provider payload,
 subprocess, port, adapter, CLI, service, or background process.

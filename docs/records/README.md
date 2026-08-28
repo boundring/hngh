@@ -150,5 +150,12 @@ authorize a future action.
   dashboard evolution wave (operator-item lifecycle, server endpoints,
   session-per-column observatory, cascading gantt) and the
   git-back-dots retirement with its verified archive.
+- `2026-08-28-self-improvement-cadence.md` records the cadence wave
+  (30m/hour tiers wired, four day routines, telemetry store v0, feeds
+  mounted), its live proof, six lessons, and the triage outcomes.
+- `2026-08-28-automation-advancement.md` maps the operator session's
+  working pattern (intake → plan → certificate-bound execution →
+  verification → records → lessons) onto the machine's own mechanisms:
+  what is automated, what stays operator-side, what is next-necessary.
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
