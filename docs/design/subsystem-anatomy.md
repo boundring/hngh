@@ -52,8 +52,11 @@ and the cycle moves on. The cycle never blocks on a human.
 ### The plan-ledger lifecycle
 
 `docs/project/plans/*.plan.md` carries its own status line
-(`status=accepted risk=normal accepted=<ts>`). Plans are
-operator-authored and operator-accepted; the machine reads the status,
+(`status=accepted risk=normal accepted=<ts>`). Plans are operator- or
+machine-authored; normal-risk plans are machine-accepted when their
+verification steps are runnable and the gates are green — the
+acceptance policy itself is operator-owned and lives in
+plans/README.md — and the machine reads the status,
 executes unchecked steps in order, and ticks each with its landing
 commit. `jobs/plan-feed.py` (30m tier) publishes the ledger to
 `dashboard/plans.json`. hngh-automation commits land free; hngh changes

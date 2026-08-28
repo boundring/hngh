@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-08-28T03:20:00Z -->
+<!-- plan: status=executed risk=normal accepted=2026-08-28T03:20:00Z -->
 # 2026-08-28 — overnight continuity
 
 Continuous operation wave: overnight work loop, budgeted remote GLM

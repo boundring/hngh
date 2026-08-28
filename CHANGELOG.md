@@ -10,6 +10,19 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Pre-trip sprint** (hngh-automation `be984d2`, `933c7c5`, `448e2d5`,
+  `4787207`, `abb2be2`): hourly adversarial workbeat (the kick-start
+  automation, guardrails included); winamp-only themes and the
+  digest-freshness P1 fixed; wake-time context in every beat prompt
+  (UTC now, last-activity age, unread alerts) with the accepted →
+  executed plan transition; Steamdeck paired — tailscale userspace
+  daemon, `hngh-desktop` ssh alias, `hngh-tunnel`, remote-posture card
+  on the System page; plan ledger gains dashboard-qol and
+  remote-hardening waves; the first autonomous overnight shift was
+  evaluated and its lessons landed as fixes (budget counting,
+  ceremony-store sweep, selector timeout with kill-after); acceptance
+  policy reconciled — normal-risk plans machine-accepted by gate,
+  critical-risk and the policy itself stay operator-owned.
 - **Winamp conversion wave 1** (hngh-automation `5a4ac12`): the classic
   skin is the dashboard's default — playlist-editor schedule rows
   (uniform 48px rows, striping, LED greens), LCD marquee ticker, panel
