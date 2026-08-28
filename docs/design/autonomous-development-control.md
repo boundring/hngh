@@ -1,5 +1,8 @@
 # Autonomous development control
 
+Freedom is granted by certificate, measured by evidence, and revoked by
+the same hand that gave it.
+
 Status: DESIGN — Task A, 2026-08-12.
 
 Source: `docs/project/decisions.md`.

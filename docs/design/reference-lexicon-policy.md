@@ -1,5 +1,7 @@
 # Reference lexicon policy
 
+Phrases may dress the facts; they may never rewrite them.
+
 A reference lexicon is optional renderer data. It can add a display phrase to a
 presentation surface, but it cannot alter machine behavior or canonical terms.
 No reference pack is active in the current kernel.

@@ -107,8 +107,10 @@ Pi RPC compiler agent remains a survey and a plan.
 When a worker arrives, it will sit behind a port: a replaceable outer layer that Hngh can
 swap out. The worker is read-only by default. Hngh keeps authority, holds the evidence,
 and holds the power to end any run. The worker may only act on the one action its current
-certificate names, verified at the moment of action. Under consideration as the agent
-harness that sits on top is "oh-my-pi," but nothing is installed and nothing is decided.
+certificate names, verified at the moment of action. The agent harness that sits on
+top is "oh-my-pi," installed and live: its omp-bridge gates
+delegated runs through create-run and admit-transport
+(`2026-08-26-omp-bridge`), and the watchdog watches it work.
 
 The standing rule: a worker is a tool, never the source of truth. The truth lives in the
 evidence and the checked decisions, and the final say stays with the human.

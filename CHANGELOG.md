@@ -6,6 +6,21 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-08-28
+
+#### Added
+
+- **Winamp conversion wave 1** (hngh-automation `5a4ac12`): the classic
+  skin is the dashboard's default — playlist-editor schedule rows
+  (uniform 48px rows, striping, LED greens), LCD marquee ticker, panel
+  shade/roll-up, schedule jump filter and status bar, and a programmatic
+  UI audit (`jobs/ui-audit.mjs`: axe-core + display-register rules,
+  mounted on the hour tier) whose first runs found and fixed real
+  contrast and landmark defects.
+- **Docs wave**: route-doc corrections (intent, architecture, index,
+  roadmap), register framing across the dry docs, spec-triage bounds
+  sentences, and the automation-advancement review record.
+
 ### 2026-08-27
 
 #### Added

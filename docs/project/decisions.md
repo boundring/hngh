@@ -1,5 +1,8 @@
 # Decisions
 
+Each entry is a promise the machine made in public, kept where the
+operator can check it.
+
 ## 2026-08-24 — Bounded model & terminal transports are loadout-admitted advisors only
 
 `hngh.adapters.model` and `hngh.adapters.terminal` are input/advisor

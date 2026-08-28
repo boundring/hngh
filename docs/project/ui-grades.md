@@ -1,3 +1,8 @@
+# Interface grades
+
+Every grade the machine has given its own face, in its own words. Low
+scores are kept, not sanded — a flattering ledger is a broken instrument.
+
 | timestamp | target | grade | first finding |
 |---|---|---|---|
 | 2026-08-25 22:19 | dashboard-tui | 4/10 | 1) **title/header text**: "OVERVIEW" "commands" "sessions" "22:18:44" |
@@ -518,3 +523,78 @@
 | 2026-08-27 17:40 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-08-27 17:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-08-27 17:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 17:50 | dashboard-tui-hngh-gen1 | 9/10 | self-grade 9/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 17:50 | dashboard-tui-hngh-gen2 | 9/10 | self-grade 9/10 fg/bg contrast 11.4:1 |
+| 2026-08-27 17:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:00 | dashboard-tui-hngh-gen1 | 6/10 | self-grade 6/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 18:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:00 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.3:1 |
+| 2026-08-27 18:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:10 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 18:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:20 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 18:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 18:30 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 18:30 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:40 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 18:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:50 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:50 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 18:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.8:1 |
+| 2026-08-27 19:00 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.8:1 |
+| 2026-08-27 19:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-08-27 19:00 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.2:1 |
+| 2026-08-27 19:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:10 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:20 | dashboard-tui-hngh-gen2 | 8/10 | self-grade 8/10 fg/bg contrast 12.3:1 |
+| 2026-08-27 19:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:30 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:30 | dashboard-tui-hngh-gen2 | 8/10 | self-grade 8/10 fg/bg contrast 6.0:1 |
+| 2026-08-27 19:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:40 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:50 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:50 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 19:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 11.8:1 |
+| 2026-08-27 20:00 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 13.2:1 |
+| 2026-08-27 20:00 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.1:1 |
+| 2026-08-27 20:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 14.0:1 |
+| 2026-08-27 20:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:10 | dashboard-tui-hngh-gen3 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 20:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 13.9:1 |
+| 2026-08-27 20:20 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.7:1 |
+| 2026-08-27 20:30 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.3:1 |
+| 2026-08-27 20:30 | dashboard-tui-hngh-gen2 | 8/10 | self-grade 8/10 fg/bg contrast 12.2:1 |
+| 2026-08-27 20:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:40 | dashboard-tui-hngh-gen1 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 20:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 13.9:1 |
+| 2026-08-27 20:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:50 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 11.7:1 |
+| 2026-08-27 20:50 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 20:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:00 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:00 | dashboard-tui-hngh-gen3 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 21:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 13.2:1 |
+| 2026-08-27 21:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:10 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:20 | dashboard-tui-hngh-gen2 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 21:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:30 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:30 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 11.8:1 |
+| 2026-08-27 21:40 | dashboard-tui-hngh-gen1 | 8/10 | self-grade 8/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:50 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-08-27 21:50 | dashboard-tui-hngh-gen2 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-08-27 21:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |

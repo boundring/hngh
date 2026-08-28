@@ -1,5 +1,8 @@
 # Launch checklist: public readiness
 
+Readiness is a gate, not a mood: every box flips on evidence or stays
+open.
+
 Status legend: `[x]` done, `[~]` in progress, `[ ]` open. Nothing flips
 until every item is `[x]` with the evidence cited. Each item states the
 criterion (what must be true and verifiable), the current state with one

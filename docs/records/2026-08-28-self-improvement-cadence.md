@@ -60,12 +60,13 @@ and the route docs were corrected to match.
 
 ## Open
 
-- The 19 tracked body deletions remain unstaged by design; the
-  `ledger-prune:deletions` alert (window 604800) holds the operator
-  decision on the ceremony that lands them.
-- AUTO `make test` has 19 pre-existing lint-identifiers problems
-  (watchdog/oversight jobs; `$SECONDS`/`$NF` false positives included) —
-  predates this wave, unfixed here.
-- Review P1s filed by the first fresh-eyes run (ledger-and-records-spec
-  dual-write vs the no-unbounded-mutation roadmap line; knowledge-base-spec
-  index scope) await operator triage in the ledger.
+- RESOLVED 2026-08-28: the 19 tracked body deletions landed via a manual
+  `docs:` commit (hngh `c0c0bd5`) — the ceremony structurally cannot
+  express deletions; the operator delegated the path choice.
+- RESOLVED 2026-08-28: the AUTO lint false positives were fixed at the
+  root (hngh-automation `02f7c1c`); `make test` is green.
+- TRIAGED 2026-08-28: both fresh-eyes P1s were wording-level; bounds
+  sentences added to ledger-and-records-spec.md and
+  knowledge-base-spec.md. The store half of the first was already
+  landed; the dual-write producer and the KB index remain
+  designed-not-built.

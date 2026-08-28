@@ -2,6 +2,9 @@
 
 Hngh begins as a compact, side-effect-free kernel.
 
+It stays small on purpose: the quiet center holds the rules while the
+lattice of small ledgered machines does the moving.
+
 ## Current kernel
 
 `hngh.domain` is an active Common Lisp-only library. It validates ordered
@@ -25,8 +28,8 @@ hold evidence only; they cannot change state or grant authority.
 
 `hngh:validate-profile` remains a compatibility facade over the domain policy.
 `hngh.application` currently contains the pure `create-run`, `admit-transport`,
-`arm-run`, `start-run`, `checkpoint`, and `close-run` use cases with their inward port
-contracts; `admit-transport` and `close-run` are policy-gated.
+`arm-run`, `start-run`, `checkpoint`, `close-run`, and `select-course` use cases with
+their inward port contracts; `admit-transport` and `close-run` are policy-gated.
 `checkpoint` admits only closed verification and manifest evidence through a
 run-only request value. It has no persistence root, clock,
 environment, provider payload, subprocess, service, or background process.

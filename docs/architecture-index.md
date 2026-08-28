@@ -1,5 +1,7 @@
 # Architecture index — what we want, where it is designed, queued, and recorded
 
+One map, so the machine can find its own intentions.
+
 This is the single hub that maps Hngh's **system-harness intent** (the
 fleet-governance ambition) onto its concrete homes: the promotion rungs in the
 [roadmap `## Now`](project/roadmap.md), the
@@ -48,7 +50,7 @@ operator-installed timer invoking single-tick scripts.
 |---|---|---|---|
 | Both repos push their own verified commits; origin never lags the ledger | `push-self-sufficiency` | Push self-sufficiency (autonomy continuum) | `2026-08-26-post-ceremony-push` |
 | Token/key rotation, health probes, alert reports, zero operator | `credential-rotation-auto` (folds into `key-rotation-freshness`) | Credential rotation automation | 2026-08-26 13:00Z token-refresh FAILED (STATE.md) |
-| Timing tiers as systemd units over single-tick jobs | `cadence-continuum` | Cadence continuum | `design/activity-matrix.md` tier schedule |
+| Timing tiers as systemd units over single-tick jobs | `cadence-continuum` | Cadence continuum | `project/activity-matrix.md` tier schedule |
 | Routine project activities on the tiers, fleet-scaled | `activity-cadence` | Activity cadence | `2026-08-26-activity-cadence`; `project/activity-matrix.md` |
 | Relax ritual/ceremony terms to flexible governance vocabulary | `governance-vocabulary` | Governance vocabulary | `2026-08-26-governance-vocabulary` |
 | Automatic live view of working subagents in the dashboard | `agent-live-view` (folds into `ux-hardening`) | Agent live view | `2026-08-26-agent-live-view` |

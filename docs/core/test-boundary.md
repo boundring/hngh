@@ -1,5 +1,8 @@
 # Test boundary
 
+Proof before presence: nothing ships because it looks finished, only
+because the fixtures say so.
+
 Tests prove policy and boundary behavior without a live service, real home
 root, provider call, or background process.
 
