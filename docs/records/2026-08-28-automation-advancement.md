@@ -23,7 +23,7 @@ none for the mapping; the next-necessary list is forward work.
 | Dashboard honesty | Yes, hourly | `cadence/hour/00-dashboard-self-review.sh`, `cadence/hour/05-ui-audit.sh` |
 | Surface evolution | Yes | `cadence/10m/01-evolve-ui.sh` (evolve-dashboard-style) |
 | Routine project activities | Yes, matrix-driven | `cadence/day/01-activity-tick.sh` per activity-matrix.md |
-| Commits | Hybrid — plain `fix:`/`feat:`/`docs:` commits in hngh-automation; certificate loop in hngh is agent-run but operator-initiated | ceremony-drive; two waves of ceremonies this day |
+| Commits | Hybrid — plain `fix:`/`feat:`/`docs:` commits in hngh-automation; certificate loop in hngh is agent-run and now fired autonomously by the overnight beats (first runs were operator-initiated) | ceremony-drive; two waves of ceremonies this day |
 | Records writing | No — agent-authored, ceremony-landed | docs/records/2026-08-28-*.md |
 | Doc routing | No — agent-authored | this wave's docs edits |
 | Telemetry | Capture only | `jobs/telemetry.py` (no readers yet, by design) |
@@ -32,18 +32,20 @@ none for the mapping; the next-necessary list is forward work.
 
 The machine verifies, reviews, researches, prunes, watches itself, and
 evolves its own surface on cadence. As of the overnight loop
-(hngh-automation `3f4ad10`) it also plans, accepts, executes, and lands
-its own work: the plan ledger (docs/project/plans/) is
-machine-accepted for normal-risk work, the overnight cycle executes
-accepted steps through bridge-gated delegated sessions, and landing is
-certificate-driven — plain commits in hngh-automation, the full
-ceremony loop in hngh. The only barrier is governance itself
-(certificates + green gates); human approval is reserved for the
-critical class: provider/credential configuration, systemd unit
-lifecycle beyond installed units, non-prune deletions, and security
-posture. Blocked work parks with an operator-facing alert and the
-cycle moves on — research lines are the filler, so the machine never
-idles on a human.
+(hngh-automation `3f4ad10`) it also executes and lands its own work:
+plans are operator-authored and operator-accepted (today's plan,
+docs/project/plans/2026-08-28-overnight-continuity.plan.md, was
+accepted 2026-08-28T03:20:00Z before machine execution began), the
+overnight cycle executes the accepted steps through bridge-gated
+delegated sessions, and landing is certificate-driven — plain commits
+in hngh-automation, the full ceremony loop in hngh. The only barrier is
+governance itself (certificates + green gates); human approval covers
+plan authoring and acceptance at every risk class, and beyond that is
+reserved for the critical class: provider/credential configuration,
+systemd unit lifecycle beyond installed units, non-prune deletions,
+and security posture. Blocked work parks with an operator-facing alert
+and the cycle moves on — research lines are the filler, so the machine
+never idles on a human.
 
 ## Next-necessary (recorded, not built here)
 
