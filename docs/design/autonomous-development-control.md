@@ -90,7 +90,10 @@ evidence facts. The requirement kinds are:
 `closed-failure-disposition`, `claim-proof`, `base-revision`,
 `candidate-manifest`, `content-hash`, `reversion-or-containment`,
 `component-import`, `route`, `budget`, `token-limit`, `expiry`,
-`source-manifest`, and `conclusion-link`.
+`source-manifest`, `conclusion-link`, `review`, `remote-attestation`,
+and `federated-claim` — 24 kinds in all (the latter three were admitted
+with the federation rung 11 and the policy-profile rung 16; the closed
+set is validated in `src/domain/governance.lisp`).
 
 The requirement kind, not `evidence-fact.kind`, supplies closed evaluator
 meaning. `evidence-fact.kind` remains an open producer/category label. A
