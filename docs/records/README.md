@@ -161,5 +161,11 @@ authorize a future action.
   day's process lessons into their correct homes (governance doc,
   ledger spec, backlog, roadmap) and repairs the reports.md double-header
   flagged by the review digest.
+- `2026-08-30-lessons-and-foldback.md` records what the 33h+
+  unattended window produced (8-step plan executed, 12/12 research
+  lines crystallized, zero kernel commits after plan exhaustion), the
+  window's failure classes, and the 2026-08-30 doc-suite fold-back
+  (requirement-kind count, roadmap rung/use-case drift, two backlog
+  rows).
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.

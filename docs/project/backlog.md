@@ -277,12 +277,63 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Evidence:** the 2026-08-25 consistency pass (README count and
   command surface hand-corrected across the day); the records-index
   gap fixed the same day.
+  2026-08-30 update: the README-count half landed
+  (`tests/scripts/test-doc-numbers.py`, wired in `make test`); the
+  roadmap rung prose drifted again (the Now paragraph stopped at
+  promotion rung 13) and was corrected by the 2026-08-30 fold-back —
+  the row stays open for rung-prose and CLI-verb-list coverage.
 - **Risk:** the guard must only verify, never auto-rewrite; docs stay
   human-folded, the guard fails loudly on divergence.
 - **Dependencies:** the existing `make test` suite (whose count is an
   input) and the surface the numbers describe.
 - **Review trigger:** an independent reviewer sees a deliberately
   desynced README number fail the guard, and a synced one pass.
+
+## Night-agent plan authoring (plan-supply) — queued 2026-08-30
+
+- **Problem:** plans are operator-authored (suite doc 08 R2); when the
+  plan queue emptied after the 2026-08-28 evening-selfdev plan
+  executed, the machine idled for 40h+ — zero kernel commits after
+  `667a36b` (2026-08-28T19:46Z) through 2026-08-30T12:30Z, the hourly
+  workbeat re-announcing the same lane with no plan to feed it
+  (reports.md rows `f27e3532`, `9b362832`), and overnight budget
+  digests at sessions=0.
+- **Smallest useful outcome:** the overnight loop gains a
+  plan-authoring leg that drafts one normal-risk plan per night from
+  open backlog rows, deduplicated alert rows, and crystallized
+  research lines, filing it under `docs/project/plans/` as
+  `status=drafted`; the operator accepts or rejects each morning and
+  the existing accepted→executed machinery runs unchanged.
+- **Evidence:** docs/project/plans/ (last plan 2026-08-28);
+  docs/records/2026-08-30-lessons-and-foldback.md §1–§2; the 2026-08-28
+  evening-selfdev plan as the proof that one good plan converts to a
+  full night of verified work.
+- **Risk:** an authored plan is a proposal, never authority —
+  acceptance stays operator-owned; the standing rule forbidding
+  machine sessions from kernel src/tests/Makefile stays.
+- **Dependencies:** the plan ledger and dashboard (`dashboard/plans.json`,
+  landed 2026-08-28); the backlog lane parser.
+- **Review trigger:** an operator accepts one machine-drafted plan and
+  its execution passes both repos' gates unattended.
+
+## Alert → plan-candidate routing — queued 2026-08-30
+
+- **Problem:** honest alerts route nowhere (suite doc 08 R6): every
+  repair that landed in the 2026-08-28→30 window (stale-store,
+  unparsable readout.json, tree-skew, agent-stall eviction, doc-suite
+  checker bug) originated in a plan step or an operator session, never
+  from the alert row itself; the observation loop is open-ended.
+- **Smallest useful outcome:** a routing step that converts a
+  deduplicated alert row into a draft plan step (problem, evidence
+  link, smallest fix) appended to the next drafted plan — never
+  auto-executed, dedup/escalation caps unchanged.
+- **Evidence:** reports.md alert rows 2026-08-28T20:10Z–2026-08-30T12:03Z;
+  docs/records/2026-08-30-lessons-and-foldback.md §1, lesson 2.
+- **Risk:** low — produces draft text only; the existing hourly
+  escalation caps bound volume.
+- **Dependencies:** the night-agent plan-authoring row above.
+- **Review trigger:** one real alert converts to a drafted step the
+  operator accepts unchanged.
 
 ## Bridge-as-operator-host — queued 2026-08-25
 

@@ -6,6 +6,24 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-08-30
+
+#### Added
+
+- **Lessons & fold-back** (`1f04b5b` machine docs wave;
+  docs/records/2026-08-30-lessons-and-foldback.md): the 2026-08-30
+  doc-suite audit folded back into the kernel docs — the closed
+  requirement-kind list corrected to 24 kinds (autonomous-development-control.md
+  was stale at 21; `:review`, `:remote-attestation`, `:federated-claim`
+  added), the roadmap Now paragraph corrected to seven application use
+  cases (select-course was missed) and to promotion rungs 14–18 (all
+  landed 2026-08-25 but absent from the frontier prose), and the
+  uncommitted 2026-08-28/29 machine docs state landed (evening-selfdev
+  changelog, journals, lessons harvest, six crystallized research
+  docs, ledger appends). Two backlog rows carry the window's lessons
+  as candidate work: night-agent plan authoring (plans ran dry and the
+  kernel idled 40h+) and alert→plan-candidate routing.
+
 ### 2026-08-28
 
 #### Added
