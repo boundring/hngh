@@ -1,3 +1,4 @@
+| timestamp | kind | id | first line | body |
 # Report ledger
 
 Everything the routines saw fit to say, appended oldest-first; the
@@ -56,48 +57,32 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-27T21:08:43Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-27T21:08:43Z-progress-6f20e8cb.md |
 | 2026-08-27T22:00:45Z | progress | b1512bb8 | course bridge-operator-host: card mounted, last increment 2026-08-27T21:00:02Z | 2026-08-27T22:00:45Z-progress-b1512bb8.md |
 | 2026-08-27T22:46:48Z | progress | 8e88929d | wrap witnessed: run-1 start->working->end cancelled (stage-3 criterion 1) | 2026-08-27T22:46:48Z-progress-8e88929d.md |
-| 2026-08-27T22:52:54Z | alert | 6f60879f | agent-stall run-1: stalled, last tool-call n/a ago [close-run: rc=1 Unhandled SIMPLE-ERROR in thread #<SB-THREAD:THREAD tid=2777906 "main thread" RUNNING ×2 | 2026-08-27T22:52:54Z-alert-6f60879f.md |
 | 2026-08-27T22:58:12Z | progress | 198c58ff | seeded stall flagged+replaced in one tick (stage-3 criterion 2); UTC timestamp parse fix in supervision | 2026-08-27T22:58:12Z-progress-198c58ff.md |
 | 2026-08-27T23:00:41Z | progress | d6909c27 | course bridge-operator-host: card mounted, last increment 2026-08-27T22:00:45Z | 2026-08-27T23:00:41Z-progress-d6909c27.md |
 | 2026-08-28T00:00:50Z | progress | 0a32c23e | course bridge-operator-host: card mounted, last increment 2026-08-27T23:00:41Z | 2026-08-28T00:00:50Z-progress-0a32c23e.md |
-| 2026-08-28T00:20:51Z | alert | 60bd43c6 | agent-stall omp-2026-08-27T22-28-12-217Z_01a-43dd63: stalled, last tool-call 33m ago | 2026-08-28T00:20:51Z-alert-60bd43c6.md |
 | 2026-08-28T00:25:53Z | progress | 31a45824 | agent-stall omp-2026-08-27T22-28-12-217Z_01a-43dd63: recovered | 2026-08-28T00:25:53Z-progress-31a45824.md |
 | 2026-08-28T00:34:59Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:34:59Z-progress-6f20e8cb.md |
-| 2026-08-28T00:34:59Z | alert | 171a4138 | [dash-selfreview] served:index.html: unacceptable-now — marker 'Health · verdict' absent from served body — served-stale or cache regression (style.css ?v= class of bug) ×2 | 2026-08-28T00:34:59Z-alert-171a4138.md |
-| 2026-08-28T00:34:59Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×18 | 2026-08-28T00:34:59Z-alert-f438818b.md |
-| 2026-08-28T00:40:31Z | alert | e9e3f4e3 | prune left tracked body deletions — operator ceremony needed | 2026-08-28T00:40:31Z-alert-e9e3f4e3.md |
 | 2026-08-28T00:43:47Z | progress | 84b1a73f | research beat: log-presentation patterns -> digest/RESEARCH-BEAT-2026-08-28.md | 2026-08-28T00:43:47Z-progress-84b1a73f.md |
-| 2026-08-28T00:49:50Z | alert | c04d2d6d | review P0/P1 (hngh): P1: `docs/design/ledger-and-records-spec.md` proposes a new SQLite store (`dashboard/telemetry.db`) and dual-write producers, which violates the roadmap's explicit constraint: "No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage." The spec must be revised to align with current constraints or the roadmap constraint updated. | 2026-08-28T00:49:50Z-alert-c04d2d6d.md |
-| 2026-08-28T00:49:50Z | alert | 2fa318a8 | review P0/P1 (hngh): P1: `docs/design/knowledge-base-spec.md` proposes a client-side index build at "kb-feed time" and a "wiki-grade" viewer (MiniSearch, graph pane), which expands scope beyond the stated "capture before views" principle and risks violating the "no unbounded mutation" constraint if the index generation is not strictly bounded/cached. | 2026-08-28T00:49:50Z-alert-2fa318a8.md |
-| 2026-08-28T00:49:50Z | alert | 39a11864 | review P0/P1 (hngh-automation): P1: `systemd/hngh-cadence-hour.timer` uses `OnCalendar=*-*-* *:00:10`, which is invalid systemd calendar syntax (seconds are not supported in this format; it should be `*:00:10` for minute:second or similar, but typically hourly offsets use `Persistent=true` with a standard hour spec). This will likely fail to load or behave unexpectedly. | 2026-08-28T00:49:50Z-alert-39a11864.md |
 | 2026-08-28T00:49:50Z | progress | 65339f66 | review: hngh 4 findings (0 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T00:49:50Z-progress-65339f66.md |
 | 2026-08-28T00:49:50Z | progress | 83387e21 | review: hngh-automation 3 findings (0 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T00:49:50Z-progress-83387e21.md |
 | 2026-08-28T00:52:51Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T00:52:51Z-progress-ad39f093.md |
 | 2026-08-28T00:53:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T00:53:02Z-progress-6f20e8cb.md |
-| 2026-08-28T01:00:49Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×17 | 2026-08-28T01:00:49Z-alert-e5f68caa.md |
 | 2026-08-28T01:00:50Z | progress | 9d520a33 | course bridge-operator-host: card mounted, last increment 2026-08-28T00:00:50Z | 2026-08-28T01:00:50Z-progress-9d520a33.md |
 | 2026-08-28T01:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T01:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T01:30:52Z-progress-6f20e8cb.md |
-| 2026-08-28T01:42:42Z | alert | 98c4f43a | ui-audit unavailable: Passed function cannot be serialized! | 2026-08-28T01:42:42Z-alert-98c4f43a.md |
 | 2026-08-28T01:43:13Z | alert | c518fa21 | ui-audit axe:color-contrast: 1 violation(s) — .gcount | .glabel-deferred.glabel-row:nth-child(38) > .gname | .glabel-deferred.glabel-row:nth-child(38) > .gchip-oneoff | 2026-08-28T01:43:13Z-alert-c518fa21.md |
 | 2026-08-28T01:43:13Z | alert | 70a44eb8 | ui-audit axe:region: 1 violation(s) — #tabs | .orient-line | 2026-08-28T01:43:13Z-alert-70a44eb8.md |
-| 2026-08-28T01:43:13Z | alert | 69886bba | ui-audit name-completeness: 1 violation(s) — arch-update ×5 | 2026-08-28T01:43:13Z-alert-69886bba.md |
 | 2026-08-28T01:43:13Z | alert | 6979dc0d | ui-audit text-legibility-squash: 154 violation(s) — gname: hngh-cadence-1m | gest: ESTIMATE from ledger p50 (schedule feed) | gchip-recur: ∷ every ~60s · 7 runs/24h · 1m tier | 2026-08-28T01:43:13Z-alert-6979dc0d.md |
-| 2026-08-28T01:44:43Z | alert | d59b0b17 | ui-audit probe row (delete-me via 48h prune) | 2026-08-28T01:44:43Z-alert-d59b0b17.md |
 | 2026-08-28T01:45:08Z | alert | f547e48c | ui-audit text-legibility-squash: 154 violation(s) — gname: 01-activity-tick.sh | gname: 02-ledger-prune.sh | 2026-08-28T01:45:08Z-alert-f547e48c.md |
-| 2026-08-28T01:45:08Z | alert | 1cefe5d5 | ui-audit axe:color-contrast: 1 violation(s) — .strip-counts ×5 | 2026-08-28T01:45:08Z-alert-1cefe5d5.md |
-| 2026-08-28T01:46:41Z | alert | 643e9f45 | ui-audit axe:region: 1 violation(s) — #tabs ¦ .orient-line ×3 | 2026-08-28T01:46:41Z-alert-643e9f45.md |
 | 2026-08-28T02:00:50Z | progress | cbac56f9 | course bridge-operator-host: card mounted, last increment 2026-08-28T01:00:50Z | 2026-08-28T02:00:50Z-progress-cbac56f9.md |
 | 2026-08-28T02:00:54Z | progress | 3718401b | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-08-28T02:00:54Z-progress-3718401b.md |
 | 2026-08-28T02:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T02:30:52Z-progress-6f20e8cb.md |
-| 2026-08-28T02:40:51Z | alert | 6475fa5c | agent-stall omp-2026-08-28T00-32-16-127Z_01a-d758cd: stalled, last tool-call 41m ago | 2026-08-28T02:40:51Z-alert-6475fa5c.md |
 | 2026-08-28T02:45:51Z | progress | 3c9458cb | agent-stall omp-2026-08-28T00-32-16-127Z_01a-d758cd: recovered | 2026-08-28T02:45:51Z-progress-3c9458cb.md |
 | 2026-08-28T03:00:50Z | progress | be5c331c | course bridge-operator-host: card mounted, last increment 2026-08-28T02:00:50Z | 2026-08-28T03:00:50Z-progress-be5c331c.md |
 | 2026-08-28T03:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T03:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T03:12:07Z | progress | abbdad27 | research line gantt-legibility: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-gantt-legibility.md | 2026-08-28T03:12:07Z-progress-abbdad27.md |
 | 2026-08-28T03:14:04Z | progress | c687db18 | research line log-presentation-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-log-presentation-patterns.md | 2026-08-28T03:14:04Z-progress-c687db18.md |
 | 2026-08-28T03:16:52Z | progress | 937cb1cc | research line session-cost-display: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-session-cost-display.md | 2026-08-28T03:16:52Z-progress-937cb1cc.md |
-| 2026-08-28T03:19:56Z | alert | a1fde252 | overnight beat 2026-08-28-overnight-continuity could not open a bridge run: omp-bridge: create-run refused (exit 1) | 2026-08-28T03:19:56Z-alert-a1fde252.md |
 | 2026-08-28T03:22:12Z | progress | de7d4ee9 | research line tech-tree-research-ux: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-tech-tree-research-ux.md | 2026-08-28T03:22:12Z-progress-de7d4ee9.md |
 | 2026-08-28T03:25:05Z | progress | cd95477e | research line telemetry-schema-exemplars: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-telemetry-schema-exemplars.md | 2026-08-28T03:25:05Z-progress-cd95477e.md |
 | 2026-08-28T03:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T03:30:52Z-progress-6f20e8cb.md |
@@ -124,7 +109,6 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T07:00:00Z | progress | 24d59d95 | course bridge-operator-host: card mounted, last increment 2026-08-28T06:00:50Z | 2026-08-28T07:00:00Z-progress-24d59d95.md |
 | 2026-08-28T07:00:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T07:00:02Z-progress-6f20e8cb.md |
 | 2026-08-28T07:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T07:30:52Z-progress-6f20e8cb.md |
-| 2026-08-28T07:55:50Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×64 | 2026-08-28T07:55:50Z-alert-96bd99de.md |
 | 2026-08-28T08:00:50Z | progress | ea249137 | course bridge-operator-host: card mounted, last increment 2026-08-28T07:00:00Z | 2026-08-28T08:00:50Z-progress-ea249137.md |
 | 2026-08-28T08:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T08:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T08:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T08:30:52Z-progress-6f20e8cb.md |
@@ -150,7 +134,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T11:10:49Z | alert | 0582c2ca | [oversight] stale-store: /tmp/hngh-cer-overnight-3 record.lisp untouched 30min+ ×12 | 2026-08-28T11:10:49Z-alert-0582c2ca.md |
 | 2026-08-28T11:10:49Z | alert | 4b0abe9a | [oversight] stale-store: /tmp/hngh-cer-overnight-4 record.lisp untouched 30min+ ×12 | 2026-08-28T11:10:49Z-alert-4b0abe9a.md |
 | 2026-08-28T11:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T11:30:52Z-progress-6f20e8cb.md |
-| 2026-08-28T12:00:49Z | alert | 6ac3bee7 | [dash-selfreview] feed-fresh:sessions.json: unacceptable-now — stale 1859s > 3x tier 60s — producer for sessions.json is not firing or is failing | 2026-08-28T12:00:49Z-alert-6ac3bee7.md |
+| 2026-08-28T12:00:49Z | alert | 6ac3bee7 | [dash-selfreview] feed-fresh:sessions.json: unacceptable-now — stale 1859s > 3x tier 60s — producer for sessions.json is not firing or is failing ×2 | 2026-08-28T12:00:49Z-alert-6ac3bee7.md |
 | 2026-08-28T12:00:50Z | progress | c79195e5 | course bridge-operator-host: card mounted, last increment 2026-08-28T11:00:50Z | 2026-08-28T12:00:50Z-progress-c79195e5.md |
 | 2026-08-28T12:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T12:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T12:30:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T12:30:52Z-progress-6f20e8cb.md |
@@ -188,3 +172,189 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-28T19:00:52Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T19:00:52Z-progress-6f20e8cb.md |
 | 2026-08-28T19:03:30Z | progress | 22a2b295 | research line adversarial-review-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-adversarial-review-patterns.md | 2026-08-28T19:03:30Z-progress-22a2b295.md |
 | 2026-08-28T19:30:46Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T19:30:46Z-progress-6f20e8cb.md |
+| 2026-08-28T20:00:43Z | progress | f07f1f49 | course bridge-operator-host: card mounted, last increment 2026-08-28T19:00:50Z | 2026-08-28T20:00:43Z-progress-f07f1f49.md |
+| 2026-08-28T20:00:46Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T20:00:46Z-progress-6f20e8cb.md |
+| 2026-08-28T20:10:00Z | alert | 849d330b | [oversight] stale-store: /tmp/hngh-cer-lessons-1 record.lisp untouched 30min+ ×6 | 2026-08-28T20:10:00Z-alert-849d330b.md |
+| 2026-08-28T20:12:46Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-28T20:12:46Z-progress-ad39f093.md |
+| 2026-08-28T20:12:46Z | progress | f92dc864 | gate: hngh-automation make test green (ok) | 2026-08-28T20:12:46Z-progress-f92dc864.md |
+| 2026-08-28T20:20:00Z | alert | ce6857f7 | [oversight] stale-store: /tmp/hngh-cer-evening-selfdev record.lisp untouched 30min+ ×4 | 2026-08-28T20:20:00Z-alert-ce6857f7.md |
+| 2026-08-28T20:23:24Z | alert | 622e68f0 | review P0/P1 (hngh): P1: `docs/design/logs-page-spec.md` is truncated mid-sentence at the end of the file (ends with "is an un"), indicating a failed write or incomplete commit. ×2 | 2026-08-28T20:23:24Z-alert-622e68f0.md |
+| 2026-08-28T20:23:24Z | alert | 7de11874 | review P0/P1 (hngh-automation): P1: `scripts/lint-identifiers.sh` heredoc scoping logic has a race condition/state leak risk: `hd_defined` and `hd_referenced` are declared with `declare -A` inside the loop but only `unset`/re-declared at the start of the file iteration. If a file contains multiple quoted heredocs, the associative arrays accumulate keys from previous heredocs in the same file unless explicitly cleared per-heredoc or if the logic relies on the `hidx` keying perfectly (which it does via `$hidx $name`, but the `unset` at the top of the loop is good). However, the `refbuf` variable is appended to for unquoted heredocs but never reset between files? No, it is initialized per file. Wait, looking closely: `refbuf=""` is initialized per file. `hbuf` is reset per heredoc start. The logic seems sound for single-pass. | 2026-08-28T20:23:24Z-alert-7de11874.md |
+| 2026-08-28T20:23:24Z | progress | f4ae7c68 | review: hngh 2 findings (1 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T20:23:24Z-progress-f4ae7c68.md |
+| 2026-08-28T20:23:24Z | progress | cf4df163 | review: hngh-automation 3 findings (1 P0/P1) -> digest/REVIEW-2026-08-28.md | 2026-08-28T20:23:24Z-progress-cf4df163.md |
+| 2026-08-28T20:30:03Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T20:30:03Z-progress-6f20e8cb.md |
+| 2026-08-28T20:30:47Z | progress | 7df94000 | plan 2026-08-28-evening-selfdev executed (all steps checked) | 2026-08-28T20:30:47Z-progress-7df94000.md |
+| 2026-08-28T20:35:43Z | alert | 021cb86c | [oversight] slow-unit: dropin:20-workbeat.sh wall=1800.8s median=419.8s ×6 | 2026-08-28T20:35:43Z-alert-021cb86c.md |
+| 2026-08-28T21:00:43Z | progress | a2137009 | course bridge-operator-host: card mounted, last increment 2026-08-28T20:00:43Z | 2026-08-28T21:00:43Z-progress-a2137009.md |
+| 2026-08-28T21:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T21:00:45Z-progress-6f20e8cb.md |
+| 2026-08-28T21:03:10Z | progress | 36e92a54 | research line adversarial-review-patterns: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-adversarial-review-patterns.md | 2026-08-28T21:03:10Z-progress-36e92a54.md |
+| 2026-08-28T21:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T21:30:45Z-progress-6f20e8cb.md |
+| 2026-08-28T22:00:43Z | progress | b8d30425 | course bridge-operator-host: card mounted, last increment 2026-08-28T21:00:43Z | 2026-08-28T22:00:43Z-progress-b8d30425.md |
+| 2026-08-28T22:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T22:00:45Z-progress-6f20e8cb.md |
+| 2026-08-28T22:03:11Z | progress | 3471c985 | research line logs-known-good-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-28-logs-known-good-patterns.md | 2026-08-28T22:03:11Z-progress-3471c985.md |
+| 2026-08-28T22:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T22:30:45Z-progress-6f20e8cb.md |
+| 2026-08-28T22:32:53Z | progress | 83cdfb3c | research line logs-known-good-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-28-logs-known-good-patterns.md | 2026-08-28T22:32:53Z-progress-83cdfb3c.md |
+| 2026-08-28T23:00:43Z | progress | fddba668 | course bridge-operator-host: card mounted, last increment 2026-08-28T22:00:43Z | 2026-08-28T23:00:43Z-progress-fddba668.md |
+| 2026-08-28T23:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T23:00:45Z-progress-6f20e8cb.md |
+| 2026-08-28T23:03:11Z | progress | d7952986 | research line logs-known-good-patterns: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-28-logs-known-good-patterns.md | 2026-08-28T23:03:11Z-progress-d7952986.md |
+| 2026-08-28T23:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-28T23:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T00:00:43Z | progress | de034675 | course bridge-operator-host: card mounted, last increment 2026-08-28T23:00:43Z | 2026-08-29T00:00:43Z-progress-de034675.md |
+| 2026-08-29T00:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T00:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T00:03:07Z | progress | 9ac334e1 | research line remote-access-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-29-remote-access-patterns.md | 2026-08-29T00:03:07Z-progress-9ac334e1.md |
+| 2026-08-29T00:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T00:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T00:32:53Z | progress | 0aa784db | research line remote-access-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-29-remote-access-patterns.md | 2026-08-29T00:32:53Z-progress-0aa784db.md |
+| 2026-08-29T01:00:42Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×24 | 2026-08-29T01:00:42Z-alert-f438818b.md |
+| 2026-08-29T01:00:43Z | progress | 87230626 | course bridge-operator-host: card mounted, last increment 2026-08-29T00:00:43Z | 2026-08-29T01:00:43Z-progress-87230626.md |
+| 2026-08-29T01:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T01:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T01:03:06Z | progress | 4d482eb5 | research line remote-access-patterns: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-29-remote-access-patterns.md | 2026-08-29T01:03:06Z-progress-4d482eb5.md |
+| 2026-08-29T01:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T01:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T02:00:42Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×24 | 2026-08-29T02:00:42Z-alert-e5f68caa.md |
+| 2026-08-29T02:00:43Z | progress | 971ac844 | course bridge-operator-host: card mounted, last increment 2026-08-29T01:00:43Z | 2026-08-29T02:00:43Z-progress-971ac844.md |
+| 2026-08-29T02:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T02:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T02:03:11Z | progress | 3c5bbaa3 | research line research-publishing-pipelines: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-29-research-publishing-pipelines.md | 2026-08-29T02:03:11Z-progress-3c5bbaa3.md |
+| 2026-08-29T02:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T02:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T02:32:54Z | progress | b140cdc9 | research line research-publishing-pipelines: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-29-research-publishing-pipelines.md | 2026-08-29T02:32:54Z-progress-b140cdc9.md |
+| 2026-08-29T03:00:43Z | progress | 954c6f4c | course bridge-operator-host: card mounted, last increment 2026-08-29T02:00:43Z | 2026-08-29T03:00:43Z-progress-954c6f4c.md |
+| 2026-08-29T03:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T03:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T03:03:42Z | progress | 6696a176 | research line research-publishing-pipelines: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-29-research-publishing-pipelines.md | 2026-08-29T03:03:42Z-progress-6696a176.md |
+| 2026-08-29T03:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T03:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T04:00:42Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×288 | 2026-08-29T04:00:42Z-alert-96bd99de.md |
+| 2026-08-29T04:00:43Z | progress | c6559c19 | course bridge-operator-host: card mounted, last increment 2026-08-29T03:00:43Z | 2026-08-29T04:00:43Z-progress-c6559c19.md |
+| 2026-08-29T04:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T04:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T04:03:47Z | progress | c034a546 | research line unattended-session-budgets: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-29-unattended-session-budgets.md | 2026-08-29T04:03:47Z-progress-c034a546.md |
+| 2026-08-29T04:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T04:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T04:32:53Z | progress | f1ffabbf | research line unattended-session-budgets: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-29-unattended-session-budgets.md | 2026-08-29T04:32:53Z-progress-f1ffabbf.md |
+| 2026-08-29T05:00:43Z | progress | c713fbeb | course bridge-operator-host: card mounted, last increment 2026-08-29T04:00:43Z | 2026-08-29T05:00:43Z-progress-c713fbeb.md |
+| 2026-08-29T05:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T05:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T05:03:13Z | progress | 1914f8c4 | research line unattended-session-budgets: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-29-unattended-session-budgets.md | 2026-08-29T05:03:13Z-progress-1914f8c4.md |
+| 2026-08-29T05:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T05:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T06:00:43Z | progress | df0de0cf | course bridge-operator-host: card mounted, last increment 2026-08-29T05:00:43Z | 2026-08-29T06:00:43Z-progress-df0de0cf.md |
+| 2026-08-29T06:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T06:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T06:03:54Z | progress | 0351f72d | research line virtual-assistant-ux: planned -> expanding -> digest/RESEARCH-BEAT-2026-08-29-virtual-assistant-ux.md | 2026-08-29T06:03:54Z-progress-0351f72d.md |
+| 2026-08-29T06:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T06:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T06:33:32Z | progress | 6907c8f1 | research line virtual-assistant-ux: expanding -> contracting -> digest/RESEARCH-BEAT-2026-08-29-virtual-assistant-ux.md | 2026-08-29T06:33:32Z-progress-6907c8f1.md |
+| 2026-08-29T07:00:43Z | progress | 5add465f | course bridge-operator-host: card mounted, last increment 2026-08-29T06:00:43Z | 2026-08-29T07:00:43Z-progress-5add465f.md |
+| 2026-08-29T07:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T07:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T07:03:12Z | progress | f8ea558a | research line virtual-assistant-ux: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-08-29-virtual-assistant-ux.md | 2026-08-29T07:03:12Z-progress-f8ea558a.md |
+| 2026-08-29T07:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T07:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T08:00:43Z | progress | 6ce9abf3 | course bridge-operator-host: card mounted, last increment 2026-08-29T07:00:43Z | 2026-08-29T08:00:43Z-progress-6ce9abf3.md |
+| 2026-08-29T08:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T08:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T08:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T08:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T09:00:42Z | progress | f27e3532 | implementation: 2026-08-29 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-08-29T09:00:42Z-progress-f27e3532.md |
+| 2026-08-29T09:00:42Z | progress | 5a4239a7 | review: 2026-08-29 latest progress increment=f27e3532 (implementation:2026-08-2910openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-08-29T09:00:42Z-progress-5a4239a7.md |
+| 2026-08-29T09:00:43Z | scheduled | ff457fa3 | refactor: 2026-08-29 no refactor step defined (none scheduled) | 2026-08-29T09:00:43Z-scheduled-ff457fa3.md |
+| 2026-08-29T09:00:43Z | progress | 92b2a0f5 | cleanup: 2026-08-29 done markers present; cleanup due | 2026-08-29T09:00:43Z-progress-92b2a0f5.md |
+| 2026-08-29T09:00:43Z | progress | ceb879cb | inward: 2026-08-29 checkin awaits line (head: # Check-ins — gentle periodic look at the project) | 2026-08-29T09:00:43Z-progress-ceb879cb.md |
+| 2026-08-29T09:00:43Z | progress | 2a6ee240 | course bridge-operator-host: card mounted, last increment 2026-08-29T08:00:43Z | 2026-08-29T09:00:43Z-progress-2a6ee240.md |
+| 2026-08-29T09:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T09:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T09:01:17Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-29T09:01:17Z-progress-ad39f093.md |
+| 2026-08-29T09:01:17Z | progress | f92dc864 | gate: hngh-automation make test green (ok) | 2026-08-29T09:01:17Z-progress-f92dc864.md |
+| 2026-08-29T09:06:56Z | alert | 17aeb398 | review P0/P1 (hngh-automation): P1: The sweep commit includes `dashboard/telemetry.db-shm` (a SQLite shared memory file) which should not be tracked in git; it will cause merge conflicts and repository bloat. | 2026-08-29T09:06:56Z-alert-17aeb398.md |
+| 2026-08-29T09:06:56Z | progress | 9dd457bb | review: hngh 2 findings (1 P0/P1) -> digest/REVIEW-2026-08-29.md | 2026-08-29T09:06:56Z-progress-9dd457bb.md |
+| 2026-08-29T09:06:57Z | progress | 9fdde1f1 | review: hngh-automation 1 findings (1 P0/P1) -> digest/REVIEW-2026-08-29.md | 2026-08-29T09:06:57Z-progress-9fdde1f1.md |
+| 2026-08-29T09:07:07Z | progress | 5de6c1a8 | remote posture degraded 2026-08-29: tailscale ping 100.79.162.3 (deck) unreachable | 2026-08-29T09:07:07Z-progress-5de6c1a8.md |
+| 2026-08-29T09:07:07Z | progress | f5929eaa | daily budget digest 2026-08-29: overnight sessions=0 remote_model_calls=0 remote_cost_usd=0 [vs operator target $10-20/day] | 2026-08-29T09:07:07Z-progress-f5929eaa.md |
+| 2026-08-29T09:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T09:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T10:00:43Z | progress | 39b41b29 | course bridge-operator-host: card mounted, last increment 2026-08-29T09:00:43Z | 2026-08-29T10:00:43Z-progress-39b41b29.md |
+| 2026-08-29T10:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T10:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T10:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T10:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T11:00:43Z | progress | 261d862e | course bridge-operator-host: card mounted, last increment 2026-08-29T10:00:43Z | 2026-08-29T11:00:43Z-progress-261d862e.md |
+| 2026-08-29T11:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T11:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T11:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T11:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T12:00:43Z | progress | 58ff4491 | course bridge-operator-host: card mounted, last increment 2026-08-29T11:00:43Z | 2026-08-29T12:00:43Z-progress-58ff4491.md |
+| 2026-08-29T12:00:45Z | alert | 8f95be31 | ui-audit name-completeness: 18 violation(s) — wake-mutation-lane ¦ node-lattice-admission ¦ bridge-operator-host | 2026-08-29T12:00:45Z-alert-8f95be31.md |
+| 2026-08-29T12:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T12:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T12:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T12:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T13:00:43Z | progress | 60c52867 | course bridge-operator-host: card mounted, last increment 2026-08-29T12:00:45Z | 2026-08-29T13:00:43Z-progress-60c52867.md |
+| 2026-08-29T13:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T13:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T13:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T13:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T14:00:43Z | progress | e24b0cbb | course bridge-operator-host: card mounted, last increment 2026-08-29T13:00:43Z | 2026-08-29T14:00:43Z-progress-e24b0cbb.md |
+| 2026-08-29T14:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T14:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T14:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T14:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T15:00:43Z | progress | 2bd4070e | course bridge-operator-host: card mounted, last increment 2026-08-29T14:00:43Z | 2026-08-29T15:00:43Z-progress-2bd4070e.md |
+| 2026-08-29T15:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T15:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T15:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T15:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T16:00:43Z | progress | 5e6abe5b | course bridge-operator-host: card mounted, last increment 2026-08-29T15:00:43Z | 2026-08-29T16:00:43Z-progress-5e6abe5b.md |
+| 2026-08-29T16:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T16:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T16:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T16:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T17:00:43Z | progress | a3eed282 | course bridge-operator-host: card mounted, last increment 2026-08-29T16:00:43Z | 2026-08-29T17:00:43Z-progress-a3eed282.md |
+| 2026-08-29T17:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T17:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T17:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T17:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T18:00:43Z | progress | 95fffff6 | course bridge-operator-host: card mounted, last increment 2026-08-29T17:00:43Z | 2026-08-29T18:00:43Z-progress-95fffff6.md |
+| 2026-08-29T18:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T18:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T18:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T18:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T19:00:43Z | progress | 61ee81b1 | course bridge-operator-host: card mounted, last increment 2026-08-29T18:00:43Z | 2026-08-29T19:00:43Z-progress-61ee81b1.md |
+| 2026-08-29T19:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T19:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T19:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T19:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T20:00:43Z | progress | d403b67b | course bridge-operator-host: card mounted, last increment 2026-08-29T19:00:43Z | 2026-08-29T20:00:43Z-progress-d403b67b.md |
+| 2026-08-29T20:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T20:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T20:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T20:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T21:00:43Z | progress | 37c3af85 | course bridge-operator-host: card mounted, last increment 2026-08-29T20:00:43Z | 2026-08-29T21:00:43Z-progress-37c3af85.md |
+| 2026-08-29T21:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T21:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T21:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T21:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T22:00:43Z | progress | 38f6e9b5 | course bridge-operator-host: card mounted, last increment 2026-08-29T21:00:43Z | 2026-08-29T22:00:43Z-progress-38f6e9b5.md |
+| 2026-08-29T22:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T22:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T22:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T22:30:45Z-progress-6f20e8cb.md |
+| 2026-08-29T23:00:43Z | progress | cfe8f397 | course bridge-operator-host: card mounted, last increment 2026-08-29T22:00:43Z | 2026-08-29T23:00:43Z-progress-cfe8f397.md |
+| 2026-08-29T23:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T23:00:45Z-progress-6f20e8cb.md |
+| 2026-08-29T23:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-29T23:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T00:00:43Z | progress | 1ea29be7 | course bridge-operator-host: card mounted, last increment 2026-08-29T23:00:43Z | 2026-08-30T00:00:43Z-progress-1ea29be7.md |
+| 2026-08-30T00:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T00:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T00:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T00:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T01:00:42Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×11 | 2026-08-30T01:00:42Z-alert-f438818b.md |
+| 2026-08-30T01:00:43Z | progress | 48de4e9d | course bridge-operator-host: card mounted, last increment 2026-08-30T00:00:43Z | 2026-08-30T01:00:43Z-progress-48de4e9d.md |
+| 2026-08-30T01:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T01:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T01:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T01:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T02:00:42Z | alert | e5f68caa | [dash-selfreview] feed-valid:readout.json: unacceptable-now — unparsable: Expecting value: line 1 column 1 (char 0) ×10 | 2026-08-30T02:00:42Z-alert-e5f68caa.md |
+| 2026-08-30T02:00:43Z | progress | 83787c71 | course bridge-operator-host: card mounted, last increment 2026-08-30T01:00:43Z | 2026-08-30T02:00:43Z-progress-83787c71.md |
+| 2026-08-30T02:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T02:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T02:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T02:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T03:00:43Z | progress | 86a6c32a | course bridge-operator-host: card mounted, last increment 2026-08-30T02:00:43Z | 2026-08-30T03:00:43Z-progress-86a6c32a.md |
+| 2026-08-30T03:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T03:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T03:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T03:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T04:00:43Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×88 | 2026-08-30T04:00:43Z-alert-96bd99de.md |
+| 2026-08-30T04:00:43Z | progress | 9189f4b4 | course bridge-operator-host: card mounted, last increment 2026-08-30T03:00:43Z | 2026-08-30T04:00:43Z-progress-9189f4b4.md |
+| 2026-08-30T04:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T04:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T04:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T04:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T04:45:44Z | alert | acd0de86 | agent-stall omp-2026-08-28T19-18-27-123Z_01a-e1668f: stalled, last tool-call 1967m ago | 2026-08-30T04:45:44Z-alert-acd0de86.md |
+| 2026-08-30T04:50:44Z | progress | e51e5788 | agent-stall omp-2026-08-28T19-18-27-123Z_01a-e1668f: recovered | 2026-08-30T04:50:44Z-progress-e51e5788.md |
+| 2026-08-30T05:00:43Z | progress | 2d196c63 | course bridge-operator-host: card mounted, last increment 2026-08-30T04:00:43Z | 2026-08-30T05:00:43Z-progress-2d196c63.md |
+| 2026-08-30T05:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T05:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T05:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T05:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T06:00:43Z | progress | 21c30d5f | course bridge-operator-host: card mounted, last increment 2026-08-30T05:00:43Z | 2026-08-30T06:00:43Z-progress-21c30d5f.md |
+| 2026-08-30T06:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T06:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T06:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T06:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T07:00:43Z | progress | 3218f52e | course bridge-operator-host: card mounted, last increment 2026-08-30T06:00:43Z | 2026-08-30T07:00:43Z-progress-3218f52e.md |
+| 2026-08-30T07:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T07:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T07:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T07:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T08:00:43Z | progress | b5cc91c9 | course bridge-operator-host: card mounted, last increment 2026-08-30T07:00:43Z | 2026-08-30T08:00:43Z-progress-b5cc91c9.md |
+| 2026-08-30T08:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T08:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T08:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T08:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T09:00:42Z | progress | 9b362832 | implementation: 2026-08-30 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-08-30T09:00:42Z-progress-9b362832.md |
+| 2026-08-30T09:00:42Z | progress | 6286bca0 | review: 2026-08-30 latest progress increment=9b362832 (implementation:2026-08-3010openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-08-30T09:00:42Z-progress-6286bca0.md |
+| 2026-08-30T09:00:43Z | scheduled | 92a5b9c5 | refactor: 2026-08-30 no refactor step defined (none scheduled) | 2026-08-30T09:00:43Z-scheduled-92a5b9c5.md |
+| 2026-08-30T09:00:43Z | progress | 35310f20 | cleanup: 2026-08-30 done markers present; cleanup due | 2026-08-30T09:00:43Z-progress-35310f20.md |
+| 2026-08-30T09:00:43Z | progress | b16f7d60 | inward: 2026-08-30 checkin awaits line (head: # Check-ins — gentle periodic look at the project) | 2026-08-30T09:00:43Z-progress-b16f7d60.md |
+| 2026-08-30T09:00:43Z | progress | bea64697 | course bridge-operator-host: card mounted, last increment 2026-08-30T08:00:43Z | 2026-08-30T09:00:43Z-progress-bea64697.md |
+| 2026-08-30T09:00:43Z | progress | 27ced21b | ledger prune: pruned 17 alert rows (48h retention, archived to docs/project/report-bodies/prune-archive-2026-08-30.md) | 2026-08-30T09:00:43Z-progress-27ced21b.md |
+| 2026-08-30T09:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T09:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T09:01:18Z | progress | ad39f093 | gate: hngh make test green (2855 checks passed) | 2026-08-30T09:01:18Z-progress-ad39f093.md |
+| 2026-08-30T09:01:19Z | progress | f92dc864 | gate: hngh-automation make test green (ok) | 2026-08-30T09:01:19Z-progress-f92dc864.md |
+| 2026-08-30T09:05:06Z | progress | 3ae65fc9 | review: hngh 0 findings (0 P0/P1) -> digest/REVIEW-2026-08-30.md | 2026-08-30T09:05:06Z-progress-3ae65fc9.md |
+| 2026-08-30T09:05:06Z | progress | 96dcaae8 | review: hngh-automation 2 findings (0 P0/P1) -> digest/REVIEW-2026-08-30.md | 2026-08-30T09:05:06Z-progress-96dcaae8.md |
+| 2026-08-30T09:05:16Z | progress | f7ea7451 | remote posture degraded 2026-08-30: tailscale ping 100.79.162.3 (deck) unreachable | 2026-08-30T09:05:16Z-progress-f7ea7451.md |
+| 2026-08-30T09:05:16Z | progress | bed8edd3 | daily budget digest 2026-08-30: overnight sessions=0 remote_model_calls=0 remote_cost_usd=0 [vs operator target $10-20/day] | 2026-08-30T09:05:16Z-progress-bed8edd3.md |
+| 2026-08-30T09:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T09:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T10:00:43Z | progress | c3217471 | course bridge-operator-host: card mounted, last increment 2026-08-30T09:00:43Z | 2026-08-30T10:00:43Z-progress-c3217471.md |
+| 2026-08-30T10:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T10:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T10:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T10:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T11:00:43Z | progress | b8edad2c | course bridge-operator-host: card mounted, last increment 2026-08-30T10:00:43Z | 2026-08-30T11:00:43Z-progress-b8edad2c.md |
+| 2026-08-30T11:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T11:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T11:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T11:30:45Z-progress-6f20e8cb.md |
+| 2026-08-30T12:00:43Z | progress | 0bd2f628 | course bridge-operator-host: card mounted, last increment 2026-08-30T11:00:43Z | 2026-08-30T12:00:43Z-progress-0bd2f628.md |
+| 2026-08-30T12:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T12:00:45Z-progress-6f20e8cb.md |
+| 2026-08-30T12:03:14Z | alert | 5a0680e3 | doc-suite check FAILED (rc=1) | 2026-08-30T12:03:14Z-alert-5a0680e3.md |
+| 2026-08-30T12:03:41Z | progress | b1f3a157 | doc-suite: 12:03:41 [08-doc-suite-check.sh] doc-suite ok: 12 docs, 38 links, 4 fact checks | 2026-08-30T12:03:41Z-progress-b1f3a157.md |
+| 2026-08-30T12:03:52Z | progress | ec152302 | doc-suite: 12:03:52 [08-doc-suite-check.sh] doc-suite ok: 11 docs, 38 links, 4 fact checks | 2026-08-30T12:03:52Z-progress-ec152302.md |
+| 2026-08-30T12:04:21Z | progress | 3e3c661f | doc-suite: the 12:02 alert (README.md: missing version header line) was a checker bug — README.md is the index whose version identity is its first heading; exemption added, re-verified green (11 docs, 38 links, 4 fact checks), see 20260830/CHANGELOG.md | 2026-08-30T12:04:21Z-progress-3e3c661f.md |
+| 2026-08-30T12:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-30T12:30:45Z-progress-6f20e8cb.md |

@@ -10,6 +10,23 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Evening selfdev wave** (hngh-automation `585ccd0`, `c9474bf`,
+  `6a9d561`, `5b6ad25`, `4bc46ae`, `6ef85c4`, `2ea3db0`): the
+  automation gate repaired and both repos now gated daily
+  (`03-gate-check.sh` sweeps kernel + hngh-automation, identity-scoped
+  red alerts); the lint-identifiers scanner learned quoted-heredoc
+  scoping and caught a real bug — the deck-setup .bashrc block's
+  `$DESKTOP_IP` splices never expanded (quoted tag), so the deck's
+  `HNGH_DESKTOP_IP` sourced empty; tree-skew whitelists
+  machine-maintained append paths (dashboards, ledgers, journals) so it
+  fires only on stalled agent edits; the review digest carries findings
+  + reviewed ranges instead of the echoed prompt with ~1100 diff lines
+  (122KB -> 1.9KB); first telemetry readers (`telemetry-report.py`) and
+  session-cost capture (one row per omp session, usage parsed from
+  transcripts, idempotent by session id); the 5m oversight tick now
+  escalates unread gate-red rows (hourly cap, per-repo identity) and
+  files a single ui-audit regression breadcrumb when a rule's violation
+  count crosses upward.
 - **Pre-trip sprint** (hngh-automation `be984d2`, `933c7c5`, `448e2d5`,
   `4787207`, `abb2be2`): hourly adversarial workbeat (the kick-start
   automation, guardrails included); winamp-only themes and the

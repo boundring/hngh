@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-08-28T19:43:12Z -->
+<!-- plan: status=executed risk=normal accepted=2026-08-28T19:43:12Z -->
 # 2026-08-28 — evening selfdev
 
 Autonomous evening wave while the operator is away. Operator
@@ -28,7 +28,7 @@ Parked (not in this plan, recorded for the operator):
 
 ## Steps
 
-- [ ] 1. Automation gate repair — lint-identifiers heredoc scoping +
+- [x] 1. Automation gate repair — lint-identifiers heredoc scoping +
       dead TS_SUBNET. `jobs/lint-identifiers.sh` currently skips heredoc
       bodies for DEFINITIONS but still counts references, so
       `scripts/deck-setup.sh` (the hngh-connect dispatcher heredoc,
@@ -46,7 +46,7 @@ Parked (not in this plan, recorded for the operator):
       TS_SUBNET); deck-setup.sh and hngh-ufw-manage.sh behavior
       unchanged (`bash -n` both).
 
-- [ ] 2. Day-tier drop-in gates BOTH repos. Extend
+- [x] 2. Day-tier drop-in gates BOTH repos. Extend
       `cadence/day/03-gate-check.sh`: after the kernel gate, run
       `make test` in `$AUTOMATION_ROOT` (same timeout, fail-closed
       style) and file the honest signal — a `gate: hngh-automation make
@@ -60,7 +60,7 @@ Parked (not in this plan, recorded for the operator):
       → alert row with the 3 lint findings text. Day-tier `make test`
       green on HEAD after landing.
 
-- [ ] 3. Tree-skew whitelist for machine-maintained append paths.
+- [x] 3. Tree-skew whitelist for machine-maintained append paths.
       The oversight tree-skew probe fired x64 on files the machine
       itself regenerates every few minutes (reports.md, ui-grades.md,
       docs/design/ui-evolve/current-overlay.json, plan status
@@ -73,7 +73,7 @@ Parked (not in this plan, recorded for the operator):
       introduce a scratch modification to a non-whitelisted tracked
       file in a fixture → alert still fires.
 
-- [ ] 4. Review digest hygiene — findings, not prompt echo.
+- [x] 4. Review digest hygiene — findings, not prompt echo.
       `cadence/day/04-review-prep.sh` ships `digest/REVIEW-<date>.md`
       with the echoed prompt plus raw diffs (~1100 lines) around the
       findings. Keep the findings sections (the `## hngh` /
@@ -87,7 +87,7 @@ Parked (not in this plan, recorded for the operator):
       `diff --git` hunks; file size drops by an order of magnitude;
       `make test` green.
 
-- [ ] 5. Telemetry readers — first consumers over
+- [x] 5. Telemetry readers — first consumers over
       `dashboard/telemetry.db` (capture-first store has data since
       `232c5fe`; zero readers today by design). Add
       `jobs/telemetry-report.py`: read-only stdlib-sqlite queries
@@ -102,7 +102,7 @@ Parked (not in this plan, recorded for the operator):
       (spot-check two numbers); run against a missing db path → notice
       + exit 0.
 
-- [ ] 6. Session-cost capture per ledger-and-records-spec.md §3.
+- [x] 6. Session-cost capture per ledger-and-records-spec.md §3.
       One row per omp session: parse token usage from session
       transcripts (the same `~/.omp/agent/sessions/<project>/` jsonl
       files `jobs/sessions-feed.py` already tail-reads — reuse its
@@ -116,7 +116,7 @@ Parked (not in this plan, recorded for the operator):
       row with nulls, never a failure; re-run is idempotent (dedup by
       session id).
 
-- [ ] 7. Watchdog/oversight consuming day-tier gate-red rows. The
+- [x] 7. Watchdog/oversight consuming day-tier gate-red rows. The
       gate-red alert rows (identity `gate-check:hngh`, and
       `gate-check:automation` after step 2) already land in the ledger;
       arming the 5m oversight on them is wiring, not new machinery.
@@ -129,7 +129,7 @@ Parked (not in this plan, recorded for the operator):
       a fixture report root → oversight tick emits the operator-facing
       alert once (dedup holds on second run); green state → no alert.
 
-- [ ] 8. ui-audit findings feeding oversight. The ui-audit alert
+- [x] 8. ui-audit findings feeding oversight. The ui-audit alert
       identities are already per-rule (36 ui-audit events in the
       telemetry store today); the 5m consumer needs only a read.
       Extend the oversight tick (same pass as step 7) to count open
