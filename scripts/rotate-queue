@@ -50,7 +50,11 @@
 (defun queue-row-flip (item-id)
   "Flip ITEM-ID's status to done in docs/project/queue.md in place.
 Returns the new queue file namestring."
-  (let ((path "docs/project/queue.md"))
+  (let ((path "docs/project/queue.md")
+        (today (multiple-value-bind (ss mm hh dd mo yy)
+                   (decode-universal-time (get-universal-time) 0)
+                 (declare (ignore ss mm hh))
+                 (format nil "~4,'0D-~2,'0D-~2,'0D" yy mo dd))))
     (let ((lines (uiop:read-file-lines path))
           (seen nil))
       (with-open-file (stream path :direction :output :if-exists :supersede)
@@ -59,8 +63,8 @@ Returns the new queue file namestring."
             (when (and (= 4 (length fields))
                        (string= item-id (first fields)))
               (setf seen t)
-              (format stream "~A~Cdone~C~A~Crotated 2026-08-25~%"
-                      (first fields) #\Tab #\Tab (third fields) #\Tab))
+              (format stream "~A~Cdone~C~A~Crotated ~A~%"
+                      (first fields) #\Tab #\Tab (third fields) #\Tab today))
             (when (not (and (= 4 (length fields))
                             (string= item-id (first fields))))
               (format stream "~A~%" line)))))
@@ -84,12 +88,14 @@ hash, per-file source-manifest entries with live SHA-256s."
   "Resolve the operator reviewer-transport for ROUTE by probing the
 configured endpoints (one bounded read-only probe). Returns
 (values path nil) or (values nil refusal-text)."
-  (let ((home (parse-namestring (uiop:getenv "HOME"))))
-    (multiple-value-bind (out exit-code)
+  (let ((home (parse-namestring (concatenate 'string
+                                             (uiop:getenv "HOME") "/"))))
+    (multiple-value-bind (out err-output exit-code)
         (uiop:run-program
          (list "python3" "scripts/probe-model-route"
                (format nil "--route=~A" route))
          :output :string :error-output :string :ignore-error-status t)
+       (declare (ignore err-output))
       (let ((choice (string-trim '(#\Newline #\Return #\Space) out)))
         (cond
          ((not (zerop exit-code))
