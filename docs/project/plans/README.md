@@ -21,9 +21,12 @@ is reserved for critical-class work.
   lifecycle beyond an already-installed unit, non-prune deletions, or
   the security posture.
 - Steps live under `## Steps` as `- [ ]` / `- [x]` checkboxes; the
-  overnight cycle (`hngh-automation/scripts/overnight-cycle.sh`)
-  executes the next unchecked step of the oldest accepted plan through
-  a bounded delegated session and ticks it.
+  cycle executes the next unchecked step of the oldest accepted plan
+  through a bounded delegated session and ticks it. It runs
+  continuously, 24/7 by intent — the script name
+  (`hngh-automation/scripts/overnight-cycle.sh`) is a stable CLI name,
+  not a doctrine that the cycle only runs overnight (same convention
+  as `ceremony-drive`).
 - Acceptance: a `proposed` normal-risk plan is auto-accepted when its
   Verification steps are runnable and both repos' gates are green;
   the accepted timestamp is written into the front-matter.
