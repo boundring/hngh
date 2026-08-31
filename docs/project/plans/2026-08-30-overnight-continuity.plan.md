@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-08-31T18:31:17Z -->
 # 2026-08-30 — overnight continuity
 
 Slim follow-on wave so the plan queue does not run out overnight
@@ -43,13 +43,16 @@ Parked (follow-on candidates for the next plan's author):
 
 ## Steps
 
-- [ ] 1. Gate baseline: `make test` in this repo (record check count)
+- [x] 1. Gate baseline: `make test` in this repo (record check count)
       and `make test` in hngh-automation (exit 0). No landing happens
       on any other step until both are green.
       Verification: both commands exit 0; check count noted in the
       execution record.
+      Executed 2026-08-31T20:01Z: kernel 2,855 checks passed (exit 0,
+      wall 35s); automation 10 tests OK + lint-identifiers clean
+      (exit 0).
 
-- [ ] 2. RESEARCH BEAT (never code): crystallize ONE line from
+- [x] 2. RESEARCH BEAT (never code): crystallize ONE line from
       docs/research/ accumulated per-beat material (hngh-automation
       digest/RESEARCH-BEAT-* material not yet crystallized), with a
       Grounding section listing verified repo paths and "not
@@ -60,8 +63,16 @@ Parked (follow-on candidates for the next plan's author):
       prior art, honest gamification mechanics.
       Verification: doc exists under docs/research/; Grounding paths
       verified with `test -f`; `make test` green.
+      Executed 2026-08-31T20:19Z: docs/research/2026-08-31-buddy-
+      summoned-not-nagging-menu-learning.md authored (top §4 backlog
+      candidate; 13 repo paths test -f verified; 5 prior-art references
+      visited; explicit Not established section — no menu implementation
+      exists, scripts/osd-operative.qml has no menu code). No
+      un-crystallized digest material existed: research-lines.tsv had
+      all 22 lines crystallized, so the beat took the §4 candidate
+      branch. Gate green (2855 checks) post-authoring.
 
-- [ ] 3. GROW BEAT (normal-risk): rotate ONE queue.md item that is
+- [x] 3. GROW BEAT (normal-risk): rotate ONE queue.md item that is
       rotation-scale and certificate-loop ready, via
       scripts/rotate-queue, committing its own candidate through the
       full governance loop (per queue.md Scheduling: real evidence →
@@ -74,8 +85,31 @@ Parked (follow-on candidates for the next plan's author):
       Verification: queue.md row transitions (queued → active → done)
       in the diff; the rotated item's candidate commit passes
       `make test`; or the honest no-candidate note is recorded.
+      Candidate disposition 2026-08-31T20:10Z: wake-mutation-lane parks
+      (its smallest useful outcome is a `:wake-mutation` action in the
+      mutation vocabulary — kernel src/, forbidden to machine sessions
+      this session); dss-e-export parks (YAGNI-gated on an interop
+      consumer that does not exist). Rotating publication-lines-contract
+      instead: queued 2026-08-31, priced decision A
+      (ebook-selection-manifest) in
+      docs/research/2026-08-30-publication-pipeline-grounding.md §4,
+      touches scripts/ + docs only. Rides with it: one-line fix to the
+      hardcoded `rotated 2026-08-25` evidence date in
+      scripts/rotate-queue (evidence-first; the only prior use was on
+      that literal date).
+      Executed 2026-08-31T20:27Z: rotation complete via scripts/
+      rotate-queue --route auto (the first --route exercise ever — it
+      exposed and the rotation carries fixes for two latent
+      route-reviewer bugs: uiop:run-program returns values stdout,
+      stderr, exit-code, and parse-namestring of HOME parses the user
+      as a file name). Real model review: status complete, findings 0.
+      Candidate 5be9d4c (content hash a569ab0d…) — queue.md row
+      queued→done "rotated 2026-08-31" (honest date, fix working),
+      generate-publication --chapters (decision A), rotate-queue fixes;
+      pushed 0a209ba..5be9d4c; make test green post-commit (2855
+      checks); verify-candidate pre-flight :passed.
 
-- [ ] 4. RESEARCH BEAT (never code): crystallize any SECOND accumulated
+- [x] 4. RESEARCH BEAT (never code): crystallize any SECOND accumulated
       line from the overnight research-beat materials, same Grounding
       contract as step 2. If nothing accumulated, this beat extends
       the evening plan's routing-table design (step 7) with the
@@ -83,6 +117,15 @@ Parked (follow-on candidates for the next plan's author):
       kernel changes — docs only.
       Verification: doc exists with Grounding section of verified
       paths; `make test` green.
+      Executed 2026-08-31T20:31Z: nothing accumulated (all digest lines
+      crystallized), so this beat took the routing-table extension
+      branch: +171 lines, section "Outcome tracking without kernel
+      changes (2026-08-31)" in docs/research/2026-08-30-alert-to-work-
+      routing-patterns-closing-the-self-observation-loop.md — six
+      fields (routed-from, routed-at, first-attempt-at, closed-at,
+      outcome class, duplicate-skip event), each grounded in verified
+      automation call sites; contracts only, no router tick exists
+      (stated as Not established).
 
 - [ ] 5. Batched docs ceremony: land all uncommitted research/docs
       artifacts from this plan (and any stragglers from the evening
