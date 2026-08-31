@@ -1379,5 +1379,65 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** one deduped alert crosses its cap and surfaces
   in the operator-facing digest.
 
+## Router-side re-arm pre-check (router-rearm-precheck) — queued 2026-08-31
+
+- **Problem:** the alert→plan-candidate routing resolutions
+  ("Open-thread resolutions (2026-08-31)" in
+  docs/research/2026-08-30-alert-to-work-routing-patterns-closing-the-self-observation-loop.md)
+  park re-arm after step close: dedup is wall-clock only, so an alert
+  re-added right after its named plan step closes can route a
+  duplicate candidate.
+- **Smallest useful outcome:** a pre-check before `report-queue
+  --add` that consults plan state (step open/closed) and skips the
+  add when the named step is already closed — the router-side
+  pre-check the resolutions recommend; no router-internal state.
+- **Evidence:** the resolved doc, thread 2 (dedup window is
+  wall-clock only; identity = plan step, `--window 0`);
+  overnight-cycle.sh:186-199 (the docs/project/plans/*.plan.md
+  selector surface).
+- **Risk:** low — a read-only plan-state consult before an existing
+  add; dedup/escalation caps unchanged.
+- **Dependencies:** scripts/report-queue; docs/project/plans/ status
+  conventions.
+- **Review trigger:** one closed-step re-fire is demonstrably skipped
+  in a fixture run.
+
+## Publication pipeline: research-lines wiring vs the fixed 7-file contract (publication-lines-contract) — queued 2026-08-31
+
+- **Problem:** the publication-pipeline grounding pass proved
+  scripts/generate-publication consumes no docs/research/ lines and no
+  research-lines manifest: `--ebook` reads a hard-coded 7-file list
+  (script lines 235-247) and `--site` is a shell over
+  scripts/dashboard-readout. Research output therefore never reaches
+  the publication surface, and the 7-file list is an undocumented
+  contract.
+- **Smallest useful outcome:** one decision landed either way — wire
+  research-lines into generate-publication's `--ebook` inputs, or
+  document the fixed 7-file list as the contract (README/usage note).
+- **Evidence:** docs/research/2026-08-30-publication-pipeline-grounding.md
+  (15/15 grounding paths verified); scripts/generate-publication
+  lines 235-247; scripts/dashboard-readout.
+- **Risk:** low — documentation-only if the contract path is chosen;
+  wiring adds a manifest read, no new daemons.
+- **Dependencies:** scripts/generate-publication; the research-lines
+  surface (research controls row).
+- **Review trigger:** the decision is recorded and its chosen side is
+  verifiable (a doc note, or a manifest-driven `--ebook` run).
+
+## Ebook book-machine inputs (ebook-book-inputs) — queued 2026-08-31
+
+- **Problem:** the royalty-pipeline is blocked on missing book-machine
+  inputs per its own dependency line; the publication grounding pass
+  confirmed the blocker is upstream inputs, not the generation script.
+- **Smallest useful outcome:** the book-machine inputs exist (the
+  manuscript/outline/metadata set the royalty pipeline expects) so its
+  dependency line is satisfiable.
+- **Evidence:** docs/research/2026-08-30-publication-pipeline-grounding.md;
+  the royalty-pipeline row's dependency line; the ebook longform row.
+- **Risk:** none — authoring inputs only; no runtime surface changes.
+- **Dependencies:** ebook longform row; royalty-pipeline row.
+- **Review acceptance:** `generate-publication --ebook` completes on
+  the real inputs without placeholder files.
+
 
 - Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.

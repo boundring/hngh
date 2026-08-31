@@ -119,3 +119,89 @@ Discarded as ungrounded (the original crystallization's mechanics):
 kernel modules, Netlink generic families, sysfs/tracepoint exposure,
 userspace daemons. Hngh has no kernel module; its alert surface is the
 report ledger.
+
+## Open-thread resolutions (2026-08-31)
+
+Both threads from `## Open threads` resolved with source evidence; authored 2026-08-31 against the plan-mandated 2026-08-30 filename. No code was written in this beat.
+
+### Thread 1 — where draft plan-step candidates stage
+
+**Resolution: the plan directory (`docs/project/plans/*.plan.md`), not a queue-ledger column.**
+
+The decision is fixed by what the actual selector consumes:
+
+- `hngh-automation/scripts/overnight-cycle.sh` (selector (a), lines
+  186-199) iterates `$KERNEL/docs/project/plans/*.plan.md`, keeps files
+  whose front-matter greps `status=accepted`, and takes the first
+  `^\- \[ \]` line as the next step. Any staging surface the selector
+  does not scan is dead storage for candidates — nothing else reads a
+  queue-ledger column into plan execution.
+- The plan contract (`docs/project/plans/README.md`)
+  already defines the accepted authoring surface: a proposal is a
+  `<date>-<slug>.plan.md` file with `status=proposed` written into the
+  directory (its omp-plugin section describes exactly this path for
+  non-automation authors). Auto-acceptance per the contract converts a
+  gated normal-risk candidate into a `status=accepted` plan — the
+  selector then picks it up with no further machinery.
+- The queue ledger is the wrong shape for candidates:
+  `docs/project/queue.md` is a fixed 4-field TSV (`id status title
+  evidence`) and its own `## ETA` section records that even planned
+  windows stay outside the TSV; `scripts/rotate-queue` rotates that
+  ledger through full rotation sessions, a different instrument from
+  per-alert step candidates.
+
+So the routing recommendation's two authoring surfaces hold as stated:
+a batch of candidates becomes one `status=proposed` plan file (the
+append-an-step-to-an-open-plan variant appends a `- [ ]` line to an
+existing accepted plan — the same selector line it is consumed by).
+A queue-ledger column is rejected: no consumer exists for it.
+
+### Thread 2 — escalation caps / dedup windows vs open plan steps
+
+**Resolution (mechanism as it stands): the dedup window is wall-clock
+only and cannot span a plan step's lifecycle today.**
+
+From `scripts/report-queue` source (`add()`, lines 178-205; `row_identity`,
+`within_window`, `bump_row`):
+
+- Dedup matches on KIND + stored `identity:` in the row's body meta,
+  newest rows first, within `--window` seconds (default 86400; 0 =
+  unlimited lookback). A match folds the occurrence into the existing
+  row (×N marker + `- <ts> occurrence` body line); no new row appears.
+- The window compares the row's original timestamp against wall-clock
+  time only. report-queue never reads `docs/project/plans/*.plan.md`;
+  no parameter or command ties an identity to plan state. A plan step
+  staying open past 86400 s therefore does NOT suppress its alert —
+  the identity simply ages out of the window and the next occurrence
+  files a fresh row.
+
+**Minimal coupling that IS available in the current source: identity
+naming the plan step.** The identity is an opaque stored string, so a
+router can make it carry the candidate's target, e.g.
+`<alert-class>:plan:<slug>` or `<alert-class>:plan:<slug>:<step-N>`,
+and file with `--window 0` (unlimited lookback). With window 0 the
+identity matches its one row forever, so the alert never re-fires as a
+new row while (or after) the step is open — occurrences still fold in
+and stay visible. That satisfies "must not re-fire while open" with
+zero kernel or report-queue changes.
+
+**Parked, needs: identity expiry or router-side plan-state check.**
+Window 0 suppression is permanent for that identity — a new defect
+instance of the same class after the plan step closes would fold into
+the old row rather than draft a fresh candidate. Re-arming requires one
+of two concrete mechanisms, neither present in source:
+
+1. A per-identity expiry in report-queue (e.g. an `--expire IDENTITY`
+   path that drops or re-dates the stored identity) — a report-queue
+   change, out of scope for this beat; or
+2. A router-side pre-check before `--add`: read the plan file named in
+   the identity and skip emission while the named `- [ ]` step still
+   exists (the same grep the selector already runs, so the pattern is
+   proven). That is an automation-side change and the recommended
+   instrument — it keeps the dedup semantics untouched and makes the
+   suppression exactly the plan lifecycle.
+
+Until the router tick exists, the standing statement is: the default
+86400 s window is the flap-suppression layer and does not consult plan
+state; the coupling above is the designed fix, parked behind the
+routing-tick implementation beat.

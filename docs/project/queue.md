@@ -37,6 +37,9 @@ marketplace-governance	queued	Marketplace-gov lane (audit/authorization of marke
 compliance-dashboard	queued	Freemium-hosted compliance dashboard + report export	market-scope-2026-08-25.md
 ledger-format-standard	queued	Publish the ledger/cert format as an open standard	market-scope-2026-08-25.md
 self-funding-plan	queued	Self-funding plan (sponsorship, hosted compliance, docs-first)	market-scope-2026-08-25.md
+router-rearm-precheck	queued	Router-side re-arm pre-check before report-queue --add	alert-routing open-thread resolutions (2026-08-31); reports.md dedup rows
+publication-lines-contract	queued	Publication pipeline: wire research-lines into generate-publication or fix the 7-file contract	publication-pipeline-grounding.md; scripts/generate-publication
+ebook-book-inputs	queued	Ebook book-machine inputs to unblock the royalty-pipeline	publication-pipeline-grounding.md; backlog royalty-pipeline row
 ```
 ## Next
 

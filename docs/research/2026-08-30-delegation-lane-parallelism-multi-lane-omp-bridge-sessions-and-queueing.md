@@ -19,7 +19,7 @@ According to the supplied prior beat, verification against the `hngh` repository
 - a dedicated lane manager
 - an exposed kernel scheduler API usable by the bridge
 
-I cannot independently re-enumerate the repository from this session, so this final record does not assert those paths exist. It treats them as **not established** based on the prior beat’s verification note.
+This final record does not assert those paths exist; it treats them as **not established** based on the prior beat's verification note.
 
 The practical conclusion is:
 
@@ -76,7 +76,7 @@ The minimal fix is to decouple request submission from execution.
 The prior beat states that no scheduler abstraction was found exposed to the bridge. The grounded pass agrees at the level that matters: the bridge's run governance is per-session (one `hngh` run per delegated session, created by `--run-start`), with no shared scheduler object the kernel exposes for lane arbitration. The bridge comment records the actual serial constraint: one shared bridge store and a single-flight assumption ("at check-in scale a single bridge run is in flight at a time"), plus a global ceremony lock.
 
 **Status:** Not independently verified in this session; treated as unestablished.
-**Grounding:** Supplied prior research beat 2026-08-30. No specific kernel scheduler file is cited because I am not confident it exists.
+**Grounding:** Supplied prior research beat 2026-08-30. No specific kernel scheduler file is cited because its existence is not established.
 
 ---
 

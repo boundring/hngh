@@ -105,3 +105,89 @@ crystallized→committed stall of foldback lesson 3, live):
 - Journal note: docs/journal/2026-08-30.md is intentionally untouched
   by this wave (dirty with the live autonomous loop's writes;
   machine-owned tonight).
+
+## Execution — 2026-08-31 continuation wave
+
+The wrap docs of this wave (docs/project/lessons-2026-08-30.md, this
+addendum, the queue/backlog sync) land through the next batched docs
+ceremony, same as the authoring set above.
+
+- Step 9 landed as ceremony commit 8dfab6d (2026-08-30 19:26Z,
+  pushed; exact 7-file list).
+- Step 3 — docs/research/2026-08-30-handoff-brief-schema.md (119
+  lines): 8-field handoff-brief schema, each field producer-anchored
+  (active-work.md lane lines, hngh-automation/agent-handoffs.md
+  watchdog rows, scripts/omp-bridge --orient/--run-start brief); thin
+  fields framed "not established".
+- Step 4 (first live wrapped delegation) — session
+  evening-beat4-docscheck-20260831: `--register` (agent-handoffs.md:104);
+  fresh per-run store hngh-automation/bridge/20260831T1846Z-evening-beat4/
+  (required because omp-bridge hardcodes the run id `run-1`);
+  `--run-start` accepted (create-run + admit-transport, run-1
+  :created); `--orient` captured mid-work; the docs-integrity task ran
+  green (doc-numbers guard exit 0, read-order 12/12, 23/24
+  README-referenced paths present); three report-queue progress rows
+  witness run-start/work/run-end (reports.md:502-504); `--run-end
+  run-1 cancelled` accepted (receipt facts=closed-to-cancelled);
+  `hngh present run-1` state=cancelled; probing an illegal `evacuated`
+  close on the closed run was refused (invalid-transition). One
+  finding was closed as a false positive: docs/project/notify-log.md
+  is runtime-created by scripts/notify-agent append_hits (creates with
+  the header on first hit, script lines 115-132).
+- Step 5 — docs/research/2026-08-30-steer-vs-die-threshold.md (60
+  lines): 5 signals with responses steer | procedural hook |
+  die+replace, grounded in agent-watchdog.sh tunables
+  (LOOP_N=3/ERROR_GRACE_MIN=2/STALL_MIN=10) and real reports.md rows
+  (loop-signal/agent-stall/slow-unit/tree-skew); budget burn rate
+  framed "not established".
+- Step 7 — appended "## Open-thread resolutions (2026-08-31)"
+  (+86 lines) to
+  docs/research/2026-08-30-alert-to-work-routing-patterns-closing-the-self-observation-loop.md:
+  thread 1 — candidates stage as docs/project/plans/*.plan.md
+  (overnight-cycle.sh:186-199's selector greps exactly that surface; a
+  queue-ledger column was rejected — queue.md is a fixed 4-field TSV
+  by contract); thread 2 — the dedup window is wall-clock only;
+  minimal coupling = identity naming the plan step with `--window 0`;
+  re-arm after step close parked with a router-side pre-check
+  recommended.
+- Step 8 — docs/research/2026-08-30-publication-pipeline-grounding.md
+  (213 lines; 15/15 grounding paths verified). Key correction:
+  scripts/generate-publication consumes no docs/research/ lines and no
+  research-lines manifest — `--ebook` reads a hard-coded 7-file list
+  (script lines 235-247); `--site` is a shell over
+  scripts/dashboard-readout (timeline.md + queue.md + live store
+  rosters); the royalty-pipeline is blocked on missing book-machine
+  inputs per its own dependency line.
+- Step 6 (grow: config-lanes manifest in hngh-automation) landed
+  after this addendum was drafted: automation commit 0927992
+  (jobs/config-lanes.tsv + config-backup.sh manifest reader; per-lane
+  --dry-run parity byte-identical; hngh-automation `make test` exit
+  0; also carries the beat-4 witness artifacts). Verified in the plan
+  file's step-6 note.
+- Journal: docs/journal/2026-08-30.md was deliberately untouched by
+  the continuation wave (machine-owned; the authoring-time note above
+  stands).
+- Filenames: the new research docs keep their 2026-08-30 (plan-date)
+  filenames per plan contract; each notes authored-2026-08-31 inside.
+- Second batched ceremony: landed 2026-08-31 by the closing cycle with
+  kernel `make test` green immediately before, landing exactly the
+  10-file candidate list from the plan's step-10 continuation note
+  (three new research docs, the alert-to-work-routing resolutions, the
+  delegation-lane agent-voice strip, the plan file with step 10 ticked
+  and front-matter status=executed, lessons-2026-08-30.md, this
+  RECORD, queue.md, backlog.md); push rides ceremony-drive's
+  certificate-gated auto-push (failure would file an alert row). NEXT
+  CYCLE status: item (1) was already in-tree at wake; items (2)-(5)
+  are this ceremony.
+
+### Sources (continuation wave)
+
+- The four research docs named in steps 3, 5, 7, 8 (line counts
+  verified at wrap time: 119 / 60 / +86 / 213).
+- scripts/omp-bridge, scripts/generate-publication (lines 235-247),
+  scripts/notify-agent (append_hits, lines 115-132),
+  hngh-automation/overnight-cycle.sh (lines 186-199),
+  hngh-automation/agent-watchdog.sh tunables,
+  hngh-automation/bridge/20260831T1846Z-evening-beat4/,
+  docs/project/agent-handoffs.md:104, docs/project/reports.md:502-504,
+  ceremony commit 8dfab6d.
