@@ -17,7 +17,14 @@ write):
   --ebook [DIR]    assemble the documented corpus into an e-book
                    structure: book.md spine plus a minimal readable
                    EPUB (stdlib zipfile, self-contained). Default
-                   DIR docs/journal/ebook.
+                   DIR docs/journal/ebook. The seven fixed docs (the
+                   intent, the architecture, the roadmap, the
+                   decisions, the backlog, the queue, the readme) are
+                   the front matter; --chapters GLOB [GLOB ...]
+                   supplies additional body chapters as repo-relative
+                   globs matched against the project root (e.g.
+                   --chapters 'docs/journal/*.md' 'docs/records/*.md'),
+                   each titled with its file's stem.
   --site [DIR]     export the dashboard HTML (the same committed spine
                    the themed readout renders) as a public site index,
                    plus the leaderboard. Default docs/site/index.html.
@@ -247,10 +254,17 @@ def ebook_documents():
     return docs
 
 
-def build_ebook(outdir):
+def chapter_documents(patterns):
+    matched = set()
+    for pattern in patterns:
+        matched.update(p for p in ROOT.glob(pattern) if p.is_file())
+    return [(p.stem, p.read_text()) for p in sorted(matched)]
+
+
+def build_ebook(outdir, chapters=None):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    docs = ebook_documents()
+    docs = ebook_documents() + chapter_documents(chapters or [])
     book = "\n\n".join(
         [f"# The Hngh memoir (assembled)", "",
          "The record in one file: the intent, the architecture, the "
@@ -328,6 +342,7 @@ def main(argv=None):
     parser.add_argument("--daily", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--ebook", nargs="?")
+    parser.add_argument("--chapters", nargs="+", metavar="GLOB")
     parser.add_argument("--site", nargs="?")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("day", nargs="?")
@@ -351,7 +366,8 @@ def main(argv=None):
             print(f"generated journal -> {path}")
             return 0
         if args.ebook is not None:
-            epub, book = build_ebook(args.ebook or "docs/journal/ebook")
+            epub, book = build_ebook(args.ebook or "docs/journal/ebook",
+                                     args.chapters)
             print(f"ebook -> {book} + {epub}")
             return 0
         if args.site is not None:
