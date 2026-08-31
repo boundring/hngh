@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-08-31T18:31:17Z -->
+<!-- plan: status=executed risk=normal accepted=2026-08-31T18:31:17Z -->
 # 2026-08-30 — overnight continuity
 
 Slim follow-on wave so the plan queue does not run out overnight
@@ -127,24 +127,51 @@ Parked (follow-on candidates for the next plan's author):
       automation call sites; contracts only, no router tick exists
       (stated as Not established).
 
-- [ ] 5. Batched docs ceremony: land all uncommitted research/docs
+- [x] 5. Batched docs ceremony: land all uncommitted research/docs
       artifacts from this plan (and any stragglers from the evening
       plan) in ONE certificate ceremony with `make test` green
       immediately before. No src/ files in candidate paths.
       Verification: one ceremony commit, git show --stat matches the
       intended list; `make test` green before issue-cert; push to
       origin succeeds or is recorded as an alert row.
+      Executed 2026-08-31T20:30Z: ceremony 11de68c (candidate
+      87373ae7…) landed exactly 9 docs files — this plan's step-2
+      research doc (buddy-summoned-not-nagging-menu-learning) and
+      step-4 routing-table outcome-tracking extension (171 lines),
+      the six evening-plan research stragglers (gantt-legibility,
+      web-search-reference-capture, self-funding-paths, tech-tree-UX,
+      unattended-plan-authoring-safety, wiki-viewer-QoL), plus the
+      plan-file step 1–4 notes. No src/ in candidate paths; make test
+      green pre-cert (2,855 checks); main == origin/main (pushed).
+      The 20:00Z beat hit its 30m kill (rc=124) 14s after the commit,
+      before this tick — recorded here by the 21:00Z wake, whose
+      lesson ("tick the step inside the ceremony that completes it")
+      lands in lessons-2026-08-31.
 
-- [ ] 6. Wrap: append the night's outcomes to
+- [x] 6. Wrap: append the night's outcomes to
       docs/project/lessons-2026-08-30.md (or open
       docs/project/lessons-2026-08-31.md after midnight UTC), journal
       update, queue/backlog sync, and author the NEXT slim follow-on
       plan (docs/project/plans/2026-08-31-overnight-continuity.plan.md,
-      same contract) so the queue never runs empty — the plan is the
-      machine's supply line.
+      same contract) so the queue never runs empty — the plan is
+      the machine's supply line.
       Verification: next-day plan file exists with status=proposed
       risk=normal and ≥ 3 runnable steps; journal and queue rows
       updated; `make test` green.
+      Executed 2026-08-31T21:15Z by the 21:00Z wake: lessons
+      appended to lessons-2026-08-31.md (tick-inside-ceremony
+      lesson, beat sizing, alert-ledger 486→499→514 growth); journal
+      2026-08-31.md rewritten with the honest day ledger (4 candidate
+      commits + this wrap); queue synced — publication-lines-contract
+      done (landed in step 3's 5be9d4c), operator-owned `## Next`
+      pointer untouched, wake-mutation-lane and dss-e-export stay
+      parked per the step-3 dispositions; execution record
+      docs/records/2026-08-30-overnight-continuity-plan.md authored;
+      next plan 2026-08-31-overnight-continuity.plan.md authored
+      (status=proposed risk=normal accepted=-, 5 runnable steps each
+      with a Verification line). All wraps, ticks, and the new plan
+      land in this ceremony — the tick-inside-ceremony lesson,
+      applied. Plan complete: status=executed.
 
 ## Verification summary
 
