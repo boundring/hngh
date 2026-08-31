@@ -205,3 +205,174 @@ Until the router tick exists, the standing statement is: the default
 86400 s window is the flap-suppression layer and does not consult plan
 state; the coupling above is the designed fix, parked behind the
 routing-tick implementation beat.
+
+## Outcome tracking without kernel changes (2026-08-31)
+
+Third beat on this doc. The routing table specifies how a candidate is
+authored; the resolutions above fix where it lives and how it dedups.
+What nothing yet fixes is how the loop proves it closed: which fields
+record routed → attempted → closed, and where each is captured. This
+section is that field set, automation-side only, grounded in what
+`hngh-automation` writes today. No router tick exists yet (a grep of
+`scripts/`, `jobs/`, `cadence/` for routing/router matches nothing);
+fields marked *today* already have their capture point in running code,
+the rest are the contract that tick must meet.
+
+### The fields
+
+**1. `routed-from` — alert identity → plan-step linkage.**
+For a whole-plan draft: a `routed-from=<identity>` attribute appended
+inside the existing front-matter comment. Both machine parsers tolerate
+a trailing attribute — `scripts/accept-plans.py:32-33` and
+`jobs/plan-feed.py:21-22` compile their FRONT regex with `[^>]*-->` as
+the tail — so adding the attribute breaks neither acceptance nor the
+dashboard plans feed. For an appended `- [ ]` step on an open plan: a
+`routed-from=<identity>` tail on that step's indented `Verification:`
+line — `accept-plans.py:34` only checks that such a line exists
+(`(?m)^[ \t]+Verification[ \t]*:`), its content is free, and the line
+is not part of the step text the selector strips into the objective
+(`scripts/overnight-cycle.sh:193` strips only the `- [ ]` line).
+Example: `routed-from=gate-check:hngh-automation` on a gate-red
+candidate. No new store: the linkage lives in the candidate itself.
+
+**2. `routed-at` — when the candidate was authored.**
+The routing tick files the same row shape the draft flow already uses
+(`overnight-cycle.sh:180-183`: `--add progress "..." --identity
+"overnight:plan-draft:$day" --window 86400`), with identity
+`router:routed:<slug>[:<step-N>]`, plus a STATE.md breadcrumb in the
+existing `lib/breadcrumbs.sh` pattern (`overnight-cycle.sh:179` files
+`plan-drafted` the same way). Example: a reports.md progress row
+`router:routed:2026-08-31-gate-red` at `2026-08-31T03:14:07Z`. This is
+F1's repair: the routing moment becomes a ledger row, not a memory.
+
+**3. `first-attempt-at` — the cycle picked the step up.**
+Captured today, zero new code: the `WAKE CONTEXT` timestamp written
+into `prompts/overnight/$slug.md` (`overnight-cycle.sh:205-210`), the
+session-run row `overnight|<slug> | session-run` in
+`logs/budget.md:310-311`, and the
+`overnight-lead | <ts> | <slug>|<run_id> | rc=<N> <disposition> log=<path>`
+row in `agent-handoffs.md:337-339`. Example:
+`overnight-lead | 2026-08-31T03:20:11Z | 2026-08-31-foo|run-42 | rc=0
+evacuated log=logs/overnight-2026-08-31-foo-032011.log`.
+
+**4. `closed-at` — the step finished.**
+Captured today: the step's `- [x]` tick in the plan file; when no
+unchecked step remains, `overnight-cycle.sh:317-321` flips
+`status=accepted` to `status=executed` in the plan front-matter and
+files the `plan <slug> executed (all steps checked)` progress row.
+Example: `2026-08-31T03:47:52Z | plan 2026-08-31-foo executed (all
+steps checked)` in reports.md plus the flipped front-matter.
+
+**5. step outcome class — one existing row per class.**
+Landed = `- [x]` on the routed step (front-matter flip above).
+Parked = `park()` (`overnight-cycle.sh:73-78`): alert row identity
+`overnight:parked:<slug>` plus the
+`operator-attention | <ts> | overnight|<slug> | parked: ...` handoff
+row; also `accept-plans.py:146-148` for critical-class plans
+(`overnight:plan-critical:<slug>`). Refused =
+`overnight:bridge-refused:<slug>` (`overnight-cycle.sh:290-291`),
+`overnight:critical-touch:<slug>` (`:333-334`), and accept-plans'
+blocked rows `overnight:plan-accept-blocked:<slug>` and
+`overnight:plan-accept-gate:{kernel,automation}`
+(`accept-plans.py:157-159, 168-177`); a non-zero session rc also shows
+as `disposition=dead` in the budget row. No-candidate = selector (a)
+falling through (`overnight-cycle.sh:186-200`) into the research beat
+breadcrumb (`:271`); a routing tick files its own no-candidate
+breadcrumb here since it is the one class with no dedicated row today.
+Duplicate-skip = field 6.
+
+**6. the duplicate-skip event — what router-rearm-precheck needs
+observable.**
+The backlog row (`docs/project/backlog.md`, "Router-side re-arm
+pre-check (router-rearm-precheck) — queued 2026-08-31") parks on
+"one closed-step re-fire is demonstrably skipped". The skip is
+currently unobservable: dedup is wall-clock only (thread 2 above), so
+a re-add after the named step closes looks identical to a first fire.
+Spec: before the router's `report-queue --add`, it consults plan state
+with the same two greps the selector already uses
+(`overnight-cycle.sh:192-193`: `status=accepted` in the front-matter,
+an unchecked `- [ ]` step); when the identity's named step is closed
+it skips the add and files exactly one observable pair —
+a STATE.md breadcrumb `router | duplicate-skip | <identity> step
+already closed` and a deduped alert row
+`--add alert "router duplicate-skip: <identity> (named step closed;
+candidate not re-drafted)" --identity "router:dup-skip:<identity>"
+--window 86400`. The alert row is the operator-visible leg: the
+operator panel reads only digest bullets and STATE.md breadcrumbs
+whose event matches `alert` or the papercut/flagged/needs/operator
+keywords (`jobs/operator-items-feed.py:91-93`), so a breadcrumb alone
+would be invisible there. No router-internal state is kept — the skip
+decision is re-derived from the plan file each time, exactly as the
+backlog row asks.
+
+### Not established
+
+- No router tick exists in hngh-automation today; `routed-from`,
+  `routed-at`, and the duplicate-skip pair are capture contracts for
+  it, not running behavior. Fields 3-5 and the parked/refused rows are
+  verified in current code.
+- No producer writes a `routed-from=` front-matter attribute or
+  Verification-line tag yet. Parser tolerance is established from the
+  two regexes; a round-trip of a tagged plan file through
+  `accept-plans.py` and `plan-feed.py` has not been exercised.
+- No dashboard surface consumes routing state: `dashboard/plans.json`
+  (`plan-feed.py:45-52`) carries only
+  slug/status/risk/accepted/steps counts, and
+  `jobs/operator-items-feed.py` reads only digest bullets and
+  STATE.md breadcrumbs. Whether routed-outcome panels are wanted is an
+  operator decision.
+- Whether `report-queue --json`'s unread count can distinguish alert
+  kinds is not established from the automation side:
+  `overnight-cycle.sh:206-207` consumes the bare count only.
+
+### Grounding
+
+All paths below verified with `test -f` on 2026-08-31 (~/-form;
+line numbers as read this beat):
+
+- `~/Projects/etc/hngh-automation/scripts/overnight-cycle.sh` — OK.
+  Verified call sites: `:64-67` `file_alert()` (alert rows,
+  identity+window 604800); `:73-78` `park()`; `:180-183` plan-draft
+  progress row; `:186-200` selector (a), with `:192`
+  `grep -q "status=accepted" "$f"` and `:193`
+  `step="$(grep -m1 '^\- \[ \]' "$f" | sed ...)"`; `:205-210` wake
+  timestamp + `:206-207` `report-queue --json` unread read; `:290-291`
+  bridge-refused alert; `:310-311` budget session-run row; `:317-321`
+  executed flip + completion row; `:333-334` critical-touch alert;
+  `:337-339` overnight-lead handoff row; `:342` overnight-done
+  breadcrumb.
+- `~/Projects/etc/hngh-automation/scripts/accept-plans.py` — OK.
+  `:32-33` FRONT regex (trailing `[^>]*-->`), `:34` VERIFICATION
+  regex, `:44` report-queue path, `:93-103` report() call shape,
+  `:146-148` critical park, `:157-159` blocked-acceptance alert row,
+  `:168-177` gate-red acceptance alerts, `:185-187` accepted progress
+  row.
+- `~/Projects/etc/hngh-automation/jobs/agent-supervision.py` — OK.
+  `:216-221` report(); `:323-327` `supervision-evicted:<id>`, `:346-348`
+  `agent-stall:<id>` alert, `:351-353` `agent-stall-recovered:<id>`
+  flap row — the alert classes a router must link.
+- `~/Projects/etc/hngh-automation/jobs/oversight-tick.sh` — OK.
+  `:49-70` alert() (kind+detail, --identity/--window), `:80` stale-store,
+  `:101` system flags, `:126` tree-skew, `:175-180` gate-red,
+  `:326` rendered-surface, `:353` slow-unit, `:411` repeat-crumbs,
+  `:414` loop-signal.
+- `~/Projects/etc/hngh-automation/jobs/plan-feed.py` — OK. `:21-22`
+  FRONT regex, `:45-52` plans.json fields (no routing state today).
+- `~/Projects/etc/hngh-automation/jobs/operator-items-feed.py` — OK.
+  `:91-93` is_operator_item() event/keyword filter.
+- `~/Projects/etc/hngh-automation/lib/breadcrumbs.sh` — OK (the
+  breadcrumb pattern cited for routed-at).
+- `~/Projects/etc/hngh-automation/STATE.md` — OK (breadcrumb ledger).
+- `~/Projects/etc/hngh-automation/agent-handoffs.md` — OK
+  (overnight-lead / operator-attention rows).
+- `~/Projects/etc/hngh-automation/logs/budget.md` — OK (session-run
+  rows).
+- `~/Projects/etc/hngh-automation/dashboard/plans.json` and
+  `dashboard/operator-items.json` — OK (checked as consumers; neither
+  carries routing state).
+- `~/Projects/etc/hngh/docs/project/backlog.md` — OK
+  (router-rearm-precheck row, "queued 2026-08-31").
+- `~/Projects/etc/hngh/docs/project/reports.md` — OK (the alert/
+  progress ledger every field above lands in).
+- `~/Projects/etc/hngh/scripts/report-queue` — OK (identity/window
+  mechanics already specified in Thread 2 above; not re-derived here).
