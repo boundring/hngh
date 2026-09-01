@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-01T00:31:18Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-01T00:31:18Z -->
 # 2026-09-01 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
@@ -121,7 +121,7 @@ What the next author must NOT do:
       the intended list; push to origin succeeds or is recorded as an
       alert row.
 
-- [ ] 5. Wrap: append the cycle's outcomes to
+- [x] 5. Wrap: append the cycle's outcomes to
       docs/project/lessons-2026-09-01.md (open it if absent), journal
       update under docs/journal/, queue/backlog sync (including the
       step-2 caller-wiring outcome against the alert→plan-candidate

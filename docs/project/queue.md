@@ -40,6 +40,7 @@ self-funding-plan	queued	Self-funding plan (sponsorship, hosted compliance, docs
 router-rearm-precheck	done	Router-side re-arm pre-check before report-queue --add	implemented 2026-09-01 in hngh-automation scripts/router-tick.py (commit 87e6bc3); fixture test + live closed-step re-fire skip demonstrated (reports.md row f9360a6e)
 publication-lines-contract	done	Publication pipeline: wire research-lines into generate-publication or fix the 7-file contract	rotated 2026-08-31
 ebook-book-inputs	queued	Ebook book-machine inputs to unblock the royalty-pipeline	publication-pipeline-grounding.md; backlog royalty-pipeline row
+alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production caller)	closed 2026-09-01: router-tick 87e6bc3 + router-feed caller 7992f78 (hngh-automation); first live routings reports.md bffc89a6 + ffa1d58e, auto-accepted f4c7e12e/9993c29d; already-routed skips observed 02:00:45Z
 ```
 ## Next
 

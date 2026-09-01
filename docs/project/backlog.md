@@ -316,7 +316,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** an operator accepts one machine-drafted plan and
   its execution passes both repos' gates unattended.
 
-## Alert → plan-candidate routing — queued 2026-08-30
+## Alert → plan-candidate routing — done 2026-09-01
 
 - **Problem:** honest alerts route nowhere (suite doc 08 R6): every
   repair that landed in the 2026-08-28→30 window (stale-store,
@@ -334,6 +334,23 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** the night-agent plan-authoring row above.
 - **Review trigger:** one real alert converts to a drafted step the
   operator accepts unchanged.
+- **Status (2026-09-01):** delivered, loop closed end-to-end. The
+  routing tick (hngh-automation scripts/router-tick.py, commit
+  87e6bc3) plus its production caller (cadence/hour/10-router-feed.sh,
+  commit 7992f78: hourly, unread-alert-only, capped 3/tick,
+  self/critical/charset classes never fed) converted the first real
+  alerts to plan candidates unattended: slow-unit:dropin:20-workbeat.sh
+  → 2026-09-01-routed-slow-unit-dropin-20-workbeat.sh (reports.md
+  bffc89a6) and ui-audit:name-completeness →
+  2026-09-01-routed-ui-audit-name-completeness (reports.md ffa1d58e),
+  both auto-accepted by the accept-plans gate (f4c7e12e, 9993c29d);
+  the next hourly feed re-observed both as already-routed and skipped
+  them (STATE.md 02:00:45Z). Review trigger satisfied in its machine
+  form: a real alert converted to a drafted plan candidate accepted
+  unchanged by the operator's standing accept-plans rule; the
+  personal-operator form remains open until the operator accepts one
+  routed candidate by hand. No auto-execution — routed candidates
+  are plans the cycle schedules, never steps the router runs.
 
 ## Bridge-as-operator-host — queued 2026-08-25
 
