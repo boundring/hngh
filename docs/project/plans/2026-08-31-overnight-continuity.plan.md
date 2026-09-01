@@ -186,7 +186,7 @@ What the next author must NOT do:
       public-content gate (absolute home paths, credential shapes,
       eval/exec) before the ceremony invocation.
 
-- [ ] 5. Wrap: append the cycle's outcomes to
+- [x] 5. Wrap: append the cycle's outcomes to
       docs/project/lessons-2026-08-31.md (open it if absent), journal
       update under docs/journal/, queue/backlog sync (including noting
       step 2's duplicate-skip demonstration against the
@@ -203,6 +203,24 @@ What the next author must NOT do:
       status=proposed risk=normal accepted=- and ≥3 runnable steps
       each with a Verification line; lessons and journal files exist;
       queue rows updated; `make test` green.
+      Executed 2026-09-01T00:27Z: lessons appended (beat-sizing +
+      ceremony-drive lessons, this wake's outcomes) to
+      docs/project/lessons-2026-08-31.md; journal entry
+      docs/journal/2026-09-01.md written; queue row
+      router-rearm-precheck flipped queued → done with evidence
+      (implementation 87e6bc3, fixture test + live row f9360a6e) and
+      the backlog row marked done 2026-09-01 with a Status block —
+      this is the duplicate-skip demonstration note step 5 asked
+      for; NEXT plan authored at docs/project/plans/
+      2026-09-01-overnight-continuity.plan.md (status=proposed
+      risk=normal accepted=-, 5 runnable steps each with a
+      Verification line, first grow beat = router-tick production
+      caller, research beat = honest gamification mechanics, final
+      step authors the 2026-09-02 plan). This tick, the wrap docs,
+      and the next plan land in this wrap ceremony — plan supply
+      refilled before the wake ends. All 5 steps of this plan are
+      now ticked; status stays accepted until the cycle's executor
+      flips it (status=executed) per the plan lifecycle.
 
 ## Verification summary
 
