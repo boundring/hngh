@@ -1379,7 +1379,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** one deduped alert crosses its cap and surfaces
   in the operator-facing digest.
 
-## Router-side re-arm pre-check (router-rearm-precheck) — queued 2026-08-31
+## Router-side re-arm pre-check (router-rearm-precheck) — done 2026-09-01
 
 - **Problem:** the alert→plan-candidate routing resolutions
   ("Open-thread resolutions (2026-08-31)" in
@@ -1401,6 +1401,21 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   conventions.
 - **Review trigger:** one closed-step re-fire is demonstrably skipped
   in a fixture run.
+- **Status (2026-09-01):** delivered. The pre-check is implemented in
+  hngh-automation scripts/router-tick.py (automation commit 87e6bc3):
+  before any report-queue --add it consults the plan file named in the
+  identity with the selector's own two greps (status=accepted
+  front-matter, unchecked `- [ ]` step) and skips the add when the
+  named step is closed, filing the observable pair instead (STATE.md
+  `router | duplicate-skip` breadcrumb + deduped alert row
+  router:dup-skip:identity, window 86400). Review trigger satisfied
+  both ways: hermetic fixture run
+  (hngh-automation tests/test-router-tick.py,
+  test_closed_step_refire_files_duplicate_skip_pair) and a live
+  closed-step re-fire against the executed 2026-08-30 overnight plan
+  (reports.md alert row f9360a6e). No router-internal state — the
+  skip decision is re-derived from the plan file each run. Queue row
+  flipped queued → done.
 
 ## Publication pipeline: research-lines wiring vs the fixed 7-file contract (publication-lines-contract) — queued 2026-08-31
 
