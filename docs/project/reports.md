@@ -513,7 +513,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-31T19:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T19:00:45Z-progress-6f20e8cb.md |
 | 2026-08-31T19:00:47Z | alert | 2e9cb1ca | ui-audit name-completeness: 3 violation(s) — router-rearm-precheck ¦ publication-lines-contract ¦ ebook-book-inputs | 2026-08-31T19:00:47Z-alert-2e9cb1ca.md |
 | 2026-08-31T19:11:45Z | progress | 84bab25f | plan 2026-08-30-evening-selfdev executed (all steps checked) | 2026-08-31T19:11:45Z-progress-84bab25f.md |
-| 2026-08-31T19:15:43Z | alert | 0b477264 | [oversight] slow-unit: dropin:20-workbeat.sh wall=657.7s median=150.0s ×25 | 2026-08-31T19:15:43Z-alert-0b477264.md |
+| 2026-08-31T19:15:43Z | alert | 0b477264 | [oversight] slow-unit: dropin:20-workbeat.sh wall=657.7s median=150.0s ×34 | 2026-08-31T19:15:43Z-alert-0b477264.md |
 | 2026-08-31T19:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T19:30:45Z-progress-6f20e8cb.md |
 | 2026-08-31T19:40:43Z | alert | 49392da7 | [oversight] stale-store: /tmp/hngh-cer-20260831-191013 record.lisp untouched 30min+ ×7 | 2026-08-31T19:40:43Z-alert-49392da7.md |
 | 2026-08-31T20:00:43Z | progress | 3fcd2681 | course bridge-operator-host: card mounted, last increment 2026-08-31T19:00:43Z | 2026-08-31T20:00:43Z-progress-3fcd2681.md |
@@ -527,3 +527,16 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-08-31T21:00:43Z | alert | 6718e279 | [oversight] stale-store: /tmp/hngh-cer-overnight-publine2 record.lisp untouched 30min+ ×4 | 2026-08-31T21:00:43Z-alert-6718e279.md |
 | 2026-08-31T21:00:43Z | progress | 3b56db22 | course bridge-operator-host: card mounted, last increment 2026-08-31T20:00:43Z | 2026-08-31T21:00:43Z-progress-3b56db22.md |
 | 2026-08-31T21:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T21:00:45Z-progress-6f20e8cb.md |
+| 2026-08-31T21:18:11Z | progress | 00b33ad6 | plan 2026-08-30-overnight-continuity executed (all steps checked) | 2026-08-31T21:18:11Z-progress-00b33ad6.md |
+| 2026-08-31T21:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T21:30:45Z-progress-6f20e8cb.md |
+| 2026-08-31T21:50:43Z | alert | fea334c8 | [oversight] stale-store: /tmp/hngh-cer-wrap-20260831 record.lisp untouched 30min+ ×29 | 2026-08-31T21:50:43Z-alert-fea334c8.md |
+| 2026-08-31T22:00:43Z | progress | 966e6ecf | course bridge-operator-host: card mounted, last increment 2026-08-31T21:00:43Z | 2026-08-31T22:00:43Z-progress-966e6ecf.md |
+| 2026-08-31T22:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T22:00:45Z-progress-6f20e8cb.md |
+| 2026-08-31T22:01:21Z | progress | a876c23f | plan 2026-08-31-overnight-continuity auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-08-31T22:01:21Z | 2026-08-31T22:01:21Z-progress-a876c23f.md |
+| 2026-08-31T22:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T22:30:45Z-progress-6f20e8cb.md |
+| 2026-08-31T23:00:43Z | progress | 7c23fa20 | course bridge-operator-host: card mounted, last increment 2026-08-31T22:00:43Z | 2026-08-31T23:00:43Z-progress-7c23fa20.md |
+| 2026-08-31T23:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T23:00:45Z-progress-6f20e8cb.md |
+| 2026-08-31T23:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-08-31T23:30:45Z-progress-6f20e8cb.md |
+| 2026-09-01T00:00:43Z | progress | 15b6e8be | course bridge-operator-host: card mounted, last increment 2026-08-31T23:00:43Z | 2026-09-01T00:00:43Z-progress-15b6e8be.md |
+| 2026-09-01T00:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-01T00:00:45Z-progress-6f20e8cb.md |
+| 2026-09-01T00:05:40Z | alert | f9360a6e | router duplicate-skip: gate-check:plan:2026-08-30-overnight-continuity:step-1 (named step closed; candidate not re-drafted) | 2026-09-01T00:05:40Z-alert-f9360a6e.md |
