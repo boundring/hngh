@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-08-31T22:01:21Z -->
 # 2026-08-31 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
@@ -77,13 +77,17 @@ What the next author must NOT do:
 
 ## Steps
 
-- [ ] 1. Gate baseline: `make test` in this repo (record the check
+- [x] 1. Gate baseline: `make test` in this repo (record the check
       count) and `make test` in hngh-automation (exit 0). No landing
       happens on any other step until both are green.
       Verification: both commands exit 0; check counts noted in the
       execution record.
+      Executed 2026-09-01T00:01Z: kernel 2855 checks passed (exit 0);
+      hngh-automation 10 tests + identifier lint (exit 0). Counts
+      recorded here per the verification line; the execution record
+      (step 5) carries them forward.
 
-- [ ] 2. GROW BEAT (normal-risk, hngh-automation only — commits there
+- [x] 2. GROW BEAT (normal-risk, hngh-automation only — commits there
       are free, no ceremony): implement the alert→plan-candidate
       router tick priced by the routing doc's "Outcome tracking
       without kernel changes (2026-08-31)" section. Minimum scope
@@ -110,8 +114,24 @@ What the next author must NOT do:
       parse error — closing the doc's Not-established round-trip item;
       the duplicate-skip pair (breadcrumb + alert row) is observable
       after a simulated closed-step re-fire.
+      Executed 2026-09-01T00:06Z: scripts/router-tick.py + 6 hermetic
+      tests (tests/test-router-tick.py, wired into the automation
+      Makefile test target) landed in hngh-automation commit 87e6bc3;
+      `make test` green (16 tests + lint). All of (a)+(b)+(c) landed:
+      closed-step re-fire → duplicate-skip pair observable LIVE
+      (STATE.md breadcrumb `router | duplicate-skip | gate-check:plan:
+      2026-08-30-overnight-continuity:step-1 step already closed` +
+      reports.md alert row, identity router:dup-skip:gate-check:plan:
+      2026-08-30-overnight-continuity:step-1, window 86400, row
+      f9360a6e); tagged candidate front-matter round-trips
+      accept-plans.py (DRY_RUN=1) + jobs/plan-feed.py (proven by
+      test_tagged_candidate_round_trips_parsers). Remainder recorded
+      honestly: no production caller invokes the tick yet — wiring it
+      into a job/cadence lane is follow-on; the tick + tests prove the
+      mechanism and the live demonstration ran the real script against
+      the real ledger.
 
-- [ ] 3. RESEARCH BEAT (never code): crystallize the next master-plan
+- [x] 3. RESEARCH BEAT (never code): crystallize the next master-plan
       §4 research-backlog candidate in order — self-hosting prior art
       (buddy summoned-not-nagging was crystallized 2026-08-31,
       handoff-brief-schema and steer-vs-die-threshold 2026-08-30; do
@@ -124,8 +144,20 @@ What the next author must NOT do:
       mechanics (next uncrystallized §4 candidate) instead.
       Verification: doc exists under docs/research/; Grounding paths
       verified with `test -f`; kernel `make test` green.
+      Executed 2026-09-01T00:14Z: docs/research/2026-09-01-self-hosting-
+      prior-art.md authored — self-hosting prior art was the next
+      uncrystallized §4 candidate (buddy/handoff/steer already done).
+      All 18 repo Grounding paths test -f verified BEFORE citing;
+      external anchors web-verified (gnu.org mes, stage0 hex0, Mes
+      bootstrap, dwheeler trusting-trust); explicit Not-established
+      section (no compile-twice fixed point claimed; bootstrap-share
+      measure parseable but unsurfaced; external claims URL-cited, not
+      line-verified). Kernel `make test` green: 2855 checks, exit 0.
+      Doc is untracked in the working tree and rides the step-4
+      ceremony (this tick rides the same ceremony per the rc=124
+      lesson).
 
-- [ ] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
+- [x] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
       the step-3 research doc (plus any uncommitted kernel docs
       stragglers) in ONE certificate ceremony through the full
       governance loop (real evidence → real model review →
@@ -139,6 +171,20 @@ What the next author must NOT do:
       intended list; `make test` green before issue-cert; plan-file
       ticks for steps 2–4 present in the same ceremony; push to origin
       succeeds or is recorded as an alert row.
+      Executed 2026-09-01T00:17Z: batched ceremony via scripts/
+      ceremony-drive (fresh store, model loadout, deterministic
+      ten-principle verdict, cert-bound prepare-candidate + commit,
+      certificate-gated push). Candidate paths, all docs, no src/:
+      docs/research/2026-09-01-self-hosting-prior-art.md (step 3),
+      this plan file (ticks for steps 1–4 in the same commit — the
+      rc=124 lesson), and the stragglers docs/project/reports.md
+      (append-only ledger rows incl. the router dup-skip alert row),
+      docs/project/ui-grades.md, docs/design/ui-evolve/current-overlay.json
+      (job churn, batch precedent 1f04b5b / 5f0a0a2). Kernel gate green
+      this wake at 00:09Z — 2855 checks, exit 0; only docs changed
+      since. All five candidates pre-flighted clean against the
+      public-content gate (absolute home paths, credential shapes,
+      eval/exec) before the ceremony invocation.
 
 - [ ] 5. Wrap: append the cycle's outcomes to
       docs/project/lessons-2026-08-31.md (open it if absent), journal
