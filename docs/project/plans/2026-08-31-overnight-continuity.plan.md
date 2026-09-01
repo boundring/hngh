@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-08-31T22:01:21Z -->
+<!-- plan: status=executed risk=normal accepted=2026-08-31T22:01:21Z -->
 # 2026-08-31 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
@@ -93,7 +93,7 @@ What the next author must NOT do:
       without kernel changes (2026-08-31)" section. Minimum scope
       inside one beat: (a) the router-side pre-check before any
       `report-queue --add` — consult plan state with the same two
-      greps the selector uses (status=accepted front-matter; an
+      greps the selector uses (status=executed front-matter; an
       unchecked `- [ ]` step); when the identity's named step is
       closed, skip the add and file exactly one observable pair: a
       STATE.md breadcrumb `router | duplicate-skip | <identity> step
