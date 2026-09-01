@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-01T00:31:18Z -->
 # 2026-09-01 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
@@ -68,13 +68,15 @@ What the next author must NOT do:
 
 ## Steps
 
-- [ ] 1. Gate baseline: `make test` in this repo (record the check
+- [x] 1. Gate baseline: `make test` in this repo (record the check
       count) and `make test` in hngh-automation (exit 0). No landing
       happens on any other step until both are green.
       Verification: both commands exit 0; check counts noted in the
       tick and carried to the execution record.
+      (Done 2026-09-01: kernel 2855 checks, hngh-automation 21 tests
+      + identifier lint, both exit 0; counts carried to the journal.)
 
-- [ ] 2. GROW BEAT (normal-risk, hngh-automation only — commits
+- [x] 2. GROW BEAT (normal-risk, hngh-automation only — commits
       free, no ceremony): give the router tick its production caller.
       Price the call site first (read jobs/oversight-tick.sh and
       scripts/overnight-cycle.sh): the router tick must be invoked on
@@ -91,7 +93,7 @@ What the next author must NOT do:
       simulated alert reaching router-tick through the production
       path) in STATE.md or reports.md.
 
-- [ ] 3. RESEARCH BEAT (never code): crystallize honest gamification
+- [x] 3. RESEARCH BEAT (never code): crystallize honest gamification
       mechanics — the last uncrystallized master-plan §4 candidate.
       One doc under docs/research/ with a Grounding section listing
       verified repo paths (`test -f` each) and explicit
@@ -107,7 +109,7 @@ What the next author must NOT do:
       Verification: doc exists under docs/research/; Grounding paths
       verified with `test -f`; kernel `make test` green.
 
-- [ ] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
+- [x] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
       the step-3 research doc (plus uncommitted kernel docs
       stragglers) in ONE certificate ceremony via scripts/
       ceremony-drive (fresh /tmp store; pre-flight candidates against
