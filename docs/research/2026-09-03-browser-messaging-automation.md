@@ -101,3 +101,30 @@ admits it with the probe gate re-run at execution time.
 
 Discord and WhatsApp remain future candidates behind the same
 pattern, deliberately not prototyped here.
+
+## 6. Re-probe 2026-09-04 (admit/park gate — capabilities plan step 6)
+
+The §1 battery re-run 2026-09-04, same probes, verbatim results:
+
+| Probe | Result |
+|---|---|
+| `command -v chromium google-chrome-stable chromium-browser google-chrome` | no output, exit 1 — still no Chrome-family binary on PATH |
+| `python3 -c "import playwright"` | `ModuleNotFoundError: No module named 'playwright'` — still not installed for python3 |
+| profile dirs under `~/.config` (EXISTENCE only, never opened) | `~/.config/chromium` and `~/.config/google-chrome` both still exist |
+
+Verdict: **PARK** (step 7 does not admit). The exact missing piece is
+unchanged from 2026-09-03: `playwright` is not importable, and with
+no package there is no chromium build available to it either — both
+halves of the ADMIT condition fail. Per the plan's boundary record:
+the playwright pip install (+ `playwright install chromium`) is a
+normal-risk hngh-automation dependency step, but browser acquisition
+on this host has NOT been granted to machine sessions — the missing
+binary is the operator-procedural step, so the slice stays parked
+until a plan admits it with this gate re-run at execution time.
+
+Credentials rules the isolated profile will inherit when it admits
+(credentials-posture.md §4, standing): no plaintext secrets in any
+repo; no secret values in logs, breadcrumbs, report rows, or digests;
+the profile dir is 700-mode, never backed up, never copied; session
+credentials ARE credentials and redact to paths, never values; a
+world-readable secret-bearing file is alert-class.

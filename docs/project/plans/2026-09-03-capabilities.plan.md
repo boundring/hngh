@@ -96,7 +96,7 @@ lesson 1).
 
 ## Steps
 
-- [ ] 1. GROW — service-state recognition verified live. Confirm the
+- [x] 1. GROW — service-state recognition verified live. Confirm the
       sibling slice landed (hngh-automation jobs/service-state.py
       exists on disk); run the probe read-only (systemctl --user
       is-active/is-enabled + list-unit-files for the three allowlisted
@@ -110,7 +110,15 @@ lesson 1).
       unit's live state and the fired alert class (or the parked gap
       note naming the missing file); no unit is started, stopped, or
       modified by this step; kernel `make test` green.
-- [ ] 2. RESEARCH — unsloth launch-config lane proposal. What
+      Ticked 2026-09-04: hngh-automation commit be4ba07 landed
+      jobs/service-state.py (+ scripts/service-ctl.sh,
+      cadence/day/11-service-recovery.sh, queue-progress telemetry);
+      the live probe fired reports.md row
+      2026-09-04T17:11:15Z alert b80f38fd ("unsloth serving down
+      while llama-server.service inactive"), and
+      dashboard/service-state.json confirms the class-2 firing
+      (:8080 down, llama-server inactive; :11434 up, no alert).
+- [x] 2. RESEARCH — unsloth launch-config lane proposal. What
       config.env-driven launch config llama-server.service needs to
       re-host the 35B fleet: model path(s) for unsloth/Ornith-1.0-35B-
       GGUF (the 5/5 bench leader all three days per
@@ -126,6 +134,12 @@ lesson 1).
       with the proposed config.env inventory, the unit's current
       EnvironmentFile state quoted, and an explicit no-unit-edited
       statement; kernel `make test` green.
+      Ticked 2026-09-04:
+      docs/research/2026-09-04-unsloth-launch-config-lane.md —
+      EnvironmentFile slot declared in the unit but the file absent
+      (quoted verbatim), LLAMA_ARG_* launch inventory with the
+      Ornith-1.0-35B GGUF model path, explicit no-unit-edited /
+      no-service-started statement.
 - [ ] 3. GROW — service-ctl exercised: status read-only, then the
       recovery path when :8080 is actually down. Run
       scripts/service-ctl.sh status for each allowlisted unit
@@ -175,7 +189,7 @@ lesson 1).
       live transition recorded, or the parked operator step quoted
       verbatim; hngh-automation `make test` green; kernel `make test`
       green.
-- [ ] 6. RESEARCH — browser-messaging admit/park gate. Re-run the
+- [x] 6. RESEARCH — browser-messaging admit/park gate. Re-run the
       probe battery from
       docs/research/2026-09-03-browser-messaging-automation.md §1
       (browser binary on PATH, `python3 -c "import playwright"`,
@@ -191,6 +205,11 @@ lesson 1).
       (or appended to the 2026-09-03 research doc as a dated
       re-probe section) with the ADMIT/PARK verdict and the exact
       missing piece if parked; kernel `make test` green.
+      Ticked 2026-09-04: re-probe section appended to
+      docs/research/2026-09-03-browser-messaging-automation.md §6 —
+      probes verbatim (no browser on PATH, playwright not
+      importable, both profile dirs exist), verdict PARK naming the
+      missing install as the operator-procedural step.
 - [ ] 7. GROW — browser-messaging prototype slice (gated on step 6's
       ADMIT; otherwise this step parks and records). Google Messages
       web ONLY, Playwright persistent context with an isolated
