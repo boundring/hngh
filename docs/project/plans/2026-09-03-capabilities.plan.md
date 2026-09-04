@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-04T18:01:27Z -->
 # 2026-09-03 — operator-directed capabilities: service management, 1Password credentials, browser-messaging line
 
 Authorization: operator-directed 2026-09-03, recorded faithfully in
@@ -210,6 +210,14 @@ lesson 1).
       probes verbatim (no browser on PATH, playwright not
       importable, both profile dirs exist), verdict PARK naming the
       missing install as the operator-procedural step.
+      Re-probe 2026-09-04 post-install: playwright importable=yes
+      (venv ~/.hngh-automation/venvs/playwright, 1.62.0; plain
+      python3 stays PEP 668 externally-managed so the venv
+      interpreter is the seam), chromium=~/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome
+      (Chrome 151.0.7922.34, user-space download, smoke-launched
+      headless on a data: URL) — verdict ADMIT (step 7 unblocked for
+      the machine's next executor session). Battery verbatim in
+      docs/research/2026-09-04-browser-relay-architecture.md.
 - [ ] 7. GROW — browser-messaging prototype slice (gated on step 6's
       ADMIT; otherwise this step parks and records). Google Messages
       web ONLY, Playwright persistent context with an isolated

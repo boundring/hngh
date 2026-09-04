@@ -128,3 +128,8 @@ repo; no secret values in logs, breadcrumbs, report rows, or digests;
 the profile dir is 700-mode, never backed up, never copied; session
 credentials ARE credentials and redact to paths, never values; a
 world-readable secret-bearing file is alert-class.
+
+Successor doc 2026-09-04: docs/research/2026-09-04-browser-relay-architecture.md
+— what omp's browser relay actually does (evidence-quoted), the
+post-install Route A verdict, and the operator-authorized extension
+relay (Route B) design.
