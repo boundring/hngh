@@ -376,3 +376,27 @@ Known pre-guard violation, named rather than rewritten: `915e0e3`
 plain docs commit after the restatement). It is exempted by name in the
 guard and stands as history, proving the guard is not a whitewash of the
 past.
+
+## 2026-09-06 — A post-guard miss is declared, cured through the loop, never rewritten
+
+The portfolio lane landed `526cd3f` ("docs: portfolio surface — ebook
+build, README pointer, journal mission lines") directly on `origin/main`:
+a docs-shaped commit that also modified the kernel script
+`scripts/generate-publication`. The loop-history guard caught it; the
+gate went red, as designed.
+
+The cure honors the constraint that pushed history is never rewritten:
+
+1. **The miss is declared by name**, exactly as `915e0e3` was: the guard
+   lists `526cd3f` in its named-exemption table with the reason, and
+   this entry records it. The declaration exempts one past commit and
+   nothing else; the rule for future commits is untouched.
+2. **The change itself is cured through the loop**: the script is
+   reverted to its pre-miss content and re-applied as two
+   certificate-bound candidates, so the final script content is bound
+   by a real propose -> verdict -> certificate -> commit ceremony and
+   every new script-touching commit carries a candidate label.
+
+The guard stays intact and unweakened: same scan range, same subject
+rule, same diff inspection. One blemish declared, as the README
+sentence requires.

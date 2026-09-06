@@ -34,6 +34,10 @@ RESTATEMENT = "1915713"
 KNOWN_EXEMPTIONS = {
     # comment-only alignment of composition-root references; predates the guard
     "915e0e3": "comment-only docs alignment (pre-guard)",
+    # portfolio docs commit that also touched a kernel script (2026-09-06),
+    # landed outside the loop and already pushed; declared by name per the
+    # 2026-08-25 decision, cured by ceremony record -- not rewritten
+    "526cd3f": "portfolio ebook/journal commit touching a kernel script (declared miss)",
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
