@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=executed risk=normal accepted=2026-09-01T23:01:23Z -->
 # 2026-09-01 — operator items: push-on-demand, email reports, cost discipline, local-model research, self-funding, scheduling
 
 Authorization: operator-directed 2026-09-01, recorded faithfully in
@@ -103,7 +103,7 @@ plan so the queue stays fed (foldback lesson 1).
 
 ## Steps
 
-- [ ] 1. GROW — push-on-demand verification slice. Check hngh-automation
+- [x] 1. GROW — push-on-demand verification slice. Check hngh-automation
       for the connectivity slice's arrival (its CHANGELOG's newest
       entry, `git remote -v`, origin wiring). If a remote exists,
       exercise push-on-demand: after the next plain hngh-automation
@@ -116,7 +116,14 @@ plan so the queue stays fed (foldback lesson 1).
       up to date, OR an alert row documenting the slice's absence
       (CHANGELOG newest entry date + empty `git remote -v` quoted);
       hngh-automation `make test` green.
-- [ ] 2. RESEARCH — notification-channel survey. Compare candidate
+      Executed 2026-09-06T00:20Z: connectivity slice landed long since
+      (origin github.com:boundring/hngh-automation.git); sweep-artifacts
+      pushed master to origin 2026-09-06T00:01:43Z (STATE.md crumb
+      "sweep-artifacts.sh | git-push | pushed master to origin"), and
+      commit b199eb8 (gate-red root-cause fix) pushed with
+      `git status -sb` showing master up to date with origin/master;
+      automation `make test` green at b199eb8.
+- [x] 2. RESEARCH — notification-channel survey. Compare candidate
       channels for operator reports: email (SMTP; the notify-email
       slice being landed 2026-09-01 — cite it when visible, mark "not
       established" until then), ntfy.sh hosted topics (curl POST, no
@@ -132,7 +139,12 @@ plan so the queue stays fed (foldback lesson 1).
       exists with a per-channel cost/latency/privacy table, explicit
       "not established" markers where unverified, and a one-line
       recommendation; kernel `make test` green.
-- [ ] 3. GROW — email digest wiring check + first live digest. If the
+      Executed by 2026-09-02: hngh-automation
+      docs/research/2026-09-01-notification-channel-survey.md exists
+      with the per-channel cost/latency/privacy table, "not
+      established" markers, one-line recommendation; kernel gate
+      re-verified green 2026-09-06T00:05Z (2855 checks).
+- [x] 3. GROW — email digest wiring check + first live digest. If the
       notify-email slice has landed: run the digest composer in report
       mode (no send), verify its content against named sources
       (docs/project/queue.md rotation rows, docs/project/reports.md
@@ -143,7 +155,14 @@ plan so the queue stays fed (foldback lesson 1).
       source rows, plus either one live digest sent or the
       missing-slice/missing-config condition recorded in an alert row;
       hngh-automation `make test` green.
-- [ ] 4. RESEARCH — delegated-session cost model + roguelike budget
+      Executed 2026-09-02T01:00Z (park): digest composer verified in
+      report mode against plans.json, kernel commits, automation
+      commits; live send parked — SMTP config at
+      ~/.hngh-automation/notify-email.conf absent (operator setup
+      item), exit-2 "no config" recorded in hngh-automation
+      docs/project/reports.md step-3 park; digest beat runs hourly
+      (time-ledger dropin:09-email-digest.sh).
+- [x] 4. RESEARCH — delegated-session cost model + roguelike budget
       rule. From hngh-automation jobs/session-cost.py telemetry rows
       (cost_usd per session, by model) and logs/budget.md, quantify
       the current per-session cost distribution; propose the roguelike
@@ -156,7 +175,12 @@ plan so the queue stays fed (foldback lesson 1).
       exists citing concrete telemetry rows (dates, session
       identities, cost_usd) and states a budget rule whose stated
       arithmetic sums under $10/day; kernel `make test` green.
-- [ ] 5. GROW — publication pipeline first artifact. Read scripts/
+      Executed by 2026-09-02: hngh-automation
+      docs/research/2026-09-01-session-cost-model.md exists citing
+      concrete telemetry rows with the budget rule arithmetic;
+      companion roguelike-pattern-design.md (same dir) carries the
+      death-and-replacement rule.
+- [x] 5. GROW — publication pipeline first artifact. Read scripts/
       generate-publication, then run its --ebook mode with HNGH_PUB_ROOT
       pointed at a throwaway temp directory (build artifacts are never
       committed). Record what the pipeline actually consumed (expected
@@ -169,7 +193,14 @@ plan so the queue stays fed (foldback lesson 1).
       as the finding); the next-needed-inputs note landed in a record
       or research doc; `git status` shows no committed publication
       artifacts; kernel `make test` green.
-- [ ] 6. RESEARCH — continuous local-model benchmark loop design.
+      Executed 2026-09-06T00:16Z: the automation repo's own
+      scripts/generate-publication (landed 2026-09-02+, distinct from
+      the kernel's) ran --ebook into a throwaway temp dir rc=0; output
+      inventory (book.md 17,937B, EPUB 22,371B, 5 zip entries, 7
+      corpus sections) and next-needed-inputs recorded in hngh-automation
+      docs/records/2026-09-06-publication-first-artifact.md; no
+      artifacts committed; kernel gate green 2026-09-06T00:05Z.
+- [x] 6. RESEARCH — continuous local-model benchmark loop design.
       Design the standing loop per the operator's directive: what to
       measure (probe pass rate over model-bench's three probes,
       tokens/s, task completion on plan steps), which cadence-continuum
@@ -183,7 +214,11 @@ plan so the queue stays fed (foldback lesson 1).
       exists with named metrics, one cadence tier, and concrete
       adopt-thresholds each tied to a cited jsonl field or record;
       kernel `make test` green.
-- [ ] 7. GROW — first daily biographic capture row. Bootstrap directive
+      Executed by 2026-09-02: hngh-automation
+      docs/research/2026-09-01-local-model-benchmark-loop.md exists
+      with named metrics, cadence tier, adopt-thresholds tied to
+      model-bench jsonl fields.
+- [x] 7. GROW — first daily biographic capture row. Bootstrap directive
       6's documentary pipeline: author
       docs/records/2026-09-01-biographic-capture.md exercising the
       docs/records/README.md format and the operator suite's exemplar
@@ -196,7 +231,12 @@ plan so the queue stays fed (foldback lesson 1).
       Verification: the record exists with Status: RECORD, every claim
       cites a source, it admits no runtime capability, and it does not
       modify docs/journal/; kernel `make test` green.
-- [ ] 8. RESEARCH — arbitrary-request scheduling design. Design how an
+      Executed 2026-09-01: hngh-automation
+      docs/records/2026-09-01-biographic-capture.md exists with Status:
+      RECORD and sourced claims; docs/journal/ untouched by it;
+      cadence continued via docs/research/
+      2026-09-02-biographic-cadence-design.md.
+- [x] 8. RESEARCH — arbitrary-request scheduling design. Design how an
       operator, an alert, or a plan files a "request" that the
       continuous queue picks up immediately or on a named cycle:
       map intake onto the queue.md rotation (scripts/rotate-queue,
@@ -212,7 +252,11 @@ plan so the queue stays fed (foldback lesson 1).
       covering intake surfaces (operator/alert/plan), the
       immediate-vs-cycled execution mapping, and the named boundary;
       kernel `make test` green.
-- [ ] 9. GROW — wrap, lessons, author-next-plan (the plan-supply law).
+      Executed by 2026-09-02: hngh-automation
+      docs/research/2026-09-01-arbitrary-request-scheduling.md exists
+      covering intake surfaces, immediate-vs-cycled mapping, the
+      kernel/automation boundary.
+- [x] 9. GROW — wrap, lessons, author-next-plan (the plan-supply law).
       Land this plan's lessons into the foldback/lessons path, and
       author the next plan file (docs/project/plans/<date>-<slug>.
       plan.md, status=proposed) whose steps cover the parked
@@ -222,6 +266,12 @@ plan so the queue stays fed (foldback lesson 1).
       front-matter (first line `<!-- plan: status=proposed risk=normal
       accepted=- -->`) and every unchecked step carrying an indented
       Verification line; kernel `make test` green.
+      Executed by 2026-09-02: lessons landed (hngh-automation
+      docs/project/lessons/lessons-2026-09-01.md, 6 lessons; further
+      harvests lessons-2026-09-02..05); next plan authored — hngh-automation
+      docs/project/plans/2026-09-02-operator-items-follow-on.plan.md,
+      status=proposed, contract-valid front-matter, per-step
+      Verification lines.
 
 Parked (not in this plan, recorded for the operator; follow-on
 candidates for the next plan's author):
