@@ -166,7 +166,8 @@ def build_journal(day):
         lines.extend([
             "## The day's commits",
             "",
-            *[f"- `{sha}` {subject}" for subject, sha in commits],
+            *[f"- `{sha}` {mission_line(subject, sha)}"
+              for subject, sha in commits],
             "",
         ])
     return "\n".join(lines)
@@ -174,6 +175,24 @@ def build_journal(day):
 
 def journal_path(day):
     return JOURNAL_DIR / f"{day}.md"
+
+
+def mission_line(subject, sha):
+    """Human line for a candidate commit, from records that cite the
+    candidate hash. No records citation -> honest placeholder, never
+    an invented mission."""
+    m = re.match(r"hngh: candidate (\S+)$", subject)
+    if not m:
+        return subject
+    full = m.group(1)
+    for record in sorted((ROOT / "docs" / "records").glob("*.md")):
+        if full in record.read_text():
+            title = next((ln.lstrip("# ").strip()
+                          for ln in record.read_text().splitlines()
+                          if ln.startswith("# ")), record.stem)
+            return f"candidate {full[:7]} — {title}"
+    return (f"candidate {full[:7]} — recorded run "
+            f"(no mission line in records)")
 
 
 def check_day(day):
