@@ -11,6 +11,12 @@ For newcomers: read [README.md](../README.md) at the repository root first.
 
 ## Read in this order
 
+Start with the one-page snapshot — it is maintained by hand until the
+weekly wiring lands, and says so:
+
+- [State of the project](project/STATE-OF-PROJECT.md) — the five-minute
+  portfolio read before step 0.
+
 0. [Intent](intent.md) — why Hngh exists and where it is going.
 1. [Architecture](architecture.md) — the current kernel and planned boundary map.
 2. [Run contract](core/run-contract.md) — domain values, lifecycle, and refusals.
@@ -61,6 +67,15 @@ companions to the contracts above, after the core read order:
   roguelike death rule, and the honesty leash.
 - [Display register](design/display-register-spec.md) — the one Nihei
   register law: voice, proportions, palette, perceptual-only aliases.
+- [The Descent](design/descent.md) — the six-station cyclical
+  self-improvement loop: stations, invariants, falsifiable weekly
+  checks, and the flavor-name lexicon.
+- [Bestiary](design/bestiary.md) — the five failure-cause classes,
+  grounded in this project's own incident rows, with the routing table
+  from cause to disposition.
+- [Writing register](design/writing-register.md) — the prose law
+  (Orwell/Leonard/Adams) for all operator-facing and machine-drafted
+  text.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.

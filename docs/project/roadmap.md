@@ -41,7 +41,16 @@ exist without grow demanding them.
 
 ## Now
 
-Current frontier: the clean-slate baseline, now self-governing. The retired daemon and plugin system is archived and not part of the active product. The active kernel contains pure profile and run-domain policy, seven application use cases (the six original fake-backed use cases plus queue-ranking select-course), governance C0–C3: the proposal-evidence ledger, deterministic principle evaluation, the failure-disposition policy, and the candidate authorization certificate, plus the read-only evidence adapter (promotion rung 4), the fixture-backed mutation executor (promotion rung 5), the bounded model-review adapter (promotion rung 6), the composition root and operator-visible presentation (promotion rung 7), the operator-facing command surface with local filesystem transport admission (promotion rung 8), the self-governed dogfood loop (promotion rung 9), the bounded model and terminal worker transports behind closed loadout admission (promotion rung 10), the distributed attestation and evidence federation slice (promotion rung 11), the operator pinned-key registry and signature-verification transport (promotion rung 12), the operator reviewer transport verified live against the local model server (promotion rung 13), the Ed25519 signature-transport hardening (rung 14), the network claim method (rung 15), the operator policy profiles (rung 16), the wake-on-demand slice (rung 17), and the bounded read-only worker task (rung 18) — rungs 14–18 all landed 2026-08-25.
+the bounded read-only worker task (rung 18) — rungs 14–18 all landed 2026-08-25.
+
+The Descent cycle ([design/descent.md](../design/descent.md)) now
+governs the stage 5/6 alternation: research lines gain a review
+transition between crystallization and adoption, and failure causes
+route into research demands per the bestiary
+([design/bestiary.md](../design/bestiary.md)) instead of piling up in
+the alert ledger. The cycle's five weekly checks are the route's
+honesty gate; the adoption gate and the Audit station are specified
+there and not yet wired.
 ### Completed
 
 - Sealed the retirement boundary: the archived prior system is external and
