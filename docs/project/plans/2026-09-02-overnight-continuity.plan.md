@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-01T02:31:19Z -->
 # 2026-09-02 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
