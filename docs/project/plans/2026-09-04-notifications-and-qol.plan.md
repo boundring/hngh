@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z -->
 # 2026-09-04 — notifications, QoL, and extended documentation
 
 Authorization: operator-directed 2026-09-04, recorded faithfully in
