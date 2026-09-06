@@ -248,6 +248,14 @@ never second-class peers bolted on later.
 Start at [docs/README.md](docs/README.md). Records and the external retirement archive cover
 the project's prior state; the active baseline lives here.
 
+## Live operation
+
+The machine runs from a sibling repository, `../hngh-automation/` — its
+[README](../hngh-automation/README.md) documents the cadence tiers, the
+watchdog, and the digest surfaces; the
+[latest daily digest](../hngh-automation/digest/2026-09-06.md) shows
+what actually fired today.
+
 ## For the public
 
 The project publishes a daily journal of its own construction — the

@@ -153,20 +153,48 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Governance-benchmark research lane
 
-- **Problem:** no public benchmark measures governance properties, so Hngh
-  cannot compare itself to anything or be compared by anyone.
-- **Smallest useful outcome:** a survey of existing agent-safety evals
-  (AgentDojo github.com/ethz-spylab/agentdojo, InjecAgent, R-Judge) and a
-  draft metric set: tamper-evidence, approved equals executed, and
-  reconstruction-from-record.
+- **Definition:** a public, runnable benchmark that scores governance
+  properties (tamper-evidence, approved=executed,
+  reconstruction-from-record, refusal-accounting) of any change-governance
+  system — Hngh, CI pipelines, agent-harness guardrails, voting
+  procedures — so governance claims become comparable evidence, not
+  marketing.
+- **Spec-first order:** the artifact is built only after a reviewer
+  accepts the metric definitions and scenario corpus; the review trigger
+  below stays.
+- **Subjects, near-term (S1–S6):**
+  - **S1** — what GitHub CI/CD actually proves, including the
+    unattested-runner gap (a green check from a runner nobody attested).
+  - **S2** — a Copilot-class weak-validation baseline scored on the same
+    scenarios: the floor every governance system must beat.
+  - **S3** — quorum, BFT, and approval-voting literature as approved=executed
+    prior art.
+  - **S4** — metric definitions v1, with refusal-accounting as the fourth
+    property beside tamper-evidence, approved=executed, and
+    reconstruction-from-record.
+  - **S5** — the scenario corpus: the ten attacks every governance system
+    must survive — tampered record, unapproved execution, record deletion,
+    replay, stale evidence, verifier collusion, and their variants.
+  - **S6** — the conformance-harness adapter contract over the four
+    integration shapes from
+    [integrations-marketplace.md](integrations-marketplace.md).
+- **Subjects, parked (S7–S8):**
+  - **S7** — cross-instance reconstruction under federation, including
+    Sybil resistance and ActivityPub as a transport.
+  - **S8** — signed scorecard publication and a leaderboard.
+- **Dogfood order:** the first scored system is hngh-automation itself.
+  Its plan ledger is currently unversioned and invisible to its own
+  tree-skew monitor — `hngh-automation/jobs/oversight-tick.sh`
+  whitelists `docs/project/plans/` out of the skew check, and
+  `hngh-automation/jobs/sweep-artifacts.sh` stages only STATE.md,
+  dashboard, digest, logs, stats, systemd, and Makefile, never the plan
+  ledger. No external system is scored before the loop scores itself.
 - **Evidence:** `docs/records/2026-08-24-prior-art-landscape.md` — the
-  governance-benchmark gap; AgentDojo/InjecAgent/R-Judge named as prior art.
-- **Risk:** this is a research lane, not a feature; it must not become a
-  benchmark-building project without separate admission.
-- **Dependencies:** nothing from the runtime; survey plus draft metrics
-  only.
-- **Review trigger:** an independent reviewer accepts the survey and the
-  metric definitions as a sound basis for a later benchmark proposal.
+  governance-benchmark gap; AgentDojo/InjecAgent/R-Judge named as prior
+  art.
+- **Review trigger:** an independent reviewer accepts the metric
+  definitions (S4) and the scenario corpus (S5) as a sound basis for the
+  benchmark artifact.
 
 ## Dogfood loop — COMPLETED (promotion rung 9, 2026-08-24; hardened by the loop-history guard 2026-08-25)
 
