@@ -1,9 +1,11 @@
 # State of the project
 
-*Manually maintained as of 2026-09-06. The weekly wiring that would
-regenerate this page does not exist yet; a human or an agent rewrites
-this file by hand until the Audit station of [the Descent](../design/descent.md)
-lands. No fake automation claim here.*
+*Prose sections are hand-maintained. The "Verified numbers" block below
+regenerates weekly from the live ledgers by the Audit station
+(`hngh-automation/cadence/week/02-torch-audit.sh`, part of
+[the Descent](../design/descent.md)): only content between the
+`torch:begin` / `torch:end` sentinels is rewritten, the rest stays
+hand-edited.*
 
 ## What Hngh is
 
@@ -28,9 +30,20 @@ passing a check and being recorded. Full statement:
   dispositioning, watchdog, and feeds all run deterministic; model
   surfaces fail closed-skip — verified per
   [the Descent's control-plane invariant](../design/descent.md).
-- **22/22 research lines crystallized** and unreviewed
-  (`../hngh-automation/research-lines.tsv`); the research beat has
-  idled since 2026-08-31.
+
+## Verified numbers
+
+<!-- torch:begin -->
+Regenerated weekly from live ledgers by
+hngh-automation `cadence/week/02-torch-audit.sh` — do not hand-edit
+inside the sentinels.
+
+- Research lines: 6 planned, 23 crystallized (hngh-automation/research-lines.tsv).
+- Queue Next: wake-mutation-lane, set 2026-08-25 (12 days old) (hngh docs/project/queue.md).
+- Plan ledger: 77 plan files, 63 routed candidates (hngh docs/project/plans/).
+- Operator items: 40 open (hngh-automation/dashboard/operator-items.json; display cap 40).
+- Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok (hngh-automation/STATE.md crumb tail).
+<!-- torch:end -->
 
 ## What is broken and being fixed
 
