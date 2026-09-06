@@ -262,3 +262,9 @@ next rotation or tomorrow, whichever comes first.
 - **Next:** wake-mutation-lane stays the top rotation; the
   heartbeat's mounted-card trigger is one operator cron line plus a
   card file away.
+
+## 2026-09-06 — heartbeat #1 (schedule-heartbeat)
+
+- **State:** clean; queue 19 queued / 7 done; next=wake-mutation-lane.
+- **Probes:** model=local; network=reachable; audio=4/10.
+- **Action:** none — no action card mounted for wake-mutation-lane
