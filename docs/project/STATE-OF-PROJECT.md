@@ -47,16 +47,19 @@ inside the sentinels.
 
 ## What is broken and being fixed
 
-- Queue rotation stalled since 2026-09-01 ([queue.md](queue.md) shows
-  no row rotation since then).
-- 62 routed plan files in `plans/`, with same-identity re-routing —
-  ten tree-skew candidates on 2026-09-05 alone
+- Queue rotation still stalled since 2026-09-01 ([queue.md](queue.md)
+  shows no row rotation since then).
+- 63 routed candidates in the plan ledger (77 files in `plans/`).
+  Same-identity re-routing now parks at threshold via the disposition
+  spine — router escalation with bump-in-place landed 2026-09-06. The
+  historical x10 tree-skew burst stands on record
   ([bestiary.md](../design/bestiary.md), class: obsolete).
-- 4 of 12 automation artifact classes are write-only (operator
-  assessment, 2026-09-06). The artifact-consumer invariant and the
-  Audit station exist to end this — [the Descent](../design/descent.md)
-  is the fix, its adoption gate and weekly checks are specified but
-  not yet wired.
+- 3 of 16 artifact classes are write-only per the torch ledger
+  (hngh-automation `torch-ledger.tsv`): digest-BENCH, digest-RESEARCH,
+  email-qa.log — wire-or-delete pending. digest-REVIEW flipped live
+  the same day via the review-findings sink. The artifact-consumer
+  invariant runs weekly under [the Descent](../design/descent.md)'s
+  Audit station (`hngh-automation/cadence/week/02-torch-audit.sh`).
 
 ## Where it goes
 
