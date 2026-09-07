@@ -8,3 +8,7 @@ at 2026-09-07T13:00:36Z. Alert text: [oversight] system-network-down: critical r
 
 - [ ] Delve: open research subject fail-20260907-system-network-down for system-network-down; record disposition; then fix or park
       Verification: research subject fail-20260907-system-network-down present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-07T14:00:36Z re-occurred (dedup window expired)
