@@ -12,3 +12,4 @@ at 2026-09-07T21:00:36Z. Alert text: plan acceptance blocked: hngh-automation ma
 ## Occurrences
 
 - 2026-09-07T22:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T23:00:12Z re-occurred (dedup window expired)
