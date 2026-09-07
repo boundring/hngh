@@ -1,8 +1,8 @@
 # State of the project
 
 *Prose sections are hand-maintained. The "Verified numbers" block below
-regenerates weekly from the live ledgers by the Audit station
-(`hngh-automation/cadence/week/02-torch-audit.sh`, part of
+regenerates daily from the live ledgers by the Audit station
+(`hngh-automation/cadence/day/17-torch-audit.sh`, part of
 [the Descent](../design/descent.md)): only content between the
 `torch:begin` / `torch:end` sentinels is rewritten, the rest stays
 hand-edited.*
@@ -34,8 +34,8 @@ passing a check and being recorded. Full statement:
 ## Verified numbers
 
 <!-- torch:begin -->
-Regenerated weekly from live ledgers by
-hngh-automation `cadence/week/02-torch-audit.sh` — do not hand-edit
+Regenerated daily from live ledgers by
+hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
 - Research lines: 6 planned, 23 crystallized (hngh-automation/research-lines.tsv).
@@ -58,8 +58,8 @@ inside the sentinels.
   (hngh-automation `torch-ledger.tsv`): digest-BENCH, digest-RESEARCH,
   email-qa.log — wire-or-delete pending. digest-REVIEW flipped live
   the same day via the review-findings sink. The artifact-consumer
-  invariant runs weekly under [the Descent](../design/descent.md)'s
-  Audit station (`hngh-automation/cadence/week/02-torch-audit.sh`).
+  invariant runs daily under [the Descent](../design/descent.md)'s
+  Audit station (`hngh-automation/cadence/day/17-torch-audit.sh`).
 
 ## Where it goes
 
