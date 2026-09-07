@@ -11,6 +11,11 @@ For newcomers: read [README.md](../README.md) at the repository root first.
 
 ## Read in this order
 
+> **Terminology.** "Nerve center" names the webapp surface; "command
+> center" names the CLI+GUI family it belongs to
+> ([design/command-center.md](design/command-center.md) is that family's
+> hub). Both describe stage-2's one consolidation.
+
 Start with the one-page snapshot — it is maintained by hand until the
 weekly wiring lands, and says so:
 
@@ -39,16 +44,12 @@ weekly wiring lands, and says so:
 The operator-facing surface and the integrations roadmap read as
 companions to the contracts above, after the core read order:
 
-> **Terminology.** The governance vocabulary is deliberately flexible:
+> The governance vocabulary is deliberately flexible:
 > prose freely uses governance, validation, acceptance, and admission
 > (the former "ceremony"/"ritual" terms are relaxed, not fixed).
 > `ceremony-drive` is a stable CLI name, not a doctrine — it names the
 > closed governance loop's driver, and the token stays as-is even as the
 > prose around it varies.
->
-> "Nerve center" names the webapp surface; "command center" names the
-> CLI+GUI family it belongs to ([design/command-center.md](design/command-center.md)
-> is that family's hub). Both describe stage-2's one consolidation.
 
 - [Assistant interfaces](design/assistant-interface.md) — the operative
   layer (the dark-coat presence, aesthetic, voice, interface family).
