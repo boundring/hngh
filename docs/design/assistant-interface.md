@@ -7,6 +7,11 @@ it is a presence: a dark coat silhouette, a slit where a face might
 be, speech that arrives like a caption in the margin. Fantasy and
 sci-fi both (Tower Dungeon's stone, Blame!'s silicon).
 
+The dark coat is the register, not the function: the operative layer
+renders recorded facts — captions, state changes, readouts — and is
+display-only. The visual law it follows (proportions, palette, the
+eye-slit) is fixed in [display-register-spec.md](display-register-spec.md).
+
 ## Aesthetic principles
 
 1. **Slender and elegant, never cute.** Sacrifice facial features
