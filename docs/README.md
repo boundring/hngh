@@ -86,6 +86,15 @@ companions to the contracts above, after the core read order:
 - [Data sovereignty](design/data-sovereignty.md) — the Portage:
   de-google export and rehoming to local devices + syncthing, under the
   Mirror's model-exposure policy and the Keyring's handle-only rule.
+- [The Compass](design/context-manager.md) — the context-manager
+  design: measured baselines for what each surface loads, and the
+  budget that keeps them honest.
+- [The Splice](design/ttsr-alignment.md) — the ttsr alignment design:
+  how test-to-spec-review findings loop back without a watcher.
+- [Wiki surface](design/wiki-surface.md) — the Athenaeum: two-vault
+  wiki topology and its continual-optimization cycle.
+- [Gate inventory](design/gate-inventory.md) — every gate in one
+  ledger: what each checks, what it refuses, and its current verdict.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.
