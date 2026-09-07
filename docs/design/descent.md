@@ -63,10 +63,11 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   subject list, or written by the operator.
 - **Outputs:** crystallized research lines in `docs/research/`, one file
   per line.
-- **Exists today:** the day-tier research beat advances one line per beat
+- **Exists today:** the research beat advances one line per beat
   through planned → expanding → contracting → crystallized and writes
   the crystallized result into the kernel's `docs/research/`
-  (`hngh-automation/cadence/day/05-research-beat.sh`; state in
+  (`hngh-automation/cadence/hour/33-research-beat.sh`, hourly-mounted and
+  self-gated to one beat per 2h since 2026-09-07; state in
   `hngh-automation/research-lines.tsv`). All 22 lines crystallized by
   2026-08-31; the beat has idled since, filing nothing.
 - **Designed, not built:** the demand wire. Nothing auto-appends a
@@ -165,7 +166,7 @@ never run the loop. Verified 2026-09-06 by reading the wiring:
 Model surfaces fail closed-skip: the steering leg without a model logs
 "none" and moves on (`oversight-tick.sh` `steer_leg`); the research beat
 and review beat file an "unavailable" alert and exit 0 when the model
-chain is down (`05-research-beat.sh`, `04-review-prep.sh`). A model
+chain is down (`33-research-beat.sh`, `04-review-prep.sh`). A model
 failure degrades one beat's content, never the control flow.
 
 ## The falsifiable weekly checks
