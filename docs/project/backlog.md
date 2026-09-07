@@ -1326,6 +1326,15 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** the panel renders the real vault index and every
   displayed lesson links to its source record.
 
+- **Progress (2026-09-07):** vaults mapped -- two of them; the project
+  vault (`~/Projects/etc/llm-wiki/.llm-wiki`) is stale, 92 pages on
+  disk against 26 in the registry, with all the Cistern lessons
+  unindexed since the 2026-08-19 meta freeze. Health probe
+  (`hngh-automation/cadence/week/04-wiki-health.sh`), research-beat
+  consumption, and the lessons production seed landed; the one
+  rebuild action is documented in
+  [../design/wiki-surface.md](../design/wiki-surface.md).
+
 ## Startup launch flow
 
 - **Problem:** starting work means opening a terminal, an omp session,
