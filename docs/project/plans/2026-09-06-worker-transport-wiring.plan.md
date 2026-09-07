@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- source=gate-inventory-audit run-worker row -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z source=gate-inventory-audit run-worker row -->
 # 2026-09-06 — run-worker transport wiring (operator-file worker transport)
 
 Rung 18 shipped the worker injection point — `dispatch-run-worker`

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=review-finding:2026-09-06:docs-research-2026-09-04-operator-inter -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z routed-from=review-finding:2026-09-06:docs-research-2026-09-04-operator-inter -->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `review-finding:2026-09-06:docs-research-2026-09-04-operator-inter`
