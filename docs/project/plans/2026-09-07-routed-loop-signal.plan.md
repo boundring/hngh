@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z routed-from=loop-signal -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T01:01:21Z routed-from=loop-signal  cause=obsolete disposed=2026-09-07T03:00:36Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `loop-signal`
@@ -13,3 +13,4 @@ at 2026-09-07T00:00:37Z. Alert text: [oversight] loop-signal:  /tmp/hngh-fasttes
 
 - 2026-09-07T01:00:36Z re-occurred (dedup window expired)
 - 2026-09-07T02:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T03:00:36Z re-occurred (dedup window expired)
