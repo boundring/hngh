@@ -12,3 +12,4 @@ at 2026-09-07T10:00:36Z. Alert text: 3. "Dark-coat presence" is an unexplained m
 ## Occurrences
 
 - 2026-09-07T11:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T12:00:36Z re-occurred (dedup window expired)
