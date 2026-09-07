@@ -1501,3 +1501,47 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 
 - Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.
+
+## Operator-coherence layer (the Mirror) — operator directive 2026-09-07
+
+- **Problem:** operator intent drifts across sessions and sits outside
+  the source-resolution chain ([design/autonomous-development-control.md](../design/autonomous-development-control.md)
+  step 1): machine decisions cannot be checked against what the
+  operator actually wrote, valued, or meant. The existing substitutes
+  (the writing/display registers, cadence-params.tsv, the llm-wiki
+  vault, the lessons index) are each partial. Designed in
+  [design/operator-mirror.md](../design/operator-mirror.md).
+- **Smallest useful outcome:** one preference/principle register with
+  versioned, citable rows, one named source ingested into the
+  local-first corpus, and one grow-admission coherence check that holds
+  a contradicting plan with cause=intent-conflict.
+- **How we'd know it works:** a plan that contradicts a cited register
+  row parks at admission; a conforming plan passes; every corpus item
+  has a manifest row and a per-item exposure policy (nothing enters a
+  remote prompt unnamed).
+- **Review trigger:** the first register row is cited by a real
+  disposition, or the coherence check fires (or provably never fires
+  across a full Stratum) — either is evidence.
+
+## Credential-rotation harness (the Keyring) — operator directive 2026-09-07
+
+- **Problem:** rotating hundreds to thousands of account passwords,
+  paired with password-manager entry updates, is long manual work; doing
+  it with models risks exposing secrets and PII. Extends the
+  "Credential rotation automation" row (autonomy continuum
+  2026-08-26); designed in [design/keyring.md](../design/keyring.md)
+  on the browser-relay transport and the 1Password seam
+  ([design/credentials-posture.md](../design/credentials-posture.md)).
+- **Smallest useful outcome:** a dry-run over the account inventory that
+  emits classed, ordered per-account proposals (handles only) and one
+  unattended-class account rotated end to end — proposal, browser-relay
+  execution, manager update in the same atomic step, login-check
+  evidence, certificate.
+- **How we'd know it works:** the dry run's ordering respects the
+  break-glass recovery edges; no secret value appears in any log,
+  digest, or evidence row (redaction audit clean); a killed half-run
+  leaves the manager and the site consistent (rollback or no-op).
+- **Review trigger:** the 1Password CLI integration prerequisite
+  (`op whoami` succeeding at execution time; leads recorded in
+  research/2026-09-04-operator-interface-landscape.md §3) is cleared,
+  or the first attended-class batch is operator-approved for a wet run.
