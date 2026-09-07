@@ -400,3 +400,19 @@ The cure honors the constraint that pushed history is never rewritten:
 The guard stays intact and unweakened: same scan range, same subject
 rule, same diff inspection. One blemish declared, as the README
 sentence requires.
+
+## 2026-09-07 — Standing service-management grant
+
+The operator grants Hngh standing authority to manage and configure
+system services, billion-context included. Discipline (unchanged): every
+service action is a recorded disposition with cause and evidence;
+`scripts/service-ctl.sh` remains the single path; failures are alerts,
+never retries-in-the-dark; credential-bearing or payment-bearing
+configuration still requires per-action operator instruction or
+certificate (the Keyring law).
+
+Precedents: unsloth service recovery (2026-09-04 corrective slice,
+`docs/research/2026-09-04-unsloth-launch-config-lane.md`) and the deck
+llama-server user service (2026-09-07, `hngh-automation
+docs/DECK-NODE.md`). The managed-service registry (expected-state rows
+in the gate inventory) is the next increment, not built tonight.
