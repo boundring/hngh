@@ -8,3 +8,7 @@ at 2026-09-07T06:00:36Z. Alert text: 2. "Dark-coat presence" is a significance a
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-07T07:00:36Z re-occurred (dedup window expired)
