@@ -1396,7 +1396,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T13:04:49Z | progress | 830f4a12 | research line govbench-weak-validation-baseline: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-07-govbench-weak-validation-baseline.md | 2026-09-07T13:04:49Z-progress-830f4a12.md |
 | 2026-09-07T13:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T13:30:36Z-progress-6f20e8cb.md |
 | 2026-09-07T14:00:33Z | progress | aea41655 | course bridge-operator-host: card mounted, last increment 2026-09-07T13:00:33Z | 2026-09-07T14:00:33Z-progress-aea41655.md |
-| 2026-09-07T14:00:36Z | alert | 54ef4941 | router dedup: system-network-down suppressed (routed candidate 2026-09-07-routed-system-network-down still live, 0h old; day count 1) ×8 | 2026-09-07T14:00:36Z-alert-54ef4941.md |
+| 2026-09-07T14:00:36Z | alert | 54ef4941 | router dedup: system-network-down suppressed (routed candidate 2026-09-07-routed-system-network-down still live, 0h old; day count 1) ×9 | 2026-09-07T14:00:36Z-alert-54ef4941.md |
 | 2026-09-07T14:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T14:00:36Z-progress-6f20e8cb.md |
 | 2026-09-07T14:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T14:30:36Z-progress-6f20e8cb.md |
 | 2026-09-07T14:35:36Z | progress | 8019ad11 | agent-supervision: evicted-stale omp-docs-rewrite-c7a371 (idle 360m) | 2026-09-07T14:35:36Z-progress-8019ad11.md |
@@ -1407,7 +1407,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T15:50:21Z | progress | 9bba0cbe | agent-supervision: evicted-stale omp-2026-09-06T17-02-11-643Z_01a-d7e586 (idle 619m) | 2026-09-07T15:50:21Z-progress-9bba0cbe.md |
 | 2026-09-07T16:00:14Z | progress | b7dc4ead | course bridge-operator-host: card mounted, last increment 2026-09-07T15:00:34Z | 2026-09-07T16:00:14Z-progress-b7dc4ead.md |
 | 2026-09-07T16:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T16:00:17Z-progress-6f20e8cb.md |
-| 2026-09-07T16:00:17Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-07T16:00:17Z-alert-8877ca89.md |
+| 2026-09-07T16:00:17Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility ×7 | 2026-09-07T16:00:17Z-alert-8877ca89.md |
 | 2026-09-07T16:00:17Z | alert | bf3a0487 | router escalated: system-network-down re-occurred 3 times without landing — plan 2026-09-07-routed-system-network-down parked (cause=obsolete); operator disposition stands | 2026-09-07T16:00:17Z-alert-bf3a0487.md |
 | 2026-09-07T16:05:10Z | progress | d0444250 | research line govbench-weak-validation-baseline: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-07-govbench-weak-validation-baseline.md | 2026-09-07T16:05:10Z-progress-d0444250.md |
 | 2026-09-07T16:30:37Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T16:30:37Z-progress-6f20e8cb.md |
@@ -1439,7 +1439,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T21:00:33Z | progress | 95a25aab | course bridge-operator-host: card mounted, last increment 2026-09-07T20:00:33Z | 2026-09-07T21:00:33Z-progress-95a25aab.md |
 | 2026-09-07T21:00:36Z | progress | c2173bb5 | router routed overnight:plan-accept-gate:automation -> plan candidate 2026-09-07-routed-overnight-plan-accept-gate-automation (routed-at 2026-09-07T21:00:36Z) | 2026-09-07T21:00:36Z-progress-c2173bb5.md |
 | 2026-09-07T21:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T21:00:36Z-progress-6f20e8cb.md |
-| 2026-09-07T21:00:36Z | alert | 2f11fa69 | router dedup: wiki-health:llm-wiki suppressed (routed candidate 2026-09-07-routed-wiki-health-llm-wiki still live, 0h old; day count 1) | 2026-09-07T21:00:36Z-alert-2f11fa69.md |
+| 2026-09-07T21:00:36Z | alert | 2f11fa69 | router dedup: wiki-health:llm-wiki suppressed (routed candidate 2026-09-07-routed-wiki-health-llm-wiki still live, 0h old; day count 1) ×2 | 2026-09-07T21:00:36Z-alert-2f11fa69.md |
 | 2026-09-07T21:01:36Z | progress | 664982b2 | plan 2026-09-07-routed-overnight-plan-accept-gate-automation auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-07T21:01:36Z | 2026-09-07T21:01:36Z-progress-664982b2.md |
 | 2026-09-07T21:01:36Z | progress | 6a50d1e1 | plan 2026-09-07-routed-wiki-health-llm-wiki auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-07T21:01:36Z | 2026-09-07T21:01:36Z-progress-6a50d1e1.md |
 | 2026-09-07T21:04:42Z | progress | ad92b5e5 | research line ctx-compaction-strategies: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-07-ctx-compaction-strategies.md | 2026-09-07T21:04:42Z-progress-ad92b5e5.md |
+| 2026-09-07T21:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T21:30:36Z-progress-6f20e8cb.md |
+| 2026-09-07T22:00:33Z | progress | 6187ed2b | course bridge-operator-host: card mounted, last increment 2026-09-07T21:00:33Z | 2026-09-07T22:00:33Z-progress-6187ed2b.md |
+| 2026-09-07T22:00:36Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-07T22:00:36Z-progress-87537517.md |
+| 2026-09-07T22:00:36Z | alert | 70f1a6fe | router dedup: overnight:plan-accept-gate:automation suppressed (routed candidate 2026-09-07-routed-overnight-plan-accept-gate-automation still live, 0h old; day count 1) | 2026-09-07T22:00:36Z-alert-70f1a6fe.md |
