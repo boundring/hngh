@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T10:31:18Z routed-from=ux-review:kernel-docs:2-The-truncated-Automation-tier-live-lis -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T10:31:18Z routed-from=ux-review:kernel-docs:2-The-truncated-Automation-tier-live-lis  cause=obsolete disposed=2026-09-07T13:00:36Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:kernel-docs:2-The-truncated-Automation-tier-live-lis`
@@ -13,3 +13,4 @@ at 2026-09-07T10:00:36Z. Alert text: 2. The truncated "Automation tier live" lis
 
 - 2026-09-07T11:00:36Z re-occurred (dedup window expired)
 - 2026-09-07T12:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T13:00:36Z re-occurred (dedup window expired)
