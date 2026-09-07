@@ -34,13 +34,13 @@ passing a check and being recorded. Full statement:
 ## Verified numbers
 
 <!-- torch:begin -->
-Regenerated daily from live ledgers by
+Regenerated weekly from live ledgers by
 hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 6 planned, 23 crystallized (hngh-automation/research-lines.tsv).
-- Queue Next: wake-mutation-lane, set 2026-08-25 (12 days old) (hngh docs/project/queue.md).
-- Plan ledger: 77 plan files, 63 routed candidates (hngh docs/project/plans/).
+- Research lines: 2 planned, 1 contracting, 26 crystallized (hngh-automation/research-lines.tsv).
+- Queue Next: wake-mutation-lane, set 2026-08-25 (13 days old) (hngh docs/project/queue.md).
+- Plan ledger: 89 plan files, 74 routed candidates (hngh docs/project/plans/).
 - Operator items: 40 open (hngh-automation/dashboard/operator-items.json; display cap 40).
 - Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
