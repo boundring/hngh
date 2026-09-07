@@ -47,8 +47,10 @@ inside the sentinels.
 
 ## What is broken and being fixed
 
-- Queue rotation still stalled since 2026-09-01 ([queue.md](queue.md)
-  shows no row rotation since then).
+- Queue rotation is running again: the hourly heartbeat tick is live
+  (`hngh-automation/cadence/README.md`, `31-heartbeat`), with
+  heartbeat #1 recorded and fifteen heartbeats on the ledger as of
+  2026-09-07.
 - 63 routed candidates in the plan ledger (77 files in `plans/`).
   Same-identity re-routing now parks at threshold via the disposition
   spine — router escalation with bump-in-place landed 2026-09-06. The
