@@ -12,3 +12,4 @@ at 2026-09-07T06:00:36Z. Alert text: 3. "Honesty leash" is a dead metaphor for a
 ## Occurrences
 
 - 2026-09-07T07:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T08:00:36Z re-occurred (dedup window expired)
