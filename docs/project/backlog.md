@@ -1610,3 +1610,24 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   under the quarantine path.
 - **Review trigger:** operator decision after reading the
   consideration.
+
+## Clean reorientation track A (automation cleanup)
+
+- **Problem:** the automation-tier ponytail audit found nine verified
+  findings — four dead utility scripts (388 lines), config.env quota-leg
+  stopgaps shadowing landed cadence-params rows, four-plus duplicated
+  curl-POST-parse blocks in `lib/model.sh`, five duplicated test stub
+  servers, and three tombstones (a dead env var, a documenting tsv row,
+  a tripled comment). Clean-architecture principles (kernel purity,
+  single authority, artifact-consumer invariant) dictate the cleanup.
+- **Smallest useful outcome:** Track A phases A1–A4 landed in
+  hngh-automation, each independently gated on `make test`, per
+  [design/clean-reorientation.md](../design/clean-reorientation.md)
+  (~-560 measured lines); Track B (topology) stays gated on the merge
+  P0 decision.
+- **Risk:** low — zero-caller deletions and behavior-preserving
+  consolidations; the one behavior-adjacent move (`DECK_URL` into its
+  tsv row) is value-identical. The leave-alone doctrine list in the
+  plan protects the fail-closed paths from over-zealous cleanup.
+- **Review trigger:** landed after operator reads clean-reorientation.md;
+  Track B gated on merge P0.

@@ -98,6 +98,10 @@ companions to the contracts above, after the core read order:
 - [Repo topology](design/repo-merge-consideration.md) — the
   automation-into-hngh merge consideration: both cases steelmanned,
   middle paths, migration mechanics, decision factors. No decision made.
+- [Clean reorientation](design/clean-reorientation.md) — the
+  automation-tier cleanup plan: Track A (decision-independent
+  cleanup, verified findings) and Track B (merge-gated topology), with
+  the leave-alone doctrine.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.
