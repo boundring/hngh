@@ -2,17 +2,17 @@
   "preset": "hngh",
   "gen": 1,
   "grade": "10/10",
-  "seed": 2981233,
+  "seed": 2981239,
   "fields": {
     "primary": "#5af78e",
-    "secondary": "#3d9c78",
-    "accent": "#5af78e",
+    "secondary": "#3d9478",
+    "accent": "#52f78e",
     "foreground": "#c8d0d8",
     "background": "#0b0e11",
     "surface": "#11151a",
     "panel": "#14181e",
-    "warning": "#e6b450",
-    "error": "#e0646c",
+    "warning": "#eeb450",
+    "error": "#e06c6c",
     "success": "#5af78e",
     "dark": true
   }

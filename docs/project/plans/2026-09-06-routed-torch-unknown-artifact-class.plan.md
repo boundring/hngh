@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=torch:unknown:artifact-class -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z routed-from=torch:unknown:artifact-class -->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `torch:unknown:artifact-class`
