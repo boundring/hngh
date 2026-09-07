@@ -209,6 +209,7 @@ law these rows inherit.
 | Builders | delegated worker agents | alias only |
 | the Mirror | operator-coherence layer | design layer; display alias ([operator-mirror.md](operator-mirror.md)) |
 | the Keyring | credential-rotation harness | design layer; display alias ([keyring.md](keyring.md)) |
+| the Portage | data-sovereignty layer | design layer; display alias ([data-sovereignty.md](data-sovereignty.md)) |
 
 Scope rules:
 

@@ -82,6 +82,9 @@ companions to the contracts above, after the core read order:
 - [The Keyring](design/keyring.md) — the credential-rotation harness:
   mass password rotation with the password manager as the only secret
   holder.
+- [Data sovereignty](design/data-sovereignty.md) — the Portage:
+  de-google export and rehoming to local devices + syncthing, under the
+  Mirror's model-exposure policy and the Keyring's handle-only rule.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.
