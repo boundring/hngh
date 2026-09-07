@@ -117,4 +117,4 @@ CLI flag, or record field):
 | the Compass | context manager | design layer; display alias (this file) |
 
 Adopted into descent.md's Lexicon table at that file's next landing
-(it is mid-edit by a sibling lane as this doc lands).
+(`descent.md` Lexicon, row added 2026-09-07).
