@@ -76,6 +76,12 @@ companions to the contracts above, after the core read order:
 - [Writing register](design/writing-register.md) — the prose law
   (Orwell/Leonard/Adams) for all operator-facing and machine-drafted
   text.
+- [The Mirror](design/operator-mirror.md) — the operator-coherence
+  layer: operator intent as versioned, citable registers with a
+  local-first model-exposure policy.
+- [The Keyring](design/keyring.md) — the credential-rotation harness:
+  mass password rotation with the password manager as the only secret
+  holder.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.

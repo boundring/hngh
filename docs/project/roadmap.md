@@ -51,6 +51,16 @@ route into research demands per the bestiary
 the alert ledger. The cycle's five weekly checks are the route's
 honesty gate; the adoption gate and the Audit station are specified
 there and not yet wired.
+
+Two operator-directed design docs are admitted as design pressure
+(2026-09-07): the operator-coherence layer
+([design/operator-mirror.md](../design/operator-mirror.md)) and the
+credential-rotation harness ([design/keyring.md](../design/keyring.md)).
+Both extend existing doctrine — registers, the Bestiary cause routing,
+the browser-relay transport, the 1Password seam — rather than adding new
+machinery, and both are research-ready. Implementation rides the normal
+rung path: backlog rows, proposal, gates, certificate — no shortcut.
+
 ### Completed
 
 - Sealed the retirement boundary: the archived prior system is external and
