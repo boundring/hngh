@@ -95,6 +95,9 @@ companions to the contracts above, after the core read order:
   wiki topology and its continual-optimization cycle.
 - [Gate inventory](design/gate-inventory.md) — every gate in one
   ledger: what each checks, what it refuses, and its current verdict.
+- [Repo topology](design/repo-merge-consideration.md) — the
+  automation-into-hngh merge consideration: both cases steelmanned,
+  middle paths, migration mechanics, decision factors. No decision made.
 - [Integrations marketplace](project/integrations-marketplace.md) — where
   Hngh's governance pattern binds to CI, agent harnesses, ops, and
   security tooling.

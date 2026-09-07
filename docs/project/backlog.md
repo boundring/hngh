@@ -1593,3 +1593,20 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** the first device admission run records its
   evidence, or the mesh-horizon nodes (backlog "Node lattice rung")
   need a transport for file movement — whichever comes first.
+
+## Repo topology consolidation (single-repo candidate)
+
+- **Problem:** Hngh's operational tier lives in a second public repo
+  (`hngh-automation`), splitting the story the docs tell from the
+  machine that acts: 856 cross-references, dead relative links on
+  GitHub, two URLs, and hourly sweep commits polluting one history.
+- **Smallest useful outcome:** an operator decision — merge via
+  machine-data quarantine (`git subtree add --prefix=automation`, env
+  seam collapse, systemd cutover, remote archive) or a recorded
+  decision to stay split with sweep-noise pruning — per
+  [design/repo-merge-consideration.md](../design/repo-merge-consideration.md).
+- **Risk:** migration touches 37 systemd units and one cutover day on
+  a live cadence; raw operational data leaves the public git surface
+  under the quarantine path.
+- **Review trigger:** operator decision after reading the
+  consideration.
