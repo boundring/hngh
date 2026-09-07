@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T06:01:21Z routed-from=ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T06:01:21Z routed-from=ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de  cause=obsolete disposed=2026-09-07T09:00:36Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de`
@@ -13,3 +13,4 @@ at 2026-09-07T06:00:36Z. Alert text: 1. "Nerve center" and "command center" are 
 
 - 2026-09-07T07:00:36Z re-occurred (dedup window expired)
 - 2026-09-07T08:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T09:00:36Z re-occurred (dedup window expired)

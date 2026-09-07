@@ -958,50 +958,28 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-05T01:00:45Z | progress | 431298e6 | router routed system-network-down -> plan candidate 2026-09-05-routed-system-network-down (routed-at 2026-09-05T01:00:45Z) | 2026-09-05T01:00:45Z-progress-431298e6.md |
 | 2026-09-05T01:00:45Z | progress | 156cfc2e | router routed overnight:plan-accept-gate:automation -> plan candidate 2026-09-05-routed-overnight-plan-accept-gate-automation (routed-at 2026-09-05T01:00:45Z) | 2026-09-05T01:00:45Z-progress-156cfc2e.md |
 | 2026-09-05T01:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T01:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T02:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T02:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T02:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T02:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T02:00:43Z | progress | 6acd0a91 | course bridge-operator-host: card mounted, last increment 2026-09-05T01:00:43Z | 2026-09-05T02:00:43Z-progress-6acd0a91.md |
 | 2026-09-05T02:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T02:00:45Z-progress-6f20e8cb.md |
-| 2026-09-05T02:00:45Z | alert | 8e949f49 | router dedup: system-network-down suppressed (routed candidate 2026-09-05-routed-system-network-down still live, 0h old; day count 1) ×11 | 2026-09-05T02:00:45Z-alert-8e949f49.md |
-| 2026-09-05T02:00:45Z | alert | 99cd7f62 | router dedup: overnight:plan-accept-gate:automation suppressed (routed candidate 2026-09-05-routed-overnight-plan-accept-gate-automation still live, 0h old; day count 1) ×8 | 2026-09-05T02:00:45Z-alert-99cd7f62.md |
 | 2026-09-05T02:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T02:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T03:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T03:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T03:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T03:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T03:00:43Z | progress | b71efdfa | course bridge-operator-host: card mounted, last increment 2026-09-05T02:00:43Z | 2026-09-05T03:00:43Z-progress-b71efdfa.md |
 | 2026-09-05T03:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T03:00:45Z-progress-6f20e8cb.md |
-| 2026-09-05T03:00:45Z | alert | b9f2b96d | router dedup escalation: supervision-replace-park:transcript-stalls recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-05T03:00:45Z-alert-b9f2b96d.md |
-| 2026-09-05T03:15:43Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×253 | 2026-09-05T03:15:43Z-alert-96bd99de.md |
 | 2026-09-05T03:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T03:30:45Z-progress-6f20e8cb.md |
 | 2026-09-05T03:35:45Z | progress | 71f7bbac | agent-supervision: evicted-stale omp-hngh-smtp-complete-ee4660 (idle 362m) | 2026-09-05T03:35:45Z-progress-71f7bbac.md |
-| 2026-09-05T04:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T04:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T04:00:43Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T04:00:43Z-alert-54fd7a51.md |
 | 2026-09-05T04:00:43Z | progress | 9630e808 | course bridge-operator-host: card mounted, last increment 2026-09-05T03:00:43Z | 2026-09-05T04:00:43Z-progress-9630e808.md |
 | 2026-09-05T04:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T04:00:45Z-progress-6f20e8cb.md |
 | 2026-09-05T04:00:45Z | progress | b890e26d | router routed tree-skew:hngh -> plan candidate 2026-09-05-routed-tree-skew-hngh (routed-at 2026-09-05T04:00:45Z) | 2026-09-05T04:00:45Z-progress-b890e26d.md |
-| 2026-09-05T04:00:45Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility ×9 | 2026-09-05T04:00:45Z-alert-8877ca89.md |
-| 2026-09-05T04:00:45Z | alert | b72de53e | router dedup escalation: overnight:plan-accept-gate:automation recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-05T04:00:45Z-alert-b72de53e.md |
 | 2026-09-05T04:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T04:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T05:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T05:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T05:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T05:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T05:00:43Z | progress | 82036728 | course bridge-operator-host: card mounted, last increment 2026-09-05T04:00:43Z | 2026-09-05T05:00:43Z-progress-82036728.md |
 | 2026-09-05T05:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T05:00:45Z-progress-6f20e8cb.md |
-| 2026-09-05T05:00:45Z | alert | adccc18c | router dedup: tree-skew:hngh suppressed (routed candidate 2026-09-05-routed-tree-skew-hngh still live, 1h old; day count 1) ×11 | 2026-09-05T05:00:45Z-alert-adccc18c.md |
 | 2026-09-05T05:10:45Z | progress | fcb33e9d | agent-supervision: evicted-stale omp-impl-phase3-9d5ab9 (idle 363m) | 2026-09-05T05:10:45Z-progress-fcb33e9d.md |
 | 2026-09-05T05:15:45Z | progress | 58a435dc | agent-supervision: evicted-stale omp-hngh-landscape-b24a9b (idle 362m) | 2026-09-05T05:15:45Z-progress-58a435dc.md |
 | 2026-09-05T05:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T05:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T06:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T06:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T06:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T06:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T06:00:43Z | progress | 8e3eaf9b | course bridge-operator-host: card mounted, last increment 2026-09-05T05:00:43Z | 2026-09-05T06:00:43Z-progress-8e3eaf9b.md |
 | 2026-09-05T06:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T06:00:45Z-progress-6f20e8cb.md |
 | 2026-09-05T06:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T06:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T07:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T07:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T07:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T07:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T07:00:43Z | progress | 8668acae | course bridge-operator-host: card mounted, last increment 2026-09-05T06:00:43Z | 2026-09-05T07:00:43Z-progress-8668acae.md |
 | 2026-09-05T07:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T07:00:45Z-progress-6f20e8cb.md |
-| 2026-09-05T07:00:45Z | alert | 9803cb41 | router dedup escalation: tree-skew:hngh recurring — suppressed 3 times today — escalated to operator visibility ×9 | 2026-09-05T07:00:45Z-alert-9803cb41.md |
 | 2026-09-05T07:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T07:30:45Z-progress-6f20e8cb.md |
-| 2026-09-05T08:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T08:00:42Z-alert-bbdf87ef.md |
-| 2026-09-05T08:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T08:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T08:00:43Z | progress | 4a673f26 | course bridge-operator-host: card mounted, last increment 2026-09-05T07:00:43Z | 2026-09-05T08:00:43Z-progress-4a673f26.md |
 | 2026-09-05T08:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T08:00:45Z-progress-6f20e8cb.md |
 | 2026-09-05T08:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T08:30:45Z-progress-6f20e8cb.md |
@@ -1336,9 +1314,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T06:30:33Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T06:30:33Z-progress-6f20e8cb.md |
 | 2026-09-07T07:00:33Z | progress | ea18e308 | course bridge-operator-host: card mounted, last increment 2026-09-07T06:00:33Z | 2026-09-07T07:00:33Z-progress-ea18e308.md |
 | 2026-09-07T07:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T07:00:36Z-progress-6f20e8cb.md |
-| 2026-09-07T07:00:36Z | alert | d12f3884 | router dedup: ux-review:kernel-docs:3-Honesty-leash-is-a-dead-metaphor-for-a suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-3-Honesty-leash-is-a-dead-metaphor-for-a still live, 0h old; day count 1) ×2 | 2026-09-07T07:00:36Z-alert-d12f3884.md |
-| 2026-09-07T07:00:36Z | alert | 34eccb98 | router dedup: ux-review:kernel-docs:2-Dark-coat-presence-is-a-significance-a suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-2-Dark-coat-presence-is-a-significance-a still live, 0h old; day count 1) ×2 | 2026-09-07T07:00:36Z-alert-34eccb98.md |
-| 2026-09-07T07:00:36Z | alert | 91353ec1 | router dedup: ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-1-Nerve-center-and-command-center-are-de still live, 0h old; day count 1) ×2 | 2026-09-07T07:00:36Z-alert-91353ec1.md |
+| 2026-09-07T07:00:36Z | alert | d12f3884 | router dedup: ux-review:kernel-docs:3-Honesty-leash-is-a-dead-metaphor-for-a suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-3-Honesty-leash-is-a-dead-metaphor-for-a still live, 0h old; day count 1) ×3 | 2026-09-07T07:00:36Z-alert-d12f3884.md |
+| 2026-09-07T07:00:36Z | alert | 34eccb98 | router dedup: ux-review:kernel-docs:2-Dark-coat-presence-is-a-significance-a suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-2-Dark-coat-presence-is-a-significance-a still live, 0h old; day count 1) ×3 | 2026-09-07T07:00:36Z-alert-34eccb98.md |
+| 2026-09-07T07:00:36Z | alert | 91353ec1 | router dedup: ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de suppressed (routed candidate 2026-09-07-routed-ux-review-kernel-docs-1-Nerve-center-and-command-center-are-de still live, 0h old; day count 1) ×3 | 2026-09-07T07:00:36Z-alert-91353ec1.md |
 | 2026-09-07T07:15:52Z | progress | 17b36e0b | plan 2026-09-01-routed-tree-skew-hngh executed (all steps checked) | 2026-09-07T07:15:52Z-progress-17b36e0b.md |
 | 2026-09-07T07:30:35Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-07T07:30:35Z-progress-87537517.md |
 | 2026-09-07T08:00:33Z | progress | 1ae36611 | course bridge-operator-host: card mounted, last increment 2026-09-07T07:00:33Z | 2026-09-07T08:00:33Z-progress-1ae36611.md |
@@ -1347,3 +1325,19 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T08:15:02Z | progress | a438910c | agent-supervision: evicted-stale omp-scout-batch2-1a1153 (idle 360m) | 2026-09-07T08:15:02Z-progress-a438910c.md |
 | 2026-09-07T08:15:03Z | progress | 52ab01a4 | agent-supervision: evicted-stale omp-scout-batch1-5817c6 (idle 364m) | 2026-09-07T08:15:03Z-progress-52ab01a4.md |
 | 2026-09-07T08:20:01Z | progress | 4fc3dda8 | agent-supervision: evicted-stale omp-lobehub-email-1fb527 (idle 362m) | 2026-09-07T08:20:01Z-progress-4fc3dda8.md |
+| 2026-09-07T08:27:14Z | progress | 52ea8cb8 | research line govbench-voting-prior-art: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-07-govbench-voting-prior-art.md | 2026-09-07T08:27:14Z-progress-52ea8cb8.md |
+| 2026-09-07T08:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T08:30:36Z-progress-6f20e8cb.md |
+| 2026-09-07T09:00:33Z | progress | da8df46b | implementation: 2026-09-07 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-09-07T09:00:33Z-progress-da8df46b.md |
+| 2026-09-07T09:00:33Z | progress | 717721de | review: 2026-09-07 latest progress increment=da8df46b (implementation:2026-09-0710openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-09-07T09:00:33Z-progress-717721de.md |
+| 2026-09-07T09:00:33Z | scheduled | 63142d33 | refactor: 2026-09-07 no refactor step defined (none scheduled) | 2026-09-07T09:00:33Z-scheduled-63142d33.md |
+| 2026-09-07T09:00:33Z | progress | 524217ad | cleanup: 2026-09-07 done markers present; cleanup due | 2026-09-07T09:00:33Z-progress-524217ad.md |
+| 2026-09-07T09:00:33Z | scheduled | b4d2ae15 | inward: 2026-09-07 already noted in checkin.md | 2026-09-07T09:00:33Z-scheduled-b4d2ae15.md |
+| 2026-09-07T09:00:33Z | progress | eba6ba60 | course bridge-operator-host: card mounted, last increment 2026-09-07T08:00:33Z | 2026-09-07T09:00:33Z-progress-eba6ba60.md |
+| 2026-09-07T09:00:34Z | progress | 832d72af | ledger prune: pruned 22 alert rows (48h retention, archived to docs/project/report-bodies/prune-archive-2026-09-07.md) | 2026-09-07T09:00:34Z-progress-832d72af.md |
+| 2026-09-07T09:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T09:00:36Z-progress-6f20e8cb.md |
+| 2026-09-07T09:00:36Z | alert | b671de61 | router dedup escalation: ux-review:kernel-docs:3-Honesty-leash-is-a-dead-metaphor-for-a recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-07T09:00:36Z-alert-b671de61.md |
+| 2026-09-07T09:00:36Z | alert | 3ae2478d | router escalated: ux-review:kernel-docs:3-Honesty-leash-is-a-dead-metaphor-for-a re-occurred 3 times without landing — plan 2026-09-07-routed-ux-review-kernel-docs-3-Honesty-leash-is-a-dead-metaphor-for-a parked (cause=obsolete); operator disposition stands | 2026-09-07T09:00:36Z-alert-3ae2478d.md |
+| 2026-09-07T09:00:36Z | alert | ea46f3b3 | router dedup escalation: ux-review:kernel-docs:2-Dark-coat-presence-is-a-significance-a recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-07T09:00:36Z-alert-ea46f3b3.md |
+| 2026-09-07T09:00:36Z | alert | 1731e970 | router escalated: ux-review:kernel-docs:2-Dark-coat-presence-is-a-significance-a re-occurred 3 times without landing — plan 2026-09-07-routed-ux-review-kernel-docs-2-Dark-coat-presence-is-a-significance-a parked (cause=obsolete); operator disposition stands | 2026-09-07T09:00:36Z-alert-1731e970.md |
+| 2026-09-07T09:00:36Z | alert | 20633949 | router dedup escalation: ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-07T09:00:36Z-alert-20633949.md |
+| 2026-09-07T09:00:36Z | alert | 37069b9c | router escalated: ux-review:kernel-docs:1-Nerve-center-and-command-center-are-de re-occurred 3 times without landing — plan 2026-09-07-routed-ux-review-kernel-docs-1-Nerve-center-and-command-center-are-de parked (cause=obsolete); operator disposition stands | 2026-09-07T09:00:36Z-alert-37069b9c.md |
