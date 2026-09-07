@@ -304,3 +304,9 @@ next rotation or tomorrow, whichever comes first.
 - **State:** clean; queue 19 queued / 7 done; next=wake-mutation-lane.
 - **Probes:** model=local; network=reachable; audio=9/10.
 - **Action:** none — no action card mounted for wake-mutation-lane
+
+## 2026-09-07 — heartbeat #8 (schedule-heartbeat)
+
+- **State:** clean; queue 19 queued / 7 done; next=wake-mutation-lane.
+- **Probes:** model=local; network=reachable; audio=6/10.
+- **Action:** none — no action card mounted for wake-mutation-lane
