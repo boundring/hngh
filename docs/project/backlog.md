@@ -1545,3 +1545,42 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   (`op whoami` succeeding at execution time; leads recorded in
   research/2026-09-04-operator-interface-landscape.md §3) is cleared,
   or the first attended-class batch is operator-approved for a wet run.
+
+## Takeout ingest pipeline (the Portage P1) — operator directive 2026-09-07
+
+- **Problem:** the operator's personal data (gmail, calendar, docs,
+  drive, sheets) sits inside walled gardens; the Mirror's corpus
+  ([design/operator-mirror.md](../design/operator-mirror.md) §3) has no
+  transport to feed it. Export, normalization, and ingest are long,
+  multi-step work that needs checkpoints and evidence. Designed in
+  [design/data-sovereignty.md](../design/data-sovereignty.md) §3 and §5.
+- **Smallest useful outcome:** one Google Takeout export read-only,
+  normalized into a local corpus tree, with manifest rows (paths and
+  hashes, no values) and ingest rows naming each corpus item per the
+  no-unnamed-source rule.
+- **How we'd know it works:** re-running normalization over the same
+  export yields identical hashes (deterministic); every normalized item
+  has an ingest row; no remote write occurs anywhere in the phase.
+- **Review trigger:** the LobeHub integration-surface study lands in
+  research/ (2026-09-07), or the first export run produces a complete
+  manifest — whichever comes first.
+
+## Syncthing fleet manager (the Portage P2) — operator directive 2026-09-07
+
+- **Problem:** rehomed data must spread across local devices (desktop,
+  deck, NAS, laptop), but syncthing configuration is hand-edited per
+  device and the fleet's shape is uncitable. Hngh should manage
+  folders, devices, and ignore patterns as ledger rows over syncthing's
+  REST API, one-shot per tick, no daemon
+  ([design/data-sovereignty.md](../design/data-sovereignty.md) §4).
+- **Smallest useful outcome:** one folder-device pair admitted through
+  the proposal/check/record path and reconciled by a tick — desired
+  state as a ledger row with provenance, the change recorded, no
+  watching process.
+- **How we'd know it works:** the row's provenance names the run that
+  wrote it; killing the tick mid-reconcile leaves the pair consistent
+  or parked with cause; a second device joins via the introducer with
+  its own admission run.
+- **Review trigger:** the first device admission run records its
+  evidence, or the mesh-horizon nodes (backlog "Node lattice rung")
+  need a transport for file movement — whichever comes first.
