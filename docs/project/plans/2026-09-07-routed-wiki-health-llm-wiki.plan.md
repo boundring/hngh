@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T21:01:36Z routed-from=wiki-health:llm-wiki -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T21:01:36Z routed-from=wiki-health:llm-wiki  cause=obsolete disposed=2026-09-07T23:00:12Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `wiki-health:llm-wiki`
@@ -13,3 +13,4 @@ at 2026-09-07T20:00:38Z. Alert text: wiki-health llm-wiki: SPLIT -- 93 pages on 
 
 - 2026-09-07T21:00:36Z re-occurred (dedup window expired)
 - 2026-09-07T22:00:36Z re-occurred (dedup window expired)
+- 2026-09-07T23:00:12Z re-occurred (dedup window expired)
