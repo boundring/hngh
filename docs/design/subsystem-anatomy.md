@@ -64,7 +64,7 @@ land only through the certificate ceremony behind green gates.
 
 ### The research-line lifecycle
 
-`cadence/day/05-research-beat.sh` advances one non-crystallized line
+`cadence/hour/33-research-beat.sh` advances one non-crystallized line
 per beat through planned → expanding → contracting → crystallized
 (`research-lines.tsv`), finishing lines before starting new ones. The
 crystallization beat writes the line's lasting record to
