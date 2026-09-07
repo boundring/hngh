@@ -12,9 +12,10 @@ no watcher, and starts nothing by default. One tick:
      (probe-model-route), network reachability, audio level;
   3. triggers the mounted driver when eligible, from a fresh ephemeral
      /tmp/hngh-heartbeat-* store (state-isolated per run);
-  4. records a dated heartbeat entry (checkin.md + a machine-readable
-     timeline row) whose SHA-256 is verified by re-reading the written
-     bytes, then commits the two ledger docs as one plain docs commit.
+  4. records a dated heartbeat entry in checkin.md (the periodic
+     ledger; never timeline.md, which is the milestone ledger) whose
+     SHA-256 is verified by re-reading the written bytes, then commits
+     checkin.md as one plain docs commit.
 
 --dry-run performs steps 1-2 and prints the whole decision, mutating
 nothing and creating no store. --loop N re-ticks every N seconds while
@@ -41,7 +42,6 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE = ROOT / "docs" / "project" / "queue.md"
-TIMELINE = ROOT / "docs" / "project" / "timeline.md"
 CHECKIN = ROOT / "docs" / "project" / "checkin.md"
 RECIPE_DIR = ROOT / "docs" / "project" / "heartbeat"
 LOCAL_REVIEWER = Path.home() / ".hngh-automation" / "reviewer-local.conf"
@@ -163,8 +163,8 @@ def resolve_reviewer(route):
 
 
 def heartbeat_number():
-    text = TIMELINE.read_text()
-    numbers = [int(m) for m in re.findall(r"heartbeat-(\d+)", text)]
+    text = CHECKIN.read_text()
+    numbers = [int(m) for m in re.findall(r"heartbeat #(\d+)", text)]
     return (max(numbers) + 1) if numbers else 1
 
 
@@ -178,24 +178,18 @@ def entry_block(number, next_id, queued, done, model, network, audio, action):
 
 
 def record_telemetry(number, next_id, queued, done, model, network, audio, action):
-    """Append the entry to checkin.md + timeline.md, then verify by
-    re-reading: the checkin tail must hash to the recorded digest and
-    the timeline row must match exactly. Returns the digest; raises on
-    mismatch (the caller treats it as a tick fault)."""
+    """Append the entry to checkin.md, then verify by re-reading: the
+    checkin tail must hash to the recorded digest. Returns the digest;
+    raises on mismatch (the caller treats it as a tick fault)."""
     block = entry_block(number, next_id, queued, done, model, network, audio, action)
     digest = hashlib.sha256(block.encode("utf-8")).hexdigest()
     marker = f"## {TODAY} — heartbeat #{number} (schedule-heartbeat)"
     with CHECKIN.open("a") as fh:
         fh.write("\n" + block)
-    row = f"{TODAY}\tevent\theartbeat-{number}\t{digest}\n"
-    with TIMELINE.open("a") as fh:
-        fh.write(row)
     text = CHECKIN.read_text()
     if text.rfind(marker) < 0 or hashlib.sha256(
             text[text.rfind(marker):].encode("utf-8")).hexdigest() != digest:
         raise RuntimeError(f"checkin SHA-256 mismatch for heartbeat #{number}")
-    if row not in TIMELINE.read_text():
-        raise RuntimeError(f"timeline row mismatch for heartbeat #{number}")
     return digest
 
 
@@ -215,10 +209,9 @@ def drive_worker(store, objective, task):
 
 
 def commit_ledger(number):
-    """One plain docs commit of the two ledger files; the working tree
-    was clean when the tick started, so only these two change."""
-    code, _, err = git("add", "--", "docs/project/checkin.md",
-                       "docs/project/timeline.md")
+    """One plain docs commit of the checkin ledger; the working tree
+    was clean when the tick started, so only this file changes."""
+    code, _, err = git("add", "--", "docs/project/checkin.md")
     if code != 0:
         raise RuntimeError(f"stage failed: {err}")
     code, _, err = git("commit", "-m", f"docs: heartbeat #{number} (schedule-heartbeat tick)")
