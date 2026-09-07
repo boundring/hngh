@@ -71,6 +71,13 @@ respawn briefs carry `not established` for session state, which is
 honest but blind — the compaction wire is the designed fix, not built
 today.
 
+Boundary (2026-09-07): in-session token compaction is billion-context's
+authority (the operator's proxy, per hngh
+docs/records/2026-08-24-context-budget-and-toolchain.md). Hngh's
+checkpoints are turn-boundary respawn briefs layered on top — never a
+second compressor. The ctx-compaction-strategies research subject
+resolves against billion-context as prior art.
+
 ## 3. The measurement loop
 
 The tracked metric is the per-session input:output ratio. Telemetry
