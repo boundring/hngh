@@ -82,13 +82,37 @@ authority here.
 
 ## The one outstanding action
 
-The project vault needs exactly one rebuild: run an omp session with
-cwd `/home/bricker/Projects/etc/llm-wiki` and invoke the extension's
-`wiki_rebuild_meta` tool. That reindexes the 70 unindexed pages,
-including every Cistern lesson, and clears the SPLIT verdict the
-health probe currently files. This is an operator-or-instructed-agent
-action by design -- meta ownership is the extension's, and Hngh's
-probe will keep alerting with this exact command until it is done.
+Discharged 2026-09-07: the project vault's rebuild ran as designed --
+an omp one-shot session with cwd `/home/bricker/Projects/etc/llm-wiki`
+invoked the extension's `wiki_rebuild_meta` tool, reindexed all 93
+pages (registry 26 -> 93), and cleared the SPLIT verdict the health
+probe had been filing. The action is now owned by the automated cycle
+below, not by any operator todo.
+
+### Continual optimization (2026-09-07)
+
+The outstanding action is now automated as a measured, tunable cycle,
+not a fixed automation. `cadence/day/25-wiki-health.sh` (hngh-automation)
+probes both vaults daily; each unhealthy vault with `wiki-auto-rebuild`
+armed gets ONE bounded omp one-shot rebuild attempt per UTC day (the
+rebuild still happens inside the omp session -- the boundary law holds;
+Hngh only spawns the session and reads the result).
+
+- Telemetry: every attempt emits one `kind=wiki-rebuild` event
+  (identity = vault, `wall_s`, outcome `unfrozen|still-unhealthy|
+  attempt-failed`, before/after page-vs-registry counts). This is what
+  makes the cycle optimizable: attempts, costs, and success rates are
+  visible over time.
+- Knobs: `wiki-auto-rebuild` (default 1; 0 = never attempt) and
+  `wiki-rebuild-timeout` (default 240 s), both in the Inventory with
+  env overrides (`WIKI_AUTO_REBUILD`, `WIKI_REBUILD_TIMEOUT`).
+- Efficacy: alert and ok rows carry the vault's 7d rebuild history
+  (attempts / unfrozen) from the same telemetry, so a vault that
+  repeatedly fails rebuilds is a visible pattern, not a repeated
+  surprise. Torch's weekly audit reads the same telemetry stream.
+- Failure routing: two consecutive daily non-unfrozen attempts on a
+  vault file a research subject (`ctx-wiki-rebuild-<vault>`) -- the
+  cycle's own failures become research demand, per the house loop.
 
 ## Lexicon row
 
