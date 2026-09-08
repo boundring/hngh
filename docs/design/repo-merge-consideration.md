@@ -148,3 +148,7 @@ quiet):
 Touch surface: ~250 automation files moved, 37 systemd units, ~94 live
 ref lines in automation, ~25 live docs + 6 scripts in hngh, one gate
 script, one push script. Historical text is untouched.
+
+P2 landed (subtree import b881186), P3 landed (env seam collapse
+bfaedf0), P4 landed (systemd paths 83e1d35), P5 landed (this doc
+update). Status: MERGED.

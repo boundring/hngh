@@ -92,7 +92,7 @@ STATE.md).
 
 ## 3. Sequence
 
-Each phase lands independently in `hngh-automation` behind its own `make test` gate and its own commit.
+Each phase lands independently in `automation/` behind its own `make test` gate and its own commit.
 
 - **A1 — dead code** (finding 1). Gate: repo-wide grep zero live
   callers; `make test` green.

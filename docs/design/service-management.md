@@ -16,7 +16,7 @@ and package-manager.
 ## 1. Recognition (read-only probe surface)
 
 Hngh must first SEE installed software before it manages any of it.
-The recognition surface is read-only and lands in hngh-automation as
+The recognition surface is read-only and lands in automation as
 `jobs/service-state.py` (sibling slice 2026-09-03 — **declared, not
 yet visible on disk at authoring time 2026-09-04**; verify on
 arrival).

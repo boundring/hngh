@@ -59,7 +59,7 @@ acceptance policy itself is operator-owned and lives in
 plans/README.md — and the machine reads the status,
 executes unchecked steps in order, and ticks each with its landing
 commit. `jobs/plan-feed.py` (30m tier) publishes the ledger to
-`dashboard/plans.json`. hngh-automation commits land free; hngh changes
+`dashboard/plans.json`. automation commits land free; hngh changes
 land only through the certificate ceremony behind green gates.
 
 ### The research-line lifecycle
