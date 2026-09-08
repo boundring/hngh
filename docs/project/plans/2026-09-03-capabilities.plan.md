@@ -177,7 +177,7 @@ lesson 1).
       the model chain keeps serving. Evidence: reports.md progress
       row 2026-09-08T04:43:34Z 3c259909 (one row; status writes
       none by design).
-- [ ] 4. RESEARCH — credentials-posture redaction audit. Grep the
+- [x] 4. RESEARCH — credentials-posture redaction audit. Grep the
       automation surface (logs/, digests, report rows, telemetry,
       breadcrumbs) for any value that should not be there: SMTP
       password material, unsloth token/refresh values, anything from
@@ -191,7 +191,7 @@ lesson 1).
       the greps run, patterns used, and the zero-findings result (or
       the parked incident row with the exact finding and NO value
       quoted); kernel `make test` green.
-- [ ] 5. GROW — lib/credentials.sh op-seam implemented; notify-email
+- [x] 5. GROW — lib/credentials.sh op-seam implemented; notify-email
       password as first consumer. Implement lib/credentials.sh per
       credentials-posture.md §2 (cred_get REF via `op read`,
       `op whoami` session check, fail-closed file fallback with a
@@ -238,7 +238,7 @@ lesson 1).
       headless on a data: URL) — verdict ADMIT (step 7 unblocked for
       the machine's next executor session). Battery verbatim in
       docs/research/2026-09-04-browser-relay-architecture.md.
-- [ ] 7. GROW — browser-messaging prototype slice (gated on step 6's
+- [x] 7. GROW — browser-messaging prototype slice (gated on step 6's
       ADMIT; otherwise this step parks and records). Google Messages
       web ONLY, Playwright persistent context with an isolated
       profile, ONE message to the operator ("hngh browser channel
@@ -254,7 +254,7 @@ lesson 1).
       install gap); no second message, no other service, no operator
       profile touched; hngh-automation `make test` green (slice code)
       and kernel `make test` green.
-- [ ] 8. RESEARCH — queue-drain verification beat. The operator's
+- [x] 8. RESEARCH — queue-drain verification beat. The operator's
       directive 4 asks for more reliable progress at a steady
       continual pace: measure it. Metric: unchecked-step counts per
       accepted plan (2026-09-01-operator-items, 2026-09-03-staging,
@@ -266,11 +266,19 @@ lesson 1).
       beat length, plan step granularity, sibling-slice dependency
       ordering).
       Verification:
-      docs/research/2026-09-04-queue-drain-verification.md exists
+      docs/research/2026-09-08-queue-drain-verification.md exists
       with per-plan step counts (checked/unchecked), the observed
       daily completion evidence, and a named verdict; kernel `make
       test` green.
-- [ ] 9. GROW — wrap, lessons, author-next-plan (the plan-supply
+      Ticked 2026-09-08:
+      docs/research/2026-09-08-queue-drain-verification.md —
+      per-plan step counts (2026-09-01-operator-items 9/9,
+      2026-09-03-staging 0/7, 2026-09-03-capabilities 4/9); daily
+      throughput rising (mean 112.6 rows/day, recent 7-day mean
+      138.0 rows/day); verdict: steady to rising pace, bottleneck
+      is operator procedural steps (install `op` CLI, sign in,
+      install playwright + chromium).
+- [x] 9. GROW — wrap, lessons, author-next-plan (the plan-supply
       law). Land this plan's lessons into the foldback/lessons path
       (expected candidates: the sibling-slice verify-on-arrival
       pattern, the park-with-exact-operator-step pattern from steps
