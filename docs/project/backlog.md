@@ -1507,6 +1507,12 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** ebook longform row; royalty-pipeline row.
 - **Review acceptance:** `generate-publication --ebook` completes on
   the real inputs without placeholder files.
+- **2026-09-08:** research crystallized —
+  `docs/research/2026-09-08-ebook-book-inputs.md` (ceremony da3d441).
+  Delta found: the `--chapters` selection input already landed in
+  `scripts/generate-publication`. Priced decision: the per-book
+  metadata input is the next grow beat (smallest fully-missing
+  input); selection persistence and cover follow.
 
 
 - Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.
