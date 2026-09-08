@@ -224,8 +224,11 @@ operator's number.
    fail-first); omp, lobehub, unsloth, and any integration it builds
    feed its own operation. This packet's levers are the first
    beneficiaries.
-6. **Still open (operator-only):** the Moonshot platform recharge
-   question in automation/docs/KIMI-QUOTA.md — the kimi.com consumer
-   K3 plan is confirmed plentiful by the operator, but the dead
-   MOONSHOTAI platform key (429 no-balance) awaits a recharge
-   decision or stays dropped.
+6. **Moonshot platform API: eliminated.** The operator directs the
+   MOONSHOTAI platform API is not needed and should be removed from
+   consideration — same as most platforms. The kimi.com consumer K3
+   plan is the only Kimi surface in scope. The dead MOONSHOTAI key
+   (429 no-balance) stays dead; the open operator question in
+   automation/docs/KIMI-QUOTA.md is answered "do not recharge, drop
+   the platform path". Key-resolution order in lib/model.sh and the
+   probe matrix keep it only as historical record.
