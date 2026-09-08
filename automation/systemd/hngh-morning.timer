@@ -2,8 +2,8 @@
 Description=hngh-automation morning digest
 [Service]
 Type=oneshot
-ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/morning-digest.sh
-WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+ExecStart=/home/bricker/Projects/etc/hngh/automation/jobs/morning-digest.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh/automation
 
 [Timer]
 OnCalendar=*-*-* 06,07,08,09:00:00

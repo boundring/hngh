@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/bricker/Projects/etc/hngh-automation/scripts/night-session.sh prompts/morning-report.md morning-report
-ExecStartPost=/home/bricker/Projects/etc/hngh-automation/jobs/refresh-dashboard.sh morning-report
-WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+ExecStart=/home/bricker/Projects/etc/hngh/automation/scripts/night-session.sh prompts/morning-report.md morning-report
+ExecStartPost=/home/bricker/Projects/etc/hngh/automation/jobs/refresh-dashboard.sh morning-report
+WorkingDirectory=/home/bricker/Projects/etc/hngh/automation
 Restart=no

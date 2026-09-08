@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/bricker/Projects/etc/hngh-automation/dashboard-server.py
-WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+ExecStart=/usr/bin/python3 /home/bricker/Projects/etc/hngh/automation/dashboard-server.py
+WorkingDirectory=/home/bricker/Projects/etc/hngh/automation
 Restart=on-failure
 RestartSec=5
 # dashboard serves generated digests/JSON only — no secrets are ever written here

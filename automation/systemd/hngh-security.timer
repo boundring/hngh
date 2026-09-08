@@ -2,8 +2,8 @@
 Description=hngh-automation security check (every 4h)
 [Service]
 Type=oneshot
-ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/security-check.sh
-WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+ExecStart=/home/bricker/Projects/etc/hngh/automation/jobs/security-check.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh/automation
 
 [Timer]
 OnCalendar=*-*-* 00,04,08,12,16,20:00:00
