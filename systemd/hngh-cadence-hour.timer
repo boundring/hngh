@@ -1,0 +1,9 @@
+[Unit]
+Description=hngh cadence tick: hourly tier
+
+[Timer]
+OnCalendar=*-*-* *:00:10
+Persistent=true
+
+[Install]
+WantedBy=timers.target

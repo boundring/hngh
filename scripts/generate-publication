@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""generate-publication: assemble this automation repo's research record
+into distributable publication surfaces (the self-funding pipeline's
+first artifact; backlog rows ebook-longform / public-surface).
+
+Unlike the hngh kernel's generate-publication (whose --ebook consumed a
+hard-coded 7-file spine and zero docs/research/ lines), this one's
+hard-coded 7-file list IS the docs/research/ corpus plus the research
+lines manifests, so research output actually reaches the publication
+surface.
+
+Sources are always read from the script's own repository. HNGH_PUB_ROOT
+(names the ARTIFACT root only; default: the repo root) redirects where
+builds land — point it at a throwaway temp dir so build artifacts are
+never committed.
+
+Modes (read-only over sources; writes only artifacts):
+
+  --ebook [DIR]  assemble the hard-coded 7-file list into book.md plus
+                 a minimal readable EPUB (stdlib zipfile). Default
+                 $HNGH_PUB_ROOT/docs/journal/ebook.
+  --site [DIR]   render the same corpus as a static index.html.
+                 Default $HNGH_PUB_ROOT/docs/site.
+  --help         this text.
+
+Exit codes: 0 written; 2 malformed invocation or missing source.
+"""
+
+import argparse
+import html
+import os
+import sys
+import zipfile
+from pathlib import Path
+
+# Sources always come from the repo this script lives in.
+SOURCE_ROOT = Path(__file__).resolve().parent.parent
+# Artifacts land under the pub root (HNGH_PUB_ROOT seam).
+PUB_ROOT = Path(os.environ.get("HNGH_PUB_ROOT") or SOURCE_ROOT)
+
+RESEARCH = SOURCE_ROOT / "docs" / "research"
+
+# The hard-coded 7-file contract: the docs/research/ line docs plus the
+# research-lines manifests. Missing files are skipped (the corpus grows
+# into the list; the kernel pattern).
+EBOOK_FILES = (
+    (RESEARCH / "2026-09-01-session-cost-model.md", "Session cost model"),
+    (RESEARCH / "2026-09-01-notification-channel-survey.md",
+     "Notification channel survey"),
+    (RESEARCH / "2026-09-01-local-model-benchmark-loop.md",
+     "Local-model benchmark loop"),
+    (RESEARCH / "2026-09-01-arbitrary-request-scheduling.md",
+     "Arbitrary request scheduling"),
+    (RESEARCH / "2026-09-01-roguelike-pattern-design.md",
+     "Roguelike pattern design"),
+    (SOURCE_ROOT / "research-lines.tsv", "The research lines"),
+    (SOURCE_ROOT / "research-subjects.txt", "The research subjects"),
+)
+
+
+def corpus():
+    docs = []
+    for path, title in EBOOK_FILES:
+        if path.exists():
+            docs.append((title, path.read_text()))
+        else:
+            print(f"generate-publication: skipping missing {path}",
+                  file=sys.stderr)
+    return docs
+
+
+def md_to_html(md):
+    """Minimal markdown -> HTML: headings, bullets, paragraphs."""
+    acc, in_list = [], False
+    for line in md.splitlines():
+        s = line.strip()
+        if s.startswith(("- ", "* ")):
+            if not in_list:
+                acc.append("<ul>")
+                in_list = True
+            acc.append(f"<li>{html.escape(s[2:])}</li>")
+            continue
+        if in_list:
+            acc.append("</ul>")
+            in_list = False
+        if not s:
+            continue
+        if s.startswith("### "):
+            acc.append(f"<h3>{html.escape(s[4:])}</h3>")
+        elif s.startswith("## "):
+            acc.append(f"<h2>{html.escape(s[3:])}</h2>")
+        elif s.startswith("# "):
+            acc.append(f"<h1>{html.escape(s[2:])}</h1>")
+        else:
+            acc.append(f"<p>{html.escape(s)}</p>")
+    if in_list:
+        acc.append("</ul>")
+    return "\n".join(acc)
+
+
+def build_ebook(outdir):
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    docs = corpus()
+    if not docs:
+        raise RuntimeError("no source documents found — the hard-coded "
+                           "7-file list matched nothing")
+    book = "\n\n".join(
+        ["# Hngh automation research record", "",
+         "The crystallized research lines in one distributable volume.",
+         ""]
+        + [f"## {title}\n\n{text}" for title, text in docs]) + "\n"
+    (outdir / "book.md").write_text(book)
+
+    body = "".join(f"<h2>{html.escape(t)}</h2>\n{md_to_html(x)}\n"
+                   for t, x in docs)
+    xhtml = (f'<?xml version="1.0" encoding="utf-8"?>\n'
+             f'<html xmlns="http://www.w3.org/1999/xhtml"><head>'
+             f'<title>hngh-automation research record</title></head>'
+             f'<body>{body}</body></html>')
+    opf = f"""<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid" version="2.0">
+<metadata><dc:title>hngh-automation research record</dc:title>
+<dc:language>en</dc:language>
+<dc:identifier id="uid">urn:hngh-automation:research-record</dc:identifier>
+</metadata>
+<manifest>
+<item id="cx" href="chapter.xhtml" media-type="application/xhtml+xml"/>
+<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+</manifest>
+<spine><itemref idref="cx"/></spine></package>"""
+    ncx = f"""<?xml version="1.0" encoding="utf-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head><meta name="dtb:uid" content="urn:hngh-automation:research-record"/></head>
+<navMap><navPoint id="n1" playOrder="1"><navLabel><text>hngh-automation research record</text></navLabel>
+<content src="chapter.xhtml"/></navPoint></navMap></ncx>"""
+    epub = outdir / "hngh-automation-research.epub"
+    with zipfile.ZipFile(epub, "w") as z:
+        z.writestr("mimetype", "application/epub+zip", zipfile.ZIP_STORED)
+        z.writestr("META-INF/container.xml",
+                   '<?xml version="1.0"?><container version="1.0" '
+                   'xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+                   '<rootfiles><rootfile full-path="OEBPS/content.opf" '
+                   'media-type="application/oebps-package+xml"/>'
+                   '</rootfiles></container>')
+        z.writestr("OEBPS/content.opf", opf)
+        z.writestr("OEBPS/toc.ncx", ncx)
+        z.writestr("OEBPS/chapter.xhtml", xhtml)
+    return epub, outdir / "book.md"
+
+
+def build_site(outdir):
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    body = "".join(f"<section><h2>{html.escape(t)}</h2>\n{md_to_html(x)}"
+                   f"</section>\n" for t, x in corpus())
+    index = outdir / "index.html"
+    index.write_text(
+        f'<!doctype html><html><head><meta charset="utf-8">'
+        f'<title>hngh-automation research record</title>'
+        f'<style>body{{max-width:46em;margin:2em auto;'
+        f'font-family:serif;line-height:1.5}}'
+        f'pre{{white-space:pre-wrap}}</style></head><body>'
+        f'<h1>hngh-automation research record</h1>{body}</body></html>')
+    return index
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--help", action="store_true")
+    parser.add_argument("--ebook", nargs="?", const="", metavar="DIR")
+    parser.add_argument("--site", nargs="?", const="", metavar="DIR")
+    args = parser.parse_args(argv)
+    if args.help:
+        print(__doc__.strip())
+        return 0
+    try:
+        if args.ebook is not None:
+            epub, book = build_ebook(
+                args.ebook or PUB_ROOT / "docs" / "journal" / "ebook")
+            print(f"ebook -> {book} + {epub}")
+            return 0
+        if args.site is not None:
+            index = build_site(args.site or PUB_ROOT / "docs" / "site")
+            print(f"site index -> {index}")
+            return 0
+        parser.print_usage(sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f"generate-publication: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

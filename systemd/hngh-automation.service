@@ -1,0 +1,14 @@
+[Unit]
+Description=hngh-automation hourly research ping
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/ping-hourly.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+# fail-closed jobs always exit 0 on expected conditions; nonzero = real bug
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

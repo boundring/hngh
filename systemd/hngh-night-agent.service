@@ -1,0 +1,10 @@
+[Unit]
+Description=hngh-automation night agent wake session (00/02/04/06)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/scripts/night-session.sh prompts/night-check.md night-agent
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no

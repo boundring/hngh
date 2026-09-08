@@ -1,0 +1,14 @@
+[Unit]
+Description=hngh cadence tick: daily tier
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=TIER=day
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/cadence-tick.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

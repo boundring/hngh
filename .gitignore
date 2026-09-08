@@ -1,0 +1,25 @@
+# secrets — never commit
+*.token
+store/
+# raw source captures (bulky, regenerable)
+snapshots/
+# temp artifacts
+*.tmp
+tmp-*
+.DS_Store
+__pycache__/
+node_modules/
+.lesson-harvest-last
+.research-beat-last
+.lesson-harvest-handoffs
+# machine data — quarantined out of git (P1, repo-merge-consideration)
+STATE.md
+agent-handoffs.md
+dashboard/
+digest/
+logs/
+archive/
+stats/
+prompts/
+deck-facts/
+bridge/

@@ -1,0 +1,10 @@
+{
+  "name": "hngh-automation-ui-audit",
+  "private": true,
+  "type": "module",
+  "description": "Programmatic UI audit for the hngh-automation dashboard (axe-core + register rules over the served page).",
+  "dependencies": {
+    "axe-core": "^4.10.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

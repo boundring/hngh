@@ -1,0 +1,14 @@
+[Unit]
+Description=hngh autonomy tick (journal + one ceremony slice)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/bricker/Projects/etc/hngh/scripts/run-autonomous
+WorkingDirectory=/home/bricker/Projects/etc/hngh
+# exit 0 on nothing-due; nonzero = malformed card (2) or refusing sub-step (3)
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=hngh-automation model bench (daily 01:10 overnight, local models only)
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/model-bench.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no

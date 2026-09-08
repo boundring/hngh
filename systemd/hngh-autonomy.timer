@@ -1,0 +1,11 @@
+[Unit]
+Description=hngh autonomy tick (journal + one ceremony slice)
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
