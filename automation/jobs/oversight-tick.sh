@@ -113,8 +113,12 @@ probe_working_tree_skew() {
  local wl dirty last now
  # Whitelist filters porcelain lines BEFORE alerting: routed candidates
  # (router-tick writes them; day cadence 14-plan-ledger-sync.sh versions
- # them) stay defused, every other plans/ path counts as skew.
- local hngh_wl='docs/project/reports\.md|docs/project/ui-grades\.md|docs/journal/|docs/design/ui-evolve/current-overlay\.json|docs/project/plans/.*routed-.*\.plan\.md|CHANGELOG\.md'
+ # them) stay defused, every other plans/ path counts as skew. The
+ # automation subtree research tsvs are beat-written machine state (the
+ # standalone-repo auto_wl always carried research-lines.tsv; the
+ # subtree move into the kernel repo never gained the equivalents) --
+ # they churn every research transition, so they are not skew either.
+ local hngh_wl='docs/project/reports\.md|docs/project/ui-grades\.md|docs/journal/|docs/design/ui-evolve/current-overlay\.json|docs/project/plans/.*routed-.*\.plan\.md|CHANGELOG\.md|automation/research-(lines|dispositions)\.tsv'
  local auto_wl='STATE\.md|agent-handoffs\.md|dashboard/|digest/|logs/|research-lines\.tsv|prompts/'
  for repo in ${TREE_SKEW_REPOS:-$HNGH_REPO $ROOT}; do
   [ -d "$repo/.git" ] || continue
