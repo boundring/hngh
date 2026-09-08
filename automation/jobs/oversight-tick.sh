@@ -116,7 +116,7 @@ probe_working_tree_skew() {
  # them) stay defused, every other plans/ path counts as skew.
  local hngh_wl='docs/project/reports\.md|docs/project/ui-grades\.md|docs/journal/|docs/design/ui-evolve/current-overlay\.json|docs/project/plans/.*routed-.*\.plan\.md|CHANGELOG\.md'
  local auto_wl='STATE\.md|agent-handoffs\.md|dashboard/|digest/|logs/|research-lines\.tsv|prompts/'
- for repo in ${TREE_SKEW_REPOS:-/home/bricker/Projects/etc/hngh /home/bricker/Projects/etc/hngh-automation}; do
+ for repo in ${TREE_SKEW_REPOS:-$HNGH_REPO $ROOT}; do
   [ -d "$repo/.git" ] || continue
   wl="$hngh_wl"
   [ "${repo##*/}" = "hngh-automation" ] && wl="$auto_wl"

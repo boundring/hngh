@@ -19,7 +19,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/params.sh"
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
-AUTO="${HNGH_AUTOMATION_HOME:-$AUTOMATION_ROOT}" # seam for hermetic tests
+AUTO="$AUTOMATION_ROOT"
 JOB_NAME="${JOB_NAME:-16-remote-push}"
 STAMP="${HNGH_PUSH_STAMP:-$HOME/.hngh-automation/.remote-push-stamp}"
 HOURS="$(get_param push-cadence-hours 24)"

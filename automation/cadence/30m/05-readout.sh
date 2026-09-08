@@ -3,16 +3,17 @@
 # queue/timeline/roster fresh for the dashboards (dashboard-self-review
 # flags readout.json stale beyond 3x this tier otherwise). Pure reader,
 # fails closed; the digest itself stays morning-gated by design.
-if [ -x "$HNGH_HOME/scripts/dashboard-readout" ] || [ -x /home/bricker/Projects/etc/hngh/scripts/dashboard-readout ]; then
-  HNGH="${HNGH_HOME:-/home/bricker/Projects/etc/hngh}"
+HNGH="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+if [ -x "$HNGH/scripts/dashboard-readout" ]; then
   # per-PID tmp: the 30m tier and refresh-dashboard.sh (morning-report
   # ExecStartPost) collide daily at 11:30Z; a shared tmp name let one
   # writer's fd keep writing into the other's renamed readout.json
   # (2026-09-01 feed-valid:readout unparsable alert).
-  tmp="/home/bricker/Projects/etc/hngh-automation/dashboard/.readout.json.$$.tmp"
+  tmp="$root/dashboard/.readout.json.$$.tmp"
   if (cd "$HNGH" && python3 scripts/dashboard-readout --json \
     >"$tmp" 2>/dev/null); then
-    mv "$tmp" /home/bricker/Projects/etc/hngh-automation/dashboard/readout.json
+    mv "$tmp" "$root/dashboard/readout.json"
     echo "readout.json refreshed"
   else
     rm -f "$tmp"

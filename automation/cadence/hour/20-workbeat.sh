@@ -5,4 +5,5 @@
 # human. All guardrails live inside the cycle: flock serialization,
 # daily session cap, budget counting, critical-path audit, research
 # filler when nothing else is due.
-exec /home/bricker/Projects/etc/hngh-automation/scripts/overnight-cycle.sh
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+exec "$root/scripts/overnight-cycle.sh"

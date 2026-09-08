@@ -4,4 +4,5 @@
 # lexically, and 01-oversight.sh reads the report queue independently, so
 # this fires fresh stall rows on the same tick either way. Advisory only:
 # never kills/restarts/mutates a session. Always exits 0.
-exec /home/bricker/Projects/etc/hngh-automation/jobs/agent-supervision.py
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+exec "$root/jobs/agent-supervision.py"

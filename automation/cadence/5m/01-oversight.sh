@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 # cadence/5m — oversight tick (procedural every fire; agentic gated inside).
-exec /home/bricker/Projects/etc/hngh-automation/jobs/oversight-tick.sh
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+exec "$root/jobs/oversight-tick.sh"

@@ -39,7 +39,7 @@ from pathlib import Path
 # ---- operator-editable thresholds ------------------------------------
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8890")
 DASH_DIR = os.environ.get(
-    "DASH_DIR", "/home/bricker/Projects/etc/hngh-automation/dashboard"
+    "DASH_DIR", str(Path(__file__).resolve().parent.parent / "dashboard")
 )
 HNGH_REPO = os.environ.get("HNGH_REPO", "/home/bricker/Projects/etc/hngh")
 STALE_MULT = 3          # feed is stale when older than N x its tier
