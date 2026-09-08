@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T13:01:33Z routed-from=slow-unit:dropin:16-remote-push.sh -->
+<!-- plan: status=parked risk=normal accepted=2026-09-08T13:01:33Z routed-from=slow-unit:dropin:16-remote-push.sh  cause=obsolete disposed=2026-09-08T16:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:16-remote-push.sh`
@@ -13,3 +13,4 @@ at 2026-09-08T13:00:34Z. Alert text: [oversight] slow-unit: dropin:16-remote-pus
 
 - 2026-09-08T14:00:22Z re-occurred (dedup window expired)
 - 2026-09-08T15:00:39Z re-occurred (dedup window expired)
+- 2026-09-08T16:00:39Z re-occurred (dedup window expired)
