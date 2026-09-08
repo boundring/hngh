@@ -1274,7 +1274,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T03:00:36Z | alert | 69108863 | router escalated: loop-signal re-occurred 3 times without landing — plan 2026-09-07-routed-loop-signal parked (cause=obsolete); operator disposition stands | 2026-09-07T03:00:36Z-alert-69108863.md |
 | 2026-09-07T03:03:10Z | progress | aa2e2ecb | research line govbench-metrics-v1: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-07-govbench-metrics-v1.md | 2026-09-07T03:03:10Z-progress-aa2e2ecb.md |
 | 2026-09-07T03:03:20Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×2 | 2026-09-07T03:03:20Z-alert-f7fd5d5b.md |
-| 2026-09-07T03:05:34Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×12 | 2026-09-07T03:05:34Z-alert-3bf67046.md |
+| 2026-09-07T03:05:34Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×26 | 2026-09-07T03:05:34Z-alert-3bf67046.md |
 | 2026-09-07T03:30:35Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-07T03:30:35Z-progress-87537517.md |
 | 2026-09-07T04:00:33Z | progress | 74b8873d | course bridge-operator-host: card mounted, last increment 2026-09-07T03:00:33Z | 2026-09-07T04:00:33Z-progress-74b8873d.md |
 | 2026-09-07T04:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T04:00:36Z-progress-6f20e8cb.md |
@@ -1448,7 +1448,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T22:00:36Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-07T22:00:36Z-progress-87537517.md |
 | 2026-09-07T22:00:36Z | alert | 70f1a6fe | router dedup: overnight:plan-accept-gate:automation suppressed (routed candidate 2026-09-07-routed-overnight-plan-accept-gate-automation still live, 0h old; day count 1) ×4 | 2026-09-07T22:00:36Z-alert-70f1a6fe.md |
 | 2026-09-07T22:04:54Z | progress | 6b149bd4 | research line ctx-retrieval-vs-repetition: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-07-ctx-retrieval-vs-repetition.md | 2026-09-07T22:04:54Z-progress-6b149bd4.md |
-| 2026-09-07T22:05:34Z | alert | ab7b673a | [oversight] slow-unit: dropin:50-research-overflow.sh wall=258.9s median=0.0s ×7 | 2026-09-07T22:05:34Z-alert-ab7b673a.md |
+| 2026-09-07T22:05:34Z | alert | ab7b673a | [oversight] slow-unit: dropin:50-research-overflow.sh wall=258.9s median=0.0s ×13 | 2026-09-07T22:05:34Z-alert-ab7b673a.md |
 | 2026-09-07T22:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T22:30:36Z-progress-6f20e8cb.md |
 | 2026-09-07T22:34:56Z | progress | 66aa5aa8 | research line ctx-retrieval-vs-repetition: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-07-ctx-retrieval-vs-repetition.md | 2026-09-07T22:34:56Z-progress-66aa5aa8.md |
 | 2026-09-07T23:00:08Z | progress | 376f4c3e | course bridge-operator-host: card mounted, last increment 2026-09-07T22:00:33Z | 2026-09-07T23:00:08Z-progress-376f4c3e.md |
@@ -1476,5 +1476,20 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T01:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T01:00:36Z-progress-6f20e8cb.md |
 | 2026-09-08T01:00:36Z | progress | 7913909a | router routed slow-unit:dropin:33-research-beat.sh -> plan candidate 2026-09-08-routed-slow-unit-dropin-33-research-beat.sh (routed-at 2026-09-08T01:00:36Z) | 2026-09-08T01:00:36Z-progress-7913909a.md |
 | 2026-09-08T01:00:57Z | progress | 3b3c62b0 | research line log-presentation-patterns reviewed: parked (parked -- solid slice-first/structured-logging reference, but unvalidated against the codebase and no active workstream needs it now) | 2026-09-08T01:00:57Z-progress-3b3c62b0.md |
-| 2026-09-08T01:01:33Z | alert | 598ffaaa | plan acceptance blocked: kernel make test FAILED (rc=2) | 2026-09-08T01:01:33Z-alert-598ffaaa.md |
+| 2026-09-08T01:01:33Z | alert | 598ffaaa | plan acceptance blocked: kernel make test FAILED (rc=2) ×2 | 2026-09-08T01:01:33Z-alert-598ffaaa.md |
 | 2026-09-08T01:07:11Z | progress | 920b36a3 | plan 2026-09-02-routed-gate-red-hngh executed (all steps checked) | 2026-09-08T01:07:11Z-progress-920b36a3.md |
+| 2026-09-08T01:07:22Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) | 2026-09-08T01:07:22Z-alert-f7fd5d5b.md |
+| 2026-09-08T01:15:33Z | alert | 3424f490 | [oversight] stale-store: /tmp/hngh-cer-oc0908c.gLXL0w record.lisp untouched 30min+ ×10 | 2026-09-08T01:15:33Z-alert-3424f490.md |
+| 2026-09-08T01:15:36Z | progress | 0d34e372 | agent-supervision: evicted-stale omp-hngh-fieldreport-d60c82 (idle 360m) | 2026-09-08T01:15:36Z-progress-0d34e372.md |
+| 2026-09-08T01:20:33Z | alert | be5f1af4 | [oversight] stale-store: /tmp/hngh-cer-oc0908w.U9jw4O record.lisp untouched 30min+ ×9 | 2026-09-08T01:20:33Z-alert-be5f1af4.md |
+| 2026-09-08T01:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T01:30:36Z-progress-6f20e8cb.md |
+| 2026-09-08T01:30:36Z | progress | 36d6ec3b | agent-supervision: evicted-stale omp-research-accel2-505a21 (idle 362m) | 2026-09-08T01:30:36Z-progress-36d6ec3b.md |
+| 2026-09-08T01:35:36Z | progress | 0251a6a2 | agent-supervision: evicted-stale omp-wiki-recon-149b24 (idle 364m) | 2026-09-08T01:35:36Z-progress-0251a6a2.md |
+| 2026-09-08T02:00:33Z | progress | d38bdd90 | course bridge-operator-host: card mounted, last increment 2026-09-08T01:00:33Z | 2026-09-08T02:00:33Z-progress-d38bdd90.md |
+| 2026-09-08T02:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T02:00:36Z-progress-6f20e8cb.md |
+| 2026-09-08T02:00:36Z | progress | 30252aff | router routed deck-unreachable-2026-09-08 -> plan candidate 2026-09-08-routed-deck-unreachable-2026-09-08 (routed-at 2026-09-08T02:00:36Z) | 2026-09-08T02:00:36Z-progress-30252aff.md |
+| 2026-09-08T02:00:36Z | progress | 9930474e | router routed overnight:plan-accept-gate:kernel -> plan candidate 2026-09-08-routed-overnight-plan-accept-gate-kernel (routed-at 2026-09-08T02:00:36Z) | 2026-09-08T02:00:36Z-progress-9930474e.md |
+| 2026-09-08T02:00:36Z | alert | d049e9e5 | router dedup: slow-unit:dropin:33-research-beat.sh suppressed (routed candidate 2026-09-08-routed-slow-unit-dropin-33-research-beat.sh still live, 1h old; day count 1) | 2026-09-08T02:00:36Z-alert-d049e9e5.md |
+| 2026-09-08T02:05:05Z | progress | 92207e33 | research line ctx-structured-briefs: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-08-ctx-structured-briefs.md | 2026-09-08T02:05:05Z-progress-92207e33.md |
+| 2026-09-08T02:11:05Z | progress | dbb10522 | plan 2026-09-02-routed-repeat-crumbs executed (all steps checked) | 2026-09-08T02:11:05Z-progress-dbb10522.md |
+| 2026-09-08T02:11:05Z | alert | 24a69312 | session touched critical paths in ~/Projects/etc/hngh-automation: tests/test-notify-email.py | 2026-09-08T02:11:05Z-alert-24a69312.md |
