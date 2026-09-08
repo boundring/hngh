@@ -416,3 +416,22 @@ Precedents: unsloth service recovery (2026-09-04 corrective slice,
 llama-server user service (2026-09-07, `hngh-automation
 docs/DECK-NODE.md`). The managed-service registry (expected-state rows
 in the gate inventory) is the next increment, not built tonight.
+
+## 2026-09-07 — Repo topology: merge automation tier into hngh (P0)
+
+Decision: hngh-automation merges into the hngh repo as `hngh/automation/`
+via git subtree `--squash` (clean import, no operational-data history
+bloat). Machine data (STATE.md, dashboard/, digest/, logs/, archive/,
+snapshots/, stats/, prompts/, deck-facts/, telemetry.db) is QUARANTINED
+out of git entirely (P1: gitignore + sweep retirement) before the
+subtree import (P2, queued) so the imported tree is clean.
+
+Rationale: clean-architecture core/edge doctrine (the automation is the
+harness around the kernel, not a different project); portfolio coherence
+(one repo, one URL, one narrative); the hourly kernel-ledger sync
+already merged the narratives; the sweep-churn debt (170 commits/7d,
+committed binary telemetry.db) dies under quarantine regardless of
+topology. Phases: P0 this record, P1 quarantine (landed in this commit),
+P2 subtree import (queued), P3 env seam collapse, P4 systemd cutover, P5
+doc/path sweep. The old hngh-automation remote will be archived
+read-only after P5.
