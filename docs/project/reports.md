@@ -1448,7 +1448,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T22:00:36Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-07T22:00:36Z-progress-87537517.md |
 | 2026-09-07T22:00:36Z | alert | 70f1a6fe | router dedup: overnight:plan-accept-gate:automation suppressed (routed candidate 2026-09-07-routed-overnight-plan-accept-gate-automation still live, 0h old; day count 1) ×4 | 2026-09-07T22:00:36Z-alert-70f1a6fe.md |
 | 2026-09-07T22:04:54Z | progress | 6b149bd4 | research line ctx-retrieval-vs-repetition: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-07-ctx-retrieval-vs-repetition.md | 2026-09-07T22:04:54Z-progress-6b149bd4.md |
-| 2026-09-07T22:05:34Z | alert | ab7b673a | [oversight] slow-unit: dropin:50-research-overflow.sh wall=258.9s median=0.0s ×13 | 2026-09-07T22:05:34Z-alert-ab7b673a.md |
+| 2026-09-07T22:05:34Z | alert | ab7b673a | [oversight] slow-unit: dropin:50-research-overflow.sh wall=258.9s median=0.0s ×17 | 2026-09-07T22:05:34Z-alert-ab7b673a.md |
 | 2026-09-07T22:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T22:30:36Z-progress-6f20e8cb.md |
 | 2026-09-07T22:34:56Z | progress | 66aa5aa8 | research line ctx-retrieval-vs-repetition: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-07-ctx-retrieval-vs-repetition.md | 2026-09-07T22:34:56Z-progress-66aa5aa8.md |
 | 2026-09-07T23:00:08Z | progress | 376f4c3e | course bridge-operator-host: card mounted, last increment 2026-09-07T22:00:33Z | 2026-09-07T23:00:08Z-progress-376f4c3e.md |
@@ -1466,7 +1466,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T00:09:40Z | alert | cd7add8f | session touched critical paths in ~/Projects/etc/hngh-automation: tests/test-wiki-health.sh | 2026-09-08T00:09:40Z-alert-cd7add8f.md |
 | 2026-09-08T00:10:03Z | progress | 11112230 | agent-supervision: evicted-stale omp-design-story-4570de (idle 360m) | 2026-09-08T00:10:03Z-progress-11112230.md |
 | 2026-09-08T00:12:11Z | progress | e3a7b5bc | research line ctx-retrieval-vs-repetition: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-08-ctx-retrieval-vs-repetition.md | 2026-09-08T00:12:11Z-progress-e3a7b5bc.md |
-| 2026-09-08T00:15:04Z | alert | 66ab0e1a | [oversight] slow-unit: dropin:33-research-beat.sh wall=147.7s median=0.0s ×11 | 2026-09-08T00:15:04Z-alert-66ab0e1a.md |
+| 2026-09-08T00:15:04Z | alert | 66ab0e1a | [oversight] slow-unit: dropin:33-research-beat.sh wall=147.7s median=0.0s ×17 | 2026-09-08T00:15:04Z-alert-66ab0e1a.md |
 | 2026-09-08T00:15:06Z | progress | c0a39908 | agent-supervision: evicted-stale omp-design-rpg-73d9b8 (idle 361m) | 2026-09-08T00:15:06Z-progress-c0a39908.md |
 | 2026-09-08T00:20:26Z | progress | 1f5221ab | agent-supervision: evicted-stale omp-authority-record-86df3c (idle 360m) | 2026-09-08T00:20:26Z-progress-1f5221ab.md |
 | 2026-09-08T00:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T00:30:36Z-progress-6f20e8cb.md |
@@ -1476,7 +1476,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T01:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T01:00:36Z-progress-6f20e8cb.md |
 | 2026-09-08T01:00:36Z | progress | 7913909a | router routed slow-unit:dropin:33-research-beat.sh -> plan candidate 2026-09-08-routed-slow-unit-dropin-33-research-beat.sh (routed-at 2026-09-08T01:00:36Z) | 2026-09-08T01:00:36Z-progress-7913909a.md |
 | 2026-09-08T01:00:57Z | progress | 3b3c62b0 | research line log-presentation-patterns reviewed: parked (parked -- solid slice-first/structured-logging reference, but unvalidated against the codebase and no active workstream needs it now) | 2026-09-08T01:00:57Z-progress-3b3c62b0.md |
-| 2026-09-08T01:01:33Z | alert | 598ffaaa | plan acceptance blocked: kernel make test FAILED (rc=2) ×2 | 2026-09-08T01:01:33Z-alert-598ffaaa.md |
+| 2026-09-08T01:01:33Z | alert | 598ffaaa | plan acceptance blocked: kernel make test FAILED (rc=2) ×3 | 2026-09-08T01:01:33Z-alert-598ffaaa.md |
 | 2026-09-08T01:07:11Z | progress | 920b36a3 | plan 2026-09-02-routed-gate-red-hngh executed (all steps checked) | 2026-09-08T01:07:11Z-progress-920b36a3.md |
 | 2026-09-08T01:07:22Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) | 2026-09-08T01:07:22Z-alert-f7fd5d5b.md |
 | 2026-09-08T01:15:33Z | alert | 3424f490 | [oversight] stale-store: /tmp/hngh-cer-oc0908c.gLXL0w record.lisp untouched 30min+ ×10 | 2026-09-08T01:15:33Z-alert-3424f490.md |
@@ -1493,3 +1493,24 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T02:05:05Z | progress | 92207e33 | research line ctx-structured-briefs: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-08-ctx-structured-briefs.md | 2026-09-08T02:05:05Z-progress-92207e33.md |
 | 2026-09-08T02:11:05Z | progress | dbb10522 | plan 2026-09-02-routed-repeat-crumbs executed (all steps checked) | 2026-09-08T02:11:05Z-progress-dbb10522.md |
 | 2026-09-08T02:11:05Z | alert | 24a69312 | session touched critical paths in ~/Projects/etc/hngh-automation: tests/test-notify-email.py | 2026-09-08T02:11:05Z-alert-24a69312.md |
+| 2026-09-08T02:13:32Z | progress | 1b379639 | research line ctx-structured-briefs: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-08-ctx-structured-briefs.md | 2026-09-08T02:13:32Z-progress-1b379639.md |
+| 2026-09-08T02:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T02:30:36Z-progress-6f20e8cb.md |
+| 2026-09-08T02:31:32Z | progress | 684b3e36 | plan 2026-09-08-routed-deck-unreachable-2026-09-08 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-08T02:31:32Z | 2026-09-08T02:31:32Z-progress-684b3e36.md |
+| 2026-09-08T02:31:32Z | progress | 13da52fd | plan 2026-09-08-routed-overnight-plan-accept-gate-kernel auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-08T02:31:32Z | 2026-09-08T02:31:32Z-progress-13da52fd.md |
+| 2026-09-08T02:31:32Z | progress | 4da07b64 | plan 2026-09-08-routed-slow-unit-dropin-33-research-beat.sh auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-08T02:31:32Z | 2026-09-08T02:31:32Z-progress-4da07b64.md |
+| 2026-09-08T02:31:32Z | progress | a48f3027 | plan 2026-09-09-overnight-continuity auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-08T02:31:32Z | 2026-09-08T02:31:32Z-progress-a48f3027.md |
+| 2026-09-08T02:42:16Z | progress | b9e0f5af | plan 2026-09-02-routed-review-hngh-automation-P1-STATE-md-contains-absolute- executed (all steps checked) | 2026-09-08T02:42:16Z-progress-b9e0f5af.md |
+| 2026-09-08T02:42:16Z | alert | 3235fa36 | session touched critical paths in ~/Projects/etc/hngh-automation: Makefile tests/test-breadcrumbs.sh | 2026-09-08T02:42:16Z-alert-3235fa36.md |
+| 2026-09-08T02:43:11Z | alert | 3130d5cc | [dash-selfreview] feed-fresh:sessions.json: unacceptable-now — /home/bricker/Projects/etc/hngh/automation/dashboard/sessions.json missing | 2026-09-08T02:43:11Z-alert-3130d5cc.md |
+| 2026-09-08T02:43:11Z | alert | 782c3492 | [dash-selfreview] feed-fresh:operator-items.json: unacceptable-now — /home/bricker/Projects/etc/hngh/automation/dashboard/operator-items.json missing ×2 | 2026-09-08T02:43:11Z-alert-782c3492.md |
+| 2026-09-08T02:43:11Z | alert | 756424e8 | [dash-selfreview] feed-fresh:time-ledger.json: unacceptable-now — /home/bricker/Projects/etc/hngh/automation/dashboard/time-ledger.json missing | 2026-09-08T02:43:11Z-alert-756424e8.md |
+| 2026-09-08T02:43:11Z | alert | a7a2d16c | [dash-selfreview] feed-fresh:readout.json: unacceptable-now — stale 7116s > 3x tier 1800s — producer for readout.json is not firing or is failing ×2 | 2026-09-08T02:43:11Z-alert-a7a2d16c.md |
+| 2026-09-08T02:43:11Z | alert | 97dbea80 | [dash-selfreview] feed-valid:sessions.json: unacceptable-now — unparsable: [Errno 2] No such file or directory: '/home/bricker/Projects/etc/hngh/automation/dashboard/sessions.json' | 2026-09-08T02:43:11Z-alert-97dbea80.md |
+| 2026-09-08T02:43:11Z | alert | 2b64a833 | [dash-selfreview] feed-valid:operator-items.json: unacceptable-now — unparsable: [Errno 2] No such file or directory: '/home/bricker/Projects/etc/hngh/automation/dashboard/operator-items.json' ×2 | 2026-09-08T02:43:11Z-alert-2b64a833.md |
+| 2026-09-08T02:43:11Z | alert | 55e7aa7c | [dash-selfreview] feed-valid:time-ledger.json: unacceptable-now — unparsable: [Errno 2] No such file or directory: '/home/bricker/Projects/etc/hngh/automation/dashboard/time-ledger.json' | 2026-09-08T02:43:11Z-alert-55e7aa7c.md |
+| 2026-09-08T02:43:11Z | alert | 5be3fc2a | [dash-selfreview] summary: 7 findings (7 unacceptable-now, 0 acceptable-for-now) ×2 | 2026-09-08T02:43:11Z-alert-5be3fc2a.md |
+| 2026-09-08T02:43:12Z | alert | 61c03f06 | ui-audit unavailable: Cannot find module 'axe-core/axe.min.js' | 2026-09-08T02:43:12Z-alert-61c03f06.md |
+| 2026-09-08T02:43:12Z | progress | 8b3cbcf8 | router routed ui-audit:unavailable -> plan candidate 2026-09-08-routed-ui-audit-unavailable (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-8b3cbcf8.md |
+| 2026-09-08T02:43:12Z | progress | e0dd753b | router routed dash-selfreview:summary -> plan candidate 2026-09-08-routed-dash-selfreview-summary (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-e0dd753b.md |
+| 2026-09-08T02:43:12Z | progress | f3143d1b | router routed dash-selfreview:feed-valid:time-ledger.json -> plan candidate 2026-09-08-routed-dash-selfreview-feed-valid-time-ledger.json (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-f3143d1b.md |
+| 2026-09-08T02:57:31Z | progress | 41357e3f | plan 2026-09-02-routed-review-hngh-P1-Commit-6cbdc9c-modifies-doc executed (all steps checked) | 2026-09-08T02:57:31Z-progress-41357e3f.md |
