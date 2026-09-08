@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-08
+
+- fix: automation gate red (rc=2) since the fail-first subtree sync —
+  e2b03ce took 6 of archived e9ff90f's 10 files and skipped both
+  research test files plus the Makefile line registering
+  test-failfirst.sh, so the gate ran pre-fail-first tests against the
+  fail-first beat: test-research-governor still pinned the removed
+  stamp-gate/defer matrix (case 1: fresh stamp + busy must stay
+  silent — the beat now routes), test-research-accel2 still pinned
+  research-deck-pin/research-deferred breadcrumbs, and the failfirst
+  state machine was never exercised by the gate. Synced the missing
+  e9ff90f deltas: both tests restored, `bash tests/test-failfirst.sh`
+  registered between accel2 and wiki-health. Verify: make test green
+  (rc=0); overnight plan acceptance unblocked.
+
 ## 2026-09-06
 
 - fix: per-process tmp names for every dashboard feed writer —

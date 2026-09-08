@@ -53,6 +53,7 @@ BEAT_ENV=(
  AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh
  HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root"
  RESEARCH_SYNTH_STAMP_FILE="$sb/synth-stamp"
+ FAILFIRST_STATE_DIR="$sb/ff" RESEARCH_LOCK_FILE="$sb/lock"
  TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
  REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
  UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
@@ -66,7 +67,7 @@ beat_run() { # [K=V ...] -> one hour-beat run; caller args win
   rm -f "$sb/beat-stamp"
   env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
    RESEARCH_STAMP_FILE="$sb/beat-stamp" RESEARCH_BEAT_COUNT_FILE="$sb/beat-count" \
-   RESEARCH_LOADAVG_FILE="$sb/loadavg" RESEARCH_BEAT_HOURS=1 \
+   RESEARCH_LOADAVG_FILE="$sb/loadavg" \
    "$@" \
    bash "$sb/cadence/hour/33-research-beat.sh" >/dev/null 2>&1
  )
@@ -75,11 +76,9 @@ overflow_run() { # [K=V ...] -> one 30m-tier overflow run
  (
   cd "$sb"
   env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
-   RESEARCH_STAMP_FILE="$sb/beat-stamp" RESEARCH_LOADAVG_FILE="$sb/loadavg" \
-   RESEARCH_BEAT_HOURS=1 \
    RESEARCH_OVERFLOW_STAMP_FILE="$sb/of-stamp" \
-   RESEARCH_BEAT_STAMP_FILE="$sb/beat-stamp" \
    RESEARCH_OVERFLOW_COUNT_FILE="$sb/of-count" \
+   OVERFLOW_SLEEP_S=0 \
    "$@" \
    bash "$sb/cadence/30m/50-research-overflow.sh" >/dev/null 2>&1
  )
@@ -87,7 +86,9 @@ overflow_run() { # [K=V ...] -> one 30m-tier overflow run
 reset_beat() { # n-planned-lines -> fresh pool, counters, telemetry, hits
  rm -f "$sb/beat-stamp" "$sb/beat-count" "$sb/of-stamp" "$sb/of-count" \
   "$sb/tmp-modelused.txt" "$sb/synth-stamp" "$sb/research-dispositions.tsv" \
-  "$stubdir/synth-reply"
+  "$sb/lock"
+ rm -rf "$sb/ff"
+ rm -f "$stubdir/synth-reply"
  : >"$sb/STATE.md"
  rm -f "$sb/dashboard/telemetry.db"
  : >"$stubdir/stubU-hits"
@@ -116,7 +117,7 @@ ck() { # desc expected actual
  fi
 }
 
-# --- a) deck-pin-on-busy ------------------------------------------------
+# --- a) busy routing (fail-first: route, never defer) -------------------
 # a1: busy + deck armed -> run pinned to the deck, no defer, stamp eaten
 reset_beat 2
 printf '%s\n' "$busy" >"$sb/loadavg-busy"
@@ -124,7 +125,7 @@ beat_run "${deck_env[@]}" "RESEARCH_LOADAVG_FILE=$sb/loadavg-busy"
 ck "busy+deck: deck stub answered" "1" "$(hits stubD)"
 ck "busy+deck: unsloth never hit" "0" "$(hits stubU)"
 ck "busy+deck: model used = deck" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
-grep -q 'research-deck-pin' "$sb/STATE.md" &&
+grep -q 'research-route-deck' "$sb/STATE.md" &&
  grep -q 'local busy - research routed to deck (load 12.00 >= ' "$sb/STATE.md" &&
  echo "ok: busy+deck: routed-to-deck breadcrumb" || {
  echo "FAIL: busy+deck: no routed-to-deck breadcrumb"
@@ -141,100 +142,105 @@ grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
  fails=$((fails + 1))
 }
 
-# a2: busy + deck unarmed -> defer exactly as before, no stamp
+# a2: busy + deck unarmed -> routes to a quota leg by parity; the quota
+# pin is unarmed too, so model_call falls through to the local chain:
+# the machine NEVER stops researching because the desktop is busy
 reset_beat 2
 printf '%s\n' "$busy" >"$sb/loadavg-busy"
 beat_run "RESEARCH_LOADAVG_FILE=$sb/loadavg-busy"
-ck "busy+unarmed: unsloth never hit" "0" "$(hits stubU)"
-grep -q 'research-deferred' "$sb/STATE.md" &&
- grep -q 'research deferred: load 12.00 >= ceiling' "$sb/STATE.md" &&
- echo "ok: busy+unarmed: deferred breadcrumb" || {
- echo "FAIL: busy+unarmed: no deferred breadcrumb"
+grep -q 'research-route-quota' "$sb/STATE.md" &&
+ grep -q 'local busy - research routed to' "$sb/STATE.md" &&
+ echo "ok: busy+unarmed: quota route breadcrumb" || {
+ echo "FAIL: busy+unarmed: no quota route breadcrumb"
  fails=$((fails + 1))
 }
-[ ! -e "$sb/beat-stamp" ] &&
- echo "ok: busy+unarmed: stamp NOT consumed" || {
- echo "FAIL: busy+unarmed: stamp consumed"
+grep -q 'research-deferred' "$sb/STATE.md" && {
+ echo "FAIL: busy+unarmed: deferred (fail-first never defers)"
  fails=$((fails + 1))
-}
-
-# --- b) overflow beat ---------------------------------------------------
-b4stale=$((now - 7200))
-# b1: own stamp fresh -> skip
-reset_beat 4
-printf '%s\n' "$now" >"$sb/of-stamp"
-printf '%s\n' "$b4stale" >"$sb/beat-stamp"
-overflow_run "${kimi_env[@]}"
-ck "overflow fresh: kimi never hit" "0" "$(hits stubK)"
-ck "overflow fresh: unsloth never hit" "0" "$(hits stubU)"
-ck "overflow fresh: own stamp untouched" "$now" "$(cat "$sb/of-stamp")"
-
-# b2: own stamp stale + hour stamp <30min -> silent defer
-reset_beat 4
-printf '%s\n' "$((now - 7200))" >"$sb/of-stamp"
-printf '%s\n' "$((now - 600))" >"$sb/beat-stamp"
-overflow_run "${kimi_env[@]}"
-ck "overflow 30m-guard: kimi never hit" "0" "$(hits stubK)"
-ck "overflow 30m-guard: unsloth never hit" "0" "$(hits stubU)"
-ck "overflow 30m-guard: own stamp untouched" "$((now - 7200))" "$(cat "$sb/of-stamp")"
-grep -q 'research' "$sb/STATE.md" && {
- echo "FAIL: overflow 30m-guard: not silent (STATE touched)"
- fails=$((fails + 1))
-} || echo "ok: overflow 30m-guard: silent defer"
-
-# b3: stale + hour stamp >=30min -> runs pinned kimi (counter 0 -> 1, odd)
-reset_beat 4
-printf '%s\n' "$((now - 7200))" >"$sb/of-stamp"
-printf '%s\n' "$((now - 3600))" >"$sb/beat-stamp"
-overflow_run "${kimi_env[@]}"
-ck "overflow run1 (odd): kimi pinned" "1" "$(hits stubK)"
-ck "overflow run1: unsloth never hit" "0" "$(hits stubU)"
-ck "overflow run1: kimi model used" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
+} || echo "ok: busy+unarmed: no defer"
+ck "busy+unarmed: run completed on local fallthrough" "1" "$(hits stubU)"
 grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
- echo "ok: overflow run1: line-1 advanced" || {
- echo "FAIL: overflow run1: line-1 not advanced"
+ echo "ok: busy+unarmed: line-1 advanced" || {
+ echo "FAIL: busy+unarmed: line-1 not advanced"
  fails=$((fails + 1))
 }
-new_of="$(cat "$sb/of-stamp")"
-[ "$new_of" != "$((now - 7200))" ] &&
- echo "ok: overflow run1: own stamp consumed" || {
- echo "FAIL: overflow run1: own stamp not consumed"
- fails=$((fails + 1))
-}
-ck "overflow run1: hour stamp NOT consumed" "$((now - 3600))" "$(cat "$sb/beat-stamp")"
 
-# b4: next overflow run (counter 1 -> 2, even) pins lobehub; unarmed ->
-# falls through to the local chain inside model_call (never blocks)
-printf '%s\n' "$((now - 7200))" >"$sb/of-stamp"
-printf '%s\n' "$((now - 3600))" >"$sb/beat-stamp"
+# --- b) overflow beat: 15-minute cadence, own failfirst state -----------
+# b1: full speed -> TWO beats per 30m tick (OVERFLOW_SLEEP_S=0), parity
+# pins kimi then lobehub; an unarmed lobehub falls through to the local
+# chain inside model_call (never blocks)
+reset_beat 4
 overflow_run "${kimi_env[@]}"
-ck "overflow run2 (even): kimi not re-hit" "1" "$(hits stubK)"
+ck "overflow: kimi answered exactly once (beat 1)" "1" "$(hits stubK)"
 ck "overflow run2: lobehub unarmed -> local answers" "unsloth:stub-model" \
  "$(cat "$sb/tmp-modelused.txt")"
 ck "overflow run2: unsloth hit once" "1" "$(hits stubU)"
+# pick_line finishes lines before starting them: beat 1 advances
+# line-1 planned->expanding, beat 2 advances line-1 expanding->contracting
+grep -q $'line-1\tcontracting\t' "$sb/research-lines.tsv" &&
+ echo "ok: overflow: both beats advanced line-1" || {
+ echo "FAIL: overflow: line-1 not advanced twice"
+ fails=$((fails + 1))
+}
+[ -f "$sb/ff/failfirst-research-overflow" ] &&
+ echo "ok: overflow: own tuning state file" || {
+ echo "FAIL: overflow: no separate tuning state"
+ fails=$((fails + 1))
+}
+[ ! -e "$sb/ff/failfirst-research" ] &&
+ echo "ok: overflow: hour operation state untouched" || {
+ echo "FAIL: overflow: wrote to the hour operation state"
+ fails=$((fails + 1))
+}
+ck "overflow: state says ok at full" "ok" "$(sed -n 's/^last=//p' "$sb/ff/failfirst-research-overflow")"
+
+# b2: degraded overflow operation -> both beats of the tick throttle
+# (15-minute tick: standard paces to 30 minutes)
+reset_beat 4
+( export FAILFIRST_STATE_DIR="$sb/ff"
+  . "$root/lib/params.sh"
+  . "$root/lib/failfirst.sh"
+  record_outcome research-overflow 1 degraded )
+overflow_run "${kimi_env[@]}"
+ck "overflow degraded: kimi never hit" "0" "$(hits stubK)"
+ck "overflow degraded: unsloth never hit" "0" "$(hits stubU)"
+grep -q 'research-overflow-throttled' "$sb/STATE.md" &&
+ echo "ok: overflow degraded: throttled breadcrumb" || {
+ echo "FAIL: overflow degraded: no throttle breadcrumb"
+ fails=$((fails + 1))
+}
+ck "overflow degraded: still standard speed" "2" \
+ "$(sed -n 's/^speed=//p' "$sb/ff/failfirst-research-overflow")"
+
+# b3: standard speed aged past 2 overflow ticks (2*900s) -> gate releases
+# (kimi count restarted at 0 by b2's reset_beat)
+printf '%s\n' "$((now - 1801))" >"$sb/of-stamp"
+sed -i "s/^lastrun=.*/lastrun=$((now - 1801))/" "$sb/ff/failfirst-research-overflow"
+overflow_run "${kimi_env[@]}"
+ck "overflow aged: gate released, kimi pinned" "1" "$(hits stubK)"
 
 # --- c) review interleave ------------------------------------------------
-# c1: counter 3 -> run 4, 4%4=0, crystallized line present -> REVIEW even
-# with planned lines available
+# c1: counter 2 -> run 3, 3%3=0 (default interleave 3), crystallized
+# line present -> REVIEW even with planned lines available
 reset_beat 8
 seed_crystallized line-old
-printf '%s\n' 3 >"$sb/beat-count"
-beat_run "${kimi_env[@]}"
-ck "interleave %4: review pinned kimi" "1" "$(hits stubK)"
-ck "interleave %4: unsloth never hit" "0" "$(hits stubU)"
+printf '%s\n' 2 >"$sb/beat-count"
+beat_run "${kimi_env[@]}" RESEARCH_REVIEW_INTERLEAVE=3
+ck "interleave %3: review pinned kimi" "1" "$(hits stubK)"
+ck "interleave %3: unsloth never hit" "0" "$(hits stubU)"
 grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
- echo "ok: interleave %4: oldest crystallized reviewed" || {
- echo "FAIL: interleave %4: line-old not reviewed"
+ echo "ok: interleave %3: oldest crystallized reviewed" || {
+ echo "FAIL: interleave %3: line-old not reviewed"
  fails=$((fails + 1))
 }
 grep -q $'line-1\tplanned\t' "$sb/research-lines.tsv" &&
- echo "ok: interleave %4: planned line NOT advanced" || {
- echo "FAIL: interleave %4: planned line advanced during review"
+ echo "ok: interleave %3: planned line NOT advanced" || {
+ echo "FAIL: interleave %3: planned line advanced during review"
  fails=$((fails + 1))
 }
 grep -q $'line-old\tparked\t' "$sb/research-dispositions.tsv" 2>/dev/null &&
- echo "ok: interleave %4: disposition appended" || {
- echo "FAIL: interleave %4: no disposition row"
+ echo "ok: interleave %3: disposition appended" || {
+ echo "FAIL: interleave %3: no disposition row"
  fails=$((fails + 1))
 }
 
@@ -255,12 +261,12 @@ grep -q $'line-old\tcrystallized\t' "$sb/research-lines.tsv" &&
  fails=$((fails + 1))
 }
 
-# c3: aligned interleave but counter not at %4 -> normal advance
+# c3: aligned interleave but counter not at %3 -> normal advance
 reset_beat 8
 seed_crystallized line-old
 printf '%s\n' 0 >"$sb/beat-count"
 beat_run "${kimi_env[@]}"
-ck "counter 1 (1%4): kimi never hit" "0" "$(hits stubK)"
+ck "counter 1 (1%3): kimi never hit" "0" "$(hits stubK)"
 grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
  echo "ok: counter 1: planned line advanced (no review)" || {
  echo "FAIL: counter 1: planned line not advanced"
