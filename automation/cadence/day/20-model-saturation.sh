@@ -6,8 +6,9 @@
 #
 # Reads dashboard/telemetry.db directly (telemetry.py has no query
 # interface; the session-cost analysis reads the store the same way).
-# kind=model events carry no wall-s today (lib/model.sh emits only the
-# paid legs -- remote/kimi/lobehub -- without --wall-s), so busy seconds
+# kind=model events carry no wall-s (lib/model.sh emits one row per
+# successful call -- unsloth/ollama/remote/kimi/lobehub -- without
+# --wall-s; the overflow deck leg is not emitted), so busy seconds
 # per UTC hour = sum(wall_s) when an hour has any, else model-call count
 # times the mean measured research-call wall (telemetry kind=research;
 # falls back to MODEL_TIMEOUT=300s, config.env, when the store has no
