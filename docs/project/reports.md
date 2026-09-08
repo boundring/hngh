@@ -984,7 +984,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-05T08:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T08:00:45Z-progress-6f20e8cb.md |
 | 2026-09-05T08:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-05T08:30:45Z-progress-6f20e8cb.md |
 | 2026-09-05T09:00:42Z | progress | 0b8294f8 | implementation: 2026-09-05 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-09-05T09:00:42Z-progress-0b8294f8.md |
-| 2026-09-05T09:00:42Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-09-05T09:00:42Z-alert-bbdf87ef.md |
+| 2026-09-05T09:00:42Z | alert | bbdf87ef | credential unsloth-token — unexpected http=000000 on session probe | 2026-09-05T09:00:42Z-alert-bbdf87ef.md |
 | 2026-09-05T09:00:42Z | progress | 3447f88f | review: 2026-09-05 latest progress increment=0b8294f8 (implementation:2026-09-0510openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-09-05T09:00:42Z-progress-3447f88f.md |
 | 2026-09-05T09:00:42Z | alert | 54fd7a51 | credential reviewer-reviewer-local: endpoint not reachable (probe-model-route rc=1) | 2026-09-05T09:00:42Z-alert-54fd7a51.md |
 | 2026-09-05T09:00:43Z | scheduled | ed59a1ca | refactor: 2026-09-05 no refactor step defined (none scheduled) | 2026-09-05T09:00:43Z-scheduled-ed59a1ca.md |
@@ -1428,7 +1428,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T19:30:27Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T19:30:27Z-progress-6f20e8cb.md |
 | 2026-09-07T19:31:27Z | progress | ad92b5e5 | research line ctx-compaction-strategies: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-07-ctx-compaction-strategies.md | 2026-09-07T19:31:27Z-progress-ad92b5e5.md |
 | 2026-09-07T19:54:32Z | progress | 2a95ae31 | wiki-health bricker: healthy (51 pages on disk, 51 in registry, meta 0 d old) ×3 | 2026-09-07T19:54:32Z-progress-2a95ae31.md |
-| 2026-09-07T19:54:32Z | alert | 9d473b2e | wiki-health llm-wiki: SPLIT -- 93 pages on disk, 26 in registry, meta 19 d old (threshold 14 d). Fix: run the llm-wiki rebuild from an omp session with cwd /home/bricker/Projects/etc/llm-wiki -- extension tool wiki_rebuild_meta; Hngh never writes meta/ ×2 | 2026-09-07T19:54:32Z-alert-9d473b2e.md |
+| 2026-09-07T19:54:32Z | alert | 9d473b2e | wiki-health llm-wiki: SPLIT -- 93 pages on disk, 26 in registry, meta 19 d old (threshold 14 d). Fix: run the llm-wiki rebuild from an omp session with cwd ~/Projects/etc/llm-wiki -- extension tool wiki_rebuild_meta; Hngh never writes meta/ ×2 | 2026-09-07T19:54:32Z-alert-9d473b2e.md |
 | 2026-09-07T20:00:33Z | progress | d854ebbc | course bridge-operator-host: card mounted, last increment 2026-09-07T19:00:29Z | 2026-09-07T20:00:33Z-progress-d854ebbc.md |
 | 2026-09-07T20:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T20:00:36Z-progress-6f20e8cb.md |
 | 2026-09-07T20:00:38Z | progress | dfd21858 | router routed wiki-health:llm-wiki -> plan candidate 2026-09-07-routed-wiki-health-llm-wiki (routed-at 2026-09-07T20:00:38Z) | 2026-09-07T20:00:38Z-progress-dfd21858.md |
@@ -1464,3 +1464,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T00:00:26Z | alert | f211e48e | router escalated: overnight:plan-accept-gate:automation re-occurred 3 times without landing — plan 2026-09-07-routed-overnight-plan-accept-gate-automation parked (cause=obsolete); operator disposition stands | 2026-09-08T00:00:26Z-alert-f211e48e.md |
 | 2026-09-08T00:09:40Z | progress | 00cefde5 | plan 2026-09-01-routed-ui-audit-name-completeness executed (all steps checked) | 2026-09-08T00:09:40Z-progress-00cefde5.md |
 | 2026-09-08T00:09:40Z | alert | cd7add8f | session touched critical paths in ~/Projects/etc/hngh-automation: tests/test-wiki-health.sh | 2026-09-08T00:09:40Z-alert-cd7add8f.md |
+| 2026-09-08T00:10:03Z | progress | 11112230 | agent-supervision: evicted-stale omp-design-story-4570de (idle 360m) | 2026-09-08T00:10:03Z-progress-11112230.md |
+| 2026-09-08T00:12:11Z | progress | e3a7b5bc | research line ctx-retrieval-vs-repetition: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-08-ctx-retrieval-vs-repetition.md | 2026-09-08T00:12:11Z-progress-e3a7b5bc.md |
+| 2026-09-08T00:15:04Z | alert | 66ab0e1a | [oversight] slow-unit: dropin:33-research-beat.sh wall=147.7s median=0.0s ×6 | 2026-09-08T00:15:04Z-alert-66ab0e1a.md |
+| 2026-09-08T00:15:06Z | progress | c0a39908 | agent-supervision: evicted-stale omp-design-rpg-73d9b8 (idle 361m) | 2026-09-08T00:15:06Z-progress-c0a39908.md |
+| 2026-09-08T00:20:26Z | progress | 1f5221ab | agent-supervision: evicted-stale omp-authority-record-86df3c (idle 360m) | 2026-09-08T00:20:26Z-progress-1f5221ab.md |
+| 2026-09-08T00:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T00:30:36Z-progress-6f20e8cb.md |

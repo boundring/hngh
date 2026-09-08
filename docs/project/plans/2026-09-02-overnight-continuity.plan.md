@@ -73,13 +73,17 @@ What the next author must NOT do:
 
 ## Steps
 
-- [ ] 1. Gate baseline: `make test` in this repo (record the check
+- [x] 1. Gate baseline: `make test` in this repo (record the check
       count) and `make test` in hngh-automation (exit 0). No landing
       happens on any other step until both are green.
       Verification: both commands exit 0; check counts noted in the
       tick and carried to the execution record.
+      Executed 2026-09-08T00:36Z (this wake): kernel `make test` green
+      — 2855 checks (wall 49s); hngh-automation `make test` green
+      rc=0 (full suite incl. ttsr-fit contract + identifier lint,
+      wall 22s). Counts carried to journal/2026-09-08.md.
 
-- [ ] 2. GROW BEAT (normal-risk): close the routed-stub lanes. Both
+- [x] 2. GROW BEAT (normal-risk): close the routed-stub lanes. Both
       routed plans are accepted and each owns one investigation:
       execute them per their own files — slow-unit first (why does
       cadence/hour/20-workbeat.sh run wall=657.7s against a 150s
@@ -96,8 +100,20 @@ What the next author must NOT do:
       (inside the ceremony that lands its artifacts) or parked with
       an alert row; one resolution row per stub in STATE.md or
       reports.md.
+      Executed 2026-09-08T00:47Z (this wake — sync, not redo; both
+      stubs were executed by earlier wakes): slow-unit
+      dropin:20-workbeat.sh was a false-positive probe (bimodal
+      workbeat by design) — fixed in hngh-automation 7caff48
+      (jobs/slow-units.py envelope + 7 hermetic tests), ticked in its
+      own plan file 2026-09-01. ui-audit name-completeness was a
+      two-clock race (schedule feed vs rendered page) — fixed in
+      f9723c3 + fixture 6b9ca00 by the 00:01Z wake, all three
+      identity-duplicate plans ticked in ceremony 9826af5, pushed;
+      16 consecutive hourly audits clean since. Resolution rows:
+      reports.md 00cefde5 (executed progress) + STATE.md wrap rows.
+      Both repos' gates green this wake.
 
-- [ ] 3. RESEARCH BEAT (never code): ebook-book-inputs — the queued
+- [x] 3. RESEARCH BEAT (never code): ebook-book-inputs — the queued
       publication-side research candidate (queue row;
       publication-pipeline-grounding.md). One doc under
       docs/research/ with a Grounding section listing verified repo
@@ -107,8 +123,18 @@ What the next author must NOT do:
       grounding doc; do not redo it.
       Verification: doc exists under docs/research/; Grounding paths
       verified with `test -f`; kernel `make test` green.
+      Executed 2026-09-08T00:47Z (this wake, via a delegated bounded
+      session): docs/research/2026-09-08-ebook-book-inputs.md authored
+      — builds on 2026-08-30-publication-pipeline-grounding.md without
+      repeating it; Grounding section test -f/-x verified 8 paths this
+      session; Not-established section explicit (KDP/revenue, PDF,
+      mobi/pandoc, prose machine, cover asset, no live --ebook run).
+      Material delta recorded: --chapters selection already landed in
+      scripts/generate-publication since the base doc; priced decision
+      picks per-book metadata input first (smallest fully-missing
+      input). Kernel `make test` green (2855 checks) in the same beat.
 
-- [ ] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
+- [x] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
       the step-3 research doc, the routed-stub plan ticks, and any
       uncommitted kernel docs stragglers in ONE certificate ceremony
       via scripts/ceremony-drive (fresh /tmp store; pre-flight
@@ -121,6 +147,19 @@ What the next author must NOT do:
       Verification: one ceremony commit; `git show --stat` matches
       the intended list; push to origin succeeds or is recorded as
       an alert row.
+      Executed 2026-09-08T00:52Z (this wake): one ceremony-drive
+      invocation (fresh /tmp store) with candidate manifest
+      [docs/research/2026-09-08-ebook-book-inputs.md, this plan file,
+      docs/project/reports.md, docs/project/ui-grades.md,
+      docs/design/ui-evolve/current-overlay.json]; content-gate
+      pre-flight clean (report rows render in ~/-form; no credential
+      shapes; no src/ files in candidates); steps 2-4 ticked inside
+      this ceremony. Straggler docs/research/
+      2026-09-08-ctx-retrieval-vs-repetition.md EXCLUDED from the
+      manifest: the artifact carries transcript corruption from its
+      research-beat session (stray model narration + raw tool-call
+      blocks); left untracked for the owning line to rewrite. Push
+      outcome recorded in journal/2026-09-08.md.
 
 - [ ] 5. Wrap: append the cycle's outcomes to
       docs/project/lessons-2026-09-02.md (open it if absent),
