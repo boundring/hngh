@@ -6,7 +6,7 @@
 # ~/.config/billion-context/billion-context.json (compress.maxContextLimit);
 # the decision is on record at hngh
 # docs/records/2026-08-24-context-budget-and-toolchain.md (40% chosen; live
-# drifted to 44%, adopted 2026-09-07 pending operator confirm). This canary
+# drifted to 44%, adopted 2026-09-07, operator confirmed 2026-09-08). This canary
 # reads the live config and compares against the Inventory row
 # bctx-max-context-limit (cadence-params.tsv; env BCTX_MAX_CONTEXT overrides):
 #   drift   -> ONE identity-deduped report-queue alert row
@@ -67,7 +67,7 @@ if [ "$found" = "$expected" ]; then
   file_report progress "$obs — ok (proxy token feed: no readable log found; ratio vital stays transcript-derived)" \
     "bctx-canary-ok"
 else
-  file_report alert "$obs — DRIFT (record 2026-08-24 chose 40%; Inventory adopted live 2026-09-07 pending operator confirm)" \
+  file_report alert "$obs — DRIFT (record 2026-08-24 chose 40%; Inventory row confirms (operator confirmed 2026-09-08))" \
     "bctx-config-drift"
 fi
 exit 0
