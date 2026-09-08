@@ -148,6 +148,7 @@ ensure_lines() {
  local line
  local id
  local desc
+ SEEDED=0
  while IFS= read -r line; do
   [ -n "$line" ] || continue
   desc="$line"
@@ -163,8 +164,40 @@ ensure_lines() {
   printf '%s\tplanned\t%s\t%s\n' \
    "$id" \
    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$desc" >>"$LINES"
+  SEEDED=$((SEEDED + 1))
  done <"$SUBJECTS"
- breadcrumb "$JOB_NAME" "lines-seed" "reseeded research-lines.tsv from subjects"
+ [ "$SEEDED" -gt 0 ] && breadcrumb "$JOB_NAME" "lines-seed" \
+  "seeded $SEEDED missing research line(s) from subjects"
+ return 0
+}
+
+research_doc() { # id -> crystallized doc path on stdout (empty = none)
+ local f
+ for f in "$KERNEL"/docs/research/*-"$1".md; do
+  [ -f "$f" ] && {
+   printf '%s\n' "$f"
+   return 0
+  }
+ done
+ for f in "$AUTOMATION_ROOT"/digest/RESEARCH-BEAT-*-"$1".md; do
+  [ -f "$f" ] && {
+   printf '%s\n' "$f"
+   return 0
+  }
+ done
+ return 1
+}
+
+pick_doc_row() { # rows on stdin -> first whose crystallized doc exists
+ local r
+ while IFS= read -r r; do
+  [ -n "$(research_doc "$(printf '%s' "$r" | cut -f1)")" ] &&
+   {
+    printf '%s\n' "$r"
+    return 0
+   }
+ done
+ return 1
 }
 
 pick_line() { # finish lines before starting them: contracting first, then
@@ -193,7 +226,7 @@ pick_line() { # finish lines before starting them: contracting first, then
   case "$interleave" in '' | *[!0-9]*) interleave=0 ;; esac
   if [ "$interleave" -gt 0 ] && [ $((run_n % interleave)) -eq 0 ]; then
    crow="$(awk -F'\t' '$2=="crystallized"{print $3"\t"$0}' "$LINES" 2>/dev/null |
-    sort | head -n 1 | cut -f2-)"
+    sort | cut -f2- | pick_doc_row)"
    [ -n "$crow" ] && {
     ROW="$crow"
     REVIEW=1
@@ -203,7 +236,7 @@ pick_line() { # finish lines before starting them: contracting first, then
   return 0
  fi
  row="$(awk -F'\t' '$2=="crystallized"{print $3"\t"$0}' "$LINES" 2>/dev/null |
-  sort | head -n 1 | cut -f2-)"
+  sort | cut -f2- | pick_doc_row)"
  [ -n "$row" ] && {
   ROW="$row"
   REVIEW=1
@@ -420,15 +453,7 @@ if [ "$REVIEW" = "1" ]; then
  # review transition: nothing left to advance -- give the oldest
  # crystallized line a terminal disposition (adopted | parked | killed)
  # instead of idling the beat.
- doc=""
- for f in "$KERNEL"/docs/research/*-"$id".md; do
-  [ -f "$f" ] && doc="$f"
- done
- if [ -z "$doc" ]; then
-  for f in "$AUTOMATION_ROOT"/digest/RESEARCH-BEAT-*-"$id".md; do
-   [ -f "$f" ] && doc="$f"
-  done
- fi
+ doc="$(research_doc "$id")"
  if [ -z "$doc" ]; then
   file_report alert "research review has no crystallized doc for $id" \
    "research-beat:review-no-doc" 86400

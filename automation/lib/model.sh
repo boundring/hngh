@@ -395,6 +395,12 @@ lobehub_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
   printf '%s\n' "$content"
 }
 
+_model_emit() { # source model -- one kind=model row per successful call
+  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
+    --source "$1" --model "$2" --subject "${0##*/}" \
+    >/dev/null 2>&1 || true
+}
+
 # kimi quota leg: call, tag MODEL_USED, persist tmp-modelused.txt, emit one
 # telemetry row. Shared by the unpinned chain and MODEL_PIN=kimi/deck.
 _kimi_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
@@ -403,13 +409,13 @@ _kimi_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
   km="${KIMI_MODEL:-$(get_param kimi-model '')}"
   MODEL_USED="kimi:$km"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
-  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
-    --source kimi --model "$km" --subject "${0##*/}" \
-    >/dev/null 2>&1 || true
+  _model_emit kimi "$km"
   return 0
 }
 
-# deck leg (second-server overflow), same contract as _kimi_leg.
+# deck leg (second-server overflow), same contract as _kimi_leg. No
+# telemetry emit: the saturation instrument measures the desktop
+# unsloth, and the deck is overflow-only, so deck rows would skew it.
 _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
   deck_chat "$1" "$2" || return 1
   MODEL_USED="deck:${DECK_MODEL:-deck}"
@@ -423,9 +429,7 @@ _lobehub_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
   lobehub_chat "$1" "$2" || return 1
   MODEL_USED="lobehub:${LOBEHUB_AGENT_ID:-$(get_param lobehub-agent-id '')}"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
-  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
-    --source lobehub --model "$MODEL_USED" --subject "${0##*/}" \
-    >/dev/null 2>&1 || true
+  _model_emit lobehub "$MODEL_USED"
   return 0
 }
 
@@ -454,6 +458,7 @@ model_call() {
   if unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
     MODEL_USED="unsloth:$MODEL"
     printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+    _model_emit unsloth "$MODEL"
     return 0
   fi
   local m
@@ -464,6 +469,7 @@ model_call() {
     if unsloth_chat "$prompt" "$max_tokens" "$m"; then
       MODEL_USED="unsloth:$m"
       printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+      _model_emit unsloth "$m"
       return 0
     fi
   done
@@ -471,14 +477,13 @@ model_call() {
     [ "$pin_lobehub" = 0 ] && remote_chat "$prompt" "$max_tokens"; then
     MODEL_USED="openrouter:$REMOTE_MODEL"
     printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
-    python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
-      --source remote --model "$REMOTE_MODEL" --subject "${0##*/}" \
-      >/dev/null 2>&1 || true
+    _model_emit remote "$REMOTE_MODEL"
     return 0
   fi
   if ollama_chat "$prompt" "$max_tokens"; then
     MODEL_USED="ollama:$OLLAMA_MODEL"
     printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+    _model_emit ollama "$OLLAMA_MODEL"
     return 0
   fi
   if [ "$pin_local" = 0 ] && [ "$pin_deck" = 0 ] &&
