@@ -29,7 +29,8 @@ PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 """
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
-       "params.sh", "context-pack.sh", "launch-session.sh")
+       "params.sh", "context-pack.sh", "launch-session.sh",
+       "model.sh", "failfirst.sh")
 
 OMP_STUB = ('#!/usr/bin/env bash\n'
             'printf "%s\\n" "$*" >> "$MARKER"\n'
@@ -100,7 +101,8 @@ class BctxLaunch(unittest.TestCase):
         full = dict(os.environ,
                     HNGH_HOME=str(self.kernel),
                     OVERNIGHT_LOCK=str(self.td / "cycle.lock"),
-                    OVERNIGHT_TIMEOUT="5")
+                    OVERNIGHT_TIMEOUT="5",
+                    FAILFIRST_STATE_DIR=str(self.td / "ff"))
         full.update(env)
         return subprocess.run(
             ["bash", str(self.auto / "scripts" / "overnight-cycle.sh")],
@@ -158,9 +160,10 @@ class BctxLaunch(unittest.TestCase):
                        'printf "%s\\n" "$*" >> "$MARKER"\n'
                        "exit 124\n")
         self.run_cycle(env)
-        state = self.state.read_text()
-        self.assertIn("dead rc=124", state)
-        self.assertNotIn("cancelled rc=0", state)
+        # the disposition lands in the per-session handoff ledger row
+        handoff = (self.auto / "agent-handoffs.md").read_text()
+        self.assertIn("rc=124 dead", handoff)
+        self.assertNotIn("rc=0 cancelled", handoff)
 
 
 if __name__ == "__main__":

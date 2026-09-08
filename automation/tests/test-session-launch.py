@@ -28,7 +28,8 @@ PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 """
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
-       "params.sh", "context-pack.sh", "launch-session.sh")
+       "params.sh", "context-pack.sh", "launch-session.sh",
+       "model.sh", "failfirst.sh")
 
 
 class SessionLaunch(unittest.TestCase):
@@ -87,6 +88,7 @@ class SessionLaunch(unittest.TestCase):
                    HNGH_HOME=str(self.kernel),
                    OVERNIGHT_LOCK=str(self.td / "cycle.lock"),
                    OVERNIGHT_TIMEOUT="5",
+                   FAILFIRST_STATE_DIR=str(self.td / "ff"),
                    MARKER=str(self.marker),
                    OMP_BRIDGE_BIN=str(self.bridge),
                    OMP_BIN_CMD=str(self.omp))
@@ -157,6 +159,88 @@ class SessionLaunch(unittest.TestCase):
         self.plan()
         self.run_cycle()
         self.assertEqual(self.launches(), 0)
+
+    # --- fail-first development tier: concurrency tunes within the cap ---
+
+    def ff_seed(self, speed=1, age=0):
+        """Pre-seed the development failfirst state (key=value format)."""
+        d = self.td / "ff"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "failfirst-development").write_text(
+            "speed=%d\noks=0\nlast=none\nceiling=0\nlastrun=%d\n"
+            "n_ok=0\nn_deg=0\nn_fail=0\n" % (speed, time.time() - age))
+
+    def ff_state(self, key):
+        f = self.td / "ff" / "failfirst-development"
+        for line in f.read_text().splitlines():
+            if line.startswith(key + "="):
+                return line.split("=", 1)[1]
+        return ""
+
+    def three_plans(self):
+        for i in (1, 2, 3):
+            (self.kernel / "docs" / "project" / "plans" /
+             ("seed%d.plan.md" % i)).write_text(PLAN.replace("seed plan",
+                                                             "seed plan %d" % i))
+
+    def test_full_speed_runs_three_concurrent(self):
+        """fresh state -> GO at full: all 3 accepted plans launch in one
+        beat (concurrency from the Inventory row, cap permitting)."""
+        self.params("8")
+        self.three_plans()
+        self.run_cycle()
+        self.assertEqual(self.launches(), 3)
+
+    def test_degraded_paces_the_beat(self):
+        """standard speed + a beat just recorded -> THROTTLE: zero
+        launches, the plans stay queued for the next beat."""
+        self.params("8")
+        self.three_plans()
+        self.ff_seed(speed=2, age=0)
+        self.run_cycle()
+        self.assertEqual(self.launches(), 0)
+
+    def test_standard_concurrency_two_after_release(self):
+        """standard speed releasing after its 2-tick pace -> 2 concurrent
+        sessions (of 3 queued plans)."""
+        self.params("8")
+        self.three_plans()
+        self.ff_seed(speed=2, age=7201)
+        self.run_cycle()
+        self.assertEqual(self.launches(), 2)
+
+    def test_day_max_caps_concurrency(self):
+        """the sessions-day-max hard ceiling sits ABOVE the tuning: full
+        speed wants 3 but only 1 slot is left under the cap."""
+        self.params("8")
+        self.budget(7)
+        self.three_plans()
+        self.run_cycle()
+        self.assertEqual(self.launches(), 1)
+
+    def test_dead_session_demotes_speed(self):
+        """a dead session (rc!=0) records degraded -> speed demoted to
+        standard in the development state file."""
+        self.params("8")
+        self.plan()
+        failing_omp = self.td / "omp-fail.sh"
+        failing_omp.write_text('#!/usr/bin/env bash\nexit 1\n')
+        failing_omp.chmod(0o755)
+        self.run_cycle(OMP_BIN_CMD=str(failing_omp))
+        self.assertEqual(self.ff_state("speed"), "2")
+        self.assertEqual(self.ff_state("n_deg"), "1")
+
+    def test_bridge_refusal_records_failed(self):
+        """a launch-plane crash (bridge refusal, rc=75) records failed ->
+        drop to cautious (speed 3)."""
+        self.params("8")
+        self.plan()
+        refused_bridge = self.td / "bridge-refused.sh"
+        refused_bridge.write_text('#!/usr/bin/env bash\necho refused >&2\nexit 1\n')
+        refused_bridge.chmod(0o755)
+        self.run_cycle(OMP_BRIDGE_BIN=str(refused_bridge))
+        self.assertEqual(self.ff_state("speed"), "3")
+        self.assertEqual(self.ff_state("n_fail"), "1")
 
 
 if __name__ == "__main__":
