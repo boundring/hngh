@@ -7,3 +7,18 @@
 __pycache__/
 .hermes/
 docs/project/report-bodies/
+# machine data — quarantined out of git (P1 prep for P2 subtree import,
+# repo-merge-consideration); mirrors hngh-automation .gitignore
+automation/STATE.md
+automation/agent-handoffs.md
+automation/dashboard/
+automation/digest/
+automation/logs/
+automation/archive/
+automation/snapshots/
+automation/stats/
+automation/prompts/
+automation/deck-facts/
+automation/bridge/
+automation/node_modules/
+automation/tmp-*
