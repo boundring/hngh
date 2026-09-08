@@ -8,3 +8,7 @@ at 2026-09-08T13:00:34Z. Alert text: [oversight] slow-unit: dropin:16-remote-pus
 
 - [ ] Delve: open research subject fail-20260908-slow-unit-dropin-16-remote-push.sh for slow-unit:dropin:16-remote-push.sh; record disposition; then fix or park
       Verification: research subject fail-20260908-slow-unit-dropin-16-remote-push.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-08T14:00:22Z re-occurred (dedup window expired)
