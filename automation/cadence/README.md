@@ -24,15 +24,18 @@ inside each script skips runs until the Inventory interval elapses.
   `16-remote-push` (push-cadence-hours stamp rate-limit, moved from the
   day tier so a due push can no longer wait up to a full day for the
   next 05:00 tick),
-  `33-research-beat` (research-beat-hours, default 1, was 2, moved from
-  the day tier, was daily; 1h-stamped with the idle-governor load guard,
-  acceleration wave 2: loadavg1 >= research-load-ceiling * nproc no
-  longer defers when the deck leg is armed -- the run is pinned to the
-  deck (deck-pin-on-busy); only an unarmed deck defers without
-  consuming the stamp. Every research-review-interleave-th run
-  (default 4, 0 = never) reviews the oldest crystallized line instead
-  of advancing a planned line; an empty pool below
-  research-demand-floor (default 2) triggers the demand synthesizer --
+  `33-research-beat` (fail-first gated, 2026-09-07: fires every hour
+  tick and lib/failfirst.sh decides GO vs THROTTLE -- full speed until
+  the model chain actually degrades, paced standard/cautious after a
+  degradation, promoted back after failfirst-promote-threshold
+  consecutive ok outcomes; no pre-set beat interval. Load is a ROUTING
+  signal, not a throttle: loadavg1 >= research-load-ceiling * nproc
+  shifts the pin to the deck when armed AND responsive (deck_up probe)
+  or to a quota leg by run parity -- the beat never defers. Every
+  RESEARCH_REVIEW_INTERLEAVE-th run (default 3, 0 = never) reviews the
+  oldest crystallized line instead of advancing a planned line; an
+  empty pool below RESEARCH_DEMAND_FLOOR (default 3) triggers the
+  demand synthesizer --
   one local-model call per UTC day reading dispositions, lessons,
   backlog sections, and alert identities, appending only subjects that
   name a specific source item; both the research prompt and the
@@ -40,12 +43,14 @@ inside each script skips runs until the Inventory interval elapses.
   llm-wiki vault indexes (read-only pointers, 6 lines / 600 bytes,
   silent when the vaults are absent -- wiki surface, hngh
   docs/design/wiki-surface.md))
-- 30m: `50-research-overflow` (acceleration wave 2: same beat body as
-  `33-research-beat`, pinned to a quota leg -- odd runs kimi, even runs
-  lobehub, never the local server; gated on research-overflow-hours
-  (default 2) since its own stamp AND >= 30 minutes since the hour
-  beat's stamp, so research can transition up to every 30 minutes at
-  peak with zero local contention)
+- 30m: `50-research-overflow` (promoted to a full research beat at a
+  15-minute cadence, 2026-09-07: the drop-in runs the `33-research-beat`
+  body immediately and again 15 minutes later, so research transitions
+  land at :00 :15 :30 :45; always pinned non-local -- deck first when
+  the deck_up probe answers, else kimi/lobehub alternating on the shared
+  run counter. Own failfirst tuning state (research-overflow, 15-minute
+  tick); a shared flock in the beat body replaces the old 30-minute
+  stagger guard; design: hngh docs/design/fail-first.md)
 - day: `17-torch-audit` (moved from week), `18-mimic-drill` (moved from
   week), `25-wiki-health` (moved from week; model-free two-vault probe:
   pages-on-disk vs registry count + meta staleness per llm-wiki vault,
@@ -68,7 +73,10 @@ under the house registers, findings to the report queue) ·
 hour utilization of the desktop unsloth from telemetry kind=model over
 24h -- wall-s sums when present, else call counts times the measured
 research-call mean -- one identity-deduped report row per day with a
-headroom verdict; deck leg is overflow-only and not counted) ·
+headroom verdict plus the failfirst tuning state summary (current
+speed per operation, outcome counts, observed ceiling: the calibration
+record of what actually broke, not a guessed limit); deck leg is
+overflow-only and not counted) ·
 `22-ttsr-fit` (ttsr alignment record screen, model-free: VERIFY leg
 probes the operator's omp stream rules + ttsr.enabled for drift, DETECT
 leg counts ttsr injection markers and runs the mirrored rule regexes

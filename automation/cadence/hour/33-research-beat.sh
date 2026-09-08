@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 33-research-beat -- research machine, mounted hourly and self-gated to
-# one beat per research-beat-hours (Inventory; env RESEARCH_BEAT_HOURS
-# overrides): advance the oldest non-crystallized research line one
+# 33-research-beat -- research machine, mounted hourly and fail-first
+# gated (lib/failfirst.sh; no pre-set beat interval): advance the oldest
+# non-crystallized research line one
 # lifecycle transition per beat
 # (planned → expanding → contracting → crystallized) using the model
 # chain. Each beat writes digest/RESEARCH-BEAT-<date>-<id>.md; the
@@ -11,14 +11,17 @@
 # re-seeded from research-subjects.txt. When every line is crystallized
 # or reviewed, the beat reviews the oldest crystallized line into a
 # terminal disposition (adopted|parked|killed, research-dispositions.tsv,
-# state=reviewed). Acceleration wave 2 (2026-09-07): a busy machine does
-# not defer research when the deck leg is armed -- the run is pinned to
-# the deck instead (deck-pin-on-busy); every research-review-interleave-th
-# run reviews the oldest crystallized line even while planned lines
-# remain; and an empty pool below research-demand-floor triggers the
-# daily demand synthesizer (one local-model call per UTC day) which
-# seeds sourced subjects. Fail-closed: model-chain failure files an
-# alert and exits 0 — never hangs the tick.
+# state=reviewed). Fail-first (2026-09-07): the beat fires every hour
+# tick and failfirst_gate decides GO vs THROTTLE -- full speed until the
+# model chain actually degrades, then paced (standard/cautious) until
+# consecutive ok outcomes promote it back. Load is a ROUTING signal, not
+# a throttle: busy local shifts the pin to the deck (when armed AND
+# responsive) or a quota leg -- the beat never defers. The review
+# interleave (RESEARCH_REVIEW_INTERLEAVE, default 3) and the demand
+# synthesizer (empty pool below RESEARCH_DEMAND_FLOOR, default 3) stay:
+# they are coverage and supply, not throttles. Fail-closed: model-chain
+# failure records a degraded outcome, files an alert and exits 0 —
+# never hangs the tick.
 #
 # usage: cadence/hour/33-research-beat.sh   (via cadence-tick.sh TIER=hour)
 set -u
@@ -26,32 +29,74 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
+. "$AUTOMATION_ROOT/lib/failfirst.sh"
 
-# self-gating stamp, same shape as 31-heartbeat: skip unless
-# >= research-beat-hours since the last beat. The beat is fail-closed
-# (every path exits 0), so a run that passes the gate stamps itself on
-# exit; the stamp lives in /tmp on purpose: worst case after a reboot
-# is one extra beat.
+# one research transition at a time: the hour beat and the 15-minute
+# overflow beat share this body and research-lines.tsv. A beat arriving
+# while another holds the lock skips -- the next 15-minute overflow tick
+# picks the work up. (Replaces the old 30-minute stagger guard: at a
+# 15-minute overflow cadence the hour beat is always "recent", so the
+# lock is the race prevention.)
+exec 9>"${RESEARCH_LOCK_FILE:-/tmp/.hngh-research-beat-lock}"
+flock -w "${RESEARCH_LOCK_WAIT:-300}" 9 || exit 0
+
+# fail-first gate: the beat fires every hour tick; the gate decides GO
+# vs THROTTLE. Full speed (fresh state or after promotions) always runs;
+# after a degradation the speed ladder paces the beat (standard = every
+# 2nd tick, cautious = every 4th, FAILFIRST_TICK_S=3600 here) until
+# consecutive ok outcomes promote it back. No pre-set beat interval: the
+# old RESEARCH_BEAT_HOURS stamp gate is gone -- degradation is detected
+# empirically by the model chain's fail-closed-skip, never guessed.
+# The stamp survives only as a last-beat record (the overflow beat
+# redirects it so the hour record stays the hour's); the EXIT trap
+# writes it -- a run that errors still leaves its timestamp.
 RESEARCH_STAMP="${RESEARCH_STAMP_FILE:-/tmp/.hngh-research-beat-last}" # seam for hermetic tests
 now="$(date +%s)"
 OVERFLOW_PIN="${OVERFLOW_PIN:-}"
+FF_OP="${FAILFIRST_OP:-research}"
+FF_SF="$(failfirst_state_file "$FF_OP")"
+failfirst_load "$FF_OP" "$FF_SF"
 if [ -z "$OVERFLOW_PIN" ]; then
- last="$(cat "$RESEARCH_STAMP" 2>/dev/null || printf '0')"
- last="${last//[!0-9]/}"
- last="${last:-0}"
- beat_hours="${RESEARCH_BEAT_HOURS:-$(get_param research-beat-hours 2)}"
- [ $((now - last)) -ge $((beat_hours * 3600)) ] || exit 0
+ verdict="$(failfirst_gate "$FF_OP" "$FF_SF")"
+ if [ "$verdict" != "GO" ]; then
+  breadcrumb "$JOB_NAME" "research-throttled" \
+   "failfirst: $verdict - $FF_OP paced below its observed ceiling"
+  exit 0
+ fi
 fi
 
-# idle governor: research runs on idle machines only. loadavg1 at or
-# above research-load-ceiling * nproc (Inventory; env RESEARCH_LOAD_CEILING
-# overrides) no longer defers outright: the run is pinned to the deck
-# (deck-pin-on-busy, acceleration wave 2) -- the deck is idle hardware
-# the operator directed into the chain. Only an UNARMED deck leg (same
-# gate as deck_chat: DECK_URL env or the deck-model-endpoint row,
-# empty = skipped) defers exactly as before, without consuming the
-# stamp - the next hour retries. Placed after the stamp gate and before
-# the EXIT trap arms. Test seams: RESEARCH_LOADAVG_FILE (loadavg
+# outcome recording (fail-first tuning input): ok = the model_call
+# returned content, degraded = archive-only (chain exhausted), failed =
+# a real script error (the EXIT trap). One record per run; the overflow
+# caller records to its own operation via FAILFIRST_OP.
+FF_RECORDED=0
+ff_record() { # result
+ [ "$FF_RECORDED" = "0" ] || return 0
+ FF_RECORDED=1
+ record_outcome "$FF_OP" "$FF_SPEED" "$1" "$FF_SF"
+}
+trap 'rc=$?; printf "%s\n" "$now" >"$RESEARCH_STAMP" 2>/dev/null
+ [ "$rc" -eq 0 ] || ff_record failed' EXIT
+
+# run counter (operator quota directive, 2026-09-07): one increment per
+# run that passes the failfirst gate; drives the quota rotations below.
+RESEARCH_COUNT_FILE="${RESEARCH_BEAT_COUNT_FILE:-/tmp/.hngh-research-beat-count}"
+run_n="$(cat "$RESEARCH_COUNT_FILE" 2>/dev/null)"
+run_n="${run_n//[!0-9]/}"
+run_n="${run_n:-0}"
+run_n=$((run_n + 1))
+printf '%s\n' "$run_n" >"$RESEARCH_COUNT_FILE" 2>/dev/null
+
+# routing (fail-first: load is a CAPACITY signal, not a throttle --
+# the machine never stops researching because the desktop is busy; it
+# routes around it). loadavg1 at or above research-load-ceiling * nproc
+# (Inventory; env RESEARCH_LOAD_CEILING overrides) does not defer
+# anything: the pin SHIFTS. Deck first when armed AND responsive (deck_up
+# probe in lib/failfirst.sh -- the deck is idle hardware the operator
+# directed into the chain), else a quota leg by run parity (odd kimi,
+# even lobehub -- same convention as the overflow beat). An unarmed
+# quota pin falls through to the local chain inside model_call, so
+# routing never blocks. Test seams: RESEARCH_LOADAVG_FILE (loadavg
 # source), RESEARCH_BEAT_GATE_ONLY=1 (exit 0 right after the gates).
 load_busy() { # -> exit 0 when the machine is busy; prints "<loadavg1> <limit>"
  local ceiling="${RESEARCH_LOAD_CEILING:-$(get_param research-load-ceiling 0.7)}"
@@ -64,30 +109,20 @@ load_busy() { # -> exit 0 when the machine is busy; prints "<loadavg1> <limit>"
  fi
  return 1
 }
-if [ -z "$OVERFLOW_PIN" ]; then
- if busy="$(load_busy)"; then
-  if [ -n "${DECK_URL:-$(get_param deck-model-endpoint '')}" ]; then
-   MODEL_PIN=deck
-   breadcrumb "$JOB_NAME" "research-deck-pin" \
-    "local busy - research routed to deck (load ${busy%% *} >= ${busy##* })"
-  else
-   breadcrumb "$JOB_NAME" "research-deferred" \
-    "research deferred: load ${busy%% *} >= ceiling ${busy##* } (machine busy)"
-   exit 0
-  fi
+ROUTE_PIN=""
+if [ -z "$OVERFLOW_PIN" ] && busy="$(load_busy)"; then
+ if deck_up; then
+  ROUTE_PIN=deck
+  breadcrumb "$JOB_NAME" "research-route-deck" \
+   "local busy - research routed to deck (load ${busy%% *} >= ceiling ${busy##* }; deck responsive)"
+ else
+  ROUTE_PIN=kimi
+  [ $(((run_n + 1) % 2)) -eq 0 ] && ROUTE_PIN=lobehub
+  breadcrumb "$JOB_NAME" "research-route-quota" \
+   "local busy - research routed to $ROUTE_PIN (load ${busy%% *} >= ceiling ${busy##* }; deck unavailable)"
  fi
 fi
-trap 'printf "%s\n" "$now" >"$RESEARCH_STAMP" 2>/dev/null' EXIT
 [ "${RESEARCH_BEAT_GATE_ONLY:-0}" = "1" ] && exit 0
-
-# run counter (operator quota directive, 2026-09-07): one increment per run
-# that passes the stamp + load gates; drives the kimi rotation below.
-RESEARCH_COUNT_FILE="${RESEARCH_BEAT_COUNT_FILE:-/tmp/.hngh-research-beat-count}"
-run_n="$(cat "$RESEARCH_COUNT_FILE" 2>/dev/null)"
-run_n="${run_n//[!0-9]/}"
-run_n="${run_n:-0}"
-run_n=$((run_n + 1))
-printf '%s\n' "$run_n" >"$RESEARCH_COUNT_FILE" 2>/dev/null
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
@@ -152,7 +187,9 @@ pick_line() { # finish lines before starting them: contracting first, then
   # a planned one, so the review backlog drains while the pool is alive.
   # Shares the run counter with the quota rotation: a %N run reviews and
   # its pin still follows the normal rotation.
-  interleave="${RESEARCH_REVIEW_INTERLEAVE:-$(get_param research-review-interleave 4)}"
+  # interleave default 3 (Inventory row removed 2026-09-07 with the
+  # pre-set pacing family; the coverage mechanism stays).
+  interleave="${RESEARCH_REVIEW_INTERLEAVE:-3}"
   case "$interleave" in '' | *[!0-9]*) interleave=0 ;; esac
   if [ "$interleave" -gt 0 ] && [ $((run_n % interleave)) -eq 0 ]; then
    crow="$(awk -F'\t' '$2=="crystallized"{print $3"\t"$0}' "$LINES" 2>/dev/null |
@@ -190,7 +227,9 @@ demand_synthesize() { # -> replacement pick row after one bounded synthesis
  synth_stamp="${RESEARCH_SYNTH_STAMP_FILE:-/tmp/.hngh-research-synth-last}"
  [ "$(cat "$synth_stamp" 2>/dev/null || true)" = "$day" ] && return 0
  planned="$(awk -F'\t' '$2=="planned"' "$LINES" 2>/dev/null | wc -l | tr -d ' ')"
- floor="${RESEARCH_DEMAND_FLOOR:-$(get_param research-demand-floor 2)}"
+ # floor default 3 (Inventory row removed 2026-09-07 with the pre-set
+ # pacing family; the supply mechanism stays).
+ floor="${RESEARCH_DEMAND_FLOOR:-3}"
  case "$floor" in '' | *[!0-9]*) floor=0 ;; esac
  [ "$planned" -lt "$floor" ] || return 0
  disp="$(tail -n 20 "$DISPOSITIONS" 2>/dev/null || true)"
@@ -354,13 +393,15 @@ line="$(printf '%s' "$row" | cut -f4)"
 # research volume; kimi stays the judgment-work lane. The review transition
 # (terminal verdict on a crystallized line) is high-value judgment: ALWAYS
 # pin kimi (an unarmed leg falls through immediately, same semantics).
-# Precedence (acceleration wave 2): an overflow caller's OVERFLOW_PIN
-# (quota legs only -- the overflow beat never touches the local server)
-# or the deck-pin-on-busy guard wins; the rotation below only picks a
-# pin for an otherwise-unpinned (local) run.
+# Precedence (fail-first routing): an overflow caller's OVERFLOW_PIN
+# (quota/deck legs only -- the overflow beat never touches the local
+# server) wins, then the busy ROUTE_PIN (capacity signal), then the
+# rotation below for an otherwise-unpinned (local) run.
 MODEL_PIN="${MODEL_PIN:-local}"
 if [ -n "$OVERFLOW_PIN" ]; then
  MODEL_PIN="$OVERFLOW_PIN"
+elif [ -n "$ROUTE_PIN" ]; then
+ MODEL_PIN="$ROUTE_PIN"
 elif [ "$MODEL_PIN" = "local" ]; then
  kimi_share="${KIMI_RESEARCH_SHARE:-$(get_param kimi-research-share 3)}"
  case "$kimi_share" in '' | *[!0-9]*) kimi_share=0 ;; esac
@@ -414,10 +455,12 @@ $(marked_cut 8000 "$doc")"
  wall=$(awk "BEGIN{printf \"%.1f\", $t1 - $t0}")
  used="$(last_model_used)"
  if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
+  ff_record degraded
   file_report alert "research review unavailable: model chain down ($used)" \
    "research-beat:unavailable" 86400
   exit 0
  fi
+ ff_record ok
  verdict_line="$(printf '%s\n' "$response" |
   grep -m1 -E '^[[:space:]]*VERDICT:[[:space:]]*(adopted|parked|killed)([[:space:]]|$)' || true)"
  action=""
@@ -480,10 +523,12 @@ wall=$(awk "BEGIN{printf \"%.1f\", $t1 - $t0}")
 used="$(last_model_used)"
 
 if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
+ ff_record degraded
  file_report alert "research beat unavailable: local model chain down ($used)" \
   "research-beat:unavailable" 86400
  exit 0
 fi
+ff_record ok
 
 out_rel="digest/RESEARCH-BEAT-$day-$id.md"
 mkdir -p "$AUTOMATION_ROOT/digest"
