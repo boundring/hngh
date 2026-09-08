@@ -1,2 +1,3 @@
 line	action	verdict	reviewer	evidence	date
 gantt-legibility	killed	killed -- duplicate of surviving line gantt-legibility-patterns; keep record, consolidate findings there	model:kimi:k3-256k	/home/bricker/Projects/etc/hngh/docs/research/2026-08-28-gantt-legibility.md	2026-09-07
+log-presentation-patterns	adopted	adopted -- Crystallized slice-first, contract-driven log presentation guidance is actionable and should shape logging and UI work now, with implementation validation as the next step.	model:unsloth:unsloth/Qwen3.8-27B-GGUF	/home/bricker/Projects/etc/hngh/docs/research/2026-08-28-log-presentation-patterns.md	2026-09-08
