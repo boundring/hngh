@@ -6,6 +6,29 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-09-07
+
+#### Added
+
+- **Automation tier import** (`b881186` subtree merge;
+  docs/records/2026-09-07-automation-subtree-import.md): phase 2 of
+  the repo-merge plan — hngh-automation imported as `automation/` via
+  `git subtree add --squash` on top of the P1 machine-data quarantine
+  (222 tracked files, zero machine data; pack 4.04 MiB after gc).
+  Path references, the 37 systemd units, and the old remote are
+  untouched (P3–P5 queued).
+
+#### Fixed
+
+- **Loop-history guard vs parentless commits** (`2aec814`
+  `hngh: candidate 7a3dfa8…`): the guard test crashed with exit 128
+  on the parentless git-subtree squash root and, past the crash, would
+  flag its unprefixed import paths as code-surface touches. The diff
+  helper now resolves parentless commits against the empty tree, and
+  squash roots are skipped by rule (content is judged at the merge
+  commit where paths carry the `automation/` prefix). Guard policy
+  unchanged; 81 commits checked, 0 violations.
+
 ### 2026-08-30
 
 #### Added
