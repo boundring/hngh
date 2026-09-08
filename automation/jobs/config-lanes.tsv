@@ -1,0 +1,10 @@
+# config-lanes.tsv — lane manifest for jobs/config-backup.sh (data only, operator-editable).
+# Columns (TAB-separated): lane | repo (path relative to $HOME) | push remote (empty = none, like gbd push_skipped) | sources (space-separated, each relative to $HOME).
+# Paths are expanded to absolute at read time by config-backup.sh. Mirrors gbd ~/.config/git-back-dots/config.toml.
+# NOTE: gbd's agent-configs HEAD also carries files tracked earlier but since dropped from config.toml (opencode.json,
+# oh-my-openagent.json, day-ralph.*, ~/.local/bin scripts); gbd syncs only tracked_paths but never deletes old worktree
+# copies, and its `git add -A` keeps committing them. The dry-run parity diff reports those as head-only leftovers; this
+# lane declares gbd's CURRENT tracked set only.
+agent-configs	.local/state/git-back-dots/agent-configs	git@github.com:boundring/agent-configs.git	.config/opencode/opencode.jsonc .config/opencode/tui.json .config/opencode/package.json .hermes/config.yaml .hermes/SOUL.md .config/llmtrim/config.toml .config/rtk/config.toml .config/rtk/filters.toml .tmux.conf
+hermes-mcp-proxy	.local/state/git-back-dots/workarounds/hermes-mcp-proxy		.hermes/hermes-agent/tools/mcp_tool.py
+hermes-nous-off	.local/state/git-back-dots/workarounds/hermes-nous-off		.hermes/hermes-agent/agent/system_prompt.py

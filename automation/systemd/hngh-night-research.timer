@@ -1,0 +1,9 @@
+[Unit]
+Description=hngh-automation night research brief (23:40, local models only)
+
+[Timer]
+OnCalendar=*-*-* 23:40:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

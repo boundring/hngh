@@ -1,0 +1,9 @@
+[Unit]
+Description=hngh overnight work cycle: bounded delegated beats, round the clock
+
+[Timer]
+OnCalendar=*-*-* 00/2:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
