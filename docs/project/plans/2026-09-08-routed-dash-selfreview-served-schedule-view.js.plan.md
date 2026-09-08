@@ -14,3 +14,4 @@ at 2026-09-08T04:00:34Z. Alert text: [dash-selfreview] served:schedule-view.js: 
 - 2026-09-08T05:00:34Z re-occurred (dedup window expired)
 - 2026-09-08T06:00:34Z re-occurred (dedup window expired)
 - 2026-09-08T07:00:34Z re-occurred (dedup window expired)
+- 2026-09-08T08:00:34Z re-occurred (dedup window expired)

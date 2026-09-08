@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-08T08:01:31Z -->
 # 2026-09-08 — operator procedural unblocks + capabilities completion
 
 Authorization: operator-directed 2026-09-03, recorded faithfully in
