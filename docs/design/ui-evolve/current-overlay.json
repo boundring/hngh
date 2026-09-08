@@ -1,13 +1,13 @@
 {
   "preset": "hngh",
-  "gen": 1,
+  "gen": 2,
   "grade": "10/10",
-  "seed": 2981394,
+  "seed": 2981395,
   "fields": {
     "primary": "#5af78e",
-    "secondary": "#3d9c78",
+    "secondary": "#3da478",
     "accent": "#5af796",
-    "foreground": "#c8d8d8",
+    "foreground": "#c0d0d8",
     "background": "#0b0e11",
     "surface": "#11151a",
     "panel": "#14181e",
