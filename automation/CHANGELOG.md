@@ -2,6 +2,24 @@
 
 ## 2026-09-08
 
+- feat: fail-first development — the TCP self-tuning engine extends from
+  research to the delegated-session cycle. Speeds now map to CONCURRENCY
+  (full=3 / standard=2 / cautious=1 concurrent sessions per beat,
+  Inventory rows failfirst-dev-concurrent-*) instead of spend: the
+  sessions-day-max ceiling stays a hard constraint above the tuning.
+  overnight-cycle.sh gates each beat (THROTTLE skips the launch, plans
+  stay queued), runs the accepted-plans batch concurrently (steps within
+  one plan stay sequential), and records ok/degraded/failed outcomes per
+  session from the existing disposition spine. Grow side of the demand
+  synthesizer: when the accepted-plans queue runs dry, adopted research
+  (recent verdict=adopted dispositions) is synthesized into a proposed
+  development plan on the pinned local chain, bounded to
+  failfirst-dev-synth-daily/day, admitted through the one accept-plans
+  path. Also fixes a latent break: overnight-cycle used model_call
+  without sourcing lib/model.sh, so machine plan drafts always failed
+  fail-closed. Verify: make test green (rc=0) incl. new
+  test-dev-plan-synth.sh and 6 new session-launch concurrency cases.
+
 - fix: automation gate red (rc=2) since the fail-first subtree sync —
   e2b03ce took 6 of archived e9ff90f's 10 files and skipped both
   research test files plus the Makefile line registering

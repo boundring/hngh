@@ -7,6 +7,12 @@
 #   full (1)     run every tick                     <- fresh state starts here
 #   standard (2) run every 2nd tick after degradation
 #   cautious (3) run every 4th tick after a second degradation or a script error
+#   For development (delegated sessions cost real money) the same three
+#   speeds map to CONCURRENCY instead of pace alone: full = up to 3
+#   concurrent sessions per beat, standard = 2, cautious = 1 (Inventory
+#   rows failfirst-dev-concurrent-*). The spend ceiling itself
+#   (sessions-day-max) is a hard constraint above the tuning and never
+#   moves; the caller caps the batch at (ceiling - sessions used today).
 #   ok outcomes at standard/cautious promote one level after
 #   failfirst-promote-threshold (Inventory, default 3) consecutive oks;
 #   degraded (archive-only model chain) demotes one level immediately and
@@ -65,6 +71,22 @@ failfirst_save() { # op statefile
  printf 'speed=%s\noks=%s\nlast=%s\nceiling=%s\nlastrun=%s\nn_ok=%s\nn_deg=%s\nn_fail=%s\n' \
   "$FF_SPEED" "$FF_OKS" "$FF_LAST" "$FF_CEILING" "$FF_LAST_RUN" \
   "$FF_NOK" "$FF_NDEG" "$FF_NFAIL" >"$2" 2>/dev/null
+}
+
+failfirst_concurrency() { # op [statefile] -> max concurrent sessions at the current speed
+ failfirst_load "$1" "${2:-$(failfirst_state_file "$1")}"
+ local full=3 std=2 cau=1
+ if declare -F get_param >/dev/null 2>&1; then
+  full="${FAILFIRST_DEV_CONCURRENT_FULL:-$(get_param failfirst-dev-concurrent-full 3)}"
+  std="${FAILFIRST_DEV_CONCURRENT_STANDARD:-$(get_param failfirst-dev-concurrent-standard 2)}"
+  cau="${FAILFIRST_DEV_CONCURRENT_CAUTIOUS:-$(get_param failfirst-dev-concurrent-cautious 1)}"
+ fi
+ case "$full$std$cau" in '' | *[!0-9]*) full=3 std=2 cau=1 ;; esac
+ case "$FF_SPEED" in
+ 2) printf '%s\n' "$std" ;;
+ 3) printf '%s\n' "$cau" ;;
+ *) printf '%s\n' "$full" ;;
+ esac
 }
 
 failfirst_gate() { # op [statefile] -> GO | THROTTLE:<reason> on stdout

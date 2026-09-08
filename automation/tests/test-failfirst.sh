@@ -33,6 +33,17 @@ ff() { # run one failfirst command in a clean shell with the sandbox state
  "
 }
 
+ff_env() { # run one failfirst command with extra env (AUTOMATION_ROOT etc)
+ local expr="$1"
+ shift
+ env "$@" FAILFIRST_STATE_DIR="$sb/ff" bash -c "
+  . '$root/lib/params.sh'
+  . '$root/lib/failfirst.sh'
+  breadcrumb() { :; } # failed-outcome alert fallback: silent in this test
+  $expr
+ "
+}
+
 state() { # op key -> value from the state file
  sed -n "s/^$2=//p" "$sb/ff/failfirst-$1"
 }
@@ -126,5 +137,63 @@ need test "$(state research-overflow n_ok)" = "2"
 need test "$(state research-overflow n_deg)" = "1"
 need test "$(state research-overflow n_fail)" = "0"
 ok "outcome counters accumulate"
+
+# --- c) development tier: speeds map to CONCURRENCY -----------------------
+# delegated sessions cost real money, so the same TCP state machine tunes
+# how many sessions run per beat, inside the hard sessions-day-max ceiling.
+
+# c1: fresh development state -> GO at full, 3 concurrent slots
+v="$(ff 'failfirst_gate development')"
+need test "$v" = "GO"
+v="$(ff 'failfirst_concurrency development')"
+need test "$v" = "3"
+ok "development fresh: GO at full, 3 concurrent slots"
+
+# c2: degraded -> demote to standard, 2 slots
+ff 'record_outcome development 1 degraded'
+need test "$(state development speed)" = "2"
+v="$(ff 'failfirst_concurrency development')"
+need test "$v" = "2"
+ok "development degraded: standard, 2 slots"
+
+# c3: 3 consecutive oks at standard -> promote to full, 3 slots
+ff 'record_outcome development 2 ok; record_outcome development 2 ok; record_outcome development 2 ok'
+need test "$(state development speed)" = "1"
+v="$(ff 'failfirst_concurrency development')"
+need test "$v" = "3"
+ok "development 3 oks at standard: full, 3 slots"
+
+# c4: failed (launch-plane crash) -> cautious, 1 slot + alert row
+rm -f "$sb/alerts"
+ff 'record_outcome development 2 failed'
+need test "$(state development speed)" = "3"
+need test "$(state development last)" = "failed"
+v="$(ff 'failfirst_concurrency development')"
+need test "$v" = "1"
+need grep -q '^alert|failfirst development: script error at speed 2 - dropped to cautious|failfirst-development:script-error$' \
+ "$sb/alerts"
+ok "development failed: cautious, 1 slot + alert"
+
+# c5: development state is isolated from research state
+ff 'record_outcome research 1 ok'
+need test "$(state development speed)" = "3"
+need test "$(state research speed)" = "1"
+ok "development and research state isolated"
+
+# c6: Inventory rows drive the mapping (sandbox Inventory)
+rm -f "$sb/ff/failfirst-development"
+mkdir -p "$sb/inv"
+printf '# Inventory\nfailfirst-dev-concurrent-full\t7\ttest\ttest row\nfailfirst-dev-concurrent-standard\t5\ttest\ttest row\nfailfirst-dev-concurrent-cautious\t2\ttest\ttest row\n' \
+ >"$sb/inv/cadence-params.tsv"
+v="$(ff_env 'failfirst_gate development; failfirst_concurrency development' \
+ AUTOMATION_ROOT="$sb/inv" | tail -n1)"
+need test "$v" = "7"
+v="$(ff_env 'record_outcome development 1 degraded; failfirst_concurrency development' \
+ AUTOMATION_ROOT="$sb/inv")"
+need test "$v" = "5"
+v="$(ff_env 'record_outcome development 2 failed; failfirst_concurrency development' \
+ AUTOMATION_ROOT="$sb/inv")"
+need test "$v" = "2"
+ok "Inventory rows failfirst-dev-concurrent-* drive the mapping"
 
 echo "failfirst engine contract: all cases passed"

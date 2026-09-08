@@ -77,6 +77,7 @@ test:
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
 	bash tests/test-failfirst.sh
+	bash tests/test-dev-plan-synth.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-ttsr-fit.sh
 	bash scripts/lint-identifiers.sh
