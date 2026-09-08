@@ -172,7 +172,7 @@ may manage, keeping the critical boundary intact.
 - lib/model.sh chain comment ("unsloth (401 auto-refresh + empty-
   content retry) -> ollama -> archive-only"), hngh-automation, read
   2026-09-04.
-- Bench history: `hngh-automation/stats/model-bench-2026-09-0{1,2,3}.jsonl`
+- Bench history: `automation/stats/model-bench-2026-09-0{1,2,3}.jsonl`
   (5-probe runs; per-model results as cited in §4 and in the
   2026-09-03 staging notes).
 - Not established: actual `service-ctl.sh` behavior (file absent);

@@ -36,7 +36,7 @@ Two vaults exist and they are not interchangeable:
 ## Hngh's three roles
 
 **CONSUME.** The research machine reads the vaults. The hour research
-beat (`hngh-automation/cadence/hour/33-research-beat.sh`) greps a
+beat (`automation/cadence/hour/33-research-beat.sh`) greps a
 bounded prior-art block out of both vaults' `meta/index.md` --
 deterministic word overlap with the line's id and question, capped at
 6 lines / 600 bytes -- and hands the same excerpt to the demand
@@ -58,7 +58,7 @@ own-file-only), making Hngh's lessons citable the way the Cistern
 lessons are.
 
 **MANAGE.** The week probe
-(`hngh-automation/cadence/week/04-wiki-health.sh`, model-free,
+(`automation/cadence/week/04-wiki-health.sh`, model-free,
 fail-closed) compares pages-on-disk against the registry `.pages`
 count and the `meta/index.md` age per vault, and files one
 identity-deduped alert per unhealthy vault -- `healthy | UNINDEXED |

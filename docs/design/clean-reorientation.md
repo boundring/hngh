@@ -35,7 +35,7 @@ Cross-links: [repo-merge-consideration.md](repo-merge-consideration.md), [descen
 
 ### Track A — CLEANUP (decision-independent, immediate)
 
-All paths relative to `hngh-automation/`.
+All paths relative to `automation/`.
 
 1. **Dead utility scripts, 388 lines.** `scripts/hngh-ufw-manage.sh`,
    `bench-rolling.py`, `deck-setup.sh`, `unsloth-url.sh`. Verified:

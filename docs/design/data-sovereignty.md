@@ -87,7 +87,7 @@ operator-installed single tick"), so Hngh speaks the API one-shot per
 tick and never runs a watching process.
 
 - **Folders, devices, ignore patterns are ledger rows.** The
-  param-ledger discipline of `hngh-automation/cadence-params.tsv`: one
+  param-ledger discipline of `automation/cadence-params.tsv`: one
   row per folder-device pair — folder, device, path, state, provenance,
   note. Desired state is data; the tick reconciles one row at a time and
   records what changed.

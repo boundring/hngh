@@ -33,13 +33,13 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
 - **Exists today:** the oversight tick runs deterministic probes every
   5 minutes — stale ceremony stores, working-tree skew, gate-red
   escalation, ui-audit regression, repeat breadcrumbs, loop signals,
-  system headroom, slow units (`hngh-automation/jobs/oversight-tick.sh`).
+  system headroom, slow units (`automation/jobs/oversight-tick.sh`).
   Session phase classification (discovering / writing / verifying /
   stalled / terminal) is a pure function over transcript counters
-  (`hngh-automation/jobs/agent-supervision.py`, `classify()`). The daily
+  (`automation/jobs/agent-supervision.py`, `classify()`). The daily
   lesson harvest scans records and the handoff ledger into
   `docs/project/lessons-<date>.md`
-  (`hngh-automation/cadence/day/01-lesson-harvest.sh`).
+  (`automation/cadence/day/01-lesson-harvest.sh`).
 
 ### 2. Disposition / Verdict
 
@@ -50,9 +50,9 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   ([autonomous-development-control.md](autonomous-development-control.md),
   "Failure disposition"). The router maps alert identities to plan
   candidates with dedup and daily escalation
-  (`hngh-automation/scripts/router-tick.py`); plan acceptance is a
+  (`automation/scripts/router-tick.py`); plan acceptance is a
   deterministic gate over runnable verification plus green `make test`
-  in both repos (`hngh-automation/scripts/accept-plans.py`).
+  in both repos (`automation/scripts/accept-plans.py`).
 - **Designed, not built:** automatic cause classification of a failure
   row into a bestiary class. Today a human or an agent reads the alert
   and classifies it; the router routes identities, not causes.
@@ -66,9 +66,9 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
 - **Exists today:** the research beat advances one line per beat
   through planned → expanding → contracting → crystallized and writes
   the crystallized result into the kernel's `docs/research/`
-  (`hngh-automation/cadence/hour/33-research-beat.sh`, hourly-mounted and
+  (`automation/cadence/hour/33-research-beat.sh`, hourly-mounted and
   self-gated to one beat per 2h since 2026-09-07; state in
-  `hngh-automation/research-lines.tsv`). All 22 lines crystallized by
+  `automation/research-lines.tsv`). All 22 lines crystallized by
   2026-08-31; the beat has idled since, filing nothing.
 - **Designed, not built:** the demand wire. Nothing auto-appends a
   missing-knowledge or missing-design cause to the subject list; the
@@ -76,7 +76,7 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   Disposition cannot feed Research, and the loop breaks at station 3.
   The research-line review transition (a line passes a fresh-eyes
   review before it may be adopted) is specified here and unbuilt; the
-  daily review beat (`hngh-automation/cadence/day/04-review-prep.sh`)
+  daily review beat (`automation/cadence/day/04-review-prep.sh`)
   reviews commits, not lines.
 
 ### 4. Adopt / Loot
@@ -96,8 +96,8 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   certificates.
 - **Outputs:** landed changes, each through the standing gates.
 - **Exists today:** the hourly workbeat and the overnight cycle execute
-  accepted plans (`hngh-automation/cadence/hour/20-workbeat.sh`,
-  `hngh-automation/scripts/overnight-cycle.sh`); kernel changes pass
+  accepted plans (`automation/cadence/hour/20-workbeat.sh`,
+  `automation/scripts/overnight-cycle.sh`); kernel changes pass
   ceremony-drive under certificate
   ([autonomous-development-control.md](autonomous-development-control.md)).
   The grow/research alternation is the master plan's stage 5/6 rule
@@ -106,7 +106,7 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   dead session with a failure-informed brief, per
   [roguelike-agentic.md](../project/roguelike-agentic.md). The watchdog
   is log-only today; it records deaths, it never executes them
-  (`hngh-automation/jobs/agent-watchdog.sh`).
+  (`automation/jobs/agent-watchdog.sh`).
 
 ### 6. Audit / Torch
 
@@ -116,7 +116,7 @@ display alias is the flavored one. Scope rules are in the Lexicon and in the
   verdict.
 - **Exists today:** fragments. The oversight tick's tree-skew and
   rendered-surface probes audit fragments of the tree; doc-suite checks
-  links daily (`hngh-automation/jobs/doc-suite-update.sh`).
+  links daily (`automation/jobs/doc-suite-update.sh`).
 - **Designed, not built:** the consumption audit and the Mimic
   red-team beat. The consumption audit is the artifact-consumer
   invariant enforced periodically (below). The Mimic is a scheduled
@@ -151,17 +151,17 @@ write-only; that count is the Audit station's first agenda.
 The automation control plane stays model-free. Models fill content; they
 never run the loop. Verified 2026-09-06 by reading the wiring:
 
-- Routing is deterministic — `hngh-automation/scripts/router-tick.py`
+- Routing is deterministic — `automation/scripts/router-tick.py`
   maps identities to candidates in pure Python.
-- Acceptance is deterministic — `hngh-automation/scripts/accept-plans.py`
+- Acceptance is deterministic — `automation/scripts/accept-plans.py`
   gates on runnable verification plus `make test` exit codes.
 - Dispositioning (alerts, escalation, dedup) is deterministic shell and
-  Python in `hngh-automation/jobs/oversight-tick.sh`.
+  Python in `automation/jobs/oversight-tick.sh`.
 - The watchdog logs and never kills or launches
-  (`hngh-automation/jobs/agent-watchdog.sh`).
+  (`automation/jobs/agent-watchdog.sh`).
 - The feeds (dashboard, schedule, research, plan, sessions) are
-  deterministic scripts under `hngh-automation/cadence/` and
-  `hngh-automation/jobs/`.
+  deterministic scripts under `automation/cadence/` and
+  `automation/jobs/`.
 
 Model surfaces fail closed-skip: the steering leg without a model logs
 "none" and moves on (`oversight-tick.sh` `steer_leg`); the research beat

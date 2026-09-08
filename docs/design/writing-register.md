@@ -37,7 +37,7 @@ After: `the evidence transport fails open on malformed output — fix it`.
 Before: `This major new capability significantly improves the
 documentation experience going forward.`
 After: `doc-suite now checks all 39 links daily
-(hngh-automation/jobs/doc-suite-update.sh).`
+(automation/jobs/doc-suite-update.sh).`
 
 ### Adams — precision beats grandeur
 

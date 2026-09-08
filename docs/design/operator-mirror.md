@@ -35,7 +35,7 @@ Four operator-preference surfaces already exist, each partial:
 [writing-register.md](writing-register.md) and
 [display-register-spec.md](display-register-spec.md) are operator-preference
 registers (versioned, citable prose constraining machine-drafted text and
-rendered surfaces); `hngh-automation/cadence-params.tsv` is operator
+rendered surfaces); `automation/cadence-params.tsv` is operator
 preference as data (one row per loop tunable: key, value, provenance,
 note); the llm-wiki vault (`~/.llm-wiki/`) is the emerging memory corpus
 (backlog row "Memory surface" wires Hngh to it);
@@ -74,7 +74,7 @@ over the whole recorded life, not just prose style.
 The corpus is **local-first by default**: it lives on the operator's
 machine and is processed by local models where possible. Remote-model
 exposure requires **per-item policy rows** — the param-ledger pattern of
-`hngh-automation/cadence-params.tsv`: one row per item or item class,
+`automation/cadence-params.tsv`: one row per item or item class,
 naming what may leave and under which consumer. PII and personal documents
 default to local-model-only processing. Nothing from the Mirror enters a
 remote prompt without a policy row naming it — no row, no exposure; the
@@ -83,8 +83,8 @@ kernel's fail-closed rule ([../intent.md](../intent.md)) applied to memory.
 ## 5. Ingest candidates and where they already exist
 
 - Memes, videos, images: research and interest signals, routed through the
-  existing research machinery (`hngh-automation/research-lines.tsv`,
-  `hngh-automation/research-subjects.txt`).
+  existing research machinery (`automation/research-lines.tsv`,
+  `automation/research-subjects.txt`).
 - Browser history and collected pages: the browser-relay lines —
   [2026-09-03-browser-messaging-automation.md](../research/2026-09-03-browser-messaging-automation.md)
   and [2026-09-04-browser-relay-architecture.md](../research/2026-09-04-browser-relay-architecture.md)

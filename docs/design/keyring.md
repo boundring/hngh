@@ -73,7 +73,7 @@ operator step by definition — it exists to prove a human is present.
 ## 4. Safety properties
 
 - **Rate limiting per site.** A per-site cap and spacing, ledger rows in
-  the `hngh-automation/cadence-params.tsv` pattern, so a batch cannot
+  the `automation/cadence-params.tsv` pattern, so a batch cannot
   trip a site's lockout into an account-recovery cascade.
 - **Break-glass ordering.** Never rotate an account that is the sole
   recovery path for another account before its dependent is rotated.
