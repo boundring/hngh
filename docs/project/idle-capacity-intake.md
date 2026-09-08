@@ -121,3 +121,68 @@ responsiveness is the one constraint with no automatic feedback loop.
 *This is an intake packet, not a plan or spec. Hngh's cycles own the
 research, adversarial review, design, and build that turns these
 requirements into standing machinery.*
+
+---
+
+## 6. Operator decisions (2026-09-08, second session — these supersede
+the "research question" framing in §3)
+
+1. **Spend authorization: $20/day.** Non-stop paid use of glm-5.3-flash
+   and non-stop local model use are both permitted, accelerated to the
+   point of failure and dialed back to the situational sweet-spot. The
+   machine should note this is exactly the existing fail-first doctrine
+   (additive increase, multiplicative decrease); what changes is the
+   ceiling it tunes within. A cost governor on the existing
+   `cost_usd` telemetry column is the natural replacement/companion
+   for count-based `sessions-day-max`. Self-funding (funding-rails
+   backlog row) is expected to raise budgets further.
+2. **Scale-out stays clean.** Multiple simultaneous local models and
+   rented-VRAM cloud endpoints are in scope; the endpoint
+   leg/chain/probe abstraction (deck pattern) is the seam — new
+   capacity is a new endpoint row, not new machinery.
+3. **Plan supply gets extra attention.** The 1/day synthesis cap and
+   related supply features are a named research subject; treat every
+   bottleneck as a lesson, not just a knob.
+4. **No dead time.** Hngh's time should be alive: operator present →
+   stay out of the way; operator absent / machine idle → fill with
+   research and development. Duty-cycle and activity-awareness work
+   rides levers 4 and 6.
+5. **Unsloth is the existing always-on local leg.** The operator
+   confirms unsloth runs practically non-stop as a local service
+   (`UNSLOTH_URL=http://127.0.0.1:8888`, unsloth-studio.service;
+   outage-restart lesson in bestiary 2026-09-04) with a local API and
+   many models available — Hngh already routes every chain through it
+   (`lib/model.sh`; 83/103 site runs via unsloth per
+   clean-reorientation.md), and it served `Ornith-1.0-35B-GGUF` free
+   today. So lever 5's "desktop-local serving" is mostly *additional*
+   capacity, not bring-up: local ollama already holds
+   `Ornith-1.0-9B-GGUF` (6.6 GB) and `gemma-4-12B-it-qat` (6.9 GB) —
+   both fit the idle 24 GB GPU simultaneously. Ornith is
+   operator-endorsed ("Ornith is good").
+6. **Desktop buddy (new surface).** KDE/GTK+Qt first, Tsutomu Nihei
+   aesthetic, procedurally animated character docked to one side:
+   live status/diagnostic indicator for Hngh activity, mouse-able to
+   summon specialized omp/agent sessions. Requirements map onto the
+   existing `operative-overlay`, `pixel-agent-assets`, and
+   `operative-voice` backlog rows — extend those, do not duplicate.
+   Companion ask: system-activity awareness including operator-driven
+   desktop software, feeding the busy/idle routing.
+7. **Lobehub integration should generalize.** The quota-leg pattern
+   (endpoint + agent-id + daily-cap rows) should become the reusable
+   shape for other knowledge-base / platform-bridging services.
+
+### Measured anchors (2026-09-08 telemetry)
+
+| fact | value |
+|---|---|
+| today's actual spend | **$42.06** (76 session-cost rows, 138.0M tok in / 3.17M out) |
+| glm-5.3-flash | 45 sessions, $30.31 (~$0.67/session; in=$0.075/M, out=$0.25/M, ctx 1.31M) |
+| glm-5.3 (full) | 10 sessions, $11.17 — same work on flash ≈ $0.60; routing trim, not pace loss |
+| qwen3.7-flash | 16 sessions, $0.58 (~$0.036/session) |
+| unsloth/Ornith-35B (local service) | 3 sessions, $0.00 |
+| at $20/day, flash-only routing | ≈ 30 paid sessions + free legs (unsloth, local ollama) ≈ 4-6× today's 8-session dev ceiling |
+
+**Reading:** at $20/day the binding constraint is not model spend — it
+is `sessions-day-max` 8, concurrency 3/2/1, the 60-minute beat timer,
+and plan supply. Raise those first; the cost governor then guards the
+operator's number.
