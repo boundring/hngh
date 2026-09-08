@@ -92,7 +92,7 @@ below, not by any operator todo.
 ### Continual optimization (2026-09-07)
 
 The outstanding action is now automated as a measured, tunable cycle,
-not a fixed automation. `cadence/day/25-wiki-health.sh` (hngh-automation)
+not a fixed automation. `cadence/day/25-wiki-health.sh` (automation/)
 probes both vaults daily; each unhealthy vault with `wiki-auto-rebuild`
 armed gets ONE bounded omp one-shot rebuild attempt per UTC day (the
 rebuild still happens inside the omp session -- the boundary law holds;

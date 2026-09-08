@@ -28,7 +28,7 @@ telemetry store per ledger-and-records-spec §2.
 
 ## 2. The `op` CLI seam (`lib/credentials.sh` — spec)
 
-A new hngh-automation library (implementation staged in the
+A new automation library (implementation staged in the
 capabilities plan) with exactly one consumer-visible function:
 
 ```

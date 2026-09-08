@@ -22,3 +22,12 @@ automation/deck-facts/
 automation/bridge/
 automation/node_modules/
 automation/tmp-*
+automation/telemetry.db
+# secrets and per-run state — mirrors automation/.gitignore
+automation/*.token
+automation/store/
+automation/*.tmp
+automation/.DS_Store
+automation/.lesson-harvest-last
+automation/.research-beat-last
+automation/.lesson-harvest-handoffs

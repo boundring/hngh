@@ -7,7 +7,7 @@ Status: DESIGN — lifecycle rendering for the dashboard Research tab
 (dashboard `#p-research` / `#research-root`, `research-view.js`), from the
 research-lines ledger and research-feed, 2026-08-28.
 
-Source: `../../research-lines.tsv` (hngh-automation); `dashboard/research.json`
+Source: `../../research-lines.tsv` (automation/); `automation/dashboard/research.json`
 (`jobs/research-feed.py` → `research_lines()`); `dashboard/research-view.js`;
 `../../docs/research/*.md`.
 

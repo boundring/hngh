@@ -250,11 +250,12 @@ the project's prior state; the active baseline lives here.
 
 ## Live operation
 
-The machine runs from a sibling repository, `../hngh-automation/` — its
-[README](../hngh-automation/README.md) documents the cadence tiers, the
+The machine runs from the `automation/` subtree of this repository —
+its [README](automation/README.md) documents the cadence tiers, the
 watchdog, and the digest surfaces; the
-[latest daily digest](../hngh-automation/digest/2026-09-06.md) shows
-what actually fired today.
+[latest daily digest](automation/digest/2026-09-06.md) shows what
+actually fired today. The old standalone repository
+(`hngh-automation`) is archived, superseded by the subtree.
 
 ## For the public
 

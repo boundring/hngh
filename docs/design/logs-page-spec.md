@@ -10,7 +10,7 @@ retention tiers, redaction) mapped onto the dashboard's Logs tab, from the
 dashboard-QoL plan, 2026-08-28.
 
 Source: `../../research/2026-08-28-log-presentation-patterns.md` (primary);
-hngh-automation `dashboard/index.html`, `dashboard/app.js`,
+automation/ `dashboard/index.html`, `dashboard/app.js`,
 `lib/common.sh` (`update_dashboard`), `lib/breadcrumbs.sh`,
 `jobs/morning-digest.sh`; the REVIEW-2026-08-28 P1 on the stale digest feed.
 
@@ -137,5 +137,5 @@ Design only — implementation rides a later build wave and this file carries
 no code changes. Explicitly out of scope here: the telemetry store and its
 producers (ledger spec §3, must land before §6), any governance use of
 anything this tab renders (the page stays display-only), log shipping or
-external aggregators (twelve-factor: hngh-automation writes streams, the
+external aggregators (twelve-factor: automation writes streams, the
 dashboard renders them), and raw journald surfaces in the tab.
