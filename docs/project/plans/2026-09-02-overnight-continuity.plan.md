@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-01T02:31:19Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-01T02:31:19Z -->
 # 2026-09-02 — overnight continuity
 
 Slim follow-on wave in the 24/7 continuous cycle so the plan queue
@@ -161,7 +161,7 @@ What the next author must NOT do:
       blocks); left untracked for the owning line to rewrite. Push
       outcome recorded in journal/2026-09-08.md.
 
-- [ ] 5. Wrap: append the cycle's outcomes to
+- [x] 5. Wrap: append the cycle's outcomes to
       docs/project/lessons-2026-09-02.md (open it if absent),
       journal update under docs/journal/, queue/backlog sync, and
       author the NEXT slim follow-on plan at docs/project/plans/
@@ -176,6 +176,22 @@ What the next author must NOT do:
       status=proposed risk=normal accepted=- and ≥3 runnable steps
       each with a Verification line; lessons and journal files exist;
       queue rows updated; `make test` green.
+      Executed 2026-09-08T00:55Z (this wake): lessons-2026-09-02.md
+      appended (cycle-outcomes section, honestly dated 2026-09-08);
+      journal/2026-09-08.md authored with the execution record;
+      queue row 42 (ebook-book-inputs) evidence synced to cite the
+      2026-09-08 research doc; backlog ebook-book-inputs entry gained
+      a dated evidence line; NEXT plan authored at docs/project/
+      plans/2026-09-09-overnight-continuity.plan.md (status=proposed
+      risk=normal accepted=-, 5 runnable steps each with a
+      Verification line, first step gate baseline, grow-research
+      alternation, final step authors the next). Deviation from the
+      literal "2026-09-03" filename: this plan executed 2026-09-08
+      after six days queued behind routed stubs and operator-items
+      wakes, so the follow-on carries the next execution day's date.
+      Kernel-side wrap artifacts land in this wake's wrap ceremony;
+      automation-side wrap commits free. Steps 1-4 landed in ceremony
+      da3d441 (candidate a1021dfb, 10/10 principles, pushed).
 
 ## Verification summary
 
