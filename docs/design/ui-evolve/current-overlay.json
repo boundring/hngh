@@ -1,8 +1,8 @@
 {
   "preset": "hngh",
-  "gen": 1,
+  "gen": 3,
   "grade": "10/10",
-  "seed": 2981503,
+  "seed": 2981509,
   "fields": {
     "primary": "#5af78e",
     "secondary": "#3d9c78",
@@ -13,7 +13,7 @@
     "panel": "#14181e",
     "warning": "#e6b450",
     "error": "#e06c6c",
-    "success": "#62f78e",
+    "success": "#5af786",
     "dark": true
   }
 }

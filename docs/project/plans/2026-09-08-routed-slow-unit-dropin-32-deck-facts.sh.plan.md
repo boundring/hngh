@@ -12,3 +12,4 @@ at 2026-09-08T20:00:39Z. Alert text: [oversight] slow-unit: dropin:32-deck-facts
 ## Occurrences
 
 - 2026-09-08T21:00:39Z re-occurred (dedup window expired)
+- 2026-09-08T22:00:35Z re-occurred (dedup window expired)
