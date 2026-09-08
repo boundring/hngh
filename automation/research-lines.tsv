@@ -1,4 +1,4 @@
-log-presentation-patterns	crystallized	2026-08-28T04:42:49Z	log-presentation patterns
+log-presentation-patterns	reviewed	2026-09-08T04:19:39Z	log-presentation patterns
 wiki-viewer-qol	crystallized	2026-08-28T12:33:56Z	wiki-viewer QoL comparison
 tech-tree-research-ux	crystallized	2026-08-28T04:51:24Z	tech-tree research UX precedents
 session-cost-display	crystallized	2026-08-28T04:46:58Z	session-cost display formats
@@ -29,5 +29,5 @@ govbench-scenario-corpus	crystallized	2026-09-07T05:02:58Z	What scenario corpus 
 govbench-adapter-contract	crystallized	2026-09-06T20:32:53Z	What adapter contract lets different change-governance systems run the same governance benchmark unmodified?
 ctx-compaction-strategies	crystallized	2026-09-07T21:04:42Z	Which long-session compaction strategies (checkpointing state at turn boundaries) let a reborn session reorient in one bounded read without losing verified facts?
 ctx-structured-briefs	planned	2026-09-07T17:00:36Z	Which structured brief fields measurably cut reorientation tokens after a session death, and which fields are noise?
-ctx-retrieval-vs-repetition	contracting	2026-09-07T22:34:56Z	At equal task quality, when do orientation pointers (retrieval) beat inlined content (repetition) for session input cost, and how does the 1500-byte pack cap trade off?
+ctx-retrieval-vs-repetition	crystallized	2026-09-08T04:01:51Z	At equal task quality, when do orientation pointers (retrieval) beat inlined content (repetition) for session input cost, and how does the 1500-byte pack cap trade off?
 ctx-ttsr-scope-gaps	planned	2026-09-07T18:30:33Z	What session-discipline violations escape stream-rule scopes (thinking, subagents) and how should record-level screening close them?
