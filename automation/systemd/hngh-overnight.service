@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=~/Projects/etc/hngh-automation/scripts/overnight-cycle.sh
-WorkingDirectory=~/Projects/etc/hngh-automation
+ExecStart=~/Projects/etc/hngh/automation/scripts/overnight-cycle.sh
+WorkingDirectory=~/Projects/etc/hngh/automation
 Restart=no
 
 [Install]
