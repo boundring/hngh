@@ -140,7 +140,7 @@ lesson 1).
       (quoted verbatim), LLAMA_ARG_* launch inventory with the
       Ornith-1.0-35B GGUF model path, explicit no-unit-edited /
       no-service-started statement.
-- [ ] 3. GROW — service-ctl exercised: status read-only, then the
+- [x] 3. GROW — service-ctl exercised: status read-only, then the
       recovery path when :8080 is actually down. Run
       scripts/service-ctl.sh status for each allowlisted unit
       (read-only verb, always admitted). Then the recovery path —
@@ -157,6 +157,26 @@ lesson 1).
       noted, or a grounded no-action note naming which precondition
       failed; exactly one progress row per action taken; kernel
       `make test` green.
+      Ticked 2026-09-08: status (read-only, always admitted) run for
+      all three allowlisted units — llama-server.service inactive
+      (dead), disabled; unsloth-warm.service inactive (dead) since
+      2026-09-06T02:05:51-0400 (exit 0/SUCCESS); unsloth-studio.
+      service active (running) since 2026-09-06T02:05:39-0400, with
+      :8888 up (serving), :8080 down (000), :11434 up. Recovery path
+      NOT exercised — grounded no-action: the sweep's live
+      precondition (:8888 down + unsloth-studio
+      installed-but-inactive, per the 2026-09-04 corrective slice in
+      cadence/day/11-service-recovery.sh) fails on both counts —
+      :8888 is up and the unit is active (nothing to recover; the
+      start path itself is already proven by the 2026-09-05T09:01:41Z
+      service-ctl start row, rc=0 → active). The plan text's
+      :8080/llama-server literal branch was removed by that same
+      corrective slice — nothing in the chain consumes :8080, so a
+      llama-server start would not be recovery. Bench gate: no start
+      occurred, so no lane re-admission transition exists to observe;
+      the model chain keeps serving. Evidence: reports.md progress
+      row 2026-09-08T04:43:34Z 3c259909 (one row; status writes
+      none by design).
 - [ ] 4. RESEARCH — credentials-posture redaction audit. Grep the
       automation surface (logs/, digests, report rows, telemetry,
       breadcrumbs) for any value that should not be there: SMTP
