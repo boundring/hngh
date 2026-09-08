@@ -20,3 +20,5 @@ ctx-compaction-strategies	Which long-session compaction strategies (checkpointin
 ctx-structured-briefs	Which structured brief fields measurably cut reorientation tokens after a session death, and which fields are noise?
 ctx-retrieval-vs-repetition	At equal task quality, when do orientation pointers (retrieval) beat inlined content (repetition) for session input cost, and how does the 1500-byte pack cap trade off?
 ctx-ttsr-scope-gaps	What session-discipline violations escape stream-rule scopes (thinking, subagents) and how should record-level screening close them?
+
+ainglish-engagement	Explore ainglish.org keyless surfaces (246 proposals, preflight screening, stage-history ledgers) — identify one proposal worth seconding and test the preflight API for Hngh evidence-gathering.
