@@ -1637,3 +1637,29 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   plan protects the fail-closed paths from over-zealous cleanup.
 - **Review trigger:** landed after operator reads clean-reorientation.md;
   Track B gated on merge P0.
+
+## Kernel gate watch-test load flake
+
+- **Problem:** kernel `make test` flakes under launch-storm load —
+  `tests/scripts/test-dashboard-live.py` spawns
+  `scripts/dashboard-readout --watch 1` with a hard 5s subprocess wait;
+  during overnight-cycle launch storms the spawn exceeds 5s, the kernel
+  gate returns rc=2, accept-plans blocks plan acceptance for that tick,
+  and a gate-red alert row + routed plan are filed (2026-09-05 ×6,
+  2026-09-06 ×8, 2026-09-07, 2026-09-08 bursts).
+- **Smallest useful outcome:** raise the watch-spawn wait (5s → 30s) or
+  make it load-hermetic in tests/scripts/test-dashboard-live.py; kernel
+  gate stays green under concurrent launch load.
+- **Evidence:** alert bodies 598ffaaa (2026-09-08T01:01:33Z, full
+  traceback), 60e40190 (2026-09-06T21:00:45Z), 870f7cf0
+  (2026-09-05T12:01:28Z); plan
+  `docs/project/plans/2026-09-02-routed-gate-red-hngh.plan.md`
+  (executed 2026-09-08T01:06Z — both gates green on direct re-run,
+  kernel rc=0 / 2855 checks).
+- **Risk:** low — test-only timeout change; no `src/` semantics touched.
+- **Dependencies:** a session with kernel `tests/` write permission; the
+  change rides the certificate ceremony with a green `make test`.
+- **Review trigger:** kernel `make test` green twice in a row under a
+  simulated launch storm (concurrent cadence tick), and the
+  `overnight:plan-accept-gate:kernel` alert identity silent for a full
+  day of launch ticks.
