@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-04T18:01:27Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-04T18:01:27Z -->
 # 2026-09-03 — operator-directed capabilities: service management, 1Password credentials, browser-messaging line
 
 Authorization: operator-directed 2026-09-03, recorded faithfully in
