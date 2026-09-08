@@ -186,3 +186,46 @@ the "research question" framing in §3)
 is `sessions-day-max` 8, concurrency 3/2/1, the 60-minute beat timer,
 and plan supply. Raise those first; the cost governor then guards the
 operator's number.
+
+## 7. Quota integration — full-utilization directives (same session)
+
+1. **K3 gets the intelligence-shaped roles, explicitly.** Kimi K3 is
+   the designated engine for planning, task decomposition, delegation
+   design, and fresh-eyes review. Today it is reserved for research
+   transitions + reviews at 40 calls/day (19 used). Notably, K3-driven
+   plan synthesis attacks lever 3 directly: plan supply is the
+   intelligence bottleneck, and K3 is the intelligence quota.
+2. **Multi-window quota model replaces daily-only pacing.** Kimi's
+   limits reset on 5-hour, 7-day, and 1-month windows; Lobehub's is
+   monthly. `quota_pace_blocked` (lib/model.sh:265) models a single
+   UTC day — a named gap. Requirement: per-window usage tracking from
+   existing telemetry (`kind=model, source=kimi|lobehub`), pacing
+   against the tightest binding window, and distribution of use across
+   each reset period so no window's allowance is stranded. Check,
+   track, and adjust on a steady periodic cycle (day-tier cadence
+   step, neighbor of 20-model-saturation.sh).
+3. **Caps are evidence-set, not conservative guesses.** kimi-daily-cap
+   40 and lobehub-daily-cap 50 were stand-ins. Lobehub went **unused
+   today** (0 calls) — with a monthly window that is pure waste.
+   Discover the real limits empirically (the KIMI-QUOTA.md probe-
+   matrix method, 429/pace telemetry), set Inventory rows from
+   evidence, keep pacing + fall-through intact.
+4. **Lobehub is a platform, not just an inference leg.** Beyond the
+   Responses-API leg (live, agent agt_6sB8IcJhaTg6): WebMCP is
+   verified keyless, the MCP marketplace and knowledge-base surfaces
+   are mapped in docs/research/2026-09-07-lobehub-integration-surface.
+   Directive: integrate its features as fully as practical, and
+   generalize the quota-leg pattern (endpoint + auth + cap + telemetry
+   + health probe rows) into the reusable seam for ANY
+   knowledge-base/platform-bridging service — the clean-architecture
+   shape so each new service is a row set, not new machinery.
+5. **Self-development is the standing mandate.** Hngh works on itself
+   from now on — continuous operation already stands (overnight-cycle,
+   fail-first); omp, lobehub, unsloth, and any integration it builds
+   feed its own operation. This packet's levers are the first
+   beneficiaries.
+6. **Still open (operator-only):** the Moonshot platform recharge
+   question in automation/docs/KIMI-QUOTA.md — the kimi.com consumer
+   K3 plan is confirmed plentiful by the operator, but the dead
+   MOONSHOTAI platform key (429 no-balance) awaits a recharge
+   decision or stays dropped.
