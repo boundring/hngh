@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:served:gantt.js -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:served:gantt.js -->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:served:gantt.js`

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ui-audit:unavailable -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=ui-audit:unavailable -->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:unavailable`

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:served:schedule-view.js -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:served:schedule-view.js -->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:served:schedule-view.js`
@@ -8,3 +8,7 @@ at 2026-09-08T04:00:34Z. Alert text: [dash-selfreview] served:schedule-view.js: 
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-08T05:00:34Z re-occurred (dedup window expired)
