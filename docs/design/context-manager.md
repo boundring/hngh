@@ -1,7 +1,7 @@
 # Context manager (display alias: "the Compass" — orientation)
 
 Status: designed 2026-09-07 from the measured baseline in
-hngh-automation/docs/session-cost-analysis-2026-09-07.md. Orientation is
+automation/docs/session-cost-analysis-2026-09-07.md. Orientation is
 the single largest token sink in delegated sessions and is therefore a
 cross-cutting concern of the Descent: every station wakes a session, and
 every waking pays the orientation cost. This doc makes context
@@ -38,7 +38,7 @@ map, ledger paths, role hint (what good output looks like for the
 session's role), and the frontier (the torch-sentinel Verified-numbers
 block from docs/project/STATE-OF-PROJECT.md). Hard cap 1500 bytes,
 `head -c` enforced. The single generator is
-`hngh-automation/lib/context-pack.sh` (`context_pack ROLE SLUG`); both
+`automation/lib/context-pack.sh` (`context_pack ROLE SLUG`); both
 launch paths — the gated launcher `lib/launch-session.sh` and the
 watchdog respawn executor `jobs/agent-respawn.sh` — consume it. No
 second pack builder may be added; the pack path is carried in the
@@ -95,7 +95,7 @@ the thing to change.
 
 ## 4. Research subjects opened
 
-Queued in hngh-automation/research-subjects.txt (ctx-* rows): long-
+Queued in automation/research-subjects.txt (ctx-* rows): long-
 session compaction strategies (what to persist at turn boundaries),
 structured briefs (which fields measurably cut reorientation cost),
 and retrieval vs repetition (pointers vs inlined content at equal

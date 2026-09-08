@@ -19,7 +19,7 @@ The system did the thing wrong. A red gate, a dead session, a plan whose
 steps never ticked. The knowledge existed; the execution failed.
 
 - Overnight-lead died rc=1 four runs in a row on the same plan
-  (`hngh-automation/agent-handoffs.md:151-154`, 2026-09-05).
+  (`automation/agent-handoffs.md:151-154`, 2026-09-05).
 - The automation gate went red and stayed red — "gate: hngh-automation
   make test FAILED (rc=2)"
   (`docs/project/reports.md`, 2026-09-05T09:01:28Z, alert 87bf41f4).
@@ -30,8 +30,8 @@ The system hit a question nobody has answered in-repo. Not a bug — a
 gap in the record.
 
 - The research beat has idled since 2026-08-31: all 22 research lines
-  are crystallized (`hngh-automation/research-lines.tsv`; the newest
-  beat file is `hngh-automation/digest/RESEARCH-BEAT-2026-08-31-*.md`),
+  are crystallized (`automation/research-lines.tsv`; the newest
+  beat file is `automation/digest/RESEARCH-BEAT-2026-08-31-*.md`),
   and nothing refills the subject list.
 
 ### missing-design
@@ -72,8 +72,8 @@ signals and re-work.
 
 | Cause | Disposition route |
 |---|---|
-| bad-execution | Guardrail or lesson: fold into `docs/project/agent-guardrails.md` via the daily harvest (`hngh-automation/cadence/day/01-lesson-harvest.sh`); kernel-side dispositions follow the closed policy in [autonomous-development-control.md](autonomous-development-control.md). |
-| missing-knowledge | Research demand auto-appended to the subject list (`hngh-automation/research-subjects.txt`) — wire designed, not built ([descent.md](descent.md) station 3). |
+| bad-execution | Guardrail or lesson: fold into `docs/project/agent-guardrails.md` via the daily harvest (`automation/cadence/day/01-lesson-harvest.sh`); kernel-side dispositions follow the closed policy in [autonomous-development-control.md](autonomous-development-control.md). |
+| missing-knowledge | Research demand auto-appended to the subject list (`automation/research-subjects.txt`) — wire designed, not built ([descent.md](descent.md) station 3). |
 | missing-design | Research demand gated BEFORE grow admission: the affected grow beat refuses until the design lands. |
 | missing-authority | Operator packet: one row in the report ledger naming the exact action, target, and grant needed. The loop waits; it never self-grants. |
 | obsolete | Kill or park: close the artifact, mark the row parked, and stop the supply that regenerates it. |
