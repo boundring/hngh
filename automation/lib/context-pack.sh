@@ -21,6 +21,9 @@ CONTEXT_PACK_BYTES="${CONTEXT_PACK_BYTES:-1500}"
 # role -> one line: what good output from this session looks like
 context_role_hint() { # role
   case "$1" in
+  cistern)
+    printf 'work on the Cistern emacs game — respect the clean architecture (domain is pure, game is use cases, view renders, input adapts); run the test suite before committing'
+    ;;
   research)
     printf 'crystallize ONE research line — sources plus a named consumer — into docs/research/; no code'
     ;;
@@ -29,6 +32,25 @@ context_role_hint() { # role
     ;;
   *)
     printf 'execute the routed plan as the smallest verified step, land it, append the ledgers, stop'
+    ;;
+  esac
+}
+
+# project block: role == project name -> one bounded repo-orientation block
+# (multi-project: hngh docs/design/multi-project.md). Read-only git probes
+# only; the target project's sources are never edited or committed from
+# here. Env seam: CISTERN_REPO.
+context_project_block() { # role
+  case "$1" in
+  cistern)
+    local repo="${CISTERN_REPO:-$HOME/Projects/etc/20260830/cistern}"
+    printf 'cistern repo: %s (emacs roguelike, ~17K LOC, clean architecture)\n' "$repo"
+    printf 'architecture: domain (pure core, no buffers/faces/timers) -> game (use cases: state+intent -> state+log) -> view (render) -> input (adapter) -> driver (keymap/timer, the single cistern--st global)\n'
+    printf 'key files: src/cistern-domain.el (3555 lines, the pure core), src/cistern-game.el, src/cistern-view.el, src/cistern.el, tests/run.el (canonical runner, PROCESS-RETRO P3)\n'
+    printf 'test command: cd %s && emacs -Q --batch -l tests/run.el -f cistern-run-all-tests\n' "$repo"
+    printf 'dirty files (uncommitted — another session owns them; observe, never edit/commit):\n'
+    git -C "$repo" status --porcelain 2>/dev/null | sed 's/^/  /'
+    printf 'wiki lessons: ~/Projects/etc/llm-wiki/.llm-wiki/wiki/syntheses/delegated-subagent-steering.md and wiki/cases/cistern-emacs-rewrite.md\n'
     ;;
   esac
 }
@@ -51,13 +73,17 @@ context_pack() { # role slug -> pack path on stdout
       "$role" "$slug" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     printf 'current UTC (machine clock — verify against it, never assume): %s\n' \
       "$(date -u)"
+    printf 'role hint: %s\n' "$(context_role_hint "$role")"
+    # project block first: when the cap bites, generic boilerplate
+    # truncates, never the project-specific orientation (multi-project:
+    # hngh docs/design/multi-project.md)
+    context_project_block "$role"
     printf 'automation repo: %s\nkernel repo: %s\n' "$root" "$krepo"
     printf 'automation top level: '
     (cd "$root" && ls | tr '\n' ' ' && printf '\n')
     printf 'ledgers: STATE.md agent-handoffs.md logs/budget.md cadence-params.tsv\n'
     printf 'kernel ledgers: docs/project/STATE-OF-PROJECT.md docs/project/reports.md docs/project/plans/\n'
     printf 'research index: %s/docs/research/\n' "$krepo"
-    printf 'role hint: %s\n' "$(context_role_hint "$role")"
     printf 'frontier (kernel Verified numbers):\n'
     sed -n '/torch:begin/,/torch:end/p' \
       "$krepo/docs/project/STATE-OF-PROJECT.md" 2>/dev/null | marked_cut 700
