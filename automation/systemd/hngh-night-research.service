@@ -1,0 +1,8 @@
+[Unit]
+Description=hngh-automation night research brief (23:40, local models only)
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/night-research.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no

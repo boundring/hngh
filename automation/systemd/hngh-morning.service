@@ -1,0 +1,10 @@
+[Unit]
+Description=hngh-automation morning digest
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/morning-digest.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no

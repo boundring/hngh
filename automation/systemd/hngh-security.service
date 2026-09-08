@@ -1,0 +1,10 @@
+[Unit]
+Description=hngh-automation security check (every 4h)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/bricker/Projects/etc/hngh-automation/jobs/security-check.sh
+WorkingDirectory=/home/bricker/Projects/etc/hngh-automation
+Restart=no
