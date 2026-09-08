@@ -22,6 +22,8 @@
 set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
+. "$AUTOMATION_ROOT/lib/params.sh"
+. "$AUTOMATION_ROOT/lib/failfirst.sh"
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
@@ -40,9 +42,38 @@ file_report() { # kind text identity
  fi
 }
 
+failfirst_summary() { # -> calibration line over the failfirst state files
+ # The fail-first machine tunes itself to just below its observed
+ # ceiling; this line is the calibration record: current speed per
+ # operation, outcome counts, and the speed at which degradation first
+ # occurred (ceiling=0 = never degraded). Read directly from the state
+ # files -- the day instrument stays model-free.
+ local dir="${FAILFIRST_STATE_DIR:-/tmp/hngh-failfirst}" f op out="" speed name
+ local oks deg fail ceiling k v
+ for f in "$dir"/failfirst-*; do
+  [ -f "$f" ] || continue
+  op="${f##*/failfirst-}"
+  speed=1 oks=0 deg=0 fail=0 ceiling=0
+  while IFS='=' read -r k v; do
+   case "$k" in
+   speed) speed="$v" ;;
+   n_ok) oks="$v" ;;
+   n_deg) deg="$v" ;;
+   n_fail) fail="$v" ;;
+   ceiling) ceiling="$v" ;;
+   esac
+  done <"$f"
+  case "$speed" in 2) name=standard ;; 3) name=cautious ;; *) name=full ;; esac
+  out="$out $op=$name(ok=$oks,degraded=$deg,failed=$fail,ceiling=$ceiling);"
+ done
+ [ -n "$out" ] &&
+  printf 'failfirst tuning (ceiling = speed at first degradation):%s' "$out"
+}
+ff="$(failfirst_summary)"
+
 cutoff="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:00:00Z 2>/dev/null)" || cutoff=""
 if [ -z "$cutoff" ] || [ ! -r "$DB" ]; then
- file_report progress "model-saturation $day: no data yet" "$ident"
+ file_report progress "model-saturation $day: no data yet${ff:+; $ff}" "$ident"
  exit 0
 fi
 
@@ -61,7 +92,7 @@ rows="$(sqlite3 -separator '|' "$DB" \
     from events where kind='model' and ts >= '$cutoff'
     group by substr(ts,1,13) order by 1" 2>/dev/null)"
 if [ -z "$rows" ]; then
- file_report progress "model-saturation $day: no data yet" "$ident"
+ file_report progress "model-saturation $day: no data yet${ff:+; $ff}" "$ident"
  exit 0
 fi
 
@@ -87,6 +118,6 @@ else
  verdict="headroom ok (<50%)"
 fi
 file_report progress \
- "model-saturation $day (24h, desktop unsloth; deck leg is overflow-only, not counted): peak hour $peak UTC at $peak_pct% utilization, daily total $total_pct% ($total_s s busy; basis: $basis) - $verdict" \
+ "model-saturation $day (24h, desktop unsloth; deck leg is overflow-only, not counted): peak hour $peak UTC at $peak_pct% utilization, daily total $total_pct% ($total_s s busy; basis: $basis) - $verdict${ff:+; $ff}" \
  "$ident"
 exit 0

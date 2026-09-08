@@ -1,53 +1,75 @@
 #!/usr/bin/env bash
-# 50-research-overflow -- staggered overflow research beat (30m tier;
-# acceleration wave 2, 2026-09-07). Runs the SAME beat body as
-# cadence/hour/33-research-beat.sh, pinned to a quota leg (odd runs pin
-# kimi, even runs lobehub, alternating on its own counter) so it NEVER
-# touches the local server and cannot contend with the desktop for the
-# model. The hour beat honors OVERFLOW_PIN (skips its own rotation and
-# its stamp/load gates -- the caller owns gating) and stamps
-# RESEARCH_STAMP_FILE, which this wrapper points at the overflow stamp;
-# hour-tier stamp semantics are unchanged.
+# 50-research-overflow -- 15-minute overflow research beat (30m tier;
+# acceleration wave 2, 2026-09-07; fail-first promotion 2026-09-07).
+# Runs the SAME beat body as cadence/hour/33-research-beat.sh (same
+# logic, same lifecycle transitions), always pinned to a non-local leg
+# so it NEVER touches the local server. The beat body honors
+# OVERFLOW_PIN (skips the hour beat's own failfirst gate and busy
+# routing -- this wrapper owns gating) and stamps RESEARCH_STAMP_FILE,
+# which this wrapper points at its own stamp so the hour record stays
+# the hour's. A shared flock inside the body prevents same-instant
+# research-lines.tsv races between the two beats.
+#
+# Cadence (operator directive: research more often than once per hour):
+# the 30m tier fires :00 and :30; this beat runs immediately and again
+# 15 minutes later -- a 15-minute research cadence (:00 :15 :30 :45)
+# without a new systemd unit. At fail-first FULL speed that is 4 overflow
+# transitions/hour plus the hour beat's local transition; the overflow's
+# own tuning state (failfirst-research-overflow, FAILFIRST_TICK_S=900)
+# paces it down just below its observed ceiling when the quota/deck legs
+# degrade, and promotes it back after consecutive oks.
+#
 # Gates:
-#   a) >= research-overflow-hours (Inventory; env RESEARCH_OVERFLOW_HOURS
-#      overrides) since its own stamp /tmp/.hngh-research-overflow-last
-#      (seam: RESEARCH_OVERFLOW_STAMP_FILE);
-#   b) >= 30 minutes since the HOUR beat's stamp -- the 30m tier fires at
-#      :00 and :30, so an hour beat that ran within 30 minutes defers
-#      this run silently (no same-instant research-lines.tsv races);
-#   c) no load gate: the pin means no local model use, so machine load
-#      cannot starve the overflow beat (ceiling 1 of acceleration wave 2).
+#   a) failfirst_gate research-overflow (lib/failfirst.sh): own state
+#      file, 15-minute tick;
+#   b) pin selection: deck first when armed AND responsive (deck_up
+#      probe -- the deck is a capacity signal, not a fallback), else
+#      quota legs alternating kimi/lobehub on the shared run counter
+#      (odd kimi, even lobehub); an unarmed or pace-blocked pin falls
+#      through inside model_call -- research never blocks;
+#   c) no load gate and no stagger guard: the pin means no local model
+#      use, and the body's flock replaces the old 30-minute stagger
+#      (the hour beat is always "recent" at a 15-minute cadence).
 # usage: cadence/30m/50-research-overflow.sh   (via cadence-tick.sh TIER=30m)
 set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
+. "$AUTOMATION_ROOT/lib/failfirst.sh"
+. "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
 STAMP="${RESEARCH_OVERFLOW_STAMP_FILE:-/tmp/.hngh-research-overflow-last}"
-HOUR_STAMP="${RESEARCH_BEAT_STAMP_FILE:-/tmp/.hngh-research-beat-last}"
 COUNT="${RESEARCH_OVERFLOW_COUNT_FILE:-/tmp/.hngh-research-overflow-count}"
-now="$(date +%s)"
-last="$(cat "$STAMP" 2>/dev/null || printf '0')"
-last="${last//[!0-9]/}"
-last="${last:-0}"
-hours="${RESEARCH_OVERFLOW_HOURS:-$(get_param research-overflow-hours 2)}"
-case "$hours" in '' | *[!0-9]*) hours=2 ;; esac
-[ $((now - last)) -ge $((hours * 3600)) ] || exit 0
-hlast="$(cat "$HOUR_STAMP" 2>/dev/null || printf '0')"
-hlast="${hlast//[!0-9]/}"
-hlast="${hlast:-0}"
-[ $((now - hlast)) -ge 1800 ] || exit 0 # hour beat ran within 30 min
-
-# pin alternation: the NEXT counter value drives parity (odd -> kimi,
-# even -> lobehub). The beat body increments this same counter, sharing
-# it with the review interleave -- no double increment here.
-n="$(cat "$COUNT" 2>/dev/null || printf '0')"
-n="${n//[!0-9]/}"
-n="${n:-0}"
-n=$((n + 1))
-pin=kimi
-[ $((n % 2)) -eq 0 ] && pin=lobehub
-export OVERFLOW_PIN="$pin"
-export RESEARCH_STAMP_FILE="$STAMP"
-export RESEARCH_BEAT_COUNT_FILE="$COUNT"
 export JOB_NAME="50-research-overflow.sh"
-exec bash "$AUTOMATION_ROOT/cadence/hour/33-research-beat.sh"
+export FAILFIRST_OP="research-overflow"
+export FAILFIRST_TICK_S="900" # 15-minute tier: standard 30m, cautious 60m
+
+overflow_once() { # one gated, pinned research transition
+ local verdict n pin
+ verdict="$(failfirst_gate research-overflow)"
+ if [ "$verdict" != "GO" ]; then
+  breadcrumb "$JOB_NAME" "research-overflow-throttled" \
+   "failfirst: $verdict - overflow paced below its observed ceiling"
+  return 1
+ fi
+ # pin selection: deck first when responsive; else parity on the NEXT
+ # counter value (odd kimi, even lobehub). The beat body increments the
+ # same counter, sharing it with the review interleave.
+ if deck_up; then
+  pin=deck
+ else
+  n="$(cat "$COUNT" 2>/dev/null || printf '0')"
+  n="${n//[!0-9]/}"
+  n="${n:-0}"
+  pin=kimi
+  [ $(((n + 1) % 2)) -eq 0 ] && pin=lobehub
+ fi
+ export OVERFLOW_PIN="$pin"
+ export RESEARCH_STAMP_FILE="$STAMP"
+ export RESEARCH_BEAT_COUNT_FILE="$COUNT"
+ bash "$AUTOMATION_ROOT/cadence/hour/33-research-beat.sh"
+}
+
+overflow_once || true
+sleep "${OVERFLOW_SLEEP_S:-900}" # second beat of the 15-minute cadence (seam for hermetic tests)
+overflow_once || true
+exit 0
