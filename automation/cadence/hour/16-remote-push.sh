@@ -1,39 +1,36 @@
 #!/usr/bin/env bash
-# 16-remote-push — cyclical origin push, hour-tier, gate-gated, never forced.
+# 16-remote-push — origin push, gate-gated, never forced, event-driven.
 #
-# For each repo (the hngh kernel + this automation repo): when local is
-# ahead of upstream, push the default branch to origin — but only when the
-# tree has nothing staged (never push half-landed operator work) and the
-# last gate signal for that repo is green (crumb recorded by 03-gate-check;
-# no crumb -> run `make test` quietly). Refusal, unreachability and auth
-# failures breadcrumb and exit 0 — never retried in-script. Runs at most
-# once per cadence-hours (cadence-params.tsv `push-cadence-hours`, stamp
-# file, same pattern as 11-service-recovery's one-attempt/day stamp).
+# When local is ahead of upstream, push the default branch to origin —
+# but only when the tree has nothing staged (never push half-landed
+# operator work) and the last gate signal for the repo is green (crumb
+# recorded by 03-gate-check; no crumb -> run `make test` quietly).
+# Refusal, unreachability and auth failures breadcrumb and exit 0 —
+# never retried in-script.
+# Event-driven (2026-09-08): the git post-commit hook fires this after
+# every verified commit; the hour tick is the backstop. A nonblocking
+# flock serializes concurrent invocations — rapid commits lose the race
+# and exit 0; the winner pushes. The push-cadence-hours stamp gate is
+# gone: the commit event plus the script's own quality gates ARE the
+# pacing. Automation merged into the kernel repo (one repo, one origin)
+# — one push covers both trees.
 # Pushing is authorized by hngh AGENTS.md; never --force, only the
 # checked-out default branch.
 #
-# usage: cadence/hour/16-remote-push.sh   (via jobs/cadence-tick.sh TIER=hour)
+# usage: fired by the git post-commit hook; backstop via
+#   cadence/hour/16-remote-push.sh   (jobs/cadence-tick.sh TIER=hour)
 set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
-. "$AUTOMATION_ROOT/lib/params.sh"
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
-AUTO="$AUTOMATION_ROOT"
 JOB_NAME="${JOB_NAME:-16-remote-push}"
-STAMP="${HNGH_PUSH_STAMP:-$HOME/.hngh-automation/.remote-push-stamp}"
-HOURS="$(get_param push-cadence-hours 24)"
-HOURS="${HNGH_PUSH_CADENCE_HOURS:-${HOURS:-24}}"
 
-# one run per cadence-hours, not per script invocation
-if [ -r "$STAMP" ]; then
- last="$(cat "$STAMP" 2>/dev/null)"
- now="$(date -u +%s)"
- case "$last" in '' | *[!0-9]*) last=0 ;; esac
- [ $((now - last)) -lt $((HOURS * 3600)) ] && exit 0
-fi
-mkdir -p "$(dirname "$STAMP")" 2>/dev/null || true
-date -u +%s >"$STAMP" 2>/dev/null || true
+# serialize concurrent invocations (rapid commits): the first run in
+# pushes; later ones find it busy and exit immediately — no duplicate
+# make-test runs, no double push
+exec 9>"${HNGH_PUSH_LOCK:-/tmp/.hngh-remote-push-lock}"
+flock -n 9 || exit 0
 
 # last_gate <label> — echoes "<state> <crumb-iso-ts>" from the latest
 # gate-check crumb for that repo (green/red/none + its timestamp).
@@ -110,5 +107,4 @@ push_repo() { # name dir
 }
 
 push_repo hngh "$KERNEL"
-push_repo hngh-automation "$AUTO"
 exit 0

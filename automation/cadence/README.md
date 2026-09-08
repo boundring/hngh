@@ -21,9 +21,11 @@ Self-gating drop-ins run more often than their effective beat: the gate
 inside each script skips runs until the Inventory interval elapses.
 
 - hour: `31-heartbeat` (heartbeat-minutes, default 60, was hardcoded 3h),
-  `16-remote-push` (push-cadence-hours stamp rate-limit, moved from the
-  day tier so a due push can no longer wait up to a full day for the
-  next 05:00 tick),
+  `16-remote-push` (event-driven, 2026-09-08: the git post-commit hook
+  fires it after every verified commit, the hour tick is the backstop;
+  a nonblocking flock serializes rapid commits; the push-cadence-hours
+  stamp rate-limit is gone -- the commit event plus the script's own
+  gates are the pacing),
   `33-research-beat` (fail-first gated, 2026-09-07: fires every hour
   tick and lib/failfirst.sh decides GO vs THROTTLE -- full speed until
   the model chain actually degrades, paced standard/cautious after a
