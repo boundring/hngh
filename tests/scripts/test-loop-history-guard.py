@@ -31,6 +31,8 @@ import subprocess
 import sys
 
 RESTATEMENT = "1915713"
+EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+SUBTREE_SQUASH = re.compile(r"^Squashed '.*' content from commit [0-9a-f]+$")
 KNOWN_EXEMPTIONS = {
     # comment-only alignment of composition-root references; predates the guard
     "915e0e3": "comment-only docs alignment (pre-guard)",
@@ -56,14 +58,20 @@ def commits_since(rev):
 
 
 def touches_code(sha):
-    out = run(["git", "diff", "--name-only", f"{sha}^", sha]).stdout
+    out = run(["git", "diff", "--name-only", diff_base(sha), sha]).stdout
     return any(p.startswith(prefix) for p in out.splitlines()
                for prefix in CODE_SURFACE)
 
 def code_files(sha):
-    out = run(["git", "diff", "--name-only", f"{sha}^", sha]).stdout
+    out = run(["git", "diff", "--name-only", diff_base(sha), sha]).stdout
     return [p for p in out.splitlines()
             if any(p.startswith(prefix) for prefix in CODE_SURFACE)]
+
+def diff_base(sha):
+    # graft/squash imports (git subtree add --squash) land as parentless
+    # root commits; diff them against the empty tree
+    parents = run(["git", "rev-list", "--parents", "-n", "1", sha]).stdout.split()
+    return parents[1] if len(parents) > 1 else EMPTY_TREE
 
 
 def main():
@@ -71,6 +79,11 @@ def main():
     checked = 0
     exempted = 0
     for sha, subject in commits_since(RESTATEMENT):
+        if SUBTREE_SQUASH.match(subject):
+            # git-subtree --squash root: a parentless graft commit carrying the
+            # imported tree unprefixed; its content is judged at the merge
+            # commit, where the paths land under the subtree prefix
+            continue
         if not touches_code(sha):
             continue
         checked += 1
