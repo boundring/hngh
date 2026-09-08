@@ -1,0 +1,33 @@
+log-presentation-patterns	crystallized	2026-08-28T04:42:49Z	log-presentation patterns
+wiki-viewer-qol	crystallized	2026-08-28T12:33:56Z	wiki-viewer QoL comparison
+tech-tree-research-ux	crystallized	2026-08-28T04:51:24Z	tech-tree research UX precedents
+session-cost-display	crystallized	2026-08-28T04:46:58Z	session-cost display formats
+gantt-legibility	reviewed	2026-09-07T20:01:38Z	gantt legibility patterns
+telemetry-schema-exemplars	crystallized	2026-08-28T04:56:41Z	telemetry schema exemplars
+remote-access-patterns	crystallized	2026-08-29T01:03:06Z	remote access patterns: WoL, tailnet VPN, SSH, headless dashboard exposure
+unattended-session-budgets	crystallized	2026-08-29T05:03:13Z	budget optimization for unattended model sessions: caps, quotas, cost telemetry
+virtual-assistant-ux	crystallized	2026-08-29T07:03:12Z	virtual assistant as companion surface: configuration, actions, guidance UX
+adversarial-review-patterns	crystallized	2026-08-28T21:03:10Z	adversarial fresh-eyes review cadences for interfaces and agent work
+logs-known-good-patterns	crystallized	2026-08-28T23:03:11Z	log organization/navigation/presentation patterns for the logs overhaul
+research-publishing-pipelines	crystallized	2026-08-29T03:03:42Z	research publishing pipelines: reports, papers, books from crystallized lines
+wiki-viewer-QoL-comparison	crystallized	2026-08-31T08:03:42Z	wiki-viewer QoL comparison
+tech-tree-research-UX-precedents	crystallized	2026-08-31T04:04:41Z	tech-tree research UX precedents
+session-cost-display-formats	crystallized	2026-08-31T02:03:48Z	session-cost display formats
+gantt-legibility-patterns	crystallized	2026-08-30T20:04:01Z	gantt legibility patterns
+self-funding-paths-publications-ebook-site-operator-runway	crystallized	2026-08-31T00:03:11Z	self-funding paths (publications/ebook/site -> operator runway)
+unattended-plan-authoring-safety-operator-accepted-machine-drafted-plans	crystallized	2026-08-31T06:03:14Z	unattended plan authoring safety: operator-accepted machine-drafted plans
+alert-to-work-routing-patterns-closing-the-self-observation-loop	crystallized	2026-08-30T14:04:24Z	alert-to-work routing patterns: closing the self-observation loop
+search-grounded-research-beats-web-search-reference-capture-source-quality	crystallized	2026-08-30T22:03:15Z	search-grounded research beats: web search, reference capture, source quality
+delegation-lane-parallelism-multi-lane-omp-bridge-sessions-and-queueing	crystallized	2026-08-30T18:03:18Z	delegation lane parallelism: multi-lane omp-bridge sessions and queueing
+ceremony-cost-reduction-batching-kernel-doc-landings-safely	crystallized	2026-08-30T16:04:29Z	ceremony-cost reduction: batching kernel doc landings safely
+governance-benchmark	planned	2026-09-06T18:30:34Z	public runnable benchmark scoring governance properties (tamper-evidence, approved=executed, reconstruction-from-record, refusal-accounting) of change-governance systems; comparisons: CI/CD, Copilot-class guardrails, procedural voting
+govbench-ci-evidence	crystallized	2026-09-06T22:33:02Z	What CI/CD systems publish machine-checkable evidence of change governance, and what do their artifacts cover?
+govbench-weak-validation-baseline	crystallized	2026-09-07T17:06:00Z	What is the weakest validation baseline a governance benchmark must compare against (rubber-stamp approval, unchecked auto-merge)?
+govbench-voting-prior-art	crystallized	2026-09-07T10:33:38Z	What prior art exists for procedural voting on changes (sign-offs, LGTM counts, quorum rules) and how is it scored?
+govbench-metrics-v1	crystallized	2026-09-07T03:03:10Z	Which metrics make tamper-evidence, approved=executed, reconstruction-from-record, and refusal-accounting measurable?
+govbench-scenario-corpus	crystallized	2026-09-07T05:02:58Z	What scenario corpus (benign, adversarial, partial-failure changes) exercises a governance benchmark honestly?
+govbench-adapter-contract	crystallized	2026-09-06T20:32:53Z	What adapter contract lets different change-governance systems run the same governance benchmark unmodified?
+ctx-compaction-strategies	crystallized	2026-09-07T21:04:42Z	Which long-session compaction strategies (checkpointing state at turn boundaries) let a reborn session reorient in one bounded read without losing verified facts?
+ctx-structured-briefs	planned	2026-09-07T17:00:36Z	Which structured brief fields measurably cut reorientation tokens after a session death, and which fields are noise?
+ctx-retrieval-vs-repetition	contracting	2026-09-07T22:34:56Z	At equal task quality, when do orientation pointers (retrieval) beat inlined content (repetition) for session input cost, and how does the 1500-byte pack cap trade off?
+ctx-ttsr-scope-gaps	planned	2026-09-07T18:30:33Z	What session-discipline violations escape stream-rule scopes (thinking, subagents) and how should record-level screening close them?

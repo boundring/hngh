@@ -1,0 +1,22 @@
+log-presentation patterns
+wiki-viewer QoL comparison
+tech-tree research UX precedents
+session-cost display formats
+gantt legibility patterns
+telemetry schema exemplars
+self-funding paths (publications/ebook/site -> operator runway)
+unattended plan authoring safety: operator-accepted machine-drafted plans
+alert-to-work routing patterns: closing the self-observation loop
+search-grounded research beats: web search, reference capture, source quality
+delegation lane parallelism: multi-lane omp-bridge sessions and queueing
+ceremony-cost reduction: batching kernel doc landings safely
+govbench-ci-evidence	What CI/CD systems publish machine-checkable evidence of change governance, and what do their artifacts cover?
+govbench-weak-validation-baseline	What is the weakest validation baseline a governance benchmark must compare against (rubber-stamp approval, unchecked auto-merge)?
+govbench-voting-prior-art	What prior art exists for procedural voting on changes (sign-offs, LGTM counts, quorum rules) and how is it scored?
+govbench-metrics-v1	Which metrics make tamper-evidence, approved=executed, reconstruction-from-record, and refusal-accounting measurable?
+govbench-scenario-corpus	What scenario corpus (benign, adversarial, partial-failure changes) exercises a governance benchmark honestly?
+govbench-adapter-contract	What adapter contract lets different change-governance systems run the same governance benchmark unmodified?
+ctx-compaction-strategies	Which long-session compaction strategies (checkpointing state at turn boundaries) let a reborn session reorient in one bounded read without losing verified facts?
+ctx-structured-briefs	Which structured brief fields measurably cut reorientation tokens after a session death, and which fields are noise?
+ctx-retrieval-vs-repetition	At equal task quality, when do orientation pointers (retrieval) beat inlined content (repetition) for session input cost, and how does the 1500-byte pack cap trade off?
+ctx-ttsr-scope-gaps	What session-discipline violations escape stream-rule scopes (thinking, subagents) and how should record-level screening close them?

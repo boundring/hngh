@@ -1,0 +1,9 @@
+[Unit]
+Description=hngh cadence tick: 30-minute tier
+
+[Timer]
+OnCalendar=*-*-* *:00/30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
