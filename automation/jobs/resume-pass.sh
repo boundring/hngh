@@ -18,7 +18,7 @@
 #
 # Modes:
 #   --boot   operator login / @reboot-style manual hook (one-liner:
-#            bash ~/Projects/etc/hngh-automation/jobs/resume-pass.sh --boot
+#            bash "$AUTOMATION_ROOT"/jobs/resume-pass.sh --boot
 #            — no systemd unit; see docs/NIGHT-OPS.md resume protocol)
 #   --sweep  cadence/day/15-resume-pass.sh wrapper; runs only when the
 #            last non-tick STATE.md crumb is older than resume-gap-hours
@@ -128,7 +128,7 @@ OUT="$AUTOMATION_ROOT/$LOG"
     fi
   done
   if [ "$missed" -gt 0 ]; then
-    printf '\nRun these next (the existing one-line catch-up, no scheduler invented):\n\n    cd ~/Projects/etc/hngh-automation && make adhoc TIER=day\n\n'
+    printf '\nRun these next (the existing one-line catch-up, no scheduler invented):\n\n    cd "$AUTOMATION_ROOT" && make adhoc TIER=day\n\n'
   else
     printf 'none — every day-tier beat fired within the last 24h.\n'
   fi
