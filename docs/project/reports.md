@@ -1695,7 +1695,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T19:01:11Z | progress | 5e495144 | research line ainglish-engagement reviewed: parked (parked -- line never tested the real preflight API or selected an actual proposal; recommendations rest on unverified file paths and schemas, so keep the record but take no action until grounded.) | 2026-09-08T19:01:11Z-progress-5e495144.md |
 | 2026-09-08T19:01:19Z | progress | ab22fc31 | research line ctx-ttsr-scope-gaps reviewed: parked (parked -- legitimate scope-gap inventory but only LLM-verifier concept sketches with no concrete design or integration path; revisit when record-level screening is scheduled.) | 2026-09-08T19:01:19Z-progress-ab22fc31.md |
 | 2026-09-08T19:01:51Z | progress | a952eab4 | research line governance-benchmark reviewed: parked (parked -- hollow crystallization with fabricated-shape references and zero measured results, but the underlying benchmark question is sound and not worth closing.) | 2026-09-08T19:01:51Z-progress-a952eab4.md |
-| 2026-09-08T19:05:00Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×63 | 2026-09-08T19:05:00Z-alert-3bf67046.md |
+| 2026-09-08T19:05:00Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×64 | 2026-09-08T19:05:00Z-alert-3bf67046.md |
 | 2026-09-08T19:10:01Z | progress | c9c9145d | agent-supervision: evicted-stale omp-stall-inspector-eae517 (idle 363m) | 2026-09-08T19:10:01Z-progress-c9c9145d.md |
 | 2026-09-08T19:30:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T19:30:41Z-progress-6f20e8cb.md |
 | 2026-09-08T20:00:39Z | progress | e284d101 | course bridge-operator-host: card mounted, last increment 2026-09-08T19:00:39Z | 2026-09-08T20:00:39Z-progress-e284d101.md |
@@ -1740,3 +1740,6 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T00:00:15Z | progress | c333a4dc | course bridge-operator-host: card mounted, last increment 2026-09-08T23:00:15Z | 2026-09-09T00:00:15Z-progress-c333a4dc.md |
 | 2026-09-09T00:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T00:00:18Z-progress-6f20e8cb.md |
 | 2026-09-09T00:00:31Z | progress | e583f604 | research line synth-2026-09-08-1: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-09-synth-2026-09-08-1.md | 2026-09-09T00:00:31Z-progress-e583f604.md |
+| 2026-09-09T00:17:47Z | progress | 6f89f8dd | plan 2026-09-03-routed-agent-stall-omp-2026-08-30T18-58-28-968Z_01a-8a8d24 executed (all steps checked) | 2026-09-09T00:17:47Z-progress-6f89f8dd.md |
+| 2026-09-09T00:20:00Z | alert | 176162f7 | [oversight] slow-unit: dropin:33-research-beat.sh wall=28.3s median=0.1s | 2026-09-09T00:20:00Z-alert-176162f7.md |
+| 2026-09-09T00:21:36Z | progress | 1b0c746d | research line synth-2026-09-08-1: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-09-synth-2026-09-08-1.md | 2026-09-09T00:21:36Z-progress-1b0c746d.md |
