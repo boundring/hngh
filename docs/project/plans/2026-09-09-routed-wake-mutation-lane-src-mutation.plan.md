@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=wake-mutation-lane:src-mutation -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-09T20:01:16Z routed-from=wake-mutation-lane:src-mutation -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `wake-mutation-lane:src-mutation`

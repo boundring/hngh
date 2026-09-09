@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=ui-audit:unavailable -->
+<!-- plan: risk=normal accepted=2026-09-08T04:32:07Z routed-from=ui-audit:unavailable  cause=obsolete disposed=2026-09-09T19:11:58Z reason="ui-audit ran green end-to-end 2026-09-09: automation/node_modules present (puppeteer-core+axe-core), /usr/bin/google-chrome-stable default executablePath, exit 0 with 0 violations (operator-observed subagent run); audit "-->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:unavailable`
