@@ -60,8 +60,9 @@ never knows omp exists. No step touches provider/credential configuration
 - [ ] 2. Register the server for omp: add an entry to this repo's
       `.omp/mcp.json` (`hngh` → `python automation/mcp/hngh_mcp_server.py`)
       and, after the operator confirms, mirror it in
-      `~/.omp/agent/mcp.json`. Verification: an omp session in this repo
-      observes `xd://mcp__hngh_*` tools via `/mcp`.
+      `~/.omp/agent/mcp.json`.
+      Verification: an omp session in this repo observes
+      `xd://mcp__hngh_*` tools via `/mcp`.
 - [ ] 3. Extend `scripts/omp-bridge` with the two subcommands the plugin and
       MCP server back onto (single adapter, dependency inward):
       `--propose <plan-slug>` (writes `docs/project/plans/<date>-<slug>.plan.md`
@@ -113,7 +114,8 @@ never knows omp exists. No step touches provider/credential configuration
       existing research pipeline — `automation/research-lines.tsv` and
       `automation/research-dispositions.tsv` — and surface current research
       lines through the MCP server (extends step 1 with a `research_lines`
-      tool). Verification: tool returns the live TSV contents; a research
+      tool).
+      Verification: tool returns the live TSV contents; a research
       beat writes a line and the tool reflects it.
 - [ ] 10. Dashboard as operator UI: add a read-only JSON endpoint (or extend
       `dashboard/plans.json`) covering queue + accepted plans + last ceremony
@@ -124,7 +126,8 @@ never knows omp exists. No step touches provider/credential configuration
 - [ ] 11. Records: `CHANGELOG.md` entry + `docs/records/2026-09-XX-omp-integration.md`
       describing the integrated surface set, and update
       `docs/project/plans/README.md` only if the propose surface gained
-      behavior. Verification: `make test` green; record cross-linked from
+      behavior.
+      Verification: `make test` green; record cross-linked from
       CHANGELOG.
 
 ## Execution notes
