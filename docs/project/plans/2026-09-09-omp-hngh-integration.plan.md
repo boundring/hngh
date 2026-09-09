@@ -7,6 +7,26 @@ operator's UI/UX for hngh (orientation, context-seeding, research feed, work
 requests). This plan was authored in an operator omp session on 2026-09-09 and
 handed off; execution belongs to the 24/7 cycle, step by step.
 
+Authorization: operator-directed 2026-09-09. The operator instructed this
+session to prioritize this plan for "the smoothest and fastest and
+least-troubled progress" (verbatim) after reviewing the queue state
+(62 accepted plans ahead, fail-first parallel slots, 45-77 commits/day
+recent throughput). The executing session folds this directive into
+docs/records/ with its first commit so the audit trail lands with the
+plan file.
+
+## Execution priority directive
+
+The selector runs accepted plans in filename order with parallel slots.
+This plan is operator-prioritized: it proceeds ahead of discretionary
+and research-filler work wherever the executor has scheduling latitude.
+Steps are dependency-ordered (1-3 foundation; 4-8 depend on 3; 9
+depends on 1; 10-11 last), so each beat makes safe progress regardless
+of scheduling. Executor sessions do not wait on human approval;
+governance (certificates + green gates) is the only barrier. Each step
+verifies on its own surface; omp-side verification runs through the
+delegated omp session itself (`omp -p`), which is native to this cycle.
+
 Evidence base for the omp side: omp internal docs (`omp://extensions.md`,
 `omp://mcp-config.md`, `omp://plugin-manager-installer-plumbing.md`,
 `omp://skills.md`, `omp://ttsr-injection-lifecycle.md`, `omp://custom-tools.md`;

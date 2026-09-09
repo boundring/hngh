@@ -8,3 +8,7 @@ at 2026-09-09T01:00:16Z. Alert text: overnight beat 2026-09-03-routed-agent-stal
 
 - [ ] Stop the stalled session, write a handoff brief (last state + next action), start the replacement
       Verification: old session id gone from supervision state; handoff brief file exists; replacement session shows fresh tool activity
+
+## Occurrences
+
+- 2026-09-09T02:00:16Z re-occurred (dedup window expired)
