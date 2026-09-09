@@ -130,6 +130,21 @@ docs/records/ with its first commit.
       when configured > local-bench > paid-fallback), budget.md source
       tagging, and refusal to route to a quota model with no key config;
       `make test` green.
+- [ ] 10. Fix the fresh-eyes review beat's model selection. Evidence:
+      operator item "review: model response unparseable — read
+      digest/REVIEW-2026-09-09.md": the 2026-09-09 review ran on
+      unsloth:unsloth/Qwen3-8B-class bench model and returned a
+      "print Hello world" non-review — the same bad-bench-model family
+      that burned the session budget (step 1). The review/digest lane
+      picks its model independently of the session ladder, so step 1
+      does not cover it. Change: route the fresh-eyes review (and the
+      digest model leg) through lib/model.sh's quota ladder
+      (deck -> kimi -> lobehub) with the local bench as last resort,
+      and mark a review unparseable as a bad-execution signal feeding
+      the same demotion counter as step 1.
+      Verification: suite test covers the review-beat model ladder and
+      the unparseable->demotion-signal wiring; one live review beat
+      produces a parseable review; `make test` green.
 
 ## Execution notes
 
