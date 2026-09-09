@@ -1,184 +1,51 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T15:01:13Z -->
-# 2026-09-09 — stall recovery, operator surfaces, lifecycle accommodation
+<!-- plan: status=proposed risk=normal accepted=- -->
+# 2026-09-09 — stall-recovery-and-operator-surfaces
 
-Authorization: operator-directed 2026-09-09. The operator reviewed five
-independent performance/dashboard reports (supportive + adversarial, this
-session) and directed: autonomous reaction to blockers, direct session
-interaction surfaces, subagent observation, notification for important
-matters (operator away on paid work all today), and smooth accommodation
-of steamdeck availability and desktop restarts. Evidence base: the report
-findings cited per step. The executing session folds this directive into
-docs/records/ with its first commit.
+## Status
+proposed. Not yet accepted.
+
+## Authorization
+Operator-directed staging 2026-09-09 ("Stall recovery and operator surfaces"), plus the standing directive to reduce operator actions and simplify UX with prompts for acceptance. Normal-risk autonomous work is pre-authorized; critical-class work parks with operator-facing alerts.
+
+## Sources
+docs/project/plans/README.md (the contract this file obeys); docs/project/roadmap.md (stage table, working order); docs/project/queue.md (Next: wake-mutation-lane; Scheduling: the rotation loop); docs/project/backlog.md rows wake-mutation-lane, publication-lines-contract (done 2026-08-31), ebook-book-inputs, config-manager; docs/project/master-plan.md §4 (grow↔research alternation); docs/research/2026-09-09-bench-probe-calibration.md; docs/research/2026-09-09-stage23-exit-criteria-sweep.md; docs/research/2026-09-09-unsloth-recovery-local-lane.md; docs/research/2026-09-09-stage4-package-upgrade-runbook.md; docs/research/2026-09-09-publication-gap-inventory.md; docs/research/2026-09-09-staging-lessons.md; docs/records/2026-09-09-operator-flexibility-doctrine.md; docs/records/2026-09-09-wake-mutation-lane-rotation.md.
 
 ## Steps
 
-- [ ] 1. Model-outcome demotion in the session launcher. Evidence: all 9
-      sessions today (automation/agent-handoffs.md rows 9-17) ended
-      rc=0 cancelled cause=bad-execution on unsloth/Ornith-1.0-35B
-      (local-bench), burning the full 8/day budget with zero landings;
-      the fail-first ladder paced spend down but never demoted the model.
-      Change: automation/lib/launch-session.sh (or failfirst state) counts
-      consecutive bad-execution cancellations per model; at 2 consecutive,
-      demote to the next model in the bench ladder and file an alert row.
-      Test-first in the automation suite.
-      Verification: suite test covers the demotion counter (2 strikes ->
-      next model, alert filed, counter resets on success); full `make test`
-      green.
-- [ ] 2. Prove the notification send path. Evidence: notify-email.conf
-      exists but logs/notify-email.log is empty — no send ever recorded;
-      the daily digest said "ATTENTION: 52 alerts in 24h" and the operator
-      received nothing on the machine-matters channel. The operator has
-      authorized Hngh notifying them for important matters.
-      Change: send exactly one test email via scripts/notify-email.py
-      marked TEST, verify the send log records it; only if email fails,
-      wire the implemented-but-unborn telegram/webhook seam in
-      automation/lib/notify.sh and test that instead.
-      Verification: one test send recorded in logs/notify-email.log with
-      rc=0 (or telegram equivalent); no repeat sends.
-- [ ] 3. Budget-governance directive record. Evidence: cap chain
-      env OVERNIGHT_MAX_SESSIONS_DAY > inventory sessions-day-max
-      (operator authorization 2026-09-07) exhausted at 01:12:38Z today;
-      the operator's 2026-09-09 directive is "as few blockers and stalls
-      as possible today". Change: record the directive; when the cap
-      blocks an operator-priority plan, file an operator-item requesting
-      the cap amendment instead of silently waiting or burning filler —
-      never amend spend caps unilaterally.
-      Verification: directive recorded in the record doc; operator-item
-      path demonstrated once in a suite test (no real cap change).
-- [ ] 4. Tmux-based subagent observer. Evidence: auto-tiling Konsole
-      observer already works (automation/jobs/window-tile.py, POST /tile,
-      ui-config tiling.enabled=true) but tails raw s-expr logs; a tracked
-      omp-tuned .tmux.conf exists in
-      ~/.local/state/git-back-dots/agent-configs/ undeployed; pygmentize
-      is installed. Change: deploy the tracked .tmux.conf; add a tmux
-      observer launcher (labeled panes, one per session, tailing
-      logs/overnight-*.log through pygmentize) registered as a launcher
-      key in ~/.config/hngh/ui-config.json and wired to POST /spawn and
-      POST /tile like the Konsole templates.
-      Verification: launcher spawns a tmux session with one labeled pane
-      per running session log and highlighted output; ui-config validation
-      passes; suite test covers the launcher template parse.
-- [ ] 5. Rebuild the orphaned write-surface UI. Evidence: POST /spawn,
-      /tile, /flag are served and validated but have zero served-JS
-      callers (grep of dashboard/*.js) — the operator has no UI path to
-      set up manual/automated sessions with prompt/context control, their
-      stated need. Change: add the controls to the served dashboard
-      (spawn form naming a launcher key + session mission/context fields,
-      tile button, flag control), preserving the server's rule that the
-      client may only NAME a launcher, never supply a command.
-      Verification: served page renders the controls and a dry POST
-      against the running server is accepted (one /flag call, recorded in
-      the ledger); no server changes beyond what exists.
-- [ ] 6. Dashboard exposure and data-quality fixes. Evidence:
-      dashboard-server.py binds 0.0.0.0:8890 with eight unauthenticated
-      POST actions (systemd unit says "phone-accessible on LAN");
-      system.json reports tailscale_peers:'0' contradicting its own raw
-      state blob (3 nodes); no uptime/boot probe. Operator is remote
-      today — remote access must be safe, not LAN-open.
-      Change: require a shared token (from ~/.config/hngh/ui-config.json)
-      on POST endpoints, or bind non-GET to the tailscale interface;
-      fix the peers parser; add uptime/last-boot to the system feed.
-      Test-first where the change is parseable.
-      Verification: POST without token refused rc=401/403 in a suite
-      test; system.json peers matches raw tailscale state; uptime field
-      present.
-- [ ] 7. Lifecycle accommodation: traps and persistent state. Evidence:
-      timeout wraps bili so SIGTERM kills the whole tree (rc=124) with no
-      trap handlers in overnight-cycle.sh; no mid-plan checkpoint beyond
-      git/checkboxes; failfirst state lives in /tmp/hngh-failfirst and
-      resets on reboot. Operator requires smooth safe stop/restart on
-      updates and shutdowns.
-      Change: trap SIGTERM/SIGINT in overnight-cycle.sh to log the
-      in-flight slug and disposition before exit; move failfirst state
-      under a persistent path (automation/state/ or
-      ~/.local/state/hngh-failfirst) so pacing survives reboots; document
-      the restart sequence. No systemd unit changes (critical boundary).
-      Verification: suite test simulates SIGTERM mid-beat and asserts the
-      breadcrumb + clean exit; state path survives a simulated reboot
-      (dir not under /tmp); `make test` green.
-- [ ] 8. Steamdeck availability windows. Evidence: hourly 32-deck-facts
-      probes file deck-unreachable alerts (rc=255) and the operator
-      receives email for what is normal gaming/travel; operator commits
-      the deck to weekday 09:00-17:30 EST availability when feasible and
-      expects Hngh to recognize unavailability otherwise.
-      Change: availability schedule in cadence params (weekday 09:00-17:30
-      EST expected; outside it, unreachable is expected-state — no alert,
-      dashboard shows "off-duty" instead of down); within-window
-      unreachable still alerts. Adjust automation/jobs system/remote
-      probes and the digest classifier accordingly.
-      Verification: suite test: unreachable outside window -> no alert,
-      status off-duty; unreachable inside window -> alert retained;
-      `make test` green.
-- [ ] 9. Wire pre-paid quota models into session routing. Evidence:
-      overnight-cycle.sh:123 itself says "model routing (future, not
-      implemented): when the KIMI/LOBEHUB quota keys go live (sibling
-      lane), a session-model-preference Inventory row can route bounded
-      delegated sessions to a quota model ahead of the paid fallback".
-      Meanwhile the 8/day session cap counts cash-spend and quota sessions
-      identically, so pre-paid quota goes unconsumed (2026-09-09: $0.08
-      spent, cap exhausted by a bad local-bench model) and the operator's
-      standing directive to distribute Kimi/Lobehub quota across reset
-      windows is unimplemented. Change: implement the designed hook —
-      read a session-model-preference cadence param row in select_model,
-      preferring quota models over paid-fallback when their keys/config
-      are present; make budget.md record source=quota separately from
-      paid cash spend so the cap can distinguish them. Activating actual
-      provider keys stays critical-class (operator certificate or
-      explicit instruction) — this step ships the mechanism, tests, and
-      Inventory-row plumbing only.
-      Verification: suite test covers the ladder (env > quota-row model
-      when configured > local-bench > paid-fallback), budget.md source
-      tagging, and refusal to route to a quota model with no key config;
-      `make test` green.
-- [ ] 10. Fix the fresh-eyes review beat's model selection. Evidence:
-      operator item "review: model response unparseable — read
-      digest/REVIEW-2026-09-09.md": the 2026-09-09 review ran on
-      unsloth:unsloth/Qwen3-8B-class bench model and returned a
-      "print Hello world" non-review — the same bad-bench-model family
-      that burned the session budget (step 1). The review/digest lane
-      picks its model independently of the session ladder, so step 1
-      does not cover it. Change: route the fresh-eyes review (and the
-      digest model leg) through lib/model.sh's quota ladder
-      (deck -> kimi -> lobehub) with the local bench as last resort,
-      and mark a review unparseable as a bad-execution signal feeding
-      the same demotion counter as step 1.
-      Verification: suite test covers the review-beat model ladder and
-      the unparseable->demotion-signal wiring; one live review beat
-      produces a parseable review; `make test` green.
-- [ ] 11. Bidirectional email contact (operator meta-agentic surface).
-      Authorization: operator doctrine 2026-09-09
-      (docs/records/2026-09-09-operator-flexibility-doctrine.md §4).
-      Evidence: notify-email.py is send-only (SMTP); the operator wants
-      a slow loop where hngh injects content into an email thread, the
-      operator replies, and hngh reads replies — reducing reliance on
-      live omp sessions. Change: add an IMAP poll drop-in (cadence 30m)
-      reading the notify mailbox for operator replies (same account as
-      notify-email.conf where the provider supports IMAP; config keys
-      beside the SMTP ones, same fail-closed conf pattern, password via
-      the existing 1Password/op path), converting unread operator
-      replies into operator-items and — for replies that carry a decision
-      on a parked plan — into plan-proposal drafts through the normal
-      router path. Attachment/link/image content links to files under
-      automation/, never inlined into ledgers. Mark processed messages
-      read; never delete.
-      Verification: suite test covers conf parsing (missing IMAP keys
-      fail closed), reply->operator-item conversion, and
-      processed-marking; a live poll against the real mailbox lists
-      unread state without mutating anything on a dry run;
-      `make test` green.
+- [ ] 1. GROW — wake-mutation-lane rotation beat (executed 2026-09-09T16:24Z by the cycle's rotation beat). Boundary proposal certified, park alert filed. The FORBIDDEN clause is superseded by the operator-flexibility doctrine §2: certificate-bound :wake-mutation src work may now proceed as machine work through the ceremony. Verification: a certificate issued for the :wake-mutation boundary proposal with the src mutation parked via an alert row naming the forbidden boundary and files, OR a grounded note (record or research doc) naming the exact loop stage that could not complete and the missing piece; kernel `make test` green.
 
-## Execution notes
+- [ ] 2. RESEARCH — bench probe calibration: is p1_reader mis-calibrated or genuinely discriminative? Read hngh-automation jobs/model-bench.sh (read-only): probe 1 plants the `#+` reader-macro defect and the judge scores p1_reader=1 only if the answer contains the literal `#+` or one of reader/syntax/malformed/sharp. Against stats/model-bench-2026-09-{08,09}.jsonl: both gemma-4-12B variants scored p1_reader=0 on both days while passing p1_div0 and p1_json — a stable signature consistent with paraphrase-style answers failing a strict keyword judge, not obviously with missing the defect. Also weigh the variance finding: Ornith-1.0-9B scored 5/5 (09-08, 09-09), so single-day runs are weak gates. Conclude recalibrate-or-accept with a priced recommendation for the delegated-lane gate. Verification: docs/research/2026-09-09-bench-probe-calibration.md exists citing the per-day jsonl rows (models, fields, timestamps), a named recalibrate-or-accept verdict on p1_reader with the judge logic quoted, and a priced recommendation; kernel `make test` green.
 
-- Priority order is the step order: 1-3 directly attack today's stall
-  (model burn -> notifications -> budget governance); 4-6 are the operator
-  surfaces; 7-8 are lifecycle. Steps 1, 2, 3 are mutually independent.
-- Inherited guardrails: no provider/credential configuration changes, no
-  systemd unit lifecycle changes, no unilateral spend-cap amendments.
-  Failing-test-first for every behavior change; full `make test` green
-  per slice.
-- The two operator-priority plans already in the queue
-  (2026-09-09-omp-hngh-integration — acceptance-parse fixed by the
-  operator session at 2026-09-09T13:05Z after the router flagged
-  step-2-no-verification for ~12h — and
-  2026-09-09-automation-schedule-optimization) execute through the normal
-  selector; this plan's steps 1 and 3 unblock their throughput.
+- [ ] 3. GROW — stage-2/3 exit-criteria verification sweep. Run the cheapest real check for each remaining criterion in the roadmap stage table and record per-criterion status so the roadmap can flip states on evidence. Stage 2: fetch each dashboard tab on :8890 (Schedule, Sessions, System, Research, Logs) and record HTTP status + identifying content; fetch at least one cold deep-link directly; look for operator-item lifecycle evidence (open→handled→dismissed) in recent reports.md rows. Stage 3: read the recent overnight run logs and logs/budget.md session-run rows for one full delegation cycle witnessed end-to-end (run-start → observatory working → run-end disposition), and search alert/supervision rows for a stall flag + auto-replace without human intervention (the 2026-09-02→03 stalled session recovered by sibling automation slice 2026-09-03 is candidate evidence — verify from logs, not from the brief). Anything not verifiable cheaply is recorded not-established with the missing check named. Verification: docs/research/2026-09-09-stage23-exit-criteria-sweep.md exists with one row per remaining stage-2 and stage-3 exit criterion, each marked verified or not-established with cited evidence (URLs, log paths, row ids); kernel `make test` green.
+
+- [ ] 4. RESEARCH — unsloth recovery note + local-lane resilience. Investigate WITHOUT starting anything: what returns 127.0.0.1:8080? Observed at authoring time: llama-server.service (disabled, ExecStart=/usr/bin/llama-server with no model arguments in the unit), unsloth-warm.service (disabled), unsloth-studio.service (active while :8080 is unresponsive). Determine the operator-side start path (which unit, which config, what arguments the server needs to re-host the 35B fleet) and whether Ollama :11434's Ornith-1.0-9B can host a delegated lane if the probe recalibrates (bench history: 5/5 on 09-08 and 09-09 — state the multi-day threshold rule that would admit it). Docs only; explicitly no service start, stop, or restart; systemd unit edits are critical-class and park. Verification: docs/research/2026-09-09-unsloth-recovery-local-lane.md exists naming the observed unit states with the unit names quoted, the concrete operator start path (or "not established" per unknown), a multi-day admission rule for the 9B lane, and an explicit no-service-started statement; kernel `make test` green.
+
+- [ ] 5. GROW — publications pipeline --site increment. The publication-lines-contract row is done (rotated 2026-08-31: the hard-coded 7-file list stands as the documented contract), and operator-items step 5 covers an `--ebook` temp run — this step covers the other mode. Run scripts/generate-publication --site with HNGH_PUB_ROOT pointed at a throwaway temp directory, record what it consumed and the gap inventory versus the research-lines surface (what the site lacks before it is a public surface per the backlog public-surface row). Build artifacts are never committed. Verification: an --site run completed into the temp dir with its output inventory recorded (or the failure captured verbatim as the finding), the gap note landed in a record or research doc, `git status` shows no committed publication artifacts; kernel `make test` green.
+
+- [ ] 6. RESEARCH — stage-4 governed package upgrade runbook design. Stage 4's exit criterion is a governed package upgrade run start-to-finish through the certificate loop on this host, but kernel-side governed update lanes are FORBIDDEN to machine sessions — so design the runbook and park the execution as operator-supervised. What the run needs: the package inventory feed (system-ops v1, landed), a certificate binding the exact package list, fresh-evidence recheck immediately before the mutation, the operator supervision gate (who issues what), and rollback/reversibility notes. Ground in the roadmap stage-4 row and the backlog config-manager and "System controls → governed package operations" rows; keep it design-only. Verification: docs/research/2026-09-09-stage4-package-upgrade-runbook.md exists with the runbook outline, the explicit operator-supervised boundary, and a parked-execution note; no package command is run by this step; kernel `make test` green.
+
+- [ ] 7. GROW — wrap, lessons, author-next-plan (the plan-supply law). Land this plan's lessons into the foldback/lessons path, and author the next plan file (docs/project/plans/<date>-<slug>.plan.md, status=proposed) whose steps cover the parked follow-ons below and the newest executed evidence (including the sibling automation slice's email-setup prompter + digest operator-items section once visible in hngh-automation), so the queue never runs empty. Verification: the next plan file exists with contract-valid front-matter (first line `<!-- plan: status=proposed risk=normal accepted=- -->`) and every unchecked step carrying an indented Verification line; kernel `make test` green.
+
+## Parked (not in this plan, recorded for the operator; follow-on candidates for the next plan's author):
+- The `:wake-mutation` kernel src mutation itself — operator-landed or explicitly authorized; the certificate from step 1 names the files.
+- Returning the 35B server to service (llama-server.service / unsloth-warm.service start or unit amendment) — systemd unit lifecycle, critical-class, operator-supervised per step 4's note.
+- A browser-graded mobile-width sweep of every dashboard tab (step 3 records what cheap checks can and cannot verify; rendering-grade evidence needs the graded surface pass).
+- ebook-book-inputs (manuscript/outline/metadata set) — the royalty-pipeline blocker; grows after step 5's gap inventory.
+- Fold the sibling automation slice's prompter + digest section into the next plan once it lands in hngh-automation.
+
+## Autonomy rule (binding for this session)
+
+Governance — certificates and green gates — is the only barrier. Do not wait for or ask for human approval. hngh-automation commits are free. hngh changes land via the certificate ceremony ONLY with a green `make test`. hngh kernel src/, tests/, Makefile, and hngh.asd changes are FORBIDDEN this session — if a step requires one, stop that step, note it in the plan file, and move to the next step. Never touch provider or credential configuration, systemd unit state, tracked deletions outside the 48h prune, or secrets. If blocked, write what blocked you into the plan file and move on; other work always exists.
+
+## Known context (cite these; do not re-derive)
+
+- Loop tunables live in hngh-automation/cadence-params.tsv (the Inventory): read the row, never guess a default.
+- Plans feed: hngh docs/project/plans/*.plan.md; queue: hngh docs/project/queue.md; backlog: hngh docs/project/backlog.md.
+- Crystallized research index: hngh docs/research/ — the budgets prior art is docs/research/2026-08-29-unattended-session-budgets.md.
+- Ledgers: hngh-automation/STATE.md, agent-handoffs.md, hngh-automation/logs/budget.md (session-run rows).
+- Verified numbers: hngh docs/project/STATE-OF-PROJECT.md between the torch:begin/torch:end sentinels — cite them, do not recount.
+- A pre-digested repo map + frontier numbers is regenerated fresh at launch at hngh-automation/prompts/overnight/2026-09-09-staging.context.txt — read that file first instead of re-grepping the repo.
+
+## Standing authorizations (operator grant, 2026-09-01)
+
+Push origin whenever a commit exists — push-on-demand is authorized; Never pause for or ask push confirmation (on push failure: file an alert row and continue). Never pause to ask the operator anything — a question is either answerable from repo docs or becomes a parked alert row. The email digest may run in report mode anytime.
