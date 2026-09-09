@@ -253,3 +253,38 @@ operator's number.
    `github.com/lobehub/lobehub`, `docs/` tree (`usage/`, `agent/`,
    `providers/`, `self-hosting/`, `.mdx` files). Rendered-browser
    passes are the fallback for anything only visible client-side.
+
+## 8. llm-wiki — utilization directives (same session)
+
+Measured 2026-09-08: personal vault 51 pages / **40 orphans** /
+health Warning (and the wiki-health:llm-wiki alert is in the same
+escalate→park router churn as §4); project vault 115 files vs 93
+indexed; dashboard telemetry has **zero wiki rows** (rebuild efficacy
+trail invisible on the surface). The wiki is used write-mostly:
+weekly lessons seed in, health probe + bounded rebuild, and one thin
+read wire (`prior_art()` feeds research beats bounded excerpts,
+never blocks). Nothing flows session→wiki.
+
+1. **Read before work, not just before research.** Extend the
+   prior-art wire to delegated dev sessions: overnight-cycle session
+   prompts get the same bounded wiki prior-art excerpt (adopted
+   lessons, relevant cases) so sessions stop re-deriving known
+   lessons. Same never-blocks rule.
+2. **Capture at the green boundary.** Completed delegated sessions
+   and operator-assist sessions emit one atomic insight or trajectory
+   capture (wiki_retro / wiki_capture_trajectory / wiki_distill_skills
+   — the extension already ships these); the delegation-fanout and
+   TTSR work of this week is exactly distillable skill material.
+   Lesson flow becomes two-way: docs→wiki AND session→wiki.
+3. **Lint the orphans away.** One wiki_lint auto-fix pass on the
+   personal vault (40/51 orphaned), then weekly — orphaned pages are
+   retrieval-degraded pages.
+4. **Wiki health on the dashboard.** Emit wiki-rebuild/probe rows to
+   dashboard telemetry.db (today they vanish) and fold a wiki/memory
+   panel into the queued Memory-surface backlog row (operator
+   directive 2026-08-27, still unadmitted) so the operator sees vault
+   health beside every other surface.
+5. **Ingest the research corpus.** docs/research/ crystallized docs
+   are wiki source packets waiting to happen — point the capture/ingest
+   flow at them so research lines interlink with (and are retrievable
+   from) the vault instead of living in one flat directory.
