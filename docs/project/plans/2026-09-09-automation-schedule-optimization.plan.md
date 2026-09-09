@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-09T06:01:51Z -->
 # 2026-09-09 — automation schedule optimization: backlog sweep, selector priority, throughput review
 
 Authorization: operator-directed 2026-09-09. The operator asked this session

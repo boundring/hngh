@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ui-audit:unavailable -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=ui-audit:unavailable  cause=obsolete disposed=2026-09-09T06:00:16Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:unavailable`
@@ -13,3 +13,4 @@ at 2026-09-09T03:00:16Z. Alert text: ui-audit unavailable: Cannot find module 'a
 
 - 2026-09-09T04:00:16Z re-occurred (dedup window expired)
 - 2026-09-09T05:00:16Z re-occurred (dedup window expired)
+- 2026-09-09T06:00:16Z re-occurred (dedup window expired)
