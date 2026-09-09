@@ -8,3 +8,7 @@ at 2026-09-09T10:00:15Z. Alert text: [oversight] gate-red: hngh make test red â€
 
 - [ ] Delve: open research subject fail-20260909-gate-red-hngh for gate-red:hngh; record disposition; then fix or park
       Verification: research subject fail-20260909-gate-red-hngh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-09T11:00:16Z re-occurred (dedup window expired)
