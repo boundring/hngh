@@ -1447,7 +1447,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T00:09:40Z | alert | cd7add8f | session touched critical paths in ~/Projects/etc/hngh-automation: tests/test-wiki-health.sh | 2026-09-08T00:09:40Z-alert-cd7add8f.md |
 | 2026-09-08T00:10:03Z | progress | 11112230 | agent-supervision: evicted-stale omp-design-story-4570de (idle 360m) | 2026-09-08T00:10:03Z-progress-11112230.md |
 | 2026-09-08T00:12:11Z | progress | e3a7b5bc | research line ctx-retrieval-vs-repetition: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-08-ctx-retrieval-vs-repetition.md | 2026-09-08T00:12:11Z-progress-e3a7b5bc.md |
-| 2026-09-08T00:15:04Z | alert | 66ab0e1a | [oversight] slow-unit: dropin:33-research-beat.sh wall=147.7s median=0.0s ×61 | 2026-09-08T00:15:04Z-alert-66ab0e1a.md |
+| 2026-09-08T00:15:04Z | alert | 66ab0e1a | [oversight] slow-unit: dropin:33-research-beat.sh wall=147.7s median=0.0s ×76 | 2026-09-08T00:15:04Z-alert-66ab0e1a.md |
 | 2026-09-08T00:15:06Z | progress | c0a39908 | agent-supervision: evicted-stale omp-design-rpg-73d9b8 (idle 361m) | 2026-09-08T00:15:06Z-progress-c0a39908.md |
 | 2026-09-08T00:20:26Z | progress | 1f5221ab | agent-supervision: evicted-stale omp-authority-record-86df3c (idle 360m) | 2026-09-08T00:20:26Z-progress-1f5221ab.md |
 | 2026-09-08T00:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T00:30:36Z-progress-6f20e8cb.md |
@@ -1459,7 +1459,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T01:00:57Z | progress | 3b3c62b0 | research line log-presentation-patterns reviewed: parked (parked -- solid slice-first/structured-logging reference, but unvalidated against the codebase and no active workstream needs it now) | 2026-09-08T01:00:57Z-progress-3b3c62b0.md |
 | 2026-09-08T01:01:33Z | alert | 598ffaaa | plan acceptance blocked: kernel make test FAILED (rc=2) ×3 | 2026-09-08T01:01:33Z-alert-598ffaaa.md |
 | 2026-09-08T01:07:11Z | progress | 920b36a3 | plan 2026-09-02-routed-gate-red-hngh executed (all steps checked) | 2026-09-08T01:07:11Z-progress-920b36a3.md |
-| 2026-09-08T01:07:22Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×5 | 2026-09-08T01:07:22Z-alert-f7fd5d5b.md |
+| 2026-09-08T01:07:22Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×6 | 2026-09-08T01:07:22Z-alert-f7fd5d5b.md |
 | 2026-09-08T01:15:33Z | alert | 3424f490 | [oversight] stale-store: /tmp/hngh-cer-oc0908c.gLXL0w record.lisp untouched 30min+ ×10 | 2026-09-08T01:15:33Z-alert-3424f490.md |
 | 2026-09-08T01:15:36Z | progress | 0d34e372 | agent-supervision: evicted-stale omp-hngh-fieldreport-d60c82 (idle 360m) | 2026-09-08T01:15:36Z-progress-0d34e372.md |
 | 2026-09-08T01:20:33Z | alert | be5f1af4 | [oversight] stale-store: /tmp/hngh-cer-oc0908w.U9jw4O record.lisp untouched 30min+ ×9 | 2026-09-08T01:20:33Z-alert-be5f1af4.md |
@@ -1490,7 +1490,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T02:43:11Z | alert | 2b64a833 | [dash-selfreview] feed-valid:operator-items.json: unacceptable-now — unparsable: [Errno 2] No such file or directory: '/home/bricker/Projects/etc/hngh/automation/dashboard/operator-items.json' ×3 | 2026-09-08T02:43:11Z-alert-2b64a833.md |
 | 2026-09-08T02:43:11Z | alert | 55e7aa7c | [dash-selfreview] feed-valid:time-ledger.json: unacceptable-now — unparsable: [Errno 2] No such file or directory: '/home/bricker/Projects/etc/hngh/automation/dashboard/time-ledger.json' | 2026-09-08T02:43:11Z-alert-55e7aa7c.md |
 | 2026-09-08T02:43:11Z | alert | 5be3fc2a | [dash-selfreview] summary: 7 findings (7 unacceptable-now, 0 acceptable-for-now) ×14 | 2026-09-08T02:43:11Z-alert-5be3fc2a.md |
-| 2026-09-08T02:43:12Z | alert | 61c03f06 | ui-audit unavailable: Cannot find module 'axe-core/axe.min.js' ×22 | 2026-09-08T02:43:12Z-alert-61c03f06.md |
+| 2026-09-08T02:43:12Z | alert | 61c03f06 | ui-audit unavailable: Cannot find module 'axe-core/axe.min.js' ×23 | 2026-09-08T02:43:12Z-alert-61c03f06.md |
 | 2026-09-08T02:43:12Z | progress | 8b3cbcf8 | router routed ui-audit:unavailable -> plan candidate 2026-09-08-routed-ui-audit-unavailable (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-8b3cbcf8.md |
 | 2026-09-08T02:43:12Z | progress | e0dd753b | router routed dash-selfreview:summary -> plan candidate 2026-09-08-routed-dash-selfreview-summary (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-e0dd753b.md |
 | 2026-09-08T02:43:12Z | progress | f3143d1b | router routed dash-selfreview:feed-valid:time-ledger.json -> plan candidate 2026-09-08-routed-dash-selfreview-feed-valid-time-ledger.json (routed-at 2026-09-08T02:43:12Z) | 2026-09-08T02:43:12Z-progress-f3143d1b.md |
@@ -1656,7 +1656,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T13:10:02Z | progress | 79b32e7a | agent-supervision: evicted-stale omp-Step8Count-d14794 (idle 360m) | 2026-09-08T13:10:02Z-progress-79b32e7a.md |
 | 2026-09-08T13:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T13:30:36Z-progress-6f20e8cb.md |
 | 2026-09-08T14:00:22Z | progress | 9b805100 | course bridge-operator-host: card mounted, last increment 2026-09-08T13:00:33Z | 2026-09-08T14:00:22Z-progress-9b805100.md |
-| 2026-09-08T14:00:22Z | alert | 6964afa1 | router dedup: slow-unit:dropin:16-remote-push.sh suppressed (routed candidate 2026-09-08-routed-slow-unit-dropin-16-remote-push.sh still live, 0h old; day count 1) ×10 | 2026-09-08T14:00:22Z-alert-6964afa1.md |
+| 2026-09-08T14:00:22Z | alert | 6964afa1 | router dedup: slow-unit:dropin:16-remote-push.sh suppressed (routed candidate 2026-09-08-routed-slow-unit-dropin-16-remote-push.sh still live, 0h old; day count 1) ×11 | 2026-09-08T14:00:22Z-alert-6964afa1.md |
 | 2026-09-08T14:00:22Z | alert | 45ddb5d2 | router dedup escalation: research-beat:review-no-doc recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-08T14:00:22Z-alert-45ddb5d2.md |
 | 2026-09-08T14:00:22Z | alert | 63e96a37 | router escalated: research-beat:review-no-doc re-occurred 3 times without landing — plan 2026-09-08-routed-research-beat-review-no-doc parked (cause=obsolete); operator disposition stands | 2026-09-08T14:00:22Z-alert-63e96a37.md |
 | 2026-09-08T14:00:24Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T14:00:24Z-progress-6f20e8cb.md |
@@ -1669,7 +1669,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T15:01:34Z | progress | 93b0e5d4 | plan 2026-09-08-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-08T15:01:34Z | 2026-09-08T15:01:34Z-progress-93b0e5d4.md |
 | 2026-09-08T15:30:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T15:30:41Z-progress-6f20e8cb.md |
 | 2026-09-08T16:00:39Z | progress | f442ff6c | course bridge-operator-host: card mounted, last increment 2026-09-08T15:00:39Z | 2026-09-08T16:00:39Z-progress-f442ff6c.md |
-| 2026-09-08T16:00:39Z | alert | 434a8607 | router dedup: agent-stall:omp-2026-08-31T03-39-26-964Z_01a-817298 suppressed (routed candidate 2026-09-08-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 still live, 0h old; day count 1) ×8 | 2026-09-08T16:00:39Z-alert-434a8607.md |
+| 2026-09-08T16:00:39Z | alert | 434a8607 | router dedup: agent-stall:omp-2026-08-31T03-39-26-964Z_01a-817298 suppressed (routed candidate 2026-09-08-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 still live, 0h old; day count 1) ×9 | 2026-09-08T16:00:39Z-alert-434a8607.md |
 | 2026-09-08T16:00:39Z | alert | 1551fdc6 | router dedup escalation: slow-unit:dropin:16-remote-push.sh recurring — suppressed 3 times today — escalated to operator visibility ×8 | 2026-09-08T16:00:39Z-alert-1551fdc6.md |
 | 2026-09-08T16:00:39Z | alert | 5c41108f | router escalated: slow-unit:dropin:16-remote-push.sh re-occurred 3 times without landing — plan 2026-09-08-routed-slow-unit-dropin-16-remote-push.sh parked (cause=obsolete); operator disposition stands | 2026-09-08T16:00:39Z-alert-5c41108f.md |
 | 2026-09-08T16:00:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T16:00:41Z-progress-6f20e8cb.md |
@@ -1695,7 +1695,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T19:01:11Z | progress | 5e495144 | research line ainglish-engagement reviewed: parked (parked -- line never tested the real preflight API or selected an actual proposal; recommendations rest on unverified file paths and schemas, so keep the record but take no action until grounded.) | 2026-09-08T19:01:11Z-progress-5e495144.md |
 | 2026-09-08T19:01:19Z | progress | ab22fc31 | research line ctx-ttsr-scope-gaps reviewed: parked (parked -- legitimate scope-gap inventory but only LLM-verifier concept sketches with no concrete design or integration path; revisit when record-level screening is scheduled.) | 2026-09-08T19:01:19Z-progress-ab22fc31.md |
 | 2026-09-08T19:01:51Z | progress | a952eab4 | research line governance-benchmark reviewed: parked (parked -- hollow crystallization with fabricated-shape references and zero measured results, but the underlying benchmark question is sound and not worth closing.) | 2026-09-08T19:01:51Z-progress-a952eab4.md |
-| 2026-09-08T19:05:00Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×48 | 2026-09-08T19:05:00Z-alert-3bf67046.md |
+| 2026-09-08T19:05:00Z | alert | 3bf67046 | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.7s ×63 | 2026-09-08T19:05:00Z-alert-3bf67046.md |
 | 2026-09-08T19:10:01Z | progress | c9c9145d | agent-supervision: evicted-stale omp-stall-inspector-eae517 (idle 363m) | 2026-09-08T19:10:01Z-progress-c9c9145d.md |
 | 2026-09-08T19:30:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T19:30:41Z-progress-6f20e8cb.md |
 | 2026-09-08T20:00:39Z | progress | e284d101 | course bridge-operator-host: card mounted, last increment 2026-09-08T19:00:39Z | 2026-09-08T20:00:39Z-progress-e284d101.md |
@@ -1707,7 +1707,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T20:40:01Z | progress | 9ed2af89 | agent-supervision: evicted-stale omp-recon-w32-20acb8 (idle 361m) | 2026-09-08T20:40:01Z-progress-9ed2af89.md |
 | 2026-09-08T20:55:41Z | progress | f739293d | agent-supervision: evicted-stale omp-impl-w32-hooks-a49440 (idle 360m) | 2026-09-08T20:55:41Z-progress-f739293d.md |
 | 2026-09-08T21:00:39Z | progress | 1d126740 | course bridge-operator-host: card mounted, last increment 2026-09-08T20:00:39Z | 2026-09-08T21:00:39Z-progress-1d126740.md |
-| 2026-09-08T21:00:39Z | alert | 6029de7b | router dedup: slow-unit:dropin:32-deck-facts.sh suppressed (routed candidate 2026-09-08-routed-slow-unit-dropin-32-deck-facts.sh still live, 0h old; day count 1) ×3 | 2026-09-08T21:00:39Z-alert-6029de7b.md |
+| 2026-09-08T21:00:39Z | alert | 6029de7b | router dedup: slow-unit:dropin:32-deck-facts.sh suppressed (routed candidate 2026-09-08-routed-slow-unit-dropin-32-deck-facts.sh still live, 0h old; day count 1) ×4 | 2026-09-08T21:00:39Z-alert-6029de7b.md |
 | 2026-09-08T21:00:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T21:00:41Z-progress-6f20e8cb.md |
 | 2026-09-08T21:20:41Z | progress | 958c3b46 | agent-supervision: evicted-stale omp-verify-v5-66066c (idle 360m) | 2026-09-08T21:20:41Z-progress-958c3b46.md |
 | 2026-09-08T21:30:41Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T21:30:41Z-progress-6f20e8cb.md |
@@ -1728,3 +1728,15 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T23:00:16Z | alert | d081535c | router escalated: slow-unit:dropin:32-deck-facts.sh re-occurred 3 times without landing — plan 2026-09-08-routed-slow-unit-dropin-32-deck-facts.sh parked (cause=obsolete); operator disposition stands | 2026-09-08T23:00:16Z-alert-d081535c.md |
 | 2026-09-08T23:00:18Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-08T23:00:18Z-progress-87537517.md |
 | 2026-09-08T23:02:58Z | progress | f5e29776 | research line cistern-test-coverage: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-08-cistern-test-coverage.md | 2026-09-08T23:02:58Z-progress-f5e29776.md |
+| 2026-09-08T23:03:32Z | progress | 265130ab | research line cistern-roadmap-deferred reviewed: parked (parked -- meta-finding on title-only grounding is worth keeping, but its recommendations are themselves unverified against the repo; resume only after targeted reads of DESIGN-SPEC §6 and existing Hngh provenance support.) | 2026-09-08T23:03:32Z-progress-265130ab.md |
+| 2026-09-08T23:03:37Z | progress | fb24ca0c | research line cistern-test-coverage: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-08-cistern-test-coverage.md | 2026-09-08T23:03:37Z-progress-fb24ca0c.md |
+| 2026-09-08T23:15:02Z | progress | f18b6abb | agent-supervision: evicted-stale omp-impl-v5close-1afd84 (idle 361m) | 2026-09-08T23:15:02Z-progress-f18b6abb.md |
+| 2026-09-08T23:23:00Z | progress | a1994ad6 | research line cistern-test-coverage: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-08-cistern-test-coverage.md | 2026-09-08T23:23:00Z-progress-a1994ad6.md |
+| 2026-09-08T23:30:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T23:30:18Z-progress-6f20e8cb.md |
+| 2026-09-08T23:30:42Z | progress | 2b2d30a6 | research line cistern-test-coverage reviewed: killed (killed -- crystallized artifact is an aborted tool-call transcript with no findings; re-raise the R9/coverage-gap question as a fresh, complete research line) | 2026-09-08T23:30:42Z-progress-2b2d30a6.md |
+| 2026-09-08T23:35:02Z | progress | 164d5f46 | agent-supervision: evicted-stale omp-wiki-path-check-1d594d (idle 362m) | 2026-09-08T23:35:02Z-progress-164d5f46.md |
+| 2026-09-08T23:50:03Z | progress | b30cbf5e | agent-supervision: evicted-stale omp-telemetry-fix-ee85f9 (idle 364m) | 2026-09-08T23:50:03Z-progress-b30cbf5e.md |
+| 2026-09-08T23:51:23Z | progress | 5b19a716 | research line synth-2026-09-08-1: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-08-synth-2026-09-08-1.md | 2026-09-08T23:51:23Z-progress-5b19a716.md |
+| 2026-09-09T00:00:15Z | progress | c333a4dc | course bridge-operator-host: card mounted, last increment 2026-09-08T23:00:15Z | 2026-09-09T00:00:15Z-progress-c333a4dc.md |
+| 2026-09-09T00:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T00:00:18Z-progress-6f20e8cb.md |
+| 2026-09-09T00:00:31Z | progress | e583f604 | research line synth-2026-09-08-1: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-09-synth-2026-09-08-1.md | 2026-09-09T00:00:31Z-progress-e583f604.md |
