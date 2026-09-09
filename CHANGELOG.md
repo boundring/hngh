@@ -6,6 +6,21 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-09-09
+
+#### Changed
+
+- **Notify-email secret path moved to 1Password headless**
+  (automation/scripts/setup-notify-email.sh): the conf now stores an
+  `op://` item reference instead of the raw SMTP password ("password
+  sourced from 1Password at send time"); the vault gate swaps
+  `op whoami` (broken under desktop-app integration) for
+  `op account list`, and `--force` is now honored in any argument
+  position (regression-tested in
+  automation/tests/test-notify-email.py). Interface contract for the
+  operator's 1Password service account:
+  docs/records/2026-09-09-1password-service-account-interface.md.
+
 ### 2026-09-07
 
 #### Added

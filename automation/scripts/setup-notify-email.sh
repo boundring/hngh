@@ -57,7 +57,10 @@ ask() { # prompt default -> REPLY (default when empty)
 }
 
 main() {
-  [ "${1:-}" = "--force" ] && FORCE=1
+  local a
+  for a in "$@"; do
+    [ "$a" = "--force" ] && FORCE=1
+  done
   if [ "${1:-}" = "--from-1password" ]; then
     [ -n "${2:-}" ] || {
       printf 'usage: setup-notify-email.sh --from-1password "op://<vault>/<item>/<field>"\n' >&2
@@ -115,7 +118,7 @@ from_1password() { # ref -> conf written + test-send; never prompts
     printf 'setup-notify-email: %s already exists — rerun with --force to overwrite\n' "$CONF" >&2
     exit 1
   fi
-  "$OP_BIN" whoami >/dev/null 2>&1 || {
+  "$OP_BIN" account list >/dev/null 2>&1 || {
     printf 'setup-notify-email: 1Password locked or signed out — unlock the 1Password desktop app / run "op signin"\n' >&2
     exit 1
   }

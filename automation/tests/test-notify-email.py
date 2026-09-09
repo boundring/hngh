@@ -588,6 +588,26 @@ class SetupNotifyEmail(unittest.TestCase):
         return subprocess.run(["bash", str(SETUP), "--from-1password", ref], env=env,
                               capture_output=True, text=True, timeout=60)
 
+    def _from_1password_argv(self, conf, stub, *argv):
+        stub_path = Path(tempfile.mkdtemp()) / "op-stub"
+        stub_path.write_text(stub)
+        stub_path.chmod(0o755)
+        env = dict(os.environ, HNGH_NOTIFY_EMAIL_CONF=str(conf),
+                   HNGH_OP_BIN=str(stub_path))
+        return subprocess.run(["bash", str(SETUP), *argv], env=env,
+                              capture_output=True, text=True, timeout=60)
+
+    def test_from_1password_force_flag_in_any_position(self):
+        conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
+        conf.write_text("[smtp]\nhost = keepme\n")
+        p = self._from_1password_argv(conf, "#!/usr/bin/env bash\nexit 1\n",
+                                      "--from-1password", "op://v/i/password",
+                                      "--force")
+        # with the flag honored, the run must NOT refuse for the existing
+        # conf; it proceeds to the vault gate (stub exits 1)
+        self.assertNotIn("already exists", p.stderr)
+        self.assertIn("unlock the 1Password desktop app", p.stderr)
+
     def test_from_1password_refuses_locked_vault(self):
         conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
         p = self._from_1password("op://v/i/password", conf,
@@ -600,7 +620,7 @@ class SetupNotifyEmail(unittest.TestCase):
         conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
         p = self._from_1password("op://v/i/password", conf,
                                  "#!/usr/bin/env bash\n"
-                                 '[ "$1" = whoami ] && exit 0\nexit 1\n')
+                                 '[ "$1" = account ] && exit 0\nexit 1\n')
         self.assertEqual(p.returncode, 1)
         self.assertIn("username", p.stderr)
         self.assertFalse(conf.exists())
