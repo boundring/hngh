@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-09T15:01:13Z -->
 # 2026-09-09 — stall recovery, operator surfaces, lifecycle accommodation
 
 Authorization: operator-directed 2026-09-09. The operator reviewed five
@@ -108,6 +108,27 @@ docs/records/ with its first commit.
       probes and the digest classifier accordingly.
       Verification: suite test: unreachable outside window -> no alert,
       status off-duty; unreachable inside window -> alert retained;
+      `make test` green.
+- [ ] 9. Wire pre-paid quota models into session routing. Evidence:
+      overnight-cycle.sh:123 itself says "model routing (future, not
+      implemented): when the KIMI/LOBEHUB quota keys go live (sibling
+      lane), a session-model-preference Inventory row can route bounded
+      delegated sessions to a quota model ahead of the paid fallback".
+      Meanwhile the 8/day session cap counts cash-spend and quota sessions
+      identically, so pre-paid quota goes unconsumed (2026-09-09: $0.08
+      spent, cap exhausted by a bad local-bench model) and the operator's
+      standing directive to distribute Kimi/Lobehub quota across reset
+      windows is unimplemented. Change: implement the designed hook —
+      read a session-model-preference cadence param row in select_model,
+      preferring quota models over paid-fallback when their keys/config
+      are present; make budget.md record source=quota separately from
+      paid cash spend so the cap can distinguish them. Activating actual
+      provider keys stays critical-class (operator certificate or
+      explicit instruction) — this step ships the mechanism, tests, and
+      Inventory-row plumbing only.
+      Verification: suite test covers the ladder (env > quota-row model
+      when configured > local-bench > paid-fallback), budget.md source
+      tagging, and refusal to route to a quota model with no key config;
       `make test` green.
 
 ## Execution notes
