@@ -204,7 +204,7 @@ def email_sidechannel(subject, text):
 def run_gate(cmd, cwd):
     try:
         p = subprocess.run(shlex.split(cmd), cwd=str(cwd), capture_output=True,
-                           text=True, timeout=600)
+                           text=True, timeout=300)
         return p.returncode, (p.stdout + p.stderr)[-400:]
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)[-400:]

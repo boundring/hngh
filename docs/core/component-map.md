@@ -83,3 +83,14 @@ manually and only serve runs holding the matching admission receipt.
   transport is only composed manually behind a run loadout that carries the
   required route and labels; no default provider or input exists by import
   or in plain `scripts/hngh` invocations.
+
+
+## Outer adapters outside src/
+
+Beyond the kernel map above, the live machine runs from `automation/`
+(cadence tiers, watchdog, fail-first spend governor, `lib/model.sh`
+quota chain: deck → kimi → lobehub) and `scripts/omp-bridge` (the omp
+session adapter: orientation, registration, ceremony drive). Dependency
+direction is fixed: automation adapters call the hngh CLI inward; the
+kernel never knows omp exists (../records/2026-09-09-operator-flexibility-doctrine.md,
+2026-09-09-omp-hngh-integration.plan.md).

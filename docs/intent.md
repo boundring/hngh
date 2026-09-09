@@ -103,6 +103,11 @@ Long-term, Hngh is meant to orchestrate an automated worker — likely one calle
 actually carries out runs. Today the bounded read-only worker task (`run-worker`, rung 18)
 and the one-shot `scripts/worker-driver` cycle are installed behind a port; the durable
 Pi RPC compiler agent remains a survey and a plan.
+Since 2026-09-09 the direction is full omp integration — hngh exposes itself to omp
+sessions (plan-file propose surface, planned MCP server and plugin) and omp becomes the
+operator's UI/UX for hngh (orientation, context-seeding, research feed, work requests;
+see project/plans/2026-09-09-omp-hngh-integration.plan.md and
+records/2026-09-09-operator-flexibility-doctrine.md).
 
 When a worker arrives, it will sit behind a port: a replaceable outer layer that Hngh can
 swap out. The worker is read-only by default. Hngh keeps authority, holds the evidence,
