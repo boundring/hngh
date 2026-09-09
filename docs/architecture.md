@@ -83,3 +83,12 @@ responsibilities and allowed dependencies live in the
 terminal transports are admitted only under a separately approved run
 loadout (rung 10), and the operator reviewer transport (rung 13) is
 admitted by an explicit operator reviewer file.
+
+
+Beyond these in-repo kernel boundaries, the live machine runs from
+`automation/` (cadence tiers, watchdog, fail-first spend governor, model
+fallback chain) and the `scripts/omp-bridge` adapter — outer adapters
+that call the kernel CLI inward. The omp↔hngh integration plan
+(project/plans/2026-09-09-omp-hngh-integration.plan.md) adds the
+operator-facing surfaces (MCP server, omp plugin) on the same
+direction: outer code calls inward; the kernel stays side-effect-free.

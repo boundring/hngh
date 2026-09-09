@@ -51,6 +51,10 @@ companions to the contracts above, after the core read order:
 > closed governance loop's driver, and the token stays as-is even as the
 > prose around it varies.
 
+- [omp↔hngh integration](project/plans/2026-09-09-omp-hngh-integration.plan.md)
+  + [plans contract](project/plans/README.md) §omp plugin interface — the
+  omp propose surface, MCP/plugin plan, and the 2026-09-09 operator
+  doctrine + service-account records.
 - [Assistant interfaces](design/assistant-interface.md) — the operative
   layer (the dark-coat presence, aesthetic, voice, interface family).
 - [Interface grading](design/interface-grading.md) — the automated grade

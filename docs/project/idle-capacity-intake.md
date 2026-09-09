@@ -1,5 +1,7 @@
 # Idle-capacity acceleration — Owner-directive intake packet
 
+
+> 2026-09-09: `sessions-day-max` raised 8→200 by operator authorization; the constraint analysis below is historical.
 *Status: INTAKE PACKET — queued for Hngh cadence-tuning and research/design
 cycles.*
 *Date: 2026-09-08.*

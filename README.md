@@ -72,7 +72,7 @@ silent continuation of an old one.
 
 Hngh is a pure library with fixture tests (`make test` runs 8 reader-guard checks plus a
 suite past 2,855 checks — the count grows with every closed vocabulary, and the run prints
-the current number) and an operator command surface. Implemented:
+the current number), an operator command surface, and a live automation tier. Implemented:
 
 - Pure domain values (profile, mission, role, loadout, run, receipt, score, afterlife) with a
   closed lifecycle.
@@ -149,6 +149,15 @@ the current number) and an operator command surface. Implemented:
   admit worker → run-worker → close) as a single explicit operator invocation.
   It is glue over the existing surface, adds no authority, and the periodic
   invocation belongs to the operator's scheduler, never a daemon.
+- omp↔hngh integration: `scripts/omp-bridge` (orientation, register,
+  certificate-gated ceremony) and the plan-file propose surface any omp
+  session can write (`docs/project/plans/README.md` §omp plugin
+  interface); an MCP server and omp plugin are queued in
+  `docs/project/plans/2026-09-09-omp-hngh-integration.plan.md`.
+- Fail-first live operation: spend/concurrency governed by
+  `automation/cadence-params.tsv` (session ceiling, quota-model legs
+  kimi/lobehub in `automation/lib/model.sh`), tuned by a TCP-style
+  congestion ladder rather than fixed throttles.
 - Self-watch: a time ledger measuring every operation level, an hourly
   dashboard self-review whose findings classify themselves
   (`unacceptable-now` / `acceptable-for-now`), oversight alerts with
@@ -185,7 +194,7 @@ the current number) and an operator command surface. Implemented:
   `docs/project/system-harness-roadmap.md` (a fleet of nodes under one
   governance: resource pool, config manager, security manager).
 
-Not yet: daemon, watcher, scheduler, and no ambient state. Each will be admitted the same way
+Not yet: a daemon and ambient state — every tier is an operator-installed single-tick timer; see Live operation below for the cadence/watchdog tier that runs from automation/. Each will be admitted the same way
 everything else is: through a proposal, a check, and a record. The megastructure is built
 one verified stretch at a time.
 
@@ -253,7 +262,7 @@ the project's prior state; the active baseline lives here.
 The machine runs from the `automation/` subtree of this repository —
 its [README](automation/README.md) documents the cadence tiers, the
 watchdog, and the digest surfaces; the
-[latest daily digest](automation/digest/2026-09-06.md) shows what
+[latest daily digest](automation/digest/2026-09-08.md) shows what
 actually fired today. The old standalone repository
 (`hngh-automation`) is archived, superseded by the subtree.
 

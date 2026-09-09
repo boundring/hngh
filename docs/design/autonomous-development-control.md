@@ -199,3 +199,19 @@ ceremonies; each changes how the loop behaves, not what it is.
   must whitelist machine-maintained append paths, or ceremonies sweep
   them on a fixed cadence; a watchdog that alerts on its own
   housekeeping trains the operator to ignore it.
+
+
+## 2026-09-09 amendments
+
+Three standing amendments ride alongside this doctrine without changing
+its guardrails (../records/2026-09-09-operator-flexibility-doctrine.md):
+
+1. Policy fluidity — hngh amends its own internal policies through this
+   governance loop as optimization requires; operator-blocks are the
+   exception (credentials, payments, public surfaces).
+2. The 2026-09-03 operator-only `:wake-mutation` boundary is amended:
+   certificate-bound wake-mutation src work may proceed as machine work
+   (fresh-evidence recheck guards stay mandatory).
+3. Meta-optimization priority — enabling work (selectors, quota routing,
+   model quality, comms surfaces) outranks unrelated queued work; short
+   agentic calls may delay non-accelerating plans.

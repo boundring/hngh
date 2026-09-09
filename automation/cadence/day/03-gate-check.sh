@@ -30,7 +30,7 @@ file_report() {
 # (last ~10 lines, dedup window 24h) + gate-red crumb.
 gate() {
   local label="$1" dir="$2" ident="$3" out rc why checks
-  out="$(cd "$dir" && timeout 600 make test 2>&1)"
+  out="$(cd "$dir" && timeout 300 make test 2>&1)"
   rc=$?
   if [ "$rc" -eq 0 ]; then
     checks="$(printf '%s' "$out" | grep -Eo '[0-9]+ checks passed' | tail -n 1)"

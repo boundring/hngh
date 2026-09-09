@@ -17,6 +17,17 @@
 Hngh is a side-effect-free local kernel. Do not start a daemon, service,
 provider, watcher, scheduler, agent, or process. Do not write to `~/.hngh`.
 
+Machine sessions do not touch kernel `src/`, `tests/`, `Makefile`, or
+`hngh.asd` (2026-09-03 staging boundary) — except certificate-bound
+`:wake-mutation` work, which the operator-flexibility doctrine
+(docs/records/2026-09-09-operator-flexibility-doctrine.md §2) allows
+through the ceremony. Headless secrets come from the 1Password service
+account: `OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORD_SERVICE_KEY"`
+(docs/records/2026-09-09-1password-service-account-interface.md); with
+that set, `op` needs no desktop app. Probing gate/secret state: use
+`op account list`, not `op whoami` (whoami misreports under app
+integration).
+
 The retired system is outside this repository in an operator-configured local
 archive. It is evidence, not an implementation source, and no active gate
 verifies it anymore; the archive verifier was retired on 2026-08-19. Meaningful
