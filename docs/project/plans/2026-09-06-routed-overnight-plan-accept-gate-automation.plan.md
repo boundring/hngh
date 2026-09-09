@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:automation -->
+<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same resolved premise; no automation-gate acceptance block after 2026-09-08T04:01Z in acceptance.log"-->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:automation`

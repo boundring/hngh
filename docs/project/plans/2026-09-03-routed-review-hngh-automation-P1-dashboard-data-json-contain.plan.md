@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-03T11:01:24Z routed-from=review:hngh-automation:P1-dashboard-data-json-contain -->
+<!-- plan: status=parked risk=normal accepted=2026-09-03T11:01:24Z routed-from=review:hngh-automation:P1-dashboard-data-json-contain  cause=obsolete disposed=2026-09-09T15:27:53Z reason="premise obsolete post-merge: .gitignore:14 ignores automation/dashboard/ wholesale (data.json untracked machine state); docs/records/2026-09-07-automation-subtree-import.md '222 files, zero machine da"-->
 # 2026-09-03 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `review:hngh-automation:P1-dashboard-data-json-contain`
