@@ -13,7 +13,7 @@
 # Requires lib/common.sh + lib/breadcrumbs.sh sourced first.
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 EMAIL_NOTIFY="$AUTOMATION_ROOT/scripts/notify-email.py"
-EMAIL_LOG="$AUTOMATION_ROOT/logs/notify-email.log"
+EMAIL_LOG="${HNGH_NOTIFY_EMAIL_LOG:-$AUTOMATION_ROOT/logs/notify-email.log}"
 
 email_conf_path() { # -> config path (env seam wins, for tests)
   printf '%s' "${HNGH_NOTIFY_EMAIL_CONF:-$HOME/.hngh-automation/notify-email.conf}"
