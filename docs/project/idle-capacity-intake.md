@@ -246,3 +246,10 @@ operator's number.
    certificate-bound, no bypass). Research cycles verify the exact
    Shapes/auth for Skills and Connectors and fold them into the
    general platform-seam pattern of item 4.
+   Primary source for that verification (operator-supplied link
+   https://lobehub.com/docs/): the docs render from an SPA whose
+   AI-markdown route was mid-migration on 2026-09-08 (shells, no
+   content), so the reliable scrape path is the public source repo —
+   `github.com/lobehub/lobehub`, `docs/` tree (`usage/`, `agent/`,
+   `providers/`, `self-hosting/`, `.mdx` files). Rendered-browser
+   passes are the fallback for anything only visible client-side.
