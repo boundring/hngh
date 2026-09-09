@@ -13,6 +13,13 @@ This plan is the enabler for docs/project/plans/2026-09-09-omp-hngh-integration.
 ahead), and its step 3 flags that plan so the selector honors the operator's
 priority once supported.
 
+PRIORITY NOTE 2026-09-09 (operator session): step 2 is the
+highest-leverage unfinished item in the queue — until the priority
+selector lands, every operator-priority plan waits behind one-step
+misc plans in filename order. Sessions executing this plan should take
+step 2 (with step 5's gate isolation) before discretionary work; step 1
+is already complete (operator-procedural sweep, twice over).
+
 ## Steps
 
 - [x] 1. Backlog disposition sweep. Classify every currently `status=accepted`
@@ -54,6 +61,22 @@ priority once supported.
       Verification: analysis note in docs/research/ with the measured numbers;
       any tuning change ships with a test; if data does not support a change,
       the note says so and no code changes.
+- [ ] 5. Gate-evaluation isolation under parallel beats (failing test
+      first). Evidence: 2026-09-09 kernel-gate-red-rc2 and
+      automation-gate-red-rc2 blocks at 14:01-19:01Z while isolated
+      `make test` runs pass rc=0 twice (2855 checks); the flap is
+      load-correlated — 3 parallel delegated sessions compiling SBCL
+      on the same host interfere with the acceptance gate's
+      subprocess runs, plan-blocking everything for whole beats.
+      Change: serialize gate evaluation against beat sessions — e.g.
+      take the existing flock before running the gate inside
+      accept-plans.py, or shed to 2 parallel slots while a gate
+      evaluation runs; keep the 300s subprocess cap (already lowered
+      from 600s). Test the serialization seam in the automation suite
+      before the behavior change.
+      Verification: suite test covers gate-under-concurrency
+      serialization; the acceptance log stops filing gate-red-rc2 on
+      a green gate across a full parallel beat; `make test` green.
 
 ## Execution notes
 
