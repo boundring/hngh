@@ -8,3 +8,7 @@ at 2026-09-06T14:00:36Z. Alert text: plan acceptance blocked: hngh-automation ma
 
 - [ ] Re-run the named gate, capture the failing check, fix or park
       Verification: both `make test` gates green; failing check captured
+
+## Occurrences
+
+- 2026-09-09T18:00:13Z re-occurred (dedup window expired)

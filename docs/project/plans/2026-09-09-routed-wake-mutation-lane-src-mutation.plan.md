@@ -8,3 +8,7 @@ at 2026-09-09T17:00:16Z. Alert text: wake-mutation-lane rotation beat parked at 
 
 - [ ] Delve: open research subject fail-20260909-wake-mutation-lane-src-mutation for wake-mutation-lane:src-mutation; record disposition; then fix or park
       Verification: research subject fail-20260909-wake-mutation-lane-src-mutation present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-09T18:00:13Z re-occurred (dedup window expired)
