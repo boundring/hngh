@@ -23,6 +23,7 @@ import re
 import select
 import signal
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 import time
 import termios
 import tty
@@ -168,33 +169,41 @@ def session_rows(limit=5, ttl=0.0):
         (d for d in STORE_ROOT.iterdir()
          if d.is_dir() and (d / "record.lisp").exists()),
         key=lambda d: (d / "record.lisp").stat().st_mtime_ns, reverse=True)
-    rows = []
-    for store in stores[:limit]:
-        try:
-            age = time.time() - (store / "record.lisp").stat().st_mtime
-        except OSError:
-            age = None
-        try:
-            out = subprocess.run(
-                ["sbcl", "--script", str(PRESENT), f"--store={store}",
-                 "present", "run-1"],
-                capture_output=True, text=True, timeout=4)
-        except Exception:
-            continue
-        line = (out.stdout or "").strip().splitlines()
-        if not line:
-            continue
-        text = line[0]
-        if not text.startswith("run "):
-            continue
-        fields = text.split()
-        if len(fields) < 4 or fields[0] != "run":
-            continue
-        info = _parse_present(fields, store.name)
-        info["age"] = age
-        rows.append(info)
+    # concurrent, not serial: under beat load each SBCL boot can hit its
+    # 4s timeout, and five serial rounds once stalled the watch loop past
+    # the gate's five-second quit budget (2026-09-09 kernel-gate flap)
+    with ThreadPoolExecutor(max_workers=limit) as pool:
+        rows = [row for row in pool.map(_present_row, stores[:limit])
+                if row]
     _session_cache.update(at=time.time(), rows=rows)
     return rows
+
+
+def _present_row(store):
+    """One store -> one session row, or None. Extracted for the pool."""
+    try:
+        age = time.time() - (store / "record.lisp").stat().st_mtime
+    except OSError:
+        age = None
+    try:
+        out = subprocess.run(
+            ["sbcl", "--script", str(PRESENT), f"--store={store}",
+             "present", "run-1"],
+            capture_output=True, text=True, timeout=4)
+    except Exception:
+        return None
+    line = (out.stdout or "").strip().splitlines()
+    if not line:
+        return None
+    text = line[0]
+    if not text.startswith("run "):
+        return None
+    fields = text.split()
+    if len(fields) < 4 or fields[0] != "run":
+        return None
+    info = _parse_present(fields, store.name)
+    info["age"] = age
+    return info
 
 
 _roster_cache = {"at": 0.0, "rows": None}
@@ -964,22 +973,29 @@ def rich_watch(interval):
         return watch_loop(interval)
     try:
         with Live(console=console, refresh_per_second=4, screen=False) as live:
+            last_render = 0.0
             while True:
-                if time.time() - last_at >= 15:
-                    last_sessions = session_rows(ttl=15)
-                    last_at = time.time()
-                dance = dance_level()
-                sessions = [] if NO_SESSIONS else last_sessions or []
-                body = rich_dashboard(timeline_rows(), queue_items(),
-                                      queue_etas(), sessions, dance)
-                footer = (f"[dim]{datetime.now().strftime('%H:%M:%S')} · "
-                          f"every {interval}s · q to quit[/]")
-                live.update(Group(body, footer))
-                r, _, _ = select.select([sys.stdin], [], [], interval)
+                # quit check FIRST: a 'q' must never wait behind the
+                # session refresh (up to five SBCL subprocesses) or a
+                # render - the gate's watch test budgets five seconds
+                # for a clean exit
+                r, _, _ = select.select([sys.stdin], [], [], 0.2)
                 if r:
                     key = os.read(sys.stdin.fileno(), 1)
                     if key in (b"q", b"Q", b"\x1b"):
                         break
+                if time.time() - last_render >= interval:
+                    if time.time() - last_at >= 15:
+                        last_sessions = session_rows(ttl=15)
+                        last_at = time.time()
+                    dance = dance_level()
+                    sessions = [] if NO_SESSIONS else last_sessions or []
+                    body = rich_dashboard(timeline_rows(), queue_items(),
+                                          queue_etas(), sessions, dance)
+                    footer = (f"[dim]{datetime.now().strftime('%H:%M:%S')} · "
+                              f"every {interval}s · q to quit[/]")
+                    live.update(Group(body, footer))
+                    last_render = time.time()
     except (OSError, ValueError):
             pass
     finally:
