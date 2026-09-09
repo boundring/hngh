@@ -270,6 +270,59 @@ def budget_lines(cap=12):
         len(lines) - cap)
 
 
+
+def classify_alerts(rows):
+    """Classify alert rows into critical/notable/info tiers.
+    Critical: mentions 'P0', 'gate-red', 'blocked', 'failed' (rc=2).
+    Notable: mentions 'escalated', 're-occurred', 'stall', 'router dedup escalation'.
+    Info: everything else.
+    Returns dict with 'critical', 'notable', 'info' lists."""
+    critical_re = re.compile(r'(P0|gate-red|blocked|FAILED\s+\(rc=2\))', re.I)
+    notable_re = re.compile(r'(escalated|re-occurred|stall|router dedup escalation)', re.I)
+    critical, notable, info = [], [], []
+    for r in rows:
+        if critical_re.search(r):
+            critical.append(r)
+        elif notable_re.search(r):
+            notable.append(r)
+        else:
+            info.append(r)
+    return {'critical': critical, 'notable': notable, 'info': info}
+
+
+def dedup_alerts(rows):
+    """Fold suppressed/escalated variants into unique alerts.
+    Returns list of unique alert lines with dedup counts as suffix.
+    Strategy: group by normalized key (strip router/escalated/dedup prefixes)."""
+    seen = {}
+    for r in rows:
+        # Normalize: strip 'router dedup:', 'router dedup escalation:', 'router escalated:'
+        key = r
+        for prefix in ['router dedup escalation: ', 'router dedup: ', 'router escalated: ']:
+            if r.startswith(prefix):
+                key = r[len(prefix):]
+                break
+        # Also strip 'router dedup escalation' prefix (no colon)
+        if 'router dedup escalation: ' in r:
+            key = r.split('router dedup escalation: ')[1]
+        elif 'router dedup: ' in r:
+            key = r.split('router dedup: ')[1]
+        elif 'router escalated: ' in r:
+            key = r.split('router escalated: ')[1]
+        if key in seen:
+            seen[key]['count'] += 1
+        else:
+            seen[key] = {'line': r, 'count': 1}
+    out = []
+    for k, v in seen.items():
+        if v['count'] > 1:
+            out.append('%s (×%d)' % (v['line'], v['count']))
+        else:
+            out.append(v['line'])
+    return out
+
+
+
 def alert_rows(window_s=ALERT_WINDOW_S):
     """Alert report-queue rows from the last window_s seconds (default
     7d; env seam for tests: HNGH_DIGEST_ALERTS = pre-rendered lines,
@@ -441,9 +494,12 @@ def compose():
     # (6) ALERTS
     out.append("## Alerts (last 24h)")
     if alerts24:
-        out.append("%d alert(s) in the last 24h (full rows in the queue)."
-                   % len(alerts24))
-        out += [ellipsize(r) for r in alerts24]
+        classified = classify_alerts(alerts24)
+        deduped = dedup_alerts(alerts24)
+        out.append("%d alert(s) in the last 24h — %d critical, %d notable, %d info."
+                   % (len(alerts24), len(classified['critical']),
+                      len(classified['notable']), len(classified['info'])))
+        out += [ellipsize(r) for r in deduped]
     else:
         out.append("none — quiet window")
     out.append("")
