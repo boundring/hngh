@@ -82,15 +82,15 @@ push_repo() { # name dir
   gate_state=stale
  fi
  case "$gate_state" in
- red)
-  breadcrumb "$JOB_NAME" "push-refused" "$name: gate-red crumb — run the gate before pushing"
-  return 0
-  ;;
- none | stale)
+ red | none | stale)
+  # a red crumb is the last measurement, not the current state: the
+  # 2026-09-09 flap left a morning red crumb refusing pushes for ~14h
+  # while the gate was intermittently green — re-run the gate inline,
+  # exactly what the crumb itself demands
   if (cd "$dir" && make test >/dev/null 2>&1); then
-   [ "$gate_state" = stale ] &&
+   [ "$gate_state" != none ] &&
     breadcrumb "$JOB_NAME" "gate-refresh" \
-     "$name: gate crumb older than HEAD — make test re-run green"
+     "$name: gate crumb was $gate_state — make test re-run green"
   else
    breadcrumb "$JOB_NAME" "push-refused" \
     "$name: gate $gate_state and make test failed — not pushing"

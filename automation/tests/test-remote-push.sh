@@ -22,7 +22,8 @@ run_push() { # repo-dir -> runs the real script against it
     HNGH_PUSH_LOCK="$sb/push.lock" JOB_NAME=test-push \
     bash "$root/cadence/hour/16-remote-push.sh" 2>&1
 }
-crumbs() { grep -c "test-push" "$sb/STATE.md" 2>/dev/null || echo 0; }
+crumbs() { grep -c "test-push" "$sb/STATE.md"; }
+reset_state() { : >"$sb/STATE.md"; }
 # fixture: bare origin + worktree one commit ahead, stub gate via Makefile
 fixture() { # dir gate-rc
   local d="$1" rc="$2"
@@ -44,21 +45,21 @@ ahead_count() { git -C "$1" rev-list --count "origin/main..main" 2>/dev/null; }
 red_crumb() { printf '2026-09-09T09:00:49Z | 03-gate-check.sh | gate-red | hngh: make test rc=2\n' >> "$sb/STATE.md"; }
 
 # case 1: stale red crumb, gate now green -> gate re-run, push lands
-d="$sb/c1"; fixture "$d" 0; new_commit "$d"
-red_crumb
-out="$(run_push "$d")"
+d="$sb/c1"; fixture "$d" 0; new_commit "$d"; red_crumb
+run_push "$d" >/dev/null
 ck "red-crumb green-gate pushes" "0" "$(ahead_count "$d")"
 
 # case 2: red crumb, gate genuinely red -> refused, still ahead
-: >"$sb/STATE.md"; red_crumb
+reset_state; red_crumb
 d="$sb/c2"; fixture "$d" 1; new_commit "$d"
-out="$(run_push "$d")"
+run_push "$d" >/dev/null
 ck "red-crumb red-gate refuses" "1" "$(ahead_count "$d")"
-ck "refusal crumb filed" "2" "$(crumbs)"
+ck "refusal crumb filed" "1" "$(crumbs)"
 
 # case 3: no crumb, green gate -> push lands (existing contract)
+reset_state
 d="$sb/c3"; fixture "$d" 0; new_commit "$d"
-out="$(run_push "$d")"
+run_push "$d" >/dev/null
 ck "no-crumb green-gate pushes" "0" "$(ahead_count "$d")"
 
 echo "---"
