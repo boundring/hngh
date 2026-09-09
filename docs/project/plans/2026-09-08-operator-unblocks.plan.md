@@ -24,6 +24,15 @@ Grounding notes:
   - Install 1Password CLI (`op`) and sign in (`op signin`)
   - Install playwright (`npm install -g playwright`) and chromium (`playwright install chromium`)
   - Load SMTP credential into 1Password (`op item create --vault=<vault> --title=<title> email <user> password <pass>`)
+  RESOLUTION 2026-09-09 (operator-observed subagent, job PlatformUnblock):
+  `op` 2.32.1 already installed (linuxbrew) — remaining step is
+  operator-only desktop-app integration (1Password app Settings >
+  Developer > 'Integrate with 1Password CLI', then `op signin`,
+  `op whoami`). Playwright NOT needed: ui-audit is puppeteer-core +
+  axe-core on system Chrome; `npm install` in automation/ (node_modules
+  gitignored) + existing /usr/bin/google-chrome-stable made the audit
+  run green with zero code changes (exit 0, 0 violations). Only the
+  SMTP-credential item-create remains operator-side.
   Verification: a research note (docs/research/2026-09-08-operator-procedural-unblocks.md) with the exact operator steps quoted, the current state of each prerequisite, and a verdict on whether the operator can proceed autonomously or needs human intervention.
 - [ ] 2. GROW — capabilities plan completion. Complete the remaining steps of the 2026-09-03-capabilities plan (steps 8, 9):
   - Step 8: queue-drain verification beat (already authored: docs/research/2026-09-08-queue-drain-verification.md)

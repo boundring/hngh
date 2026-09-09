@@ -145,6 +145,27 @@ docs/records/ with its first commit.
       Verification: suite test covers the review-beat model ladder and
       the unparseable->demotion-signal wiring; one live review beat
       produces a parseable review; `make test` green.
+- [ ] 11. Bidirectional email contact (operator meta-agentic surface).
+      Authorization: operator doctrine 2026-09-09
+      (docs/records/2026-09-09-operator-flexibility-doctrine.md §4).
+      Evidence: notify-email.py is send-only (SMTP); the operator wants
+      a slow loop where hngh injects content into an email thread, the
+      operator replies, and hngh reads replies — reducing reliance on
+      live omp sessions. Change: add an IMAP poll drop-in (cadence 30m)
+      reading the notify mailbox for operator replies (same account as
+      notify-email.conf where the provider supports IMAP; config keys
+      beside the SMTP ones, same fail-closed conf pattern, password via
+      the existing 1Password/op path), converting unread operator
+      replies into operator-items and — for replies that carry a decision
+      on a parked plan — into plan-proposal drafts through the normal
+      router path. Attachment/link/image content links to files under
+      automation/, never inlined into ledgers. Mark processed messages
+      read; never delete.
+      Verification: suite test covers conf parsing (missing IMAP keys
+      fail closed), reply->operator-item conversion, and
+      processed-marking; a live poll against the real mailbox lists
+      unread state without mutating anything on a dry run;
+      `make test` green.
 
 ## Execution notes
 
