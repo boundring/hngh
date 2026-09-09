@@ -8,3 +8,7 @@ at 2026-09-09T03:00:16Z. Alert text: ui-audit unavailable: Cannot find module 'a
 
 - [ ] Delve: open research subject fail-20260909-ui-audit-unavailable for ui-audit:unavailable; record disposition; then fix or park
       Verification: research subject fail-20260909-ui-audit-unavailable present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-09T04:00:16Z re-occurred (dedup window expired)

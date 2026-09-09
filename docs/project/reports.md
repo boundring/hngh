@@ -838,7 +838,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-04T01:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-04T01:00:45Z-progress-6f20e8cb.md |
 | 2026-09-04T01:00:45Z | progress | 4cd2ff68 | router routed system-network-down -> plan candidate 2026-09-04-routed-system-network-down (routed-at 2026-09-04T01:00:45Z) ×17 | 2026-09-04T01:00:45Z-progress-4cd2ff68.md |
 | 2026-09-04T01:15:46Z | progress | 24b38cde | agent-supervision: evicted-stale omp-impl-phase1-5daa4e (idle 364m) | 2026-09-04T01:15:46Z-progress-24b38cde.md |
-| 2026-09-04T01:20:46Z | progress | cb53a0f2 | agent-supervision: evicted-stale omp-2026-08-31T03-39-26-964Z_01a-817298 (idle 360m) ×2 | 2026-09-04T01:20:46Z-progress-cb53a0f2.md |
+| 2026-09-04T01:20:46Z | progress | cb53a0f2 | agent-supervision: evicted-stale omp-2026-08-31T03-39-26-964Z_01a-817298 (idle 360m) ×3 | 2026-09-04T01:20:46Z-progress-cb53a0f2.md |
 | 2026-09-04T01:30:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-04T01:30:45Z-progress-6f20e8cb.md |
 | 2026-09-04T02:00:43Z | progress | 9aa94e6d | course bridge-operator-host: card mounted, last increment 2026-09-04T01:00:43Z | 2026-09-04T02:00:43Z-progress-9aa94e6d.md |
 | 2026-09-04T02:00:45Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-04T02:00:45Z-progress-6f20e8cb.md |
@@ -1385,7 +1385,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-07T15:00:34Z | progress | e7c825cb | course bridge-operator-host: card mounted, last increment 2026-09-07T14:00:33Z | 2026-09-07T15:00:34Z-progress-e7c825cb.md |
 | 2026-09-07T15:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T15:00:36Z-progress-6f20e8cb.md |
 | 2026-09-07T15:30:12Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T15:30:12Z-progress-6f20e8cb.md |
-| 2026-09-07T15:50:21Z | progress | 9bba0cbe | agent-supervision: evicted-stale omp-2026-09-06T17-02-11-643Z_01a-d7e586 (idle 619m) ×2 | 2026-09-07T15:50:21Z-progress-9bba0cbe.md |
+| 2026-09-07T15:50:21Z | progress | 9bba0cbe | agent-supervision: evicted-stale omp-2026-09-06T17-02-11-643Z_01a-d7e586 (idle 619m) ×3 | 2026-09-07T15:50:21Z-progress-9bba0cbe.md |
 | 2026-09-07T16:00:14Z | progress | b7dc4ead | course bridge-operator-host: card mounted, last increment 2026-09-07T15:00:34Z | 2026-09-07T16:00:14Z-progress-b7dc4ead.md |
 | 2026-09-07T16:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-07T16:00:17Z-progress-6f20e8cb.md |
 | 2026-09-07T16:00:17Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility ×7 | 2026-09-07T16:00:17Z-alert-8877ca89.md |
@@ -1644,7 +1644,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-08T12:00:33Z | progress | 30e6febb | course bridge-operator-host: card mounted, last increment 2026-09-08T11:00:33Z | 2026-09-08T12:00:33Z-progress-30e6febb.md |
 | 2026-09-08T12:00:34Z | alert | 89135c88 | router dedup: research-beat:review-no-doc suppressed (routed candidate 2026-09-08-routed-research-beat-review-no-doc still live, 0h old; day count 1) ×8 | 2026-09-08T12:00:34Z-alert-89135c88.md |
 | 2026-09-08T12:00:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T12:00:36Z-progress-6f20e8cb.md |
-| 2026-09-08T12:05:00Z | alert | c3fb13c6 | [oversight] slow-unit: dropin:16-remote-push.sh wall=40.8s median=0.0s ×24 | 2026-09-08T12:05:00Z-alert-c3fb13c6.md |
+| 2026-09-08T12:05:00Z | alert | c3fb13c6 | [oversight] slow-unit: dropin:16-remote-push.sh wall=40.8s median=0.0s ×36 | 2026-09-08T12:05:00Z-alert-c3fb13c6.md |
 | 2026-09-08T12:15:02Z | progress | 9ad4d55e | agent-supervision: evicted-stale omp-2026-09-08T06-00-35-789Z_01a-735244 (idle 362m) | 2026-09-08T12:15:02Z-progress-9ad4d55e.md |
 | 2026-09-08T12:30:36Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-08T12:30:36Z-progress-6f20e8cb.md |
 | 2026-09-08T13:00:33Z | progress | 2e699a75 | course bridge-operator-host: card mounted, last increment 2026-09-08T12:00:33Z | 2026-09-08T13:00:33Z-progress-2e699a75.md |
@@ -1752,7 +1752,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T01:00:16Z | progress | 231ce820 | router routed overnight:bridge-refused:2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e -> plan candidate 2026-09-09-routed-overnight-bridge-refused-2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e (routed-at 2026-09-09T01:00:16Z) | 2026-09-09T01:00:16Z-progress-231ce820.md |
 | 2026-09-09T01:00:16Z | progress | cb177f05 | router routed slow-unit:dropin:33-research-beat.sh -> plan candidate 2026-09-09-routed-slow-unit-dropin-33-research-beat.sh (routed-at 2026-09-09T01:00:16Z) | 2026-09-09T01:00:16Z-progress-cb177f05.md |
 | 2026-09-09T01:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T01:00:18Z-progress-6f20e8cb.md |
-| 2026-09-09T01:00:51Z | alert | f4f7d35b | plan 2026-09-09-omp-hngh-integration not auto-accepted: step 2 has no Verification line ×4 | 2026-09-09T01:00:51Z-alert-f4f7d35b.md |
+| 2026-09-09T01:00:51Z | alert | f4f7d35b | plan 2026-09-09-omp-hngh-integration not auto-accepted: step 2 has no Verification line ×5 | 2026-09-09T01:00:51Z-alert-f4f7d35b.md |
 | 2026-09-09T01:01:49Z | progress | f9720043 | plan 2026-09-09-routed-overnight-bridge-refused-2026-09-03-routed-agent-stall-omp-hngh-action-reduction-312cd0 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T01:01:49Z | 2026-09-09T01:01:49Z-progress-f9720043.md |
 | 2026-09-09T01:01:49Z | progress | 98e8c4e7 | plan 2026-09-09-routed-overnight-bridge-refused-2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T01:01:49Z | 2026-09-09T01:01:49Z-progress-98e8c4e7.md |
 | 2026-09-09T01:01:49Z | progress | f6cf4b1f | plan 2026-09-09-routed-slow-unit-dropin-33-research-beat.sh auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T01:01:49Z | 2026-09-09T01:01:49Z-progress-f6cf4b1f.md |
@@ -1765,11 +1765,22 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T02:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T02:00:18Z-progress-6f20e8cb.md |
 | 2026-09-09T02:01:14Z | progress | 9ecc315a | plan 2026-09-09-routed-overnight-plan-accept-blocked-2026-09-09-omp-hngh-integration auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T02:01:14Z | 2026-09-09T02:01:14Z-progress-9ecc315a.md |
 | 2026-09-09T02:30:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T02:30:18Z-progress-6f20e8cb.md |
-| 2026-09-09T02:31:11Z | alert | 51553d46 | plan acceptance blocked: kernel make test FAILED (rc=2) ×2 | 2026-09-09T02:31:11Z-alert-51553d46.md |
-| 2026-09-09T03:00:15Z | alert | 61c03f06 | ui-audit unavailable: Cannot find module 'axe-core/axe.min.js' | 2026-09-09T03:00:15Z-alert-61c03f06.md |
+| 2026-09-09T02:31:11Z | alert | 51553d46 | plan acceptance blocked: kernel make test FAILED (rc=2) ×3 | 2026-09-09T02:31:11Z-alert-51553d46.md |
+| 2026-09-09T03:00:15Z | alert | 61c03f06 | ui-audit unavailable: Cannot find module 'axe-core/axe.min.js' ×2 | 2026-09-09T03:00:15Z-alert-61c03f06.md |
 | 2026-09-09T03:00:15Z | progress | 69208531 | course bridge-operator-host: card mounted, last increment 2026-09-09T02:00:15Z | 2026-09-09T03:00:15Z-progress-69208531.md |
 | 2026-09-09T03:00:16Z | progress | 1bae6fa9 | router routed ui-audit:unavailable -> plan candidate 2026-09-09-routed-ui-audit-unavailable (routed-at 2026-09-09T03:00:16Z) | 2026-09-09T03:00:16Z-progress-1bae6fa9.md |
 | 2026-09-09T03:00:16Z | progress | b6fd3c51 | router routed overnight:plan-accept-gate:kernel -> plan candidate 2026-09-09-routed-overnight-plan-accept-gate-kernel (routed-at 2026-09-09T03:00:16Z) | 2026-09-09T03:00:16Z-progress-b6fd3c51.md |
-| 2026-09-09T03:00:16Z | alert | c0d9916d | router dedup: overnight:plan-accept-blocked:2026-09-09-omp-hngh-integration suppressed (routed candidate 2026-09-09-routed-overnight-plan-accept-blocked-2026-09-09-omp-hngh-integration still live, 0h old; day count 1) | 2026-09-09T03:00:16Z-alert-c0d9916d.md |
+| 2026-09-09T03:00:16Z | alert | c0d9916d | router dedup: overnight:plan-accept-blocked:2026-09-09-omp-hngh-integration suppressed (routed candidate 2026-09-09-routed-overnight-plan-accept-blocked-2026-09-09-omp-hngh-integration still live, 0h old; day count 1) ×2 | 2026-09-09T03:00:16Z-alert-c0d9916d.md |
 | 2026-09-09T03:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T03:00:18Z-progress-6f20e8cb.md |
 | 2026-09-09T03:00:18Z | progress | 7919de3c | agent-supervision: evicted-stale omp-event-driven-a217ea (idle 360m) | 2026-09-09T03:00:18Z-progress-7919de3c.md |
+| 2026-09-09T03:20:18Z | progress | 487e7b9d | agent-supervision: evicted-stale omp-game-recon-582160 (idle 361m) | 2026-09-09T03:20:18Z-progress-487e7b9d.md |
+| 2026-09-09T03:30:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T03:30:18Z-progress-6f20e8cb.md |
+| 2026-09-09T03:40:02Z | progress | 0cc04b2e | agent-supervision: evicted-stale omp-impl-v6w1-66f0b3 (idle 360m) | 2026-09-09T03:40:02Z-progress-0cc04b2e.md |
+| 2026-09-09T03:45:03Z | progress | 947bd6f7 | agent-supervision: evicted-stale omp-hngh-handoff-1ae051 (idle 360m) | 2026-09-09T03:45:03Z-progress-947bd6f7.md |
+| 2026-09-09T03:50:18Z | progress | e7b0b211 | agent-supervision: evicted-stale omp-lessons-append-ad3618 (idle 364m) | 2026-09-09T03:50:18Z-progress-e7b0b211.md |
+| 2026-09-09T04:00:15Z | progress | 8db9a853 | course bridge-operator-host: card mounted, last increment 2026-09-09T03:00:15Z | 2026-09-09T04:00:15Z-progress-8db9a853.md |
+| 2026-09-09T04:00:16Z | alert | d73c750d | router dedup: ui-audit:unavailable suppressed (routed candidate 2026-09-09-routed-ui-audit-unavailable still live, 1h old; day count 1) | 2026-09-09T04:00:16Z-alert-d73c750d.md |
+| 2026-09-09T04:00:16Z | alert | c79a91ce | router dedup: overnight:plan-accept-gate:kernel suppressed (routed candidate 2026-09-09-routed-overnight-plan-accept-gate-kernel still live, 0h old; day count 1) | 2026-09-09T04:00:16Z-alert-c79a91ce.md |
+| 2026-09-09T04:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T04:00:18Z-progress-6f20e8cb.md |
+| 2026-09-09T04:00:18Z | progress | c10732f5 | agent-supervision: evicted-stale omp-cistern-accept-85466c (idle 360m) | 2026-09-09T04:00:18Z-progress-c10732f5.md |
+| 2026-09-09T04:00:18Z | progress | 460e020e | agent-supervision: evicted-stale omp-hngh-recon-0a5e80 (idle 364m) | 2026-09-09T04:00:18Z-progress-460e020e.md |

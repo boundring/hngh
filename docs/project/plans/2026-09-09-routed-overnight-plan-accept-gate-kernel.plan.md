@@ -8,3 +8,7 @@ at 2026-09-09T03:00:16Z. Alert text: plan acceptance blocked: kernel make test F
 
 - [ ] Delve: open research subject fail-20260909-overnight-plan-accept-gate-kernel for overnight:plan-accept-gate:kernel; record disposition; then fix or park
       Verification: research subject fail-20260909-overnight-plan-accept-gate-kernel present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-09T04:00:16Z re-occurred (dedup window expired)
