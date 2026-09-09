@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z routed-from=torch:unknown:artifact-class -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T01:01:21Z routed-from=torch:unknown:artifact-class  cause=obsolete disposed=2026-09-09T15:27:53Z reason="premise cured in code: cadence/day/17-torch-audit.sh:86 now skips the artifact-class row; 2026-09-08 audit clean (STATE.md live=14 write-only=2 unknown=0); research subject fail-20260906-torch never o"-->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `torch:unknown:artifact-class`

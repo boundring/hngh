@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-03T11:01:24Z routed-from=review:hngh:P1-Step-1-push-on-demand-and-S -->
+<!-- plan: status=parked risk=normal accepted=2026-09-03T11:01:24Z routed-from=review:hngh:P1-Step-1-push-on-demand-and-S  cause=obsolete disposed=2026-09-09T15:27:53Z reason="premise resolved: scripts/report-queue exists (used by executed 2026-08-28-dashboard-qol step 4 [x], rows e654253f/ef36ca89)"-->
 # 2026-09-03 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `review:hngh:P1-Step-1-push-on-demand-and-S`

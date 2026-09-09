@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:kernel -->
+<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:kernel  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same identity re-route, keep 2026-09-08-routed-overnight-plan-accept-gate-kernel"-->
 # 2026-09-05 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`

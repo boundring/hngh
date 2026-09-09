@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T04:01:20Z routed-from=slow-unit:dropin:32-deck-facts.sh -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T04:01:20Z routed-from=slow-unit:dropin:32-deck-facts.sh  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same identity slow-unit:dropin:32-deck-facts.sh (wall=10.1s median=0.7s ×12) as accepted 2026-09-08 twin"-->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:32-deck-facts.sh`

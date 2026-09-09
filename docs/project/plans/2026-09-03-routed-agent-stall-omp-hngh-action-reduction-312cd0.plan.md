@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-03T15:01:24Z routed-from=agent-stall:omp-hngh-action-reduction-312cd0 -->
+<!-- plan: status=parked risk=normal accepted=2026-09-03T15:01:24Z routed-from=agent-stall:omp-hngh-action-reduction-312cd0  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same alert identity agent-stall:omp-hngh-action-reduction-312cd0 as accepted 2026-09-04 twin (×68 counter); identical one-step die+replace scope"-->
 # 2026-09-03 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `agent-stall:omp-hngh-action-reduction-312cd0`

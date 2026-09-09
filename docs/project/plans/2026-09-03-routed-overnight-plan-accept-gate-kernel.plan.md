@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-03T01:01:24Z routed-from=overnight:plan-accept-gate:kernel -->
+<!-- plan: status=parked risk=normal accepted=2026-09-03T01:01:24Z routed-from=overnight:plan-accept-gate:kernel  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same identity overnight:plan-accept-gate:kernel, 5 accepted re-routes; newest carrier 2026-09-08 stays live (kernel gate still red: acceptance.log kernel-gate-red-rc2 through 2026-09-09T14:31Z)"-->
 # 2026-09-03 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`

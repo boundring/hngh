@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-04T00:01:24Z routed-from=tree-skew:hngh -->
+<!-- plan: status=parked risk=normal accepted=2026-09-04T00:01:24Z routed-from=tree-skew:hngh  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same identity, keep newest carrier 2026-09-06-routed-tree-skew-hngh-2"-->
 # 2026-09-04 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `tree-skew:hngh`

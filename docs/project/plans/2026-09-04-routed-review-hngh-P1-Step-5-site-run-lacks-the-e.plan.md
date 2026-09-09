@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-04T10:01:25Z routed-from=review:hngh:P1-Step-5-site-run-lacks-the-e -->
+<!-- plan: status=parked risk=normal accepted=2026-09-04T10:01:25Z routed-from=review:hngh:P1-Step-5-site-run-lacks-the-e  cause=obsolete disposed=2026-09-09T15:27:53Z reason="target 2026-09-01-operator-items step 5 executed cleanly 2026-09-06T00:05Z ([x]: artifacts committed, kernel gate green) — the risk window the finding flags is closed"-->
 # 2026-09-04 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `review:hngh:P1-Step-5-site-run-lacks-the-e`

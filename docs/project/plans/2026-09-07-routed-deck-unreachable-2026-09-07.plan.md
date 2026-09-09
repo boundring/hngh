@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T04:01:20Z routed-from=deck-unreachable-2026-09-07 -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T04:01:20Z routed-from=deck-unreachable-2026-09-07  cause=duplicate disposed=2026-09-09T15:27:53Z reason="same objective as accepted 2026-09-08-routed-deck-unreachable-2026-09-08 (deck pull probe rc=255); premise still true — STATE.md 2026-09-08/09-09 'deck unreachable (normal)'"-->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `deck-unreachable-2026-09-07`

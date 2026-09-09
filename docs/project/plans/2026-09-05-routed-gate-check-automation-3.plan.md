@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z routed-from=gate-check:automation -->
+<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z routed-from=gate-check:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same identity, same resolved premise: gate green 2026-09-08T09:01Z + 2026-09-09T09:01Z (STATE.md)"-->
 # 2026-09-05 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `gate-check:automation`

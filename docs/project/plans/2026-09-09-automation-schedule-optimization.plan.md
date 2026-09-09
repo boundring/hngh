@@ -15,7 +15,7 @@ priority once supported.
 
 ## Steps
 
-- [ ] 1. Backlog disposition sweep. Classify every currently `status=accepted`
+- [x] 1. Backlog disposition sweep. Classify every currently `status=accepted`
       plan in docs/project/plans/ as live / superseded / obsolete / duplicate,
       with evidence per plan (alert history, automation/research-dispositions.tsv,
       work already landed in git log, references from other plans, dashboard
@@ -23,6 +23,9 @@ priority once supported.
       inline (existing router disposition convention). Guardrails: never touch
       `risk=critical`, already-parked plans, or plans whose premise has no
       counter-evidence; when in doubt, leave it live.
+      Executed operator-procedurally 2026-09-09 (report: docs/research/2026-09-09-backlog-disposition-sweep.md);
+      dashboard plans.json mirror refreshes on the 30m tick. Performed outside the session-budget
+      cap because the cap itself was the blocker (see stall-recovery plan).
       Verification: sweep report in docs/research/ listing every accepted plan
       with verdict + evidence; automation/dashboard/plans.json parked count
       rises by exactly the parked set; no other plan file modified.

@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:feed-valid:time-ledger.json -->
+<!-- plan: status=parked risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:feed-valid:time-ledger.json  cause=obsolete disposed=2026-09-09T15:27:53Z reason="premise resolved: automation/dashboard/time-ledger.json now exists (the alert was 'No such file'); STATE.md shows time-ledger.sh refreshing it repeatedly"-->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:feed-valid:time-ledger.json`
