@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T01:01:49Z routed-from=overnight:bridge-refused:2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e -->
+<!-- plan: status=parked risk=normal accepted=2026-09-09T01:01:49Z routed-from=overnight:bridge-refused:2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e  cause=superseded disposed=2026-09-09T21:01:28Z reason="duplicate one-step die+replace carrier; merged scope into 2026-09-09-routed-overnight-bridge-refused-2026-09-04-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 per queue-dependency-inventory merge candidate 3" -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:bridge-refused:2026-09-03-routed-agent-stall-omp-impl-phase1-5daa4e`
