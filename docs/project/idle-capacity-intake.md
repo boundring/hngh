@@ -232,3 +232,17 @@ operator's number.
    automation/docs/KIMI-QUOTA.md is answered "do not recharge, drop
    the platform path". Key-resolution order in lib/model.sh and the
    probe matrix keep it only as historical record.
+7. **Lobehub Skills, MCP, and Connectors are named integration
+   routes.** Operator report 2026-09-08: Lobehub permits custom
+   Skills, MCP, and "Connectors" per agent. The 2026-09-07 surface
+   study already saw per-agent plugins/MCP ("configured per-agent,
+   not LobeHub APIs", research doc line 104) plus the keyless WebMCP
+   handshake and the market.lobehub.com plugin marketplace. Directive:
+   treat these as two-way routes and design for both directions —
+   hngh→lobehub: Hngh calls/uses Lobehub-side Skills, MCP tools, and
+   Connectors from its own cycles; lobehub→hngh: Hngh exposes an MCP
+   server fronting its kernel/bridge so Lobehub agents can reach it
+   (through the same governance gates as every other Hngh surface —
+   certificate-bound, no bypass). Research cycles verify the exact
+   Shapes/auth for Skills and Connectors and fold them into the
+   general platform-seam pattern of item 4.
