@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T10:01:35Z routed-from=ttsr-fit:ttsr-scout -->
+<!-- plan: risk=normal accepted=2026-09-08T10:01:35Z routed-from=ttsr-fit:ttsr-scout  cause=obsolete disposed=2026-09-09T19:11:58Z reason="same source fix 2026-09-09: rule conditions tightened and verified; ungrounded-time-of-day injections stop at cause"-->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ttsr-fit:ttsr-scout`

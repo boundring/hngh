@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T02:31:32Z routed-from=overnight:plan-accept-gate:kernel -->
+<!-- plan: risk=normal accepted=2026-09-08T02:31:32Z routed-from=overnight:plan-accept-gate:kernel  cause=obsolete disposed=2026-09-09T19:11:58Z reason="kernel gate green at acceptance 2026-09-09T15:01:13Z and manual make test rc=0 (2855 checks) at 16:58Z and 19:2xZ; the 19:01Z rc=2 is load-transient (3 parallel beats) and self-heals each 30m tick"-->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`

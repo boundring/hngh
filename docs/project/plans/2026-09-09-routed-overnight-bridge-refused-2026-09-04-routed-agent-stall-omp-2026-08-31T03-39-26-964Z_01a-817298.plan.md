@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:bridge-refused:2026-09-04-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-09T20:01:16Z routed-from=overnight:bridge-refused:2026-09-04-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298 -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:bridge-refused:2026-09-04-routed-agent-stall-omp-2026-08-31T03-39-26-964Z_01a-817298`

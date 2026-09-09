@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T02:31:32Z routed-from=deck-unreachable-2026-09-08 -->
+<!-- plan: risk=normal accepted=2026-09-08T02:31:32Z routed-from=deck-unreachable-2026-09-08  cause=superseded disposed=2026-09-09T19:11:58Z reason="deck availability-window fix carried by accepted 2026-09-09-stall-recovery-and-operator-surfaces step 8 (weekday 09:00-17:30 EST windows, off-duty state); this symptom plan duplicates the same probe adjustment"-->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `deck-unreachable-2026-09-08`

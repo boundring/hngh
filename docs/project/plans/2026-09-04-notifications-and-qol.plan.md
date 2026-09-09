@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z -->
+<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z cause=superseded disposed=2026-09-09T19:10:00Z reason="email/notification QoL scope now carried by accepted 2026-09-09-stall-recovery-and-operator-surfaces steps 2 (notification channel proof: TEST sends rc=0 + headless service-account setup PASS 2026-09-09) and 11 (bidirectional email surface); keeping both live burned beats on duplicate scope (agent-handoffs 18:36Z rc=0 cancelled)" -->
 # 2026-09-04 — notifications, QoL, and extended documentation
 
 Authorization: operator-directed 2026-09-04, recorded faithfully in

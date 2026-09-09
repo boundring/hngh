@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-04T18:01:27Z routed-from=agent-stall:omp-verify-phase2-39f0c6 -->
+<!-- plan: risk=normal accepted=2026-09-04T18:01:27Z routed-from=agent-stall:omp-verify-phase2-39f0c6  cause=obsolete disposed=2026-09-09T19:11:58Z reason="session 39f0c6 first seen 2026-09-04, 5 days dead, no active bridge carrier"-->
 # 2026-09-04 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `agent-stall:omp-verify-phase2-39f0c6`

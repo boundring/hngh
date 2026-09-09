@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-04T22:01:52Z routed-from=agent-stall:omp-hngh-relay-arch-81f7e6 -->
+<!-- plan: risk=normal accepted=2026-09-04T22:01:52Z routed-from=agent-stall:omp-hngh-relay-arch-81f7e6  cause=obsolete disposed=2026-09-09T19:11:58Z reason="session 81f7e6 first seen 2026-09-04, supervision state terminal/evicted, 5 days dead; no recoverable context value in a die+replace this old"-->
 # 2026-09-04 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `agent-stall:omp-hngh-relay-arch-81f7e6`

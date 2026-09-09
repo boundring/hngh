@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z routed-from=agent-stall:omp-impl-phase3-9d5ab9 -->
+<!-- plan: risk=normal accepted=2026-09-06T01:01:30Z routed-from=agent-stall:omp-impl-phase3-9d5ab9  cause=obsolete disposed=2026-09-09T19:11:58Z reason="session 9d5ab9 exited 2026-09-04T23:14Z per supervision alert, 5 days dead; transcript-replace policy work carried by live 2026-09-05-routed-supervision-replace-park-transcript-stalls"-->
 # 2026-09-05 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `agent-stall:omp-impl-phase3-9d5ab9`
