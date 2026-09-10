@@ -191,3 +191,19 @@ the refusal crumb carries the last lines
   now ceremony-landable.
 - Stale ceremony stores swept (/tmp/hngh-cer-{diag,gatefix,pushfix}-*
   removed, 2026-09-10 ~02:5xZ).
+
+## Addendum: stall-recovery plan clobbered and recovered
+
+**Clobbering commit:** bb67075 at 2026-09-09T19:13:38-04:00 (UTC 23:13:38). Message: staging 2026-09-09: steps 2-7 executed. This commit replaced the entire 184-line stall-recovery-and-operator-surfaces.plan.md with a 51-line staging-plan fragment. The clobbered version had front-matter changed from status=accepted accepted=2026-09-09T15:01:13Z to status=proposed risk=normal accepted=-.
+
+**Root cause:** The staging session logged in agent-handoffs.md as overnight-lead at 2026-09-09T23:15:51Z for 2026-09-03-staging appears to have written its output into this filename instead of creating a new one, or there was a filesystem write collision between concurrent writes. The accept-plans tick processed the clobbered status=proposed file every 30 minutes (00:00Z through 02:30Z), generating step-1-no-verification blocks because the glued mid-line Verification format failed regex matching on first_unverified_step().
+
+**Recovery:** Restored from commit 3ded9b6 (last known-good commit before bb67075). Original content restored: 184 lines, 11 properly formatted steps with multi-line indented Verification: lines, status=accepted risk=normal accepted=2026-09-09T15:01:13Z front-matter.
+
+**Verification result:** first_unverified_step() returns 0. Checker clean. No unchecked step lacks a following Verification: line.
+
+**Note:** Since the restored file has status=accepted (not proposed), accept-plans.py skips it entirely per line 256. Repeated step-1-no-verification blocks should cease once dedup windows expire. The kernel gate state is independent of this fix.
+
+**Remaining action:** File is restored but uncommitted in working tree. Should be committed via machine-ledger-sync cycle. No ceremony required -- infrastructure recovery ride along.
+
+**Data loss assessment:** None. The 2026-09-03-staging plan file legitimately holds the staging-content at docs/project/plans/2026-09-03-staging.plan.md. All original stall-recovery steps are intact post-restoration.
