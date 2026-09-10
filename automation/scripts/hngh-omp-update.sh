@@ -4,6 +4,8 @@
 # (Hngh omp Update shortcut). Plugins load on the next omp start; a
 # running TUI keeps the old version until restarted.
 set -u
+. "$(cd "$(dirname "$0")/../lib" && pwd)/prereqs.sh"
+require_bins python3 npm || exit 1
 OMP=/home/bricker/.bun/bin/omp
 
 echo "=== omp self-update ==="

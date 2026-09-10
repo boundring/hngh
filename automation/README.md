@@ -63,6 +63,56 @@ Makefile          smoke / enable / disable / status
   at `run-1`, so a shared store would collide). Hngh refusals (exit 1) are breadcrumbed
   as data, never failures. The Hngh repo is never modified by this harness (only `git fetch`).
 
+## Run it live (the honest stranger path)
+
+```
+git clone <this repo> && cd hngh/automation
+bash bootstrap.sh          # validates prerequisites; stages config/machine.env
+make test                  # hermetic automation suite (no network, no secrets)
+cd .. && make test         # kernel suite (2855 checks; sbcl — bootstrap checks for it)
+```
+
+`bootstrap.sh --check` validates only; `bootstrap.sh --install` installs missing
+prerequisites via the system package manager only (never `curl | bash` of a
+third-party script). The full environment contract — every variable name, its
+consumer, required-vs-optional, and where to obtain it — is `env.example`.
+
+What still needs a human (the machine tier, not the kernel):
+
+- **Machine profile**: edit `config/machine.env` (deck tailnet IP, tailnet
+  name, dashboard bind) — host identity is deliberately gitignored.
+- **Secrets**: the documented path is the 1Password service account interface
+  (`docs/records/2026-09-09-1password-service-account-interface.md`); or place
+  token/key files by hand per `env.example` (`~/.hngh-automation/`,
+  `~/.config/hngh/`). Declare `ONEPASSWORD_SERVICE_KEY` outside the repo and
+  `systemctl --user import-environment ONEPASSWORD_SERVICE_KEY` at login.
+- **systemd units**: review a `make smoke` run, then `make enable` (user
+  timers + dashboard). The units still carry absolute paths (see below).
+- **Dashboard bind / deck endpoints**: defaults in `config.env` +
+  `cadence-params.tsv`; override via `config/machine.env` or the env vars in
+  `env.example`.
+
+Without the human steps the tier stays dormant by design: jobs fail closed,
+quota legs skip themselves, notifications never fire, and `make test` still
+proves the code.
+
+## Known remaining hardcoded paths (follow-up sweep)
+
+Peer-review finding 1 counted ~18 user-home-style paths baked into job code.
+`06-remote-posture.sh`'s deck IP now resolves from `config/machine.env`; the
+rest, for a later slice (env twins already exist where noted):
+
+- `jobs/agent-supervision.py:53`, `jobs/dashboard-self-review.py:44`,
+  `jobs/research-feed.py:34`, `jobs/system-feed.py:32`,
+  `jobs/agent-watchdog.sh:27`, `jobs/oversight-tick.sh:24`,
+  `jobs/system-awareness.sh:22`, `cadence/day/01-lesson-harvest.sh:27` —
+  `HNGH_REPO`/kernel default `/home/bricker/Projects/etc/hngh`.
+- `scripts/hngh-omp-update.sh:7,11` — `OMP` binary and `cd /home/bricker`.
+- `scripts/night-session.sh:40` — `OMP_BIN` default `~/.bun/bin/omp`.
+- `systemd/*.service` — absolute `ExecStart`/`WorkingDirectory` paths.
+- `cadence-params.tsv` `deck-model-endpoint` row — the deck IP again (env
+  `DECK_URL` overrides it today).
+
 ## Fail-closed contract
 
 Every job exits 0 on any expected condition (model down, fetch failed, nothing

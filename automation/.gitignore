@@ -25,3 +25,5 @@ stats/
 prompts/
 deck-facts/
 bridge/
+# machine profile - host identity, never committed (copy machine.env.example)
+config/machine.env
