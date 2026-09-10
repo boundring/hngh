@@ -85,3 +85,21 @@ Reinforcement: the inventory's merge and ordering sections become the curator's 
 | Commit-per-green | rule plus doctrine | death-telemetry aggregation |
 | Voice as contract | practiced by grep | docs lint job (shared with above) |
 | Queue hygiene as acceleration | inventory landed | curator merges from the inventory |
+
+### 11. Bounded evaluation / dead-end recognition
+Rule: cap the time spent evaluating a suspected dead-end; the
+identification is the deliverable, not the workaround.
+Lives: the router's dedup and escalation (scripts/router-tick.py
+suppresses repeats, escalates at the third); the TTSR rule
+`~/.omp/agent/rules/dead-end-timebox.md`; the plan lifecycle's
+parked-with-cause disposition.
+Fired today: the readout race - two structural fixes bounded the
+problem, and the test-budget residual was routed, not hand-fixed in
+place; the plan-verification-line failure - identified and fixed at
+the regex seam in minutes once the checker was read; the bench
+triggering design - a benchmark with no pending decision is expense
+wearing a lab coat, so evaluation was bounded to decision-pending
+cases.
+Reinforcement: evaluation time-boxes become normal - a probe, a
+bounded analysis, then either a fix or a documented park. Revisiting
+a known dead-end requires new evidence; trying is not spending.
