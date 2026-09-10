@@ -207,3 +207,106 @@ the refusal crumb carries the last lines
 **Remaining action:** File is restored but uncommitted in working tree. Should be committed via machine-ledger-sync cycle. No ceremony required -- infrastructure recovery ride along.
 
 **Data loss assessment:** None. The 2026-09-03-staging plan file legitimately holds the staging-content at docs/project/plans/2026-09-03-staging.plan.md. All original stall-recovery steps are intact post-restoration.
+
+## Monitoring log (blocker-clearing session, 20-min cadence)
+
+- 2026-09-10T03:1xZ | task 1 landed: ceremony e8231ba (candidate
+  86726ae2...) - plan-identity-drift guard in accept-plans.py
+  (tracked plan accepted at HEAD reverting to proposed files alert
+  identity plan-identity-drift:<slug>, plan left untouched) +
+  PLAN-FILE RULE line in both wake prompts + test-plan-identity.py
+  wired into the automation gate. Both gates green pre-ceremony
+  (kernel 2855 checks, automation suite + new test).
+- 2026-09-10T03:1xZ | overnight-cycle.sh selector/priority work from
+  the corrupted turn verified NOT present in the tree (git diff empty
+  vs HEAD) - nothing half-landed; salvage confirmed clean.
+- 2026-09-10T03:25Z | monitor pass 1: kernel gate rc=0 (2855 checks),
+  automation gate rc=0; failfirst still THROTTLE:speed-3 (03:01:05Z);
+  no new session-run rows since 23:15:51Z (speed-3 ceiling + no
+  accepted-plan steps runnable); acceptance routing resumed
+  (routed-slow-unit-dropin-16-remote-push accepted 03:01:05Z);
+  stall-recovery plan still blocked step-1-no-verification (its
+  Verification lines are mid-line glued - plan contract bug, router
+  keeps routing the symptom); priority plans still 0 steps checked.
+- 2026-09-10T03:4xZ | monitor pass 2: kernel rc=0 (2855), automation
+  rc=0; failfirst unchanged THROTTLE:speed-3 (03:01:05Z latest); no
+  new session rows (still none since 23:15:51Z - speed-3 caps
+  concurrency at 1 and no accepted plan has a runnable step);
+  acceptance unchanged since 03:01; six priority plans: schedule-opt 1
+  checked (operator-procedural sweep), others 0; no Flash session in
+  either lane yet (none launched), no gate-rerun logs (gate stayed
+  green).
+- 2026-09-10T03:33Z | monitor pass 3 - ZERO-LAUNCH ROOT CAUSE FOUND:
+  not the plan selector (21 accepted plans have runnable first steps,
+  rehearsal-lane and omp-hngh-integration among them) and not the
+  session cap (0 of 200 used today). The overnight beat's failfirst
+  gate exits the whole beat on THROTTLE: speed=3 paces to one run per
+  4 ticks (mult=4 x FAILFIRST_TICK_S=3600 = 4h between GOs), and
+  FF_LAST_RUN=23:15:51Z (the last actual launch). 02:30Z elapsed
+  6849s, 03:01Z elapsed 8709s - both THROTTLE; next GO window opens
+  03:15:51Z, so the 03:30Z hour beat should launch. Deadlock shape
+  confirmed as designed-behavior: pace gate releases one slot per 4h
+  at speed 3, promote needs 3 consecutive ok outcomes, so worst-case
+  ladder climb from speed 3 back to 1 is ~12h+ of quiet success; the
+  gate-red flap spent the state (n_deg=2, n_fail=3) and the throttle
+  then starved launches for 4h windows. The oks=1 counter already
+  holds one credit from the 23:15 session (rc=0 cancelled with output
+  = ok).
+- 2026-09-10T03:38Z | monitor pass 4: the 03:00:18Z hour beat ran
+  20-workbeat (overnight-cycle) - failfirst gate said
+  THROTTLE:speed-3 at 03:01:05Z (beat start 03:00:18Z, elapsed
+  8697s < 14400s; the GO window opened 03:15:51Z, after the beat had
+  already exited). No session launched; no budget row; state file
+  unchanged (oks=1, lastrun=23:15:51Z). The next beat inside the GO
+  window is the 04:00:10Z hour tick (overnight timer fires 04:30Z).
+  Timing note: the pace gate is checked at beat START, so a beat
+  started at :00:18 misses a window that opens minutes later - the
+  4h window arithmetic plus beat alignment is what produced the
+  23:15Z -> (predicted) 04:00Z gap, not a deadlock: no beat ran
+  between 03:15:51Z and 04:00Z.
+- 2026-09-10T04:01Z | monitor pass 5: PREDICTION CONFIRMED - the
+  04:00:10Z hour beat entered the GO window and launched a session
+  (2026-03-staging, log overnight-2026-09-03-staging-20260910T000105.log,
+  live under timeout 1800 at 04:01). failfirst state advanced:
+  FF_LAST_RUN=1789012865 (04:01:05Z) - the pace gate consumed its
+  slot; oks=1 held. budget.md row and handoff outcome land when the
+  session completes (rc + model verdict to confirm Flash-in-workbeat
+  lane; the prompt shows the PLAN-FILE RULE line riding along - task
+  1's prompt fix live in the lane). Session completion verdict in
+  pass 6.
+- 2026-09-10T04:0xZ | ttsr-fit drift cluster diagnosis: the
+  rule-drift identities (no-ungrounded-time-of-day x2,
+  ttsr-enabled-settings) do NOT fire when 22-ttsr-fit runs directly
+  (verified twice with bash -x: cond-len 289/433, enabled=true, zero
+  drift emissions) but DID fire at 21:01Z/23:15Z/03:30:54Z cadence
+  beats. Trigger observed once under my own cadence-tick invocation
+  (03:51:21, concurrent with a direct run). Working hypothesis:
+  concurrent 22-ttsr-fit instances (day tick + my probes + the
+  30m-tick's own run) racing the report-queue/crumb path - the drift
+  branch is env-stable, so the fired/not-fired split is concurrency,
+  not configuration. The fit identities are real and stable though:
+  SimDesign (23 injections), QueueDeps (3), NotifySeam (3),
+  2026-09-09T00-35-50 (22), threeinj/batch/slip/tight - these are
+  THIS session family's transcripts tripping the no-ungrounded
+  post-hoc regex (quoted text inside tool output contains time
+  phrases). No reports.md rows landed for the drift identities
+  (dedup window) - only crumbs. Closure path: the post-hoc regex
+  matching QUOTED text (rules quoted inside transcripts) is
+  over-firing; a session-side exclusion (skip content inside tool
+  results) is the durable fix, automation-layer, testable.
+- 2026-09-10T00:10Z | pass-4 (blocker diagnosis, kernel-gate-red-rc2): Root cause of the
+  acceptance starvation chain is now precise. (1) The rc2 failure is NOT a broken gate:
+  tests/scripts/test-dashboard-live.py::test_rich_watch_renders_operative_and_quits runs
+  scripts/dashboard-readout --watch 1 and calls p.wait(timeout=5); rich_watch's cold
+  session_rows (TTL 15s, up to 5 serial sbcl --script boots at timeout=4 each) can exceed
+  the 5s quit budget under beat load -> TimeoutExpired -> error=1 -> make rc=2. It passes
+  quiet (verified twice: 0.15s cold) and fails only in beat windows (02:31-05:01, 09:00,
+  14:01, 14:31, 19:01, 04:01 all rc=2; 15:01, 16:58, 20:01, 20:05, 21:01, 03:53 all green).
+  The commit landing was debee2c (rich_watch quit-check-first + concurrent session_rows,
+  cold 0.61s -> 0.15s) - the deterministic shape is fixed; the residual race needs the
+  test to budget for sbcl boot (routed, not hand-fixed). (2) The 04:01 beat re-confirmed
+  rc=2 at the same boundary. (3) Consequence chain: rc2 -> accept-plans blocks every
+  proposed plan (kernel-gate-red-rc2) -> rehearsal-lane/work-graph/stall-recovery/
+  presentation-pass-1 starve; failfirst development at speed-3 ceiling=1, and its
+  promotion ladder is launch-fed (oks come from delegated sessions), so a starving
+  ceiling cannot promote. Findings file: docs/design/kernel-gate-followup.md next.
