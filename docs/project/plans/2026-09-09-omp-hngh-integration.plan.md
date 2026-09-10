@@ -57,7 +57,7 @@ never knows omp exists. No step touches provider/credential configuration
       existing misakanet stdio server (`~/.local/share/misakanet/scripts/mcp_server.py`).
       Verification: server answers one tool call over stdio from a
       throwaway client script; a pytest in `automation/` covers tool dispatch.
-- [ ] 2. Register the server for omp: add an entry to this repo's
+- [x] 2. Register the server for omp: add an entry to this repo's
       `.omp/mcp.json` (`hngh` → `python automation/mcp/hngh_mcp_server.py`)
       and, after the operator confirms, mirror it in
       `~/.omp/agent/mcp.json`.
