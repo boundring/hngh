@@ -1834,7 +1834,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T22:00:16Z | progress | e234b112 | course bridge-operator-host: card mounted, last increment 2026-09-09T21:00:15Z | 2026-09-09T22:00:16Z-progress-e234b112.md |
 | 2026-09-09T22:00:19Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T22:00:19Z-progress-6f20e8cb.md |
 | 2026-09-09T22:00:19Z | alert | debf1890 | router dedup escalation: dash-selfreview:summary recurring — suppressed 3 times today — escalated to operator visibility ×3 | 2026-09-09T22:00:19Z-alert-debf1890.md |
-| 2026-09-09T22:00:19Z | alert | 5dd4477b | router escalated: dash-selfreview:summary re-occurred 3 times without landing — plan 2026-09-09-routed-dash-selfreview-summary parked (cause=obsolete); operator disposition stands | 2026-09-09T22:00:19Z-alert-5dd4477b.md |
+| 2026-09-09T22:00:19Z | alert | 5dd4477b | router escalated: dash-selfreview:summary re-occurred 3 times without landing — plan 2026-09-09-routed-dash-selfreview-summary parked (cause=obsolete); operator disposition stands ×2 | 2026-09-09T22:00:19Z-alert-5dd4477b.md |
 | 2026-09-09T22:00:19Z | alert | 860ff758 | router dedup escalation: dash-selfreview:ledger-sanity recurring — suppressed 3 times today — escalated to operator visibility ×3 | 2026-09-09T22:00:19Z-alert-860ff758.md |
 | 2026-09-09T22:15:02Z | progress | 357ae1ea | agent-supervision: evicted-stale omp-step2-bench-probe-dae758 (idle 360m) | 2026-09-09T22:15:02Z-progress-357ae1ea.md |
 | 2026-09-09T22:15:02Z | progress | 9e03ef93 | agent-supervision: evicted-stale omp-step5-pub-site-d66a4b (idle 361m) | 2026-09-09T22:15:02Z-progress-9e03ef93.md |
@@ -1848,7 +1848,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T23:25:18Z | progress | d9f9d538 | agent-supervision: evicted-stale omp-PlatformUnblock-c55a6f (idle 362m) | 2026-09-09T23:25:18Z-progress-d9f9d538.md |
 | 2026-09-09T23:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T23:30:17Z-progress-6f20e8cb.md |
 | 2026-09-09T23:35:00Z | alert | 106d04a1 | [oversight] stale-store: /tmp/hngh-cer-gatefix-1788994872 record.lisp untouched 30min+ ×18 | 2026-09-09T23:35:00Z-alert-106d04a1.md |
-| 2026-09-09T23:45:00Z | alert | 82a04771 | [oversight] system-network-down: critical resource flag set | 2026-09-09T23:45:00Z-alert-82a04771.md |
+| 2026-09-09T23:45:00Z | alert | 82a04771 | [oversight] system-network-down: critical resource flag set ×2 | 2026-09-09T23:45:00Z-alert-82a04771.md |
 | 2026-09-09T23:50:15Z | alert | 825a2bff | [oversight] stale-store: /tmp/hngh-cer-diag-1788995914 record.lisp untouched 30min+ ×15 | 2026-09-09T23:50:15Z-alert-825a2bff.md |
 | 2026-09-09T23:50:15Z | alert | e7734670 | [oversight] stale-store: /tmp/hngh-cer-pushfix-1788995719 record.lisp untouched 30min+ ×15 | 2026-09-09T23:50:15Z-alert-e7734670.md |
 | 2026-09-10T00:00:15Z | progress | 5ce838b1 | course bridge-operator-host: card mounted, last increment 2026-09-09T23:00:15Z | 2026-09-10T00:00:15Z-progress-5ce838b1.md |
@@ -1879,7 +1879,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T03:00:18Z | progress | a6ad3a32 | router routed slow-unit:dropin:16-remote-push.sh -> plan candidate 2026-09-10-routed-slow-unit-dropin-16-remote-push.sh (routed-at 2026-09-10T03:00:18Z) | 2026-09-10T03:00:18Z-progress-a6ad3a32.md |
 | 2026-09-10T03:00:18Z | alert | ed35b734 | router dedup escalation: slow-unit:dropin:33-research-beat.sh recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-10T03:00:18Z-alert-ed35b734.md |
 | 2026-09-10T03:01:05Z | progress | 0fafcec1 | plan 2026-09-10-routed-slow-unit-dropin-16-remote-push.sh auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T03:01:05Z | 2026-09-10T03:01:05Z-progress-0fafcec1.md |
-| 2026-09-10T03:01:16Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×13 | 2026-09-10T03:01:16Z-alert-f7fd5d5b.md |
+| 2026-09-10T03:01:16Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×14 | 2026-09-10T03:01:16Z-alert-f7fd5d5b.md |
 | 2026-09-10T03:05:00Z | alert | 8dee9bbe | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.8s ×131 | 2026-09-10T03:05:00Z-alert-8dee9bbe.md |
 | 2026-09-10T03:15:00Z | alert | 98b02d75 | [oversight] stale-store: /tmp/hngh-cer-amd4-1789008128 record.lisp untouched 30min+ ×3 | 2026-09-10T03:15:00Z-alert-98b02d75.md |
 | 2026-09-10T03:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T03:30:17Z-progress-6f20e8cb.md |
@@ -2060,8 +2060,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T18:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T18:30:17Z-progress-6f20e8cb.md |
 | 2026-09-10T18:31:14Z | progress | 2182cbd3 | plan 2026-09-10-cost-tiering auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T18:31:14Z | 2026-09-10T18:31:14Z-progress-2182cbd3.md |
 | 2026-09-10T18:31:14Z | progress | 570acab3 | plan 2026-09-10-routed-agent-stall-omp-SimDesign-6b54f6 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T18:31:14Z | 2026-09-10T18:31:14Z-progress-570acab3.md |
-| 2026-09-10T19:00:15Z | alert | 3feb1b3d | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1811 rows (259 ledger vs 2070 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×3 | 2026-09-10T19:00:15Z-alert-3feb1b3d.md |
-| 2026-09-10T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×3 | 2026-09-10T19:00:15Z-alert-f438818b.md |
+| 2026-09-10T19:00:15Z | alert | 3feb1b3d | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1811 rows (259 ledger vs 2070 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×4 | 2026-09-10T19:00:15Z-alert-3feb1b3d.md |
+| 2026-09-10T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×4 | 2026-09-10T19:00:15Z-alert-f438818b.md |
 | 2026-09-10T19:00:15Z | progress | 6f65edca | course bridge-operator-host: card mounted, last increment 2026-09-10T18:00:15Z | 2026-09-10T19:00:15Z-progress-6f65edca.md |
 | 2026-09-10T19:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T19:00:17Z-progress-6f20e8cb.md |
 | 2026-09-10T19:00:18Z | progress | 913ec158 | router routed dash-selfreview:summary -> plan candidate 2026-09-10-routed-dash-selfreview-summary (routed-at 2026-09-10T19:00:18Z) | 2026-09-10T19:00:18Z-progress-913ec158.md |
@@ -2074,8 +2074,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T20:00:15Z | alert | 392924cd | [oversight] stale-store: /tmp/hngh-cer-ph-1789068579 record.lisp untouched 30min+ ×13 | 2026-09-10T20:00:15Z-alert-392924cd.md |
 | 2026-09-10T20:00:15Z | progress | 8b84b1b4 | course bridge-operator-host: card mounted, last increment 2026-09-10T19:00:15Z | 2026-09-10T20:00:15Z-progress-8b84b1b4.md |
 | 2026-09-10T20:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T20:00:17Z-progress-6f20e8cb.md |
-| 2026-09-10T20:00:18Z | alert | 49b25a29 | router dedup: dash-selfreview:summary suppressed (routed candidate 2026-09-10-routed-dash-selfreview-summary still live, 0h old; day count 2) ×2 | 2026-09-10T20:00:18Z-alert-49b25a29.md |
-| 2026-09-10T20:00:18Z | alert | 2ac9741c | router dedup: dash-selfreview:ledger-sanity suppressed (routed candidate 2026-09-10-routed-dash-selfreview-ledger-sanity still live, 0h old; day count 2) ×2 | 2026-09-10T20:00:18Z-alert-2ac9741c.md |
+| 2026-09-10T20:00:18Z | alert | 49b25a29 | router dedup: dash-selfreview:summary suppressed (routed candidate 2026-09-10-routed-dash-selfreview-summary still live, 0h old; day count 2) ×3 | 2026-09-10T20:00:18Z-alert-49b25a29.md |
+| 2026-09-10T20:00:18Z | alert | 2ac9741c | router dedup: dash-selfreview:ledger-sanity suppressed (routed candidate 2026-09-10-routed-dash-selfreview-ledger-sanity still live, 0h old; day count 2) ×3 | 2026-09-10T20:00:18Z-alert-2ac9741c.md |
 | 2026-09-10T20:00:18Z | alert | a363ea97 | router dedup: push-blocked:openrouter-key-hngh suppressed (routed candidate 2026-09-10-routed-push-blocked-openrouter-key-hngh still live, 0h old; day count 1) | 2026-09-10T20:00:18Z-alert-a363ea97.md |
 | 2026-09-10T20:01:31Z | progress | 73e63a82 | plan 2026-09-10-peer-hardening auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T20:01:31Z | 2026-09-10T20:01:31Z-progress-73e63a82.md |
 | 2026-09-10T20:10:02Z | progress | 72408856 | agent-supervision: evicted-stale omp-2026-09-10T14-01-08-105Z_01a-e013b2 (idle 360m) | 2026-09-10T20:10:02Z-progress-72408856.md |
@@ -2086,3 +2086,16 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T21:00:11Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T21:00:11Z-progress-6f20e8cb.md |
 | 2026-09-10T21:00:12Z | progress | 3786f3ca | router routed agent-stall:omp-2026-09-09T00-35-50-818Z_01a-f66646 -> plan candidate 2026-09-10-routed-agent-stall-omp-2026-09-09T00-35-50-818Z_01a-f66646 (routed-at 2026-09-10T21:00:12Z) | 2026-09-10T21:00:12Z-progress-3786f3ca.md |
 | 2026-09-10T21:01:27Z | progress | 716eff7d | plan 2026-09-10-routed-agent-stall-omp-2026-09-09T00-35-50-818Z_01a-f66646 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T21:01:27Z | 2026-09-10T21:01:27Z-progress-716eff7d.md |
+| 2026-09-10T21:30:18Z | progress | 3718401b | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-10T21:30:18Z-progress-3718401b.md |
+| 2026-09-10T22:00:30Z | progress | a6d149fb | course bridge-operator-host: card mounted, last increment 2026-09-10T21:00:09Z | 2026-09-10T22:00:30Z-progress-a6d149fb.md |
+| 2026-09-10T22:00:32Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T22:00:32Z-progress-6f20e8cb.md |
+| 2026-09-10T22:00:33Z | alert | b7ea0b29 | router dedup: agent-stall:omp-2026-09-09T00-35-50-818Z_01a-f66646 suppressed (routed candidate 2026-09-10-routed-agent-stall-omp-2026-09-09T00-35-50-818Z_01a-f66646 still live, 0h old; day count 1) | 2026-09-10T22:00:33Z-alert-b7ea0b29.md |
+| 2026-09-10T22:00:33Z | alert | fa94da46 | router dedup escalation: dash-selfreview:summary recurring — suppressed 4 times today — escalated to operator visibility | 2026-09-10T22:00:33Z-alert-fa94da46.md |
+| 2026-09-10T22:00:33Z | alert | b0efcaac | router dedup escalation: dash-selfreview:ledger-sanity recurring — suppressed 4 times today — escalated to operator visibility | 2026-09-10T22:00:33Z-alert-b0efcaac.md |
+| 2026-09-10T22:00:33Z | alert | eb40fc1f | router escalated: dash-selfreview:ledger-sanity re-occurred 3 times without landing — plan 2026-09-10-routed-dash-selfreview-ledger-sanity parked (cause=obsolete); operator disposition stands | 2026-09-10T22:00:33Z-alert-eb40fc1f.md |
+| 2026-09-10T22:01:00Z | alert | 5a5966cb | overnight beat 2026-09-06-routed-system-network-down could not open a bridge run: conflict labels=record-conflict | 2026-09-10T22:01:00Z-alert-5a5966cb.md |
+| 2026-09-10T22:01:00Z | alert | a7e32cf1 | overnight beat 2026-09-06-routed-tree-skew-hngh-2 could not open a bridge run: conflict labels=record-conflict | 2026-09-10T22:01:00Z-alert-a7e32cf1.md |
+| 2026-09-10T22:02:24Z | progress | db31dd46 | research line synth-2026-09-10-1: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-10-synth-2026-09-10-1.md | 2026-09-10T22:02:24Z-progress-db31dd46.md |
+| 2026-09-10T22:22:37Z | progress | a0310ac0 | research line synth-2026-09-10-1: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-10-synth-2026-09-10-1.md | 2026-09-10T22:22:37Z-progress-a0310ac0.md |
+| 2026-09-10T22:30:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T22:30:02Z-progress-6f20e8cb.md |
+| 2026-09-10T22:31:00Z | alert | c230b1b9 | session touched critical paths in ~/Projects/etc/hngh: src/main.lisp tests/adapter/test-worker-file.lisp tests/run.lisp | 2026-09-10T22:31:00Z-alert-c230b1b9.md |
