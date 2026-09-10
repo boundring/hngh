@@ -29,16 +29,24 @@
 #   pin to the deck or a quota leg; it never defers. This file only owns the
 #   speed state machine and the probe.
 # State: one key=value file per operation under FAILFIRST_STATE_DIR
-# (default /tmp/hngh-failfirst). Tick seconds: FAILFIRST_TICK_S (default
+# (default $AUTOMATION_ROOT/state/failfirst — durable across reboots,
+# same convention as model-demote.sh; /tmp kept only for lockfiles).
+# Tick seconds: FAILFIRST_TICK_S (default
 # 3600 = the hour tier; the 15-minute overflow exports 900). Caller must
 # have sourced params.sh (get_param) and breadcrumbs.sh (fallback alert);
 # both hold for every cadence drop-in.
 set -u
 
-FF_DIR="${FAILFIRST_STATE_DIR:-/tmp/hngh-failfirst}"
+FF_DIR="${FAILFIRST_STATE_DIR:-$AUTOMATION_ROOT/state/failfirst}"
 
 failfirst_state_file() { # op -> default state path
- printf '%s/failfirst-%s\n' "$FF_DIR" "$1"
+ local f="$FF_DIR/failfirst-$1" old="/tmp/hngh-failfirst/failfirst-$1"
+ # one-shot migration: pre-2026-09-10 state lived in /tmp and reset on
+ # every reboot; carry it over exactly once (mv only when target absent)
+ if [ -z "${FAILFIRST_STATE_DIR:-}" ] && [ -e "$old" ] && [ ! -e "$f" ]; then
+  mkdir -p "$FF_DIR" && mv "$old" "$f"
+ fi
+ printf '%s\n' "$f"
 }
 
 failfirst_load() { # op [statefile] -> FF_* globals (fresh defaults when absent)

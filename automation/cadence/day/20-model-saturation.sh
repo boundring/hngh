@@ -49,7 +49,7 @@ failfirst_summary() { # -> calibration line over the failfirst state files
  # operation, outcome counts, and the speed at which degradation first
  # occurred (ceiling=0 = never degraded). Read directly from the state
  # files -- the day instrument stays model-free.
- local dir="${FAILFIRST_STATE_DIR:-/tmp/hngh-failfirst}" f op out="" speed name
+ local dir="${FAILFIRST_STATE_DIR:-$AUTOMATION_ROOT/state/failfirst}" f op out="" speed name
  local oks deg fail ceiling k v
  for f in "$dir"/failfirst-*; do
   [ -f "$f" ] || continue
