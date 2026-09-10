@@ -56,6 +56,29 @@ DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
 now_utc = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def committed_plan_status(rel):
+    """Status word of the plan file at git HEAD, or None.
+
+    Identity check for the bb67075 clobber shape: a tracked plan whose
+    HEAD version was accepted but whose working tree now says proposed
+    accepted=- is a session overwriting an existing plan file. Git
+    trouble (no repo, missing file, odd output) skips the check
+    silently - behavior-preserving when the tool is unavailable.
+    """
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(KERNEL), "show", "HEAD:" + rel],
+            capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    m = FRONT.search(r.stdout or "")
+    if not m or m.group(3) == "-":
+        return None
+    return m.group(1)
+
+
 def steps_text(text):
     """Content of the '## Steps' section (up to the next '## ' heading)."""
     m = re.search(r"(?m)^## Steps[ \t]*$", text)
@@ -240,6 +263,22 @@ def main():
         if not m:
             continue
         slug = name[:-len(".plan.md")]
+        # identity guard: a tracked file that was accepted at HEAD but
+        # whose working tree now says proposed accepted=- is the
+        # bb67075 clobber shape - a session wrote "the next plan" over
+        # an existing plan's filename. Alert instead of processing.
+        if m.group(1) == "proposed" and m.group(3) == "-":
+            prev = committed_plan_status("docs/project/plans/" + name)
+            if prev is not None:
+                report("alert",
+                       "plan %s identity drift: git HEAD carries status=%s "
+                       "with a real accepted timestamp but the working tree "
+                       "is proposed/unaccepted - plan-file clobber suspected; "
+                       "never overwrite an existing plan file, new plans get "
+                       "new slugs" % (slug, prev),
+                       "plan-identity-drift:" + slug, 86400)
+                note("blocked %s plan-identity-drift" % slug)
+                continue
         if m.group(1) == "held":
             # the gate re-evaluates held plans every run: when the design
             # has landed, the plan re-enters the proposed pool
