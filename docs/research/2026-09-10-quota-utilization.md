@@ -31,11 +31,32 @@ Both endpoints persistently failing since their configuration was introduced 202
 
 | Service     | Config Key       | Value (cadence-params.tsv)                        | Latest Check                     | Diagnosis                                    |
 |-------------|------------------|----------------------------------------------------|----------------------------------|----------------------------------------------|
-| Kimi        | kimi-endpoint    | https://api.kimi.com/coding/v1/chat/completions    | http=401 (always)                | API key invalid/expired; machine can fix only if operator provides fresh KIMI_AI_KEY or MOONSHOTAI_API_KEY env var |
+| Kimi        | kimi-endpoint    | https://api.kimi.com/coding/v1/chat/completions    | http=401 from the health PROBE (unauthenticated; see correction below) | PROBE ARTIFACT - the credential itself is valid (live kimi_chat http=200 with KIMI_AI_KEY, 2026-09-10); probe fixed in 75ce22c2 |
 | LobeHub     | lobehub-endpoint | https://app.lobehub.com/api/v1/responses           | http=404 (always)                | Endpoint dead; possible LobeHub migration/API change; requires investigation before retry |
 
 Configuration details:
-- **Kimi:** Source env is `MOONSHOTAI_API_KEY` (via lib/model.sh:318: `key="${KIMI_AI_KEY:-${KIMI_FOR_CODING_KEY:-${MOONSHOTAI_API_KEY:-}}}"`). The credential-health check shows "armed via env" meaning the key file exists but the 401 response indicates the key itself is rejected by the API server. This is an **operator-owned credential issue** - the key was likely expired and needs re-acquisition.
+- **Kimi: CORRECTED 2026-09-10 (operator correction + probe fix).** The
+  original "expired key" diagnosis was WRONG - it measured the probe's
+  own missing header. The credential-health kimi probe sent NO
+  Authorization header (and defaulted to the platform models URL), so
+  every reading since 2026-09-08T03:00Z was the API's unauthenticated
+  401, not a credential verdict - while real kimi_chat calls kept
+  succeeding (research beats via kimi:k3-256k the same morning, and a
+  live probe this session: kimi_chat http=200 content=[ok]). Live
+  matrix measured 2026-09-10: models endpoint WITHOUT auth = 401
+  (the old probe's reading), WITH KIMI_AI_KEY Bearer = 200. The
+  operator confirmed KIMI_AI_KEY is the correct key. Fix landed
+  (75ce22c2, test test-credential-kimi.sh): the probe resolves the
+  key exactly as kimi_chat does (KIMI_AI_KEY -> KIMI_FOR_CODING_KEY ->
+  MOONSHOTAI_API_KEY -> 600-mode key file), sends
+  Authorization: Bearer, honors KIMI_URL, and words a 401/403 as a
+  genuine credential failure. systemd user environment carries the
+  kimi/moonshot vars (3 matches in show-environment), so the probe
+  reads true from unit context too - no key-file propagation needed.
+  **The Kimi quota rung is one config row from live:**
+  session-model-quota-keys=1 + session-model-preference naming an
+  omp-addressable quota model (the kimi: prefix drives the health
+  probe; kimi_chat itself serves the research/review lanes).
 - **LobeHub:** Source env is LOBEHUB_AGENT_ID (from cadence-params.tsv row) with key loaded from `~/.config/hngh/lobehub-key`. The 404 response indicates the endpoint URL itself is wrong or the service migrated. This is a **configuration issue** that may be fixable by updating lobehub-endpoint row, but requires understanding the new LobeHub API shape.
 
 Neither issue prevents the system from operating - both legs gracefully skip via fail-closed semantics. But it means **both paid quotas are sitting at zero consumption regardless of share-row pinning**.
@@ -101,6 +122,6 @@ If both steps landed:
 | Cost signal            | None                 | Significant                         | None                |
 | Blocked by             | Env pin + creds + empty pipelines | Creds + pipeline depletion | Creds               |
 
-The most efficient next action is fixing the kimi API key (operator action, takes minutes). After that, enabling step 9 would immediately start utilizing the kimodel quota leg for delegated sessions. Step 10 follows naturally. LobeHub endpoint diagnosis requires more effort (understanding LobeHub API changes) and should be sequenced after kimodel is operational.
+CORRECTION 2026-09-10 (operator correction; probe fixed in 75ce22c2): the kimi key was never the problem - the health probe was unauthenticated (see the Kimi bullet above). The most efficient next action is flipping the gate row (session-model-quota-keys=1 with a session-model-preference naming an omp-addressable quota model), which is config-only. LobeHub endpoint diagnosis (404 since config) remains the separate, real issue and should be sequenced after kimi routing is live.
 
 Without credential fixes, executing steps 9+10 has negative utility: it adds quota consumption paths that all immediately fail, wasting daily cap budgets against 401/404 errors. The dependency chain is: fix credentials -> enable routing -> monitor utilization -> tune share rows.
