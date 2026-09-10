@@ -1873,8 +1873,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T18:36:43Z | alert | ef5485a3 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-notify-email.py | 2026-09-09T18:36:43Z-alert-ef5485a3.md |
 | 2026-09-09T18:46:54Z | alert | 74c13bb5 | operator-item: restore 1Password/op availability (or set conf pass in ~/.hngh-automation/notify-email.conf) so the notify-email send path can be proven rc=0. Live send 2026-09-09T18:36:43Z failed closed rc=2 (1password unreadable, conf pass empty); fail-closed and seam-dispatch paths are now unit-proven (tests/test-notify-send-path.py). TEST-marked send pending credentials. | 2026-09-09T18:46:54Z-alert-74c13bb5.md |
 | 2026-09-09T18:49:37Z | alert | ef5485a3 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-notify-email.py ×2 | 2026-09-09T18:49:37Z-alert-ef5485a3.md |
-| 2026-09-09T19:00:15Z | alert | 3a6f73e5 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1880 rows (2 ledger vs 1882 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×5 | 2026-09-09T19:00:15Z-alert-3a6f73e5.md |
-| 2026-09-09T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×5 | 2026-09-09T19:00:15Z-alert-f438818b.md |
+| 2026-09-09T19:00:15Z | alert | 3a6f73e5 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1880 rows (2 ledger vs 1882 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×6 | 2026-09-09T19:00:15Z-alert-3a6f73e5.md |
+| 2026-09-09T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×6 | 2026-09-09T19:00:15Z-alert-f438818b.md |
 | 2026-09-09T19:00:15Z | progress | 5eb49af0 | course bridge-operator-host: card mounted, never incremented | 2026-09-09T19:00:15Z-progress-5eb49af0.md |
 | 2026-09-09T19:00:18Z | progress | 7fcefc74 | agent-supervision: evicted-stale omp-DashGood-d84904 (idle 360m) | 2026-09-09T19:00:18Z-progress-7fcefc74.md |
 | 2026-09-09T19:00:18Z | progress | 03a99b37 | agent-supervision: evicted-stale omp-PerfGood-ec9189 (idle 360m) | 2026-09-09T19:00:18Z-progress-03a99b37.md |
@@ -1887,8 +1887,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T19:30:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T19:30:18Z-progress-6f20e8cb.md |
 | 2026-09-09T20:00:15Z | progress | 7960d9e1 | course bridge-operator-host: card mounted, last increment 2026-09-09T19:00:15Z | 2026-09-09T20:00:15Z-progress-7960d9e1.md |
 | 2026-09-09T20:00:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T20:00:18Z-progress-6f20e8cb.md |
-| 2026-09-09T20:00:18Z | alert | 0032d20d | router dedup: dash-selfreview:summary suppressed (routed candidate 2026-09-09-routed-dash-selfreview-summary still live, 0h old; day count 1) ×4 | 2026-09-09T20:00:18Z-alert-0032d20d.md |
-| 2026-09-09T20:00:18Z | alert | 302ece9d | router dedup: dash-selfreview:ledger-sanity suppressed (routed candidate 2026-09-09-routed-dash-selfreview-ledger-sanity still live, 0h old; day count 1) ×4 | 2026-09-09T20:00:18Z-alert-302ece9d.md |
+| 2026-09-09T20:00:18Z | alert | 0032d20d | router dedup: dash-selfreview:summary suppressed (routed candidate 2026-09-09-routed-dash-selfreview-summary still live, 0h old; day count 1) ×5 | 2026-09-09T20:00:18Z-alert-0032d20d.md |
+| 2026-09-09T20:00:18Z | alert | 302ece9d | router dedup: dash-selfreview:ledger-sanity suppressed (routed candidate 2026-09-09-routed-dash-selfreview-ledger-sanity still live, 0h old; day count 1) ×5 | 2026-09-09T20:00:18Z-alert-302ece9d.md |
 | 2026-09-09T20:01:16Z | progress | a632bcc5 | plan 2026-09-09-presentation-pass-1 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T20:01:16Z | 2026-09-09T20:01:16Z-progress-a632bcc5.md |
 | 2026-09-09T20:01:17Z | progress | 4e115e13 | plan 2026-09-09-routed-agent-stall-omp-2026-09-09T00-35-50-818Z_01a-f66646 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T20:01:16Z | 2026-09-09T20:01:17Z-progress-4e115e13.md |
 | 2026-09-09T20:01:17Z | progress | 7ae61e29 | plan 2026-09-09-routed-dash-selfreview-ledger-sanity auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-09T20:01:16Z | 2026-09-09T20:01:17Z-progress-7ae61e29.md |
@@ -1915,3 +1915,13 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T22:30:18Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T22:30:18Z-progress-6f20e8cb.md |
 | 2026-09-09T23:00:15Z | progress | 2524245d | course bridge-operator-host: card mounted, last increment 2026-09-09T22:00:16Z | 2026-09-09T23:00:15Z-progress-2524245d.md |
 | 2026-09-09T23:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T23:00:17Z-progress-6f20e8cb.md |
+| 2026-09-09T23:25:18Z | progress | d9f9d538 | agent-supervision: evicted-stale omp-PlatformUnblock-c55a6f (idle 362m) | 2026-09-09T23:25:18Z-progress-d9f9d538.md |
+| 2026-09-09T23:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-09T23:30:17Z-progress-6f20e8cb.md |
+| 2026-09-09T23:35:00Z | alert | 106d04a1 | [oversight] stale-store: /tmp/hngh-cer-gatefix-1788994872 record.lisp untouched 30min+ ×6 | 2026-09-09T23:35:00Z-alert-106d04a1.md |
+| 2026-09-09T23:45:00Z | alert | 82a04771 | [oversight] system-network-down: critical resource flag set | 2026-09-09T23:45:00Z-alert-82a04771.md |
+| 2026-09-09T23:50:15Z | alert | 825a2bff | [oversight] stale-store: /tmp/hngh-cer-diag-1788995914 record.lisp untouched 30min+ ×3 | 2026-09-09T23:50:15Z-alert-825a2bff.md |
+| 2026-09-09T23:50:15Z | alert | e7734670 | [oversight] stale-store: /tmp/hngh-cer-pushfix-1788995719 record.lisp untouched 30min+ ×3 | 2026-09-09T23:50:15Z-alert-e7734670.md |
+| 2026-09-10T00:00:15Z | progress | 5ce838b1 | course bridge-operator-host: card mounted, last increment 2026-09-09T23:00:15Z | 2026-09-10T00:00:15Z-progress-5ce838b1.md |
+| 2026-09-10T00:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T00:00:17Z-progress-6f20e8cb.md |
+| 2026-09-10T00:00:18Z | alert | 38359be4 | router dedup: system-network-down suppressed (routed candidate 2026-09-05-routed-system-network-down still live, 8h old; day count 1) | 2026-09-10T00:00:18Z-alert-38359be4.md |
+| 2026-09-10T00:00:18Z | alert | de775d42 | plan 2026-09-09-stall-recovery-and-operator-surfaces not auto-accepted: step 1 has no Verification line | 2026-09-10T00:00:18Z-alert-de775d42.md |
