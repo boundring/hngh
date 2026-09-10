@@ -1820,8 +1820,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-09T18:36:43Z | alert | ef5485a3 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-notify-email.py | 2026-09-09T18:36:43Z-alert-ef5485a3.md |
 | 2026-09-09T18:46:54Z | alert | 74c13bb5 | operator-item: restore 1Password/op availability (or set conf pass in ~/.hngh-automation/notify-email.conf) so the notify-email send path can be proven rc=0. Live send 2026-09-09T18:36:43Z failed closed rc=2 (1password unreadable, conf pass empty); fail-closed and seam-dispatch paths are now unit-proven (tests/test-notify-send-path.py). TEST-marked send pending credentials. | 2026-09-09T18:46:54Z-alert-74c13bb5.md |
 | 2026-09-09T18:49:37Z | alert | ef5485a3 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-notify-email.py ×2 | 2026-09-09T18:49:37Z-alert-ef5485a3.md |
-| 2026-09-09T19:00:15Z | alert | 3a6f73e5 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1880 rows (2 ledger vs 1882 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×11 | 2026-09-09T19:00:15Z-alert-3a6f73e5.md |
-| 2026-09-09T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×11 | 2026-09-09T19:00:15Z-alert-f438818b.md |
+| 2026-09-09T19:00:15Z | alert | 3a6f73e5 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1880 rows (2 ledger vs 1882 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×12 | 2026-09-09T19:00:15Z-alert-3a6f73e5.md |
+| 2026-09-09T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×12 | 2026-09-09T19:00:15Z-alert-f438818b.md |
 | 2026-09-09T19:00:15Z | progress | 5eb49af0 | course bridge-operator-host: card mounted, never incremented | 2026-09-09T19:00:15Z-progress-5eb49af0.md |
 | 2026-09-09T19:00:18Z | progress | 7fcefc74 | agent-supervision: evicted-stale omp-DashGood-d84904 (idle 360m) | 2026-09-09T19:00:18Z-progress-7fcefc74.md |
 | 2026-09-09T19:00:18Z | progress | 03a99b37 | agent-supervision: evicted-stale omp-PerfGood-ec9189 (idle 360m) | 2026-09-09T19:00:18Z-progress-03a99b37.md |
@@ -1889,15 +1889,15 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T02:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T02:00:17Z-progress-6f20e8cb.md |
 | 2026-09-10T02:00:18Z | alert | 5841889f | router dedup: overnight:plan-accept-blocked:2026-09-09-stall-recovery-and-operator-surfaces suppressed (routed candidate 2026-09-10-routed-overnight-plan-accept-blocked-2026-09-09-stall-recovery-and-operator-surfaces still live, 0h old; day count 1) ×2 | 2026-09-10T02:00:18Z-alert-5841889f.md |
 | 2026-09-10T02:00:18Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-10T02:00:18Z-alert-8877ca89.md |
-| 2026-09-10T02:05:00Z | alert | ea1143eb | [oversight] slow-unit: dropin:16-remote-push.sh wall=23.1s median=0.0s ×12 | 2026-09-10T02:05:00Z-alert-ea1143eb.md |
+| 2026-09-10T02:05:00Z | alert | ea1143eb | [oversight] slow-unit: dropin:16-remote-push.sh wall=23.1s median=0.0s ×24 | 2026-09-10T02:05:00Z-alert-ea1143eb.md |
 | 2026-09-10T02:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T02:30:17Z-progress-6f20e8cb.md |
 | 2026-09-10T03:00:15Z | progress | 7fda7d9b | course bridge-operator-host: card mounted, last increment 2026-09-10T02:00:15Z | 2026-09-10T03:00:15Z-progress-7fda7d9b.md |
 | 2026-09-10T03:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T03:00:17Z-progress-6f20e8cb.md |
 | 2026-09-10T03:00:18Z | progress | a6ad3a32 | router routed slow-unit:dropin:16-remote-push.sh -> plan candidate 2026-09-10-routed-slow-unit-dropin-16-remote-push.sh (routed-at 2026-09-10T03:00:18Z) | 2026-09-10T03:00:18Z-progress-a6ad3a32.md |
 | 2026-09-10T03:00:18Z | alert | ed35b734 | router dedup escalation: slow-unit:dropin:33-research-beat.sh recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-10T03:00:18Z-alert-ed35b734.md |
 | 2026-09-10T03:01:05Z | progress | 0fafcec1 | plan 2026-09-10-routed-slow-unit-dropin-16-remote-push.sh auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T03:01:05Z | 2026-09-10T03:01:05Z-progress-0fafcec1.md |
-| 2026-09-10T03:01:16Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×2 | 2026-09-10T03:01:16Z-alert-f7fd5d5b.md |
-| 2026-09-10T03:05:00Z | alert | 8dee9bbe | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.8s ×24 | 2026-09-10T03:05:00Z-alert-8dee9bbe.md |
+| 2026-09-10T03:01:16Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×3 | 2026-09-10T03:01:16Z-alert-f7fd5d5b.md |
+| 2026-09-10T03:05:00Z | alert | 8dee9bbe | [oversight] slow-unit: dropin:32-deck-facts.sh wall=10.1s median=0.8s ×36 | 2026-09-10T03:05:00Z-alert-8dee9bbe.md |
 | 2026-09-10T03:15:00Z | alert | 98b02d75 | [oversight] stale-store: /tmp/hngh-cer-amd4-1789008128 record.lisp untouched 30min+ ×3 | 2026-09-10T03:15:00Z-alert-98b02d75.md |
 | 2026-09-10T03:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T03:30:17Z-progress-6f20e8cb.md |
 | 2026-09-10T03:49:07Z | alert | 2f8f55c1 | ttsr fit: session QueueDeps — ttsr injections: 3 (>= threshold 3) — fix or park with cause ×3 | 2026-09-10T03:49:07Z-alert-2f8f55c1.md |
@@ -1951,6 +1951,19 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T05:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T05:00:17Z-progress-6f20e8cb.md |
 | 2026-09-10T05:00:18Z | alert | 05b6e199 | ui-audit axe:color-contrast: 1 violation(s) — .gtrack-row:nth-child(73) > .gbar > .gbar-lab ¦ .gtrack-row:nth-child(74) > .gbar > .gbar-lab | 2026-09-10T05:00:18Z-alert-05b6e199.md |
 | 2026-09-10T05:00:18Z | progress | c1886110 | router routed ui-audit:axe:color-contrast -> plan candidate 2026-09-10-routed-ui-audit-axe-color-contrast (routed-at 2026-09-10T05:00:18Z) | 2026-09-10T05:00:18Z-progress-c1886110.md |
-| 2026-09-10T05:00:18Z | alert | a16ada72 | router dedup: overnight:plan-accept-gate:kernel suppressed (routed candidate 2026-09-08-routed-overnight-plan-accept-gate-kernel still live, 9h old; day count 1) | 2026-09-10T05:00:18Z-alert-a16ada72.md |
-| 2026-09-10T05:00:18Z | alert | 0b2a0f2c | router dedup: ux-review:dashboard-logs:3-fetchOpState-silently-swallows-network suppressed (routed candidate 2026-09-10-routed-ux-review-dashboard-logs-3-fetchOpState-silently-swallows-network still live, 0h old; day count 1) | 2026-09-10T05:00:18Z-alert-0b2a0f2c.md |
+| 2026-09-10T05:00:18Z | alert | a16ada72 | router dedup: overnight:plan-accept-gate:kernel suppressed (routed candidate 2026-09-08-routed-overnight-plan-accept-gate-kernel still live, 9h old; day count 1) ×2 | 2026-09-10T05:00:18Z-alert-a16ada72.md |
+| 2026-09-10T05:00:18Z | alert | 0b2a0f2c | router dedup: ux-review:dashboard-logs:3-fetchOpState-silently-swallows-network suppressed (routed candidate 2026-09-10-routed-ux-review-dashboard-logs-3-fetchOpState-silently-swallows-network still live, 0h old; day count 1) ×2 | 2026-09-10T05:00:18Z-alert-0b2a0f2c.md |
 | 2026-09-10T05:01:30Z | progress | 2af33233 | plan 2026-09-10-routed-ui-audit-axe-color-contrast auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T05:01:30Z | 2026-09-10T05:01:30Z-progress-2af33233.md |
+| 2026-09-10T05:10:02Z | progress | d7f5d986 | agent-supervision: evicted-stale omp-overnight-cycle-d6a631 (idle 360m) | 2026-09-10T05:10:02Z-progress-d7f5d986.md |
+| 2026-09-10T05:10:02Z | progress | 091dd16f | agent-supervision: evicted-stale omp-model-files-ab4f5a (idle 360m) | 2026-09-10T05:10:02Z-progress-091dd16f.md |
+| 2026-09-10T05:10:02Z | progress | b5f9643d | agent-supervision: evicted-stale omp-overnight-logs-28f591 (idle 361m) | 2026-09-10T05:10:02Z-progress-b5f9643d.md |
+| 2026-09-10T05:10:02Z | progress | b2698b52 | agent-supervision: evicted-stale omp-stage23-sweep-34f552 (idle 361m) | 2026-09-10T05:10:02Z-progress-b2698b52.md |
+| 2026-09-10T05:10:02Z | progress | c4bdd79f | agent-supervision: evicted-stale omp-dashboard-browser-533879 (idle 362m) | 2026-09-10T05:10:02Z-progress-c4bdd79f.md |
+| 2026-09-10T05:10:02Z | progress | 09ac8b87 | agent-supervision: evicted-stale omp-dashboard-fetch-0fdd53 (idle 364m) | 2026-09-10T05:10:02Z-progress-09ac8b87.md |
+| 2026-09-10T05:15:03Z | progress | cb16a01d | agent-supervision: evicted-stale omp-bench-probe-calibration-063d5a (idle 361m) | 2026-09-10T05:15:03Z-progress-cb16a01d.md |
+| 2026-09-10T05:15:03Z | progress | 8b28c770 | agent-supervision: evicted-stale omp-systemd-units-58aec5 (idle 363m) | 2026-09-10T05:15:03Z-progress-8b28c770.md |
+| 2026-09-10T05:15:03Z | progress | 49938c5b | agent-supervision: evicted-stale omp-pub-gap-d05027 (idle 364m) | 2026-09-10T05:15:03Z-progress-49938c5b.md |
+| 2026-09-10T05:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T05:30:17Z-progress-6f20e8cb.md |
+| 2026-09-10T06:00:15Z | progress | 2751af9b | course bridge-operator-host: card mounted, last increment 2026-09-10T05:00:15Z | 2026-09-10T06:00:15Z-progress-2751af9b.md |
+| 2026-09-10T06:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T06:00:17Z-progress-6f20e8cb.md |
+| 2026-09-10T06:00:18Z | alert | 104bbc90 | router dedup: ui-audit:axe:color-contrast suppressed (routed candidate 2026-09-10-routed-ui-audit-axe-color-contrast still live, 0h old; day count 1) | 2026-09-10T06:00:18Z-alert-104bbc90.md |
