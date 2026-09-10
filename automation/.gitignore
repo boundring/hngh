@@ -13,6 +13,8 @@ node_modules/
 .research-beat-last
 .lesson-harvest-handoffs
 # machine data — quarantined out of git (P1, repo-merge-consideration)
+state/*
+!state/.gitkeep
 STATE.md
 agent-handoffs.md
 dashboard/

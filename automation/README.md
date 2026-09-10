@@ -125,3 +125,10 @@ against a fixed rubric and files findings as one optimization row per
 day (trend log: `logs/email-qa.log`). Without a config the
 channel is dormant: the digest still lands in `logs/email-digest-<date>.md`.
 Google-Messages browser relay remains a manual fallback channel.
+## Restart resilience
+
+Behavioral state (the fail-first speed ladders and the model demotion
+counters) lives in `state/` — `state/failfirst/` and
+`state/model-demote.tsv` — so it survives reboots: the system keeps
+remembering its own degradations. `/tmp` is used only for true
+short-lived serialization lockfiles (flock), never for state.
