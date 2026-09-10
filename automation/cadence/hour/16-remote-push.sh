@@ -87,14 +87,18 @@ push_repo() { # name dir
   # 2026-09-09 flap left a morning red crumb refusing pushes for ~14h
   # while the gate was intermittently green — re-run the gate inline,
   # exactly what the crumb itself demands
-  gate_log="${TMPDIR:-/tmp}/hngh-gate-rerun-$name.log"
+  # unique per invocation: a fixed name let concurrent pushes (hook-fired
+  # + tick) and the test fixtures clobber one shared log, cross-
+  # contaminating the captured evidence (2026-09-10 diagnosis)
+  gate_log="${TMPDIR:-/tmp}/hngh-gate-rerun-$name-$$.log"
   if (cd "$dir" && timeout 290 make test >"$gate_log" 2>&1); then
    [ "$gate_state" != none ] &&
     breadcrumb "$JOB_NAME" "gate-refresh" \
      "$name: gate crumb was $gate_state — make test re-run green"
   else
    gate_tail="$(tail -n 3 "$gate_log" 2>/dev/null | cut -c1-160 | tr '\n' ' ')"
-   mv "$gate_log" "$AUTOMATION_ROOT/logs/gate-rerun-$name-$(date +%H%M%S).log" \
+   rr="${GATE_RERUN_DIR:-$AUTOMATION_ROOT/logs}"
+   mv "$gate_log" "$rr/gate-rerun-$name-$(date +%H%M%S)-$$.log" \
     2>/dev/null || true
    breadcrumb "$JOB_NAME" "push-refused" \
     "$name: gate $gate_state and make test failed — not pushing; tail: $gate_tail"
