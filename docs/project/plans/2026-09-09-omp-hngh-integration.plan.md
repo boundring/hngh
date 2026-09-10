@@ -137,3 +137,31 @@ never knows omp exists. No step touches provider/credential configuration
 - omp-side steps (4–8) should be developed with the plugin loaded live in an
   omp session; hngh-side steps follow the normal failing-test-first rule.
 - No step starts daemons, writes `~/.hngh`, or touches the kernel.
+
+## Cost-controlled execution decomposition (2026-09-10)
+
+Quota-leg context (docs/research/2026-09-10-lobehub-api-research.md):
+OpenCode Go T2 GLM resets on 5-hour / 7-day / monthly buckets -- pace heavy
+design work within the 5h bucket, never dumped at once; LobeHub and
+OpenRouter legs are daily-reset; Kimi has multi-tier resets. Standing rule
+(docs/records/2026-09-09-budget-governance-directive.md): caps are never
+amended by machine sessions -- this decomposition routes work, it does not
+raise any cap.
+
+| Step | Dependency | Executing surface | Verification surface | Est. sessions |
+|------|-----------|-------------------|----------------------|---------------|
+| 1. MCP stdio server | none | local/cheap leg; mechanical adapter code, no design load | stdio client probe + automation test + `make test` | 1 |
+| 2. MCP registration | 1 | local/cheap; config-only, no model spend | omp session `/mcp` tool visibility (omp native) | 0-1 |
+| 3. omp-bridge subcommands | none (1 for surfaces) | local/cheap; pure scripting + tests | script-suite test + `make test` | 1 |
+| 4. hngh-bridge plugin | 3 | local/cheap; plugin plumbing is mechanical | omp plugin listing + propose round-trip | 1 |
+| 5. hngh skill | 1-3 (context) | local model for the draft; terse doc, no research sweep | omp skill trigger probe | 1 |
+| 6. agent definitions | 3, 5 | T2 GLM within 5h bucket pacing (agent-front-matter design) | omp agent load + dry executor run | 1 |
+| 7. TTSR/rulebook expansion | 5-6 | T2 GLM within 5h bucket (audit is judgment-heavy); OpenRouter leg only for the probe-session runs if T2 is exhausted | rule trigger probe + `22-ttsr-fit` | 1-2 |
+| 8. Context-seeding | 4 | local/cheap; lifecycle hook is a small extension patch | fresh-session orient observation | 1 |
+| 9. Research feed wiring | 1 | local/cheap; TSV wiring mechanical | research beat writes a line; tool reflects it | 1 |
+| 10. Dashboard JSON endpoint | 3 | local/cheap; single script + page, no design sweep | endpoint vs queue.md/plans.json diff | 1 |
+| 11. Records + changelog | all | local/cheap; write-up only | `make test` green | 1 |
+
+Pacing rule: any step marked T2 rides the 5h bucket one step per bucket;
+mechanical steps stack freely on local/cheap legs. Cap-block still files an
+operator-item per the standing directive; it never self-raises.
