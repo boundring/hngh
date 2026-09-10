@@ -431,6 +431,7 @@ build_plan_prompt() { # slug plan_file step -> prompt path on stdout
  {
   printf 'WAKE CONTEXT: %s UTC. You are waking mid-stream — read the plan\nand ledger state before acting. Unread ledger alerts: %s.\n\n' \
    "$wake" "$unread"
+  printf 'PLAN-FILE RULE: never overwrite an existing plan file. New plans\nget new slugs (docs/project/plans/<date>-<slug>.plan.md); check the\ndirectory for the filename before writing.\n\n'
   cat "$pfile"
   cat <<'RULE'
 
@@ -471,6 +472,7 @@ verified increment in hngh-automation — small, tested, committed."
  prompt_file="$ROOT/prompts/overnight/$(date +%Y%m%dT%H%M%S)-$slug.md"
  {
   printf 'WAKE CONTEXT: %s UTC. You are waking mid-stream — check the\nplan ledger, queue state, and unread alerts before acting.\n\n' "$wake"
+  printf 'PLAN-FILE RULE: never overwrite an existing plan file. New plans\nget new slugs (docs/project/plans/<date>-<slug>.plan.md); check the\ndirectory for the filename before writing.\n\n'
   printf 'Objective: %s\n\n' "$objective"
   cat <<'RULE'
 

@@ -79,6 +79,7 @@ test:
 	bash tests/test-failfirst.sh
 	bash tests/test-dev-plan-synth.sh
 	bash tests/test-remote-push.sh
+	python3 -B tests/test-plan-identity.py
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-ttsr-fit.sh
