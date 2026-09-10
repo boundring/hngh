@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T10:01:05Z routed-from=ux-review:dashboard-logs:fetchOpState-silently-swallows-network -->
+<!-- plan: status=parked risk=normal accepted=2026-09-10T10:01:05Z routed-from=ux-review:dashboard-logs:fetchOpState-silently-swallows-network  cause=obsolete disposed=2026-09-10T13:00:18Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:dashboard-logs:fetchOpState-silently-swallows-network`
@@ -13,3 +13,4 @@ at 2026-09-10T10:00:18Z. Alert text: `fetchOpState` silently swallows network er
 
 - 2026-09-10T11:00:18Z re-occurred (dedup window expired)
 - 2026-09-10T12:00:18Z re-occurred (dedup window expired)
+- 2026-09-10T13:00:18Z re-occurred (dedup window expired)
