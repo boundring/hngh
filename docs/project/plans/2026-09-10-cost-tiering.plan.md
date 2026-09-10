@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T18:31:14Z -->
 # 2026-09-10 - cost tiering: class tags and worker tiering
 
 Operator directive 2026-09-10: local for mechanical, quota for
