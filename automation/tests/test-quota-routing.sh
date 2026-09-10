@@ -17,27 +17,19 @@ ck() {
 }
 LIB_OC="$root/scripts/overnight-cycle.sh"
 DEM_LIB="$root/lib/model-demote.sh"
-# select_model is defined in overnight-cycle.sh; extract + source just it
-# via a helper that stubs the deps select_model touches.
-mk_env() { # extra env as KEY=VAL pairs on argv
-  env "$@" DEMOTE_STATE="$sb/state/model-demote.tsv" \
-    AUTOMATION_ROOT="$root" HNGH_HOME="$root/.." \
-    bash -c '
-      . "'"$root"'/lib/model-demote.sh"
-      select_model() { # copy of overnight-cycle select_model, sourced by extraction
-'"$(sed -n '/^select_model() {/,/^}/p' "$LIB_OC")"'
-      }'
-}
-# The env construction above is fragile; simpler: extract select_model to a
-# sourced snippet file once:
+# select_model reads OVERNIGHT_MODEL/OVERNIGHT_PAID_MODEL and
+# SESSION_MODEL_QUOTA_KEY_PRESENT straight from the environment; a cadence
+# unit exports OVERNIGHT_MODEL, so scrub before each case or the env
+# short-circuit outranks the leg under test (hermeticity, 2026-09-10).
 sed -n '/^select_model() {/,/^}/p' "$LIB_OC" >"$sb/select_model.snippet"
 
 sm() { # env assignments as KEY=VAL... then eval select_model
-  # stub quota_leg_healthy: healthy unless model name contains 'deadleg'
-  env "$@" DEMOTE_STATE="$sb/state/model-demote.tsv" AUTOMATION_ROOT="$sb" \
+  env -u OVERNIGHT_MODEL -u OVERNIGHT_PAID_MODEL -u SESSION_MODEL_QUOTA_KEY_PRESENT \
+    "$@" DEMOTE_STATE="$sb/state/model-demote.tsv" AUTOMATION_ROOT="$sb" \
     HNGH_HOME="$root/.." ROOT="$sb" \
     bash -c ". '$root/lib/params.sh'; . '$DEM_LIB'; quota_leg_healthy() { case \"\$1\" in *dead*) return 1;; *) return 0;; esac; }; . '$sb/select_model.snippet'; select_model"
 }
+
 
 # 1. env short-circuit stays first
 ck "env outranks quota row" "flash|env" \
