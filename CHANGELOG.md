@@ -6,6 +6,25 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-09-10
+
+#### Added
+
+- **Automation tier in CI** (.github/workflows/ci.yml): a second
+  `test-automation` job installs bash + python3 + sqlite3 (jq/curl/git
+  preinstalled) and runs `automation/ make test` — the 40-test machine
+  suite, verified hermetic in a bare environment (env -i, PATH=/usr/bin:/bin,
+  exit 0). Peer review finding 2 (docs/research/2026-09-10-peer-standard-review.md):
+  CI previously tested the kernel only; the tier that does the live damage
+  ran only on the operator's desktop.
+- **Probe-hygiene lint** (automation/tests/test-probe-hygiene.sh, wired
+  into the suite): guards the probe-measures-itself class — every curl in
+  jobs/credential-health.sh targeting a key-gated endpoint (unsloth,
+  lobehub, kimi) must carry Authorization: Bearer; the deck /health probe
+  is the single documented bare-GET exemption. Fail-closed on new
+  headerless curls. Peer review finding 3; lesson from the five-day
+  kimi-401/lobehub-404 self-probe incident.
+
 ### 2026-09-09
 
 #### Changed

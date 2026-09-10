@@ -14,3 +14,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes sbcl
       - name: Test local kernel
         run: make test
+  test-automation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # suite needs bash + python3 (preinstalled) + git/curl/jq (preinstalled)
+      # + sqlite3 (not preinstalled; used by the model-leg tests)
+      - name: Install sqlite3
+        run: sudo apt-get update && sudo apt-get install --yes sqlite3
+      - name: Test automation tier
+        run: cd automation && make test
