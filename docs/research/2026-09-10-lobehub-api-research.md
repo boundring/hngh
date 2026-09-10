@@ -128,6 +128,53 @@ Both LobeHub's own API (verified live, requires auth) AND the broader ecosystem 
 ### Action items (in order of impact)
 
 1. **Slim the hngh agent system prompt** (28.6k tokens -> target <8k): Eliminates Cloudflare 524 timeouts, reduces per-call input cost by ~72%. LobeHub-side action, no repo changes needed.
+
+### Prompt-slim outcome (2026-09-10, live; supersedes item 1 above)
+
+Executed live via the API (Bearer key from the leg's key file; values never
+logged). Endpoints tried, exact codes:
+
+| Call | Code |
+|---|---|
+| GET /api/v1/models | 200 |
+| GET /api/v1/agents | 200 |
+| GET /api/v1/agents/agt_6sB8IcJhaTg6 | 200 |
+| PATCH /api/v1/agents/agt_6sB8IcJhaTg6 (systemRole / model / agencyConfig) | 200 each |
+| POST /api/v1/responses (agent id) | 200 |
+| POST /api/v1/responses (plain model id) | 200 envelope, error "Agent not found" |
+| PATCH model=z-ai/glm-5.3 and z-ai/glm-5.3-flash, then POST | status: failed (route broken; reverted) |
+| POST /api/v1/agents (create probe agent) / DELETE same | 200 / 200 |
+
+Findings, all measured via `usage.input_tokens` on bounded POSTs:
+
+- **The agent config carried NO system prompt.** `systemRole` was `null`;
+  the 28.6k figure was entirely platform-injected.
+- A brand-new bare agent (no agencyConfig) measures **24,512** input
+  tokens for a trivial prompt. The ~24.5k base is LobeHub's universal
+  agent scaffold, present on every agent; it is NOT stored in any
+  operator-editable field and cannot be slimmed via API (or UI -- the
+  agent's prompt field is empty).
+- The hngh agent's extra ~4.1k came from `agencyConfig` (device binding:
+  boundDeviceId + executionTarget "local", added by the 2026-09-07
+  device-flow session). PATCHing `agencyConfig` to null removed it.
+- `systemRole` IS editable via PATCH. A ~122-token slim role (plain-text
+  summarization contract for the lobehub_chat leg) is now set.
+- `/api/v1/responses` accepts ONLY agent ids in `model` -- no plain-model
+  bypass exists. Both alternative GLM routes (z-ai/glm-5.3,
+  z-ai/glm-5.3-flash) fail server-side; model reverted to null (default
+  route, the only working one).
+
+**Result: 28,659 -> 24,641 input tokens (-14%). Verified: POST returns 200
+`completed` in 15-20s with bounded max_output_tokens (well under the
+Cloudflare 30s edge timeout; the historical 524s traced to unbounded
+output, not prompt size alone).** The <8k target is unreachable from our
+side: the 24.5k floor is LobeHub platform-owned. Smoke test: brief with
+CVE line answered correctly, plain text, 29 words, no meta-commentary.
+
+Agent end state (GET-verified): systemRole = slim summarization contract;
+agencyConfig = null; model = null; id/title/slug unchanged, so the
+`lobehub-agent-id` row stays valid. If the binding is ever needed again,
+it was `{"boundDeviceId":"7af042f513f8d4e11957f995d2904390","executionTarget":"local"}`.
 2. **Keep cadence-params.tsv lobehub-endpoint row as-is**: It correctly points to app.lobehub.com/api/v1/responses. The leg works once prompts shrink. DO NOT replace with openrouter or opencode endpoints.
 3. **Record OpenCode Go as active T2-tier quota source (subscribed 2026-09-10, operator)**: Configured via OPENCODE_API_KEY, authenticated against opencode.ai/zen/go/v1/chat/completions. Useful for background GLM work at fixed $10/month within per-model usage caps. Pacing must respect 5h/7d/monthly reset windows.
 4. **Monitor Cloudflare behavior post-prompt-slim**: If 524s resolve with smaller payloads (~8k-token prompt), the API leg becomes production-ready immediately.
