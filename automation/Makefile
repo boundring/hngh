@@ -85,6 +85,7 @@ test:
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-ttsr-fit.sh
+	bash tests/test-probe-hygiene.sh
 	bash scripts/lint-identifiers.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 
