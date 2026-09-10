@@ -4,10 +4,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+# operator authorization 2026-09-09: prefer GLM 5.3 Flash for cost;
+# every unit that can reach overnight-cycle.sh must carry the
+# override so a lane switch (e.g. hour workbeat) cannot drop it
+Environment=OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash
 Type=oneshot
 Environment=TIER=hour
-ExecStart=/home/bricker/Projects/etc/hngh/automation/jobs/cadence-tick.sh
-WorkingDirectory=/home/bricker/Projects/etc/hngh/automation
+ExecStart=%h/Projects/etc/hngh/automation/jobs/cadence-tick.sh
+WorkingDirectory=%h/Projects/etc/hngh/automation
 Restart=no
 
 [Install]

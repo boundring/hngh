@@ -62,5 +62,14 @@ d="$sb/c3"; fixture "$d" 0; new_commit "$d"
 run_push "$d" >/dev/null
 ck "no-crumb green-gate pushes" "0" "$(ahead_count "$d")"
 
+# case 4: red crumb, gate fails -> refusal crumb carries the failure tail
+# (evidence, not silence - the 02:00:41Z inline re-run recorded nothing)
+reset_state; red_crumb
+d="$sb/c4"; fixture "$d" 1; new_commit "$d"
+run_push "$d" >/dev/null
+ck "failing-gate refusal crumbs" "1" "$(crumbs)"
+ck "failure tail captured in crumb" "1" \
+  "$(grep -c "FAILED\|Error" "$sb/STATE.md" || true)"
+
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || { echo "$fails FAILED"; exit 1; }
