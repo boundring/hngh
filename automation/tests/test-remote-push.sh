@@ -18,8 +18,10 @@ ck() { # desc expected actual
   fi
 }
 run_push() { # repo-dir -> runs the real script against it
+  mkdir -p "$sb/logs"
   HNGH_HOME="$1" STATE_FILE="$sb/STATE.md" \
     HNGH_PUSH_LOCK="$sb/push.lock" JOB_NAME=test-push \
+    GATE_RERUN_DIR="$sb/logs" \
     bash "$root/cadence/hour/16-remote-push.sh" 2>&1
 }
 crumbs() { grep -c "test-push" "$sb/STATE.md"; }
@@ -70,6 +72,21 @@ run_push "$d" >/dev/null
 ck "failing-gate refusal crumbs" "1" "$(crumbs)"
 ck "failure tail captured in crumb" "1" \
   "$(grep -c "FAILED\|Error" "$sb/STATE.md" || true)"
+ck "no shared gate log after failing run" "0" \
+  "$([ -e /tmp/hngh-gate-rerun-hngh.log ] && echo 1 || echo 0)"
+ck "failing rerun logs land in sandbox" "2" \
+  "$(ls "$sb/logs"/gate-rerun-* 2>/dev/null | wc -l)"
+ck "automation/logs untouched by test" "0" \
+  "$(find "$root/logs" -name 'gate-rerun-*' -newer "$sb/STATE.md" 2>/dev/null | wc -l)"
+
+# case 5: gate log hygiene - a run leaves no shared /tmp log behind
+# (unique per-invocation names; the fixed name let the fixtures
+# cross-contaminate real evidence, 2026-09-10)
+reset_state
+d="$sb/c5"; fixture "$d" 0; new_commit "$d"
+[ -e /tmp/hngh-gate-rerun-hngh.log ] && shared_leak=1 || shared_leak=0
+run_push "$d" >/dev/null
+ck "no shared gate log after green run" "0" "$shared_leak"
 
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || { echo "$fails FAILED"; exit 1; }

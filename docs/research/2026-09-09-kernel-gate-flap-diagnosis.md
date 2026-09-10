@@ -129,3 +129,47 @@ bodies naming the exact wait, the failure timestamps aligning with
 loaded beats, and the quiet-time measurements showing the margin that
 load erodes. The fix removes the stall source structurally rather
 than re-tuning the race.
+
+
+## Archive-gate immediate failure (2026-09-10 addendum)
+
+The report of pushes refused since 23:51Z on gate-rerun logs showing
+`make[1]: *** [Makefile:2: test] Error 1` inside /tmp/tmp.*/c4 was NOT
+a kernel gate failure and NOT an archive problem. Two findings:
+
+1. 16-remote-push.sh never runs `git archive`; its inline re-run is
+   `cd "$KERNEL" && make test` in the real repository. The
+   /tmp/tmp.XXX/c4 path in those logs is a TEST FIXTURE repository
+   from automation/tests/test-remote-push.sh (case 4's sandbox,
+   Makefile = `test:
+@exit 1`), not the kernel.
+2. The script wrote its gate output to a FIXED shared path
+   (/tmp/hngh-gate-rerun-<name>.log) and moved it into
+   automation/logs on failure. Concurrent invocations (hook-fired
+   after ceremonies, hour ticks, and the test's own failing fixtures)
+   shared that one file: the test's failing fixture repos (37/145-byte
+   outputs) were moved into automation/logs as if they were kernel
+   gate evidence, overwriting/mixing with real beat captures. The
+   20 small logs were fixture residue; the three 7146-byte logs are
+   real beat failures - all three are the known watch-quit race at
+   tests/scripts/test-dashboard-live.py line 168 (routed residual,
+   unchanged).
+
+Fix (test-first, in test-remote-push.sh + the script):
+
+- gate log is now per-invocation
+  (/tmp/hngh-gate-rerun-<name>-<pid>.log) - no shared path, no
+  clobber;
+- failure logs land in $GATE_RERUN_DIR (default automation/logs),
+  so the test harness sandboxes its fixtures and asserts
+  automation/logs gains nothing during the run;
+- fixture-contaminated logs purged (20 files); the 3 genuine beat
+  captures retained.
+
+Consequence for the push-refusal chain: the "immediate Error 1"
+evidence was fixture output, not the kernel gate failing instantly.
+The real refusals trace to genuine in-beat rc2 (the routed watch-test
+budget fix) plus the red-crumb latch (already fixed). Pushes
+themselves were not broken: the beat logs show gate-refresh green ->
+push-done at 00:00:42Z, and the current backlog is one ledger-sync
+commit.
