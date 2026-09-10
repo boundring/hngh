@@ -125,3 +125,81 @@ If both steps landed:
 CORRECTION 2026-09-10 (operator correction; probe fixed in 75ce22c2): the kimi key was never the problem - the health probe was unauthenticated (see the Kimi bullet above). The most efficient next action is flipping the gate row (session-model-quota-keys=1 with a session-model-preference naming an omp-addressable quota model), which is config-only. LobeHub endpoint diagnosis (404 since config) remains the separate, real issue and should be sequenced after kimi routing is live.
 
 Without credential fixes, executing steps 9+10 has negative utility: it adds quota consumption paths that all immediately fail, wasting daily cap budgets against 401/404 errors. The dependency chain is: fix credentials -> enable routing -> monitor utilization -> tune share rows.
+
+
+## LobeHub correction and adoption design (2026-09-10, later session)
+
+### The 404 was never the endpoint's verdict
+
+Bounded probes with the stored key (Bearer JWT in
+~/.config/hngh/lobehub-key, 600 perms, from the 09-07 API session):
+
+- GET app.lobehub.com/api/v1/models with Bearer -> 200 (model listing
+  with the GLM fleet; auth shape confirmed: plain Bearer).
+- GET app.lobehub.com/api/v1/agents with Bearer -> 200 (exactly one
+  agent: agt_6sB8IcJhaTg6 'hngh').
+- POST app.lobehub.com/api/v1/responses (the CONFIGURED endpoint, the
+  exact payload lobehub_chat sends) -> 200, status=completed,
+  output text 'ok' from the hngh agent. VERIFIED LIVE.
+
+The original endpoint row and payload shape were correct all along.
+Why the leg read dead:
+
+1. The credential-health probe did a bare unauthenticated GET on the
+   POST-only /responses path -> 404 forever (the same probe-measures-
+   itself family as the kimi 401; fixed in b367b0c, test
+   test-credential-kimi.sh covers both probes).
+2. Real lobehub_chat calls failed on LATENCY, not auth: the hngh
+   agent carries a ~28.6k-token system prompt (28,636 input tokens
+   for a one-word reply), so completions take 24s+ and Cloudflare cut
+   eight calls with HTTP 524 (STATE.md rows 2026-09-08). MODEL_TIMEOUT
+   is 300s client-side; the 524s are the CDN's origin limit - real
+   calls are a coin flip at current prompt weight.
+
+Implications: (a) the leg WORKS and needs no config change; (b) the
+agent's giant system prompt is the cost/latency driver - bounded
+calls should either tolerate the latency (fine for async research)
+or use a slimmer agent; (c) the input-token cost per call is real
+quota spend - the 50/day cap is the right guardrail.
+
+### Adoption direction corrected (operator): LobeHub connects TO Pi
+
+The operator clarified: the LobeHub-Pi connection is configured on
+LobeHub's side (their agentic-tools integration), not Pi configuring
+LobeHub as a provider. Local inspection agrees: ~/.pi carries no
+lobehub provider entries (models-store.json: zero; mcp.json: empty
+mcpServers). Web research: LobeHub is an MCP marketplace and agent
+host - its 'connect agentic tools' = MCP servers configured server-
+side that LobeHub's agents call; there is even a published
+pi-mcp-adapter (MCP support for the pi coding agent, lobehub.com/mcp/
+alephtex-pi-mcp-setup).
+
+Two candidate paths, honestly assessed:
+
+(a) hngh/omp CONSUMES LobeHub as inference: WORKS for bounded calls -
+    lobehub_chat is verified live (the 200 above). This serves the
+    T2 lane (research/review model_call pins, MODEL_PIN=lobehub) at
+    ~28k input tokens per call of GLM quota. For delegated SESSIONS
+    the only omp-addressable shape is what select_model's quota rung
+    already routes (omp-addressable model ids); LobeHub does not
+    publish a per-model OpenAI endpoint for external callers (the
+    404s on /chat/completions and /agents/<id>/chat), so sessions
+    stay on the responses-agent shape only via lib/model.sh's
+    bounded calls - NOT via omp --model. That boundary stands.
+
+(b) LobeHub DRIVES hngh/omp as an agent (the inverse): LobeHub's
+    agents can call MCP servers; hngh's designed surfaces (omp MCP
+    server plan, rehearsal-lane read-only worker verbs) are exactly
+    the server side. If hngh exposes an MCP server, LobeHub's
+    4,000-call GLM quota could be spent BY LobeHub driving hngh's
+    tools - the quota burns on LobeHub's side, and hngh executes.
+    Programmatically usable: the MCP protocol is machine-to-machine,
+    so yes in principle; the operator's caution ('hard to tell how
+    useful that is') stands - the use case is LobeHub-scheduled
+    operations calling hngh's read-only tools, which is the
+    rehearsal-lane surface, not free-form sessions. Design: expose
+    hngh's read-only evidence/plan-graph tools as an MCP server
+    (stdio or local HTTP), let the operator bind it in LobeHub's UI,
+    and gate by the existing run/loadout machinery. The omp-side
+    provider entry (base_url/api_key/model list) is NOT the shape -
+    LobeHub is the client, hngh would be the server.

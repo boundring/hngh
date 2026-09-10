@@ -589,3 +589,25 @@ distribution for more information. flakiness — specifically the load-correlate
   quota model with no key config" - all three covered by
   test-quota-routing.sh (9 cases green); full make test green. Step 9
   is checkable.
+- 2026-09-10T16:4xZ | LOBEHUB VERIFIED LIVE (bounded probes): the
+  configured endpoint/payload/key were correct all along - POST
+  /api/v1/responses -> 200, status=completed, text 'ok' from the hngh
+  agent. The leg read dead because (a) the health probe did a bare
+  unauthenticated GET on the POST-only path (404 forever; same
+  probe-measures-itself family as the kimi 401 - fixed in b367b0c,
+  both probes covered by test-credential-kimi.sh) and (b) real calls
+  died to Cloudflare 524s: the agent carries a ~28.6k-token system
+  prompt, completions take 24s+. Cost note: 28,636 input tokens per
+  bounded call - the lobehub-daily-cap=50 guardrail is load-bearing.
+  Adoption direction corrected by the operator: LobeHub connects TO
+  Pi (server-side agentic-tools integration; Pi has zero lobehub
+  provider config - verified). LobeHub is an MCP marketplace/agent
+  host: path (a) hngh-consumes-LobeHub works for bounded calls only
+  (sessions need omp-addressable ids LobeHub doesn't publish);
+  path (b) LobeHub-drives-hngh via MCP = hngh exposing its read-only
+  surfaces as an MCP server (design appended to the quota doc; the
+  omp-side provider-entry shape does not apply - LobeHub is the
+  client). Also found and documented: AUTOMATION_ROOT set by a caller
+  is unconditionally overwritten by common.sh - env overrides of that
+  var do not reach get_param consumers (hit while sandboxing the
+  probe tests; worked around with leg-specific env overrides).
