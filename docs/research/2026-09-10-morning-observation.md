@@ -116,3 +116,51 @@ GLM Flash evaluation: both sessions used openrouter/z-ai/glm-5.3-flash(env). Out
 Timeout recommendation: DO NOT raise 1800s. Appropriate bound; raising wastes quota on incapable model. Action items: (1) promote outcome-demotion from stall-recovery S1 so consecutive bad-execution results automatically switch failing models; (2) fix kernel Makefile:2 test failure preventing gate green stability; (3) ensure failfirst promotion triggers once any model achieves consecutive ok outcomes. Only after these three gates clear will sessions have realistic chance of landing code.
 
 Director judgment summary: Session-cost working correctly despite initial false alarm. Staging timeout (1800s) right bound; problem neither unsloth nor GLM Flash can produce usable content in bounded session for staging research. Bottleneck compoundly requires kernel Makefile stabilization + outcome-demotion enforcement + failfirst promotion unlocking, in that dependency order. None solved by changing timeout duration.
+## Addendum: model selection lanes + benchmarking back-burner (2026-09-10T13:00Z)
+
+### Model selection lane verification
+
+Both systemd units carry OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash as of this check:
+
+- hngh-overnight.service: Environment=OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash
+- hngh-cadence-hour.service: Environment=OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash TIER=hour
+
+No drift detected between tracked source units and live state.
+
+Proof in automation/scripts/overnight-cycle.sh:91-94, select_model() function:
+
+    [ -n "" ] && {
+     printf '%s|env
+' ""
+     return 0
+    }
+
+This early-return means the local-bench lane (model-bench.jsonl scoring) is completely skipped whenever OVERNIGHT_MODEL env is set. With both unit files pinned, bench data is consulted zero times today. Bench branch execution requires ENV ABSENCE, which does not occur under current config. Safe.
+
+### Benchmarking back-burner
+
+Operator directive 2026-09-10: benchmarking back-burnered in favor of development work. This applies to staging plan steps 2 and 4, plus the daily hngh-model-bench.timer data feed.
+
+Existing gates checked:
+- cadence-params.tsv has NO existing row for benchmark/model-bench disable gate
+- model-bench.sh reads no params/env guard before executing probes (set -u only; BENCH_MODELS var from lib/model.sh, but no enable/disable check)
+- Timer fires daily at 01:10 (next: Fri 2026-09-11 01:10:00 EDT); Persistent=true so missed runs catch up
+
+Action taken:
+a) Added cadence-params.tsv row (last line):
+
+   benchmarking-backburner<TAB>1<TAB>automation/systemd/hngh-model-bench.timer (operator directive 2026-09-10: benchmarking back-burnered in favor of development)<TAB>bench timer still fires daily at 01:10; no script-side disable gate exists - this row is operator-facing documentation only
+
+b) Annotated docs/project/plans/2026-09-03-staging.plan.md:
+
+   Step 2 (bench probe calibration) line 143: BACK-BURNERED 2026-09-10 note appended
+   Step 4 (unsloth recovery note) line 186: BACK-BURNERED 2026-09-10 note appended
+
+c) get_param resolution verified:
+
+   benchmarking-backburner => [1]
+   sessions-day-max => [200]
+
+Residual: hngh-model-bench.timer continues firing daily at 01:10Z (Persistent=true). Service will run model-bench.sh each night producing stats/model-bench-YYYY-MM-DD.jsonl lines. These are harmless dead-weight computation consuming local unsloth slots during overnight hours but do not affect runtime model selection (OVERNIGHT_MODEL pinned blocks the bench branch per overnight-cycle.sh:91). If the operator later decides to fully stop bench timer, systemctl --user disable hngh-model-bench.timer achieves that without any code changes.
+
+Revisit trigger: when stall-recovery S1 (model-outcome demotion) needs fresh bench data to validate new models entering the ladder, or when the operator explicitly un-pins OVERNIGHT_MODEL and wants local-model fallback to be bench-scored again.

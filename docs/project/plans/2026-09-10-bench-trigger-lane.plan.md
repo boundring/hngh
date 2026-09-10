@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T14:01:06Z -->
 # 2026-09-10 — bench trigger lane: event-driven benchmarking
 
 Operator directive 2026-09-10: local benchmarks become occasional and
