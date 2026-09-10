@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T20:01:31Z -->
 # 2026-09-10 - peer hardening: install path, CI, state hygiene, docs
 
 Operator-directed 2026-09-10. Converts the peer-standard review

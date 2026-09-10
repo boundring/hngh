@@ -8,3 +8,7 @@ at 2026-09-10T19:00:18Z. Alert text: [dash-selfreview] ledger-sanity: unacceptab
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-10T20:00:18Z re-occurred (dedup window expired)
