@@ -8,3 +8,7 @@ at 2026-09-05T01:00:45Z. Alert text: [oversight] system-network-down: critical r
 
 - [ ] Investigate the alert, fix or park, with a named verification
       Verification: `make test` green in the owning repo
+
+## Occurrences
+
+- 2026-09-10T00:00:18Z re-occurred (dedup window expired)
