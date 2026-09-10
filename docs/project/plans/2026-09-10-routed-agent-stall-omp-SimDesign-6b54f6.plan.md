@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=agent-stall:omp-SimDesign-6b54f6 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T18:31:14Z routed-from=agent-stall:omp-SimDesign-6b54f6 -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `agent-stall:omp-SimDesign-6b54f6`
