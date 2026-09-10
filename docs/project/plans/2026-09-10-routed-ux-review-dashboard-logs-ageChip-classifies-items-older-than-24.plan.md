@@ -12,3 +12,4 @@ at 2026-09-10T10:00:18Z. Alert text: `ageChip` classifies items older than 24 ho
 ## Occurrences
 
 - 2026-09-10T11:00:18Z re-occurred (dedup window expired)
+- 2026-09-10T12:00:18Z re-occurred (dedup window expired)
