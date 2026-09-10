@@ -40,7 +40,7 @@ intended.
 | Tier | Work shapes (real lanes) | Cost-optimal executor |
 |---|---|---|
 | T1 mechanical | test runs, renames, log parsing, ledger appends, format fixes, data collection (the worker fan-out slots, evolve-ui batches, telemetry) | local unsloth always (`model_call` local chain; bench-scored) |
-| T2 bounded intelligence | research synthesis (33-research-beat), reviews (04-review-prep, 00-dashboard-self-review), plan-step execution with clear specs (overnight sessions on accepted plans) | quota legs first (`kimi_chat`/`lobehub_chat` bounded calls, or omp-addressable quota models for sessions), local fallback |
+| T2 bounded intelligence | research synthesis (33-research-beat), reviews (04-review-prep, 00-dashboard-self-review), plan-step execution with clear specs (overnight sessions on accepted plans) | quota legs first: kimi (daily reset), OpenCode Go (5h/7d/monthly windows, operator-subscribed 2026-09-10, verified live - see [../research/2026-09-10-lobehub-api-research.md](../research/2026-09-10-lobehub-api-research.md)), lobehub (daily reset, ~4,000-call allowance; latency-heavy), then local fallback |
 | T3 deep intelligence | design, root-cause diagnosis, architecture, cross-system judgment (the operator session; ceremony verdicts stay deterministic) | best available: quota top, then paid cash - never local for the deciding step |
 
 The honest observation from the 2026-09-09 spend: the cap counted a
@@ -102,6 +102,21 @@ health before routing, identification before persistence.
   T2 quota tier is kimi-first until that is diagnosed.
 - The env override (OVERNIGHT_MODEL) outranks everything by design:
   operator steering is not a cost decision, it is the operator.
+
+## Reset-cycle pacing
+
+The quota legs are heterogeneous in their reset windows, and T2
+pacing must respect each leg's tightest window, not just its cap:
+kimi and lobehub reset daily; OpenCode Go (opencode.ai/zen/go/v1,
+operator-subscribed 2026-09-10) has three stacked windows - 5-hour
+(tightest), 7-day (~$30/model), monthly (~$60/model). T2 traffic
+therefore paces against the 5h bucket for OpenCode Go and the daily
+cap for the other two; dumping T2 traffic at beat rate exhausts the
+tightest window and wastes the rest. This is a cadence-params/budget
+concern for the cost-tiering plan's follow-on: when a pacing row
+exists, select_model and `quota_pace_blocked`
+(automation/lib/model.sh) read per-leg reset cycles instead of
+assuming daily.
 
 ## Per-lane ladder after this design
 
