@@ -127,13 +127,27 @@ kimi_key_src=""
 kimi_key_file="${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}"
 [ -z "$kimi_key_src" ] && [ -f "$kimi_key_file" ] && kimi_key_src="key file"
 if [ -n "$kimi_key_src" ]; then
-  kimi_url="$(get_param kimi-endpoint 'https://api.moonshot.ai/v1/chat/completions')"
+  # probe with the SAME key resolution and endpoint kimi_chat uses - the
+  # 2026-09-10 lesson: an unauthenticated GET read 401 for five days while
+  # real kimi_chat calls succeeded (the probe measured its own missing
+  # header, not the credential). Key values never logged.
+  kimi_key=""
+  [ -n "${MOONSHOTAI_API_KEY:-}" ] && kimi_key="$MOONSHOTAI_API_KEY"
+  [ -z "$kimi_key" ] && [ -n "${KIMI_AI_KEY:-}" ] && kimi_key="$KIMI_AI_KEY"
+  [ -z "$kimi_key" ] && [ -n "${KIMI_FOR_CODING_KEY:-}" ] && kimi_key="$KIMI_FOR_CODING_KEY"
+  [ -z "$kimi_key" ] && [ -f "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}" ] &&
+    [ "$(stat -c %a "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}")" = "600" ] &&
+    kimi_key="$(cat "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}" 2>/dev/null)"
+  kimi_url="${KIMI_URL:-$(get_param kimi-endpoint 'https://api.kimi.com/coding/v1/chat/completions')}"
   kimi_models_url="${kimi_url%/chat/completions}/models"
-  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "$kimi_models_url" 2>/dev/null)" || code=000
+  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
+    ${kimi_key:+-H "Authorization: Bearer $kimi_key"} "$kimi_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) endpoint not answering (http=$code)"
+  elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
+    breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) rejected by endpoint (http=$code) - credential failure, operator attention"
   else
-    breadcrumb "$JOB_NAME" "credential-health" "kimi armed via $kimi_key_src; models endpoint http=$code; gated on kimi-model row"
+    breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) ok; models endpoint http=$code; gated on kimi-model row"
   fi
 fi
 
