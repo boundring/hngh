@@ -88,10 +88,15 @@ file_alert() { # identity text — the row is the contract; email is convenience
 # attribution: roguelike budget loop — free local when it proves itself,
 # paid only as fallback while the bench keeps re-validating.
 select_model() { # -> "model|source" on stdout
- [ -n "${OVERNIGHT_MODEL:-}" ] && {
+ local dm
+ declare -F model_demoted >/dev/null ||
+  . "$ROOT/lib/model-demote.sh"
+ # demotion guard (stall-recovery step 1): a model with 2 consecutive
+ # bad-execution outcomes is skipped, whatever rung would have served it
+ if [ -n "${OVERNIGHT_MODEL:-}" ] && [ "$(model_demoted "$OVERNIGHT_MODEL")" != 1 ]; then
   printf '%s|env\n' "$OVERNIGHT_MODEL"
   return 0
- }
+ fi
  local best
  best="$(
   python3 - "$ROOT/stats" <<'PY'
@@ -114,10 +119,23 @@ for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
 print(best)
 PY
  )"
- [ -n "$best" ] && {
+ [ -n "$best" ] && [ "$(model_demoted "$best")" != 1 ] && {
   printf '%s|local-bench\n' "$best"
   return 0
  }
+ # bench leg demoted (or no bench): paid fallback, unless it too is demoted
+ local paid="${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
+ if [ "$(model_demoted "$paid")" != 1 ]; then
+  printf '%s|paid-fallback\n' "$paid"
+  return 0
+ fi
+ # every rung demoted: last known non-demoted wins via env leg echo; the
+ # session will fail closed through the bridge instead of burning budget
+ [ -n "$OVERNIGHT_MODEL" ] && {
+  printf '%s|env-all-demoted\n' "$OVERNIGHT_MODEL"
+  return 0
+ }
+ printf '%s|paid-fallback\n' "$paid"
  printf '%s|paid-fallback\n' "${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
 }
 # model routing (future, not implemented): when the KIMI/LOBEHUB quota
