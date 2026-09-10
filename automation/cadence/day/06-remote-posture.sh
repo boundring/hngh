@@ -18,11 +18,25 @@ set -u
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
-DECK_IP="${DECK_IP:-100.79.162.3}" # steamdeck tailnet addr (REMOTE-ACCESS.md)
+# machine profile: host identity (deck IP, tailnet, dashboard bind) lives in
+# config/machine.env (gitignored; example: config/machine.env.example) -
+# peer-review finding 1: machine defaults never bake into job code. The
+# profile path is env-selectable (HNGH_MACHINE_PROFILE) for tests.
+MACHINE_PROFILE="${HNGH_MACHINE_PROFILE:-$AUTOMATION_ROOT/config/machine.env}"
+[ -f "$MACHINE_PROFILE" ] && . "$MACHINE_PROFILE"
+DECK_IP="${DECK_IP:-}" # steamdeck tailnet addr; machine profile or exported env
 
 day_of() { # YYYY-MM-DD date from HNGH_TICK_TS (tests) or today UTC
   printf '%s' "${HNGH_TICK_TS:-$(date -u +%Y-%m-%d)}"
 }
+
+# fail-closed: without a machine profile (and no env DECK_IP) there is no
+# host identity to probe - skip, never fall back to a baked-in address.
+if [ -z "$DECK_IP" ]; then
+  breadcrumb "$JOB_NAME" "remote-posture" \
+    "no DECK_IP (config/machine.env missing - see config/machine.env.example): skipped"
+  exit 0
+fi
 
 # file_report TEXT — one report row + breadcrumb. A failed write is a
 # breadcrumb, never a crash (fail-closed to exit 0).
