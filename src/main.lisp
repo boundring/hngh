@@ -429,7 +429,7 @@ commands:~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
   review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
-  list-pins PATH  wake-peer RUN PINS-FILE PEER  run-worker RUN task=T [payload=X]~%~
+  list-pins PATH  wake-peer RUN PINS-FILE PEER  run-worker RUN task=T [payload=X] [worker=FILE]~%~
   select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...  status~%~
 options: --store=PATH record the run ledger under PATH"))
 
@@ -899,6 +899,104 @@ prompt, a result, or the store."
          nil))
     (file-error () (values nil "cannot read reviewer file"))
     (error () (values nil "malformed reviewer file"))))
+
+(defparameter +worker-config-keys+
+  '(:command :timeout-seconds)
+  "The closed worker-transport file vocabulary.")
+
+(defun parse-worker-config (text)
+  "Strict-parse operator worker-transport text: KEY=VALUE lines over the
+two closed keys, `#` comments and blank lines skipped; unknown, duplicate,
+missing, empty, or non-integer fields refuse, and timeout-seconds must be
+positive. Returns a plist."
+  (unless (stringp text)
+    (error "worker config must be text"))
+  (let ((plist '())
+        (seen '()))
+    (dolist (line (uiop:split-string text :separator '(#\Newline)))
+      (let ((line (string-right-trim '(#\Return) line)))
+        (unless (or (uiop:emptyp line) (char= (char line 0) #\#))
+          (let ((eq (position #\= line)))
+            (unless eq
+              (error "malformed worker line: ~S" line))
+            (let* ((key-text (subseq line 0 eq))
+                   (key (intern (string-upcase key-text) :keyword))
+                   (value (subseq line (1+ eq))))
+              (unless (member key +worker-config-keys+)
+                (error "unknown worker key: ~A" key-text))
+              (when (member key seen)
+                (error "duplicate worker key: ~A" key-text))
+              (unless (plusp (length value))
+                (error "empty worker value: ~A" key-text))
+              (push key seen)
+              (push value plist)
+              (push key plist))))))
+    (dolist (key +worker-config-keys+)
+      (unless (member key seen)
+        (error "missing worker key: ~A"
+               (string-downcase (symbol-name key)))))
+    (let ((timeout (parse-integer (getf plist :timeout-seconds))))
+      (unless (plusp timeout)
+        (error "non-positive worker timeout-seconds: ~D" timeout))
+      (setf (getf plist :timeout-seconds) timeout))
+    plist))
+
+(defun read-worker-file (path)
+  "Read and strict-parse an operator worker-transport file. Returns
+(values ports nil) or (values nil refusal-text). The ports' callback
+executes the file's command with the worker request's task label as
+argv[1] and the request payload (nil allowed) on stdin, returning
+(values exit-code stdout stderr). The task is bounded by
+timeout-seconds: an expired task is terminated and reports no exit code
+(a worker fault)."
+  (handler-case
+      (let ((config (parse-worker-config (uiop:read-file-string path))))
+        (values
+         (hngh.adapters.worker:make-worker-ports
+          (lambda (request)
+            (let* ((task (hngh.adapters.worker:worker-request-task request))
+                   (payload
+                     (hngh.adapters.worker:worker-request-payload request))
+                   (start (get-internal-real-time))
+                   (deadline (+ start (* (getf config :timeout-seconds)
+                                         internal-time-units-per-second)))
+                   (proc (uiop:launch-program
+                          (cons (getf config :command) (list task))
+                          :input :stream :output :stream
+                          :error-output :stream))
+                   (in (uiop:process-info-input proc)))
+              ;; ponytail: the payload stdin write can deadlock when the
+              ;; child fills its stdout pipe before reading stdin (payloads
+              ;; are already bounded at 64KiB); drain out/err concurrently
+              ;; via poll(2)/threads if payloads ever need to grow.
+              (when payload (write-string payload in))
+              (finish-output in)
+              (close in)
+              (if (loop
+                    (cond ((not (uiop:process-alive-p proc))
+                           (return nil))
+                          ((> (get-internal-real-time) deadline)
+                           (uiop:terminate-process proc)
+                           (return t))
+                          (t (sleep 0.05))))
+                  (progn
+                    (close (uiop:process-info-output proc))
+                    (close (uiop:process-info-error-output proc))
+                    ;; the task expired: no exit code (a worker fault).
+                    (values nil nil nil))
+                  (let* ((out (uiop:process-info-output proc))
+                         (err (uiop:process-info-error-output proc))
+                         (code (uiop:wait-process proc))
+                         ;; drain both streams only AFTER wait-process:
+                         ;; the child has exited, so no pipe deadlock.
+                         (stdout (uiop:slurp-input-stream 'string out))
+                         (stderr (uiop:slurp-input-stream 'string err)))
+                    (close out)
+                    (close err)
+                     (values code stdout stderr)))))
+         )))
+    (file-error () (values nil "cannot read worker file"))
+    (error () (values nil "malformed worker file"))))
 
 (defun dispatch-review (args store clock review-ports)
   (declare (ignore clock))
@@ -1701,41 +1799,62 @@ injection the command refuses no-wake-transport."
           (:fault (values (hngh.presentation:render result) 3))))))))
 
 (defun dispatch-run-worker (args store worker-ports)
-  "run-worker RUN task=LABEL [payload=TEXT]: run one bounded, read-only
-worker task through the injected WORKER-PORTS. The run must hold a
-:worker admission receipt (loadout tool label worker-task). No default
-transport exists — without injection the command refuses
-no-worker-transport. A completed task binds a :worker evidence fact;
-it never grants a mutation certificate."
+  "run-worker RUN task=LABEL [payload=TEXT] [worker=FILE]: run one
+bounded, read-only worker task through the injected WORKER-PORTS or,
+when worker=FILE names an operator worker-transport file, through the
+file's transport (vocabulary: command, timeout-seconds; the command runs
+with the task label as argv[1] and the payload, nil allowed, on stdin;
+bounded by timeout-seconds). The run must hold a :worker admission
+receipt (loadout tool label worker-task). The worker file is validated
+before any run lookup or admission work, mirroring the reviewer=
+transport admission. No default transport exists -- without worker= and
+injection the command refuses no-worker-transport. A completed task
+binds a :worker evidence fact; it never grants a mutation certificate."
   (multiple-value-bind (positionals options) (collect-options args)
     (let ((unknown (find-if (lambda (pair)
-                              (not (member (car pair) '(:task :payload))))
+                              (not (member (car pair)
+                                           '(:task :payload :worker))))
                             options)))
       (when (or unknown (/= 1 (length positionals)))
         (return-from dispatch-run-worker (values (command-usage) 2)))
-      (let ((identifier (first positionals)))
+      ;; The operator worker file is the transport admission: when
+      ;; present it replaces any injected worker ports with the real
+      ;; subprocess transport from the operator's config, validated
+      ;; before any run lookup or admission work.
+      (let* ((worker-path (cdr (assoc :worker options)))
+             (ports
+               (if worker-path
+                   (multiple-value-bind (file-ports refusal)
+                       (read-worker-file worker-path)
+                     (when refusal
+                       (return-from dispatch-run-worker
+                         (values (format nil "run-worker refused: ~A" refusal)
+                                 2)))
+                     file-ports)
+                   worker-ports))
+             (identifier (first positionals)))
         (unless (store-has-transport-admission-receipt-p store identifier
                                                          :worker)
           (return-from dispatch-run-worker
-          (values (format nil "run-worker refused: run ~A not admitted for worker"
+            (values (format nil "run-worker refused: run ~A not admitted for worker"
                             identifier)
                     1)))
-        (unless worker-ports
+        (unless ports
           (return-from dispatch-run-worker
-          (values "run-worker refused: no-worker-transport" 1)))
+            (values "run-worker refused: no-worker-transport" 1)))
         (handler-case
-          (let* ((plist (options-plist options))
+            (let* ((plist (options-plist options))
                    (request (hngh.adapters.worker:make-worker-request
                              :task (getf plist :task)
                              :payload (getf plist :payload))))
               (let ((result (hngh.adapters.worker:run-worker-task
-                             request worker-ports)))
+                             request ports)))
                 (case (hngh.adapters.worker:worker-result-status result)
                   (:complete (values (hngh.presentation:render result) 0))
-          (:refused (values (hngh.presentation:render result) 1))
+                  (:refused (values (hngh.presentation:render result) 1))
                   (:fault (values (hngh.presentation:render result) 3)))))
           (error (condition)
-          (values (format nil "malformed run-worker: ~A" condition) 2)))))))
+            (values (format nil "malformed run-worker: ~A" condition) 2)))))))
 
 (defun report-federation-result (result)
   "Map a FEDERATION-RESULT to (values output exit-code): 0 complete,
