@@ -40,7 +40,7 @@ inside the sentinels.
 
 - Research lines: 39 reviewed (hngh-automation/research-lines.tsv).
 - Queue Next: wake-mutation-lane, set 2026-08-25 (16 days old) (hngh docs/project/queue.md).
-- Plan ledger: 138 plan files, 115 routed candidates (hngh docs/project/plans/).
+- Plan ledger: 143 plan files, 120 routed candidates (hngh docs/project/plans/).
 - Operator items: 40 open (hngh-automation/dashboard/operator-items.json; display cap 40).
 - Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
