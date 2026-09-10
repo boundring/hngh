@@ -10,7 +10,8 @@ to the guardrails at the end.
 Hngh may update its own internal policies "as continually as optimization
 ever requires" to suit more fluid, secure, and stable operations — through
 its normal governance loop (certificates, green gates, records), not
-around it. Operator-blocked states should be exceptional: before parking
+around it. Guidance flows both ways: the operator directs, and hngh
+sanity-checks back (section 5). Operator-blocked states should be exceptional: before parking
 on the operator, a machine session exhausts recorded intent, common
 sense, and the model chain's stronger legs (the standing TTSR rule
 `no-premature-operator-block` already encodes the ladder). Still
@@ -56,6 +57,17 @@ hngh injects content (text, images, links, attachments) into a thread;
 operator replies in the chain; hngh reads replies on a slower cadence
 and turns them into operator-items or plan proposals — reducing reliance
 on live omp sessions for slow meta-agentic decisions.
+
+## 5. Operator guidance and sanity-checking (standing)
+
+Operator decisions govern base principles and matters of great
+importance. For everything else, hngh's duty is to sanity-check the
+direction and propose the rational path that functionally meets the
+requirement — and to recognize dead-ends quickly, spending no more
+than bounded time identifying them before stopping. Trying is not the
+same as spending: evaluation is capped, the identification itself is
+the deliverable, and revisiting a known dead-end requires new
+evidence. (Pattern 11, docs/design/meta-patterns.md.)
 
 ## Guardrails (unchanged)
 
