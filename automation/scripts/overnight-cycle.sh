@@ -97,6 +97,36 @@ select_model() { # -> "model|source" on stdout
   printf '%s|env\n' "$OVERNIGHT_MODEL"
   return 0
  fi
+ # quota preference (stall-recovery step 9): a session-model-preference
+ # cadence-params row names OMP-ADDRESSABLE quota models ahead of the
+ # paid fallback; SESSION_MODEL_QUOTA_KEY_PRESENT (set from the leg-key
+ # config: kimi-model/lobehub-agent-id rows or env) gates the leg -
+ # no key config, no quota routing, fail-closed. Demotion applies to
+ # quota models like any other rung. Boundary, found and documented:
+ # kimi_chat/lobehub_chat are curl chat helpers, not omp providers -
+ # a delegated omp session cannot run "as kimi"; the row must name an
+ # omp-addressable quota model id (e.g. an openrouter free/quota tier).
+ if [ "$(get_param session-model-quota-keys 0)" = "1" ] \
+    && [ -n "$(get_param session-model-preference "")" ]; then
+  pref="$(get_param session-model-preference "")"
+  local IFS=',' q
+  for q in $pref; do
+   q="$(printf '%s' "$q" | sed 's/^ *//; s/ *$//')"
+   [ -n "$q" ] || continue
+   if [ "$(model_demoted "$q")" = 1 ]; then
+    continue
+   fi
+   # health gate before routing (quota-utilization lesson: never burn a
+   # session on a dead credential) - one deduped alert per beat, cached
+   if quota_leg_healthy "$q"; then
+    printf '%s|quota\n' "$q"
+    return 0
+   fi
+   $ROOT/scripts/report-queue --add alert \
+    "quota leg $q failed health probe - skipped for this beat (no session wasted)" \
+    --identity "quota-leg-unhealthy:$q" --window 86400 >/dev/null 2>&1 || true
+  done
+ fi
  local best
  best="$(
   python3 - "$ROOT/stats" <<'PY'
@@ -146,6 +176,8 @@ PY
 # here from `get_param session-model-preference` when the row exists.
 MODEL_SPEC="$(select_model)"
 SESSION_MODEL="${MODEL_SPEC%%|*}"
+SESSION_SOURCE="${MODEL_SPEC##*|}"
+export SESSION_SOURCE
 MODEL_SOURCE="${MODEL_SPEC##*|}"
 
 is_critical() { # id+title -> 0 when the item must park for the operator

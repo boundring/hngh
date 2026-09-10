@@ -81,6 +81,7 @@ test:
 	bash tests/test-remote-push.sh
 	python3 -B tests/test-plan-identity.py
 	bash tests/test-model-demote.sh
+	bash tests/test-quota-routing.sh
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-ttsr-fit.sh
