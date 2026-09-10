@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-06T01:01:30Z routed-from=supervision-replace-park:transcript-stalls -->
+<!-- plan: status=executed risk=normal accepted=2026-09-06T01:01:30Z resolved=2026-09-10T18:10Z routed-from=supervision-replace-park:transcript-stalls -->
 # 2026-09-05 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `supervision-replace-park:transcript-stalls`
@@ -6,5 +6,22 @@ at 2026-09-05T00:00:45Z. Alert text: parked (bounded-slice limit): transcript-de
 
 ## Steps
 
-- [ ] Investigate the alert, fix or park, with a named verification
+- [x] Investigate the alert, fix or park, with a named verification
       Verification: `make test` green in the owning repo
+      Resolved 2026-09-10 (overnight-lead): no code change. The demanded
+      spawn policy + handoff source landed 2026-09-06 as the
+      watchdog->respawn composition: jobs/agent-watchdog.sh (5m tier)
+      classifies stall/loop/hard-error and appends cause-classified
+      `session-drop` rows to agent-handoffs.md; jobs/agent-respawn.sh
+      (30m tier) consumes dead rows under bounded guards (steer-don't-kill
+      by cause, 1/mission/day + respawn-max-attempts 2, respawn-daily-cap
+      1 shared with logs/budget.md, launch via lib/launch-session.sh
+      only). Ledger shows live dispositions (respawn-refused rows
+      2026-09-08/09). Bare transcripts stay advisory by design: a
+      transcript alone names no mission to respawn (an operator-interactive
+      session must not be auto-replaced); stale ones evict via
+      MAX_TRACKED_AGE_S. agent-supervision.py itself unchanged — the
+      session_exit terminal fix from 2026-09-04 stands.
+      Verification run: automation `make test` rc=0, including
+      test-agent-supervision.py and test-agent-respawn.py; gate was red
+      until d78a622 fixed the non-hermetic quota-routing test.
