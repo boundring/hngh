@@ -12,3 +12,4 @@ at 2026-09-10T16:00:19Z. Alert text: agent-stall omp-SimDesign-6b54f6: stalled, 
 ## Occurrences
 
 - 2026-09-10T17:00:18Z re-occurred (dedup window expired)
+- 2026-09-10T18:00:18Z re-occurred (dedup window expired)
