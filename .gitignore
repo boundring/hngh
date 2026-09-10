@@ -3,7 +3,8 @@
 *.log
 /.cache/
 /.codegraph/
-/.omp/
+/.omp/*
+!/.omp/mcp.json
 __pycache__/
 .hermes/
 docs/project/report-bodies/
