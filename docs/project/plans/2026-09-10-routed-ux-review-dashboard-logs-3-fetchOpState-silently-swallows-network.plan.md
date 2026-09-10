@@ -12,3 +12,4 @@ at 2026-09-10T04:00:18Z. Alert text: 3. `fetchOpState` silently swallows network
 ## Occurrences
 
 - 2026-09-10T05:00:18Z re-occurred (dedup window expired)
+- 2026-09-10T06:00:18Z re-occurred (dedup window expired)
