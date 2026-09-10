@@ -81,6 +81,7 @@
 (load (cl-user::project-file "tests/adapter/test-federation.lisp"))
 (load (cl-user::project-file "tests/adapter/test-worker.lisp"))
 (load (cl-user::project-file "tests/adapter/test-worker-driver.lisp"))
+(load (cl-user::project-file "tests/adapter/test-worker-file.lisp"))
 (load (cl-user::project-file "tests/presentation/test-presentation.lisp"))
 (load (cl-user::project-file "tests/main/test-main.lisp"))
 (load (cl-user::project-file "tests/main/test-dispatch.lisp"))
