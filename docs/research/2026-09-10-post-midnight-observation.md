@@ -365,7 +365,7 @@ Data source: agent-handoffs.md (42 entries total, covering 2026-09-08T00:00Z thr
 
 Model distribution (all available handoffs):
 - unsloth/Ornith-1.0-35B-GGUF(local-bench): 12 sessions
-- zai/glm-5.3(paid-fallback): 5 sessions  
+- zai/glm-5.3(paid-fallback): 5 sessions
 - openrouter/z-ai/glm-5.3-flash(env): 2 sessions
 
 Outcome distribution: rc=0 cancelled (15), rc=124 dead (2), rc=1 dead (2), rc=0 done (2). Landings = 2 out of 22 measurable = **9%**. **Trend: catastrophically low. 91% of sessions produce nothing actionable.**
@@ -399,7 +399,7 @@ The kernel gate just achieved a stable green state at 03:53Z-04:12Z, enabling on
 
 ---
 
-**VERDICT: Regressed.** 
+**VERDICT: Regressed.**
 
 Throughput has declined from the 2026-09-07 peak (52 real commits/day) to near-zero on 2026-09-10. The six priority plans collectively hold 40 unchecked steps with 0 completed. Session efficiency is at 9% — the vast majority of launched sessions burn budget without producing landings. Three independent blocker events (model burn, file clobber, kernel gate flap) compound rather than resolve independently, creating a cascade where the kernel gate red prevents plan execution, preventing landed changes, which keeps the gate unstable because load patterns don't change without new code submissions.
 
@@ -512,7 +512,7 @@ python3 scripts/lint-parens.py src/domain/profile.lisp src/domain/loadout.lisp s
 sbcl --script tests/run.lisp
 
 2855 checks passed.
-sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd "/home/bricker/Projects/etc/hngh/hngh.asd")' --eval '(asdf:load-system :hngh)'
+sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd <hngh.asd>)' --eval '(asdf:load-system :hngh)'
 This is SBCL 2.6.8, an implementation of ANSI Common Lisp.
 More information about SBCL is available at <http://www.sbcl.org/>.
 
@@ -559,3 +559,33 @@ distribution for more information. flakiness — specifically the load-correlate
   test-budget fix lands; but the executor path (launched sessions
   working accepted plans' steps) is unblocked and accumulating
   promotion credit. 09-10 trend: reversing.
+- 2026-09-10T05:1xZ | stall-recovery STEP 9 EXECUTED (commit e2b4701,
+  candidate 01e31260...; both gates green pre-ceremony: automation
+  suite incl. new test-quota-routing.sh, kernel 2855 checks).
+  session-model-preference row mechanism in select_model
+  (env > quota-row > local-bench > paid-fallback), gated by a
+  session-model-quota-keys=1 params row (operator asserts keys live;
+  fail-closed without it) AND a per-beat cached health probe
+  (quota_leg_healthy: kimi:/lobehub:-prefixed entries get a 1-token
+  leg probe with 1h stamp cache; omp-addressable models take the gate
+  row as the health signal). Unhealthy leg: skipped for the beat +
+  one deduped alert identity quota-leg-unhealthy:<name> - no
+  per-session burn (quota-utilization lesson honored). Demotion
+  applies to quota models identically (tested). budget.md session-run
+  rows now carry | model=<model> source=<quota|paid|env|bench>
+  (SESSION_SOURCE exported from select_model; lint-identifiers gained
+  the SESSION_SOURCE exception, same pattern as MODEL_USED_FILE).
+  HONEST BOUNDARY (documented in code and here): kimi_chat/lobehub_chat
+  are curl chat helpers, not omp providers - a delegated omp session
+  cannot run "as kimi" directly; the preference row names
+  OMP-ADDRESSABLE quota models (e.g. openrouter free/quota tiers), and
+  kimi:/lobehub: prefixes route health probes only. Both quota legs
+  are dead today (kimi 401 operator-owned credential; lobehub 404
+  since config) - the gate row stays 0 so nothing routes there until
+  the operator activates; mechanism and Inventory plumbing only,
+  per the step's own spec. Step 9 Verification: "suite test covers the
+  ladder (env > quota-row model when configured > local-bench >
+  paid-fallback), budget.md source tagging, and refusal to route to a
+  quota model with no key config" - all three covered by
+  test-quota-routing.sh (9 cases green); full make test green. Step 9
+  is checkable.
