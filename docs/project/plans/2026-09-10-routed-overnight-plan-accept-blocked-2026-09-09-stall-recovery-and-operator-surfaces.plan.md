@@ -8,3 +8,7 @@ at 2026-09-10T01:00:18Z. Alert text: plan 2026-09-09-stall-recovery-and-operator
 
 - [ ] Delve: open research subject fail-20260910-overnight-plan-accept-blocked-2026-09-09-stall-recovery-and-operator-surfaces for overnight:plan-accept-blocked:2026-09-09-stall-recovery-and-operator-surfaces; record disposition; then fix or park
       Verification: research subject fail-20260910-overnight-plan-accept-blocked-2026-09-09-stall-recovery-and-operator-surfaces present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-10T02:00:18Z re-occurred (dedup window expired)

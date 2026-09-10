@@ -12,3 +12,4 @@ at 2026-09-05T01:00:45Z. Alert text: [oversight] system-network-down: critical r
 ## Occurrences
 
 - 2026-09-10T00:00:18Z re-occurred (dedup window expired)
+- 2026-09-10T02:00:18Z re-occurred (dedup window expired)
