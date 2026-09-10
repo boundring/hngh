@@ -181,5 +181,13 @@ the refusal crumb carries the last lines
   automation/tests/test-remote-push.sh case 4 covers it.
 - Both gates green post-change: automation make test rc=0 (suite +
   two new tests wired in), kernel make test rc=0 (2855 checks).
+- Ceremony commit 8885b0c (candidate 2ac4af40...). The unit files
+  needed %h (systemd home specifier) instead of user-home literals: the candidate gate's public-content check refuses
+  absolute local paths, and the units had entered git only via the
+  P2/P4 subtree cutover commits - no ceremony could carry them
+  until the paths were specifier-clean. %h expands identically for
+  user units (verified: systemctl show ExecStart
+  path expands to the user's home), so semantics are unchanged and the files are
+  now ceremony-landable.
 - Stale ceremony stores swept (/tmp/hngh-cer-{diag,gatefix,pushfix}-*
   removed, 2026-09-10 ~02:5xZ).
