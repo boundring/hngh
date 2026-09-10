@@ -92,7 +92,10 @@ distilled from the Steamdeck pairing (2026-08-28):
 ## Deck desktop shortcut
 
 `automation/deck/tailscale-serve.sh` + `hngh-remote.desktop` make the
-one remaining operator step a double-click on the deck:
+one remaining operator step a double-click on the deck. The serve
+command itself runs on the **desktop** (the dashboard binds there); the
+deck's userspace tailscale serves nothing -- the deck shortcut just
+ssh-triggers it:
 
 1. Copy both files to `~/Desktop` on the deck.
 2. `chmod +x ~/Desktop/tailscale-serve.sh` (the .desktop `Exec` is the
@@ -101,7 +104,13 @@ one remaining operator step a double-click on the deck:
 3. Right-click `hngh-remote.desktop` on the deck -> **Allow Launch**
    (SteamOS requirement for untrusted .desktop entries).
 
-The script is idempotent: it checks `tailscale serve status` first and
-exits 0 if 8890 is already served. It is **manual-run only** -- like
-the `sudo tailscale serve --bg 8890` step itself, automation never
-invokes it (no-daemon rule).
+The script is idempotent: it checks
+`ssh hngh-desktop tailscale serve status` first and exits 0 if 8890 is
+already served; otherwise it runs `ssh -t hngh-desktop sudo tailscale
+serve --bg 8890` (the desktop's sudo prompt appears in the deck's
+terminal). Local precondition: the deck's tailscale must be up
+(`tailscale --socket ~/.local/share/tailscaled/tailscaled.sock status`)
+so the `hngh-desktop` ssh alias routes. If ssh fails the script says
+"desktop unreachable -- check tailscale login on both ends". It is
+**manual-run only** -- automation never invokes the serve step
+(no-daemon rule).
