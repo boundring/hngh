@@ -104,13 +104,26 @@ lobehub_key_src=""
 [ -n "${LOBEHUB_KEY:-}" ] && lobehub_key_src="env LOBEHUB_KEY"
 lobehub_key_file="${LOBEHUB_KEY_FILE:-$HOME/.config/hngh/lobehub-key}"
 [ -z "$lobehub_key_src" ] && [ -f "$lobehub_key_file" ] && lobehub_key_src="key file"
-if [ -n "$lobehub_key_src" ]; then
-  lobe_url="$(get_param lobehub-endpoint 'https://api.lobehub.com/v1/chat/completions')"
-  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "$lobe_url" 2>/dev/null)" || code=000
+lobe_key=""
+[ -n "${LOBEHUB_KEY:-}" ] && lobe_key="$LOBEHUB_KEY"
+[ -z "$lobe_key" ] && [ -f "$lobehub_key_file" ] &&
+  [ "$(stat -c %a "$lobehub_key_file")" = "600" ] &&
+  lobe_key="$(cat "$lobehub_key_file" 2>/dev/null)"
+if [ -n "$lobehub_key_src" ] && [ -n "$lobe_key" ]; then
+  # authenticated probe on a GET-able path derived from the leg's base -
+  # the /responses path is POST-only (a bare GET reads 404 forever; the
+  # 2026-09-10 lesson, same family as the kimi probe's missing header).
+  # Key values never logged.
+  lobe_base="${LOBEHUB_URL:-$(get_param lobehub-endpoint 'https://app.lobehub.com/api/v1/responses')}"
+  lobe_models_url="${lobe_base%/responses}/models"
+  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer $lobe_key" "$lobe_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) endpoint not answering (http=$code)"
+  elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
+    breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) rejected by endpoint (http=$code) - credential failure, operator attention"
   else
-    breadcrumb "$JOB_NAME" "credential-health" "lobehub armed via $lobehub_key_src; endpoint http=$code; gated on lobehub-model row"
+    breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) ok; models endpoint http=$code; gated on lobehub-model row"
   fi
 fi
 
@@ -141,7 +154,7 @@ if [ -n "$kimi_key_src" ]; then
   kimi_url="${KIMI_URL:-$(get_param kimi-endpoint 'https://api.kimi.com/coding/v1/chat/completions')}"
   kimi_models_url="${kimi_url%/chat/completions}/models"
   code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
-    ${kimi_key:+-H "Authorization: Bearer $kimi_key"} "$kimi_models_url" 2>/dev/null)" || code=000
+    -H "Authorization: Bearer $kimi_key" "$kimi_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) endpoint not answering (http=$code)"
   elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
