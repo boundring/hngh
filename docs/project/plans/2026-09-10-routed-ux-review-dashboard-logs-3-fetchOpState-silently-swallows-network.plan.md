@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ux-review:dashboard-logs:3-fetchOpState-silently-swallows-network -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T04:31:26Z routed-from=ux-review:dashboard-logs:3-fetchOpState-silently-swallows-network -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:dashboard-logs:3-fetchOpState-silently-swallows-network`
@@ -8,3 +8,7 @@ at 2026-09-10T04:00:18Z. Alert text: 3. `fetchOpState` silently swallows network
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-10T05:00:18Z re-occurred (dedup window expired)

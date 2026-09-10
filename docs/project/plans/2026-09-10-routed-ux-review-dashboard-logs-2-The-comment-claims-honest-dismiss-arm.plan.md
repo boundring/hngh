@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ux-review:dashboard-logs:2-The-comment-claims-honest-dismiss-arm -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T04:31:26Z routed-from=ux-review:dashboard-logs:2-The-comment-claims-honest-dismiss-arm -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:dashboard-logs:2-The-comment-claims-honest-dismiss-arm`

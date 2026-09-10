@@ -541,3 +541,21 @@ distribution for more information. flakiness — specifically the load-correlate
   through the fixed lane - the reversal depends on this session's
   outcome (pass 7) and on the routed test-budget fix for the in-beat
   rc2 residual.
+- 2026-09-10T04:28Z | monitor pass 7: DECIDING DATUM LANDS OK. The
+  04:01:05Z staging session completed at 04:25:30Z: budget row
+  `2026-09-10T04:25:30Z | overnight|2026-09-03-staging | session-run`;
+  handoff row `rc=0 cancelled model=openrouter/z-ai/glm-5.3-flash(env)
+  cause=unknown` (log overnight-...-20260910T000105.log). failfirst:
+  oks=1 -> 2 (n_ok 10 -> 11), speed stays 3 — ONE more ok promotes to
+  speed 2. Beat crumb: `overnight-done sessions=1 concurrency=1
+  speed=3 results=ok model=openrouter/z-ai/glm-5.3-flash(env)`.
+  Recovery chain now demonstrably live end to end: pace slot consumed
+  -> correctly-modeled session (Flash in the workbeat lane, the lane
+  env fix holding under systemd) -> ok outcome -> oks counter
+  climbing. The 04:30Z beat (overnight timer) will consume the next
+  pace window check; promotion to speed-2 lands on the NEXT ok after
+  this one. Residual unchanged: in-beat kernel-gate-red-rc2 still
+  blocks ACCEPTANCE of new plans (04:01 rows) until the routed
+  test-budget fix lands; but the executor path (launched sessions
+  working accepted plans' steps) is unblocked and accumulating
+  promotion credit. 09-10 trend: reversing.
