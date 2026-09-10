@@ -8,3 +8,7 @@ at 2026-09-10T10:00:18Z. Alert text: `rerenderOp` calls `renderLogs` directly in
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-10T11:00:18Z re-occurred (dedup window expired)
