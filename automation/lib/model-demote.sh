@@ -126,3 +126,53 @@ for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
             print(m)
 PY
 }
+
+session_model_source() { # model selected-via -> quota|paid|env|bench
+ local m="$1" via="${2:-}"
+ case "$via" in
+  env|env-all-demoted) printf 'env'; return 0 ;;
+  local-bench) printf 'bench'; return 0 ;;
+  paid-fallback) printf 'paid'; return 0 ;;
+ esac
+ # selected-via quota (or unknown): quota when the model is in the
+ # preference list and the quota-key gate is on, else paid
+ if [ "$(get_param session-model-quota-keys 0)" = "1" ]; then
+  local pref list q
+  pref="$(get_param session-model-preference "")"
+  local IFS=','
+  for q in $pref; do
+   q="$(printf '%s' "$q" | sed 's/^ *//; s/ *$//')"
+   [ "$q" = "$m" ] && { printf 'quota'; return 0; }
+  done
+ fi
+ printf 'paid'
+}
+
+
+quota_leg_healthy() { # model -> 0/1; cached per beat (stamp file, TTL 3600)
+ local m="$1" stamp
+ stamp="${TMPDIR:-/tmp}/hngh-quota-health-${m//[\/]/_}"
+ if [ -f "$stamp" ] && [ "$(( $(date +%s) - $(stat -c %Y "$stamp" 2>/dev/null || echo 0) ))" -lt 3600 ]; then
+  [ "$(cat "$stamp" 2>/dev/null)" = ok ] && return 0 || return 1
+ fi
+ case "$m" in
+  kimi:*|lobehub:*)
+   # cheap 1-token completion against the named leg; kimi_chat/lobehub_chat
+   # fail-closed-skip when the leg is unconfigured or the key is dead
+   local lib="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..}"
+   local fn="${m%%:*}_chat"
+   local out
+   out="$(bash -c ". '$lib/lib/model.sh'; ${m%%:*}_chat ping 1" 2>/dev/null)"
+   if [ -n "$out" ]; then
+    echo ok > "$stamp" 2>/dev/null; return 0
+   fi
+   ;;
+  *)
+   # omp-addressable quota models (e.g. openrouter tiers): omp routes them
+   # with its own key config; the gate row IS the health signal
+   echo ok > "$stamp" 2>/dev/null; return 0
+   ;;
+ esac
+ echo fail > "$stamp" 2>/dev/null
+ return 1
+}
