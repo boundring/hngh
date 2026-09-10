@@ -51,6 +51,36 @@ flock -n 9 || {
  breadcrumb "$JOB_NAME" "tick-skip" "overnight beat already live"
  exit 0
 }
+
+# --- crash-safety net (plan 19 step 7) ------------------------------------
+# SIGTERM/SIGINT: stop spawning new sessions, record a dated breadcrumb
+# with the in-flight session ids, exit non-zero cleanly. No new state
+# files: the record lives in STATE.md (breadcrumbs) only. INFLIGHT is a
+# /tmp scratch list, same class as RESULTS — never durable state.
+STOP=0
+INFLIGHT="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-inflight.XXXXXX")"
+over_shutdown() { # sig
+ local ids
+ ids="$(tr '\n' ',' <"$INFLIGHT" 2>/dev/null | sed 's/,$//')"
+ breadcrumb "$JOB_NAME" "shutdown-signal" "signal=$1 in_flight=$ids"
+ exit 1
+}
+trap 'over_shutdown TERM' TERM
+trap 'over_shutdown INT' INT
+
+# cold-start idempotency: a shutdown-signal newer than the last
+# overnight-done means the previous beat died on a signal (machine halt /
+# operator stop) and its in-flight sessions may still be finishing
+# orphaned. Report the unclean exit and skip this beat's session batch
+# (one tick) instead of double-spawning the same work; this run still
+# exits cleanly with overnight-done, which restores the ordering.
+_unclean="$(awk -F'|' '/shutdown-signal/{ts=$1} /overnight-done/{ts=""} END{print ts}' \
+ "$STATE_FILE" 2>/dev/null)"
+if [ -n "${_unclean// /}" ]; then
+ breadcrumb "$JOB_NAME" "cold-start-unclean" \
+  "previous beat ended on a shutdown signal (ts=${_unclean// /}); skipping this beat's session batch to avoid double-spawning"
+ STOP=1 # cold start skips the batch via the same flag the trap honors
+fi
 # Plan acceptance runs every tick, around the clock: the cycle is
 # continuous operation (24/7), not overnight-only — the timer is the
 # only clock. Per the kernel contract (docs/project/plans/README.md) a
@@ -106,8 +136,8 @@ select_model() { # -> "model|source" on stdout
  # kimi_chat/lobehub_chat are curl chat helpers, not omp providers -
  # a delegated omp session cannot run "as kimi"; the row must name an
  # omp-addressable quota model id (e.g. an openrouter free/quota tier).
- if [ "$(get_param session-model-quota-keys 0)" = "1" ] \
-    && [ -n "$(get_param session-model-preference "")" ]; then
+ if [ "$(get_param session-model-quota-keys 0)" = "1" ] &&
+  [ -n "$(get_param session-model-preference "")" ]; then
   pref="$(get_param session-model-preference "")"
   local IFS=',' q
   for q in $pref; do
@@ -593,6 +623,9 @@ RESULTS="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-results.XXXXXX")"
 run_one() { # slug objective prompt_file plan_file
  local slug="$1" objective="$2" prompt_file="$3" pfile="$4"
  local start rc run_id log disposition cause result
+ # crash-safety net: never spawn past a stop signal or a cold-start skip
+ [ "$STOP" -eq 1 ] && return 0
+ printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
  start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
  launch_session "$slug" "$objective" "$prompt_file"
  rc="$LAUNCH_RC"

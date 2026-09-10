@@ -68,6 +68,7 @@ test:
 	python3 -B jobs/agent-supervision.py --selfcheck
 	bash tests/test-model-deck-leg.sh
 	bash tests/test-model-lobehub-leg.sh
+	bash tests/test-overnight-shutdown.sh
 	bash tests/test-model-kimi-leg.sh
 	bash tests/test-model-pin-routing.sh
 	bash tests/test-notify-seam.sh
@@ -80,6 +81,7 @@ test:
 	bash tests/test-dev-plan-synth.sh
 	bash tests/test-remote-push.sh
 	python3 -B tests/test-plan-identity.py
+	python3 -B tests/test-mcp-server.py
 	bash tests/test-model-demote.sh
 	bash tests/test-quota-routing.sh
 	bash tests/test-unit-model-env.sh
