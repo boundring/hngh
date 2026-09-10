@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hngh Remote Enable
+Comment=Serve the Hngh dashboard over tailscale HTTPS (port 8890)
+# Copy tailscale-serve.sh next to this file on the deck's ~/Desktop;
+# keep the script in the same directory as this .desktop entry.
+Exec=./tailscale-serve.sh
+Terminal=true
+Categories=Network;

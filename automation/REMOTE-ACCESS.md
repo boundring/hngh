@@ -88,3 +88,20 @@ distilled from the Steamdeck pairing (2026-08-28):
 - Kernel federation rungs (`admit-transport :federation`, `wake-peer`,
   `fetch-evidence`) are the eventual deck-as-node path; a deck-native
   hngh flatpak is a follow-up wave, not a dependency.
+
+## Deck desktop shortcut
+
+`automation/deck/tailscale-serve.sh` + `hngh-remote.desktop` make the
+one remaining operator step a double-click on the deck:
+
+1. Copy both files to `~/Desktop` on the deck.
+2. `chmod +x ~/Desktop/tailscale-serve.sh` (the .desktop `Exec` is the
+   relative hint `./tailscale-serve.sh` -- the script must sit next to
+   the entry; adjust the path if you install them elsewhere).
+3. Right-click `hngh-remote.desktop` on the deck -> **Allow Launch**
+   (SteamOS requirement for untrusted .desktop entries).
+
+The script is idempotent: it checks `tailscale serve status` first and
+exits 0 if 8890 is already served. It is **manual-run only** -- like
+the `sudo tailscale serve --bg 8890` step itself, automation never
+invokes it (no-daemon rule).
