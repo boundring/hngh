@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:plan-accept-gate:kernel -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-10T10:01:05Z routed-from=overnight:plan-accept-gate:kernel -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`
