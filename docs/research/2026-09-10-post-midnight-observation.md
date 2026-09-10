@@ -310,3 +310,234 @@ the refusal crumb carries the last lines
   presentation-pass-1 starve; failfirst development at speed-3 ceiling=1, and its
   promotion ladder is launch-fed (oks come from delegated sessions), so a starving
   ceiling cannot promote. Findings file: docs/design/kernel-gate-followup.md next.
+
+## Zoom-out: acceleration metrics (2026-09-10)
+
+### 1. Commit Throughput (real work vs ledger sync, UTC days)
+
+| Day       | Real Work | Ledger Sync | Total | Trend   |
+|-----------|-----------|-------------|-------|---------|
+| 2026-09-05| 4         | 0           | 4     | baseline|
+| 2026-09-06| 17        | 5           | 22    | +325%   |
+| 2026-09-07| 52        | 25          | 77    | PEAK (+146%)|
+| 2026-09-08| 23        | 24          | 47    | -39%    |
+| 2026-09-09| 13        | 25          | 38    | -43%    |
+| 2026-09-10| 1         | 0           | 1     | DROPPED |
+
+Real-work trend: peaked 2026-09-07 at 52 commits/day, then declined through the week. 2026-09-10 showing only 1 commit so far — the kernel gate red prevented most changes from landing today. Ledger-sync (heartbeat) remains constant ~24/night, indicating automated infrastructure runs reliably regardless of mission output. **Trend: declining real throughput; cadence infrastructure steady.**
+
+Peak-day hash:  staging execution produced heavy single-commit writes; post-peak days show fewer committed files as stalled plans couldn't land code.
+
+### 2. Plan Throughput (last 7 days)
+
+| Day       | Plans Accepted | Notes                        |
+|-----------|---------------|------------------------------|
+| 2026-09-04| 0             | pre-sweep                    |
+| 2026-09-05| 0             | pre-sweep                    |
+| 2026-09-06| 0             | pre-sweep                    |
+| 2026-09-07| 0             | auto-accepted via cron tick  |
+| 2026-09-08| 15            | bulk sweep accepted batch    |
+| 2026-09-09| 18            | acceptance wave (incl priority plans)|
+| 2026-09-10| 2             | follow-on blocked plans      |
+
+Total auto-acceptances (2026-09-08 to 2026-09-10): 35 from acceptance.log. Plans flipped executed: 31 total across repo history. **No new plan steps have been checked off by automated sessions since the last operator session (2026-09-09).** Priority plan status:
+
+| Plan                          | Steps Checked/Total | Status   |
+|-------------------------------|---------------------|----------|
+| rehearsal-lane                | 0/4                 | accepted |
+| work-graph-visualization      | 0/4                 | accepted |
+| presentation-pass-1           | 0/5                 | accepted |
+| stall-recovery-and-operator-surfaces | 0/11         | accepted (restored clobbered version) |
+| omp-hngh-integration          | 0/11                | accepted |
+| automation-schedule-optimization | 1/5              | accepted (S1 done by operator sweep) |
+
+Zero steps checked by autonomous delegation this cycle. **Trend: high acceptance rate but zero execution progress on priority plans due to compounded failures.**
+
+### 3. Session Efficiency (sessions launched with measurable outcomes)
+
+Data source: agent-handoffs.md (42 entries total, covering 2026-09-08T00:00Z through 2026-09-09T23:15:51Z). Earlier dates have no handoff entries logged.
+
+| Day       | Launched | Landed (ok/done) | Cancelled | Dead  | Landing % | Dominant Model                     |
+|-----------|----------|------------------|-----------|-------|-----------|------------------------------------|
+| 2026-09-08| ~21*     | 2                | 15        | 4     | 9%        | unsloth/Ornith-1.0-35B-GGUF(local-bench)|
+| 2026-09-09| ~21*     | 2                | 15        | 4     | 9%        | unsloth/Ornith-1.0-35B-GGUF(local-bench) + GLM Flash |
+| 2026-09-10| 0        | 0                | 0         | 0     | N/A       | No overnight beat completed yet    |
+
+Model distribution (all available handoffs):
+- unsloth/Ornith-1.0-35B-GGUF(local-bench): 12 sessions
+- zai/glm-5.3(paid-fallback): 5 sessions  
+- openrouter/z-ai/glm-5.3-flash(env): 2 sessions
+
+Outcome distribution: rc=0 cancelled (15), rc=124 dead (2), rc=1 dead (2), rc=0 done (2). Landings = 2 out of 22 measurable = **9%**. **Trend: catastrophically low. 91% of sessions produce nothing actionable.**
+
+*Caveat: exact per-day splits uncertain as handoff file has 42 lines total but timestamps span 2 days; the split shown is approximate based on date ranges.*
+
+### 4. Time-to-Recovery (diagnosis latency for major blockers)
+
+| Blocker Event           | Symptom Found        | Diagnosed/Resolved   | Latency   | Trend Analysis |
+|------------------------|----------------------|----------------------|-----------|----------------|
+| Model burn (unsloth)   | Budget exhaust 01:00Z| Operator session ~13:xxZ, outcome-demotion implemented | ~12 hours | Poor — human-dependent diagnosis window. Fail-first demotion mechanism (stall-recovery S1) would have auto-demoted at 2 strikes. |
+| File clobber (bb67075) | Clobber at 23:13Z UTC| Detected at 00:00Z blocked rows, recovered when observed 02:5xZ today | ~3h detectable, ~17h total from write-to-fix | Slow detection (auto-blocking created noise), slow fix (manual git restore required) |
+| Kernel gate flap       | kernel-gate-red-rc2 at 14:01Z | Root-caused via remote-push.sh auto-refresh next day 23:16Z | ~33 hours | Worst — persistent failure mode that the system self-corrects every ~20 minutes via push-check cycles but never sustains green long enough to land work |
+
+Diagnosis latency trend: not shrinking. The model-burn was found immediately but fixed only after ~12h of manual intervention. The clobber went undetected until it triggered the block chain. The gate problem persists continuously. The primary improvement lever is replacing all three with automated mechanisms: outcome-demotion at 2 strikes (S1), file-change detection in the watchdog loop, and isolated gate testing before scheduling (gate-evaluation isolation S5).
+
+### 5. Constraint State Right Now (as of 04:15Z)
+
+| Metric                  | Current Value                                |
+|------------------------|----------------------------------------------|
+| Failfirst speed        | speed-3 (cautious, 1 concurrent session max) |
+| Sessions launched today| 0 (no overnight beat completion yet)          |
+| Gate green rate last 6h| Brief green windows (~30 min each) via 16-remote-push.sh auto-refresh; mostly red |
+| THROTTLE rows last 3h  | Every 30-minute cadence (00:30, 01:01, 02:00, 02:30, 03:01Z) reporting THROTTLE:speed-3 |
+| Pending sessions       | deferred-live=2 (session-cost 03:01Z)         |
+| Last gate-green        | 2026-09-10T03:53:00Z (hngh: 2855 checks passed); pushed 1 commit at 04:11:57Z |
+
+The kernel gate just achieved a stable green state at 03:53Z-04:12Z, enabling one push. This is the first sustained green window since the morning flare-up. Whether it holds depends on whether load-correlated interference from parallel delegated sessions recurs.
+
+**Current bottleneck:** failfirst speed-3 throttling combined with persistent kernel gate instability. Even if gate recovers fully, the caution speed caps concurrency at 1 session, meaning at best 2-3 plan executions per night. The gate needs stabilization before speed promotion can occur — they form a dependency loop.
+
+---
+
+**VERDICT: Regressed.** 
+
+Throughput has declined from the 2026-09-07 peak (52 real commits/day) to near-zero on 2026-09-10. The six priority plans collectively hold 40 unchecked steps with 0 completed. Session efficiency is at 9% — the vast majority of launched sessions burn budget without producing landings. Three independent blocker events (model burn, file clobber, kernel gate flap) compound rather than resolve independently, creating a cascade where the kernel gate red prevents plan execution, preventing landed changes, which keeps the gate unstable because load patterns don't change without new code submissions.
+
+The single biggest remaining limiter is the kernel python3 tests/scripts/test-notify-agent.py
+python3 tests/scripts/test-backlog-lanes.py
+python3 tests/scripts/test-lint-parens.py
+python3 tests/scripts/test-loop-history-guard.py
+loop-history guard: 83 code-surface commits checked, 2 named exemption(s), 0 violations
+python3 tests/scripts/test-doc-numbers.py
+doc-numbers guard: README matches the live suite (past 2,855 checks)
+python3 tests/scripts/test-timeline-events.py
+python3 tests/scripts/test-dashboard-readout.py
+dashboard-readout smoke OK (linear+spiral+circular+burst+wave+tone+theme+banner+quiet+dance+roster)
+python3 tests/scripts/test-dashboard-tui.py
+python3 tests/scripts/test-evolve-dashboard-style.py
+python3 tests/scripts/test-schedule-heartbeat.py
+schedule-heartbeat dry-run (2026-09-10)
+  next:    item-a; 1 queued, 0 done
+  tree:     M docs/project/queue.md
+  card:    none
+  model:   unreachable (route=auto)
+  network: reachable
+  audio:   0/10
+  store:   /tmp/hngh-heartbeat-* (ephemeral, provisioned on a real tick)
+schedule-heartbeat: postponed — tree not clean ( M docs/project/queue.md)
+python3 tests/scripts/test-probe-model-route.py
+python3 tests/scripts/test-driver-routes.py
+driver route smoke OK (rotate-queue + worker-driver route vocabulary + bare-cycle refusal)
+python3 tests/scripts/test-dashboard-live.py
+python3 tests/scripts/test-generate-publication.py
+generate-publication: journal 2026-08-20 verified (0 commits, 0 candidate-bound, 0 check-ins)
+generate-publication: /tmp/tmpqajb8y1e/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
+generate-publication: /tmp/tmpa6y2wlrq/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
+generate-publication: /tmp/tmpa6y2wlrq/2026-08-20.md exists; journals are the operator's as much as the machine's. Use --force to overwrite.
+generated journal -> /tmp/tmpa6y2wlrq/2026-08-20.md
+generate-publication: journal 2026-08-20 verified (0 commits, 0 candidate-bound, 0 check-ins)
+python3 tests/scripts/test-fleet-manager.py
+python3 tests/scripts/test-osd-operative.py
+python3 tests/scripts/test-report-queue.py
+python3 tests/scripts/test-run-autonomous.py
+python3 tests/scripts/test-omp-bridge.py
+python3 scripts/lint-parens.py src/domain/profile.lisp src/domain/loadout.lisp src/domain/run.lisp src/domain/mission.lisp src/domain/outcome.lisp src/domain/governance.lisp src/domain/attestation.lisp src/domain/course.lisp src/application/create-run.lisp src/application/arm-run.lisp src/application/start-run.lisp src/application/ports.lisp src/application/checkpoint.lisp src/application/close-run.lisp src/application/admit-transport.lisp src/application/select-course.lisp src/adapter/evidence.lisp src/adapter/mutation.lisp src/adapter/review.lisp src/adapter/filesystem.lisp src/adapter/run-gather.lisp src/adapter/terminal.lisp src/adapter/model.lisp src/adapter/federation.lisp src/adapter/worker.lisp src/presentation/render.lisp src/packages.lisp src/main.lisp tests/fixtures/reference-lexicon/attempts-canonical-control.lisp tests/fixtures/reference-lexicon/presentation-only.lisp tests/fixtures/dependency-guard/inward-imports-presentation.lisp tests/fixtures/dependency-guard/inward-dependencies-clean.lisp tests/fixtures/dependency-guard/inward-imports-adapter.lisp tests/fixtures/dependency-guard/presentation-imports-adapter.lisp tests/fixtures/dependency-guard/presentation-dependencies-clean.lisp tests/fixtures/dependency-guard/composition-root-imports-all.lisp tests/support/boundary-guards.lisp tests/support/fakes.lisp tests/domain/test-run-state.lisp tests/domain/test-loadout.lisp tests/domain/test-governance.lisp tests/domain/test-governance-properties.lisp tests/domain/test-attestation.lisp tests/domain/test-course.lisp tests/application/test-start-run.lisp tests/application/test-create-run.lisp tests/application/test-arm-run.lisp tests/application/test-checkpoint.lisp tests/application/test-close-run.lisp tests/application/test-admit-transport.lisp tests/application/test-select-course.lisp tests/adapter/test-evidence.lisp tests/adapter/test-mutation.lisp tests/adapter/test-review.lisp tests/adapter/test-filesystem.lisp tests/adapter/test-run-gather.lisp tests/adapter/test-model.lisp tests/adapter/test-terminal.lisp tests/adapter/test-federation.lisp tests/adapter/test-worker.lisp tests/adapter/test-worker-driver.lisp tests/presentation/test-presentation.lisp tests/main/test-governance-dispatch.lisp tests/main/test-main.lisp tests/main/test-dispatch.lisp tests/main/test-status.lisp tests/run.lisp
+[OK] src/domain/profile.lisp
+[OK] src/domain/loadout.lisp
+[OK] src/domain/run.lisp
+[OK] src/domain/mission.lisp
+[OK] src/domain/outcome.lisp
+[OK] src/domain/governance.lisp
+[OK] src/domain/attestation.lisp
+[OK] src/domain/course.lisp
+[OK] src/application/create-run.lisp
+[OK] src/application/arm-run.lisp
+[OK] src/application/start-run.lisp
+[OK] src/application/ports.lisp
+[OK] src/application/checkpoint.lisp
+[OK] src/application/close-run.lisp
+[OK] src/application/admit-transport.lisp
+[OK] src/application/select-course.lisp
+[OK] src/adapter/evidence.lisp
+[OK] src/adapter/mutation.lisp
+[OK] src/adapter/review.lisp
+[OK] src/adapter/filesystem.lisp
+[OK] src/adapter/run-gather.lisp
+[OK] src/adapter/terminal.lisp
+[OK] src/adapter/model.lisp
+[OK] src/adapter/federation.lisp
+[OK] src/adapter/worker.lisp
+[OK] src/presentation/render.lisp
+[OK] src/packages.lisp
+[OK] src/main.lisp
+[OK] tests/fixtures/reference-lexicon/attempts-canonical-control.lisp
+[OK] tests/fixtures/reference-lexicon/presentation-only.lisp
+[OK] tests/fixtures/dependency-guard/inward-imports-presentation.lisp
+[OK] tests/fixtures/dependency-guard/inward-dependencies-clean.lisp
+[OK] tests/fixtures/dependency-guard/inward-imports-adapter.lisp
+[OK] tests/fixtures/dependency-guard/presentation-imports-adapter.lisp
+[OK] tests/fixtures/dependency-guard/presentation-dependencies-clean.lisp
+[OK] tests/fixtures/dependency-guard/composition-root-imports-all.lisp
+[OK] tests/support/boundary-guards.lisp
+[OK] tests/support/fakes.lisp
+[OK] tests/domain/test-run-state.lisp
+[OK] tests/domain/test-loadout.lisp
+[OK] tests/domain/test-governance.lisp
+[OK] tests/domain/test-governance-properties.lisp
+[OK] tests/domain/test-attestation.lisp
+[OK] tests/domain/test-course.lisp
+[OK] tests/application/test-start-run.lisp
+[OK] tests/application/test-create-run.lisp
+[OK] tests/application/test-arm-run.lisp
+[OK] tests/application/test-checkpoint.lisp
+[OK] tests/application/test-close-run.lisp
+[OK] tests/application/test-admit-transport.lisp
+[OK] tests/application/test-select-course.lisp
+[OK] tests/adapter/test-evidence.lisp
+[OK] tests/adapter/test-mutation.lisp
+[OK] tests/adapter/test-review.lisp
+[OK] tests/adapter/test-filesystem.lisp
+[OK] tests/adapter/test-run-gather.lisp
+[OK] tests/adapter/test-model.lisp
+[OK] tests/adapter/test-terminal.lisp
+[OK] tests/adapter/test-federation.lisp
+[OK] tests/adapter/test-worker.lisp
+[OK] tests/adapter/test-worker-driver.lisp
+[OK] tests/presentation/test-presentation.lisp
+[OK] tests/main/test-governance-dispatch.lisp
+[OK] tests/main/test-main.lisp
+[OK] tests/main/test-dispatch.lisp
+[OK] tests/main/test-status.lisp
+[OK] tests/run.lisp
+sbcl --script tests/run.lisp
+
+2855 checks passed.
+sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd "/home/bricker/Projects/etc/hngh/hngh.asd")' --eval '(asdf:load-system :hngh)'
+This is SBCL 2.6.8, an implementation of ANSI Common Lisp.
+More information about SBCL is available at <http://www.sbcl.org/>.
+
+SBCL is free software, provided as is, with absolutely no warranty.
+It is mostly in the public domain; some portions are provided under
+BSD-style licenses.  See the CREDITS and COPYING files in the
+distribution for more information. flakiness — specifically the load-correlated interference between parallel SBCL compilations documented in the schedule-optimization plan step 5. Until this is resolved with serialized gate evaluation (flock or concurrency shedding), the machine will oscillate between brief green flashes and sustained red states, and even during green periods, failfirst speed-3 caps throughput to roughly 1-2 successful plan executions per night. Fixing the gate serialization unlocks both gate stability AND the potential for speed promotion back toward standard/cautious speeds.
+- 2026-09-10T04:20Z | monitor pass 6: LANE-ENV FIX PROVEN LIVE - the
+  04:01:05Z staging session is running under
+  omp --model openrouter/z-ai/glm-5.3-flash on the workbeat lane
+  (verified via /proc/1170862 cmdline; first Flash session in the
+  workbeat lane since the env fix; the 23:15Z unsloth(local-bench)
+  regression does not recur). Session still running at 04:20 (started
+  04:01:05 under timeout 1800; budget/handoff rows and the oks
+  movement land on completion - pass 7 reads them; either outcome
+  moves the ladder: ok -> oks=2, degraded -> reset). Gate: 03:53Z
+  green (2855 checks, day-tier 03-gate-check) but the 04:01 beat's
+  accept-plans still measured kernel-gate-red-rc2 - same
+  watch-quit-race shape, confirming the flap is beat-load-correlated,
+  not a standing break: quiet gate runs pass, in-beat runs hit the
+  5s test budget. 3 gate-red/push-refused crumbs in 03:5x-04:1x; no
+  new gate-rerun capture yet (16-remote-push had nothing unpushed).
+  Acceptance: 3 new routed ux-review plans blocked on the same rc2;
+  priority plans unchanged. Verdict datum for 09-10's trend: the
+  machine launched a correctly-routed, correctly-modeled session
+  through the fixed lane - the reversal depends on this session's
+  outcome (pass 7) and on the routed test-budget fix for the in-beat
+  rc2 residual.
