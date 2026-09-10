@@ -81,6 +81,7 @@ test:
 	bash tests/test-dev-plan-synth.sh
 	bash tests/test-remote-push.sh
 	python3 -B tests/test-plan-identity.py
+	python3 -B tests/test-plan-templates.py
 	python3 -B tests/test-mcp-server.py
 	bash tests/test-model-demote.sh
 	bash tests/test-quota-routing.sh
