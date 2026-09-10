@@ -38,10 +38,10 @@ Regenerated weekly from live ledgers by
 hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 38 reviewed (hngh-automation/research-lines.tsv).
-- Queue Next: wake-mutation-lane, set 2026-08-25 (15 days old) (hngh docs/project/queue.md).
-- Plan ledger: 124 plan files, 105 routed candidates (hngh docs/project/plans/).
-- Operator items: 34 open (hngh-automation/dashboard/operator-items.json; display cap 40).
+- Research lines: 39 reviewed (hngh-automation/research-lines.tsv).
+- Queue Next: wake-mutation-lane, set 2026-08-25 (16 days old) (hngh docs/project/queue.md).
+- Plan ledger: 138 plan files, 115 routed candidates (hngh docs/project/plans/).
+- Operator items: 40 open (hngh-automation/dashboard/operator-items.json; display cap 40).
 - Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
 
