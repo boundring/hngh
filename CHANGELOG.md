@@ -34,6 +34,17 @@ lives under Pre-release / early development until the first release.
   (queue + accepted plans + last ceremony commit). Kernel stays
   side-effect-free: all omp-facing code lives in automation/, .omp/,
   and ~/.omp/; no daemons.
+- **Feedback auto-apply for quick theme/format items**
+  (docs/records/2026-09-11-feedback-apply.md): the apply slice of the
+  operator interactivity loop — jobs/feedback-apply.py (30m cadence
+  drop-in) applies whitelisted [quick] css-theme/data-format feedback
+  (font/gap/margin/padding +/−2px clamped to +/−16px from a recorded
+  baseline, explicit colors; max 5 appended rules per beat) to
+  dashboard/style.css, files inspection report rows for correction
+  items (named check run, never an edit), leaves everything else an
+  unapplied operator item, and carries a one-deep `--revert-last`
+  restore path via dashboard/feedback/APPLIED.md +
+  state/feedback-applied.tsv. 9 hermetic tests wired into make test.
 
 ### 2026-09-10
 
