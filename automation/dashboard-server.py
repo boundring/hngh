@@ -148,6 +148,13 @@ _tspec = importlib.util.spec_from_file_location(
 window_tile = importlib.util.module_from_spec(_tspec)
 _tspec.loader.exec_module(window_tile)
 
+# same treatment for jobs/digest-html.py (dash in filename): the
+# newspaper-style renderer behind the /digest-html/ GET routes.
+_dspec = importlib.util.spec_from_file_location(
+    "digest_html", os.path.join(ROOT, "jobs", "digest-html.py"))
+digest_html = importlib.util.module_from_spec(_dspec)
+_dspec.loader.exec_module(digest_html)
+
 
 def _launchers():
     merged = dict(DEFAULT_LAUNCHERS)
@@ -204,7 +211,39 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/digest/"):
             self._serve_md(DIGESTS, DIGEST_NAME_RE)
             return
+        if self.path.startswith("/digest-html/index.json"):
+            self._json(200, digest_html.digest_index(DIGESTS))
+            return
+        if self.path.startswith("/digest-html/"):
+            self._serve_digest_html()
+            return
         super().do_GET()
+
+    # GET /digest-html/<name>.html — newspaper-style rendering of ONE
+    # daily digest from the same jailed DIGESTS root as /digest/. The
+    # name must validate against DIGEST_NAME_RE after swapping the .html
+    # suffix for .md, and the md must realpath-land inside DIGESTS
+    # (jailed_doc_path); anything else 404s. Render faults fail closed
+    # with 500. Display-only; sibling overview dispatch link probes this.
+    def _serve_digest_html(self):
+        name = urllib.parse.unquote(self.path.rsplit("/", 1)[-1].split("?")[0])
+        if not name.endswith(".html"):
+            self.send_error(404)
+            return
+        doc = jailed_doc_path(DIGESTS, DIGEST_NAME_RE, name[:-5] + ".md")
+        if not doc:
+            self.send_error(404)
+            return
+        try:
+            payload = digest_html.render_page(doc, DIGESTS).encode("ascii")
+        except Exception:
+            self.send_error(500)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def _serve_md(self, base, name_re):
         name = urllib.parse.unquote(self.path.rsplit("/", 1)[-1].split("?")[0])

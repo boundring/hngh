@@ -101,6 +101,9 @@ resolution, escalation, or a material fact added)."
       printf '_sources: %s | model: %s_\n' "$(printf '%s' "$new_names" | tr '\n' ',' | sed 's/,$//')" "$used"
       printf '%s\n' "$summary"
     } >>"$DIGEST"
+    # grounded megastructure block: real feeds only, sources cited in
+    # HTML comments; best-effort, never breaks the news block.
+    python3 "$AUTOMATION_ROOT/jobs/digest-ledger.py" "$DATE" >>"$DIGEST" 2>/dev/null || true
   fi
   printf '%s\n' "$now" >"$digest_stamp" 2>/dev/null || true
   if [ "$reason" = "escalation" ]; then
