@@ -38,8 +38,10 @@ import argparse
 import html
 import importlib.machinery
 import importlib.util
+import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import zipfile
@@ -55,6 +57,7 @@ QUEUE = ROOT / "docs" / "project" / "queue.md"
 README = ROOT / "README.md"
 INTENT = ROOT / "docs" / "intent.md"
 ARCH = ROOT / "docs" / "architecture.md"
+AUTOMATION = ROOT / "automation"
 
 
 def git(*cmd):
@@ -103,6 +106,124 @@ def day_stats(day):
     return commits, candidates, labeled
 
 
+def dispatch_numbers(day):
+    """Daily dispatch metrics, fail-open: a missing feed, a locked
+    sqlite db, or unparsable json reads as 0/quiet — the dispatch is a
+    morning headline, never a governance input."""
+    budget = AUTOMATION / "logs" / "budget.md"
+    sessions = 0
+    if budget.exists():
+        sessions = sum(1 for ln in budget.read_text(errors="replace").splitlines()
+                       if ln.startswith(day) and ln.rstrip().endswith("session-run"))
+    spend, calls = 0.0, 0
+    db = AUTOMATION / "dashboard" / "telemetry.db"
+    if db.exists():
+        try:
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=2)
+            row = con.execute(
+                "select count(*), ifnull(sum(cost_usd), 0) from events "
+                "where kind = 'session-cost' "
+                "and ts >= datetime('now', '-24 hours')").fetchone()
+            con.close()
+            calls, spend = int(row[0]), round(float(row[1]), 2)
+        except Exception:
+            pass
+    open_items = 0
+    items = AUTOMATION / "dashboard" / "operator-items.json"
+    if items.exists():
+        try:
+            data = json.loads(items.read_text())
+            open_items = sum(1 for i in data.get("items", [])
+                             if i.get("status") == "open")
+        except Exception:
+            pass
+    states = {}
+    lines = AUTOMATION / "research-lines.tsv"
+    if lines.exists():
+        for ln in lines.read_text(errors="replace").splitlines():
+            parts = ln.split("\t")
+            if len(parts) >= 2:
+                states[parts[1]] = states.get(parts[1], 0) + 1
+    advancing = states.get("planned", 0) + states.get("expanding", 0)
+    verdict = ("advancing" if advancing
+               else ("holding" if states.get("reviewed") else "quiet"))
+    return {"sessions": sessions, "spend": spend, "calls": calls,
+            "open_items": open_items, "advancing": advancing,
+            "states": states, "verdict": verdict}
+
+
+def dispatch_section(day):
+    """The journal's DISPATCH lead: headline numbers from the same feeds
+    the digest uses. Every number cites its source in an HTML comment."""
+    d = dispatch_numbers(day)
+    by_state = ", ".join(f"{k} {v}" for k, v in sorted(d["states"].items())) \
+        or "none seeded"
+    return "\n".join([
+        "## DISPATCH",
+        "",
+        f"- **{d['sessions']}** sessions launched today; "
+        f"**${d['spend']:.2f}** spent across **{d['calls']}** model "
+        "calls in the last 24h.",
+        f"- **{d['advancing']}** research lines advancing "
+        f"({by_state}).",
+        f"- **{d['open_items']}** operator items open.",
+        f"Verdict: {d['verdict']}.",
+        "",
+        "<!-- sources: sessions = automation/logs/budget.md (date-prefix + "
+        "session-run suffix); spend/calls = automation/dashboard/telemetry.db "
+        "(events, kind=session-cost, 24h window); operator items = "
+        "automation/dashboard/operator-items.json (status=open); research "
+        "lines = automation/research-lines.tsv (state column) -->",
+    ])
+
+
+def dispatch_table(day):
+    """The README daily-dispatch table row block (inside the
+    dispatch:begin / dispatch:end sentinels)."""
+    d = dispatch_numbers(day)
+    return "\n".join([
+        f"| {day} | {d['sessions']} | ${d['spend']:.2f} | "
+        f"{d['advancing']} | {d['open_items']} |",
+        "",
+        f"Deep read: [the journal](docs/journal/{day}.md).",
+    ])
+
+
+def readme_dispatch(day, readme=None):
+    """Rewrite ONLY the sentinel-bounded daily-dispatch table in the
+    public README — same machine-owned convention as the torch
+    sentinels in docs/project/STATE-OF-PROJECT.md. Sentinels missing ->
+    refuse (never inject)."""
+    path = Path(readme) if readme else README
+    if not path.exists() or "<!-- dispatch:begin -->" not in path.read_text():
+        print(f"generate-publication: {path} missing or dispatch "
+              "sentinels absent; table not rewritten")
+        return 1
+    block = dispatch_table(day)
+    out, inh, done = [], False, False
+    for ln in path.read_text().splitlines():
+        if ln.strip() == "<!-- dispatch:begin -->":
+            inh, done = True, True
+            out.append(ln)
+            continue
+        if inh and ln.strip() == "<!-- dispatch:end -->":
+            inh = False
+            out.append(ln)
+            continue
+        if not inh:
+            out.append(ln)
+    if inh:
+        print(f"generate-publication: {path} dispatch sentinels "
+              "unterminated; table not rewritten")
+        return 1
+    text = "\n".join(out)
+    marker = "<!-- dispatch:begin -->"
+    i = text.index(marker) + len(marker)
+    path.write_text(text[:i] + "\n" + block + "\n" + text[i:].lstrip("\n"))
+    print(f"generate-publication: dispatch table -> {path} ({day})")
+    return 0
+
+
 def journal_narrative(day, n, candidates, labeled, checkins, timeline):
     arcs = []
     if n:
@@ -143,6 +264,8 @@ def build_journal(day):
                  if kinds else "none")
     lines = [
         f"# Journal — {day}",
+        "",
+        dispatch_section(day),
         "",
         narrative,
         "",
@@ -362,6 +485,7 @@ def main(argv=None):
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--ebook", nargs="?")
     parser.add_argument("--chapters", nargs="+", metavar="GLOB")
+    parser.add_argument("--readme", nargs="?", const=True)
     parser.add_argument("--site", nargs="?")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("day", nargs="?")
@@ -393,8 +517,11 @@ def main(argv=None):
             index = build_site(args.site or "docs/site")
             print(f"site index -> {index}")
             return 0
+        if args.readme is not None:
+            return readme_dispatch(day, None if args.readme is True
+                                   else args.readme)
         print("usage: --daily [DATE] | --check [DATE] | --ebook[=DIR] "
-              "| --site[=DIR]", file=sys.stderr)
+              "| --site[=DIR] | --readme[=PATH] [DATE]", file=sys.stderr)
         return 2
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"generate-publication: {exc}", file=sys.stderr)

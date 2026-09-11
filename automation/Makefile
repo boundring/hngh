@@ -107,6 +107,7 @@ test:
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-imagegen-submit.sh
+	bash tests/test-dispatch.sh
 	bash scripts/lint-identifiers.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 

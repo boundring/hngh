@@ -82,6 +82,18 @@ promotion ladder: [docs/core/clean-architecture-charter.md](docs/core/clean-arch
   the machine hall actually fired today, with the model leg named on
   every beat.
 
+The daily dispatch regenerates each morning from the same live feeds the
+journal uses - only content between the `dispatch:begin` / `dispatch:end`
+sentinels is rewritten (same machine-owned convention as the torch
+sentinels in [docs/project/STATE-OF-PROJECT.md](docs/project/STATE-OF-PROJECT.md)),
+the rest of this README stays hand-edited.
+
+<!-- dispatch:begin -->
+| 2026-09-11 | 7 | $6.49 | 5 | 40 |
+
+Deep read: [the journal](docs/journal/2026-09-11.md).
+<!-- dispatch:end -->
+
 ---
 
 `[ III. HOW IT WORKS ]`
