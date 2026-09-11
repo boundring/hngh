@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-11T10:02:24Z routed-from=overnight:bridge-refused:2026-09-06-worker-transport-wiring -->
+<!-- plan: status=parked risk=normal accepted=2026-09-11T10:02:24Z routed-from=overnight:bridge-refused:2026-09-06-worker-transport-wiring  cause=obsolete disposed=2026-09-11T13:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-11 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:bridge-refused:2026-09-06-worker-transport-wiring`
@@ -13,3 +13,4 @@ at 2026-09-11T10:00:49Z. Alert text: overnight beat 2026-09-06-worker-transport-
 
 - 2026-09-11T11:00:48Z re-occurred (dedup window expired)
 - 2026-09-11T12:00:48Z re-occurred (dedup window expired)
+- 2026-09-11T13:00:13Z re-occurred (dedup window expired)
