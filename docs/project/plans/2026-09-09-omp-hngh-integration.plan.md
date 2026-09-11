@@ -49,7 +49,7 @@ never knows omp exists. No step touches provider/credential configuration
 
 ## Steps
 
-- [ ] 1. Read-only MCP stdio server `automation/mcp/hngh_mcp_server.py`,
+- [x] 1. Read-only MCP stdio server `automation/mcp/hngh_mcp_server.py`,
       wrapping existing hngh CLI read-only commands as MCP tools:
       `hngh present`, `hngh status`, `scripts/report-queue`,
       `scripts/dashboard-readout` (JSON mode if available). stdio transport,
@@ -95,7 +95,7 @@ never knows omp exists. No step touches provider/credential configuration
       with what `automation/scripts/overnight-cycle.sh` passes through today.
       Verification: definitions load as agents in an omp session; a dry
       executor run on a parked plan produces a proposal, not a mutation.
-- [ ] 7. TTSR/rulebook expansion from ceremony lessons: audit
+- [x] 7. TTSR/rulebook expansion from ceremony lessons: audit
       `.omp/rules/` (2 live rules) and `~/.omp/agent/rules/` (16 live) against
       the lessons in `docs/design/autonomous-development-control.md` and
       `docs/records/2026-09-04-transcript-stall-no-replace.md`; add only rules
@@ -123,7 +123,7 @@ never knows omp exists. No step touches provider/credential configuration
       hngh state from omp (browser relay) or `scripts/dashboard-tui`.
       Verification: endpoint returns live data matching `queue.md` and
       `plans.json`; page renders in the running dashboard.
-- [ ] 11. Records: `CHANGELOG.md` entry + `docs/records/2026-09-XX-omp-integration.md`
+- [x] 11. Records: `CHANGELOG.md` entry + `docs/records/2026-09-XX-omp-integration.md`
       describing the integrated surface set, and update
       `docs/project/plans/README.md` only if the propose surface gained
       behavior.
