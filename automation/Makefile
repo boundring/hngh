@@ -65,6 +65,7 @@ test:
 	python3 -B tests/test-bctx-launch.py
 	python3 -B tests/test-ocgo-attribution.py
 	python3 -B tests/test-ocgo-launch.py
+	python3 -B tests/test-causes.py
 	python3 -B tests/test-resume-pass.py
 	python3 -B tests/test-context-ratio.py
 	bash tests/test-news-screen.sh
