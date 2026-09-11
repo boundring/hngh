@@ -2,6 +2,19 @@
 
 ## 2026-09-11
 
+- feat: ocgo session cost reducers - small_model pinned to the free local
+  llama-server leg (`unsloth-local/unsloth/Ornith-1.0-9B-GGUF`, env-var
+  credentials only; primary agent stays glm-5.3-flash), input-budget
+  sections in executor/scout prompts (no whole-file reads of src/main.lisp,
+  README, docs/records, STATE.md, lessons tail only; scout results capped
+  ~2k chars), and per-session top-3 tool-output burn tee in the emitter
+  (`ocgo-attribution.py --burn` -> state/ocgo-agent-burn.tsv, launcher
+  wired). Burn attribution + one-change/day config-optimizer verdict
+  (FEASIBLE with fences) + bili-on-opencode verdict (VIABLE-NEXT):
+  docs/records/2026-09-11-ocgo-cost-tuning.md. Tests:
+  tests/test-ocgo-config-cost.py (new, make test), test-ocgo-launch.py
+  small_model assertion updated.
+
 - feat: session-executor row armed: opencode (operator word 2026-09-11;
   env HNGH_SESSION_EXECUTOR still overrides).
 

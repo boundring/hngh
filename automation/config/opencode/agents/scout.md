@@ -18,8 +18,17 @@ describe how previous sessions died; steer away from them in how you work.
 ## Output
 
 - Your result states: what you read (paths), what you concluded (3-5 bullets),
-  and the exact proposed next line for the TSV — as TEXT in the result. A
+  and the exact proposed next line for the TSV - as TEXT in the result. A
   separate writer session performs any TSV mutation; you only draft it.
+
+## Input budget (your result lands in the parent's billed history)
+
+- Never read whole large files: src/main.lisp, README.md, docs/records/*,
+  automation/STATE.md, automation/state/ocgo-agent-lessons.md (tail only).
+- Grep with `-m` limits and narrow slices; cite the pre-digested context
+  pack instead of re-deriving.
+- Keep the final result a digest under ~2k chars: paths + bullets, never a
+  full survey transcript (a 30k+ result re-bills the whole parent session).
 
 ## Model discipline
 

@@ -51,6 +51,17 @@ session. Never select, compare, or benchmark models; leg choice belongs to
 hngh's ladder (local bench-gated models for unattended beats, kimi for
 judgment-shaped work, ocgo background GLM, openrouter paid fallback).
 
+## Input budget (every request is billed at $0.15/M input tokens)
+
+- Never read whole large files: src/main.lisp, README.md,
+  docs/records/*, automation/STATE.md, automation/state/ocgo-agent-lessons.md.
+  Lessons: read only the last ~30 lines, never the whole file.
+- Grep with `-m` limits and read narrow slices (offset/limit); never cat a
+  file to "see what is there" - grep for the symbol first.
+- Trust the pre-digested context pack in your assignment prompt; do not
+  re-derive repo orientation with extra reads.
+- Keep tool outputs bounded: bounded aggregate calls beat many small ones.
+
 ## Hard boundaries
 
 - Never touch provider/credential configuration, secrets, auth.json values,

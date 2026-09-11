@@ -171,6 +171,7 @@ launch) before re-deriving any repo fact from scratch."
    oc_rc=$? # captured before the emitter masks $?
    python3 "$AUTOMATION_ROOT/jobs/ocgo-attribution.py" \
     "$ROOT/$log.json" --plain "$ROOT/$log" \
+    --burn "$AUTOMATION_ROOT/state/ocgo-agent-burn.tsv" \
     --telemetry "${HNGH_TELEMETRY_DB:-$AUTOMATION_ROOT/dashboard/telemetry.db}" \
     >/dev/null 2>&1 || true
   else

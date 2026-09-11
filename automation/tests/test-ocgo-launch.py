@@ -285,11 +285,13 @@ class OcgoConfigLayer(unittest.TestCase):
         # permission — the documented agent-format mechanism)
         self.assertEqual(agents["hngh-scout"]["permission"]["edit"], "deny")
         self.assertEqual(agents["hngh-scout"]["permission"]["bash"], "deny")
-        # Go quota model pinned everywhere; small_model pinned too so
-        # lightweight tasks never route to another model id
+        # Go quota model pinned for the agent; small_model pinned too so
+        # lightweight tasks never route to another id (2026-09-11 cost
+        # reducer: small_model rides the free local leg, titles/summary only)
         pin = "opencode-go/glm-5.3-flash"
         self.assertEqual(cfg["model"], pin)
-        self.assertEqual(cfg["small_model"], pin)
+        self.assertTrue(cfg["small_model"].startswith("unsloth-local/"),
+                        cfg["small_model"])
         self.assertEqual(agents["executor"]["model"], pin)
         self.assertEqual(agents["hngh-scout"]["model"], pin)
         self.assertEqual(cfg["default_agent"], "executor")

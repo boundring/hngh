@@ -135,6 +135,52 @@ def extract_plain(stream, plain):
         pass
 
 
+def append_burn(stream, burn):
+    """Per-session top-burner tee (docs/records/2026-09-11-ocgo-cost-tuning.md):
+    the 3 largest tool outputs from the stream, largest first, as TSV rows
+    utc_date | session_id | tool | output_chars | input-desc. The burn
+    table is what the day-tier config optimizer reads; append-only so a
+    rerun never rewrites history."""
+    hits = []
+    try:
+        with open(stream, errors="replace") as fh:
+            for ln in fh:
+                try:
+                    ev = json.loads(ln)
+                except ValueError:
+                    continue
+                if ev.get("type") != "tool_use":
+                    continue
+                part = ev.get("part") or {}
+                state = part.get("state") or {}
+                out = state.get("output") or ""
+                if len(out) < 256:
+                    continue
+                inp = state.get("input") or {}
+                desc = (inp.get("filePath") or inp.get("command")
+                        or inp.get("pattern") or inp.get("description") or "")
+                desc = " ".join(str(desc).split())[:120]
+                hits.append((len(out), ev.get("sessionID") or "",
+                             part.get("tool") or "?", desc,
+                             ev.get("timestamp")))
+    except OSError:
+        return
+    if not hits:
+        return
+    top = sorted(hits, key=lambda h: -h[0])[:3]
+    try:
+        with open(burn, "a", errors="replace") as out:
+            if out.tell() == 0:
+                out.write("utc_date\tsession_id\ttool\toutput_chars\tdesc\n")
+            for chars, sid, tool, desc, ts in top:
+                date = datetime.fromtimestamp(
+                    (ts or 0) / 1000.0, tz=timezone.utc).strftime("%Y-%m-%d")
+                out.write("%s\t%s\t%s\t%s\t%s\n"
+                          % (date, sid, tool, chars, desc))
+    except OSError:
+        pass
+
+
 def main():
     p = argparse.ArgumentParser(prog="ocgo-attribution.py")
     p.add_argument("stream", help="opencode run --format json event log")
@@ -143,6 +189,8 @@ def main():
     p.add_argument("--telemetry", default=telemetry.DB)
     p.add_argument("--source", default="ocgo-agent")
     p.add_argument("--plain", help="plain-text log path for classify_cause")
+    p.add_argument("--burn", help="TSV path for the per-session top-3 "
+                   "tool-output burn (appended)")
     args = p.parse_args()
     try:
         telemetry.DB = args.telemetry
@@ -161,6 +209,8 @@ def main():
         emit_rows(per, args.telemetry, args.source)
         if args.plain:
             extract_plain(args.stream, args.plain)
+        if args.burn:
+            append_burn(args.stream, args.burn)
     except Exception:
         pass  # best-effort: attribution never fails a session's cleanup
     sys.exit(0)
