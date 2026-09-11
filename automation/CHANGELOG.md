@@ -2,6 +2,16 @@
 
 ## 2026-09-11
 
+- fix: network-down headroom flag now measures the WAN directly —
+  jobs/system-awareness.sh probes the loop's own push dependency
+  (curl api.github.com, any HTTP answer = up) and flags network-down only
+  when that fails; the old (model endpoint fail && tailscale peers 0)
+  predicate never probed the network and fired nightly 2026-09-08..09-11
+  whenever the local unsloth proxy hiccuped while the operator's peer
+  devices slept (routed plan 2026-09-11-routed-system-network-down, root
+  cause after 7 undiagnosed parkings 2026-09-04..09-11); regression test
+  tests/test-system-awareness.sh wired into make test; disposition
+  recorded as research subject fail-20260911-system-network-down.
 - feat: hngh's own opencode configuration layer —
   `automation/config/opencode/` (opencode.jsonc OPENCODE_CONFIG target:
   secret-deny block copied verbatim (superset of opencode-safety.jsonc,
