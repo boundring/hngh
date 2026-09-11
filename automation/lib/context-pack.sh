@@ -30,6 +30,9 @@ context_role_hint() { # role
   review)
     printf 'attack the record, not the summary; every finding carries file+line evidence or it is not a finding'
     ;;
+  dream)
+    printf 'advisory-only dream pass: simulate the plan step read-only, never mutate anything except your dream brief; answer in five flat fields (requirements, failure-modes, surfaces, split, sanity-checks); handoff-brief discipline — one field: value line each, single-line values, "not established" never guessed'
+    ;;
   *)
     printf 'execute the routed plan as the smallest verified step, land it, append the ledgers, stop'
     ;;

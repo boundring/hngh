@@ -533,6 +533,63 @@ RULE
  printf '%s\n' "$ROOT/prompts/overnight/$slug.md"
 }
 
+# --- forethought: dream pass (design docs/research/2026-09-10-
+# forethought-and-decomposition.md s2/s3/s5): a bounded read-only session
+# simulates one plan step before an executor touches it. One cadence row
+# (forethought-depth), one classifier, one conditional launch — no
+# framework, no new state files, no ledger; advisory-only, fail-open.
+FORETHOUGHT_DEPTH="${FORETHOUGHT_DEPTH:-$(get_param forethought-depth 1)}"
+
+is_risky_step() { # step [sibling_steps...] -> 0 = dream-worthy at depth 1
+ local step="$1"
+ shift
+ # kernel-touching: the autonomy rule's critical path set
+ printf '%s\n' "$step" | grep -qiE 'src/|tests/|Makefile|hngh\.asd' && return 0
+ # unproven-surface markers: a capability not yet proven in-repo
+ printf '%s\n' "$step" | grep -qiE 'unverified|unproven|extension|hook|session_start|MCP' && return 0
+ # file-sharing with a sibling step: a slash-path both mention (the
+ # inventory's file-conflict check, restated as a grep)
+ local mine sibling
+ mine="$(printf '%s\n' "$step" | grep -oE '[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+' | sort -u)"
+ [ -n "$mine" ] || return 1
+ for sibling in "$@"; do
+  printf '%s\n' "$sibling" | grep -oE '[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+' | sort -u |
+   grep -qxFf <(printf '%s\n' "$mine") && return 0
+ done
+ return 1
+}
+
+build_dream_prompt() { # slug plan_file step dream_out -> prompt path on stdout
+ local slug="$1" pfile="$2" step="$3" dream_out="$4"
+ mkdir -p "$ROOT/prompts/overnight"
+ {
+  printf 'WAKE CONTEXT: %s UTC. You are a DREAM pass (forethought design:\ndocs/research/2026-09-10-forethought-and-decomposition.md section 2):\na bounded READ-ONLY simulation of one plan step before an executor\ntouches it. Advisory-only: never mutate the repo, ledgers, or plan\nstate — the ONLY write this session may make is the dream brief named\nbelow. Read the plan and the repo before answering.\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'Plan step to simulate (plan %s): %s\n\n' "$slug" "$step"
+  cat "$pfile"
+  cat <<'RULE'
+
+## Dream brief (binding for this session)
+
+Emit the five dream fields in handoff-brief flat field discipline (one
+`field: value` line per field, single-line values, `not established`
+never guessed):
+requirements: facts that must hold before execution
+failure-modes: anticipated problems, each tagged with a bestiary class
+(bad-execution / missing-knowledge / missing-design / missing-authority / obsolete)
+surfaces: required files and surfaces to touch or read
+split: proposed subtask decomposition (or `single-session`)
+sanity-checks: assertions the executor verifies FIRST, before its first edit
+
+Field schema: docs/research/2026-09-10-forethought-and-decomposition.md
+section 2 — cite it, do not restate it. Write the finished brief to the
+dream brief path below, then stop. If you cannot establish a field,
+write `not established` — never guess.
+RULE
+  printf '\nDream brief path (your single permitted write): %s\n' "$dream_out"
+ } >"$ROOT/prompts/overnight/$slug.dream-prompt.md"
+ printf '%s\n' "$ROOT/prompts/overnight/$slug.dream-prompt.md"
+}
+
 if [ -n "$plan_file" ]; then
  slug="$plan_slug"
  objective="Execute the next step of plan $slug: $plan_step"
@@ -620,13 +677,39 @@ cd "$ROOT" || exit 0
 # batch: slot 0 is the selected plan-or-lane session; remaining slots are
 # additional accepted plans (steps within one plan stay sequential).
 RESULTS="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-results.XXXXXX")"
-run_one() { # slug objective prompt_file plan_file
- local slug="$1" objective="$2" prompt_file="$3" pfile="$4"
+run_one() { # slug objective prompt_file plan_file [dream_step]
+ local slug="$1" objective="$2" prompt_file="$3" pfile="$4" dream_step="$5"
  local start rc run_id log disposition cause result
  # crash-safety net: never spawn past a stop signal or a cold-start skip
  [ "$STOP" -eq 1 ] && return 0
  printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
  start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ # forethought dream pass: one bounded read-only session before the
+ # executor; fail-open — a dream that dies files a breadcrumb and the
+ # step proceeds undreamed (a dream may delay, never veto). The dream
+ # runs inside this slot synchronously and adds one budget row via
+ # launch_session (counted in the sessions-day ceiling).
+ if [ -n "$dream_step" ]; then
+  local dream_out="$ROOT/prompts/overnight/$slug.dream.md"
+  rm -f "$dream_out"
+  local dprompt
+  dprompt="$(build_dream_prompt "$slug" "$pfile" "$dream_step" "$dream_out")"
+  local save_ts="$TIMEOUT_S"
+  TIMEOUT_S="${OVERNIGHT_DREAM_TIMEOUT:-600}" # bounded dream, never 2x the beat
+  launch_session "$slug-dream" \
+   "DREAM pass: read-only simulation of plan $slug step before execution" \
+   "$dprompt" dream
+  TIMEOUT_S="$save_ts"
+  if [ "$LAUNCH_RC" -ne 0 ] || [ ! -s "$dream_out" ]; then
+   breadcrumb "$JOB_NAME" "forethought-dream-skip" \
+    "$slug dream dead/empty (rc=$LAUNCH_RC) — step proceeds undreamed"
+  else
+   {
+    printf '\n## Dream sanity-checks (verify these assertions FIRST, before your first edit)\n\n'
+    cat "$dream_out"
+   } >>"$prompt_file"
+  fi
+ fi
  launch_session "$slug" "$objective" "$prompt_file"
  rc="$LAUNCH_RC"
  run_id="$LAUNCH_RUN_ID"
@@ -689,20 +772,36 @@ run_one() { # slug objective prompt_file plan_file
 }
 
 s_slug=("$slug") s_obj=("$objective") s_prompt=("$prompt_file") s_plan=("$plan_file")
+dream=""
+if [ "$FORETHOUGHT_DEPTH" -ge 2 ]; then
+ dream="$plan_step"
+elif [ "$FORETHOUGHT_DEPTH" -eq 1 ] && [ -n "$plan_step" ] &&
+ is_risky_step "$plan_step" "${plan_steps[@]:1}"; then
+ dream="$plan_step"
+fi
+s_dream=("$dream")
 i=1
 while [ "$i" -lt "$slots" ] && [ "$i" -lt "${#plan_slugs[@]}" ]; do
  s_slug+=("${plan_slugs[$i]}")
  s_obj+=("Execute the next step of plan ${plan_slugs[$i]}: ${plan_steps[$i]}")
  s_prompt+=("$(build_plan_prompt "${plan_slugs[$i]}" "${plan_files[$i]}" "${plan_steps[$i]}")")
  s_plan+=("${plan_files[$i]}")
+ dream=""
+ if [ "$FORETHOUGHT_DEPTH" -ge 2 ]; then
+  dream="${plan_steps[$i]}"
+ elif [ "$FORETHOUGHT_DEPTH" -eq 1 ] &&
+  is_risky_step "${plan_steps[$i]}" "${plan_steps[@]:0:$i}" "${plan_steps[@]:$((i + 1))}"; then
+  dream="${plan_steps[$i]}"
+ fi
+ s_dream+=("$dream")
  i=$((i + 1))
 done
 
 if [ "${#s_slug[@]}" -eq 1 ]; then
- run_one "${s_slug[0]}" "${s_obj[0]}" "${s_prompt[0]}" "${s_plan[0]}"
+ run_one "${s_slug[0]}" "${s_obj[0]}" "${s_prompt[0]}" "${s_plan[0]}" "${s_dream[0]}"
 else
  for i in "${!s_slug[@]}"; do
-  run_one "${s_slug[$i]}" "${s_obj[$i]}" "${s_prompt[$i]}" "${s_plan[$i]}" &
+  run_one "${s_slug[$i]}" "${s_obj[$i]}" "${s_prompt[$i]}" "${s_plan[$i]}" "${s_dream[$i]}" &
  done
  wait
 fi
