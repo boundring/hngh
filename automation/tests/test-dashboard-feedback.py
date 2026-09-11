@@ -52,6 +52,11 @@ class EndpointTest(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.fb_dir = self.tmp / "feedback"
         ds.FEEDBACK = str(self.fb_dir)
+        dash = self.tmp / "dash"
+        dash.mkdir()
+        ds.DASHBOARD = str(dash)  # token file lands in tmp, hermetic
+        ds.TOKEN_FILE = str(dash / "token.txt")
+        self.token = ds.load_token()
         ds.Handler._fb_last = {}
         ds.Handler.protocol_version = "HTTP/1.1"
         self.httpd = ds.ThreadingHTTPServer(("127.0.0.1", 0), ds.Handler)
@@ -69,6 +74,7 @@ class EndpointTest(unittest.TestCase):
         body = json.dumps(payload)
         c.request("POST", "/api/feedback", body,
                   {"Content-Type": "application/json",
+                   "X-Hngh-Token": self.token,
                    "Connection": "close"})
         r = c.getresponse()
         data = r.read()
@@ -83,6 +89,7 @@ class EndpointTest(unittest.TestCase):
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         c.request("POST", "/api/feedback", urllib.parse.urlencode(fields),
                   {"Content-Type": "application/x-www-form-urlencoded",
+                   "X-Hngh-Token": self.token,
                    "Connection": "close"})
         r = c.getresponse()
         data = r.read()
