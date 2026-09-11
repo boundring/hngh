@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ui-audit:axe:aria-required-children -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-11T07:02:25Z routed-from=ui-audit:axe:aria-required-children -->
 # 2026-09-11 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:axe:aria-required-children`
