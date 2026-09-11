@@ -490,21 +490,6 @@ import json, sys                 # model field = LobeHub agent id; NO messages,
 print(json.dumps({"model": sys.argv[1], "input": sys.argv[2], "max_output_tokens": int(sys.argv[3])}))
 PY
  # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
- # live 2026-09-07: OpenAI Responses shape,
 }
 lobehub_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  local prompt="$1" max_tokens="$2" url agent key kfile content pace cap
