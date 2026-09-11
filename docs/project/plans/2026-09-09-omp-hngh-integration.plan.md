@@ -104,7 +104,7 @@ never knows omp exists. No step touches provider/credential configuration
       Deduplicate with the existing `22-ttsr-fit` cadence screen.
       Verification: each new rule fires on its stated trigger in a probe
       session and stays silent on normal traffic; `22-ttsr-fit` reports no drift.
-- [ ] 8. Context-seeding: make `omp-bridge --orient` run automatically for
+- [x] 8. Context-seeding: make `omp-bridge --orient` run automatically for
       every omp session entering this repo (extension session-lifecycle event
       in the `hngh-bridge` plugin, or a rulebook `condition` rule if events
       cannot inject). Orientation output stays read-only and small.
