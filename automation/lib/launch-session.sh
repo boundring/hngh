@@ -21,6 +21,8 @@
 
 declare -F classify_cause >/dev/null ||
  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/causes.sh"
+declare -F get_param >/dev/null ||
+ . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/params.sh"
 declare -F context_pack >/dev/null ||
  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context-pack.sh"
 declare -F breadcrumb >/dev/null ||
@@ -94,9 +96,40 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
 
 Read the pre-digested repo context at $ctx (regenerated fresh at this
 launch) before re-deriving any repo fact from scratch."
+ # executor selection (design docs/research/2026-09-10-opencode-agentic-
+ # surface.md s5): one cadence-params row; empty/absent = omp fail-closed;
+ # env HNGH_SESSION_EXECUTOR overrides the row (per-caller precedence).
+ local executor
+ executor="${HNGH_SESSION_EXECUTOR:-$(get_param session-executor omp)}"
  # timeout stays OUTSIDE bili (timeout -> bili -> omp): the SIGTERM
  # still lands on the process-tree root and kills the whole tree.
- if [ -n "$bctx_bin" ]; then
+ if [ "$executor" = "opencode" ]; then
+  # opencode executor: same wrapper contract, different child. --format
+  # json (agent spend + session ids) to the side log; the emitter
+  # attributes it (R2) and extracts plain text into the classifier's
+  # log path (lib/causes.sh keyword matching — json escapes would
+  # break keyword matching, design risk 2). OPENCODE_CONFIG pins the
+  # copied secret-deny block: --auto approves everything not explicitly
+  # denied (design risk 1). Fail-closed: opencode binary or model row
+  # absent -> omp launch with a breadcrumb.
+  local oc_bin oc_model
+  oc_bin="$(command -v opencode || true)"
+  oc_model="$(get_param opencode-model '')"
+  if [ -n "$oc_bin" ] && [ -n "$oc_model" ]; then
+   OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode-safety.jsonc" \
+    timeout "$TIMEOUT_S" "$oc_bin" run --dir "$ROOT" --format json \
+    -m "opencode-go/$oc_model" --auto "$body" >"$ROOT/$log.json" 2>&1
+   python3 "$AUTOMATION_ROOT/jobs/ocgo-attribution.py" \
+    "$ROOT/$log.json" --plain "$ROOT/$log" \
+    --telemetry "${HNGH_TELEMETRY_DB:-$AUTOMATION_ROOT/dashboard/telemetry.db}" \
+    >/dev/null 2>&1 || true
+  else
+   breadcrumb launch-session "ocgo-executor" \
+    "opencode binary or opencode-model row absent -> omp"
+   timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
+    "$body" >"$ROOT/$log" 2>&1
+  fi
+ elif [ -n "$bctx_bin" ]; then
   timeout "$TIMEOUT_S" "$bctx_bin" omp -- -p --model "$SESSION_MODEL" \
    "$body" >"$ROOT/$log" 2>&1
  else
