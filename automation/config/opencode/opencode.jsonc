@@ -21,24 +21,57 @@
 //   (the $60/mo tier = the $12/5h bucket); small_model pinned to the SAME
 //   id so lightweight tasks (title/summary/compaction) never route to
 //   another model (operator rule: opencode never picks models; R2 keeps
-//   agent spend attributable on one bucket).
+//   agent spend attributable on one bucket). 2026-09-11 cost reducers
+//   (docs/records/2026-09-11-ocgo-cost-tuning.md): small_model moved to the
+//   free local llama-server leg: titles/summaries/compaction tolerate a
+//   small model, the primary agent does NOT (it stays glm-5.3-flash).
 // Deliberately OUT (prior-install evaluation): plugins
 // opencode-antigravity-auth + oh-my-openagent (no hngh purpose — the Go
 // quota authenticates via the OPENCODE_API_KEY environment variable,
 // verified `opencode auth list` Environment: "OpenCode Zen
-// OPENCODE_API_KEY") and the unsloth-local provider block (bench-gated
-// local models route through omp legs, never opencode sessions). They stay
-// in the operator's personal config. Honest note: the global config still
+// OPENCODE_API_KEY"). The unsloth-local provider block WAS deliberately out
+// (bench-gated local models route through omp legs) until the cost reducer
+// brought it back for small_model only; credentials ride {env:...}
+// references, never literals. They stay in the operator's personal config
+// too. Honest note: the global config still
 // merges in, so its plugins still load for machine sessions; a custom
 // config cannot remove them (short of OPENCODE_CONFIG_DIR isolation) —
 // acceptable because they set no hngh-owned key.
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode-go/glm-5.3-flash",
-  "small_model": "opencode-go/glm-5.3-flash",
+  "small_model": "unsloth-local/unsloth/Ornith-1.0-9B-GGUF",
   "default_agent": "executor",
   "autoupdate": false,
   "share": "disabled",
+  // Free local llama-server leg (127.0.0.1:8888, token-gated): SMALL_MODEL
+  // ONLY: titles, summaries, compaction. Never the primary agent (a 9B
+  // local cannot hold the executor role; compaction quality vs flash is an
+  // accepted trade for throwaway summaries). Both values resolve through
+  // opencode's {env:VAR} interpolation: UNSLOTH_BASE_URL/UNSLOTH_API_KEY
+  // must exist in the launcher's environment; no key value is ever stored
+  // in this file (secret-file guardrail).
+  "provider": {
+    "unsloth-local": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Unsloth Studio (local)",
+      "options": {
+        "baseURL": "{env:UNSLOTH_BASE_URL}",
+        "apiKey": "{env:UNSLOTH_API_KEY}"
+      },
+      "models": {
+        // Ornith 1.0 9B: light fallback, the small_model pick
+        "unsloth/Ornith-1.0-9B-GGUF": {
+          "name": "Ornith 1.0 9B (local)",
+          "reasoning": true,
+          "tool_call": true,
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] },
+          "limit": { "context": 243200, "output": 8192 }
+        }
+      }
+    }
+  },
   "mcp": {
     "hngh": {
       "type": "local",
