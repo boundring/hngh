@@ -40,6 +40,12 @@ KNOWN_EXEMPTIONS = {
     # landed outside the loop and already pushed; declared by name per the
     # 2026-08-25 decision, cured by ceremony record -- not rewritten
     "526cd3f": "portfolio ebook/journal commit touching a kernel script (declared miss)",
+    # omp-bridge --propose/--plan-status (integration plan step 3) and its
+    # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
+    # itself was being built; declared by name per the 2026-09-06 decision,
+    # cured by post-hoc certification (2026-09-11) -- not rewritten
+    "a2f4d0e": "omp-bridge --propose/--plan-status (declared miss)",
+    "31768d2": "omp-bridge --plan-status bare-slug fix (declared miss)",
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")

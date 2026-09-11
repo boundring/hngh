@@ -435,3 +435,25 @@ topology. Phases: P0 this record, P1 quarantine (landed in this commit),
 P2 subtree import (queued), P3 env seam collapse, P4 systemd cutover, P5
 doc/path sweep. The old hngh-automation remote will be archived
 read-only after P5.
+
+## 2026-09-11 — Two omp-bridge misses declared, cured through the loop
+
+The 2026-09-09 integration plan landed `--propose`/`--plan-status` and
+its bare-slug fix directly (`a2f4d0e`, `31768d2`, 2026-09-10): real
+code-surface commits to `scripts/omp-bridge` with no candidate label.
+The loop-history guard caught both; the gate (`make test`) went red for
+two days and blocked plan acceptance and origin push, as designed.
+
+The cure follows the 2026-09-06 precedent, minimized:
+
+1. **Declared, not rewritten.** The guard's named-exemption table lists
+   both commits with the reason, as `915e0e3` and `526cd3f` were. The
+   declaration exempts two past commits and nothing else.
+2. **Cured through the loop.** This candidate binds the final
+   `scripts/omp-bridge` content (the whole bridge, including the
+   unbound --propose/--plan-status surfaces) by per-file sha256
+   evidence, together with this entry, the cure record
+   (docs/records/2026-09-11-omp-bridge-post-hoc-certification.md), and
+   the guard declaration. One ceremony, one candidate — the precedent's
+   revert-then-reapply dance is not needed because the feature content
+   is bound by this certificate without a gate-red window.

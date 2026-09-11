@@ -38,6 +38,13 @@ this script) gets three things without re-discovering them:
              as JSON, cross-checked with the dashboard's plans.json when
              available. SLUG is a bare slug or the full date-prefixed stem.
 
+             Post-hoc certification (2026-09-11): (f)/(g) landed
+             2026-09-10 outside the loop (`a2f4d0e`, `31768d2`);
+             declared in the loop-history guard and re-certified by the
+             candidate commit carrying this note
+             (docs/records/2026-09-11-omp-bridge-post-hoc-certification
+             .md).
+
 The bridge is an outer adapter: it only invokes the existing ceremony /
 watchdog surfaces. It never imports or mutates the hngh kernel, and it
 records no side effect beyond the handoff ledger line it is asked to

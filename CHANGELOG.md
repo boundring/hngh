@@ -46,6 +46,17 @@ lives under Pre-release / early development until the first release.
   restore path via dashboard/feedback/APPLIED.md +
   state/feedback-applied.tsv. 9 hermetic tests wired into make test.
 
+#### Fixed
+
+- **Two omp-bridge post-hoc certifications** (`a2f4d0e`, `31768d2`
+  declared; cure candidate this entry,
+  docs/records/2026-09-11-omp-bridge-post-hoc-certification.md): the
+  integration plan's --propose/--plan-status commits landed without
+  candidate labels, reding the loop-history guard and the kernel gate
+  for two days. Both declared by name in the guard's exemption table
+  per the 2026-09-06 decision; the final script content is re-bound by
+  this candidate. History not rewritten.
+
 ### 2026-09-10
 
 #### Added
