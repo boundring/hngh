@@ -2,6 +2,9 @@
 
 ## 2026-09-11
 
+- feat: session-executor row armed: opencode (operator word 2026-09-11;
+  env HNGH_SESSION_EXECUTOR still overrides).
+
 - refactor: drop lobehub leg (operator decision; history:
   docs/research/2026-09-10-lobehub-*.md, docs/research/2026-09-11-lobehub-grunt-work.md).
 
