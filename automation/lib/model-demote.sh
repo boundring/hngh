@@ -33,7 +33,8 @@ _demote_load() { # -> sets D_BAD D_DEM for $1 (model)
   D_BAD="$(printf '%s' "$line" | cut -f2)"
   D_DEM="$(printf '%s' "$line" | cut -f3)"
  else
-  D_BAD=0; D_DEM=0
+  D_BAD=0
+  D_DEM=0
  fi
  case "$D_BAD" in '' | *[!0-9]*) D_BAD=0 ;; esac
  case "$D_DEM" in 0 | 1) ;; *) D_DEM=0 ;; esac
@@ -43,8 +44,10 @@ _demote_save() { # m bad dem — one row per model, atomically rewritten
  local m="$1" bad="$2" dem="$3" tmp
  mkdir -p "$(dirname "$DEMOTE_STATE")" 2>/dev/null || return 0
  tmp="$DEMOTE_STATE.tmp.$$"
- { grep -v -F "$(printf '%s\t' "$m")" "$DEMOTE_STATE" 2>/dev/null
-   printf '%s\t%s\t%s\n' "$m" "$bad" "$dem"; } >"$tmp" 2>/dev/null
+ {
+  grep -v -F "$(printf '%s\t' "$m")" "$DEMOTE_STATE" 2>/dev/null
+  printf '%s\t%s\t%s\n' "$m" "$bad" "$dem"
+ } >"$tmp" 2>/dev/null
  mv "$tmp" "$DEMOTE_STATE" 2>/dev/null || true
 }
 
@@ -53,30 +56,30 @@ record_model_outcome() { # model result
  [ -n "$m" ] || return 0
  _demote_load "$m"
  case "$res" in
-  ok)
-   if [ "$D_DEM" = 1 ]; then
-    $REPORT --add progress "model $m back in rotation (ok outcome; demotion cleared)" \
-      --identity "model-demotion-cleared:$m" --window 86400 >/dev/null 2>&1 || true
-   fi
-   _demote_save "$m" 0 0
-   ;;
-  bad-execution)
-   bad=$((D_BAD + 1))
-   if [ "$bad" -ge "$DEMOTE_THRESHOLD" ] && [ "$D_DEM" != 1 ]; then
-    $REPORT --add alert \
-     "model $m demoted: $bad consecutive bad-execution outcomes (threshold $DEMOTE_THRESHOLD) — skipped in select_model until an ok outcome" \
-     --identity "model-demotion:$m" --window 86400 >/dev/null 2>&1 || true
-    dem=1
-   else
-    dem="$D_DEM"
-   fi
-   _demote_save "$m" "$bad" "$dem"
-   ;;
-  *)
-   # dead/unknown: recorded, not counted — only bad-execution cancellations
-   # feed the demotion counter (the step-1 evidence class)
-   _demote_save "$m" "$D_BAD" "$D_DEM"
-   ;;
+ ok)
+  if [ "$D_DEM" = 1 ]; then
+   $REPORT --add progress "model $m back in rotation (ok outcome; demotion cleared)" \
+    --identity "model-demotion-cleared:$m" --window 86400 >/dev/null 2>&1 || true
+  fi
+  _demote_save "$m" 0 0
+  ;;
+ bad-execution)
+  bad=$((D_BAD + 1))
+  if [ "$bad" -ge "$DEMOTE_THRESHOLD" ] && [ "$D_DEM" != 1 ]; then
+   $REPORT --add alert \
+    "model $m demoted: $bad consecutive bad-execution outcomes (threshold $DEMOTE_THRESHOLD) — skipped in select_model until an ok outcome" \
+    --identity "model-demotion:$m" --window 86400 >/dev/null 2>&1 || true
+   dem=1
+  else
+   dem="$D_DEM"
+  fi
+  _demote_save "$m" "$bad" "$dem"
+  ;;
+ *)
+  # dead/unknown: recorded, not counted — only bad-execution cancellations
+  # feed the demotion counter (the step-1 evidence class)
+  _demote_save "$m" "$D_BAD" "$D_DEM"
+  ;;
  esac
  return 0
 }
@@ -130,9 +133,18 @@ PY
 session_model_source() { # model selected-via -> quota|paid|env|bench
  local m="$1" via="${2:-}"
  case "$via" in
-  env|env-all-demoted) printf 'env'; return 0 ;;
-  local-bench) printf 'bench'; return 0 ;;
-  paid-fallback) printf 'paid'; return 0 ;;
+ env | env-all-demoted)
+  printf 'env'
+  return 0
+  ;;
+ local-bench)
+  printf 'bench'
+  return 0
+  ;;
+ paid-fallback)
+  printf 'paid'
+  return 0
+  ;;
  esac
  # selected-via quota (or unknown): quota when the model is in the
  # preference list and the quota-key gate is on, else paid
@@ -142,37 +154,42 @@ session_model_source() { # model selected-via -> quota|paid|env|bench
   local IFS=','
   for q in $pref; do
    q="$(printf '%s' "$q" | sed 's/^ *//; s/ *$//')"
-   [ "$q" = "$m" ] && { printf 'quota'; return 0; }
+   [ "$q" = "$m" ] && {
+    printf 'quota'
+    return 0
+   }
   done
  fi
  printf 'paid'
 }
 
-
 quota_leg_healthy() { # model -> 0/1; cached per beat (stamp file, TTL 3600)
  local m="$1" stamp
  stamp="${TMPDIR:-/tmp}/hngh-quota-health-${m//[\/]/_}"
- if [ -f "$stamp" ] && [ "$(( $(date +%s) - $(stat -c %Y "$stamp" 2>/dev/null || echo 0) ))" -lt 3600 ]; then
+ if [ -f "$stamp" ] && [ "$(($(date +%s) - $(stat -c %Y "$stamp" 2>/dev/null || echo 0)))" -lt 3600 ]; then
   [ "$(cat "$stamp" 2>/dev/null)" = ok ] && return 0 || return 1
  fi
  case "$m" in
-  kimi:*|lobehub:*)
-   # cheap 1-token completion against the named leg; kimi_chat/lobehub_chat
-   # fail-closed-skip when the leg is unconfigured or the key is dead
-   local lib="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..}"
-   local fn="${m%%:*}_chat"
-   local out
-   out="$(bash -c ". '$lib/lib/model.sh'; ${m%%:*}_chat ping 1" 2>/dev/null)"
-   if [ -n "$out" ]; then
-    echo ok > "$stamp" 2>/dev/null; return 0
-   fi
-   ;;
-  *)
-   # omp-addressable quota models (e.g. openrouter tiers): omp routes them
-   # with its own key config; the gate row IS the health signal
-   echo ok > "$stamp" 2>/dev/null; return 0
-   ;;
+ kimi:* | lobehub:* | ocgo:*)
+  # cheap 1-token completion against the named leg; kimi_chat/lobehub_chat/
+  # ocgo_chat
+  # fail-closed-skip when the leg is unconfigured or the key is dead
+  local lib="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..}"
+  local fn="${m%%:*}_chat"
+  local out
+  out="$(bash -c ". '$lib/lib/model.sh'; ${m%%:*}_chat ping 1" 2>/dev/null)"
+  if [ -n "$out" ]; then
+   echo ok >"$stamp" 2>/dev/null
+   return 0
+  fi
+  ;;
+ *)
+  # omp-addressable quota models (e.g. openrouter tiers): omp routes them
+  # with its own key config; the gate row IS the health signal
+  echo ok >"$stamp" 2>/dev/null
+  return 0
+  ;;
  esac
- echo fail > "$stamp" 2>/dev/null
+ echo fail >"$stamp" 2>/dev/null
  return 1
 }

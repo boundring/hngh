@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-10
+
+- feat: opencode-go quota leg with 5h-window pacing (R3). OpenCode Go T2
+  GLM (operator-armed 2026-09-10) wired as the fourth quota leg, balanced
+  like the kimi leg: cadence-params rows opencode-url / opencode-model
+  (glm-5.3-flash, the $60/mo = $12/5h-bucket model) / opencode-cap-5h-calls
+  (60) / opencode-research-share (3); ocgo_chat + _ocgo_leg in lib/model.sh
+  (Bearer auth, mandatory x-opencode-session header -- the Go gateway 400s
+  MissingSessionID without it, live-verified -- shared _post_chat
+  MODEL_TIMEOUT), new quota_pace_blocked_5h pacing the trailing 5h window
+  (hard cap + soft-pace line, one call of grace; ~$0.005/bounded call ->
+  cap 60 ~= $0.30 vs the $12 bucket). Chain: kimi -> ocgo -> lobehub;
+  MODEL_PIN=ocgo and research-beat rotation (opencode-research-share 3)
+  wired; credential-health gains a Bearer /models probe (probe-hygiene
+  lint extended to ocgo_models_url). Verify: new hermetic
+  tests/test-model-ocgo-leg.sh (written first, red, then green; caught the
+  strftime threshold bug), kimi/lobehub/demote/probe-hygiene suites green,
+  make test green except 2 pre-existing OmpBridge reds owned by a sibling's
+  in-flight omp-bridge change, env -i hermetic green, bounded live call
+  200 completed in 0.67s (docs/records/2026-09-10-opencode-go-leg.md,
+  automation/docs/OPENCODE-GO.md).
+
 ## 2026-09-08
 
 - feat: fail-first development — the TCP self-tuning engine extends from

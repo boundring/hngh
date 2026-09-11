@@ -7,7 +7,10 @@
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
-cleanup() { [ -n "${SRVPID:-}" ] && kill "$SRVPID" 2>/dev/null; rm -rf "$sb"; }
+cleanup() {
+  [ -n "${SRVPID:-}" ] && kill "$SRVPID" 2>/dev/null
+  rm -rf "$sb"
+}
 trap cleanup EXIT
 mkdir -p "$sb"
 fails=0
@@ -32,14 +35,19 @@ open(sb + "/port.txt", "w").write(str(srv.server_port))
 srv.serve_forever()
 PY
 SRVPID=$!
-for i in 1 2 3 4 5; do [ -s "$sb/port.txt" ] && break; sleep 0.2; done
+for i in 1 2 3 4 5; do
+  [ -s "$sb/port.txt" ] && break
+  sleep 0.2
+done
 port="$(cat "$sb/port.txt")"
-STATE="$sb/STATE.md"; : >"$STATE"
+STATE="$sb/STATE.md"
+: >"$STATE"
 : >"$sb/cadence-params.tsv"
 HNGH_HOME="$root/.." AUTOMATION_ROOT="$root" STATE_FILE="$STATE" \
   KIMI_URL="http://127.0.0.1:$port/v1/chat/completions" \
   LOBEHUB_KEY_FILE="$sb/nonexistent-lobe" \
   MOONSHOTAI_API_KEY="test.key.123" \
+  OPENCODE_API_KEY= OCGO_URL= \
   timeout 30 bash "$root/jobs/credential-health.sh" >/dev/null 2>&1
 rc=$?
 ck "credential-health exits 0" "0" "$rc"
@@ -48,12 +56,15 @@ ck "probe sent Authorization header" "1" \
   "$(grep -c "test.key.123" "$sb/auth-header.txt" 2>/dev/null || true)"
 ck "crumb says http=200" "1" "$(grep -c "models endpoint http=200" "$STATE")"
 echo "---"
-[ "$fails" -eq 0 ] && echo "ALL PASS" || { echo "$fails FAILED"; exit 1; }
+[ "$fails" -eq 0 ] && echo "ALL PASS" || {
+  echo "$fails FAILED"
+  exit 1
+}
 
 # --- lobehub probe: authenticated GET on a GET-able derived path ---
 lobehub_case() {
   mkdir -p "$sb/hngh-cfg"
-  printf 'stub-key-value-99' > "$sb/lobehub-key"
+  printf 'stub-key-value-99' >"$sb/lobehub-key"
   chmod 600 "$sb/lobehub-key"
   LOBEHUB_KEY_FILE="$sb/lobehub-key"
   : >"$sb/cadence-params.tsv"
@@ -62,6 +73,7 @@ lobehub_case() {
   HNGH_HOME="$root/.." STATE_FILE="$sb/STATE2.md" \
     LOBEHUB_URL="http://127.0.0.1:$port/api/v1/responses" \
     LOBEHUB_KEY_FILE="$sb/lobehub-key" \
+    OPENCODE_API_KEY= OCGO_URL= \
     timeout 30 bash "$root/jobs/credential-health.sh" >/dev/null 2>&1
   rc=$?
   ck "lobehub: credential-health exits 0" "0" "$rc"

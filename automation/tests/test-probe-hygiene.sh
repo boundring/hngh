@@ -48,7 +48,7 @@ PY
 )
 
 # per-known-gate: exactly one authed curl per key-gated endpoint var
-for var in 'UNSLOTH_URL' 'lobe_models_url' 'kimi_models_url'; do
+for var in 'UNSLOTH_URL' 'lobe_models_url' 'kimi_models_url' 'ocgo_models_url'; do
   n="$(printf '%s\n' "${curls[@]}" | grep -c "\$${var}" || true)"
   ck "exactly one curl probes \$$var" "1" "$n"
   h="$(printf '%s\n' "${curls[@]}" | grep "\$${var}" | grep -c 'Authorization: Bearer' || true)"
