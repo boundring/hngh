@@ -42,6 +42,35 @@ classify_cause() { # logfile -> one cause class on stdout (unknown if no log)
  esac
 }
 
+# lesson_for_cause -- the self-steering loop's sentence map (2026-09-11,
+# hngh opencode configuration layer): one line per cause class that a NEXT
+# session should know, derived from the bestiary countermeasures above.
+# Consumed by append_ocgo_lesson (launch-session.sh) into
+# automation/state/ocgo-agent-lessons.md; executor/scout read the tail at
+# session start and steer away from the recorded classes.
+lesson_for_cause() { # cause-class -> one sentence on stdout
+ case "$1" in
+ bad-execution)
+  printf 'budget/cap/exhausted/timeout -- the step was too big or never verified: shrink the step and prove the thing works on its own surface before claiming done'
+  ;;
+ missing-knowledge)
+  printf '404/unknown verb/command -- you ran an interface that does not exist: read the real docs or source for the exact name before running anything'
+  ;;
+ missing-design)
+  printf 'there was no design for the change: find or draft the design first, never improvise structure mid-edit'
+  ;;
+ missing-authority)
+  printf 'permission/denied/awaiting-operator -- the boundary is real: never retry around it; park the item and report it'
+  ;;
+ obsolete)
+  printf 'the target was superseded/duplicate/stale -- check the current ledger state before acting on anything you read earlier'
+  ;;
+ *)
+  printf 'the log tail matched no known failure class -- state plainly what you were doing when it failed so the next session can classify it'
+  ;;
+ esac
+}
+
 append_research_subject() { # slug question -> appends to research-subjects.txt
  local slug="$1" q="$2" root file id
  [ -n "$slug" ] && [ -n "$q" ] || return 1

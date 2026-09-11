@@ -1,0 +1,102 @@
+// opencode/opencode.jsonc — hngh-owned OPENCODE_CONFIG target (2026-09-11,
+// mission "hngh's own opencode configuration layer"; design
+// docs/research/2026-09-10-opencode-agentic-surface.md risk 1 + s5).
+// launch-session.sh points OPENCODE_CONFIG here for executor=opencode
+// sessions. Layering: a custom config merges OVER the operator's global
+// ~/.config/opencode/opencode.jsonc (precedence: global < OPENCODE_CONFIG
+// < project). What hngh carries vs the prior install:
+// - the secret-deny permission block copied verbatim from
+//   ~/.config/opencode/opencode.jsonc — a superset of the committed
+//   baseline automation/config/opencode-safety.jsonc (never referenced by
+//   path: operator config churn cannot widen machine-session permissions;
+//   test-ocgo-launch.py enforces the superset);
+// - MCP servers: hngh's own MCP server (mcp__hngh_* read tools for the
+//   agents) + misakanet/codegraph copied verbatim from the prior install
+//   (both verified local stdio commands that exist on this desktop);
+// - agents executor + scout (hngh delegation style, mirroring
+//   .omp/agents/hngh-executor.md + hngh-scout.md), each instructed to read
+//   the lessons tail at session start (the self-steering loop,
+//   automation/state/ocgo-agent-lessons.md);
+// - model pinned to the operator's Go quota model opencode-go/glm-5.3-flash
+//   (the $60/mo tier = the $12/5h bucket); small_model pinned to the SAME
+//   id so lightweight tasks (title/summary/compaction) never route to
+//   another model (operator rule: opencode never picks models; R2 keeps
+//   agent spend attributable on one bucket).
+// Deliberately OUT (prior-install evaluation): plugins
+// opencode-antigravity-auth + oh-my-openagent (no hngh purpose — the Go
+// quota authenticates via the OPENCODE_API_KEY environment variable,
+// verified `opencode auth list` Environment: "OpenCode Zen
+// OPENCODE_API_KEY") and the unsloth-local provider block (bench-gated
+// local models route through omp legs, never opencode sessions). They stay
+// in the operator's personal config. Honest note: the global config still
+// merges in, so its plugins still load for machine sessions; a custom
+// config cannot remove them (short of OPENCODE_CONFIG_DIR isolation) —
+// acceptable because they set no hngh-owned key.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/glm-5.3-flash",
+  "small_model": "opencode-go/glm-5.3-flash",
+  "default_agent": "executor",
+  "autoupdate": false,
+  "share": "disabled",
+  "mcp": {
+    "hngh": {
+      "type": "local",
+      "command": [
+        "python3",
+        "/home/bricker/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py"
+      ],
+      "enabled": true
+    },
+    "misakanet": {
+      "type": "local",
+      "command": [
+        "/home/bricker/.local/share/misakanet/.venv/bin/python",
+        "/home/bricker/.local/share/misakanet/scripts/mcp_server.py"
+      ],
+      "enabled": true
+    },
+    "codegraph": {
+      "type": "local",
+      "command": ["codegraph", "serve", "--mcp"],
+      "enabled": true
+    }
+  },
+  // Secret-file guardrails: block agent-tool reads of credential-bearing
+  // files. Copied verbatim from ~/.config/opencode/opencode.jsonc (2026-09-11).
+  // Deliberate access stays available via Bash with by-name, no-echo patterns.
+  "permission": {
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      "*.env.sample": "allow",
+      "~/.hermes/auth.json": "deny",
+      "~/.local/share/opencode/auth.json": "deny",
+      "*.key": "deny",
+      "~/.gnupg/**": "deny",
+      "~/.ssh/id_*": "deny"
+    }
+  },
+  "agent": {
+    "executor": {
+      "description": "hngh delegated-session executor: ONE verified assignment (plan step through the certificate ceremony, or one bounded research-class task); commit-per-green; reads the lessons tail first; terse, English/ASCII",
+      "mode": "primary",
+      "model": "opencode-go/glm-5.3-flash",
+      "prompt": "{file:./agents/executor.md}"
+    },
+    "hngh-scout": {
+      "description": "hngh read-only research scout: surveys assigned research lines (automation/research-lines.tsv) and drafts docs/research/ evidence; never mutates anything",
+      "mode": "subagent",
+      "model": "opencode-go/glm-5.3-flash",
+      "prompt": "{file:./agents/scout.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny",
+        "todowrite": "deny"
+      }
+    }
+  }
+}

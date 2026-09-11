@@ -1,6 +1,9 @@
-// opencode-safety.jsonc — hngh-owned opencode session config (R1 mitigation,
+// opencode-safety.jsonc — the committed secret-deny BASELINE (R1 mitigation,
 // design docs/research/2026-09-10-opencode-agentic-surface.md risk 1).
-// Launch-session points OPENCODE_CONFIG here for executor=opencode sessions:
+// Since 2026-09-11 the OPENCODE_CONFIG target for executor=opencode sessions
+// is automation/config/opencode/opencode.jsonc (the full hngh config layer:
+// this deny block copied verbatim into it plus agent roles + MCP servers).
+// This file remains the superset test's baseline:
 // --auto approves everything not explicitly denied, so the copied
 // secret-deny permission block (from ~/.config/opencode/opencode.jsonc,
 // copied verbatim 2026-09-11 — never referenced by path, so operator config
