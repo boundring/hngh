@@ -30,10 +30,11 @@ declare -F breadcrumb >/dev/null ||
 # standalone callers get the kernel default)
 BRIDGE="${BRIDGE:-${HNGH_HOME:-$HOME/Projects/etc/hngh}/scripts/omp-bridge}"
 
-launch_session() { # slug objective prompt_file (env: STORE TIMEOUT_S SESSION_MODEL)
+launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SESSION_MODEL)
  LAUNCH_RC=0 LAUNCH_RUN_ID="" LAUNCH_LOG="" \
   LAUNCH_DISPOSITION="" LAUNCH_CAUSE="" LAUNCH_BRIDGE_MSG=""
  local slug="$1" objective="$2" prompt_file="$3"
+ local role="${4:-overnight-lead}"
  local bridge_bin="${OMP_BRIDGE_BIN:-$BRIDGE}"
  local omp_bin="${OMP_BIN_CMD:-}"
  local bctx_bin=""
@@ -62,7 +63,7 @@ launch_session() { # slug objective prompt_file (env: STORE TIMEOUT_S SESSION_MO
  # tokens on orientation alone). Assembled from existing files,
  # size-capped; the path is carried in the session brief below.
  local ctx
- ctx="$(context_pack overnight-lead "$slug")"
+ ctx="$(context_pack "$role" "$slug")"
 
  local bridge_out bridge_rc run_id
  bridge_out="$(OMP_BRIDGE_STORE="$STORE" \

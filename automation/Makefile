@@ -69,6 +69,7 @@ test:
 	bash tests/test-model-deck-leg.sh
 	bash tests/test-model-lobehub-leg.sh
 	bash tests/test-overnight-shutdown.sh
+	bash tests/test-overnight-forethought.sh
 	bash tests/test-model-kimi-leg.sh
 	bash tests/test-model-ocgo-leg.sh
 	bash tests/test-model-pin-routing.sh
