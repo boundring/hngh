@@ -344,11 +344,11 @@ quota_pace_blocked() { # source cap -> 0 blocked (prints "used cap"), 1 go
 # the subscription's true reset origin is operator-side and unknowable
 # here; grid alignment just spreads spend, which is the point).
 # Prints "<used> <cap>" when blocked; exit 0 = blocked, 1 = go.
-quota_pace_blocked_5h() { # source cap -> 0 blocked (prints "used cap"), 1 go
+quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used cap"), 1 go
  local src="$1" cap="$2" used elapsed allowed
  case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
  used="$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
-  "select count(*) from events where kind='model' and source='$src' \
+  "select count(*) from events where kind='model' and source in ('${src//,/\',\'}') \
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-5 hours')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
@@ -459,7 +459,10 @@ ocgo_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  model="${OCGO_MODEL:-$(get_param opencode-model '')}"
  [ -n "$model" ] || return 1 # operator has not named the quota model yet
  cap="${OCGO_CAP_5H_CALLS:-$(get_param opencode-cap-5h-calls 60)}"
- pace="$(quota_pace_blocked_5h ocgo "$cap")"
+ # ocgo-agent = the opencode executor's agent-internal spend, attributed
+ # by jobs/ocgo-attribution.py onto this same $12/5h bucket (R2: no
+ # double-spend; design 2026-09-10 s6).
+ pace="$(quota_pace_blocked_5h ocgo,ocgo-agent "$cap")"
  if [ -n "$pace" ]; then
   breadcrumb model "ocgo" "quota pace 5h: ocgo used ${pace% *}/cap ${pace#* } -- deferring to next leg"
   return 1

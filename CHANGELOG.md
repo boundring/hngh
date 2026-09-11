@@ -6,6 +6,35 @@ lives under Pre-release / early development until the first release.
 
 ## Pre-release / early development
 
+### 2026-09-11
+
+#### Added
+
+- **opencode executor wiring with attribution emitter**
+  (docs/records/2026-09-11-opencode-executor.md, design
+  docs/research/2026-09-10-opencode-agentic-surface.md): opencode
+  installed (npm `opencode-ai` 1.18.30, update script coverage), the R2
+  attribution emitter (jobs/ocgo-attribution.py) that turns opencode's
+  local session spend into kind=model source=ocgo-agent telemetry rows
+  through the standard write path (5h pacer now counts ocgo +
+  ocgo-agent on the shared bucket), one `session-executor` launcher
+  branch (opencode run --format json + pinned copied secret-deny
+  OPENCODE_CONFIG; bridge/budget/log contract unchanged), and its
+  tests. Row is EMPTY: default stays omp, dormant-until-armed — no
+  opencode agent session has run; first supervised session remains
+  operator-side.
+- **omp-hngh full integration** (plan 2026-09-09-omp-hngh-integration,
+  steps 1-11; docs/records/2026-09-11-omp-integration.md): omp
+  sessions in this repo now see hngh through a five-tool read-only
+  MCP server (automation/mcp/hngh_mcp_server.py), an automatic orient
+  brief injected at session start, the `hngh_propose` plugin tool
+  writing plan files with status readback (omp-bridge
+  --propose/--plan-status), a project skill, executor/scout agent
+  definitions, the live research feed, and a dashboard Plans tab
+  (queue + accepted plans + last ceremony commit). Kernel stays
+  side-effect-free: all omp-facing code lives in automation/, .omp/,
+  and ~/.omp/; no daemons.
+
 ### 2026-09-10
 
 #### Added

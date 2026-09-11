@@ -39,7 +39,13 @@ echo "=== billion-context (npm global; the proxy) ==="
 # npm, not bun: bili lives on PATH at ~/.npm-global/bin/bili.
 npm install -g billion-context@latest 2>&1 | tail -1
 
+echo "=== opencode (npm global; agentic executor surface) ==="
+# docs/opencode.ai install section names the npm package `opencode-ai`;
+# postinstall needs allow-scripts (set 2026-09-11, --location=user).
+npm install -g opencode-ai@latest 2>&1 | tail -1
+
 echo "=== versions after ==="
 "$OMP" --version
 command -v bili >/dev/null 2>&1 && bili --version || echo "billion-context: MISSING from PATH"
+command -v opencode >/dev/null 2>&1 && opencode --version || echo "opencode: MISSING from PATH"
 echo "note: restart running omp TUIs to load updates"
