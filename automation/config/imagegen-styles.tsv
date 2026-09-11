@@ -1,0 +1,22 @@
+# imagegen-styles.tsv -- the imagegen style inventory (design:
+# docs/research/2026-09-11-imagegen-integration.md s3/s6).
+# One data row per style:
+#   style-id<TAB>aspect<TAB>size-pair<TAB>seed<TAB>prompt-template<TAB>negative-template<TAB>lora-slot
+# aspect is intent shorthand; size-pair (WxH) is what every API consumes.
+# seed is the per-family continuity pin: same style suffix + same seed +
+# same checkpoint = reproducible art (design s3).
+# The negative-template and the (optional) lora-slot column are inert on the
+# --free pollinations leg (keyless GET takes no negative field); they feed the
+# local ComfyUI leg when it goes live.
+# The empty lora-slot column is optional on data rows: a missing 7th field
+# reads as empty (edit tools strip trailing tabs), and the driver parses
+# NF>=6 accordingly.
+# Style framing note: the Nihei / Hayashida / Matsumoto flavor is carried by
+# style descriptors (high-contrast monochrome ink, brutalist architecture,
+# negative space, fine cross-hatching, desaturated), never by artist names in
+# prompts. Per-artist prompting is a legal-and-quality gray zone (design s3
+# "style-approximation framing"); the descriptors below approximate the
+# shared aesthetic denominator instead.
+hero-banner	3:1	1536x512	511	{SUBJECT}, cathedral-scale machine megastructure, one lone silhouetted figure on a walkway, cables like vines, monochrome ink illustration, high contrast black and white, extreme architectural scale, brutalist architecture, vast negative space, moss and bone motifs, fine cross-hatching, muted desaturated accents, manga aesthetic	color, photorealistic, soft lighting, text, watermark
+section-spacer	4:1	1280x320	907	{SUBJECT}, weathered and overgrown, minimalist line art, sparse composition, white line work on dark ground, high contrast monochrome ink, fine cross-hatching, extreme negative space, desaturated	color, shading, busy background, text
+environment	16:9	1280x720	1131	{SUBJECT}, cathedral-scale machine hall, catwalks between titanic machinery, shafts of light through dust, rust and moss, monochrome ink illustration, high contrast black and white, brutalist architecture, fine cross-hatching, desaturated, manga aesthetic	color, photorealistic, people, text, watermark
