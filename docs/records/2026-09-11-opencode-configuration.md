@@ -237,7 +237,9 @@ one authorized session; total Go-bucket spend tonight is ~$0.042.
 ## 6. Ship state
 
 - session-executor row: EMPTY (dormant default stands). Tonight's
-  session rode the env override only.
+  session rode the env override only. Row armed 2026-09-11 per operator
+  word (value `opencode`); the first machine-ridden beat will be
+  visible in logs/budget.md and telemetry source=ocgo-agent.
 - The ocgo HTTP leg, pacing, and model selection for every other leg are
   untouched (operator directive 2026-09-11 item 2/4; benchmarking stays
   back-burnered).
