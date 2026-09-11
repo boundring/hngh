@@ -72,6 +72,24 @@ advance_markers() {
   done
   echo "$newest" >"$MARKER" 2>/dev/null || true
 }
+  # Landing the counter: it lives inside the hngh kernel-repo tree and is
+  # pure machine state, but the tree-skew whitelist does not carry it, so
+  # any advance leaves the kernel dirty >4h and the oversight tree-skew
+  # alert re-fires every cycle (2026-09-11 run). Same posture as
+  # cadence/hour/30-kernel-ledger-sync.sh: explicit single path, refuse
+  # when anything is staged (never entangle operator work), never touch
+  # kernel code surfaces, no push. Fail-open: a failed commit is a crumb.
+  if git -C "$HNGH_REPO" diff --cached --quiet 2>/dev/null; then
+    if ! git -C "$HNGH_REPO" diff --quiet -- automation/.lesson-harvest-handoffs 2>/dev/null; then
+      cmsg="chore: lesson-harvest handoff counter tick ($(date -u +%F))"
+      if git -C "$HNGH_REPO" add -- automation/.lesson-harvest-handoffs && \
+         git -C "$HNGH_REPO" commit -q -m "$cmsg"; then
+        breadcrumb "lesson-harvest" "counter-commit" "committed: $cmsg"
+      else
+        breadcrumb "lesson-harvest" "counter-commit" "commit failed (tree changed mid-sync)"
+      fi
+    fi
+  fi
 
 case "$MODE" in
 run)
