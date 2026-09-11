@@ -1,0 +1,27 @@
+SUPERVISED FIRST SESSION (operator-supervised, bounded ~10 minutes,
+research-class; ceremony NOT required for this assignment).
+
+Assignment (research-class; mutate nothing except the one draft file named
+below):
+
+Research line: alert-to-work-routing-patterns-closing-the-self-observation-loop
+(automation/research-lines.tsv).
+
+Task: survey prior art for session-level self-steering loops — how agent
+systems record one-line lessons/post-mortems after each session and inject
+them into the next session's instructions — then draft evidence for how
+hngh's own loop (automation/state/ocgo-agent-lessons.md, appended by
+automation/lib/launch-session.sh append_ocgo_lesson after every opencode
+session, read by the executor/hngh-scout agent prompts in
+automation/config/opencode/) compares, what prior art does better, and one
+concrete improvement to the loop.
+
+Delegate the web survey to @hngh-scout; write the draft yourself to
+docs/research/2026-09-11-ocgo-agent-self-steering.md in the house shape
+(Question, Evidence read, Doctrine applied, Findings, Recommended next
+line) with file:line anchors. Terse. English/ASCII only.
+
+Boundaries: this session writes ONLY
+docs/research/2026-09-11-ocgo-agent-self-steering.md. No TSV edits, no
+commits, no kernel mutating verbs, no provider or credential config. If
+anything fails, state the cause class plainly in your final output.
