@@ -555,11 +555,26 @@ if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
 fi
 ff_record ok
 
+# Capture-side filter (2026-09-11 corpus-loss cure, docs/records/
+# 2026-09-11-research-beat-capture-fix.md): raw model tool-call syntax
+# never becomes doc prose; a capture stripped to empty files an alert and
+# writes nothing (state held for retry); truncation is explicit, never a
+# silent mid-token cut. DOC_CAPTURE_CHAR_CAP is a hermetic-test seam.
+truncflag=""
+[ -n "$(last_model_truncated)" ] && truncflag="--truncated"
+body="$(printf '%s' "$response" | python3 "$AUTOMATION_ROOT/lib/docfilter.py" \
+ "${DOC_CAPTURE_CHAR_CAP:-16000}" $truncflag)" || {
+ ff_record degraded
+ file_report alert "research beat capture for $id ($state->$next) stripped to empty: model emitted only tool-call syntax ($used); no doc written, line state held for retry" \
+  "research-beat:junk-capture:$id" 86400
+ exit 0
+}
+
 out_rel="digest/RESEARCH-BEAT-$day-$id.md"
 mkdir -p "$AUTOMATION_ROOT/digest"
 {
  printf '# research beat %s\n\n_line: %s | state: %s -> %s | model: %s | wall_s: %s_\n\n%s\n' \
-  "$day" "$line" "$state" "$next" "$used" "$wall" "$response"
+  "$day" "$line" "$state" "$next" "$used" "$wall" "$body"
 } >"$AUTOMATION_ROOT/$out_rel"
 
 if [ "$next" = "crystallized" ]; then
@@ -567,7 +582,7 @@ if [ "$next" = "crystallized" ]; then
   printf '# %s\n\n' "$line"
   printf 'Status: crystallized %s from research line `%s`; per-beat\n' "$(date -u +%Y-%m-%d)" "$id"
   printf 'material lives in hngh-automation digest/RESEARCH-BEAT-*-%s.md.\n\n' "$id"
-  printf '%s\n' "$response"
+  printf '%s\n' "$body"
  } >"$KERNEL/docs/research/$day-$id.md"
 fi
 

@@ -8,28 +8,18 @@ prose. Scans every docs/**/*.md file for the junk signature and fails
 naming file:line.
 """
 
-import re
+import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 
-# Junk signature from the actual corrupted bytes: raw tool-call capture
-# fragments, one hit per line, e.g.:
-#   <tool_call>
-#   <function=Bash>
-#   <parameter=command>
-#   </parameter>
-#   </tool_call>
-JUNK_RE = re.compile(
-    r"^<tool_call>$"
-    r"|^<function=[A-Za-z_]+>$"
-    r"|^<parameter=[A-Za-z_]+>$"
-    r"|^</parameter>$"
-    r"|^</function>$"
-    r"|^</tool_call>$"
-)
+# Junk signature lives in lib/docfilter.py -- the single source of
+# truth shared with the research beat's capture-side filter
+# (corpus-loss cure, 2026-09-11).
+sys.path.insert(0, str(ROOT / "lib"))
+from docfilter import JUNK_RE
 
 
 def scan_text(text):

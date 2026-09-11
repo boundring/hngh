@@ -43,9 +43,28 @@ POST_CODE_FILE="$AUTOMATION_ROOT/tmp-postcode.txt"
 WALL_S_FILE="$AUTOMATION_ROOT/tmp-walls.txt"
 TOKIN_FILE="$AUTOMATION_ROOT/tmp-tokensin.txt"
 TOKOUT_FILE="$AUTOMATION_ROOT/tmp-tokensout.txt"
+# finish_reason=length flag (file, not var: same subshell-escape reason).
+# "1" = the returned completion was cut at the max_tokens cap; empty =
+# clean stop. Callers mark the doc instead of writing a silently
+# mid-syntax capture (2026-09-11 research-beat corpus loss).
+MODEL_TRUNC_FILE="$AUTOMATION_ROOT/tmp-modeltrunc.txt"
 
 last_model_used() {
  cat "$MODEL_USED_FILE" 2>/dev/null || true
+}
+
+last_model_truncated() {
+ cat "$MODEL_TRUNC_FILE" 2>/dev/null || true
+}
+
+# _mark_trunc tmp -- record whether a raw response file ended in
+# finish_reason=length (overwrites any stale flag on every attempt).
+_mark_trunc() { # tmp
+ if jq -r '.choices[0].finish_reason // ""' "$1" 2>/dev/null | grep -qx length; then
+  printf '1' >"$MODEL_TRUNC_FILE"
+ else
+  printf '' >"$MODEL_TRUNC_FILE"
+ fi
 }
 
 # _post_chat URL JQ_EXPR [BEARER_KEY] — the shared POST+parse scaffold for
@@ -86,6 +105,7 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] -> content on stdout; code i
  printf '%s' "$code" >"$POST_CODE_FILE"
  content=""
  [ "$code" = "200" ] && content="$(jq -r "$expr" "$tmp" 2>/dev/null || true)"
+ _mark_trunc "$tmp"
  rm -f "$tmp"
  [ -n "$content" ] || return 1
  printf '%s\n' "$content"
@@ -201,6 +221,7 @@ unsloth_chat() {
   if jq -e '.choices[0].message.content // ""' "$tmp" >/dev/null 2>&1; then
    content="$(jq -r '.choices[0].message.content // ""' "$tmp")"
    if [ -n "$content" ]; then
+    _mark_trunc "$tmp"
     rm -f "$tmp"
     printf '%s\n' "$content"
     return 0
@@ -215,6 +236,7 @@ unsloth_chat() {
    if [ "$code" = "200" ] && jq -e '.choices[0].message.content // ""' "$tmp" >/dev/null 2>&1; then
     content="$(jq -r '.choices[0].message.content // ""' "$tmp")"
     if [ -n "$content" ]; then
+     _mark_trunc "$tmp"
      rm -f "$tmp"
      printf '%s\n' "$content"
      return 0
@@ -539,6 +561,7 @@ model_call() {
  esac # unknown values: ignore (full chain)
  prompt="$(cat)"
  MODEL_USED=""
+ printf '' >"$MODEL_TRUNC_FILE" 2>/dev/null
  # pinned quota legs run first; a miss (pace-block, 429, down) falls
  # through to the local chain -- the caller never blocks on quota state.
  if [ "$pin_kimi" = 1 ] && _kimi_leg "$prompt" "$max_tokens"; then
