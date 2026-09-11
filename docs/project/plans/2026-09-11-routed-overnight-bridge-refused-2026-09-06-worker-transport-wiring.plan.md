@@ -17,3 +17,4 @@ at 2026-09-11T10:00:49Z. Alert text: overnight beat 2026-09-06-worker-transport-
 - 2026-09-11T14:00:12Z re-occurred (dedup window expired)
 - 2026-09-11T15:00:49Z re-occurred (dedup window expired)
 - 2026-09-11T16:00:49Z re-occurred (dedup window expired)
+- 2026-09-11T17:00:50Z re-occurred (dedup window expired)
