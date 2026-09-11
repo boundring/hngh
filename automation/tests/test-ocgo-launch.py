@@ -203,6 +203,32 @@ class OcgoLaunch(unittest.TestCase):
         self.assertIn("| bad-execution |", lessons)
         self.assertIn("the step was too big", lessons)
 
+    def test_second_launch_in_same_beat_store_is_not_refused(self):
+        # 2026-09-11 beat stall: dream pass and executor (and extra plan
+        # slots) shared the beat's single bridge store; the bridge
+        # records run-1 per store, so the second --run-start refused
+        # record-conflict (rc=75, no session, no spend) and the
+        # failfirst machine counted the launch-plane crash. Each launch
+        # gets its own store subdir; both launches succeed. The stub
+        # bridge emulates the real store contract: one run per store,
+        # conflict on re-creation.
+        self.bridge.write_text(
+            '#!/usr/bin/env bash\n'
+            'rec="$OMP_BRIDGE_STORE/record.lisp"\n'
+            'if [ -f "$rec" ]; then\n'
+            '  echo "conflict labels=record-conflict" >&2; exit 1\n'
+            'fi\n'
+            'printf "(:IDENTIFIER \\"run-1\\")\\n" > "$rec"\n'
+            'echo "run run-1 started $*"\n'
+            'exit 0\n')
+        self.bridge.chmod(0o755)
+        r1 = self.launch(HNGH_SESSION_EXECUTOR="opencode")
+        self.assertEqual(r1.returncode, 0, r1.stderr)
+        self.assertNotIn("rc=75", r1.stdout)
+        r2 = self.launch(HNGH_SESSION_EXECUTOR="opencode")
+        self.assertEqual(r2.returncode, 0, r2.stderr)
+        self.assertNotIn("rc=75", r2.stdout)
+
     def test_key_file_fallback_wires_key_into_child(self):
         # no env key; the operator key file (mode 600) is wired into the
         # child env — length observable, value never printed anywhere
@@ -310,9 +336,14 @@ class OcgoConfigLayer(unittest.TestCase):
         tmp = Path(self._td2.name)
         script = (
             "set -u\n"
-            f"AUTOMATION_ROOT={tmp}\n"
             f". {AUTO}/lib/causes.sh\n"
             f". {AUTO}/lib/launch-session.sh\n"
+            # set AFTER sourcing: context-pack.sh (pulled in by
+            # launch-session.sh) sources common.sh, which resets
+            # AUTOMATION_ROOT to the real repo — setting it before the
+            # libs leaked 205 test appends into the real state file
+            # (found 2026-09-11)
+            f"AUTOMATION_ROOT={tmp}\n"
             "for i in $(seq 1 205); do append_ocgo_lesson bad-execution; done\n"
             "grep -vc '^#' \"$AUTOMATION_ROOT/state/ocgo-agent-lessons.md\"\n"
             "head -n 6 \"$AUTOMATION_ROOT/state/ocgo-agent-lessons.md\"\n"

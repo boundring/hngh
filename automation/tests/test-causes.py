@@ -21,11 +21,11 @@ from pathlib import Path
 
 AUTO = Path(__file__).resolve().parent.parent
 
-# arg1 = tail file, arg2 = a cause class for lesson_for_cause
+# arg1 = tail file, arg2 = a cause class for lesson_for_cause, arg3 = rc
 DRIVER = """#!/usr/bin/env bash
 set -u
 . {auto}/lib/causes.sh
-printf 'class=%s\\n' "$(classify_cause "$1")"
+printf 'class=%s\\n' "$(classify_cause "$1" "$3")"
 printf 'lesson=%s\\n' "$(lesson_for_cause "$2")"
 """
 
@@ -41,10 +41,11 @@ class ClassifyCause(unittest.TestCase):
     def tearDown(self):
         self._td.cleanup()
 
-    def classify(self, tail, lesson_class="bad-execution"):
+    def classify(self, tail, lesson_class="bad-execution", rc=""):
         log = self.td / "tail.log"
         log.write_text(tail)
-        r = subprocess.run(["bash", str(self.driver), str(log), lesson_class],
+        r = subprocess.run(["bash", str(self.driver), str(log), lesson_class,
+                            rc],
                            capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = dict(l.split("=", 1) for l in r.stdout.strip().splitlines())
@@ -94,6 +95,23 @@ class ClassifyCause(unittest.TestCase):
     def test_timeout_still_classifies(self):
         self.assertEqual(self.classify("error: timeout exceeded while "
                                        "integrating")[0], "bad-execution")
+
+    def test_rc124_timeout_is_bad_execution_even_with_clean_tail(self):
+        # the worker-transport-wiring stall (2026-09-11): a timeout kill
+        # (rc=124) left a clean "Working..." tail, classified unknown,
+        # and the respawn guard refused it as non-transient. A timeout
+        # IS a transient death by definition (steer-vs-die doctrine).
+        self.assertEqual(self.classify("Working...\n", "bad-execution",
+                                       "124")[0], "bad-execution")
+
+    def test_rc124_does_not_mask_a_more_specific_text_class(self):
+        self.assertEqual(self.classify("error: permission denied\n",
+                                       "missing-authority", "124")[0],
+                         "missing-authority")
+
+    def test_rc0_clean_tail_stays_unknown(self):
+        self.assertEqual(self.classify("Working...\n", "unknown", "0")[0],
+                         "unknown")
 
     def test_lesson_for_cause_maps_sensibly(self):
         _, lesson = self.classify("x", "bad-execution")
