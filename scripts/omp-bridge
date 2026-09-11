@@ -36,7 +36,7 @@ this script) gets three things without re-discovering them:
              docs/project/plans/README.md promises; never overwrites.
   (g) `--plan-status [SLUG]` reads plan front-matter (+ step checkboxes)
              as JSON, cross-checked with the dashboard's plans.json when
-             available.
+             available. SLUG is a bare slug or the full date-prefixed stem.
 
 The bridge is an outer adapter: it only invokes the existing ceremony /
 watchdog surfaces. It never imports or mutates the hngh kernel, and it
@@ -148,13 +148,17 @@ def plan_row(slug, path, meta, total, done, rows):
 
 def plan_status_cmd(slug):
     """--plan-status [SLUG]: JSON on stdout. No slug: all plans, newest
-    first. Exit 2 unknown slug, 3 unreadable front-matter, 0 otherwise."""
+    first. SLUG is a full date-prefixed stem or a bare slug (exact stem
+    match preferred; else any stem ending -{slug}, newest wins -- dates
+    are fixed-width prefixes so the suffix form is unambiguous).
+    Exit 2 unknown slug, 3 unreadable front-matter, 0 otherwise."""
     rows = dashboard_rows()
     files = sorted(PLANS.glob("*.plan.md"), reverse=True) if PLANS.is_dir() else []
     if slug:
-        for f in files:
-            if plan_slug(f) != slug:
-                continue
+        matches = [f for f in files if plan_slug(f) == slug] or \
+                  [f for f in files if plan_slug(f).endswith(f"-{slug}")]
+        for f in matches:
+            slug = plan_slug(f)
             parsed = parse_plan(f)
             if parsed is None:
                 print(f"omp-bridge: unreadable plan front-matter: {f}",

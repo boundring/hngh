@@ -102,6 +102,25 @@ class OmpBridge(unittest.TestCase):
         r = self.run_bridge("--plan-status", "2026-09-10-nonexistent")
         self.assertEqual(r.returncode, 2, r.stderr)
 
+    def test_plan_status_bare_slug_matches_full_stem(self):
+        plan = (FRONT + "\n# t\n\n## Steps\n\n"
+                "- [x] one\n- [ ] two\n")
+        self.write_plan("2026-09-10-fixture-slug.plan.md", plan)
+        full = json.loads(self.run_bridge(
+            "--plan-status", "2026-09-10-fixture-slug").stdout)
+        bare = self.run_bridge("--plan-status", "fixture-slug")
+        self.assertEqual(bare.returncode, 0, bare.stderr)
+        self.assertEqual(json.loads(bare.stdout), full)
+
+    def test_plan_status_bare_slug_multi_date_returns_newest(self):
+        plan = FRONT + "\n# t\n"
+        self.write_plan("2026-09-09-fixture-slug.plan.md", plan)
+        self.write_plan("2026-09-10-fixture-slug.plan.md", plan)
+        r = self.run_bridge("--plan-status", "fixture-slug")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["slug"],
+                         "2026-09-10-fixture-slug")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
