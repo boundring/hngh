@@ -52,3 +52,6 @@ base, not imported back into this repository. Treat prior-state records
   enabling a service still requires a current policy certificate or an
   explicit operator instruction naming the exact action and target.
 - Record architecture-relevant work in `CHANGELOG.md` and `docs/records/`.
+- Repo-root `scripts/` is kernel code surface: machine-session commits
+  there require the ceremony label (`hngh: candidate <hash>`); the
+  automation free-commit rule covers `automation/` only.

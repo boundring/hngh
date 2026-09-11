@@ -2,6 +2,13 @@
 
 ## 2026-09-11
 
+- fix: kernel gate recertified — loop-history exemption register
+  re-keyed to the post-purge hashes (572d3e2/adb0307) and the 41f646a
+  miss declared post-hoc, through one certificate ceremony; guard gains
+  purge-proof patch-id fallback keying and a standing
+  exemption-reachability self-check. Record:
+  docs/records/2026-09-11-kernel-gate-recertified.md.
+
 - feat: orchestrator stall detector + blocker-ledger re-attempt loop
   (as-above-so-below) — the run domain's created/.../dead lifecycle now
   exists at the orchestrator's own level: jobs/beat-watchdog.py (30m tier)

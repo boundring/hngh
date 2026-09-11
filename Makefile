@@ -9,6 +9,7 @@ test:
 	python3 tests/scripts/test-backlog-lanes.py
 	python3 tests/scripts/test-lint-parens.py
 	python3 tests/scripts/test-loop-history-guard.py
+	python3 tests/scripts/test-loop-history-guard-safeguards.py
 	python3 tests/scripts/test-doc-numbers.py
 	python3 tests/scripts/test-timeline-events.py
 	python3 tests/scripts/test-dashboard-readout.py
