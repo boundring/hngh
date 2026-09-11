@@ -8,3 +8,7 @@ at 2026-09-10T23:00:33Z. Alert text: overnight beat 2026-09-06-routed-tree-skew-
 
 - [ ] Whitelist check + handoff/commit of the stalled edit
       Verification: dirty-tree whitelist clean; stalled edit committed or handed off
+
+## Occurrences
+
+- 2026-09-11T00:00:33Z re-occurred (dedup window expired)
