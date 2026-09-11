@@ -268,19 +268,22 @@ class AcceptPlans(unittest.TestCase):
 
 
 class PlanFeed(unittest.TestCase):
-    def run_feed(self, plans):
+    def run_feed(self, plans, queue_md=None, ceremony_log=None):
         with tempfile.TemporaryDirectory() as td:
             home = Path(td) / "kernel"
             (home / "docs" / "project" / "plans").mkdir(parents=True)
             for name, text in plans.items():
                 (home / "docs" / "project" / "plans" / name).write_text(text)
+            if queue_md is not None:
+                (home / "docs" / "project" / "queue.md").write_text(queue_md)
             out = Path(td) / "plans.json"
             env = {**os.environ, "HNGH_HOME": str(home),
-                   "HNGH_PLANS_FEED_OUT": str(out), "DRY_RUN": "0"}
+                   "HNGH_PLANS_FEED_OUT": str(out), "DRY_RUN": "0",
+                   "HNGH_CEREMONY_LOG": ceremony_log or ""}
             r = subprocess.run([sys.executable, str(PLAN_FEED)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            return json.loads(out.read_text())["plans"]
+            return json.loads(out.read_text())
 
     def test_steps_counted_beyond_2k(self):
         # the real 2026-08-30 failure: Steps section past the 2048-byte head
@@ -291,16 +294,16 @@ class PlanFeed(unittest.TestCase):
                 "- [ ] two: thing\n      Verification: make test\n"
                 "- [x] three: thing\n      Verification: make test\n")
         feed = self.run_feed({"2026-08-30-big.plan.md": text})
-        self.assertEqual(feed[0]["steps_total"], 3)
-        self.assertEqual(feed[0]["steps_done"], 1)
-        self.assertEqual(feed[0]["status"], "proposed")
+        self.assertEqual(feed["plans"][0]["steps_total"], 3)
+        self.assertEqual(feed["plans"][0]["steps_done"], 1)
+        self.assertEqual(feed["plans"][0]["status"], "proposed")
 
     def test_accepted_timestamp_not_truncated(self):
         text = ("<!-- plan: status=executed risk=normal "
                 "accepted=2026-08-28T17:35:00Z -->\n# p\n\n## Steps\n\n"
                 "- [x] done: thing\n      Verification: make test\n")
         feed = self.run_feed({"2026-08-28-p.plan.md": text})
-        self.assertEqual(feed[0]["accepted"], "2026-08-28T17:35:00Z")
+        self.assertEqual(feed["plans"][0]["accepted"], "2026-08-28T17:35:00Z")
 
     def test_held_status_and_cause_passthrough(self):
         text = ("<!-- plan: status=held risk=normal accepted=- "
@@ -308,8 +311,57 @@ class PlanFeed(unittest.TestCase):
                 "# p\n\nPer docs/design/absent-spec.md.\n\n## Steps\n\n"
                 "- [ ] one: thing\n      Verification: make test\n")
         feed = self.run_feed({"2026-08-30-p.plan.md": text})
-        self.assertEqual(feed[0]["status"], "held")
-        self.assertEqual(feed[0]["accepted"], "-")
+        self.assertEqual(feed["plans"][0]["status"], "held")
+        self.assertEqual(feed["plans"][0]["accepted"], "-")
+
+    def test_queue_next_parsed_from_fixture(self):
+        feed = self.run_feed(
+            {"2026-08-30-p.plan.md": plan_md([("x", "one", "make test")])},
+            queue_md="## Next\n\n"
+                     "- **wake-mutation-lane** — rotate next (pins wake).\n\n"
+                     "## Scheduling\n\n- other: thing\n")
+        self.assertEqual(feed["queue_next"], "wake-mutation-lane")
+
+    def test_queue_next_fail_closed_without_queue(self):
+        feed = self.run_feed(
+            {"2026-08-30-p.plan.md": plan_md([("x", "one", "make test")])})
+        self.assertIsNone(feed["queue_next"])
+
+    def test_last_ceremony_parsed_from_git_log_seam(self):
+        log = ("abc123|%cs|feat: unrelated\n"
+               "def456|2026-09-10|hngh: candidate sealed rotation r1\n")
+        feed = self.run_feed(
+            {"2026-08-30-p.plan.md": plan_md([("x", "one", "make test")])},
+            ceremony_log=log)
+        self.assertEqual(feed["last_ceremony_commit"], {
+            "hash": "def456", "date": "2026-09-10",
+            "subject": "hngh: candidate sealed rotation r1"})
+
+    def test_last_ceremony_none_without_candidate(self):
+        feed = self.run_feed(
+            {"2026-08-30-p.plan.md": plan_md([("x", "one", "make test")])},
+            ceremony_log="abc123|2026-09-10|feat: not a ceremony\n")
+        self.assertIsNone(feed["last_ceremony_commit"])
+
+
+class PlansViewContract(unittest.TestCase):
+    """Textual contract for the static Plans tab (plan step 10): the page
+    must render the two new feed fields plus the plans rows, and be
+    mounted in the tab system — string-level checks are the honest
+    runnable regression for a static page (test-readout-writers style)."""
+
+    def test_view_renders_feed_fields(self):
+        view = (ROOT / "dashboard" / "plans-view.js").read_text()
+        for field in ("queue_next", "last_ceremony_commit", "plans"):
+            self.assertIn(field, view)
+
+    def test_view_mounted_in_page(self):
+        page = (ROOT / "dashboard" / "index.html").read_text()
+        app = (ROOT / "dashboard" / "app.js").read_text()
+        self.assertIn('data-tab="plans"', page)
+        self.assertIn('id="plans-root"', page)
+        self.assertIn('src="plans-view.js"', page)
+        self.assertIn("'plans-root':    ['plans',    'PlansView']", app)
 
 
 if __name__ == "__main__":
