@@ -1,0 +1,9 @@
+{
+  "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "v1-5-pruned-emaonly.safetensors"}},
+  "2": {"class_type": "CLIPTextEncode", "inputs": {"text": "a lone figure walking through a vast weathered megastructure, monochrome ink, high contrast, minimal line art", "clip": ["1", 1]}},
+  "3": {"class_type": "CLIPTextEncode", "inputs": {"text": "color, blurry, text", "clip": ["1", 1]}},
+  "4": {"class_type": "KSampler", "inputs": {"seed": 907, "steps": 20, "cfg": 7.0, "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0, "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["5", 0]}},
+  "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
+  "6": {"class_type": "VAEDecode", "inputs": {"samples": ["4", 0], "vae": ["1", 2]}},
+  "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "smoke", "images": ["6", 0]}}
+}
