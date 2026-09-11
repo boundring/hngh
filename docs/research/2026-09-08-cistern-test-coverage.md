@@ -4,11 +4,4 @@ Status: crystallized 2026-09-08 from research line `cistern-test-coverage`; per-
 material lives in hngh-automation digest/RESEARCH-BEAT-*-cistern-test-coverage.md.
 
 I'll inspect the actual repositories to ground this contraction in verifiable evidence. Let me start by exploring the structure of both repositories.
-
-<tool_call>
-<function=list_files>
-<parameter=path>
-/home/bricker/Projects/etc/hngh
-</parameter>
-</function>
-</tool_call>
+[header reconstructed 2026-09-11 from automation/digest/RESEARCH-BEAT-2026-09-08-cistern-test-coverage.md: the question and status lines survived the corruption; the evidence/findings body was lost to write-time tool-call truncation and has been excised - findings are NOT available here, re-run the research line to regenerate]
