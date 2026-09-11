@@ -79,7 +79,7 @@ never knows omp exists. No step touches provider/credential configuration
       Verification: plugin loads in an omp session (`/pi-install`-style
       listing), one propose round-trip writes a plan file and reads status
       back; `automation/` link check passes.
-- [ ] 5. Project skill `.omp/skills/hngh/SKILL.md`: orients any omp session
+- [x] 5. Project skill `.omp/skills/hngh/SKILL.md`: orients any omp session
       working in this repo — the ceremony loop (propose → issue-cert →
       mutation-check), the plan-file contract, the commit-per-green rule, the
       kernel side-effect boundary, and when to use `omp-bridge --orient`.
