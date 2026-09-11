@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:33-research-beat.sh -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-11T07:02:25Z routed-from=slow-unit:dropin:33-research-beat.sh -->
 # 2026-09-11 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:33-research-beat.sh`
@@ -12,3 +12,4 @@ at 2026-09-11T05:00:49Z. Alert text: [oversight] slow-unit: dropin:33-research-b
 ## Occurrences
 
 - 2026-09-11T06:00:49Z re-occurred (dedup window expired)
+- 2026-09-11T07:00:48Z re-occurred (dedup window expired)
