@@ -110,7 +110,7 @@ never knows omp exists. No step touches provider/credential configuration
       cannot inject). Orientation output stays read-only and small.
       Verification: a fresh omp session in this repo receives the brief
       without operator action; logs show one orient call per session start.
-- [ ] 9. Research feed: wire hngh-scout / research-beat outputs into the
+- [x] 9. Research feed: wire hngh-scout / research-beat outputs into the
       existing research pipeline — `automation/research-lines.tsv` and
       `automation/research-dispositions.tsv` — and surface current research
       lines through the MCP server (extends step 1 with a `research_lines`
