@@ -39,6 +39,7 @@ class H(http.server.BaseHTTPRequestHandler):
             content = default_content
         out = json.dumps({"choices": [{"message": {"content": content}}],
                           "message": {"content": content},
+                          "usage": {"prompt_tokens": 11, "completion_tokens": 7},
                           "object": "response", "status": "completed",
                           "output_text": content,
                           "output": [{"content": [{"type": "output_text", "text": content}],

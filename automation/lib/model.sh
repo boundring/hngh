@@ -40,6 +40,13 @@
 MODEL_USED=""
 MODEL_USED_FILE="$AUTOMATION_ROOT/tmp-modelused.txt"
 POST_CODE_FILE="$AUTOMATION_ROOT/tmp-postcode.txt"
+# same subshell-escape reason as POST_CODE_FILE: the chat helpers run inside
+# the caller's command substitution, so the measured wall time (curl
+# %{time_total}, seconds) and any usage tokens the provider returned travel
+# to _model_emit through files. Empty/absent = not measured -> NULL row.
+WALL_S_FILE="$AUTOMATION_ROOT/tmp-walls.txt"
+TOKIN_FILE="$AUTOMATION_ROOT/tmp-tokensin.txt"
+TOKOUT_FILE="$AUTOMATION_ROOT/tmp-tokensout.txt"
 
 last_model_used() {
  cat "$MODEL_USED_FILE" 2>/dev/null || true
@@ -53,14 +60,33 @@ last_model_used() {
 # code (000 on transport failure) goes to $POST_CODE_FILE — a file, not a
 # variable, because the helper runs inside the caller's command-substitution
 # subshell (same reason MODEL_USED goes through tmp-modelused.txt).
-_post_chat() { # url jq_expr [bearer] [session_hdr] -> content on stdout; code in $POST_CODE_FILE
+_post_chat() { # url jq_expr [bearer] [session_hdr] -> content on stdout; code in $POST_CODE_FILE,
+ # wall seconds in $WALL_S_FILE, usage tokens (chat-completions
+ # .usage.prompt_tokens/completion_tokens or Responses
+ # .usage.input_tokens/output_tokens) in $TOKIN/$TOKOUT files
  local url="$1" expr="$2" auth="${3:-}" session="${4:-}" tmp code content
+ local raw t tin tout
  tmp="$(mktemp)"
- code="$(curl -s --max-time "$MODEL_TIMEOUT" -X POST \
+ raw="$(curl -s --max-time "$MODEL_TIMEOUT" -X POST \
   -H "Content-Type: application/json" \
   ${auth:+-H "Authorization: Bearer $auth"} \
   ${session:+-H "x-opencode-session: $session"} \
-  -d @- -w '%{http_code}' -o "$tmp" "$url" 2>/dev/null)" || code=000
+  -d @- -w '%{http_code} %{time_total}' -o "$tmp" "$url" 2>/dev/null)" || raw="000 0"
+ case "$raw" in
+ *' '*)
+  code="${raw%% *}"
+  t="${raw#* }"
+  ;;
+ *)
+  code="$raw"
+  t=0
+  ;;
+ esac
+ printf '%s' "$t" >"$WALL_S_FILE" 2>/dev/null
+ tin="$(jq -r '.usage.prompt_tokens // .usage.input_tokens // empty' "$tmp" 2>/dev/null)"
+ printf '%s' "${tin:-}" >"$TOKIN_FILE" 2>/dev/null
+ tout="$(jq -r '.usage.completion_tokens // .usage.output_tokens // empty' "$tmp" 2>/dev/null)"
+ printf '%s' "${tout:-}" >"$TOKOUT_FILE" 2>/dev/null
  printf '%s' "$code" >"$POST_CODE_FILE"
  content=""
  [ "$code" = "200" ] && content="$(jq -r "$expr" "$tmp" 2>/dev/null || true)"
@@ -128,12 +154,27 @@ refresh_unsloth_token() {
 
 # one raw Unsloth attempt writing the response into $tmp; echoes the http code.
 unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
- local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code
- code="$(printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" |
+ local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code raw t tin tout
+ raw="$(printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" |
   curl -s --max-time "$MODEL_TIMEOUT" \
    -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
-   -d @- -w '%{http_code}' -o "$tmp" "$UNSLOTH_URL/v1/chat/completions" 2>/dev/null)" ||
-  code=000
+   -d @- -w '%{http_code} %{time_total}' -o "$tmp" "$UNSLOTH_URL/v1/chat/completions" \
+   2>/dev/null)" || raw="000 0"
+ case "$raw" in
+ *' '*)
+  code="${raw%% *}"
+  t="${raw#* }"
+  ;;
+ *)
+  code="$raw"
+  t=0
+  ;;
+ esac
+ printf '%s' "$t" >"$WALL_S_FILE" 2>/dev/null
+ tin="$(jq -r '.usage.prompt_tokens // .usage.input_tokens // empty' "$tmp" 2>/dev/null)"
+ printf '%s' "${tin:-}" >"$TOKIN_FILE" 2>/dev/null
+ tout="$(jq -r '.usage.completion_tokens // .usage.output_tokens // empty' "$tmp" 2>/dev/null)"
+ printf '%s' "${tout:-}" >"$TOKOUT_FILE" 2>/dev/null
  printf '%s' "$code"
 }
 
@@ -461,6 +502,9 @@ PY
  # live 2026-09-07: OpenAI Responses shape,
  # live 2026-09-07: OpenAI Responses shape,
  # live 2026-09-07: OpenAI Responses shape,
+ # live 2026-09-07: OpenAI Responses shape,
+ # live 2026-09-07: OpenAI Responses shape,
+ # live 2026-09-07: OpenAI Responses shape,
 }
 lobehub_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  local prompt="$1" max_tokens="$2" url agent key kfile content pace cap
@@ -495,9 +539,26 @@ lobehub_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  printf '%s\n' "$content"
 }
 
-_model_emit() { # source model -- one kind=model row per successful call
+_model_emit() { # source model -- one kind=model row per successful call,
+ # with wall_s and any usage tokens the leg measured (the
+ # tmp files _post_chat/unsloth_attempt wrote; consumed and
+ # cleared here so a later leg never inherits stale values)
+ local wall tin tout data
+ wall="$(cat "$WALL_S_FILE" 2>/dev/null)"
+ tin="$(cat "$TOKIN_FILE" 2>/dev/null)"
+ tout="$(cat "$TOKOUT_FILE" 2>/dev/null)"
+ rm -f "$WALL_S_FILE" "$TOKIN_FILE" "$TOKOUT_FILE"
+ data=""
+ case "$tin$tout" in *[0-9]*) : ;; *)
+  tin=""
+  tout=""
+  ;;
+ esac
+ [ -n "$tin" ] || [ -n "$tout" ] &&
+  data="$(python3 -c 'import json,sys;print(json.dumps({k:int(v) for k,v in [("tokens_in",sys.argv[1]),("tokens_out",sys.argv[2])] if v}))' "${tin:-}" "${tout:-}")"
  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
   --source "$1" --model "$2" --subject "${0##*/}" \
+  ${wall:+--wall-s "$wall"} ${data:+--data "$data"} \
   >/dev/null 2>&1 || true
 }
 

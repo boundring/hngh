@@ -314,6 +314,18 @@ re-proposed.
   natively; adopt opencode-go as an hngh leg only with tightest-window
   pacing (R3).
 
+2026-09-11 update (R1 gap closed, in-pipeline datum landed): wall_s is now
+populated on every leg's kind=model row (_model_emit reads the wall-seconds
+and usage-token files _post_chat/unsloth_attempt write -- same
+tmp-file subshell-escape mechanism as POST_CODE_FILE; chat-completions and
+Responses usage shapes both parsed; absent = NULL, never fabricated), and
+the one authorized MODEL_PIN=lobehub model_call ran in the automation
+path: HTTP 200-completed, wall_s 30.44 s, tokens_in 24638 / tokens_out 14
+(the 24.6k input confirms the 28.6k->8k prompt-slim concern is real in
+pipeline, not just config). The 30 s row supersedes the 15-20 s
+hand-measurement; lobehub's CONDITIONAL status now rests on prompt slim,
+not on missing evidence.
+
 Highest-leverage next measurement: populate wall_s in _model_emit, then run
 ONE bounded MODEL_PIN=lobehub model_call in the automation path -- it
 converts the 15-20 s hand number into an in-pipeline row and is the only

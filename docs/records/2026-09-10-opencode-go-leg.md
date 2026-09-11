@@ -62,3 +62,16 @@ Bearer-only GET /v1/models health-probe path read 200. Full `make test`
 red count is 2, both in tests/test-plan-acceptance.py OmpBridge --
 confirmed the sibling's in-flight scripts/omp-bridge bare-slug work
 (step3-bridge), not this change.
+
+2026-09-11 follow-up (R1 instrumentation gap closed): _model_emit now
+populates wall_s and any usage tokens on every leg's kind=model row
+(wall measured by curl %{time_total} in _post_chat/unsloth_attempt,
+relayed through tmp files for the same subshell reason as
+tmp-postcode.txt; absent values stay NULL). One authorized in-pipeline
+MODEL_PIN=lobehub model_call 64 probe: HTTP 200-completed, wall_s
+30.439229, tokens_in 24638, tokens_out 14 (row 418, ts
+2026-09-11T01:05:38Z) -- converts lobehub's hand-measured 15-20 s into an
+in-pipeline datum and quantifies the oversized agent prompt
+(24.6k input tokens) that was throttling the leg. See the appended
+paragraph in docs/research/2026-09-10-passthrough-and-quota-interleaving.md
+section 5.

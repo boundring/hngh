@@ -206,3 +206,37 @@ ck "pin=ocgo, live leg: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelus
  echo "test-model-ocgo-leg: $fails failure(s)"
  exit 1
 }
+
+# --- 12. telemetry wall_s + tokens: a slow stubbed call (0.15s sleep)
+#         emits its row with wall_s > 0 and usage tokens from the reply.
+rm -f "$sb/dashboard/telemetry.db"
+: >"$sb/STATE.md"
+stub_start stubU 0.15
+stubU_port="$(cat "$stubdir/stubU-port")"
+[ -n "$stubU_port" ] || { echo "FAIL: usage stub did not start"; exit 1; }
+out="$(call "hello-12" "OPENCODE_API_KEY=stub-key-never-real" \
+ "OCGO_MODEL=glm-test-model" "OCGO_URL=http://127.0.0.1:$stubU_port")"
+ck "wall_s case: stub content" "stub-says-hi" "$out"
+row="$(sqlite3 "$sb/dashboard/telemetry.db" \
+ "select wall_s, tokens_in, tokens_out from events where kind='model' and source='ocgo'")"
+wall="${row%%|*}"
+ck "wall_s case: wall_s is a number > 0" "yes" \
+ "$(awk -v w="$wall" 'BEGIN{print (w+0 > 0) ? "yes" : "no"}')"
+ck "wall_s case: tokens_in from usage" "11" "$(printf '%s' "$row" | cut -d'|' -f2 | tr -d ' ')"
+ck "wall_s case: tokens_out from usage" "7" "$(printf '%s' "$row" | cut -d'|' -f3 | tr -d ' ')"
+
+# --- 13. unsloth leg also emits wall_s (own curl path, not _post_chat).
+rm -f "$sb/dashboard/telemetry.db"
+: >"$sb/STATE.md"
+stub_start stubA 0.15
+stubA_port="$(cat "$stubdir/stubA-port")"
+[ -n "$stubA_port" ] || { echo "FAIL: unsloth stub did not start"; exit 1; }
+printf 'stub-token-never-real' >"$sb/unsloth-token"
+out="$(call "hello-13" "MODEL_PIN=local" \
+ "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port")"
+ck "unsloth wall_s case: stub content" "stub-says-hi" "$out"
+row="$(sqlite3 "$sb/dashboard/telemetry.db" \
+ "select wall_s from events where kind='model' and source='unsloth'")"
+ck "unsloth wall_s case: wall_s > 0" "yes" \
+ "$(awk -v w="$row" 'BEGIN{print (w+0 > 0) ? "yes" : "no"}')"
+

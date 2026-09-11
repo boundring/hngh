@@ -2,6 +2,19 @@
 
 ## 2026-09-10
 
+- feat: wall_s telemetry on model legs + lobehub in-pipeline probe (R1
+  datum). _model_emit now emits wall_s (curl %{time_total}, captured in
+  _post_chat/unsloth_attempt through the same tmp-file subshell escape as
+  tmp-postcode.txt) and usage tokens (chat-completions and Responses usage
+  shapes; absent = NULL) on every kind=model row. One authorized in-pipeline
+  MODEL_PIN=lobehub model_call 64: HTTP 200, wall_s 30.44, tokens_in 24638
+  (quantifies the oversized agent prompt throttling the leg). Failing-first
+  test cases 12-13 in test-model-ocgo-leg.sh; stub-lib reply gained a usage
+  block. Verify: make test green normal + env -i hermetic (rc=0 both).
+  docs/research/2026-09-10-passthrough-and-quota-interleaving.md s5 verdict
+  updated (append-only); record amendment in
+  docs/records/2026-09-10-opencode-go-leg.md.
+
 - feat: opencode-go quota leg with 5h-window pacing (R3). OpenCode Go T2
   GLM (operator-armed 2026-09-10) wired as the fourth quota leg, balanced
   like the kimi leg: cadence-params rows opencode-url / opencode-model
