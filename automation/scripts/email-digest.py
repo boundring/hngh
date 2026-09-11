@@ -594,7 +594,7 @@ def dashboard_base_url():
     return "http://%s:%s" % (host, port)
 
 
-def feedback_form_html():
+def feedback_form_html(token=None):
     """Compact HTML feedback form (one per email, not per section) feeding
     the SAME capture endpoint the dashboard pips use: POST /api/feedback,
     application/x-www-form-urlencoded (email is JS-free; the endpoint
@@ -604,6 +604,12 @@ def feedback_form_html():
     line under the form is mandatory, never remove it.
     """
     url = dashboard_base_url() + "/api/feedback"
+    # Dashboard POSTs are token-gated (X-Hngh-Token header); HTML email
+    # forms cannot carry headers, so the token rides a hidden field
+    # rendered at digest time — the digest is generated on-host, where
+    # dashboard/token.txt is readable. Empty when the server has never
+    # booted: the form still renders and fails closed server-side (403).
+    token = dashboard_token() if token is None else token
     box = "border:1px solid #aaa;padding:4px;margin:2px 0;width:95%%;font-family:monospace;font-size:13px"
     return (
         '<form method="POST" action="%s" '
@@ -618,10 +624,23 @@ def feedback_form_html():
         '<textarea name="text" maxlength="2000" rows="4" '
         'placeholder="your feedback" style="%s"></textarea><br>'
         '<button type="submit" style="padding:4px 10px">Submit feedback</button>'
+        '<input type="hidden" name="hngh_token" value="%s">'
         '<div style="margin-top:6px;color:#666">'
         "Form not rendering? Open the dashboard and use its feedback pip.</div>"
         "</form>"
-    ) % (html.escape(url), box, box, box)
+    ) % (html.escape(url), box, box, box, html.escape(token or ""))
+
+
+def dashboard_token():
+    """The dashboard POST token (dashboard/token.txt), for the hidden
+    feedback-form field. Empty when the server has never booted.
+    """
+    path = os.path.join(AUTOMATION, "dashboard", "token.txt")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
 
 
 def wrap78(text):

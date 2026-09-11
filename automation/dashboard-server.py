@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 """dashboard-server — static file server for hngh-automation/dashboard/
-PLUS exactly nine write endpoints (any other POST path -> 404) and one
-read-only GET route (see below).
+PLUS exactly eleven write endpoints (any other POST path -> 404) and the
+read-only GET routes below (session slice, SSE push, telemetry, jails).
+
+POST auth (plan 2026-09-09 step 6, security, fail closed): every POST
+requires header X-Hngh-Token matching dashboard/token.txt — 32-hex,
+generated on first boot, mode 600, reused afterward. The served index
+injects the token as <meta name="hngh-token"> so the legit UI reads it
+from the page it already loaded. HTML email forms cannot carry headers,
+so urlencoded posts may present the token as a hidden hngh_token form
+field rendered into the digest at send time; tradeoff accepted (recorded
+in docs/records/2026-09-11-dashboard-p1-server.md): the token rides in
+the digest email — it gates ledger-mutating POSTs on the LAN, it is not
+itself a secret. Missing/wrong token -> 403, before any dispatch.
 
 Endpoints — all advisory/display-only. They NEVER feed hngh governance,
 policy, certificates, or scoring; spawned processes are display surfaces.
@@ -88,6 +99,14 @@ POST /system/backup-now  {}
     Every /system/* call appends one agent-handoffs.md line
     (system-op | <UTC ts> | automation|system-view | <action>).
 
+POST /report-queue/mark-read  {"id": str}
+    Advances the operator's own reading cursor via scripts/report-queue
+    --mark-read <id> (the CLI refuses unknown ids, exit 2 -> 400).
+    Handoffs-logged like /operator-item/dismiss:
+      mark-read | <UTC ts> | automation|<id> | report marked read
+    --prune stays CLI-only (it deletes ledger rows). 201 {"ok": true};
+    400 bad id / refused id; 500 exec failure.
+
 Contract (shared, same style as /flag):
     - session/id: non-empty, <=80 chars, [A-Za-z0-9._-]
     - note:       non-empty, <=200 chars after stripping pipes
@@ -98,10 +117,12 @@ named lane's backlog.md section (insertion is the point of the feature;
 existing content is never reordered).
 """
 import importlib.util
+import hmac
 import json
 import os
 import re
 import shlex
+import sqlite3
 import subprocess
 import time
 import urllib.parse
@@ -124,6 +145,15 @@ FEEDBACK_TYPES = ("css-theme", "data-format", "correction", "idea")
 
 SESSION_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 UNIT_RE = re.compile(r"^[A-Za-z0-9.@_-]{1,80}$")
+
+TOKEN_FILE = os.path.join(DASHBOARD, "token.txt")
+SESSIONS_JSON = os.path.join(DASHBOARD, "sessions.json")
+TELEMETRY_DB = os.path.join(DASHBOARD, "telemetry.db")
+EVENT_WATCH = (os.path.join(DASHBOARD, "operator-items.json"),
+               DISMISSED, os.path.join(DASHBOARD, "readout.json"))
+SSE_POLL_S = 0.5
+SSE_HEARTBEAT_S = 15.0
+TELEMETRY_TTL_S = 30.0
 
 # Built-in launcher templates (ui-config "launchers" overrides/adds).
 # {transcript} is replaced with the shlex-quoted absolute record.lisp
@@ -194,6 +224,70 @@ def jailed_doc_path(base, name_re, name):
     return doc if os.path.isfile(real) else None
 
 
+def load_token():
+    """The POST token: 32-hex, generated on first boot into token.txt
+    (mode 600), reused afterward. Mode is re-enforced on every read so a
+    sloppy pre-existing file cannot linger permissive. Guards ledger-
+    mutating POSTs on the LAN, not secrets (plan 2026-09-09 step 6).
+    """
+    try:
+        with open(TOKEN_FILE, encoding="utf-8") as f:
+            tok = f.read().strip()
+        if not re.fullmatch(r"[0-9a-f]{32}", tok):
+            raise ValueError("corrupt token file")
+    except (OSError, ValueError):
+        tok = os.urandom(16).hex()
+        fd = os.open(TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(tok + "\n")
+    os.chmod(TOKEN_FILE, 0o600)
+    return tok
+
+
+def dashboard_token():
+    """load_token() or None when the token file is unreadable: fail closed."""
+    try:
+        return load_token()
+    except Exception:
+        return None
+
+
+_tele_cache = (0.0, None)
+
+
+def telemetry_24h():
+    """24h aggregates from telemetry.db, emitted on request (no new job);
+    cached 30s in-process (feed cadence is minutes, not seconds)."""
+    global _tele_cache
+    if _tele_cache[1] is not None and time.monotonic() - _tele_cache[0] < TELEMETRY_TTL_S:
+        return _tele_cache[1]
+    buckets, legs = [], {}
+    spend = 0.0
+    cutoff = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 86400))
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % TELEMETRY_DB, uri=True)
+        for hour, s, ti, to, n in conn.execute(
+                "SELECT substr(ts,1,13), COALESCE(SUM(cost_usd),0),"
+                " COALESCE(SUM(tokens_in),0), COALESCE(SUM(tokens_out),0),"
+                " COUNT(*) FROM events WHERE ts >= ?"
+                " GROUP BY substr(ts,1,13) ORDER BY 1", (cutoff,)):
+            buckets.append({"hour": hour, "spend": round(s, 6),
+                            "tokens_in": ti, "tokens_out": to, "runs": n})
+        legs = dict(conn.execute(
+            "SELECT COALESCE(model,'(none)'), COUNT(*) FROM events"
+            " WHERE ts >= ? GROUP BY model ORDER BY 2 DESC", (cutoff,)))
+        spend = round(conn.execute(
+            "SELECT COALESCE(SUM(cost_usd),0) FROM events WHERE ts >= ?",
+            (cutoff,)).fetchone()[0], 6)
+        conn.close()
+    except sqlite3.Error:
+        pass  # db missing/empty/locked: zeroed payload, never fails the feed
+    payload = {"generated": _ts(), "window": "24h", "buckets": buckets,
+               "legs": legs, "spend": spend}
+    _tele_cache = (time.monotonic(), payload)
+    return payload
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DASHBOARD, **kwargs)
@@ -205,6 +299,19 @@ class Handler(SimpleHTTPRequestHandler):
     # client probes first and renders the state chip without a link on
     # 404 — fail closed, no dead links. Display-only.
     def do_GET(self):
+        route = self.path.split("?")[0]
+        if route in ("/", "/index.html"):
+            self._serve_index()
+            return
+        if route.startswith("/session/"):
+            self._serve_session()
+            return
+        if route == "/events":
+            self._serve_events()
+            return
+        if route == "/telemetry.json":
+            self._json(200, telemetry_24h())
+            return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
             return
@@ -259,15 +366,140 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    # GET / (and /index.html) — static index with the POST token injected
+    # as <meta name="hngh-token"> so the legit UI reads it from the page it
+    # already loaded (no second secret channel). Token unreadable -> empty
+    # meta, every mutation 403s: fail closed.
+    def _serve_index(self):
+        try:
+            with open(os.path.join(DASHBOARD, "index.html"), "rb") as f:
+                payload = f.read()
+        except OSError:
+            self.send_error(404)
+            return
+        meta = ('<meta name="hngh-token" content="%s">'
+                % (dashboard_token() or "")).encode()
+        payload = payload.replace(b"<head>", b"<head>" + meta, 1)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    # GET /session/<id>?tail=N — server-side slice of sessions.json: the
+    # last N transcript entries (N clamped 1..200, default 20) instead of
+    # the whole 2+MB feed. id validated against SESSION_RE (traversal
+    # included); unknown id 404s. Read-only.
+    def _serve_session(self):
+        sid = urllib.parse.unquote(self.path[len("/session/"):].split("?")[0])
+        try:
+            tail = min(max(int(urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query).get("tail", ["20"])[0]),
+                1), 200)
+        except ValueError:
+            self.send_error(400)
+            return
+        if not SESSION_RE.fullmatch(sid):
+            self.send_error(404)
+            return
+        try:
+            with open(SESSIONS_JSON, encoding="utf-8") as f:
+                feed = json.load(f)
+        except Exception:
+            self.send_error(500)
+            return
+        entry = next((s for s in (feed.get("sessions") or [])
+                      if s.get("id") == sid), None)
+        if entry is None:
+            self.send_error(404)
+            return
+        entries = (entry.get("detail") or {}).get("entries") or []
+        payload = json.dumps({"id": sid, "entries": entries[-tail:]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    # GET /events — SSE push. Watches mtimes of the attention feeds (the
+    # verdict readout + operator-items/dismissed); emits one no-payload
+    # change event per change (client re-fetches the small feed), a
+    # heartbeat comment otherwise, and exits on client disconnect. Keeps
+    # the push layer dumb: no data crosses, only "go look again".
+    def _serve_events(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        watch = tuple(EVENT_WATCH)  # snapshot: seams may swap under us
+        mtimes = {p: self._mtime(p) for p in watch}
+        last_hb = time.monotonic()
+        try:
+            while True:
+                for p in watch:
+                    m = self._mtime(p)
+                    if m != mtimes[p]:
+                        mtimes[p] = m
+                        if m is not None:
+                            payload = ('event: change\ndata: {"name": "%s",'
+                                       ' "mtime": %.3f}\n\n'
+                                       % (os.path.basename(p), m)).encode()
+                            self.wfile.write(payload)
+                            self.wfile.flush()
+                if time.monotonic() - last_hb >= SSE_HEARTBEAT_S:
+                    self.wfile.write(b": heartbeat\n\n")
+                    self.wfile.flush()
+                    last_hb = time.monotonic()
+                time.sleep(SSE_POLL_S)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass  # client went away: close cleanly
+
+    @staticmethod
+    def _mtime(path):
+        try:
+            return os.stat(path).st_mtime
+        except OSError:
+            return None
+
     def _body(self):
         length = int(self.headers.get("Content-Length", 0))
         return json.loads(self.rfile.read(length) if length < 65536 else b"")
 
+    def _form_raw(self):
+        length = int(self.headers.get("Content-Length", 0))
+        return self.rfile.read(length if length < 65536 else 0)
+
+    def _token_ok(self):
+        """Shared POST guard (plan 2026-09-09 step 6, fail closed): header
+        X-Hngh-Token must match dashboard/token.txt. Exception: HTML email
+        forms cannot carry headers, so urlencoded posts may present the
+        token as a hidden hngh_token form field rendered at digest time
+        (the digest is generated on-host where the token is readable).
+        Tradeoff, accepted: the token rides in the digest email — it gates
+        ledger-mutating POSTs on the LAN, it is not itself a secret.
+        """
+        supplied = self.headers.get("X-Hngh-Token")
+        if supplied is None and "application/x-www-form-urlencoded" in (
+                self.headers.get("Content-Type") or ""):
+            self._raw_form = self._form_raw()
+            fields = urllib.parse.parse_qsl(
+                self._raw_form.decode("utf-8", "replace"))
+            supplied = dict(fields).get("hngh_token")
+        tok = dashboard_token()
+        if not tok:
+            return False
+        return hmac.compare_digest(str(supplied or ""), tok)
+
     def do_POST(self):
         try:
+            self._raw_form = None  # per-request: Handler serves keep-alive
             p = self.path.lstrip("/")
             if p == "api/feedback":
                 p = "feedback"  # namespaced client path, root dispatch
+            if not self._token_ok():
+                self._json(403, {"ok": False, "error": "forbidden"})
+                return
             {"flag": self._flag,
              "operator-item/dismiss": self._dismiss,
              "spawn": self._spawn,
@@ -277,9 +509,35 @@ class Handler(SimpleHTTPRequestHandler):
              "system/refresh": self._system_refresh,
              "system/reset-failed": self._system_reset_failed,
              "system/backup-now": self._system_backup_now,
+             "report-queue/mark-read": self._mark_read,
              "feedback": self._feedback}[p]()
         except KeyError:
             self._json(404, {"ok": False, "error": "not found"})
+
+    def _mark_read(self):
+        try:
+            rid = str(self._body().get("id", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        if not SESSION_RE.fullmatch(rid):
+            self._json(400, {"ok": False, "error": "invalid report id"})
+            return
+        try:
+            p = subprocess.run(["python3", REPORT_QUEUE, "--mark-read", rid],
+                               capture_output=True, text=True, timeout=15)
+        except Exception:
+            self._json(500, {"ok": False, "error": "mark-read exec failed"})
+            return
+        if p.returncode != 0:  # report-queue refuses unknown ids (exit 2)
+            self._json(400, {"ok": False, "error": "report-queue refused"
+                             " (rc=%d)" % p.returncode})
+            return
+        ts = _ts()
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write("mark-read | %s | automation|%s | report marked read\n"
+                    % (ts, rid))
+        self._json(201, {"ok": True})
 
     def _handoff(self, action):
         try:
@@ -361,10 +619,9 @@ class Handler(SimpleHTTPRequestHandler):
     # POST /api/feedback — write-only feedback capture from the dashboard
     # pips (JSON body) and the notification-email feedback forms
     # (application/x-www-form-urlencoded body; email is JS-free). One
-    # validator for both encodings. POST endpoints here carry no shared
-    # token (LAN-served static
-    # dashboard; every route is display/ledger-only), so the posture is:
-    # files only, plain text, 2000-char cap, 64 KB body cap (in _body),
+    # validator for both encodings. POST endpoints are token-gated (see
+    # _token_ok). Residual posture: files only, plain text, 2000-char
+    # cap, 64 KB body cap (in _form_raw/_body),
     # and a simple 1-per-second per-type rate guard. Nothing is executed.
     _fb_last = {}  # type -> monotonic ts of last accepted write
 
@@ -375,8 +632,10 @@ class Handler(SimpleHTTPRequestHandler):
                 # HTML email feedback forms post urlencoded (email is
                 # JS-free); parse_qsl cannot raise, empty fields drop out
                 # to "" and fail validation below like any bad JSON field.
-                length = int(self.headers.get("Content-Length", 0))
-                raw = self.rfile.read(length if length < 65536 else 0)
+                # The token guard consumed this body when it validated the
+                # hidden hngh_token field; reuse it, never re-read rfile.
+                raw = self._raw_form if self._raw_form is not None \
+                    else self._form_raw()
                 body = dict(urllib.parse.parse_qsl(raw.decode("utf-8", "replace")))
             else:
                 body = self._body()
@@ -628,4 +887,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    ThreadingHTTPServer(("0.0.0.0", 8890), Handler).serve_forever()
+    # DASHBOARD_PORT matches the email-digest footer convention; the
+    # systemd unit keeps the default.
+    ThreadingHTTPServer(("0.0.0.0",
+                         int(os.environ.get("DASHBOARD_PORT", "8890"))),
+                        Handler).serve_forever()
