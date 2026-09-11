@@ -61,6 +61,17 @@ append_ocgo_lesson() { # cause-class
 # standalone callers get the kernel default)
 BRIDGE="${BRIDGE:-${HNGH_HOME:-$HOME/Projects/etc/hngh}/scripts/omp-bridge}"
 
+# bridge store per launch: hngh records run-1 per store, so two
+# --run-start calls against one store record-conflict. A beat used to
+# share one store across its dream pass and executor (and extra plan
+# slots), so every launch after the first refused rc=75 with no session
+# and no spend — the 2026-09-11 throughput stall. run-end MUST use the
+# same store as run-start (omp-bridge closes the run in BRIDGE_STORE),
+# so the dir is fixed per launch, not per process.
+launch_store() { # -> fresh bridge store dir for this launch on stdout
+ printf '%s/launch-%s-%s' "${STORE:?STORE unset}" "$1" "$(date +%Y%m%dT%H%M%S)-$$"
+}
+
 launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SESSION_MODEL)
  LAUNCH_RC=0 LAUNCH_RUN_ID="" LAUNCH_LOG="" \
   LAUNCH_DISPOSITION="" LAUNCH_CAUSE="" LAUNCH_BRIDGE_MSG=""
@@ -98,14 +109,15 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
  ctx="$(context_pack "$role" "$slug")"
 
  local bridge_out bridge_rc run_id
- bridge_out="$(OMP_BRIDGE_STORE="$STORE" \
+ local bridge_store="$(launch_store)"
+ bridge_out="$(OMP_BRIDGE_STORE="$bridge_store" \
   HNGH_LOADOUT="loadout-route-label=automation loadout-context-limit=2000 loadout-token-limit=50000 loadout-cost-limit=2000 loadout-time-limit=$TIMEOUT_S" \
   "$bridge_bin" --run-start "overnight-$slug" "$objective" 2>&1)"
  bridge_rc=$?
  run_id="$(printf '%s' "$bridge_out" | sed -n 's/.*run \(run-[0-9]*\).*/\1/p' | head -1)"
  if [ "$bridge_rc" -ne 0 ] || [ -z "$run_id" ]; then
   # raised limits refused (fail-closed): retry with config.env verbatim
-  bridge_out="$(OMP_BRIDGE_STORE="$STORE" "$bridge_bin" --run-start \
+  bridge_out="$(OMP_BRIDGE_STORE="$bridge_store" "$bridge_bin" --run-start \
    "overnight-$slug" "$objective" 2>&1)"
   bridge_rc=$?
   run_id="$(printf '%s' "$bridge_out" | sed -n 's/.*run \(run-[0-9]*\).*/\1/p' | head -1)"
@@ -199,7 +211,7 @@ launch) before re-deriving any repo fact from scratch."
  esac
  # cause classification for the disposition spine (lib/causes.sh bestiary);
  # a missing/unreadable log classifies as unknown
- LAUNCH_CAUSE="$(classify_cause "$ROOT/$log")"
+ LAUNCH_CAUSE="$(classify_cause "$ROOT/$log" "$LAUNCH_RC")"
  # self-steering loop: one lesson line per opencode session (after
  # classification — the lesson cites the cause class). Happy-path skip:
  # a clean exit (rc=0) classified unknown matched no failure keyword —
@@ -211,7 +223,7 @@ launch) before re-deriving any repo fact from scratch."
  fi
  printf '%s | overnight|%s | session-run\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" >>"$ROOT/logs/budget.md"
- OMP_BRIDGE_STORE="$STORE" "$bridge_bin" --run-end "$run_id" \
+ OMP_BRIDGE_STORE="$bridge_store" "$bridge_bin" --run-end "$run_id" \
   "$LAUNCH_DISPOSITION" >/dev/null 2>&1 || true
  # model-outcome demotion counter (stall-recovery step 1): ok resets,
  # bad-execution counts toward demotion, other classes only record

@@ -2,6 +2,17 @@
 
 ## 2026-09-11
 
+- fix: delegated-session beat stall — every launch after the first in a
+  beat refused `conflict labels=record-conflict` (rc=75, no session, no
+  spend) because dream pass + executor + extra plan slots shared one
+  bridge store and hngh records run-1 per store; lib/launch-session.sh
+  now gives each launch its own store subdir (run-end matches). Also:
+  classify_cause takes the launch rc and classifies a timeout kill
+  (rc=124) bad-execution even with a clean log tail, so the respawn
+  guard stops refusing timeouts as non-transient. Tests: tests/
+  test-ocgo-launch.py, tests/test-causes.py. Record: docs/records/
+  2026-09-11-beat-stall-diagnosis.md.
+
 - fix: research-beat writer strips model tool-call syntax and marks
   truncation (corpus-loss cure): capture-side filter (lib/docfilter.py,
   shared signature with tests/test-doc-hygiene.py) applied before every

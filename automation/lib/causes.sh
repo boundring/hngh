@@ -22,8 +22,8 @@
 #                     as superseded; no fix
 #   unknown            no keyword matched -- generic investigate, fix or park
 
-classify_cause() { # logfile -> one cause class on stdout (unknown if no log)
- local log="$1" text=""
+classify_cause() { # logfile [rc] -> one cause class on stdout (unknown if no log)
+ local log="$1" rc="${2:-}" text=""
  if [ -n "$log" ] && [ -f "$log" ]; then
   # two-stage classification (2026-09-11 404-in-success false positive):
   # first keep only failure-shaped lines, then run the class table on
@@ -35,6 +35,15 @@ classify_cause() { # logfile -> one cause class on stdout (unknown if no log)
    tr '[:upper:]' '[:lower:]')"
  fi
  [ -z "$text" ] && {
+  # a timeout kill (rc=124) is a transient death by definition
+  # (steer-vs-die doctrine) even when the tail is clean — the session
+  # never finished inside its budget. The worker-transport-wiring
+  # respawn refusal (2026-09-11) classified this unknown and the guard
+  # treated it as non-transient.
+  [ "$rc" = "124" ] && {
+   printf 'bad-execution'
+   return 0
+  }
   printf 'unknown'
   return 0
  }

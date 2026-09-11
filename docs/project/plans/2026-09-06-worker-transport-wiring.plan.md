@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-07T01:01:21Z source=gate-inventory-audit run-worker row -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T01:01:21Z source=gate-inventory-audit run-worker row cause=ceremony-required disposed=2026-09-11T19:10:00Z reason=kernel src/tests steps require the certificate ceremony lane; machine delegated sessions must not execute them (beat-stall diagnosis 2026-09-11); step 1 already landed in e42f637 -->
 # 2026-09-06 — run-worker transport wiring (operator-file worker transport)
 
 Rung 18 shipped the worker injection point — `dispatch-run-worker`
