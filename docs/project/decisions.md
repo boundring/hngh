@@ -457,3 +457,27 @@ The cure follows the 2026-09-06 precedent, minimized:
    the guard declaration. One ceremony, one candidate — the precedent's
    revert-then-reapply dance is not needed because the feature content
    is bound by this certificate without a gate-red window.
+
+   **Superseded 2026-09-11 (post-purge re-keying; no governance change).**
+   The 10:57 secret-scrub `git filter-branch` purge rewrote the hashes of
+   every descendant of the redacted doc commit, orphaning the declared
+   hashes: `a2f4d0e` -> `572d3e2` and `31768d2` -> `adb0307` (same
+   subjects, same author dates, identical patch-ids). This declaration
+   stands; the exemption register was re-keyed to the post-purge hashes
+   through a fresh ceremony (docs/records/
+   2026-09-11-kernel-gate-recertified.md). The guard now records each
+   entry's patch-id — which survived the rewrite unchanged — as a
+   purge-proof fallback key, and fails loudly when a registered hash is
+   unreachable, so a future purge turns into an immediate self-naming
+   failure instead of a silent red.
+
+   **Declared post-hoc 2026-09-11 (same class, same ceremony):**
+   `41f646a` (auto-unpark blocker cooldown + README daily dispatch
+   frame) touched repo-root `scripts/generate-publication` under the
+   automation free-commit rule without the candidate label. Declared
+   here with the operator's approval in the same ceremony batch: the
+   change was operator-approved, the full automation suite was green at
+   commit time, and the batch ceremony is the cheaper landing.
+   AGENTS.md now states the boundary: repo-root `scripts/` is kernel
+   code surface — machine-session commits there require the ceremony
+   label; the automation free-commit rule covers `automation/` only.

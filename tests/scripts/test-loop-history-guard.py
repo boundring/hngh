@@ -24,6 +24,15 @@ of composition-root references, committed before this guard existed); it
 is exempted by name below and recorded in docs/project/decisions.md.
 History is not rewritten; enforcement starts from the restatement, with
 that one blemish declared.
+
+Declarations are purge-proof by construction. The registered hash is
+primary; the patch-id (git show <hash> | git patch-id --stable) is the
+purge-proof fallback: a history rewrite (filter-branch/filter-repo)
+re-keys descendant hashes but leaves patch content untouched, so a
+commit whose registered hash dangles is still matched by patch-id. A
+standing reachability self-check fails the gate when a registered hash
+is no longer reachable from HEAD, with a message that names the cure:
+re-declare via ceremony.
 """
 
 import re
@@ -35,17 +44,39 @@ EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 SUBTREE_SQUASH = re.compile(r"^Squashed '.*' content from commit [0-9a-f]+$")
 KNOWN_EXEMPTIONS = {
     # comment-only alignment of composition-root references; predates the guard
-    "915e0e3": "comment-only docs alignment (pre-guard)",
+    "915e0e3": {
+        "reason": "comment-only docs alignment (pre-guard)",
+        "patch-id": "09b439c8625b0c12d3bf402a5cf696af0157d6c2",
+    },
     # portfolio docs commit that also touched a kernel script (2026-09-06),
     # landed outside the loop and already pushed; declared by name per the
     # 2026-08-25 decision, cured by ceremony record -- not rewritten
-    "526cd3f": "portfolio ebook/journal commit touching a kernel script (declared miss)",
+    "526cd3f": {
+        "reason": "portfolio ebook/journal commit touching a kernel script (declared miss)",
+        "patch-id": "4496b3361bc3d606837acfd377b9ead29a636a4d",
+    },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
     # itself was being built; declared by name per the 2026-09-06 decision,
-    # cured by post-hoc certification (2026-09-11) -- not rewritten
-    "a2f4d0e": "omp-bridge --propose/--plan-status (declared miss)",
-    "31768d2": "omp-bridge --plan-status bare-slug fix (declared miss)",
+    # cured by post-hoc certification (2026-09-11) -- not rewritten.
+    # hash post-purge (2026-09-11 secret-scrub filter-branch), same patch-id
+    # as the declared original (a2f4d0e / 31768d2); re-keyed by ceremony
+    "572d3e2": {
+        "reason": "omp-bridge --propose/--plan-status (declared miss)",
+        "patch-id": "558c84f7a35794b3368334fe3b1e0f1b15e8ac7e",
+    },
+    "adb0307": {
+        "reason": "omp-bridge --plan-status bare-slug fix (declared miss)",
+        "patch-id": "697027ae813c96d0bc7638841aa542fe833972a6",
+    },
+    # declared post-hoc 2026-09-11: machine worker committed to repo-root
+    # scripts/ under the automation free-commit rule without the candidate
+    # label; change operator-approved (dispatch frame + blocker auto-unpark),
+    # full automation suite green at commit time
+    "41f646a": {
+        "reason": "auto-unpark blocker cooldown + README daily dispatch frame (declared miss)",
+        "patch-id": "d72c1f2c8248d8f23944898278398f5ed0c38c40",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
@@ -80,10 +111,49 @@ def diff_base(sha):
     return parents[1] if len(parents) > 1 else EMPTY_TREE
 
 
+UNREACHABLE_NOTE = ("exemption unreachable - history was rewritten; "
+                    "re-declare via ceremony (docs/project/decisions.md)")
+
+
+def reachable(sha):
+    proc = subprocess.run(["git", "merge-base", "--is-ancestor", sha, "HEAD"],
+                          capture_output=True)
+    return proc.returncode == 0
+
+
+def patch_id(sha):
+    show = run(["git", "show", sha]).stdout
+    out = subprocess.run(["git", "patch-id", "--stable"], input=show,
+                         capture_output=True, text=True, check=True).stdout
+    parts = out.split()
+    return parts[0] if parts else ""
+
+
+def registered_patch_ids(table=None):
+    table = KNOWN_EXEMPTIONS if table is None else table
+    return {entry["patch-id"] for entry in table.values()}
+
+
+def exempted_by(sha, table=None):
+    # hash is primary; patch-id is the purge-proof fallback (the hash may
+    # dangle after a history rewrite, but the same patch re-keyed under a
+    # new hash still matches the registered patch-id)
+    table = KNOWN_EXEMPTIONS if table is None else table
+    if sha in table:
+        return True
+    pid = patch_id(sha)
+    return bool(pid) and pid in registered_patch_ids(table)
+
+
 def main():
     violations = []
     checked = 0
     exempted = 0
+    # standing self-check: every registered exemption hash must resolve in
+    # reachable history; a dangling hash fails with a self-naming message
+    for sha in KNOWN_EXEMPTIONS:
+        if not reachable(sha):
+            violations.append((sha, UNREACHABLE_NOTE))
     for sha, subject in commits_since(RESTATEMENT):
         if SUBTREE_SQUASH.match(subject):
             # git-subtree --squash root: a parentless graft commit carrying the
@@ -103,6 +173,11 @@ def main():
             if files and not set(files) <= EXEMPT_ALLOWED_FILES:
                 violations.append((sha, subject,
                     f"labeled exemption touches {files}"))
+            continue
+        # last-chance purge-proof fallback: would-be violation whose
+        # patch-id matches a registered declaration is still exempted
+        if exempted_by(sha):
+            exempted += 1
             continue
         violations.append((sha, subject))
     if violations:

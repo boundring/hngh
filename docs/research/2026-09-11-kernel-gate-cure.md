@@ -164,3 +164,17 @@ above, and (2) optionally a gate-cure flow in the ceremony drive: parse the
 loop-history guard's violation output -> propose the re-declaration plan ->
 issue-cert -> re-certify — so the next desynchronization is cured by one
 command, with the ledger append-only throughout.
+
+## 8. Purge runbook (baked in with the 2026-09-11 recertification)
+
+Any future history rewrite (filter-branch / filter-repo) MUST be
+followed immediately by either a re-declaration ceremony re-keying the
+affected KNOWN_EXEMPTIONS hashes (the 2026-09-11 recertification is the
+precedent), or is performed with the patch-id keying already active —
+in which case the rewritten twins still match by patch-id, but the
+standing exemption-reachability self-check fires on the orphaned
+registered hashes and fails the gate with a self-naming message until
+the register is re-keyed. In practice: run
+`python3 tests/scripts/test-loop-history-guard.py` right after any
+rewrite; a red `exemption ... unreachable` line IS the signal to
+re-declare via ceremony.
