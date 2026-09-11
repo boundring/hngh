@@ -14,3 +14,4 @@ at 2026-09-11T05:00:49Z. Alert text: [oversight] slow-unit: dropin:33-research-b
 - 2026-09-11T06:00:49Z re-occurred (dedup window expired)
 - 2026-09-11T07:00:48Z re-occurred (dedup window expired)
 - 2026-09-11T08:00:49Z re-occurred (dedup window expired)
+- 2026-09-11T09:00:49Z re-occurred (dedup window expired)
