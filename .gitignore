@@ -6,6 +6,7 @@
 /.omp/*
 !/.omp/mcp.json
 !/.omp/agents/
+!/.omp/skills/
 __pycache__/
 .hermes/
 docs/project/report-bodies/
