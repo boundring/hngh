@@ -6,9 +6,12 @@ record docs/records/2026-09-11-opencode-configuration.md s4) ended
 cleanly (rc=0) but its log tail innocuously mentioned "check the
 budget/breadcrumbs" — the bare-word budget rule classified bad-execution,
 appending a false lesson line and incrementing the demote counter. A
-bare vocabulary word must not classify; the budget/exhaustion class
-requires failure-context phrases on the same line (still deterministic
-keyword matching, no model call — causes.sh's design constraint).
+bare vocabulary word must not classify. A second success-shaped tail
+innocuously mentioned "404" in prose and classified missing-knowledge
+the same day. Both are fixed by two-stage classification: keep only
+failure-shaped lines, then run the class table on those (still
+deterministic keyword matching, no model call -- causes.sh's design
+constraint).
 """
 
 import subprocess
@@ -58,6 +61,23 @@ class ClassifyCause(unittest.TestCase):
         self.assertEqual(self.classify("context pack cites the "
                                        "loadout-budget 2000 row")[0],
                          "unknown")
+
+    def test_success_prose_404_mention_is_unknown(self):
+        # the exact 13:45:25Z session-2 misfire: rc=0 success whose log
+        # prose innocuously cites 404s (research docs) -> stays unknown
+        tail = ("Checked the research docs (they mention 404 handling) and "
+                "the draft landed cleanly. Session complete.")
+        self.assertEqual(self.classify(tail)[0], "unknown")
+
+    def test_failure_line_with_404_is_missing_knowledge(self):
+        self.assertEqual(self.classify("error: 404 not found while fetching "
+                                       "verb")[0], "missing-knowledge")
+
+    def test_incidental_404_beside_failure_stays_unclassified(self):
+        # failure-shaped lines exist but none carries a class keyword
+        tail = ("the build failed on a flaky step\n"
+                "the research docs mention 404s in passing")
+        self.assertEqual(self.classify(tail)[0], "unknown")
 
     def test_real_cost_failure_is_bad_execution(self):
         self.assertEqual(self.classify("error: cost limit exceeded while "
