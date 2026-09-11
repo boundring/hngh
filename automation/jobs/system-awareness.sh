@@ -3,7 +3,8 @@
 #
 # Writes dashboard/system.json for the command center + oversight tick:
 #   cpu% / mem% / disk% / net-reachability (model endpoint ok|fail, tailscale
-#   peers count) + resource headroom flags (low-disk / low-mem / network-down),
+#   peers count, WAN ok|fail) + resource headroom flags (low-disk / low-mem /
+#   network-down),
 #   each field carrying a timestamp.
 #
 # Fail-closed: a failing probe yields that field "unavailable" — never a
@@ -23,7 +24,7 @@ HNGH_REPO="${HNGH_REPO:-/home/bricker/Projects/etc/hngh}"
 FLEET="$HNGH_REPO/scripts/fleet-manager"
 PROBE_ROUTE="$HNGH_REPO/scripts/probe-model-route"
 ROUTE_CONF="${PROBE_ROUTE_CONF:-$HOME/.hngh-automation/reviewer-local.conf}"
-OUT="$AUTOMATION_ROOT/dashboard/system.json"
+OUT="${AWARENESS_OUT:-$AUTOMATION_ROOT/dashboard/system.json}"
 
 LOW_DISK_PCT="${LOW_DISK_PCT:-90}"
 LOW_MEM_PCT="${LOW_MEM_PCT:-90}"
@@ -70,26 +71,42 @@ if [ -x "$PROBE_ROUTE" ] && [ -n "$ROUTE_CONF" ] && [ -f "$ROUTE_CONF" ]; then
  if "$PROBE_ROUTE" "$ROUTE_CONF" >/dev/null 2>&1; then model=ok; else model=fail; fi
 fi
 
+# WAN reachability — one bounded probe of the loop's own hard push
+# dependency (GitHub API). ANY HTTP answer means the network is up (the
+# same convention as probe-model-route); DNS failure, timeout, or
+# connection refusal means it is not.
+wan=unavailable
+if command -v curl >/dev/null 2>&1; then
+ if curl -s -o /dev/null --max-time 8 https://api.github.com >/dev/null 2>&1; then wan=ok; else wan=fail; fi
+fi
+
 # headroom flags ------------------------------------------------------------
 low_disk=false
 [ "$disk" != "unavailable" ] && [ "${disk%%.*}" -ge "$LOW_DISK_PCT" ] 2>/dev/null && low_disk=true
 low_mem=false
 [ "$mem" != "unavailable" ] && [ "${mem%%.*}" -ge "$LOW_MEM_PCT" ] 2>/dev/null && low_mem=true
 network_down=false
-[ "$model" = "fail" ] && [ "$peers" = "0" ] && network_down=true
+# network-down = this machine cannot reach the WAN, measured directly.
+# The local model endpoint hiccuping or peer devices sleeping is normal
+# nightly behavior, not an outage — the old (model fail && peers 0)
+# predicate fired network-down nightly 2026-09-08..09-11 while push,
+# ping, and GitHub all worked (routed-plan root cause).
+# ponytail: one WAN target (api.github.com); a GitHub-only outage still
+# flags network-down — add a second independent target if it misfires.
+[ "$wan" = "fail" ] && network_down=true
 
 # write JSON  (python assembles to dodge shell quoting) ----------------------
-python3 - "$ts" "$cpu" "$mem" "$disk" "$model" "$peers" "$tailscale" \
+python3 - "$ts" "$cpu" "$mem" "$disk" "$model" "$peers" "$tailscale" "$wan" \
  "$low_disk" "$low_mem" "$network_down" "$OUT" <<'PY'
 import json, os, sys
-ts, cpu, mem, disk, model, peers, tailscale, low_disk, low_mem, ndown, out = sys.argv[1:]
+ts, cpu, mem, disk, model, peers, tailscale, wan, low_disk, low_mem, ndown, out = sys.argv[1:]
 doc = {
     "generated_at": ts,
     "cpu":  {"pct": cpu,  "ts": ts},
     "mem":  {"pct": mem,  "ts": ts},
     "disk": {"pct": disk, "ts": ts},
     "net":  {"model_endpoint": model, "tailscale_peers": peers,
-             "tailscale_state": tailscale, "ts": ts},
+             "tailscale_state": tailscale, "wan_endpoint": wan, "ts": ts},
     "headroom": {"low-disk": low_disk == "true", "low-mem": low_mem == "true",
                  "network-down": ndown == "true"},
 }
@@ -100,7 +117,7 @@ os.replace(tmp, out)
 PY
 rc=$?
 if [ "$rc" = "0" ]; then
- breadcrumb "$JOB_NAME" "system-awareness" "cpu=$cpu mem=$mem disk=$disk model=$model peers=$peers"
+ breadcrumb "$JOB_NAME" "system-awareness" "cpu=$cpu mem=$mem disk=$disk model=$model peers=$peers wan=$wan"
 else
  breadcrumb "$JOB_NAME" "system-awareness" "write-fail rc=$rc"
 fi
