@@ -2,6 +2,21 @@
 
 ## 2026-09-11
 
+- feat: hngh's own opencode configuration layer —
+  `automation/config/opencode/` (opencode.jsonc OPENCODE_CONFIG target:
+  secret-deny block copied verbatim (superset of opencode-safety.jsonc,
+  test-enforced), MCP servers hngh/misakanet/codegraph, model +
+  small_model pinned opencode-go/glm-5.3-flash, agents `executor`
+  (primary, ceremony discipline) + `hngh-scout` (read-only subagent));
+  self-steering lessons loop (`append_ocgo_lesson` appends one
+  cause-class line per opencode session to state/ocgo-agent-lessons.md,
+  capped 200, agents read the tail at session start); executor-branch
+  fixes from the first supervised session: child rc no longer masked by
+  the emitter, demote counter keyed to the model actually used,
+  happy-path lesson skip, key-file credential fallback (mode 600, value
+  never echoed). First supervised session run + attributed
+  (source=ocgo-agent, 112883 in / 7788 out, $0.0381); record:
+  docs/records/2026-09-11-opencode-configuration.md. ACP verdict: defer.
 - chore: demote lobehub leg to opportunistic — `lobehub-research-share`
   row 6 -> 0 (0 = never pin; routing reduction, not a spend-cap change;
   caps/tests/telemetry/probe untouched). Re-arm: flip the row to a nonzero
