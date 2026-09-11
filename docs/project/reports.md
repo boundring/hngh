@@ -2060,8 +2060,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T18:30:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T18:30:17Z-progress-6f20e8cb.md |
 | 2026-09-10T18:31:14Z | progress | 2182cbd3 | plan 2026-09-10-cost-tiering auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T18:31:14Z | 2026-09-10T18:31:14Z-progress-2182cbd3.md |
 | 2026-09-10T18:31:14Z | progress | 570acab3 | plan 2026-09-10-routed-agent-stall-omp-SimDesign-6b54f6 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-10T18:31:14Z | 2026-09-10T18:31:14Z-progress-570acab3.md |
-| 2026-09-10T19:00:15Z | alert | 3feb1b3d | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1811 rows (259 ledger vs 2070 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×11 | 2026-09-10T19:00:15Z-alert-3feb1b3d.md |
-| 2026-09-10T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×11 | 2026-09-10T19:00:15Z-alert-f438818b.md |
+| 2026-09-10T19:00:15Z | alert | 3feb1b3d | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1811 rows (259 ledger vs 2070 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×12 | 2026-09-10T19:00:15Z-alert-3feb1b3d.md |
+| 2026-09-10T19:00:15Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×12 | 2026-09-10T19:00:15Z-alert-f438818b.md |
 | 2026-09-10T19:00:15Z | progress | 6f65edca | course bridge-operator-host: card mounted, last increment 2026-09-10T18:00:15Z | 2026-09-10T19:00:15Z-progress-6f65edca.md |
 | 2026-09-10T19:00:17Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T19:00:17Z-progress-6f20e8cb.md |
 | 2026-09-10T19:00:18Z | progress | 913ec158 | router routed dash-selfreview:summary -> plan candidate 2026-09-10-routed-dash-selfreview-summary (routed-at 2026-09-10T19:00:18Z) | 2026-09-10T19:00:18Z-progress-913ec158.md |
@@ -2143,12 +2143,12 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T03:45:10Z | alert | fd02ac16 | feedback-apply: style.css missing or unparseable; quick item t1 left unapplied ×2 | 2026-09-11T03:45:10Z-alert-fd02ac16.md |
 | 2026-09-11T04:00:46Z | progress | 63625110 | course bridge-operator-host: card mounted, last increment 2026-09-11T03:00:30Z | 2026-09-11T04:00:46Z-progress-63625110.md |
 | 2026-09-11T04:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T04:00:48Z-progress-6f20e8cb.md |
-| 2026-09-11T04:00:48Z | alert | 40531ae2 | ui-audit axe:aria-required-children: 1 violation(s) — #tabs ×2 | 2026-09-11T04:00:48Z-alert-40531ae2.md |
+| 2026-09-11T04:00:48Z | alert | 40531ae2 | ui-audit axe:aria-required-children: 1 violation(s) — #tabs ×3 | 2026-09-11T04:00:48Z-alert-40531ae2.md |
 | 2026-09-11T04:00:48Z | progress | 6022cf09 | router routed ui-audit:axe:aria-required-children -> plan candidate 2026-09-11-routed-ui-audit-axe-aria-required-children (routed-at 2026-09-11T04:00:48Z) | 2026-09-11T04:00:48Z-progress-6022cf09.md |
 | 2026-09-11T04:00:48Z | progress | 3e4a8ff6 | router routed correction-style-css -> plan candidate 2026-09-11-routed-correction-style-css (routed-at 2026-09-11T04:00:48Z) | 2026-09-11T04:00:48Z-progress-3e4a8ff6.md |
 | 2026-09-11T04:00:49Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-11T04:00:49Z-alert-8877ca89.md |
 | 2026-09-11T04:00:49Z | alert | 1092a4cf | router escalated: system-network-down re-occurred 3 times without landing — plan 2026-09-11-routed-system-network-down parked (cause=obsolete); operator disposition stands | 2026-09-11T04:00:49Z-alert-1092a4cf.md |
-| 2026-09-11T04:01:29Z | alert | cad3a336 | plan acceptance blocked: kernel make test FAILED (rc=2) ×3 | 2026-09-11T04:01:29Z-alert-cad3a336.md |
+| 2026-09-11T04:01:29Z | alert | cad3a336 | plan acceptance blocked: kernel make test FAILED (rc=2) ×4 | 2026-09-11T04:01:29Z-alert-cad3a336.md |
 | 2026-09-11T04:11:55Z | alert | 7ef3f1fc | session touched critical paths in ~/Projects/etc/hngh/automation: automation/Makefile automation/tests/test-system-awareness.sh | 2026-09-11T04:11:55Z-alert-7ef3f1fc.md |
 | 2026-09-11T04:13:22Z | progress | 034f7b98 | research line fail-20260911-system-network-down: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-11-fail-20260911-system-network-down.md | 2026-09-11T04:13:22Z-progress-034f7b98.md |
 | 2026-09-11T04:15:00Z | alert | 8eaed562 | [oversight] slow-unit: dropin:33-research-beat.sh wall=76.0s median=0.1s ×10 | 2026-09-11T04:15:00Z-alert-8eaed562.md |
@@ -2162,3 +2162,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T05:00:49Z | progress | be2f9f69 | router routed ui-audit:axe:color-contrast -> plan candidate 2026-09-11-routed-ui-audit-axe-color-contrast (routed-at 2026-09-11T05:00:49Z) | 2026-09-11T05:00:49Z-progress-be2f9f69.md |
 | 2026-09-11T05:00:49Z | progress | e6f897f3 | router routed slow-unit:dropin:33-research-beat.sh -> plan candidate 2026-09-11-routed-slow-unit-dropin-33-research-beat.sh (routed-at 2026-09-11T05:00:49Z) | 2026-09-11T05:00:49Z-progress-e6f897f3.md |
 | 2026-09-11T05:00:49Z | progress | 1bc83cd7 | router routed overnight:plan-accept-gate:kernel -> plan candidate 2026-09-11-routed-overnight-plan-accept-gate-kernel (routed-at 2026-09-11T05:00:49Z) | 2026-09-11T05:00:49Z-progress-1bc83cd7.md |
+| 2026-09-11T05:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T05:30:48Z-progress-6f20e8cb.md |
+| 2026-09-11T06:00:46Z | progress | 9d2c61ea | course bridge-operator-host: card mounted, last increment 2026-09-11T05:00:46Z | 2026-09-11T06:00:46Z-progress-9d2c61ea.md |
+| 2026-09-11T06:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T06:00:48Z-progress-6f20e8cb.md |
+| 2026-09-11T06:00:49Z | alert | 5dc36063 | router dedup: ui-audit:axe:color-contrast suppressed (routed candidate 2026-09-11-routed-ui-audit-axe-color-contrast still live, 0h old; day count 1) | 2026-09-11T06:00:49Z-alert-5dc36063.md |
+| 2026-09-11T06:00:49Z | alert | 18cd9125 | router dedup: slow-unit:dropin:33-research-beat.sh suppressed (routed candidate 2026-09-11-routed-slow-unit-dropin-33-research-beat.sh still live, 0h old; day count 1) | 2026-09-11T06:00:49Z-alert-18cd9125.md |
+| 2026-09-11T06:00:49Z | alert | 59746c1e | router dedup: overnight:plan-accept-gate:kernel suppressed (routed candidate 2026-09-11-routed-overnight-plan-accept-gate-kernel still live, 0h old; day count 1) | 2026-09-11T06:00:49Z-alert-59746c1e.md |
