@@ -5,6 +5,7 @@
 /.codegraph/
 /.omp/*
 !/.omp/mcp.json
+!/.omp/agents/
 __pycache__/
 .hermes/
 docs/project/report-bodies/

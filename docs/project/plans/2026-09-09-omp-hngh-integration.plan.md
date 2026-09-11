@@ -71,7 +71,7 @@ never knows omp exists. No step touches provider/credential configuration
       front-matter + `automation/dashboard/plans.json` status).
       Verification: script-suite test in `automation/` covering both
       subcommands including duplicate-slug refusal; `make test` green.
-- [ ] 4. omp plugin `hngh-bridge` (file: link plugin, modeled on the existing
+- [x] 4. omp plugin `hngh-bridge` (file: link plugin, modeled on the existing
       `~/.omp/plugins/lisp-paren-fix` package): exposes a `hngh_propose` tool
       that calls `omp-bridge --propose` and reads back `--plan-status` — the
       plan-file propose surface promised by `docs/project/plans/README.md`.
@@ -87,7 +87,7 @@ never knows omp exists. No step touches provider/credential configuration
       `docs/design/autonomous-development-control.md` instead of duplicating.
       Verification: skill appears in an omp session in this repo and its
       triggers fire on a ceremony question.
-- [ ] 6. Custom agent definitions formalizing the delegated sessions the
+- [x] 6. Custom agent definitions formalizing the delegated sessions the
       cycle already spawns: `.omp/agents/hngh-executor.md` (one verified
       step, certificate ceremony, commits only on green gate) and
       `.omp/agents/hngh-scout.md` (read-only research into
