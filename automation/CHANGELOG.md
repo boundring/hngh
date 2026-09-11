@@ -2,6 +2,19 @@
 
 ## 2026-09-11
 
+- feat: bili compression on the opencode executor (clobber-safe
+  integration) — launch-session's opencode branch rides a bili proxy via
+  env-only MITM redirect (HTTPS_PROXY + the bili root CA; proxy reused
+  from 127.0.0.1:8787 or self-spawned per launch and killed after the
+  run; fail-open direct like the omp bctx branch). `bili opencode` was
+  rejected: its temp-config path strict-parses JSON and would silently
+  replace the hngh-owned OPENCODE_CONFIG layer (secret-deny block lost
+  on .jsonc). One real session verified: rc=0, emitter attribution
+  unchanged, proxy killed on exit, config byte-identical; plus the
+  launch_store "$slug" fix for the set -u bare-call that voided
+  per-launch stores (live-caught rc=75). Record:
+  docs/records/2026-09-11-bili-opencode.md.
+
 - fix: kernel gate recertified — loop-history exemption register
   re-keyed to the post-purge hashes (572d3e2/adb0307) and the 41f646a
   miss declared post-hoc, through one certificate ceremony; guard gains

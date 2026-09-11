@@ -109,7 +109,11 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
  ctx="$(context_pack "$role" "$slug")"
 
  local bridge_out bridge_rc run_id
- local bridge_store="$(launch_store)"
+ # $slug rides to launch_store: a bare call loses the caller's
+ # positionals under set -u (bash 5.3), silently voiding the per-launch
+ # store dir and falling back to the shared default -> record-conflict
+ # refusals. Caught live by the 2026-09-11 bili-ocgo verification run.
+ local bridge_store="$(launch_store "$slug")"
  bridge_out="$(OMP_BRIDGE_STORE="$bridge_store" \
   HNGH_LOADOUT="loadout-route-label=automation loadout-context-limit=2000 loadout-token-limit=50000 loadout-cost-limit=2000 loadout-time-limit=$TIMEOUT_S" \
   "$bridge_bin" --run-start "overnight-$slug" "$objective" 2>&1)"
@@ -159,8 +163,11 @@ launch) before re-deriving any repo fact from scratch."
   # echoed and never exported into the launcher's shell). Fail-closed:
   # opencode binary, model row, or credential absent -> omp with a
   # breadcrumb.
-  local oc_bin oc_model oc_key=""
+  local oc_bin oc_model oc_key="" bili_bin borigin="" bili_pid=""
   oc_bin="$(command -v opencode || true)"
+  # test seam mirrors OMP_BIN_CMD; hermetic tests scope PATH instead of
+  # set-but-empty (the empty value falls through to PATH discovery)
+  bili_bin="${BILI_OCGO_BIN:-$(command -v bili || true)}"
   oc_model="$(get_param opencode-model '')"
   if [ -z "${OPENCODE_API_KEY:-}" ]; then
    local kfile="${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
@@ -175,12 +182,64 @@ launch) before re-deriving any repo fact from scratch."
   if [ -n "$oc_bin" ] && [ -n "$oc_model" ] &&
    [ -n "${OPENCODE_API_KEY:-}$oc_key" ]; then
    outcome_model="opencode-go/$oc_model" oc_ran=1
+   # bili compression on the opencode leg (2026-09-11): env-only MITM
+   # redirect — the hngh config layer is NEVER written or replaced
+   # (`bili opencode`'s temp-config path strict-parses JSON and would
+   # silently drop the .jsonc layer incl. the secret-deny block;
+   # docs/records/2026-09-11-bili-opencode.md). A healthy proxy on
+   # BILI_OCGO_PORT (default 8787) is reused; else one is spawned
+   # (killed after the run); bili absent/unreachable -> fail-open
+   # direct with a visible breadcrumb, exactly like the omp branch.
+   local bport="${BILI_OCGO_PORT:-8787}"
+   if [ -n "$bili_bin" ]; then
+    if curl -sf -m 2 "http://127.0.0.1:$bport/__bili/health" \
+     >/dev/null 2>&1; then
+     borigin="http://127.0.0.1:$bport"
+    else
+     BILI_MITM_DOMAINS=opencode.ai "$bili_bin" start \
+      --host 127.0.0.1 --port "$bport" \
+      >>"$ROOT/logs/bili-ocgo-$ts.log" 2>&1 &
+     bili_pid=$!
+     local _try=0
+     while [ -z "$borigin" ] && [ "$_try" -lt 20 ]; do
+      sleep 0.5
+      curl -sf -m 2 "http://127.0.0.1:$bport/__bili/health" \
+       >/dev/null 2>&1 && borigin="http://127.0.0.1:$bport"
+      _try=$((_try + 1))
+     done
+     if [ -z "$borigin" ]; then
+      kill "$bili_pid" 2>/dev/null
+      breadcrumb launch-session "ocgo-executor" \
+       "bili proxy unreachable -> opencode uncompressed (direct)"
+     fi
+    fi
+    if [ -n "$borigin" ] && [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/billion-context/ca/root-ca.pem" ]; then
+     export HTTPS_PROXY="$borigin"
+     export NODE_EXTRA_CA_CERTS="${XDG_DATA_HOME:-$HOME/.local/share}/billion-context/ca/root-ca.pem"
+    elif [ -n "$borigin" ]; then
+     breadcrumb launch-session "ocgo-executor" \
+      "bili CA pem absent -> opencode uncompressed (direct)"
+    fi
+   else
+    breadcrumb launch-session "ocgo-executor" \
+     "bili absent -> opencode uncompressed (direct)"
+   fi
+   if [ -z "$borigin" ]; then
+    # no wrap: strip any ambient proxy envs inherited from a
+    # bili-wrapped parent (its proxy dies with the parent — a stale
+    # HTTPS_PROXY here would break every direct session's fetch)
+    unset HTTPS_PROXY NODE_EXTRA_CA_CERTS 2>/dev/null
+   fi
    OPENCODE_API_KEY="${OPENCODE_API_KEY:-$oc_key}" \
     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
     timeout "$TIMEOUT_S" "$oc_bin" run --dir "$ROOT" --format json \
     --agent executor -m "opencode-go/$oc_model" --auto "$body" \
     >"$ROOT/$log.json" 2>&1
    oc_rc=$? # captured before the emitter masks $?
+   if [ -n "$borigin" ]; then
+    unset HTTPS_PROXY NODE_EXTRA_CA_CERTS
+    [ -n "$bili_pid" ] && kill "$bili_pid" 2>/dev/null
+   fi
    python3 "$AUTOMATION_ROOT/jobs/ocgo-attribution.py" \
     "$ROOT/$log.json" --plain "$ROOT/$log" \
     --burn "$AUTOMATION_ROOT/state/ocgo-agent-burn.tsv" \
