@@ -2043,7 +2043,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-10T22:00:33Z | alert | b0efcaac | router dedup escalation: dash-selfreview:ledger-sanity recurring — suppressed 4 times today — escalated to operator visibility | 2026-09-10T22:00:33Z-alert-b0efcaac.md |
 | 2026-09-10T22:00:33Z | alert | eb40fc1f | router escalated: dash-selfreview:ledger-sanity re-occurred 3 times without landing — plan 2026-09-10-routed-dash-selfreview-ledger-sanity parked (cause=obsolete); operator disposition stands | 2026-09-10T22:00:33Z-alert-eb40fc1f.md |
 | 2026-09-10T22:01:00Z | alert | 5a5966cb | overnight beat 2026-09-06-routed-system-network-down could not open a bridge run: conflict labels=record-conflict ×2 | 2026-09-10T22:01:00Z-alert-5a5966cb.md |
-| 2026-09-10T22:01:00Z | alert | a7e32cf1 | overnight beat 2026-09-06-routed-tree-skew-hngh-2 could not open a bridge run: conflict labels=record-conflict ×5 | 2026-09-10T22:01:00Z-alert-a7e32cf1.md |
+| 2026-09-10T22:01:00Z | alert | a7e32cf1 | overnight beat 2026-09-06-routed-tree-skew-hngh-2 could not open a bridge run: conflict labels=record-conflict ×6 | 2026-09-10T22:01:00Z-alert-a7e32cf1.md |
 | 2026-09-10T22:02:24Z | progress | db31dd46 | research line synth-2026-09-10-1: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-10-synth-2026-09-10-1.md | 2026-09-10T22:02:24Z-progress-db31dd46.md |
 | 2026-09-10T22:22:37Z | progress | a0310ac0 | research line synth-2026-09-10-1: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-10-synth-2026-09-10-1.md | 2026-09-10T22:22:37Z-progress-a0310ac0.md |
 | 2026-09-10T22:30:02Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-10T22:30:02Z-progress-6f20e8cb.md |
@@ -2092,12 +2092,12 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T03:45:10Z | alert | fd02ac16 | feedback-apply: style.css missing or unparseable; quick item t1 left unapplied ×2 | 2026-09-11T03:45:10Z-alert-fd02ac16.md |
 | 2026-09-11T04:00:46Z | progress | 63625110 | course bridge-operator-host: card mounted, last increment 2026-09-11T03:00:30Z | 2026-09-11T04:00:46Z-progress-63625110.md |
 | 2026-09-11T04:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T04:00:48Z-progress-6f20e8cb.md |
-| 2026-09-11T04:00:48Z | alert | 40531ae2 | ui-audit axe:aria-required-children: 1 violation(s) — #tabs ×15 | 2026-09-11T04:00:48Z-alert-40531ae2.md |
+| 2026-09-11T04:00:48Z | alert | 40531ae2 | ui-audit axe:aria-required-children: 1 violation(s) — #tabs ×16 | 2026-09-11T04:00:48Z-alert-40531ae2.md |
 | 2026-09-11T04:00:48Z | progress | 6022cf09 | router routed ui-audit:axe:aria-required-children -> plan candidate 2026-09-11-routed-ui-audit-axe-aria-required-children (routed-at 2026-09-11T04:00:48Z) | 2026-09-11T04:00:48Z-progress-6022cf09.md |
 | 2026-09-11T04:00:48Z | progress | 3e4a8ff6 | router routed correction-style-css -> plan candidate 2026-09-11-routed-correction-style-css (routed-at 2026-09-11T04:00:48Z) | 2026-09-11T04:00:48Z-progress-3e4a8ff6.md |
 | 2026-09-11T04:00:49Z | alert | 8877ca89 | router dedup escalation: system-network-down recurring — suppressed 3 times today — escalated to operator visibility | 2026-09-11T04:00:49Z-alert-8877ca89.md |
 | 2026-09-11T04:00:49Z | alert | 1092a4cf | router escalated: system-network-down re-occurred 3 times without landing — plan 2026-09-11-routed-system-network-down parked (cause=obsolete); operator disposition stands | 2026-09-11T04:00:49Z-alert-1092a4cf.md |
-| 2026-09-11T04:01:29Z | alert | cad3a336 | plan acceptance blocked: kernel make test FAILED (rc=2) ×5 | 2026-09-11T04:01:29Z-alert-cad3a336.md |
+| 2026-09-11T04:01:29Z | alert | cad3a336 | plan acceptance blocked: kernel make test FAILED (rc=2) ×6 | 2026-09-11T04:01:29Z-alert-cad3a336.md |
 | 2026-09-11T04:11:55Z | alert | 7ef3f1fc | session touched critical paths in ~/Projects/etc/hngh/automation: automation/Makefile automation/tests/test-system-awareness.sh ×2 | 2026-09-11T04:11:55Z-alert-7ef3f1fc.md |
 | 2026-09-11T04:13:22Z | progress | 034f7b98 | research line fail-20260911-system-network-down: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-11-fail-20260911-system-network-down.md | 2026-09-11T04:13:22Z-progress-034f7b98.md |
 | 2026-09-11T04:15:00Z | alert | 8eaed562 | [oversight] slow-unit: dropin:33-research-beat.sh wall=76.0s median=0.1s ×22 | 2026-09-11T04:15:00Z-alert-8eaed562.md |
@@ -2188,7 +2188,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T09:02:46Z | alert | a6bf7ec2 | ttsr fit: session ttsr-rules — ttsr injections: 4 (>= threshold 3) — fix or park with cause | 2026-09-11T09:02:46Z-alert-a6bf7ec2.md |
 | 2026-09-11T09:02:47Z | progress | d9805edc | bctx context budget: expected 44% found 44% (emergencyThresholdPercent=75% nudgeGrowthTokens=20000) — ok (proxy token feed: no readable log found; ratio vital stays transcript-derived) | 2026-09-11T09:02:47Z-progress-d9805edc.md |
 | 2026-09-11T09:04:01Z | alert | 260121eb | overnight beat 2026-09-06-worker-transport-wiring could not open a bridge run: conflict labels=record-conflict | 2026-09-11T09:04:01Z-alert-260121eb.md |
-| 2026-09-11T09:05:00Z | alert | 9cf264f6 | [oversight] gate-red: hngh make test red — gate-check alert row unread in ledger ×97 | 2026-09-11T09:05:00Z-alert-9cf264f6.md |
+| 2026-09-11T09:05:00Z | alert | 9cf264f6 | [oversight] gate-red: hngh make test red — gate-check alert row unread in ledger ×109 | 2026-09-11T09:05:00Z-alert-9cf264f6.md |
 | 2026-09-11T09:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T09:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T09:35:02Z | progress | 2df42064 | agent-supervision: evicted-stale omp-dash-feedback-91b36d (idle 363m) | 2026-09-11T09:35:02Z-progress-2df42064.md |
 | 2026-09-11T10:00:46Z | progress | 0c54d42d | course bridge-operator-host: card mounted, last increment 2026-09-11T09:00:46Z | 2026-09-11T10:00:46Z-progress-0c54d42d.md |
@@ -2202,7 +2202,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T10:30:48Z | progress | 87537517 | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-11T10:30:48Z-progress-87537517.md |
 | 2026-09-11T11:00:46Z | progress | 96a50fda | course bridge-operator-host: card mounted, last increment 2026-09-11T10:00:46Z | 2026-09-11T11:00:46Z-progress-96a50fda.md |
 | 2026-09-11T11:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T11:00:48Z-progress-6f20e8cb.md |
-| 2026-09-11T11:00:48Z | alert | 0bdb71c9 | router dedup: gate-red:hngh suppressed (routed candidate 2026-09-11-routed-gate-red-hngh still live, 0h old; day count 1) ×8 | 2026-09-11T11:00:48Z-alert-0bdb71c9.md |
+| 2026-09-11T11:00:48Z | alert | 0bdb71c9 | router dedup: gate-red:hngh suppressed (routed candidate 2026-09-11-routed-gate-red-hngh still live, 0h old; day count 1) ×9 | 2026-09-11T11:00:48Z-alert-0bdb71c9.md |
 | 2026-09-11T11:00:48Z | alert | fecd17f1 | router dedup: overnight:bridge-refused:2026-09-06-worker-transport-wiring suppressed (routed candidate 2026-09-11-routed-overnight-bridge-refused-2026-09-06-worker-transport-wiring still live, 0h old; day count 1) ×8 | 2026-09-11T11:00:48Z-alert-fecd17f1.md |
 | 2026-09-11T11:00:49Z | alert | 12dc0a08 | router dedup: ttsr-fit:ttsr-rules suppressed (routed candidate 2026-09-11-routed-ttsr-fit-ttsr-rules still live, 0h old; day count 1) ×8 | 2026-09-11T11:00:49Z-alert-12dc0a08.md |
 | 2026-09-11T11:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T11:30:48Z-progress-6f20e8cb.md |
@@ -2211,7 +2211,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T12:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T12:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T13:00:07Z | progress | 4de69057 | course bridge-operator-host: card mounted, last increment 2026-09-11T12:00:46Z | 2026-09-11T13:00:07Z-progress-4de69057.md |
 | 2026-09-11T13:00:08Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T13:00:08Z-progress-6f20e8cb.md |
-| 2026-09-11T13:00:13Z | alert | 7600c222 | router dedup escalation: gate-red:hngh recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-11T13:00:13Z-alert-7600c222.md |
+| 2026-09-11T13:00:13Z | alert | 7600c222 | router dedup escalation: gate-red:hngh recurring — suppressed 3 times today — escalated to operator visibility ×7 | 2026-09-11T13:00:13Z-alert-7600c222.md |
 | 2026-09-11T13:00:13Z | alert | 2cd1c307 | router dedup escalation: overnight:bridge-refused:2026-09-06-worker-transport-wiring recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-11T13:00:13Z-alert-2cd1c307.md |
 | 2026-09-11T13:00:13Z | alert | 8de2c6f2 | router escalated: overnight:bridge-refused:2026-09-06-worker-transport-wiring re-occurred 3 times without landing — plan 2026-09-11-routed-overnight-bridge-refused-2026-09-06-worker-transport-wiring parked (cause=obsolete); operator disposition stands | 2026-09-11T13:00:13Z-alert-8de2c6f2.md |
 | 2026-09-11T13:00:13Z | alert | 256d5286 | router dedup escalation: ttsr-fit:ttsr-rules recurring — suppressed 3 times today — escalated to operator visibility ×6 | 2026-09-11T13:00:13Z-alert-256d5286.md |
@@ -2231,3 +2231,14 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T17:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T17:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T18:00:46Z | progress | 8e429d7b | course bridge-operator-host: card mounted, last increment 2026-09-11T17:00:46Z | 2026-09-11T18:00:46Z-progress-8e429d7b.md |
 | 2026-09-11T18:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T18:00:48Z-progress-6f20e8cb.md |
+| 2026-09-11T18:16:47Z | progress | 0c3a9c6b | research line cistern-test-coverage: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-11-cistern-test-coverage.md | 2026-09-11T18:16:47Z-progress-0c3a9c6b.md |
+| 2026-09-11T18:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T18:30:48Z-progress-6f20e8cb.md |
+| 2026-09-11T18:31:51Z | progress | 1e149d85 | research line cistern-test-coverage: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-11-cistern-test-coverage.md | 2026-09-11T18:31:51Z-progress-1e149d85.md |
+| 2026-09-11T18:47:54Z | progress | 69bd8fd6 | research line cistern-test-coverage: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-11-cistern-test-coverage.md | 2026-09-11T18:47:54Z-progress-69bd8fd6.md |
+| 2026-09-11T19:00:46Z | alert | e47c52e8 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1761 rows (485 ledger vs 2246 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune | 2026-09-11T19:00:46Z-alert-e47c52e8.md |
+| 2026-09-11T19:00:46Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) | 2026-09-11T19:00:46Z-alert-f438818b.md |
+| 2026-09-11T19:00:46Z | progress | 3840d970 | course bridge-operator-host: card mounted, last increment 2026-09-11T18:00:46Z | 2026-09-11T19:00:46Z-progress-3840d970.md |
+| 2026-09-11T19:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T19:00:48Z-progress-6f20e8cb.md |
+| 2026-09-11T19:00:49Z | progress | ce916abb | router routed dash-selfreview:summary -> plan candidate 2026-09-11-routed-dash-selfreview-summary (routed-at 2026-09-11T19:00:48Z) | 2026-09-11T19:00:49Z-progress-ce916abb.md |
+| 2026-09-11T19:00:49Z | progress | fa5ef519 | router routed dash-selfreview:ledger-sanity -> plan candidate 2026-09-11-routed-dash-selfreview-ledger-sanity (routed-at 2026-09-11T19:00:49Z) | 2026-09-11T19:00:49Z-progress-fa5ef519.md |
+| 2026-09-11T19:01:58Z | progress | f14689e8 | research line govbench-adapter-contract: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-11-govbench-adapter-contract.md | 2026-09-11T19:01:58Z-progress-f14689e8.md |
