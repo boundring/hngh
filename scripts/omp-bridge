@@ -31,6 +31,12 @@ this script) gets three things without re-discovering them:
              actually been driven through the lifecycle. The kernel
             refuses illegal transitions by design; that refusal is the
              contract working, not a bug (proven live 2026-08-27).
+  (f) `--propose`   writes a NEW docs/project/plans/<UTC-date>-<slug>.plan.md
+             with status=proposed front-matter -- the propose surface
+             docs/project/plans/README.md promises; never overwrites.
+  (g) `--plan-status [SLUG]` reads plan front-matter (+ step checkboxes)
+             as JSON, cross-checked with the dashboard's plans.json when
+             available.
 
 The bridge is an outer adapter: it only invokes the existing ceremony /
 watchdog surfaces. It never imports or mutates the hngh kernel, and it
@@ -43,6 +49,7 @@ Exit protocol (matches repo convention): 0 ok, 1 refused/conflict
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -58,12 +65,14 @@ CEREMONY_DRIVE = SCRIPTS / "ceremony-drive"
 HNGH_BIN = Path(os.environ.get("HNGH_BIN") or SCRIPTS / "hngh")
 QUEUE = ROOT / "docs" / "project" / "queue.md"
 ROADMAP = ROOT / "docs" / "project" / "roadmap.md"
+PLANS = ROOT / "docs" / "project" / "plans"
 
 # Where the roguelike watchdog writes the handoff it AND the operator /
 # steering leg read. Default is the sibling hngh-automation repo's ledger;
 # override for tests / alternate mounts.
 AUTOMATION_ROOT = Path(os.environ.get("HNGH_AUTOMATION_ROOT")
                        or ROOT.parent / "hngh-automation")
+PLANS_JSON = AUTOMATION_ROOT / "dashboard" / "plans.json"
 LEDGER = Path(os.environ.get("OMP_HANDOFF_LEDGER")
               or AUTOMATION_ROOT / "agent-handoffs.md")
 # Where delegated runs are recorded so --run-end can close them. One
@@ -79,6 +88,127 @@ CEREMONY_TIMEOUT = int(os.environ.get("OMP_CEREMONY_TIMEOUT") or 1800)
 NEXT_RE = re.compile(r"## Next\s*\n(.*?)(?=\n## |\Z)", re.S)
 BULLET_ITEM = re.compile(r"^\s*(?:-\s*\*\*|1\.\s*\*\*|-\s+|1\.\s+)"
                          r"(?P<item>[^\n]+)", re.M)
+SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+FRONT_RE = re.compile(r"<!--\s*plan:(.*?)-->", re.S)
+KV_RE = re.compile(r"([a-z-]+)=\"([^\"]*)\"|([a-z-]+)=(\S+)")
+STEPS_RE = re.compile(r"## Steps\s*\n(.*?)(?=\n## |\Z)", re.S)
+
+
+def parse_plan(path):
+    """Front-matter dict + (steps_total, steps_done) from a plan file.
+    None if no first plan comment (unreadable front-matter)."""
+    try:
+        text = path.read_text()
+    except OSError:
+        return None
+    m = FRONT_RE.search(text)
+    if not m:
+        return None
+    meta = {}
+    for ascii_k, q, k, v in KV_RE.findall(m.group(1)):
+        meta[ascii_k or k] = q or v
+    sm = STEPS_RE.search(text)
+    body = sm.group(1) if sm else ""
+    total = len(re.findall(r"^- \[[ x]\]", body, re.M))
+    done = len(re.findall(r"^- \[x\]", body, re.M))
+    return meta, total, done
+
+
+def plan_slug(path):
+    """<date>-<slug>.plan.md -> slug (the stem; the dashboard's
+    plans.json keys rows by the same date-prefixed slug)."""
+    return path.name[:-len(".plan.md")]
+
+
+def dashboard_rows():
+    """plans.json rows (slug-keyed) when the dashboard file is readable."""
+    try:
+        return {r["slug"]: r for r in json.load(PLANS_JSON.open())["plans"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+def plan_row(slug, path, meta, total, done, rows):
+    """One --plan-status JSON row: front-matter values, overridden by the
+    dashboard's plans.json row when present (source flags which won)."""
+    row = rows.get(slug)
+    src = "dashboard" if row else "frontmatter"
+    over = row or {}
+    return {
+        "slug": slug,
+        "file": str(path.relative_to(ROOT)),
+        "status": over.get("status", meta.get("status")),
+        "risk": over.get("risk", meta.get("risk")),
+        "accepted": over.get("accepted", meta.get("accepted")),
+        "steps_total": over.get("steps_total", total),
+        "steps_done": over.get("steps_done", done),
+        "source": src,
+    }
+
+
+def plan_status_cmd(slug):
+    """--plan-status [SLUG]: JSON on stdout. No slug: all plans, newest
+    first. Exit 2 unknown slug, 3 unreadable front-matter, 0 otherwise."""
+    rows = dashboard_rows()
+    files = sorted(PLANS.glob("*.plan.md"), reverse=True) if PLANS.is_dir() else []
+    if slug:
+        for f in files:
+            if plan_slug(f) != slug:
+                continue
+            parsed = parse_plan(f)
+            if parsed is None:
+                print(f"omp-bridge: unreadable plan front-matter: {f}",
+                      file=sys.stderr)
+                return 3
+            meta, total, done = parsed
+            print(json.dumps(plan_row(slug, f, meta, total, done, rows)))
+            return 0
+        print(f"omp-bridge: unknown plan slug: {slug}", file=sys.stderr)
+        return 2
+    arr = []
+    for f in files:
+        parsed = parse_plan(f)
+        if parsed is None:
+            continue
+        meta, total, done = parsed
+        arr.append(plan_row(plan_slug(f), f, meta, total, done, rows))
+    print(json.dumps(arr))
+    return 0
+
+
+def propose_cmd(slug, title, risk):
+    """--propose: write a NEW <UTC-date>-<slug>.plan.md with status=proposed
+    front-matter (the propose surface plans/README.md promises). Proposing
+    is free -- risk=critical is writable; acceptance never happens here."""
+    if (not slug or not slug.isascii() or len(slug) > 64
+            or not SLUG_RE.match(slug)):
+        print("omp-bridge: slug must match ^[a-z0-9][a-z0-9-]*$ "
+              f"(ASCII, <=64 chars): {slug!r}", file=sys.stderr)
+        return 2
+    if not (title or "").strip():
+        print("omp-bridge: empty or missing --title refused", file=sys.stderr)
+        return 2
+    if risk not in ("normal", "critical"):
+        print("omp-bridge: --risk must be normal|critical", file=sys.stderr)
+        return 2
+    target = PLANS / f"{datetime.now(timezone.utc).strftime('%Y-%m-%d')}-{slug}.plan.md"
+    if target.exists():
+        print(f"omp-bridge: plan already exists, never overwritten: {target}",
+              file=sys.stderr)
+        return 1
+    front = f"<!-- plan: status=proposed risk={risk} accepted=- -->"
+    body = (f"{front}\n# {title.strip()}\n\n"
+            "Proposed via `omp-bridge --propose` (omp session propose surface;\n"
+            "see docs/project/plans/README.md).\n")
+    try:
+        PLANS.mkdir(parents=True, exist_ok=True)
+        target.write_text(body)
+    except OSError as exc:
+        print(f"omp-bridge: cannot write plan {target}: {exc}", file=sys.stderr)
+        return 3
+    print(target)
+    print(front)
+    return 0
 
 
 def now_ts():
@@ -369,6 +499,16 @@ def main(argv=None):
                    help="close RUN with DISPOSITION (cancelled|evacuated|dead)")
     p.add_argument("--ceremony", action="store_true",
                    help="ceremony-commit the following OBJECTIVE and FILES")
+    p.add_argument("--propose", metavar="SLUG",
+                   help="write a new docs/project/plans/<date>-<slug>.plan.md "
+                        "(status=proposed); never overwrites")
+    p.add_argument("--title", metavar="TEXT",
+                   help="one-line title for --propose")
+    p.add_argument("--risk", metavar="RISK", default="normal",
+                   help="normal|critical for --propose (default normal)")
+    p.add_argument("--plan-status", nargs="?", const="", default=None,
+                   metavar="SLUG",
+                   help="emit plan status JSON (all plans, or one by slug)")
     p.add_argument("rest", nargs="*")
     args = p.parse_args(argv)
 
@@ -389,9 +529,15 @@ def main(argv=None):
                   file=sys.stderr)
             return 2
         return ceremony_cmd(args.rest[0], args.rest[1:])
+    if args.propose:
+        return propose_cmd(args.propose, args.title, args.risk)
+    if args.plan_status is not None:
+        return plan_status_cmd(args.plan_status)
     print("usage: omp-bridge --orient | --register[=SESSION] [--note TEXT] | "
           "--ceremony OBJECTIVE FILE... | --run-start SESSION OBJECTIVE "
-          "[--task LABEL] | --run-end RUN DISPOSITION | --help",
+          "[--task LABEL] | --run-end RUN DISPOSITION | --propose SLUG "
+          "--title TEXT [--risk normal|critical] | --plan-status [SLUG] "
+          "| --help",
           file=sys.stderr)
     return 2
 
