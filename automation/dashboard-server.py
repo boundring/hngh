@@ -119,6 +119,8 @@ RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 DOC_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,120}\.md$")
 DIGESTS = os.path.join(ROOT, "digest")
 DIGEST_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.md$")
+FEEDBACK = os.path.join(DASHBOARD, "feedback")
+FEEDBACK_TYPES = ("css-theme", "data-format", "correction", "idea")
 
 SESSION_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 UNIT_RE = re.compile(r"^[A-Za-z0-9.@_-]{1,80}$")
@@ -224,6 +226,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            p = self.path.lstrip("/")
+            if p == "api/feedback":
+                p = "feedback"  # namespaced client path, root dispatch
             {"flag": self._flag,
              "operator-item/dismiss": self._dismiss,
              "spawn": self._spawn,
@@ -232,7 +237,8 @@ class Handler(SimpleHTTPRequestHandler):
              "research-note": self._research_note,
              "system/refresh": self._system_refresh,
              "system/reset-failed": self._system_reset_failed,
-             "system/backup-now": self._system_backup_now}[self.path.lstrip("/")]()
+             "system/backup-now": self._system_backup_now,
+             "feedback": self._feedback}[p]()
         except KeyError:
             self._json(404, {"ok": False, "error": "not found"})
 
@@ -311,6 +317,49 @@ class Handler(SimpleHTTPRequestHandler):
         ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         with open(HANDOFFS, "a", encoding="utf-8") as f:
             f.write(f"flag | {ts} | automation|{session} | operator flag: {note}\n")
+        self._json(201, {"ok": True})
+
+    # POST /api/feedback — write-only feedback capture from the dashboard
+    # pips. POST endpoints here carry no shared token (LAN-served static
+    # dashboard; every route is display/ledger-only), so the posture is:
+    # files only, plain text, 2000-char cap, 64 KB body cap (in _body),
+    # and a simple 1-per-second per-type rate guard. Nothing is executed.
+    _fb_last = {}  # type -> monotonic ts of last accepted write
+
+    def _feedback(self):
+        try:
+            body = self._body()
+            ftype = str(body.get("type", "")).strip()
+            text = str(body.get("text", "")).strip()
+            element = str(body.get("element", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+
+        if ftype not in FEEDBACK_TYPES:
+            self._json(400, {"ok": False, "error": "invalid type"})
+            return
+        if not 0 < len(text) <= 2000:
+            self._json(400, {"ok": False, "error": "text must be 1-2000 chars"})
+            return
+        now = time.monotonic()
+        if now - Handler._fb_last.get(ftype, 0.0) < 1.0:
+            self._json(429, {"ok": False, "error": "slow down (1/sec per type)"})
+            return
+        Handler._fb_last[ftype] = now
+        rec = {"ts": _ts(), "type": ftype,
+               "text": text.replace("\x00", "")[:2000],
+               "element": element[:80]}
+        try:
+            os.makedirs(FEEDBACK, exist_ok=True)
+            name = _ts().replace(":", "-") + ".json"
+            tmp = os.path.join(FEEDBACK, name + ".tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(rec, f, ensure_ascii=True, indent=2)
+            os.replace(tmp, os.path.join(FEEDBACK, name))
+        except OSError:
+            self._json(500, {"ok": False, "error": "feedback write failed"})
+            return
         self._json(201, {"ok": True})
 
     def _dismiss(self):
