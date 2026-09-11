@@ -46,6 +46,15 @@ else
   breadcrumb "$JOB_NAME" "writeups" "--daily journal generated"
 fi
 
+# daily dispatch: the public README's sentinel-bounded headline table
+# (machine-owned like the STATE-OF-PROJECT torch sentinels) plus the
+# journal's DISPATCH lead section, both fed by --daily/--readme above.
+if "$GEN" --readme "$KERNEL/README.md" >/dev/null 2>&1; then
+  breadcrumb "$JOB_NAME" "dispatch" "README dispatch table rewritten"
+else
+  breadcrumb "$JOB_NAME" "dispatch" "README dispatch table not rewritten (sentinels missing or feeds unreadable)"
+fi
+
 if ! "$GEN" --ebook >/dev/null 2>&1; then
   breadcrumb "$JOB_NAME" "writeups" "--ebook failed (data, not fatal)"
 else

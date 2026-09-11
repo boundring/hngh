@@ -483,6 +483,7 @@ $response"
 # runs up to `concurrency` of them as parallel sessions in one beat.
 # Steps WITHIN a plan stay sequential (step 2 may need step 1).
 plan_slugs=() plan_files=() plan_steps=()
+blocker_tick "$(get_param blocker-park-cooldown-hours 24)"
 for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  [ -f "$f" ] || continue
  grep -q "status=accepted" "$f" 2>/dev/null || continue

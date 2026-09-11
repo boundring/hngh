@@ -1,5 +1,7 @@
 # 2026-09-11 — Secret scrub (push-protection cure)
 
+Keys rotated 2026-09-11 per recommendation; push-protection allowlist no longer relevant.
+
 ## What happened
 GitHub push protection (GH013) blocked `git push origin main` because
 OpenRouter/OpenCode-shaped API keys were committed to

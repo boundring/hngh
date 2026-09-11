@@ -27,7 +27,7 @@ for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
 cp "$root/scripts/accept-plans.py" "$auto/scripts/"
-printf '# Inventory\nsessions-day-max\t8\ttest\ttest row\n' \
+printf '# Inventory\nsessions-day-max\t12\ttest\ttest row\n' \
  >"$auto/cadence-params.tsv"
 kernel="$td/kernel"
 mkdir -p "$kernel/docs/project/plans" "$kernel/scripts"
@@ -86,9 +86,45 @@ seed_row() { # slug cause attempts — pre-seed a cycle-owned blocker row
  printf 'blk-test\t%s\t%s\t2026-09-11T00:00:00Z\t%s\tactive\n' \
   "$1" "$2" "${3:-1}" >>"$BLOCKERS"
 }
+seed_parked_row() { # slug cause attempts last-update — pre-seed a parked row
+ printf 'blk-test\t%s\t%s\t2026-09-11T00:00:00Z\t%s\tparked\t%s\n' \
+  "$1" "$2" "${3:-2}" "${4:-2026-09-11T00:00:00Z}" >>"$BLOCKERS"
+}
+
+# --- (u1) blocker_tick: parked row older than cooldown unparks, resets ------
+rm -rf "$auto/state"
+mkdir -p "$auto/state"
+: >"$BLOCKERS"
+. "$root/lib/beat-blockers.sh"
+BEAT_BLOCKERS_FILE="$BLOCKERS"
+seed_parked_row old bad-execution 2 2020-01-01T00:00:00Z
+blocker_tick 24
+awk -F'\t' -v OFS='\t' '$2=="old" && $6=="active" && $5==0 {ok=1} END{exit !ok}' "$BLOCKERS" ||
+ fail "blocker_tick did not unpark the expired parked row (state+attempts reset)"
+ok "blocker_tick: parked row older than cooldown -> active, attempts reset"
+
+# --- (u2) blocker_tick: parked row within cooldown stays parked -------------
+rm -f "$BLOCKERS"
+seed_parked_row fresh bad-execution 2 "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+BEAT_BLOCKERS_FILE="$BLOCKERS" blocker_tick 24
+awk -F'\t' -v OFS='\t' '$2=="fresh" && $6=="parked" && $5==2 {ok=1} END{exit !ok}' "$BLOCKERS" ||
+ fail "blocker_tick unparked a row inside the cooldown window"
+ok "blocker_tick: parked row within cooldown stays parked"
+
+# --- (u3) unparked plan re-enters the rotation ------------------------------
+rm -f "$MARKER" "$STATE"
+rm -rf "$td/ff"
+seed_parked_row old bad-execution 2 2020-01-01T00:00:00Z
+plan_with_step old 'touch the sandbox marker'
+DREAM_OUT="$auto/prompts/overnight/old.dream.md" run_cycle >/dev/null 2>&1
+[ "$?" -eq 0 ] || fail "unpark cycle exited non-zero"
+grep -q '^launch:dream$' "$MARKER" || fail "auto-unparked plan did not re-enter the rotation"
+[ -f "$BLOCKERS" ] && grep -q 'old' "$BLOCKERS" && fail "unparked row did not clear on success"
+ok "auto-unparked plan re-enters the rotation (row consumed: tick reset then success clears)"
 
 # --- (a) blocker row forces the dream on a mechanical step -----------------
 rm -f "$MARKER" "$STATE" "$BLOCKERS"
+rm -f "$kernel"/docs/project/plans/*.plan.md
 mkdir -p "$auto/state"
 seed_row seed bad-execution 1
 plan_with_step seed 'touch the sandbox marker'
@@ -123,6 +159,7 @@ ok "second same-cause dream-informed failure parks the plan (bounded)"
 # --- (d) a parked plan leaves the rotation ---------------------------------
 rm -f "$MARKER" "$STATE"
 rm -rf "$td/ff"
+rm -f "$kernel"/docs/project/plans/*.plan.md
 plan_with_step alive 'touch the sandbox marker'
 run_cycle >/dev/null 2>&1
 [ "$?" -eq 0 ] || fail "skip cycle exited non-zero"
