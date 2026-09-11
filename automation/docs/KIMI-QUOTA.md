@@ -77,7 +77,7 @@ works for Claude Code itself). Not a raw URL we need; dropped.
   | `local` | unsloth -> ollama only | news, ux-review, bench (low-stakes or probing local models) |
   | `kimi` | kimi -> unsloth -> ollama -> deck -> archive; remote + lobehub skipped | research beat every Nth run (`kimi-research-share`, default 3); research REVIEW transition always; fresh-eyes review (`04-review-prep.sh`) always |
   | `deck` | deck -> unsloth -> ollama -> kimi -> archive; remote + lobehub skipped | (available for second-server overflow; no cycle pins it yet) |
-| `lobehub` | lobehub (Responses API) -> unsloth -> ollama -> deck -> archive; remote + kimi skipped | research volume, every 6th beat (`lobehub-research-share 6`) |
+| `lobehub` | lobehub (Responses API) -> unsloth -> ollama -> deck -> archive; remote + kimi skipped | research volume, every 6th beat (`lobehub-research-share`, demoted to 0 / opportunistic 2026-09-11 per docs/research/2026-09-10-lobehub-worth-it.md s3; re-arm = flip row nonzero) |
   | anything else | full chain, remote/openrouter last | delegated sessions (budget-gated) |
 
   Research rotation: 1 beat/hour, every 3rd run on kimi = <=8 kimi

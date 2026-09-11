@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-11
+
+- chore: demote lobehub leg to opportunistic — `lobehub-research-share`
+  row 6 -> 0 (0 = never pin; routing reduction, not a spend-cap change;
+  caps/tests/telemetry/probe untouched). Re-arm: flip the row to a nonzero
+  share, zero rebuild. Per docs/research/2026-09-10-lobehub-worth-it.md s3.
+
 ## 2026-09-10
 
 - feat: wall_s telemetry on model legs + lobehub in-pipeline probe (R1
