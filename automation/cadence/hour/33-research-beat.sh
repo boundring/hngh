@@ -422,8 +422,9 @@ line="$(printf '%s' "$row" | cut -f4)"
 # <=8 kimi calls/day against the 40/day cap; quota_pace_blocked still guards
 # bursts, and a pace-blocked or 429ing kimi falls through to the local chain
 # inside model_call (research never blocks). The live lobehub leg (Responses
-# API, lobehub-research-share) takes precedence on its own cycle and covers
-# research volume; kimi stays the judgment-work lane. The review transition
+# API, lobehub-research-share) takes precedence on its own cycle; the
+# OpenCode Go leg (opencode-research-share, 5h-window paced) rotates after
+# the kimi cycle. The review transition
 # (terminal verdict on a crystallized line) is high-value judgment: ALWAYS
 # pin kimi (an unarmed leg falls through immediately, same semantics).
 # Precedence (fail-first routing): an overflow caller's OVERFLOW_PIN
@@ -446,6 +447,12 @@ elif [ "$MODEL_PIN" = "local" ]; then
   MODEL_PIN=lobehub
  elif [ "$kimi_share" -gt 0 ] && [ $((run_n % kimi_share)) -eq 0 ]; then
   MODEL_PIN=kimi
+ else
+  ocgo_share="${OCGO_RESEARCH_SHARE:-$(get_param opencode-research-share 3)}"
+  case "$ocgo_share" in '' | *[!0-9]*) ocgo_share=0 ;; esac
+  if [ "$ocgo_share" -gt 0 ] && [ $((run_n % ocgo_share)) -eq 0 ]; then
+   MODEL_PIN=ocgo
+  fi
  fi
 fi
 

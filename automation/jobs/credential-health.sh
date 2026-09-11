@@ -164,7 +164,37 @@ if [ -n "$kimi_key_src" ]; then
   fi
 fi
 
-# --- 6. notify seam (lib/notify.sh) ---
+# --- 6. opencode-go leg (opencode.ai/zen/go/v1; cadence-params rows
+# `opencode-url`/`opencode-model`; docs/OPENCODE-GO.md) ---
+# Same philosophy as the kimi/lobehub probes: every outcome is a breadcrumb,
+# not an alert; the key VALUE is never logged or sent on the wire. The probe
+# exercises the SAME authenticated path ocgo_chat uses (Bearer header; the
+# 2026-09-10 lesson: a headerless probe measures only its own missing
+# header). Unconfigured = silent (the leg does not exist yet).
+ocgo_key_src=""
+[ -n "${OPENCODE_API_KEY:-}" ] && ocgo_key_src="env OPENCODE_API_KEY"
+ocgo_key_file="${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
+[ -z "$ocgo_key_src" ] && [ -f "$ocgo_key_file" ] && ocgo_key_src="key file"
+if [ -n "$ocgo_key_src" ]; then
+  ocgo_key=""
+  [ -n "${OPENCODE_API_KEY:-}" ] && ocgo_key="$OPENCODE_API_KEY"
+  [ -z "$ocgo_key" ] && [ -f "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}" ] &&
+    [ "$(stat -c %a "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}")" = "600" ] &&
+    ocgo_key="$(cat "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}" 2>/dev/null)"
+  ocgo_url="${OCGO_URL:-$(get_param opencode-url 'https://opencode.ai/zen/go/v1/chat/completions')}"
+  ocgo_models_url="${ocgo_url%/chat/completions}/models"
+  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer $ocgo_key" "$ocgo_models_url" 2>/dev/null)" || code=000
+  if [ "$code" = "000" ]; then
+    breadcrumb "$JOB_NAME" "credential-health" "ocgo ($ocgo_key_src) endpoint not answering (http=$code)"
+  elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
+    breadcrumb "$JOB_NAME" "credential-health" "ocgo ($ocgo_key_src) rejected by endpoint (http=$code) - credential failure, operator attention"
+  else
+    breadcrumb "$JOB_NAME" "credential-health" "ocgo ($ocgo_key_src) ok; models endpoint http=$code; gated on opencode-model row"
+  fi
+fi
+
+# --- 7. notify seam (lib/notify.sh) ---
 # Presence-only: reports WHICH channels are armed (names only — token/url
 # VALUES are never read, logged, or sent). Dormant = silent (no channels
 # armed yet is the normal operator setup state, not an alert).
