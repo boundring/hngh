@@ -162,6 +162,23 @@ class NotifyEmail(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("from file", StubSMTP.instances[0].sent[0].get_payload(decode=True).decode())
 
+    def test_html_file_composes_alternative(self):
+        plain = self.root / "body.txt"
+        plain.write_text("plain body")
+        html = self.root / "body.html"
+        html.write_text("<form>feedback form</form>")
+        code, _, _ = self.run_main(
+            ["send", "--subject", "s", "--body-file", str(plain),
+             "--html-file", str(html)])
+        self.assertEqual(code, 0)
+        msg = StubSMTP.instances[0].sent[0]
+        self.assertEqual(msg.get_content_type(), "multipart/alternative")
+        parts = msg.get_payload()
+        self.assertEqual(parts[0].get_content_type(), "text/plain")
+        self.assertIn("plain body", parts[0].get_payload(decode=True).decode())
+        self.assertEqual(parts[1].get_content_type(), "text/html")
+        self.assertIn("feedback form", parts[1].get_payload(decode=True).decode())
+
 
 def mock_patch():
     return mock.patch.object(smtplib, "SMTP", StubSMTP)
@@ -483,6 +500,36 @@ class EmailDigest(unittest.TestCase):
             HNGH_DIGEST_PREV_DIGEST=str(prev),
             HNGH_DIGEST_TELEMETRY="session-cost total: $0.42")
         self.assertIn("spend: $0.42 today (vs $0.31 yesterday; target $10/day)", d)
+
+    def test_plain_digest_has_form_fallback_line(self):
+        p = subprocess.run([sys.executable, str(DIGEST)], env=self.env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("Form not rendering? Open the dashboard and use its "
+                      "feedback pip.", p.stdout)
+
+    def test_html_variant_contains_feedback_form(self):
+        p = subprocess.run([sys.executable, str(DIGEST), "--html"], env=self.env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        h = p.stdout
+        self.assertIn('action="http://127.0.0.1:8890/api/feedback"', h)
+        self.assertIn('method="POST"', h)
+        self.assertIn('name="element"', h)
+        self.assertIn('name="text"', h)
+        self.assertIn('name="type"', h)
+        self.assertIn('maxlength="2000"', h)
+        for t in ("css-theme", "data-format", "correction", "idea"):
+            self.assertIn("<option>%s</option>" % t, h)
+        self.assertIn("Form not rendering?", h)
+
+    def test_form_action_url_respects_env(self):
+        p = subprocess.run(
+            [sys.executable, str(DIGEST), "--html"],
+            env=dict(self.env, DASHBOARD_PORT="8123", DASHBOARD_HOST="192.0.2.9"),
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('action="http://192.0.2.9:8123/api/feedback"', p.stdout)
 
 
 class ClassifyAlert(unittest.TestCase):
