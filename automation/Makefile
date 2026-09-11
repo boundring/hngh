@@ -66,6 +66,8 @@ test:
 	python3 -B tests/test-email-qa.py
 	python3 -B tests/test-agent-supervision.py
 	python3 -B tests/test-agent-respawn.py
+	python3 -B tests/test-beat-watchdog.py
+	bash tests/test-beat-blockers.sh
 	python3 -B tests/test-session-launch.py
 	python3 -B tests/test-bctx-launch.py
 	python3 -B tests/test-ocgo-attribution.py
