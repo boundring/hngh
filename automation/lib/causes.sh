@@ -5,9 +5,12 @@
 # place the keyword mapping lives (first match wins, table order is the
 # precedence):
 #
-#   bad-execution     budget/cap/exhausted/timeout -- execution failed, the
-#                     plan was fine; route back to the owning lane with a
-#                     smaller step
+#   bad-execution     budget/cap failure phrases (failure context required
+#                     on the line — bare "budget"/"cap" mentions must not
+#                     classify; 2026-09-11 keyword false positive),
+#                     exhausted/timeout -- execution failed, the plan was
+#                     fine; route back to the owning lane with a smaller
+#                     step
 #   missing-knowledge  404/not found/unknown command/unknown verb --
 #                     Delve: open a research subject, record a disposition,
 #                     then fix
@@ -36,7 +39,7 @@ classify_cause() { # logfile -> one cause class on stdout (unknown if no log)
  *"permission"* | *"denied"* | *"unauthorized"* | *"awaiting-operator"*)
   printf 'missing-authority'
   ;;
- *"budget"* | *"cap"* | *"exhausted"* | *"timeout"*) printf 'bad-execution' ;;
+ *"budget exceed"* | *"over budget"* | *"budget limit"* | *"budget cap"* | *"budget exhausted"* | *"cost limit"* | *"cap reached"* | *"cap exceeded"* | *"cap hit"* | *"exhausted"* | *"timeout"*) printf 'bad-execution' ;;
  *"superseded"* | *"duplicate"* | *"stale"*) printf 'obsolete' ;;
  *) printf 'unknown' ;;
  esac
