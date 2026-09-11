@@ -63,7 +63,7 @@ never knows omp exists. No step touches provider/credential configuration
       `~/.omp/agent/mcp.json`.
       Verification: an omp session in this repo observes
       `xd://mcp__hngh_*` tools via `/mcp`.
-- [ ] 3. Extend `scripts/omp-bridge` with the two subcommands the plugin and
+- [x] 3. Extend `scripts/omp-bridge` with the two subcommands the plugin and
       MCP server back onto (single adapter, dependency inward):
       `--propose <plan-slug>` (writes `docs/project/plans/<date>-<slug>.plan.md`
       with `status=proposed` front-matter, refuses non-ASCII slugs and
