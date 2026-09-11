@@ -2,6 +2,16 @@
 
 ## 2026-09-11
 
+- fix: research-beat writer strips model tool-call syntax and marks
+  truncation (corpus-loss cure): capture-side filter (lib/docfilter.py,
+  shared signature with tests/test-doc-hygiene.py) applied before every
+  digest/docs-research write; empty-after-strip files an alert and holds
+  line state instead of landing a findings-less doc; finish_reason=length
+  plumbed from the model chain and an over-cap write gets an explicit
+  "[truncated at write: ...]" marker (mark_cut convention). Tests:
+  tests/test-doc-filter.py (new, make test). Record:
+  docs/records/2026-09-11-research-beat-capture-fix.md.
+
 - feat: ocgo session cost reducers - small_model pinned to the free local
   llama-server leg (`unsloth-local/unsloth/Ornith-1.0-9B-GGUF`, env-var
   credentials only; primary agent stays glm-5.3-flash), input-budget

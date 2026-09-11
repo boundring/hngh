@@ -53,6 +53,7 @@ test:
 	python3 -B tests/test-credentials.py
 	python3 -B tests/test-doc-secrets.py
 	python3 -B tests/test-doc-hygiene.py
+	python3 -B tests/test-doc-filter.py
 	python3 -B tests/test-router-tick.py
 	python3 -B tests/test-router-feed.py
 	python3 -B tests/test-slow-units.py
