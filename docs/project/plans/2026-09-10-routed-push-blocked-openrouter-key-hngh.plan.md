@@ -12,3 +12,11 @@ at 2026-09-10T19:00:18Z. Alert text: push origin main declined: GitHub push prot
 ## Occurrences
 
 - 2026-09-10T20:00:18Z re-occurred (dedup window expired)
+- 2026-09-11T06:38Z fresh evidence (candidate f2f04e3 ceremony push):
+  push protection still declines HEAD -> main — OpenRouter API key in
+  docs/research/2026-09-10-lobehub-api-research.md:11,81 (commits
+  13007a8, 857d1de). Unblock URL:
+  https://github.com/boundring/hngh/security/secret-scanning/unblock-secret/3J97gRRoN8mSiEknkAf2IST0yZa
+  Operator action unchanged: rotate the key, redact lines 11+81,
+  allowlist-or-repush. The gate-fix candidate f2f04e3 is among the
+  blocked commits (gate now green locally).
