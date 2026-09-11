@@ -157,7 +157,7 @@ that can do the most; the agent whose every step leaves a trace.
 
 ## Five things you can touch today
 
-- A pure kernel with 2,889+ fixture checks (`make test`) and a closed
+- A pure kernel with a suite past 2,889 checks (`make test`) and a closed
   run lifecycle - `detail: docs/core/component-map.md`.
 - A governance loop that certifies and executes its own repository
   changes: 45 of 60 commits in one day were candidate-bound
