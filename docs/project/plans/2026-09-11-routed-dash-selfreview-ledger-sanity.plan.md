@@ -12,3 +12,4 @@ at 2026-09-11T19:00:49Z. Alert text: [dash-selfreview] ledger-sanity: unacceptab
 ## Occurrences
 
 - 2026-09-11T20:00:49Z re-occurred (dedup window expired)
+- 2026-09-11T21:00:49Z re-occurred (dedup window expired)

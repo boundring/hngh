@@ -8,3 +8,7 @@ at 2026-09-11T20:00:49Z. Alert text: plan 2026-06-worker-transport-wiring parked
 
 - [ ] Delve: open research subject fail-20260911-overnight-park-2026-09-06-worker-transport-wiring for overnight:park:2026-09-06-worker-transport-wiring; record disposition; then fix or park
       Verification: research subject fail-20260911-overnight-park-2026-09-06-worker-transport-wiring present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-11T21:00:48Z re-occurred (dedup window expired)
