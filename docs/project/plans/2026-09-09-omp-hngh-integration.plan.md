@@ -117,7 +117,7 @@ never knows omp exists. No step touches provider/credential configuration
       tool).
       Verification: tool returns the live TSV contents; a research
       beat writes a line and the tool reflects it.
-- [ ] 10. Dashboard as operator UI: add a read-only JSON endpoint (or extend
+- [x] 10. Dashboard as operator UI: add a read-only JSON endpoint (or extend
       `dashboard/plans.json`) covering queue + accepted plans + last ceremony
       commit, and a dashboard page rendering it, so the operator can view
       hngh state from omp (browser relay) or `scripts/dashboard-tui`.
