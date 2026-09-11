@@ -194,3 +194,46 @@ the day of this research):
   speed comes from skipping what hngh exists to formalize. The mirror:
   hngh should imitate their *visibility* (numbered, public design
   discussion) and not their *validation* (self-merge).
+
+## 4. Follow mechanism (landed, not started)
+
+Continuous tracking wired into existing machinery; no research started:
+
+- **Releases ride the news lane.** Both feeds are live atom (HTTP 200,
+  application/atom+xml, verified 2026-09-11) and SOURCES already
+  normalizes atom via fetch_rss (automation/lib/sources.sh):
+  - `acpkernel-rel:https://github.com/ranxianglei/acp-kernel/releases.atom`
+  - `bilirel:https://github.com/ranxianglei/billion-context/releases.atom`
+  appended to SOURCES in automation/config.env. The hourly news lane now
+  sees their releases as outside-world news; a release title mentioning
+  the kernel boundary model or a plugin protocol is the trigger to
+  propose a research line.
+- **Research subjects added** (automation/research-subjects.txt, one per
+  topic area, fail-/<date> convention for the session-failure one):
+  - `acpkernel-boundary-model` -- what does acp-kernel's boundary model
+    (one-port DESIGN.md s5, state-in/state-out) teach hngh's port
+    enforcement?
+  - `acpkernel-process-track` -- what does a solo author's issue-RFC +
+    self-merge + release-PR cadence teach hngh's public design-visibility
+    and backlog-disposition practice?
+- **Zoom-out pass is the review cadence.** The queue.md zoom-out log
+  checks the news digests each pass; the two feeds above give the zoom-out
+  a concrete tripwire. No new cron, no new lane.
+
+## 5. Verdict
+
+Partially accurate, with a naming correction. The operator's "similar
+approach -- de-coupling the kernel" is structurally true: ranxianglei
+extracted a pure, host-free kernel (processTurn/applyCompression, one
+injected port, state in/out) from a host-coupled plugin, the same
+inward-pointing move hngh's charter freezes (docs/core/clean-architecture-
+charter.md). But the similarity is *surface-deep at the boundary*: the
+acp-kernel boundary separates a COMPRESSION ALGORITHM from hosts, and its
+"kernel purity" is declared-by-convention plus a provenance audit; hngh's
+boundary separates GOVERNANCE AUTHORITY from everything else and enforces
+it mechanically (dependency fixture guard, closed lifecycle, certificate
+ceremony). The author's own docs name the difference: acp-kernel "never
+calls a model" and holds no authority over anything; hngh's kernel exists
+precisely to refuse un-certified mutation. Same architecture shape, no
+governance substance overlap -- and no relation to Zed's Agent Client
+Protocol, so the 2026-09-11 ACP DEFER stands unchanged.
