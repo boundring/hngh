@@ -1,0 +1,43 @@
+# leg-budgets.tsv — chain leg-budget registry (R5, audited 2026-09-11).
+# Columns: leg <TAB> max-time-s <TAB> max-output <TAB> binding-edge <TAB> source-file
+# Rule: every model-chain leg declares curl --max-time AND bounded max
+# output tokens (numeric, max-time <= edge when edge is numeric); no
+# declared pair, no chain admission. Guard: automation/tests/test-leg-budgets.py.
+#
+# Audited values (2026-09-11, from code):
+#   config.env:21 MODEL_TIMEOUT default 300 (first call after model swap
+#     can load 1-3 min; all OpenAI-compat legs share it via _post_chat/
+#     unsloth_attempt, lib/model.sh:85,175)
+#   config.env:20 MODEL_MAX_TOKENS default 1024 (chain-call max_tokens)
+#   lib/model.sh:230 unsloth empty-content retry: budget*8 -> 8192
+#   lib/model.sh:155 token-refresh POST --max-time 30 (auth infra, not a
+#     completion leg; bound anyway)
+#   cadence-params.tsv:19 deck-probe-timeout 4 (availability probe, not
+#     the call timeout)
+#   cadence-params.tsv:24 kimi-daily-cap 40 calls/day
+#   cadence-params.tsv:28 opencode-cap-5h-calls 60 calls/5h
+#   config.env:31 REMOTE_DAILY_CAP_CALLS 200 calls/day
+#   lib/launch-session.sh:118,235 TIMEOUT_S 1800 (default, jobs/
+#     agent-respawn.sh:55 OVERNIGHT_TIMEOUT) + loadout token-limit 50000
+#   lib/launch-session.sh:195-206 bili health probe curl -m 2 x20 tries
+#     (~10s spawn budget) on the opencode-agent leg
+# The opencode-go gateway declares no per-call Cloudflare-class edge
+# timeout; the session wall-clock is the binding budget.
+# lobehub (30s Cloudflare edge class): leg dropped 2026-09-11, never in
+# model.sh's chain -> no row (ghost rows are forbidden by the guard).
+#
+# --- model-chain legs ---
+unsloth	300	8192	-	lib/model.sh unsloth_chat/unsloth_attempt (8192 = empty-retry budget*8, model.sh:230)
+ollama	300	1024	-	lib/model.sh ollama_chat/_post_chat (local, no edge)
+remote	300	1024	-	lib/model.sh remote_chat (OpenRouter; cap REMOTE_DAILY_CAP_CALLS=200/day, config.env:31)
+deck	300	1024	-	lib/model.sh deck_chat (probe deck-probe-timeout 4, cadence-params.tsv:19)
+kimi	300	1024	-	lib/model.sh kimi_chat (cap kimi-daily-cap 40/day, cadence-params.tsv:24)
+ocgo	300	1024	-	lib/model.sh ocgo_chat (cap opencode-cap-5h-calls 60/5h, cadence-params.tsv:28)
+opencode-agent	1800	50000	1800	lib/launch-session.sh:118,235 (session wall-clock TIMEOUT_S + loadout token-limit 50000)
+#
+# --- image legs (not model-completion legs: no max_tokens exists; max-time
+# and size bounds declared for completeness, guard skips the output column) ---
+image-pollinations	120	-	-	jobs/imagegen-submit.sh:235 (--max-time IMAGEGEN_TIMEOUT default 120; size from imagegen-styles.tsv col 3)
+image-comfyui-submit	30	-	-	jobs/imagegen-submit.sh:167
+image-comfyui-history	10	-	-	jobs/imagegen-submit.sh:187
+image-comfyui-view	30	-	-	jobs/imagegen-submit.sh:206

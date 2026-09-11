@@ -230,6 +230,11 @@ launch) before re-deriving any repo fact from scratch."
     # HTTPS_PROXY here would break every direct session's fetch)
     unset HTTPS_PROXY NODE_EXTRA_CA_CERTS 2>/dev/null
    fi
+   # Leg budgets (R5): this branch's binding pair is registered in
+   # automation/config/leg-budgets.tsv as leg `opencode-agent`
+   # (max-time 1800s = TIMEOUT_S, max-output 50000 = loadout token-limit).
+   # The opencode-go gateway declares no per-call edge timeout; the session
+   # wall-clock below is the enforced ceiling.
    OPENCODE_API_KEY="${OPENCODE_API_KEY:-$oc_key}" \
     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
     timeout "$TIMEOUT_S" "$oc_bin" run --dir "$ROOT" --format json \
