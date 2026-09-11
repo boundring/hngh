@@ -25,6 +25,7 @@ The secret value is never printed, logged, or echoed — only compared.
 """
 import configparser
 import glob
+import html
 import json
 import os
 import re
@@ -516,6 +517,7 @@ def compose():
     out += ["--",
             "full digest: logs/email-digest-%s.md | "
             "dashboard: http://127.0.0.1:8890" % day,
+            "Form not rendering? Open the dashboard and use its feedback pip.",
            ]
     return wrap78(redact("\n".join(out))) + "\n"
 
@@ -564,6 +566,62 @@ def ellipsize(text, width=76):
     never wrapped — a wrapped one-liner reads as two rows."""
     text = "  " + (text or "").strip()
     return text if len(text) <= width + 2 else text[:width] + "…"
+
+
+def _config_env(name):
+    """Bash-style default from config.env: NAME="${NAME:-value}"."""
+    try:
+        with open(os.path.join(AUTOMATION, "config.env"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return ""
+    m = re.search(r'^%s="?\$\{%s:-(?P<v>[^}"]+)\}' % (name, name), text, re.M)
+    return m.group("v") if m else ""
+
+
+def dashboard_base_url():
+    """http://host:port for the feedback action URL. Env wins (lib/common.sh
+    sources config.env and exports the effective values), else the
+    config.env default line, else the documented 8890. A 0.0.0.0 bind
+    address is not addressable in a form action, so it renders as
+    127.0.0.1 — LAN/phone operators open the dashboard URL from the footer
+    pointer; a hardcoded LAN IP would rot across networks.
+    """
+    port = os.environ.get("DASHBOARD_PORT") or _config_env("DASHBOARD_PORT") or "8890"
+    host = os.environ.get("DASHBOARD_HOST") or _config_env("DASHBOARD_HOST") or ""
+    if host in ("", "0.0.0.0"):
+        host = "127.0.0.1"
+    return "http://%s:%s" % (host, port)
+
+
+def feedback_form_html():
+    """Compact HTML feedback form (one per email, not per section) feeding
+    the SAME capture endpoint the dashboard pips use: POST /api/feedback,
+    application/x-www-form-urlencoded (email is JS-free; the endpoint
+    accepts both encodings). Email-safe: inline styles only, no JS, no
+    external assets. NOTE: several clients strip <form> elements entirely
+    (Outlook desktop, Gmail webmail, Apple Mail) — the plain-text fallback
+    line under the form is mandatory, never remove it.
+    """
+    url = dashboard_base_url() + "/api/feedback"
+    box = "border:1px solid #aaa;padding:4px;margin:2px 0;width:95%%;font-family:monospace;font-size:13px"
+    return (
+        '<form method="POST" action="%s" '
+        'style="border:1px solid #ccc;padding:6px;margin:8px 0;'
+        'font-family:monospace;font-size:13px">'
+        '<div style="margin:4px 0">Feedback type: '
+        '<select name="type" style="%s">'
+        '<option>css-theme</option><option>data-format</option>'
+        '<option>correction</option><option>idea</option></select></div>'
+        '<input name="element" maxlength="80" '
+        'placeholder="element/topic (one line)" style="%s"><br>'
+        '<textarea name="text" maxlength="2000" rows="4" '
+        'placeholder="your feedback" style="%s"></textarea><br>'
+        '<button type="submit" style="padding:4px 10px">Submit feedback</button>'
+        '<div style="margin-top:6px;color:#666">'
+        "Form not rendering? Open the dashboard and use its feedback pip.</div>"
+        "</form>"
+    ) % (html.escape(url), box, box, box)
 
 
 def wrap78(text):
@@ -643,4 +701,15 @@ def night_brief_line():
 
 
 if __name__ == "__main__":
-    sys.stdout.write(compose())
+    if "--html" in sys.argv[1:]:
+        # HTML alternative part for the email transport: the digest text
+        # pre-escaped plus the feedback form. Same content, one extra cheap
+        # compose; keeps this script the single source of the digest body.
+        sys.stdout.write(
+            '<!doctype html><html><head><meta charset="utf-8">'
+            "<title>hngh daily digest</title></head>"
+            '<body style="font-family:monospace;font-size:13px">'
+            '<pre style="white-space:pre-wrap;margin:0">%s</pre>%s</body></html>'
+            % (html.escape(compose()), feedback_form_html()))
+    else:
+        sys.stdout.write(compose())

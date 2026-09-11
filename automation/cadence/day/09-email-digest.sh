@@ -31,12 +31,17 @@ HNGH_DIGEST_RESEARCH="$(
 export HNGH_DIGEST_KERNEL_COMMITS HNGH_DIGEST_AUTO_COMMITS HNGH_DIGEST_RESEARCH
 
 python3 "$AUTOMATION_ROOT/scripts/email-digest.py" >"$out" 2>/dev/null || true
+# HTML alternative part: same digest text plus the feedback form feeding
+# POST /api/feedback (same capture endpoint as the dashboard pips).
+outh="$AUTOMATION_ROOT/logs/email-digest-$day.html"
+python3 "$AUTOMATION_ROOT/scripts/email-digest.py" --html >"$outh" 2>/dev/null || true
 
 # transport: send only when the operator config exists (dormant otherwise)
 sent="dormant"
 if [ -f "$(email_conf_path)" ]; then
   if timeout 60 python3 "$AUTOMATION_ROOT/scripts/notify-email.py" send \
     --subject "hngh daily digest $day" --body-file "$out" \
+    --html-file "$outh" \
     >>"$EMAIL_LOG" 2>&1; then
     sent="yes"
   else

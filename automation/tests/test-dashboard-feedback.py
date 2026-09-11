@@ -26,6 +26,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # automation/
@@ -76,6 +77,36 @@ class EndpointTest(unittest.TestCase):
 
     def files(self):
         return sorted(p for p in self.fb_dir.glob("*.json")) if self.fb_dir.exists() else []
+
+    def post_form(self, fields):
+        """urlencoded form POST — the encoding HTML email forms use."""
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        c.request("POST", "/api/feedback", urllib.parse.urlencode(fields),
+                  {"Content-Type": "application/x-www-form-urlencoded",
+                   "Connection": "close"})
+        r = c.getresponse()
+        data = r.read()
+        c.close()
+        return r.status, json.loads(data) if data else {}
+
+    def test_form_encoded_accepted_same_shape(self):
+        st, _ = self.post_form({"type": "idea", "text": "send form entries",
+                                "element": "digest email"})
+        self.assertEqual(st, 201)
+        files = self.files()
+        self.assertEqual(len(files), 1)
+        rec = json.loads(files[0].read_text())
+        self.assertEqual(rec["type"], "idea")
+        self.assertEqual(rec["text"], "send form entries")
+        self.assertEqual(rec["element"], "digest email")
+        self.assertRegex(rec["ts"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    def test_form_encoded_malformed_rejected(self):
+        st, _ = self.post_form({"type": "nope", "text": "x"})
+        self.assertEqual(st, 400)
+        st, _ = self.post_form({"type": "idea", "text": ""})
+        self.assertEqual(st, 400)
+        self.assertEqual(len(self.files()), 0)
 
     def test_writes_one_file(self):
         st, body = self.post({"type": "css-theme", "text": "font+ on headers",

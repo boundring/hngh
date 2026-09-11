@@ -45,6 +45,7 @@ import os
 import smtplib
 import subprocess
 import sys
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 
@@ -116,8 +117,13 @@ def resolve_password(cp):
     return pw
 
 
-def compose(cp, subject, body):
-    msg = MIMEText(body, "plain", "utf-8")
+def compose(cp, subject, body, html_body=None):
+    if html_body:
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+    else:
+        msg = MIMEText(body, "plain", "utf-8")
     prefix = cp.get("flags", "subject-prefix") if cp.has_option("flags", "subject-prefix") else ""
     msg["Subject"] = ("%s %s" % (prefix, subject)) if prefix else subject
     msg["From"] = cp.get("smtp", "from")
@@ -172,7 +178,7 @@ def classify_alert(text):
 
 
 def parse_args(argv):
-    subject = body = None
+    subject = body = html_body = None
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -187,11 +193,19 @@ def parse_args(argv):
             i += 2
         elif a == "--body-text" and i + 1 < len(argv):
             body = argv[i + 1]; i += 2
+        elif a == "--html-file" and i + 1 < len(argv):
+            try:
+                with open(argv[i + 1], encoding="utf-8", errors="replace") as fh:
+                    html_body = fh.read()
+            except OSError as exc:
+                fail("cannot read html file: %s" % exc, 2)
+            i += 2
         else:
-            fail("usage: notify-email.py send --subject S (--body-file F|--body-text T)", 2)
+            fail("usage: notify-email.py send --subject S "
+                 "(--body-file F|--body-text T) [--html-file H]", 2)
     if subject is None or body is None:
         fail("--subject and one of --body-file/--body-text required", 2)
-    return subject, body
+    return subject, body, html_body
 
 
 def main(argv):
@@ -203,9 +217,9 @@ def main(argv):
     if len(argv) < 2 or argv[1] != "send":
         fail("usage: notify-email.py send --subject S (--body-file F|--body-text T)\n"
              "       notify-email.py classify --text T", 2)
-    subject, body = parse_args(argv[2:])
+    subject, body, html_body = parse_args(argv[2:])
     cp = load_conf()
-    msg = compose(cp, subject, body)
+    msg = compose(cp, subject, body, html_body)
     if os.environ.get("DRY_RUN") == "1":
         sys.stdout.write(msg.as_string())
         return 0

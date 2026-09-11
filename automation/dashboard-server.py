@@ -320,7 +320,10 @@ class Handler(SimpleHTTPRequestHandler):
         self._json(201, {"ok": True})
 
     # POST /api/feedback — write-only feedback capture from the dashboard
-    # pips. POST endpoints here carry no shared token (LAN-served static
+    # pips (JSON body) and the notification-email feedback forms
+    # (application/x-www-form-urlencoded body; email is JS-free). One
+    # validator for both encodings. POST endpoints here carry no shared
+    # token (LAN-served static
     # dashboard; every route is display/ledger-only), so the posture is:
     # files only, plain text, 2000-char cap, 64 KB body cap (in _body),
     # and a simple 1-per-second per-type rate guard. Nothing is executed.
@@ -328,7 +331,16 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _feedback(self):
         try:
-            body = self._body()
+            ctype = self.headers.get("Content-Type", "")
+            if "application/x-www-form-urlencoded" in ctype:
+                # HTML email feedback forms post urlencoded (email is
+                # JS-free); parse_qsl cannot raise, empty fields drop out
+                # to "" and fail validation below like any bad JSON field.
+                length = int(self.headers.get("Content-Length", 0))
+                raw = self.rfile.read(length if length < 65536 else 0)
+                body = dict(urllib.parse.parse_qsl(raw.decode("utf-8", "replace")))
+            else:
+                body = self._body()
             ftype = str(body.get("type", "")).strip()
             text = str(body.get("text", "")).strip()
             element = str(body.get("element", "")).strip()
