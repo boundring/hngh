@@ -48,6 +48,9 @@ and execution then happen automatically per the rules above; the
 plugin reads status back from the front-matter or from
 hngh-automation's `dashboard/plans.json`.
 
+`omp-bridge --plan-status` (the plugin's readback) accepts a bare slug
+or the full date-prefixed stem (`<date>-<slug>`).
+
 ## Verification contract
 
 Standard per-step verification, cited in one line instead of repeated:
