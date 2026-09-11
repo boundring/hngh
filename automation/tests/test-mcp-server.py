@@ -46,6 +46,14 @@ class McpServer(unittest.TestCase):
         self.fail_stub.write_text(
             "#!/usr/bin/env bash\necho boom >&2\nexit 3\n")
         self.fail_stub.chmod(0o755)
+        self.auto = self.root / "automation"
+        self.auto.mkdir(parents=True, exist_ok=True)
+        (self.auto / "research-lines.tsv").write_text(
+            "alpha\treviewed\t2026-09-08T00:00:00Z\talpha line\n"
+            "beta\topen\t2026-09-09T00:00:00Z\tbeta line\n")
+        (self.auto / "research-dispositions.tsv").write_text(
+            "line\taction\tverdict\treviewer\tevidence\tdate\n"
+            "alpha\tadopted\tadopted -- keep\tmodel:x\t/path/e.md\t2026-09-08\n")
 
     def _server_env(self, kernel=None):
         repo = self.root / "repo"
@@ -60,6 +68,7 @@ class McpServer(unittest.TestCase):
             "HNGH_MCP_REPO_ROOT": str(repo),
             "HNGH_MCP_KERNEL_CMD": "scripts/hngh-wrapped",
             "HNGH_MCP_KERNEL": kernel or str(self.kernel_stub),
+            "HNGH_MCP_AUTOMATION_ROOT": str(self.auto),
         })
         return env
 
@@ -85,7 +94,7 @@ class McpServer(unittest.TestCase):
             names = {t["name"] for t in
                      self._rpc(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})["result"]["tools"]}
             self.assertEqual(names, {"hngh_present", "hngh_status",
-                                     "queue_report", "dashboard_readout"})
+                                     "queue_report", "dashboard_readout", "research_lines"})
             call = self._rpc(proc, {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                                     "params": {"name": "hngh_present", "arguments": {}}})
             self.assertIn("run: demo ok", call["result"]["content"][0]["text"])
@@ -113,6 +122,55 @@ class McpServer(unittest.TestCase):
                                     "params": {"name": "hngh_status"}})
             self.assertTrue(resp["result"]["isError"])
             self.assertIn("boom", resp["result"]["content"][0]["text"])
+        finally:
+            proc.stdin.close(); proc.stdout.close()
+            proc.wait(timeout=10)
+
+    def test_research_lines_parses_fixtures(self):
+        proc = self._spawn()
+        try:
+            resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 20, "method": "tools/call",
+                                    "params": {"name": "research_lines"}})
+            self.assertFalse(resp["result"].get("isError"))
+            data = json.loads(resp["result"]["content"][0]["text"])
+            self.assertEqual(data["counts"], {"lines": 2, "dispositions": 1})
+            self.assertFalse(data["truncated"])
+            self.assertEqual(data["lines"][1],
+                             {"line": "beta", "status": "open",
+                              "date": "2026-09-09T00:00:00Z", "title": "beta line"})
+            self.assertEqual(data["dispositions"][0]["action"], "adopted")
+            self.assertEqual(data["dispositions"][0]["verdict"], "adopted -- keep")
+        finally:
+            proc.stdin.close(); proc.stdout.close()
+            proc.wait(timeout=10)
+
+    def test_research_lines_reflects_live_appends(self):
+        proc = self._spawn()
+        try:
+            with (self.auto / "research-lines.tsv").open("a") as fh:
+                fh.write("gamma\tscouted\t2026-09-10T00:00:00Z\tgamma line\n")
+            resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 21, "method": "tools/call",
+                                    "params": {"name": "research_lines"}})
+            data = json.loads(resp["result"]["content"][0]["text"])
+            self.assertEqual(data["counts"]["lines"], 3)
+            self.assertEqual(data["lines"][2]["line"], "gamma")
+        finally:
+            proc.stdin.close(); proc.stdout.close()
+            proc.wait(timeout=10)
+
+    def test_research_lines_truncates_over_cap(self):
+        cap = 200
+        (self.auto / "research-lines.tsv").write_text("".join(
+            "r%03d\topen\t2026-09-10T00:00:00Z\trow %d\n" % (i, i)
+            for i in range(cap + 50)))
+        proc = self._spawn()
+        try:
+            resp = self._rpc(proc, {"jsonrpc": "2.0", "id": 22, "method": "tools/call",
+                                    "params": {"name": "research_lines"}})
+            data = json.loads(resp["result"]["content"][0]["text"])
+            self.assertTrue(data["truncated"])
+            self.assertEqual(data["counts"]["lines"], cap)
+            self.assertEqual(data["lines"][-1]["line"], "r199")
         finally:
             proc.stdin.close(); proc.stdout.close()
             proc.wait(timeout=10)

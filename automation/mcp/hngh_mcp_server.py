@@ -9,6 +9,9 @@ scripts/hngh, scripts/report-queue --json, scripts/dashboard-readout
 
 Env seams (hermetic tests / operators):
   HNGH_MCP_REPO_ROOT   repo root override (default: parent of this dir)
+  HNGH_MCP_AUTOMATION_ROOT automation checkout holding the research TSVs
+                       (default: this checkout's own automation dir, i.e.
+                       the sibling hngh-automation dir convention)
   HNGH_MCP_TIMEOUT     per-tool subprocess timeout seconds (default 60)
   HNGH_MCP_KERNEL_CMD  command wrapping the kernel CLI (default scripts/hngh)
 """
@@ -22,7 +25,10 @@ from pathlib import Path
 
 PROTOCOL_VERSION = "2025-06-18"
 REPO_ROOT = Path(os.environ.get("HNGH_MCP_REPO_ROOT", Path(__file__).resolve().parent.parent.parent))
+AUTOMATION_ROOT = Path(os.environ.get(
+    "HNGH_MCP_AUTOMATION_ROOT", Path(__file__).resolve().parent.parent))
 TIMEOUT = float(os.environ.get("HNGH_MCP_TIMEOUT", "60"))
+ROW_CAP = 200
 
 
 def run_cli(cmd, timeout=TIMEOUT):
@@ -63,6 +69,47 @@ def tool_dashboard_readout(args):
     return {"output": run_cli([str(REPO_ROOT / "scripts" / "dashboard-readout"), "--json"])}
 
 
+def read_tsv(path, header):
+    """Parse a TSV into rows (header-keyed, or positional keys). Cap rows."""
+    rows = []
+    truncated = False
+    with open(path, encoding="utf-8") as fh:
+        if header:
+            fh.readline()
+        for lineno, raw in enumerate(fh):
+            line = raw.rstrip("\n")
+            if not line:
+                continue
+            if header:
+                keys = header
+            else:
+                keys = ["line", "status", "date", "title"][:max(1, len(line.split("\t")))]
+            if len(keys) < len(line.split("\t")):
+                raise RuntimeError("%s:%d has more columns than expected" % (path, lineno + 1))
+            if len(rows) >= ROW_CAP:
+                truncated = True
+                break
+            rows.append(dict(zip(keys, line.split("\t"))))
+    return rows, truncated
+
+
+def tool_research_lines(args):
+    lines, t1 = read_tsv(AUTOMATION_ROOT / "research-lines.tsv", None)
+    dheader = (AUTOMATION_ROOT / "research-dispositions.tsv")
+    try:
+        with open(dheader, encoding="utf-8") as fh:
+            header = fh.readline().rstrip("\n").split("\t")
+    except OSError as exc:
+        raise RuntimeError("research-dispositions.tsv unreadable: %s" % exc)
+    dispositions, t2 = read_tsv(dheader, header)
+    return {
+        "lines": lines,
+        "dispositions": dispositions,
+        "truncated": bool(t1 or t2),
+        "counts": {"lines": len(lines), "dispositions": len(dispositions)},
+    }
+
+
 READONLY_SCHEMA = {
     "type": "object",
     "properties": {},
@@ -74,6 +121,7 @@ HANDLERS = {
     "hngh_status": tool_hngh_status,
     "queue_report": tool_queue_report,
     "dashboard_readout": tool_dashboard_readout,
+    "research_lines": tool_research_lines,
 }
 
 
@@ -101,6 +149,15 @@ def tools_list():
         {
             "name": "dashboard_readout",
             "description": "Automation dashboard spine as JSON (scripts/dashboard-readout --json).",
+            "inputSchema": READONLY_SCHEMA,
+        },
+        {
+            "name": "research_lines",
+            "description": (
+                "Live research feed (plan step 9): rows of research-lines.tsv"
+                " and research-dispositions.tsv from the automation checkout."
+                " Pure file read, capped at %d rows with a truncated flag." % ROW_CAP
+            ),
             "inputSchema": READONLY_SCHEMA,
         },
     ]
