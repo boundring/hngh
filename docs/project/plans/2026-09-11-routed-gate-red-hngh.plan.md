@@ -12,3 +12,4 @@ at 2026-09-11T10:00:49Z. Alert text: [oversight] gate-red: hngh make test red â€
 ## Occurrences
 
 - 2026-09-11T11:00:48Z re-occurred (dedup window expired)
+- 2026-09-11T12:00:48Z re-occurred (dedup window expired)
