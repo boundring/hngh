@@ -79,3 +79,6 @@ Reasoning, no sunk cost:
 If the operator later wants IM presence: build the Telegram channel (parked
 BACKLOG row), not a LobeHub Discord bridge -- it is smaller, operator-owned,
 and does not depend on a third-party platform's RFC schedule.
+
+Applied 2026-09-11: share row flipped to 0 per this verdict (see
+automation/cadence-params.tsv; commit hash recorded in the session report).
