@@ -37,6 +37,8 @@ printf 'rc=%s log=%s cause=%s\\n' "$LAUNCH_RC" "$LAUNCH_LOG" "$LAUNCH_CAUSE"
 OC_STUB = """#!/usr/bin/env bash
 printf 'opencode %s config=%s\\n' "$*" "$OPENCODE_CONFIG" >> "$OC_MARKER"
 printf 'keylen=%s\\n' "${#OPENCODE_API_KEY}" >> "$OC_MARKER"
+printf 'proxy=%s\\n' "${HTTPS_PROXY:-}" >> "$OC_MARKER"
+printf 'ca=%s\\n' "${NODE_EXTRA_CA_CERTS:-}" >> "$OC_MARKER"
 if [ -n "${OC_FAIL:-}" ]; then
  TS=$(date +%s)000
  printf '{"type":"text","timestamp":%s,"sessionID":"ses_fail","part":{"type":"text","text":"error: timeout exceeded while integrating"}}\\n' "$TS"
@@ -46,6 +48,18 @@ cat <<'JSON'
 {"type":"step_finish","timestamp":TIMESTAMP,"sessionID":"ses_test1","part":{"type":"step-finish","tokens":{"input":31495,"output":93},"cost":0.003}}
 {"type":"text","timestamp":TIMESTAMP,"sessionID":"ses_test1","part":{"type":"text","text":"done\\nrationale: finished"}}
 JSON
+"""
+
+# bili stub: `start` serves /__bili/health 200 on BILI_STUB_PORT (the
+# launch path's health probe turns green and the wrap envs ride through)
+BILI_STUB = """#!/usr/bin/env bash
+exec python3 -c "
+import os, http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
+    def log_message(self, *a): pass
+http.server.HTTPServer(('127.0.0.1', int(os.environ['BILI_STUB_PORT'])), H).serve_forever()"
 """
 
 
@@ -120,6 +134,10 @@ class OcgoLaunch(unittest.TestCase):
                  OMP_BRIDGE_BIN=str(self.bridge),
                  OMP_BIN_CMD=str(self.omp),
                  HNGH_TELEMETRY_DB=str(self.telem),
+                 # ambient proxy envs (this process may itself ride a
+                 # bili wrapper) would leak into the child marker
+                 HTTPS_PROXY=None,
+                 NODE_EXTRA_CA_CERTS=None,
                  PATH=str(self.td / "stubs") + ":" + os.environ["PATH"])
         if "OPENCODE_API_KEY" not in os.environ:
             e["OPENCODE_KEY_FILE"] = str(self.keyfile)
@@ -251,6 +269,67 @@ class OcgoLaunch(unittest.TestCase):
                         OPENCODE_KEY_FILE=str(kfile))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(self.oc_marker.exists())
+
+    def test_bili_present_wraps_opencode_with_proxy_env(self):
+        # bili present and healthy on BILI_OCGO_PORT -> the child runs
+        # under the env-only MITM redirect (HTTPS_PROXY + NODE_EXTRA_CA_
+        # CERTS); the OPENCODE_CONFIG pin is byte-identical afterwards
+        # (zero clobber: the config layer is never written).
+        import socket
+        bili = self.td / "stubs" / "bili"
+        bili.write_text(BILI_STUB)
+        bili.chmod(0o755)
+        port = 18923
+        xdg = self.td / "xdg"
+        ca_dir = xdg / "billion-context" / "ca"
+        ca_dir.mkdir(parents=True)
+        ca = ca_dir / "root-ca.pem"
+        ca.write_text("-----BEGIN CERTIFICATE-----\ntest\n")
+        cfg = self.auto / "config" / "opencode" / "opencode.jsonc"
+        before = cfg.read_bytes()
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        BILI_OCGO_BIN=str(bili), BILI_OCGO_PORT=str(port),
+                        BILI_STUB_PORT=str(port), XDG_DATA_HOME=str(xdg))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("proxy=http://127.0.0.1:%d" % port, marker)
+        self.assertIn("ca=" + str(ca), marker)
+        self.assertIn("config=" + str(cfg), marker)
+        self.assertEqual(cfg.read_bytes(), before)  # never rewritten
+        # the spawned proxy was killed after the run (port released)
+        import socket as s
+        c = s.socket()
+        c.settimeout(2)
+        self.assertRaises((ConnectionRefusedError, OSError),
+                          c.connect, ("127.0.0.1", port))
+        c.close()
+
+    def test_bili_wrapped_exit_code_passthrough(self):
+        # rc semantics unchanged under the wrap: timeout wraps opencode
+        # directly, bili is a sidecar proxy — the child's rc rides to
+        # LAUNCH_RC even when the proxy envs are set
+        bili = self.td / "stubs" / "bili"
+        bili.write_text(BILI_STUB)
+        bili.chmod(0o755)
+        port = 18931
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode", OC_FAIL="1",
+                        BILI_OCGO_BIN=str(bili), BILI_OCGO_PORT=str(port),
+                        BILI_STUB_PORT=str(port))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("rc=1", r.stdout)
+
+    def test_bili_absent_fails_open_uncompressed(self):
+        # bili absent -> direct launch with a breadcrumb, no proxy envs,
+        # never a failed launch (mirror of the omp bctx-absent pattern);
+        # PATH is scoped without npm-global so command -v bili finds
+        # nothing, and an ambient bili-wrapped parent's stale proxy envs
+        # are stripped from the child
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        PATH=str(self.td / "stubs") + ":/usr/bin:/bin:/usr/sbin:/sbin")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("proxy=\n", marker)
+        self.assertNotIn("proxy=http", marker)
 
 
 def _load_jsonc(path):
