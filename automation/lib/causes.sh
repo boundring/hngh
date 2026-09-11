@@ -25,7 +25,14 @@
 classify_cause() { # logfile -> one cause class on stdout (unknown if no log)
  local log="$1" text=""
  if [ -n "$log" ] && [ -f "$log" ]; then
-  text="$(tail -n 200 "$log" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+  # two-stage classification (2026-09-11 404-in-success false positive):
+  # first keep only failure-shaped lines, then run the class table on
+  # those alone. Incidental keyword mentions in success prose (research
+  # docs citing 404s, budget chatter) never classify; no failure-shaped
+  # line in the tail means unknown regardless of keywords.
+  text="$(tail -n 200 "$log" 2>/dev/null |
+   grep -iE 'error|fatal|fail|refus|traceback|exit code [1-9]|rc=[1-9]|exit [1-9]|budget excee|budget exhaust|cost limit|cap reach|cap excee|cap hit|exhausted|timeout' |
+   tr '[:upper:]' '[:lower:]')"
  fi
  [ -z "$text" ] && {
   printf 'unknown'
