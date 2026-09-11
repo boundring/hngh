@@ -59,6 +59,7 @@ test:
 	python3 -B tests/test-slow-units.py
 	python3 -B tests/test-readout-writers.py
 	python3 -B tests/test-dashboard-feedback.py
+	python3 -B tests/test-digest-html.py
 	python3 -B tests/test-feedback-apply.py
 	python3 -B tests/test-service-ctl.py
 	python3 -B tests/test-queue-progress.py
