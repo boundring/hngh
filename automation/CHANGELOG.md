@@ -2,6 +2,21 @@
 
 ## 2026-09-11
 
+- feat: orchestrator stall detector + blocker-ledger re-attempt loop
+  (as-above-so-below) — the run domain's created/.../dead lifecycle now
+  exists at the orchestrator's own level: jobs/beat-watchdog.py (30m tier)
+  detects consecutive launch-plane failures (beat-stall-n), same-cause plan
+  deaths (blocker-escalate-n), and beat silence (beat-stall-silence-hours)
+  over STATE.md/handoffs records, filing beat-stall alerts + one
+  state/beat-blockers.tsv row per scope; overnight-cycle.sh's remediation
+  loop forces the dream on blocked plans (blocker line: state what you
+  would do differently), clears rows on success, parks after
+  blocker-escalate-n same-cause dream-informed failures (bounded retries),
+  and skips parked plans in the selector. Fail-first: a detector crash
+  never breaks the tick. Tests: tests/test-beat-watchdog.py,
+  tests/test-beat-blockers.sh. Record: docs/records/
+  2026-09-11-orchestrator-roguelike-loop.md.
+
 - fix: delegated-session beat stall — every launch after the first in a
   beat refused `conflict labels=record-conflict` (rc=75, no session, no
   spend) because dream pass + executor + extra plan slots shared one

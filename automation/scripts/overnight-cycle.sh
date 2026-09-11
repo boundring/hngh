@@ -39,6 +39,7 @@ TIMEOUT_S="${OVERNIGHT_TIMEOUT:-1800}"
 . "$ROOT/lib/params.sh"
 . "$ROOT/lib/model.sh"
 . "$ROOT/lib/failfirst.sh"
+. "$ROOT/lib/beat-blockers.sh"
 
 # spend discipline: session cap chain — env OVERNIGHT_MAX_SESSIONS_DAY >
 # Inventory row sessions-day-max (operator authorization 2026-09-07:
@@ -487,7 +488,12 @@ for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  grep -q "status=accepted" "$f" 2>/dev/null || continue
  step="$(grep -m1 '^\- \[ \]' "$f" | sed 's/^- \[ \]//; s/^ *//; s/ *$//')"
  [ -n "$step" ] || continue
- plan_slugs+=("$(basename "$f" .plan.md)")
+ pslug="$(basename "$f" .plan.md)"
+ # parked blocker: the remediation loop already handed this plan to the
+ # operator (escalate threshold) — leave it out of the rotation until
+ # the ledger row is cleared
+ [ "$(blocker_row_for "$pslug" | cut -f6)" = "parked" ] && continue
+ plan_slugs+=("$pslug")
  plan_files+=("$f")
  plan_steps+=("$step")
 done
@@ -561,6 +567,7 @@ is_risky_step() { # step [sibling_steps...] -> 0 = dream-worthy at depth 1
 
 build_dream_prompt() { # slug plan_file step dream_out -> prompt path on stdout
  local slug="$1" pfile="$2" step="$3" dream_out="$4"
+ local bline
  mkdir -p "$ROOT/prompts/overnight"
  {
   printf 'WAKE CONTEXT: %s UTC. You are a DREAM pass (forethought design:\ndocs/research/2026-09-10-forethought-and-decomposition.md section 2):\na bounded READ-ONLY simulation of one plan step before an executor\ntouches it. Advisory-only: never mutate the repo, ledgers, or plan\nstate — the ONLY write this session may make is the dream brief named\nbelow. Read the plan and the repo before answering.\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -585,6 +592,10 @@ section 2 — cite it, do not restate it. Write the finished brief to the
 dream brief path below, then stop. If you cannot establish a field,
 write `not established` — never guess.
 RULE
+  # dream-informed re-attempt (as-above-so-below): a blocker row makes the
+  # dream state the counter-lesson explicitly
+  bline="$(blocker_prompt_line "$slug")"
+  [ -n "$bline" ] && printf '\n%s\n' "$bline"
   printf '\nDream brief path (your single permitted write): %s\n' "$dream_out"
  } >"$ROOT/prompts/overnight/$slug.dream-prompt.md"
  printf '%s\n' "$ROOT/prompts/overnight/$slug.dream-prompt.md"
@@ -626,6 +637,8 @@ secrets. If blocked, say so in your final message and stop; other work
 always exists.
 RULE
   known_context "$slug"
+  bl="$(blocker_prompt_line "$slug")"
+  [ -n "$bl" ] && printf '\n%s\n' "$bl"
   printf '\n%s\n' "$STANDING_AUTH"
  } >"$prompt_file"
  if [ ! -s "$prompt_file" ]; then
@@ -677,9 +690,11 @@ cd "$ROOT" || exit 0
 # batch: slot 0 is the selected plan-or-lane session; remaining slots are
 # additional accepted plans (steps within one plan stay sequential).
 RESULTS="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-results.XXXXXX")"
+BLOCKER_EVENTS="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-blockers.XXXXXX")"
 run_one() { # slug objective prompt_file plan_file [dream_step]
  local slug="$1" objective="$2" prompt_file="$3" pfile="$4" dream_step="$5"
  local start rc run_id log disposition cause result
+ local dream_informed=0
  # crash-safety net: never spawn past a stop signal or a cold-start skip
  [ "$STOP" -eq 1 ] && return 0
  printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
@@ -708,6 +723,7 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
     printf '\n## Dream sanity-checks (verify these assertions FIRST, before your first edit)\n\n'
     cat "$dream_out"
    } >>"$prompt_file"
+   dream_informed=1
   fi
  fi
  launch_session "$slug" "$objective" "$prompt_file"
@@ -720,6 +736,7 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
   file_alert "overnight:bridge-refused:$slug" \
    "overnight beat $slug could not open a bridge run: $LAUNCH_BRIDGE_MSG"
   printf 'failed\n' >>"$RESULTS" # launch-plane crash, not saturation
+  printf '%s\tfailed\tunknown\t%s\n' "$slug" "$dream_informed" >>"$BLOCKER_EVENTS"
   return 0
  fi
  # fail-first outcome for the development state machine: ok = the
@@ -727,6 +744,8 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  # dead (rc!=0, timeout kill) or cancelled with no output
  if [ "$rc" -eq 0 ] && [ -s "$ROOT/$log" ]; then result=ok; else result=degraded; fi
  printf '%s\n' "$result" >>"$RESULTS"
+ printf '%s\t%s\t%s\t%s\n' "$slug" "$result" "$cause" "$dream_informed" \
+  >>"$BLOCKER_EVENTS"
 
  # plan lifecycle: an accepted plan whose steps are all checked flips to
  # executed and files its completion row
@@ -776,7 +795,8 @@ dream=""
 if [ "$FORETHOUGHT_DEPTH" -ge 2 ]; then
  dream="$plan_step"
 elif [ "$FORETHOUGHT_DEPTH" -eq 1 ] && [ -n "$plan_step" ] &&
- is_risky_step "$plan_step" "${plan_steps[@]:1}"; then
+ { is_risky_step "$plan_step" "${plan_steps[@]:1}" ||
+  [ -n "$(blocker_row_for "$slug")" ]; }; then
  dream="$plan_step"
 fi
 s_dream=("$dream")
@@ -790,7 +810,8 @@ while [ "$i" -lt "$slots" ] && [ "$i" -lt "${#plan_slugs[@]}" ]; do
  if [ "$FORETHOUGHT_DEPTH" -ge 2 ]; then
   dream="${plan_steps[$i]}"
  elif [ "$FORETHOUGHT_DEPTH" -eq 1 ] &&
-  is_risky_step "${plan_steps[$i]}" "${plan_steps[@]:0:$i}" "${plan_steps[@]:$((i + 1))}"; then
+  { is_risky_step "${plan_steps[$i]}" "${plan_steps[@]:0:$i}" "${plan_steps[@]:$((i + 1))}" ||
+   [ -n "$(blocker_row_for "${plan_slugs[$i]}")" ]; }; then
   dream="${plan_steps[$i]}"
  fi
  s_dream+=("$dream")
@@ -812,6 +833,28 @@ while IFS= read -r result; do
  [ -n "$result" ] || continue
  record_outcome development "$ff_speed" "$result" "$ff_dev_sf"
 done <"$RESULTS"
+# blocker-ledger remediation loop (as-above-so-below, 2026-09-11): the
+# orchestrator gets the run-domain lifecycle at its own level. Success
+# clears the row; a failure records/bumps same-cause attempts; attempts
+# >= blocker-escalate-n parks the plan for the operator (bounded, never
+# infinite). Sequential — never written from the concurrent subshells.
+while IFS=$'\t' read -r b_slug b_outcome b_cause b_dream; do
+ [ -n "$b_slug" ] || continue
+ if [ "$b_outcome" = ok ]; then
+  blocker_clear "$b_slug"
+  continue
+ fi
+ attempts="$(blocker_record "$b_slug" "$b_cause")"
+ if [ "${attempts:-0}" -ge "$(get_param blocker-escalate-n 2)" ] &&
+  [ "$(blocker_row_for "$b_slug" | cut -f6)" != parked ]; then
+  blocker_park "$b_slug"
+  file_alert "beat-parked:$b_slug" \
+   "orchestrator blocker parked '$b_slug': $attempts consecutive deaths with cause class '$b_cause' (blocker-escalate-n reached). Fix or remove the state/beat-blockers.tsv row to re-admit."
+  breadcrumb "$JOB_NAME" "blocker-parked" \
+   "$b_slug cause=$b_cause attempts=$attempts"
+ fi
+done <"$BLOCKER_EVENTS"
+rm -f "$BLOCKER_EVENTS"
 results_summary="$(tr '\n' ',' <"$RESULTS" | sed 's/,$//')"
 rm -f "$RESULTS"
 
