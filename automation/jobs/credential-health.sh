@@ -93,43 +93,9 @@ if [ -n "$deck_url" ]; then
   fi
 fi
 
-# --- 4. lobehub leg (docs/LOBEHUB.md; cadence-params rows
-# `lobehub-endpoint`/`lobehub-model`) ---
-# Dormant-by-design until the operator drops the key file; every outcome
-# here is a breadcrumb, not an alert: the model chain degrades to
-# archive-only without the leg — nothing breaks. The key VALUE is never
-# read, logged, or sent on the wire. The probe reports WHICH source armed
-# the leg (env name or key file), never the value.
-lobehub_key_src=""
-[ -n "${LOBEHUB_KEY:-}" ] && lobehub_key_src="env LOBEHUB_KEY"
-lobehub_key_file="${LOBEHUB_KEY_FILE:-$HOME/.config/hngh/lobehub-key}"
-[ -z "$lobehub_key_src" ] && [ -f "$lobehub_key_file" ] && lobehub_key_src="key file"
-lobe_key=""
-[ -n "${LOBEHUB_KEY:-}" ] && lobe_key="$LOBEHUB_KEY"
-[ -z "$lobe_key" ] && [ -f "$lobehub_key_file" ] &&
-  [ "$(stat -c %a "$lobehub_key_file")" = "600" ] &&
-  lobe_key="$(cat "$lobehub_key_file" 2>/dev/null)"
-if [ -n "$lobehub_key_src" ] && [ -n "$lobe_key" ]; then
-  # authenticated probe on a GET-able path derived from the leg's base -
-  # the /responses path is POST-only (a bare GET reads 404 forever; the
-  # 2026-09-10 lesson, same family as the kimi probe's missing header).
-  # Key values never logged.
-  lobe_base="${LOBEHUB_URL:-$(get_param lobehub-endpoint 'https://app.lobehub.com/api/v1/responses')}"
-  lobe_models_url="${lobe_base%/responses}/models"
-  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Bearer $lobe_key" "$lobe_models_url" 2>/dev/null)" || code=000
-  if [ "$code" = "000" ]; then
-    breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) endpoint not answering (http=$code)"
-  elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
-    breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) rejected by endpoint (http=$code) - credential failure, operator attention"
-  else
-    breadcrumb "$JOB_NAME" "credential-health" "lobehub ($lobehub_key_src) ok; models endpoint http=$code; gated on lobehub-model row"
-  fi
-fi
-
-# --- 5. kimi leg (Moonshot platform; docs/LOBEHUB.md; cadence-params rows
+# --- 4. kimi leg (Moonshot platform; cadence-params rows
 # `kimi-endpoint`/`kimi-model`) ---
-# Same philosophy as the lobehub probe: every outcome is a breadcrumb, not
+# Every outcome is a breadcrumb, not
 # an alert; the key VALUE is never read, logged, or sent on the wire. The
 # probe reports WHICH source armed the leg (env name or key file), never
 # the value. Unconfigured = silent (the leg does not exist yet).
@@ -164,9 +130,9 @@ if [ -n "$kimi_key_src" ]; then
   fi
 fi
 
-# --- 6. opencode-go leg (opencode.ai/zen/go/v1; cadence-params rows
+# --- 5. opencode-go leg (opencode.ai/zen/go/v1; cadence-params rows
 # `opencode-url`/`opencode-model`; docs/OPENCODE-GO.md) ---
-# Same philosophy as the kimi/lobehub probes: every outcome is a breadcrumb,
+# Same philosophy as the kimi probe: every outcome is a breadcrumb,
 # not an alert; the key VALUE is never logged or sent on the wire. The probe
 # exercises the SAME authenticated path ocgo_chat uses (Bearer header; the
 # 2026-09-10 lesson: a headerless probe measures only its own missing
@@ -194,7 +160,7 @@ if [ -n "$ocgo_key_src" ]; then
   fi
 fi
 
-# --- 7. notify seam (lib/notify.sh) ---
+# --- 6. notify seam (lib/notify.sh) ---
 # Presence-only: reports WHICH channels are armed (names only — token/url
 # VALUES are never read, logged, or sent). Dormant = silent (no channels
 # armed yet is the normal operator setup state, not an alert).

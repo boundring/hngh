@@ -2,9 +2,8 @@
 # test-probe-hygiene.sh — probe-measures-itself class guard (peer review
 # finding 3, docs/research/2026-09-10-peer-standard-review.md).
 #
-# Rule: every credential probe must exercise the authenticated path its
-# real caller uses. The 2026-09-10 kimi/lobehub lesson: five days of a
-# probe measuring its own missing header (kimi 401, lobehub 404;
+# real caller uses. The 2026-09-10 kimi lesson: five days of a
+# probe measuring its own missing header (kimi 401;
 # commits 8db143a, b367b0c) while the real legs worked. The remaining
 # deck /health probe is the documented exemption: that endpoint has no
 # key gate at all (wall-powered device, breadcrumb-only —
@@ -13,7 +12,7 @@
 #
 # Mechanical form: join continuation lines, classify every curl in
 # jobs/credential-health.sh. Each known key gate (unsloth /v1/models,
-# lobehub /models, kimi /models) must appear in exactly one curl that
+# kimi /models) must appear in exactly one curl that
 # carries "Authorization: Bearer"; the deck /health curl is the single
 # exempt bare GET; ANY other headerless curl fails (fail-closed: a new
 # probe with a new endpoint var must authenticate or update this
@@ -48,7 +47,7 @@ PY
 )
 
 # per-known-gate: exactly one authed curl per key-gated endpoint var
-for var in 'UNSLOTH_URL' 'lobe_models_url' 'kimi_models_url' 'ocgo_models_url'; do
+for var in 'UNSLOTH_URL' 'kimi_models_url' 'ocgo_models_url'; do
   n="$(printf '%s\n' "${curls[@]}" | grep -c "\$${var}" || true)"
   ck "exactly one curl probes \$$var" "1" "$n"
   h="$(printf '%s\n' "${curls[@]}" | grep "\$${var}" | grep -c 'Authorization: Bearer' || true)"

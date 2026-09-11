@@ -49,8 +49,8 @@ inside each script skips runs until the Inventory interval elapses.
   15-minute cadence, 2026-09-07: the drop-in runs the `33-research-beat`
   body immediately and again 15 minutes later, so research transitions
   land at :00 :15 :30 :45; always pinned non-local -- deck first when
-  the deck_up probe answers, else kimi/lobehub alternating on the shared
-  run counter. Own failfirst tuning state (research-overflow, 15-minute
+  the deck_up probe answers, else kimi on the shared run counter. Own
+  failfirst tuning state (research-overflow, 15-minute
   tick); a shared flock in the beat body replaces the old 30-minute
   stagger guard; design: hngh docs/design/fail-first.md)
 - day: `17-torch-audit` (moved from week), `18-mimic-drill` (moved from

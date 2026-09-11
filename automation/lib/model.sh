@@ -6,26 +6,22 @@
 # Chain: unsloth (401 auto-refresh + empty-content retry) -> remote
 # (budget-gated, see remote_chat) -> ollama -> deck (param-gated, see
 # deck_chat) -> kimi (quota leg, see kimi_chat) -> ocgo (quota leg,
-# OpenCode Go, 5h-window pacing, see ocgo_chat) -> lobehub (quota leg,
-# see lobehub_chat) -> archive-only.
+# OpenCode Go, 5h-window pacing, see ocgo_chat) -> archive-only.
 # MODEL_PIN routes a call:
 #   local  unsloth -> ollama only (remote, deck, and the quota legs kimi/
-#          lobehub are skipped): news/ux-review/bench pin local
+#          ocgo are skipped): news/ux-review/bench pin local
 #          (low-stakes or probing local models).
 #   ocgo   ocgo first (OpenCode Go GLM quota, 5h-window paced), then
-#          unsloth -> ollama -> deck -> archive; remote + kimi + lobehub
+#          unsloth -> ollama -> deck -> archive; remote + kimi
 #          skipped. Research volume rotates onto it
 #          (opencode-research-share).
 #   kimi   kimi first (K3 quota primary), then unsloth -> ollama ->
-#          deck -> archive; remote + lobehub skipped. Intelligence-shaped
+#          deck -> archive; remote skipped. Intelligence-shaped
 #          bounded work (research transitions, fresh-eyes review) rotates
 #          onto the quota here, spread across the window by
 #          quota_pace_blocked + kimi-daily-cap.
-#   lobehub lobehub first (Responses-API quota leg), then unsloth ->
-#          ollama -> deck -> archive; remote + kimi skipped. Research
-#          volume rotates onto it (lobehub-research-share).
 #   deck   deck first (second-server overflow), then unsloth -> ollama ->
-#          kimi -> archive; remote + lobehub skipped.
+#          kimi -> archive; remote skipped.
 #   other  ignored: the full chain runs.
 # A pinned quota leg that misses (pace-block, 429, endpoint down) falls
 # through to the local chain inside model_call -- research/reviews never
@@ -53,7 +49,7 @@ last_model_used() {
 }
 
 # _post_chat URL JQ_EXPR [BEARER_KEY] — the shared POST+parse scaffold for
-# the chat legs (ollama, remote, deck, kimi, lobehub): JSON body on stdin,
+# the chat legs (ollama, remote, deck, kimi, ocgo): JSON body on stdin,
 # curl POST with content-type + optional bearer header, %{http_code}
 # capture, jq parse of the completion, tmp cleanup. Prints the completion
 # and returns 0 on HTTP 200 + nonempty content; else returns 1. The http
@@ -309,7 +305,7 @@ deck_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  printf '%s\n' "$content"
 }
 
-# Quota-window pacing for the paid legs (kimi, lobehub). Counts today's
+# Quota-window pacing for the paid legs (kimi). Counts today's
 # telemetry events (kind=model source=<source>, the same query remote_chat
 # uses) and blocks when the day is being spent faster than an even pace:
 # used >= cap (hard cap) OR used > cap*elapsed/86400 + 1 (soft pace, one
@@ -421,8 +417,7 @@ kimi_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
 }
 
 # chat via the OpenCode Go quota leg (opencode.ai/zen/go/v1/chat/completions,
-# OpenAI-compatible; T2 GLM subscription, operator-armed 2026-09-10 --
-# docs/research/2026-09-10-lobehub-api-research.md section 4). Key
+# OpenAI-compatible; T2 GLM subscription, operator-armed 2026-09-10). Key
 # resolution order: env OPENCODE_API_KEY (the same key Pi's opencode-go
 # provider entry uses) -> key file ~/.config/hngh/opencode-key (mode 600
 # required; the key VALUE is never logged or echoed). Model gate:
@@ -471,57 +466,6 @@ ocgo_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
   _post_chat "$url" '.choices[0].message.content // ""' "$key" \
    "hngh-$(head -c8 /dev/urandom | od -An -tx1 | tr -d ' \n')")" || {
   breadcrumb model "ocgo" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
-  return 1
- }
- printf '%s\n' "$content"
-}
-
-# chat via the Lobehub premium-quota endpoint (OpenAI Responses API
-# /api/v1/responses; docs/LOBEHUB.md). Two gates, both fail-closed-skip:
-# (a) key resolution order: env LOBEHUB_KEY -> key file
-# ~/.config/hngh/lobehub-key (mode 600 required; absent or too open -> the
-# leg is dormant and silently skipped; the key VALUE is never logged or
-# echoed), (b) agent id: env LOBEHUB_AGENT_ID -> cadence-params row
-# `lobehub-agent-id` (empty/absent -> no agent to address -> skipped).
-# Spend guard: hard cap `lobehub-daily-cap` (default 50; env
-# LOBEHUB_DAILY_CAP_CALLS) plus quota-window pacing, see quota_pace_blocked
-# (telemetry kind=model, source=lobehub, the same mechanism remote_chat
-# uses for openrouter).
-_lobehub_body() {                # agent prompt max_tokens -> stdout (verified
- python3 - "$1" "$2" "$3" <<'PY' # live 2026-09-07: OpenAI Responses shape,
-import json, sys                 # model field = LobeHub agent id; NO messages,
-print(json.dumps({"model": sys.argv[1], "input": sys.argv[2], "max_output_tokens": int(sys.argv[3])}))
-PY
- # live 2026-09-07: OpenAI Responses shape,
-}
-lobehub_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
- local prompt="$1" max_tokens="$2" url agent key kfile content pace cap
- key="${LOBEHUB_KEY:-}"
- kfile="${LOBEHUB_KEY_FILE:-$HOME/.config/hngh/lobehub-key}"
- if [ -z "$key" ]; then
-  key="$(cat "$kfile" 2>/dev/null)" || key=""
- fi
- [ -n "$key" ] || return 1 # no env key, no key file: silent fail-closed-skip
- # trust boundary: a world/group-readable key file is a config error, not
- # a usable credential — skip with a breadcrumb, never read it into a log.
- # (env-armed keys skip the file-mode check: nothing on disk to leak.)
- if [ -z "${LOBEHUB_KEY:-}" ] &&
-  [ "$(stat -c %a "$kfile" 2>/dev/null)" != "600" ]; then
-  breadcrumb model "lobehub" "key file too open (chmod 600 required) -> next backend"
-  return 1
- fi
- agent="${LOBEHUB_AGENT_ID:-$(get_param lobehub-agent-id '')}"
- [ -n "$agent" ] || return 1
- url="${LOBEHUB_URL:-$(get_param lobehub-endpoint 'https://app.lobehub.com/api/v1/responses')}"
- cap="${LOBEHUB_DAILY_CAP_CALLS:-$(get_param lobehub-daily-cap 50)}"
- pace="$(quota_pace_blocked lobehub "$cap")"
- if [ -n "$pace" ]; then
-  breadcrumb model "lobehub" "quota pace: lobehub used ${pace% *}/cap ${pace#* } -- deferring to next leg"
-  return 1
- fi
- content="$(printf '%s' "$(_lobehub_body "$agent" "$prompt" "$max_tokens")" |
-  _post_chat "$url" '.output_text // .output[0].content[0].text' "$key")" || {
-  breadcrumb model "lobehub" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
   return 1
  }
  printf '%s\n' "$content"
@@ -584,24 +528,13 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  return 0
 }
 
-# lobehub quota leg: call, tag MODEL_USED, persist tmp-modelused.txt, emit
-# one telemetry row. Shared by the unpinned chain and MODEL_PIN=lobehub.
-_lobehub_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
- lobehub_chat "$1" "$2" || return 1
- MODEL_USED="lobehub:${LOBEHUB_AGENT_ID:-$(get_param lobehub-agent-id '')}"
- printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
- _model_emit lobehub "$MODEL_USED"
- return 0
-}
-
 model_call() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
- local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_lobehub=0 pin_ocgo=0
+ local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0
  case "${MODEL_PIN:-}" in
  local) pin_local=1 ;;
  kimi) pin_kimi=1 ;;
  deck) pin_deck=1 ;;
- lobehub) pin_lobehub=1 ;;
  ocgo) pin_ocgo=1 ;;
  esac # unknown values: ignore (full chain)
  prompt="$(cat)"
@@ -615,9 +548,6 @@ model_call() {
   return 0
  fi
  if [ "$pin_deck" = 1 ] && _deck_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_lobehub" = 1 ] && _lobehub_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  if unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
@@ -639,7 +569,7 @@ model_call() {
   fi
  done
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
-  [ "$pin_lobehub" = 0 ] && [ "$pin_ocgo" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] &&
   remote_chat "$prompt" "$max_tokens"; then
   MODEL_USED="openrouter:$REMOTE_MODEL"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
@@ -657,18 +587,13 @@ model_call() {
   return 0
  fi
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_lobehub" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] &&
   _kimi_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
   [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] &&
   _ocgo_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] &&
-  _lobehub_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  archive_only "$prompt"

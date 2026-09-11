@@ -6,8 +6,7 @@
 #      load + unarmed deck -> defers exactly as before, no stamp.
 #   b) 30m/50-research-overflow: own-stamp fresh -> skip; stale own-stamp
 #      + hour stamp <30min -> silent defer; stale + hour stamp >=30min ->
-#      runs pinned (odd counter kimi, even lobehub) without consuming the
-#      hour stamp.
+#      runs pinned kimi without consuming the hour stamp.
 #   c) review interleave: counter %research-review-interleave reviews the
 #      oldest crystallized line even with planned lines present; 0 or a
 #      non-aligned counter advances the planned line.
@@ -59,7 +58,6 @@ BEAT_ENV=(
  UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
  OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS=""
  MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096 KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
- LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key"
 )
 beat_run() { # [K=V ...] -> one hour-beat run; caller args win
  (
@@ -166,15 +164,15 @@ grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
 }
 
 # --- b) overflow beat: 15-minute cadence, own failfirst state -----------
-# b1: full speed -> TWO beats per 30m tick (OVERFLOW_SLEEP_S=0), parity
-# pins kimi then lobehub; an unarmed lobehub falls through to the local
-# chain inside model_call (never blocks)
+# b1: full speed -> TWO beats per 30m tick (OVERFLOW_SLEEP_S=0), both
+# pinned kimi; a pace-blocked kimi falls through to the local chain inside
+# model_call (never blocks)
 reset_beat 4
 overflow_run "${kimi_env[@]}"
-ck "overflow: kimi answered exactly once (beat 1)" "1" "$(hits stubK)"
-ck "overflow run2: lobehub unarmed -> local answers" "unsloth:stub-model" \
+ck "overflow: kimi answered on both beats" "2" "$(hits stubK)"
+ck "overflow run2: kimi answers" "kimi:kimi-test-model" \
  "$(cat "$sb/tmp-modelused.txt")"
-ck "overflow run2: unsloth hit once" "1" "$(hits stubU)"
+ck "overflow run2: unsloth never hit" "0" "$(hits stubU)"
 # pick_line finishes lines before starting them: beat 1 advances
 # line-1 planned->expanding, beat 2 advances line-1 expanding->contracting
 grep -q $'line-1\tcontracting\t' "$sb/research-lines.tsv" &&
@@ -197,10 +195,12 @@ ck "overflow: state says ok at full" "ok" "$(sed -n 's/^last=//p' "$sb/ff/failfi
 # b2: degraded overflow operation -> both beats of the tick throttle
 # (15-minute tick: standard paces to 30 minutes)
 reset_beat 4
-( export FAILFIRST_STATE_DIR="$sb/ff"
-  . "$root/lib/params.sh"
-  . "$root/lib/failfirst.sh"
-  record_outcome research-overflow 1 degraded )
+(
+ export FAILFIRST_STATE_DIR="$sb/ff"
+ . "$root/lib/params.sh"
+ . "$root/lib/failfirst.sh"
+ record_outcome research-overflow 1 degraded
+)
 overflow_run "${kimi_env[@]}"
 ck "overflow degraded: kimi never hit" "0" "$(hits stubK)"
 ck "overflow degraded: unsloth never hit" "0" "$(hits stubU)"

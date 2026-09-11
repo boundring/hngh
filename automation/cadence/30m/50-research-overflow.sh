@@ -24,8 +24,8 @@
 #      file, 15-minute tick;
 #   b) pin selection: deck first when armed AND responsive (deck_up
 #      probe -- the deck is a capacity signal, not a fallback), else
-#      quota legs alternating kimi/lobehub on the shared run counter
-#      (odd kimi, even lobehub); an unarmed or pace-blocked pin falls
+#      the kimi quota leg on the shared run counter; an unarmed or
+#      pace-blocked pin falls
 #      through inside model_call -- research never blocks;
 #   c) no load gate and no stagger guard: the pin means no local model
 #      use, and the body's flock replaces the old 30-minute stagger
@@ -51,8 +51,8 @@ overflow_once() { # one gated, pinned research transition
    "failfirst: $verdict - overflow paced below its observed ceiling"
   return 1
  fi
- # pin selection: deck first when responsive; else parity on the NEXT
- # counter value (odd kimi, even lobehub). The beat body increments the
+ # pin selection: deck first when responsive; else the kimi quota leg.
+ # The beat body increments the
  # same counter, sharing it with the review interleave.
  if deck_up; then
   pin=deck
@@ -61,7 +61,6 @@ overflow_once() { # one gated, pinned research transition
   n="${n//[!0-9]/}"
   n="${n:-0}"
   pin=kimi
-  [ $(((n + 1) % 2)) -eq 0 ] && pin=lobehub
  fi
  export OVERFLOW_PIN="$pin"
  export RESEARCH_STAMP_FILE="$STAMP"

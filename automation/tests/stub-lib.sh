@@ -6,8 +6,8 @@
 # recorded: request path appended to $stubdir/<NAME>-hits, raw body
 # appended to $stubdir/<NAME>-bodies (one per line) so tests can prove a
 # leg was (or was never) reached and inspect the request shape. Reply is
-# the superset body (OpenAI choices[], ollama .message, and the lobehub
-# Responses .output_text shape all parse) with content: synthesis prompts
+# the superset body (OpenAI choices[] and ollama .message shapes both
+# parse) with content: synthesis prompts
 # -> $stubdir/synth-reply (or "no-subjects"), VERDICT prompts -> a
 # parseable verdict (the review-transition path), else $STUB_CONTENT
 # (default "stub-says-hi"). SLEEP seconds delay the answer — the

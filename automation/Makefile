@@ -72,7 +72,7 @@ test:
 	bash tests/test-news-screen.sh
 	python3 -B jobs/agent-supervision.py --selfcheck
 	bash tests/test-model-deck-leg.sh
-	bash tests/test-model-lobehub-leg.sh
+
 	bash tests/test-overnight-shutdown.sh
 	bash tests/test-overnight-forethought.sh
 	bash tests/test-model-kimi-leg.sh

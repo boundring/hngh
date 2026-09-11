@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # test-model-pin-routing.sh — sandbox proofs for MODEL_PIN routing (operator
 # quota directive, 2026-09-07) and the research-beat kimi rotation:
-#   pin=kimi  -> kimi stub answers; unsloth/deck/lobehub stubs provably
+#   pin=kimi  -> kimi stub answers; unsloth/deck/ocgo stubs provably
 #                never hit; kimi request body keeps the max_tokens
 #                passthrough and stays lean (no temperature).
 #   pin=kimi + kimi pace-block -> local (unsloth) answers; local never
 #                blocked by kimi state.
 #   pin=deck  -> deck stub answers first; unsloth/kimi never hit.
 #   pin=bogus -> ignored: full chain, unsloth answers.
-#   33-research-beat rotation: runs 1,2 local / 3 kimi (share=3) / run 6
-#   lobehub (share=6, takes precedence); share=0 never pins; REVIEW
-#   transition always pins kimi.
+#   33-research-beat rotation: runs 1,2 local / runs 3,6 kimi (share=3);
+#   share=0 never pins; REVIEW transition always pins kimi.
 # Hermetic: no real endpoints, no real keys, sandbox repo copy so the beat
 # never touches the live telemetry/research state.
 set -u
@@ -65,10 +64,9 @@ call() { # prompt [K=V ...] -> stdout
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
   export MODEL_MAX_TOKENS=3072
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
-  export LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key"
   # hermetic: start bare of the operator's session env
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
-  unset KIMI_DAILY_CAP_CALLS LOBEHUB_KEY LOBEHUB_URL LOBEHUB_DAILY_CAP_CALLS
+  unset KIMI_DAILY_CAP_CALLS
   unset DECK_URL DECK_MODEL MODEL_PIN
   for kv in "$@"; do export "$kv"; done
   printf '%s' "$prompt" | bash -c '. "'"$sb"'/lib/model.sh"; model_call'
@@ -89,13 +87,13 @@ reset_hits() {
 }
 kimi_env=("KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubK_port")
 deck_env=("DECK_URL=http://127.0.0.1:$stubD_port" "DECK_MODEL=deck-test")
-lobe_env=("LOBEHUB_KEY=stub-lobe-key")
+ocgo_env=("OCGO_URL=http://127.0.0.1:1" "OCGO_MODEL=glm-test-model" "OPENCODE_API_KEY=stub-key-never-real")
 
-# --- 1. MODEL_PIN=kimi -> kimi answers; unsloth/deck/lobehub never hit;
+# --- 1. MODEL_PIN=kimi -> kimi answers; unsloth/deck/ocgo never hit;
 #        the kimi body keeps the max_tokens passthrough and stays lean.
 rm -f "$sb/dashboard/telemetry.db"
 reset_hits
-out="$(call "hello-1" "MODEL_PIN=kimi" "${kimi_env[@]}" "${deck_env[@]}" "${lobe_env[@]}")"
+out="$(call "hello-1" "MODEL_PIN=kimi" "${kimi_env[@]}" "${deck_env[@]}" "${ocgo_env[@]}")"
 ck "pin=kimi: kimi stub content" "stub-says-hi" "$out"
 ck "pin=kimi: kimi used" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "pin=kimi: kimi stub hit" "1" "$(hits stubK)"
@@ -161,7 +159,6 @@ beat_run() { # [K=V ...] -> runs one full beat against the sandbox
    UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1 \
    OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" \
    MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096 KIMI_KEY_FILE="$sb/.config/hngh/kimi-key" \
-   LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key" \
    "$@" \
    bash "$sb/cadence/hour/33-research-beat.sh" >/dev/null 2>&1
  )
@@ -209,8 +206,8 @@ ck "rotation run4 (4%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-mo
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
 ck "rotation run5 (5%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
-ck "rotation run6 (6%%6): lobehub pinned; unarmed leg falls through" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
-ck "rotation: kimi telemetry rows" "1" "$(kimi_rows)"
+ck "rotation run6 (6%%3): kimi answers again" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "rotation: kimi telemetry rows" "2" "$(kimi_rows)"
 # the kimi request from the beat kept the beat's 4096 budget passthrough
 ck "rotation: beat kimi body max_tokens=4096" "4096" \
  "$(tail -n 1 "$stubdir/stubK-bodies" | jq -r '.max_tokens')"
