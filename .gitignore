@@ -9,6 +9,8 @@
 !/.omp/skills/
 __pycache__/
 .hermes/
+.omo/
+/logs/
 docs/project/report-bodies/
 # machine data — quarantined out of git (P1 prep for P2 subtree import,
 # repo-merge-consideration); mirrors hngh-automation .gitignore
@@ -34,3 +36,4 @@ automation/.DS_Store
 automation/.lesson-harvest-last
 automation/.research-beat-last
 automation/.lesson-harvest-handoffs
+/prompts/overnight/*.context.txt
