@@ -170,8 +170,8 @@ quota_leg_healthy() { # model -> 0/1; cached per beat (stamp file, TTL 3600)
   [ "$(cat "$stamp" 2>/dev/null)" = ok ] && return 0 || return 1
  fi
  case "$m" in
- kimi:* | lobehub:* | ocgo:*)
-  # cheap 1-token completion against the named leg; kimi_chat/lobehub_chat/
+ kimi:* | ocgo:*)
+  # cheap 1-token completion against the named leg; kimi_chat/
   # ocgo_chat
   # fail-closed-skip when the leg is unconfigured or the key is dead
   local lib="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..}"

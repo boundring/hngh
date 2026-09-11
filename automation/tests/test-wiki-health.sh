@@ -367,7 +367,6 @@ BEAT_ENV=(
  OLLAMA_MODEL=stub-ols MODEL=stub-model UNSLOTH_FALLBACK_MODELS=""
  MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096
  KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
- LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key"
  RESEARCH_SYNTH_STAMP_FILE="$sb/synth-stamp"
 )
 beat_run() { # [K=V ...] -> one hour-beat run; caller args win

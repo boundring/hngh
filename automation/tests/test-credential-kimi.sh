@@ -45,7 +45,6 @@ STATE="$sb/STATE.md"
 : >"$sb/cadence-params.tsv"
 HNGH_HOME="$root/.." AUTOMATION_ROOT="$root" STATE_FILE="$STATE" \
   KIMI_URL="http://127.0.0.1:$port/v1/chat/completions" \
-  LOBEHUB_KEY_FILE="$sb/nonexistent-lobe" \
   MOONSHOTAI_API_KEY="test.key.123" \
   OPENCODE_API_KEY= OCGO_URL= \
   timeout 30 bash "$root/jobs/credential-health.sh" >/dev/null 2>&1
@@ -60,26 +59,3 @@ echo "---"
   echo "$fails FAILED"
   exit 1
 }
-
-# --- lobehub probe: authenticated GET on a GET-able derived path ---
-lobehub_case() {
-  mkdir -p "$sb/hngh-cfg"
-  printf 'stub-key-value-99' >"$sb/lobehub-key"
-  chmod 600 "$sb/lobehub-key"
-  LOBEHUB_KEY_FILE="$sb/lobehub-key"
-  : >"$sb/cadence-params.tsv"
-  printf 'lobehub-endpoint\thttp://127.0.0.1:%s/api/v1/responses\ttest\ttest\n' "$port" >>"$sb/cadence-params.tsv"
-  : >"$sb/STATE2.md"
-  HNGH_HOME="$root/.." STATE_FILE="$sb/STATE2.md" \
-    LOBEHUB_URL="http://127.0.0.1:$port/api/v1/responses" \
-    LOBEHUB_KEY_FILE="$sb/lobehub-key" \
-    OPENCODE_API_KEY= OCGO_URL= \
-    timeout 30 bash "$root/jobs/credential-health.sh" >/dev/null 2>&1
-  rc=$?
-  ck "lobehub: credential-health exits 0" "0" "$rc"
-  ck "lobehub: probe sent Authorization header" "1" \
-    "$(grep -c "stub-key-value-99" "$sb/auth-header.txt" 2>/dev/null || true)"
-  ck "lobehub: crumb says ok http=200" "1" \
-    "$(grep -c "lobehub (key file) ok; models endpoint http=200" "$sb/STATE2.md")"
-}
-lobehub_case

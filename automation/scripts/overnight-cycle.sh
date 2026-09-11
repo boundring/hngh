@@ -130,10 +130,10 @@ select_model() { # -> "model|source" on stdout
  # quota preference (stall-recovery step 9): a session-model-preference
  # cadence-params row names OMP-ADDRESSABLE quota models ahead of the
  # paid fallback; SESSION_MODEL_QUOTA_KEY_PRESENT (set from the leg-key
- # config: kimi-model/lobehub-agent-id rows or env) gates the leg -
+ # config: the kimi-model row or env) gates the leg -
  # no key config, no quota routing, fail-closed. Demotion applies to
  # quota models like any other rung. Boundary, found and documented:
- # kimi_chat/lobehub_chat are curl chat helpers, not omp providers -
+ # kimi_chat is a curl chat helper, not an omp provider -
  # a delegated omp session cannot run "as kimi"; the row must name an
  # omp-addressable quota model id (e.g. an openrouter free/quota tier).
  if [ "$(get_param session-model-quota-keys 0)" = "1" ] &&
@@ -198,7 +198,7 @@ PY
  printf '%s|paid-fallback\n' "$paid"
  printf '%s|paid-fallback\n' "${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
 }
-# model routing (future, not implemented): when the KIMI/LOBEHUB quota
+# model routing (future, not implemented): when the KIMI quota
 # keys go live (sibling lane), a session-model-preference Inventory row
 # can route bounded delegated sessions to a quota model ahead of the
 # paid fallback; until that lands, the paid fallback below stays

@@ -34,10 +34,9 @@ glm-5.3 itself is only $15/mo — switch rows if the default changes.
 
 ## Chain position
 
-unsloth -> remote -> ollama -> deck -> **kimi -> ocgo -> lobehub** ->
+unsloth -> remote -> ollama -> deck -> **kimi -> ocgo** ->
 archive-only. Ocgo sits after kimi (kimi stays the judgment-work lane:
-research REVIEW transitions always pin kimi) and before lobehub (premium,
-latency-heavy, last). A pace-blocked, capped, or dead ocgo falls through
+research REVIEW transitions always pin kimi). A pace-blocked, capped, or dead ocgo falls through
 to the next leg inside model_call — a missed leg never hangs the chain.
 
 ## Config rows (automation/cadence-params.tsv)
@@ -50,13 +49,13 @@ to the next leg inside model_call — a missed leg never hangs the chain.
 | `opencode-research-share` | 3 | `OCGO_RESEARCH_SHARE` |
 
 Empty/absent row = leg skipped fail-closed. `MODEL_PIN=ocgo` routes there
-first (remote + kimi + lobehub skipped). Research beat rotation
+first (remote + kimi skipped). Research beat rotation
 (cadence/hour/33-research-beat.sh) pins ocgo every Nth run after the kimi
 cycle. `MODEL_USED=ocgo:<model>`; telemetry source `ocgo`.
 
 ## Credential health
 
-jobs/credential-health.sh section 6: one authenticated GET to the derived
+jobs/credential-health.sh section 5: one authenticated GET to the derived
 `/models` path (Bearer, same resolution as ocgo_chat). Headerless curls
 against key-gated endpoints are linted by tests/test-probe-hygiene.sh.
 

@@ -71,7 +71,6 @@ run_cycle() { # [extra K=V...] -> runs one overnight beat in the sandbox
     OLLAMA_URL="http://127.0.0.1:1" OLLAMA_MODEL=stub-ollama \
     MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5 \
     KIMI_KEY_FILE="$sb/.config/hngh/kimi-key" \
-    LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key" \
     bash "$sb/scripts/overnight-cycle.sh" >/dev/null 2>&1
   return 0
 }

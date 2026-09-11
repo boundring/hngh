@@ -5,7 +5,7 @@
 # MODEL_USED=kimi:<model> + telemetry row; pace-blocked (above the pace
 # line, below cap) or hard-capped -> breadcrumb + next leg answers; dead
 # endpoint -> HTTP 000 breadcrumb + fall-through; MODEL_PIN=local -> quota
-# stubs (deck/kimi/lobehub) never hit, unsloth answers. Hermetic: no real
+# stubs (deck/kimi/ocgo) never hit, unsloth answers. Hermetic: no real
 # endpoints, no real key, telemetry db is a fixture we seed. The operator's
 # session env may carry KIMI_* keys — call() unsets them.
 set -u
@@ -17,7 +17,7 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/jobs" "$sb/.config/hngh"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
-: >"$sb/cadence-params.tsv" # Inventory: no kimi/lobehub rows unless a case sets one
+: >"$sb/cadence-params.tsv" # Inventory: no kimi/ocgo rows unless a case sets one
 : >"$sb/STATE.md"
 
 . "$root/tests/stub-lib.sh"
@@ -36,7 +36,7 @@ pace_seed_count() { # cap -> used count just above the pace line for right now
  local elapsed=$((10#$(date -u +%H) * 3600 + 10#$(date -u +%M) * 60 + 10#$(date -u +%S)))
  awk -v c="$1" -v e="$elapsed" 'BEGIN{printf "%d", int(c*e/86400) + 2}'
 }
-set_lobe_rows() { printf 'lobehub-endpoint\t%s\ttest\ttest\nlobehub-agent-id\tagt_test_quota\ttest\ttest\n' "$1" >"$sb/cadence-params.tsv"; }
+set_ocgo_rows() { printf 'opencode-url\t%s\ttest\ttest\nopencode-model\tglm-test-model\ttest\ttest\n' "$1" >"$sb/cadence-params.tsv"; }
 
 # one model_call in the sandbox; per-case env passed as K=V args.
 call() { # prompt [K=V ...] -> stdout
@@ -50,11 +50,11 @@ call() { # prompt [K=V ...] -> stdout
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
-  export MODEL_MAX_TOKENS=3072 LOBEHUB_KEY_FILE="$sb/.config/hngh/lobehub-key"
+  export MODEL_MAX_TOKENS=3072
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
   # the operator's session may arm real keys/models — hermetic tests start bare
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
-  unset KIMI_DAILY_CAP_CALLS LOBEHUB_KEY LOBEHUB_URL LOBEHUB_DAILY_CAP_CALLS MODEL_PIN
+  unset KIMI_DAILY_CAP_CALLS MODEL_PIN
   for kv in "$@"; do export "$kv"; done
   printf '%s' "$prompt" | bash -c '. "'"$root"'/lib/model.sh"; model_call'
  )
@@ -112,16 +112,17 @@ grep -q "key file too open" "$sb/STATE.md" &&
 chmod 600 "$sb/.config/hngh/kimi-key"
 
 # --- 5. pace-blocked (above the pace line, below the cap) -> breadcrumb,
-#        next quota leg (lobehub) answers.
+#        next quota leg (ocgo) answers.
 rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
-set_lobe_rows "http://127.0.0.1:$stubB_port"
+set_ocgo_rows "http://127.0.0.1:$stubB_port"
 seed_events kimi "$(pace_seed_count 100)"
 out="$(call "hello-5" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=100" \
- "LOBEHUB_KEY=stub-lobe-key")"
-ck "pace-blocked: kimi skipped, lobehub answers" "stub-says-hi" "$out"
-ck "pace-blocked: lobehub used" "lobehub:agt_test_quota" "$(cat "$sb/tmp-modelused.txt")"
+ "OCGO_URL=http://127.0.0.1:$stubB_port" "OPENCODE_API_KEY=stub-key-never-real" \
+ "OCGO_MODEL=glm-test-model" "OCGO_CAP_5H_CALLS=100000")"
+ck "pace-blocked: kimi skipped, ocgo answers" "stub-says-hi" "$out"
+ck "pace-blocked: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 grep -q "quota pace: kimi used " "$sb/STATE.md" &&
  echo "ok: pace-blocked: breadcrumb written" || {
  echo "FAIL: pace-blocked: no breadcrumb"
@@ -134,8 +135,9 @@ rm -f "$sb/dashboard/telemetry.db"
 seed_events kimi 2
 out="$(call "hello-6" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=2" \
- "LOBEHUB_KEY=stub-lobe-key")"
-ck "hard cap: kimi skipped, lobehub answers" "stub-says-hi" "$out"
+ "OCGO_URL=http://127.0.0.1:$stubB_port" "OPENCODE_API_KEY=stub-key-never-real" \
+ "OCGO_MODEL=glm-test-model" "OCGO_CAP_5H_CALLS=100000")"
+ck "hard cap: kimi skipped, ocgo answers" "stub-says-hi" "$out"
 grep -q "quota pace: kimi used 2/cap 2" "$sb/STATE.md" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: hard cap: no breadcrumb"
@@ -153,7 +155,7 @@ got="$(
 )"
 ck "helper: used=1, huge cap goes" "rc=1" "$got"
 
-# --- 8. MODEL_PIN=local -> quota stubs (deck/kimi/lobehub) NEVER hit;
+# --- 8. MODEL_PIN=local -> quota stubs (deck/kimi/ocgo) NEVER hit;
 #        unsloth stub answers.
 stub_start stubA
 stubA_port="$(cat "$stubdir/stubA-port")"
@@ -168,19 +170,21 @@ out="$(call "hello-8" "MODEL_PIN=local" \
  "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port" \
  "DECK_URL=http://127.0.0.1:$stubB_port" \
  "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
- "KIMI_URL=http://127.0.0.1:$stubB_port" "LOBEHUB_KEY=stub-lobe-key")"
+ "KIMI_URL=http://127.0.0.1:$stubB_port" "OCGO_URL=http://127.0.0.1:1")"
 ck "MODEL_PIN=local: local stub content" "stub-says-hi" "$out"
 ck "MODEL_PIN=local: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
-ck "MODEL_PIN=local: kimi/lobehub/deck stub never hit" "0" "$(hits stubB)"
+ck "MODEL_PIN=local: kimi/ocgo/deck stub never hit" "0" "$(hits stubB)"
 ck "MODEL_PIN=local: unsloth stub hit" "1" "$(hits stubA)"
 
 # --- 9. dead kimi endpoint -> HTTP 000 breadcrumb + fall-through.
 rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-9" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
- "KIMI_URL=http://127.0.0.1:1" "LOBEHUB_KEY=stub-lobe-key")"
-ck "dead kimi endpoint: fall-through to lobehub" "stub-says-hi" "$out"
-ck "dead kimi endpoint: lobehub used" "lobehub:agt_test_quota" "$(cat "$sb/tmp-modelused.txt")"
+ "KIMI_URL=http://127.0.0.1:1" "OCGO_URL=http://127.0.0.1:$stubB_port" \
+ "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
+ "OCGO_CAP_5H_CALLS=100000")"
+ck "dead kimi endpoint: fall-through to ocgo" "stub-says-hi" "$out"
+ck "dead kimi endpoint: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 grep -q "| model | kimi | HTTP 000 -> next backend" "$sb/STATE.md" &&
  echo "ok: dead kimi endpoint: breadcrumb written" || {
  echo "FAIL: dead kimi endpoint: no breadcrumb"

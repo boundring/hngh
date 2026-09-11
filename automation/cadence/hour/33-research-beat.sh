@@ -93,8 +93,7 @@ printf '%s\n' "$run_n" >"$RESEARCH_COUNT_FILE" 2>/dev/null
 # (Inventory; env RESEARCH_LOAD_CEILING overrides) does not defer
 # anything: the pin SHIFTS. Deck first when armed AND responsive (deck_up
 # probe in lib/failfirst.sh -- the deck is idle hardware the operator
-# directed into the chain), else a quota leg by run parity (odd kimi,
-# even lobehub -- same convention as the overflow beat). An unarmed
+# directed into the chain), else the kimi quota leg. An unarmed
 # quota pin falls through to the local chain inside model_call, so
 # routing never blocks. Test seams: RESEARCH_LOADAVG_FILE (loadavg
 # source), RESEARCH_BEAT_GATE_ONLY=1 (exit 0 right after the gates).
@@ -117,7 +116,6 @@ if [ -z "$OVERFLOW_PIN" ] && busy="$(load_busy)"; then
    "local busy - research routed to deck (load ${busy%% *} >= ceiling ${busy##* }; deck responsive)"
  else
   ROUTE_PIN=kimi
-  [ $(((run_n + 1) % 2)) -eq 0 ] && ROUTE_PIN=lobehub
   breadcrumb "$JOB_NAME" "research-route-quota" \
    "local busy - research routed to $ROUTE_PIN (load ${busy%% *} >= ceiling ${busy##* }; deck unavailable)"
  fi
@@ -421,8 +419,7 @@ line="$(printf '%s' "$row" | cut -f4)"
 # primary, spreading K3 quota across the window -- 1 beat/hour, share 3 ->
 # <=8 kimi calls/day against the 40/day cap; quota_pace_blocked still guards
 # bursts, and a pace-blocked or 429ing kimi falls through to the local chain
-# inside model_call (research never blocks). The live lobehub leg (Responses
-# API, lobehub-research-share) takes precedence on its own cycle; the
+# inside model_call (research never blocks). The
 # OpenCode Go leg (opencode-research-share, 5h-window paced) rotates after
 # the kimi cycle. The review transition
 # (terminal verdict on a crystallized line) is high-value judgment: ALWAYS
@@ -439,12 +436,8 @@ elif [ -n "$ROUTE_PIN" ]; then
 elif [ "$MODEL_PIN" = "local" ]; then
  kimi_share="${KIMI_RESEARCH_SHARE:-$(get_param kimi-research-share 3)}"
  case "$kimi_share" in '' | *[!0-9]*) kimi_share=0 ;; esac
- lobehub_share="${LOBEHUB_RESEARCH_SHARE:-$(get_param lobehub-research-share 6)}"
- case "$lobehub_share" in '' | *[!0-9]*) lobehub_share=0 ;; esac
  if [ "$REVIEW" = "1" ]; then
   MODEL_PIN=kimi
- elif [ "$lobehub_share" -gt 0 ] && [ $((run_n % lobehub_share)) -eq 0 ]; then
-  MODEL_PIN=lobehub
  elif [ "$kimi_share" -gt 0 ] && [ $((run_n % kimi_share)) -eq 0 ]; then
   MODEL_PIN=kimi
  else

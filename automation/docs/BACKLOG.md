@@ -186,18 +186,6 @@ smallest useful outcome, and how we'd know it works.
 - Next step: none for Hngh; read /licensing before any programmatic pull.
 - Cost/risk: footer states "Public domain originals · Translations CC BY-SA 4.0 · AI training requires a license" and TDM reservation header is set — agentic ingestion beyond normal reads is gated.
 
-### LobeHub (lobehub.com) — premium plan in hand
-
-- URL: https://lobehub.com/docs/usage/start
-- What it is: LobeHub — agent-harness platform (Agent Builder, Agent Groups, persistent white-box memory, Schedule/Pages/Workspace); the operator holds a premium Cloud plan with desktop + Android apps. The /docs/usage/start markdown route itself returns a migration stub ("Content-specific rendering will be filled in during the page and MDX service migration phase") — the real content came from llms.txt, /pricing.md, /.well-known/api-catalog, and the docs source (lobehub/lobe-chat docs/usage/start.mdx).
-- Integration findings for the model-chain design:
-  (a) Programmatic API: yes, but OAuth-based, not an OpenAI-compatible key endpoint. llms.txt: "OAuth and tokens: issued by LobeHub Cloud. Discovery metadata is under /.well-known/oauth-*"; RFC 8414 authorization-server metadata and RFC 9728 protected-resource metadata are published; the openapi.json is titled "Public OpenAPI for lobehub.com helper endpoints" (discovery/WebMCP, not model chat). There is also WebMCP at /api/mcp and an official CLI `@lobehub/cli` (`lh`).
-  (b) Desktop app: 70+ providers configured per agent, local models on-device supported ("If your data needs to stay on-device, you can run local models too"), one-account sync across devices.
-  (c) Android: no documented push-notification/webhook API for an external harness — the fetched surface describes the mobile app purely as a synced client. Remote triggering would have to go through the Cloud API/OAuth surface, not the phone.
-  (d) Cost/quota: credits model — premium = 15,000,000 credits/month at 24.9 USD/mo list (19.9 yearly); free tier 500,000; credit-to-model mapping documented at /docs/usage/subscription/model-pricing; llms.txt generated 2026-09-06, docs surface is actively maintained.
-- Next step (operator, one manual action): log in on the desktop app or lobehub.com and create a Cloud OAuth token (per /.well-known/oauth-authorization-server) or run `lh` login, then place the token in harness config — the discovery chain (/.well-known/api-catalog → /openapi.json → OAuth) is keyless and machine-readable up to that point.
-- Cost/risk: already paid; risk is that the documented API is helper/MCP-surface — confirm whether any model-inference endpoint is exposed to the OAuth client before designing a chain that assumes OpenAI-compatible calls.
-
 ### PostalForm (postalform.com)
 
 - URL: https://postalform.com/developers
@@ -257,22 +245,9 @@ smallest useful outcome, and how we'd know it works.
 - Social-account notification ingestion: platform notifications as news
   items. Needs per-platform auth design (tokens, scopes) and an explicit
   operator decision on account access before any fetch is wired.
-- LobeHub autonomous management (WebMCP/OAuth): Hngh reads
-  `https://lobehub.com/api/agent-readiness` at integration time, drives
-  cloud config via the OAuth app.lobehub.com PKCE flow (or `lh login`,
-  token stored Keyring-side, handle-only), and manages desktop config via
-  on-disk files (the desktop app exposes no local management API --
-  loopback port 33250 is an internal file server, probed 2026-09-07).
-  WebMCP is keyless but discovery-only. Ground: hngh
-  `docs/research/2026-09-07-lobehub-integration-surface.md`. Governing
-  law: Mirror model-exposure policy (per-item rows) + Keyring handle-only.
-  Smallest useful outcome: one script that fetches agent-readiness and
-  reports config drift between cloud agents and the Inventory.
 - Android integration via ssh/Termux (parked pending operator channel
   choice): Termux sshd + `termux-notification` as the operator-owned
-  Hngh-to-phone channel; alternatives are a LobeHub Telegram channel
-  (docs/usage/channels/telegram) or the LobeHub app's own push
-  (undocumented). Parked until the operator picks a channel; battery/Doze
+  Hngh-to-phone channel. Parked until the operator picks a channel; battery/Doze
   and APK-source trust are the open risks.
 
 ## TTSR proposal artifact class (2026-09-07)

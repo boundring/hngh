@@ -32,7 +32,7 @@ fi
 leaks=0
 for f in "$HOME/.hngh-automation/unsloth.token" "$HOME/.hngh-automation/unsloth.refresh" \
   "$HOME/.hngh-automation/openrouter.token" "$HOME/.hngh-automation/notify-email.conf" \
-  "$HOME/.config/hngh/kimi-key" "$HOME/.config/hngh/lobehub-key"; do
+  "$HOME/.config/hngh/kimi-key"; do
   [ -f "$f" ] || continue
   while IFS= read -r line; do
     [ -n "$line" ] && [ "${#line}" -ge 8 ] || continue # skip trivial ini keys

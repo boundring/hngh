@@ -5,7 +5,8 @@
 # no key/no model row -> skip (archive-only); env key or mode-600 key file
 # + model + stub -> answered with MODEL_USED=ocgo:<model> + telemetry row
 # (source=ocgo); 5h-window pace-blocked or hard-capped -> breadcrumb +
-# next leg answers; dead endpoint -> HTTP 000 breadcrumb + fall-through;
+# leg skipped (nothing after ocgo: archive-only); dead endpoint -> HTTP
+# 000 breadcrumb + fall-through to archive-only;
 # empty/absent rows = leg skipped; key file 644 refused. Hermetic: no real
 # endpoints, no real key, telemetry db is a fixture we seed. The session
 # env may carry OPENCODE_API_KEY — call() unsets it.
@@ -48,7 +49,7 @@ call() { # prompt [K=V ...] -> stdout
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
   export MODEL_MAX_TOKENS=3072
   unset OPENCODE_API_KEY KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY \
-   LOBEHUB_KEY OCGO_URL OCGO_MODEL OCGO_CAP_5H_CALLS MODEL_PIN
+   OCGO_URL OCGO_MODEL OCGO_CAP_5H_CALLS MODEL_PIN
   local prompt="$1"
   shift
   for k in "$@"; do export "$k"; done
@@ -67,7 +68,6 @@ pace_seed_count_5h() { # cap -> used count just above the 5h pace line now
  local elapsed=$(($(date -u +%s) % 18000))
  awk -v c="$1" -v e="$elapsed" 'BEGIN{printf "%d", int(c*e/18000) + 2}'
 }
-set_lobe_rows() { printf 'lobehub-endpoint\t%s\ttest\ttest\nlobehub-agent-id\tagt_test_quota\ttest\ttest\n' "$1" >"$sb/cadence-params.tsv"; }
 
 # --- 1. no key, no model row -> leg invisible, archive-only catches it.
 stub_start stubB # not in $( ): the background stub would hold the capture pipe open
@@ -119,16 +119,14 @@ grep -q "key file too open" "$sb/STATE.md" &&
 chmod 600 "$sb/.config/hngh/opencode-key"
 
 # --- 5. 5h-window pace-blocked (above the pace line, below the cap) ->
-#        breadcrumb, next quota leg (kimi stub) answers.
+#        breadcrumb, leg skipped (nothing after ocgo: archive-only).
 rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
 seed_events ocgo "$(pace_seed_count_5h 100)" 60 # just above the pace line
-set_lobe_rows "http://127.0.0.1:$stubB_port"
 out="$(call "hello-5" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
- "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100" \
- "LOBEHUB_KEY=stub-lobe-key")"
-ck "5h pace-blocked: ocgo skipped, lobehub answers" "stub-says-hi" "$out"
-ck "5h pace-blocked: lobehub used" "lobehub:agt_test_quota" "$(cat "$sb/tmp-modelused.txt")"
+ "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100")"
+ck "5h pace-blocked: ocgo skipped, archive-only used" "" "$out"
+ck "5h pace-blocked: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
 grep -q "quota pace 5h: ocgo used " "$sb/STATE.md" &&
  echo "ok: 5h pace-blocked: breadcrumb written" || {
  echo "FAIL: no pace breadcrumb"
@@ -141,7 +139,7 @@ rm -f "$sb/dashboard/telemetry.db"
 seed_events ocgo 95 21600 # 6h old: outside the tightest window
 out="$(call "hello-6" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100" \
- "LOBEHUB_KEY=stub-lobe-key")"
+ "OCGO_CAP_5H_CALLS=100")"
 ck "outside-window events ignored: ocgo answers" "stub-says-hi" "$out"
 ck "outside-window events ignored: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 
@@ -151,8 +149,8 @@ rm -f "$sb/dashboard/telemetry.db"
 seed_events ocgo 3 60
 out="$(call "hello-7" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=3" \
- "LOBEHUB_KEY=stub-lobe-key")"
-ck "hard cap: ocgo skipped, lobehub answers" "stub-says-hi" "$out"
+ "OCGO_CAP_5H_CALLS=3")"
+ck "hard cap: ocgo skipped, archive-only used" "" "$out"
 grep -q "quota pace 5h: ocgo used 3/cap 3" "$sb/STATE.md" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: no cap breadcrumb"
@@ -174,9 +172,9 @@ ck "helper: fresh window goes" "rc=1" "$got"
 rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-9" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
- "OCGO_URL=http://127.0.0.1:1" "LOBEHUB_KEY=stub-lobe-key")"
-ck "dead ocgo endpoint: fall-through to lobehub" "stub-says-hi" "$out"
-ck "dead ocgo endpoint: lobehub used" "lobehub:agt_test_quota" \
+ "OCGO_URL=http://127.0.0.1:1")"
+ck "dead ocgo endpoint: fall-through to archive-only" "" "$out"
+ck "dead ocgo endpoint: archive-only used" "none:archive-only" \
  "$(cat "$sb/tmp-modelused.txt")"
 grep -q "| model | ocgo | HTTP 000 -> next backend" "$sb/STATE.md" &&
  echo "ok: dead ocgo endpoint: breadcrumb written" || {
@@ -213,7 +211,10 @@ rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
 stub_start stubU 0.15
 stubU_port="$(cat "$stubdir/stubU-port")"
-[ -n "$stubU_port" ] || { echo "FAIL: usage stub did not start"; exit 1; }
+[ -n "$stubU_port" ] || {
+ echo "FAIL: usage stub did not start"
+ exit 1
+}
 out="$(call "hello-12" "OPENCODE_API_KEY=stub-key-never-real" \
  "OCGO_MODEL=glm-test-model" "OCGO_URL=http://127.0.0.1:$stubU_port")"
 ck "wall_s case: stub content" "stub-says-hi" "$out"
@@ -230,7 +231,10 @@ rm -f "$sb/dashboard/telemetry.db"
 : >"$sb/STATE.md"
 stub_start stubA 0.15
 stubA_port="$(cat "$stubdir/stubA-port")"
-[ -n "$stubA_port" ] || { echo "FAIL: unsloth stub did not start"; exit 1; }
+[ -n "$stubA_port" ] || {
+ echo "FAIL: unsloth stub did not start"
+ exit 1
+}
 printf 'stub-token-never-real' >"$sb/unsloth-token"
 out="$(call "hello-13" "MODEL_PIN=local" \
  "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port")"
@@ -239,4 +243,3 @@ row="$(sqlite3 "$sb/dashboard/telemetry.db" \
  "select wall_s from events where kind='model' and source='unsloth'")"
 ck "unsloth wall_s case: wall_s > 0" "yes" \
  "$(awk -v w="$row" 'BEGIN{print (w+0 > 0) ? "yes" : "no"}')"
-

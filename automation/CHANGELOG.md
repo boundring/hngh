@@ -2,6 +2,9 @@
 
 ## 2026-09-11
 
+- refactor: drop lobehub leg (operator decision; history:
+  docs/research/2026-09-10-lobehub-*.md, docs/research/2026-09-11-lobehub-grunt-work.md).
+
 - fix: network-down headroom flag now measures the WAN directly —
   jobs/system-awareness.sh probes the loop's own push dependency
   (curl api.github.com, any HTTP answer = up) and flags network-down only

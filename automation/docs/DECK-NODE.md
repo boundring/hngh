@@ -237,7 +237,7 @@ stub answer, dead URL, MODEL_TIMEOUT).
 The deck being off/suspended is a normal state, not an alert: with no
 listener at `100.79.162.3:8082`, `deck_chat` gets HTTP 000 inside
 MODEL_TIMEOUT, writes the breadcrumb `| model | deck | HTTP 000 ->
-next backend`, and the chain falls through to lobehub/archive-only.
+next backend`, and the chain falls through to archive-only.
 The hourly facts sync keeps its own independent deck-unreachable
 semantics (Phase 1 section 2).
 
