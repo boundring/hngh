@@ -8,3 +8,7 @@ at 2026-09-12T10:00:49Z. Alert text: ttsr fit: session gopro-sync — ttsr injec
 
 - [ ] Delve: open research subject fail-20260912-ttsr-fit-gopro-sync for ttsr-fit:gopro-sync; record disposition; then fix or park
       Verification: research subject fail-20260912-ttsr-fit-gopro-sync present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-12T11:00:49Z re-occurred (dedup window expired)
