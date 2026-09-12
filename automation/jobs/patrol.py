@@ -33,6 +33,7 @@ usage: jobs/patrol.py [--patrol ID | --tier TIER | --all] [--repo DIR]
 import argparse
 import json
 import os
+import shutil
 import re
 import subprocess
 import sys
@@ -51,6 +52,9 @@ GATE_STALE_HOURS = 26  # the day gate runs once a day; 24h + one tier slack
 DISK_PCT = 90
 RESEARCH_STALL_HOURS = 48
 STUCK_STATES = ("planned", "expanding", "contracting")
+FEEDBACK_FLOOD = 20  # unprocessed dashboard feedback json backlog cap
+MANGA_STALE_HOURS = 48  # newest draft older than this = pipeline stalled
+EMAIL_FAILS = 0  # any failed send today is a finding
 DECK_ITEM_RE = re.compile(r"^(CRITICAL|NOTABLE|CONTEXT):")
 DECK_BLOCK_RE = re.compile(r"^## \d{4}\b")
 
@@ -403,6 +407,228 @@ def check_loop_history_guard(ctx):
     return out
 
 
+def check_feedback_backlog(ctx):
+    """Dashboard feedback pipeline: unprocessed feedback/*.json backlog
+    over the flood cap, or a missing processed/ dir (the dedupe sink
+    feedback-ingest.py moves files into)."""
+    out = {"passes": [], "fails": []}
+    processed = os.path.join(ctx["feedback"], "processed")
+    try:
+        names = [n for n in os.listdir(ctx["feedback"])
+                 if n.endswith(".json")]
+    except OSError:
+        out["passes"].append(("feedback-backlog",
+                              "no feedback dir (no feedback yet)"))
+        return out
+    if not os.path.isdir(processed):
+        out["fails"].append(("feedback/processed", "processed-missing",
+                             "dedupe sink dir absent"))
+    if len(names) > FEEDBACK_FLOOD:
+        out["fails"].append(("feedback", "feedback-flood",
+                             "%d unprocessed > %d"
+                             % (len(names), FEEDBACK_FLOOD)))
+    else:
+        out["passes"].append(("feedback-backlog",
+                              "backlog=%d cap=%d" % (len(names),
+                                                     FEEDBACK_FLOOD)))
+    return out
+
+
+def check_manga_pipeline(ctx):
+    """Manga pipeline: the newest draft json under docs/media/manga is
+    the pipeline heartbeat -- stale beyond the window means the passes
+    stopped; component prompts pending with no rendered panel.png in the
+    same panel dir means a pass died mid-pipeline."""
+    out = {"passes": [], "fails": []}
+    drafts = []
+    for dirpath, _dirs, files in os.walk(ctx["manga"]):
+        for n in files:
+            if "draft" in n and n.endswith(".json"):
+                drafts.append(os.path.join(dirpath, n))
+    if drafts:
+        newest = max(os.path.getmtime(p) for p in drafts)
+        age_h = (ctx["now"] - newest) / 3600.0
+        if age_h > MANGA_STALE_HOURS:
+            out["fails"].append(("manga", "manga-stale",
+                                 "newest draft %.0fh old > %dh"
+                                 % (age_h, MANGA_STALE_HOURS)))
+        else:
+            out["passes"].append(("manga-pipeline",
+                                  "newest draft %.0fh old" % age_h))
+    else:
+        out["passes"].append(("manga-pipeline", "no drafts (nothing due)"))
+    for dirpath, dirs, files in os.walk(ctx["manga"]):
+        if "components" not in dirs:
+            continue
+        comps = os.path.join(dirpath, "components")
+        prompts = [n for n in os.listdir(comps) if n.endswith(".json")]
+        rendered = [n for n in files if n.endswith(".png")]
+        if prompts and not rendered:
+            out["fails"].append((os.path.relpath(dirpath, ctx["manga"]),
+                                 "components-pending",
+                                 "%d component prompt(s), 0 renders"
+                                 % len(prompts)))
+    return out
+
+
+def check_email_sends(ctx):
+    """Email side-channel: notify-email.log tail -- any failed send
+    today is a finding (the channel is fail-closed, so silence is not
+    health, but a failed rc means an alert never left the machine)."""
+    out = {"passes": [], "fails": []}
+    try:
+        with open(ctx["email_log"], encoding="utf-8",
+                  errors="replace") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        out["passes"].append(("email-sends", "no log (channel dormant)"))
+        return out
+    failed = [ln for ln in lines
+              if ln.startswith(ctx["date"]) and "send failed rc=" in ln]
+    ok = [ln for ln in lines
+          if ln.startswith(ctx["date"]) and "send ok rc=0" in ln]
+    if len(failed) > EMAIL_FAILS:
+        out["fails"].append(("notify-email.log", "send-failed",
+                             "%d failed send(s) today, last: %s"
+                             % (len(failed), failed[-1][:120])))
+    else:
+        out["passes"].append(("email-sends",
+                              "failed=%d ok=%d today"
+                              % (len(failed), len(ok))))
+    return out
+
+
+def check_package_ghosts(ctx):
+    """Packages registry: every in-use row's install-path must resolve
+    on the host (the ghost-row rule, guard-enforced by
+    test-hngh-packages.py -- patrolled here at runtime, because a row
+    can rot between test runs)."""
+    out = {"passes": [], "fails": []}
+    try:
+        with open(ctx["packages"], encoding="utf-8",
+                  errors="replace") as fh:
+            rows = [ln.rstrip("\n").split("\t") for ln in fh
+                    if not ln.startswith("#")]
+    except OSError:
+        out["passes"].append(("package-ghosts", "no packages registry"))
+        return out
+    n = 0
+    for f in rows:
+        if len(f) < 8 or f[0] == "package" or f[7] != "in-use":
+            continue
+        if f[3].startswith("none-"):  # deliberately not installed
+            continue
+        target = f[3].split("(", 1)[0].strip()
+        n += 1
+        ok = (os.path.exists(target) if "/" in target
+              else shutil.which(target) is not None)
+        if not ok:
+            out["fails"].append((f[0], "ghost-row",
+                                 "in-use install-path does not resolve: %s"
+                                 % f[3]))
+    if not out["fails"]:
+        out["passes"].append(("package-ghosts",
+                              "%d in-use row(s) resolve" % n))
+    return out
+
+
+def check_service_children(ctx):
+    """Services the automation manages: lib/comfyui.sh's contract is a
+    TRANSIENT lifecycle (spawn -> use -> stop inside the run process,
+    never a daemon) -- a managed child still alive at patrol time is a
+    leak. Pattern = the last meaningful tokens of the row's
+    start-command (--port 8188), so the check is registry-driven, not
+    hardcoded."""
+    out = {"passes": [], "fails": []}
+    try:
+        with open(ctx["services_tsv"], encoding="utf-8",
+                  errors="replace") as fh:
+            rows = [ln.rstrip("\n").split("\t") for ln in fh
+                    if not ln.startswith("#")]
+    except OSError:
+        out["passes"].append(("service-children", "no services registry"))
+        return out
+    checked = 0
+    for f in rows:
+        if len(f) < 8 or f[0] == "service":
+            continue
+        svc, start, managed = f[0], f[4], f[6]
+        if not managed.startswith("automation/") or not start:
+            continue
+        toks = start.replace("&&", " ").split()
+        if not toks:
+            continue
+        # ponytail: last-two-token pgrep heuristic; a per-service pattern
+        # column is the upgrade if a row ever needs more
+        # a pattern may not begin with "-" (pgrep parses it as a flag)
+        pattern = (" ".join([toks[-2].lstrip("-"), toks[-1]])
+                   if toks[-1][:1].isdigit() else toks[-1].lstrip("-"))
+        checked += 1
+        try:
+            r = subprocess.run(["pgrep", "-af", pattern],
+                               capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError) as exc:
+            out["fails"].append((svc, "check-crash",
+                                 "pgrep fault: %s" % exc.__class__.__name__))
+            continue
+        if r.returncode == 0:
+            out["fails"].append((svc, "transient-left-running",
+                                 "managed child alive outside a run: %s"
+                                 % r.stdout.strip().splitlines()[0][:120]))
+        else:
+            out["passes"].append(("service-children:" + svc,
+                                  "no transient child (pattern %r)"
+                                  % pattern))
+    if not out["fails"] and not out["passes"]:
+        out["passes"].append(("service-children",
+                              "no automation-managed rows"))
+    return out
+
+
+def check_disposition_followons(ctx):
+    """Research dispositions: an `adopted` verdict is a promise -- the
+    line must have a follow-on subject queued (a research-lines row or
+    a research-subjects entry) or the finding dies in the ledger."""
+    out = {"passes": [], "fails": []}
+    try:
+        with open(ctx["dispositions"], encoding="utf-8",
+                  errors="replace") as fh:
+            rows = [ln.rstrip("\n").split("\t") for ln in fh
+                    if not ln.startswith("#")]
+    except OSError:
+        out["passes"].append(("disposition-followons",
+                              "no dispositions tsv"))
+        return out
+    try:
+        with open(ctx["research_lines"], encoding="utf-8",
+                  errors="replace") as fh:
+            line_ids = {ln.split("\t", 1)[0] for ln in fh
+                        if ln.strip() and not ln.startswith("#")}
+    except OSError:
+        line_ids = set()
+    try:
+        subjects = open(ctx["subjects"], encoding="utf-8",
+                        errors="replace").read().lower()
+    except OSError:
+        subjects = ""
+    adopted = 0
+    for f in rows:
+        if len(f) < 2 or f[1] != "adopted":
+            continue
+        lid = f[0]
+        adopted += 1
+        if lid in line_ids or lid.replace("-", " ") in subjects:
+            continue
+        out["fails"].append((lid, "adopted-no-followon",
+                             "adopted but no research-lines row or "
+                             "queued subject carries it"))
+    if not out["fails"]:
+        out["passes"].append(("disposition-followons",
+                              "%d adopted row(s) have follow-ons"
+                              % adopted))
+    return out
+
+
 CHECKS = {
     "feed-freshness": check_feed_freshness,
     "blocker-escalations": check_blocker_escalations,
@@ -415,6 +641,12 @@ CHECKS = {
     "research-stall": check_research_stall,
     "session-budget": check_session_budget,
     "loop-history-guard": check_loop_history_guard,
+    "feedback-backlog": check_feedback_backlog,
+    "manga-pipeline": check_manga_pipeline,
+    "email-sends": check_email_sends,
+    "package-ghosts": check_package_ghosts,
+    "service-children": check_service_children,
+    "disposition-followons": check_disposition_followons,
 }
 
 
@@ -466,6 +698,21 @@ def build_ctx(args, now_s):
             "PATROL_SUBJECTS", os.path.join(root, "research-subjects.txt")),
         "digest_dir": os.environ.get(
             "PATROL_DIGEST_DIR", os.path.join(root, "digest")),
+        "feedback": os.environ.get(
+            "PATROL_FEEDBACK",
+            os.path.join(root, "dashboard", "feedback")),
+        "packages": os.environ.get(
+            "PATROL_PACKAGES",
+            os.path.join(root, "config", "hngh-packages.tsv")),
+        "email_log": os.environ.get(
+            "PATROL_EMAIL_LOG",
+            os.path.join(root, "logs", "notify-email.log")),
+        "manga": os.environ.get(
+            "PATROL_MANGA", os.path.join(os.path.dirname(root),
+                                         "docs", "media", "manga")),
+        "dispositions": os.environ.get(
+            "PATROL_DISPOSITIONS",
+            os.path.join(root, "research-dispositions.tsv")),
     }
 
 
@@ -517,6 +764,15 @@ def findings_md(now_s, date, results, quip_line):
                        % (r["id"], artifact, cause, detail))
         if not r["fails"]:
             out.append("- ok %s -- no red findings" % r["id"])
+    # the rounds: each FAIL mapped to the surface it touches and the
+    # artifact to look at -- the operator's morning checklist (the
+    # night-watch precedent, mechanized)
+    rounds = [(r, f) for r in results for f in r["fails"]]
+    if rounds:
+        out += ["", "### The rounds", ""]
+        for r, (artifact, cause, detail) in rounds:
+            out.append("- ROUNDS %s -> surface: %s; artifact: %s "
+                       "(%s)" % (r["id"], r["surface"], artifact, cause))
     return "\n".join(out) + "\n"
 
 
@@ -619,10 +875,14 @@ def main(argv=None):
     ap.add_argument("--patrol", metavar="ID")
     ap.add_argument("--tier", choices=["30m", "day"])
     ap.add_argument("--all", action="store_true")
+    ap.add_argument("--morning", action="store_true",
+                    help="emit the morning rounds digest section")
     ap.add_argument("--repo", default=os.environ.get("PATROL_ROOT", ROOT))
     ap.add_argument("--kernel", default=os.environ.get("PATROL_KERNEL", REPO))
     args = ap.parse_args(argv)
     now_s = float(os.environ.get("PATROL_NOW_EPOCH", time.time()))
+    if args.morning:
+        return morning_report(now_s)
     results, rc = run(tier=args.tier, patrol_id=args.patrol, now_s=now_s)
     if rc:
         return rc
@@ -664,6 +924,74 @@ def main(argv=None):
             [(pid, cause) for pid, (a, cause, d) in fails])
         for rid in queued:
             print("QUEUED research-subject %s" % rid)
+    return 0
+
+
+def morning_report(now_s):
+    """--morning: summarize today's findings doc into the daily digest
+    as an append-only `## The rounds` section (PASS/FAIL counts, causes,
+    the top-3 items for operator attention). Runs the walk first when
+    nothing has patrolled today."""
+    args = argparse.Namespace(
+        repo=os.environ.get("PATROL_ROOT", ROOT),
+        kernel=os.environ.get("PATROL_KERNEL", REPO),
+        date=time.strftime("%Y-%m-%d", time.gmtime(now_s)))
+    ctx = build_ctx(args, now_s)
+    findings = os.path.join(ctx["digest_dir"],
+                            "PATROL-%s.md" % ctx["date"])
+    if not os.path.exists(findings):
+        main(["--all"])
+    passes = fails = 0
+    fail_rows = []
+    try:
+        for ln in open(findings, encoding="utf-8", errors="replace"):
+            if ln.startswith("- [ok] "):
+                passes += 1
+            elif ln.startswith("- FAIL "):
+                fails += 1
+                m = re.match(r"- FAIL ([\w-]+)/([^:]+): ([\w-]+) -- (.*)",
+                             ln.rstrip("\n"))
+                if m:
+                    fail_rows.append(m.groups())
+    except OSError:
+        pass
+    causes = {}
+    for _pid, _art, cause, _d in fail_rows:
+        causes[cause] = causes.get(cause, 0) + 1
+    out = ["## The rounds",
+           "",
+           "PASS %d, FAIL %d (%s)"
+           % (passes, fails,
+              ", ".join("%s x%d" % (c, n)
+                        for c, n in sorted(causes.items(),
+                                           key=lambda kv: -kv[1]))
+              or "no causes"),
+           ""]
+    surface_of = {r["id"]: r["surface"]
+                  for r in load_routes(os.environ.get(
+                      "PATROL_ROUTES", os.path.join(
+                          ctx["root"], "config", "patrol-routes.tsv")))}
+    seen = set()
+    top = []
+    for pid, art, cause, detail in fail_rows:
+        if pid in seen:
+            continue
+        seen.add(pid)
+        top.append("%d. %s (%s): %s on %s -- %s"
+                   % (len(top) + 1, pid, surface_of.get(pid, "?"),
+                      cause, art, detail))
+        if len(top) == 3:
+            break
+    if top:
+        out += ["Top items for operator attention:"] + top
+    else:
+        out.append("All quiet -- nothing needs the operator this morning.")
+    section = "\n".join(out) + "\n"
+    os.makedirs(ctx["digest_dir"], exist_ok=True)
+    with open(os.path.join(ctx["digest_dir"], "%s.md" % ctx["date"]),
+              "a", encoding="utf-8") as fh:
+        fh.write(section)
+    print(section, end="")
     return 0
 
 

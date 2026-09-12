@@ -27,3 +27,9 @@ paper	paper-edition	paper-edition	day	bad-execution
 services	services	service-health	day	bad-execution
 disk	disk	disk-usage	day	bad-execution
 budget	budget	session-budget	day	bad-execution
+feedback	dashboard-feedback	feedback-backlog	30m	bad-execution
+manga	manga-pipeline	manga-pipeline	30m	bad-execution
+email	notify-email	email-sends	30m	bad-execution
+packages	hngh-packages	package-ghosts	day	bad-execution
+service-children	services	service-children	day	bad-execution
+research-dispositions	research-dispositions	disposition-followons	day	bad-execution
