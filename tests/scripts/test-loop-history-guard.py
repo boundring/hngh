@@ -87,6 +87,14 @@ KNOWN_EXEMPTIONS = {
         "reason": "narrative daily ledger + public dispatch edition (declared miss)",
         "patch-id": "38ad9a7cc2679d4dad027bb8fe3f6a4e277e198f",
     },
+    # declared post-hoc 2026-09-12: stale-badge CI cure (operator-directed
+    # mission) touched tests/scripts/test-dashboard-live.py without a
+    # candidate label; TERM=dumb graceful skip, automation suite green at
+    # commit time; declared per the 41f646a precedent, not rewritten
+    "4fc4a0f": {
+        "reason": "CI push-trigger + dashboard-live TERM robustness (declared miss)",
+        "patch-id": "ae8b9f0569e6ea0c8a14ca66445d664069e99529",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
