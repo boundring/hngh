@@ -69,6 +69,9 @@ def load_tui_module():
 
 
 class DashboardTUI(unittest.TestCase):
+    # the help banner is printed after the textual import; a runner
+    # without textual exits 2 with a hint (its own asserted path below)
+    @unittest.skipUnless(textual_present(), "textual not importable")
     def test_help_exits_zero(self):
         out = subprocess.run([sys.executable, str(SCRIPT), "--help"],
                              capture_output=True, text=True, cwd=ROOT)
