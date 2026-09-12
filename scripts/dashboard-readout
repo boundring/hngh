@@ -972,7 +972,33 @@ def rich_watch(interval):
         # refresh contract without the raw-key layer
         return watch_loop(interval)
     try:
-        with Live(console=console, refresh_per_second=4, screen=False) as live:
+        def _poll_quit():
+            """Drain one pending key if any; true only on quit keys.
+
+            Non-blocking (timeout 0): called between every expensive
+            sub-call of a render tick so a 'q' typed mid-render does
+            not wait behind the remaining render work (the gate's
+            watch test budgets five seconds for a clean exit)."""
+            r, _, _ = select.select([sys.stdin], [], [], 0)
+            if r:
+                key = os.read(sys.stdin.fileno(), 1)
+                # a non-quit key is just drained
+                return key in (b"q", b"Q", b"\x1b")
+            return False
+
+        # A stopped consumer (gate test quits reading, window closed)
+        # must never wedge the watch on a full pty buffer: stdout is
+        # nonblocking for the watch lifetime (BlockingIOError is a
+        # subclass of OSError, already caught below), and the quit path
+        # silences rich's exit repaint via console.quiet so Live.stop's
+        # final refresh writes nothing into a stalled consumer.
+        try:
+            os.set_blocking(sys.stdout.fileno(), False)
+        except (OSError, ValueError):
+            pass
+        got_quit = False
+        with Live(console=console, refresh_per_second=4, screen=False,
+                  vertical_overflow="visible") as live:
             last_render = 0.0
             while True:
                 # quit check FIRST: a 'q' must never wait behind the
@@ -983,19 +1009,47 @@ def rich_watch(interval):
                 if r:
                     key = os.read(sys.stdin.fileno(), 1)
                     if key in (b"q", b"Q", b"\x1b"):
+                        got_quit = True
                         break
                 if time.time() - last_render >= interval:
                     if time.time() - last_at >= 15:
+                        if _poll_quit():
+                            break
                         last_sessions = session_rows(ttl=15)
                         last_at = time.time()
+                    if _poll_quit():
+                        break
                     dance = dance_level()
+                    if _poll_quit():
+                        break
                     sessions = [] if NO_SESSIONS else last_sessions or []
-                    body = rich_dashboard(timeline_rows(), queue_items(),
-                                          queue_etas(), sessions, dance)
+                    if _poll_quit():
+                        break
+                    tl = timeline_rows()
+                    if _poll_quit():
+                        break
+                    items = queue_items()
+                    if _poll_quit():
+                        break
+                    etas = queue_etas()
+                    if _poll_quit():
+                        break
+                    body = rich_dashboard(tl, items, etas, sessions, dance)
                     footer = (f"[dim]{datetime.now().strftime('%H:%M:%S')} · "
                               f"every {interval}s · q to quit[/]")
                     live.update(Group(body, footer))
-                    last_render = time.time()
+            if got_quit:
+                # silence rich's exit repaint: Live.stop's final refresh
+                # would block forever writing a full frame into a
+                # consumer that has stopped reading; exit without the
+                # interpreter's shutdown flush too - with a nonblocking
+                # stdout the pending buffer cannot drain (no reader)
+                # and Python would otherwise exit 120 on the flush
+                # failure. Everything the operator needed is already
+                # written to the terminal.
+                live.auto_refresh = False
+                console.quiet = True
+                os._exit(0)
     except (OSError, ValueError):
             pass
     finally:
