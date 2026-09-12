@@ -138,6 +138,10 @@ BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 DOC_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,120}\.md$")
+MEDIA_DOCS = os.path.join(HNGH, "docs", "media")
+MEDIA_NAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}(/[A-Za-z0-9][A-Za-z0-9_.-]{0,80})*"
+    r"\.(png|svg)$")
 DIGESTS = os.path.join(ROOT, "digest")
 DIGEST_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.md$")
 FEEDBACK = os.path.join(DASHBOARD, "feedback")
@@ -315,6 +319,9 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
             return
+        if self.path.startswith("/hngh-docs/media/"):
+            self._serve_media()
+            return
         if self.path.startswith("/digest/"):
             self._serve_md(DIGESTS, DIGEST_NAME_RE)
             return
@@ -362,6 +369,26 @@ class Handler(SimpleHTTPRequestHandler):
             payload = f.read()
         self.send_response(200)
         self.send_header("Content-Type", "text/markdown; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    # GET /hngh-docs/media/<path>.<png|svg> — read-only serve of ONE
+    # image from the jailed docs/media tree (the digest editions embed
+    # the manga panel and imagegen art). Strict relative-path validation
+    # + realpath jail; anything else 404s. Display-only, fail closed.
+    def _serve_media(self):
+        name = urllib.parse.unquote(
+            self.path[len("/hngh-docs/media/"):].split("?")[0])
+        doc = jailed_doc_path(MEDIA_DOCS, MEDIA_NAME_RE, name)
+        if not doc:
+            self.send_error(404)
+            return
+        with open(doc, "rb") as f:
+            payload = f.read()
+        ctype = ("image/svg+xml" if doc.endswith(".svg") else "image/png")
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)

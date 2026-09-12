@@ -5,15 +5,21 @@ Same data pulls as jobs/digest-html.py (it reuses that module's parsers
 and telemetry readers), but the output is GitHub-safe markdown for
 docs/dispatch/<date>.md: masthead, THE LEDGER numbers, Deck A (outside
 world, verbatim digest items), Deck B (grounded megastructure blocks),
-the day's lessons, and links to the journal. Deterministic, stdlib only,
-ASCII output; fails open (returns "" on unreadable feeds) so the daily
-writer can never break on it.
+the day's lessons, and links to the journal. Newspaper edition (operator
+feedback 2026-09-12): per-story summaries, the committed manga panel as
+the comic strip (relative link, rendered inline by GitHub), an ASCII
+machine-hall text-graphic, and one dry evidence-first quip per section
+(the shared quips bank; machine metrics only). Deterministic, stdlib
+only, ASCII output; fails open (returns "" on unreadable feeds) so the
+daily writer can never break on it.
 
 usage (module): write_publication(date, repo) -> Path | None
        jobs/digest-public.py <YYYY-MM-DD>   (prints the markdown)
 """
 import importlib.machinery
 import importlib.util
+import glob
+import re
 import os
 import sys
 
@@ -76,6 +82,30 @@ def lessons_md(day, repo):
                    "class: %s." % (len(learned),
                                    _ascii(learned[-1].split("|")[1].strip())))
     return out
+
+
+def comic_md(day, repo):
+    """The comic strip: newest committed manga panel as a relative
+    image link (GitHub renders committed images), or nothing."""
+    hits = sorted(glob.glob(os.path.join(
+        repo, "docs", "media", "manga", "*.png")))
+    if not hits:
+        return []
+    name = os.path.basename(hits[-1])
+    cap = digest_html().quips.quip("comic", day) or ""
+    return ["![the day's manga panel: %s](../media/manga/%s)" % (name, name),
+            "", "> %s" % cap, ""]
+
+
+QUIET_RE = re.compile(r"quiet window")
+
+
+def hall_md(day, hourly):
+    """The machine hall as a fenced ASCII text-graphic with caption."""
+    dh = digest_html()
+    cap = dh.quips.quip("machine_hall", day) or ""
+    return ["## The machine hall (text-graphic)", "", "```",
+            dh.machine_hall(hourly), "```", "", "> %s" % cap, ""]
 
 
 SAGA_CLASSES = {
@@ -159,6 +189,15 @@ def render_page(date, repo):
     quiet = sum(1 for h in hourly if not h[3])
     news = [s for s in sections if not s["mega"] and s["items"]]
     megas = [s for s in sections if s["mega"]]
+    q = dh.quips.quip
+    items_flat = [it for s in news for it in s["items"]]
+    a_facts = {"blocks": len(news),
+               "criticals": sum(1 for it in items_flat
+                                if it.startswith("CRITICAL: ")),
+               "quiet_wins": sum(1 for it in items_flat
+                                 if QUIET_RE.search(it))}
+    mega_text = " ".join(it for s in megas for it in s["items"])
+    m_tokens = dh.TOKENS_RE.search(mega_text)
     out = [
         "# The Machine Hall - Daily Dispatch (public edition)",
         "",
@@ -174,9 +213,19 @@ def render_page(date, repo):
         "- research beats: %d; dispatch blocks: %d active, %d quiet hours."
         % (len(ticks), len(news), quiet),
         "",
+    ]
+    ledger_quip = q("ledger", date, spend=spend, calls=calls, quiet=quiet)
+    if ledger_quip:
+        out += ["> %s" % ledger_quip, ""]
+    out += comic_md(date, repo)
+    out += hall_md(date, hourly)
+    out += [
         "## Deck A - News from the Outside World",
         "",
     ]
+    a_quip = q("deck_a", date, **a_facts) if news else None
+    if a_quip:
+        out += ["> %s" % a_quip, ""]
     for s in news:
         out.append("### %s UTC" % s["time"])
         out.append("")
@@ -184,9 +233,23 @@ def render_page(date, repo):
                                                   _ascii(s["model"])))
         out.append("")
         for it in s["items"]:
-            out.append("- %s" % _ascii(it))
+            if QUIET_RE.search(it):
+                out.append("- %s" % _ascii(it))
+                continue
+            head, rest = dh.split_headline(it)
+            out.append("- **%s**" % _ascii(head))
+            if not rest:
+                rest = ("Standfirst: filed via %s, screened by %s at "
+                        "%s UTC." % (s["sources"].split(",")[0],
+                                     s["model"], s["time"]))
+            out.append("  _%s_" % _ascii(rest))
         out.append("")
     out += ["## Deck B - News from the Megastructure", ""]
+    b_quip = (q("deck_b", date,
+                tokens=int(m_tokens.group(1).replace(",", "")))
+              if megas and m_tokens else None)
+    if b_quip:
+        out += ["> %s" % b_quip, ""]
     for s in megas:
         for it in s["items"]:
             out.append(_ascii(it))
