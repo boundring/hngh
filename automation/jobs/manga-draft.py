@@ -34,6 +34,7 @@ components/, panel.svg, panel.png.
 """
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -152,6 +153,204 @@ REACTIONS = {
     ],
 }
 
+# Recognition register (operator critique 2, item 4): the REACTION beat's
+# line -- the moment the beat lands and the character knows it. Distinct
+# pool from the punch REACTIONS so the three beats read as an arc
+# (flat -> recognition -> punch), not three draws from one pool.
+RECOGNITIONS = {
+    "bureaucrat": [
+        "Wait. That stamp is not ours.",
+        "There it is. Paragraph nine.",
+        "The drawer is empty. The form is gone.",
+    ],
+    "engineer": [
+        "The gantry just moved on its own.",
+        "That is not the bolt I tightened.",
+        "The diagram was right. That is worse.",
+    ],
+    "nightwatch": [
+        "Something moved at the end of the hall.",
+        "The candle just went out. Both of them.",
+        "The log is writing itself. Look.",
+    ],
+}
+
+# Strip geometry (operator critique 2, items 3/5): the wireframe models a
+# 1-3 panel grid. 3 beats -> horizontal strip (setup | reaction | gag),
+# 2 beats -> vertical stack, 1 beat -> single panel. GUTTER px between
+# frames; panels are (x, y, w, h) in the same 1024x820 canvas.
+GUTTER = 14
+
+
+def panel_grid(n):
+    """The beat-count-keyed layout contract: orientation + panel rects
+    for an n-beat strip, sharing the 1024x820 canvas and the 668px
+    narrative band below."""
+    W, H, ART_H = 1024, 820, 650
+    if n <= 1:
+        return {"orientation": "single", "panels": [(14, 14, 996, ART_H)]}
+    if n == 2:
+        ph = (ART_H - GUTTER) // 2
+        return {"orientation": "vertical", "panels":
+                [(14, 14, 996, ph), (14, 14 + ph + GUTTER, 996, ph)]}
+    pw = (996 - 2 * GUTTER) // 3
+    return {"orientation": "horizontal", "panels":
+            [(14 + i * (pw + GUTTER), 14, pw, ART_H) for i in range(3)]}
+
+
+def sfx_anchor(panel, focal, seed):
+    """SFX position: orbital offset around the beat's focal-action
+    point, quadrant-cycled by seed (45+90*deg) with golden-jitter and a
+    seed-varied radius, clamped inside the panel. The focal point
+    differs per beat, so the SFX lands where the action is; the quadrant
+    cycle guarantees the seed spread covers distinct quadrants."""
+    px, py, pw, ph = panel
+    ang = 45 + (seed % 4) * 90 + ((seed * 13) % 30) - 15
+    rad = (0.22 + (seed % 3) * 0.08) * min(pw, ph)
+    x = focal[0] + rad * math.cos(math.radians(ang))
+    y = focal[1] + rad * math.sin(math.radians(ang))
+    x = max(px + 20, min(px + pw - 20, x))
+    y = max(py + 40, min(py + ph - 20, y))
+    return round(x, 1), round(y, 1)
+
+
+WF_DEFS = """<defs>
+  <pattern id="screentone" width="8" height="8" patternUnits="userSpaceOnUse">
+    <circle cx="4" cy="4" r="1.3" fill="#141414"/></pattern>
+  <pattern id="screentone-dark" width="6" height="6" patternUnits="userSpaceOnUse">
+    <circle cx="3" cy="3" r="2.1" fill="#141414"/></pattern>
+  <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse"
+    patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="7" stroke="#141414" stroke-width="1.1"/>
+  </pattern>
+  <filter id="ink" x="-4%" y="-4%" width="108%" height="108%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2"
+      seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6"/>
+  </filter>
+  <marker id="focalhead" markerWidth="8" markerHeight="8" refX="6" refY="3"
+    orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#141414"/></marker>
+</defs>"""
+
+
+def _tail(bx, by, tx, ty):
+    """Two-segment quadratic bezier tail from the bubble edge to the
+    actor anchor (operator critique 2, item 1): no bare polygons, and
+    the ink-wash filter gives it the same hand-drawn wobble."""
+    mx = (bx + tx) / 2.0 + 0.18 * (ty - by)
+    my = (by + ty) / 2.0
+    return ('<path class="tail" d="M%d %d Q%.1f %.1f %.1f %.1f '
+            'Q%.1f %.1f %d %d" fill="none" stroke="#141414" '
+            'stroke-width="4" filter="url(#ink)"/>'
+            % (bx, by, mx, my, mx, my, mx, my, tx, ty))
+
+
+def _panel_scene(px, py, pw, ph, seed, i):
+    """Deepened hand-drawn placeholder scene per panel (operator
+    critique 2, item 6): screentone sky, towers with a SECOND screentone
+    density, ground line, ground shadow under the actor slot, varied
+    power-line curves, ONE accent (moss patch XOR mini-seal). All
+    geometry is panel-relative so any grid cell composes."""
+    gy = py + ph - 36
+    parts = ['<rect x="%d" y="%d" width="%d" height="%d" fill="#ffffff"/>'
+             % (px, py, pw, ph),
+             '<rect x="%d" y="%d" width="%d" height="%d" '
+             'fill="url(#screentone)" opacity="0.45"/>'
+             % (px, py, pw, ph * 0.42)]
+    for tx, tw, th in ((px + 12, pw * 0.16, ph * 0.5),
+                       (px + pw * 0.7, pw * 0.2, ph * 0.36)):
+        parts += [
+            '<rect x="%.0f" y="%.0f" width="%.0f" height="%.0f" '
+            'fill="#141414"/>' % (tx, gy - th, tw, th),
+            '<rect x="%.0f" y="%.0f" width="%.0f" height="%.0f" '
+            'fill="url(#hatch)" opacity="0.3"/>' % (tx, gy - th, tw, th),
+            '<rect x="%.0f" y="%.0f" width="%.0f" height="%.0f" '
+            'fill="url(#screentone-dark)" opacity="0.45"/>'
+            % (tx, gy - th, tw, th)]
+    for k in range(2):
+        dy = py + ph * (0.3 + k * 0.09) + (seed % 7)
+        parts.append('<path d="M%.0f %.0f Q %.0f %.0f %.0f %.0f" '
+                     'fill="none" stroke="#141414" stroke-width="1.4" '
+                     'opacity="0.6"/>' % (px, dy, px + pw / 2.0,
+                                          dy + 12 + (seed + k) % 9,
+                                          px + pw, dy - 4))
+    parts += ['<path d="M%.0f %.0f L%.0f %.0f" stroke="#141414" '
+              'stroke-width="2.4"/>' % (px, gy, px + pw, gy),
+              '<ellipse cx="%.0f" cy="%.0f" rx="%.0f" ry="5" '
+              'fill="#141414" opacity="0.3"/>'
+              % (px + pw / 2.0, gy, pw * 0.16)]
+    if (seed + i) % 2 == 0:
+        parts.append('<circle cx="%.0f" cy="%.0f" r="9" '
+                     'fill="url(#screentone-dark)"/>'
+                     % (px + pw * 0.14, gy + 8))
+    else:
+        parts.append('<rect x="%.0f" y="%.0f" width="26" height="12" '
+                     'fill="none" stroke="#a3282d" stroke-width="2" '
+                     'opacity="0.8"/>' % (px + pw * 0.1, py + ph * 0.5))
+    return "".join(parts)
+
+
+def _panel_text_layer(plan, b, rect, seed, i):
+    """Per-panel text layer: actor slot (pose library), focal-action
+    mark, setup caption OR ellipse bubble with a curved bezier tail to
+    the actor's head, the beat's register line, and -- on the reaction
+    beat -- the SFX anchored at the beat's focal point (seed-varied
+    quadrant, critique 2 item 2)."""
+    px, py, pw, ph = rect
+    gy = py + ph - 40
+    h = ph * (0.5 if b["pose"] != "small-in-frame" else 0.26)
+    ax = px + pw / 2.0 + (seed % 21) - 10
+    head = (ax, gy - h * 0.85)  # matches the wireframe's stick head
+    focal = (px + pw * (0.35 + ((seed + i) % 5) * 0.08),
+             py + ph * 0.42)
+    parts = ['<g data-beat="%d" data-kind="%s" data-pose="%s">'
+             % (i, b["kind"], b["pose"]),
+             '<path data-focal="%s" d="M%.0f %.0f L%.0f %.0f" '
+             'stroke="#141414" stroke-width="3" fill="none" '
+             'marker-end="url(#focalhead)"/>'
+             % (b["kind"], focal[0] - 44, focal[1] + 30,
+                focal[0], focal[1])]
+    if b["kind"] == "setup":
+        bx, bw = px + 8, pw - 16
+        parts.append('<rect x="%d" y="%d" width="%d" height="56" '
+                     'rx="3" fill="#ffffff" stroke="#141414" '
+                     'stroke-width="3"/>' % (bx, py + 10, bw))
+        parts.append('<text font-family="Iosevka, monospace" '
+                     'font-size="14" fill="#141414">%s</text>'
+                     % "".join('<tspan x="%d" y="%d">%s</tspan>'
+                               % (bx + 10, py + 32 + n * 18, escape(l))
+                               for n, l in enumerate(_wrap(b["line"],
+                                                           34))))
+    else:
+        bcx, bcy = px + pw * 0.6, py + ph * 0.14
+        rx, ry = pw * 0.36, ph * 0.075
+        parts.append('<ellipse cx="%.0f" cy="%.0f" rx="%.0f" ry="%.0f" '
+                     'fill="#ffffff" stroke="#141414" stroke-width="3"/>'
+                     % (bcx, bcy, rx, ry))
+        parts.append(_tail(bcx - rx * 0.3, bcy + ry, head[0], head[1]))
+        parts.append('<text text-anchor="middle" font-size="14" '
+                     'fill="#141414">%s</text>'
+                     % "".join('<tspan x="%.0f" y="%.0f">%s</tspan>'
+                               % (bcx, bcy - 8 + n * 18, escape(l))
+                               for n, l in enumerate(_wrap(b["line"],
+                                                           24))))
+        if b["kind"] == "reaction":
+            sx, sy = sfx_anchor(rect, focal, seed + i)
+            # keep the word on-panel: clamp for ~5 letters + rotation
+            sx = max(px + 60, min(px + pw - 110, sx))
+            sy = max(py + 70, min(py + ph - 40, sy))
+            srot = -16 + (seed % 9)
+            parts.append('<text data-sfx="%s" x="%.1f" y="%.1f" '
+                         'font-family="Averia Gruesa Libre, cursive" '
+                         'font-size="30" font-weight="bold" '
+                         'fill="#141414" stroke="#ffffff" '
+                         'stroke-width="6" paint-order="stroke" '
+                         'transform="rotate(%d %.1f %.1f)">%s</text>'
+                         % (plan["sfx"], sx, sy, srot, sx, sy,
+                            escape(plan["sfx"])))
+    parts.append('</g>')
+    return "".join(parts)
+
 
 def load_cast(path=CAST_JSON):
     """Character sheets: cameo -> {appearance, seed}. Fail-closed: a
@@ -168,23 +367,29 @@ def script_for(plan):
     with per-beat visual notes (who's in frame, camera angle, what the
     eye hits in order) and a stick pose from the library. Deterministic
     on the plan seed; the cameo's character sheet feeds the visual notes.
-    The narration register (serious-manga deadpan) rides the setup beat."""
+    Dialogue comes from PER-BEAT-TYPE registers (operator critique 2,
+    item 4): setup = flat narration, reaction = recognition, gag = the
+    punch -- three distinct lines from three distinct pools, an arc."""
     seed = plan["seed"]
     cameo = plan["cameo"]
     cast = load_cast().get(cameo, {})
     narration = _pick(NARRATIONS, seed // 17)
+    recognition = _pick(RECOGNITIONS[cameo], seed // 23)
     return {
         "narration": narration,
         "beats": [
             {"kind": "setup", "cast": [cameo], "pose": "standing-deadpan",
+             "register": "narration", "line": narration,
              "camera": "wide, figure small against the machinery",
              "eye": "narration caption first, then the tilted structure",
              "visual": plan["scene"] + ". " + narration},
             {"kind": "reaction", "cast": [cameo], "pose": "reacting",
+             "register": "recognition", "line": recognition,
              "camera": "medium, face in frame, star-highlight eyes",
              "eye": "the face, then the focal action behind it",
              "visual": "close on %s reacting; %s" % (cameo, plan["sfx"])},
             {"kind": "gag", "cast": [cameo], "pose": "pointing",
+             "register": "punch", "line": plan["dialogue"],
              "camera": "medium-wide, diagonal depth to the focal action",
              "eye": "the dialogue bubble, then the aftermath",
              "visual": plan["dialogue"]},
@@ -198,7 +403,7 @@ def script_for(plan):
 def _stick(x, y, h, pose, seed):
     """One stick figure: head circle + spine + limbs, hand-drawn jitter
     from the seed. (x, y) is the ground point, h the total height."""
-    r = h * 0.14
+    r = h * 0.07
     hip = y - h * 0.45
     neck = y - h * 0.72
     lean = {"reacting": -h * 0.08, "crouched": h * 0.22,
@@ -207,88 +412,82 @@ def _stick(x, y, h, pose, seed):
     if pose == "reacting":
         arms = ('<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
                 '<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
-                % (neck - r, neck + 4, neck - h * 0.3, neck - h * 0.2,
-                   neck + r, neck + 4, neck + h * 0.3, neck - h * 0.2))
+                % (x - r, neck + 4, x - h * 0.3, neck - h * 0.2,
+                   x + r, neck + 4, x + h * 0.3, neck - h * 0.2))
     elif pose == "pointing":
         arms = ('<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
                 '<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
-                % (neck - r, neck + 4, neck - h * 0.28, neck + h * 0.12,
-                   neck + r, neck + 4, neck + h * 0.34, neck - h * 0.06))
+                % (x - r, neck + 4, x - h * 0.26, hip + 8,
+                   x + r, neck + 4, x + h * 0.34, neck - h * 0.06))
     elif pose == "crouched":
         arms = ('<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
-                % (neck - r, neck + 4, neck - h * 0.3, neck + h * 0.18))
+                % (x - r, neck + 4, x - h * 0.3, neck + h * 0.18))
     else:
         arms = ('<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
                 '<line x1="%d" y1="%d" x2="%d" y2="%d"/>'
-                % (neck - r, neck + 4, neck - h * 0.3, hip + 8,
-                   neck + r, neck + 4, neck + h * 0.3, hip + 8))
-    return ('<g transform="translate(%.1f %.1f)">'
+                % (x - r, neck + 4, x - h * 0.3, hip + 8,
+                   x + r, neck + 4, x + h * 0.3, hip + 8))
+    # absolute coords throughout: translate() + absolute y double-offset
+    # the figure off-canvas (found on first strip rasterization)
+    return ('<g stroke="#141414" stroke-width="4">'
             '<circle cx="%.1f" cy="%.1f" r="%.1f"/>'
-            '<line x1="0" y1="%.1f" x2="%.1f" y2="%.1f"/>%s'
-            '<line x1="0" y1="%.1f" x2="%.1f" y2="%d"/>'
-            '<line x1="0" y1="%.1f" x2="%.1f" y2="%d"/></g>'
-            % (x, y, lean * 0.4, neck - r, r, neck, lean, hip,
-               arms, hip, -h * 0.16 + j, y, hip, h * 0.16 + j, y))
+            '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f"/>%s'
+            '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%d"/>'
+            '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%d"/></g>'
+            % (x + lean * 0.4, neck - r, r, x, neck, x + lean, hip,
+               arms, x, hip, x - h * 0.16 + j, y, x, hip,
+               x + h * 0.16 + j, y))
 
 
 def wireframe_svg(plan, script, width=1024, height=820):
-    """Pass 2 -- the procedural wireframe: panel frame + gutter, per-beat
-    actor slots (pose-library stick figures), speech bubble + caption box
-    placement, focal-action arrow. The layout contract for later passes:
-    every later layer lands inside these coordinates. data-beat /
-    data-pose / data-focal attributes make the contract inspectable."""
+    """Pass 2 -- the procedural wireframe IS the beat visualization
+    (operator critique 2, items 3/5): one panel per beat in a
+    beat-count-keyed grid (3 = horizontal strip, 2 = vertical stack,
+    1 = single panel), gutters between frames. Per panel: pose-library
+    stick figure, caption (setup) or ellipse bubble (reaction/gag) with
+    a curved bezier tail to the actor, focal-action mark, and the SFX
+    anchored where the reaction beat's action is. A shared narrative
+    band + attribution footer close the strip. data-panel / data-beat /
+    data-panelimg / data-sfx attributes make the contract inspectable
+    and give assemble_svg its injection points."""
     seed = plan["seed"]
-    art = {"x": 18, "y": 18, "w": width - 36, "h": 632}
     beats = script["beats"]
-    slots = []  # horizontal thirds: one beat per slot, reading order L->R
-    for i, b in enumerate(beats):
-        slots.append((art["x"] + i * art["w"] // len(beats),
-                      art["w"] // len(beats)))
+    grid = panel_grid(len(beats))
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="%d" '
              'height="%d" viewBox="0 0 %d %d">' % (width, height,
                                                    width, height),
+             WF_DEFS,
              '<rect width="%d" height="%d" fill="#f7f2e7"/>' % (width,
-                                                                height),
-             '<rect x="%d" y="%d" width="%d" height="%d" fill="#ffffff" '
-             'stroke="#141414" stroke-width="6"/>'
-             % (art["x"], art["y"], art["w"], art["h"])]
-    # gutter separators between beat slots
-    for i in range(1, len(beats)):
-        gx = art["x"] + i * art["w"] // len(beats)
-        parts.append('<line x1="%d" y1="%d" x2="%d" y2="%d" '
-                     'stroke="#141414" stroke-width="4" '
-                     'stroke-dasharray="10 6"/>'
-                     % (gx, art["y"] + 8, gx, art["y"] + art["h"] - 8))
-    for i, (b, (x0, w)) in enumerate(zip(beats, slots)):
-        cx = x0 + w // 2
-        gy = art["y"] + art["h"] - 24
-        h = art["h"] * (0.62 if b["pose"] != "small-in-frame" else 0.3)
-        parts.append('<g data-beat="%d" data-kind="%s" data-pose="%s">'
-                     % (i, b["kind"], b["pose"]))
-        parts.append(_stick(cx + (seed % 21) - 10, gy, h, b["pose"],
-                            seed + i))
+                                                                height)]
+    for i, (b, rect) in enumerate(zip(beats, grid["panels"])):
+        parts.append('<g data-panel="%d" data-orientation="%s">'
+                     % (i, grid["orientation"]))
+        gy = rect[1] + rect[3] - 40
+        h = rect[3] * (0.5 if b["pose"] != "small-in-frame" else 0.26)
+        ax = rect[0] + rect[2] / 2.0 + (seed % 21) - 10
+        parts.append('<g data-panelimg="%d">%s%s</g>'
+                     % (i, _panel_scene(rect[0], rect[1], rect[2],
+                                        rect[3], seed, i),
+                        _stick(ax, gy, h, b["pose"], seed + i)))
+        parts.append(_panel_text_layer(plan, b, rect, seed, i))
+        # frame drawn over the scene so art never crosses the border
+        parts.append('<rect x="%d" y="%d" width="%d" height="%d" '
+                     'fill="none" stroke="#141414" stroke-width="5"/>'
+                     % rect)
         parts.append('</g>')
-    # focal-action arrow: beat 2 (the gag) aims at the beat-1 actor
-    fx, fy = slots[-1][0] + slots[-1][1] // 2, art["y"] + art["h"] - 120
-    parts.append('<path data-focal="%s" d="M%d %d L%d %d" '
-                 'stroke="#141414" stroke-width="3" fill="none" '
-                 'marker-end="url(#focalhead)"/>'
-                 % (beats[-1]["kind"], fx - 90, fy + 60, fx, fy))
-    # caption box (upper-left) + speech bubble (upper-right third point)
-    parts += ['<rect x="%d" y="%d" width="300" height="72" fill="#ffffff" '
-              'stroke="#141414" stroke-width="3"/>'
-              % (art["x"] + 14, art["y"] + 14),
-              '<ellipse cx="%d" cy="%d" rx="200" ry="80" fill="#ffffff" '
-              'stroke="#141414" stroke-width="3"/>'
-              % (art["x"] + art["w"] - 230, art["y"] + 160)]
-    parts += ['<rect x="14" y="%d" width="%d" height="112" fill="#ffffff" '
-              'stroke="#141414" stroke-width="3"/>'
-              % (height - 152, width - 28),
-              '<text x="14" y="%d" font-size="11" fill="#141414">%s</text>'
-              % (height - 16, escape(plan["attribution"])),
-              '<defs><marker id="focalhead" markerWidth="8" markerHeight="8" '
-              'refX="6" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" '
-              'fill="#141414"/></marker></defs>', "</svg>"]
+    # shared narrative band + attribution footer (once per strip)
+    narr = "".join('<tspan x="28" y="%d">%s</tspan>'
+                   % (700 + n * 22, escape(l))
+                   for n, l in enumerate(_wrap(plan["narrative"], 110)))
+    parts += ['<rect x="14" y="672" width="%d" height="110" fill="#ffffff" '
+              'stroke="#141414" stroke-width="4"/>' % (width - 28),
+              '<text font-family="Iosevka, monospace" font-size="17" '
+              'fill="#141414">%s</text>'
+              % narr,
+              '<text x="14" y="%d" font-family="Iosevka, monospace" '
+              'font-size="12" fill="#141414">%s</text>'
+              % (height - 14, escape(plan["attribution"])),
+              "</svg>"]
     return "\n".join(parts)
 
 
@@ -318,41 +517,36 @@ def component_prompts(plan, script, cast=None):
 
 
 def assemble_svg(plan, script, wireframe, components=None):
-    """Pass 4 -- composite the components into the wireframe (SVG
-    layering: art plate under, actors mid, text layers over) and keep
-    the existing post-process chain (screentone overlay + feTurbulence
-    ink unification ride the skeleton; magick tone normalization runs
-    on the rasterized PNG). components maps region -> image path; a
-    missing piece leaves the wireframe layer visible (never empty)."""
-    env_href = (components or {}).get("environment")
-    actor_hrefs = {k: v for k, v in (components or {}).items()
-                   if k.startswith("actor:")}
-    img = ('<image x="18" y="18" width="988" height="632" href="%s" '
-           'preserveAspectRatio="xMidYMid slice"/>' % env_href
-           if env_href else "")
-    actors = ""
-    for beat_i, beat in enumerate(script["beats"]):
+    """Pass 4 -- composite components into the STRIP wireframe (operator
+    critique 2, item 5): each panel's placeholder art group
+    (data-panelimg) swaps for the real pieces -- environment plate
+    under, actor piece over -- while the text layers (bubbles, tails,
+    captions, SFX) always stay on top. components maps region -> image
+    path; a missing piece keeps that panel's hand-drawn placeholder
+    (never empty)."""
+    comps = components or {}
+    if 'data-panelimg="0"' not in (wireframe or ""):
+        wireframe = wireframe_svg(plan, script)
+    rects = panel_grid(len(script["beats"]))["panels"]
+    out = wireframe
+    for i, beat in enumerate(script["beats"]):
+        px, py, pw, ph = rects[i]
+        layers = ""
+        if comps.get("environment"):
+            layers += ('<image x="%d" y="%d" width="%d" height="%d" '
+                       'href="%s" preserveAspectRatio="xMidYMid slice"/>'
+                       % (px, py, pw, ph, comps["environment"]))
         key = "actor:%s" % beat["cast"][0]
-        if beat_i == 0 or key not in actor_hrefs:
-            continue
-        x0 = 18 + beat_i * 996 // len(script["beats"])
-        actors += ('<image x="%d" y="%d" width="%d" height="%d" '
-                   'href="%s" preserveAspectRatio="xMidYMax meet"/>'
-                   % (x0 + 20, 18, 312, 632, actor_hrefs[key]))
-    # reuse the skeleton's text/frame layers: render_svg fills every
-    # placeholder; we ride the {{IMAGE}} slot as a sentinel image tag,
-    # then swap that tag for the component layers (env under, actors
-    # over) so the hand-drawn scene stays as the no-component fallback.
-    sentinel = ('<image x="18" y="18" width="988" height="632" '
-                'href="__COMPONENT_LAYERS__" '
-                'preserveAspectRatio="xMidYMid"/>')
-    base = render_svg(plan, image_href="__COMPONENT_LAYERS__")
-    if base is None:
-        return None
-    if sentinel not in base:
-        return None
-    return base.replace(sentinel, '<g clip-path="url(#artz)">%s%s</g>'
-                        % (img, actors))
+        if comps.get(key):
+            layers += ('<image x="%d" y="%d" width="%d" height="%d" '
+                       'href="%s" preserveAspectRatio="xMidYMax meet"/>'
+                       % (px + pw * 0.3, py + ph * 0.35, pw * 0.4,
+                          ph * 0.55, comps[key]))
+        if layers:
+            out = re.sub(r'<g data-panelimg="%d">.*?</g>' % i,
+                         '<g data-panelimg="%d">%s</g>' % (i, layers),
+                         out, count=1, flags=re.S)
+    return out
 
 
 def parse_item(text):
