@@ -4,7 +4,12 @@
 # non-crystallized research line one
 # lifecycle transition per beat
 # (planned → expanding → contracting → crystallized) using the model
-# chain. Each beat writes digest/RESEARCH-BEAT-<date>-<id>.md; the
+# chain. Commit-per-op (2026-09-12 yield audit): each value-carrying
+# transition (crystallize write, review disposition) commits its own
+# artifacts immediately via the free-commit lane, so nothing
+# research-owned sits uncommitted between the hourly kernel-ledger
+# syncs; the hourly sync stays as a backstop and normally carries
+# nothing research-owned. Each beat writes digest/RESEARCH-BEAT-<date>-<id>.md; the
 # crystallize transition also writes the condensed result into the hngh
 # kernel's docs/research/<date>-<id>.md. State: research-lines.tsv at
 # the AUTO root (id, state, updated, line); missing/empty state is
@@ -131,6 +136,34 @@ SUBJECTS="$AUTOMATION_ROOT/research-subjects.txt"
 DISPOSITIONS="$AUTOMATION_ROOT/research-dispositions.tsv"
 WIKI_PROJECT_IDX="${HNGH_WIKI_PROJECT_INDEX:-$HOME/Projects/etc/llm-wiki/.llm-wiki/meta/index.md}"
 WIKI_PERSONAL_IDX="${HNGH_WIKI_PERSONAL_INDEX:-$HOME/.llm-wiki/meta/index.md}"
+
+# commit-per-op (2026-09-12 yield audit): commit exactly the artifacts a
+# value-carrying transition just wrote, in the same beat. Free-commit
+# lane (machine-managed research surfaces, per the plans/README autonomy
+# reference). Fail-closed: no git repo, operator-staged work, or any
+# path outside the repo (hermetic sandboxes) -> quiet no-op, hourly
+# ledger sync remains the backstop. Never pushes (sweep tier owns push).
+# Staged-change refusal mirrors 30-kernel-ledger-sync so the two never
+# entangle each other's commits.
+research_commit() { # id state path... -> commits exactly the named paths
+ local id="$1" state="$2"
+ shift 2
+ local paths=() p rel
+ [ -d "$KERNEL/.git" ] || return 0
+ git -C "$KERNEL" diff --cached --quiet 2>/dev/null || return 0
+ for p in "$@"; do
+  [ -f "$p" ] || continue
+  rel="$(realpath --relative-to="$KERNEL" "$p" 2>/dev/null)" || continue
+  case "$rel" in ..*) continue ;; esac
+  git -C "$KERNEL" add -- "$rel" 2>/dev/null || continue
+  paths+=("$rel")
+ done
+ [ "${#paths[@]}" -ge 1 ] || return 0
+ git -C "$KERNEL" commit -q -m "research: $id $state" -- "${paths[@]}" \
+  2>/dev/null &&
+  breadcrumb "$JOB_NAME" "research-commit" "$id $state: ${paths[*]}"
+ return 0
+}
 
 file_report() {
  local kind="$1" text="$2" ident="${3:-}" win="${4:-86400}"
@@ -502,6 +535,7 @@ $(marked_cut 8000 "$doc")"
  printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\n' \
   "$id" "$action" "$reason" "$used" "$doc" "$day" >>"$DISPOSITIONS"
  set_state "$id" "reviewed"
+ research_commit "$id" "reviewed-$action" "$DISPOSITIONS" "$LINES"
  python3 "$TELEMETRY" emit --kind research --model "$used" --wall-s "$wall" \
   --source research-review --subject "$id:crystallized->reviewed" \
   --data "{\"unit\":\"$id\"}"
@@ -587,6 +621,12 @@ if [ "$next" = "crystallized" ]; then
 fi
 
 set_state "$id" "$next"
+if [ "$next" = "crystallized" ]; then
+ research_commit "$id" "crystallized" \
+  "$KERNEL/docs/research/$day-$id.md" \
+  "$AUTOMATION_ROOT/digest/RESEARCH-BEAT-$day-$id.md" \
+  "$LINES"
+fi
 
 python3 "$TELEMETRY" emit --kind research --model "$used" --wall-s "$wall" \
  --source research-beat --subject "$id:$state->$next" \
