@@ -10,6 +10,20 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Interactive installer skeleton** (`install.sh` at the repo root +
+  `automation/lib/platform.sh`): one-command public install face that
+  delegates the fail-closed core to `automation/bootstrap.sh`, detects the
+  system package manager (pacman/apt-get/dnf/zypper/apk) with a per-manager
+  prereq package map, checks systemd --user availability and the python3
+  3.12 floor (read-only), polls editor/browser/desktop/JS-toolchain
+  preferences only on a TTY (env overrides win; defaults otherwise), records
+  choices to `automation/config/installer-choices.json` (gitignored), and
+  prints - never runs - optional companion installs and the systemd enable
+  step. Installs nothing itself; no secrets; no privilege escalation
+  (grep-sentinel-tested). `automation/tests/test-installer.sh` added to
+  `make test`; design decisions and the unverified-distro honesty markers in
+  `docs/records/2026-09-11-installer-skeleton.md` (peer-review finding 1
+  rung one).
 - **opencode executor wiring with attribution emitter**
   (docs/records/2026-09-11-opencode-executor.md, design
   docs/research/2026-09-10-opencode-agentic-surface.md): opencode
