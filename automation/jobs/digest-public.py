@@ -190,6 +190,8 @@ def render_page(date, repo):
     news = [s for s in sections if not s["mega"] and s["items"]]
     megas = [s for s in sections if s["mega"]]
     q = dh.quips.quip
+    articles = dh.load_articles(
+        date, os.path.join(repo, "docs", "articles"))
     items_flat = [it for s in news for it in s["items"]]
     a_facts = {"blocks": len(news),
                "criticals": sum(1 for it in items_flat
@@ -233,6 +235,14 @@ def render_page(date, repo):
                                                   _ascii(s["model"])))
         out.append("")
         for it in s["items"]:
+            # join by digest-headline (same law as digest-html Deck A)
+            tagless = it
+            for t in ("CRITICAL: ", "NOTABLE: ", "CONTEXT: "):
+                if tagless.startswith(t):
+                    tagless = tagless[len(t):]
+                    break
+            head, _rest = dh.split_headline(tagless)
+            art = articles.get(head)
             if QUIET_RE.search(it):
                 out.append("- %s" % _ascii(it))
                 continue
@@ -243,6 +253,9 @@ def render_page(date, repo):
                         "%s UTC." % (s["sources"].split(",")[0],
                                      s["model"], s["time"]))
             out.append("  _%s_" % _ascii(rest))
+            if art:
+                out.append("  _Extended article: "
+                           "docs/articles/%s/%s.md_" % (date, art["slug"]))
         out.append("")
     out += ["## Deck B - News from the Megastructure", ""]
     b_quip = (q("deck_b", date,
