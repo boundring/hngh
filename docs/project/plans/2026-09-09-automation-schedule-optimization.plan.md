@@ -36,12 +36,17 @@ is already complete (operator-procedural sweep, twice over).
       Verification: sweep report in docs/research/ listing every accepted plan
       with verdict + evidence; automation/dashboard/plans.json parked count
       rises by exactly the parked set; no other plan file modified.
-- [ ] 2. Selector priority support (failing test first). Extend
+- [x] 2. Selector priority support (failing test first). Extend
       automation/scripts/overnight-cycle.sh slot-0 selection: accepted plans
       carrying `priority=high` in the front-matter comment sort ahead of
       others; ties and absence fall back to current filename order. Document
       the key in docs/project/plans/README.md (one line under Contract).
       Add the automation script-suite test BEFORE the behavior change.
+      Executed 2026-09-12T16:35Z: tests/test-plan-priority-selector.sh
+      (three cases, red-first), selector bucket ordering in
+      overnight-cycle.sh, contract line in docs/project/plans/README.md.
+      automation `make test` green rc=0; commits 3542a19 (automation)
+      + 82e026e (kernel docs).
       Verification: suite test covers three cases (flag present sorts first,
       multiple flags keep filename order, no flag preserves current order);
       full `make test` green.
