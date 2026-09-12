@@ -245,5 +245,52 @@ class TestSentinelsAndDaily(unittest.TestCase):
             self.assertEqual(chk.returncode, 0, chk.stdout + chk.stderr)
 
 
+
+
+class TestSaga(unittest.TestCase):
+    def test_saga_renders_blocker_and_lessons_with_footnotes(self):
+        with Fixture() as fix:
+            dp = _load_digest_public(fix)
+            page = dp.render_page(DAY, str(fix))
+            self.assertIn("## The Saga", page)
+            self.assertIn("symbolic register; facts are the cited ledgers",
+                          page)
+            self.assertIn("a creature that knew the shape and stumbled at "
+                          "the gate", page)
+            self.assertIn("it paces the hall still, watched", page)
+            self.assertIn("[^bblk-20260911-overnight]: state/"
+                          "beat-blockers.tsv | lane overnight | cause "
+                          "bad-execution | x1 | active", page)
+            self.assertIn("The night-watch filed 2 lesson(s) before the "
+                          "dawn (unknown x2); the dream pass keeps the "
+                          "watch awake. [^l2026-09-11]", page)
+            self.assertIn("[^l2026-09-11]: automation/state/"
+                          "ocgo-agent-lessons.md | classes unknown.", page)
+            # the cap: under 8 content lines a day
+            saga = page[page.index("## The Saga"):
+                        page.index("## Reading room")]
+            body = [ln for ln in saga.splitlines()
+                    if ln and not ln.startswith("#")
+                    and "symbolic register" not in ln]
+            self.assertLessEqual(len(body), 8)
+
+    def test_saga_parked_is_sealed_wing_and_absent_when_quiet(self):
+        with Fixture() as fix:
+            dp = _load_digest_public(fix)
+            rows = (fix / "automation" / "state" /
+                    "beat-blockers.tsv").read_text()
+            rows = rows.replace("active", "parked")
+            (fix / "automation" / "state" / "beat-blockers.tsv") \
+                .write_text(rows)
+            saga = dp.saga_md(DAY, str(fix))
+            self.assertIn("the park sealed it in a quiet wing",
+                          " ".join(saga))
+            (fix / "automation" / "state" / "beat-blockers.tsv").unlink()
+            (fix / "automation" / "state" / "ocgo-agent-lessons.md").unlink()
+            self.assertEqual(dp.saga_md(DAY, str(fix)), [])
+            page = dp.render_page(DAY, str(fix))
+            self.assertNotIn("## The Saga", page)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

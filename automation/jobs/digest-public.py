@@ -77,6 +77,72 @@ def lessons_md(day, repo):
                                    _ascii(learned[-1].split("|")[1].strip())))
     return out
 
+
+SAGA_CLASSES = {
+    "bad-execution": "a creature that knew the shape and stumbled at the gate",
+    "missing-knowledge": "a passage the map has never drawn",
+    "missing-design": "a question wearing the robes of policy",
+    "missing-authority": "a door only the operator's key opens",
+    "obsolete": "an old wight rattling past its use",
+    "unknown": "a nameless thing moving in the dark",
+}
+SAGA_MAX_EVENTS = 3
+
+
+def saga_md(day, repo):
+    """The Saga: one short mythic-register line per blocker event and
+    one for the night-watch lessons, each footnoted with the ledger row
+    it renders. Deterministic templates, no model call; under 8 lines
+    a day. The park is the sealed wing; the dream pass is the
+    night-watch's preparation."""
+    blockers = []
+    path = os.path.join(repo, "automation", "state", "beat-blockers.tsv")
+    if os.path.isfile(path):
+        try:
+            for ln in open(path, encoding="utf-8"):
+                p = ln.rstrip("\n").split("\t")
+                if len(p) >= 6 and p[3].startswith(day):
+                    blockers.append(p)
+        except OSError:
+            pass
+    lessons = []
+    ocgo = os.path.join(repo, "automation", "state", "ocgo-agent-lessons.md")
+    if os.path.isfile(ocgo):
+        try:
+            for ln in open(ocgo, encoding="utf-8"):
+                if ln.startswith(day + "T") and "|" in ln:
+                    lessons.append(ln.strip().split("|")[1].strip())
+        except OSError:
+            pass
+    if not blockers and not lessons:
+        return []
+    out = ["## The Saga", "",
+           "*(symbolic register; facts are the cited ledgers.)*", ""]
+    for b in blockers[:SAGA_MAX_EVENTS]:
+        flavor = SAGA_CLASSES.get(b[2], SAGA_CLASSES["unknown"])
+        if b[5] == "parked":
+            park = "the park sealed it in a quiet wing"
+        else:
+            park = "it paces the hall still, watched"
+        out.append("In the %s wing the crew met %s: it struck %s "
+                   "time(s) on %s, and %s. [^b%s]"
+                   % (b[1], flavor, b[4], b[2], park, _ascii(b[0])))
+        out.append("[^b%s]: state/beat-blockers.tsv | lane %s | "
+                   "cause %s | x%s | %s" % (b[0], b[1], b[2], b[4], b[5]))
+    if lessons:
+        counts = {}
+        for c in lessons:
+            counts[c] = counts.get(c, 0) + 1
+        out.append("The night-watch filed %d lesson(s) before the "
+                   "dawn (%s); the dream pass keeps the watch awake. [^l%s]"
+                   % (len(lessons),
+                      ", ".join("%s x%d" % (c, n)
+                                for c, n in sorted(counts.items())),
+                      day))
+        out.append("[^l%s]: automation/state/ocgo-agent-lessons.md | "
+                   "classes %s." % (day, ", ".join(sorted(counts))))
+    return out
+
 def render_page(date, repo):
     """Full markdown edition for <date>. Raises on unreadable digest."""
     dh = digest_html()
@@ -128,6 +194,10 @@ def render_page(date, repo):
     lessons = lessons_md(date, repo)
     if lessons:
         out += ["## Lessons of the day", ""] + lessons + [""]
+    saga = saga_md(date, repo)
+    out += saga
+    if saga:
+        out.append("")
     out += [
         "## Reading room",
         "",
