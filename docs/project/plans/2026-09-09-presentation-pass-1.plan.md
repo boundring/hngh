@@ -10,7 +10,7 @@ flavor layer; rungs 3–7 are horizon, not this plan.
 
 ## Steps
 
-- [ ] 1. README front-door pass. Rewrite the root README's opening
+- [x] 1. README front-door pass. Rewrite the root README's opening
       screen: two-sentence identity (what hngh is, including the live
       automation tier and omp direction), truthful status block,
       navigation table that mirrors docs/README.md's read-order, the
