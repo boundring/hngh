@@ -67,6 +67,7 @@ test:
 	python3 -B tests/test-dashboard-p1-ui.py
 	python3 -B tests/test-digest-html.py
 	python3 -B tests/test-gdelt-news.py
+	bash tests/test-news-articles.sh
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-narrative-ledger.py
 	python3 -B tests/test-feedback-apply.py

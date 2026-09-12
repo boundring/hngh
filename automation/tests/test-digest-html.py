@@ -149,7 +149,13 @@ class NewspaperTest(unittest.TestCase):
                               dh.DIGESTS, dh.TELEMETRY)
 
     def test_columns_css(self):
-        self.assertIn("column-count:2", dh.STYLE)
+        # operator directive 2026-09-12: printed-newspaper front page,
+        # minimum three columns for the Deck A flow
+        self.assertIn("column-count:3", dh.STYLE)
+        self.assertIn("@media(max-width:1279px){.cols{column-count:2}}",
+                      dh.STYLE)
+        self.assertIn("@media(max-width:799px){.cols{column-count:1}}",
+                      dh.STYLE)
         self.assertIn("column-rule", dh.STYLE)
         # contrast tokens unchanged (register law)
         self.assertIn("--bg:#0d1117", dh.STYLE)

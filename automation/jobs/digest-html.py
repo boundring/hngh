@@ -32,6 +32,7 @@ REPO = os.path.dirname(ROOT)
 TELEMETRY = os.path.join(ROOT, "dashboard", "telemetry.db")
 DIGESTS = os.path.join(ROOT, "digest")
 MEDIA = os.path.join(REPO, "docs", "media")
+ARTICLES = os.path.join(REPO, "docs", "articles")
 SECTION_BUDGET = int(os.environ.get("DIGEST_SECTION_BUDGET", "1200"))
 BEAT_SENTENCES = 3
 BEAT_RE = re.compile(r"^RESEARCH-BEAT-(\d{4}-\d{2}-\d{2})-.*\.md$")
@@ -108,6 +109,56 @@ def comic_html(date):
     return ['<figure class="comic"><img src="%s" alt="the day\'s manga '
             'panel: %s"><figcaption>%s</figcaption></figure>'
             % (esc(src), esc(name), esc(caption))]
+
+
+META_RE = re.compile(r"^<!-- article: (\{.*\}) -->\s*$")
+
+
+def load_article(path):
+    """One committed article file -> {meta..., paras, attribution} or
+    None (unparseable = headline-only; display never fails closed)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return None
+    m = META_RE.match(text.split("\n\n", 1)[0])
+    if not m:
+        return None
+    try:
+        meta = json.loads(m.group(1))
+    except ValueError:
+        return None
+    paras, attribution = [], ""
+    block, seen_head = [], False
+    for blk in text.split("\n\n")[1:]:
+        b = blk.strip()
+        if not seen_head:
+            seen_head = b.startswith("# ")
+            continue
+        if b == "--":
+            continue
+        if b.startswith("Filed by the hngh wire desk"):
+            attribution = b
+            break
+        paras.append(b)
+    return dict(meta, paras=paras, attribution=attribution)
+
+
+def load_articles(date, articles_dir=None):
+    """Committed articles for <date>, joined to Deck-A items by their
+    digest-headline: {headline -> article}."""
+    d = articles_dir or ARTICLES
+    out = {}
+    try:
+        names = sorted(os.listdir(os.path.join(d, date)))
+    except OSError:
+        return out
+    for n in names:
+        a = load_article(os.path.join(d, date, n))
+        if a and a.get("digest_headline"):
+            out[a["digest_headline"]] = a
+    return out
 
 
 def digest_index(digests_dir=DIGESTS):
@@ -241,25 +292,42 @@ STYLE = """
 body{margin:0;background:var(--bg);color:var(--ink);
 font:11.5px/1.35 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
 #digest-page{max-width:1180px;margin:0 auto;padding:14px 18px 40px}
-.masthead{border-bottom:2px solid var(--line);text-align:center;
-padding:10px 0 8px;margin-bottom:12px}
-.masthead h1{margin:0;font-size:21px;letter-spacing:.14em;
-font-weight:700;font-variant:small-caps}
+.masthead{border-top:1px solid var(--line);
+border-bottom:4px double var(--line);text-align:center;
+padding:10px 0 6px;margin-bottom:10px}
+.masthead h1{margin:0;font-size:26px;letter-spacing:.18em;
+font-weight:700;font-variant:small-caps;
+font-family:Georgia,'Times New Roman',serif}
+.folio{display:flex;justify-content:space-between;color:var(--muted);
+font-variant:small-caps;letter-spacing:.12em;font-size:10px;
+border-bottom:1px solid var(--line);padding:4px 2px 5px;margin-bottom:12px}
+.article{break-inside:avoid;margin:4px 0 10px}
+.article p{text-align:justify;hyphens:auto;margin:3px 0;font-size:11.5px}
+.article .dateline{font-variant:small-caps;letter-spacing:.08em;
+font-weight:700;color:var(--ink)}
+.article .artnote{color:var(--muted);font-size:9.5px;font-style:italic;
+text-align:left}
+.storyart{margin:6px 0;break-inside:avoid}
+.storyart img{width:100%;display:block;border:1px solid var(--line)}
+.storyart figcaption{color:var(--muted);font-size:9.5px;font-style:italic;
+margin-top:3px}
 .masthead .edition{color:var(--muted);font-size:10.5px;letter-spacing:.08em;
 margin-top:3px;font-variant:small-caps}
 .deck-plate{font-variant:small-caps;letter-spacing:.22em;font-size:13px;
-border-top:2px solid var(--line);border-bottom:1px solid var(--line);
+border-top:3px double var(--line);border-bottom:1px solid var(--line);
 padding:6px 2px;margin:36px 0 12px;color:var(--ink)}
 .deck-plate small{color:var(--muted);letter-spacing:.06em;
 text-transform:none;float:right}
-.cols{column-count:2;column-gap:20px;column-rule:1px solid var(--line)}
-@media(max-width:1099px){.cols{column-count:1}}
+.cols{column-count:3;column-gap:22px;column-rule:1px solid var(--line);
+text-align:justify;hyphens:auto}
+@media(max-width:1279px){.cols{column-count:2}}
+@media(max-width:799px){.cols{column-count:1}}
 .block{break-inside:avoid;padding:4px 0 8px;border-bottom:1px dotted var(--line)}
 .block .stamp{color:var(--muted);font-variant:small-caps;letter-spacing:.1em;
 font-size:10.5px}
 .block .src{color:var(--muted);font-size:10px;font-style:italic}
 .item{margin:3px 0}
-.item .hl{font-weight:700}
+.item .hl{font-weight:700;font-family:Georgia,'Times New Roman',serif}
 .item .sum{display:block;color:var(--muted);font-size:10.5px;margin:1px 0 2px}
 .item .tag{font-variant:small-caps;letter-spacing:.08em;font-weight:700}
 .item.critical .tag{color:var(--warn)}
@@ -370,10 +438,19 @@ def _deck_a_facts(news):
     }
 
 
-def render_deck_a(sections, edition_count):
+def render_deck_a(sections, edition_count, articles=None):
     """News blocks of the day; leads with the most consequential item
     (first CRITICAL on record, else first NOTABLE) — data pick, not taste."""
     news = [s for s in sections if not s["mega"] and s["items"]]
+    articles = articles if articles is not None else {}
+
+    def tag_body(line):
+        for t in ("CRITICAL", "NOTABLE", "CONTEXT"):
+            if line.startswith(t + ": "):
+                return line[len(t) + 2:]
+        return line
+
+    art_for = lambda line: articles.get(split_headline(tag_body(line))[0])
     lead, lead_src = None, None
     for s in news:
         for it in s["items"]:
@@ -406,6 +483,9 @@ def render_deck_a(sections, edition_count):
             % (lead_src["sources"].split(",")[0] if lead_src["sources"]
                else "the wire",
                lead_src["model"] or "the screen", lead_src["time"])))
+        lead_art = art_for(lead)
+        if lead_art:
+            parts.append(render_article(lead_art))
     quip = quips.quip("deck_a", news[0]["date"] if news else "",
                       **_deck_a_facts(news))
     if quip and news:
@@ -430,10 +510,39 @@ def render_deck_a(sections, edition_count):
                 it, standfirst="Filed via %s, screened by %s at %s UTC."
                 % (s["sources"].split(",")[0] if s["sources"] else "the wire",
                    s["model"] or "the screen", s["time"] or "00:00")))
+            art = art_for(it)
+            if art:
+                chunk.append(render_article(art))
         chunk.append("</div>")
         parts.append("".join(chunk))
     parts.append("</div>")
     return "\n".join(parts)
+
+
+def render_article(art):
+    """One extended story: dateline-convention paragraphs in the column
+    flow, the story's single illustration when present, and the
+    attribution footer as page furniture. Fail-open by construction."""
+    parts = ['<div class="article">']
+    dateline = ("%s &mdash; " % esc(art["place"])) if art.get("place") else ""
+    for i, p in enumerate(art["paras"]):
+        parts.append('<p>%s%s</p>'
+                     % ('<span class="dateline">%s</span> ' % dateline
+                        if i == 0 and dateline else "", esc(p)))
+    img = art.get("image")
+    if img:
+        name = os.path.basename(img)
+        parts.append('<figure class="storyart"><img '
+                     'src="/hngh-docs/media/news/%s" alt="story '
+                     'illustration: %s"><figcaption>Illustration: %s'
+                     '</figcaption></figure>'
+                     % (esc(name), esc(art.get("digest_headline", name)),
+                        esc(art.get("digest_headline", name))))
+    if art.get("attribution"):
+        parts.append('<p class="artnote">%s</p>'
+                     % esc(art["attribution"]))
+    parts.append("</div>")
+    return "".join(parts)
 
 
 def render_deck_b(sections, sidenotes, date=""):
@@ -548,14 +657,18 @@ def render_page(digest_path, digests_dir=DIGESTS, db=TELEMETRY):
                  'alt="masthead art: %s"></div>'
                  % (esc(hero), esc(hero))) if hero else ""
     comic = "".join(comic_html(date))
+    folio = ('<div class="folio"><span>%s</span>'
+             '<span>edition no. %d &middot; page 1</span></div>'
+             % (esc(date), edition))
     return ("<!doctype html>\n<html><head><meta charset=\"utf-8\">"
             "<title>Daily Dispatch %s</title><style>%s</style></head>"
-            "<body><div id=\"digest-page\">%s%s%s%s%s%s%s%s</div>"
+            "<body><div id=\"digest-page\">%s%s%s%s%s%s%s%s%s</div>"
             "</body></html>"
-            % (esc(date), STYLE, head, hero_html,
+            % (esc(date), STYLE, head, folio, hero_html,
                render_ledger(date, hourly, ticks, db),
                ledger_quip or "",
-               render_deck_a(sections, edition), comic,
+               render_deck_a(sections, edition,
+                             load_articles(date, ARTICLES)), comic,
                hall_html(date, hourly),
                render_deck_b(sections, beat_sidenotes(date, digests_dir),
                              date)))

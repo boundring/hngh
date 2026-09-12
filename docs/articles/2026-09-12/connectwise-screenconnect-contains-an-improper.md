@@ -1,0 +1,9 @@
+<!-- article: {"date": "2026-09-12", "digest_headline": "ConnectWise ScreenConnect contains an improper privilege management and missing authorization vulnerability allowing unauthenticated file transfer and execution through active remote sessions (https://cisa.gov/known-exploited-vulnerabilities-catalog)", "image": "docs/media/news/news-illustration-20260912T195210Z.png", "model": "unsloth:unsloth/Qwen3.8-27B-GGUF", "place": "", "provenance": "source", "slug": "connectwise-screenconnect-contains-an-improper", "url": "https://cisa.gov/known-exploited-vulnerabilities-catalog"} -->
+
+# ConnectWise ScreenConnect contains an improper privilege management and missing authorization vulnerability allowing unauthenticated file transfer and execution through active remote sessions
+
+ConnectWise ScreenConnect contains a vulnerability allowing unauthenticated file transfer and execution through active remote sessions. The flaw stems from improper privilege management and missing authorization controls. This defect permits an attacker to inject files into a live session without valid credentials, leading to code execution on the target system. CISA lists this issue in its Known Exploited Vulnerabilities Catalog. The severity screen marks the risk as CRITICAL. No specific location or entity is named in the provided data. The source text notes the catalog exists "to help every organization better manage vulnerabilities and keep pace with threat." The technical failure allows direct system compromise via session hijacking. Unverified per source regarding specific patch details or affected version ranges beyond the general description. The ledger records $0.75 spent on this filing.
+
+--
+
+Filed by the hngh wire desk from GDELT 2.0 event data and the cited source page. Nothing beyond the cited data is asserted; gaps read "unverified per source". Model draft: unsloth:unsloth/Qwen3.8-27B-GGUF.
