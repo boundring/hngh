@@ -215,3 +215,35 @@ its guardrails (../records/2026-09-09-operator-flexibility-doctrine.md):
 3. Meta-optimization priority — enabling work (selectors, quota routing,
    model quality, comms surfaces) outranks unrelated queued work; short
    agentic calls may delay non-accelerating plans.
+
+## 2026-09-12 amendments — large vs small matters
+
+Operator authorization (this turn, 2026-09-12, the research-pipeline
+operator directive): the governance surface definition moves from
+"operator decides in-flight" to "operator decides the POLICY; hngh
+executes within it". The bushido framing: matters divide by weight, not
+by novelty.
+
+**LARGE** — decided in advance by policy; execution then triggers
+automatically; operator briefs fire only on the exception list:
+
+- kernel surface: `src/`, `tests/`, `Makefile`, `hngh.asd`;
+- credentials and provider configuration;
+- systemd unit lifecycle;
+- spend caps (`sessions-day-max`, the fail-first concurrency family);
+- non-prune deletions;
+- the public surface (pushes, digest-public, published digests).
+
+**SMALL** — common-sense changes that follow existing procedures and
+pass the standing green gates; no operator brief needed. The machine
+decides, the ledger records: the free-commit automation lane, research
+beat transitions and their commit-per-op artifacts, blocker parks and
+cooldown unparks, review dispositions, and policy-class changes such as
+the synthesizer precondition removal (dev-synth appends to the rotation
+under the existing daily cap, accepted plans keep priority). Every
+LARGE hit still parks with an alert; every SMALL action still lands in
+the ledger (breadcrumbs, dispositions, STATE.md) for after-the-fact
+operator audit. Governance LOOSING changes (a precondition removed, a
+gate widened) are SMALL only while an existing guard covers them:
+accept-plans still validates, spend caps still hold, the blocker park
+still bounds.

@@ -226,7 +226,7 @@ reset_beat 8
 seed_crystallized line-old
 printf '%s\n' 2 >"$sb/beat-count"
 beat_run "${kimi_env[@]}" RESEARCH_REVIEW_INTERLEAVE=3
-ck "interleave %3: review pinned kimi" "1" "$(hits stubK)"
+ck "interleave %3: review pinned kimi" "2" "$(hits stubK)"
 ck "interleave %3: unsloth never hit" "0" "$(hits stubU)"
 grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
  echo "ok: interleave %3: oldest crystallized reviewed" || {
@@ -335,7 +335,7 @@ seed_crystallized line-old
 printf '%s\n' "$day" >"$sb/synth-stamp"
 beat_run "${kimi_env[@]}"
 ck "synth capped: unsloth never hit (no synthesis call)" "0" "$(hits stubU)"
-ck "synth capped: review ran on kimi" "1" "$(hits stubK)"
+ck "synth capped: review ran on kimi" "2" "$(hits stubK)"
 grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
  echo "ok: synth capped: fell through to review path" || {
  echo "FAIL: synth capped: review path not taken"

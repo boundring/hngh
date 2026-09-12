@@ -19,58 +19,62 @@ set -u
 BEAT_BLOCKERS_FILE="${BEAT_BLOCKERS_FILE:-${AUTOMATION_ROOT:-${ROOT:-.}}/state/beat-blockers.tsv}"
 
 blocker_row_for() { # scope -> row (id\t...\tstate) or ""
-  local row=""
-  [ -f "$BEAT_BLOCKERS_FILE" ] &&
-    row="$(awk -F'\t' -v s="$1" '$2 == s { print; exit }' "$BEAT_BLOCKERS_FILE" 2>/dev/null)"
-  printf '%s' "$row"
+ local row=""
+ [ -f "$BEAT_BLOCKERS_FILE" ] &&
+  row="$(awk -F'\t' -v s="$1" '$2 == s { print; exit }' "$BEAT_BLOCKERS_FILE" 2>/dev/null)"
+ printf '%s' "$row"
 }
 
 blocker_record() { # scope cause -> attempts on stdout (0 = ledger write refused)
-  local scope="$1" cause="$2" f="$BEAT_BLOCKERS_FILE" attempts
-  [ -n "$scope" ] && [ -n "$cause" ] || {
-    printf '0'
-    return 0
-  }
-  mkdir -p "$(dirname "$f")" 2>/dev/null
-  touch "$f" 2>/dev/null || {
-    printf '0'
-    return 0
-  }
-  attempts="$(awk -F'\t' -v s="$scope" -v c="$cause" \
-    '$2 == s { a = ($3 == c) ? $5 + 1 : 1 } END { print a + 0 }' "$f" 2>/dev/null)"
-  awk -F'\t' -v OFS='\t' -v s="$scope" -v c="$cause" -v a="$attempts" \
-    -v ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    -v id="blk-$(date -u +%Y%m%d)-$(printf '%s' "$scope" | tr -cs 'a-zA-Z0-9._-' '-')" '
+ local scope="$1" cause="$2" f="$BEAT_BLOCKERS_FILE" attempts
+ [ -n "$scope" ] && [ -n "$cause" ] || {
+  printf '0'
+  return 0
+ }
+ mkdir -p "$(dirname "$f")" 2>/dev/null
+ touch "$f" 2>/dev/null || {
+  printf '0'
+  return 0
+ }
+ # BEGIN a=1: a scope's FIRST record is attempt 1 (a fresh row must
+ # reach blocker-escalate-n on the nth death, not the n+1th;
+ # 2026-09-12 research-lines wiring found the off-by-one).
+ attempts="$(awk -F'\t' -v s="$scope" -v c="$cause" \
+  'BEGIN { a = 1 } $2 == s { a = ($3 == c) ? $5 + 1 : 1 }
+     END { print a + 0 }' "$f" 2>/dev/null)"
+ awk -F'\t' -v OFS='\t' -v s="$scope" -v c="$cause" -v a="$attempts" \
+  -v ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -v id="blk-$(date -u +%Y%m%d)-$(printf '%s' "$scope" | tr -cs 'a-zA-Z0-9._-' '-')" '
     $2 == s { $3 = c; $5 = a; $6 = "active"; $7 = ts; f = 1 }  # same cause: bump; new cause: new diagnosis
     { print }
     END { if (!f) print id, s, c, ts, a, "active", ts }
   ' "$f" >"$f.tmp.$$" 2>/dev/null && mv "$f.tmp.$$" "$f" || {
-    rm -f "$f.tmp.$$" 2>/dev/null
-    printf '0'
-    return 0
-  }
-  printf '%s' "$attempts"
+  rm -f "$f.tmp.$$" 2>/dev/null
+  printf '0'
+  return 0
+ }
+ printf '%s' "$attempts"
 }
 
 blocker_park() { # scope -> marks the row parked (escalation; auto-unparks after cooldown)
-  local f="$BEAT_BLOCKERS_FILE"
-  [ -f "$f" ] || return 0
-  awk -F'\t' -v OFS='\t' -v s="$1" -v ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '$2 == s { $6 = "parked"; $7 = ts } { print }' \
-    "$f" >"$f.tmp.$$" 2>/dev/null && mv "$f.tmp.$$" "$f" || rm -f "$f.tmp.$$"
+ local f="$BEAT_BLOCKERS_FILE"
+ [ -f "$f" ] || return 0
+ awk -F'\t' -v OFS='\t' -v s="$1" -v ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '$2 == s { $6 = "parked"; $7 = ts } { print }' \
+  "$f" >"$f.tmp.$$" 2>/dev/null && mv "$f.tmp.$$" "$f" || rm -f "$f.tmp.$$"
 }
 
 blocker_tick() { # [hours] -> unpark rows whose last update is older than the cooldown
-  # Called from the overnight beat start (overnight-cycle.sh, before plan
-  # selection): parked rows return to active with attempts reset to 0 once
-  # blocker-park-cooldown-hours (default 24) have passed since the last
-  # park/update. The diagnosis restarts from scratch (dream pass re-preps
-  # via blocker_prompt_line). Repeat offenders remain visible: every
-  # re-park files a fresh beat-parked alert.
-  local f="$BEAT_BLOCKERS_FILE" hours="${1:-24}" cutoff
-  [ -f "$f" ] || return 0
-  cutoff="$(date -u -d "-${hours} hours" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)" || return 0
-  awk -F'\t' -v OFS='\t' -v cutoff="$cutoff" '
+ # Called from the overnight beat start (overnight-cycle.sh, before plan
+ # selection): parked rows return to active with attempts reset to 0 once
+ # blocker-park-cooldown-hours (default 24) have passed since the last
+ # park/update. The diagnosis restarts from scratch (dream pass re-preps
+ # via blocker_prompt_line). Repeat offenders remain visible: every
+ # re-park files a fresh beat-parked alert.
+ local f="$BEAT_BLOCKERS_FILE" hours="${1:-24}" cutoff
+ [ -f "$f" ] || return 0
+ cutoff="$(date -u -d "-${hours} hours" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)" || return 0
+ awk -F'\t' -v OFS='\t' -v cutoff="$cutoff" '
     $6 == "parked" {
       lu = ($7 != "" ? $7 : $4)
       if (lu != "" && lu < cutoff) { $5 = 0; $6 = "active"; print; next }
@@ -80,15 +84,15 @@ blocker_tick() { # [hours] -> unpark rows whose last update is older than the co
 }
 
 blocker_clear() { # scope -> success removes the row entirely
-  local f="$BEAT_BLOCKERS_FILE"
-  [ -f "$f" ] || return 0
-  awk -F'\t' -v s="$1" '$2 != s' "$f" >"$f.tmp.$$" 2>/dev/null &&
-    mv "$f.tmp.$$" "$f" || rm -f "$f.tmp.$$"
+ local f="$BEAT_BLOCKERS_FILE"
+ [ -f "$f" ] || return 0
+ awk -F'\t' -v s="$1" '$2 != s' "$f" >"$f.tmp.$$" 2>/dev/null &&
+  mv "$f.tmp.$$" "$f" || rm -f "$f.tmp.$$"
 }
 
 blocker_prompt_line() { # scope -> the dream/plan blocker sentence ("" when no row)
-  local cause
-  cause="$(blocker_row_for "$1" | cut -f3)"
-  [ -n "$cause" ] || return 0
-  printf 'BLOCKER (orchestrator ledger, state/beat-blockers.tsv): this plan/lane previously died with cause class %s. Read state/beat-blockers.tsv and the tail of automation/state/ocgo-agent-lessons.md, state what you will do differently this attempt, and assert it in your sanity-checks.' "$cause"
+ local cause
+ cause="$(blocker_row_for "$1" | cut -f3)"
+ [ -n "$cause" ] || return 0
+ printf 'BLOCKER (orchestrator ledger, state/beat-blockers.tsv): this plan/lane previously died with cause class %s. Read state/beat-blockers.tsv and the tail of automation/state/ocgo-agent-lessons.md, state what you will do differently this attempt, and assert it in your sanity-checks.' "$cause"
 }

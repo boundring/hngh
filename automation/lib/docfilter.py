@@ -34,6 +34,32 @@ JUNK_RE = re.compile(
 # token cap ends mid-block; the tail must not survive the filter).
 BLOCK_RE = re.compile(r"<tool_call>[\s\S]*?(?:</tool_call>|$)")
 
+# Imperative-voice injection signatures (2026-09-12 security routines,
+# operator directive): imperative sentences addressed to an AI reader in
+# fetched-source-derived docs. Grep-class patterns, deliberately narrow;
+# they encode the bigeye caution precedent (fetched content = data) as
+# the standing rule for every capture that becomes a doc. Matched lines
+# are redacted at write time and alerted, never executed or trusted.
+INJECTION_RE = re.compile(
+    r"ignore (?:all )?(?:previous|prior|above|earlier) "
+    r"(?:instructions?|prompts?|messages?|context)"
+    r"|disregard (?:all )?(?:previous|prior|above|earlier)"
+    r"|(?:your|its) (?:new |true |real )?"
+    r"(?:instructions|directives?|purpose|system prompt)"
+    r"|(?:you are|act as|behaving as) (?:now )?(?:an?|the) "
+    r"(?:AI|assistant|agent|system|operator)"
+    r"|(?:system|developer|admin) (?:prompt|message|instructions?)"
+    r"|(?:reveal|print|repeat|show) (?:your |the |its )?"
+    r"(?:system prompt|instructions?|api[ _-]?key|credentials?)"
+    r"|(?:curl|wget)\b[^\n]*\|\s*(?:ba)?sh\b"
+    r"|(?:execute|run|popen|eval)\s*\(\s*[\"']"
+)
+
+
+def injection_lines(text):
+    """Lines carrying an imperative-voice injection signature."""
+    return [ln for ln in text.splitlines() if INJECTION_RE.search(ln)]
+
 
 def strip_tool_calls(text):
     """Remove tool-call blocks entirely, then any stray fragment lines."""
@@ -52,6 +78,11 @@ def finalize(text, cap, truncated=False):
     clean = strip_tool_calls(text).strip()
     if not clean:
         return None
+    # injection redaction is a finalize guarantee, not a CLI extra: every
+    # consumer of finalize gets doc-ready prose with signature lines
+    # replaced (fetched sentences are data, never command).
+    for hit in injection_lines(clean):
+        clean = clean.replace(hit, "[redacted: injection signature]")
     if truncated:
         clean += ("\n\n[truncated at model call: completion hit the "
                   "max_tokens cap (finish_reason=length) - re-run the beat]")
@@ -64,9 +95,13 @@ def finalize(text, cap, truncated=False):
 def main(argv):
     cap = int(argv[1])
     truncated = "--truncated" in argv[2:]
-    clean = finalize(sys.stdin.read(), cap, truncated)
+    raw = sys.stdin.read()
+    hits = injection_lines(raw)
+    clean = finalize(raw, cap, truncated)
     if clean is None:
         return 1  # caller must file an alert and NOT write a doc
+    for hit in hits[:5]:
+        sys.stderr.write("INJECTION: %s\n" % hit.strip()[:160])
     sys.stdout.write(clean + "\n")
     return 0
 

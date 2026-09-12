@@ -367,20 +367,25 @@ $response"
 }
 
 synthesize_dev_plan() { # adopted research -> one PROPOSED development plan
- # The grow side of the demand synthesizer: when the accepted-plans
- # queue runs dry and the research machine has delivered (recent
- # verdict=adopted dispositions with their crystallized evidence docs),
- # turn the adopted findings into a development plan. Pinned local
- # model chain (cheap, low-stakes: admission gates it anyway). Bounded
- # to failfirst-dev-synth-daily syntheses per UTC day. The plan lands
- # in the kernel plans feed as status=proposed — accept-plans.py at the
- # next tick start runs the one admission path (runnable Verification,
- # both gates green) and accepts or blocks it; this beat never
- # self-accepts.
+ # The grow side of the demand synthesizer (audit 2026-09-12): the
+ # queue-dry precondition is gone — synthesized plans APPEND to the
+ # rotation at lower selector priority instead of requiring an empty
+ # queue. Capped to failfirst-dev-synth-daily syntheses per UTC day
+ # (env DEV_SYNTH_DAILY overrides) and never runs with no session
+ # budget left today (slots_day < 1). Pinned local model chain (cheap,
+ # low-stakes: admission gates it anyway). The plan lands in the
+ # kernel plans feed as status=proposed — accept-plans.py at the next
+ # tick start runs the one admission path (runnable Verification, both
+ # gates green) and accepts or blocks it; this beat never self-accepts.
  local day synth_max n=0 f adopted docs first slug prompt response used
  day="$(date -u +%F)"
- synth_max="$(get_param failfirst-dev-synth-daily 1)"
+ synth_max="${DEV_SYNTH_DAILY:-$(get_param failfirst-dev-synth-daily 1)}"
  case "$synth_max" in '' | *[!0-9]* | 0) synth_max=1 ;; esac
+ # additional cap: never spend a synth draft without session budget
+ if [ "${slots_day:-0}" -lt 1 ]; then
+  breadcrumb "$JOB_NAME" "dev-synth-skip" "no session budget left today"
+  return 0
+ fi
  for f in "$ROOT"/digest/SYNTH-PLAN-"$day"*.md; do
   [ -e "$f" ] && n=$((n + 1))
  done
@@ -408,8 +413,8 @@ $(marked_cut 2000 "$path")
  done <<<"$adopted"
  slug="dev-$(printf '%s' "$first" | tr -cs 'a-zA-Z0-9._-' '-' |
   sed 's/^-*//; s/-$//' | cut -c1-40)"
- prompt="You are the hngh development-plan synthesizer. The accepted-plans
-queue is dry and the research machine has adopted the findings below.
+ prompt="You are the hngh development-plan synthesizer. The research
+machine has adopted the findings below.
 Turn the ADOPTED findings into ONE normal-risk development plan for
 hngh-automation. Output ONLY the plan body: a 1-2 sentence rationale
 naming the research line it implements, then a '## Steps' section with
@@ -477,6 +482,11 @@ $response"
   "docs/project/plans/$day-$slug.plan.md from $first (admission on next tick)"
 }
 
+# grow side (audit 2026-09-12): adopted research becomes a proposed
+# development plan (bounded, admitted on the next tick) — appended to
+# the rotation, no queue-dry precondition
+synthesize_dev_plan
+
 # --- selector (a): accepted plan's next unchecked step -------------------
 # (held plans are non-supply by construction: only status=accepted matches)
 # ALL open accepted plans are collected: the fail-first development tier
@@ -485,7 +495,11 @@ $response"
 # Ordering (2026-09-09 schedule-optimization step 2): accepted plans
 # carrying `priority=high` in the front-matter comment sort ahead of the
 # rest; ties and absence fall back to filename order (the glob).
+# Ordering (audit 2026-09-12): synth-origin plans ("synthesized from
+# adopted research") sort LAST — slot 0 goes to an operator/accepted
+# plan whenever one is pending; synth plans only run in leftover slots.
 plan_slugs=() plan_files=() plan_steps=() prio_hi=() prio_hif=() prio_hist=()
+synth_slugs=() synth_files=() synth_steps=()
 blocker_tick "$(get_param blocker-park-cooldown-hours 24)"
 for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  [ -f "$f" ] || continue
@@ -497,9 +511,14 @@ for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  # operator (escalate threshold) — leave it out of the rotation until
  # the ledger row is cleared
  [ "$(blocker_row_for "$pslug" | cut -f6)" = "parked" ] && continue
+ # synth-origin plans always sort last (audit 2026-09-12)
+ if grep -q 'synthesized from adopted research' "$f" 2>/dev/null; then
+  synth_slugs+=("$pslug")
+  synth_files+=("$f")
+  synth_steps+=("$step")
  # priority=high front-matter flag: bucket 0 sorts ahead of bucket 1
  # (append to the high bucket in glob order: ties keep filename order)
- if head -n1 "$f" | grep -q 'priority=high'; then
+ elif head -n1 "$f" | grep -q 'priority=high'; then
   prio_hi+=("$pslug")
   prio_hif+=("$f")
   prio_hist+=("$step")
@@ -509,9 +528,9 @@ for f in "$KERNEL"/docs/project/plans/*.plan.md; do
   plan_steps+=("$step")
  fi
 done
-plan_slugs=("${prio_hi[@]}" "${plan_slugs[@]}")
-plan_files=("${prio_hif[@]}" "${plan_files[@]}")
-plan_steps=("${prio_hist[@]}" "${plan_steps[@]}")
+plan_slugs=("${prio_hi[@]}" "${plan_slugs[@]}" "${synth_slugs[@]}")
+plan_files=("${prio_hif[@]}" "${plan_files[@]}" "${synth_files[@]}")
+plan_steps=("${prio_hist[@]}" "${plan_steps[@]}" "${synth_steps[@]}")
 
 plan_slug=""
 plan_file=""
@@ -661,9 +680,6 @@ RULE
   exit 0
  fi
 else
- # plan-queue dry: grow side first — adopted research becomes a
- # proposed development plan (bounded, admitted on the next tick)
- synthesize_dev_plan
  # plan-authoring leg: with no accepted plan pending (and no lane to
  # work), draft at most one normal-risk proposal per day before the
  # research filler. Drafts are proposals — never auto-accepted, never
