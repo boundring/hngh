@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-12
+
+- feat: gdelt news source - ranked world events with editorial priority
+  scoring. jobs/gdelt-news.py (hour-tier drop-in cadence/hour/
+  40-gdelt-news.sh) pulls GDELT 2.0's latest 15-minute export window,
+  filters it through a tone-balanced editorial lens (world lane:
+  QuadClass 3|4 or GoldsteinScale <= -5; good lane: CAMEO roots
+  05/06/07/08 with AvgTone > 0, capped at NOTABLE), ranks stories by
+  NumSources-driven priority bands (CRITICAL >= 60 / NOTABLE >= 20) and
+  appends Deck-A-shaped per-article-linked blocks to the daily digest;
+  fail-closed with 24h SOURCEURL dedup, so the paper publishes even when
+  GDELT is unreachable. Tests: tests/test-gdelt-news.py (hermetic).
+  Record: docs/records/2026-09-12-gdelt-source.md.
+
 ## 2026-09-11
 
 - feat: bili compression on the opencode executor (clobber-safe
