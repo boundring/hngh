@@ -58,6 +58,19 @@ README = ROOT / "README.md"
 INTENT = ROOT / "docs" / "intent.md"
 ARCH = ROOT / "docs" / "architecture.md"
 AUTOMATION = ROOT / "automation"
+JOBS = Path(__file__).resolve().parent.parent / "automation" / "jobs"
+
+
+def _load_job(name):
+    """Load an automation/jobs module by file path (its file name uses
+    hyphens; the narrative reuses the digest pipeline's own parsers so
+    the two surfaces can never disagree about the data)."""
+    loader = importlib.machinery.SourceFileLoader(
+        name, str(JOBS / (name.replace("_", "-") + ".py")))
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def git(*cmd):
@@ -217,11 +230,124 @@ def readme_dispatch(day, readme=None):
               "unterminated; table not rewritten")
         return 1
     text = "\n".join(out)
+    if path.read_text().endswith("\n") and not text.endswith("\n"):
+        text += "\n"
     marker = "<!-- dispatch:begin -->"
     i = text.index(marker) + len(marker)
     path.write_text(text[:i] + "\n" + block + "\n" + text[i:].lstrip("\n"))
     print(f"generate-publication: dispatch table -> {path} ({day})")
     return 0
+
+
+def day_blockers(day):
+    """Rows the stall ledger (automation/state/beat-blockers.tsv) gained
+    for <day>: [id, lane, cause, ts, count, status]. Fail-open."""
+    path = AUTOMATION / "state" / "beat-blockers.tsv"
+    rows = []
+    try:
+        for ln in path.read_text(errors="replace").splitlines():
+            parts = ln.split("\t")
+            if len(parts) >= 6 and parts[3].startswith(day):
+                rows.append(parts)
+    except OSError:
+        pass
+    return rows
+
+
+def day_lessons(day):
+    """(session lessons, harvest records) for <day>, from the two
+    lessons feeds. Fail-open."""
+    n, records = 0, 0
+    ocgo = AUTOMATION / "state" / "ocgo-agent-lessons.md"
+    harvest = ROOT / "docs" / "project" / f"lessons-{day}.md"
+    try:
+        n = sum(1 for ln in ocgo.read_text(errors="replace").splitlines()
+                if ln.startswith(day + "T"))
+    except OSError:
+        pass
+    try:
+        records = sum(1 for ln in harvest.read_text(errors="replace").splitlines()
+                      if ln.startswith("- 20") and ".md" in ln)
+    except OSError:
+        pass
+    return n, records
+
+
+def story_section(day):
+    """The day's story: deterministic paragraphs written from the same
+    feeds the digest builds from — no model call at render time. Every
+    paragraph is preceded by its feeds citation (the digest's
+    <!-- feeds: --> convention). Never touches the ledger's format."""
+    dl = _load_job("digest_ledger")
+    telem = dl.spend(day, str(AUTOMATION / "dashboard" / "telemetry.db"))
+    sess = dl.sessions(day, str(AUTOMATION / "logs" / "budget.md"))
+    plans = dl.plans(day, str(AUTOMATION / "dashboard" / "plans.json"))
+    d = dispatch_numbers(day)
+    blocks = []
+    if telem and telem[0]:
+        lanes = sorted(set(s[1].split("|", 1)[0]
+                           for s in sess if len(s) > 1)) if sess else []
+        plan_bits = ""
+        if plans is not None:
+            entries, accepted, executed, queue_next = plans
+            plan_bits = (" %d plans on the books, %d accepted and %d "
+                         "executed today; the queue points at '%s'."
+                         % (len(entries), len(accepted), len(executed),
+                            queue_next or "-"))
+        blocks.append((
+            "automation/dashboard/telemetry.db + automation/logs/"
+            "budget.md + automation/dashboard/plans.json",
+            "The hall fired %d session(s) across %d plan lane(s); the "
+            "meter read $%.2f across %d model calls, tokens in %s.%s"
+            % (len(sess), len(lanes), telem[1] or 0.0, telem[0],
+               "{:,}".format(telem[2] or 0), plan_bits)))
+    lead = []
+    digest = AUTOMATION / "digest" / (day + ".md")
+    if digest.exists():
+        dh = _load_job("digest_public").digest_html()
+        secs = [s for s in dh.parse_sections(digest.read_text())
+                if not s["mega"] and s["items"]]
+        items = [(s["time"], it) for s in secs for it in s["items"]]
+        crit = [(t, i) for t, i in items if i.startswith("CRITICAL: ")]
+        lead = [items[0]] if items else []
+        if crit:
+            lead = crit[:1]
+        if lead:
+            blocks.append((
+                "automation/digest/%s.md (Deck A)" % day,
+                "Outside the wire, %d dispatch block(s) crossed; the "
+                "loudest line was %s UTC: \"%s\"." % (
+                    len(items), lead[0][0], lead[0][1][:140])))
+    blockers = day_blockers(day)
+    if blockers:
+        bits = "; ".join("%s stalled (%s, x%s) and now sits %s"
+                         % (b[1], b[2], b[4], b[5]) for b in blockers)
+        blocks.append(("automation/state/beat-blockers.tsv",
+                       "The stall ledger gained %d row(s): %s."
+                       % (len(blockers), bits)))
+    else:
+        blocks.append(("automation/state/beat-blockers.tsv",
+                       "The stall ledger is quiet for the day - no "
+                       "beat blockers filed."))
+    n_lessons, n_records = day_lessons(day)
+    if n_lessons or n_records:
+        blocks.append((
+            "automation/state/ocgo-agent-lessons.md + docs/project/"
+            "lessons-%s.md" % day,
+            "The learning loop filed %d session lesson(s) and the "
+            "daily harvest folded in %d new lesson-bearing record(s)."
+            % (n_lessons, n_records)))
+    verdict = "%s - %d research line(s) advancing, %d operator item(s) "\
+              "open, %d blocker(s) on file." % (d["verdict"], d["advancing"],
+                                                d["open_items"], len(blockers))
+    out = []
+    for feeds, para in blocks:
+        out.append("<!-- feeds: %s -->" % feeds)
+        out.append("")
+        out.append(para)
+        out.append("")
+    out.append("Verdict: %s" % verdict)
+    return "\n".join(out)
 
 
 def journal_narrative(day, n, candidates, labeled, checkins, timeline):
@@ -278,6 +404,11 @@ def build_journal(day):
         + (("#" + " #".join(str(c) for c in checkins))
            if checkins else "(none)") + ".",
         f"- **{len(timeline)}** timeline rows: {kind_text}.",
+        f"- Public edition: docs/dispatch/{day}.md (same feeds, markdown).",
+        "",
+        "## The day's story",
+        "",
+        story_section(day),
         "",
         "## The book of the day",
         "",
@@ -507,6 +638,13 @@ def main(argv=None):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(build_journal(day))
             print(f"generated journal -> {path}")
+            edition = _load_job("digest_public").write_publication(
+                day, str(ROOT))
+            if edition:
+                print(f"generated dispatch edition -> {edition}")
+            else:
+                print("generate-publication: dispatch edition skipped "
+                      "(digest or telemetry feeds unreadable)")
             return 0
         if args.ebook is not None:
             epub, book = build_ebook(args.ebook or "docs/journal/ebook",
