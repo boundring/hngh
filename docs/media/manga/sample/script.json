@@ -1,0 +1,40 @@
+{
+  "narration": "It was an ordinary day in the hall. That was the problem.",
+  "beats": [
+    {
+      "kind": "setup",
+      "cast": [
+        "engineer"
+      ],
+      "pose": "standing-deadpan",
+      "camera": "wide, figure small against the machinery",
+      "eye": "narration caption first, then the tilted structure",
+      "visual": "an engineer tightening one bolt as the whole gantry groans. It was an ordinary day in the hall. That was the problem."
+    },
+    {
+      "kind": "reaction",
+      "cast": [
+        "engineer"
+      ],
+      "pose": "reacting",
+      "camera": "medium, face in frame, star-highlight eyes",
+      "eye": "the face, then the focal action behind it",
+      "visual": "close on engineer reacting; KRAK"
+    },
+    {
+      "kind": "gag",
+      "cast": [
+        "engineer"
+      ],
+      "pose": "pointing",
+      "camera": "medium-wide, diagonal depth to the focal action",
+      "eye": "the dialogue bubble, then the aftermath",
+      "visual": "I told you the paperwork was load-bearing!"
+    }
+  ],
+  "cast_sheet": {
+    "cameo": "engineer",
+    "appearance": "a wiry engineer in a patched work jacket, small head, large gloves, a wrench slung on the back like a rifle, soot smudge on one cheek",
+    "seed": 5521
+  }
+}

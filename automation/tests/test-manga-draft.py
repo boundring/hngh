@@ -106,5 +106,142 @@ class TestRender(unittest.TestCase):
         self.assertIsNone(md.render_svg(plan, panel_svg="/nonexistent.svg"))
 
 
+class TestScript(unittest.TestCase):
+    """Pass 1: the script layer -- beats with visual notes."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+
+    def test_script_beats_exist(self):
+        script = md.script_for(self.plan)
+        self.assertTrue(script["beats"])
+        kinds = [b["kind"] for b in script["beats"]]
+        for kind in ("setup", "reaction", "gag"):
+            self.assertIn(kind, kinds)
+
+    def test_beats_carry_visual_notes(self):
+        script = md.script_for(self.plan)
+        for b in script["beats"]:
+            self.assertIn("visual", b)
+            self.assertIn("cast", b)
+            self.assertIn(b["cast"][0], md.CAMEOS)
+
+    def test_beat_types_cover_pose_library(self):
+        script = md.script_for(self.plan)
+        poses = {b["pose"] for b in script["beats"]}
+        self.assertTrue(poses <= set(md.POSE_LIBRARY))
+
+    def test_script_deterministic(self):
+        self.assertEqual(md.script_for(self.plan), md.script_for(self.plan))
+
+    def test_narration_register_in_plan_and_script(self):
+        """The serious-manga deadpan narration rides the plan and the
+        setup beat (operator steer: flat declarative narration of the
+        machine's small dramas, played straight)."""
+        self.assertIn(self.plan["narration"], md.NARRATIONS)
+        script = md.script_for(self.plan)
+        self.assertEqual(script["narration"], self.plan["narration"])
+        self.assertIn(script["beats"][0]["kind"], "setup")
+        self.assertIn(self.plan["narration"],
+                      script["beats"][0]["visual"])
+
+
+class TestWireframe(unittest.TestCase):
+    """Pass 2: procedural SVG wireframe from the script."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_wireframe_valid_svg_shape(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertIn("<svg", svg)
+        self.assertIn("</svg>", svg)
+        self.assertIn("stroke-width", svg)
+
+    def test_wireframe_carries_pose_and_focal(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertIn('data-pose="', svg)
+        self.assertIn('data-focal="', svg)
+
+    def test_wireframe_covers_every_beat(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertEqual(svg.count("data-beat"), len(self.script["beats"]))
+
+
+class TestStyleCore(unittest.TestCase):
+    """The style core: one string all component prompts inherit."""
+
+    def test_style_core_is_single_string(self):
+        self.assertIsInstance(md.STYLE_CORE, str)
+        self.assertTrue(md.STYLE_CORE)
+
+    def test_no_artist_names(self):
+        banned = ["tatsumi", "tezuka", "nihei", "hayashida"]
+        core = md.STYLE_CORE.lower()
+        for name in banned:
+            self.assertNotIn(name, core)
+
+    def test_component_prompts_inherit_core(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+        prompts = md.component_prompts(self.plan, self.script)
+        self.assertTrue(prompts)
+        for p in prompts:
+            self.assertIn(md.STYLE_CORE, p["prompt"])
+            low = p["prompt"].lower()
+            for name in ("tatsumi", "tezuka", "nihei", "hayashida"):
+                self.assertNotIn(name, low)
+
+    def test_component_budget_enforced(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+        prompts = md.component_prompts(self.plan, self.script)
+        self.assertLessEqual(len(prompts), md.COMPONENT_BUDGET)
+
+    def test_component_bounds_small(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+        for p in md.component_prompts(self.plan, self.script):
+            w, h = p["size"].split("x")
+            self.assertLessEqual(int(w), 768)
+            self.assertLessEqual(int(h), 768)
+
+
+class TestCast(unittest.TestCase):
+    """Character sheets: persisted appearance descriptor + seed."""
+
+    def test_cast_file_loads(self):
+        cast = md.load_cast(os.path.join(ROOT, "config", "manga-cast.json"))
+        for cameo in md.CAMEOS:
+            self.assertIn(cameo, cast)
+            self.assertIn("appearance", cast[cameo])
+            self.assertIn("seed", cast[cameo])
+
+
+class TestAssemble(unittest.TestCase):
+    """Pass 4: components composite into the panel skeleton."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_components_layered_into_panel(self):
+        svg = md.assemble_svg(self.plan, self.script, "wf", components={
+            "environment": "env.png", "actor:engineer": "act.png"})
+        self.assertIn('href="env.png"', svg)
+        self.assertIn('href="act.png"', svg)
+
+    def test_no_components_keeps_skeleton_fallback(self):
+        svg = md.assemble_svg(self.plan, self.script, "wf", components={})
+        self.assertIn("<svg", svg)
+        self.assertNotIn("__COMPONENT_LAYERS__", svg)
+
+    def test_text_layers_survive_assembly(self):
+        svg = md.assemble_svg(self.plan, self.script, "wf", components={})
+        self.assertIn("<ellipse", svg)       # speech bubble
+        self.assertIn("DRAMATIZATION", svg)  # attribution footer
+
+
 if __name__ == "__main__":
     unittest.main()

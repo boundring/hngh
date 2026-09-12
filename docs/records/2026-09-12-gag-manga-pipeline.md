@@ -166,3 +166,41 @@ surge counters, reconstruction truncation bounds vs the gdeltnews
 paper), `manga-panel-conventions` (panel grammar, bubble/caption
 norms), `dramatization-plot-taxonomy` (comedy plot types mapped to
 CAMEO lanes for stage 4).
+
+## Multi-pass pipeline landed (operator verdict pass, same day)
+
+Operator verdict on the first one-shot panel: "horrifying and needs
+extensive revision." The cure is procedural passes, not better
+one-shot prompts. Landed (jobs/manga-draft.py):
+
+    pass 1  --script      JSON beats (setup -> reaction -> gag) with
+                          per-beat visual notes + stick pose + camera +
+                          eye order; narration register (serious-manga
+                          deadpan) rides the setup beat
+    pass 2  --wireframe   SVG layout contract: panel frame, gutters,
+                          pose-library stick figures, focal-action
+                          arrow, caption/bubble placement
+    pass 3  --components bounded per-region prompts (environment plate
+                          768x512, actor pieces 512x768 via the
+                          character sheets), max 3 gens/panel, each an
+                          imagegen-submit call on the managed leg
+    pass 4  --assemble    sentinel-slot composite into the panel
+                          skeleton (art under, actors mid, text over)
+                          + best-effort rsvg-convert raster
+
+Stages land in docs/media/manga/<name>/ (script.json, wireframe.svg,
+components/, panel.svg, panel.png); the legacy pair
+(<name>-draft.{json,svg,png}) is refreshed for the standing review and
+the dispatch embed. Character consistency: config/manga-cast.json
+(appearance descriptor + per-cameo seed -- same seed + same descriptor
+= same character across panels). The style lives in one string
+(STYLE_CORE, manga-draft.py), studied in
+docs/design/manga-style-research.md. Review extension:
+publication-review.py now checks the stage files + script beats when a
+stage dir exists (pipeline-stages-missing, script-beats-missing).
+Render-pass status: GPU-0 held by the resident 27B text model (21.2 of
+21.5 GB) -- the VRAM gate skipped the component generations
+fail-closed; panel landed with placeholder plates (hand-drawn scene
+under, no <image> layer). The next run with a free VRAM window
+regenerates the components through the managed ComfyUI leg (2 of the
+3-gen budget used).

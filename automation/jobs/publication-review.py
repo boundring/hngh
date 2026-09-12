@@ -89,6 +89,30 @@ def check_manga(draft_path):
                                            QUIP_BUDGET))
     art_ok = os.path.isfile(art) and "<image" in open(
         art, encoding="utf-8").read() or os.path.isfile(png)
+    # multi-pass pipeline extension (2026-09-12): when the draft has a
+    # stage directory (<stem>/script.json), the pass artifacts are part
+    # of the contract -- every stage must exist and the script must
+    # carry beats with visual notes.
+    stem = os.path.splitext(draft_path)[0]
+    stage_dir = stem.replace("-draft", "") if stem.endswith("-draft") \
+        else None
+    if stage_dir and os.path.isdir(stage_dir):
+        missing = [n for n in ("script.json", "wireframe.svg",
+                               "components/prompts.json", "panel.svg",
+                               "panel.png")
+                   if not os.path.isfile(os.path.join(stage_dir, n))]
+        adv("pipeline-stages-missing", not missing,
+            "stage files missing: %s" % (", ".join(missing) or "none"))
+        try:
+            script = json.load(
+                open(os.path.join(stage_dir, "script.json"),
+                     encoding="utf-8"))
+            adv("script-beats-missing",
+                bool(script.get("beats"))
+                and all("visual" in b for b in script.get("beats", [])),
+                "beats with visual notes required")
+        except (OSError, ValueError) as exc:
+            adv("script-beats-missing", False, "script unreadable: %s" % exc)
     if os.path.isfile(art):
         svg = open(art, encoding="utf-8").read()
         m = re.search(r'<rect x="14" y="14" width="996" height="(\d+)"',
