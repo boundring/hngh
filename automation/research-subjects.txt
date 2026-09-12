@@ -32,3 +32,6 @@ fail-20260911-system-network-down	Why does the oversight system-network-down fla
 fail-20260911-overnight-plan-accept-gate-kernel	Why is the kernel gate (make test rc=2) red for two days and what exact commits break the loop-history guard — can the miss be declared and re-certified through the loop without rewriting history?
 acpkernel-boundary-model	ACP kernel decoupling prior art: what does acp-kernel's boundary model (one injected port, state-in/state-out, DESIGN.md s5) teach hngh's port enforcement?
 acpkernel-process-track	What does a solo author's issue-RFC + self-merge + release-PR cadence (acp-kernel #166/#167/#168, release PRs #240/#243/#246) teach hngh's public design visibility and backlog-disposition practice?
+os-harness-distro-packaging	What distro packaging prior art (PKGBUILD/AUR, deb/rpm packaging, Nix/system-manager-style declarative layers) should hngh's environment contract and package registry rungs learn from?
+os-harness-systemd-integration	What depth of systemd integration (user units, generators, timer-vs-unit tradeoffs) makes an OS-harness harness cleanly alongside a host systemd rather than fighting it?
+os-harness-cross-platform-patterns	What patterns let one harness core late-bind to different DE/WM (KDE/GNOME/X11), editors, and browsers without hardcoding per-platform edges?

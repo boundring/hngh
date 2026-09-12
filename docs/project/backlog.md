@@ -1663,3 +1663,76 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
   simulated launch storm (concurrent cadence tick), and the
   `overnight:plan-accept-gate:kernel` alert identity silent for a full
   day of launch ticks.
+
+## Interactive installer maturity (real distro matrix) — operator directive 2026-09-11
+
+- **Problem:** the OS-harness vision
+  ([2026-09-11-operating-system-harness-vision.md](../records/2026-09-11-operating-system-harness-vision.md))
+  needs install that works beyond one host; today Hngh situates itself via
+  the host orientation pass but nothing installs it onto a fresh machine
+  across a real distro matrix.
+- **Smallest useful outcome:** an installer skeleton that brings the
+  kernel + automation tier up on one second machine, later verified across
+  N distinct distros — the vision record's staging triggers.
+- **Evidence:** vision record 2026-09-11; host-orientation backlog row.
+- **Risk:** medium — touches system setup paths; gated by proposals.
+- **Dependencies:** installer skeleton, environment contract, secrets
+  seam (1Password pattern).
+- **Review trigger:** second machine runs the kernel + automation tier
+  green, or a staging trigger fires.
+
+## OS-harness knowledge tracks (systemd/distro packaging research) — operator directive 2026-09-11
+
+- **Problem:** the OS-harness vision's near-term ladder (environment
+  contract, package registry, cross-platform abstraction) lacks research
+  grounding in systemd integration depth and distro packaging prior art.
+- **Smallest useful outcome:** stage 5 research beats (queued in
+  automation/research-subjects.txt 2026-09-11) crystallized into design
+  inputs for the ladder's rungs.
+- **Evidence:** vision record 2026-09-11; research-subjects.txt entries.
+- **Risk:** low — research-only.
+- **Dependencies:** none; rides the stage 5/6 alternation.
+- **Review trigger:** a ladder rung's proposal needs the research input.
+
+## Social read layer — operator directive 2026-09-11
+
+- **Problem:** the social-surfaces policy
+  ([2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md))
+  authorizes feed reading (LinkedIn, Facebook, Twitter/X, Bluesky,
+  Mastodon, others) but no read capability exists.
+- **Smallest useful outcome:** browser-relay/API read of one operator
+  feed surface, surfaced to the operator (brief or dashboard row).
+- **Evidence:** policy record 2026-09-11.
+- **Risk:** medium — credentials must ride the 1Password/env pattern;
+  read-only, no mutation path.
+- **Dependencies:** browser-relay transport; secrets seam.
+- **Review trigger:** operator asks for feed visibility in a brief.
+
+## Social post layer (gated) — operator directive 2026-09-11
+
+- **Problem:** the social-surfaces policy authorizes posting in principle
+  behind the caveat chain (writing-register review, staged trust path,
+  handoffs-logged emission) but no post capability exists.
+- **Smallest useful outcome:** drafted posts surfaced to the operator for
+  approve/edit — no autonomous cadence until an explicit later grant.
+- **Evidence:** policy record 2026-09-11; writing-register
+  (docs/design/writing-register.md).
+- **Risk:** high — public voice on the operator's behalf; the full caveat
+  chain is the admission gate.
+- **Dependencies:** social read layer; writing-register check wiring;
+  handoffs logging.
+- **Review trigger:** read layer landed and operator requests a draft.
+
+## OSS contribution candidates — operator directive 2026-09-11
+
+- **Problem:** the OSS contribution policy
+  ([2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md))
+  authorizes upstream bug reports/issues/PRs with verified diagnosis only;
+  no candidate queue exists.
+- **Smallest useful outcome:** a running list of verified diagnoses from
+  real runs suitable for upstream filing, with attribution debts named.
+- **Evidence:** policy record 2026-09-11; no speculation filings.
+- **Risk:** low — deferred until a real diagnosis exists.
+- **Dependencies:** writing-register check; Hngh run evidence.
+- **Review trigger:** first verified upstream-able diagnosis from a real
+  run.
