@@ -12,8 +12,21 @@ set -u
 OP_BIN="${HNGH_OP_BIN:-op}"
 CRED_STATE_DIR="${CRED_STATE_DIR:-$AUTOMATION_ROOT/logs}"
 
+# Keyed entry (2026-09-12): map the operator's service key onto op's
+# service-account env so every consumer is prompt-free and headless —
+# the desktop-app integration (which is what demands interactive
+# /bin/bash CLI-access grants) is never consulted when the token is set
+# (docs/records/2026-09-12-privilege-model.md). Only a non-empty token
+# is mapped: an empty export must not shadow the desktop path.
+if [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ] && [ -n "${ONEPASSWORD_SERVICE_KEY:-}" ]; then
+  export OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORD_SERVICE_KEY"
+fi
+
 op_ready() { # -> 0 iff the CLI has a live session
-  "$OP_BIN" whoami >/dev/null 2>&1
+  # whoami lies under desktop-app integration ("not signed in" while
+  # per-command auth works) — account list is the honest probe there
+  # (docs/records/2026-09-09-1password-service-account-interface.md).
+  "$OP_BIN" whoami >/dev/null 2>&1 || "$OP_BIN" account list >/dev/null 2>&1
 }
 
 cred_fallback_crumb() { # ref — one per UTC day max

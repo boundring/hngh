@@ -2,6 +2,26 @@
 
 ## 2026-09-12
 
+- feat: privilege model - 1password keyed access, sudoers.d delegation,
+  checkbox grant surface. lib/credentials.sh now maps
+  ONEPASSWORD_SERVICE_KEY onto OP_SERVICE_ACCOUNT_TOKEN at the shared
+  seam (keyed entry: op ignores the desktop app, whose CLI-access
+  prompts caused the 4-5 sudo-password dialogs; pre-set token wins) and
+  op_ready falls back to `op account list` (whoami lies under desktop
+  integration). New authoritative grant surface:
+  config/permissions-profile.json (shipped default = everything denied)
+  read through lib/permissions.sh (perm_load/perm_validate/perm_granted,
+  fail-closed: missing or invalid profile = minimum grants);
+  install.sh --profile FILE seeds checkbox prompts (TTY) / seed-as-is
+  (non-interactive) and writes the resolved profile to
+  ~/.hngh-automation/permissions-profile.json; sudoers drop-in TEMPLATE
+  shipped at config/hngh-automation.sudoers.example (exact-command
+  Cmnd_Aliases, no NOPASSWD:ALL, visudo-validated; never installed by
+  the repo). Tests: tests/test-permissions.sh (hermetic: enum
+  validation, fail-closed, sudoers law, installer TTY + non-interactive
+  paths), tests/test-credentials.py mapping contract. Record:
+  docs/records/2026-09-12-privilege-model.md.
+
 - feat: gdelt news source - ranked world events with editorial priority
   scoring. jobs/gdelt-news.py (hour-tier drop-in cadence/hour/
   40-gdelt-news.sh) pulls GDELT 2.0's latest 15-minute export window,

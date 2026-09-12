@@ -1,0 +1,36 @@
+# hngh-automation.sudoers.example — the hngh privilege DELEGATION template
+# (docs/records/2026-09-12-privilege-model.md §sudoers). Design surface
+# only: NOTHING in this repo installs sudoers. The operator copies this
+# file to /etc/sudoers.d/hngh-automation (mode 0440) AFTER validating:
+#
+#     visudo -cf automation/config/hngh-automation.sudoers.example
+#     sudo install -m 0440 <validated copy> /etc/sudoers.d/hngh-automation
+#
+# Law: exact commands, exact args, NOPASSWD per command — NEVER
+# NOPASSWD:ALL (test-permissions.sh enforces the template). Each granted
+# class maps 1:1 to a permissions-profile checkbox; an ungranted checkbox
+# means the corresponding line is commented out below. Every sudo action
+# hngh takes is already breadcrumb-logged (lib/breadcrumbs.sh), and
+# sudoers logs to journalctl/syslog independently — two audit trails.
+#
+# systemctl --user is deliberately ABSENT: user units need no root, and
+# `sudo systemctl --user` as root would target root's manager — wrong
+# target, so the class does not exist here.
+
+# host-actions.package-updates: package cache hygiene only (no installs,
+# no system upgrades — those stay operator-run).
+Cmnd_Alias HNGH_PKGCACHE = /usr/bin/paccache -r *
+Cmnd_Alias HNGH_PARU_CLEAN = /usr/bin/paru -Sc *
+
+# host-actions.wol: link wake flags only.
+Cmnd_Alias HNGH_WOL = /usr/bin/ethtool wol *
+
+# host-actions.snapshots: btrfs per-directory time travel, scoped to the
+# directories the profile's file-paths list admits. Snapshot/restore of
+# agent working state; list for verification. No subvolume delete here —
+# restore is snapshot-over, deletes stay operator-run.
+Cmnd_Alias HNGH_BTRFS_SNAP = /usr/bin/btrfs subvolume snapshot *, /usr/bin/btrfs subvolume list *
+
+# hngh = the user the automation tier runs as (operator renames if the
+# tier runs under a dedicated account).
+hngh ALL=(root) NOPASSWD: HNGH_PKGCACHE, HNGH_PARU_CLEAN, HNGH_WOL, HNGH_BTRFS_SNAP

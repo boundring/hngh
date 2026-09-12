@@ -11,9 +11,12 @@
 # (d) interactive prompts are SKIPPED when stdin is not a TTY (no prompt
 #     markers, run completes, choices record written with mode
 #     non-interactive);
-# (e) sentinel: no sudo, no curl|bash of third-party scripts anywhere in the
-#     installer (install.sh + lib/platform.sh). bootstrap --install's sudo
-#     path is out of scope (it predates the installer and is fail-closed).
+# (e) sentinel: sudo never INVOKED, no curl|bash of third-party scripts
+#     anywhere in the installer (install.sh + lib/platform.sh). The
+#     word-boundary form lets the installer MENTION the sudoers.d
+#     template (a pointer the operator follows) without calling sudo.
+#     bootstrap --install's sudo path is out of scope (it predates the
+#     installer and is fail-closed).
 # (f) presentation degradation: piped, NO_COLOR, and --no-color runs emit
 #     zero escape bytes (CI/hermetic logs stay greppable);
 # (g) colored pty run carries the Winamp masthead, playlist numbers 01-05
@@ -123,13 +126,13 @@ sys.exit(0 if c.get("installer_mode") == "non-interactive" else 1)
   fi
 fi
 
-# --- (e) sentinel: no sudo, no curl|bash in the installer -------------------
+# --- (e) sentinel: sudo never invoked, no curl|bash in the installer --------
 sentinel_hits=""
 if [ -f "$INSTALLER" ]; then
-  sentinel_hits="$(grep -nE 'sudo|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$INSTALLER")"
+  sentinel_hits="$(grep -nE '\bsudo\b|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$INSTALLER")"
 fi
 if [ -f "$PLATFORM" ]; then
-  sentinel_hits="$sentinel_hits$(grep -nE 'sudo|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$PLATFORM")"
+  sentinel_hits="$sentinel_hits$(grep -nE '\bsudo\b|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$PLATFORM")"
 fi
 if [ -z "$sentinel_hits" ]; then
   ok "sentinel: no sudo / curl|bash in install.sh or lib/platform.sh"

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "secret-access": "none",
+  "host-actions": {
+    "snapshots": false,
+    "package-updates": false,
+    "wol": false
+  },
+  "file-paths": [],
+  "social-posting": false,
+  "kernel-gates": "operator-only"
+}
