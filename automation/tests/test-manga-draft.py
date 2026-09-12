@@ -4,9 +4,11 @@ lane-line parsing, SVG placeholder fill, garbage rejection."""
 import importlib.util
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
+from xml.sax.saxutils import escape
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # automation/
@@ -167,6 +169,150 @@ class TestWireframe(unittest.TestCase):
     def test_wireframe_covers_every_beat(self):
         svg = md.wireframe_svg(self.plan, self.script)
         self.assertEqual(svg.count("data-beat"), len(self.script["beats"]))
+
+
+class TestRegisters(unittest.TestCase):
+    """Operator critique 2, item 4: dialogue comes from PER-BEAT-TYPE
+    registers (setup = flat narration, reaction = recognition,
+    gag = punch), not one generic pool."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+
+    def test_beats_carry_register_lines(self):
+        script = md.script_for(self.plan)
+        kinds = [(b["kind"], b["register"], b["line"])
+                 for b in script["beats"]]
+        self.assertEqual([k[0] for k in kinds],
+                         ["setup", "reaction", "gag"])
+        self.assertEqual([k[1] for k in kinds],
+                         ["narration", "recognition", "punch"])
+
+    def test_three_beats_three_distinct_lines_registers(self):
+        script = md.script_for(self.plan)
+        lines = [b["line"] for b in script["beats"]]
+        self.assertEqual(len(set(lines)), 3)
+        self.assertIn(lines[0], md.NARRATIONS)
+        self.assertIn(lines[1], md.RECOGNITIONS[self.plan["cameo"]])
+        self.assertIn(lines[2], md.REACTIONS[self.plan["cameo"]])
+
+    def test_setup_line_matches_plan_narration(self):
+        script = md.script_for(self.plan)
+        self.assertEqual(script["beats"][0]["line"],
+                         self.plan["narration"])
+
+    def test_gag_line_matches_plan_dialogue(self):
+        script = md.script_for(self.plan)
+        self.assertEqual(script["beats"][2]["line"],
+                         self.plan["dialogue"])
+
+
+class TestStrip(unittest.TestCase):
+    """Operator critique 2, items 2/3/5: the wireframe IS the beat
+    visualization -- a 3-beat script renders a multi-panel strip with
+    gutters; a 1-beat script keeps the single-panel fallback."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_three_beats_make_horizontal_strip(self):
+        grid = md.panel_grid(3)
+        self.assertEqual(grid["orientation"], "horizontal")
+        self.assertEqual(len(grid["panels"]), 3)
+        rects = grid["panels"]
+        # distinct frames, gutters (gaps) between, shared top edge
+        self.assertEqual(len({r[0] for r in rects}), 3)
+        self.assertEqual(len({r[1] for r in rects}), 1)
+        for a, b in zip(rects, rects[1:]):
+            self.assertGreaterEqual(b[0], a[0] + a[2])  # gutter gap
+
+    def test_two_beats_make_vertical_strip(self):
+        grid = md.panel_grid(2)
+        self.assertEqual(grid["orientation"], "vertical")
+        self.assertEqual(len(grid["panels"]), 2)
+        (ax, ay, aw, ah), (bx, by, bw, bh) = grid["panels"]
+        self.assertEqual(ax, bx)
+        self.assertGreaterEqual(by, ay + ah)  # stacked with a gutter
+
+    def test_wireframe_one_frame_per_beat(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertEqual(svg.count("<g data-beat="), 3)
+        self.assertEqual(svg.count("<g data-panel="), 3)
+        self.assertEqual(svg.count("<g data-panelimg="), 3)
+
+    def test_wireframe_single_beat_fallback(self):
+        one = {"narration": self.script["narration"],
+               "beats": self.script["beats"][:1],
+               "cast_sheet": self.script["cast_sheet"]}
+        svg = md.wireframe_svg(self.plan, one)
+        self.assertEqual(svg.count("<g data-panel="), 1)
+
+    def test_beat_lines_rendered_in_their_panels(self):
+        """The script is visibly consumed: each beat's register line
+        lands in its own panel."""
+        svg = md.wireframe_svg(self.plan, self.script)
+        for b in self.script["beats"]:
+            self.assertIn(escape(b["line"][:20]), svg)
+
+
+class TestBubbleTails(unittest.TestCase):
+    """Operator critique 2, item 1: curved bezier tails anchored to the
+    actor, ink-wash wobble, no bare polygon triangles."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_no_polygon_tails(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertNotIn("<polygon", svg)
+
+    def test_tails_are_two_segment_quadratics(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertTrue(re.search(
+            r'<path class="tail" d="M\d+ \d+ Q[\d.]+ [\d.]+ [\d.]+ [\d.]+ '
+            r'Q[\d.]+ [\d.]+ [\d.]+ [\d.]+"', svg))
+
+    def test_tails_carry_ink_filter(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertRegex(svg, r'class="tail"[^>]*filter="url\(#ink\)"')
+
+
+class TestSfxPlacement(unittest.TestCase):
+    """Operator critique 2, item 2: SFX anchors where the beat's focal
+    action is; the quadrant varies with the seed (3 seeds -> 3
+    quadrants), not a fixed corner."""
+
+    PANEL = (14, 14, 324, 640)
+
+    def test_quadrant_variance_across_seeds(self):
+        rect = self.PANEL
+        focal = (rect[0] + rect[2] * 0.5, rect[1] + rect[3] * 0.4)
+        quads = set()
+        for seed in (0, 1, 2):
+            x, y = md.sfx_anchor(rect, focal, seed)
+            quads.add((x > rect[0] + rect[2] / 2, y > rect[1] + rect[3] / 2))
+        self.assertEqual(len(quads), 3)
+
+    def test_anchor_stays_inside_panel(self):
+        rect = self.PANEL
+        for seed in range(12):
+            x, y = md.sfx_anchor(rect, (rect[0] + 162, rect[1] + 256), seed)
+            self.assertTrue(rect[0] <= x <= rect[0] + rect[2])
+            self.assertTrue(rect[1] <= y <= rect[1] + rect[3])
+
+    def test_wireframe_sfx_lands_in_beat_panel(self):
+        plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        svg = md.wireframe_svg(plan, md.script_for(plan))
+        m = re.search(r'<text[^>]*data-sfx[^>]*x="([\d.]+)" y="([\d.]+)"',
+                      svg)
+        self.assertIsNotNone(m)
+        x, y = float(m.group(1)), float(m.group(2))
+        self.assertNotEqual((x, y), (90, 545))  # not the fixed legacy spot
+        inside = [i for i, r in enumerate(md.panel_grid(3)["panels"])
+                  if r[0] <= x <= r[0] + r[2] and r[1] <= y <= r[1] + r[3]]
+        self.assertEqual(inside, [1])  # the reaction beat's panel
 
 
 class TestStyleCore(unittest.TestCase):

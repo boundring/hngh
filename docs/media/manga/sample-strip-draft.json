@@ -1,0 +1,17 @@
+{
+  "band": "NOTABLE",
+  "headline": "Diplomatic Cooperation Bank Announces Peace Fund",
+  "url": "https://example.com/news/1",
+  "style_id": "manga-panel",
+  "image_prompt": "diplomatic cooperation bank announces peace fund, single gag manga panel, gekiga realism, bold confident linework, expressive character faces with round expressive eyes and star highlights, postwar urban japan ambiance, two to three distinct recurring character silhouettes in the foreground (small heads, gaunt coats, readable at thumbnail size), cinematic panel composition with diagonal depth and a clear focal action, monochrome ink illustration, dense cross-hatching on towering dark structures and shadow, bold ink outlines, screentone shading, dynamic speed lines, exaggerated reactions, high contrast monochrome ink with a single accent color, vast negative space in the background for bubbles, clean white ground, comic panel composition, no text in image",
+  "seed": 4538,
+  "cameo": "engineer",
+  "scene": "an engineer tightening one bolt as the whole gantry groans",
+  "caption": "MEANWHILE, IN WORLD NEWS...",
+  "dialogue": "I told you the paperwork was load-bearing!",
+  "sfx": "KRAK",
+  "narration": "It was an ordinary day in the hall. That was the problem.",
+  "margin": "corridor B, 03:07. again.",
+  "narrative": "Grounded event: Diplomatic Cooperation Bank Announces Peace Fund (severity NOTABLE). Source cited below.",
+  "attribution": "[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://example.com/news/1"
+}

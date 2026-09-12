@@ -1,103 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="820" viewBox="0 0 1024 820">
-  <!-- gag-manga single-panel skeleton (P0: docs/records/2026-09-12-gag-manga-pipeline.md).
-       Gekiga upgrade 2026-09-12 (operator critique + docs/research/2026-09-12-publication-review-01.md):
-       Averia Gruesa Libre for dialogue + SFX, Iosevka for caption/narrative/footer
-       (generic fallbacks keep the renderer safe on a fontless box); screentone
-       pattern sky, feTurbulence ink-wash filter, hand-drawn scene sketch under the
-       image slot (megastructure skyline + lone figure, so an imageless panel is
-       never empty), double-line frame with seed-jittered tilt, per-seed SFX
-       placement/scale, margin note + red seal so a panel always carries more than
-       one bubble and one KRAK. Placeholders are filled server-side by
-       jobs/manga-draft.py; all text is XML-escaped there. Image generation is
-       optional (imagegen local leg). -->
-  <defs>
-    <pattern id="screentone" width="8" height="8" patternUnits="userSpaceOnUse">
-      <circle cx="4" cy="4" r="1.3" fill="#141414"/>
-    </pattern>
-    <pattern id="screentone-dark" width="6" height="6" patternUnits="userSpaceOnUse">
-      <circle cx="3" cy="3" r="2.1" fill="#141414"/>
-    </pattern>
-    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-      <line x1="0" y1="0" x2="0" y2="7" stroke="#141414" stroke-width="1.1"/>
-    </pattern>
-    <filter id="ink" x="-4%" y="-4%" width="108%" height="108%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="7" result="n"/>
-      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6"/>
-    </filter>
-    <clipPath id="artz"><rect x="18" y="18" width="988" height="632"/></clipPath>
-  </defs>
-  <rect width="1024" height="820" fill="#f7f2e7"/>
-
-  <!-- hand-drawn scene placeholder: sits UNDER <g clip-path="url(#artz)"></g>; a generated panel covers it -->
-  <g clip-path="url(#artz)" filter="url(#ink)">
-    <rect x="18" y="18" width="988" height="300" fill="#ffffff"/>
-    <rect x="18" y="18" width="988" height="300" fill="url(#screentone)" opacity="0.5"/>
-    <rect x="40" y="270" width="120" height="380" fill="#141414"/>
-    <rect x="40" y="270" width="120" height="380" fill="url(#hatch)" opacity="0.35"/>
-    <rect x="250" y="200" width="95" height="450" fill="#141414"/>
-    <rect x="250" y="200" width="95" height="450" fill="url(#hatch)" opacity="0.25"/>
-    <rect x="700" y="240" width="150" height="410" fill="#141414"/>
-    <rect x="700" y="240" width="150" height="410" fill="url(#hatch)" opacity="0.3"/>
-    <rect x="905" y="330" width="90" height="320" fill="url(#screentone-dark)"/>
-    <path d="M18 470 L120 468 L240 474 L360 470 L480 476 L610 471 L740 477 L870 472 L1006 475"
-          fill="none" stroke="#141414" stroke-width="3"/>
-    <path d="M18 520 L1006 524" fill="none" stroke="#141414" stroke-width="2" opacity="0.7"/>
-    <path d="M18 250 Q 500 300 1006 240" fill="none" stroke="#141414" stroke-width="1.6" opacity="0.6"/>
-    <path d="M18 285 Q 500 335 1006 275" fill="none" stroke="#141414" stroke-width="1.6" opacity="0.6"/>
-    <g transform="translate(520 470)">
-      <circle cx="0" cy="-52" r="13" fill="#141414"/>
-      <path d="M-18 -40 L18 -40 L14 40 L-14 40 Z" fill="#141414"/>
-      <path d="M-14 40 L-18 96 L-6 96 L-2 44 L2 44 L6 96 L18 96 L14 40 Z" fill="#141414"/>
-    </g>
-    <g stroke="#141414" stroke-width="1.6" opacity="0.55">
-      <line x1="60" y1="600" x2="96" y2="640"/>
-      <line x1="150" y1="590" x2="190" y2="636"/>
-      <line x1="330" y1="600" x2="368" y2="642"/>
-      <line x1="450" y1="592" x2="492" y2="638"/>
-      <line x1="620" y1="602" x2="656" y2="640"/>
-      <line x1="800" y1="594" x2="840" y2="638"/>
-      <line x1="940" y1="604" x2="972" y2="640"/>
-    </g>
-  </g>
-
-  <!-- art frame: double line, -0.250 deg jitter for hand-drawn feel -->
-  <g transform="rotate(-0.250 512 334)">
-    <rect x="14" y="14" width="996" height="640" fill="none" stroke="#141414" stroke-width="7"/>
-    <rect x="24" y="24" width="976" height="620" fill="none" stroke="#141414" stroke-width="2.5"/>
-  </g>
-<g clip-path="url(#artz)"></g>
-  <!-- caption box -->
-  <rect x="36" y="36" width="540" height="92" rx="3" fill="#ffffff" stroke="#141414" stroke-width="4"/>
-  <text font-family="Iosevka, monospace" font-size="22" font-weight="bold" fill="#141414">
-    <tspan x="50" y="68">MEANWHILE, IN WORLD NEWS...</tspan>
-  </text>
-  <!-- speech bubble + tail (third-point anchor: cx=2/3 of 1024, cy=1/3 of art zone) -->
-  <ellipse cx="682" cy="227" rx="244" ry="98" fill="#ffffff" stroke="#141414" stroke-width="4"/>
-  <polygon points="602,315 562,385 672,319" fill="#ffffff" stroke="#141414" stroke-width="4"/>
-  <text font-family="Averia Gruesa Libre, Comic Sans MS, cursive" font-size="19" fill="#141414">
-    <tspan x="548" y="202">I told you the paperwork was</tspan><tspan x="548" y="226">load-bearing!</tspan>
-  </text>
-  <!-- SFX: x/y/size/rotation filled per seed; white halo keeps it readable
-       over the dark towers (both copies get the same attrs) -->
-  <text font-family="Averia Gruesa Libre, Comic Sans MS, cursive" font-weight="bold"
-        fill="#ffffff" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"
-        x="132" y="581" font-size="56" transform="rotate(-14 132 581)">KRAK</text>
-  <text font-family="Averia Gruesa Libre, Comic Sans MS, cursive" font-weight="bold"
-        fill="#141414" x="132" y="581" font-size="56" transform="rotate(-14 132 581)">KRAK</text>
-  <!-- margin note (dim Iosevka) + red seal: every panel carries 3+ elements
-       beside the bubble (publication-review-01 finding) -->
-  <text x="640" y="612" font-family="Iosevka, monospace" font-size="15" font-style="italic"
-        fill="#5a5548" transform="rotate(-1.5 640 612)">corridor B, 03:07. again.</text>
-  <g transform="rotate(-6 948 72)" opacity="0.85">
-    <rect x="914" y="57" width="68" height="30" fill="#ffffff" fill-opacity="0.7" stroke="#a3282d" stroke-width="3"/>
-    <text x="921" y="78" font-family="Iosevka, monospace" font-size="13" fill="#a3282d">APPROVED</text>
-  </g>
-  <!-- narrative strip (grounded text + source citation) -->
-  <rect x="14" y="668" width="996" height="112" fill="#ffffff" stroke="#141414" stroke-width="4"/>
-  <text font-family="Iosevka, monospace" font-size="17" fill="#141414">
-    <tspan x="28" y="700">Grounded event: Diplomatic Cooperation</tspan><tspan x="28" y="722">Bank Announces Peace Fund (severity</tspan><tspan x="28" y="744">NOTABLE). Source cited below.</tspan>
-  </text>
-  <!-- attribution footer -->
-  <!-- ponytail: single-line footer at 12px fits ~135 chars; per-word wrap if longer URLs appear -->
-  <text x="14" y="804" font-family="Iosevka, monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://example.com/news/1</text>
+<defs>
+  <pattern id="screentone" width="8" height="8" patternUnits="userSpaceOnUse">
+    <circle cx="4" cy="4" r="1.3" fill="#141414"/></pattern>
+  <pattern id="screentone-dark" width="6" height="6" patternUnits="userSpaceOnUse">
+    <circle cx="3" cy="3" r="2.1" fill="#141414"/></pattern>
+  <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse"
+    patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="7" stroke="#141414" stroke-width="1.1"/>
+  </pattern>
+  <filter id="ink" x="-4%" y="-4%" width="108%" height="108%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2"
+      seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6"/>
+  </filter>
+  <marker id="focalhead" markerWidth="8" markerHeight="8" refX="6" refY="3"
+    orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#141414"/></marker>
+</defs>
+<rect width="1024" height="820" fill="#f7f2e7"/>
+<g data-panel="0" data-orientation="horizontal">
+<g data-panelimg="0"><rect x="14" y="14" width="322" height="650" fill="#ffffff"/><rect x="14" y="14" width="322" height="273" fill="url(#screentone)" opacity="0.45"/><rect x="26" y="303" width="52" height="325" fill="#141414"/><rect x="26" y="303" width="52" height="325" fill="url(#hatch)" opacity="0.3"/><rect x="26" y="303" width="52" height="325" fill="url(#screentone-dark)" opacity="0.45"/><rect x="239" y="394" width="64" height="234" fill="#141414"/><rect x="239" y="394" width="64" height="234" fill="url(#hatch)" opacity="0.3"/><rect x="239" y="394" width="64" height="234" fill="url(#screentone-dark)" opacity="0.45"/><path d="M14 211 Q 175 225 336 207" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M14 270 Q 175 284 336 266" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M14 628 L336 628" stroke="#141414" stroke-width="2.4"/><ellipse cx="175" cy="628" rx="52" ry="5" fill="#141414" opacity="0.3"/><circle cx="59" cy="636" r="9" fill="url(#screentone-dark)"/><g stroke="#141414" stroke-width="4"><circle cx="167.0" cy="367.2" r="22.8"/><line x1="167.0" y1="390.0" x2="167.0" y2="477.8"/><line x1="144" y1="394" x2="69" y2="485"/><line x1="189" y1="394" x2="264" y2="485"/><line x1="167.0" y1="477.8" x2="114.0" y2="624"/><line x1="167.0" y1="477.8" x2="218.0" y2="624"/></g></g>
+<g data-beat="0" data-kind="setup" data-pose="standing-deadpan"><path data-focal="setup" d="M160 317 L204 287" stroke="#141414" stroke-width="3" fill="none" marker-end="url(#focalhead)"/><rect x="22" y="24" width="306" height="56" rx="3" fill="#ffffff" stroke="#141414" stroke-width="3"/><text font-family="Iosevka, monospace" font-size="14" fill="#141414"><tspan x="32" y="46">It was an ordinary day in the</tspan><tspan x="32" y="64">hall. That was the problem.</tspan></text></g>
+<rect x="14" y="14" width="322" height="650" fill="none" stroke="#141414" stroke-width="5"/>
+</g>
+<g data-panel="1" data-orientation="horizontal">
+<g data-panelimg="1"><rect x="350" y="14" width="322" height="650" fill="#ffffff"/><rect x="350" y="14" width="322" height="273" fill="url(#screentone)" opacity="0.45"/><rect x="362" y="303" width="52" height="325" fill="#141414"/><rect x="362" y="303" width="52" height="325" fill="url(#hatch)" opacity="0.3"/><rect x="362" y="303" width="52" height="325" fill="url(#screentone-dark)" opacity="0.45"/><rect x="575" y="394" width="64" height="234" fill="#141414"/><rect x="575" y="394" width="64" height="234" fill="url(#hatch)" opacity="0.3"/><rect x="575" y="394" width="64" height="234" fill="url(#screentone-dark)" opacity="0.45"/><path d="M350 211 Q 511 225 672 207" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M350 270 Q 511 284 672 266" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M350 628 L672 628" stroke="#141414" stroke-width="2.4"/><ellipse cx="511" cy="628" rx="52" ry="5" fill="#141414" opacity="0.3"/><rect x="382" y="339" width="26" height="12" fill="none" stroke="#a3282d" stroke-width="2" opacity="0.8"/><g stroke="#141414" stroke-width="4"><circle cx="492.6" cy="367.2" r="22.8"/><line x1="503.0" y1="390.0" x2="477.0" y2="477.8"/><line x1="480" y1="394" x2="405" y2="325"/><line x1="525" y1="394" x2="600" y2="325"/><line x1="503.0" y1="477.8" x2="451.0" y2="624"/><line x1="503.0" y1="477.8" x2="555.0" y2="624"/></g></g>
+<g data-beat="1" data-kind="reaction" data-pose="reacting"><path data-focal="reaction" d="M522 317 L566 287" stroke="#141414" stroke-width="3" fill="none" marker-end="url(#focalhead)"/><ellipse cx="543" cy="105" rx="116" ry="49" fill="#ffffff" stroke="#141414" stroke-width="3"/><path class="tail" d="M508 153 Q540.6 250.8 540.6 250.8 Q540.6 250.8 503 347" fill="none" stroke="#141414" stroke-width="4" filter="url(#ink)"/><text text-anchor="middle" font-size="14" fill="#141414"><tspan x="543" y="97">The diagram was right.</tspan><tspan x="543" y="115">That is worse.</tspan></text><text data-sfx="KRAK" x="562.0" y="248.4" font-family="Averia Gruesa Libre, cursive" font-size="30" font-weight="bold" fill="#141414" stroke="#ffffff" stroke-width="6" paint-order="stroke" transform="rotate(-14 562.0 248.4)">KRAK</text></g>
+<rect x="350" y="14" width="322" height="650" fill="none" stroke="#141414" stroke-width="5"/>
+</g>
+<g data-panel="2" data-orientation="horizontal">
+<g data-panelimg="2"><rect x="686" y="14" width="322" height="650" fill="#ffffff"/><rect x="686" y="14" width="322" height="273" fill="url(#screentone)" opacity="0.45"/><rect x="698" y="303" width="52" height="325" fill="#141414"/><rect x="698" y="303" width="52" height="325" fill="url(#hatch)" opacity="0.3"/><rect x="698" y="303" width="52" height="325" fill="url(#screentone-dark)" opacity="0.45"/><rect x="911" y="394" width="64" height="234" fill="#141414"/><rect x="911" y="394" width="64" height="234" fill="url(#hatch)" opacity="0.3"/><rect x="911" y="394" width="64" height="234" fill="url(#screentone-dark)" opacity="0.45"/><path d="M686 211 Q 847 225 1008 207" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M686 270 Q 847 284 1008 266" fill="none" stroke="#141414" stroke-width="1.4" opacity="0.6"/><path d="M686 628 L1008 628" stroke="#141414" stroke-width="2.4"/><ellipse cx="847" cy="628" rx="52" ry="5" fill="#141414" opacity="0.3"/><circle cx="731" cy="636" r="9" fill="url(#screentone-dark)"/><g stroke="#141414" stroke-width="4"><circle cx="839.0" cy="367.2" r="22.8"/><line x1="839.0" y1="390.0" x2="839.0" y2="477.8"/><line x1="816" y1="394" x2="754" y2="485"/><line x1="861" y1="394" x2="949" y2="370"/><line x1="839.0" y1="477.8" x2="788.0" y2="624"/><line x1="839.0" y1="477.8" x2="892.0" y2="624"/></g></g>
+<g data-beat="2" data-kind="gag" data-pose="pointing"><path data-focal="gag" d="M755 317 L799 287" stroke="#141414" stroke-width="3" fill="none" marker-end="url(#focalhead)"/><ellipse cx="879" cy="105" rx="116" ry="49" fill="#ffffff" stroke="#141414" stroke-width="3"/><path class="tail" d="M844 153 Q876.6 250.8 876.6 250.8 Q876.6 250.8 839 347" fill="none" stroke="#141414" stroke-width="4" filter="url(#ink)"/><text text-anchor="middle" font-size="14" fill="#141414"><tspan x="879" y="97">I told you the paperwork</tspan><tspan x="879" y="115">was load-bearing!</tspan></text></g>
+<rect x="686" y="14" width="322" height="650" fill="none" stroke="#141414" stroke-width="5"/>
+</g>
+<rect x="14" y="672" width="996" height="110" fill="#ffffff" stroke="#141414" stroke-width="4"/>
+<text font-family="Iosevka, monospace" font-size="17" fill="#141414"><tspan x="28" y="700">Grounded event: Diplomatic Cooperation Bank Announces Peace Fund (severity NOTABLE). Source cited below.</tspan></text>
+<text x="14" y="806" font-family="Iosevka, monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://example.com/news/1</text>
 </svg>
