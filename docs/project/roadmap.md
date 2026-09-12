@@ -61,6 +61,19 @@ the browser-relay transport, the 1Password seam — rather than adding new
 machinery, and both are research-ready. Implementation rides the normal
 rung path: backlog rows, proposal, gates, certificate — no shortcut.
 
+Staging design pressure (2026-09-11): the operator's long-horizon
+operating-system harness vision
+([records/2026-09-11-operating-system-harness-vision.md](../records/2026-09-11-operating-system-harness-vision.md))
+is admitted as operator-directed design pressure, per the same precedent
+as the operator-mirror and keyring admissions — the distro ambition is
+explicitly back-burnered behind named triggers, and the near-term ladder
+(installer skeleton -> environment contract -> package registry ->
+cross-platform abstraction) routes through existing backlog rows and the
+stage 5 research alternation. Companion policies the same turn: social
+surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md))
+and OSS contribution
+([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)).
+
 ### Completed
 
 - Sealed the retirement boundary: the archived prior system is external and
