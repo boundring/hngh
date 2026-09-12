@@ -28,7 +28,7 @@
   </defs>
   <rect width="1024" height="820" fill="#f7f2e7"/>
 
-  <!-- hand-drawn scene placeholder: sits UNDER <image x="18" y="18" width="988" height="632" href="../imagegen/manga-panel-20260912T185223Z.png" preserveAspectRatio="xMidYMid"/>; a generated panel covers it -->
+  <!-- hand-drawn scene placeholder: sits UNDER <g clip-path="url(#artz)"></g>; a generated panel covers it -->
   <g clip-path="url(#artz)" filter="url(#ink)">
     <rect x="18" y="18" width="988" height="300" fill="#ffffff"/>
     <rect x="18" y="18" width="988" height="300" fill="url(#screentone)" opacity="0.5"/>
@@ -60,12 +60,12 @@
     </g>
   </g>
 
-  <!-- art frame: double line, -0.500 deg jitter for hand-drawn feel -->
-  <g transform="rotate(-0.500 512 334)">
+  <!-- art frame: double line, -0.250 deg jitter for hand-drawn feel -->
+  <g transform="rotate(-0.250 512 334)">
     <rect x="14" y="14" width="996" height="640" fill="none" stroke="#141414" stroke-width="7"/>
     <rect x="24" y="24" width="976" height="620" fill="none" stroke="#141414" stroke-width="2.5"/>
   </g>
-<image x="18" y="18" width="988" height="632" href="../imagegen/manga-panel-20260912T185223Z.png" preserveAspectRatio="xMidYMid"/>
+<g clip-path="url(#artz)"></g>
   <!-- caption box -->
   <rect x="36" y="36" width="540" height="92" rx="3" fill="#ffffff" stroke="#141414" stroke-width="4"/>
   <text font-family="Iosevka, monospace" font-size="22" font-weight="bold" fill="#141414">
@@ -81,13 +81,13 @@
        over the dark towers (both copies get the same attrs) -->
   <text font-family="Averia Gruesa Libre, Comic Sans MS, cursive" font-weight="bold"
         fill="#ffffff" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"
-        x="146" y="557" font-size="61" transform="rotate(-16 146 557)">BZZT</text>
+        x="132" y="581" font-size="56" transform="rotate(-14 132 581)">KRAK</text>
   <text font-family="Averia Gruesa Libre, Comic Sans MS, cursive" font-weight="bold"
-        fill="#141414" x="146" y="557" font-size="61" transform="rotate(-16 146 557)">BZZT</text>
+        fill="#141414" x="132" y="581" font-size="56" transform="rotate(-14 132 581)">KRAK</text>
   <!-- margin note (dim Iosevka) + red seal: every panel carries 3+ elements
        beside the bubble (publication-review-01 finding) -->
   <text x="640" y="612" font-family="Iosevka, monospace" font-size="15" font-style="italic"
-        fill="#5a5548" transform="rotate(-1.5 640 612)">note: it was, in fact, not fine.</text>
+        fill="#5a5548" transform="rotate(-1.5 640 612)">corridor B, 03:07. again.</text>
   <g transform="rotate(-6 948 72)" opacity="0.85">
     <rect x="914" y="57" width="68" height="30" fill="#ffffff" fill-opacity="0.7" stroke="#a3282d" stroke-width="3"/>
     <text x="921" y="78" font-family="Iosevka, monospace" font-size="13" fill="#a3282d">APPROVED</text>
@@ -95,9 +95,9 @@
   <!-- narrative strip (grounded text + source citation) -->
   <rect x="14" y="668" width="996" height="112" fill="#ffffff" stroke="#141414" stroke-width="4"/>
   <text font-family="Iosevka, monospace" font-size="17" fill="#141414">
-    <tspan x="28" y="700">Grounded event: Google no longer</tspan><tspan x="28" y="722">provides direct URLs in search results</tspan><tspan x="28" y="744">(severity NOTABLE). Source cited</tspan><tspan x="28" y="766">below.</tspan>
+    <tspan x="28" y="700">Grounded event: Diplomatic Cooperation</tspan><tspan x="28" y="722">Bank Announces Peace Fund (severity</tspan><tspan x="28" y="744">NOTABLE). Source cited below.</tspan>
   </text>
   <!-- attribution footer -->
   <!-- ponytail: single-line footer at 12px fits ~135 chars; per-word wrap if longer URLs appear -->
-  <text x="14" y="804" font-family="Iosevka, monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://www.autom.dev/blog/google-search-goto-links</text>
+  <text x="14" y="804" font-family="Iosevka, monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://example.com/news/1</text>
 </svg>
