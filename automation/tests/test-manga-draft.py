@@ -237,9 +237,12 @@ class TestStrip(unittest.TestCase):
 
     def test_wireframe_one_frame_per_beat(self):
         svg = md.wireframe_svg(self.plan, self.script)
+        # density rule (2026-09-12 collection study): 3 story beats
+        # plan 4 panels -- the content-heavy setup beat splits in two;
+        # each beat still owns exactly one data-beat marker.
         self.assertEqual(svg.count("<g data-beat="), 3)
-        self.assertEqual(svg.count("<g data-panel="), 3)
-        self.assertEqual(svg.count("<g data-panelimg="), 3)
+        self.assertEqual(svg.count("<g data-panel="), 4)
+        self.assertEqual(svg.count("<g data-panelimg="), 4)
 
     def test_wireframe_single_beat_fallback(self):
         one = {"narration": self.script["narration"],
@@ -304,15 +307,18 @@ class TestSfxPlacement(unittest.TestCase):
 
     def test_wireframe_sfx_lands_in_beat_panel(self):
         plan = md.plan_for(md.parse_item(ITEM_TEXT))
-        svg = md.wireframe_svg(plan, md.script_for(plan))
+        script = md.script_for(plan)
+        svg = md.wireframe_svg(plan, script)
         m = re.search(r'<text[^>]*data-sfx[^>]*x="([\d.]+)" y="([\d.]+)"',
                       svg)
         self.assertIsNotNone(m)
         x, y = float(m.group(1)), float(m.group(2))
         self.assertNotEqual((x, y), (90, 545))  # not the fixed legacy spot
-        inside = [i for i, r in enumerate(md.panel_grid(3)["panels"])
+        grid = md.panel_grid(len(md.beat_panels(script)))
+        inside = [i for i, r in enumerate(grid["panels"])
                   if r[0] <= x <= r[0] + r[2] and r[1] <= y <= r[1] + r[3]]
-        self.assertEqual(inside, [1])  # the reaction beat's panel
+        # panels: setup-wide(0) setup-close(1) reaction(2) gag(3)
+        self.assertEqual(inside, [2])  # the reaction beat's panel
 
 
 class TestStyleCore(unittest.TestCase):
@@ -363,6 +369,88 @@ class TestCast(unittest.TestCase):
             self.assertIn(cameo, cast)
             self.assertIn("appearance", cast[cameo])
             self.assertIn("seed", cast[cameo])
+
+
+class TestDensity(unittest.TestCase):
+    """Bank delta 1 (2026-09-12 collection study): the wireframe plans
+    3-5 panels per page on story beats (masters ran 4.6 avg; our 1-3
+    under-ran), 1 panel for splash beats."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_story_beats_land_in_density_band(self):
+        n = len(md.beat_panels(self.script))
+        self.assertGreaterEqual(n, 3)
+        self.assertLessEqual(n, 5)
+
+    def test_content_heavy_beat_splits_across_panels(self):
+        """The setup beat's visual note lists two eye-hits (caption,
+        then the tilted structure) -> the wireframe splits it in two."""
+        self.assertEqual(self.script["beats"][0]["panels"], 2)
+        self.assertEqual(len(md.beat_panels(self.script)), 4)
+
+    def test_splash_beat_stays_single_panel(self):
+        script = dict(self.script)
+        script["beats"] = [dict(b, splash=True)
+                           for b in self.script["beats"]]
+        self.assertEqual(len(md.beat_panels(script)), 3)
+
+    def test_single_beat_script_stays_single_panel(self):
+        one = {"narration": self.script["narration"],
+               "beats": self.script["beats"][:1],
+               "cast_sheet": self.script["cast_sheet"]}
+        self.assertEqual(len(md.beat_panels(one)), 1)
+
+    def test_panel_grid_supports_density(self):
+        for n in (4, 5):
+            grid = md.panel_grid(n)
+            self.assertEqual(len(grid["panels"]), n)
+            for x, y, w, h in grid["panels"]:
+                self.assertGreaterEqual(x, 14)
+                self.assertLessEqual(x + w, 1010)
+                self.assertLessEqual(y + h, 664)  # above the band
+
+
+class TestToneSequencing(unittest.TestCase):
+    """Bank deltas 3+4 (2026-09-12 collection study): the wit is the
+    tonal CONTRAST -- the grim setup beat plans mid-tone texture, the
+    gag/reaction beats plan flat white; the adjacent tone delta is the
+    timing. Tone targets ride the script, the wireframe (data-tone),
+    and the component prompts."""
+
+    def setUp(self):
+        self.plan = md.plan_for(md.parse_item(ITEM_TEXT))
+        self.script = md.script_for(self.plan)
+
+    def test_beats_carry_tone_targets(self):
+        for b in self.script["beats"]:
+            self.assertIn("tone", b)
+        self.assertEqual(self.script["beats"][0]["tone"], md.TONE_GRIM)
+        self.assertEqual(self.script["beats"][1]["tone"], md.TONE_FLAT)
+        self.assertEqual(self.script["beats"][2]["tone"], md.TONE_FLAT)
+
+    def test_adjacent_tone_delta_setup_vs_gag(self):
+        """The check the study proposes: the planned sequence
+        alternates tone register between setup and gag panels."""
+        tones = [b["tone"] for b in self.script["beats"]]
+        self.assertNotEqual(tones[0], tones[2])
+
+    def test_wireframe_annotates_tone_per_panel(self):
+        svg = md.wireframe_svg(self.plan, self.script)
+        self.assertEqual(svg.count("data-tone="), 4)
+        self.assertIn('data-tone="%s"' % md.TONE_GRIM, svg)
+        self.assertIn('data-tone="%s"' % md.TONE_FLAT, svg)
+
+    def test_component_prompts_inherit_tone_targets(self):
+        prompts = md.component_prompts(self.plan, self.script)
+        by_region = {p["region"]: p for p in prompts}
+        env = by_region["environment"]["prompt"]
+        actor = by_region["actor:%s"
+                          % self.script["beats"][0]["cast"][0]]["prompt"]
+        self.assertIn("mid-gray", env)          # grim panel register
+        self.assertIn("clean white ground", actor)  # gag flat-white
 
 
 class TestAssemble(unittest.TestCase):
