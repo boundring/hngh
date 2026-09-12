@@ -1,30 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="820" viewBox="0 0 1024 820">
   <!-- gag-manga single-panel skeleton (P0: docs/records/2026-09-12-gag-manga-pipeline.md).
-       Placeholders are filled server-side by jobs/manga-draft.py; all text is
-       XML-escaped there. Image generation is optional (imagegen local leg). -->
+       Tightened 2026-09-12 (docs/research/2026-09-12-publication-review-01.md):
+       art zone grown to 640px (~80% of panel height), speech bubble anchored
+       at the upper-right third point of the art zone, SFX at the lower-left
+       third point. Placeholders are filled server-side by jobs/manga-draft.py;
+       all text is XML-escaped there. Image generation is optional (imagegen
+       local leg). -->
   <rect width="1024" height="820" fill="#f7f2e7"/>
-  <rect x="14" y="14" width="996" height="560" fill="#ffffff" stroke="#141414" stroke-width="7"/>
+  <rect x="14" y="14" width="996" height="640" fill="#ffffff" stroke="#141414" stroke-width="7"/>
 
   <!-- caption box -->
   <rect x="36" y="36" width="540" height="92" rx="4" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="22" font-weight="bold" fill="#141414">
     <tspan x="50" y="68">MEANWHILE, IN WORLD NEWS...</tspan>
   </text>
-  <!-- speech bubble + tail -->
-  <ellipse cx="716" cy="428" rx="244" ry="98" fill="#ffffff" stroke="#141414" stroke-width="5"/>
-  <polygon points="636,516 596,586 706,520" fill="#ffffff" stroke="#141414" stroke-width="5"/>
+  <!-- speech bubble + tail (third-point anchor: cx=2/3 of 1024, cy=1/3 of art zone) -->
+  <ellipse cx="682" cy="227" rx="244" ry="98" fill="#ffffff" stroke="#141414" stroke-width="5"/>
+  <polygon points="602,315 562,385 672,319" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="19" fill="#141414">
-    <tspan x="500" y="400">We prepared for everything except this</tspan><tspan x="500" y="424">exact thing.</tspan>
+    <tspan x="548" y="202">We prepared for everything except this</tspan><tspan x="548" y="226">exact thing.</tspan>
   </text>
-  <!-- SFX -->
-  <text x="110" y="536" font-family="monospace" font-size="54" font-weight="bold"
-        fill="#141414" transform="rotate(-12 110 536)">KRAK</text>
+  <!-- SFX (lower-left third point of the art zone) -->
+  <text x="110" y="580" font-family="monospace" font-size="54" font-weight="bold"
+        fill="#141414" transform="rotate(-12 110 580)">KRAK</text>
   <!-- narrative strip (grounded text + source citation) -->
-  <rect x="14" y="590" width="996" height="152" fill="#ffffff" stroke="#141414" stroke-width="5"/>
+  <rect x="14" y="668" width="996" height="112" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="17" fill="#141414">
-    <tspan x="28" y="620">Grounded event: Google no longer</tspan><tspan x="28" y="644">provides direct URLs in search results</tspan><tspan x="28" y="668">(severity NOTABLE). Source cited</tspan><tspan x="28" y="692">below.</tspan>
+    <tspan x="28" y="700">Grounded event: Google no longer</tspan><tspan x="28" y="722">provides direct URLs in search results</tspan><tspan x="28" y="744">(severity NOTABLE). Source cited</tspan><tspan x="28" y="766">below.</tspan>
   </text>
   <!-- attribution footer -->
   <!-- ponytail: single-line footer at 12px fits ~135 chars; per-word wrap if longer URLs appear -->
-  <text x="14" y="776" font-family="monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://www.autom.dev/blog/google-search-goto-links</text>
+  <text x="14" y="804" font-family="monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://www.autom.dev/blog/google-search-goto-links</text>
 </svg>
