@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:summary -->
+<!-- plan: status=superseded risk=normal accepted=2026-09-08T04:32:07Z routed-from=dash-selfreview:summary  cause=missing-design disposed=2026-09-12T14:13:41Z reason=design line landed: docs/research/2026-09-12-dash-selfreview-ledger-sync-skew.md; fix re-cut into plan 2026-09-12-routed-dash-selfreview-ledger-sync-skew -->
 # 2026-09-08 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:summary`
@@ -48,3 +48,13 @@ at 2026-09-08T02:43:12Z. Alert text: [dash-selfreview] summary: 7 findings (7 un
   rather than raw counts. Proposed plan slug:
   2026-09-12-routed-dash-selfreview-ledger-sync-skew. Blocker recorded
   per plan autonomy rule; step left unchecked.
+
+- 2026-09-12T14:13:26Z occurrence executed (session
+  2026-09-08-routed-dash-selfreview-summary executor beat). Design line
+  landed: docs/research/2026-09-12-dash-selfreview-ledger-sync-skew.md;
+  fix re-cut into plan
+  2026-09-12-routed-dash-selfreview-ledger-sync-skew (created accepted,
+  step unchecked). Drift re-measured read-only: rows=2383, bodies=2408,
+  drift=-25 — under LEDGER_DRIFT_MAX=50, the finding's own check passes
+  locally; no local repair exists. This plan is disposed superseded
+  (cause missing-design).
