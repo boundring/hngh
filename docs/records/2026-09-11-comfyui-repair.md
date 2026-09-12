@@ -43,9 +43,21 @@ cd /opt/comfyui && ~/.local/share/comfyui-venv312/bin/python main.py \
   --extra-model-paths-config ~/.config/comfyui/extra_model_paths.yaml
 ```
 
-Operator-run service posture: automation never starts/stops it; start-verify-
-stop always (GET / 200 -> generate -> stop). Add `--cpu` when the VRAM gate
-skips (text model resident): SD1.5 512x512 on CPU ~1-3 min.
+POSTURE CHANGE (2026-09-12, operator directive): operator-run -> hngh-operated
+transient per-run service. Automation owns the lifecycle now:
+`automation/lib/comfyui.sh` (comfyui_healthy / comfyui_start / comfyui_stop)
+and the managed-start branch in `automation/jobs/imagegen-submit.sh` -- spawn,
+health-poll, submit the batch, stop, all inside one run process; never a
+daemon, no systemd unit created (the systemd option below remains available
+for a future persistent deployment). Fail-closed: a failed managed start
+falls back to the pollinations free leg with a breadcrumb; the managed server
+is an upgrade, never a dependency. The VRAM/load gates stay authoritative and
+run BEFORE any spawn (one gate: "can we run imagegen at all").
+
+The old operator-run posture (below) is superseded only for THIS service;
+start-verify-stop always (GET / 200 -> generate -> stop) still applies to any
+operator-launched instance. Add `--cpu` when the VRAM gate skips (text model
+resident): SD1.5 512x512 on CPU ~1-3 min.
 
 ## GPU-window constraint
 
@@ -88,8 +100,9 @@ leg's own residency).
 ## Remaining operator steps
 
 - Optionally install the start command as a user systemd unit (on-demand
-  socket activation) -- not required for the cadence leg (it skips fail-closed
-  when the endpoint is down).
+  socket activation) for a PERSISTENT deployment -- still not created; the
+  2026-09-12 directive chose transient per-run operation instead (see the
+  posture change above).
 - Keep the text model and ComfyUI from overlapping: the VRAM gate is the
   coordination point; if the text model is resident, ComfyUI with `--cpu` is
   the fallback (slow but real).
