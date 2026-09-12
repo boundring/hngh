@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ttsr-fit:gopro-sync -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-12T12:02:15Z routed-from=ttsr-fit:gopro-sync -->
 # 2026-09-12 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ttsr-fit:gopro-sync`
@@ -12,3 +12,4 @@ at 2026-09-12T10:00:49Z. Alert text: ttsr fit: session gopro-sync — ttsr injec
 ## Occurrences
 
 - 2026-09-12T11:00:49Z re-occurred (dedup window expired)
+- 2026-09-12T12:00:49Z re-occurred (dedup window expired)
