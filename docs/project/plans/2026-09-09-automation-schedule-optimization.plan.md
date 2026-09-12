@@ -60,7 +60,7 @@ is already complete (operator-procedural sweep, twice over).
       slot 0 despite filename order.
       Verification: front-matter carries the key; the suite test from step 2
       demonstrates the selector would pick it as slot 0 despite filename order.
-- [ ] 4. Throughput evidence review. From the last 7 days of beat results
+- [x] 4. Throughput evidence review. From the last 7 days of beat results
       (overnight results logs, breadcrumb lines, sessions/day vs
       MAX_SESSIONS_DAY), measure: beats/day, slot utilization, degraded-session
       rate at each FF_SPEED tier. Only if the degraded rate is flat while
@@ -70,6 +70,12 @@ is already complete (operator-procedural sweep, twice over).
       Verification: analysis note in docs/research/ with the measured numbers;
       any tuning change ships with a test; if data does not support a change,
       the note says so and no code changes.
+      Executed 2026-09-12T22:02Z: note docs/research/2026-09-12-throughput-evidence-review.md;
+      23 beats / 43 sessions 2026-09-09..12 (aggregate crumbs only; the
+      09-05..08 window is pre-format-drift), non-ok 18/43=42%, degraded
+      22% at speed 1 vs 6-11% at speeds 2-3 — NO-GO: degraded rate not flat,
+      no tuning change, the ladder demotion is the safety mechanism working.
+      Gate-flap (step 5) named as the real lever.
 - [ ] 5. Gate-evaluation isolation under parallel beats (failing test
       first). Evidence: 2026-09-09 kernel-gate-red-rc2 and
       automation-gate-red-rc2 blocks at 14:01-19:01Z while isolated
