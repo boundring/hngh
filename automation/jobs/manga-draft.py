@@ -29,19 +29,49 @@ PANEL_SVG = os.path.join(ROOT, "config", "manga-panel.svg")
 DRAMA_LABEL = "[DRAMATIZATION - procedural gag, not a real quote]"
 
 SFX_BANK = ["KRUNK", "FWOOM", "BLORT", "KRAK", "WHOOSH", "GLORP"]
-SCENE_BANK = [
-    "two diplomats in oversized business suits arguing over a tiny table",
-    "a giant rubber stamp labeled with a treaty crashing onto a desk",
-    "a tank and a paper airplane facing off across a cracked road",
-    "a banker juggling floating coins while the ground rumbles",
-    "a weather reporter being blown sideways while still pointing",
-]
-REACTION_BANK = [
-    "I told you the paperwork was load-bearing!",
-    "This is fine. This is FINE.",
-    "Nobody reads the footnotes until the explosion.",
-    "We prepared for everything except this exact thing.",
-]
+
+# Comedy banks (2026-09-12 publication review): pools keyed by CAMEO
+# class so the strip gets recurring characters (a gag strip needs a cast),
+# with scene/dialogue/SFX drawn on different seed divisors so the same
+# cameo class still varies. Register: dry, deadpan, evidence-adjacent
+# humor -- the Saga voice (docs/dispatch "## The Saga") is the model.
+# QUIP_BUDGET is the deterministic cap the publication review checks.
+QUIP_BUDGET = 96
+CAMEOS = ["bureaucrat", "engineer", "nightwatch"]
+SCENES = {
+    "bureaucrat": [
+        "a bureaucrat stamping forms while the building tilts",
+        "two diplomats in oversized business suits arguing over a tiny table",
+        "a giant rubber stamp labeled with a treaty crashing onto a desk",
+    ],
+    "engineer": [
+        "an engineer tightening one bolt as the whole gantry groans",
+        "a tank and a paper airplane facing off across a cracked road",
+        "a banker juggling floating coins while the ground rumbles",
+    ],
+    "nightwatch": [
+        "the night watch pointing a flashlight at an empty corridor",
+        "a weather reporter being blown sideways while still pointing",
+        "a watchman reading incident reports by candlelight as lights flicker",
+    ],
+}
+REACTIONS = {
+    "bureaucrat": [
+        "The form for this does not exist yet.",
+        "Nobody reads the footnotes until the explosion.",
+        "Filed under: acts of god, subsection: this.",
+    ],
+    "engineer": [
+        "I told you the paperwork was load-bearing!",
+        "It worked in the diagram. Once.",
+        "This is fine. This is FINE.",
+    ],
+    "nightwatch": [
+        "We prepared for everything except this exact thing.",
+        "The log says this happened at 3 AM. It is 3 AM.",
+        "Nothing in the corridor. That is the problem.",
+    ],
+}
 
 
 def parse_item(text):
@@ -95,15 +125,17 @@ def plan_for(item, styles_tsv=STYLES_TSV):
     seed = sum(item["headline"].encode("utf-8"))
     subject = item["headline"].lower()[:120]
     style_id, prompt = image_prompt(styles_tsv, subject)
+    cameo = _pick(CAMEOS, seed // 5)
     sfx = _pick(SFX_BANK, seed)
-    scene = _pick(SCENE_BANK, seed // 7)
-    reaction = _pick(REACTION_BANK, seed // 3)
+    scene = _pick(SCENES[cameo], seed // 7)
+    reaction = _pick(REACTIONS[cameo], seed // 3)
     return {
         "band": item["band"],
         "headline": item["headline"],
         "url": item["url"],
         "style_id": style_id,
         "image_prompt": prompt,
+        "cameo": cameo,
         "scene": scene,
         "caption": "MEANWHILE, IN WORLD NEWS...",
         "dialogue": reaction,
@@ -134,11 +166,11 @@ def render_svg(plan, panel_svg=PANEL_SVG, image_href=None):
 
     parts = {
         "{{CAPTION}}": block(plan["caption"], 50, 68, 28),
-        "{{DIALOGUE}}": block(plan["dialogue"], 500, 400, 24),
+        "{{DIALOGUE}}": block(plan["dialogue"], 548, 202, 24),
         "{{SFX}}": tsvg(plan["sfx"]),
-        "{{NARRATIVE}}": block(plan["narrative"], 28, 620, 24),
+        "{{NARRATIVE}}": block(plan["narrative"], 28, 700, 22),
         "{{ATTRIB}}": tsvg(plan["attribution"]),
-        "{{IMAGE}}": ('<image x="18" y="18" width="988" height="552" '
+        "{{IMAGE}}": ('<image x="18" y="18" width="988" height="632" '
                       'href="%s" preserveAspectRatio="xMidYMid"/>' % image_href)
                       if image_href else "",
     }

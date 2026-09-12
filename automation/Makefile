@@ -101,6 +101,7 @@ test:
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
 	bash tests/test-research-review.sh
+	bash tests/test-publication-review.sh
 	bash tests/test-research-blockers.sh
 	bash tests/test-failfirst.sh
 	bash tests/test-system-awareness.sh

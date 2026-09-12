@@ -64,6 +64,14 @@ class TestPlan(unittest.TestCase):
         self.assertIn(item["headline"], p1["narrative"])
         self.assertTrue(p1["sfx"].isalpha())
 
+    def test_plan_cameo_and_quip_budget(self):
+        item = md.parse_item(ITEM_TEXT)
+        p = md.plan_for(item)
+        self.assertIn(p["cameo"], md.CAMEOS)
+        self.assertIn(p["scene"], md.SCENES[p["cameo"]])
+        self.assertIn(p["dialogue"], md.REACTIONS[p["cameo"]])
+        self.assertLessEqual(len(p["dialogue"]), md.QUIP_BUDGET)
+
     def test_plan_missing_style_row(self):
         with tempfile.NamedTemporaryFile("w", suffix=".tsv",
                                          delete=False) as fh:
