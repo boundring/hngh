@@ -17,6 +17,10 @@ DASH = ROOT / "dashboard"
 
 
 def src(name):
+    # dashboard/ is quarantined machine data (automation/.gitignore);
+    # a fresh clone (CI runner) has no served sources to contract-check
+    if not (DASH / "index.html").is_file():
+        raise unittest.SkipTest("dashboard/ not present (quarantined machine data)")
     return (DASH / name).read_text()
 
 
