@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FEED = ROOT / "cadence" / "hour" / "10-router-feed.sh"
-REAL_REPORT_QUEUE = Path("~/Projects/etc/hngh/scripts/report-queue").expanduser()
+REAL_REPORT_QUEUE = ROOT.parent / "scripts" / "report-queue"
 
 
 def accepted_plan(steps):
