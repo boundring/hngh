@@ -2100,7 +2100,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T04:01:29Z | alert | cad3a336 | plan acceptance blocked: kernel make test FAILED (rc=2) ×10 | 2026-09-11T04:01:29Z-alert-cad3a336.md |
 | 2026-09-11T04:11:55Z | alert | 7ef3f1fc | session touched critical paths in ~/Projects/etc/hngh/automation: automation/Makefile automation/tests/test-system-awareness.sh ×2 | 2026-09-11T04:11:55Z-alert-7ef3f1fc.md |
 | 2026-09-11T04:13:22Z | progress | 034f7b98 | research line fail-20260911-system-network-down: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-11-fail-20260911-system-network-down.md | 2026-09-11T04:13:22Z-progress-034f7b98.md |
-| 2026-09-11T04:15:00Z | alert | 8eaed562 | [oversight] slow-unit: dropin:33-research-beat.sh wall=76.0s median=0.1s ×117 | 2026-09-11T04:15:00Z-alert-8eaed562.md |
+| 2026-09-11T04:15:00Z | alert | 8eaed562 | [oversight] slow-unit: dropin:33-research-beat.sh wall=76.0s median=0.1s ×129 | 2026-09-11T04:15:00Z-alert-8eaed562.md |
 | 2026-09-11T04:21:01Z | progress | 5094b221 | research line fail-20260911-system-network-down: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-11-fail-20260911-system-network-down.md | 2026-09-11T04:21:01Z-progress-5094b221.md |
 | 2026-09-11T04:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T04:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T04:32:08Z | progress | fd4b62f5 | research line fail-20260911-system-network-down: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-11-fail-20260911-system-network-down.md | 2026-09-11T04:32:08Z-progress-fd4b62f5.md |
@@ -2188,7 +2188,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T09:02:46Z | alert | a6bf7ec2 | ttsr fit: session ttsr-rules — ttsr injections: 4 (>= threshold 3) — fix or park with cause | 2026-09-11T09:02:46Z-alert-a6bf7ec2.md |
 | 2026-09-11T09:02:47Z | progress | d9805edc | bctx context budget: expected 44% found 44% (emergencyThresholdPercent=75% nudgeGrowthTokens=20000) — ok (proxy token feed: no readable log found; ratio vital stays transcript-derived) | 2026-09-11T09:02:47Z-progress-d9805edc.md |
 | 2026-09-11T09:04:01Z | alert | 260121eb | overnight beat 2026-09-06-worker-transport-wiring could not open a bridge run: conflict labels=record-conflict | 2026-09-11T09:04:01Z-alert-260121eb.md |
-| 2026-09-11T09:05:00Z | alert | 9cf264f6 | [oversight] gate-red: hngh make test red — gate-check alert row unread in ledger ×205 | 2026-09-11T09:05:00Z-alert-9cf264f6.md |
+| 2026-09-11T09:05:00Z | alert | 9cf264f6 | [oversight] gate-red: hngh make test red — gate-check alert row unread in ledger ×217 | 2026-09-11T09:05:00Z-alert-9cf264f6.md |
 | 2026-09-11T09:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T09:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T09:35:02Z | progress | 2df42064 | agent-supervision: evicted-stale omp-dash-feedback-91b36d (idle 363m) | 2026-09-11T09:35:02Z-progress-2df42064.md |
 | 2026-09-11T10:00:46Z | progress | 0c54d42d | course bridge-operator-host: card mounted, last increment 2026-09-11T09:00:46Z | 2026-09-11T10:00:46Z-progress-0c54d42d.md |
@@ -2235,8 +2235,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-11T18:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T18:30:48Z-progress-6f20e8cb.md |
 | 2026-09-11T18:31:51Z | progress | 1e149d85 | research line cistern-test-coverage: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-11-cistern-test-coverage.md | 2026-09-11T18:31:51Z-progress-1e149d85.md |
 | 2026-09-11T18:47:54Z | progress | 69bd8fd6 | research line cistern-test-coverage: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-11-cistern-test-coverage.md | 2026-09-11T18:47:54Z-progress-69bd8fd6.md |
-| 2026-09-11T19:00:46Z | alert | e47c52e8 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1761 rows (485 ledger vs 2246 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×9 | 2026-09-11T19:00:46Z-alert-e47c52e8.md |
-| 2026-09-11T19:00:46Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×9 | 2026-09-11T19:00:46Z-alert-f438818b.md |
+| 2026-09-11T19:00:46Z | alert | e47c52e8 | [dash-selfreview] ledger-sanity: unacceptable-now — drift 1761 rows (485 ledger vs 2246 bodies) > 50 — queue panel would show rows whose bodies are gone; reconcile/prune ×10 | 2026-09-11T19:00:46Z-alert-e47c52e8.md |
+| 2026-09-11T19:00:46Z | alert | f438818b | [dash-selfreview] summary: 1 findings (1 unacceptable-now, 0 acceptable-for-now) ×10 | 2026-09-11T19:00:46Z-alert-f438818b.md |
 | 2026-09-11T19:00:46Z | progress | 3840d970 | course bridge-operator-host: card mounted, last increment 2026-09-11T18:00:46Z | 2026-09-11T19:00:46Z-progress-3840d970.md |
 | 2026-09-11T19:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-11T19:00:48Z-progress-6f20e8cb.md |
 | 2026-09-11T19:00:49Z | progress | ce916abb | router routed dash-selfreview:summary -> plan candidate 2026-09-11-routed-dash-selfreview-summary (routed-at 2026-09-11T19:00:48Z) | 2026-09-11T19:00:49Z-progress-ce916abb.md |
@@ -2299,7 +2299,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-12T00:00:46Z | progress | c8eee03d | course bridge-operator-host: card mounted, last increment 2026-09-11T23:00:46Z | 2026-09-12T00:00:46Z-progress-c8eee03d.md |
 | 2026-09-12T00:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-12T00:00:48Z-progress-6f20e8cb.md |
 | 2026-09-12T00:00:48Z | progress | 1b480598 | agent-supervision: evicted-stale omp-corpus-clean-942c6f (idle 362m) | 2026-09-12T00:00:48Z-progress-1b480598.md |
-| 2026-09-12T00:00:49Z | alert | c43a3f5f | router dedup: slow-unit:dropin:16-remote-push.sh suppressed (routed candidate 2026-09-11-routed-slow-unit-dropin-16-remote-push.sh still live, 0h old; day count 1) ×4 | 2026-09-12T00:00:49Z-alert-c43a3f5f.md |
+| 2026-09-12T00:00:49Z | alert | c43a3f5f | router dedup: slow-unit:dropin:16-remote-push.sh suppressed (routed candidate 2026-09-11-routed-slow-unit-dropin-16-remote-push.sh still live, 0h old; day count 1) ×5 | 2026-09-12T00:00:49Z-alert-c43a3f5f.md |
 | 2026-09-12T00:02:18Z | progress | 9558d8c2 | research line acpkernel-process-track: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-12-acpkernel-process-track.md | 2026-09-12T00:02:18Z-progress-9558d8c2.md |
 | 2026-09-12T00:02:55Z | progress | ef282125 | research line acpkernel-process-track: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-12-acpkernel-process-track.md | 2026-09-12T00:02:55Z-progress-ef282125.md |
 | 2026-09-12T00:18:15Z | progress | e9f78167 | research line acpkernel-process-track: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-12-acpkernel-process-track.md | 2026-09-12T00:18:15Z-progress-e9f78167.md |
@@ -2320,9 +2320,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-12T01:47:34Z | progress | 971b44ad | research line bigeye-caution-audit: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-12-bigeye-caution-audit.md | 2026-09-12T01:47:34Z-progress-971b44ad.md |
 | 2026-09-12T02:00:46Z | progress | fd830186 | course bridge-operator-host: card mounted, last increment 2026-09-12T01:00:46Z | 2026-09-12T02:00:46Z-progress-fd830186.md |
 | 2026-09-12T02:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-12T02:00:48Z-progress-6f20e8cb.md |
-| 2026-09-12T02:00:49Z | alert | 1551fdc6 | router dedup escalation: slow-unit:dropin:16-remote-push.sh recurring — suppressed 3 times today — escalated to operator visibility ×2 | 2026-09-12T02:00:49Z-alert-1551fdc6.md |
+| 2026-09-12T02:00:49Z | alert | 1551fdc6 | router dedup escalation: slow-unit:dropin:16-remote-push.sh recurring — suppressed 3 times today — escalated to operator visibility ×3 | 2026-09-12T02:00:49Z-alert-1551fdc6.md |
 | 2026-09-12T02:00:49Z | alert | 975b899c | router escalated: slow-unit:dropin:16-remote-push.sh re-occurred 3 times without landing — plan 2026-09-11-routed-slow-unit-dropin-16-remote-push.sh parked (cause=obsolete); operator disposition stands | 2026-09-12T02:00:49Z-alert-975b899c.md |
-| 2026-09-12T02:01:00Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) | 2026-09-12T02:01:00Z-alert-f7fd5d5b.md |
+| 2026-09-12T02:01:00Z | alert | f7fd5d5b | deck was reachable earlier today but the pull now fails (probe rc=255) ×2 | 2026-09-12T02:01:00Z-alert-f7fd5d5b.md |
 | 2026-09-12T02:01:41Z | progress | 2632ffb2 | research line bigeye-caution-audit: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-12-bigeye-caution-audit.md | 2026-09-12T02:01:41Z-progress-2632ffb2.md |
 | 2026-09-12T02:04:06Z | progress | 1f0cacfc | research line harness-delegation-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-12-harness-delegation-patterns.md | 2026-09-12T02:04:06Z-progress-1f0cacfc.md |
 | 2026-09-12T02:05:03Z | progress | 3809bf2d | agent-supervision: evicted-stale omp-kernel-gate-96e025 (idle 363m) | 2026-09-12T02:05:03Z-progress-3809bf2d.md |
@@ -2341,3 +2341,17 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-12T03:00:46Z | progress | 6e9d4f4b | course bridge-operator-host: card mounted, last increment 2026-09-12T02:00:46Z | 2026-09-12T03:00:46Z-progress-6e9d4f4b.md |
 | 2026-09-12T03:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-12T03:00:48Z-progress-6f20e8cb.md |
 | 2026-09-12T03:00:49Z | progress | 259203ef | router routed deck-unreachable-2026-09-12 -> plan candidate 2026-09-12-routed-deck-unreachable-2026-09-12 (routed-at 2026-09-12T03:00:49Z) | 2026-09-12T03:00:49Z-progress-259203ef.md |
+| 2026-09-12T03:02:23Z | progress | c1f51f0d | research line os-harness-cross-platform-patterns: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-12-os-harness-cross-platform-patterns.md | 2026-09-12T03:02:23Z-progress-c1f51f0d.md |
+| 2026-09-12T03:03:00Z | progress | f010f1af | research line harness-delegation-patterns reviewed: adopted (adopted -- ranked, low-cost transfers (R1–R4) with cleanly scoped verification gates ready to drive kernel hardening work immediately) | 2026-09-12T03:03:00Z-progress-f010f1af.md |
+| 2026-09-12T03:19:37Z | progress | 116b18cf | research line os-harness-cross-platform-patterns: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-12-os-harness-cross-platform-patterns.md | 2026-09-12T03:19:37Z-progress-116b18cf.md |
+| 2026-09-12T03:30:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-12T03:30:48Z-progress-6f20e8cb.md |
+| 2026-09-12T03:33:00Z | progress | 55a4675a | research line os-harness-cross-platform-patterns: contracting -> crystallized -> digest/RESEARCH-BEAT-2026-09-12-os-harness-cross-platform-patterns.md | 2026-09-12T03:33:00Z-progress-55a4675a.md |
+| 2026-09-12T03:49:48Z | progress | 75208542 | research line os-harness-distro-packaging: planned -> expanding -> digest/RESEARCH-BEAT-2026-09-12-os-harness-distro-packaging.md | 2026-09-12T03:49:48Z-progress-75208542.md |
+| 2026-09-12T04:00:46Z | progress | 89034751 | course bridge-operator-host: card mounted, last increment 2026-09-12T03:00:46Z | 2026-09-12T04:00:46Z-progress-89034751.md |
+| 2026-09-12T04:00:48Z | progress | 6f20e8cb | config-backup agent-configs: ok 9 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-12T04:00:48Z-progress-6f20e8cb.md |
+| 2026-09-12T04:00:49Z | alert | 40531ae2 | ui-audit axe:aria-required-children: 1 violation(s) — #tabs | 2026-09-12T04:00:49Z-alert-40531ae2.md |
+| 2026-09-12T04:00:49Z | progress | e7e31d0d | router routed ui-audit:axe:aria-required-children -> plan candidate 2026-09-12-routed-ui-audit-axe-aria-required-children (routed-at 2026-09-12T04:00:49Z) | 2026-09-12T04:00:49Z-progress-e7e31d0d.md |
+| 2026-09-12T04:00:49Z | alert | ee6a0026 | router dedup: deck-unreachable-2026-09-12 suppressed (routed candidate 2026-09-12-routed-deck-unreachable-2026-09-12 still live, 1h old; day count 1) | 2026-09-12T04:00:49Z-alert-ee6a0026.md |
+| 2026-09-12T04:01:45Z | alert | d7ffc115 | plan acceptance blocked: kernel make test FAILED (rc=2) | 2026-09-12T04:01:45Z-alert-d7ffc115.md |
+| 2026-09-12T04:02:04Z | progress | 02a2ae3c | research line os-harness-distro-packaging: expanding -> contracting -> digest/RESEARCH-BEAT-2026-09-12-os-harness-distro-packaging.md | 2026-09-12T04:02:04Z-progress-02a2ae3c.md |
+| 2026-09-12T04:02:27Z | progress | 68fc6a73 | plan 2026-09-06-routed-tree-skew-hngh-2 executed (all steps checked) | 2026-09-12T04:02:27Z-progress-68fc6a73.md |
