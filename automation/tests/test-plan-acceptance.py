@@ -350,12 +350,20 @@ class PlansViewContract(unittest.TestCase):
     mounted in the tab system — string-level checks are the honest
     runnable regression for a static page (test-readout-writers style)."""
 
+    # dashboard/ is machine data, quarantined out of git
+    # (automation/.gitignore) — a fresh clone has no surface to check
+    def _skip_absent(self):
+        if not (ROOT / "dashboard" / "index.html").is_file():
+            self.skipTest("dashboard/ not present (quarantined machine data)")
+
     def test_view_renders_feed_fields(self):
+        self._skip_absent()
         view = (ROOT / "dashboard" / "plans-view.js").read_text()
         for field in ("queue_next", "last_ceremony_commit", "plans"):
             self.assertIn(field, view)
 
     def test_view_mounted_in_page(self):
+        self._skip_absent()
         page = (ROOT / "dashboard" / "index.html").read_text()
         app = (ROOT / "dashboard" / "app.js").read_text()
         self.assertIn('data-tab="plans"', page)
