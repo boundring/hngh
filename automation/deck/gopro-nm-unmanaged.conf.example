@@ -1,0 +1,13 @@
+# NetworkManager: treat the GoPro's USB network interface as unmanaged.
+# The GoPro (USB cdc_ncm, MAC 04:57:47:7c:ce:3e -> enp16s0u4 on
+# brickertop) announces itself as a network device and NM churns
+# connections on every dock/undock; hngh rides tailscale and needs
+# nothing from it. Copy with sudo, then reload:
+#
+#   sudo cp gopro-nm-unmanaged.conf.example /etc/NetworkManager/conf.d/gopro.conf
+#   sudo nmcli general reload
+#
+# Installed example only -- NOT applied by automation (no-sudo rule).
+
+[keyfile]
+unmanaged-devices=mac:04:57:47:7c:ce:3e

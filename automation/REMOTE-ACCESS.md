@@ -56,6 +56,33 @@ dashboard at `http://100.83.36.27:8890`, ssh `bricker@100.83.36.27`
   is logged in; a full reboot requires logging back into desktop mode
   once (or `loginctl enable-linger deck` with sudo, follow-up).
 
+## Wake-on-LAN (both directions, prepared 2026-09-11)
+
+WoL is physical and LAN-local: magic packets are Ethernet/UDP
+**broadcast** frames and **never cross tailscale** -- sender and target
+must share the 192.168.0.x segment. No daemon runs either side (manual
+operator scripts only).
+
+- **Desktop -> deck**: `~/bin/wake-deck` (untracked operator tool) sends
+  a magic packet to the deck's Wi-Fi MAC `90:03:71:3f:e1:64` (wlan0) on
+  `192.168.0.255`. SteamOS support for WoL is limited; if the deck does
+  not wake from soft-off/suspend, that is a hardware/firmware limit,
+  not fixable in software.
+- **Deck -> desktop**: `automation/deck/wake-desktop.sh` -- copy it to
+  the deck the same way as the tailscale-serve shortcut (to
+  `~/bin/` or `~/Desktop/` on the deck, `chmod +x`). It targets the
+  desktop's wired NIC MAC `d8:43:ae:45:5d:1a` (enp14s0, 192.168.0.186).
+  The desktop's `Wake-on` state needs one operator check/enable with
+  sudo: `sudo ethtool enp14s0 | grep Wake` -- `Wake-on: g` required,
+  else `sudo ethtool -s enp14s0 wol g` plus a persistent enable
+  (systemd unit or NM dispatcher). NEVER send a wake packet to a
+  machine that is awake.
+- **GoPro false-network fix** (needs sudo, operator applies): the GoPro's
+  USB interface (cdc_ncm, MAC `04:57:47:7c:ce:3e`) makes NM churn
+  connections on dock/undock. Copy
+  `automation/deck/gopro-nm-unmanaged.conf.example` to
+  `/etc/NetworkManager/conf.d/gopro.conf`, then `sudo nmcli general reload`.
+
 ## Device pairing route (repeatable)
 
 The formal six-step procedure for connecting any new device to Hngh,
