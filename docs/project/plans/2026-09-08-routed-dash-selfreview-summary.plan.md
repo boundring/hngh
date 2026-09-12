@@ -58,3 +58,4 @@ at 2026-09-08T02:43:12Z. Alert text: [dash-selfreview] summary: 7 findings (7 un
   drift=-25 — under LEDGER_DRIFT_MAX=50, the finding's own check passes
   locally; no local repair exists. This plan is disposed superseded
   (cause missing-design).
+- 2026-09-12T23:00:49Z re-occurred (dedup window expired)
