@@ -124,9 +124,9 @@ class TestHnghPackages(unittest.TestCase):
             if ip.startswith("none-"):
                 self.assertNotEqual(ip, "none-", f"{p[0]}: bare 'none' lacks a reason")
                 continue
-            token = ip.split()[0]
-            if "/" in token and not os.path.isdir(os.path.dirname(token)):
-                continue  # different host entirely
+            if os.environ.get("CI") == "true" and not os.path.isdir(
+                    os.path.expanduser("~/.bun/bin")):
+                self.skipTest("foreign host (CI clone): machine paths cited")
             self.assertTrue(
                 path_resolves(ip),
                 f"{p[0]}: official install-path '{ip}' does not resolve on this machine",

@@ -97,9 +97,13 @@ class TestHnghServices(unittest.TestCase):
             ip = fields[3]
             if ip.startswith("none-") or not ip:
                 continue
-            token = ip.split()[0]
-            if "/" in token and not os.path.isdir(os.path.dirname(token)):
-                continue  # registry cites another host's paths (CI clone)
+            # the registry cites THIS operator's machine; a foreign clone
+            # (CI runner) has nothing to resolve -- detect the foreign
+            # host via the primary harness install the packages registry
+            # pins (a fresh runner has no /home/<operator>)
+            if os.environ.get("CI") == "true" and not os.path.isdir(
+                    os.path.expanduser("~/.bun/bin")):
+                self.skipTest("foreign host (CI clone): machine paths cited")
             self.assertTrue(path_resolves(ip), f"{fields[0]}: install-path '{ip}' does not resolve")
 
     def test_managed_by_repo_file_exists(self):
