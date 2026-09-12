@@ -61,9 +61,9 @@ run() { # args... -> stdout; stderr passes through for the caller to catch
 
 tsv="$root/config/imagegen-styles.tsv"
 
-# 1. committed TSV parses: 3 data rows, exactly 7 columns, lora slots
+# 1. committed TSV parses: 4 data rows, exactly 7 columns, lora slots
 # empty in the seed rows, and no artist names anywhere in the prompts.
-ck "tsv: 3 data rows" "3" \
+ck "tsv: 4 data rows" "4" \
   "$(awk -F'\t' '$1 !~ /^#/ && NF {print}' "$tsv" | wc -l)"
 ck "tsv: every data row has >=6 columns" "" \
   "$(awk -F'\t' '$1 !~ /^#/ && NF && NF < 6 {print $1}' "$tsv")"
@@ -74,9 +74,10 @@ ck "tsv: no artist names in prompts" "0" \
     grep -ci 'nihei\|hayashida\|matsumoto' || true)"
 
 # 2. --list-styles
-ck "list-styles: three ids" "hero-banner
+ck "list-styles: four ids" "hero-banner
 section-spacer
-environment" "$(run --list-styles)"
+environment
+manga-panel" "$(run --list-styles)"
 
 # 3. free leg, happy path (PNG stub): exit 0, conventional filename,
 # PNG magic preserved, status line points at the written file.
