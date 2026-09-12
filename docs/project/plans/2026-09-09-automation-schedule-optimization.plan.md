@@ -50,10 +50,14 @@ is already complete (operator-procedural sweep, twice over).
       Verification: suite test covers three cases (flag present sorts first,
       multiple flags keep filename order, no flag preserves current order);
       full `make test` green.
-- [ ] 3. Flag the operator-prioritized integration plan. Add
+- [x] 3. Flag the operator-prioritized integration plan. Add
       `priority=high` to the front-matter of
       docs/project/plans/2026-09-09-omp-hngh-integration.plan.md (depends on
       step 2 landing).
+      Executed 2026-09-12T18:35Z: front-matter now carries priority=high;
+      suite test test-plan-priority-selector.sh green rc=0 (all three
+      selector cases pass), demonstrating the selector would pick it as
+      slot 0 despite filename order.
       Verification: front-matter carries the key; the suite test from step 2
       demonstrates the selector would pick it as slot 0 despite filename order.
 - [ ] 4. Throughput evidence review. From the last 7 days of beat results

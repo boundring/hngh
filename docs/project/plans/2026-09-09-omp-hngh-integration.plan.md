@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T15:01:13Z -->
+<!-- plan: status=accepted risk=normal priority=high accepted=2026-09-09T15:01:13Z -->
 # 2026-09-09 — omp↔hngh full integration: plugin, MCP, skills, TTSR, context-seeding
 
 Operator-directed. Goal: make oh-my-pi (omp) and hngh a fully integrated pair —
