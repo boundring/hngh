@@ -137,6 +137,108 @@ class RendererTest(unittest.TestCase):
         self.assertEqual([r["date"] for r in idx], [DAY])
 
 
+class NewspaperTest(unittest.TestCase):
+    """Operator feedback 2026-09-12: columns, summaries, comic strip,
+    machine-hall ASCII, quip budget, unchanged contrast tokens."""
+
+    def _render(self, fx):
+        dh.DIGESTS = str(fx.tmp / "digest")
+        dh.TELEMETRY = str(fx.tmp / "telemetry.db")
+        dh.MEDIA = str(fx.tmp / "docs" / "media")
+        return dh.render_page(str(fx.tmp / "digest" / (DAY + ".md")),
+                              dh.DIGESTS, dh.TELEMETRY)
+
+    def test_columns_css(self):
+        self.assertIn("column-count:2", dh.STYLE)
+        self.assertIn("column-rule", dh.STYLE)
+        # contrast tokens unchanged (register law)
+        self.assertIn("--bg:#0d1117", dh.STYLE)
+        self.assertIn("--ink:#e6edf3", dh.STYLE)
+
+    def test_story_summaries(self):
+        with Fixture() as fx:
+            page = self._render(fx)
+        # every Deck A story carries a summary element
+        deck_a = page.split("Deck A")[1].split("Deck B")[0]
+        self.assertEqual(deck_a.count('<span class="sum">'),
+                         deck_a.count('class="item'))
+
+    def test_comic_strip_when_media_exists(self):
+        with Fixture() as fx:
+            panel = fx.tmp / "docs" / "media" / "manga" / "sample-panel.png"
+            panel.parent.mkdir(parents=True)
+            panel.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
+            page = self._render(fx)
+            self.assertIn('src="/hngh-docs/media/manga/sample-panel.png"',
+                          page)
+            # fail closed: no media -> no comic figure, no dead link
+            panel.unlink()
+            page = self._render(fx)
+        self.assertNotIn("hngh-docs/media", page)
+
+    def test_machine_hall_ascii(self):
+        with Fixture() as fx:
+            page = self._render(fx)
+        self.assertIn("machinehall", page)
+        hall = page.split('class="machinehall"')[1].split("</pre>")[0]
+        self.assertIn("#", hall)  # the 03h and 09h spend buckets render
+
+    def test_quip_budget(self):
+        with Fixture() as fx:
+            page = self._render(fx)
+        # max one quip per section; the page has at most 5 quip slots
+        self.assertLessEqual(page.count('class="quip"'), 5)
+        # quips are evidence-first: numbers ride inside the caption
+        quip = page.split('class="quip"')[1]
+        self.assertRegex(quip, r"\d")
+
+
+class PublicEditionTest(unittest.TestCase):
+    """digest-public.py: ledger first, summaries, comic link, quips."""
+
+    def setUp(self):
+        self.dp = _load("digest_public", "jobs/digest-public.py")
+        self.repo = Path(tempfile.mkdtemp())
+        auto = self.repo / "automation"
+        (auto / "digest").mkdir(parents=True)
+        (auto / "digest" / (DAY + ".md")).write_text(FIXTURE_DIGEST)
+        (auto / "dashboard").mkdir()
+        conn = sqlite3.connect(auto / "dashboard" / "telemetry.db")
+        conn.execute(
+            "CREATE TABLE events(ts TEXT, source TEXT, kind TEXT,"
+            " identity TEXT, lane TEXT, unit TEXT, model TEXT,"
+            " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
+            " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        conn.executemany(
+            "INSERT INTO events(ts, kind, tokens_in, cost_usd) VALUES(?,?,?,?)",
+            [("2026-09-11T03:00:00Z", "model", 1000, 0.30),
+             ("2026-09-11T09:00:00Z", "model", 5000, 0.75)])
+        conn.commit()
+        conn.close()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_layout_contract(self):
+        media = self.repo / "docs" / "media" / "manga"
+        media.mkdir(parents=True)
+        (media / "sample-panel.png").write_bytes(b"\x89PNG")
+        text = self.dp.render_page(DAY, str(self.repo))
+        text.encode("ascii")
+        # ledger band stays first, before prose decks
+        self.assertLess(text.index("## THE LEDGER"), text.index("## Deck A"))
+        # every Deck A story carries a summary line
+        deck_a = text.split("## Deck A")[1].split("## Deck B")[0]
+        self.assertEqual(deck_a.count("\n  _"), deck_a.count("\n- **"))
+        # committed media linked relatively (GitHub renders it)
+        self.assertIn("(../media/manga/sample-panel.png)", text)
+        # machine hall text-graphic present
+        self.assertIn("machine hall", text.lower())
+        # quip budget: at most one blockquote caption per section
+        self.assertLessEqual(text.count("\n> "), 5)
+
+
 class ServerRouteTest(unittest.TestCase):
     """/digest-html/ routes over a real bound server, seamed DIGESTS."""
 
@@ -192,6 +294,23 @@ class ServerRouteTest(unittest.TestCase):
         self.assertEqual(self._get("/digest-html/%s.md" % DAY)[0], 404)
         # garbage name -> 404
         self.assertEqual(self._get("/digest-html/<script>.html")[0], 404)
+
+    def test_media_jail(self):
+        media = self.fx.tmp / "docs" / "media" / "manga"
+        media.mkdir(parents=True)
+        (media / "sample-panel.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        ds.MEDIA_DOCS = str(self.fx.tmp / "docs" / "media")
+        status, body = self._get("/hngh-docs/media/manga/sample-panel.png")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            self._get("/hngh-docs/media/manga/sample-panel.png")[0], 200)
+        # traversal, wrong suffix, and missing files all fail closed
+        self.assertEqual(
+            self._get("/hngh-docs/media/..%2f..%2ftelemetry.db")[0], 404)
+        self.assertEqual(
+            self._get("/hngh-docs/media/manga/sample-panel.md")[0], 404)
+        self.assertEqual(
+            self._get("/hngh-docs/media/manga/nope.png")[0], 404)
 
 
 class BuilderTest(unittest.TestCase):
