@@ -100,3 +100,19 @@ certificate ceremony itself (scripts/ceremony-drive, fresh /tmp store,
 certificate-gated push). Standing rule for future machine beats:
 repo-root scripts/ commits require the 'hngh: candidate <hash>' label
 or a declared exemption.
+
+## The Saga (symbolic register, added post-ceremony)
+
+Operator steer, folded in after the gate cure: docs/dispatch gains an
+optional "## The Saga" section -- one short mythic-register line per
+day-event rendering blocker rows (bestiary cause classes as the hall's
+creatures; the park as the sealed wing; the dream pass as the
+night-watch's preparation) plus one night-watch line for the day's
+session lessons. Deterministic phrase table (SAGA_CLASSES in
+automation/jobs/digest-public.py, flavors from
+docs/design/bestiary.md), no model call, under 8 lines a day. Symbol
+above, citation below: every myth line carries a markdown footnote
+naming the ledger row it renders (lane, cause class, count, status /
+lesson classes), and the section is visibly labeled "symbolic
+register; facts are the cited ledgers." A quiet day renders no Saga.
+Tests: 2 new cases in tests/test-narrative-ledger.py (11 total).
