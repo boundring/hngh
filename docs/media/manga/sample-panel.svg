@@ -28,7 +28,7 @@
   </defs>
   <rect width="1024" height="820" fill="#f7f2e7"/>
 
-  <!-- hand-drawn scene placeholder: sits UNDER ; a generated panel covers it -->
+  <!-- hand-drawn scene placeholder: sits UNDER <image x="18" y="18" width="988" height="632" href="../imagegen/manga-panel-20260912T185223Z.png" preserveAspectRatio="xMidYMid"/>; a generated panel covers it -->
   <g clip-path="url(#artz)" filter="url(#ink)">
     <rect x="18" y="18" width="988" height="300" fill="#ffffff"/>
     <rect x="18" y="18" width="988" height="300" fill="url(#screentone)" opacity="0.5"/>
@@ -65,7 +65,7 @@
     <rect x="14" y="14" width="996" height="640" fill="none" stroke="#141414" stroke-width="7"/>
     <rect x="24" y="24" width="976" height="620" fill="none" stroke="#141414" stroke-width="2.5"/>
   </g>
-
+<image x="18" y="18" width="988" height="632" href="../imagegen/manga-panel-20260912T185223Z.png" preserveAspectRatio="xMidYMid"/>
   <!-- caption box -->
   <rect x="36" y="36" width="540" height="92" rx="3" fill="#ffffff" stroke="#141414" stroke-width="4"/>
   <text font-family="Iosevka, monospace" font-size="22" font-weight="bold" fill="#141414">

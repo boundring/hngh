@@ -14,14 +14,18 @@
 #           image, no key, 2026-09-11). Remote, so the VRAM/load gates DO
 #           NOT apply. Honest caveats: third-party service, prompts leave
 #           the machine, no SLA -- fail-closed bootstrap, never primary.
-#   else    local operator-run ComfyUI: endpoint = env IMAGEGEN_URL
+#   else    local hngh-operated ComfyUI: endpoint = env IMAGEGEN_URL
 #           (overrides) or the cadence-params row `imagegen-endpoint`.
 #           Empty row AND no env = leg skipped fail-closed, exit 0
 #           (exactly deck-model-endpoint semantics in lib/model.sh).
 #           The POST /prompt -> poll /history -> fetch /view path is live
 #           (operator repair 2026-09-11, design s6). The VRAM/load gates
 #           below guard it; the night-beat tenancy gate needs the
-#           cadence schedule (design s4 gate 3).
+#           cadence schedule (design s4 gate 3). Managed start (operator
+#           directive 2026-09-12): when the endpoint is down, this run
+#           starts ComfyUI transiently (lib/comfyui.sh), submits, and
+#           stops it; a failed start falls back to the free bootstrap
+#           leg -- never a dependency.
 #
 # Fail-closed everywhere: non-200/timeout -> exit 1 + stderr note, no
 # partial files (temp file + atomic mv on success only). The free leg
@@ -37,6 +41,7 @@ set -u
 
 aut="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$aut/lib/params.sh"
+. "$aut/lib/comfyui.sh"
 
 tsv="${IMAGEGEN_STYLES_TSV:-$aut/config/imagegen-styles.tsv}"
 out_dir="${IMAGEGEN_OUT_DIR:-$(cd "$aut/.." && pwd)/docs/media/imagegen}"
@@ -143,10 +148,30 @@ if [ "$free" -ne 1 ]; then
   echo "imagegen: load gate: loadavg1 $load busy -- skip" >&2
   exit 0
  }
- # local leg: API-format SD1.5 graph -> POST /prompt -> poll /history
- # -> fetch /view (design s4/s6). Fail-closed on any non-200/timeout.
- wf="$(mktemp)" || exit 1
- jq -n --arg p "$prompt" --argjson seed "$seed" --argjson w "$w" --argjson h "$h" '
+ # managed start: single authoritative gate above decided "can we run
+ # imagegen at all"; only then does the server get spawned (one gate,
+ # not two). Only stop what this run started (a pre-existing server is
+ # left alone).
+ managed_pid=""
+ if ! comfyui_healthy "$endpoint"; then
+  echo "imagegen: comfyui endpoint $endpoint down -- managed start" >&2
+  started="$(comfyui_start)"
+  if [ -n "$started" ]; then
+   managed_pid="${started%% *}"
+   echo "comfyui managed-start pid=$managed_pid in ${started#* }s" >&2
+   trap 'if [ -n "$managed_pid" ]; then comfyui_stop "$managed_pid" >/dev/null 2>&1; echo "comfyui managed-stop" >&2; fi' EXIT
+  else
+   echo "imagegen: managed start failed -- falling back to the free bootstrap leg (breadcrumb: managed-start-failed)" >&2
+   free=1
+  fi
+ else
+  echo "imagegen: comfyui already healthy at $endpoint" >&2
+ fi
+ if [ "$free" -ne 1 ]; then
+  # local leg: API-format SD1.5 graph -> POST /prompt -> poll /history
+  # -> fetch /view (design s4/s6). Fail-closed on any non-200/timeout.
+  wf="$(mktemp)" || exit 1
+  jq -n --arg p "$prompt" --argjson seed "$seed" --argjson w "$w" --argjson h "$h" '
     {"1": {class_type: "CheckpointLoaderSimple", inputs: {ckpt_name: "v1-5-pruned-emaonly.safetensors"}},
      "2": {class_type: "CLIPTextEncode", inputs: {text: $p, clip: ["1", 1]}},
      "3": {class_type: "CLIPTextEncode", inputs: {text: "color, blurry, text", clip: ["1", 1]}},
@@ -155,65 +180,71 @@ if [ "$free" -ne 1 ]; then
      "6": {class_type: "VAEDecode", inputs: {samples: ["4", 0], vae: ["1", 2]}},
      "7": {class_type: "SaveImage", inputs: {filename_prefix: "imagegen", images: ["6", 0]}}}' >"$wf"
 
- mkdir -p "$out_dir" || exit 1
- ts="$(date -u +%Y%m%dT%H%M%SZ)"
- while [ -e "$out_dir/${style}-${ts}.png" ]; do
-  sleep 1
+  mkdir -p "$out_dir" || exit 1
   ts="$(date -u +%Y%m%dT%H%M%SZ)"
- done
- out="$out_dir/${style}-${ts}.png"
- tmp="$(mktemp "$out_dir/.imagegen-XXXXXX")" || exit 1
+  while [ -e "$out_dir/${style}-${ts}.png" ]; do
+   sleep 1
+   ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  done
+  out="$out_dir/${style}-${ts}.png"
+  tmp="$(mktemp "$out_dir/.imagegen-XXXXXX")" || exit 1
 
- code="$(curl -sS --max-time 30 -o "$tmp" -w '%{http_code}' \
-  -H 'Content-Type: application/json' \
-  -d "{\"prompt\": $(cat "$wf")}" "$endpoint/prompt" 2>/dev/null)" || code=000
- rm -f "$wf"
- [ "$code" = 200 ] || {
-  echo "imagegen: comfyui POST /prompt HTTP ${code:-000} -- fail-closed" >&2
-  cat "$tmp" >&2 2>/dev/null
+  code="$(curl -sS --max-time 30 -o "$tmp" -w '%{http_code}' \
+   -H 'Content-Type: application/json' \
+   -d "{\"prompt\": $(cat "$wf")}" "$endpoint/prompt" 2>/dev/null)" || code=000
+  rm -f "$wf"
+  [ "$code" = 200 ] || {
+   echo "imagegen: comfyui POST /prompt HTTP ${code:-000} -- fail-closed" >&2
+   cat "$tmp" >&2 2>/dev/null
+   rm -f "$tmp"
+   exit 1
+  }
+  pid="$(jq -r .prompt_id "$tmp")"
   rm -f "$tmp"
-  exit 1
- }
- pid="$(jq -r .prompt_id "$tmp")"
- rm -f "$tmp"
- [ -n "$pid" ] && [ "$pid" != null ] || {
-  echo "imagegen: comfyui no prompt_id -- fail-closed" >&2
-  exit 1
- }
+  [ -n "$pid" ] && [ "$pid" != null ] || {
+   echo "imagegen: comfyui no prompt_id -- fail-closed" >&2
+   exit 1
+  }
 
- deadline=$(($(date +%s) + timeout_s))
- st="running"
- while [ "$(date +%s)" -lt "$deadline" ]; do
-  curl -sS --max-time 10 "$endpoint/history/$pid" -o "$tmp" 2>/dev/null || true
-  st="$(jq -r --arg p "$pid" '.[$p].status.status_str // ""' "$tmp" 2>/dev/null)"
-  [ "$st" = "success" ] && break
-  [ "$st" = "error" ] && break
-  sleep 5
- done
- [ "$st" = "success" ] || {
-  echo "imagegen: comfyui generation status=$st within ${timeout_s}s -- fail-closed" >&2
+  deadline=$(($(date +%s) + timeout_s))
+  st="running"
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+   curl -sS --max-time 10 "$endpoint/history/$pid" -o "$tmp" 2>/dev/null || true
+   st="$(jq -r --arg p "$pid" '.[$p].status.status_str // ""' "$tmp" 2>/dev/null)"
+   [ "$st" = "success" ] && break
+   [ "$st" = "error" ] && break
+   sleep 5
+  done
+  [ "$st" = "success" ] || {
+   echo "imagegen: comfyui generation status=$st within ${timeout_s}s -- fail-closed" >&2
+   rm -f "$tmp"
+   exit 1
+  }
+  meta="$(jq -r --arg p "$pid" '.[$p].outputs | to_entries[0].value.images[0] | "\(.filename)\t\(.subfolder)"' "$tmp" 2>/dev/null)"
   rm -f "$tmp"
-  exit 1
- }
- meta="$(jq -r --arg p "$pid" '.[$p].outputs | to_entries[0].value.images[0] | "\(.filename)\t\(.subfolder)"' "$tmp" 2>/dev/null)"
- rm -f "$tmp"
- [ -n "$meta" ] && [ "$meta" != null ] || {
-  echo "imagegen: comfyui no output image in history -- fail-closed" >&2
-  exit 1
- }
- fn="$(printf '%s' "$meta" | cut -f1)"
- sub="$(printf '%s' "$meta" | cut -f2)"
- code="$(curl -sS --max-time 30 --fail -o "$tmp" -G "$endpoint/view" \
-  --data-urlencode "filename=$fn" --data-urlencode "subfolder=$sub" \
-  --data-urlencode "type=output" 2>/dev/null)" || code=000
- if [ ! -s "$tmp" ]; then
-  echo "imagegen: comfyui /view fetch failed -- fail-closed" >&2
-  rm -f "$tmp"
-  exit 1
+  [ -n "$meta" ] && [ "$meta" != null ] || {
+   echo "imagegen: comfyui no output image in history -- fail-closed" >&2
+   exit 1
+  }
+  fn="$(printf '%s' "$meta" | cut -f1)"
+  sub="$(printf '%s' "$meta" | cut -f2)"
+  code="$(curl -sS --max-time 30 --fail -o "$tmp" -G "$endpoint/view" \
+   --data-urlencode "filename=$fn" --data-urlencode "subfolder=$sub" \
+   --data-urlencode "type=output" 2>/dev/null)" || code=000
+  if [ ! -s "$tmp" ]; then
+   echo "imagegen: comfyui /view fetch failed -- fail-closed" >&2
+   rm -f "$tmp"
+   exit 1
+  fi
+  mv "$tmp" "$out"
+  if [ -n "$managed_pid" ]; then
+   comfyui_stop "$managed_pid" >/dev/null 2>&1
+   echo "comfyui managed-stop" >&2
+   managed_pid=""
+  fi
+  echo "imagegen: wrote $out (style $style, ${w}x${h}, seed $seed, comfyui $endpoint)"
+  exit 0
  fi
- mv "$tmp" "$out"
- echo "imagegen: wrote $out (style $style, ${w}x${h}, seed $seed, comfyui $endpoint)"
- exit 0
 fi
 
 # --- free bootstrap leg (pollinations, keyless GET) ---

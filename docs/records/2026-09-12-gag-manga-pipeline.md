@@ -131,7 +131,10 @@ leg skips fail-closed by design):
 - [sample-panel.svg](../media/manga/sample-panel.svg) /
   [sample-panel.png](../media/manga/sample-panel.png) -- the rendered
   skeleton (caption box, speech bubble + tail, SFX, narrative strip,
-  attribution footer; empty image frame ready for the local leg).
+  attribution footer). Art slot filled 2026-09-12 via the hngh-operated
+  managed ComfyUI start (manga-panel row, seed 771; PNG at
+  docs/media/imagegen/manga-panel-20260912T185223Z.png, referenced from the
+  SVG's image frame).
 
 The daily digest gets a dispatch section wired in a later slice once
 the cadence beat exists (today's digest md is cadence-generated; a

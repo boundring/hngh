@@ -12,8 +12,9 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 trap 'rm -rf "$sb"' EXIT
 mkdir -p "$sb/automation/config" "$sb/automation/lib" "$sb/automation/jobs" \
-  "$sb/docs/media/imagegen" "$sb/shim"
+ "$sb/docs/media/imagegen" "$sb/shim"
 ln -s "$root/lib/params.sh" "$sb/automation/lib/params.sh"
+ln -s "$root/lib/comfyui.sh" "$sb/automation/lib/comfyui.sh"
 ln -s "$root/jobs/imagegen-submit.sh" "$sb/automation/jobs/imagegen-submit.sh"
 cp "$root/config/imagegen-styles.tsv" "$sb/automation/config/imagegen-styles.tsv"
 : >"$sb/curl-hits"
@@ -27,15 +28,41 @@ printf '%s\n' "$*" >>"${CURL_STUB_HITS:?}"
 mode="${CURL_STUB_MODE:-ok-png}"
 [ "$mode" = dead ] && exit 7
 out=""
+url=""
 prev=""
 for a in "$@"; do
   [ "$prev" = -o ] && out="$a"
+  case "$a" in http*) url="$a" ;; esac
   prev="$a"
 done
 case "$mode" in
   ok-png) printf '\x89PNG\r\n\x1a\nSTUBBODY' >"$out" ;;
   ok-jpeg) printf '\xff\xd8\xff\xe0STUBJPG' >"$out" ;;
   garbage) printf 'not an image at all' >"$out" ;;
+  managed-up)
+    case "$url" in
+      */health) : ;;
+      http://127.0.0.1:8188/) exit 7 ;;
+      */prompt) printf '{"prompt_id":"testpid"}' >"$out" ;;
+      */history/*) printf '{"testpid":{"status":{"status_str":"success"},"outputs":{"7":{"images":[{"filename":"stub.png","subfolder":""}]}}}}' >"$out" ;;
+      */view) printf '\x89PNG\r\n\x1a\nSTUBBODY' >"$out" ;;
+    esac ;;
+  managed-nohealth)
+    case "$url" in
+      */health|http://127.0.0.1:8188/) exit 7 ;;
+      *) printf '\x89PNG\r\n\x1a\nSTUBBODY' >"$out" ;;
+    esac ;;
+  managed-late|managed-promptdead)
+    case "$url" in
+      */health) [ -f "${STUB_SERVER_MARKER:-/nonexistent}" ] || exit 7 ;;
+      *) [ "$mode" = managed-late ] || exit 7
+         case "$url" in
+           http://127.0.0.1:8188/) exit 7 ;;
+           */prompt) printf '{"prompt_id":"testpid"}' >"$out" ;;
+           */history/*) printf '{"testpid":{"status":{"status_str":"success"},"outputs":{"7":{"images":[{"filename":"stub.png","subfolder":""}]}}}}' >"$out" ;;
+           */view) printf '\x89PNG\r\n\x1a\nSTUBBODY' >"$out" ;;
+         esac ;;
+    esac ;;
 esac
 echo 200
 EOF
@@ -43,20 +70,20 @@ chmod +x "$sb/shim/curl"
 
 fails=0
 ck() { # desc expected actual
-  if [ "$2" = "$3" ]; then echo "ok: $1"; else
-    echo "FAIL: $1 (want [$2] got [$3])"
-    fails=$((fails + 1))
-  fi
+ if [ "$2" = "$3" ]; then echo "ok: $1"; else
+  echo "FAIL: $1 (want [$2] got [$3])"
+  fails=$((fails + 1))
+ fi
 }
 run() { # args... -> stdout; stderr passes through for the caller to catch
-  (
-    export PATH="$sb/shim:$PATH"
-    export IMAGEGEN_STYLES_TSV="$sb/automation/config/imagegen-styles.tsv"
-    export IMAGEGEN_OUT_DIR="${TEST_OUT_DIR:-$sb/docs/media/imagegen}"
-    export CURL_STUB_HITS="$sb/curl-hits"
-    unset IMAGEGEN_URL IMAGEGEN_POLLINATIONS_BASE
-    bash "$sb/automation/jobs/imagegen-submit.sh" "$@"
-  )
+ (
+  export PATH="$sb/shim:$PATH"
+  export IMAGEGEN_STYLES_TSV="$sb/automation/config/imagegen-styles.tsv"
+  export IMAGEGEN_OUT_DIR="${TEST_OUT_DIR:-$sb/docs/media/imagegen}"
+  export CURL_STUB_HITS="$sb/curl-hits"
+  unset IMAGEGEN_POLLINATIONS_BASE
+  bash "$sb/automation/jobs/imagegen-submit.sh" "$@"
+ )
 }
 
 tsv="$root/config/imagegen-styles.tsv"
@@ -64,14 +91,14 @@ tsv="$root/config/imagegen-styles.tsv"
 # 1. committed TSV parses: 4 data rows, exactly 7 columns, lora slots
 # empty in the seed rows, and no artist names anywhere in the prompts.
 ck "tsv: 4 data rows" "4" \
-  "$(awk -F'\t' '$1 !~ /^#/ && NF {print}' "$tsv" | wc -l)"
+ "$(awk -F'\t' '$1 !~ /^#/ && NF {print}' "$tsv" | wc -l)"
 ck "tsv: every data row has >=6 columns" "" \
-  "$(awk -F'\t' '$1 !~ /^#/ && NF && NF < 6 {print $1}' "$tsv")"
+ "$(awk -F'\t' '$1 !~ /^#/ && NF && NF < 6 {print $1}' "$tsv")"
 ck "tsv: lora slots empty in seed rows" "" \
-  "$(awk -F'\t' '$1 !~ /^#/ && $7 != "" {print $1}' "$tsv")"
+ "$(awk -F'\t' '$1 !~ /^#/ && $7 != "" {print $1}' "$tsv")"
 ck "tsv: no artist names in prompts" "0" \
-  "$(awk -F'\t' '$1 !~ /^#/ {print tolower($5)}' "$tsv" |
-    grep -ci 'nihei\|hayashida\|matsumoto' || true)"
+ "$(awk -F'\t' '$1 !~ /^#/ {print tolower($5)}' "$tsv" |
+  grep -ci 'nihei\|hayashida\|matsumoto' || true)"
 
 # 2. --list-styles
 ck "list-styles: four ids" "hero-banner
@@ -102,7 +129,7 @@ url="$(tail -1 "$sb/curl-hits")"
 ck "url: single query separator" "1" "$(printf '%s' "$url" | tr -cd '?' | wc -c)"
 ck "url: exactly three '&' (param separators)" "3" "$(printf '%s' "$url" | grep -o '&' | wc -l)"
 ck "url: row params" "width=1536&height=512&seed=511&nologo=true" \
-  "${url#*\?}"
+ "${url#*\?}"
 case "$url" in *'test%20hall'*) ck "url: subject encoded+substituted" ok ok ;;
 *) ck "url: subject encoded+substituted" "test%20hall present" "missing" ;; esac
 rm -f "$sb/curl-hits"
@@ -153,8 +180,96 @@ run --free --style nope --subject 'x' >/dev/null 2>&1
 rc=$?
 ck "unknown style: exit 2" "2" "$rc"
 
+# --- managed-start lifecycle (operator directive 2026-09-12) ---
+mkdir -p "$sb/server"
+export STUB_SERVER_MARKER="$sb/server/marker"
+cat >"$sb/shim/stub-server" <<'EOF'
+#!/usr/bin/env bash
+echo $$ >"${STUB_SERVER_MARKER:?}"
+trap 'rm -f "$STUB_SERVER_MARKER"; exit 0' TERM
+sleep 120 &
+wait $!
+EOF
+chmod +x "$sb/shim/stub-server"
+cat >"$sb/shim/rocm-smi" <<'EOF'
+#!/usr/bin/env bash
+printf 'GPU[0]\t\t: VRAM Total Used Memory (B): %s\n' "${VRAM_STUB_USED:-1000000000}"
+EOF
+chmod +x "$sb/shim/rocm-smi"
+clean() {
+ rm -f "$sb/curl-hits"
+ rm -rf "$outdir"/* "$outdir"/.imagegen-* 2>/dev/null
+}
+no_spawn() { pgrep -f "$sb/shim/stub-server" >/dev/null && echo SPAWNED || echo ""; }
+
+# 10. VRAM gate ordering: over-threshold VRAM skips BEFORE any health
+# probe or managed start -- zero curl calls, no server spawn.
+clean
+err="$(VRAM_STUB_USED=9999999999 IMAGEGEN_URL=http://127.0.0.1:8188 \
+ run --style manga-panel --subject 'x' 2>&1 >/dev/null)"
+rc=$?
+ck "vram gate: exit 0 skip" "0" "$rc"
+ck "vram gate: no curl calls" "" "$(cat "$sb/curl-hits" 2>/dev/null)"
+ck "vram gate: no server spawn" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
+case "$err" in *"text model resident"*) ck "vram gate: skip note" ok ok ;;
+*) ck "vram gate: skip note" "skip note" "$err" ;; esac
+
+# 11. healthy server already up: submission proceeds, no managed spawn.
+clean
+err="$(CURL_STUB_MODE=managed-up IMAGEGEN_URL=http://127.0.0.1:8188 \
+ run --style manga-panel --subject 'tank vs plane' 2>&1 >/dev/null)"
+rc=$?
+ck "healthy: exit 0" "0" "$rc"
+ck "healthy: no spawn" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
+case "$err" in *"managed-start"*) ck "healthy: no managed-start" "absent" "found" ;;
+*) ck "healthy: no managed-start" ok ok ;; esac
+ck "healthy: png written" "1" "$(ls "$outdir"/*.png 2>/dev/null | wc -l)"
+
+# 12. endpoint down -> managed start -> submit -> managed stop (child
+# reaped, marker gone via the stub's TERM trap).
+clean
+err="$(CURL_STUB_MODE=managed-late IMAGEGEN_URL=http://127.0.0.1:8188 \
+ COMFYUI_PY="$sb/shim/stub-server" COMFYUI_DIR="$sb/server" \
+ COMFYUI_LOG="$sb/comfyui.log" \
+ run --style manga-panel --subject 'tank vs plane' 2>&1 >/dev/null)"
+rc=$?
+ck "managed: exit 0" "0" "$rc"
+case "$err" in *"comfyui managed-start pid="*) ck "managed: start log" ok ok ;;
+*) ck "managed: start log" "start log line" "$err" ;; esac
+case "$err" in *"comfyui managed-stop"*) ck "managed: stop log" ok ok ;;
+*) ck "managed: stop log" "stop log line" "$err" ;; esac
+ck "managed: child reaped" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
+ck "managed: marker removed" "" "$(cat "$STUB_SERVER_MARKER" 2>/dev/null)"
+ck "managed: png written" "1" "$(ls "$outdir"/*.png 2>/dev/null | wc -l)"
+
+# 13. start never healthy: fail-closed start, free bootstrap leg picks
+# the submission up, the timed-out child is killed.
+clean
+err="$(CURL_STUB_MODE=managed-nohealth IMAGEGEN_URL=http://127.0.0.1:8188 \
+ COMFYUI_PY="$sb/shim/stub-server" COMFYUI_DIR="$sb/server" \
+ COMFYUI_LOG="$sb/comfyui.log" COMFYUI_START_TIMEOUT=2 COMFYUI_POLL_INTERVAL=0.1 \
+ run --style manga-panel --subject 'tank vs plane' 2>&1 >/dev/null)"
+rc=$?
+ck "start-fail: exit 0 (free fallback)" "0" "$rc"
+case "$err" in *"falling back"*) ck "start-fail: fallback note" ok ok ;;
+*) ck "start-fail: fallback note" "falling back note" "$err" ;; esac
+ck "start-fail: child killed" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
+ck "start-fail: no comfyui submit" "" "$(grep -q '127.0.0.1:8188/prompt' "$sb/curl-hits" 2>/dev/null && echo found)"
+ck "start-fail: png written" "1" "$(ls "$outdir"/*.png 2>/dev/null | wc -l)"
+
+# 14. failure AFTER a healthy start still stops the child (trap).
+clean
+err="$(CURL_STUB_MODE=managed-promptdead IMAGEGEN_URL=http://127.0.0.1:8188 \
+ COMFYUI_PY="$sb/shim/stub-server" COMFYUI_DIR="$sb/server" \
+ COMFYUI_LOG="$sb/comfyui.log" \
+ run --style manga-panel --subject 'tank vs plane' 2>&1 >/dev/null)"
+rc=$?
+ck "trap: exit 1 fail-closed" "1" "$rc"
+ck "trap: no output files" "" "$(ls -A "$outdir" 2>/dev/null)"
+ck "trap: child killed" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
+
 rm -rf "$outdir" "$sb/curl-hits"
 [ "$fails" = 0 ] && echo "test-imagegen-submit: all pass" || {
-  echo "test-imagegen-submit: $fails failure(s)"
-  exit 1
+ echo "test-imagegen-submit: $fails failure(s)"
+ exit 1
 }

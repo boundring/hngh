@@ -37,7 +37,8 @@ opencode-agent	1800	50000	1800	lib/launch-session.sh:118,235 (session wall-clock
 #
 # --- image legs (not model-completion legs: no max_tokens exists; max-time
 # and size bounds declared for completeness, guard skips the output column) ---
-image-pollinations	120	-	-	jobs/imagegen-submit.sh:235 (--max-time IMAGEGEN_TIMEOUT default 120; size from imagegen-styles.tsv col 3)
-image-comfyui-submit	30	-	-	jobs/imagegen-submit.sh:167
-image-comfyui-history	10	-	-	jobs/imagegen-submit.sh:187
-image-comfyui-view	30	-	-	jobs/imagegen-submit.sh:206
+image-pollinations	120	-	-	jobs/imagegen-submit.sh:266 (--max-time IMAGEGEN_TIMEOUT default 120; size from imagegen-styles.tsv col 3)
+image-comfyui-health	2	-	-	automation/lib/comfyui.sh comfyui_healthy/comfyui_start poll/comfyui_stop confirm (GET /health|/ --max-time 2)
+image-comfyui-submit	30	-	-	jobs/imagegen-submit.sh:192
+image-comfyui-history	10	-	-	jobs/imagegen-submit.sh:212
+image-comfyui-view	30	-	-	jobs/imagegen-submit.sh:231
