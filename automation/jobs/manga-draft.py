@@ -28,7 +28,24 @@ STYLES_TSV = os.path.join(ROOT, "config", "imagegen-styles.tsv")
 PANEL_SVG = os.path.join(ROOT, "config", "manga-panel.svg")
 DRAMA_LABEL = "[DRAMATIZATION - procedural gag, not a real quote]"
 
-SFX_BANK = ["KRUNK", "FWOOM", "BLORT", "KRAK", "WHOOSH", "GLORP"]
+# SFX bank (2026-09-12 operator critique: "one KRAK and nothing else" is the
+# failure mode): onomatopoeia keyed to CAMEO class, 3-4 variants each, picked
+# on a different seed divisor so the same cameo still varies its sound.
+SFX_BANK = {
+    "bureaucrat": ["KRAK", "WHUMP", "TAK-TAK-TAK", "STAMP-STAMP"],
+    "engineer": ["KRAK", "FWOOOSH", "CLANG", "BZZT"],
+    "nightwatch": ["DING", "TOKU-TOKU", "FWOOOSH", "BZZT"],
+}
+# Margin notes: the second small text element a sparse panel needs
+# (hand-written register, kept dry).
+MARGIN_NOTES = [
+    "note: it was, in fact, not fine.",
+    "corridor B, 03:07. again.",
+    "initials: [illegible]",
+    "the bolt held. the diagram lied.",
+    "stamped twice by mistake. no retractions.",
+    "witnesses: one cat, unimpressed.",
+]
 
 # Comedy banks (2026-09-12 publication review): pools keyed by CAMEO
 # class so the strip gets recurring characters (a gag strip needs a cast),
@@ -126,7 +143,8 @@ def plan_for(item, styles_tsv=STYLES_TSV):
     subject = item["headline"].lower()[:120]
     style_id, prompt = image_prompt(styles_tsv, subject)
     cameo = _pick(CAMEOS, seed // 5)
-    sfx = _pick(SFX_BANK, seed)
+    sfx = _pick(SFX_BANK[cameo], seed // 11)
+    margin = _pick(MARGIN_NOTES, seed // 13)
     scene = _pick(SCENES[cameo], seed // 7)
     reaction = _pick(REACTIONS[cameo], seed // 3)
     return {
@@ -135,11 +153,13 @@ def plan_for(item, styles_tsv=STYLES_TSV):
         "url": item["url"],
         "style_id": style_id,
         "image_prompt": prompt,
+        "seed": seed,
         "cameo": cameo,
         "scene": scene,
         "caption": "MEANWHILE, IN WORLD NEWS...",
         "dialogue": reaction,
         "sfx": sfx,
+        "margin": margin,
         "narrative": "Grounded event: %s (severity %s). Source cited below."
                      % (item["headline"], item["band"]),
         "attribution": "%s -- GDELT 2.0 export, %s" % (DRAMA_LABEL, item["url"]),
@@ -158,6 +178,17 @@ def render_svg(plan, panel_svg=PANEL_SVG, image_href=None):
     def tsvg(text):
         return escape(text)
 
+    seed = plan.get("seed", 0)
+    # Hand-drawn jitter: frame tilt -0.5..0.5 deg; SFX drifts around the
+    # lower-left third point with rotation and scale variance (deterministic).
+    tilt = ((seed % 9) - 4) * 0.125
+    sx = 90 + (seed % 5) * 14
+    sy = 545 + ((seed // 5) % 4) * 12
+    srot = -16 + (seed % 9)
+    ssize = 46 + ((seed // 3) % 5) * 5
+    sfx_attrs = ('x="%d" y="%d" font-size="%d" transform="rotate(%d %d %d)"'
+                 % (sx, sy, ssize, srot, sx, sy))
+
     def block(text, x, y0, dy):
         return "".join(
             '<tspan x="%d" y="%d">%s</tspan>'
@@ -168,6 +199,9 @@ def render_svg(plan, panel_svg=PANEL_SVG, image_href=None):
         "{{CAPTION}}": block(plan["caption"], 50, 68, 28),
         "{{DIALOGUE}}": block(plan["dialogue"], 548, 202, 24),
         "{{SFX}}": tsvg(plan["sfx"]),
+        "{{SFX_ATTRS}}": sfx_attrs,
+        "{{TILT}}": "%.3f" % tilt,
+        "{{MARGIN}}": tsvg(plan["margin"]),
         "{{NARRATIVE}}": block(plan["narrative"], 28, 700, 22),
         "{{ATTRIB}}": tsvg(plan["attribution"]),
         "{{IMAGE}}": ('<image x="18" y="18" width="988" height="632" '
