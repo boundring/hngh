@@ -62,7 +62,10 @@ class TestPlan(unittest.TestCase):
         self.assertIn("DRAMATIZATION", p1["attribution"])
         self.assertIn(item["url"], p1["attribution"])
         self.assertIn(item["headline"], p1["narrative"])
-        self.assertTrue(p1["sfx"].isalpha())
+        # hyphenated onomatopoeia (TAK-TAK-TAK) is legal; banks are cameo-keyed
+        self.assertRegex(p1["sfx"], r"^[A-Z]+(-[A-Z]+)*$")
+        self.assertIn(p1["sfx"], md.SFX_BANK[p1["cameo"]])
+        self.assertTrue(p1["margin"])
 
     def test_plan_cameo_and_quip_budget(self):
         item = md.parse_item(ITEM_TEXT)
@@ -92,6 +95,8 @@ class TestRender(unittest.TestCase):
         svg = md.render_svg(plan, panel_svg=str(ROOT / "config/manga-panel.svg"))
         self.assertIsNotNone(svg)
         self.assertNotIn("{{", svg)
+        self.assertIn('transform="rotate(', svg)  # SFX placement + tilt jitter
+        self.assertIn(plan["margin"], svg)
         self.assertNotIn("<script>", svg)
         self.assertIn("&lt;script&gt;", svg)
         self.assertIn("DRAMATIZATION", svg)
