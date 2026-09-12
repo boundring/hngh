@@ -92,3 +92,48 @@ perm_secret_ok() { [ "$PERM_SECRET_ACCESS" != "none" ]; }
 # perm_paths -> newline-separated time-travel roots (the profile's
 # file-paths; the scope the snapshot machinery may touch).
 perm_paths() { printf '%s' "$PERM_FILE_PATHS"; }
+
+# sudoers_for PROFILE [USER] -> scoped sudoers.d drop-in on stdout.
+# The profile is the durable approval record; this emits the enforcement
+# (contract: docs/records/2026-09-12-privilege-model.md §sudoers). Each
+# checked host-action maps 1:1 to a Cmnd_Alias; unchecked contribute
+# nothing. Fail-closed: an invalid profile emits nothing, rc 1. This
+# GENERATES the rules only - nothing here installs them; installation is
+# the operator's one password moment (installer offers it; hngh itself
+# never runs sudo install).
+sudoers_for() { # PROFILE-JSON [USER]
+  local f="$1" user="${2:-${HNGH_SUDO_USER:-hngh}}" ha
+  perm_validate "$f" >/dev/null || return 1
+  ha="$(jq -cr '.["host-actions"]' "$f")"
+  local -a aliases=()
+  [ "$(jq -r '.["package-updates"]' <<<"$ha")" = true ] &&
+    aliases+=(HNGH_PKGCACHE HNGH_PARU_CLEAN)
+  [ "$(jq -r '.wol' <<<"$ha")" = true ] && aliases+=(HNGH_WOL)
+  [ "$(jq -r '.snapshots' <<<"$ha")" = true ] && aliases+=(HNGH_BTRFS_SNAP)
+  cat <<EOF
+# hngh-automation scoped sudo rules - generated $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+# grant source: permissions-profile.json (the checked host-actions below)
+# scoped per docs/records/2026-09-12-privilege-model.md; no NOPASSWD:ALL
+EOF
+  [ ${#aliases[@]} -eq 0 ] && return 0
+  printf '\n# host-actions.package-updates: package cache hygiene only (no installs, no upgrades).\n'
+  case " ${aliases[*]} " in
+  *" HNGH_PKGCACHE "*)
+    printf 'Cmnd_Alias HNGH_PKGCACHE = /usr/bin/paccache -r *\nCmnd_Alias HNGH_PARU_CLEAN = /usr/bin/paru -Sc *\n'
+    ;;
+  esac
+  case " ${aliases[*]} " in
+  *" HNGH_WOL "*)
+    printf '\n# host-actions.wol: link wake flags only.\nCmnd_Alias HNGH_WOL = /usr/bin/ethtool wol *\n'
+    ;;
+  esac
+  case " ${aliases[*]} " in
+  *" HNGH_BTRFS_SNAP "*)
+    printf '\n# host-actions.snapshots: btrfs time travel scoped to the profile file-paths; no subvolume delete.\n'
+    printf 'Cmnd_Alias HNGH_BTRFS_SNAP = /usr/bin/btrfs subvolume snapshot *, /usr/bin/btrfs subvolume list *\n'
+    ;;
+  esac
+  local joined
+  joined="$(printf '%s, ' "${aliases[@]}")"
+  printf '\n%s ALL=(root) NOPASSWD: %s\n' "$user" "${joined%, }"
+}

@@ -126,10 +126,26 @@ sys.exit(0 if c.get("installer_mode") == "non-interactive" else 1)
   fi
 fi
 
-# --- (e) sentinel: sudo never invoked, no curl|bash in the installer --------
+# --- (e) sentinel: no sudo outside the operator-prompted grant block, -------
+# no curl|bash anywhere. The ONE sanctioned sudo surface is the interactive
+# phase-5b grant (the operator answers y at a TTY; non-interactive runs never
+# reach it - (f) and test-permissions (g) prove that behaviorally).
 sentinel_hits=""
+grant_block=""
 if [ -f "$INSTALLER" ]; then
-  sentinel_hits="$(grep -nE '\bsudo\b|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$INSTALLER")"
+  grant_block="$(sed -n '/# --- phase 6b: scoped sudo grant/,/^step_row 06 permissions ok$/p' "$INSTALLER")"
+  rest="$(sed '/# --- phase 6b: scoped sudo grant/,/^step_row 06 permissions ok$/d' "$INSTALLER")"
+  # comments are prose, not invocation - judge code lines only
+  sentinel_hits="$(grep -v '^[[:space:]]*#' <<<"$rest" |
+    grep -nE '\bsudo\b|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh')"
+  case "$grant_block" in
+  *"sudo visudo -cf"*) ok "grant block: visudo -cf validation precedes install" ;;
+  *) bad "grant block missing visudo -cf validation" ;;
+  esac
+  case "$grant_block" in
+  *chmod\ 440*) ok "grant block: installs mode 0440" ;;
+  *) bad "grant block missing chmod 440" ;;
+  esac
 fi
 if [ -f "$PLATFORM" ]; then
   sentinel_hits="$sentinel_hits$(grep -nE '\bsudo\b|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$PLATFORM")"
@@ -180,7 +196,7 @@ if [ -f "$INSTALLER" ]; then
   esac
   prev=-1
   order=1
-  for n in 01 02 03 04 05; do
+  for n in 01 02 03 04 05 06 07; do
     pos="$(printf '%s' "$color" | grep -abo -m1 "$n\." | cut -d: -f1)"
     if [ -z "$pos" ] || [ "$pos" -le "$prev" ]; then
       order=0
@@ -189,11 +205,11 @@ if [ -f "$INSTALLER" ]; then
     prev="$pos"
   done
   if [ "$order" -eq 1 ]; then
-    ok "playlist numbers 01-05 present in execution order"
+    ok "playlist numbers 01-07 present in execution order"
   else
     bad "playlist numbers missing or out of order in colored run"
   fi
-  for w in platform prereqs stage preferences record; do
+  for w in platform prereqs stage preferences services permissions record; do
     printf '%s' "$color" | grep -q "$w" || bad "playlist step '$w' missing"
   done
   case "$color" in

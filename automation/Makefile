@@ -55,6 +55,7 @@ test:
 	python3 -B tests/test-doc-hygiene.py
 	python3 -B tests/test-leg-budgets.py
 	python3 -B tests/test-hngh-packages.py
+	python3 -B tests/test-hngh-services.py
 	python3 -B tests/test-doc-filter.py
 	python3 -B tests/test-router-tick.py
 	python3 -B tests/test-router-feed.py

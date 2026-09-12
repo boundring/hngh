@@ -24,6 +24,9 @@
 #     (default automation/config/installer-choices.json, gitignored)
 #   HNGH_PERMISSIONS_PROFILE  where the resolved grant profile lands
 #     (default ~/.hngh-automation/permissions-profile.json)
+#   HNGH_SERVICE_ANSWERS      whitespace-split answers queue for the
+#     companion-services poll (install/configure/skip; consumed in registry
+#     order; missing entries take the register-only default)
 set -u
 case "$0" in */*) ROOT="$(cd "${0%/*}" && pwd)" ;; *) ROOT="$PWD" ;; esac
 AUTO="$ROOT/automation"
@@ -239,8 +242,9 @@ step_plan() {
   step_row 02 prereqs pending
   step_row 03 stage pending
   step_row 04 preferences pending
-  step_row 05 permissions pending
-  step_row 06 record pending
+  step_row 05 services pending
+  step_row 06 permissions pending
+  step_row 07 record pending
 }
 
 # Winamp seek bar: one line redrawn in place (\r) while a slow step runs.
@@ -263,7 +267,7 @@ seek_bar() { # LABEL PCT
 }
 TMPLOG="$(mktemp)"
 TMPRC="$TMPLOG.rc"
-trap 'rm -f "$TMPLOG" "$TMPRC"' EXIT
+trap 'rm -f "$TMPLOG" "$TMPRC" "${SERVICES_OUT:-}"' EXIT
 # run_winamp [--quiet] LABEL CMD... -> seek-bar wrapper; rc = CMD's rc.
 # Output is buffered to a temp log while the bar runs and printed verbatim
 # after the bar completes (TTY only; PLAIN runs the command untouched).
@@ -341,6 +345,15 @@ else
   exit $?
 fi
 if [ "$CHECK" -eq 1 ]; then
+  # services registry: status column only (read-only; no polls, no choices)
+  . "$AUTO/lib/service-mgmt.sh"
+  plate "--- companion services (registry status; nothing installed) ---"
+  svc_rows | while IFS=$'\t' read -r svc disp path start url mgr method; do
+    if svc_health "$url"; then st="up"; else st="down"; fi
+    printf '  %-22s %-14s %s\n' "$svc" "$disp" "$st"
+  done
+  say "  services: registry status only (--check); no polls, no installs"
+  echo
   say "check-only: nothing staged, nothing recorded"
   exit 0
 fi
@@ -383,7 +396,55 @@ ask DESKTOP "desktop (kde|gnome|both|none)" "none"
 ask JS_PM "js toolchain (npm|pnpm|bun)" "npm"
 step_row 04 preferences ok
 
-# --- phase 5: permissions profile (the operator-gated grant surface) --------
+# --- phase 5: companion services (registry-driven, ask-able set) ------------
+# Standing operator pattern (docs/records/2026-09-12-services-management.md):
+# hngh manages what it can be authorized for. The registry
+# (automation/config/hngh-services.tsv) is open-ended; this phase reads it,
+# DETECTS services whose health endpoint answers, and — TTY only — polls the
+# operator for the ask-able dispositions (available|registered-only|absent).
+# Default = register-only: the choice is recorded, NOTHING is installed.
+# An explicit "install" runs svc_install, which prints the operator step and
+# installs nothing (sudo levers are printed, never executed). In-use and
+# operator-run rows are recorded, never polled.
+SERVICES_TSV="$AUTO/config/hngh-services.tsv"
+. "$AUTO/lib/service-mgmt.sh"
+SERVICES_OUT="$(mktemp)"
+plate "--- companion services (registry: $SERVICES_TSV; default register-only) ---"
+svc_phase() {
+  local row svc disp url
+  while IFS=$'\t' read -r svc disp path start url mgr method; do
+    local st
+    if svc_health "$url"; then
+      st="detected"
+    else
+      case "$disp" in
+      in-use | operator-run) st="$disp" ;;
+      *)
+        local verb
+        verb="$(svc_ask_manage "$svc")"
+        case "$verb" in
+        install)
+          st="operator-step"
+          svc_install "$svc" || true
+          ;;
+        configure)
+          st="configure"
+          say "  $svc: configure surface is $url (recorded; nothing changed)"
+          ;;
+        skip) st="skip" ;;
+        *) st="register-only" ;;
+        esac
+        ;;
+      esac
+    fi
+    printf '%s\t%s\t%s\n' "$svc" "$disp" "$st" >>"$SERVICES_OUT"
+    printf '  %-22s %-14s %s\n' "$svc" "$disp" "$st"
+  done < <(svc_rows)
+}
+svc_phase
+step_row 05 services ok
+
+# --- phase 6: permissions profile (the operator-gated grant surface) --------
 # The AUTHORITATIVE statement of what hngh may do on this host (contract:
 # automation/lib/permissions.sh; docs/records/2026-09-12-privilege-model.md).
 # hngh machinery reads ONLY the resolved profile written below - an absent
@@ -464,17 +525,67 @@ fi
 perm_load "$PERM_OUT"
 say "permissions profile: $PERM_OUT (the grant surface hngh reads)"
 say "sudoers template (operator installs): $AUTO/config/hngh-automation.sudoers.example"
-step_row 05 permissions ok
 
-# --- phase 6: choices record (reproducibility: what the operator picked) ----
+# --- phase 6b: scoped sudo grant (the ONE password moment) --------------------
+# The profile written above is the durable approval record; the sudoers.d
+# drop-in generated from it is the enforcement. Interactive TTY: one prompt,
+# visudo -cf validation, then cp + chmod 440 - sudo runs HERE, from the
+# installer, never from hngh. Non-interactive: the exact commands are
+# printed as operator steps, never run.
+SUDOERS_TARGET="${HNGH_SUDOERS_TARGET:-/etc/sudoers.d/hngh-automation}"
+SUDOERS_TMP="$(mktemp /tmp/hngh-sudoers.XXXXXX)"
+sudoers_for "$PERM_OUT" >"$SUDOERS_TMP" || SUDOERS_TMP=""
+SUDOERS_ALIASES=""
+perm_granted snapshots && SUDOERS_ALIASES+=",HNGH_BTRFS_SNAP"
+perm_granted package-updates && SUDOERS_ALIASES+=",HNGH_PKGCACHE,HNGH_PARU_CLEAN"
+perm_granted wol && SUDOERS_ALIASES+=",HNGH_WOL"
+SUDOERS_ALIASES="${SUDOERS_ALIASES#,}"
+SUDOERS_INSTALLED=false
+if [ -n "$SUDOERS_ALIASES" ]; then
+  _steps() {
+    say "operator steps (exact commands):"
+    say "  sudo visudo -cf $SUDOERS_TMP"
+    say "  sudo cp $SUDOERS_TMP $SUDOERS_TARGET && sudo chmod 440 $SUDOERS_TARGET"
+  }
+  if [ "$NONINTERACTIVE" -eq 1 ] || [ ! -t 0 ]; then
+    say "sudo grant recorded but NOT installed (generated rules: $SUDOERS_TMP)"
+    _steps
+  else
+    read -r -p "$(c moss "install scoped sudo rules for the granted actions? [y/N] ")" _sg </dev/tty || _sg=""
+    case "$_sg" in
+    y | Y)
+      if sudo visudo -cf "$SUDOERS_TMP" &&
+        sudo cp "$SUDOERS_TMP" "$SUDOERS_TARGET" &&
+        sudo chmod 440 "$SUDOERS_TARGET"; then
+        SUDOERS_INSTALLED=true
+        say "sudo rules installed: $SUDOERS_TARGET"
+      else
+        say "sudo install did not complete; retry manually:"
+        _steps
+      fi
+      ;;
+    esac
+  fi
+fi
+step_row 06 permissions ok
+
+# --- phase 7: choices record (reproducibility: what the operator picked) ----
 # The machine record stays PLAIN text - the presentation layer never colors
 # or reshapes it.
 CHOICES_FILE="${HNGH_CHOICES_FILE:-$AUTO/config/installer-choices.json}"
 MODE="interactive"
 [ "$NONINTERACTIVE" -eq 1 ] && MODE="non-interactive"
-python3 - "$CHOICES_FILE" "$MODE" "$PM" "$EDITOR" "$BROWSER" "$DESKTOP" "$JS_PM" "$PERM_OUT" <<'PY'
+python3 - "$CHOICES_FILE" "$MODE" "$PM" "$EDITOR" "$BROWSER" "$DESKTOP" "$JS_PM" "$PERM_OUT" \
+  "$SUDOERS_INSTALLED" "$SUDOERS_ALIASES" "$SERVICES_OUT" <<'PY'
 import json, os, sys, datetime
-path, mode, pm, editor, browser, desktop, js_pm, perm = sys.argv[1:]
+path, mode, pm, editor, browser, desktop, js_pm, perm, s_installed, s_aliases, services_file = sys.argv[1:]
+services = []
+if os.path.isfile(services_file):
+    with open(services_file) as sf:
+        services = [
+            dict(zip(("service", "disposition", "status"), line.rstrip("\n").split("\t")))
+            for line in sf if line.strip()
+        ]
 rec = {
     "installer_mode": mode,
     "package_manager": pm,
@@ -483,6 +594,11 @@ rec = {
     "desktop": desktop,
     "js_pm": js_pm,
     "permissions_profile": perm,
+    "sudoers": {
+        "installed": s_installed == "true",
+        "aliases": [a for a in s_aliases.split(",") if a],
+    },
+    "services": services,
     "recorded_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
 }
 os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -491,7 +607,7 @@ with open(path, "w") as f:
     f.write("\n")
 print("choices record:", path)
 PY
-step_row 05 record ok
+step_row 07 record ok
 
 # --- optional companions + systemd: PRINTED, never executed here ------------
 plate "--- optional companions (NOT installed by this skeleton) ---"
