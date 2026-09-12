@@ -82,12 +82,34 @@ COMPONENT_BUDGET = 3
 # component prompt inherits this string verbatim. Descriptor language
 # only, never artist names (test-enforced; the study references live in
 # docs/design/manga-style-research.md as reading notes, not prompt data).
-STYLE_CORE = ("monochrome ink illustration, bold confident ink linework, "
-              "dense cross-hatching on shadow and towering dark structures, "
-              "screentone shading, vast negative space, high contrast "
-              "black and white, muted desaturated accents, moss and bone "
-              "motifs, cathedral-scale brutalist machine architecture, "
-              "clean white ground, no text in image")
+# 2026-09-12 collection study (docs/research/2026-09-12-manga-collection-
+# study.md): masters run 0.55-0.96 white ground on story pages and the
+# sparse-ink economy (ink 0.08-0.20, white 0.66-0.71) out-says dense ink,
+# so white ground + negative space now LEAD the descriptor order (they
+# were buried mid-string and the output under-used them).
+STYLE_CORE = ("monochrome ink illustration, clean white ground, "
+              "vast negative space, at least half the frame left empty, "
+              "bold confident ink linework, high contrast black and "
+              "white, screentone shading, dense cross-hatching on "
+              "shadow and towering dark structures, muted desaturated "
+              "accents, moss and bone motifs, cathedral-scale "
+              "brutalist machine architecture, no text in image")
+
+# Tone sequencing (2026-09-12 collection study, bank deltas 3+4): the
+# wit is the tonal CONTRAST -- grim setup pages run the dense mid-gray
+# register (0.4-0.6 tone coverage in the measured grim sample), while
+# the reaction/gag pages go flat white; the adjacent tone delta IS the
+# timing. Per-beat targets ride the script, the wireframe (data-tone),
+# and the component prompts.
+TONE_GRIM = ("page-wide mid-gray screentone texture, dense gray wash, "
+             "low white ground")
+TONE_FLAT = "flat white, clean white ground, vast negative space"
+
+# Density band (2026-09-12 collection study, bank delta 1): masters run
+# 4.6 panels/page average (up to 8-11 on calm pages); the old 1-3
+# default under-ran. Story beats expand to 3-5 panels per page; splash
+# beats stay 1 panel (density is a RHYTHM choice, vary it).
+DENSITY_MIN, DENSITY_MAX = 3, 5
 
 # Pose library: simple stick-figure poses keyed to beat type. Each pose
 # is a tiny SVG fragment generator (head + spine + limbs), drawn by
@@ -175,10 +197,12 @@ RECOGNITIONS = {
     ],
 }
 
-# Strip geometry (operator critique 2, items 3/5): the wireframe models a
-# 1-3 panel grid. 3 beats -> horizontal strip (setup | reaction | gag),
-# 2 beats -> vertical stack, 1 beat -> single panel. GUTTER px between
-# frames; panels are (x, y, w, h) in the same 1024x820 canvas.
+# Strip geometry (operator critique 2, items 3/5; density band updated
+# 2026-09-12 per the collection study): the wireframe models a 1-5
+# panel grid. 3 beats -> horizontal strip (setup | reaction | gag),
+# 2 beats -> vertical stack, 1 beat -> single panel, 4 -> 2x2 grid,
+# 5 -> 3-over-2 grid. GUTTER px between frames; panels are (x, y, w, h)
+# in the same 1024x820 canvas.
 GUTTER = 14
 
 
@@ -193,9 +217,41 @@ def panel_grid(n):
         ph = (ART_H - GUTTER) // 2
         return {"orientation": "vertical", "panels":
                 [(14, 14, 996, ph), (14, 14 + ph + GUTTER, 996, ph)]}
+    if n == 4:
+        pw = (996 - GUTTER) // 2
+        ph = (ART_H - GUTTER) // 2
+        return {"orientation": "grid-2x2", "panels":
+                [(14, 14, pw, ph), (14 + pw + GUTTER, 14, pw, ph),
+                 (14, 14 + ph + GUTTER, pw, ph),
+                 (14 + pw + GUTTER, 14 + ph + GUTTER, pw, ph)]}
+    if n >= 5:
+        pw3 = (996 - 2 * GUTTER) // 3
+        pw2 = (996 - GUTTER) // 2
+        ph = (ART_H - GUTTER) // 2
+        return {"orientation": "grid-3-2", "panels":
+                [(14 + i * (pw3 + GUTTER), 14, pw3, ph) for i in range(3)]
+                + [(14 + j * (pw2 + GUTTER), 14 + ph + GUTTER, pw2, ph)
+                   for j in range(2)]}
     pw = (996 - 2 * GUTTER) // 3
     return {"orientation": "horizontal", "panels":
             [(14 + i * (pw + GUTTER), 14, pw, ART_H) for i in range(3)]}
+
+
+def beat_panels(script):
+    """The density rule (2026-09-12 collection study, bank delta 1):
+    expand script beats to panels for the 3-5 band. Each beat defaults
+    to 1 panel; a content-heavy beat (its visual note implies two
+    beats' worth of action, marked "panels": 2 by the script pass)
+    splits across 2; a splash beat (splash flag) always stays 1. A
+    lone beat is a splash by definition. Capped at the band's top."""
+    beats = script["beats"]
+    if len(beats) < 2:
+        return [(0, 0)]
+    panels = []
+    for bi, b in enumerate(beats):
+        for sub in range(1 if b.get("splash") else b.get("panels", 1)):
+            panels.append((bi, sub))
+    return panels[:DENSITY_MAX]
 
 
 def sfx_anchor(panel, focal, seed):
@@ -290,7 +346,7 @@ def _panel_scene(px, py, pw, ph, seed, i):
     return "".join(parts)
 
 
-def _panel_text_layer(plan, b, rect, seed, i):
+def _panel_text_layer(plan, b, rect, seed, i, beat_index=None):
     """Per-panel text layer: actor slot (pose library), focal-action
     mark, setup caption OR ellipse bubble with a curved bezier tail to
     the actor's head, the beat's register line, and -- on the reaction
@@ -304,7 +360,8 @@ def _panel_text_layer(plan, b, rect, seed, i):
     focal = (px + pw * (0.35 + ((seed + i) % 5) * 0.08),
              py + ph * 0.42)
     parts = ['<g data-beat="%d" data-kind="%s" data-pose="%s">'
-             % (i, b["kind"], b["pose"]),
+             % (i if beat_index is None else beat_index,
+                b["kind"], b["pose"]),
              '<path data-focal="%s" d="M%.0f %.0f L%.0f %.0f" '
              'stroke="#141414" stroke-width="3" fill="none" '
              'marker-end="url(#focalhead)"/>'
@@ -380,16 +437,22 @@ def script_for(plan):
         "beats": [
             {"kind": "setup", "cast": [cameo], "pose": "standing-deadpan",
              "register": "narration", "line": narration,
+             # grim/deadpan setup: mid-tone texture target; the visual
+             # note carries two eye-hits (caption, then the structure),
+             # so the density rule splits it across 2 panels.
+             "splash": False, "panels": 2, "tone": TONE_GRIM,
              "camera": "wide, figure small against the machinery",
              "eye": "narration caption first, then the tilted structure",
              "visual": plan["scene"] + ". " + narration},
             {"kind": "reaction", "cast": [cameo], "pose": "reacting",
              "register": "recognition", "line": recognition,
+             "splash": False, "panels": 1, "tone": TONE_FLAT,
              "camera": "medium, face in frame, star-highlight eyes",
              "eye": "the face, then the focal action behind it",
              "visual": "close on %s reacting; %s" % (cameo, plan["sfx"])},
             {"kind": "gag", "cast": [cameo], "pose": "pointing",
              "register": "punch", "line": plan["dialogue"],
+             "splash": False, "panels": 1, "tone": TONE_FLAT,
              "camera": "medium-wide, diagonal depth to the focal action",
              "eye": "the dialogue bubble, then the aftermath",
              "visual": plan["dialogue"]},
@@ -452,24 +515,33 @@ def wireframe_svg(plan, script, width=1024, height=820):
     and give assemble_svg its injection points."""
     seed = plan["seed"]
     beats = script["beats"]
-    grid = panel_grid(len(beats))
+    expansion = beat_panels(script)
+    grid = panel_grid(len(expansion))
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="%d" '
              'height="%d" viewBox="0 0 %d %d">' % (width, height,
                                                    width, height),
              WF_DEFS,
              '<rect width="%d" height="%d" fill="#f7f2e7"/>' % (width,
                                                                 height)]
-    for i, (b, rect) in enumerate(zip(beats, grid["panels"])):
-        parts.append('<g data-panel="%d" data-orientation="%s">'
-                     % (i, grid["orientation"]))
+    for i, (bi, sub) in enumerate(expansion):
+        b = beats[bi]
+        rect = grid["panels"][i]
+        # wide establishing shot first when a beat splits across panels
+        pose = ("small-in-frame"
+                if sub and b["pose"] != "small-in-frame" else b["pose"])
+        parts.append('<g data-panel="%d" data-orientation="%s" '
+                     'data-tone="%s">'
+                     % (i, grid["orientation"], b["tone"]))
         gy = rect[1] + rect[3] - 40
-        h = rect[3] * (0.5 if b["pose"] != "small-in-frame" else 0.26)
+        h = rect[3] * (0.5 if pose != "small-in-frame" else 0.26)
         ax = rect[0] + rect[2] / 2.0 + (seed % 21) - 10
         parts.append('<g data-panelimg="%d">%s%s</g>'
                      % (i, _panel_scene(rect[0], rect[1], rect[2],
                                         rect[3], seed, i),
-                        _stick(ax, gy, h, b["pose"], seed + i)))
-        parts.append(_panel_text_layer(plan, b, rect, seed, i))
+                        _stick(ax, gy, h, pose, seed + i)))
+        if not sub:  # the beat's text layer rides its first panel
+            parts.append(_panel_text_layer(plan, b, rect, seed, i,
+                                           beat_index=bi))
         # frame drawn over the scene so art never crosses the border
         parts.append('<rect x="%d" y="%d" width="%d" height="%d" '
                      'fill="none" stroke="#141414" stroke-width="5"/>'
@@ -504,14 +576,21 @@ def component_prompts(plan, script, cast=None):
     sheet = script.get("cast_sheet", {})
     actor_desc = sheet.get("appearance", script["beats"][0]["cast"][0])
     actor_seed = sheet.get("seed", seed)
+    # per-panel tone targets inherited into the prompts (2026-09-12
+    # collection study): the grim setup panel carries the mid-gray
+    # texture register, the gag panel the flat-white ground.
+    tones = {b["kind"]: b.get("tone", TONE_FLAT)
+             for b in script["beats"]}
     prompts = [
         {"region": "environment", "size": "768x512", "seed": seed,
-         "prompt": "%s environment plate, empty of figures, %s"
-                   % (plan["scene"], STYLE_CORE)},
+         "prompt": "%s environment plate, empty of figures, %s, %s"
+                   % (plan["scene"],
+                      tones.get("setup", TONE_GRIM), STYLE_CORE)},
         {"region": "actor:%s" % script["beats"][0]["cast"][0],
          "size": "512x768", "seed": actor_seed,
          "prompt": "single character, full figure, standing on a plain "
-                   "white ground, %s, %s" % (actor_desc, STYLE_CORE)},
+                   "white ground, %s, %s, %s"
+                   % (actor_desc, tones.get("gag", TONE_FLAT), STYLE_CORE)},
     ]
     return prompts[:COMPONENT_BUDGET]
 

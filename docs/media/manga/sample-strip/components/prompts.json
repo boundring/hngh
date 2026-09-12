@@ -3,12 +3,12 @@
     "region": "environment",
     "size": "768x512",
     "seed": 4538,
-    "prompt": "an engineer tightening one bolt as the whole gantry groans environment plate, empty of figures, monochrome ink illustration, bold confident ink linework, dense cross-hatching on shadow and towering dark structures, screentone shading, vast negative space, high contrast black and white, muted desaturated accents, moss and bone motifs, cathedral-scale brutalist machine architecture, clean white ground, no text in image"
+    "prompt": "an engineer tightening one bolt as the whole gantry groans environment plate, empty of figures, page-wide mid-gray screentone texture, dense gray wash, low white ground, monochrome ink illustration, clean white ground, vast negative space, at least half the frame left empty, bold confident ink linework, high contrast black and white, screentone shading, dense cross-hatching on shadow and towering dark structures, muted desaturated accents, moss and bone motifs, cathedral-scale brutalist machine architecture, no text in image"
   },
   {
     "region": "actor:engineer",
     "size": "512x768",
     "seed": 5521,
-    "prompt": "single character, full figure, standing on a plain white ground, a wiry engineer in a patched work jacket, small head, large gloves, a wrench slung on the back like a rifle, soot smudge on one cheek, monochrome ink illustration, bold confident ink linework, dense cross-hatching on shadow and towering dark structures, screentone shading, vast negative space, high contrast black and white, muted desaturated accents, moss and bone motifs, cathedral-scale brutalist machine architecture, clean white ground, no text in image"
+    "prompt": "single character, full figure, standing on a plain white ground, a wiry engineer in a patched work jacket, small head, large gloves, a wrench slung on the back like a rifle, soot smudge on one cheek, flat white, clean white ground, vast negative space, monochrome ink illustration, clean white ground, vast negative space, at least half the frame left empty, bold confident ink linework, high contrast black and white, screentone shading, dense cross-hatching on shadow and towering dark structures, muted desaturated accents, moss and bone motifs, cathedral-scale brutalist machine architecture, no text in image"
   }
 ]

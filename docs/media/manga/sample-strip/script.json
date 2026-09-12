@@ -9,6 +9,9 @@
       "pose": "standing-deadpan",
       "register": "narration",
       "line": "It was an ordinary day in the hall. That was the problem.",
+      "splash": false,
+      "panels": 2,
+      "tone": "page-wide mid-gray screentone texture, dense gray wash, low white ground",
       "camera": "wide, figure small against the machinery",
       "eye": "narration caption first, then the tilted structure",
       "visual": "an engineer tightening one bolt as the whole gantry groans. It was an ordinary day in the hall. That was the problem."
@@ -21,6 +24,9 @@
       "pose": "reacting",
       "register": "recognition",
       "line": "The diagram was right. That is worse.",
+      "splash": false,
+      "panels": 1,
+      "tone": "flat white, clean white ground, vast negative space",
       "camera": "medium, face in frame, star-highlight eyes",
       "eye": "the face, then the focal action behind it",
       "visual": "close on engineer reacting; KRAK"
@@ -33,6 +39,9 @@
       "pose": "pointing",
       "register": "punch",
       "line": "I told you the paperwork was load-bearing!",
+      "splash": false,
+      "panels": 1,
+      "tone": "flat white, clean white ground, vast negative space",
       "camera": "medium-wide, diagonal depth to the focal action",
       "eye": "the dialogue bubble, then the aftermath",
       "visual": "I told you the paperwork was load-bearing!"
