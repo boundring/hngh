@@ -34,6 +34,7 @@ rows() {
 }
 run() {
   BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
+    HNGH_HOME="$(cd "$root/.." && pwd)" \
     bash "$root/cadence/day/23-bctx-canary.sh"
 }
 reset() {
