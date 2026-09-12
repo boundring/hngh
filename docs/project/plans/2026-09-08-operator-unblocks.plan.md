@@ -20,7 +20,7 @@ Grounding notes:
 
 ## Steps
 
-- [ ] 1. RESEARCH — operator procedural unblock. Document the exact operator steps needed to unblock the 2026-09-03-staging and 2026-09-03-capabilities plans. The steps are:
+- [x] 1. RESEARCH — operator procedural unblock. Document the exact operator steps needed to unblock the 2026-09-03-staging and 2026-09-03-capabilities plans. The steps are:
   - Install 1Password CLI (`op`) and sign in (`op signin`)
   - Install playwright (`npm install -g playwright`) and chromium (`playwright install chromium`)
   - Load SMTP credential into 1Password (`op item create --vault=<vault> --title=<title> email <user> password <pass>`)
@@ -34,6 +34,16 @@ Grounding notes:
   run green with zero code changes (exit 0, 0 violations). Only the
   SMTP-credential item-create remains operator-side.
   Verification: a research note (docs/research/2026-09-08-operator-procedural-unblocks.md) with the exact operator steps quoted, the current state of each prerequisite, and a verdict on whether the operator can proceed autonomously or needs human intervention.
+  RESOLUTION 2026-09-12 (session re-verification, stale-state check): note
+  landed at docs/research/2026-09-12-operator-procedural-unblocks.md (the
+  step's 2026-09-08 path was never authored; dated today instead). Live
+  state: `op` 2.39.0 (linuxbrew, not on non-login PATH), google-chrome +
+  puppeteer-core/axe-core confirmed, playwright correctly absent,
+  ~/.hngh-automation/notify-email.conf present since 2026-09-09 but every
+  send fails closed (automation/scripts/notify-email.py:116) — 1Password
+  unreadable and conf pass empty. Verdict: remaining steps are strictly
+  human (desktop-app integration, `op signin`, SMTP item-create or conf
+  pass); no autonomous unblock possible.
 - [ ] 2. GROW — capabilities plan completion. Complete the remaining steps of the 2026-09-03-capabilities plan (steps 8, 9):
   - Step 8: queue-drain verification beat (already authored: docs/research/2026-09-08-queue-drain-verification.md)
   - Step 9: wrap, lessons, author-next-plan (this plan file)
