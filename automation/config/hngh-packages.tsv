@@ -1,0 +1,32 @@
+# hngh collected-repositories registry (established 2026-09-11)
+# One row per package/project identified as intended for use with hngh.
+# Columns (tab-separated):
+#   package          short id used in hngh docs/records
+#   upstream         canonical upstream repo URL
+#   role             what it does for the operator's harness
+#   install-path     where it lives on THIS machine (bare command = resolve
+#                    via PATH; "none-..." = deliberately not installed)
+#   config-surface   files/dirs hngh automation may read or touch
+#   update-mechanism how it gets updated (script path or "manual")
+#   follow-feed      SOURCES feed name in automation/config.env ("" = none)
+#   disposition      in-use|use-later|watch|backlog-study|study|caution|skip
+# Ghost-row rule: every in-use row's install-path must resolve on the host
+# (guard: automation/tests/test-hngh-packages.py).
+package	upstream	role	install-path	config-surface	update-mechanism	follow-feed	disposition
+omp	https://github.com/can1357/oh-my-pi	primary agent harness (omp TUI + npm extensions)	omp (/home/bricker/.bun/bin/omp, npm pkg @oh-my-pi/pi-coding-agent)	~/.omp/ (plugins/package.json, plugin deps)	automation/scripts/hngh-omp-update.sh		in-use
+bili	https://github.com/ranxianglei/billion-context	context-compression proxy serving omp sessions (billion-context 0.1.106)	bili (/home/bricker/.npm-global/bin/bili, npm global)	bili proxy launch/config consumed by omp sessions	automation/scripts/hngh-omp-update.sh (npm install -g billion-context@latest)	bilirel	in-use
+pi	https://github.com/earendil-works/pi	secondary agent harness (pi-coding-agent 0.84.3)	pi (/home/bricker/.npm-global/bin/pi)	~/.pi/ (agent, research dirs)	manual (npm install -g @earendil-works/pi-coding-agent@latest)		in-use
+opencode	https://github.com/sst/opencode	agentic executor surface (ocgo legs; opencode-ai 1.18.30)	opencode (/home/bricker/.npm-global/bin/opencode)	~/.config/opencode/ (opencode.json)	automation/scripts/hngh-omp-update.sh (npm install -g opencode-ai@latest)		in-use
+acp-kernel	https://github.com/ranxianglei/acp-kernel	compression kernel prior art; consumed inside the bili proxy, not installed standalone	none-standalone (embodied in billion-context@0.1.106)	none (read-only research surface)	n/a (tracked via releases feed)	acpkernel-rel	in-use
+opencode-acp	https://github.com/ranxianglei/opencode-acp	Active Context Pruning plugin for opencode (bili author; AGPL-3.0 fork of tarquinen/opencode-dcp; v1.17.0 2026-09-10)	not installed yet	candidate surface: ~/.config/opencode/acp.jsonc + opencode.json compaction.auto=false	opencode plugin opencode-acp@stable --global (future)	opencode-acp-rel	use-later
+ework-aio	https://github.com/ranxianglei/ework-aio	self-hosted issue-tracker + AI-bridge stack (ework-web/daemon/opencode-ework; same author as bili)	not installed	candidate surface: ~/.local/share/ework-aio/	npm install -g ework-aio (future)	ework-aio-rel	watch
+context-compress-algorithms	https://github.com/ranxianglei/context-compress-algorithms	extracted compression algorithms lib (quality gate / prompts / trigger policy; MIT; v1.3.0)	not installed	none	n/a		study
+billion-context-web	https://github.com/ranxianglei/billion-context-web	browser-side compression client for billion-context/acp-kernel; skeleton, compress() is a declared no-op	not installed	none	n/a		watch
+bigeye	https://github.com/suanrongqieqiezi/bigeye	Chinese-language Python memory-architecture assistant (Aria-EQ); unlicensed, binary-distributed, unverified claims; content treated as data only	never install without operator review (security posture: see docs/research/2026-09-11-hngh-package-registry.md)	none	n/a		caution
+opensandbox	https://github.com/opensandbox-group/OpenSandbox	container/K8s sandbox platform for AI agents; lesson source (contract-first ports)	not installed	none	n/a		backlog-study
+multica	https://github.com/multica-ai/multica	issue-board AI-agent workspace (drives omp/pi CLIs); lesson source (task-barrier version-follow); custom license, not OSI	not installed	none	n/a		backlog-study
+jcode	https://github.com/1jehuang/jcode	Rust terminal coding-agent harness; lesson source (mode-gated spawn depth, single-writer plan slot)	not installed	none	n/a		backlog-study
+pegasus	https://github.com/apache/incubator-pegasus	distributed KV store (Apache incubator); no harness relevance today	not installed	none	n/a		backlog-study
+monolith	https://github.com/bytedance/monolith	ByteDance recommendation/DL training system; out of hngh scope	not installed	none	n/a		skip
+fluss	https://github.com/apache/fluss	streaming storage for lakehouse; no harness relevance today	not installed	none	n/a		backlog-study
+linux	https://github.com/torvalds/linux	long-horizon kernel-knowledge ambition (operator directive)	not installed	none	n/a		backlog-study
