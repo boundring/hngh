@@ -8,3 +8,7 @@ at 2026-09-12T19:00:14Z. Alert text: correction b61fed0f: no named check found (
 
 - [ ] Delve: open research subject fail-20260912-correction-b61fed0f for correction-b61fed0f; record disposition; then fix or park
       Verification: research subject fail-20260912-correction-b61fed0f present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-12T20:00:35Z re-occurred (dedup window expired)
