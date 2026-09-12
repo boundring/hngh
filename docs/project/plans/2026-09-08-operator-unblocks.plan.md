@@ -44,11 +44,26 @@ Grounding notes:
   unreadable and conf pass empty. Verdict: remaining steps are strictly
   human (desktop-app integration, `op signin`, SMTP item-create or conf
   pass); no autonomous unblock possible.
-- [ ] 2. GROW — capabilities plan completion. Complete the remaining steps of the 2026-09-03-capabilities plan (steps 8, 9):
+- [x] 2. GROW — capabilities plan completion. Complete the remaining steps of the 2026-09-03-capabilities plan (steps 8, 9):
+  - Step 8: queue-drain verification beat (already authored: docs/research/2026-09-08-queue-drain-verification.md)
+  - Step 9: wrap, lessons, author-next-plan (this plan file)
+  Verification: the 2026-09-03-capabilities plan file updated with step 8 checked, step 9 unchecked (pending this plan's completion).
+  RESOLUTION 2026-09-12 (session re-verification, stale-state check):
+  already landed by commit 210486d (2026-09-08 capabilities completion:
+  steps 4-9 done). Both steps 8 and 9 carry a Ticked note in
+  docs/project/plans/2026-09-03-capabilities.plan.md; step 8's research
+  note exists; step 9's named product is this plan file. Target state
+  exceeded (step 9 is checked, not merely unchecked) — nothing left to do.
   - Step 8: queue-drain verification beat (already authored: docs/research/2026-09-08-queue-drain-verification.md)
   - Step 9: wrap, lessons, author-next-plan (this plan file)
   Verification: the 2026-09-03-capabilities plan file updated with step 8 checked, step 9 unchecked (pending this plan's completion).
 - [ ] 3. GROW — staging plan unblock. Once the operator has installed `op` CLI and playwright + chromium, re-run the 2026-09-03-staging plan steps 1-7 (bench calibration, stage sweeps, unsloth recovery note, package-upgrade runbook). Each step verifies on its own.
+  Verification: all 7 steps of the 2026-09-03-staging plan checked.
+  BLOCKED 2026-09-12 (operator-only prerequisites): per the step 1
+  re-verification, the remaining unblocks are strictly human —
+  desktop-app CLI integration, `op signin`, and the SMTP item-create
+  (or conf pass). No autonomous path exists; this step stays open
+  until the operator acts on docs/research/2026-09-12-operator-procedural-unblocks.md.
   Verification: all 7 steps of the 2026-09-03-staging plan checked.
 
 ## Autonomy rule (binding for this session)
