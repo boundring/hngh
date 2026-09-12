@@ -14,6 +14,10 @@
 # (e) sentinel: no sudo, no curl|bash of third-party scripts anywhere in the
 #     installer (install.sh + lib/platform.sh). bootstrap --install's sudo
 #     path is out of scope (it predates the installer and is fail-closed).
+# (f) presentation degradation: piped, NO_COLOR, and --no-color runs emit
+#     zero escape bytes (CI/hermetic logs stay greppable);
+# (g) colored pty run carries the Winamp masthead, playlist numbers 01-05
+#     in execution order, and the moss-mapped accent codes.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
@@ -131,6 +135,68 @@ if [ -z "$sentinel_hits" ]; then
   ok "sentinel: no sudo / curl|bash in install.sh or lib/platform.sh"
 else
   bad "sentinel tripped: $sentinel_hits"
+fi
+
+# --- (f) degradation: piped / NO_COLOR / --no-color -> no escape bytes ------
+# The presentation layer must strip cleanly: escape-free output keeps CI and
+# hermetic logs greppable (masthead/playlist render only on a color TTY).
+esc="$(printf '\033')"
+if [ -f "$INSTALLER" ]; then
+  plain="$(env -i HOME="$HOME" PATH="$SANDBOX/all:/usr/bin:/bin" \
+    /bin/bash "$INSTALLER" --non-interactive --check 2>&1 </dev/null)"
+  if printf '%s' "$plain" | grep -q "$esc"; then
+    bad "piped run emitted escape bytes (non-TTY must be plain)"
+  else
+    ok "piped run is escape-free"
+  fi
+  noc="$(env -i HOME="$HOME" PATH="$SANDBOX/all:/usr/bin:/bin" TERM=xterm NO_COLOR=1 \
+    script -qec "/bin/bash $INSTALLER --non-interactive --check" /dev/null 2>&1)"
+  if printf '%s' "$noc" | grep -q "$esc"; then
+    bad "NO_COLOR under a pty still colored"
+  else
+    ok "NO_COLOR under a pty is plain"
+  fi
+  flag="$(env -i HOME="$HOME" PATH="$SANDBOX/all:/usr/bin:/bin" TERM=xterm \
+    script -qec "/bin/bash $INSTALLER --non-interactive --check --no-color" /dev/null 2>&1)"
+  if printf '%s' "$flag" | grep -q "$esc"; then
+    bad "--no-color under a pty still colored"
+  else
+    ok "--no-color under a pty is plain"
+  fi
+fi
+
+# --- (g) colored pty run: masthead + playlist numbers + moss codes ----------
+# env -i leaves COLORTERM unset -> the 256-color path is deterministic here;
+# the truecolor form is accepted too in case the contract gains one.
+if [ -f "$INSTALLER" ]; then
+  color="$(env -i HOME="$HOME" PATH="$SANDBOX/all:/usr/bin:/bin" TERM=xterm \
+    script -qec "/bin/bash $INSTALLER --non-interactive --check" /dev/null 2>&1)"
+  case "$color" in
+  *"keeps the llama"*) ok "masthead present (wordmark + tagline)" ;;
+  *) bad "masthead missing in colored run" ;;
+  esac
+  prev=-1
+  order=1
+  for n in 01 02 03 04 05; do
+    pos="$(printf '%s' "$color" | grep -abo -m1 "$n\." | cut -d: -f1)"
+    if [ -z "$pos" ] || [ "$pos" -le "$prev" ]; then
+      order=0
+      break
+    fi
+    prev="$pos"
+  done
+  if [ "$order" -eq 1 ]; then
+    ok "playlist numbers 01-05 present in execution order"
+  else
+    bad "playlist numbers missing or out of order in colored run"
+  fi
+  for w in platform prereqs stage preferences record; do
+    printf '%s' "$color" | grep -q "$w" || bad "playlist step '$w' missing"
+  done
+  case "$color" in
+  *"38;5;107m"* | *"38;2;127;160;94m"*) ok "moss-mapped accent codes present" ;;
+  *) bad "moss accent code missing in colored run" ;;
+  esac
 fi
 
 # --- summary ----------------------------------------------------------------
