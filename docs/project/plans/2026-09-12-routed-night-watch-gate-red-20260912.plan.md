@@ -12,3 +12,4 @@ at 2026-09-12T06:00:49Z. Alert text: night-watch: gate-red investigated — auto
 ## Occurrences
 
 - 2026-09-12T07:00:49Z re-occurred (dedup window expired)
+- 2026-09-12T08:00:49Z re-occurred (dedup window expired)
