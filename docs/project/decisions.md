@@ -481,3 +481,15 @@ The cure follows the 2026-09-06 precedent, minimized:
    AGENTS.md now states the boundary: repo-root `scripts/` is kernel
    code surface — machine-session commits there require the ceremony
    label; the automation free-commit rule covers `automation/` only.
+
+   **Declared post-hoc 2026-09-12 (same class, same ceremony):**
+   `226de1d` (narrative daily ledger + public dispatch edition) touched
+   repo-root `scripts/generate-publication` under the automation
+   free-commit rule without the candidate label -- the same class as the
+   `41f646a` declaration. Declared post-hoc 2026-09-12 with the
+   operator's direction: narrative daily ledger + public dispatch
+   edition (machine worker, operator-directed beat; automation suite
+   green at commit time). Cure is declaration, not rewrite -- the commit
+   contains only the narrative feature and is already pushed. The gate
+   lesson is unchanged: repo-root `scripts/` is ceremony surface for
+   machine commits.
