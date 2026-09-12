@@ -482,7 +482,10 @@ $response"
 # ALL open accepted plans are collected: the fail-first development tier
 # runs up to `concurrency` of them as parallel sessions in one beat.
 # Steps WITHIN a plan stay sequential (step 2 may need step 1).
-plan_slugs=() plan_files=() plan_steps=()
+# Ordering (2026-09-09 schedule-optimization step 2): accepted plans
+# carrying `priority=high` in the front-matter comment sort ahead of the
+# rest; ties and absence fall back to filename order (the glob).
+plan_slugs=() plan_files=() plan_steps=() prio_hi=() prio_hif=() prio_hist=()
 blocker_tick "$(get_param blocker-park-cooldown-hours 24)"
 for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  [ -f "$f" ] || continue
@@ -494,10 +497,21 @@ for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  # operator (escalate threshold) — leave it out of the rotation until
  # the ledger row is cleared
  [ "$(blocker_row_for "$pslug" | cut -f6)" = "parked" ] && continue
- plan_slugs+=("$pslug")
- plan_files+=("$f")
- plan_steps+=("$step")
+ # priority=high front-matter flag: bucket 0 sorts ahead of bucket 1
+ # (append to the high bucket in glob order: ties keep filename order)
+ if head -n1 "$f" | grep -q 'priority=high'; then
+  prio_hi+=("$pslug")
+  prio_hif+=("$f")
+  prio_hist+=("$step")
+ else
+  plan_slugs+=("$pslug")
+  plan_files+=("$f")
+  plan_steps+=("$step")
+ fi
 done
+plan_slugs=("${prio_hi[@]}" "${plan_slugs[@]}")
+plan_files=("${prio_hif[@]}" "${plan_files[@]}")
+plan_steps=("${prio_hist[@]}" "${plan_steps[@]}")
 
 plan_slug=""
 plan_file=""
