@@ -178,3 +178,7 @@ emitter turning opencode session telemetry into ledger rows
 ([executor record](records/2026-09-11-opencode-executor.md)). Secrets
 stay operator-side; the executor never carries a mutation certificate.
 
+
+---
+
+Back to the [documentation spine](../README.md).

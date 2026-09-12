@@ -88,3 +88,7 @@ first; no `src/` files as ceremony candidates (machine-owned dirty
 paths — journals, reports, untracked routed plans — are landed by the
 machine's own steps, never ceremony candidates). Plans reference this
 runbook by name instead of restating the invocation details.
+
+---
+
+Back to the [documentation spine](../../README.md).

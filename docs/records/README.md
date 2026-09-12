@@ -167,5 +167,19 @@ authorize a future action.
   window's failure classes, and the 2026-08-30 doc-suite fold-back
   (requirement-kind count, roadmap rung/use-case drift, two backlog
   rows).
+- [2026-09-09-1password-service-account-interface.md](2026-09-09-1password-service-account-interface.md)
+- [2026-09-09-budget-governance-directive.md](2026-09-09-budget-governance-directive.md)
+- [2026-09-09-operator-flexibility-doctrine.md](2026-09-09-operator-flexibility-doctrine.md)
+- [2026-09-09-wake-mutation-lane-rotation.md](2026-09-09-wake-mutation-lane-rotation.md)
+
+The harvest from 2026-09-01 onward is thin here on purpose: recent
+work-slice facts live closer to their surfaces (plan files, reports.md,
+the changelog). The four 2026-09-09 rows above are the anchor records
+the documentation spine ties itself to.
+
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
+
+---
+
+Back to the [documentation spine](../../README.md).
