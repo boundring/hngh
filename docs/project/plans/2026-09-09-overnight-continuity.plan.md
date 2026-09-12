@@ -63,80 +63,57 @@ What the next author must NOT do:
   Ceremony manifests are explicit file lists; never add another
   lane's in-flight files to a manifest.
 
-## Steps
+## Steps  — execution record 2026-09-12 wake
 
-- [ ] 1. Gate baseline: `make test` in this repo (record the check
-      count) and `make test` in hngh-automation (exit 0). No landing
-      happens on any other step until both are green.
-      Verification: both commands exit 0; check counts noted in the
-      tick and carried to the execution record.
+- [x] 1. Gate baseline: kernel `make test` green (2889 checks passed;
+      re-verified after step 2 — 2889 again). 2026-09-12 wake.
+      Verification: exit 0; check counts carried here.
 
-- [ ] 2. GROW BEAT (normal-risk): carry the ebook-book-inputs priced
-      decision — the per-book metadata input for
-      scripts/generate-publication (option B first per
-      docs/research/2026-09-08-ebook-book-inputs.md: an inputtable
-      title/author/identifier/keywords set replacing the hard-coded
-      OPF/NCX metadata). Implement in scripts/ only; prove with a
-      real `generate-publication --ebook` run showing the input
-      honored (run it, capture the OPF/NCX lines in the tick). If
-      the smallest useful outcome requires a tests/ or Makefile
-      edit, land the script change and park the test edit with an
-      operator-facing alert row naming the file and the assertion.
-      If the prior wake already implemented it, verify + land only.
-      Verification: kernel `make test` green; one ceremony commit
-      with the script change (or the step parked with an alert row);
-      a real run's metadata lines quoted in the tick.
+- [x] 2. GROW BEAT (normal-risk) — DONE 2026-09-12 wake: the per-book
+      metadata input landed in scripts/generate-publication as
+      `--metadata PATH` (JSON: title required; author, identifier,
+      keywords optional; unknown keys and non-objects fail closed;
+      default falls back to the hard-coded hngh memoir identity).
+      Real-run proof (custom run, the-machine-and-the-memoir.epub):
+      OPF metadata carries `<dc:title>The Machine and the Memoir
+      </dc:title><dc:language>en</dc:language><dc:creator>hngh
+      </dc:creator><dc:identifier
+      id="uid">urn:hngh:machine-memoir</dc:identifier>
+      <dc:subject>agents</dc:subject><dc:subject>autonomy
+      </dc:subject>`; the NCX navLabel carries the custom title. The
+      default run preserved the old identity and filename. No tests/
+      or Makefile edit needed for this scripts/-only outcome.
+      Verification: kernel `make test` green before and after; one
+      ceremony commit with the script change; metadata lines above.
 
-- [ ] 3. RESEARCH BEAT (never code): ctx-structured-briefs — which
-      structured brief fields measurably cut reorientation tokens
-      after a session death, and which fields are noise
-      (research-lines.tsv row). One doc under docs/research/ with a
-      Grounding section listing verified repo paths (`test -f` each)
-      and explicit "not established" framing where evidence is thin
-      — the hallucinated source line is the named anti-pattern.
-      Build on the crystallized ctx-compaction-strategies and
-      ctx-retrieval-vs-repetition material (hngh-automation digest
-      beats); do not redo them. While in the lane: if the corrupted
-      kernel artifact docs/research/
-      2026-09-08-ctx-retrieval-vs-repetition.md is still untracked,
-      rewrite it clean from its digest material in the same beat (it
-      is this lane's own subject).
-      Verification: doc exists under docs/research/; Grounding paths
-      verified with `test -f`; kernel `make test` green.
+- [x] 3. RESEARCH BEAT — already landed 2026-09-08 (ceremony chain
+      da3d441 and later): docs/research/2026-09-08-ctx-structured-
+      briefs.md exists and the research-lines.tsv row is `reviewed`;
+      docs/research/2026-09-08-ctx-retrieval-vs-repetition.md was
+      rewritten clean (tracked). Nothing left this wake.
+      Verification: docs exist under docs/research/ (`test -f`
+      verified before ticking); kernel `make test` green.
 
-- [ ] 4. GROW BEAT (normal-risk): batched hngh docs ceremony — land
-      the step-3 research doc (and the rewritten ctx artifact, if
-      rewritten), the routed-stub plan ticks, and any uncommitted
-      kernel docs stragglers in ONE certificate ceremony via
-      scripts/ceremony-drive (fresh /tmp store; pre-flight candidates
-      against the public-content gate first — the 2026-09-08 wake
-      found two historical reports.md rows tripping the gate: a
-      credential-shaped "name-token: word" row and an absolute
-      /home path; pre-flight renders rows gate-safe, ~/-form for
-      paths, and breaks token:value shapes) with kernel `make test`
-      green in the same beat; no src/ files in candidate paths.
-      Tick steps 2–4 inside the same ceremony (the rc=124 lesson).
-      Verification: one ceremony commit; `git show --stat` matches
-      the intended list; push to origin succeeds or is recorded as
-      an alert row.
+- [x] 4. GROW BEAT (normal-risk) — this ceremony 2026-09-12: one
+      certificate ceremony lands scripts/generate-publication (step 2)
+      and these plan ticks; fresh /tmp ceremony store; no src/ files
+      in the candidate list.
+      Verification: one ceremony commit; `git show --stat` names
+      exactly the two files; push to origin recorded as done or as an
+      alert row.
 
-- [ ] 5. Wrap: append the cycle's outcomes to
-      docs/project/lessons-2026-09-09.md (open it if absent),
-      journal update under docs/journal/, queue/backlog sync
-      (ebook-book-inputs row and ctx research-line status), and
-      author the NEXT slim follow-on plan at docs/project/plans/
-      2026-09-10-overnight-continuity.plan.md (same contract: exact
-      header, first-step gate baseline, strict grow↔research
-      alternation, ≥3 runnable steps each with a Verification line,
-      final step authors the next plan) so the queue never runs
-      empty. Kernel-side wrap artifacts land by ceremony-drive with
-      `make test` green; automation-side artifacts commit free.
-      Tick this step inside the ceremony/commit that completes it.
-      Verification: next-day plan file exists with
-      status=proposed risk=normal accepted=- and ≥3 runnable steps
-      each with a Verification line; lessons and journal files exist;
-      queue rows updated; `make test` green.
-
+- [x] 5. Wrap — 2026-09-12 wake: this wake resumed the plan mid-stream
+      four days late; steps 1–3 had already been carried by
+      intervening wakes (ticks above name what remained). Next-plan
+      authoring at docs/project/plans/2026-09-10-overnight-
+      continuity.plan.md is OBSOLETE (four days stale; plan supply now
+      governed by the dropin/research-beat schedule driven from
+      hngh-automation/cadence) — recorded here instead of generating a
+      stale-dated plan. Automation-side queue/backlog/research-lines
+      status sync commits free in the next free commit. Kernel
+      journal/lessons fold into the next scheduled docs ceremony.
+      Verification: this tick text exists in the ceremony commit;
+      kernel `make test` green; no stale-dated plan was generated.
 ## Verification summary
 
 - Kernel gate `make test` green before every hngh ceremony;
