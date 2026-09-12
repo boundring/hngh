@@ -211,6 +211,55 @@ class IngestTest(unittest.TestCase):
             "decrease base font size increase margins decrease panel gap")
         self.assertEqual(fi.expand("plain   text"), "plain text")
 
+    def test_backlog_drains_20_per_tick_oldest_first(self):
+        # 70-capture backlog: first tick files 20, oldest timestamps first;
+        # repeated ticks drain the rest without flooding the feed.
+        for i in range(70):
+            self.write_rec({"ts": "2026-09-11T20:05:36Z", "type": "idea",
+                            "text": "backlog %03d" % i},
+                           name="fb-%03d.json" % i)
+        self.assertEqual(self.run_ingest(), 0)
+        self.assertEqual(len(self.report_rows()), 20)
+        self.assertIn("backlog 000", self.report_rows()[0])
+        self.assertIn("backlog 019", self.report_rows()[19])
+        self.assertEqual(len(list((self.fb / "processed").iterdir())), 20)
+        self.assertEqual(len(list(self.fb.glob("*.json"))), 50)
+        # second tick continues the drain
+        self.assertEqual(self.run_ingest(), 0)
+        self.assertEqual(len(self.report_rows()), 40)
+
+    def test_long_item_kept_in_full(self):
+        # >=500 chars survive unchanged: the standardized row and the
+        # STATE.md crumb (what jobs/operator-items-feed.py reads) carry
+        # the full text, no truncation.
+        long_text = "w" * 600  # no spaces: whitespace collapse can't mask a cut
+        self.write_rec({"ts": "2026-09-12T18:00:00Z", "type": "idea",
+                        "text": long_text, "element": "camp"})
+        self.assertEqual(self.run_ingest(), 0)
+        row = self.report_rows()[0]
+        self.assertIn(long_text, row)
+        state = (self.tmp / "STATE.md").read_text()
+        self.assertIn(long_text, state)
+
+    def test_duplicates_move_free_of_the_cap(self):
+        # 25 uniques + 20 duplicates of the first: duplicates never consume
+        # the 20/tick filing cap and all move to processed/ in one tick.
+        self.write_rec({"ts": "t", "type": "idea", "text": "spam"},
+                       name="fb-spam-a.json")
+        for i in range(24):
+            self.write_rec({"ts": "t", "type": "idea", "text": "uniq %d" % i},
+                           name="fb-u%02d.json" % i)
+        self.write_rec({"ts": "t", "type": "idea", "text": "spam"},
+                       name="fb-spam-b.json")
+        self.assertEqual(self.run_ingest(), 0)
+        # 25 unique texts capped at 20 filed + both spam copies moved
+        self.assertEqual(len(list(self.fb.glob("*.json"))), 5)  # u19..u23
+        self.assertEqual(len(list((self.fb / "processed").iterdir())), 21)
+        rows = self.report_rows()
+        self.assertEqual(len(rows), 20)
+        self.assertEqual(self.run_ingest(), 0)
+        self.assertEqual(len(self.report_rows()), 25)  # tail drains next tick
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

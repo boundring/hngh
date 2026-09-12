@@ -157,8 +157,12 @@ def main():
         if iid in dismissed:
             it["recurring"] = True
 
-    out_items = sorted(by_id.values(),
-                       key=lambda x: x["status"] != "open")[:CAP]
+    # [feedback:] operator submissions outrank the standing alert crowd:
+    # 4.5k historical alert crumbs would otherwise fill the whole cap and
+    # leave the operator's own dashboard feedback invisible (2026-09-12).
+    ranked = sorted(by_id.values(), key=lambda x: (
+        "[feedback:" not in x["text"], x["status"] != "open"))
+    out_items = ranked[:CAP]
     feed = {"generated_at": now, "items": out_items}
     # per-PID tmp — the 1m drop-in and refresh-dashboard.sh overlap (see
     # sessions-feed.py)
