@@ -19,7 +19,7 @@ mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" \
 cp -r "$root/lib/." "$sb/lib/"
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
-cp "$HOME/Projects/etc/hngh/scripts/report-queue" "$sb/kernel/scripts/"
+cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
 : >"$sb/cadence-params.tsv"
 : >"$sb/STATE.md"
 
