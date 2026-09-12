@@ -8,3 +8,7 @@ at 2026-09-12T06:00:49Z. Alert text: night-watch: gate-red investigated — auto
 
 - [ ] Delve: open research subject fail-20260912-night-watch-gate-red-20260912 for night-watch:gate-red-20260912; record disposition; then fix or park
       Verification: research subject fail-20260912-night-watch-gate-red-20260912 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-12T07:00:49Z re-occurred (dedup window expired)
