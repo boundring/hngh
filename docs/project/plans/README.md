@@ -26,7 +26,10 @@ is reserved for critical-class work.
   the security posture.
 - Steps live under `## Steps` as `- [ ]` / `- [x]` checkboxes; the
   cycle executes the next unchecked step of the oldest accepted plan
-  through a bounded delegated session and ticks it. It runs
+  through a bounded delegated session and ticks it. `priority=high` in
+  the front-matter comment sorts an accepted plan ahead of the rest in
+  that selection; ties and absence fall back to filename order.
+  It runs
   continuously, 24/7 by intent — the script name
   (`hngh-automation/scripts/overnight-cycle.sh`) is a stable CLI name,
   not a doctrine that the cycle only runs overnight (same convention
