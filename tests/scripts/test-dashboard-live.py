@@ -24,6 +24,12 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "dashboard-readout"
 
 
+def term_renders():
+    """rich Live suppresses frames on dumb/unset terminals (frames are
+    buffered past the test's read budget); skip rather than flake."""
+    return os.environ.get("TERM", "") not in ("", "dumb")
+
+
 def run(args):
     return subprocess.run([sys.executable, str(SCRIPT), *args],
                           capture_output=True, text=True, cwd=ROOT)
@@ -145,6 +151,9 @@ class DashboardExport(unittest.TestCase):
         except ImportError:
             return False
 
+    @unittest.skipUnless(term_renders(),
+                         "TERM unset/dumb: rich Live suppresses frames, "
+                         "render assertions cannot be read back")
     def test_rich_watch_renders_operative_and_quits(self):
         if not self._rich_present():
             self.skipTest("rich not installed; stdlib renderer covers the gate")
