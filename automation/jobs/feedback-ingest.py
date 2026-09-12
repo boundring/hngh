@@ -89,9 +89,16 @@ def file_item(identity, text):
 def main(argv):
     os.makedirs(PROCESSED, exist_ok=True)
     n = 0
-    for name in sorted(os.listdir(FEEDBACK)):
-        if not name.endswith(".json"):
-            continue
+    seen = set()
+    names = [name for name in sorted(os.listdir(FEEDBACK))
+             if name.endswith(".json")]
+    # ponytail: cap 20/tick so a 70-capture backlog drains over ticks
+    # without flooding the operator-items feed (oldest first -- timestamped
+    # names sort chronologically). The cap bounds FILLED rows; duplicate
+    # captures (same standardized text -> same identity) move to processed/
+    # free -- they only bump the report-queue xN marker, never a new row.
+    MAX_PER_TICK = 20
+    for name in names:
         src = os.path.join(FEEDBACK, name)
         if os.path.isdir(src):
             continue
@@ -107,6 +114,12 @@ def main(argv):
         import hashlib
         identity = "feedback-" + hashlib.sha256(
             text.encode("utf-8")).hexdigest()[:8]
+        if identity in seen:
+            os.replace(src, os.path.join(PROCESSED, name))  # dup of this batch
+            continue
+        if n >= MAX_PER_TICK:
+            break  # unique items beyond the cap wait for the next tick
+        seen.add(identity)
         r = file_item(identity, text)
         if r.returncode != 0:
             print("feedback-ingest: file rc=%d for %s: %s"
