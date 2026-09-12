@@ -29,7 +29,8 @@ jobs:
       - uses: actions/checkout@v4
       # suite needs bash + python3 (preinstalled) + git/curl/jq (preinstalled)
       # + sqlite3 (not preinstalled; used by the model-leg tests)
-      - name: Install sqlite3
-        run: sudo apt-get update && sudo apt-get install --yes sqlite3
+      # + sbcl (installer --check prereq: bootstrap.sh --check must pass)
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install --yes sqlite3 sbcl
       - name: Test automation tier
         run: cd automation && make test
