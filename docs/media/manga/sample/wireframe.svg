@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="820" viewBox="0 0 1024 820">
+<rect width="1024" height="820" fill="#f7f2e7"/>
+<rect x="18" y="18" width="988" height="632" fill="#ffffff" stroke="#141414" stroke-width="6"/>
+<line x1="347" y1="26" x2="347" y2="642" stroke="#141414" stroke-width="4" stroke-dasharray="10 6"/>
+<line x1="676" y1="26" x2="676" y2="642" stroke="#141414" stroke-width="4" stroke-dasharray="10 6"/>
+<g data-beat="0" data-kind="setup" data-pose="standing-deadpan">
+<g transform="translate(174.0 626.0)"><circle cx="0.0" cy="289.0" r="54.9"/><line x1="0" y1="343.9" x2="0.0" y2="449.7"/><line x1="289" y1="347" x2="226" y2="457"/><line x1="398" y1="347" x2="461" y2="457"/><line x1="0" y1="449.7" x2="-63.7" y2="626"/><line x1="0" y1="449.7" x2="61.7" y2="626"/></g>
+</g>
+<g data-beat="1" data-kind="reaction" data-pose="reacting">
+<g transform="translate(503.0 626.0)"><circle cx="-12.5" cy="289.0" r="54.9"/><line x1="0" y1="343.9" x2="-31.3" y2="449.7"/><line x1="289" y1="347" x2="226" y2="265"/><line x1="398" y1="347" x2="461" y2="265"/><line x1="0" y1="449.7" x2="-62.7" y2="626"/><line x1="0" y1="449.7" x2="62.7" y2="626"/></g>
+</g>
+<g data-beat="2" data-kind="gag" data-pose="pointing">
+<g transform="translate(832.0 626.0)"><circle cx="0.0" cy="289.0" r="54.9"/><line x1="0" y1="343.9" x2="0.0" y2="449.7"/><line x1="289" y1="347" x2="234" y2="390"/><line x1="398" y1="347" x2="477" y2="320"/><line x1="0" y1="449.7" x2="-61.7" y2="626"/><line x1="0" y1="449.7" x2="63.7" y2="626"/></g>
+</g>
+<path data-focal="gag" d="M750 590 L840 530" stroke="#141414" stroke-width="3" fill="none" marker-end="url(#focalhead)"/>
+<rect x="32" y="32" width="300" height="72" fill="#ffffff" stroke="#141414" stroke-width="3"/>
+<ellipse cx="776" cy="178" rx="200" ry="80" fill="#ffffff" stroke="#141414" stroke-width="3"/>
+<rect x="14" y="668" width="996" height="112" fill="#ffffff" stroke="#141414" stroke-width="3"/>
+<text x="14" y="804" font-size="11" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://example.com/news/1</text>
+<defs><marker id="focalhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#141414"/></marker></defs>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "bureaucrat": {
+    "appearance": "a gaunt narrow-shouldered clerk in an oversized dark coat, tiny round head with thick slab glasses, stooped posture, one hand always holding a folder",
+    "seed": 4409
+  },
+  "engineer": {
+    "appearance": "a wiry engineer in a patched work jacket, small head, large gloves, a wrench slung on the back like a rifle, soot smudge on one cheek",
+    "seed": 5521
+  },
+  "nightwatch": {
+    "appearance": "a slender night watch figure in a long dark coat with a pale eye-slit face and a flashlight clipped at the hip, gaunt silhouette readable at thumbnail size",
+    "seed": 6613
+  }
+}
