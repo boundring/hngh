@@ -95,6 +95,19 @@ KNOWN_EXEMPTIONS = {
         "reason": "CI push-trigger + dashboard-live TERM robustness (declared miss)",
         "patch-id": "ae8b9f0569e6ea0c8a14ca66445d664069e99529",
     },
+    # declared post-hoc 2026-09-12: CI-green chase (operator-directed
+    # mission) touched tests/scripts/test-dashboard-tui.py; textual-missing
+    # skip for the help banner, automation suite green at commit time
+    "0e3b2c6": {
+        "reason": "tui help textual-missing skip + CI sbcl prereq (declared miss)",
+        "patch-id": "92bdff695bb02f8d57d3eb3e3a9f50e5744d9907",
+    },
+    # same CI-green chase, 2026-09-12: hngh-services machine-path
+    # resolution skips foreign hosts; automation suite green at commit
+    "20700c9": {
+        "reason": "hngh-services foreign-host path skip (declared miss)",
+        "patch-id": "a1b23363e5daa52760432e9bae9b52f8c3322794",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
