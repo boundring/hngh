@@ -16,7 +16,7 @@ mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence/day" "$sb/docs/media/manga" \
 cp -r "$root/lib/." "$sb/lib/"
 cp "$root/jobs/publication-review.py" "$sb/jobs/"
 cp "$root/cadence/day/26-publication-review.sh" "$sb/cadence/day/"
-cp "$HOME/Projects/etc/hngh/scripts/report-queue" "$sb/scripts/"
+cp "$root/../scripts/report-queue" "$sb/scripts/"
 
 good_draft() { # -> writes a compliant draft + rendered panel svg
  cat >"$sb/docs/media/manga/sample-draft.json" <<'EOF'
