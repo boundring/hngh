@@ -234,7 +234,7 @@ reset_hits
 printf 'line-old\tcrystallized\t2026-09-06T00:00:00Z\tdesc-old\n' >"$sb/research-lines.tsv"
 printf 'doc-old\n' >"$sb/kernel/docs/research/2026-09-06-line-old.md"
 beat_run "${kimi_env[@]}"
-ck "review transition: kimi pinned despite counter=1" "1" "$(hits stubK)"
+ck "review transition: kimi pinned despite counter=1" "2" "$(hits stubK)"
 ck "review transition: kimi used" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
 grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
  echo "ok: review transition: line-old reviewed" || {

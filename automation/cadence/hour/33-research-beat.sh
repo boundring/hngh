@@ -16,7 +16,16 @@
 # re-seeded from research-subjects.txt. When every line is crystallized
 # or reviewed, the beat reviews the oldest crystallized line into a
 # terminal disposition (adopted|parked|killed, research-dispositions.tsv,
-# state=reviewed). Fail-first (2026-09-07): the beat fires every hour
+# state=reviewed). The review is two-sided (2026-09-12 operator
+# directive): a supportive pass, an adversarial pass that cross-considers
+# related findings, and the verdict -- both passes recorded in the
+# dispositions support/oppose/followons columns plus a committed sidecar
+# transcript; adopted findings queue up to 2 follow-on subjects per pass
+# (fail-<date> id convention). Research lines use the orchestrator
+# blocker ledger (lib/beat-blockers.sh, scope research:<id>): two
+# same-cause failures (dead model lane, junk capture) park a line,
+# success clears it, and parked lines auto-unpark after the shared
+# cooldown. Fail-first (2026-09-07): the beat fires every hour
 # tick and failfirst_gate decides GO vs THROTTLE -- full speed until the
 # model chain actually degrades, then paced (standard/cautious) until
 # consecutive ok outcomes promote it back. Load is a ROUTING signal, not
@@ -35,6 +44,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
 . "$AUTOMATION_ROOT/lib/failfirst.sh"
+. "$AUTOMATION_ROOT/lib/beat-blockers.sh"
 
 # one research transition at a time: the hour beat and the 15-minute
 # overflow beat share this body and research-lines.tsv. A beat arriving
@@ -240,6 +250,7 @@ pick_line() { # finish lines before starting them: contracting first, then
  ROW=""
  local row interleave crow
  row="$(grep -vE $'\t(crystallized|reviewed)\t' "$LINES" 2>/dev/null |
+  filter_parked |
   sort -t$'\t' -k2,2 -k3,3 |
   awk -F'\t' '{order["contracting"]=0; order["expanding"]=1; order["planned"]=2;
                print order[$2] "\t" $0}' | sort -t$'\t' -k1,1n -k3,3 |
@@ -257,7 +268,7 @@ pick_line() { # finish lines before starting them: contracting first, then
   case "$interleave" in '' | *[!0-9]*) interleave=0 ;; esac
   if [ "$interleave" -gt 0 ] && [ $((run_n % interleave)) -eq 0 ]; then
    crow="$(awk -F'\t' '$2=="crystallized"{print $3"\t"$0}' "$LINES" 2>/dev/null |
-    sort | cut -f2- | pick_doc_row)"
+    sort | cut -f2- | filter_parked | pick_doc_row)"
    [ -n "$crow" ] && {
     ROW="$crow"
     REVIEW=1
@@ -267,7 +278,7 @@ pick_line() { # finish lines before starting them: contracting first, then
   return 0
  fi
  row="$(awk -F'\t' '$2=="crystallized"{print $3"\t"$0}' "$LINES" 2>/dev/null |
-  sort | cut -f2- | pick_doc_row)"
+  sort | cut -f2- | filter_parked | pick_doc_row)"
  [ -n "$row" ] && {
   ROW="$row"
   REVIEW=1
@@ -431,7 +442,98 @@ EOF_W
   LC_ALL=C sed 's/[^[:print:]]//g' | cut -c1-100 | head -6 | head -c 600
 }
 
+filter_parked() { # TSV rows on stdin -> rows whose id has no parked
+ # research:<id> blocker row (parked lines are held out of every pick).
+ local pv
+ pv="$(awk -F'\t' '$6=="parked" && $2 ~ /^research:/ {print substr($2, 10)}' \
+  "$BEAT_BLOCKERS_FILE" 2>/dev/null | paste -sd, -)"
+ [ -n "$pv" ] || {
+  cat
+  return 0
+ }
+ awk -F'\t' -v pv="$pv" 'BEGIN{n=split(pv,a,/,/); for(i=1;i<=n;i++) p[a[i]]=1}
+  !($1 in p)'
+}
+
+block_escalate() { # id cause -> records a same-cause research failure;
+ # at blocker-escalate-n consecutive same-cause outcomes the line parks
+ # and the alert files (bounded retries, never infinite; cooldown
+ # auto-unparks via blocker_tick). attempts 0 = ledger write refused.
+ local id="$1" cause="$2" n esc
+ n="$(blocker_record "research:$id" "$cause")"
+ esc="$(get_param blocker-escalate-n 2)"
+ case "$esc" in '' | *[!0-9]*) esc=2 ;; esac
+ if [ "$n" -ge 1 ] && [ "$esc" -gt 0 ] && [ "$n" -ge "$esc" ]; then
+  blocker_park "research:$id"
+  file_report alert \
+   "research line $id parked after $n consecutive $cause outcomes (blocker-escalate-n=$esc); auto-unparks after blocker-park-cooldown-hours" \
+   "research-beat:line-parked:$id" 86400
+ fi
+}
+
+pass_line() { # response -> one-line distillation of a review pass
+ printf '%s\n' "$1" | grep -v '^[[:space:]]*$' | head -1 |
+  tr '\t' ' ' | LC_ALL=C sed 's/[^[:print:]]//g' | cut -c1-160
+}
+
+related_findings() { # id line -> bounded block of related crystallized
+ # docs (keyword overlap, same deterministic shape as prior_art; the
+ # review cross-considers these: agreement/conflict is judged in the
+ # adversarial pass). Own doc excluded.
+ local id="$1" line="$2" w f out="" files=""
+ [ -d "$KERNEL/docs/research" ] || return 0
+ while IFS= read -r w; do
+  [ -n "$w" ] || continue
+  for f in $(LC_ALL=C grep -rilF -- "$w" "$KERNEL/docs/research" 2>/dev/null |
+   head -3); do
+   case "$f" in *-"$id".md) continue ;; esac
+   files="$files $f"
+  done
+ done <<EOF_W
+$(printf '%s\n' "$line" | tr -cs 'A-Za-z0-9' '\n' | awk 'length($0) >= 5' | sort -u | head -8)
+EOF_W
+ for f in $(printf '%s\n' $files | sort -u | head -5); do
+  [ -n "$f" ] || continue
+  out="$out$(basename "$f") -- $(LC_ALL=C sed -n '1s/^#[[:space:]]*//p' "$f" | cut -c1-140)
+"
+ done
+ printf '%s' "${out%,}"
+}
+
+followon_queue() { # response -> queues up to 2 follow-on subjects from
+ # 'FOLLOWON: <question>' lines (supportive/adversarial review passes;
+ # operator directive 2026-09-12: an adopted finding that opens NEW
+ # questions auto-queues research-subjects entries, fail-<date> id
+ # convention). Prints the queued ids, comma-joined ("" = none).
+ local q n=0 rid slug
+ local out=""
+ while IFS= read -r q; do
+  case "$q" in FOLLOWON:*) q="${q#FOLLOWON: }" ;; *) continue ;; esac
+  q="$(printf '%s' "$q" | tr -cd '\11\12\15\40-\176' | tr '\t' ' ' |
+   sed 's/^ *//; s/ *$//' | cut -c1-240)"
+  [ -n "$q" ] || continue
+  slug="$(printf '%s' "$q" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-$//' |
+   cut -c1-40)"
+  [ -n "$slug" ] || continue
+  rid="fail-$(date -u +%Y%m%d)-$slug"
+  grep -qxF "$rid	$q" "$SUBJECTS" 2>/dev/null && continue
+  printf '%s	%s\n' "$rid" "$q" >>"$SUBJECTS"
+  out="$out$rid,"
+  n=$((n + 1))
+  [ "$n" -ge 2 ] && break
+ done
+ printf '%s' "$out"
+}
+
 day="$(date -u +%Y-%m-%d)"
+
+# roguelike research operations (operator directive, 2026-09-12): research
+# lines get the beat-blockers treatment at scope research:<id> -- a line
+# failing twice with the same cause (dead model lane, junk capture) parks
+# and files the alert; parked lines auto-unpark after the shared
+# blocker-park-cooldown-hours and success clears the row outright.
+blocker_tick "$(get_param blocker-park-cooldown-hours 24)"
+
 ensure_lines
 
 pick_line
@@ -485,35 +587,76 @@ fi
 if [ "$REVIEW" = "1" ]; then
  # review transition: nothing left to advance -- give the oldest
  # crystallized line a terminal disposition (adopted | parked | killed)
- # instead of idling the beat.
+ # instead of idling the beat. Two-sided review protocol (operator
+ # directive, 2026-09-12): (a) supportive pass -- corroborating
+ # evidence; (b) adversarial pass -- attempt to DISCONFIRM, with related
+ # findings cross-considered; (c) verdict adopted|parked|killed as
+ # before, with BOTH passes recorded (dispositions support/oppose/
+ # followons columns + the committed sidecar transcript).
  doc="$(research_doc "$id")"
  if [ -z "$doc" ]; then
   file_report alert "research review has no crystallized doc for $id" \
    "research-beat:review-no-doc" 86400
   exit 0
  fi
- prompt="Research line: $line (id: $id)
-Review the crystallized research document below and issue one terminal
-disposition for the line: adopted (its findings should drive work now),
-parked (keep the record, no action now), or killed (close the line).
+ related="$(related_findings "$id" "$line")"
+ sup_prompt="Research line: $line (id: $id)
+SUPPORTIVE review pass. Find corroborating evidence FOR the findings in
+the crystallized document below: concrete repo files, other research
+docs, external feeds (e.g. GDELT news trends). Name what supports each
+finding and state explicitly what remains unverified. Then list up to 2
+NEW research questions the findings open, one per line, shaped exactly:
+FOLLOWON: <one-line question>
+--- crystallized document ($doc) ---
+$(marked_cut 8000 "$doc")
+${related:+
+--- related findings (cross-consider these) ---
+$related}"
+ t0=$(date +%s)
+ supportive="$(printf '%s' "$sup_prompt" | model_call 2048)"
+ t1=$(date +%s)
+ wall="$(awk "BEGIN{printf \"%.1f\", $t1 - $t0}")"
+ used="$(last_model_used)"
+ if [ "$used" = "none:archive-only" ] || [ -z "$supportive" ]; then
+  ff_record degraded
+  block_escalate "$id" model-lane-dead
+  file_report alert "research review unavailable: model chain down ($used)" \
+   "research-beat:unavailable" 86400
+  exit 0
+ fi
+ opp_prompt="Research line: $line (id: $id)
+ADVERSARIAL review pass. Attempt to DISCONFIRM the findings: seek
+counter-evidence, edge cases, and stale assumptions; cross-consider the
+related findings below and state agreement or conflict. Then issue one
+terminal disposition for the line: adopted (its findings should drive
+work now), parked (keep the record, no action now), or killed (close
+the line).
 Known duplicate pairs -- when reviewing the first member of a pair, mark
 it killed with a pointer to the survivor:
   wiki-viewer-qol -> survivor wiki-viewer-QoL-comparison
   tech-tree-research-ux -> survivor tech-tree-research-UX-precedents
   session-cost-display -> survivor session-cost-display-formats
   gantt-legibility -> survivor gantt-legibility-patterns
+Also list up to 2 NEW research questions the findings open, one per
+line, shaped exactly:
+FOLLOWON: <one-line question>
 End your output with exactly one verdict line:
 VERDICT: adopted|parked|killed -- <one-line reason>
 
 --- crystallized document ($doc) ---
-$(marked_cut 8000 "$doc")"
+$(marked_cut 8000 "$doc")
+--- supportive pass (what supports the findings) ---
+${supportive:-none recorded}
+${related:+--- related findings (cross-consider these) ---
+$related}"
  t0=$(date +%s)
- response="$(printf '%s' "$prompt" | model_call 2048)"
+ response="$(printf '%s' "$opp_prompt" | model_call 2048)"
  t1=$(date +%s)
- wall=$(awk "BEGIN{printf \"%.1f\", $t1 - $t0}")
+ wall="$(awk "BEGIN{printf \"%.1f\", $t1 - $t0}")"
  used="$(last_model_used)"
  if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
   ff_record degraded
+  block_escalate "$id" model-lane-dead
   file_report alert "research review unavailable: model chain down ($used)" \
    "research-beat:unavailable" 86400
   exit 0
@@ -530,12 +673,35 @@ $(marked_cut 8000 "$doc")"
   exit 0
  fi
  reason="$(printf '%s' "$verdict_line" | sed 's/^VERDICT:[[:space:]]*//')"
+ sup_line="$(pass_line "$supportive")"
+ opp_line="$(pass_line "$response")"
+ followons=""
+ if [ "$action" = "adopted" ]; then
+  followons="$({
+   printf '%s\n' "$supportive"
+   printf '%s\n' "$response"
+  } |
+   followon_queue)"
+ fi
  [ -f "$DISPOSITIONS" ] ||
-  printf 'line\taction\tverdict\treviewer\tevidence\tdate\n' >"$DISPOSITIONS"
- printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\n' \
-  "$id" "$action" "$reason" "$used" "$doc" "$day" >>"$DISPOSITIONS"
+  printf 'line\taction\tverdict\treviewer\tevidence\tdate\tsupport\toppose\tfollowons\n' \
+   >"$DISPOSITIONS"
+ printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\t%s\t%s\t%s\n' \
+  "$id" "$action" "$reason" "$used" "$doc" "$day" \
+  "$sup_line" "$opp_line" "$followons" >>"$DISPOSITIONS"
  set_state "$id" "reviewed"
- research_commit "$id" "reviewed-$action" "$DISPOSITIONS" "$LINES"
+ blocker_clear "research:$id"
+ rev_rel="digest/RESEARCH-REVIEW-$day-$id.md"
+ {
+  printf '# research review %s\n\n_line: %s | verdict: %s | model: %s_\n\n' \
+   "$day" "$line" "$action" "$used"
+  printf '## Supportive pass\n\n%s\n\n' "$supportive"
+  printf '## Adversarial pass\n\n%s\n\n' "$response"
+  [ -n "$related" ] &&
+   printf '## Related findings cross-considered\n\n%s\n' "$related"
+ } >"$AUTOMATION_ROOT/$rev_rel"
+ research_commit "$id" "reviewed-$action" "$DISPOSITIONS" "$LINES" \
+  "$AUTOMATION_ROOT/$rev_rel"
  python3 "$TELEMETRY" emit --kind research --model "$used" --wall-s "$wall" \
   --source research-review --subject "$id:crystallized->reviewed" \
   --data "{\"unit\":\"$id\"}"
@@ -583,6 +749,7 @@ used="$(last_model_used)"
 
 if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
  ff_record degraded
+ block_escalate "$id" model-lane-dead
  file_report alert "research beat unavailable: local model chain down ($used)" \
   "research-beat:unavailable" 86400
  exit 0
@@ -597,12 +764,23 @@ ff_record ok
 truncflag=""
 [ -n "$(last_model_truncated)" ] && truncflag="--truncated"
 body="$(printf '%s' "$response" | python3 "$AUTOMATION_ROOT/lib/docfilter.py" \
- "${DOC_CAPTURE_CHAR_CAP:-16000}" $truncflag)" || {
+ "${DOC_CAPTURE_CHAR_CAP:-16000}" $truncflag 2>"$AUTOMATION_ROOT/.docfilter-inj.$$")" || {
  ff_record degraded
+ block_escalate "$id" junk-capture
  file_report alert "research beat capture for $id ($state->$next) stripped to empty: model emitted only tool-call syntax ($used); no doc written, line state held for retry" \
   "research-beat:junk-capture:$id" 86400
+ rm -f "$AUTOMATION_ROOT/.docfilter-inj.$$"
  exit 0
 }
+# security routines (2026-09-12): injection signatures in the capture are
+# redacted by docfilter at write time; the hits file an alert (the line
+# content is data, never command).
+if [ -s "$AUTOMATION_ROOT/.docfilter-inj.$$" ]; then
+ file_report alert \
+  "injection signature(s) redacted from research capture for $id ($used): $(head -1 "$AUTOMATION_ROOT/.docfilter-inj.$$" | cut -c1-160)" \
+  "research-beat:injection:$id" 86400
+fi
+rm -f "$AUTOMATION_ROOT/.docfilter-inj.$$"
 
 out_rel="digest/RESEARCH-BEAT-$day-$id.md"
 mkdir -p "$AUTOMATION_ROOT/digest"
@@ -621,6 +799,7 @@ if [ "$next" = "crystallized" ]; then
 fi
 
 set_state "$id" "$next"
+blocker_clear "research:$id"
 if [ "$next" = "crystallized" ]; then
  research_commit "$id" "crystallized" \
   "$KERNEL/docs/research/$day-$id.md" \

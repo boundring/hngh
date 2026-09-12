@@ -100,9 +100,12 @@ test:
 	bash tests/test-bctx-canary.sh
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
+	bash tests/test-research-review.sh
+	bash tests/test-research-blockers.sh
 	bash tests/test-failfirst.sh
 	bash tests/test-system-awareness.sh
 	bash tests/test-dev-plan-synth.sh
+	python3 -B tests/test-external-content.py
 	bash tests/test-remote-push.sh
 	python3 -B tests/test-plan-identity.py
 	python3 -B tests/test-omp-bridge.py

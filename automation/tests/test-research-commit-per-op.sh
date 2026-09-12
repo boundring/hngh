@@ -142,7 +142,7 @@ printf '%s\tcrystallized\t2026-09-06T00:00:00Z\tdesc-old\n' line-old \
 printf 'doc-old\n' >"$sb/kernel/docs/research/2026-09-06-line-old.md"
 # stub verdict is fixed: "VERDICT: parked -- stub reason" (stub-lib.sh)
 beat_run "${kimi_env[@]}"
-ck "review beat hit kimi" "1" "$(hits stubK)"
+ck "review beat hit kimi" "2" "$(hits stubK)"
 grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
  echo "ok: review: line-old reviewed" || {
  echo "FAIL: review: line-old not reviewed"
