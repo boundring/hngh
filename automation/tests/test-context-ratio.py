@@ -19,8 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PRODUCER = ROOT / "jobs" / "context-ratio.py"
 
-KERNEL = os.environ.get("HNGH_HOME") or str(
-    Path.home() / "Projects" / "etc" / "hngh")
+KERNEL = os.environ.get("HNGH_HOME") or str(ROOT.parent)
 
 
 class ContextRatio(unittest.TestCase):
