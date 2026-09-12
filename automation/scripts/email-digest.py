@@ -29,6 +29,8 @@ import html
 import json
 import os
 import re
+import socket
+import sqlite3
 import subprocess
 import sys
 import time
@@ -430,22 +432,43 @@ def operator_items():
     return "\n".join(lines) or "(nothing awaiting the operator)"
 
 
-def compose():
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def gather():
+    """Shared data pull for the plain-text and newspaper-HTML variants:
+    one gather, two renderers — the two parts stay content-identical."""
     tel = budget()
-    alerts24 = alert_rows(window_s=DAY_24H)
     prog, delta, pending = queue_progress()
-    items = operator_items()
-    action = action_item(items)
-    spend_t, spend_y = spend_today(tel), spend_yesterday()
     klines = commit_lines(git_log(KERNEL))
     alines = commit_lines(git_log(AUTOMATION))
+    return {
+        "day": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "tel": tel,
+        "alerts24": alert_rows(window_s=DAY_24H),
+        "prog": prog, "delta": delta, "pending": pending,
+        "spend_t": spend_today(tel), "spend_y": spend_yesterday(),
+        "klines": klines, "alines": alines,
+        "fresh": research_recent(), "untracked": research_status(),
+        "have_prev": os.path.isfile(prev_digest_path()),
+        "lessons": lessons(), "night": night_brief_line(),
+        "bench": model_bench_line(),
+    }
+
+
+def compose(g=None):
+    g = g or gather()
+    day = g["day"]
+    tel = g["tel"]
+    alerts24 = g["alerts24"]
+    prog, delta, pending = g["prog"], g["delta"], g["pending"]
+    items = operator_items()
+    action = action_item(items)
+    spend_t, spend_y = g["spend_t"], g["spend_y"]
+    klines, alines = g["klines"], g["alines"]
+    fresh, untracked = g["fresh"], g["untracked"]
+    have_prev = g["have_prev"]
     ktop, atop = klines[:5], alines[:5]
     more = max(0, len(klines) - 5) + max(0, len(alines) - 5)
     n_commits = sum(1 for l in klines + alines
                     if re.match(r"^[0-9a-f]{7,}\b", l))
-    fresh, untracked = research_recent(), research_status()
-    have_prev = os.path.isfile(prev_digest_path())
 
     out = ["# hngh daily digest %s" % day, ""]
     # (1) HEADLINE — the operator's first three seconds
@@ -476,10 +499,9 @@ def compose():
     out.append("\n".join(fresh) or "  (none in the last 24h)")
     out.append("untracked pending crystallization (automation):")
     out.append("\n".join(untracked) or "  (none)")
-    out.append("lessons harvested: %s" % lessons())
-    night = night_brief_line()
-    if night:
-        out.append(night)
+    out.append("lessons harvested: %s" % g["lessons"])
+    if g["night"]:
+        out.append(g["night"])
     out.append("")
     # (5) COMMITS
     out.append("## Commits (24h)")
@@ -508,7 +530,7 @@ def compose():
     out.append("## Budget (telemetry)")
     if spend_t:
         out.append("$%s today vs target $10/day." % spend_t)
-    bench = model_bench_line()
+    bench = g["bench"]
     if bench:
         out.append(bench)
     out.append(budget_lines())
@@ -610,11 +632,18 @@ def feedback_form_html(token=None):
     # dashboard/token.txt is readable. Empty when the server has never
     # booted: the form still renders and fails closed server-side (403).
     token = dashboard_token() if token is None else token
-    box = "border:1px solid #aaa;padding:4px;margin:2px 0;width:95%%;font-family:monospace;font-size:13px"
+    # display-register tokens — same values as html-digest.py (the
+    # palette owner; hexes inlined here because importing it from this
+    # module would cycle through its lazy digest_module() loader).
+    line, bg, panel, bone, moss, ash = ("#30363d", "#0d1117", "#161b22",
+                                        "#e7e2d3", "#7FA05E", "#99a3ae")
+    box = ("border:1px solid %s;background:%s;color:%s;padding:4px;"
+           "margin:2px 0;width:95%%;font-family:monospace;font-size:13px"
+           % (line, bg, bone))
     return (
         '<form method="POST" action="%s" '
-        'style="border:1px solid #ccc;padding:6px;margin:8px 0;'
-        'font-family:monospace;font-size:13px">'
+        'style="border:1px solid %s;background:%s;padding:8px;margin:8px 0;'
+        'font-family:monospace;font-size:13px;color:%s">'
         '<div style="margin:4px 0">Feedback type: '
         '<select name="type" style="%s">'
         '<option>css-theme</option><option>data-format</option>'
@@ -623,12 +652,15 @@ def feedback_form_html(token=None):
         'placeholder="element/topic (one line)" style="%s"><br>'
         '<textarea name="text" maxlength="2000" rows="4" '
         'placeholder="your feedback" style="%s"></textarea><br>'
-        '<button type="submit" style="padding:4px 10px">Submit feedback</button>'
+        '<button type="submit" style="padding:4px 10px;background:%s;'
+        'color:%s;border:1px solid %s;font-size:12px">'
+        'Submit feedback</button>'
         '<input type="hidden" name="hngh_token" value="%s">'
-        '<div style="margin-top:6px;color:#666">'
+        '<div style="margin-top:6px;color:%s">'
         "Form not rendering? Open the dashboard and use its feedback pip.</div>"
         "</form>"
-    ) % (html.escape(url), box, box, box, html.escape(token or ""))
+    ) % (html.escape(url), line, panel, bone,
+         box, box, box, moss, bg, line, html.escape(token or ""), ash)
 
 
 def dashboard_token():
@@ -721,14 +753,18 @@ def night_brief_line():
 
 if __name__ == "__main__":
     if "--html" in sys.argv[1:]:
-        # HTML alternative part for the email transport: the digest text
-        # pre-escaped plus the feedback form. Same content, one extra cheap
-        # compose; keeps this script the single source of the digest body.
-        sys.stdout.write(
-            '<!doctype html><html><head><meta charset="utf-8">'
-            "<title>hngh daily digest</title></head>"
-            '<body style="font-family:monospace;font-size:13px">'
-            '<pre style="white-space:pre-wrap;margin:0">%s</pre>%s</body></html>'
-            % (html.escape(compose()), feedback_form_html()))
+        # HTML alternative part for the email transport: the newspaper
+        # renderer (html-digest.py) — table layout, inline styles, block
+        # sparklines. One shared gather feeds both parts, so the
+        # plain-text and HTML variants stay content-identical; this
+        # script stays the single source of the digest body.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "html_digest",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "html-digest.py"))
+        hd = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hd)
+        sys.stdout.write(hd.render_html())
     else:
         sys.stdout.write(compose())

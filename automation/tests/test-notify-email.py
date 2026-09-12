@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -530,6 +531,100 @@ class EmailDigest(unittest.TestCase):
             capture_output=True, text=True, timeout=60)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertIn('action="http://192.0.2.9:8123/api/feedback"', p.stdout)
+
+    # ---- newspaper HTML variant (email-safe: inline styles, tables) ----
+
+    def run_html(self, **extra):
+        p = subprocess.run([sys.executable, str(DIGEST), "--html"],
+                           env=dict(self.env, **extra),
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return p.stdout
+
+    def test_html_masthead_and_ledger_stats(self):
+        h = self.run_html(
+            HNGH_DIGEST_TELEMETRY="session cost:\n  session-cost total: $0.42",
+            HNGH_DIGEST_HOURLY="0.10:100:1,0.30:200:2")
+        self.assertIn("THE MACHINE HALL", h)
+        self.assertIn("MORNING DISPATCH", h)
+        self.assertIn("METERED SPEND", h)
+        self.assertIn("$0.42", h)          # from the fixture telemetry text
+        self.assertIn("API CALLS", h)
+        self.assertIn(">3<", h)            # 1+2 calls from the hourly fixture
+        self.assertIn("TOKENS IN", h)
+        self.assertIn("300", h)            # 100+200 tokens
+
+    def test_html_unicode_sparkline(self):
+        h = self.run_html(HNGH_DIGEST_HOURLY="0:0:0,0.5:10:2,0:0:0,1.0:30:4")
+        # esc() emits decimal entities: U+2581 = 9601 (flat base),
+        # U+2588 = 9608 (full block peak)
+        self.assertIn("&#9601;", h)
+        self.assertIn("&#9608;", h)
+        self.assertGreaterEqual(h.count("&#96"), 48)  # 2 trends x 24 buckets
+
+    def test_html_sparkline_zero_only_stays_flat(self):
+        h = self.run_html(HNGH_DIGEST_HOURLY="0:0:0,0:0:0,0:0:0")
+        self.assertNotIn("&#9608;", h)
+        self.assertIn("&#9601;", h)
+
+    def test_html_delta_line_from_prev_digest(self):
+        prev = self.tmp / "prev.md"
+        prev.write_text("status: OK\nspend: $0.31 today (vs unknown yesterday; "
+                        "target $10/day)\n")
+        h = self.run_html(
+            HNGH_DIGEST_PREV_DIGEST=str(prev),
+            HNGH_DIGEST_TELEMETRY="session-cost total: $0.42")
+        self.assertIn("since yesterday", h)
+        self.assertIn("$0.42", h)
+        self.assertIn("(was $0.31", h)
+        # omitted when yesterday's digest is unreadable
+        h2 = self.run_html(HNGH_DIGEST_PREV_DIGEST="/nonexistent-prev.md")
+        self.assertNotIn("since yesterday", h2)
+
+    def test_html_all_styles_inline(self):
+        h = self.run_html()
+        self.assertNotIn("<style", h.lower())
+        self.assertNotIn("<script", h.lower())
+
+    def test_html_feedback_form_keeps_hidden_token(self):
+        (self.tmp / "dashboard").mkdir(exist_ok=True)
+        (self.tmp / "dashboard" / "token.txt").write_text("tok-abc123\n")
+        h = self.run_html()
+        self.assertIn('name="hngh_token" value="tok-abc123"', h)
+
+    def test_html_table_nesting_depth_bounded(self):
+        h = self.run_html()
+        depth = mx = 0
+        for m in re.finditer(r"</?table\b", h):
+            depth += -1 if m.group(0).startswith("</") else 1
+            mx = max(mx, depth)
+        self.assertGreaterEqual(mx, 1)     # table-built at all
+        self.assertLessEqual(mx, 3)        # no deeper than 3 nested tables
+
+    def test_html_news_from_outside_world(self):
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        digest = self.tmp / "digest"
+        digest.mkdir(exist_ok=True)
+        (digest / ("%s.md" % day)).write_text(
+            "## 0917 %s\n_sources: reuters.com | model: gpt-x_\n"
+            "Grid pilot expands. https://example.com/grid\n" % day)
+        h = self.run_html()
+        self.assertIn("NEWS FROM THE OUTSIDE WORLD", h)
+        self.assertIn("reuters.com", h)
+        self.assertIn('href="https://example.com/grid"', h)
+
+    def test_html_plan_links_to_dashboard_only_when_up(self):
+        up = self.run_html(HNGH_DIGEST_DASHBOARD_UP="1")
+        self.assertIn('href="http://127.0.0.1:8890/"', up)
+        down = self.run_html(HNGH_DIGEST_DASHBOARD_UP="0")
+        self.assertNotIn('href="http://127.0.0.1:8890/"', down)
+
+    def test_plain_variant_stays_text(self):
+        p = subprocess.run([sys.executable, str(DIGEST)], env=self.env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("# hngh daily digest", p.stdout)
+        self.assertNotIn("THE MACHINE HALL", p.stdout)
 
 
 class ClassifyAlert(unittest.TestCase):
