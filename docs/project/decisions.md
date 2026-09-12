@@ -493,3 +493,26 @@ The cure follows the 2026-09-06 precedent, minimized:
    contains only the narrative feature and is already pushed. The gate
    lesson is unchanged: repo-root `scripts/` is ceremony surface for
    machine commits.
+
+## 2026-09-12 — Exemption batch 2 investigated: no violations exist
+
+A CI-fix worker flagged commits `1269028`, `403eb95`, `09717fd`,
+`da24588`, `c797336`, `8bac308` (plus `d317556`, `4edb3e3`) as
+undeclared kernel-surface commits that the loop-history guard would
+flag on the next local run. Investigation refutes the flag: every
+named commit touches `automation/tests/` (and only `automation/`) --
+the free-commit lane under the commit-per-green rule -- while the
+guard polices the repo-root code surface only (`src/`, `tests/`,
+`scripts/`, `Makefile`, `hngh.asd`). The guard itself reports
+`99 code-surface commits checked, 8 named exemption(s), 0 violations`
+at HEAD (`4ea6cc6`), and every code-surface commit since the previous
+exemption declaration (`2eb07fa`) is either `hngh: candidate`-bound or
+already registered (`20700c9`, `0e3b2c6`, `4fc4a0f`, `226de1d`).
+
+No exemption entries were added and no ceremony ran: a declaration
+requires an actual miss, and registering non-misses would erode the
+register's meaning. The standing policy note from the 2026-09-12
+narrative-ledger record stands: future kernel-surface fixes go through
+the ceremony directly -- the reroute is the preference, declarations
+are the fallback. The lesson for workers: `automation/` paths are never
+code-surface; flag only commits under the repo-root prefixes.
