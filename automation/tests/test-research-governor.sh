@@ -118,7 +118,12 @@ ok "RESEARCH_LOAD_CEILING env override + per-cpu math"
 # skips silently (race prevention, not a throttle: the next 15-minute
 # overflow tick picks the work up)
 rm -f "$sb/ff/failfirst-research"
-( exec 9>"$sb/lock-ext"; flock 9; touch "$sb/locked"; sleep 5 ) &
+(
+ exec 9>"$sb/lock-ext"
+ flock 9
+ touch "$sb/locked"
+ sleep 5
+) &
 lockpid=$!
 while [ ! -e "$sb/locked" ]; do sleep 0.05; done
 RESEARCH_LOCK_FILE_OVERRIDE="$sb/lock-ext" run_beat "$idle" RESEARCH_LOCK_WAIT=1
@@ -141,6 +146,7 @@ run_sat() { # db -> prints the reports.md rows; report root $sb/sat/root
  mkdir -p "$sb/sat"
  STATE_FILE="$sb/sat/STATE.md" HNGH_REPORT_ROOT="$sb/sat/root" \
   HNGH_TELEMETRY_DB="$1" FAILFIRST_STATE_DIR="$sb/ff-empty" \
+  HNGH_HOME="$(cd "$root/.." && pwd)" \
   bash "$root/cadence/day/20-model-saturation.sh" >/dev/null 2>&1
  cat "$sb/sat/root/docs/project/reports.md" 2>/dev/null
 }

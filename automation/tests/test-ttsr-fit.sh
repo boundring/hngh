@@ -53,7 +53,7 @@ arm_rule research-continuous-not-batch 'transitions per beat'
 rows() { cat "$sb/root/docs/project/reports.md" 2>/dev/null || true; }
 run() {
   TTSR_RULES_DIR="$sb/rules" TTSR_SETTINGS="$sb/config.yml" \
-    TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" \
+    TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" HNGH_HOME="$(cd "$root/.." && pwd)" \
     bash "$root/cadence/day/22-ttsr-fit.sh"
 }
 
@@ -129,7 +129,7 @@ ok "detect leg: post-hoc assistant-text match -> alert (backstop)"
 rm -f "$sb/sess/"*.jsonl "$sb/root/docs/project/reports.md"
 inj tight 2
 TTSR_FIT_THRESHOLD=2 TTSR_RULES_DIR="$sb/rules" TTSR_SETTINGS="$sb/config.yml" \
-  TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" \
+  TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" HNGH_HOME="$(cd "$root/.." && pwd)" \
   bash "$root/cadence/day/22-ttsr-fit.sh"
 need grep -q 'ttsr fit: session tight — ttsr injections: 2 (>= threshold 2)' < <(rows)
 ok "TTSR_FIT_THRESHOLD env override"
