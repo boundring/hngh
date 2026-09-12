@@ -14,7 +14,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # the loop-history-guard test walks git history from a restatement
+      # commit; a depth-1 clone cannot resolve it (exit 128)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install SBCL
         run: sudo apt-get update && sudo apt-get install --yes sbcl
       - name: Test local kernel
