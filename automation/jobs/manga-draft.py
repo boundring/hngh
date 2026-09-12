@@ -114,7 +114,7 @@ def plan_for(item, styles_tsv=STYLES_TSV):
     }
 
 
-def render_svg(plan, panel_svg=PANEL_SVG):
+def render_svg(plan, panel_svg=PANEL_SVG, image_href=None):
     """Fill the panel skeleton placeholders; text is XML-escaped. Returns
     the SVG text or None when the skeleton is missing (fail-closed)."""
     try:
@@ -138,8 +138,9 @@ def render_svg(plan, panel_svg=PANEL_SVG):
         "{{SFX}}": tsvg(plan["sfx"]),
         "{{NARRATIVE}}": block(plan["narrative"], 28, 620, 24),
         "{{ATTRIB}}": tsvg(plan["attribution"]),
-        "{{IMAGE}}": '<image x="18" y="18" width="988" height="552" '
-                     'href="PANEL_IMAGE_PLACEHOLDER" preserveAspectRatio="xMidYMid"/>',
+        "{{IMAGE}}": ('<image x="18" y="18" width="988" height="552" '
+                      'href="%s" preserveAspectRatio="xMidYMid"/>' % image_href)
+                      if image_href else "",
     }
     for key, val in parts.items():
         svg = svg.replace(key, val)

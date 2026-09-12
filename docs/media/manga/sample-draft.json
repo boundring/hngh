@@ -1,0 +1,13 @@
+{
+  "band": "NOTABLE",
+  "headline": "Google no longer provides direct URLs in search results",
+  "url": "https://www.autom.dev/blog/google-search-goto-links",
+  "style_id": "manga-panel",
+  "image_prompt": "google no longer provides direct urls in search results, single gag manga panel, expressive cartoon characters, bold ink outlines, screentone shading, dynamic speed lines, exaggerated reactions, high contrast monochrome ink, clean white ground, comic panel composition, no text in image",
+  "scene": "a tank and a paper airplane facing off across a cracked road",
+  "caption": "MEANWHILE, IN WORLD NEWS...",
+  "dialogue": "We prepared for everything except this exact thing.",
+  "sfx": "KRAK",
+  "narrative": "Grounded event: Google no longer provides direct URLs in search results (severity NOTABLE). Source cited below.",
+  "attribution": "[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://www.autom.dev/blog/google-search-goto-links"
+}
