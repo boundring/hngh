@@ -4,8 +4,10 @@
 Every row must parse to exactly 8 columns, cite an https upstream, carry a
 disposition from the enum, and reference only feeds actually registered in
 automation/config.env SOURCES. In-use rows must resolve their official
-install-path on this machine (bare command -> PATH seam via shutil.which;
-"none-" prefix marks the documented not-installed-standalone exception).
+install-path on this machine PATH-independently (absolute path -> isfile
++ executable bit; bare command -> shutil.which with fallback to any
+absolute path cited in the row; "none-" prefix marks the documented
+not-installed-standalone exception).
 """
 
 import os
@@ -52,11 +54,18 @@ def sources_feed_names():
 
 
 def path_resolves(install_path):
-    """PATH seam: bare command -> shutil.which; absolute path -> exists."""
+    """PATH-independent: absolute path -> isfile + X_OK; bare command ->
+    shutil.which with fallback to any absolute path cited in the row."""
     token = install_path.split()[0]
     if "/" in token:
-        return os.path.exists(os.path.expanduser(token))
-    return shutil.which(token) is not None
+        p = os.path.expanduser(token)
+        return os.path.isfile(p) and os.access(p, os.X_OK)
+    if shutil.which(token) is not None:
+        return True
+    return any(
+        os.path.isfile(c) and os.access(c, os.X_OK)
+        for c in re.findall(r"/[\w./+-]+", install_path)
+    )
 
 
 class TestHnghPackages(unittest.TestCase):
