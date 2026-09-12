@@ -66,11 +66,25 @@ Makefile          smoke / enable / disable / status
 ## Run it live (the honest stranger path)
 
 ```
-git clone <this repo> && cd hngh/automation
+git clone <this repo> && cd hngh
+bash install.sh --non-interactive --check   # validate prerequisites only
+bash install.sh --non-interactive           # validate + stage the machine profile
+bash install.sh                             # + polled preferences (TTY only)
+cd automation
 bash bootstrap.sh          # validates prerequisites; stages config/machine.env
 make test                  # hermetic automation suite (no network, no secrets)
 cd .. && make test         # kernel suite (2855 checks; sbcl — bootstrap checks for it)
 ```
+
+`install.sh` (repo root) is the public face: it runs the bootstrap checks,
+detects the system package manager (pacman/apt-get/dnf/zypper/apk) and prints
+the prereq package map for it, then polls editor/browser/desktop/JS-toolchain
+preferences when stdin is a TTY (every prompt has a default; env overrides
+`HNGH_EDITOR` / `HNGH_BROWSER` / `HNGH_DESKTOP` / `HNGH_JS_PM` win). Choices
+land in `automation/config/installer-choices.json` (gitignored). Honest
+scope: the polls configure the operator environment hngh's automation assumes
+- hngh installs nothing beyond the prereqs, touches no systemd, and full
+operation still needs the human steps below.
 
 `bootstrap.sh --check` validates only; `bootstrap.sh --install` installs missing
 prerequisites via the system package manager only (never `curl | bash` of a

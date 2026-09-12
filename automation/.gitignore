@@ -27,3 +27,5 @@ deck-facts/
 bridge/
 # machine profile - host identity, never committed (copy machine.env.example)
 config/machine.env
+# installer choice record - what THIS operator picked (install.sh)
+config/installer-choices.json
