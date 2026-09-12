@@ -73,6 +73,18 @@ class Patrol(unittest.TestCase):
         (self.auto / "digest" / "2026-09-12.md").write_text(
             "## 0100 2026-09-12\n- NOTABLE: test item (https://e.com)\n")
         (self.auto / "config" / "hngh-services.tsv").write_text("")
+        (self.auto / "dashboard" / "feedback" / "processed").mkdir(
+            parents=True, exist_ok=True)
+        (self.auto / "config" / "hngh-packages.tsv").write_text(
+            "package\tupstream\trole\tinstall-path\tconfig\tupdate\tfeed\t"
+            "disposition\nomp\tu\tr\t/usr/bin/env\tc\tu\tf\tin-use\n")
+        manga = self.sb / "docs" / "media" / "manga" / "sample"
+        manga.mkdir(parents=True)
+        (manga / "sample-draft.json").write_text("{}")
+        (self.auto / "logs" / "notify-email.log").write_text("")
+        (self.auto / "research-dispositions.tsv").write_text(
+            "line\taction\tverdict\treviewer\tevidence\tdate\n"
+            "some-line\tadopted\tadopted -- fine\tm\te\t%s\n" % iso(3600))
         (self.auto / "config" / "patrol-routes.tsv").write_text(
             (REPO / "automation" / "config" / "patrol-routes.tsv").read_text())
         (self.auto / "lib" / "quips.py").write_text(
@@ -114,8 +126,8 @@ class Patrol(unittest.TestCase):
         self.assertEqual([ln for ln in r.stdout.splitlines()
                           if ln.startswith("FAIL")], [])
         self.assertEqual(alerts, [])
-        # feeds emits 3 PASSes (one per feed), the other 4 routes one each
-        self.assertEqual(r.stdout.count("\nPASS "), 6)
+        # feeds emits 3 PASSes (one per feed), the other 7 routes one each
+        self.assertEqual(r.stdout.count("\nPASS "), 9)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -170,7 +182,7 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 5)  # the walk continued
+        self.assertEqual(len(results), 8)  # the walk continued
 
     # --- (8) a runner crash files one alert and exits 0 ---
     def test_runner_crash_suppressed_exit_zero(self):
@@ -201,7 +213,114 @@ class Patrol(unittest.TestCase):
         self.run_py("--tier", "30m")
         self.assertEqual(len(subjects.read_text().splitlines()), 1)
 
+    # --- (10) a >20 unprocessed feedback backlog fires the flood check ---
+    def test_feedback_flood_fails(self):
+        fb = self.auto / "dashboard" / "feedback"
+        for i in range(21):
+            (fb / ("fb-%d.json" % i)).write_text("{}")
+        r, _ = self.run_walk()
+        self.assertIn("FAIL feedback/feedback feedback-flood "
+                      "21 unprocessed > 20", r.stdout)
 
+    # --- (11) a missing processed/ sink fires the feedback check ---
+    def test_feedback_processed_missing_fails(self):
+        (self.auto / "dashboard" / "feedback" / "processed").rmdir()
+        r, _ = self.run_walk()
+        self.assertIn("FAIL feedback/feedback/processed processed-missing",
+                      r.stdout)
+
+    # --- (12) a stale manga draft fires the manga check ---
+    def test_manga_stale_fails(self):
+        p = (self.sb / "docs" / "media" / "manga" / "sample"
+             / "sample-draft.json")
+        os.utime(p, (NOW - 49 * 3600, NOW - 49 * 3600))
+        r = self.run_py("--patrol", "manga")
+        self.assertIn("FAIL manga/manga manga-stale newest draft 49h old",
+                      r.stdout)
+
+    # --- (13) component prompts with no render fire components-pending ---
+    def test_manga_components_pending_fails(self):
+        d = (self.sb / "docs" / "media" / "manga" / "sample")
+        (d / "components").mkdir()
+        (d / "components" / "env.json").write_text("{}")
+        r = self.run_py("--patrol", "manga")
+        self.assertIn("FAIL manga/sample components-pending "
+                      "1 component prompt(s), 0 renders", r.stdout)
+
+    # --- (14) a failed email send today fires the email check ---
+    def test_email_failed_send_fails(self):
+        (self.auto / "logs" / "notify-email.log").write_text(
+            "%s | send failed rc=2: no password\n"
+            "%s | send ok rc=0: hi\n"
+            % (iso(120)[:10] + "T00:00:00Z", iso(60)[:10] + "T00:00:00Z"))
+        r, _ = self.run_walk()
+        self.assertIn("FAIL email/notify-email.log send-failed "
+                      "1 failed send(s) today", r.stdout)
+
+    # --- (15) an in-use package whose install-path rots is a ghost row ---
+    def test_package_ghost_row_fails(self):
+        (self.auto / "config" / "hngh-packages.tsv").write_text(
+            "package\tupstream\trole\tinstall-path\tconfig\tupdate\tfeed\t"
+            "disposition\nomp\tu\tr\t/no/such/bin\tc\tu\tf\tin-use\n")
+        r = self.run_py("--patrol", "packages")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("FAIL packages/omp ghost-row in-use install-path "
+                      "does not resolve: /no/such/bin", r.stdout)
+
+    # --- (16) a transient managed child left running is a leak ---
+    def test_transient_child_left_running_fails(self):
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)",
+             "--port", "8188"])
+        try:
+            (self.auto / "config" / "hngh-services.tsv").write_text(
+                "service\trole\tmethod\tpath\tstart\thealth\tmanaged\t"
+                "disposition\ncomfyui\tr\tvenv\t/opt/comfyui\t"
+                "cd /opt/comfyui && python main.py --listen --port 8188\t"
+                "http://x\tautomation/lib/comfyui.sh\tin-use\n")
+            r = self.run_py("--patrol", "service-children")
+            self.assertEqual(r.returncode, 0)
+            self.assertIn("FAIL service-children/comfyui "
+                          "transient-left-running", r.stdout)
+        finally:
+            proc.kill()
+            proc.wait()
+
+    # --- (17) an adopted disposition with no follow-on is a finding ---
+    def test_adopted_no_followon_fails(self):
+        (self.auto / "research-dispositions.tsv").write_text(
+            "line\taction\tverdict\treviewer\tevidence\tdate\n"
+            "orphan-line\tadopted\tadopted -- fine\tm\te\t%s\n" % iso(3600))
+        r = self.run_py("--patrol", "research-dispositions")
+        self.assertIn("FAIL research-dispositions/orphan-line "
+                      "adopted-no-followon", r.stdout)
+
+    # --- (18) --morning: digest section with counts, causes, top-3 ---
+    def test_morning_report_appends_rounds_section(self):
+        # two patrol runs with fails land in the findings doc
+        os.utime(self.auto / "dashboard" / "sessions.json",
+                 (NOW - 7000, NOW - 7000))
+        self.run_py("--all")
+        (self.auto / "logs" / "notify-email.log").write_text(
+            "2026-09-12T01:00:00Z | send failed rc=2: no password\n")
+        self.run_py("--all")
+        # today's daily digest exists (the append-only target)
+        r = self.run_py("--morning")
+        self.assertEqual(r.returncode, 0)
+        digest = (self.auto / "digest" / "2026-09-12.md").read_text()
+        self.assertIn("## The rounds", digest)
+        self.assertRegex(digest,
+                         r"PASS \d+, FAIL \d+ \(feed-stale x2, "
+                         r"deck-a-empty x2, send-failed x1\)")
+        self.assertIn("Top items for operator attention:", digest)
+        self.assertIn("1. feeds", digest)
+        self.assertIn("3. email", digest)
+        # idempotent append: a second --morning adds one more section
+        self.run_py("--morning")
+        self.assertEqual(
+            digest.count("## The rounds") + 1,
+            (self.auto / "digest" / "2026-09-12.md").read_text()
+            .count("## The rounds"))
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 
