@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-12T12:02:15Z routed-from=ttsr-fit:imagegen-p0 -->
+<!-- plan: status=parked risk=normal accepted=2026-09-12T12:02:15Z routed-from=ttsr-fit:imagegen-p0  cause=obsolete disposed=2026-09-12T13:00:49Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-12 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ttsr-fit:imagegen-p0`
@@ -13,3 +13,4 @@ at 2026-09-12T10:00:49Z. Alert text: ttsr fit: session imagegen-p0 — ttsr inje
 
 - 2026-09-12T11:00:49Z re-occurred (dedup window expired)
 - 2026-09-12T12:00:49Z re-occurred (dedup window expired)
+- 2026-09-12T13:00:49Z re-occurred (dedup window expired)
