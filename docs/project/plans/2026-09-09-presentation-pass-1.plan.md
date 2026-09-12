@@ -20,7 +20,7 @@ flavor layer; rungs 3–7 are horizon, not this plan.
       Verification: relative-link checker passes on README (the
       ceremony enforces this); a read-through shows zero marketing
       register; `make test` green.
-- [ ] 2. Docs spine promotion. Make the navigable path the entry
+- [x] 2. Docs spine promotion. Make the navigable path the entry
       point: docs/README.md read-order gains a visual structure
       (sections: Start here / How it governs itself / The live machine
       / Records and history), each entry one descriptive line, every

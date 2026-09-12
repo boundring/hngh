@@ -527,8 +527,36 @@ def ebook_documents():
             (ROOT / "docs" / "project" / "queue.md", "The queue"),
             (README, "The readme")):
         if path.exists():
-            docs.append((title, path.read_text()))
+            docs.append((title, path, path.read_text()))
     return docs
+
+
+def relocated_text(text, source, book_dir):
+    """Rewrite each markdown link so its target resolves from
+    book_dir, the directory the assembled book.md will live in. A
+    link that escapes the repository is kept as-is; unknown or
+    unreachable input is left untouched rather than guessed."""
+    base = source.resolve().parent
+    book_dir = Path(book_dir).resolve()
+
+    def substitute(match):
+        target = match.group(1)
+        if "://" in target or target.startswith("mailto:"):
+            return match.group(0)
+        path_part, sep, fragment = target.partition("#")
+        anchor = "#" + fragment if sep else ""
+        if not path_part:
+            return match.group(0)
+        resolved = (base / path_part).resolve()
+        if resolved.is_dir():
+            return match.group(0)
+        root = ROOT.resolve()
+        if root not in resolved.parents and root != resolved:
+            return match.group(0)
+        link = os.path.relpath(resolved, book_dir) + anchor
+        return "]({})".format(link)
+
+    return re.sub(r"\]\(([^)]+)\)", substitute, text)
 
 
 def chapter_documents(patterns):
@@ -578,7 +606,9 @@ def build_ebook(outdir, chapters=None, meta=None):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     meta = meta or dict(DEFAULT_BOOK_META)
-    docs = ebook_documents() + chapter_documents(chapters or [])
+    docs = [(title, relocated_text(text, source, outdir.resolve()))
+            for title, source, text in ebook_documents()] + \
+           chapter_documents(chapters or [])
     book = "\n\n".join(
         [f"# The Hngh memoir (assembled)", "",
          "The record in one file: the intent, the architecture, the "

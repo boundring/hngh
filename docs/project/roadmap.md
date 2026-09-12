@@ -215,3 +215,7 @@ remote step is operator-side (`sudo tailscale serve --bg 8890`,
 documented in hngh-automation REMOTE-ACCESS.md; never from automation).
 
 No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
+
+---
+
+Back to the [documentation spine](../../README.md).

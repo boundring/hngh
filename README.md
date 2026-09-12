@@ -254,7 +254,7 @@ principle for later.
 - Pre-release. Nothing has been released yet; development lives under
   Pre-release in the [CHANGELOG](CHANGELOG.md). Not production ready.
 - Not a published package yet. There is no install story beyond the
-  source tree; the surface is [this repository](.) today.
+  source tree; the surface is [this repository](docs/README.md) today.
 - Not production ready. The exact posture is honest in
   [CHANGELOG](CHANGELOG.md) and the
   [pre-release boundary](docs/project/roadmap.md).
