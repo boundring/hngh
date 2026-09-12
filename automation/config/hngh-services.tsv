@@ -1,0 +1,36 @@
+# hngh companion-services registry (established 2026-09-12)
+# One row per companion service hngh can be authorized to install, configure,
+# manage, or use (standing operator pattern, docs/records/2026-09-12-services-
+# management.md). The registry is OPEN-ENDED: any future software that
+# benefits from management is a row, guard-enforced the way hngh-packages.tsv
+# is (automation/tests/test-hngh-services.py).
+# Columns (tab-separated):
+#   service        short id used in hngh docs/records
+#   role           what it does for the operator's harness
+#   install-method how it would be installed (handler in lib/service-mgmt.sh;
+#                  unimplemented methods are printed as OPERATOR STEPS, never
+#                  run silently)
+#   install-path   where it lives on THIS machine ("none-..." = deliberately
+#                  not a managed install)
+#   start-command  the transient lifecycle command lib/service-mgmt.sh
+#                  execs as a child (required for in-use rows; empty for
+#                  operator-run rows hngh never launches)
+#   health-url     HTTP endpoint polled for "up" ("" = no HTTP health)
+#   managed-by     who owns the lifecycle: operator | none | automation/...
+#                  (the first consumer: automation/lib/comfyui.sh)
+#   disposition    in-use|operator-run|available|registered-only|absent
+# Ask-able set (installer polls the operator): available|registered-only|absent.
+# In-use/operator-run rows are recorded, never polled.
+# Facts audited 2026-09-12 (row -> citation):
+#   comfyui: docs/records/2026-09-11-comfyui-repair.md:38-39 (start), :25/:30
+#     (venv312, models), :62 (health GET /); consumer jobs/imagegen-submit.sh
+#   unsloth-llamaserver: automation/config.env:24 (UNSLOTH_URL 127.0.0.1:8888)
+#   ollama: automation/config.env:25 (OLLAMA_URL 11434), :18 (OLLAMA_MODEL);
+#     /usr/local/bin/ollama verified on-host, `ollama serve` running
+#   llamacpp: /usr/bin/llama-server (llama.cpp vulkan), deck leg per
+#     automation/config.env:33; not separately installed as a service
+service	role	install-method	install-path	start-command	health-url	managed-by	disposition
+comfyui	imagegen server (transient lifecycle; first consumer jobs/imagegen-submit.sh)	user-space-venv	/opt/comfyui	cd /opt/comfyui && $HOME/.local/share/comfyui-venv312/bin/python main.py --listen 127.0.0.1 --port 8188	http://127.0.0.1:8188/	automation/lib/comfyui.sh	in-use
+unsloth-llamaserver	text model leg (UNSLOTH_URL; operator launches via unsloth studio UI)	unsloth-studio	none-operator-run (unsloth studio launches llama-server on 127.0.0.1:8888)		http://127.0.0.1:8888/health	operator	operator-run
+ollama	gemma fallback model server (OLLAMA_MODEL, final fallback leg)	official-install-script	/usr/local/bin/ollama	/usr/local/bin/ollama serve	http://127.0.0.1:11434/	operator	in-use
+llamacpp	llama-server binary (deck vulkan leg; operator supplies model + port)	system-package	/usr/bin/llama-server			none	available
