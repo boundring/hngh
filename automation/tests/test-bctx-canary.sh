@@ -61,7 +61,8 @@ ok "canary: budget drift -> alert with expected vs found"
 # case 3: env override beats the Inventory row -> 40% is then a match
 reset
 BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
-  BCTX_MAX_CONTEXT=40% bash "$root/cadence/day/23-bctx-canary.sh"
+  BCTX_MAX_CONTEXT=40% HNGH_HOME="$(cd "$root/.." && pwd)" \
+  bash "$root/cadence/day/23-bctx-canary.sh"
 need grep -q "expected 40% found 40%" < <(rows)
 ok "canary: env BCTX_MAX_CONTEXT overrides the row"
 
