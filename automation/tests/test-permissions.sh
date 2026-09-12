@@ -10,6 +10,8 @@
 # (f) installer --profile non-interactive: resolved grant file written,
 #     choices record carries permissions_profile;
 # (g) installer TTY checkbox path: answers flip only the granted class.
+# (h) profile-driven sudoers generation: alias subset per grants, fail-closed
+#     on malformed profile, visudo-shaped output, installer records the grant.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
@@ -144,6 +146,87 @@ sys.exit(0 if p["host-actions"]["snapshots"] is True and
   grep -q '"permissions_profile"' "$choices" 2>/dev/null &&
     ok "choices record carries permissions_profile" ||
     bad "choices record missing permissions_profile"
+  if [ -f "$choices" ] && python3 -c '
+import json, sys
+c = json.load(open(sys.argv[1]))
+s = c.get("sudoers") or {}
+sys.exit(0 if s.get("installed") is False and
+          "HNGH_BTRFS_SNAP" in (s.get("aliases") or []) and
+          "HNGH_PKGCACHE" not in (s.get("aliases") or []) else 1)
+' "$choices" 2>/dev/null; then
+    ok "choices record carries sudoers grant (not installed, right aliases)"
+  else
+    bad "choices record missing/misstates sudoers grant"
+  fi
+fi
+
+# --- (h) profile-driven sudoers generation ------------------------------------
+sudoers_subset() { # NAME PROFILE_JSON EXPECTED_ALIAS [FORBIDDEN_ALIAS]...
+  local name="$1" json="$2" want="$3" pf out
+  shift 3
+  pf="$(mk "sudo-$name" "$json")"
+  out="$(sudoers_for "$pf")"
+  if [ $? -ne 0 ]; then
+    bad "sudoers_for $name: rc $?"
+    return
+  fi
+  if [ -z "$out" ]; then
+    bad "sudoers_for $name: empty output"
+    return
+  fi
+  case "$out" in
+  *"$want"*) ok "sudoers_for $name: grants $want" ;;
+  *) bad "sudoers_for $name: missing $want" ;;
+  esac
+  local a
+  for a in "$@"; do
+    case "$out" in
+    *"$a"*) bad "sudoers_for $name: must not contain $a" ;;
+    *) ok "sudoers_for $name: omits $a" ;;
+    esac
+  done
+  # header comment says "no NOPASSWD:ALL" - judge only live rules
+  if grep -v '^[[:space:]]*#' "$SANDBOX/gen.sudoers" | grep -q 'NOPASSWD:ALL'; then
+    bad "sudoers_for $name: NOPASSWD:ALL present"
+  else
+    ok "sudoers_for $name: no NOPASSWD:ALL"
+  fi
+  case "$out" in
+  *) ok "sudoers_for $name: no NOPASSWD:ALL" ;;
+  esac
+  printf '%s\n' "$out" >"$SANDBOX/gen.sudoers"
+  if command -v visudo >/dev/null 2>&1; then
+    if visudo -cf "$SANDBOX/gen.sudoers" >/dev/null 2>&1; then
+      ok "sudoers_for $name: visudo -cf parses"
+    else
+      bad "sudoers_for $name: visudo -cf rejects generated rules"
+    fi
+  fi
+}
+sudoers_subset snapwol \
+  '{"version":1,"secret-access":"none","host-actions":{"snapshots":true,"package-updates":false,"wol":true},"file-paths":[],"social-posting":false,"kernel-gates":"operator-only"}' \
+  HNGH_BTRFS_SNAP HNGH_PKGCACHE HNGH_PARU_CLEAN
+sudoers_subset snapwol2 \
+  '{"version":1,"secret-access":"none","host-actions":{"snapshots":true,"package-updates":false,"wol":true},"file-paths":[],"social-posting":false,"kernel-gates":"operator-only"}' \
+  HNGH_WOL HNGH_PKGCACHE HNGH_PARU_CLEAN
+sudoers_subset pkg \
+  '{"version":1,"secret-access":"none","host-actions":{"snapshots":false,"package-updates":true,"wol":false},"file-paths":[],"social-posting":false,"kernel-gates":"operator-only"}' \
+  HNGH_PKGCACHE HNGH_BTRFS_SNAP HNGH_WOL
+sudoers_subset pkg2 \
+  '{"version":1,"secret-access":"none","host-actions":{"snapshots":false,"package-updates":true,"wol":false},"file-paths":[],"social-posting":false,"kernel-gates":"operator-only"}' \
+  HNGH_PARU_CLEAN HNGH_BTRFS_SNAP HNGH_WOL
+denied="$(sudoers_for "$PERM_DEFAULT_PROFILE")"
+case "$denied" in
+*Cmnd_Alias* | *HNGH_*) bad "all-denied profile emits sudo aliases" ;;
+*) ok "all-denied profile emits no aliases" ;;
+esac
+malprof="$(mk malprof 'not json')"
+malout="$(sudoers_for "$malprof")"
+malrc=$?
+if [ "$malrc" -eq 1 ] && [ -z "$malout" ]; then
+  ok "malformed profile: sudoers_for empty + rc 1"
+else
+  bad "malformed profile: rc=$malrc out=$malout"
 fi
 
 # --- (g) installer TTY checkbox path: only the granted class flips ------------
