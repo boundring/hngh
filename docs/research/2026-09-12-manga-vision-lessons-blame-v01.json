@@ -1,0 +1,48 @@
+{
+ "beats": [
+  {
+   "imagery_carries": "Vast scale of the environment, two small figures walking, sense of movement and sound",
+   "narrative_mode": "image-only",
+   "page_turn_hook": "cliff",
+   "panel_flow": "Tall vertical panel with diagonal structure and SFX, then full-page spread with massive SFX text"
+  },
+  {
+   "imagery_carries": "character expressions of shock and menace, a creature/monster reveal, scale of an industrial space, and the pairing of two figures",
+   "narrative_mode": "mixed",
+   "page_turn_hook": "quiet beat",
+   "panel_flow": "Page 1: tight horizontal strips and a triptych of close-ups, then a wide low-angle action shot. Page 2: dominant full-height vertical establishing panel on the left with three stacked smaller interior panels on the right."
+  },
+  {
+   "imagery_carries": "a figure navigating a dark, organic tunnel of ribbed tubes and fleshy walls, encountering grotesque biological forms and debris",
+   "narrative_mode": "image-only",
+   "page_turn_hook": "quiet beat",
+   "panel_flow": "tall establishing panel then rapid strips"
+  },
+  {
+   "imagery_carries": "A masked figure standing amid rubble; an impact and explosion sequence; a pale child-like face lying back; a monstrous creature emerging through smoke and debris; a final close-up of the small pale figure holding an object",
+   "narrative_mode": "mixed",
+   "page_turn_hook": "quiet beat",
+   "panel_flow": "Two vertical panels stacked over one horizontal strip and one large bottom panel, then a 2x2 grid opening into a multi-panel cluster"
+  }
+ ],
+ "grammar_notes": [
+  "Page 1: tight horizontal strips and a triptych of close-ups, then a wide low-angle action shot. Page 2: dominant full-height vertical establishing panel on the left with three stacked smaller interior panels on the right.",
+  "Tall vertical panel with diagonal structure and SFX, then full-page spread with massive SFX text",
+  "Two vertical panels stacked over one horizontal strip and one large bottom panel, then a 2x2 grid opening into a multi-panel cluster",
+  "tall establishing panel then rapid strips"
+ ],
+ "hooks": [
+  "cliff",
+  "quiet beat",
+  "quiet beat",
+  "quiet beat"
+ ],
+ "ratios": {
+  "dialogue_only": 0.0,
+  "image_only": 0.5,
+  "mixed": 0.5
+ },
+ "script_annotation": "narrative-mode register per beat: image-only beats need no dialogue bank; dialogue-only beats lean on narration; mixed is the house default",
+ "spreads_sampled": 4,
+ "title": "Blame v01"
+}
