@@ -116,6 +116,7 @@ test:
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
+	bash tests/test-permissions.sh
 	bash tests/test-imagegen-submit.sh
 	bash tests/test-dispatch.sh
 	bash scripts/lint-identifiers.sh

@@ -90,6 +90,31 @@ class CredGet(unittest.TestCase):
             env=env, capture_output=True, timeout=60)
         self.assertEqual(p.returncode, 0)
 
+    def test_service_key_maps_onto_op_token(self):
+        # keyed entry (2026-09-12): ONEPASSWORD_SERVICE_KEY must reach op as
+        # OP_SERVICE_ACCOUNT_TOKEN, and a pre-set token is never overwritten.
+        stub_env = self.tmp / "op-env"
+        stub_env.write_text(
+            "#!/usr/bin/env bash\n"
+            'printf "%s" "${OP_SERVICE_ACCOUNT_TOKEN-}"\n'
+        )
+        stub_env.chmod(0o755)
+        script = (
+            '. "%s/lib/common.sh"; . "%s/lib/breadcrumbs.sh"; '
+            '. "%s/lib/credentials.sh"; printf "%%s" "$OP_SERVICE_ACCOUNT_TOKEN"'
+        ) % (ROOT, ROOT, ROOT)
+        env = dict(os.environ, HNGH_OP_BIN=str(stub_env),
+                   STATE_FILE=str(self.state), CRED_STATE_DIR=str(self.logs),
+                   ONEPASSWORD_SERVICE_KEY="sk-test-mapping")
+        env.pop("OP_SERVICE_ACCOUNT_TOKEN", None)
+        p = subprocess.run(["bash", "-c", script], env=env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.stdout, "sk-test-mapping", p.stderr)
+        env["OP_SERVICE_ACCOUNT_TOKEN"] = "sk-existing"
+        p = subprocess.run(["bash", "-c", script], env=env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.stdout, "sk-existing", p.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

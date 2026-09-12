@@ -16,30 +16,40 @@
 #   bash install.sh --non-interactive           validate + stage defaults
 #   bash install.sh                             validate + polled prefs (TTY)
 #   bash install.sh --no-color                  PLAIN output even on a TTY
+#   bash install.sh --profile FILE              permissions profile seed
+#     (checkbox grants render from FILE's values; see phase 4)
 # env overrides (win over prompts, automation-safe):
 #   HNGH_EDITOR / HNGH_BROWSER / HNGH_DESKTOP / HNGH_JS_PM
 #   HNGH_CHOICES_FILE  where the choices record lands
 #     (default automation/config/installer-choices.json, gitignored)
+#   HNGH_PERMISSIONS_PROFILE  where the resolved grant profile lands
+#     (default ~/.hngh-automation/permissions-profile.json)
 set -u
 case "$0" in */*) ROOT="$(cd "${0%/*}" && pwd)" ;; *) ROOT="$PWD" ;; esac
 AUTO="$ROOT/automation"
 NONINTERACTIVE=0
 CHECK=0
 NOCOLOR=0
-for arg in "$@"; do
-  case "$arg" in
+while [ $# -gt 0 ]; do
+  case "$1" in
   --non-interactive | -y | --yes) NONINTERACTIVE=1 ;;
   --check) CHECK=1 ;;
   --no-color) NOCOLOR=1 ;;
+  --profile)
+    PROFILE_FILE="${2:?--profile needs a file argument}"
+    shift
+    ;;
+  --profile=*) PROFILE_FILE="${1#--profile=}" ;;
   -h | --help)
-    sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)
-    echo "usage: install.sh [--non-interactive|--check]" >&2
+    echo "usage: install.sh [--non-interactive|--check|--no-color|--profile FILE]" >&2
     exit 2
     ;;
   esac
+  shift
 done
 
 # ==================== presentation layer (Winamp-class) ====================
@@ -66,7 +76,8 @@ done
 # every code flows through the single c() helper. Unicode blocks (box
 # chars, seek bars, ticks) only under a UTF-8 locale; ASCII fallbacks
 # elsewhere (repo language rule: ASCII where the repo is ASCII).
-TTY=0; [ -t 1 ] && TTY=1
+TTY=0
+[ -t 1 ] && TTY=1
 PLAIN=1
 if [ "$TTY" -eq 1 ] && [ -z "${NO_COLOR:-}" ] && [ "$NOCOLOR" -eq 0 ]; then
   PLAIN=0
@@ -104,13 +115,13 @@ elif [ "${COLORTERM:-}" = truecolor ]; then
   printf -v P_RESET '\033[0m'
 else
   # nearest ANSI-256 (6x6x6 cube + gray ramp), computed offline
-  printf -v P_BONE '\033[38;5;253m' # E7E2D3 -> 253
-  printf -v P_ASH '\033[38;5;246m' # 9B9889 -> 246
-  printf -v P_MOSS '\033[38;5;107m' # 7FA05E -> 107
+  printf -v P_BONE '\033[38;5;253m'   # E7E2D3 -> 253
+  printf -v P_ASH '\033[38;5;246m'    # 9B9889 -> 246
+  printf -v P_MOSS '\033[38;5;107m'   # 7FA05E -> 107
   printf -v P_BASALT '\033[38;5;237m' # 39413A -> 237
-  printf -v P_AMBER '\033[38;5;172m' # d29922 -> 172
-  printf -v P_OK '\033[38;5;71m' # 3fb950 -> 71
-  printf -v P_RED '\033[38;5;203m' # f85149 -> 203
+  printf -v P_AMBER '\033[38;5;172m'  # d29922 -> 172
+  printf -v P_OK '\033[38;5;71m'      # 3fb950 -> 71
+  printf -v P_RED '\033[38;5;203m'    # f85149 -> 203
   printf -v P_VOIDBG '\033[48;5;234m' # 171B17 -> 234
   printf -v P_BONEV '\033[38;5;253;48;5;234m'
   printf -v P_MOSSV '\033[38;5;107;48;5;234m'
@@ -147,7 +158,10 @@ warn() {
 }
 rep() { # CHAR N -> N copies
   local out='' i=0
-  while [ "$i" -lt "$2" ]; do out="$out$1"; i=$((i + 1)); done
+  while [ "$i" -lt "$2" ]; do
+    out="$out$1"
+    i=$((i + 1))
+  done
   printf '%s' "$out"
 }
 
@@ -164,9 +178,18 @@ MMID='|'
 masthead() {
   local top bot h tl tr bl br
   if [ "$UTF8" -eq 1 ]; then
-    h='═'; tl='╔'; tr='╗'; bl='╚'; br='╝'; MMID='║'
+    h='═'
+    tl='╔'
+    tr='╗'
+    bl='╚'
+    br='╝'
+    MMID='║'
   else
-    h='='; tl='+'; tr='+'; bl='+'; br='+'
+    h='='
+    tl='+'
+    tr='+'
+    bl='+'
+    br='+'
   fi
   top="$tl$(rep "$h" "$((MW + 2))")$tr"
   bot="$bl$(rep "$h" "$((MW + 2))")$br"
@@ -193,9 +216,20 @@ mrow() { # STYLE TEXT -> one title-bar row, dark void fill on a color TTY
 step_row() { # NUM NAME STATE(pending|ok|fail)
   local num="$1" name="$2" st="$3" glyph gcol
   case "$st" in
-  pending) glyph='[ ]'; gcol=ash ;;
-  ok) glyph='[x]'; [ "$UTF8" -eq 1 ] && glyph='[✓]'; gcol=ok ;;
-  fail) glyph='[X]'; [ "$UTF8" -eq 1 ] && glyph='[✗]'; gcol=red ;;
+  pending)
+    glyph='[ ]'
+    gcol=ash
+    ;;
+  ok)
+    glyph='[x]'
+    [ "$UTF8" -eq 1 ] && glyph='[✓]'
+    gcol=ok
+    ;;
+  fail)
+    glyph='[X]'
+    [ "$UTF8" -eq 1 ] && glyph='[✗]'
+    gcol=red
+    ;;
   esac
   printf '  %s %s %s\n' "$(c "$gcol" "$glyph")" "$(c moss "$num.")" "$(c bone "$name")"
 }
@@ -205,7 +239,8 @@ step_plan() {
   step_row 02 prereqs pending
   step_row 03 stage pending
   step_row 04 preferences pending
-  step_row 05 record pending
+  step_row 05 permissions pending
+  step_row 06 record pending
 }
 
 # Winamp seek bar: one line redrawn in place (\r) while a slow step runs.
@@ -234,18 +269,28 @@ trap 'rm -f "$TMPLOG" "$TMPRC"' EXIT
 # after the bar completes (TTY only; PLAIN runs the command untouched).
 run_winamp() {
   local quiet=0
-  if [ "${1:-}" = '--quiet' ]; then quiet=1; shift; fi
+  if [ "${1:-}" = '--quiet' ]; then
+    quiet=1
+    shift
+  fi
   local label="$1"
   shift
   if [ "$PLAIN" -eq 1 ]; then
     "$@"
     return $?
   fi
-  : >"$TMPLOG"; : >"$TMPRC"
+  : >"$TMPLOG"
+  : >"$TMPRC"
   if [ "$quiet" -eq 1 ]; then
-    ( "$@" >/dev/null 2>"$TMPLOG"; echo "$?" >"$TMPRC" ) &
+    (
+      "$@" >/dev/null 2>"$TMPLOG"
+      echo "$?" >"$TMPRC"
+    ) &
   else
-    ( "$@" >"$TMPLOG" 2>&1; echo "$?" >"$TMPRC" ) &
+    (
+      "$@" >"$TMPLOG" 2>&1
+      echo "$?" >"$TMPRC"
+    ) &
   fi
   local spid=$! i=0
   while [ ! -f "$TMPRC" ] && [ "$i" -lt 100 ]; do
@@ -338,15 +383,98 @@ ask DESKTOP "desktop (kde|gnome|both|none)" "none"
 ask JS_PM "js toolchain (npm|pnpm|bun)" "npm"
 step_row 04 preferences ok
 
-# --- phase 5: choices record (reproducibility: what the operator picked) ----
+# --- phase 5: permissions profile (the operator-gated grant surface) --------
+# The AUTHORITATIVE statement of what hngh may do on this host (contract:
+# automation/lib/permissions.sh; docs/records/2026-09-12-privilege-model.md).
+# hngh machinery reads ONLY the resolved profile written below - an absent
+# file means minimum grants (fail-closed), so this phase can only WIDEN
+# grants through explicit operator answers, never hngh discretion. Checkbox
+# classes seed from --profile FILE (else the shipped all-denied default);
+# TTY runs get checkbox prompts, non-interactive/piped runs take the seed
+# as-is. Nothing here touches sudoers or 1Password: those stay operator
+# surfaces (the template + the fix steps are printed, never executed).
+. "$AUTO/lib/permissions.sh"
+SEED="${PROFILE_FILE:-$AUTO/config/permissions-profile.json}"
+if ! perm_validate "$SEED"; then
+  step_row 05 permissions fail
+  exit 1
+fi
+perm_load "$SEED"
+perm_box() { # 0|1 -> checkbox glyph
+  [ "$1" = 1 ] && printf '[x]' || printf '[ ]'
+}
+perm_flip() { # ANSWER DEFAULT(0|1) -> 0|1 (empty keeps the seed default)
+  case "$1" in
+  y | Y) echo 1 ;;
+  n | N) echo 0 ;;
+  *) echo "$2" ;;
+  esac
+}
+plate "--- permissions (what hngh may do; nothing here is hngh's discretion) ---"
+if [ "$NONINTERACTIVE" -eq 1 ] || [ ! -t 0 ]; then
+  say "$(perm_box "$PERM_SNAPSHOTS") snapshots       - btrfs per-directory time travel (root via sudoers drop-in)"
+  say "$(perm_box "$PERM_PACKAGE_UPDATES") package-updates - paccache/paru cache hygiene (sudoers drop-in)"
+  say "$(perm_box "$PERM_WOL") wol             - wake-on-lan via ethtool (sudoers drop-in)"
+  say "$(perm_box "$PERM_SOCIAL_POSTING") social-posting - public social surfaces (dormant while denied)"
+  say "secret-access: $PERM_SECRET_ACCESS; time-travel dirs: ${PERM_FILE_PATHS:-none}"
+  say "kernel gates: operator-only (never hngh-discretion)"
+  say "(seeded from: $SEED)"
+else
+  for _cls in snapshots package-updates wol social-posting; do
+    _var="PERM_$(printf '%s' "$_cls" | tr 'a-z-' 'A-Z_')"
+    eval "_cur=\$$_var"
+    case "$_cls" in
+    snapshots) _desc="btrfs per-directory time travel (root via sudoers drop-in)" ;;
+    package-updates) _desc="paccache/paru cache hygiene (sudoers drop-in)" ;;
+    wol) _desc="wake-on-lan via ethtool (sudoers drop-in)" ;;
+    social-posting) _desc="public social surfaces (dormant while denied)" ;;
+    esac
+    printf '%s\n' "$(c moss "$(perm_box "$_cur") $_cls")$(c ash " - $_desc")"
+    read -r -p "$(c ash "grant $_cls? [y/N] ")" _ans </dev/tty || _ans=""
+    eval "$_var=\"\$(perm_flip \"\${_ans:-}\" \"$_cur\")\""
+  done
+  printf '%s\n' "$(c bone "secret access tier")$(c ash " [1password|envfile|none]")"
+  read -r -p "$(c ash "tier [$PERM_SECRET_ACCESS]: ")" _sa </dev/tty || _sa=""
+  case "${_sa:-}" in
+  1password | envfile | none) PERM_SECRET_ACCESS="$_sa" ;;
+  esac
+  printf '%s\n' "$(c bone "time-travel dirs")$(c ash " (absolute paths, comma-separated; btrfs snapshot/restore scope)")"
+  read -r -p "$(c ash "dirs [${PERM_FILE_PATHS:-none}]: ")" _fp </dev/tty || _fp=""
+  [ -n "$_fp" ] && PERM_FILE_PATHS="$(printf '%s' "$_fp" | tr ',' '\n')"
+fi
+PERM_OUT="${HNGH_PERMISSIONS_PROFILE:-$HOME/.hngh-automation/permissions-profile.json}"
+mkdir -p "$(dirname "$PERM_OUT")"
+jq -n \
+  --arg sa "$PERM_SECRET_ACCESS" \
+  --arg snap "$PERM_SNAPSHOTS" \
+  --arg pkg "$PERM_PACKAGE_UPDATES" \
+  --arg wol "$PERM_WOL" \
+  --arg fp "$PERM_FILE_PATHS" \
+  --arg social "$PERM_SOCIAL_POSTING" \
+  '{version: 1, "secret-access": $sa,
+    "host-actions": {snapshots: ($snap == "1"), "package-updates": ($pkg == "1"), wol: ($wol == "1")},
+    "file-paths": ([$fp | select(length > 0) | split("\n")[]]),
+    "social-posting": ($social == "1"), "kernel-gates": "operator-only"}' >"$PERM_OUT"
+chmod 600 "$PERM_OUT"
+if ! perm_validate "$PERM_OUT"; then
+  rm -f "$PERM_OUT" # never leave an invalid grant file behind
+  step_row 05 permissions fail
+  exit 1
+fi
+perm_load "$PERM_OUT"
+say "permissions profile: $PERM_OUT (the grant surface hngh reads)"
+say "sudoers template (operator installs): $AUTO/config/hngh-automation.sudoers.example"
+step_row 05 permissions ok
+
+# --- phase 6: choices record (reproducibility: what the operator picked) ----
 # The machine record stays PLAIN text - the presentation layer never colors
 # or reshapes it.
 CHOICES_FILE="${HNGH_CHOICES_FILE:-$AUTO/config/installer-choices.json}"
 MODE="interactive"
 [ "$NONINTERACTIVE" -eq 1 ] && MODE="non-interactive"
-python3 - "$CHOICES_FILE" "$MODE" "$PM" "$EDITOR" "$BROWSER" "$DESKTOP" "$JS_PM" <<'PY'
+python3 - "$CHOICES_FILE" "$MODE" "$PM" "$EDITOR" "$BROWSER" "$DESKTOP" "$JS_PM" "$PERM_OUT" <<'PY'
 import json, os, sys, datetime
-path, mode, pm, editor, browser, desktop, js_pm = sys.argv[1:]
+path, mode, pm, editor, browser, desktop, js_pm, perm = sys.argv[1:]
 rec = {
     "installer_mode": mode,
     "package_manager": pm,
@@ -354,6 +482,7 @@ rec = {
     "browser": browser,
     "desktop": desktop,
     "js_pm": js_pm,
+    "permissions_profile": perm,
     "recorded_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
 }
 os.makedirs(os.path.dirname(path), exist_ok=True)
