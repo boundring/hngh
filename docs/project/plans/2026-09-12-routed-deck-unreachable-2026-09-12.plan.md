@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=deck-unreachable-2026-09-12 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-12T09:02:15Z routed-from=deck-unreachable-2026-09-12 -->
 # 2026-09-12 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `deck-unreachable-2026-09-12`
