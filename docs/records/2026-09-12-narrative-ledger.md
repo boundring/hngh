@@ -86,3 +86,17 @@ grows a page a day.
   --check still verifies.
 - `cd automation && make test` green (full suite, 2026-09-12).
 - `env -i` hermetic runs of the new and adjacent suites green.
+
+## Gate lesson (2026-09-12, post-landing)
+
+The feature commit (226de1d) touched repo-root scripts/ -- kernel code
+surface per AGENTS.md (gate-cure batch 2eb07fa) -- and the loop-history
+guard went red. The assigning brief failed to carry the rule; cured by
+post-hoc declaration per the 41f646a precedent: the 226de1d patch-id
+(38ad9a7cc2679d4dad027bb8fe3f6a4e277e198f) is registered in
+tests/scripts/test-loop-history-guard.py KNOWN_EXEMPTIONS with a
+decisions.md line, and the exemption-table edit lands through the
+certificate ceremony itself (scripts/ceremony-drive, fresh /tmp store,
+certificate-gated push). Standing rule for future machine beats:
+repo-root scripts/ commits require the 'hngh: candidate <hash>' label
+or a declared exemption.

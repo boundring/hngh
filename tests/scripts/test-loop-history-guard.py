@@ -77,6 +77,16 @@ KNOWN_EXEMPTIONS = {
         "reason": "auto-unpark blocker cooldown + README daily dispatch frame (declared miss)",
         "patch-id": "d72c1f2c8248d8f23944898278398f5ed0c38c40",
     },
+    # declared post-hoc 2026-09-12: narrative daily ledger + public
+    # dispatch edition (machine worker, operator-directed beat; automation
+    # suite green at commit time). The daily journal writer
+    # (scripts/generate-publication) carries the narrative layer and the
+    # public dispatch edition; the miss is the same class as 41f646a --
+    # declared, not rewritten.
+    "226de1d": {
+        "reason": "narrative daily ledger + public dispatch edition (declared miss)",
+        "patch-id": "38ad9a7cc2679d4dad027bb8fe3f6a4e277e198f",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
