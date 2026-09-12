@@ -1,0 +1,29 @@
+# patrol-routes.tsv -- the formal rounds manifest (2026-09-12, operator
+# directive "rounds and patrols"). One row per patrol: the surface it walks,
+# the deterministic check it runs (pure function over existing ledgers and
+# commands -- no model calls), the cadence tier that mounts it, and the
+# bestiary finding-class its FAILs file under. Consumed by jobs/patrol.py;
+# executed from cadence/30m/58-patrol.sh (quick surfaces) and
+# cadence/day/27-patrol.sh (heavier surfaces). A FAIL files a report-queue
+# alert (identity patrol:<patrol-id>) and appends to
+# automation/digest/PATROL-<date>.md; the same patrol+cause on two
+# consecutive runs auto-queues a research-subjects entry (the patrol finds
+# the pattern, the research beat crystallizes the lesson).
+# Columns (tab-separated):
+#   patrol-id     stable id, also the report-queue identity suffix
+#   surface       what is being walked (record prose / findings doc)
+#   check         CHECKS function name in jobs/patrol.py
+#   freq-tier     cadence tier: 30m (quick surfaces) | day (heavy surfaces)
+#   finding-class bestiary class for the filed alert (lib/causes.sh)
+patrol-id	surface	check	freq-tier	finding-class
+feeds	dashboard-feeds	feed-freshness	30m	bad-execution
+blockers	blocker-ledger	blocker-escalations	30m	bad-execution
+handoffs	handoffs-accumulation	handoff-deaths	30m	bad-execution
+automation-gate	automation-gate	gate-crumbs	30m	bad-execution
+stall	overnight-ledger	stall-crumbs	30m	bad-execution
+kernel-gate	kernel-gate	loop-history-guard	day	bad-execution
+research-flow	research-flow	research-stall	day	bad-execution
+paper	paper-edition	paper-edition	day	bad-execution
+services	services	service-health	day	bad-execution
+disk	disk	disk-usage	day	bad-execution
+budget	budget	session-budget	day	bad-execution

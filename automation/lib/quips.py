@@ -45,6 +45,14 @@ BANKS = {
         "The machine hall, rendered in the only medium it respects: text.",
         "Twenty-four columns of spent attention; the floor never blinks.",
     ],
+    "patrol": [
+        "{surfaces} surfaces walked, {passes} green crumbs, {fails} red "
+        "marks for the ledger; the rounds continue.",
+        "The rounds ran on schedule: {passes} doors open, {fails} doors "
+        "that need a key.",
+        "{fails} red marks across {surfaces} surfaces. The rounds walked; "
+        "the paper counted.",
+    ],
 }
 
 

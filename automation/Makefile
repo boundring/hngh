@@ -77,6 +77,7 @@ test:
 	python3 -B tests/test-agent-supervision.py
 	python3 -B tests/test-agent-respawn.py
 	python3 -B tests/test-beat-watchdog.py
+	python3 -B tests/test-patrol.py
 	bash tests/test-beat-blockers.sh
 	bash tests/test-plan-priority-selector.sh
 	python3 -B tests/test-session-launch.py
