@@ -4,27 +4,27 @@
        XML-escaped there. Image generation is optional (imagegen local leg). -->
   <rect width="1024" height="820" fill="#f7f2e7"/>
   <rect x="14" y="14" width="996" height="560" fill="#ffffff" stroke="#141414" stroke-width="7"/>
-{{IMAGE}}
+
   <!-- caption box -->
   <rect x="36" y="36" width="540" height="92" rx="4" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="22" font-weight="bold" fill="#141414">
-    {{CAPTION}}
+    <tspan x="50" y="68">MEANWHILE, IN WORLD NEWS...</tspan>
   </text>
   <!-- speech bubble + tail -->
   <ellipse cx="716" cy="428" rx="244" ry="98" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <polygon points="636,516 596,586 706,520" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="19" fill="#141414">
-    {{DIALOGUE}}
+    <tspan x="500" y="400">We prepared for everything except this</tspan><tspan x="500" y="424">exact thing.</tspan>
   </text>
   <!-- SFX -->
   <text x="110" y="536" font-family="monospace" font-size="54" font-weight="bold"
-        fill="#141414" transform="rotate(-12 110 536)">{{SFX}}</text>
+        fill="#141414" transform="rotate(-12 110 536)">KRAK</text>
   <!-- narrative strip (grounded text + source citation) -->
   <rect x="14" y="590" width="996" height="152" fill="#ffffff" stroke="#141414" stroke-width="5"/>
   <text font-family="monospace" font-size="17" fill="#141414">
-    {{NARRATIVE}}
+    <tspan x="28" y="620">Grounded event: Google no longer</tspan><tspan x="28" y="644">provides direct URLs in search results</tspan><tspan x="28" y="668">(severity NOTABLE). Source cited</tspan><tspan x="28" y="692">below.</tspan>
   </text>
   <!-- attribution footer -->
   <!-- ponytail: single-line footer at 12px fits ~135 chars; per-word wrap if longer URLs appear -->
-  <text x="14" y="776" font-family="monospace" font-size="12" fill="#141414">{{ATTRIB}}</text>
+  <text x="14" y="776" font-family="monospace" font-size="12" fill="#141414">[DRAMATIZATION - procedural gag, not a real quote] -- GDELT 2.0 export, https://www.autom.dev/blog/google-search-goto-links</text>
 </svg>
