@@ -82,14 +82,14 @@ _mark_trunc() { # tmp
 # code (000 on transport failure) goes to $POST_CODE_FILE — a file, not a
 # variable, because the helper runs inside the caller's command-substitution
 # subshell (same reason MODEL_USED goes through tmp-modelused.txt).
-_post_chat() { # url jq_expr [bearer] [session_hdr] -> content on stdout; code in $POST_CODE_FILE,
+_post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] -> content on stdout; code in $POST_CODE_FILE,
  # wall seconds in $WALL_S_FILE, usage tokens (chat-completions
  # .usage.prompt_tokens/completion_tokens or Responses
  # .usage.input_tokens/output_tokens) in $TOKIN/$TOKOUT files
- local url="$1" expr="$2" auth="${3:-}" session="${4:-}" tmp code content
+ local url="$1" expr="$2" auth="${3:-}" session="${4:-}" noproxy="${5:-}" tmp code content
  local raw t tin tout
  tmp="$(mktemp)"
- raw="$(curl -s --max-time "$MODEL_TIMEOUT" -X POST \
+ raw="$(curl -s --max-time "$MODEL_TIMEOUT" ${noproxy:+--noproxy "$noproxy"} -X POST \
   -H "Content-Type: application/json" \
   ${auth:+-H "Authorization: Bearer $auth"} \
   ${session:+-H "x-opencode-session: $session"} \
@@ -683,7 +683,8 @@ zai_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
   return 1
  fi
  content="$(printf '%s' "$(_kimi_body "$model" "$prompt" "$max_tokens")" |
-  _post_chat "$url" '.choices[0].message.content // ""' "$key")" || {
+  _post_chat "$url" '.choices[0].message.content // ""' "$key" '' \
+   "$(printf '%s' "${url#*://}" | cut -d/ -f1)")" || {
   breadcrumb model "zai" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
   return 1
  }
