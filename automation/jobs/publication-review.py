@@ -218,7 +218,14 @@ def main(argv=None):
     ap.add_argument("--date", default="")
     args = ap.parse_args(argv)
     day = args.date or __import__("datetime").date.today().isoformat()
-    manga = latest(os.path.join(args.repo, "docs/media/manga/*-draft.json"))
+    home = os.environ.get("HNGH_HOME_DIR") or \
+        os.path.join(os.path.expanduser("~"), ".hngh")
+    candidates = [p for p in (
+        os.path.join(home, "manga/latest-draft.json"),
+        latest(os.path.join(args.repo, "docs/media/manga/*-draft.json")))
+        if p and os.path.isfile(p)]
+    # newest of the working pair and the committed showcase
+    manga = max(candidates, key=os.path.getmtime) if candidates else None
     dispatch = latest(os.path.join(args.repo, "docs/dispatch/2???-??-??.md"))
     if not manga or not dispatch:
         report("alert", "publication-review: no manga draft or no dispatch "

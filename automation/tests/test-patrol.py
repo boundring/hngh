@@ -97,6 +97,7 @@ class Patrol(unittest.TestCase):
         (self.sb / "rq-stub.sh").chmod(0o755)
         (self.sb / "alerts.tsv").write_text("")
         for k, v in [("PATROL_ROOT", str(self.auto)),
+                     ("HNGH_HOME_DIR", str(self.sb / "home")),
                      ("PATROL_KERNEL", str(self.kernel)),
                      ("PATROL_ROUTES", str(self.auto / "config" / "patrol-routes.tsv")),
                      ("PATROL_SUBJECTS", str(self.auto / "research-subjects.txt")),

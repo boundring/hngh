@@ -59,7 +59,7 @@ ck() { # desc expected actual
  fi
 }
 run_check() { # -> python checker against sandbox; stdout captured
- python3 "$sb/jobs/publication-review.py" --repo "$sb" \
+ HNGH_HOME_DIR="$sb/home" python3 "$sb/jobs/publication-review.py" --repo "$sb" \
   --report-root "$sb" --date 2026-09-12 2>&1
 }
 

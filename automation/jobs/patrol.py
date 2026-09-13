@@ -60,6 +60,16 @@ RESEARCH_STALL_HOURS = 48
 STUCK_STATES = ("planned", "expanding", "contracting")
 FEEDBACK_FLOOD = 20  # unprocessed dashboard feedback json backlog cap
 MANGA_STALE_HOURS = 48  # newest draft older than this = pipeline stalled
+
+def _manga_dir(root):
+    """Working manga dir: the hngh home manga dir when it exists (the
+    pipeline's default output since 2026-09-13), else the repo's
+    committed docs/media/manga."""
+    home = os.environ.get("HNGH_HOME_DIR") or \
+        os.path.join(os.path.expanduser("~"), ".hngh")
+    work = os.path.join(home, "manga")
+    return work if os.path.isdir(work) else \
+        os.path.join(os.path.dirname(root), "docs", "media", "manga")
 EMAIL_FAILS = 0  # any failed send today is a finding
 DECK_ITEM_RE = re.compile(r"^(CRITICAL|NOTABLE|CONTEXT):")
 DECK_BLOCK_RE = re.compile(r"^## \d{4}\b")
@@ -879,8 +889,8 @@ def build_ctx(args, now_s):
             "PATROL_EMAIL_LOG",
             os.path.join(root, "logs", "notify-email.log")),
         "manga": os.environ.get(
-            "PATROL_MANGA", os.path.join(os.path.dirname(root),
-                                         "docs", "media", "manga")),
+            "PATROL_MANGA",
+            _manga_dir(root)),
         "dispositions": os.environ.get(
             "PATROL_DISPOSITIONS",
             os.path.join(root, "research-dispositions.tsv")),

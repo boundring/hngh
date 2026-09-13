@@ -29,8 +29,10 @@ Multi-pass pipeline (2026-09-12 operator verdict: the one-shot panel was
   --assemble   pass 4: composite components under the existing bubble/SFX/
                caption layers, post-process (screentone overlay, ink
                unification via magick), render final PNG
-Stages land in docs/media/manga/<name>/ as script.json, wireframe.svg,
-components/, panel.svg, panel.png.
+Stages land (since 2026-09-13) in the hngh home manga dir
+($HNGH_HOME_DIR or ~/.hngh)/manga as script.json, wireframe.svg,
+components/, panel.svg, panel.png; docs/media/ keeps only committed
+showcase pieces the review cycle promotes.
 """
 import argparse
 import json
@@ -44,6 +46,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STYLES_TSV = os.path.join(ROOT, "config", "imagegen-styles.tsv")
 PANEL_SVG = os.path.join(ROOT, "config", "manga-panel.svg")
 DRAMA_LABEL = "[DRAMATIZATION - procedural gag, not a real quote]"
+HNGH_HOME = os.environ.get("HNGH_HOME_DIR") or \
+    os.path.join(os.path.expanduser("~"), ".hngh")
 
 # SFX bank (2026-09-12 operator critique: "one KRAK and nothing else" is the
 # failure mode): onomatopoeia keyed to CAMEO class, 3-4 variants each, picked
@@ -807,8 +811,10 @@ def main(argv):
     ap.add_argument("--assemble", metavar="SVG_OUT",
                     help="pass 4: composite components into the final panel SVG")
     ap.add_argument("--panel-dir", metavar="DIR",
+                    default=os.path.join(HNGH_HOME, "manga"),
                     help="run all passes into DIR as script.json, "
-                         "wireframe.svg, components/, panel.svg, panel.png")
+                         "wireframe.svg, components/, panel.svg, panel.png "
+                         "(default: the hngh home manga dir)")
     args = ap.parse_args(argv[1:])
 
     item = parse_item(args.item)
@@ -904,13 +910,18 @@ def main(argv):
         if panel:
             os.system("rsvg-convert -o %s %s 2>/dev/null || true"
                       % (png_out, args.assemble))  # ponytail: best-effort raster
-            # publish the legacy pair the standing review + dispatch
-            # read (docs/media/manga/<name>-draft.json/.svg/.png):
-            # stages are the work, the pair is the publication.
+            # publish the review pair the standing review + dispatch
+            # read: stages are the work, the pair is the publication.
+            # Under the hngh home the pair stays in the working dir as
+            # latest-draft.* (promoted to docs/media/ on selection);
+            # explicit stage dirs keep the legacy <name>-draft sibling.
             stage_png = png_out if os.path.isfile(png_out) else None
-            pair = os.path.join(os.path.dirname(panel.rstrip("/")),
-                                os.path.basename(panel.rstrip("/"))
-                                + "-draft")
+            base = os.path.abspath(panel.rstrip("/"))
+            if os.path.dirname(base) == os.path.abspath(HNGH_HOME):
+                pair = os.path.join(base, "latest-draft")
+            else:
+                pair = os.path.join(os.path.dirname(base),
+                                    os.path.basename(base) + "-draft")
             with open(pair + ".json", "w", encoding="utf-8") as fh:
                 fh.write(json.dumps(plan, indent=2, ensure_ascii=True) + "\n")
             with open(pair + ".svg", "w", encoding="utf-8") as fh:

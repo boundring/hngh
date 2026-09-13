@@ -33,7 +33,8 @@
 # the driver sniffs the body magic: PNG passes through, JPEG is
 # normalized to PNG with magick (system binary) when present, anything
 # else (or no magick) fails closed.
-# Output: docs/media/imagegen/<style-id>-<UTC-timestamp>.png.
+# Output: the hngh home imagegen dir
+# ($HNGH_HOME_DIR or ~/.hngh)/imagegen/<style-id>-<UTC-timestamp>.png.
 # Test seams: IMAGEGEN_OUT_DIR, IMAGEGEN_STYLES_TSV, IMAGEGEN_TIMEOUT,
 # IMAGEGEN_URL, IMAGEGEN_POLLINATIONS_BASE, IMAGEGEN_LOADAVG_FILE,
 # IMAGEGEN_VRAM_MAX_USED (tests stub curl via PATH).
@@ -44,7 +45,8 @@ aut="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$aut/lib/comfyui.sh"
 
 tsv="${IMAGEGEN_STYLES_TSV:-$aut/config/imagegen-styles.tsv}"
-out_dir="${IMAGEGEN_OUT_DIR:-$(cd "$aut/.." && pwd)/docs/media/imagegen}"
+hngh_home="${HNGH_HOME_DIR:-$HOME/.hngh}"
+out_dir="${IMAGEGEN_OUT_DIR:-$hngh_home/imagegen}"
 timeout_s="${IMAGEGEN_TIMEOUT:-120}"
 poll_base="${IMAGEGEN_POLLINATIONS_BASE:-https://image.pollinations.ai/prompt}"
 free=0 style="" subject=""

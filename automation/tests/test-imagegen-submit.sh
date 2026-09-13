@@ -270,6 +270,20 @@ ck "trap: exit 1 fail-closed" "1" "$rc"
 ck "trap: no output files" "" "$(ls -A "$outdir" 2>/dev/null)"
 ck "trap: child killed" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
 
+# 15. hngh home seam: with no IMAGEGEN_OUT_DIR, the default out dir is
+# $HNGH_HOME_DIR/imagegen (env override over ~/.hngh, create-if-missing).
+homedir="$sb/home"
+err="$(PATH="$sb/shim:$PATH" CURL_STUB_HITS="$sb/curl-hits" \
+ CURL_STUB_MODE=managed-up IMAGEGEN_URL=http://127.0.0.1:8188 \
+ IMAGEGEN_STYLES_TSV="$sb/automation/config/imagegen-styles.tsv" \
+ HNGH_HOME_DIR="$homedir" \
+ bash "$sb/automation/jobs/imagegen-submit.sh" --style manga-panel \
+ --subject 'home' 2>&1 >/dev/null)"
+rc=$?
+ck "home seam: exit 0" "0" "$rc"
+ck "home seam: png in HNGH_HOME_DIR/imagegen" "1" \
+ "$(ls "$homedir/imagegen"/*.png 2>/dev/null | wc -l)"
+
 rm -rf "$outdir" "$sb/curl-hits"
 [ "$fails" = 0 ] && echo "test-imagegen-submit: all pass" || {
  echo "test-imagegen-submit: $fails failure(s)"
