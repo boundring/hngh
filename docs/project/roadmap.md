@@ -27,11 +27,16 @@ Stages 5 and 6 run in alternation (grow beats and research/design beats per
 | **0 — Kernel & governance** | pure spine, seven use cases (the six original fake-backed use cases plus queue-ranking select-course, 2026-08-27), governance C0–C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
 | **1 — Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
 | **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **landing** |
-| **3 — Roguelike delegation live** | every delegated session wrapped: `omp-bridge --run-start` (budget loadout) → observatory `working` → `--run-end` disposition; self-supervision tick (transcript phase detection, stall flags, auto-replace); gantt renders actual bars beside estimates; per-lane medians | one full delegation cycle witnessed live end-to-end; a seeded stall is flagged and replaced without human intervention | **landing** |
-| **4 — System harness D/E** | config-manager (declared config lanes, governed updates), package-manager integration (updates inventory → certificate-gated upgrades), maintenance routines (orphans, caches, journal vacuum) — CachyOS first, per-host orientation generalizes — first managed service: local Unsloth/llama-server (service-ctl allowlist, 2026-09-03 operator grant) | a governed package upgrade runs start-to-finish through the certificate loop on this host; config lanes declaratively listed and backed up on cadence | **queued** |
+| **3 — The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated — chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` → observatory `working` → `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md §4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **landing** |
 | **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
 | **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
 | **7 — Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
+
+Stage 4 was merged into stage 3 on 2026-09-13 (operator ratification,
+[governed-fleet.md](../design/governed-fleet.md)); the stage-4 number is
+retired, not renumbered — history stays honest. Stages 0–2 and 5–7 are
+unchanged; stage 7 keeps orient/backup/scale-out (one peer is already
+admitted in stage 3).
 
 Sequencing rules: every stage feeds stage 1's ledger (timed, flagged,
 optimized); nothing skips the gates; research/design beats (stage 5
@@ -73,6 +78,18 @@ stage 5 research alternation. Companion policies the same turn: social
 surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md))
 and OSS contribution
 ([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)).
+
+Governed Fleet consolidation (2026-09-13): stages 3+4 are merged into
+one stage ("The Governed Fleet",
+[governed-fleet.md](../design/governed-fleet.md); operator-ratified,
+all four section-9 losses accepted): the one pattern —
+registry-declared, guard-tested, patrol-watched, certificate-gated —
+now carries the fleet (chain legs, services, packages, credential
+seams, spawn paths, cadence params) plus the delegation wrap and the
+node-lattice admission (federation exit). Sequencing: slices A–F per
+the design; slice G (operations knowledge-graph surface, 3D in the
+dashboard, 2D fallback) is the operator-directed visibility
+replacement and is never exit-bearing.
 
 ### Completed
 
@@ -171,7 +188,9 @@ and OSS contribution
 The route table above supersedes the enumerated Next list (history: the
 autonomy-continuum directives live in the queue ledger and
 [architecture index](../architecture-index.md); the worker-driver E2E and
-node-lattice amendments roll into stage 3 and stage 7 respectively).
+the node-lattice admission amendment both roll into stage 3 — the
+2026-09-13 consolidation ([governed-fleet.md](../design/governed-fleet.md))
+merges the former stage 4 into it).
 
 Working order, per the route:
 
@@ -187,13 +206,17 @@ Working order, per the route:
    The automation-advancement review
    (`2026-08-28-automation-advancement`) tracks how much of this loop
    the machine now runs itself.
-2. **Open stage 3** with the first live wrapped delegation: run-start →
-   observatory `working` → run-end, watched in the dashboard the
-   operator just shaped. Then the self-supervision tick.
-3. **Stage 4 spikes** in parallel once stage 3 is witnessed: CachyOS
-   package inventory feed (landed as system-ops v1) grows governed
-   update lanes; config-backup generalizes into the config-manager.
-4. **Stage 5 beats** alternate with stage 3/4 grow work per the
+2. **Run the Governed Fleet slices in order** (governed-fleet.md §6):
+   A bili chain legs (telemetry.py before model.sh), B spawn-path
+   matrix, C the witnessed cycle + seeded stall auto-replace, D the
+   governed package upgrade, E the credential-seam sweep, F
+   node-lattice admission (the federation exit); G renders the
+   operations knowledge graph in the dashboard (non-exit-bearing).
+3. **Flip the merged stage 3 to done** only when all ten invariants
+   (governed-fleet.md §4) hold under standing guards and patrols —
+   config lanes and the witnessed cycle are already standing; the
+   stage-4 exit (governed package upgrade) rides the certificate loop.
+4. **Stage 5 beats** alternate with stage 3 grow work per the
    alternation rule; the research view makes the state visible.
 5. **Fold the third-evening intake** (eight observations, session-notes
    §9) per the two new design docs: telemetry/records split + research

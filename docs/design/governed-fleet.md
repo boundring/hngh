@@ -1,11 +1,14 @@
 # The Governed Fleet -- stages 3+4 consolidated
 
-> **DRAFT -- 2026-09-13.** Roadmap consolidation awaiting operator
-> ratification. Written by the roadmap-consolidation session under
-> explicit operator authorization to reorganize, combine, and filter the
-> current stage designs. Nothing here is doctrine until ratified and
-> landed through the certificate ceremony. Proposed edits target
-> docs/project/roadmap.md only; every other document stays untouched.
+> **RATIFIED, PENDING LANDING -- 2026-09-13.** The operator ratified
+> this consolidation and accepted all four section-9 losses, with one
+> amendment: slice G (operations knowledge-graph surface) is the
+> operator-directed replacement for the demoted visibility framing.
+> Written by the roadmap-consolidation session under explicit operator
+> authorization to reorganize, combine, and filter the current stage
+> designs. Landing rides the certificate ceremony under plan
+> governed-fleet-consolidation. Edits target docs/project/roadmap.md;
+> every other existing document stays untouched.
 > Slices reference the bili integration decision document (to be filed
 > as docs/records/2026-09-13-bili-hngh-integration.md).
 
@@ -234,17 +237,28 @@ Slices, in order:
   key-rotation rung, one wake cycle through :wake-mutation, one
   read-only worker across hosts. Certificate path only if a new kernel
   action is needed (none expected).
+- G -- operations knowledge-graph surface (operator-directed
+  replacement for the demoted gantt/medians visibility framing; NOT
+  exit-bearing -- the ten invariants of section 4 stand unchanged):
+  an interactive 3D graph of hngh's operations in the existing
+  dashboard. Nodes are the registries, chain legs, services, packages,
+  credential seams, sessions, and research lines; edges are the
+  admission/consumption relations of the section-2 table. Fed live
+  from the registries and the telemetry db; WebGL/three.js-class
+  rendering with a graceful 2D/static fallback when WebGL is
+  unavailable.
 
 A, B, E are free-commit automation; C is a witnessed run; D and F
-exercise the certificate loop end-to-end.
+exercise the certificate loop end-to-end; G is operator-directed
+visibility surface and is never exit-bearing.
 
-## 7. Roadmap.md revision proposal (NOT applied)
+## 7. Roadmap.md revision proposal (ratified 2026-09-13; applied at landing)
 
 One row replaces the two former rows. Numbering 0-3 and 5-7 stays (the
 gap at 4 is honest history; renumbering would break descent,
 master-plan, and records cross-references).
 
-| **3 -- The Governed Fleet** (absorbs former stage 4; DRAFT pending ratification) | delegation wrapping closed (run-start budget loadout -> observatory working -> run-end; self-supervision tick; gantt actual bars; per-lane medians in the ledger); the registries (leg-budgets, hngh-services, hngh-packages, cadence-params, patrol-routes, config-lanes) with their guards and patrols; bili/context-proxy integration (tokens_cached telemetry, managed service, spawn-path matrix); credential seams token-only; governed package upgrades through the certificate loop; config lanes backed up on cadence; node-lattice admission as the federation exit | the ten invariants of this doc (section 4) hold under the standing guards and patrols -- including one witnessed delegation cycle with a seeded stall auto-replaced, one governed package upgrade start-to-finish through the certificate loop on this host, and one lattice peer admitted through the same gates | **landing** |
+| **3 -- The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13) | delegation wrapping closed (run-start budget loadout -> observatory working -> run-end; self-supervision tick; gantt actual bars; per-lane medians in the ledger); the registries (leg-budgets, hngh-services, hngh-packages, cadence-params, patrol-routes, config-lanes) with their guards and patrols; bili/context-proxy integration (tokens_cached telemetry, managed service, spawn-path matrix); credential seams token-only; governed package upgrades through the certificate loop; config lanes backed up on cadence; node-lattice admission as the federation exit | the ten invariants of this doc (section 4) hold under the standing guards and patrols -- including one witnessed delegation cycle with a seeded stall auto-replaced, one governed package upgrade start-to-finish through the certificate loop on this host, and one lattice peer admitted through the same gates | **landing** |
 
 Footnote under the table: "Former stage 4 (System harness D/E) merged
 into stage 3 on 2026-09-13 (docs/design/governed-fleet.md); stages 5-7
@@ -256,7 +270,8 @@ Now section, one added paragraph (after the existing items):
 the route is the slice list in docs/design/governed-fleet.md section 6
 -- bili telemetry/registry first, then the witnessed cycle and the
 governed upgrade, credential sweep, node-lattice admission as the
-federation exit."
+federation exit. Slice G (operations knowledge-graph surface) rides
+alongside as operator-directed visibility -- never exit-bearing."
 
 Next section, working-order edits:
 
@@ -267,7 +282,9 @@ Next section, working-order edits:
   stall auto-replaced."
 - Item 3 (stage 4 spikes in parallel) becomes: "Governed package
   upgrade through the certificate loop and the credential-seam sweep
-  run in parallel once the cycle is witnessed."
+  run in parallel once the cycle is witnessed; slice G (operations
+  knowledge-graph surface) renders in the existing dashboard off the
+  live registries."
 - Items 4-5 unchanged (5/6 alternation; third-evening intake).
 
 Explicitly untouched: stages 0-2 rows and the Completed history
@@ -357,6 +374,18 @@ named, not hidden:
    medians are ledger rows (stage 1 consumes them anyway); gantt
    actual bars stay slice C scope. The operator accepts this demotion
    explicitly or restores them.
+
+   ACCEPTED 2026-09-13, with one amendment: the operator trades the
+   demoted gantt/medians anchor for a modern operations-visibility
+   surface -- slice G, an interactive 3D knowledge graph of hngh's
+   operations (nodes = registries, chain legs, services, packages,
+   credential seams, sessions, research lines; edges = the section-2
+   admission/consumption relations), fed live from the registries and
+   the telemetry db in the existing dashboard, WebGL rendering with a
+   2D/static fallback. Slice G sits in stage 3's slice list (section
+   6), not the stage-6 QoL lane: it visualizes exactly the registries
+   this stage admits, so it belongs where they are defined. It is NOT
+   exit-bearing.
 2. Stage 4 scope loss. "Maintenance routines (orphans, caches,
    journal vacuum)" and "CachyOS first, per-host orientation
    generalizes" are dropped from the stage. The governed-upgrade exit
@@ -394,9 +423,11 @@ named, not hidden:
 
 ## 10. Ceremony-ready plan stub
 
-The operator ratifies first; then the operator (or a session with the
-operator's explicit go) runs scripts/omp-bridge --propose with this
-stub. Nothing is proposed by this draft.
+The operator ratified on 2026-09-13 (all four section-9 losses
+accepted, plus the slice-G amendment). With that explicit go, the
+executing session runs scripts/omp-bridge --propose with this stub and
+lands the record and the roadmap edit through the certificate
+ceremony.
 
 - slug: governed-fleet-consolidation
 - file: docs/project/plans/2026-09-13-governed-fleet-consolidation.plan.md
@@ -422,6 +453,9 @@ Steps:
 - [ ] Slice E: credential-seam sweep + model-tier refresh cadence
 - [ ] Slice F: node-lattice admission -- one peer admitted through the
       same gates (federation exit)
+- [ ] Slice G: operations knowledge-graph surface in the dashboard --
+      3D WebGL view of the section-2 registries, live-fed, 2D/static
+      fallback (NOT exit-bearing)
 - [ ] Roadmap stage 3 row flips to done when all ten invariants hold
       under standing guards and patrols
 
