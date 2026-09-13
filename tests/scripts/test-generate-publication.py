@@ -11,6 +11,8 @@ counts against the real git/checkin/timeline records.
 
 import importlib.machinery
 import importlib.util
+import os
+import sqlite3
 import tempfile
 import unittest
 import zipfile
@@ -44,9 +46,6 @@ class JournalLifecycle(unittest.TestCase):
             path = mod.journal_path(day)
             path.write_text(mod.build_journal(day))
             self.assertEqual(mod.check_day(day), 0)
-            # operator-authored format (no machine ledger lines) refuses
-            path.write_text("# Journal — 2026-08-20\n\nNot machine-formatted.\n")
-            self.assertEqual(mod.check_day(day), 1)
 
     def test_existing_journal_refuses_overwrite(self):
         mod = load()
@@ -61,6 +60,48 @@ class JournalLifecycle(unittest.TestCase):
             # with --force it regenerates and checks clean
             self.assertEqual(mod.main(["--daily", day, "--force"]), 0)
             self.assertEqual(mod.main(["--check", day]), 0)
+
+    def test_refuses_operator_authored_format(self):
+        mod = load()
+        with tempfile.TemporaryDirectory() as td:
+            mod.JOURNAL_DIR = Path(td)
+            day = "2026-08-20"
+            path = mod.journal_path(day)
+            path.write_text("# Journal — 2026-08-20\n\nNot machine-formatted.\n")
+            self.assertEqual(mod.check_day(day), 1)
+
+    def test_telemetry_reads_hngh_home(self):
+        # the telemetry db migrated to ~/.hngh/db/telemetry.db
+        # (2026-09-13 userspace-home layout contract); the generator
+        # resolves it through the same HNGH_HOME_DIR seam the
+        # automation tier uses
+        mod = load()
+        with tempfile.TemporaryDirectory() as td:
+            db_dir = Path(td) / "db"
+            db_dir.mkdir()
+            con = sqlite3.connect(db_dir / "telemetry.db")
+            con.execute(
+                "create table events (ts text, source text, kind text, "
+                "identity text, lane text, unit text, model text, "
+                "tokens_in integer, tokens_out integer, cost_usd real, "
+                "wall_s real, subject text, refs text, body text)")
+            con.execute("insert into events values "
+                        "(datetime('now'), 'test', 'session-cost', 'i', "
+                        "'lane', 'unit', 'model', 900, 100, 1.25, 1.0, "
+                        "'', '', '')")
+            con.commit()
+            con.close()
+            old = os.environ.get("HNGH_HOME_DIR")
+            os.environ["HNGH_HOME_DIR"] = td
+            try:
+                numbers = mod.dispatch_numbers("2026-09-13")
+            finally:
+                if old is None:
+                    os.environ.pop("HNGH_HOME_DIR", None)
+                else:
+                    os.environ["HNGH_HOME_DIR"] = old
+            self.assertEqual(numbers["calls"], 1)
+            self.assertEqual(numbers["spend"], 1.25)
 
     def test_book_assembles_epub(self):
         mod = load()
