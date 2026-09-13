@@ -25,14 +25,28 @@ docs/records/ with its first commit.
       local-bench -> paid-fallback); persistent under automation/state/ per
       docs/records/2026-09-10-restart-resilience.md. No residual gap found this audit:
       test-model-demote.sh passes on the first run.
-- [ ] 2. Prove the notification send path. Evidence: notify-email.conf
-      exists but logs/notify-email.log is empty — no send ever recorded;
-      the daily digest said "ATTENTION: 52 alerts in 24h" and the operator
-      received nothing on the machine-matters channel. The operator has
-      authorized Hngh notifying them for important matters.
+- [x] 2. Prove the notification send path. DONE 2026-09-13T23:37Z:
+      exactly one live TEST send via the real pipeline
+      (email_sidechannel -> notify-email.py, op credential path),
+      recorded by the pipeline itself as "2026-09-13T23:37:34Z | send
+      ok rc=0" in logs/notify-email.log (the row the patrol contract
+      expects); no repeat sends and the telegram/webhook fallback was
+      not needed. Gap found and closed first: the send pipeline had no
+      success-row site at all (both wrappers logged only rc!=0, so a
+      clean send was invisible) — lib/notify-email.sh now records send
+      ok rc=0 rows, automation/tests/test-notify-send-path.py gained
+      a hermetic loopback-SMTP success test, and the automation suite
+      (make test) is green (commit db28d8e, pushed; blocker row
+      blk-20260913-2026-09-09-stall-recovery-and-operator-surfaces
+      cleared via blocker_clear).
+      Original evidence: notify-email.conf exists but
+      logs/notify-email.log was empty — no send ever recorded; the
+      daily digest said "ATTENTION: 52 alerts in 24h" and the operator
+      received nothing on the machine-matters channel. The operator
+      has authorized Hngh notifying them for important matters.
       Change: send exactly one test email via scripts/notify-email.py
       marked TEST, verify the send log records it; only if email fails,
-      wire the implemented-but-unborn telegram/webhook seam in
+      wire the existing (not unborn) telegram/webhook seam in
       automation/lib/notify.sh and test that instead.
       Verification: one test send recorded in logs/notify-email.log with
       rc=0 (or telegram equivalent); no repeat sends.
