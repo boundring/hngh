@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T20:01:16Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-09T20:01:16Z -->
 # 2026-09-09 — presentation pass 1: front door, docs spine, flavor layer
 
 Authorization: operator-directed 2026-09-09 (presentation as
