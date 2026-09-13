@@ -27,6 +27,15 @@ cursor/body — fail closed):
                        (e.g. 'stale-store:<path>', 'slow-unit:<unit>');
                        occurrences = body lines; count = the ×N marker.
                        Without --identity, behavior is unchanged.
+                       With --evidence TOKEN, the underlying condition
+                       must have RECURRED to re-fire: when the stored
+                       last-evidence equals TOKEN, the occurrence is
+                       suppressed with a body breadcrumb (no bump, no
+                       new row) — only changed evidence bumps. The
+                       evidence is stored as a `last-evidence` body
+                       meta line and must be a token derived from fresh
+                       failing state (e.g. the tail of the failing log
+                       line), not a constant.
   --list [KIND]        rows, newest-first, optional KIND filter.
   --unread [KIND]      rows newer than the cursor (docs/project/
                        report-cursor). With no cursor file present, every
@@ -107,13 +116,14 @@ def body_name(ts, kind, rid):
     return f"{ts}-{kind}-{rid}.md"
 
 
-def write_body(ts, kind, rid, first, full, identity=None):
+def write_body(ts, kind, rid, first, full, identity=None, evidence=None):
     BODIES.mkdir(parents=True, exist_ok=True)
     ident = f"- **identity:** {identity}\n" if identity else ""
+    ev = f"- **last-evidence:** {evidence}\n" if evidence else ""
     body_path(ts, kind, rid).write_text(
         f"# {kind} — {rid}\n\n- **timestamp:** {ts}\n"
         f"- **kind:** {kind}\n- **first line:** {first}\n"
-        f"{ident}\n{full}\n")
+        f"{ident}{ev}\n{full}\n")
 
 
 def parse_ts(s):
@@ -139,6 +149,29 @@ def row_identity(row):
         if line.startswith("- **identity:** "):
             return line[len("- **identity:** "):].strip()
     return None
+
+
+def body_evidence(ts, kind, rid):
+    """The last-evidence token stored in a row's body, or None."""
+    for line in body_text(ts, kind, rid).splitlines():
+        if line.startswith("- **last-evidence:** "):
+            return line[len("- **last-evidence:** "):].strip()
+    return None
+
+
+def set_body_evidence(ts, kind, rid, evidence):
+    """Store/replace the `last-evidence` body meta line."""
+    p = body_path(ts, kind, rid)
+    out, seen = [], False
+    for ln in p.read_text().splitlines(keepends=True):
+        if ln.startswith("- **last-evidence:** "):
+            out.append(f"- **last-evidence:** {evidence}\n")
+            seen = True
+        else:
+            out.append(ln)
+    if not seen:
+        out.append(f"- **last-evidence:** {evidence}\n")
+    p.write_text("".join(out))
 
 
 def within_window(ts_str, window):
@@ -175,7 +208,7 @@ def bump_row(row, ts):
         fh.write(f"- {ts} occurrence\n")
 
 
-def add(kind, text, identity=None, window=86400):
+def add(kind, text, identity=None, window=86400, evidence=None):
     if kind not in KINDS:
         print(f"report-queue: bad kind {kind!r} (expected "
               f"{'/'.join(sorted(KINDS))})", file=sys.stderr)
@@ -192,14 +225,28 @@ def add(kind, text, identity=None, window=86400):
             if r[1] != kind:
                 continue
             if row_identity(r) == identity and within_window(r[0], window):
+                # Re-fire requires the condition to have recurred since
+                # the last report: same evidence = a stale condition
+                # re-alerting on a timer, suppress with a breadcrumb
+                # (2026-09-13 email-send re-fires against a 16:24Z
+                # failure).
+                if evidence is not None and body_evidence(*r[:3]) == evidence:
+                    with body_path(*r[:3]).open("a") as fh:
+                        fh.write(f"- {ts} suppressed duplicate "
+                                 "(no new evidence)\n")
+                    print(f"report-queue: suppressed duplicate alert "
+                          f"{r[2]} (no new evidence since {r[0]})")
+                    return 0
                 try:
                     bump_row(r, ts)
+                    if evidence is not None:
+                        set_body_evidence(r[0], r[1], r[2], evidence)
                     return 0
                 except (OSError, ValueError) as exc:
                     print(str(exc), file=sys.stderr)
                     return 2
     ensure_header()
-    write_body(ts, kind, rid, first, text, identity)
+    write_body(ts, kind, rid, first, text, identity, evidence)
     with REPORTS.open("a") as fh:
         fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
     return 0
@@ -350,6 +397,7 @@ def main(argv=None):
     p.add_argument("--mark-read", metavar="ID")
     p.add_argument("--json", action="store_true")
     p.add_argument("--identity", metavar="KEY")
+    p.add_argument("--evidence", metavar="TOKEN")
     p.add_argument("--window", type=int, metavar="SECONDS")
     p.add_argument("--prune", action="store_true")
     p.add_argument("--before", metavar="TS")
@@ -363,7 +411,8 @@ def main(argv=None):
         return prune_cmd(args.before, args.kinds, args.archive)
     if args.add:
         return add(args.add[0], args.add[1], args.identity,
-                   86400 if args.window is None else args.window)
+                   86400 if args.window is None else args.window,
+                   args.evidence)
     if args.list is not None:
         return list_cmd(args.list or None)
     if args.unread is not None:
@@ -378,7 +427,8 @@ def main(argv=None):
     if args.json:
         return json_cmd()
     print("usage: report-queue --add KIND TEXT [--identity KEY] "
-          "[--window SECONDS] | --list[=KIND] | --unread[=KIND] | --json | "
+          "[--evidence TOKEN] [--window SECONDS] | --list[=KIND] | "
+          "--unread[=KIND] | --json | "
           "--mark-read ID | --prune --before TS --kinds KIND[,KIND...] "
           "[--archive PATH] | --help",
           file=sys.stderr)
