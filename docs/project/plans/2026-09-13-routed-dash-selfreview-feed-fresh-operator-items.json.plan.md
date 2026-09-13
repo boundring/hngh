@@ -12,3 +12,4 @@ at 2026-09-13T15:25:39Z. Alert text: [dash-selfreview] feed-fresh:operator-items
 ## Occurrences
 
 - 2026-09-13T16:00:13Z re-occurred (dedup window expired)
+- 2026-09-13T17:00:39Z re-occurred (dedup window expired)
