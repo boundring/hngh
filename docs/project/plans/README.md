@@ -1,5 +1,9 @@
 # Plans — the operator-session lifecycle, as routine
 
+> Every bolt in this structure was logged when it was tightened.
+> That is not sentiment. It is how the building stays standing while
+> it grows.
+
 NOTE 2026-09-10: the "Autonomy rule (standing)" paragraph below is now
 the plans/README.md "Autonomy reference" section; future plans cite it
 instead of copying this text. Body kept as-is (append-only edit).
