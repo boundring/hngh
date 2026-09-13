@@ -32,7 +32,10 @@ sessions_feed = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sessions_feed)
 
 TELEMETRY = os.path.join(ROOT, "jobs", "telemetry.py")
-DB = os.path.join(ROOT, "dashboard", "telemetry.db")
+DB = os.path.join(
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 LIVE_GRACE_S = 600
 
 

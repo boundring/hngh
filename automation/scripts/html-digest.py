@@ -78,7 +78,10 @@ def hourly_buckets(date, db=None):
             c, t, n = part.split(":")
             got.append((i, float(c), int(t), int(n)))
         return got + [(h, 0.0, 0, 0) for h in range(len(got), 24)]
-    db = db or os.path.join(AUTOMATION, "dashboard", "telemetry.db")
+    db = db or os.path.join(
+        os.environ.get("HNGH_HOME_DIR")
+        or os.path.join(os.path.expanduser("~"), ".hngh"),
+        "db", "telemetry.db")
     if not os.path.isfile(db):
         return []
     try:

@@ -11,7 +11,7 @@ set -u
 
 DATE="$(date +%F)"
 TS="$(date +%H%M)"
-OUT="$AUTOMATION_ROOT/digest/RESEARCH-$DATE.md"
+OUT="$DIGEST_DIR/RESEARCH-$DATE.md"
 
 names="$(printf '%s\n' "$SOURCES" | cut -d: -f1 | tr '\n' ' ' | sed 's/ $//')"
 
@@ -21,8 +21,8 @@ for name in $names; do
   f="$(newest_snapshot "$AUTOMATION_ROOT/snapshots/$DATE" "$name")"
   [ -n "$f" ] && corpus+="$(source_block "$f" 4000)"$'\n'
 done
-[ -f "$AUTOMATION_ROOT/digest/$DATE.md" ] &&
-  corpus+="$(marked_cut 6000 "$AUTOMATION_ROOT/digest/$DATE.md")"
+[ -f "$DIGEST_DIR/$DATE.md" ] &&
+  corpus+="$(marked_cut 6000 "$DIGEST_DIR/$DATE.md")"
 
 if [ -z "$corpus" ]; then
   breadcrumb "$JOB_NAME" "research" "no snapshots and no digest today; nothing to research"

@@ -220,7 +220,7 @@ research_doc() { # id -> crystallized doc path on stdout (empty = none)
    return 0
   }
  done
- for f in "$AUTOMATION_ROOT"/digest/RESEARCH-BEAT-*-"$1".md; do
+ for f in "$DIGEST_DIR"/RESEARCH-BEAT-*-"$1".md; do
   [ -f "$f" ] && {
    printf '%s\n' "$f"
    return 0
@@ -716,7 +716,7 @@ next="expanding"
 [ "$state" = "contracting" ] && next="crystallized"
 
 prior=""
-for f in "$AUTOMATION_ROOT"/digest/RESEARCH-BEAT-*-"$id".md; do
+for f in "$DIGEST_DIR"/RESEARCH-BEAT-*-"$id".md; do
  [ -f "$f" ] || continue
  prior="$prior$(marked_cut 4000 "$f")
 "
@@ -783,12 +783,12 @@ if [ -s "$AUTOMATION_ROOT/.docfilter-inj.$$" ]; then
 fi
 rm -f "$AUTOMATION_ROOT/.docfilter-inj.$$"
 
-out_rel="digest/RESEARCH-BEAT-$day-$id.md"
-mkdir -p "$AUTOMATION_ROOT/digest"
+out_rel="$DIGEST_DIR/RESEARCH-BEAT-$day-$id.md"
+mkdir -p "$DIGEST_DIR"
 {
  printf '# research beat %s\n\n_line: %s | state: %s -> %s | model: %s | wall_s: %s_\n\n%s\n' \
   "$day" "$line" "$state" "$next" "$used" "$wall" "$body"
-} >"$AUTOMATION_ROOT/$out_rel"
+} >"$out_rel"
 
 if [ "$next" = "crystallized" ]; then
  {
@@ -804,7 +804,7 @@ blocker_clear "research:$id"
 if [ "$next" = "crystallized" ]; then
  research_commit "$id" "crystallized" \
   "$KERNEL/docs/research/$day-$id.md" \
-  "$AUTOMATION_ROOT/digest/RESEARCH-BEAT-$day-$id.md" \
+  "$DIGEST_DIR/RESEARCH-BEAT-$day-$id.md" \
   "$LINES"
 fi
 

@@ -159,7 +159,7 @@ EOF
 eff_note() { # label -> " rebuilds 7d: N attempts, M unfrozen" or ""
  local n u
  read -r n u <<EOF
-$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
+$(sqlite3 "${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}" \
   -separator ' ' \
   "select count(*), coalesce(sum(body like 'unfrozen%'),0) from events
    where kind='wiki-rebuild' and identity='$1'

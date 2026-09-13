@@ -77,6 +77,20 @@ The contracts and the loop that keeps mutation honest.
 What the operator looks at, and the machinery keeping the live tier
 honest.
 
+### Userspace data home (`~/.hngh`)
+
+Userspace data -- anything that is user data rather than code -- lives
+outside the repo under `~/.hngh/` (2026-09-13 operator directive):
+`newspaper/<date>/` article copies, `manga/` outputs, `wiki/`
+knowledge-base content, `db/` databases (telemetry.db), `archive/`
+(digest history under `archive/digest/`), `dispatch/` editions, and the
+append-only `catalog.tsv` manifest. Writers resolve paths through
+`automation/lib/hngh_home.py` or `lib/common.sh` (`HNGH_HOME_DIR`
+overrides for tests). Nothing under `~/.hngh/` is committed. Secrets,
+credentials, and kernel run stores stay in `~/.hngh-automation/` (the
+two-home split); kernel/gate/certificate state never moves there, and
+kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
+
 - [Assistant interfaces](design/assistant-interface.md) - the operative
   layer (the dark-coat presence, aesthetic, voice, interface family).
 - [Operative frames](design/operative-frames.md) - the animation/frame

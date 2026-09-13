@@ -13,7 +13,10 @@ import sqlite3
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TELEMETRY = os.path.join(ROOT, "dashboard", "telemetry.db")
+TELEMETRY = os.path.join(
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 BUDGET_LOG = os.path.join(ROOT, "logs", "budget.md")
 PLANS_JSON = os.path.join(ROOT, "dashboard", "plans.json")
 OPERATOR_ITEMS = os.path.join(ROOT, "dashboard", "operator-items.json")

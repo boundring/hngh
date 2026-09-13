@@ -15,7 +15,10 @@ import sys
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_DB = os.path.join(ROOT, "dashboard", "telemetry.db")
+DEFAULT_DB = os.path.join(
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 
 
 def open_ro(db):

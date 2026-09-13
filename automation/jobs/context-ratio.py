@@ -32,7 +32,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KERNEL = os.environ.get("HNGH_HOME") or os.path.join(
     os.path.expanduser("~"), "Projects", "etc", "hngh")
 DB = os.environ.get("HNGH_TELEMETRY_DB") or os.path.join(
-    ROOT, "dashboard", "telemetry.db")
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 REPORT_ROOT = os.environ.get("HNGH_REPORT_ROOT") or KERNEL
 DAY = os.environ.get("HNGH_TICK_TS") or __import__("time").strftime(
     "%Y-%m-%d", __import__("time").gmtime())

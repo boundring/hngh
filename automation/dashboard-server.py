@@ -152,7 +152,10 @@ UNIT_RE = re.compile(r"^[A-Za-z0-9.@_-]{1,80}$")
 
 TOKEN_FILE = os.path.join(DASHBOARD, "token.txt")
 SESSIONS_JSON = os.path.join(DASHBOARD, "sessions.json")
-TELEMETRY_DB = os.path.join(DASHBOARD, "telemetry.db")
+TELEMETRY_DB = os.path.join(
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 EVENT_WATCH = (os.path.join(DASHBOARD, "operator-items.json"),
                DISMISSED, os.path.join(DASHBOARD, "readout.json"))
 SSE_POLL_S = 0.5

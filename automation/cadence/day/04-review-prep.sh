@@ -88,11 +88,11 @@ if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
   exit 0
 fi
 
-mkdir -p "$AUTOMATION_ROOT/digest"
+mkdir -p "$DIGEST_DIR"
 {
   printf '# fresh-eyes review %s\n\n_model: %s | wall_s: %s_\n\nreviewed (36h window):\n%s\n---\n\n%s\n' \
     "$day" "$used" "$wall" "$ranges" "$response"
-} >"$AUTOMATION_ROOT/digest/REVIEW-$day.md"
+} >"$DIGEST_DIR/REVIEW-$day.md"
 
 # parse per-repo verdicts: sections "## <repo>", findings "- P0/P1/...: text"
 verdicts="$(printf '%s\n' "$response" | awk '

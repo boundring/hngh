@@ -2,12 +2,13 @@
 """publication-review -- standing two-pass review of published artifacts.
 
 Every UTC day the latest manga draft (+ its rendered SVG when present)
-and the latest docs/dispatch/<date>.md get the supportive/adversarial
+and the latest ~/.hngh/dispatch/<date>.md edition get the
+supportive/adversarial
 review, as structured deterministic checklists derived from
 docs/research/2026-09-12-publication-review-01.md. P0 stays
 deterministic: no model call (a cheap-leg commentary may attach later
 outside this script). Findings are written to
-automation/digest/PUBLICATION-REVIEW-<date>.md (supportive +
+~/.hngh/archive/digest/PUBLICATION-REVIEW-<date>.md (supportive +
 adversarial sections), red findings become report-queue rows, and
 persistent same-cause failures escalate via the blocker ledger: the
 shell caller maps printed `FAIL <artifact> <cause>` lines onto scope
@@ -226,15 +227,22 @@ def main(argv=None):
         if p and os.path.isfile(p)]
     # newest of the working pair and the committed showcase
     manga = max(candidates, key=os.path.getmtime) if candidates else None
-    dispatch = latest(os.path.join(args.repo, "docs/dispatch/2???-??-??.md"))
+    dispatch = latest(os.path.join(
+        os.environ.get("HNGH_HOME_DIR")
+        or os.path.join(os.path.expanduser("~"), ".hngh"),
+        "dispatch/2???-??-??.md"))
     if not manga or not dispatch:
         report("alert", "publication-review: no manga draft or no dispatch "
                "edition found (manga=%s dispatch=%s)" % (manga, dispatch))
         return 0
     mc, _art_ok = check_manga(manga)
     dc = check_dispatch(dispatch)
-    os.makedirs(os.path.join(args.repo, "automation/digest"), exist_ok=True)
-    out = os.path.join(args.repo, "automation/digest",
+    digest_root = os.path.join(
+        os.environ.get("HNGH_HOME_DIR")
+        or os.path.join(os.path.expanduser("~"), ".hngh"),
+        "archive/digest")
+    os.makedirs(digest_root, exist_ok=True)
+    out = os.path.join(digest_root,
                        "PUBLICATION-REVIEW-%s.md" % day)
     open(out, "w", encoding="utf-8").write(
         findings_md(day, mc, dc, manga, dispatch))

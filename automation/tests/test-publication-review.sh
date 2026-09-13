@@ -12,7 +12,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 trap 'rm -rf "$sb"' EXIT
 mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence/day" "$sb/docs/media/manga" \
- "$sb/docs/dispatch" "$sb/automation/digest" "$sb/scripts"
+ "$sb/home/dispatch" "$sb/home/archive/digest" "$sb/scripts"
 cp -r "$root/lib/." "$sb/lib/"
 cp "$root/jobs/publication-review.py" "$sb/jobs/"
 cp "$root/cadence/day/26-publication-review.sh" "$sb/cadence/day/"
@@ -35,7 +35,7 @@ EOF
 }
 
 good_dispatch() {
- cat >"$sb/docs/dispatch/2026-09-12.md" <<'EOF'
+ cat >"$sb/home/dispatch/2026-09-12.md" <<'EOF'
 # The Machine Hall - Daily Dispatch (public edition)
 
 ## Deck A - News from the Outside World
@@ -96,7 +96,7 @@ out="$(run_check)"
 ck "overage: quip-budget-overage FAIL" "1" \
  "$(printf '%s\n' "$out" | grep -c 'quip-budget-overage')"
 ck "overage: supportive quip-budget MISS recorded" "1" \
- "$(grep -c 'MISS] quip-budget' "$sb/automation/digest/PUBLICATION-REVIEW-2026-09-12.md" || true)"
+ "$(grep -c 'MISS] quip-budget' "$sb/home/archive/digest/PUBLICATION-REVIEW-2026-09-12.md" || true)"
 
 # --- d) day wrapper: persistent red escalates, green clears ----------------
 : >"$sb/STATE.md"
@@ -104,6 +104,7 @@ BEAT_BLOCKERS_FILE="$sb/blockers.tsv"
 export BEAT_BLOCKERS_FILE
 wrapper() {
  (cd "$sb" && HNGH_HOME="$sb" HNGH_REPORT_ROOT="$sb" \
+  HNGH_HOME_DIR="$sb/home" \
   bash "$sb/cadence/day/26-publication-review.sh" 2>&1)
 }
 rm -f "$sb/docs/media/manga/sample-draft.svg"

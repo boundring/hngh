@@ -3,7 +3,7 @@
 
 Same data pulls as jobs/digest-html.py (it reuses that module's parsers
 and telemetry readers), but the output is GitHub-safe markdown for
-docs/dispatch/<date>.md: masthead, THE LEDGER numbers, Deck A (outside
+~/.hngh/dispatch/<date>.md: masthead, THE LEDGER numbers, Deck A (outside
 world, verbatim digest items), Deck B (grounded megastructure blocks),
 the day's lessons, and links to the journal. Newspaper edition (operator
 feedback 2026-09-12): per-story summaries, the committed manga panel as
@@ -44,6 +44,22 @@ def digest_html():
         _dh = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(_dh)
     return _dh
+
+
+def hngh_home():
+    """Load lib/hngh_home.py once (same pattern as digest_html)."""
+    global _HNGH_HOME_MOD
+    try:
+        return _HNGH_HOME_MOD
+    except NameError:
+        pass
+    path = os.path.join(os.path.dirname(HERE), "lib", "hngh_home.py")
+    loader = importlib.machinery.SourceFileLoader("hngh_home", path)
+    spec = importlib.util.spec_from_loader("hngh_home", loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _HNGH_HOME_MOD = mod
+    return mod
 
 
 def lessons_md(day, repo):
@@ -191,8 +207,9 @@ def saga_md(day, repo):
 def render_page(date, repo):
     """Full markdown edition for <date>. Raises on unreadable digest."""
     dh = digest_html()
-    digests = os.path.join(repo, "automation", "digest")
-    db = os.path.join(repo, "automation", "dashboard", "telemetry.db")
+    # hermetic seams (same names as jobs/digest-local.py)
+    digests = os.environ.get("HNGH_DIGESTS_DIR") or dh.DIGESTS
+    db = os.environ.get("HNGH_TELEMETRY_DB") or dh.TELEMETRY
     with open(os.path.join(digests, date + ".md"), encoding="utf-8") as f:
         sections = dh.parse_sections(f.read())
     hourly = dh.telemetry_hourly(date, db)
@@ -205,8 +222,7 @@ def render_page(date, repo):
     news = [s for s in sections if not s["mega"] and s["items"]]
     megas = [s for s in sections if s["mega"]]
     q = dh.quips.quip
-    articles = dh.load_articles(
-        date, os.path.join(repo, "docs", "articles"))
+    articles = dh.load_articles(date, dh.ARTICLES)
     items_flat = [it for s in news for it in s["items"]]
     a_facts = {"blocks": len(news),
                "criticals": sum(1 for it in items_flat
@@ -218,13 +234,13 @@ def render_page(date, repo):
     out = [
         "# The Machine Hall - Daily Dispatch (public edition)",
         "",
-        "Edition no. %d | %s | source: automation/digest/%s.md |"
+        "Edition no. %d | %s | source: ~/.hngh/archive/digest/%s.md |"
         " journal: docs/journal/%s.md" % (edition, _ascii(date),
                                           _ascii(date), _ascii(date)),
         "",
         "## THE LEDGER",
         "",
-        "<!-- feeds: automation/dashboard/telemetry.db -->",
+        "<!-- feeds: ~/.hngh/db/telemetry.db -->",
         "- metered spend: $%.2f across %d model calls (24h)." % (spend, calls),
         "- tokens in: {:,}.".format(tokens),
         "- research beats: %d; dispatch blocks: %d active, %d quiet hours."
@@ -270,7 +286,7 @@ def render_page(date, repo):
             out.append("  _%s_" % _ascii(rest))
             if art:
                 out.append("  _Extended article: "
-                           "docs/articles/%s/%s.md_" % (date, art["slug"]))
+                           "%s (local edition only)_" % art["slug"])
         out.append("")
     out += ["## Deck B - News from the Megastructure", ""]
     b_quip = (q("deck_b", date,
@@ -294,7 +310,7 @@ def render_page(date, repo):
         "",
         "- The journal (machine ledger + the day's story):"
         " docs/journal/%s.md" % date,
-        "- The raw digest: automation/digest/%s.md" % date,
+        "- The raw digest: ~/.hngh/archive/digest/%s.md" % date,
         "- Records and research: docs/records/, docs/research/",
         "",
     ]
@@ -302,17 +318,19 @@ def render_page(date, repo):
 
 
 def write_publication(date, repo=None):
-    """Write docs/dispatch/<date>.md; returns the path or None on
+    """Write ~/.hngh/dispatch/<date>.md; returns the path or None on
     unreadable feeds (fail-open, never breaks the daily writer)."""
     repo = repo or os.environ.get("HNGH_PUB_ROOT") or DEFAULT_REPO
     try:
         text = render_page(date, repo)
     except (OSError, ValueError):
         return None
-    target = os.path.join(repo, "docs", "dispatch", date + ".md")
+    target = os.path.join(hngh_home().home(), "dispatch", date + ".md")
     os.makedirs(os.path.dirname(target), exist_ok=True)
     with open(target, "w", encoding="utf-8") as f:
         f.write(text)
+    hngh_home().catalog("dispatch-edition", target,
+                        "public markdown edition %s" % date)
     return target
 
 

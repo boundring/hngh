@@ -40,7 +40,6 @@ lib/              common.sh (prompt builder, dashboard), model.sh, sources.sh,
 jobs/             ping-hourly.sh, security-check.sh, morning-digest.sh
 dashboard/        index.html + data.json (generated — the ONLY dynamic file)
 snapshots/        raw source captures (gitignored)
-digest/           <date>.md (hourly) + MORNING-<date>.md (compiled)
 archive/          raw prompts captured only when the model chain is down
 STATE.md          breadcrumbs: ISO ts | job | event | detail
 systemd/          hngh-{automation,security,morning}.{service,timer} + hngh-dashboard.service
@@ -53,6 +52,13 @@ Makefile          smoke / enable / disable / status
 - **Disable**: `make disable`. Status: `make status`.
 - **Dashboard**: `0.0.0.0:8890` (phone on LAN: `http://192.168.0.186:8890`).
   To change port: edit `DASHBOARD_PORT` in `config.env` AND the unit.
+- **Userspace data home**: digests (`archive/digest/` per the layout
+  contract), newspaper copies, manga outputs, telemetry.db, and dispatch
+  editions live under `~/.hngh/`, NOT in this repo (2026-09-13 operator
+  directive). Paths resolve through `lib/hngh_home.py` (Python) and
+  `lib/common.sh` (`HNGH_HOME_DIR`, `DIGEST_DIR`, `hngh_catalog`); the
+  append-only manifest is `~/.hngh/catalog.tsv`. Secrets and kernel run
+  stores stay in `~/.hngh-automation/` — the two-home split.
 - **Breadcrumbs**: `STATE.md`, one row per event.
 - **Secrets**: never in this repo — `~/.hngh-automation/unsloth.token` +
   `unsloth.refresh`, mode 600. Refresh is automatic; if it fails the operator

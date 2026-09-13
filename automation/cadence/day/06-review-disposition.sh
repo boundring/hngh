@@ -28,9 +28,9 @@ file_report() {
 }
 
 day="$(date -u +%Y-%m-%d)"
-file="$AUTOMATION_ROOT/digest/REVIEW-$day.md"
+file="$DIGEST_DIR/REVIEW-$day.md"
 if [ ! -f "$file" ]; then
-  file="$AUTOMATION_ROOT/digest/REVIEW-$(date -u -d yesterday +%Y-%m-%d).md"
+  file="$DIGEST_DIR/REVIEW-$(date -u -d yesterday +%Y-%m-%d).md"
 fi
 if [ ! -f "$file" ]; then
   breadcrumb "$JOB_NAME" "review-dispose-skip" "no REVIEW digest for $day or yesterday"

@@ -30,7 +30,7 @@ KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 JOB_NAME="${JOB_NAME:-20-model-saturation}"
-DB="${HNGH_TELEMETRY_DB:-$AUTOMATION_ROOT/dashboard/telemetry.db}" # seam for hermetic tests
+DB="${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}" # seam for hermetic tests
 day="$(date -u +%Y-%m-%d)"
 ident="model-saturation:$day"
 

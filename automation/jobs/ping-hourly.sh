@@ -13,7 +13,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/news-screen.sh"
 DATE="$(date +%F)"
 TS="$(date +%H%M)"
-DIGEST="$AUTOMATION_ROOT/digest/$DATE.md"
+DIGEST="$DIGEST_DIR/$DATE.md"
 
 # --- 1. fetch (never fails) ---
 body="$(fetch_sources)"
@@ -75,8 +75,8 @@ if [ -n "$reason" ]; then
   # dedup: pull CRITICAL/NOTABLE lines from the previous hour block so the
   # model does not restate old items. Last block of today's file (the run
   # before this one); at day rollover fall back to yesterday's file.
-  prev_digest="$AUTOMATION_ROOT/digest/$DATE.md"
-  [ -s "$prev_digest" ] || prev_digest="$AUTOMATION_ROOT/digest/$(date -d yesterday +%F).md"
+  prev_digest="$DIGEST_DIR/$DATE.md"
+  [ -s "$prev_digest" ] || prev_digest="$DIGEST_DIR/$(date -d yesterday +%F).md"
   prev_items="$(awk '/^## /{blk=""} {blk=blk $0 "\n"} END{printf "%s", blk}' \
     "$prev_digest" 2>/dev/null | grep -E '^(CRITICAL|NOTABLE):' || true)"
   if [ -n "$prev_items" ]; then

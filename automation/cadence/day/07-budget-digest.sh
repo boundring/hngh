@@ -31,7 +31,7 @@ lanes=""
   | sort -u | paste -sd, -))"
 
 # remote model calls/cost today; missing/locked db reads as 0/0
-stats="$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
+stats="$(sqlite3 "${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}" \
   "select count(*), ifnull(round(sum(cost_usd),2),0) from events \
 where kind='model' and source='remote' and ts like '$day%'" 2>/dev/null)"
 calls="${stats%%|*}"; [ -n "$calls" ] || calls=0
