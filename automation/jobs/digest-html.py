@@ -40,6 +40,14 @@ DATE_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
 SECTION_RE = re.compile(r"^## (\d{4}) (\d{4}-\d{2}-\d{2})\s*$")
 MEGA_RE = re.compile(r"^### NEWS FROM THE MEGASTRUCTURE")
 TOKENS_RE = re.compile(r"tokens in ([0-9][0-9,]*)")
+CAT_RE = re.compile(r"^\[([A-Za-z][A-Za-z /&-]{1,23})\]\s*")
+
+
+def split_cat(body):
+    """Digest line body -> (category or "", body minus the [Cat] marker
+    gdelt-news writes). Lines without a marker read ("", body)."""
+    m = CAT_RE.match(body)
+    return (m.group(1), body[m.end():]) if m else ("", body)
 
 
 def esc(text):
@@ -383,6 +391,9 @@ table.beats td.crit{color:var(--warn)}
 padding:6px 8px;margin:6px 0;font-size:10.5px;color:var(--muted)}
 .sidenote b{color:var(--ink)}
 .sidenote a{color:var(--accent);text-decoration:none}
+.cathead{font-variant:small-caps;letter-spacing:.14em;color:var(--accent);
+font-size:10px;border-bottom:1px solid var(--line);padding:2px 0 1px;
+margin:8px 0 4px;break-after:avoid}
 """
 
 
@@ -417,14 +428,16 @@ def render_item(line, lead=False, standfirst=""):
         tag, body = "CONTEXT", line[len("CONTEXT: "):]
     else:
         tag, body = "", line
+    cat, body = split_cat(body)
     head, rest = split_headline(body)
     if not rest:
         rest = standfirst
     sum_el = ""
     if rest:
         sum_el = '<span class="sum">%s</span>' % _linkify(rest)
-    return ('<p class="%s%s">%s<span class="hl">%s</span>%s</p>'
+    return ('<p class="%s%s"%s>%s<span class="hl">%s</span>%s</p>'
             % (cls, " lead" if lead else "",
+               ' data-cat="%s"' % esc(cat) if cat else "",
                '<span class="tag">%s:</span> ' % tag if tag else "",
                _linkify(head), sum_el))
 
@@ -450,7 +463,8 @@ def render_deck_a(sections, edition_count, articles=None):
                 return line[len(t) + 2:]
         return line
 
-    art_for = lambda line: articles.get(split_headline(tag_body(line))[0])
+    art_for = lambda line: articles.get(
+        split_headline(split_cat(tag_body(line))[1])[0])
     lead, lead_src = None, None
     for s in news:
         for it in s["items"]:
@@ -499,20 +513,35 @@ def render_deck_a(sections, edition_count, articles=None):
                                   esc(s["model"])))
         items = [x for x in s["items"] if x is not lead]
         used = 0
+        cats = []  # section-front order: first appearance in the block
+        cat_of = {}
         for it in items:
-            if used > SECTION_BUDGET:
-                chunk.append('<p class="editnote">[continued in the raw '
-                             'digest &mdash; section budget %d chars]</p>'
-                             % SECTION_BUDGET)
+            c = split_cat(tag_body(it))[0] or "World News"
+            if c not in cat_of:
+                cat_of[c] = []
+                cats.append(c)
+            cat_of[c].append(it)
+        overflow = False
+        for c in cats:
+            if overflow:
                 break
-            used += len(it)
-            chunk.append(render_item(
-                it, standfirst="Filed via %s, screened by %s at %s UTC."
-                % (s["sources"].split(",")[0] if s["sources"] else "the wire",
-                   s["model"] or "the screen", s["time"] or "00:00")))
-            art = art_for(it)
-            if art:
-                chunk.append(render_article(art))
+            chunk.append('<p class="cathead">%s</p>' % esc(c))
+            for it in cat_of[c]:
+                if used > SECTION_BUDGET:
+                    chunk.append('<p class="editnote">[continued in the '
+                                 'raw digest &mdash; section budget %d '
+                                 'chars]</p>' % SECTION_BUDGET)
+                    overflow = True
+                    break
+                used += len(it)
+                chunk.append(render_item(
+                    it, standfirst="Filed via %s, screened by %s at %s UTC."
+                    % (s["sources"].split(",")[0] if s["sources"]
+                       else "the wire",
+                       s["model"] or "the screen", s["time"] or "00:00")))
+                art = art_for(it)
+                if art:
+                    chunk.append(render_article(art))
         chunk.append("</div>")
         parts.append("".join(chunk))
     parts.append("</div>")

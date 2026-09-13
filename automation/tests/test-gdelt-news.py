@@ -8,10 +8,12 @@ refused localhost port; no real digest/state touched.
 """
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 
@@ -82,8 +84,10 @@ class TestRank(unittest.TestCase):
         self.assertEqual(aid["score"], 66.0)  # ns=6 x (6+5)
 
     def test_bands_and_block_shape(self):
-        items = gn.rank_rows("\n".join(FIXTURE_ROWS), "0400")
-        block = gn.render_block(items, "0400", "2026-09-12")
+        with unittest.mock.patch.dict(os.environ,
+                                      {"GDELT_NEWS_POLISH": "0"}):
+            items = gn.rank_rows("\n".join(FIXTURE_ROWS), "0400")
+            block = gn.render_block(items, "0400", "2026-09-12")
         lines = block.splitlines()
         self.assertEqual(lines[0], "## 0400 2026-09-12")
         self.assertTrue(lines[1].startswith("_sources: gdelt | model: "))
@@ -105,7 +109,8 @@ class TestCli(unittest.TestCase):
             cmd += ["--export", str(export)]
         env = dict(gn.os.environ,
                    GDELT_LASTUPDATE_URL="http://127.0.0.1:1/lastupdate.txt",
-                   STATE_FILE=str(tmp / "STATE.md"))
+                   STATE_FILE=str(tmp / "STATE.md"),
+                   GDELT_NEWS_POLISH="0")
         return subprocess.run(cmd, capture_output=True, text=True,
                               timeout=60, env=env)
 
