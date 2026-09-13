@@ -197,7 +197,9 @@ def handle_request(request):
 
 def main():
     sys.stderr.write("hngh MCP stdio server started\n")
-    for line in sys.stdin:
+    # readline() iteration, not `for line in sys.stdin`: the iterator
+    # read-ahead buffers and starves piped one-shot clients until 8KB/EOF.
+    for line in iter(sys.stdin.readline, ""):
         line = line.strip()
         if not line:
             continue

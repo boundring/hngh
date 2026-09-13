@@ -103,6 +103,29 @@ class McpServer(unittest.TestCase):
             self.assertIn("reports", queue["result"]["content"][0]["text"])
         finally:
             proc.stdin.close(); proc.stdout.close()
+
+    def test_one_shot_piped_client_gets_replies_without_eof(self):
+        # regression 2026-09-13: `for line in sys.stdin` read-ahead starved
+        # piped one-shot clients until 8KB/EOF; replies must arrive while
+        # stdin stays open (standard stdio JSON-RPC contract unchanged).
+        proc = self._spawn()
+        try:
+            proc.stdin.write(json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n")
+            proc.stdin.write(json.dumps(
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}) + "\n")
+            proc.stdin.flush()
+            import select
+            # one fd-level select proves the reply arrives without EOF;
+            # both lines may land in the TextIOWrapper buffer at once, so
+            # parse the rest with plain readline (fd-level select on a
+            # buffered reader starves once data is in userspace).
+            ready, _, _ = select.select([proc.stdout], [], [], 10)
+            self.assertTrue(ready, "no reply within 10s while stdin open")
+            json.loads(proc.stdout.readline())
+            json.loads(proc.stdout.readline())
+        finally:
+            proc.stdin.close(); proc.stdout.close()
             proc.wait(timeout=10)
 
     def test_unknown_tool_errors(self):
