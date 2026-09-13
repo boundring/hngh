@@ -6,7 +6,7 @@
 ;;; shell, chooses policy, or supplies a default transport.
 
 (defparameter +mutation-actions+
-  '(:none :prepare-candidate :stage :commit :push))
+  '(:none :prepare-candidate :stage :commit :push :wake-mutation))
 
 ;;; Evidence ---------------------------------------------------------------
 
@@ -364,6 +364,16 @@
                              (hngh.domain:candidate-certificate-content-hash
                               certificate))
                      "--")
+               paths))
+      ;; The certificate binds the wake: base-revision is the run
+      ;; identifier, candidate-paths are the pins file and the pinned
+      ;; peer. The fixed argv invokes the kernel's own wake-peer CLI,
+      ;; which rechecks the :federation admission, strict pins parsing,
+      ;; and the wake transport behind its own guarded surface.
+      (:wake-mutation
+       (append (list "hngh" "wake-peer"
+                     (hngh.domain:candidate-certificate-base-revision
+                      certificate))
                paths))
       (:push '("git" "push" "origin" "HEAD"))
       (otherwise nil))))

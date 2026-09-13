@@ -108,7 +108,11 @@ class DashboardExport(unittest.TestCase):
     def test_etas_stop_at_next_heading(self):
         out = run(["--json"])
         data = json.loads(out.stdout)
-        self.assertIn("wake-mutation-lane", data["etas"])
+        # item names rotate; the widget's contract is the section parse,
+        # not any one queued item (a pinned item name rots when the
+        # rotation advances)
+        self.assertTrue(data["etas"], "ETA section parsed to nothing")
+        self.assertIn("others", data["etas"])
         # the ETA section ends at the next '## ' heading: no interface-spec
         # or fleet lines may leak in
         for key in data["etas"]:

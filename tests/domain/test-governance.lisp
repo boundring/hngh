@@ -834,7 +834,7 @@
                             :state :current))))))))
 
 ;; (a) every closed action mints a certificate from an admitted verdict.
-(dolist (action '(:none :prepare-candidate :stage :commit :push))
+(dolist (action '(:none :prepare-candidate :stage :commit :push :wake-mutation))
   (let ((cert (apply #'hngh.domain:issue-candidate-certificate
                      (make-fixture-admitted-verdict)
                      (list :action action :repository-identity "repo"
