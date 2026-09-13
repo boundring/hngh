@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent  # kernel repo root
@@ -76,9 +77,17 @@ class Fixture:
                     " identity TEXT, lane TEXT, unit TEXT, model TEXT,"
                     " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
                     " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        # DAY-pinned rows feed the day-scoped renders; two extra
+        # now-pinned rows feed the clock-windowed dispatch_numbers
+        # query (`ts >= datetime('now', '-24 hours')`) -- without them
+        # the README dispatch test time-bombs as real time advances
+        # past DAY + 24h (fix 2026-09-12)
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         con.executemany(
             "INSERT INTO events(ts, kind, tokens_in, cost_usd) VALUES(?,?,?,?)",
-            [("2026-09-11T03:00:00Z", "session-cost", 1000, 0.50),
+            [(now, "session-cost", 1000, 0.50),
+             (now, "session-cost", 4000, 0.75),
+             ("2026-09-11T03:00:00Z", "session-cost", 1000, 0.50),
              ("2026-09-11T09:15:00Z", "session-cost", 4000, 0.75)])
         con.commit()
         con.close()

@@ -94,10 +94,12 @@ ok "cisakev: JSON feed parses (raw path)"
 
 # --- (d2) big KEV catalog gets trimmed (recent CVEs only, metadata kept) ---
 python3 - "$sb/snapshots/2026-09-07/cisakev-big.json" <<'PY'
-import json, sys
+import json, sys, datetime
+now = datetime.datetime.now(datetime.timezone.utc)
+kept = (now - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
 pad = "x" * 400000  # push the catalog over the 200KB trim threshold
 vulns = [{"cveID": "CVE-2026-00001", "dateAdded": "2026-08-01", "notes": pad},
-         {"cveID": "CVE-2026-00002", "dateAdded": "2026-09-05", "notes": "y"}]
+         {"cveID": "CVE-2026-00002", "dateAdded": kept, "notes": "y"}]
 json.dump({"title": "CISA Catalog", "catalogVersion": "2026.09.01",
            "dateReleased": "2026-09-01T00:00:00Z", "count": 2,
            "vulnerabilities": vulns}, open(sys.argv[1], "w"))

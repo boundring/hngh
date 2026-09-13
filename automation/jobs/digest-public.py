@@ -116,6 +116,19 @@ SAGA_CLASSES = {
     "obsolete": "an old wight rattling past its use",
     "unknown": "a nameless thing moving in the dark",
 }
+# Manga-inspired epithets (easter eggs; docs/records/
+# 2026-09-12-manga-collection-policy.md): the megastructure genre's own
+# creatures, one clause per cause class, appended inside the existing
+# Saga line -- a reader who knows the source smiles; a stranger reads
+# them as original hall myth.
+SAGA_EPITHETS = {
+    "bad-execution": "a builder that kept building past its drawing",
+    "missing-knowledge": "a floor no map admits to",
+    "missing-design": "a tower drawn before its foundation",
+    "missing-authority": "a door keyed to one hand alone",
+    "obsolete": "an old safeguard pacing a finished beat",
+    "unknown": "the dark levels' own quiet thing",
+}
 SAGA_MAX_EVENTS = 3
 
 
@@ -150,6 +163,8 @@ def saga_md(day, repo):
            "*(symbolic register; facts are the cited ledgers.)*", ""]
     for b in blockers[:SAGA_MAX_EVENTS]:
         flavor = SAGA_CLASSES.get(b[2], SAGA_CLASSES["unknown"])
+        epithet = SAGA_EPITHETS.get(b[2], SAGA_EPITHETS["unknown"])
+        flavor = "%s, %s" % (flavor, epithet)
         if b[5] == "parked":
             park = "the park sealed it in a quiet wing"
         else:

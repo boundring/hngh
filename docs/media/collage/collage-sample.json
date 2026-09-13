@@ -1,0 +1,10 @@
+{
+ "kind": "collage",
+ "slug": "sample",
+ "seed": 20260912,
+ "pieces": 5,
+ "treatment": "crop + rescale + 3-band register recolor + screentone/border/vignette SVG overlay",
+ "provenance": "collection study, 2026-09-12 (docs/research/2026-09-12-manga-collection-study.md)",
+ "policy": "docs/records/2026-09-12-manga-collection-policy.md",
+ "source_note": "operator's own collection; read-only temp extract, deleted after transformation; no filenames retained"
+}
