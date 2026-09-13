@@ -192,6 +192,11 @@ _dspec = importlib.util.spec_from_file_location(
 digest_html = importlib.util.module_from_spec(_dspec)
 _dspec.loader.exec_module(digest_html)
 
+_gspec = importlib.util.spec_from_file_location(
+    "graph_data", os.path.join(ROOT, "jobs", "graph-data.py"))
+graph_data = importlib.util.module_from_spec(_gspec)
+_gspec.loader.exec_module(graph_data)
+
 
 def _launchers():
     merged = dict(DEFAULT_LAUNCHERS)
@@ -260,6 +265,25 @@ def dashboard_token():
 
 
 _tele_cache = (0.0, None)
+_graph_cache = (0.0, None)
+
+
+def graph_feed():
+    """Operations graph from the governed registries + live state
+    (graph-data.build), cached 30s like telemetry_24h; fail-soft to the
+    last good graph so the view never blanks on a registry hiccup."""
+    global _graph_cache
+    if _graph_cache[1] is not None and time.monotonic() - _graph_cache[0] < TELEMETRY_TTL_S:
+        return _graph_cache[1]
+    try:
+        graph = graph_data.build(
+            os.path.join(ROOT, "config"), DASHBOARD, TELEMETRY_DB,
+            os.path.join(ROOT, "config.env"))
+        _graph_cache = (time.monotonic(), graph)
+    except Exception:
+        if _graph_cache[1] is None:
+            raise
+    return _graph_cache[1]
 
 
 def telemetry_24h():
@@ -318,6 +342,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/telemetry.json":
             self._json(200, telemetry_24h())
+            return
+        if route == "/graph.json":
+            self._json(200, graph_feed())
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
