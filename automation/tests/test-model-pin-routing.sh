@@ -18,7 +18,7 @@ sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
-mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" \
+mkdir -p "$sb/home/db" "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" "$sb/db" \
  "$sb/digest" "$sb/kernel/docs/research" "$sb/.config/hngh"
 cp -r "$root/lib/." "$sb/lib/"
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
@@ -37,7 +37,7 @@ printf 'stub-token-never-real' >"$sb/unsloth-token"
 seed_events() { # source n -> n telemetry model/<source> events stamped today
  python3 - "$1" "$2" <<PY
 import sqlite3, datetime, sys
-db = sqlite3.connect("$sb/dashboard/telemetry.db")
+db = sqlite3.connect("$sb/home/db/telemetry.db")
 db.execute("CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT, tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL, wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
 today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 for _ in range(int(sys.argv[2])):
@@ -57,7 +57,7 @@ call() { # prompt [K=V ...] -> stdout
  local kv
  (
   export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
-  export HOME="$sb" TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
+  export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama
@@ -91,7 +91,7 @@ ocgo_env=("OCGO_URL=http://127.0.0.1:1" "OCGO_MODEL=glm-test-model" "OPENCODE_AP
 
 # --- 1. MODEL_PIN=kimi -> kimi answers; unsloth/deck/ocgo never hit;
 #        the kimi body keeps the max_tokens passthrough and stays lean.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 reset_hits
 out="$(call "hello-1" "MODEL_PIN=kimi" "${kimi_env[@]}" "${deck_env[@]}" "${ocgo_env[@]}")"
 ck "pin=kimi: kimi stub content" "stub-says-hi" "$out"
@@ -100,7 +100,7 @@ ck "pin=kimi: kimi stub hit" "1" "$(hits stubK)"
 ck "pin=kimi: unsloth stub never hit" "0" "$(hits stubU)"
 ck "pin=kimi: deck stub never hit" "0" "$(hits stubD)"
 ck "pin=kimi: telemetry row emitted" "1" \
- "$(sqlite3 "$sb/dashboard/telemetry.db" "select count(*) from events where kind='model' and source='kimi'")"
+ "$(sqlite3 "$sb/home/db/telemetry.db" "select count(*) from events where kind='model' and source='kimi'")"
 last_body="$(tail -n 1 "$stubdir/stubK-bodies")"
 ck "pin=kimi: max_tokens passthrough (3072)" "3072" \
  "$(printf '%s' "$last_body" | jq -r '.max_tokens')"
@@ -108,7 +108,7 @@ ck "pin=kimi: no temperature field (gateway 400s on it)" "false" \
  "$(printf '%s' "$last_body" | jq 'has("temperature")')"
 
 # --- 2. pin=kimi + kimi pace-blocked -> local (unsloth) answers.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 reset_hits
 seed_events kimi "$(pace_seed_count 100)"
 out="$(call "hello-2" "MODEL_PIN=kimi" "${kimi_env[@]}" "${deck_env[@]}" \
@@ -119,7 +119,7 @@ ck "pin=kimi pace-block: kimi stub never hit" "0" "$(hits stubK)"
 ck "pin=kimi pace-block: unsloth stub hit" "1" "$(hits stubU)"
 
 # --- 3. pin=deck -> deck answers first; unsloth/kimi never hit.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 reset_hits
 out="$(call "hello-3" "MODEL_PIN=deck" "${deck_env[@]}" "${kimi_env[@]}")"
 ck "pin=deck: deck stub content" "stub-says-hi" "$out"
@@ -129,7 +129,7 @@ ck "pin=deck: unsloth stub never hit" "0" "$(hits stubU)"
 ck "pin=deck: kimi stub never hit" "0" "$(hits stubK)"
 
 # --- 4. unknown pin value -> ignored, full chain (unsloth first).
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 reset_hits
 out="$(call "hello-4" "MODEL_PIN=bogus" "${kimi_env[@]}" "${deck_env[@]}")"
 ck "pin=bogus: full chain, unsloth answers" "stub-says-hi" "$out"
@@ -149,7 +149,7 @@ beat_run() { # [K=V ...] -> runs one full beat against the sandbox
  (
   cd "$sb"
   rm -f "$sb/beat-stamp" # each invocation is a fresh gate pass
-  env -i PATH="$PATH" HOME="$sb" \
+  env -i PATH="$PATH" HOME="$sb" HNGH_HOME_DIR="$sb/home" \
    AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh \
    HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root" \
    RESEARCH_STAMP_FILE="$sb/beat-stamp" RESEARCH_BEAT_COUNT_FILE="$sb/beat-count" \
@@ -166,7 +166,7 @@ beat_run() { # [K=V ...] -> runs one full beat against the sandbox
 reset_beat() { # n-lines seeded planned
  rm -f "$sb/beat-stamp" "$sb/beat-count" "$sb/tmp-modelused.txt"
  : >"$sb/STATE.md"
- rm -f "$sb/dashboard/telemetry.db"
+ rm -f "$sb/home/db/telemetry.db"
  : >"$stubdir/stubK-bodies"
  local i
  {
@@ -184,7 +184,7 @@ reset_beat() { # n-lines seeded planned
  printf '0.10 0.20 0.10 1/900 1234' >"$sb/loadavg"
 }
 kimi_rows() {
- sqlite3 "$sb/dashboard/telemetry.db" \
+ sqlite3 "$sb/home/db/telemetry.db" \
   "select count(*) from events where kind='model' and source='kimi'" 2>/dev/null
 }
 

@@ -6,13 +6,20 @@
 # lesson append, budget row) — this wrapper reuses it, never
 # re-implements it, and adds only what the branch does not decide:
 #
-#   usage: ocgo-delegate.sh SLUG OBJECTIVE [MAX_MINUTES]
+#   usage: ocgo-delegate.sh SLUG OBJECTIVE [MAX_MINUTES] [PROVIDER]
+#        PROVIDER: opencode-go (default) | kimi | zai; env OCGO_PROVIDER
+#        also selects (arg wins). kimi rides the Kimi Code K3 quota
+#        (model.sh kimi_chat key order; child sees KIMI_API_KEY only),
+#        paced against kimi-daily-cap. zai rides the Z.AI subscription
+#        (Z_AI_API_KEY; child sees ZAI_API_KEY only), paced against
+#        zai-cap-5h-calls + zai-cap-week-calls (tightest wins).
 #
-#   (a) 5h pacer BEFORE anything spends: quota_pace_blocked_5h counts
-#       sources ocgo,ocgo-agent together against opencode-cap-5h-calls
-#       (cadence-params.tsv; env OCGO_CAP_5H_CALLS overrides) -- blocked
-#       -> exit 75 with a budget line, no session, no bridge run
-#       (fail-closed: no budget = no session).
+#   (a) multi-window pacer BEFORE anything spends: ocgo_pace_blocked
+#       gates EVERY OpenCode Go window (5h $12 / 7d $30 / monthly $60 ->
+#       opencode-cap-{5h,7d,month}-calls; tightest window wins, sources
+#       ocgo,ocgo-agent counted together) -- blocked -> exit 75 with a
+#       budget line, no session, no bridge run (fail-closed: no budget =
+#       no session).
 #   (b) lessons read: the tail of state/ocgo-agent-lessons.md rides in
 #       the prompt (the append side stays in launch_session's
 #       classification hook).
@@ -29,7 +36,7 @@ AROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$AROOT/lib/common.sh"
 . "$AROOT/lib/params.sh"
 . "$AROOT/lib/launch-session.sh"
-. "$AROOT/lib/model.sh" # quota_pace_blocked_5h
+. "$AROOT/lib/model.sh" # ocgo_pace_blocked
 
 ROOT="${ROOT:-${HNGH_HOME:-$HOME/Projects/etc/hngh}}"
 STORE="${STORE:-$AUTOMATION_ROOT/store/ocgo-delegate}"
@@ -39,18 +46,53 @@ slug="${1:-task}"
 slug="$(LC_ALL=C printf '%s' "$slug" | tr -c 'A-Za-z0-9' '-')"
 objective="${2:-}"
 max_min="${3:-10}"
+provider="${4:-${OCGO_PROVIDER:-opencode-go}}"
+case "$provider" in
+opencode-go | kimi | zai) ;;
+*)
+ printf 'refused: unknown provider %s (opencode-go | kimi | zai); no session launched\n' \
+  "$provider" >&2
+ exit 2
+ ;;
+esac
 case "$max_min" in *[!0-9]* | '') max_min=10 ;; esac
 [ "$max_min" -ge 1 ] || max_min=1
 [ "$max_min" -le 30 ] || max_min=30 # leg budget: opencode-agent 1800s
 TIMEOUT_S=$((max_min * 60))
+# launch_session's omp-fallback model (env > paid model > the house
+# default -- the same chain agent-respawn.sh:57 applies); unbound under
+# set -u otherwise, which killed the first live tool-path launch
+SESSION_MODEL="${SESSION_MODEL:-${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}}"
 
 # (a) pacer first -- nothing after this line spends until the check passes
-cap="${OCGO_CAP_5H_CALLS:-$(get_param opencode-cap-5h-calls 60)}"
-pace="$(quota_pace_blocked_5h ocgo,ocgo-agent "$cap")"
-if [ -n "$pace" ]; then
- printf 'refused: budget pacer blocked -- ocgo+ocgo-agent used %s of cap %s in the trailing 5h window (opencode-cap-5h-calls); no session launched\n' \
-  "${pace% *}" "${pace#* }" >&2
- exit 75
+if [ "$provider" = "zai" ]; then
+ # same Z.AI subscription the model.sh zai_chat leg spends: count both
+ # against the 5h + weekly pair (env ZAI_CAP_5H_CALLS / ZAI_CAP_WEEK_CALLS override)
+ pace="$(zai_pace_blocked || true)"
+ if [ -n "$pace" ]; then
+  _o_label="${pace%% *}" _o_used="${pace#* }"
+  printf 'refused: budget pacer blocked -- zai %s-window used %s of cap %s; no session launched\n' \
+   "$_o_label" "${_o_used%% *}" "${_o_used##* }" >&2
+  exit 75
+ fi
+elif [ "$provider" = "kimi" ]; then
+ # same Kimi quota the deck-chat leg spends: count both against
+ # kimi-daily-cap (env KIMI_DAILY_CAP_CALLS overrides)
+ cap="${KIMI_DAILY_CAP_CALLS:-$(get_param kimi-daily-cap 40)}"
+ pace="$(quota_pace_blocked kimi "$cap" || true)"
+ if [ -n "$pace" ]; then
+  printf 'refused: budget pacer blocked -- kimi used %s of cap %s today (kimi-daily-cap); no session launched\n' \
+   "${pace% *}" "${pace#* }" >&2
+  exit 75
+ fi
+else
+ pace="$(ocgo_pace_blocked)"
+ if [ -n "$pace" ]; then
+  _o_label="${pace%% *}" _o_used="${pace#* }"
+  printf 'refused: budget pacer blocked -- ocgo+ocgo-agent %s-window used %s of cap %s; no session launched\n' \
+   "$_o_label" "${_o_used%% *}" "${_o_used##* }" >&2
+  exit 75
+ fi
 fi
 
 # (b) lessons read: bounded tail, the executor steers away from the
@@ -70,14 +112,14 @@ prompt="$ROOT/prompts/overnight/ocgo-delegate-$slug-$$.txt"
  fi
 } >"$prompt"
 
-HNGH_SESSION_EXECUTOR=opencode launch_session "ocgo-$slug" "$objective" \
- "$prompt" executor
+OCGO_PROVIDER="$provider" HNGH_SESSION_EXECUTOR=opencode \
+ launch_session "ocgo-$slug" "$objective" "$prompt" executor
 rm -f "$prompt"
 
 printf 'session=%s\nrc=%s\ndisposition=%s\ncause=%s\nlog=%s\nrun_id=%s\n' \
  "$slug" "$LAUNCH_RC" "$LAUNCH_DISPOSITION" "$LAUNCH_CAUSE" \
  "$LAUNCH_LOG" "$LAUNCH_RUN_ID"
-printf 'timeout_s=%s\n' "$TIMEOUT_S"
+printf 'provider=%s\ntimeout_s=%s\n' "$provider" "$TIMEOUT_S"
 if [ "$LAUNCH_RC" -eq 0 ]; then
  exit 0
 fi

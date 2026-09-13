@@ -70,6 +70,57 @@
           "limit": { "context": 243200, "output": 8192 }
         }
       }
+    },
+    // Kimi Code quota leg (2026-09-13, operator quota-utilization
+    // directive): api.kimi.com/coding OpenAI-compatible gateway. The key
+    // is NEVER stored here -- the launcher resolves it (model.sh kimi_chat
+    // order: KIMI_AI_KEY -> KIMI_FOR_CODING_KEY -> MOONSHOTAI_API_KEY ->
+    // 600 key file) and exports it to the child as KIMI_API_KEY only.
+    // Sessions select it with -m kimi/<model> via OCGO_PROVIDER=kimi.
+    "kimi": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Kimi Code (Moonshot K3 quota)",
+      "options": {
+        "baseURL": "https://api.kimi.com/coding/v1",
+        "apiKey": "{env:KIMI_API_KEY}"
+      },
+      "models": {
+        "k3-256k": {
+          "name": "Kimi K3 256k (coding)",
+          "reasoning": true,
+          "tool_call": true,
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] },
+          "limit": { "context": 262144, "output": 32768 }
+        }
+      }
+    },
+    // Z.AI subscription quota leg (2026-09-13, operator directive: the
+    // subscription replaces openrouter for z-ai-model calls). GLM Coding
+    // Plan gateway api.z.ai/api/coding/paas/v4; models verified live
+    // (glm-4.5..glm-5.3-flash). The key is NEVER stored here -- the
+    // launcher resolves Z_AI_API_KEY (or the 600 key file) and exports it
+    // to the child as ZAI_API_KEY only. Sessions select it with
+    // -m zai/<model> via OCGO_PROVIDER=zai; paced by
+    // zai-cap-5h-calls + zai-cap-week-calls (fixed Monday-week), shared
+    // bucket pair with the model.sh zai_chat leg (source=zai).
+    "zai": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Z.AI GLM Coding Plan",
+      "options": {
+        "baseURL": "https://api.z.ai/api/coding/paas/v4",
+        "apiKey": "{env:ZAI_API_KEY}"
+      },
+      "models": {
+        "glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (Z.AI subscription)",
+          "reasoning": true,
+          "tool_call": true,
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] },
+          "limit": { "context": 262144, "output": 32768 }
+        }
+      }
     }
   },
   "mcp": {
@@ -117,6 +168,18 @@
       "description": "hngh delegated-session executor: ONE verified assignment (plan step through the certificate ceremony, or one bounded research-class task); commit-per-green; reads the lessons tail first; terse, English/ASCII",
       "mode": "primary",
       "model": "opencode-go/glm-5.3-flash",
+      "prompt": "{file:./agents/executor.md}"
+    },
+    "executor-kimi": {
+      "description": "hngh delegated-session executor on the Kimi Code quota (same role as executor, different bucket); selected by OCGO_PROVIDER=kimi",
+      "mode": "primary",
+      "model": "kimi/k3-256k",
+      "prompt": "{file:./agents/executor.md}"
+    },
+    "executor-zai": {
+      "description": "hngh delegated-session executor on the Z.AI subscription quota (same role as executor, different bucket); selected by OCGO_PROVIDER=zai",
+      "mode": "primary",
+      "model": "zai/glm-5.3-flash",
       "prompt": "{file:./agents/executor.md}"
     },
     "hngh-scout": {

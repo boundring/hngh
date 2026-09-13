@@ -168,20 +168,122 @@ launch) before re-deriving any repo fact from scratch."
   # test seam mirrors OMP_BIN_CMD; hermetic tests scope PATH instead of
   # set-but-empty (the empty value falls through to PATH discovery)
   bili_bin="${BILI_OCGO_BIN:-$(command -v bili || true)}"
-  oc_model="$(get_param opencode-model '')"
-  if [ -z "${OPENCODE_API_KEY:-}" ]; then
-   local kfile="${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
-   if [ -f "$kfile" ] &&
-    [ "$(stat -c %a "$kfile" 2>/dev/null)" = "600" ]; then
-    oc_key="$(cat "$kfile" 2>/dev/null)"
+  # provider selection (operator quota-utilization directive 2026-09-13):
+  # env OCGO_PROVIDER picks the quota leg -- opencode-go (default, the
+  # OpenCode Go T2 bucket) | kimi (Kimi Code K3 quota). Fail-closed: an
+  # unknown value falls back to opencode-go with a breadcrumb.
+  local oc_provider="${OCGO_PROVIDER:-opencode-go}"
+  case "$oc_provider" in
+  opencode-go | kimi | zai) ;;
+  *)
+   breadcrumb launch-session "ocgo-executor" \
+    "unknown OCGO_PROVIDER '$oc_provider' -> opencode-go"
+   oc_provider="opencode-go"
+   ;;
+  esac
+  if [ "$oc_provider" = "kimi" ]; then
+   oc_model="$(get_param kimi-model '')"
+  elif [ "$oc_provider" = "zai" ]; then
+   oc_model="$(get_param zai-model '')"
+  else
+   oc_model="$(get_param opencode-model '')"
+  fi
+  local kfile=""
+  if [ "$oc_provider" = "kimi" ] || [ "$oc_provider" = "zai" ]; then
+   # quota-provider keys: same trust pattern as the model.sh chat legs
+   # (env first, else 600 key file); the value reaches the child ONLY as
+   # the config layer's {env:...} name. Never echoed, never logged.
+   if [ "$oc_provider" = "zai" ]; then
+    oc_key="${Z_AI_API_KEY:-}"
+    kfile="${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}"
    else
-    breadcrumb launch-session "ocgo-executor" \
-     "no OPENCODE_API_KEY and no 600 key file -> omp"
+    # Kimi Code key: the SAME resolution order as model.sh kimi_chat (env
+    # KIMI_AI_KEY -> KIMI_FOR_CODING_KEY -> MOONSHOTAI_API_KEY -> key file
+    # mode 600). The value reaches the child ONLY as KIMI_API_KEY (the
+    # config layer's {env:KIMI_API_KEY}); never echoed, never logged.
+    oc_key="${KIMI_AI_KEY:-${KIMI_FOR_CODING_KEY:-${MOONSHOTAI_API_KEY:-}}}"
+    kfile="${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}"
+   fi
+   if [ -z "$oc_key" ]; then
+    if [ -f "$kfile" ] &&
+     [ "$(stat -c %a "$kfile" 2>/dev/null)" = "600" ]; then
+     oc_key="$(cat "$kfile" 2>/dev/null)"
+    else
+     breadcrumb launch-session "ocgo-executor" \
+      "$oc_provider: no env key and no 600 key file -> omp"
+    fi
+   fi
+  else
+   if [ -z "${OPENCODE_API_KEY:-}" ]; then
+    kfile="${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
+    if [ -f "$kfile" ] &&
+     [ "$(stat -c %a "$kfile" 2>/dev/null)" = "600" ]; then
+     oc_key="$(cat "$kfile" 2>/dev/null)"
+    else
+     breadcrumb launch-session "ocgo-executor" \
+      "no OPENCODE_API_KEY and no 600 key file -> omp"
+    fi
    fi
   fi
-  if [ -n "$oc_bin" ] && [ -n "$oc_model" ] &&
-   [ -n "${OPENCODE_API_KEY:-}$oc_key" ]; then
-   outcome_model="opencode-go/$oc_model" oc_ran=1
+  local oc_ready=""
+  if [ "$oc_provider" = "kimi" ] || [ "$oc_provider" = "zai" ]; then
+   [ -n "$oc_key" ] && oc_ready=1 # env OPENCODE_API_KEY is the OTHER quota
+  else
+   [ -n "${OPENCODE_API_KEY:-}$oc_key" ] && oc_ready=1
+  fi
+  # quota pacing at the CHOKE POINT (quota-tightest-window-pacing rule,
+  # 2026-09-13): the wrapper's pacer only guards the wrapper route, so the
+  # branch enforces pacing itself BEFORE the first call lands --
+  # opencode-go through ocgo_pace_blocked (EVERY product window gated,
+  # tightest wins: 5h $12 / 7d $30 / monthly $60, sources
+  # ocgo+ocgo-agent counted together), kimi against the daily cap it
+  # shares with the deck-chat leg. Blocked or pacer unavailable -> omp fallback
+  # (fail-closed: no budget = no session). The wrapper keeps its earlier
+  # rc=75 refusal (cheaper: no bridge run); this is the guarantee that
+  # every route is paced, not just the wrapper's.
+  local pace_blocked=""
+  declare -F ocgo_pace_blocked >/dev/null || {
+   [ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model.sh" ] &&
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model.sh"
+  }
+  if ! declare -F ocgo_pace_blocked >/dev/null; then
+   breadcrumb launch-session "ocgo-executor" \
+    "quota pacer unavailable -> omp (fail-closed)"
+   pace_blocked="unavailable"
+  elif [ "$oc_provider" = "kimi" ]; then
+   local capd="${KIMI_DAILY_CAP_CALLS:-$(get_param kimi-daily-cap 40)}"
+   pace_blocked="$(quota_pace_blocked kimi "$capd" || true)"
+   [ -n "$pace_blocked" ] && breadcrumb launch-session "ocgo-executor" \
+    "kimi daily pacer blocked (${pace_blocked% *} of cap ${pace_blocked#* }) -> omp"
+  elif [ "$oc_provider" = "zai" ]; then
+   declare -F zai_pace_blocked >/dev/null || true
+   pace_blocked="$(zai_pace_blocked || true)"
+   [ -n "$pace_blocked" ] && breadcrumb launch-session "ocgo-executor" \
+    "Z.AI pacer blocked (${pace_blocked%% *}-window used ${pace_blocked#* }) -> omp"
+  else
+   pace_blocked="$(ocgo_pace_blocked || true)"
+   [ -n "$pace_blocked" ] && breadcrumb launch-session "ocgo-executor" \
+    "opencode-go pacer blocked (${pace_blocked%% *}-window used ${pace_blocked#* }) -> omp"
+  fi
+  if [ -n "$oc_bin" ] && [ -n "$oc_model" ] && [ -n "$oc_ready" ] &&
+   [ -z "$pace_blocked" ]; then
+   outcome_model="$oc_provider/$oc_model" oc_ran=1
+   local oc_agent="executor" oc_model_flag="opencode-go/$oc_model"
+   local key_arg="OPENCODE_API_KEY=${OPENCODE_API_KEY:-$oc_key}"
+   local emit_src=()
+   if [ "$oc_provider" = "kimi" ]; then
+    # dedicated agent (config layer pins executor to opencode-go) and
+    # attribution source=kimi so the kimi daily pacer counts these calls
+    oc_agent="executor-kimi"
+    oc_model_flag="kimi/$oc_model"
+    key_arg="KIMI_API_KEY=$oc_key"
+    emit_src=(--source kimi)
+   elif [ "$oc_provider" = "zai" ]; then
+    oc_agent="executor-zai"
+    oc_model_flag="zai/$oc_model"
+    key_arg="ZAI_API_KEY=$oc_key"
+    emit_src=(--source zai)
+   fi
    # bili compression on the opencode leg (2026-09-11): env-only MITM
    # redirect — the hngh config layer is NEVER written or replaced
    # (`bili opencode`'s temp-config path strict-parses JSON and would
@@ -235,10 +337,10 @@ launch) before re-deriving any repo fact from scratch."
    # (max-time 1800s = TIMEOUT_S, max-output 50000 = loadout token-limit).
    # The opencode-go gateway declares no per-call edge timeout; the session
    # wall-clock below is the enforced ceiling.
-   OPENCODE_API_KEY="${OPENCODE_API_KEY:-$oc_key}" \
+   env "$key_arg" \
     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
     timeout "$TIMEOUT_S" "$oc_bin" run --dir "$ROOT" --format json \
-    --agent executor -m "opencode-go/$oc_model" --auto "$body" \
+    --agent "$oc_agent" -m "$oc_model_flag" --auto "$body" \
     >"$ROOT/$log.json" 2>&1
    oc_rc=$? # captured before the emitter masks $?
    if [ -n "$borigin" ]; then
@@ -248,7 +350,8 @@ launch) before re-deriving any repo fact from scratch."
    python3 "$AUTOMATION_ROOT/jobs/ocgo-attribution.py" \
     "$ROOT/$log.json" --plain "$ROOT/$log" \
     --burn "$AUTOMATION_ROOT/state/ocgo-agent-burn.tsv" \
-    --telemetry "${HNGH_TELEMETRY_DB:-$AUTOMATION_ROOT/dashboard/telemetry.db}" \
+    --telemetry "${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}" \
+    "${emit_src[@]}" \
     >/dev/null 2>&1 || true
   else
    breadcrumb launch-session "ocgo-executor" \

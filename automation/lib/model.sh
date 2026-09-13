@@ -3,10 +3,11 @@
 #   echoes the completion text (EMPTY output only in archive-only mode);
 #   writes $MODEL_USED to $AUTOMATION_ROOT/tmp-modelused.txt so callers can
 #   read it from OUTSIDE the command-substitution subshell.
-# Chain: unsloth (401 auto-refresh + empty-content retry) -> remote
+# Chain: unsloth (401 auto-refresh + empty-content retry) -> zai (Z.AI
+# subscription quota leg, 5h + weekly paced, see zai_chat) -> remote
 # (budget-gated, see remote_chat) -> ollama -> deck (param-gated, see
 # deck_chat) -> kimi (quota leg, see kimi_chat) -> ocgo (quota leg,
-# OpenCode Go, 5h-window pacing, see ocgo_chat) -> archive-only.
+# OpenCode Go, every-window paced, see ocgo_chat) -> archive-only.
 # MODEL_PIN routes a call:
 #   local  unsloth -> ollama only (remote, deck, and the quota legs kimi/
 #          ocgo are skipped): news/ux-review/bench pin local
@@ -22,6 +23,8 @@
 #          quota_pace_blocked + kimi-daily-cap.
 #   deck   deck first (second-server overflow), then unsloth -> ollama ->
 #          kimi -> archive; remote skipped.
+#   zai    zai first (Z.AI subscription, 5h + weekly paced), then
+#          unsloth -> ollama -> deck -> archive; remote + kimi skipped.
 #   other  ignored: the full chain runs.
 # A pinned quota leg that misses (pace-block, 429, endpoint down) falls
 # through to the local chain inside model_call -- research/reviews never
@@ -30,6 +33,10 @@
 # sessions only.
 # Every step exits 0 unless a genuine local bug (missing python3, etc.).
 . "$AUTOMATION_ROOT/lib/common.sh"
+
+# telemetry db: userspace home (layout contract 2026-09-13);
+# HNGH_TELEMETRY_DB overrides for hermetic tests.
+HNGH_TELEMETRY_DB="${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
 
@@ -285,7 +292,7 @@ remote_chat() {
   breadcrumb model "remote" "no key file -> next backend"
   return 1
  }
- count="$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
+ count="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source='remote' and ts like '$(date -u +%Y-%m-%d)%'" 2>/dev/null)"
  case "$count" in '' | *[!0-9]*) count=0 ;; esac
  [ "$count" -ge "$REMOTE_DAILY_CAP_CALLS" ] && {
@@ -337,7 +344,7 @@ deck_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
 quota_pace_blocked() { # source cap -> 0 blocked (prints "used cap"), 1 go
  local src="$1" cap="$2" used elapsed allowed
  case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
- used="$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
+ used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source='$src' and ts like '$(date -u +%Y-%m-%d)%'" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
@@ -365,7 +372,7 @@ quota_pace_blocked() { # source cap -> 0 blocked (prints "used cap"), 1 go
 quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used cap"), 1 go
  local src="$1" cap="$2" used elapsed allowed
  case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
- used="$(sqlite3 "$AUTOMATION_ROOT/dashboard/telemetry.db" \
+ used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source in ('${src//,/\',\'}') \
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-5 hours')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
@@ -375,6 +382,84 @@ quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used ca
  }
  elapsed=$(($(date -u +%s) % 18000))
  allowed="$(awk -v c="$cap" -v e="$elapsed" 'BEGIN{printf "%.4f", c*e/18000}')"
+ if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  printf '%s %s\n' "$used" "$cap"
+  return 0
+ fi
+ return 1
+}
+
+# Multi-window pacing (quota-tightest-window-pacing, tightened
+# 2026-09-13): a product with several reset windows must gate EVERY
+# window BEFORE a call lands; the tightest window decides. The generic
+# window pacer is quota_pace_blocked_5h's arithmetic over an arbitrary
+# sqlite strftime window; ocgo_pace_blocked gates the OpenCode Go
+# product's three windows (5h/$12, 7d/$30, monthly/$60 per model ->
+# 60/150/300 calls at the row-26 per-call basis) and is the ONE entry
+# every opencode-go consumer must route through.
+quota_pace_blocked_window() { # source cap win-modifier soft-seconds -> 0 blocked (prints "used cap"), 1 go
+ local src="$1" cap="$2" win="$3" soft="$4" used elapsed allowed
+ case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
+ used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
+  "select count(*) from events where kind='model' and source in ('${src//,/\',\'}') \
+     and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','$win')" 2>/dev/null)"
+ case "$used" in '' | *[!0-9]*) used=0 ;; esac
+ [ "$used" -ge "$cap" ] && {
+  printf '%s %s\n' "$used" "$cap"
+  return 0
+ }
+ elapsed=$(($(date -u +%s) % soft))
+ allowed="$(awk -v c="$cap" -v e="$elapsed" -v s="$soft" 'BEGIN{printf "%.4f", c*e/s}')"
+ if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  printf '%s %s\n' "$used" "$cap"
+  return 0
+ fi
+ return 1
+}
+
+ocgo_pace_blocked() { # -> 0 blocked (prints "<window> used cap"), 1 go
+ local pace
+ pace="$(quota_pace_blocked_window ocgo,ocgo-agent \
+  "${OCGO_CAP_5H_CALLS:-$(get_param opencode-cap-5h-calls 60)}" '-5 hours' 18000)" &&
+  {
+   printf '5h %s\n' "$pace"
+   return 0
+  }
+ pace="$(quota_pace_blocked_window ocgo,ocgo-agent \
+  "${OCGO_CAP_7D_CALLS:-$(get_param opencode-cap-7d-calls 150)}" '-7 days' 604800)" &&
+  {
+   printf '7d %s\n' "$pace"
+   return 0
+  }
+ pace="$(quota_pace_blocked_window ocgo,ocgo-agent \
+  "${OCGO_CAP_MONTH_CALLS:-$(get_param opencode-cap-month-calls 300)}" '-30 days' 2592000)" &&
+  {
+   printf 'month %s\n' "$pace"
+   return 0
+  }
+ return 1
+}
+
+# Weekly fixed-window pacer (NOT a rolling -7 days: the window resets at
+# Monday 00:00 UTC, so spend alignment matches the product's weekly
+# reset; quota-tightest-window-pacing, 2026-09-13). Same soft-pace
+# arithmetic across the elapsed part of the running week.
+quota_pace_blocked_week() { # source cap [weekday 1=Mon..7=Sun] -> 0 blocked (prints "used cap"), 1 go
+ local src="$1" cap="$2" wk="${3:-1}" used days_back week_start elapsed allowed
+ case "$cap" in '' | *[!0-9]*) return 1 ;; esac
+ days_back=$(((10#$(date -u +%u) - 10#$wk + 7) % 7))
+ week_start=$(($(date -u +%s) - days_back * 86400 - 10#$(date -u +%H) * 3600 - \
+ 10#$(date -u +%M) * 60 - 10#$(date -u +%S)))
+ used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
+  "select count(*) from events where kind='model' and source in ('${src//,/\',\'}') \
+     and ts >= strftime('%Y-%m-%dT%H:%M:%SZ',$week_start,'unixepoch')" 2>/dev/null)"
+ case "$used" in '' | *[!0-9]*) used=0 ;; esac
+ [ "$used" -ge "$cap" ] && {
+  printf '%s %s\n' "$used" "$cap"
+  return 0
+ }
+ elapsed=$(($(date -u +%s) - week_start))
+ allowed="$(awk -v c="$cap" -v e="$elapsed" 'BEGIN{printf "%.4f", c*e/604800}')"
  if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
   printf '%s %s\n' "$used" "$cap"
   return 0
@@ -475,13 +560,16 @@ ocgo_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  [ -n "$key" ] || return 1 # no env key, no key file: silent fail-closed-skip
  model="${OCGO_MODEL:-$(get_param opencode-model '')}"
  [ -n "$model" ] || return 1 # operator has not named the quota model yet
- cap="${OCGO_CAP_5H_CALLS:-$(get_param opencode-cap-5h-calls 60)}"
+ # every-window gate (tightest wins): 5h + 7d + monthly, see
+ # quota-tightest-window-pacing (tightened 2026-09-13)
  # ocgo-agent = the opencode executor's agent-internal spend, attributed
  # by jobs/ocgo-attribution.py onto this same $12/5h bucket (R2: no
  # double-spend; design 2026-09-10 s6).
- pace="$(quota_pace_blocked_5h ocgo,ocgo-agent "$cap")"
+ pace="$(ocgo_pace_blocked)"
  if [ -n "$pace" ]; then
-  breadcrumb model "ocgo" "quota pace 5h: ocgo used ${pace% *}/cap ${pace#* } -- deferring to next leg"
+  local _o_label="${pace%% *}" _o_used="${pace#* }"
+  breadcrumb model "ocgo" \
+   "quota pace: ocgo+ocgo-agent ${_o_label}-window used ${_o_used%% *} of cap ${_o_used##* } -- deferring to next leg"
   return 1
  fi
  content="$(printf '%s' "$(_kimi_body "$model" "$prompt" "$max_tokens")" |
@@ -540,6 +628,81 @@ _ocgo_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  return 0
 }
 
+# Z.AI subscription quota leg (api.z.ai/api/coding/paas/v4, GLM Coding
+# Plan, operator-armed 2026-09-13; model list verified live:
+# glm-4.5..glm-5.3-flash). Key resolution order (first hit wins): env
+# Z_AI_API_KEY (the only Z.AI credential present on this host) -> key
+# file ~/.config/hngh/zai-key (mode 600 required; the value is never
+# logged or echoed). Spend guard: TWO product windows, tightest wins
+# (quota-tightest-window-pacing): zai-cap-5h-calls (rolling 5h) +
+# zai-cap-week-calls (fixed window resetting Monday 00:00 UTC), source
+# zai counted together -- opencode sessions on this provider attribute
+# source=zai onto the SAME pair via jobs/ocgo-attribution.py --source.
+# Model gate: ZAI_MODEL env -> `zai-model` row (empty/absent -> skipped
+# fail-closed). Endpoint: ZAI_URL env -> `zai-endpoint` row (default
+# the coding-plan chat-completions URL). Lean body, no temperature (the
+# coding gateway 400s on it, same as Kimi).
+zai_pace_blocked() { # -> 0 blocked (prints "<window> used cap"), 1 go
+ local pace
+ pace="$(quota_pace_blocked_window zai \
+  "${ZAI_CAP_5H_CALLS:-$(get_param zai-cap-5h-calls 300)}" '-5 hours' 18000)" &&
+  {
+   printf '5h %s\n' "$pace"
+   return 0
+  }
+ pace="$(quota_pace_blocked_week zai \
+  "${ZAI_CAP_WEEK_CALLS:-$(get_param zai-cap-week-calls 1500)}")" &&
+  {
+   printf 'week %s\n' "$pace"
+   return 0
+  }
+ return 1
+}
+zai_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
+ local prompt="$1" max_tokens="$2" url model key content pace
+ url="${ZAI_URL:-$(get_param zai-endpoint 'https://api.z.ai/api/coding/paas/v4/chat/completions')}"
+ key="${Z_AI_API_KEY:-}"
+ if [ -z "$key" ]; then
+  local kfile="${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}"
+  if [ -f "$kfile" ]; then
+   if [ "$(stat -c %a "$kfile" 2>/dev/null)" != "600" ]; then
+    breadcrumb model "zai" "key file too open (chmod 600 required) -> next backend"
+    return 1
+   fi
+   key="$(cat "$kfile" 2>/dev/null)"
+  fi
+ fi
+ [ -n "$key" ] || return 1 # no env key, no key file: silent fail-closed-skip
+ model="${ZAI_MODEL:-$(get_param zai-model '')}"
+ [ -n "$model" ] || return 1 # operator has not named the quota model yet
+ pace="$(zai_pace_blocked)"
+ if [ -n "$pace" ]; then
+  local _z_label="${pace%% *}" _z_used="${pace#* }"
+  breadcrumb model "zai" \
+   "quota pace: zai ${_z_label}-window used ${_z_used%% *} of cap ${_z_used##* } -- deferring to next leg"
+  return 1
+ fi
+ content="$(printf '%s' "$(_kimi_body "$model" "$prompt" "$max_tokens")" |
+  _post_chat "$url" '.choices[0].message.content // ""' "$key")" || {
+  breadcrumb model "zai" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
+  return 1
+ }
+ printf '%s\n' "$content"
+}
+
+# zai quota leg: call, tag MODEL_USED, persist tmp-modelused.txt, emit
+# one telemetry row (source=zai -- the shared Z.AI bucket pair). Shared
+# by the unpinned chain and MODEL_PIN=zai.
+_zai_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
+ local zm
+ zai_chat "$1" "$2" || return 1
+ zm="${ZAI_MODEL:-$(get_param zai-model '')}"
+ MODEL_USED="zai:$zm"
+ printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+ _model_emit zai "$zm"
+ return 0
+}
+
 # deck leg (second-server overflow), same contract as _kimi_leg. No
 # telemetry emit: the saturation instrument measures the desktop
 # unsloth, and the deck is overflow-only, so deck rows would skew it.
@@ -552,12 +715,13 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
 
 model_call() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
- local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0
+ local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0
  case "${MODEL_PIN:-}" in
  local) pin_local=1 ;;
  kimi) pin_kimi=1 ;;
  deck) pin_deck=1 ;;
  ocgo) pin_ocgo=1 ;;
+ zai) pin_zai=1 ;;
  esac # unknown values: ignore (full chain)
  prompt="$(cat)"
  MODEL_USED=""
@@ -565,6 +729,9 @@ model_call() {
  # pinned quota legs run first; a miss (pace-block, 429, down) falls
  # through to the local chain -- the caller never blocks on quota state.
  if [ "$pin_kimi" = 1 ] && _kimi_leg "$prompt" "$max_tokens"; then
+  return 0
+ fi
+ if [ "$pin_zai" = 1 ] && _zai_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  if [ "$pin_ocgo" = 1 ] && _ocgo_leg "$prompt" "$max_tokens"; then
@@ -593,6 +760,14 @@ model_call() {
  done
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
   [ "$pin_ocgo" = 0 ] &&
+  [ "$pin_zai" = 0 ] &&
+  _zai_leg "$prompt" "$max_tokens"; then
+  # the Z.AI subscription replaces openrouter for z-ai-model calls:
+  # direct leg first (bucket-gated), openrouter stays the fallback
+  return 0
+ fi
+ if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
   remote_chat "$prompt" "$max_tokens"; then
   MODEL_USED="openrouter:$REMOTE_MODEL"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
@@ -610,12 +785,12 @@ model_call() {
   return 0
  fi
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
   _kimi_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] && [ "$pin_zai" = 0 ] &&
   _ocgo_leg "$prompt" "$max_tokens"; then
   return 0
  fi
