@@ -76,7 +76,7 @@ is already complete (operator-procedural sweep, twice over).
       22% at speed 1 vs 6-11% at speeds 2-3 — NO-GO: degraded rate not flat,
       no tuning change, the ladder demotion is the safety mechanism working.
       Gate-flap (step 5) named as the real lever.
-- [ ] 5. Gate-evaluation isolation under parallel beats (failing test
+- [x] 5. Gate-evaluation isolation under parallel beats (failing test
       first). Evidence: 2026-09-09 kernel-gate-red-rc2 and
       automation-gate-red-rc2 blocks at 14:01-19:01Z while isolated
       `make test` runs pass rc=0 twice (2855 checks); the flap is
@@ -92,6 +92,20 @@ is already complete (operator-procedural sweep, twice over).
       Verification: suite test covers gate-under-concurrency
       serialization; the acceptance log stops filing gate-red-rc2 on
       a green gate across a full parallel beat; `make test` green.
+
+      Executed 2026-09-13T00:45Z: accept-plans.py holds an exclusive
+      flock (hngh-gate.lock under TMPDIR, ACCEPT_GATE_LOCK overrides)
+      across both repo gates; a busy lock is a loud skip -- alert row
+      (overnight:plan-accept-gate:busy), blocked <slug> gate-lock-busy
+      notes, plans untouched, next tick re-evaluates. Red-first suite
+      cases in tests/test-plan-acceptance.py: concurrent gate runs never
+      interleave (the pre-fix log showed start,start,end,end), busy lock
+      blocks loudly, free lock keeps the normal accept path. automation
+      make test green; commit ec22664. The isolation guarantees
+      serialization at the seam; the acceptance-log side of the
+      verification (no gate-red-rc2 across a full parallel beat) is
+      observable only in production and is verified by the next
+      beats' logs.
 
 ## Execution notes
 
