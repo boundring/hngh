@@ -108,6 +108,14 @@ humor, distilled into hngh's comedy banks.
   narration). No artwork scraped, no images copied, no style models
   trained. Attribution lives in this section; prompts carry pure
   descriptor language.
+- Attribution (titles/authors, cited not scanned; full list and the
+  collage-use policy in docs/records/2026-09-12-manga-collection-
+  policy.md): Blame!/Abara/Biomega/Tower Dungeon (Tsutomu Nihei), Dai
+  Dark/Dorohedoro (Q Hayashida), Hanaotoko (Taiyo Matsumoto), Astro
+  Boy collection volumes (Osamu Tezuka), Heaven's Door/G (Keiichi
+  Koike), Homunculus (Hideo Yamamoto), Japan Tengu Party Illustrated
+  and National Quiz (title-cited, authors as labeled in the
+  collection).
 - The descriptors are hngh's own phrasing, aimed at the shared
   aesthetic denominator (design s3 "style-approximation framing",
   docs/research/2026-09-11-imagegen-integration.md). If a descriptor
