@@ -809,6 +809,39 @@ def check_disposition_followons(ctx):
     return out
 
 
+CRITICAL_TIMERS = ("hngh-automation.timer", "hngh-cadence-1m.timer",
+                   "hngh-cadence-5m.timer", "hngh-overnight.timer")
+
+
+def check_systemd_units(ctx):
+    """Machine eyes on its own infrastructure: every critical hngh
+    timer unit must be enabled AND active in the user manager. The
+    2026-09-13 CachyOS update silently disabled the whole set and
+    nothing self-detected it -- this patrol closes that gap. Tests stub
+    systemctl via PATROL_SYSTEMCTL."""
+    out = {"passes": [], "fails": []}
+    ctl = os.environ.get("PATROL_SYSTEMCTL", "systemctl")
+    for unit in CRITICAL_TIMERS:
+        try:
+            en = subprocess.run([ctl, "--user", "is-enabled", unit],
+                                capture_output=True, text=True, timeout=15)
+            ac = subprocess.run([ctl, "--user", "is-active", unit],
+                                capture_output=True, text=True, timeout=15)
+        except (OSError, subprocess.SubprocessError) as exc:
+            out["fails"].append((unit, "check-crash",
+                                 "systemctl unreadable: %s" % exc.__class__.__name__))
+            continue
+        en_s = (en.stdout.strip() or en.stderr.strip() or "rc=%d" % en.returncode)
+        ac_s = (ac.stdout.strip() or ac.stderr.strip() or "rc=%d" % ac.returncode)
+        if en.returncode != 0 or ac.returncode != 0:
+            out["fails"].append((unit, "timer-dead",
+                                 "enabled=%s active=%s" % (en_s, ac_s)))
+        else:
+            out["passes"].append(("systemd-units:" + unit,
+                                  "enabled=%s active=%s" % (en_s, ac_s)))
+    return out
+
+
 CHECKS = {
     "feed-freshness": check_feed_freshness,
     "blocker-escalations": check_blocker_escalations,
@@ -828,6 +861,7 @@ CHECKS = {
     "package-ghosts": check_package_ghosts,
     "service-children": check_service_children,
     "disposition-followons": check_disposition_followons,
+    "systemd-units": check_systemd_units,
 }
 
 
