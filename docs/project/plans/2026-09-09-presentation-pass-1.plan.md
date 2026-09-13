@@ -63,3 +63,21 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   this plan does not attempt them.
 - All slices are docs/publication surfaces: normal risk, no kernel
   changes, fail-first queue applies.
+- BLOCKED 2026-09-13T04:55Z, step 5 staged but not committed: the
+  `make test` gate is red for a cause outside this step. A machine
+  rehearsal-lane session (2026-09-13 ~00:00-00:05,
+  ses_f6712c054ffe92sjP3sN6CSXvc, see the overnight rehearsal-log) ran
+  probe commits directly in the real repo (ba6b390 'fixture' deleting
+  the Makefile/README, d2d8f51 the revert, e7dbaaa the agent-stall
+  close, all authored as Fixture <fixture@example.invalid>). The
+  loop-history guard correctly refuses them: "every code-surface commit
+  must be 'hngh: candidate <hash>' or a labeled rule-based exemption".
+  The refusal pre-dates this session (16-remote-push push-refused rows
+  53942/53957/53971 in automation STATE.md at 04:04-04:05). The cure
+  named by the guard is a labeled exemption declaration in
+  tests/scripts/test-loop-history-guard.py (wake-mutation lane, not
+  this plan). Step-5 artifacts staged in the working tree:
+  docs/records/2026-09-13-presentation-pass-1-adoption.md,
+  CHANGELOG.md 2026-09-13 section. A later wake-mutation session
+  declares the exemption through the ceremony; then this plan's last
+  step commits under a green gate.
