@@ -34,6 +34,24 @@ authorization. If any fresh-evidence recheck fails, the action refuses
 and files an alert — that refusal is correct behavior, not a block to
 engineer around.
 
+### 2a. No separate operator stall for certificate-bound kernel mutations (2026-09-13)
+
+Operator authorization 2026-09-13 (after the amended wake lane sat
+parked ten days behind the 2026-09-03 staging boundary): a kernel src
+mutation that has a certificate path — its files, content hash, and
+evidence can be bound by a ceremony candidate certificate — needs no
+separate operator stall beyond the ceremony itself. Once an operator
+authorization for the class exists and the ceremony's propose ->
+issue-cert -> mutation-check pass is green, the machine proceeds and
+lands the slice; a parked queue item with an open certificate path is a
+routing defect, not a governance outcome. Parking on the operator
+remains correct only for actions with NO certificate path: credentials,
+payments, provider-key activation beyond a recorded grant, public
+surfaces, deletions, and security posture. This amendment broadens
+section 2 from the :wake-mutation lane to the whole class; the guards
+(green make test, fresh-evidence recheck, closed vocabulary) are
+unchanged and are the operator protection.
+
 ## 3. Meta-optimization priority (standing)
 
 Enabling work — selector/queue mechanics, quota routing, model quality,

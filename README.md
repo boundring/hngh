@@ -16,7 +16,7 @@ say rides the whole surface.
 & [presentation-boundary](docs/design/presentation-boundary.md) ·
 **Language:** Common Lisp (SBCL 2.x) · **License:**
 AGPL-3.0-or-later · **Status:** pre-release, not production ready
-([CHANGELOG](CHANGELOG.md)) · **Check count:** the suite states its own size - past 2,889 checks
+([CHANGELOG](CHANGELOG.md)) · **Check count:** the suite states its own size - past 2,894 checks
 (`make test`), with the count guarded by a doc-numbers test that
 refuses drift.
 
@@ -105,9 +105,9 @@ journal](docs/journal/2026-09-11.md); the whole verified run is
 the stranger's version, under [what exists](#what-exists).
 
 <!-- dispatch:begin -->
-| 2026-09-12 | 6 | $8.32 | 0 | 40 |
+| 2026-09-13 | 23 | $8.72 | 9 | 34 |
 
-Deep read: [the journal](docs/journal/2026-09-12.md).
+Deep read: [the journal](docs/journal/2026-09-13.md).
 <!-- dispatch:end -->
 
 ---

@@ -103,7 +103,7 @@
       (mutation-call "EXECUTE-MUTATION" certificate evidence ports)))
 
 ;;; Closed command vocabulary and action-bound success paths.
-(check (equal '(:none :prepare-candidate :stage :commit :push)
+(check (equal '(:none :prepare-candidate :stage :commit :push :wake-mutation)
               (mutation-value "+MUTATION-ACTIONS+"))
        "mutation action set is fixed and enumerable")
 
@@ -136,6 +136,32 @@
         (:push '("git" "push" "origin" "HEAD")))
       (mutation-result-command result))
      "action uses its fixed argv template")))
+
+;;; :wake-mutation binds the r17 wake surface to the certificate
+;;; machinery: the certificate's base-revision names the run,
+;;; candidate-paths carry the pins file and the pinned peer, and the
+;;; fixed argv invokes the kernel's own wake-peer CLI (which rechecks
+;;; the :federation admission, pins parsing, and wake transport behind
+;;; its own guarded surface).
+(let* ((certificate (make-mutation-certificate
+                     :action :wake-mutation
+                     :base-revision "run-1"
+                     :candidate-paths '("pins.tsv" "peer-7")))
+       (evidence (make-mutation-evidence
+                  :base-revision "run-1"
+                  :candidate-paths '("pins.tsv" "peer-7")))
+       (process-fake nil) (reporter nil))
+  (multiple-value-setq (process-fake reporter) (make-mutation-fake))
+  (let ((result (execute-mutation-fixture certificate evidence process-fake)))
+    (check (eq :executed (mutation-result-status result))
+           "wake-mutation executes its certificate-bound wake")
+    (check (eql :wake-mutation (mutation-result-action result))
+           "wake-mutation result preserves the certificate action")
+    (check (equal '("hngh" "wake-peer" "run-1" "pins.tsv" "peer-7")
+      (mutation-result-command result))
+           "wake-mutation uses its fixed argv template")
+    (check (= 1 (getf (funcall reporter) :calls))
+           "wake-mutation invokes transport once")))
 
 ;;; :none and action escalation are refused before the transport.
 (let ((process-fake nil) (reporter nil))

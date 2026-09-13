@@ -490,8 +490,9 @@ permitted requirement kinds. The profile only narrows."
   (ensure-label-list value name))
 
 (defun validate-certificate-action (value)
-  (validate-closed-value value '(:none :prepare-candidate :stage :commit :push)
-                         "certificate action"))
+  (validate-closed-value
+   value '(:none :prepare-candidate :stage :commit :push :wake-mutation)
+   "certificate action"))
 
 (defstruct (candidate-certificate
             (:constructor %make-candidate-certificate

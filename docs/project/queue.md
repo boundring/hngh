@@ -10,7 +10,7 @@ id); this file is the rotation state.
 
 ```
 id	status	title	evidence
-wake-mutation-lane	queued	Certificate-bound wake mutation lane	backlog boundary proposal; r17 record
+wake-mutation-lane	done	Certificate-bound wake mutation lane	landed 2026-09-13 through the certificate ceremony: :wake-mutation in the closed mutation vocabulary (src/adapter/mutation.lisp, src/domain/governance.lisp, tests/adapter/test-mutation.lisp, tests/domain/test-governance.lisp) binding the r17 wake surface; docs/records/2026-09-13-wake-mutation-lane-landing.md
 node-lattice-admission	queued	Node-lattice admission rung	backlog entry; README vision
 bridge-operator-host	queued	Bridge-as-operator-host (run → worker → review → certify)	backlog entry; bridge README
 doc-sync-loop	done	Documentation-sync loop (make numbers guard)	rotated 2026-08-25 by rotate-queue
@@ -44,7 +44,7 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
 ```
 ## Next
 
-- **wake-mutation-lane** — rotate next (pins wake to the certificate lane; unblocks node-lattice admission). Set by check-in #1 2026-08-25.
+- **node-lattice-admission** — rotate next (unblocked: wake-mutation-lane landed 2026-09-13 through the ceremony).
 
 ## Scheduling
 
@@ -107,9 +107,8 @@ review). Helps the cadence pick the right instrument.
 Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
 Gives "future" a date so a gantt can place bars.
 
-- wake-mutation-lane — next rotation (after a full session is carved,
-  target ~this week)
-- node-lattice-admission — after wake-mutation-lane
+- node-lattice-admission — next rotation (wake-mutation-lane done
+  2026-09-13)
 - queue-eta — DONE today (this widget is the item)
 - bridge-operator-host — after node-lattice
 - timeline-events — DONE (2026-08-25)

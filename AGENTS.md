@@ -15,13 +15,29 @@
 ## Current boundary
 
 Hngh is a side-effect-free local kernel. Do not start a daemon, service,
-provider, watcher, scheduler, agent, or process. Do not write to `~/.hngh`.
+provider, watcher, scheduler, agent, or process.
+
+Userspace data home (2026-09-13 operator directive): machine sessions
+MAY write userspace data — newspaper copies, manga outputs, digest
+archives, dispatch editions, local databases, knowledge-base content —
+under `~/.hngh/` (layout contract: `newspaper/<date>/`, `manga/`,
+`wiki/`, `db/`, `archive/`, `dispatch/`, plus the append-only
+`catalog.tsv`), resolving paths through `automation/lib/hngh_home.py`
+or `lib/common.sh` (`HNGH_HOME_DIR` overrides for tests). Nothing under
+`~/.hngh/` is ever committed to this repo. Secrets, credentials, and
+kernel run stores stay in `~/.hngh-automation/` (the two-home split);
+kernel/gate/certificate state never moves to `~/.hngh`, and kernel
+`src/` knows nothing of either home.
 
 Machine sessions do not touch kernel `src/`, `tests/`, `Makefile`, or
 `hngh.asd` (2026-09-03 staging boundary) — except certificate-bound
-`:wake-mutation` work, which the operator-flexibility doctrine
-(docs/records/2026-09-09-operator-flexibility-doctrine.md §2) allows
-through the ceremony. Headless secrets come from the 1Password service
+kernel mutations, which the operator-flexibility doctrine
+(docs/records/2026-09-09-operator-flexibility-doctrine.md §2, amended
+2026-09-13: docs/records/2026-09-13-wake-mutation-lane-landing.md)
+allows through the ceremony — when a slice has a certificate path
+(propose -> issue-cert -> mutation-check), the machine proceeds;
+park on the operator only actions with no certificate path. Headless
+secrets come from the 1Password service
 account: `OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORD_SERVICE_KEY"`
 (docs/records/2026-09-09-1password-service-account-interface.md); with
 that set, `op` needs no desktop app. Probing gate/secret state: use
