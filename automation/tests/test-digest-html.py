@@ -221,9 +221,15 @@ class PublicEditionTest(unittest.TestCase):
              ("2026-09-11T09:00:00Z", "model", 5000, 0.75)])
         conn.commit()
         conn.close()
+        # hermetic seams: render_page reads these env names, same as
+        # jobs/digest-local.py — never the operator's real ~/.hngh archive
+        os.environ["HNGH_DIGESTS_DIR"] = str(auto / "digest")
+        os.environ["HNGH_TELEMETRY_DB"] = str(auto / "dashboard" / "telemetry.db")
 
     def tearDown(self):
         import shutil
+        os.environ.pop("HNGH_DIGESTS_DIR", None)
+        os.environ.pop("HNGH_TELEMETRY_DB", None)
         shutil.rmtree(self.repo, ignore_errors=True)
 
     def test_layout_contract(self):

@@ -9,10 +9,14 @@ on:
 
 env:
   TERM: xterm-256color
+  # automation tier gates its host-only skips on this (the hngh-bridge
+  # plugin tests live outside the repo); unset locally keeps full coverage
+  HNGH_CI: "1"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       # the loop-history-guard test walks git history from a restatement
       # commit; a depth-1 clone cannot resolve it (exit 128)
@@ -21,10 +25,18 @@ jobs:
           fetch-depth: 0
       - name: Install SBCL
         run: sudo apt-get update && sudo apt-get install --yes sbcl
+      # dashboard-live renders the session view through the real
+      # scripts/hngh present renderer over $HOME/.hngh-automation/store;
+      # CI has no operator store, so seed the committed synthetic one
+      - name: Seed session-store fixture
+        run: |
+          mkdir -p "$HOME/.hngh-automation/store"
+          cp -r .github/fixtures/ci-store/run-1 "$HOME/.hngh-automation/store/"
       - name: Test local kernel
         run: make test
   test-automation:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       # suite needs bash + python3 (preinstalled) + git/curl/jq (preinstalled)
@@ -34,3 +46,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes sqlite3 sbcl
       - name: Test automation tier
         run: cd automation && make test
+  ci-keeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # the workflow guards itself: triggers, timeouts, action pins,
+      # HNGH_CI export, fixture presence (see .github/keeper-check.py)
+      - name: Assert CI contract
+        run: python3 .github/keeper-check.py
