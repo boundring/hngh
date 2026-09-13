@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:ledger-sanity -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-13T00:36:02Z routed-from=dash-selfreview:ledger-sanity -->
 # 2026-09-12 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:ledger-sanity`
@@ -12,3 +12,4 @@ at 2026-09-12T23:00:49Z. Alert text: [dash-selfreview] ledger-sanity: unacceptab
 ## Occurrences
 
 - 2026-09-13T00:00:13Z re-occurred (dedup window expired)
+- 2026-09-13T01:00:49Z re-occurred (dedup window expired)
