@@ -550,3 +550,21 @@ commits post-hoc and drives scripts/ceremony-drive itself; a ceremony
 refusal (LARGE-surface content, red suite, verdict refusal) parks as
 before. LARGE matters (credentials, systemd, spend caps, deletions,
 the public surface beyond the certificate-gated push) never auto-cure.
+
+## 2026-09-13 — Kernel-gate red declared post-hoc (gate-cure)
+
+The gate-cure patrol found the loop-history guard red on 04f0001.
+The commits were declared post-hoc (hash + patch-id) in the
+guard's KNOWN_EXEMPTIONS table and cured through the ceremony
+loop -- declared, not rewritten; the SMALL-matter policy is the
+2026-09-13 amendment (docs/design/autonomous-development-
+control.md). A ceremony refusal parks for the operator.
+
+## 2026-09-13 — Kernel-gate red declared post-hoc (gate-cure)
+
+The gate-cure patrol found the loop-history guard red on 29d2a27.
+The commits were declared post-hoc (hash + patch-id) in the
+guard's KNOWN_EXEMPTIONS table and cured through the ceremony
+loop -- declared, not rewritten; the SMALL-matter policy is the
+2026-09-13 amendment (docs/design/autonomous-development-
+control.md). A ceremony refusal parks for the operator.

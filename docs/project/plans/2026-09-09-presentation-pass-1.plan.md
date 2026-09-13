@@ -115,3 +115,27 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   unrelated modified files from parallel automation lanes -- plan
   sessions should not stage or commit anything beyond the two step-5
   artifacts when the exemption lands.
+- Fifth check 2026-09-13T18:40Z (step-5 session, dream-brief bounded
+  verify-first): the exemption HAS landed -- both fixture patch-ids
+  (a46ed8ae5a64949d7e5dbe8917902e125586d5d3 /
+  cef31fa5a3ea871522e0a3ea3e537088c9a8952b) are in KNOWN_EXEMPTIONS at
+  tests/scripts/test-loop-history-guard.py:122,126, and the guard now
+  reports 105 commits / 10 exemptions / 0 violations (this supersedes
+  the 13:00Z note). But `make test` is still red on a NEW cause: the
+  userspace-home lane's in-flight test-first slice --
+  tests/scripts/test-generate-publication.py (working-tree, mtime
+  14:36Z) has test_telemetry_reads_hngh_home expecting telemetry via
+  HNGH_HOME_DIR (~/.hngh/db/telemetry.db, 2026-09-13 userspace-home
+  directive), while scripts/generate-publication at HEAD (line 140)
+  still reads automation/dashboard/telemetry.db; the lane's
+  implementation has not landed (no userspace-home plan file exists
+  yet; staged automation/lib/hngh_home.py + staged record are its
+  artifacts). Cure: the userspace-home lane lands its
+  generate-publication HNGH_HOME_DIR implementation through its own
+  certificate ceremony; then this plan's step 5 commits the two
+  already-authored artifacts (staged CHANGELOG.md 2026-09-13 section,
+  untracked docs/records/2026-09-13-presentation-pass-1-adoption.md,
+  both intact and cross-linked, verified 18:40Z) under a green gate,
+  staging exactly those two files. Kernel scripts/ and tests/ remain
+  forbidden to plan sessions; no further step-5 session should re-run
+  the gate until the userspace-home slice lands.
