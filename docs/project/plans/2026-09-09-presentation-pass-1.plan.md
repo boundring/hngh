@@ -107,3 +107,11 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   unmodified. No further plan session should re-run this check until a
   wake-mutation session lands the exemption: the handoff row at 07:15Z
   and this note carry everything needed.
+- Fourth check 2026-09-13T13:00Z (step-5 session, no gate re-run): a
+  grep over tests/scripts/test-loop-history-guard.py confirms neither
+  fixture patch-id (a46ed8ae... / cef31fa5...)
+  has a KNOWN_EXEMPTIONS entry yet. The wake-mutation lane remains the
+  sole named cure; step 5 stays held. Working tree also carries many
+  unrelated modified files from parallel automation lanes -- plan
+  sessions should not stage or commit anything beyond the two step-5
+  artifacts when the exemption lands.

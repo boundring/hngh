@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ttsr-fit:synth-fix -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=ttsr-fit:synth-fix  cause=obsolete disposed=2026-09-13T13:00:49Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ttsr-fit:synth-fix`
@@ -13,3 +13,4 @@ at 2026-09-13T10:00:49Z. Alert text: ttsr fit: session synth-fix — ttsr inject
 
 - 2026-09-13T11:00:49Z re-occurred (dedup window expired)
 - 2026-09-13T12:00:49Z re-occurred (dedup window expired)
+- 2026-09-13T13:00:49Z re-occurred (dedup window expired)
