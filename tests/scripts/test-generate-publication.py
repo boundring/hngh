@@ -72,7 +72,16 @@ class JournalLifecycle(unittest.TestCase):
                 self.assertIn("mimetype", names)
                 self.assertIn("OEBPS/content.opf", names)
                 self.assertIn("OEBPS/chapter.xhtml", names)
-            self.assertIn("The intent", book.read_text())
+            book_text = book.read_text()
+            self.assertIn("The intent", book_text)
+            # the 2026-09-09 presentation spine: the direction doc
+            # and the records ride in the fixed front matter
+            self.assertIn("The presentation direction", book_text)
+            self.assertIn("The operator-flexibility doctrine", book_text)
+            self.assertIn("The budget governance directive", book_text)
+            self.assertIn("The wake-mutation lane rotation", book_text)
+            self.assertIn("The 1Password service-account interface",
+                          book_text)
 
     def test_site_index(self):
         mod = load()

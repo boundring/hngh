@@ -17,10 +17,14 @@ write):
   --ebook [DIR]    assemble the documented corpus into an e-book
                    structure: book.md spine plus a minimal readable
                    EPUB (stdlib zipfile, self-contained). Default
-                   DIR docs/journal/ebook. The seven fixed docs (the
-                   intent, the architecture, the roadmap, the
-                   decisions, the backlog, the queue, the readme) are
-                   the front matter; --chapters GLOB [GLOB ...]
+                   DIR docs/journal/ebook. The fixed front matter is the
+                   seven core docs (the intent, the architecture, the
+                   roadmap, the decisions, the backlog, the queue, the
+                   readme), the presentation direction, and the four
+                   2026-09-09 records (the operator-flexibility
+                   doctrine, the budget governance directive, the
+                   wake-mutation lane rotation, and the 1Password
+                   service-account interface); --chapters GLOB [GLOB ...]
                    supplies additional body chapters as repo-relative
                    globs matched against the project root (e.g.
                    --chapters 'docs/journal/*.md' 'docs/records/*.md'),
@@ -525,7 +529,21 @@ def ebook_documents():
             (ROOT / "docs" / "project" / "decisions.md", "The decisions"),
             (ROOT / "docs" / "project" / "backlog.md", "The backlog"),
             (ROOT / "docs" / "project" / "queue.md", "The queue"),
-            (README, "The readme")):
+            (README, "The readme"),
+            (ROOT / "docs" / "design" / "presentation-direction.md",
+             "The presentation direction"),
+            (ROOT / "docs" / "records" /
+             "2026-09-09-operator-flexibility-doctrine.md",
+             "The operator-flexibility doctrine"),
+            (ROOT / "docs" / "records" /
+             "2026-09-09-budget-governance-directive.md",
+             "The budget governance directive"),
+            (ROOT / "docs" / "records" /
+             "2026-09-09-wake-mutation-lane-rotation.md",
+             "The wake-mutation lane rotation"),
+            (ROOT / "docs" / "records" /
+             "2026-09-09-1password-service-account-interface.md",
+             "The 1Password service-account interface")):
         if path.exists():
             docs.append((title, path, path.read_text()))
     return docs

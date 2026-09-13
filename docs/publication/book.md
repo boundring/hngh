@@ -196,6 +196,10 @@ Back to the [documentation index](../README.md).
 
 # Architecture
 
+> Something vast was built down here, floor under floor, and whoever
+> drew the plans labeled every load-bearing wall. The label is the
+> contract.
+
 Hngh begins as a compact, side-effect-free kernel.
 
 It stays small on purpose: the quiet center holds the rules while the
@@ -293,7 +297,8 @@ direction: outer code calls inward; the kernel stays side-effect-free.
 
 One diagram, then one block per surface: what it is, how it touches
 hngh, what stays outside. The kernel calls none of these inward;
-every contact is an injected transport or an admitted run.
+every contact is an injected transport or an admitted run. The hall
+extends for kilometers; the load-bearing walls do not move.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': {'background': '#171B17', 'primaryColor': '#232823', 'primaryTextColor': '#E7E2D3', 'lineColor': '#7FA05E', 'edgeLabelBackground': '#232823', 'fontFamily': 'monospace'}}}%%
@@ -1102,6 +1107,29 @@ The cure follows the 2026-09-06 precedent, minimized:
    contains only the narrative feature and is already pushed. The gate
    lesson is unchanged: repo-root `scripts/` is ceremony surface for
    machine commits.
+
+## 2026-09-12 — Exemption batch 2 investigated: no violations exist
+
+A CI-fix worker flagged commits `1269028`, `403eb95`, `09717fd`,
+`da24588`, `c797336`, `8bac308` (plus `d317556`, `4edb3e3`) as
+undeclared kernel-surface commits that the loop-history guard would
+flag on the next local run. Investigation refutes the flag: every
+named commit touches `automation/tests/` (and only `automation/`) --
+the free-commit lane under the commit-per-green rule -- while the
+guard polices the repo-root code surface only (`src/`, `tests/`,
+`scripts/`, `Makefile`, `hngh.asd`). The guard itself reports
+`99 code-surface commits checked, 8 named exemption(s), 0 violations`
+at HEAD (`4ea6cc6`), and every code-surface commit since the previous
+exemption declaration (`2eb07fa`) is either `hngh: candidate`-bound or
+already registered (`20700c9`, `0e3b2c6`, `4fc4a0f`, `226de1d`).
+
+No exemption entries were added and no ceremony ran: a declaration
+requires an actual miss, and registering non-misses would erode the
+register's meaning. The standing policy note from the 2026-09-12
+narrative-ledger record stands: future kernel-surface fixes go through
+the ceremony directly -- the reroute is the preference, declarations
+are the fallback. The lesson for workers: `automation/` paths are never
+code-surface; flag only commits under the repo-root prefixes.
 
 
 ## The backlog
@@ -2996,6 +3024,9 @@ Gives "future" a date so a gantt can place bars.
 
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
+> Somewhere below the ground floor, a machine keeps its own minutes.
+> It has been taking them for a while. They are all in order.
+
 A machine that lives in the basement and got good at its job: agentic
 development with a certificate at the decision point and a receipt at
 the mutation point. The kernel (Common Lisp, pure by charter) runs the
@@ -3145,7 +3176,7 @@ refused, 2 malformed, 3 transport fault`.
 
 The [docs read-order](../README.md) is the truth for the whole
 document family - the table below is its doorway (one row per stop;
-dogs verified linked both ways at the edit gate):
+docs verified linked both ways at the edit gate):
 
 | Where to go | What it is for |
 |---|---|
@@ -3375,4 +3406,378 @@ door machine (a check, not an art mandate):
   rest of this README stays hand-edited, and the sentinel frames
   stay fixed. The same convention guards the
   [torch sentinels](../project/STATE-OF-PROJECT.md).
+
+
+## The presentation direction
+
+# Presentation direction — a building that knows it is strange
+
+Status: DESIGN — operator direction, 2026-09-09. This document is the
+north star for hngh's public surface and interface ambitions. It obeys
+the standard doctrine: outer presentation, kernel untouched; every rung
+ships through the normal gates.
+
+## The premise
+
+Hngh is not a tool that wants to look like a startup. It is a machine
+that lives in a basement and got surprisingly good at its job. The
+presentation should read like BLAME! looks: vast inhuman structure,
+quiet operators, humor kept dry enough to store near the machinery.
+Dorohedoro contributes the grime-warmth — texture where polish would be
+anonymous, grotesque charm where a design system would be beige. Dai
+Dark contributes the deadpan: never wink at the reader; state the
+absurd as fact and move on.
+
+Voice rules (binding for all public text):
+
+- Classy, dry, witty. No exclamation marks in documentation. No
+  marketing register anywhere — if a sentence could appear in a cloud
+  product's landing page, delete it and say what the thing does.
+- Wit lives in precision, not jokes: a dry aside earned by an accurate
+  sentence. A verb in the right place is funnier than a joke.
+- Flavor references (Nihei architecture, Hayashida grime, the Deluxe
+  appetite) appear as texture — epigraphs, section spines, names —
+  never as cosplay. The project is not a fan work; it borrows posture,
+  not plot.
+
+## Rungs (each one a shippable surface)
+
+1. **Front door** (near-term): root README as a designed first screen —
+   what hngh is in two sentences, a truthful status block, navigation
+   that goes somewhere, badges only where they report real state. The
+   dry voice throughout. No badge rot, no emoji confetti.
+2. **Navigable docs** (near-term): omp.sh-style human knowledge base —
+   one canonical spine (docs/README.md read-order), cross-linked
+   records, generated publication surfaces (journal, book, EPUB)
+   promoted from a side directory to the actual entry point.
+   `scripts/generate-publication` is the engine; the work is curation
+   and spine design, not new infrastructure.
+3. **Winamp-plus dashboard** (in flight): bezels today; character
+   tomorrow. Skins as personas, LCD ticker with opinions, the operative
+   sprite earning its walk cycle. Collision with the a11y findings is
+   deliberate: character and compliance in the same pass.
+4. **Node-graph navigator** (mid): the knowledge base as a traversable
+   graph — records, plans, rungs as nodes; dependency edges; the
+   dashboards' gantt engine already computes the layout data.
+5. **Environmental surface** (long): WebGL 3D of the machine's actual
+   topology — hosts, timers, sessions as navigable architecture, Nihei's
+   megastructure as an honest diagram of the thing. Derived from live
+   state, not decoration; a viewing gallery, not a game.
+6. **Hot-swap GUI wrapper** (aspiration, the big one): hngh wraps
+   arbitrary software in flexible, hot-swappable GUIs with arbitrary
+   aesthetics and theming. The dashboard, skins, and wrapper are one
+   subsystem: interfaces as configurations, swappable without restart,
+   the same way plans are hot-swapped onto the queue.
+7. **The distribution** (horizon): a hngh-flavored Linux distribution
+   based on CachyOS — the machine's own OS, where the kernel's
+   governance is the init-adjacent layer and the presentation tier is
+   the desktop. Everything above is rehearsal for this.
+
+## What this means for the near-term queue
+
+Interface and presentation work is acceleration work (operator doctrine
+§3): the surfaces that let the operator see and steer hngh compound
+every other operation. The stalled-computer lesson of 2026-09-09 is the
+pattern — presentation is not vanity spend; it is the operator's
+instrument panel. Docs and dashboard slices ride the same fail-first
+queue as everything else, with the same green-gate discipline.
+
+
+## The operator-flexibility doctrine
+
+# 2026-09-09 — operator flexibility doctrine: policy fluidity, wake-mutation amendment, meta-optimization priority, operator-load surfaces
+
+Operator-directed 2026-09-09, given verbatim direction in an omp session
+reviewing the day's triage. This record supersedes narrower readings of
+earlier boundaries where it explicitly amends them, and is itself subject
+to the guardrails at the end.
+
+## 1. Policy fluidity (standing)
+
+Hngh may update its own internal policies "as continually as optimization
+ever requires" to suit more fluid, secure, and stable operations — through
+its normal governance loop (certificates, green gates, records), not
+around it. Guidance flows both ways: the operator directs, and hngh
+sanity-checks back (section 5). Operator-blocked states should be exceptional: before parking
+on the operator, a machine session exhausts recorded intent, common
+sense, and the model chain's stronger legs (the standing TTSR rule
+`no-premature-operator-block` already encodes the ladder). Still
+operator-owned regardless of this doctrine: credentials, payments,
+provider-key activation beyond a recorded grant, public-surface changes.
+
+## 2. Wake-mutation boundary amended
+
+The 2026-09-03 staging-plan boundary ("`:wake-mutation` kernel src
+mutation is operator-only for machine sessions") is amended by this
+record: the certified boundary proposal
+(docs/records/2026-09-09-wake-mutation-lane-rotation.md; r17 record
+2026-08-25-r17-wake-peer.md) may proceed through the normal certificate
+ceremony as machine work — one certificate, one wake, one pinned peer,
+fresh-evidence recheck (pin, MAC, current lease, last-seen fact)
+immediately before the action, executed behind the mutation executor
+port, refused on stale or missing facts. The proposal's own guards ARE
+the operator protection; the operator's directive here is the standing
+authorization. If any fresh-evidence recheck fails, the action refuses
+and files an alert — that refusal is correct behavior, not a block to
+engineer around.
+
+## 3. Meta-optimization priority (standing)
+
+Enabling work — selector/queue mechanics, quota routing, model quality,
+comms surfaces, notification paths, anything that cascades into time and
+token savings across all of hngh's activities — outranks unrelated queued
+work. Procedural checks and short agentic calls may delay non-accelerating
+plans in favor of enabling steps ("megastructure-accelerating work"):
+situational logic at the beat level decides. Mechanically this lands
+through the fail-first tier, the `priority=high` selector key
+(schedule-optimization plan step 2), and the beat's own short-call
+judgment; this record is the standing authorization for that judgment.
+
+## 4. Operator-load surfaces (standing)
+
+Wherever hngh can save the operator from worrying over details they
+cannot easily understand, it should: digest items in plain language,
+decisions surfaced as one-word-answerable operator-items, and the
+communication surfaces are the email channel and LobeHub. The email
+channel is to become bidirectional (see stall-recovery plan step 11):
+hngh injects content (text, images, links, attachments) into a thread;
+operator replies in the chain; hngh reads replies on a slower cadence
+and turns them into operator-items or plan proposals — reducing reliance
+on live omp sessions for slow meta-agentic decisions.
+
+## 5. Operator guidance and sanity-checking (standing)
+
+Operator decisions govern base principles and matters of great
+importance. For everything else, hngh's duty is to sanity-check the
+direction and propose the rational path that functionally meets the
+requirement — and to recognize dead-ends quickly, spending no more
+than bounded time identifying them before stopping. Trying is not the
+same as spending: evaluation is capped, the identification itself is
+the deliverable, and revisiting a known dead-end requires new
+evidence. (Pattern 11, docs/design/meta-patterns.md.)
+
+## Guardrails (unchanged)
+
+No provider/credential key activation beyond recorded grants; no systemd
+unit lifecycle changes beyond installed units; kernel src mutations go
+through the certificate ceremony with green `make test`; deletions and
+security posture stay governed as documented in
+docs/design/autonomous-development-control.md.
+
+
+## The budget governance directive
+
+# 2026-09-09 -- budget-governance directive: operator-item on cap block, never unilateral cap amendments
+
+Operator-directed 2026-09-09: "as few blockers and stalls as possible
+today". Given in an omp session after the overnight session cap
+exhausted before dawn and the machine spent the gap silently waiting
+and burning filler instead of asking. This record is standing policy.
+
+## The cap chain (cited)
+
+Session spend is capped by a three-link chain
+(automation/scripts/overnight-cycle.sh lines 43-47):
+
+1. env `OVERNIGHT_MAX_SESSIONS_DAY` (operator-level override);
+2. the Inventory row `sessions-day-max` in
+   automation/cadence-params.tsv (line 34) -- operator-authorized; the
+   row comment records its history: 8/day per operator authorization
+   2026-09-07, since raised to 200 per operator authorization 2026-09-09
+   ("open to crazy caps like 200");
+3. legacy constant 4 (pre-Inventory behavior, unreachable while the
+   row exists).
+
+The ceiling is hard by design: the fail-first development tier tunes
+concurrency WITHIN it, never the ceiling itself
+(automation/scripts/overnight-cycle.sh lines 66-76;
+automation/cadence-params.tsv rows failfirst-dev-concurrent-*).
+
+## The exhaustion event
+
+Under the 8/day authorization the chain exhausted at
+2026-09-09T01:12:38Z: nine overnight sessions ran between
+2026-09-09T00:00:16Z and 2026-09-09T01:12:38Z
+(automation/logs/budget.md overnight rows for the day); the last is
+agent-handoffs row 34 (automation/agent-handoffs.md,
+2026-09-09T01:12:38Z). The cap-block path then took over
+(automation/scripts/overnight-cycle.sh lines 71-75): it writes a
+`budget-cap` breadcrumb and drops to the research-only beat -- no
+operator-item, no surfaced decision request. The next overnight
+session did not run until 2026-09-09T16:12:37Z (agent-handoffs row 35),
+after the operator raised the cap midday. Roughly fifteen hours of
+operator-priority stall on a day the operator asked for the opposite.
+
+## The rule (standing)
+
+1. When the session cap blocks an operator-priority plan,
+   overnight-cycle files an operator-item requesting the cap amendment
+   instead of silently waiting or burning filler. The filing surface is
+   `operator_item()` in automation/lib/operator-item.sh: one alert row
+   in the report-queue ledger (the contract) plus one `alert` crumb in
+   STATE.md -- exactly what the operator-items consumer reads
+   (automation/cadence/1m/05-operator-items.sh ->
+   automation/jobs/operator-items-feed.py: crumbs whose event matches
+   `alert` or whose text matches papercut | flagged | needs | operator
+   decision). The filing path is demonstrated hermetically by
+   automation/tests/test-cap-block-operator-item.py (seamed report root
+   and state file; no real rows, no real cap change).
+2. Spend caps are NEVER amended unilaterally by machine sessions. Only
+   the operator amends the `sessions-day-max` row or sets the env
+   override. Machine sessions request; the operator decides. The same
+   boundary already holds for the development ceiling and every other
+   money-adjacent knob.
+
+Wiring note: the cap-block path in
+automation/scripts/overnight-cycle.sh (lines 71-75) adopts
+`operator_item()` as a follow-up; the helper and its proof exist first
+so the call site lands as a one-line change with the surface already
+green.
+
+## Guardrails (unchanged)
+
+No provider/credential key activation beyond recorded grants; no
+systemd unit lifecycle changes; no edits to the cap chain's
+authorization row by machine sessions; everything else governed as
+documented in docs/design/autonomous-development-control.md and the
+2026-09-09 operator flexibility doctrine
+(docs/records/2026-09-09-operator-flexibility-doctrine.md).
+
+
+## The wake-mutation lane rotation
+
+# 2026-09-09 — wake-mutation-lane rotation beat: boundary proposal certified, src mutation parked
+
+## Scope
+
+Rotation beat for the queue's `wake-mutation-lane` row (backlog
+"Certificate-bound wake mutation lane (boundary amendment)"; r17 record
+`2026-08-25-r17-wake-peer.md` is the surface being bound). The beat runs
+the governance loop as far as the machine boundary allows: the
+`:wake-mutation` kernel src mutation is operator-only for machine
+sessions (2026-09-03 staging plan), so the certificate lands the
+boundary-proposal documentation plus the park alert, and the src change
+is parked, not attempted.
+
+## The proposal (from the backlog row, unchanged)
+
+One certificate for one wake of one pinned peer: a `:wake-mutation`
+action in the mutation vocabulary, rechecked against fresh evidence
+(pin, MAC, current lease, last-seen fact) immediately before the
+action, executed behind the mutation executor port, refused on stale or
+missing facts. Rung 17 already ships the request surface —
+`wake-ports`, `wake-result` (`:issued | :refused | :fault`), and
+`wake-peer` with strict pins parsing and the `:federation` admission
+receipt — so the lane binds that existing request to the certificate
+machinery rather than inventing a new one.
+
+## Mutation vocabulary (read, not modified)
+
+`src/adapter/mutation.lisp:8-9`:
+
+```lisp
+(defparameter +mutation-actions+
+  '(:none :prepare-candidate :stage :commit :push))
+```
+
+The `dispatch-issue-cert` and `dispatch-mutation-check` action checks
+(`src/main.lisp:1371`, `src/main.lisp:1490`) refuse any verb outside
+this closed set (exit 2). `:wake-mutation` becomes admissible only by
+the src change itself — which is exactly the boundary this beat parks
+at, and why no machine-side certificate can name it today.
+
+## Loop stages executed
+
+1. Park alert: `scripts/report-queue --add alert ... --identity
+   wake-mutation-lane:src-mutation` — row `9a50bcda`
+   (2026-09-09T16:24:54Z) in `docs/project/reports.md`, body
+   `docs/project/report-bodies/2026-09-09T16:24:54Z-alert-9a50bcda.md`,
+   naming the exact files and the operator-landing path.
+2. Advisory model review on the candidate via the operator reviewer
+   transport (`scripts/hngh review run-1 content-hash=... paths=...
+   reviewer=~/.hngh-automation/reviewer-local.conf`; r13
+   operator-reviewer precedent; endpoint `127.0.0.1:8888`, model
+   `unsloth/Ornith-1.0-35B-GGUF`); receipt in the ceremony run ledger
+   and the dispatching session report. Advisory by policy — the verdict
+   gate below is deterministic.
+3. Ten-principle verdict (the gate): `propose` with
+   `evidence-requirements=<principle>:claim-proof:<content-hash>` for
+   all ten matrix names; the certificate only issues on 10/10 passed.
+4. Certificate: `issue-cert` + `mutation-check` for `prepare-candidate`
+   and `commit` over the docs candidate (this record, the alert row,
+   and its body); commit message `hngh: candidate <content-hash>`;
+   certificate-gated push per the ceremony-drive instrument.
+5. Gate: `make test` green — 2855 checks baseline immediately before
+   the beat, re-run after the commit.
+
+## Where the loop stops (the park)
+
+The loop reaches the mutation stage only for the docs candidate above.
+The `:wake-mutation` src mutation is parked at the operator boundary:
+machine sessions do not touch kernel `src/`, `tests/`, `Makefile`, or
+`hngh.asd` (2026-09-03 staging plan). Exact files and the
+operator-landing path live in alert row `9a50bcda`:
+`src/adapter/mutation.lisp:8-9` (vocabulary + fresh-evidence mapping in
+the same file), `src/packages.lisp:247` (export), `src/main.lisp:1371`
+and `:1490` (dispatch member checks), `tests/adapter/test-mutation.lisp`
+(refuse/execute fixtures). The operator lands it through the same
+dogfood ceremony with `make test` green.
+
+## Remaining unknowns
+
+- The fresh-evidence shape for a wake (pin-file `:file-sha256` today vs
+  new evidence kinds for MAC/lease/last-seen) is operator-design work
+  for the landing slice; the current evidence set is the git triple
+  (`:repository-revision`, `:working-tree-status`, `:file-sha256`).
+- The queue row stays `queued`: the rotation completes only when the
+  operator lands the src change; this beat's certificate covers the
+  proposal + park, not the lane itself.
+
+
+## The 1Password service-account interface
+
+# 2026-09-09 — 1Password service account: hngh headless secret interface
+
+Operator-created 1Password service account (2026-09-09) gives hngh's
+unattended sessions a prompt-free, headless path to vault secrets — no
+desktop-app dependency, no interactive unlocks.
+
+## Interface contract
+
+- Token env var: `ONEPASSWORD_SERVICE_KEY` (operator-set; value never
+  handled by hngh tooling beyond passing it through to `op`).
+- Declared in `~/.config/plasma-workspace/env/env_vars.sh` (chmod 600
+  this session — it holds the secret), which on Plasma login also runs
+  `systemctl --user import-environment ONEPASSWORD_SERVICE_KEY`,
+  propagating it to the systemd user manager. All hngh cadence/overnight
+  user units therefore inherit it after each login.
+- Consumption: scripts need no changes. With
+  `OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORD_SERVICE_KEY"` in the
+  environment, `op` authenticates headless (verified 2026-09-09: scoped
+  `vault list` OK through the systemd user manager environment; 5
+  vaults — deliberately excludes `Private` and `Shared`).
+- Scope is least-privilege by design: the service account cannot read
+  `Private`/`Shared`. Secrets hngh must read headless (e.g. the notify
+  SMTP credential, currently a literal in the 600-perm notify-email
+  conf) should live in a vault within the service account's scope and
+  be referenced via `op://` — migration path via
+  `automation/scripts/setup-notify-email.sh --from-1password
+  "op://<vault>/<item>/<field>"` when the operator stages the item.
+- Desktop-app CLI integration (fixed this session: settings flag
+  `developers.cliSharedLockState.enabled`, setgid `onepassword-cli`
+  group on the op binary — required because the app rejects peers not
+  in that group) remains the interactive/operator layer; the service
+  account is the automation layer. The two are alternatives, not
+  dependencies: with `OP_SERVICE_ACCOUNT_TOKEN` set, `op` ignores the
+  desktop app entirely.
+- Known quirk: `op whoami` reports "account is not signed in" under
+  app integration even when per-command auth works; hngh's
+  `setup-notify-email.sh` gate should probe with `op account list` or a
+  real `op read`, not `op whoami` (fold into the notify-email slice).
+- Fallback for re-acquisition: the token is also stored in 1Password
+  itself; if `env_vars.sh` is ever lost, recover it via the
+  desktop-app-authenticated CLI.
+
+Related: docs/records/2026-09-09-operator-flexibility-doctrine.md
+(§4 operator-load surfaces), automation/scripts/setup-notify-email.sh.
 
