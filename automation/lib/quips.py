@@ -20,16 +20,16 @@ import hashlib
 BANKS = {
     "ledger": [
         "The meters never once looked away: ${spend:.2f} across {calls} calls.",
-        "{quiet} hours of dead air and ${spend:.2f} of metered thought.",
+        "{quiet} hours of dead air and ${spend:.2f} of metered thought, all of it.",
         "The hall billed ${spend:.2f} in {calls} breaths; the ledger absolves no one.",
         "${spend:.2f}, {calls} calls, {quiet} hushed hours -- arithmetic with a pulse.",
-        # Fan-translation dialogue register (docs/records/
-        # 2026-09-12-manga-collection-policy.md clause f); title cited
-        # in docs/design/manga-style-research.md.
+        # Distillation register (policy clause f, revised): each line is
+        # an original distillation inspired by the collection's register;
+        # the source is the study, not the line.
         "Death took the day off: ${spend:.2f} metered, {calls} calls, "
-        "{quiet} quiet hours. The ledger can wait.",            # Dai Dark
-        "{calls} calls, ${spend:.2f}. The silence moved first, "
-        "the meters followed.",                                 # BLAME!
+        "{quiet} quiet hours. The ledger can wait.",
+        "{calls} calls, ${spend:.2f}. The silence moved first; "
+        "the meters followed it down the hall.",
     ],
     "deck_a": [
         "{blocks} dispatch blocks, {criticals} alarms; the outside world "
@@ -42,26 +42,26 @@ BANKS = {
         "The megastructure answered in {tokens} tokens; the walls held.",
         "{tokens} tokens in, grounded to the last line. The building "
         "keeps its books.",
-        # Fan-translation dialogue register (policy clause f).
+        # Distillation register (policy clause f, revised).
         "{tokens} tokens. The corridors stayed silent; the work did "
-        "not.",                                                 # BLAME!
+        "not.",
     ],
     "comic": [
         "Everything above this panel was measured; this one is allowed "
         "to be a drawing.",
         "Filed under fiction. The only panel here that will not page anyone.",
-        # Fan-translation dialogue register (policy clause f).
-        "He said the hole would close. It is still open. So is this "
-        "panel.",                                               # Dorohedoro
+        # Distillation register (policy clause f, revised).
+        "He said the hole would close. It is still open. So, for the "
+        "record, is this panel.",
     ],
     "machine_hall": [
         "The machine hall, rendered in the only medium it respects: text.",
         "Twenty-four columns of spent attention; the floor never blinks.",
         "The builders finished long ago. The hall still runs itself; "
         "nobody has asked it to stop.",
-        # Fan-translation dialogue register (policy clause f).
-        "The mechanic never spoke. The hall does the talking.",  # BLAME!
-        "It is not broken in here. It is finished. That is worse.",  # BLAME!
+        # Distillation register (policy clause f, revised).
+        "The mechanic never spoke a word. The hall does the talking for him.",
+        "It is not broken in here. It is finished. That is worse.",
     ],
     "patrol": [
         "{surfaces} surfaces walked, {passes} green crumbs, {fails} red "
@@ -74,11 +74,11 @@ BANKS = {
         "corridors were quiet. The corridors are always quiet.",
         "{surfaces} surfaces, {fails} marks. Somewhere above, a stair "
         "went down a level the map does not keep.",
-        # Fan-translation dialogue register (policy clause f).
+        # Distillation register (policy clause f, revised).
         "{surfaces} surfaces walked; {fails} of them only move when "
-        "nobody is watching. The rounds continue.",             # BLAME!
+        "nobody is watching, which the rounds do not mention.",
         "{passes} doors open, {fails} things pretending to be doors. "
-        "The watch logged both the same way.",                  # Dorohedoro
+        "The watch logged both the same way.",
     ],
 }
 

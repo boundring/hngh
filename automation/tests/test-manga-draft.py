@@ -520,6 +520,37 @@ class TestBankExtensions(unittest.TestCase):
                                    passes=2, fails=1))
         self.assertTrue(quips.quip("deck_b", "2026-09-12", tokens=99))
 
+    def test_no_bracketed_citations_in_banks(self):
+        """Operator note 2026-09-12: flavor text is not a bibliography.
+        No bank line carries a bracketed source citation like [BLAME!];
+        provenance lives in the policy and style-research docs only."""
+        import re as _re
+        pools = [md.NARRATIONS, md.MARGIN_NOTES]
+        pools += [md.RECOGNITIONS[c] for c in md.CAMEOS]
+        quips = _load("quips_test", "lib/quips.py")
+        pools += [b for b in quips.BANKS.values()]
+        for line in [ln for pool in pools for ln in pool]:
+            self.assertIsNone(_re.search(r"\[[A-Z]", line), line)
+
+    def test_cadence_variety_word_counts_unique(self):
+        """Cadence-variety law (operator note 2026-09-12): within one
+        bank no two lines share a word count, so the same word-rhythm
+        cannot repeat. Format placeholders count as one word."""
+        import re as _re
+
+        def words(line):
+            return len(_re.sub(r"\{[^}]*\}", "X", line).split())
+
+        banks = {"margin_notes": md.MARGIN_NOTES,
+                 "narrations": md.NARRATIONS}
+        banks.update({("recog_" + c): md.RECOGNITIONS[c] for c in md.CAMEOS})
+        quips = _load("quips_test", "lib/quips.py")
+        banks.update(quips.BANKS)
+        for name, bank in banks.items():
+            counts = [words(ln) for ln in bank]
+            self.assertEqual(len(set(counts)), len(counts),
+                             "cadence collision in bank %s: %r" % (name, counts))
+
 
 if __name__ == "__main__":
     unittest.main()

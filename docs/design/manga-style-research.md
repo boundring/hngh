@@ -145,4 +145,7 @@ The bank lines are hngh's own phrasing over the translated register
 (the fan translation is the source; the author's Japanese intent is
 one step removed). No titles, authors, or work-specific proper nouns
 ride inside generated output (clause b subtlety law); titles are
-cited HERE only.
+cited HERE only. Revised per operator note 2026-09-12: bank lines
+carry no bracketed citations at all -- flavor text is flavor text, not
+a bibliography; each line is an original distillation inspired by the
+collection's register, and THIS doc is the provenance record.
