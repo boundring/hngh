@@ -266,6 +266,61 @@ class AcceptPlans(unittest.TestCase):
         self.assertEqual(self.plan("2026-08-30-x.plan.md"), held_before)
         self.assertEqual(subj.read_text(), subj_before)
 
+    # --- gate evaluation isolation (plan 2026-09-09 step 5) --------------
+
+    def test_concurrent_gate_evaluations_serialize(self):
+        # two accepts racing evaluate at most one gate at a time: the
+        # per-pid start/end pairs in the gate log are contiguous (--
+        # never start,pid-a / start,pid-b / end,pid-a interleaving).
+        self.write_plan("2026-08-30-x.plan.md",
+                        plan_md([(" ", "do a thing", "make test")]))
+        self.gate.write_text(
+            "#!/usr/bin/env bash\n"
+            "printf '%s\\n' \"start $$\" >> " + str(self.root / "gate.log") + "\n"
+            "sleep 0.5\n"
+            "printf '%s\\n' \"end $$\" >> " + str(self.root / "gate.log") + "\n"
+            "exit 0\n")
+        self.gate.chmod(0o755)
+        procs = [subprocess.Popen([sys.executable, str(ACCEPT)], env=self.env,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  text=True) for _ in range(2)]
+        for p in procs:
+            p.wait()
+        events = self.gate_log()
+        starts = [i for i, ev in enumerate(events) if ev.startswith("start ")]
+        for i in starts[:-1]:
+            self.assertEqual(events[i + 1], events[i].replace("start ", "end "),
+                             "gates interleaved: %s" % events)
+
+    def test_gate_lock_busy_blocks_loudly(self):
+        # a concurrent gate evaluation holds the lock: this run must NOT
+        # pile on (the flap shape) but must also not block silently -
+        # alert row, noted lines, plans untouched, gates not consulted.
+        self.write_plan("2026-08-30-x.plan.md",
+                        plan_md([(" ", "do a thing", "make test")]))
+        import fcntl
+        lock = self.root / "gate.lock"
+        self.env["ACCEPT_GATE_LOCK"] = str(lock)
+        fd = open(lock, "w")
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        out = self.run_accept()
+        self.assertIn("gate-lock-busy", out.stdout)
+        self.assertEqual(self.gate_log(), [])
+        self.assertNotIn("status=accepted", self.plan("2026-08-30-x.plan.md"))
+        self.assertTrue(any("alert" in r and "gate lock" in r
+                            for r in self.rows()), self.rows())
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        fd.close()
+
+    def test_gate_lock_free_runs_normally(self):
+        # the seam default: no env, default lock path, gates run and the
+        # plan accepts -- the lock must never wedge the normal path.
+        self.write_plan("2026-08-30-x.plan.md",
+                        plan_md([(" ", "do a thing", "make test")]))
+        out = self.run_accept()
+        self.assertIn("accepted 2026-08-30-x", out.stdout)
+        self.assertEqual(len(self.gate_log()), 2)
+
 
 class PlanFeed(unittest.TestCase):
     def run_feed(self, plans, queue_md=None, ceremony_log=None):
