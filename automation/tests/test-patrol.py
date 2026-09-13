@@ -359,15 +359,23 @@ class Patrol(unittest.TestCase):
         self.assertIn("FAIL manga/sample components-pending "
                       "1 component prompt(s), 0 renders", r.stdout)
 
-    # --- (14) a failed email send today fires the email check ---
+    # --- (14) email: only failures since the LAST patrol run fire ---
     def test_email_failed_send_fails(self):
-        (self.auto / "logs" / "notify-email.log").write_text(
-            "%s | send failed rc=2: no password\n"
-            "%s | send ok rc=0: hi\n"
-            % (iso(120)[:10] + "T00:00:00Z", iso(60)[:10] + "T00:00:00Z"))
+        log = self.auto / "logs" / "notify-email.log"
+        log.write_text("%s | send failed rc=2: historical\n" % iso(7200))
+        r, _ = self.run_walk()
+        # the first walk baselines the watermark: old failures stay old
+        self.assertNotIn("FAIL email/notify-email.log", r.stdout)
+        # a failure written after the watermark is a finding
+        with open(log, "a") as fh:
+            fh.write("%s | send ok rc=0: hi\n" % iso(300))
+            fh.write("%s | send failed rc=2: fresh\n" % iso(60))
         r, _ = self.run_walk()
         self.assertIn("FAIL email/notify-email.log send-failed "
-                      "1 failed send(s) today", r.stdout)
+                      "1 failed send(s) since last patrol", r.stdout)
+        # the same failure does not re-fire on the next run
+        r, _ = self.run_walk()
+        self.assertNotIn("FAIL email/notify-email.log", r.stdout)
 
     # --- (15) an in-use package whose install-path rots is a ghost row ---
     def test_package_ghost_row_fails(self):

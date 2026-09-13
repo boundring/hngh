@@ -70,9 +70,40 @@ def _manga_dir(root):
     work = os.path.join(home, "manga")
     return work if os.path.isdir(work) else \
         os.path.join(os.path.dirname(root), "docs", "media", "manga")
-EMAIL_FAILS = 0  # any failed send today is a finding
 DECK_ITEM_RE = re.compile(r"^(CRITICAL|NOTABLE|CONTEXT):")
 DECK_BLOCK_RE = re.compile(r"^## \d{4}\b")
+
+
+def _email_tail(ctx):
+    """notify-email.log bytes written SINCE the previous patrol run,
+    via a byte watermark persisted next to the log. First run after a
+    cold start baselines at the current size: the log's history is
+    old news, not a finding (2026-09-13 — counting the whole UTC day
+    re-fired stale 16:24Z failures for hours; bcf6956b). A truncated/
+    rotated log reads as all-new, fail open."""
+    log = ctx["email_log"]
+    mark = os.environ.get("PATROL_EMAIL_MARK", log + ".mark")
+    try:
+        size = os.path.getsize(log)
+    except OSError:
+        return []  # no log: the channel is dormant, nothing new
+    try:
+        start = int(open(mark, encoding="utf-8").read().strip())
+    except (OSError, ValueError):
+        start = size  # no watermark yet: baseline, skip history
+    if start > size:
+        start = 0
+    tail = []
+    if start < size:
+        with open(log, encoding="utf-8", errors="replace") as fh:
+            fh.seek(start)
+            tail = fh.read().splitlines()
+    try:
+        with open(mark, "w", encoding="utf-8") as fh:
+            fh.write(str(size))
+    except OSError:
+        pass  # lost mark = next run re-baselines, never a crash
+    return tail
 
 
 def get_param(params_path, key, default):
@@ -651,28 +682,20 @@ def check_manga_pipeline(ctx):
 
 
 def check_email_sends(ctx):
-    """Email side-channel: notify-email.log tail -- any failed send
-    today is a finding (the channel is fail-closed, so silence is not
-    health, but a failed rc means an alert never left the machine)."""
+    """Email side-channel: only the log bytes written since the LAST
+    patrol run. A send failure in that window is a finding; historical
+    failures are old news, not a recurring condition."""
     out = {"passes": [], "fails": []}
-    try:
-        with open(ctx["email_log"], encoding="utf-8",
-                  errors="replace") as fh:
-            lines = fh.read().splitlines()
-    except OSError:
-        out["passes"].append(("email-sends", "no log (channel dormant)"))
-        return out
-    failed = [ln for ln in lines
-              if ln.startswith(ctx["date"]) and "send failed rc=" in ln]
-    ok = [ln for ln in lines
-          if ln.startswith(ctx["date"]) and "send ok rc=0" in ln]
-    if len(failed) > EMAIL_FAILS:
+    tail = _email_tail(ctx)
+    failed = [ln for ln in tail if "send failed rc=" in ln]
+    ok = [ln for ln in tail if "send ok rc=0" in ln]
+    if failed:
         out["fails"].append(("notify-email.log", "send-failed",
-                             "%d failed send(s) today, last: %s"
+                             "%d failed send(s) since last patrol, last: %s"
                              % (len(failed), failed[-1][:120])))
     else:
         out["passes"].append(("email-sends",
-                              "failed=%d ok=%d today"
+                              "failed=%d ok=%d since last patrol"
                               % (len(failed), len(ok))))
     return out
 
