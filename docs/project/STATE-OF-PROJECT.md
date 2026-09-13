@@ -38,11 +38,11 @@ Regenerated weekly from live ledgers by
 hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 50 reviewed, 1 contracting (hngh-automation/research-lines.tsv).
-- Queue Next: wake-mutation-lane, set 2026-08-25 (18 days old) (hngh docs/project/queue.md).
-- Plan ledger: 181 plan files, 153 routed candidates (hngh docs/project/plans/).
-- Operator items: 40 open (hngh-automation/dashboard/operator-items.json; display cap 40).
-- Gates: 16-remote-push.sh — gate-refresh — hngh: gate crumb was stale — make test re-run green (hngh-automation/STATE.md crumb tail).
+- Research lines: 69 reviewed, 14 planned, 1 crystallized (hngh-automation/research-lines.tsv).
+- Queue Next: wake-mutation-lane, set 2026-08-25 (19 days old) (hngh docs/project/queue.md).
+- Plan ledger: 203 plan files, 173 routed candidates (hngh docs/project/plans/).
+- Operator items: 34 open (hngh-automation/dashboard/operator-items.json; display cap 40).
+- Gates: oversight-tick — alert — gate-red: hngh make test red — gate-check alert row unread in ledger (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
 
 ## What is broken and being fixed
