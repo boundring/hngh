@@ -374,6 +374,45 @@ def check_disk_usage(ctx):
     return out
 
 
+GH_CI_RUNS_URL = ("https://api.github.com/repos/boundring/hngh"
+                  "/actions/runs?per_page=1")
+
+
+def check_github_ci(ctx):
+    """Public CI settlement: the latest GitHub Actions run, read from
+    the unauthenticated API (no token in the patrol). Quiet on success
+    and on pending runs; FAIL when the latest completed run concluded
+    non-success. URL seam HNGH_GH_CI_RUNS_URL (tests use file://)."""
+    out = {"passes": [], "fails": []}
+    url = os.environ.get("HNGH_GH_CI_RUNS_URL", GH_CI_RUNS_URL)
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            runs = json.loads(resp.read(65536)).get("workflow_runs") or []
+    except Exception as exc:  # noqa: BLE001 -- unreachable is a finding
+        out["fails"].append(("github-actions-latest", "service-down",
+                             "ci poll unreachable: %s"
+                             % exc.__class__.__name__))
+        return out
+    if not runs:
+        out["passes"].append(("github-actions-latest", "no runs yet"))
+        return out
+    run = runs[0]
+    sha = (run.get("head_sha") or "?")[:7]
+    status = run.get("status") or "?"
+    if status != "completed":
+        out["passes"].append(("github-actions-latest",
+                              "%s status=%s (pending)" % (sha, status)))
+    elif run.get("conclusion") == "success":
+        out["passes"].append(("github-actions-latest", "%s success" % sha))
+    else:
+        out["fails"].append((
+            "github-actions-latest", "bad-execution",
+            "latest run %s concluded %s -- %s"
+            % (sha, run.get("conclusion") or "?",
+               run.get("html_url") or "no url")))
+    return out
+
+
 def check_research_stall(ctx):
     """Research flow: non-terminal lines stuck in one state longer than
     the stall window (a line that stops moving is a stopped line)."""
@@ -884,6 +923,7 @@ CHECKS = {
     "service-children": check_service_children,
     "disposition-followons": check_disposition_followons,
     "systemd-units": check_systemd_units,
+    "github-ci-latest": check_github_ci,
 }
 
 
