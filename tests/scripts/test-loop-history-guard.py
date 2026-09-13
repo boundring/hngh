@@ -125,6 +125,16 @@ KNOWN_EXEMPTIONS = {
         "reason": "fixture pair revert: restores Makefile+README (declared miss)",
         "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
     },
+    # fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed -- kernel-gate red cure 2026-09-13, declared not rewritten
+    "04f0001": {
+        "reason": "fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed (declared miss, gate-cure patrol)",
+        "patch-id": "891d22e68a3121dfabdf780bb4c685772c4eac60",
+    },
+    # fix: omp-bridge --ceremony cleans its ephemeral store on every exit path -- kernel-gate red cure 2026-09-13, declared not rewritten
+    "29d2a27": {
+        "reason": "fix: omp-bridge --ceremony cleans its ephemeral store on every exit path (declared miss, gate-cure patrol)",
+        "patch-id": "dff584c160b3d902f8cf36ad977f11a7386b7730",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
