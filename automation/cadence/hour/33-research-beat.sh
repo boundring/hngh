@@ -684,9 +684,25 @@ $related}"
   } |
    followon_queue)"
  fi
- [ -f "$DISPOSITIONS" ] ||
-  printf 'line\taction\tverdict\treviewer\tevidence\tdate\tsupport\toppose\tfollowons\n' \
-   >"$DISPOSITIONS"
+ # writer schema; upgrade a stale header (older schema) in place before
+ # appending 9-column rows, so the MCP reader never trips on column drift.
+ schema='line\taction\tverdict\treviewer\tevidence\tdate\tsupport\toppose\tfollowons'
+ if [ -f "$DISPOSITIONS" ]; then
+  [ "$(head -n 1 "$DISPOSITIONS")" = "$(printf '%b\n' "$schema")" ] || {
+   {
+    printf '%b\n' "$schema"
+    tail -n +2 "$DISPOSITIONS"
+   } >"$DISPOSITIONS.tmp" &&
+    mv "$DISPOSITIONS.tmp" "$DISPOSITIONS"
+  }
+ else
+  printf '%b\n' "$schema" >"$DISPOSITIONS"
+ fi
+ # text fields are model output: tabs would widen the row past the schema
+ reason="$(printf '%s' "$reason" | tr '\t' ' ')"
+ sup_line="$(printf '%s' "$sup_line" | tr '\t' ' ')"
+ opp_line="$(printf '%s' "$opp_line" | tr '\t' ' ')"
+ followons="$(printf '%s' "$followons" | tr '\t' ' ')"
  printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$id" "$action" "$reason" "$used" "$doc" "$day" \
   "$sup_line" "$opp_line" "$followons" >>"$DISPOSITIONS"
