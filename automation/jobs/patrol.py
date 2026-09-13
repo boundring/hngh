@@ -1025,17 +1025,22 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
     return queued
 
 
-def report_alert(text, identity):
+def report_alert(text, identity, evidence=None):
     """report-queue alert; best-effort (a lost queue write is a stderr
-    line, never a crash)."""
+    line, never a crash). EVIDENCE: a token derived from the current
+    failing state (e.g. the failing detail line). With evidence, the
+    dedup only re-fires when the CONDITION recurred (new failing log
+    line / new count); an unchanged stale condition is suppressed."""
     bin_path = os.environ.get(
         "REPORT_QUEUE_BIN", os.path.join(REPO, "scripts", "report-queue"))
     env = dict(os.environ,
                HNGH_REPORT_ROOT=os.environ.get("PATROL_REPORT_ROOT", REPO))
     try:
-        r = subprocess.run([bin_path, "--add", "alert",
-                            text, "--identity", identity,
-                            "--window", "86400"],
+        argv = [bin_path, "--add", "alert", text,
+                "--identity", identity, "--window", "86400"]
+        if evidence:
+            argv += ["--evidence", evidence]
+        r = subprocess.run(argv,
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, env=env, timeout=30)
         return r.returncode == 0
@@ -1135,7 +1140,7 @@ def main(argv=None):
         for pid, (artifact, cause, detail) in fails:
             report_alert("patrol %s: %s on %s -- %s"
                          % (pid, cause, artifact, detail),
-                         "patrol:" + pid)
+                         "patrol:" + pid, evidence=detail)
         queued = queue_repeat_subjects(
             ctx, prev_runs[-1] if prev_runs else [],
             [(pid, cause) for pid, (a, cause, d) in fails])
@@ -1221,7 +1226,8 @@ if __name__ == "__main__":
         # itself: a runner crash files one alert and exits 0 (a crumb,
         # never tick damage)
         print("patrol: suppressed %r" % exc, file=sys.stderr)
-        report_alert("patrol runner crashed: %s" % exc, "patrol:runner")
+        report_alert("patrol runner crashed: %s" % exc, "patrol:runner",
+                     evidence=repr(exc))
         sys.exit(0)
 
 
