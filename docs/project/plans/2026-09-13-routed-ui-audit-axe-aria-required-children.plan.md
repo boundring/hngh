@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ui-audit:axe:aria-required-children -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=ui-audit:axe:aria-required-children  cause=obsolete disposed=2026-09-13T07:00:49Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:axe:aria-required-children`
@@ -13,3 +13,4 @@ at 2026-09-13T04:00:49Z. Alert text: ui-audit axe:aria-required-children: 1 viol
 
 - 2026-09-13T05:00:49Z re-occurred (dedup window expired)
 - 2026-09-13T06:00:49Z re-occurred (dedup window expired)
+- 2026-09-13T07:00:49Z re-occurred (dedup window expired)

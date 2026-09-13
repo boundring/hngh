@@ -81,3 +81,18 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   CHANGELOG.md 2026-09-13 section. A later wake-mutation session
   declares the exemption through the ceremony; then this plan's last
   step commits under a green gate.
+- Re-verified 2026-09-13T07:10Z (step-5 session): the gate is red on
+  exactly two commits -- ba6b390 (patch-id
+  a46ed8ae5a64949d7e5dbe8917902e125586d5d3) and d2d8f51 (patch-id
+  cef31fa5a3ea871522e0a3ea3e537088c9a8952b), both authored as Fixture;
+  e7dbaaa is docs-only and never trips the guard. `make test` fails
+  only at test-loop-history-guard.py; all upstream suites green.
+  The ceremony was walked to its wall: propose admitted 10/10
+  principles on the step-5 evidence, issue-cert refused with
+  "candidate evidence failed" because verify-candidate.py runs
+  `make test` -- the gate verdict itself, working as designed. No
+  exemption entry exists in test-loop-history-guard.py KNOWN_EXEMPTIONS
+  for the fixture pair; the cure (declare both patch-ids there,
+  wake-mutation lane, kernel tests/ surface -- forbidden to this
+  session) is unchanged and now carries the exact patch-ids needed.
+  Step-5 artifacts remain in the working tree, unmodified.
