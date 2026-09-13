@@ -12,3 +12,4 @@ at 2026-09-13T16:00:13Z. Alert text: [oversight] slow-unit: dropin:40-gdelt-news
 ## Occurrences
 
 - 2026-09-13T17:00:39Z re-occurred (dedup window expired)
+- 2026-09-13T18:00:39Z re-occurred (dedup window expired)
