@@ -96,6 +96,24 @@ class Patrol(unittest.TestCase):
             "#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >>\"$PATROL_ALERTS\"\n")
         (self.sb / "rq-stub.sh").chmod(0o755)
         (self.sb / "alerts.tsv").write_text("")
+        # hermetic systemd: stub ctl backed by a per-unit state table
+        (self.sb / "systemctl-stub.sh").write_text(
+            "#!/usr/bin/env bash\n"
+            "unit=\"$3\"; [ -n \"$unit\" ] || exit 2\n"
+            "case \"$2\" in is-enabled) f=enabled ;; is-active) f=active ;; "
+            "*) exit 2 ;; esac\n"
+            "val=$(awk -F'\\t' -v u=\"$unit\" -v f=\"$f\" "
+            "'$1==u && $2==f {print $3}' \"$SYSTEMD_STUB_STATE\")\n"
+            "if [ \"$val\" = ok ]; then echo \"$f\"; exit 0; "
+            "else echo bad; exit 1; fi\n")
+        (self.sb / "systemctl-stub.sh").chmod(0o755)
+        (self.sb / "systemd-state.tsv").write_text(
+            "".join("%s\t%s\tok\n" % (u, f)
+                    for u in ("hngh-automation.timer",
+                              "hngh-cadence-1m.timer",
+                              "hngh-cadence-5m.timer",
+                              "hngh-overnight.timer")
+                    for f in ("enabled", "active")))
         for k, v in [("PATROL_ROOT", str(self.auto)),
                      ("HNGH_HOME_DIR", str(self.sb / "home")),
                      ("PATROL_KERNEL", str(self.kernel)),
@@ -106,6 +124,8 @@ class Patrol(unittest.TestCase):
                      ("PATROL_REPORT_ROOT", str(self.sb)),
                      ("PATROL_ALERTS", str(self.sb / "alerts.tsv"))]:
             os.environ[k] = v
+        os.environ["PATROL_SYSTEMCTL"] = str(self.sb / "systemctl-stub.sh")
+        os.environ["SYSTEMD_STUB_STATE"] = str(self.sb / "systemd-state.tsv")
         self._mod = load_mod()
 
     def tearDown(self):
@@ -147,8 +167,9 @@ class Patrol(unittest.TestCase):
                           if ln.startswith("FAIL")], [])
         self.assertEqual(alerts, [])
         # feeds emits 3 PASSes (one per feed), the other 7 routes one each
-        # (gate-cure's green-gate PASS included)
-        self.assertEqual(r.stdout.count("\nPASS "), 10)
+        # (gate-cure's green-gate PASS included); systemd-units adds 1
+        # systemd-units emits one PASS per unit (4), not one per route
+        self.assertEqual(r.stdout.count("\nPASS "), 14)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -203,7 +224,7 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 9)  # the walk continued
+        self.assertEqual(len(results), 10)  # the walk continued
 
     # --- gate-cure: a green gate is quiet, no ceremony is driven ---
     def test_gate_cure_green_quiet(self):
@@ -384,6 +405,35 @@ class Patrol(unittest.TestCase):
         r = self.run_py("--patrol", "research-dispositions")
         self.assertIn("FAIL research-dispositions/orphan-line "
                       "adopted-no-followon", r.stdout)
+
+    # --- (19) a disabled/dead critical timer is a finding + alert ---
+    def test_dead_timer_fails_and_files_alert(self):
+        state = self.sb / "systemd-state.tsv"
+        state.write_text(
+            "".join("%s\t%s\tok\n" % (u, f)
+                    for u in ("hngh-automation.timer",
+                              "hngh-cadence-1m.timer",
+                              "hngh-cadence-5m.timer")
+                    for f in ("enabled", "active"))
+            + "hngh-overnight.timer\tenabled\tdisabled\n"
+              "hngh-overnight.timer\tactive\tinactive\n")
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL systemd-units/hngh-overnight.timer timer-dead "
+                      "enabled=bad active=bad", r.stdout)
+        self.assertTrue(any("patrol systemd-units:" in a for a in alerts))
+
+    # --- (20) enabled-but-not-running still fails ---
+    def test_enabled_but_inactive_timer_fails(self):
+        state = self.sb / "systemd-state.tsv"
+        state.write_text(
+            "".join("%s\t%s\tok\n" % (u, f)
+                    for u in ("hngh-automation.timer", "hngh-cadence-1m.timer",
+                              "hngh-cadence-5m.timer", "hngh-overnight.timer")
+                    for f in ("enabled", "active"))
+            + "hngh-cadence-1m.timer\tactive\tinactive\n")
+        r = self.run_py("--patrol", "systemd-units")
+        self.assertIn("FAIL systemd-units/hngh-cadence-1m.timer timer-dead",
+                      r.stdout)
 
     # --- (18) --morning: digest section with counts, causes, top-3 ---
     def test_morning_report_appends_rounds_section(self):
