@@ -43,6 +43,12 @@ email_sidechannel() { # subject body -> 0 always
   if [ "$rc" != "0" ]; then
     printf '%s | send failed rc=%d: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       "$rc" "$out" >>"$EMAIL_LOG" 2>/dev/null || true
+  else
+    # success rows are the patrol contract (jobs/patrol.py check_email_sends
+    # greps "send ok rc=0"): a send with no recorded row is invisible to
+    # the send-path proof, so record it (the row is the record).
+    printf '%s | send ok rc=0: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      "$subject" >>"$EMAIL_LOG" 2>/dev/null || true
   fi
   return 0
 }
