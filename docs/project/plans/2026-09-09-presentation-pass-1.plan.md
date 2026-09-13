@@ -96,3 +96,14 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   wake-mutation lane, kernel tests/ surface -- forbidden to this
   session) is unchanged and now carries the exact patch-ids needed.
   Step-5 artifacts remain in the working tree, unmodified.
+- Re-verified 2026-09-13T10:05Z (step-5 session, third check): state
+  unchanged. The gate is still red on exactly ba6b390 + d2d8f51
+  (patch-ids a46ed8ae5a64949d7e5dbe8917902e125586d5d3 /
+  cef31fa5a3ea871522e0a3ea3e537088c9a8952b); no KNOWN_EXEMPTIONS entry
+  for the fixture pair exists yet; the wake-mutation lane is still the
+  named cure and kernel tests/ remains forbidden to plan sessions.
+  Step-5 artifacts (docs/records/2026-09-13-presentation-pass-1-adoption.md,
+  CHANGELOG.md 2026-09-13 section) remain staged in the working tree,
+  unmodified. No further plan session should re-run this check until a
+  wake-mutation session lands the exemption: the handoff row at 07:15Z
+  and this note carry everything needed.
