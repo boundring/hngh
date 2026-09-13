@@ -40,7 +40,7 @@ flavor layer; rungs 3–7 are horizon, not this plan.
       Verification: grep for exclamation marks and emoji in docs/*.md,
       README.md, CHANGELOG.md returns zero (code comments exempt); the
       voice reads as one author; `make test` green.
-- [ ] 4. Publication spine surfacing. Extend
+- [x] 4. Publication spine surfacing. Extend
       scripts/generate-publication's ebook mode to include the 2026-09-09
       records and the presentation direction doc in the spine, and
       regenerate docs/publication/book.md + EPUB.
