@@ -11,6 +11,7 @@ sandbox dirs only, wired by PATROL_* env (the beat-watchdog test
 convention)."""
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -127,6 +128,9 @@ class Patrol(unittest.TestCase):
             os.environ[k] = v
         os.environ["PATROL_SYSTEMCTL"] = str(self.sb / "systemctl-stub.sh")
         os.environ["SYSTEMD_STUB_STATE"] = str(self.sb / "systemd-state.tsv")
+        # hermetic public-CI patrol: the check polls this file:// fixture,
+        # not the real api.github.com (the systemd-stub convention)
+        self._ci_runs("completed", "success")
         self._mod = load_mod()
 
     def tearDown(self):
@@ -141,6 +145,16 @@ class Patrol(unittest.TestCase):
         r = self.run_py("--tier", "30m")
         self.assertEqual(r.returncode, 0, r.stderr)
         return r, (self.sb / "alerts.tsv").read_text().splitlines()
+
+    def _ci_runs(self, status, conclusion=None):
+        runs = {"workflow_runs": [{
+            "status": status, "conclusion": conclusion,
+            "head_sha": "9faf25a" + "0" * 33, "name": "CI",
+            "html_url": "https://github.com/boundring/hngh/actions/runs/1",
+        }]}
+        path = self.sb / "ci-runs.json"
+        path.write_text(json.dumps(runs))
+        os.environ["HNGH_GH_CI_RUNS_URL"] = "file://" + str(path)
 
     def _red_guard(self, subjects):
         """A kernel guard fixture that reports violations and exits 1,
@@ -169,8 +183,9 @@ class Patrol(unittest.TestCase):
         self.assertEqual(alerts, [])
         # feeds emits 3 PASSes (one per feed), the other 7 routes one each
         # (gate-cure's green-gate PASS included); systemd-units adds 1
-        # systemd-units emits one PASS per unit (4), not one per route
-        self.assertEqual(r.stdout.count("\nPASS "), 14)
+        # systemd-units emits one PASS per unit (4), not one per route;
+        # github-ci adds 1 (the latest-run verdict)
+        self.assertEqual(r.stdout.count("\nPASS "), 15)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -225,7 +240,7 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 10)  # the walk continued
+        self.assertEqual(len(results), 11)  # the walk continued
 
     # --- gate-cure: a green gate is quiet, no ceremony is driven ---
     def test_gate_cure_green_quiet(self):
@@ -430,6 +445,33 @@ class Patrol(unittest.TestCase):
         self.assertIn("FAIL systemd-units/hngh-overnight.timer timer-dead "
                       "enabled=bad active=bad", r.stdout)
         self.assertTrue(any("patrol systemd-units:" in a for a in alerts))
+
+    # --- (github-ci) the public CI settlement patrol ---
+    def test_ci_latest_success_is_quiet(self):
+        r, _ = self.run_walk()
+        self.assertIn("PASS github-ci/github-actions-latest "
+                      "9faf25a success", r.stdout)
+        self.assertEqual([ln for ln in r.stdout.splitlines()
+                          if ln.startswith("FAIL")], [])
+
+    def test_ci_latest_failure_fires_alert(self):
+        self._ci_runs("completed", "failure")
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL github-ci/github-actions-latest bad-execution "
+                      "latest run 9faf25a concluded failure", r.stdout)
+        self.assertTrue(any("patrol github-ci:" in a for a in alerts))
+
+    def test_ci_pending_run_is_quiet(self):
+        self._ci_runs("in_progress")
+        r, _ = self.run_walk()
+        self.assertIn("PASS github-ci/github-actions-latest 9faf25a "
+                      "status=in_progress", r.stdout)
+
+    def test_ci_unreachable_fails_closed(self):
+        os.environ["HNGH_GH_CI_RUNS_URL"] = "file:///nonexistent/ci-runs.json"
+        r, _ = self.run_walk()
+        self.assertIn("FAIL github-ci/github-actions-latest service-down",
+                      r.stdout)
 
     # --- (20) enabled-but-not-running still fails ---
     def test_enabled_but_inactive_timer_fails(self):
