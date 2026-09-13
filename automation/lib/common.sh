@@ -15,8 +15,18 @@ HNGH_HOME_DIR="${HNGH_HOME_DIR:-$HOME/.hngh}"
 DIGEST_DIR="${DIGEST_DIR:-$HNGH_HOME_DIR/archive/digest}"
 
 hngh_catalog() { # kind path [note] -> append to ~/.hngh/catalog.tsv
+ local file="$HNGH_HOME_DIR/catalog.tsv"
+ # Idempotency (2026-09-13): the same kind+path catalogued 5x in 17s
+ # because every run re-appends. Skip when a row already exists.
+ # ponytail: plain pre-append scan; sequential writers only — a true
+ # concurrent race needs flock, add it if catalog() ever runs in
+ # parallel jobs.
+ if [ -f "$file" ] && awk -F'\t' -v k="$1" -v p="$2" \
+  '$2==k && $3==p {found=1} END{exit !found}' "$file"; then
+  return 0
+ fi
  printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  "$1" "$2" "${3:-}" >>"$HNGH_HOME_DIR/catalog.tsv"
+  "$1" "$2" "${3:-}" >>"$file"
 }
 
 log() { # console line (breadcrumbs are separate)

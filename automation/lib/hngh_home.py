@@ -69,15 +69,36 @@ def digest_dir():
     return archive_dir("digest")
 
 
+def _catalog_rows():
+    path = os.path.join(home(), "catalog.tsv")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return path, fh.read().splitlines()
+    except OSError:
+        return path, []
+
+
 def catalog(kind, path, note=""):
-    """Append one row to the append-only catalog.tsv. TSV-safe: tabs,
-    newlines, and backslashes are backslash-escaped."""
+    """Append one row to the append-only catalog.tsv. Idempotent on
+    (kind, path): a repeated catalog call for the same artifact is a
+    no-op. TSV-safe: tabs, newlines, and backslashes are
+    backslash-escaped.
+
+    ponytail: pre-append scan, sequential writers only — a true
+    concurrent race needs flock (add it if catalog() ever runs in
+    parallel jobs)."""
     def esc(field):
         return field.replace("\\", "\\\\").replace("\t", "\\t") \
                     .replace("\n", "\\n")
+    file, rows = _catalog_rows()
+    ek, ep = esc(kind), esc(path)
+    for row in rows:
+        cells = row.split("\t")
+        if len(cells) >= 3 and cells[1] == ek and cells[2] == ep:
+            return ""
     stamp = datetime.datetime.now(datetime.timezone.utc) \
         .strftime("%Y-%m-%dT%H:%M:%SZ")
-    row = "%s\t%s\t%s\t%s\n" % (stamp, esc(kind), esc(path), esc(note))
-    with open(os.path.join(home(), "catalog.tsv"), "a", encoding="utf-8") as fh:
+    row = "%s\t%s\t%s\t%s\n" % (stamp, ek, ep, esc(note))
+    with open(file, "a", encoding="utf-8") as fh:
         fh.write(row)
     return row
