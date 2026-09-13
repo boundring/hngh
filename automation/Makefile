@@ -114,6 +114,7 @@ test:
 	bash tests/test-remote-push.sh
 	python3 -B tests/test-plan-identity.py
 	python3 -B tests/test-omp-bridge.py
+	python3 -B tests/test-hngh-bridge-plugin.py
 	python3 -B tests/test-plan-templates.py
 	python3 -B tests/test-mcp-server.py
 	bash tests/test-model-demote.sh

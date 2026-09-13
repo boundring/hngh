@@ -332,6 +332,133 @@ class OcgoLaunch(unittest.TestCase):
         self.assertNotIn("proxy=http", marker)
 
 
+DELEGATE_DRIVER = """#!/usr/bin/env bash
+set -u
+. "$AUTO_ROOT/lib/common.sh"
+bash "$AUTO_ROOT/lib/ocgo-delegate.sh" "${DELEGATE_SLUG:-dslug}" \\
+  "objective body" "${DELEGATE_MIN:-10}"
+"""
+
+
+class OcgoDelegateTool(OcgoLaunch):
+    """The omp hngh_opencode tool's launch path (automation/lib/
+    ocgo-delegate.sh): the 5h pacer (ocgo+ocgo-agent vs
+    opencode-cap-5h-calls) fires BEFORE anything spends (fail-closed
+    refusal rc=75, no session, no bridge run), the lessons tail rides in
+    the prompt, the timeout clamps to the opencode-agent leg budget
+    (1800s), and one bounded session goes through launch_session's
+    opencode branch (pack + config pin + bili MITM + R2 emitter
+    unchanged — the wrapper reuses, never re-implements)."""
+
+    def setUp(self):
+        super().setUp()
+        shutil.copy(AUTO / "lib" / "model.sh", self.auto / "lib" / "model.sh")
+        shutil.copy(AUTO / "lib" / "ocgo-delegate.sh",
+                    self.auto / "lib" / "ocgo-delegate.sh")
+        (self.auto / "dashboard").mkdir(exist_ok=True)
+        self.driver.write_text(DELEGATE_DRIVER)
+
+    def seed_events(self, source, n):
+        # two dbs: the pacer (lib/model.sh quota_pace_blocked_5h) reads
+        # $AUTOMATION_ROOT/dashboard/telemetry.db, the R2 emitter reads
+        # HNGH_TELEMETRY_DB — in production both are the same file
+        db_path = self.auto / "dashboard" / "telemetry.db"
+        db = sqlite3.connect(self.telem)
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT,"
+            " kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT,"
+            " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
+            " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        for _ in range(n):
+            db.execute("INSERT INTO events(ts, source, kind)"
+                       " VALUES (strftime('%Y-%m-%dT%H:%M:%SZ','now'),"
+                       " ?, 'model')", (source,))
+        db.commit()
+        db.close()
+        db = sqlite3.connect(db_path)
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT,"
+            " kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT,"
+            " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
+            " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        for _ in range(n):
+            db.execute("INSERT INTO events(ts, source, kind)"
+                       " VALUES (strftime('%Y-%m-%dT%H:%M:%SZ','now'),"
+                       " ?, 'model')", (source,))
+        db.commit()
+        db.close()
+
+    def test_pacer_blocks_before_any_launch(self):
+        # hard cap reached (ocgo source): refusal rc=75, budget message,
+        # no session (no oc stub call), no bridge run (store untouched)
+        self.seed_events("ocgo", 3)
+        r = self.launch(OCGO_CAP_5H_CALLS="3")
+        self.assertEqual(r.returncode, 75, r.stdout + r.stderr)
+        self.assertIn("used 3 of cap 3", r.stderr)
+        self.assertIn("budget", r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertEqual(list((self.td / "store").iterdir()), [])
+
+    def test_pacer_counts_agent_spend_too(self):
+        # ocgo-agent events attribute onto the same bucket (R2) — the
+        # delegation pacer sees them exactly like model.sh's ocgo_chat
+        self.seed_events("ocgo-agent", 3)
+        r = self.launch(OCGO_CAP_5H_CALLS="3")
+        self.assertEqual(r.returncode, 75, r.stdout + r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+
+    def test_pacer_go_launches_one_session_with_telemetry(self):
+        # below cap: one bounded session through launch_session's
+        # opencode branch; the R2 emitter lands the ocgo-agent row
+        self.seed_events("ocgo", 1)
+        r = self.launch(OCGO_CAP_5H_CALLS="3")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("--auto", marker)
+        self.assertIn("-m opencode-go/glm-5.3-flash", marker)
+        self.assertIn("config=" + str(self.auto / "config" / "opencode"
+                                      / "opencode.jsonc"), marker)
+        self.assertIn("rc=0", r.stdout)
+        self.assertIn("disposition=cancelled", r.stdout)
+        # the emitted row: one seeded ocgo + one attributed ocgo-agent
+        conn = sqlite3.connect(self.telem)
+        rows = conn.execute("select source, kind from events").fetchall()
+        conn.close()
+        self.assertIn(("ocgo", "model"), rows)
+        self.assertIn(("ocgo-agent", "model"), rows)
+
+    def test_lessons_tail_rides_in_the_prompt(self):
+        # the read side of the lessons loop: previous sessions' lessons
+        # reach the executor prompt (append side stays in launch_session)
+        lessons = self.auto / "state" / "ocgo-agent-lessons.md"
+        lessons.parent.mkdir(exist_ok=True)
+        lessons.write_text("# ocgo-agent lessons\n"
+                           "2026-09-12 | bad-execution | the step was too big\n")
+        r = self.launch()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("the step was too big", self.oc_marker.read_text())
+
+    def test_max_minutes_clamps_to_leg_budget(self):
+        # the opencode-agent leg budget (leg-budgets.tsv) caps wall-clock
+        # at 1800s: a larger ask is clamped, never passed through
+        r = self.launch(DELEGATE_MIN="999")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("timeout_s=1800", r.stdout)
+
+    def test_default_timeout_is_600s(self):
+        r = self.launch(DELEGATE_MIN="")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("timeout_s=600", r.stdout)
+
+
+# the subclass reuses the sandbox but runs the wrapper driver — the base
+# class's launch-branch tests (which drive launch_session directly and
+# assert its stdout shape) must not re-run through it
+for _n in [n for n in dir(OcgoLaunch) if n.startswith("test_")]:
+    setattr(OcgoDelegateTool, _n, None) # mask inherited: not callable -> skipped
+del _n
+
+
 def _load_jsonc(path):
     """Parse JSONC (line comments) — string-aware, tiny, no dependency."""
     out = []
