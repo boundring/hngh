@@ -72,6 +72,18 @@ Honest limits, recorded with the position:
   (recolored, recomposed, overlaid -- never verbatim), and cited to
   the collection study, not to the original filename.
 
+Overarching position, recorded later the same day (OPERATOR'S POLICY):
+"So far as I'm concerned, all of the art is fair use if altered enough
+anyway. That's collage." Structured: substantial alteration transforms
+the work -- the transformation threshold is the collage pipeline
+itself. If the output is altered enough (crop + recolor + recompose +
+overlay), the result is hngh's own art, not a derivative riding on the
+original. The pipelines enforce this by construction: every output
+carries the transformation's effects (recolor, overlay, recomposition)
+-- never a raw crop. The gray-zone caveat above still applies: this is
+the operator's stated opinion, recorded as policy, not a legal
+clearance.
+
 ## (d) No pages in the repo
 
 The provenance discipline stays: no scanned page, no raw panel, and no
@@ -95,6 +107,59 @@ references (not page-scanned into any artifact):
 - Japan Tengu Party Illustrated; National Quiz -- authors as labeled
   in the collection (folder labels carry the filing; the works are
   cited by title here).
+
+## (f) Fan-translation dialogue as bank source material (OPERATOR'S POLICY)
+
+The operator's stated position: "fan translation dialogue is all
+useable. Direct quotes should be fine, they're translated away from
+each author's true intent in Japanese." Authorized: the fan-translation
+text in the collection's dialogue bubbles may seed hngh's banks
+(quips.py, manga-draft.py pools, callbacks, easter eggs).
+
+Provenance discipline, recorded with the position:
+
+- The translation itself is the source. The original author's intent
+  is already one step removed (translated by the fan translator), so
+  quoting or echoing the fan-translation phrasing in hngh's banks is
+  an additional transformation step, not a direct copy of the original
+  author's prose.
+- When a specific bank entry is inspired by a specific observed line,
+  the style-research doc (docs/design/manga-style-research.md) cites
+  the title/work it came from.
+- Never attribute a quote to the original author in the original
+  language -- no Japanese text in banks, no author-byline quotes.
+- The subtlety law of clause (b) still governs generated output: no
+  titles, authors, or work-specific proper nouns ride inside generated
+  output or prompts.
+
+## (g) Character-image homage, light-touch (OPERATOR'S POLICY)
+
+The operator's stated position: "Hngh not being anything like a paid
+product, open-source as hell, I'm pretty sure we can get away with
+using animated characters from each work as homage." Authorized:
+character images from the collection as homage decorations BEYOND the
+heavy-transformation collage pipeline of clause (c) -- light-touch use
+included: character crops as dashboard decoration, panel backgrounds,
+interface flourishes, avatar references.
+
+Wiring: jobs/manga-collage.py --homogeneous (the homage mode: crop +
+scale + tone-match to the register palette + opacity blend + border
+overlay; no heavy paint pass). The distinction: collage = heavy
+transformation; homage = light crop/scale/opacity. Both operate under
+the overarching position in clause (c) (substantial alteration is the
+threshold; the pipeline enforces it by construction -- even homage
+output is recolored and overlaid, never a raw crop) and both cite the
+collection study.
+
+The operator's rationale, recorded: non-commercial, open-source,
+personal collection.
+
+Honest limits, unchanged:
+
+- No full-page reproduction, no verbatim-page redistribution (clause
+  d's no-pages-in-the-repo law stays).
+- Attribution in published outputs credits the TITLE, not the
+  publisher.
 
 ## Cast naming suggestion (the operator's call, kept generic in code)
 

@@ -136,6 +136,47 @@ def transform(src, dst, rect, seed, target_w=480):
     return tw, th
 
 
+def homage_frame_svg(w, h):
+    """Light overlay recomposition for homage output: a thin ink frame
+    only (no screentone, no text -- register law)."""
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">'
+        '<rect x="2" y="2" width="%d" height="%d" fill="none" '
+        'stroke="%s" stroke-width="4"/></svg>'
+    ) % (w, h, w - 4, h - 4, INK)
+
+
+def transform_homage(src, dst, rect, seed, target_w=320):
+    """The HOMAGE transformation (policy clauses c/g): crop -> scale ->
+    tone-match recolor to the register palette (grayscale + level; no
+    blur/paint pass -- light touch) -> opacity blend over the register
+    ground -> thin frame overlay. Recolor + overlay + recomposition by
+    construction: never a raw crop, but the source lineart stays
+    legible (that is the homage)."""
+    x, y, cw, ch, _ = rect
+    tw = target_w
+    th = max(1, round(ch * tw / cw))
+    tmp = dst + ".frame.svg.png"
+    with open(dst + ".frame.svg", "w") as fh:
+        fh.write(homage_frame_svg(tw, th))
+    subprocess.run(["rsvg-convert", "-w", str(tw), "-h", str(th),
+                    "-o", tmp, dst + ".frame.svg"],
+                   check=True, timeout=60)
+    subprocess.run(["magick", src,
+                    "-crop", "%dx%d+%d+%d" % (cw, ch, x, y),
+                    "-resize", "%dx%d!" % (tw, th),
+                    "-colorspace", "Gray",
+                    "-level", "10%,90%",
+                    * (["-flop"] if seed % 2 else []),
+                    "-fill", WHITE, "-tint", "22",
+                    "(", tmp, ")",
+                    "-compose", "over", "-composite", "png:%s" % dst,
+                    ], check=True, timeout=120)
+    os.unlink(tmp)
+    os.unlink(dst + ".frame.svg")
+    return tw, th
+
+
 def extract(archive, member, tmpdir):
     """Temp-extract ONE member (the collection-study pattern); returns
     the temp path. Caller deletes the whole temp dir."""
@@ -157,16 +198,20 @@ def build_collage(pieces, out):
     subprocess.run(cmd, check=True, timeout=300)
 
 
-def provenance_json(slug, seed, n_pieces):
+def provenance_json(slug, seed, n_pieces, kind="collage"):
     """Public-facing provenance: cites the study and the policy, never
     a source filename or path (policy clauses c/d)."""
     return {
-        "kind": "collage",
+        "kind": kind,
         "slug": slug,
         "seed": seed,
         "pieces": n_pieces,
         "treatment": ("crop + rescale + 3-band register recolor + "
-                      "screentone/border/vignette SVG overlay"),
+                      "screentone/border/vignette SVG overlay"
+                      if kind == "collage" else
+                      "crop + scale + grayscale tone-match recolor + "
+                      "opacity blend over register ground + frame "
+                      "overlay (homage, policy clauses c/g)"),
         "provenance": "collection study, 2026-09-12 "
                       "(docs/research/2026-09-12-manga-collection-study.md)",
         "policy": "docs/records/2026-09-12-manga-collection-policy.md",
@@ -182,6 +227,10 @@ def main(argv=None):
     ap.add_argument("--out", default=OUT_DIR)
     ap.add_argument("--seed", type=int, default=20260912)
     ap.add_argument("--slug", default="sample")
+    ap.add_argument("--homogeneous", action="store_true",
+                    help="homage mode: light-touch character tiles "
+                         "(policy clauses c/g) instead of a heavy "
+                         "collage")
     args = ap.parse_args(argv)
     with open(args.manifest) as fh:
         manifest = json.load(fh)
@@ -197,31 +246,51 @@ def main(argv=None):
     picks = members[10:12] if len(members) >= 12 else members[:2]
     os.makedirs(args.out, exist_ok=True)
     stem = os.path.join(args.out, "collage-%s" % args.slug)
+    if args.homogeneous:
+        stem = os.path.join(args.out, "homage-%s" % args.slug)
     with tempfile.TemporaryDirectory(prefix="manga-collage.") as tmp:
-        made = []   # (path, w, h, kind) in creation order
-        for i, member in enumerate(picks):
-            src = extract(archive, member, tmp)
-            ident = subprocess.run(
-                ["magick", "identify", "-format", "%w %h", src],
-                capture_output=True, text=True, check=True, timeout=60)
-            w, h = (int(v) for v in ident.stdout.split())
-            rects = crop_rects(w, h) if i == 0 else [crop_rects(w, h)[0]]
-            for rect in rects:
-                outp = "%s-%d.png" % (stem, len(made))
-                tw, th = transform(src, outp, rect, args.seed + len(made),
-                                   1024 if rect[4] == "environment" else 300)
-                made.append((outp, tw, th, rect[4]))
-        env = next(p for p in made if p[3] == "environment")
-        chars = [p for p in made if p[3] == "character"][:4]
-        pieces = [(env[0], 0, 0, CANVAS_W, CANVAS_H)]
-        for j, (path, tw, th, _) in enumerate(chars):
-            pieces.append((path, 26 + j * 336, CANVAS_H - th - 24, tw, th))
-        build_collage(pieces, stem + ".png")
+        if args.homogeneous:
+            made = []
+            for member in picks:
+                src = extract(archive, member, tmp)
+                ident = subprocess.run(
+                    ["magick", "identify", "-format", "%w %h", src],
+                    capture_output=True, text=True, check=True, timeout=60)
+                w, h = (int(v) for v in ident.stdout.split())
+                for rect in [r for r in crop_rects(w, h)
+                             if r[4] == "character"]:
+                    outp = "%s-%d.png" % (stem, len(made))
+                    tw, th = transform_homage(
+                        src, outp, rect, args.seed + len(made))
+                    made.append((outp, tw, th, rect[4]))
+        else:
+            made = []   # (path, w, h, kind) in creation order
+            for i, member in enumerate(picks):
+                src = extract(archive, member, tmp)
+                ident = subprocess.run(
+                    ["magick", "identify", "-format", "%w %h", src],
+                    capture_output=True, text=True, check=True, timeout=60)
+                w, h = (int(v) for v in ident.stdout.split())
+                rects = crop_rects(w, h) if i == 0 else [crop_rects(w, h)[0]]
+                for rect in rects:
+                    outp = "%s-%d.png" % (stem, len(made))
+                    tw, th = transform(
+                        src, outp, rect, args.seed + len(made),
+                        1024 if rect[4] == "environment" else 300)
+                    made.append((outp, tw, th, rect[4]))
+            env = next(p for p in made if p[3] == "environment")
+            chars = [p for p in made if p[3] == "character"][:4]
+            pieces = [(env[0], 0, 0, CANVAS_W, CANVAS_H)]
+            for j, (path, tw, th, _) in enumerate(chars):
+                pieces.append((path, 26 + j * 336, CANVAS_H - th - 24, tw, th))
+            build_collage(pieces, stem + ".png")
     with open(stem + ".json", "w") as fh:
-        json.dump(provenance_json(args.slug, args.seed, len(made)), fh,
+        json.dump(provenance_json(args.slug, args.seed, len(made),
+                                  "homage" if args.homogeneous else "collage"),
+                  fh,
                   indent=1)
         fh.write("\n")
-    print(stem + ".png")
+    print(stem + ".png" if not args.homogeneous else stem + "-*.png")
     return 0
 
 

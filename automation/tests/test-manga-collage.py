@@ -136,5 +136,71 @@ class TestCommittedSample(unittest.TestCase):
         self.assertIn("recolor", text)  # transformed, not verbatim
 
 
+@unittest.skipUnless(HAS_TOOLS, "magick/rsvg-convert unavailable")
+class TestHomage(unittest.TestCase):
+    """The light-touch homage mode (policy clauses c/g): crop + scale +
+    tone-match + frame overlay -- recolored and overlaid by
+    construction, never a raw crop, but no heavy paint pass."""
+
+    def _fixture(self, tmp):
+        page = str(Path(tmp) / "page.png")
+        subprocess.run(["magick", "-size", "400x600",
+                        "gradient:white-black", "png:" + page],
+                       check=True)
+        root = Path(tmp) / "col"
+        (root / "fixture").mkdir(parents=True)
+        arc = root / "fixture" / "fixture.zip"
+        with zipfile.ZipFile(arc, "w") as zf:
+            for i in range(2):
+                zf.write(page, "pages/page-%03d.png" % i)
+        manifest = Path(tmp) / "m.json"
+        manifest.write_text(json.dumps({
+            "root": str(root),
+            "titles": [{"title": "fixture",
+                        "style_reference": ["x"],
+                        "page_count_sample":
+                            [{"archive": "fixture.zip",
+                              "image_members": 2}]}]}))
+        return page, str(manifest)
+
+    def test_homage_transform_valid_and_nonverbatim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = str(Path(tmp) / "p.png")
+            subprocess.run(["magick", "-size", "200x300",
+                            "gradient:white-black", "png:" + src],
+                           check=True)
+            out = str(Path(tmp) / "h.png")
+            with open(src, "rb") as fh:
+                src_bytes = fh.read()
+            tw, th = mc.transform_homage(src, out,
+                                         mc.crop_rects(200, 300)[0], 7)
+            with open(out, "rb") as fh:
+                out_bytes = fh.read()
+            self.assertEqual(out_bytes[:8], b"\x89PNG\r\n\x1a\n")
+            with open(out, "rb") as fh:
+                self.assertNotEqual(fh.read(), src_bytes)
+            self.assertEqual(tw, 320)
+
+    def test_homogeneous_mode_emits_tiles_and_provenance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, manifest = self._fixture(tmp)
+            out = Path(tmp) / "out"
+            rc = mc.main(["--manifest", manifest, "--out", str(out),
+                          "--seed", "1", "--slug", "h",
+                          "--homogeneous"])
+            self.assertEqual(rc, 0)
+            tiles = sorted(out.glob("homage-h-*.png"))
+            self.assertTrue(tiles)
+            for tile in tiles:
+                self.assertEqual(tile.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+            meta = json.loads((out / "homage-h.json").read_text())
+            self.assertEqual(meta["kind"], "homage")
+            self.assertIn("collection study", meta["provenance"])
+            self.assertIn("tone-match", meta["treatment"])
+            blob = json.dumps(meta)
+            self.assertNotIn(str(tmp), blob)
+            self.assertNotIn(".zip", blob)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

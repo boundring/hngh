@@ -121,3 +121,28 @@ humor, distilled into hngh's comedy banks.
   docs/research/2026-09-11-imagegen-integration.md). If a descriptor
   ever needs an artist's name to work, it is the wrong descriptor --
   replace it with the visual property it was reaching for.
+
+## Bank seeds from fan-translation dialogue (policy clause f, 2026-09-12)
+
+Per docs/records/2026-09-12-manga-collection-policy.md clause (f), the
+collection's fan-translation dialogue is authorized bank source
+material. Titles behind the seeded lines in automation/jobs/
+manga-draft.py (NARRATIONS, MARGIN_NOTES, RECOGNITIONS) and
+automation/lib/quips.py:
+
+- BLAME! (Tsutomu Nihei): silence-then-action worker register --
+  corridors/work that do not stop, the downward-only direction, the
+  wrench speaking for the silent mechanic, recognition beats ("it is
+  finished, that is worse"; "the silence moved first").
+- Dai Dark (Q Hayashida): morbid-deadpan casual register -- death as
+  schedulable paperwork, the ledger that can wait, the stamp that
+  moves on its own.
+- Dorohedoro (Q Hayashida): gruff-absurd register -- mushrooms
+  nobody complains about twice, the mask that talks back, the hole
+  that never closes, doors that pretend to be doors.
+
+The bank lines are hngh's own phrasing over the translated register
+(the fan translation is the source; the author's Japanese intent is
+one step removed). No titles, authors, or work-specific proper nouns
+ride inside generated output (clause b subtlety law); titles are
+cited HERE only.

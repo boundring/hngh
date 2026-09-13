@@ -66,6 +66,12 @@ MARGIN_NOTES = [
     "mushroom season in the storeroom again.",
     "the cheek grew back. that was the problem.",
     "tengu sighted near stairwell 12. filed, not chased.",
+    # Fan-translation dialogue register (policy clause f; titles cited
+    # in docs/design/manga-style-research.md).
+    "the mechanic never spoke. the wrench did the talking.",  # BLAME!
+    "death is pending. the ledger can wait.",                 # Dai Dark
+    "the mask talked back. logged, not believed.",            # Dorohedoro
+    "he said the hole would close. it is still open.",        # Dorohedoro
 ]
 
 # Comedy banks (2026-09-12 publication review): pools keyed by CAMEO
@@ -150,6 +156,15 @@ NARRATIONS = [
     "The builders were still building. Nobody had asked them to stop.",
     "Somewhere above, a door opened onto a floor no map admitted to.",
     "The smoke took another clerk. The paperwork went on without him.",
+    # Fan-translation dialogue register (policy clause f): lines seeded
+    # by the collection's translated dialogue -- the translation is the
+    # source, the author's intent already one step removed. Titles
+    # cited per clause (f) in docs/design/manga-style-research.md;
+    # no proper nouns ride the output (clause b subtlety law).
+    "The corridors stayed silent. The work did not.",        # BLAME!
+    "Down was the only direction left. They took it.",       # BLAME!
+    "Nobody died today. The paperwork logged it anyway.",    # Dai Dark
+    "The hall served mushrooms again. Nobody complained twice.",  # Dorohedoro
 ]
 SCENES = {
     "bureaucrat": [
@@ -207,6 +222,24 @@ RECOGNITIONS = {
         "The log is writing itself. Look.",
     ],
 }
+
+# Fan-translation dialogue register (policy clause f): recognition-beat
+# lines seeded by the collection's translated dialogue -- BLAME!'s
+# silence-then-action workers, Dai Dark's morbid deadpan, Dorohedoro's
+# gruff absurdity. Titles cited in docs/design/manga-style-research.md;
+# no proper nouns ride the output (clause b subtlety law).
+RECOGNITIONS["bureaucrat"] += [
+    "The stamp moved before I touched it.",        # Dai Dark
+    "That signature is mine. It is not.",          # Dorohedoro
+]
+RECOGNITIONS["engineer"] += [
+    "It is not broken. It is finished. That is worse.",  # BLAME!
+    "The bolt held. Something else gave.",               # BLAME!
+]
+RECOGNITIONS["nightwatch"] += [
+    "The silence moved first.",                       # BLAME!
+    "Something walked the corridor. The floor disagrees.",  # Dorohedoro
+]
 
 # Strip geometry (operator critique 2, items 3/5; density band updated
 # 2026-09-12 per the collection study): the wireframe models a 1-5
