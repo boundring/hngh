@@ -247,3 +247,28 @@ operator audit. Governance LOOSING changes (a precondition removed, a
 gate widened) are SMALL only while an existing guard covers them:
 accept-plans still validates, spend caps still hold, the blocker park
 still bounds.
+
+### Red-gate cure is a SMALL matter (2026-09-13 amendment)
+
+A kernel-surface commit by a machine worker that violates the
+loop-history guard is a SMALL matter when the change itself is
+operator-approved and the suite already validates it: the response is
+a post-hoc declaration ceremony -- machine-driven, no operator brief,
+not a park. The machine backs off, considers, and self-handles: the
+gate-cure patrol (jobs/patrol.py, route `gate-cure`) detects a red
+gate, declares the violating commits in the guard's KNOWN_EXEMPTIONS
+table (hash + patch-id, per the declaration precedents), appends the
+decisions.md batch entry, and drives scripts/ceremony-drive through
+the full loop itself -- the ten-principle verdict and verify-candidate
+(make test) stay the gate; nothing bypasses them.
+
+The park remains the fallback and the boundary. A ceremony refusal --
+LARGE-surface content (credentials, systemd, spend caps, deletions),
+a red suite, or a verdict refusal -- files the alert and parks for the
+operator exactly as before. The machine never auto-cures a LARGE
+matter; it only ever runs the same ceremony an operator-approved
+session would run, and only for the class the suite already validates.
+Precedents: the post-hoc declaration batches (41f646a, 226de1d,
+20700c9/0e3b2c6/4fc4a0f) and the 2026-09-13 fixture pair
+(ba6b390/d2d8f51), the first cure the patrol pattern would have
+handled without a human.
