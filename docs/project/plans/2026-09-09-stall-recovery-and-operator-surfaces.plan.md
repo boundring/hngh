@@ -12,18 +12,19 @@ docs/records/ with its first commit.
 
 ## Steps
 
-- [ ] 1. Model-outcome demotion in the session launcher. Evidence: all 9
-      sessions today (automation/agent-handoffs.md rows 9-17) ended
-      rc=0 cancelled cause=bad-execution on unsloth/Ornith-1.0-35B
-      (local-bench), burning the full 8/day budget with zero landings;
-      the fail-first ladder paced spend down but never demoted the model.
-      Change: automation/lib/launch-session.sh (or failfirst state) counts
-      consecutive bad-execution cancellations per model; at 2 consecutive,
-      demote to the next model in the bench ladder and file an alert row.
-      Test-first in the automation suite.
-      Verification: suite test covers the demotion counter (2 strikes ->
-      next model, alert filed, counter resets on success); full `make test`
-      green.
+- [x] 1. Model-outcome demotion in the session launcher. AUDIT-CLOSED 2026-09-13T18:40Z,
+      provenance = "automation/tests/test-model-demote.sh runs ALL PASS (11 cases: 2 strikes
+      demote, alert filed, ok resets, health json coverage, mirroring the plan's
+      verification wording)".
+      Evidence: all 9 sessions on 2026-09-09 (agent-handoffs.md rows 9-17) ended
+      bad-execution on unsloth/Ornith-1.0-35B burning the day budget. Change
+      (implemented, evolved past plan text): automation/lib/model-demote.sh counts 2
+      consecutive bad-execution outcomes per model into state/model-demote.tsv, files a
+      deduped alert, resets on ok; select_model lowers the rung via model_demoted guards
+      at automation/scripts/overnight-cycle.sh:127,147,183,189 (env -> quota-row ->
+      local-bench -> paid-fallback); persistent under automation/state/ per
+      docs/records/2026-09-10-restart-resilience.md. No residual gap found this audit:
+      test-model-demote.sh passes on the first run.
 - [ ] 2. Prove the notification send path. Evidence: notify-email.conf
       exists but logs/notify-email.log is empty — no send ever recorded;
       the daily digest said "ATTENTION: 52 alerts in 24h" and the operator
