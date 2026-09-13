@@ -47,7 +47,8 @@ class CredGet(unittest.TestCase):
         ) % (ROOT, ROOT, ROOT, ref)
         env = dict(os.environ, HNGH_OP_BIN=str(stub),
                    STATE_FILE=str(self.state),
-                   CRED_STATE_DIR=str(self.logs))
+                   CRED_STATE_DIR=str(self.logs),
+                   ONEPASSWORD_SERVICE_KEY="sk-test-session")
         return subprocess.run(["bash", "-c", script], env=env,
                               capture_output=True, text=True, timeout=60)
 
@@ -83,7 +84,8 @@ class CredGet(unittest.TestCase):
         stub_ok.write_text("#!/usr/bin/env bash\nexit 0\n")
         stub_ok.chmod(0o755)
         env = dict(os.environ, HNGH_OP_BIN=str(stub_ok),
-                   STATE_FILE=str(self.state), CRED_STATE_DIR=str(self.logs))
+                   STATE_FILE=str(self.state), CRED_STATE_DIR=str(self.logs),
+                   ONEPASSWORD_SERVICE_KEY="sk-test-session")
         p = subprocess.run(
             ["bash", "-c",
              '. "%s/lib/common.sh"; . "%s/lib/credentials.sh"; op_ready' % (ROOT, ROOT)],

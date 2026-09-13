@@ -9,6 +9,7 @@ by the omp print-mode probe recorded in the integration plan.
 """
 
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -27,6 +28,10 @@ console.log(JSON.stringify([
 """
 
 
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
+                 "hngh-bridge plugin lives outside the repo "
+                 "(~/.omp/plugins/hngh-bridge); CI has no install step "
+                 "-- pure-helper coverage runs on the operator host only")
 class HnghBridgePlugin(unittest.TestCase):
     def run_helpers(self, cwd, entries):
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
@@ -72,6 +77,10 @@ console.log(JSON.stringify({
 """
 
 
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
+                 "hngh-bridge plugin lives outside the repo "
+                 "(~/.omp/plugins/hngh-bridge); CI has no install step "
+                 "-- pure-helper coverage runs on the operator host only")
 class HnghOpencodeTool(unittest.TestCase):
     """The hngh_opencode tool file: registered in the plugin manifest,
     parses under bun, and its pure helpers behave (bounded timeout clamp,

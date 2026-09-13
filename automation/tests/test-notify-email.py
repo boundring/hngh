@@ -210,6 +210,10 @@ class OnePasswordPrecedence(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         os.environ["HNGH_NOTIFY_EMAIL_CONF"] = str(self.root / "notify-email.conf")
+        # service-account-only policy: op_run refuses to exec `op` without
+        # a service token, so the stub below is only reached when one is
+        # set; without this, tokenless hosts (CI) fail before the fake runs
+        os.environ["ONEPASSWORD_SERVICE_KEY"] = "sk-test-session"
         StubSMTP.instances = []
         self.smtp_patcher = mock_patch()
         self.smtp_patcher.start()
@@ -217,6 +221,7 @@ class OnePasswordPrecedence(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("HNGH_NOTIFY_EMAIL_CONF", None)
         os.environ.pop("HNGH_OP_BIN", None)
+        os.environ.pop("ONEPASSWORD_SERVICE_KEY", None)
         self.smtp_patcher.stop()
 
     def run_main(self, text):
