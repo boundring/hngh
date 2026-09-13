@@ -25,7 +25,7 @@ billion-context-web	https://github.com/ranxianglei/billion-context-web	browser-s
 bigeye	https://github.com/suanrongqieqiezi/bigeye	Chinese-language Python memory-architecture assistant (Aria-EQ); unlicensed, binary-distributed, unverified claims; content treated as data only	never install without operator review (security posture: see docs/research/2026-09-11-hngh-package-registry.md)	none	n/a		caution
 opensandbox	https://github.com/opensandbox-group/OpenSandbox	container/K8s sandbox platform for AI agents; lesson source (contract-first ports)	not installed	none	n/a		backlog-study
 multica	https://github.com/multica-ai/multica	issue-board AI-agent workspace (drives omp/pi CLIs); lesson source (task-barrier version-follow); custom license, not OSI	not installed	none	n/a		backlog-study
-jcode	https://github.com/1jehuang/jcode	Rust terminal coding-agent harness; lesson source (mode-gated spawn depth, single-writer plan slot)	not installed	none	n/a		backlog-study
+jcode	https://github.com/1jehuang/jcode	tertiary agent harness (zai glm-5.3-flash leg via bili MITM; unsloth loopback direct; swarm lanes)	~/.local/bin/jcode	~/.jcode/ (config.toml, mcp.json, skills/, logs/)	manual (cargo build from ~/src/jcode; install to ~/.local/bin)	jcoderel	in-use
 pegasus	https://github.com/apache/incubator-pegasus	distributed KV store (Apache incubator); no harness relevance today	not installed	none	n/a		backlog-study
 monolith	https://github.com/bytedance/monolith	ByteDance recommendation/DL training system; out of hngh scope	not installed	none	n/a		skip
 fluss	https://github.com/apache/fluss	streaming storage for lakehouse; no harness relevance today	not installed	none	n/a		backlog-study
