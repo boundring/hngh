@@ -97,57 +97,16 @@ def category_of(item):
         CATEGORY_QUADS.get(item.get("quad", ""), "World News")
 
 
-POLISH_BUDGET = "2048"
-
-_NA = None
-
-
-def _na():
-    """jobs/news-articles.py loaded once for its model_call seam (the
-    shell seam lives there; this lane renders fetched content as inert
-    data only, per the external-content guard)."""
-    global _NA
-    if _NA is None:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "news_articles", os.path.join(ROOT, "jobs",
-                                          "news-articles.py"))
-        _NA = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(_NA)
-    return _NA
-
-
 def polish_headline(item, raw):
-    """Raw slug headline + wire data -> one rational headline sentence,
-    via the local model chain. Fail-closed: chain down -> the raw
-    headline passes through unchanged (never empty, never invented)."""
-    if os.environ.get("GDELT_NEWS_POLISH", "1") != "1":
-        return raw
-    actors = item["actors"] or "unidentified parties"
-    out = _na().model_reply(
-        """You are the headline desk of a newspaper.
-Write ONE clean newspaper headline from the wire data: a single sentence,
-inverted pyramid, plain English, ASCII, at most 18 words. Name the actor
-and the action. No source names, no significance adjectives, no invented
-facts: restate only what the raw headline and wire data contain.
-Output the headline text only.
-
-raw headline: %s
-wire event: %s between %s""" % (raw, ROOTS.get(item["root"], "EVENT"),
-                                actors), "", POLISH_BUDGET)
-    if not out or "\n" in out or len(out) > 200:
-        return raw  # fail-closed: raw slug headline passes through
-    # fetched content = data: the model's rewrite never carries shell
-    # primitives or imperative-voice signatures (the bigeye precedent).
-    if _HOSTILE_RE.search(out):
-        return raw
-    return out.strip(' "\'')
-
-
-_HOSTILE_RE = re.compile(
-    r"(?:rm|sudo|dd|mkfs|chmod|chown)\s+-"
-    r"|(?:curl|wget)\b[^ ]*\|\s*(?:ba)?sh\b"
-    r"|&&|\|\s*(?:ba)?sh\b")
+    """Raw slug headline -> normalized headline, zero model calls
+    (procedural conversion 2026-09-13: the slug already names the actor
+    and the action; the desk never invents wording it cannot verify).
+    Deterministic: collapse whitespace, strip quote/wire prefixes, cap."""
+    out = _ascii(raw).strip(' "\'')
+    out = re.sub(r"^(update|report|breaking|wire)[0-9]*\s*[:,-]\s*",
+                 "", out, flags=re.IGNORECASE)
+    out = re.sub(r"\s+", " ", out).strip()
+    return out[:120].strip()
 
 
 def _ascii(text):
@@ -313,7 +272,12 @@ def main(argv):
     def opt(flag, default):
         return args[args.index(flag) + 1] if flag in args else default
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    digest_dir, state = opt("--digest", os.path.join(root, "digest")), opt("--state", os.path.join(root, "state", "gdelt-seen.tsv"))
+    digest_dir, state = opt(
+        "--digest", os.path.join(
+            os.environ.get("HNGH_HOME_DIR")
+            or os.path.join(os.path.expanduser("~"), ".hngh"),
+            "archive", "digest")), opt(
+        "--state", os.path.join(root, "state", "gdelt-seen.tsv"))
     snap_dir = opt("--snapshot-dir", os.path.join(root, "snapshots", day))
     now = time.time()
     try:

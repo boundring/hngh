@@ -4,7 +4,8 @@
 # Operator directive 2026-09-12: articles generated from the day's top
 # digest items through the SAME model_call seam the research beat uses
 # (stubbed local unsloth leg answers; stubK-style reply), committed under
-# docs/articles/<date>/, image budget <= 3 per edition via a stub
+# ~/.hngh/newspaper/<date>/articles/ (2026-09-13 userspace-home + paid-cost
+# conversion: LOCAL leg only), image budget <= 3 per edition via a stub
 # imagegen, fail-closed when the chain is down, and the print front page
 # renders >= 3 columns with the article body inline.
 # Hermetic: source URLs use https://127.0.0.1:1 (the port guard refuses
@@ -23,10 +24,12 @@ CONTEXT: Fixture talks resume quietly (https://127.0.0.1:1/talks)
 "
 setup() { # -> sandbox: lib, jobs, digest, fixture digest
  rm -rf "$sb" && mkdir -p "$sb/lib" "$sb/jobs" "$sb/state" "$sb/archive" \
-  "$sb/dashboard" "$sb/digest" "$sb/repo/docs"
+  "$sb/dashboard" "$sb/digest" "$sb/repo/docs" \
+  "$sb/home/archive/digest" "$sb/home/db"
  cp -r "$root/lib/." "$sb/lib/"
  cp "$root/jobs/news-articles.py" "$root/jobs/digest-html.py" "$sb/jobs/"
  printf '%s' "$FAIL_DIGEST" >"$sb/digest/$DATE.md"
+ printf '%s' "$FAIL_DIGEST" >"$sb/home/archive/digest/$DATE.md"
  mkdir -p "$sb/repo/automation/digest"
  printf '%s' "$FAIL_DIGEST" >"$sb/repo/automation/digest/$DATE.md"
  printf 'newspaper-articles-cap\t%s\ttest\ttest\n' "${1:-6}" \
@@ -39,6 +42,8 @@ run_gen() { # [NEWS_ARTICLES_FETCH=v] -> stdout (article paths)
  (
   export HNGH_AUTOMATION_ROOT="$sb" HOME="$sb"
   export HNGH_REPO_ROOT="$sb/repo"
+  export HNGH_NEWSPAPER_DIR="$sb/paper"
+  export HNGH_HOME_DIR="$sb/home"
   export TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
   export UNSLOTH_URL="${UNSLOTH_URL:-http://127.0.0.1:$stubU_port}"
   export OLLAMA_URL=http://127.0.0.1:1 OLLAMA_MODEL=stub-ollama
@@ -69,13 +74,13 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 setup 6
 out="$(run_gen "MODEL_PIN=local" | sort)"
 ck "cap 6, 3 items: three articles committed" "3" "$(echo "$out" | wc -l)"
-ck "articles committed under docs/articles/<date>" \
- "$sb/repo/docs/articles/$DATE/fight-testland-fixture-war-escalates.md" \
+ck "articles committed under newspaper/<date>/articles" \
+ "$sb/paper/$DATE/articles/fight-testland-fixture-war-escalates.md" \
  "$(echo "$out" | grep war | cut -d/ -f1-)"
 ck "model seam used the stubbed local leg" "unsloth:stub-model" \
  "$(cat "$sb/tmp-modelused.txt" 2>/dev/null)"
 ck "stub leg hit once per article" "3" "$(wc -l <"$stubdir/stubU-hits")"
-art="$(cat "$sb/repo/docs/articles/$DATE/fight-testland-fixture-war-escalates.md")"
+art="$(cat "$sb/paper/$DATE/articles/fight-testland-fixture-war-escalates.md")"
 ck "metadata join comment present" "1" \
  "$(printf '%s' "$art" | grep -c 'digest_headline' || true)"
 ck "join key is the exact split-headline" "1" \
@@ -102,7 +107,7 @@ ck "model chain down: no article files (never fabricate)" "0" "$out"
 setup 6
 run_gen "MODEL_PIN=local" "NEWS_ARTICLES_FETCH=0" >/dev/null
 ck "fetch off: all three wire articles land" "3" \
- "$(ls "$sb/repo/docs/articles/$DATE"/*.md 2>/dev/null | wc -l)"
+ "$(ls "$sb/paper/$DATE/articles"/*.md 2>/dev/null | wc -l)"
 
 # --- 5. image budget: 3 articles -> exactly 3 imagegen calls.
 setup 6
@@ -120,7 +125,7 @@ out="$(IMGSTUB_CALLS="$sb/imgcalls" IMGSTUB_DIR="$sb/imgout" \
 ck "image budget: exactly 3 stub imagegen calls for 3 articles" "3" \
  "$(wc -l <"$sb/imgcalls")"
 ck "every illustrated article references its image" "3" \
- "$(grep -l '"image": "docs/' "$sb/repo/docs/articles/$DATE/"*.md | wc -l)"
+ "$(grep -l '"image": "media/' "$sb/paper/$DATE/articles/"*.md | wc -l)"
 
 # --- 6/7. the print front page + public md edition (python inline).
 python3 - "$root" "$sb" "$DATE" <<'PY' || fails=$((fails + 1))
@@ -132,7 +137,7 @@ dh = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dh)
 dh.DIGESTS = os.path.join(sb, "digest")
 dh.TELEMETRY = os.path.join(sb, "no.db")
-dh.ARTICLES = os.path.join(sb, "repo", "docs", "articles")
+dh.ARTICLES = os.path.join(sb, "paper")
 dh.MEDIA = os.path.join(sb, "repo", "docs", "media")
 page = dh.render_page(os.path.join(sb, "digest", day + ".md"),
                       dh.DIGESTS, dh.TELEMETRY)
@@ -153,6 +158,10 @@ ck("extended story carries the dateline convention",
 ck("attribution footer renders", "hngh wire desk" in page)
 raise SystemExit(1 if bad else 0)
 PY
+export HNGH_NEWSPAPER_DIR="$sb/paper"
+export HNGH_HOME_DIR="$sb/home"
+mkdir -p "$sb/home/archive/digest" "$sb/home/db"
+cp "$sb/repo/automation/digest/$DATE.md" "$sb/home/archive/digest/"
 python3 - "$root" "$sb" "$DATE" <<'PY' || fails=$((fails + 1))
 import importlib.machinery, importlib.util, os, sys
 loader = importlib.machinery.SourceFileLoader(
@@ -161,7 +170,8 @@ spec = importlib.util.spec_from_loader("dp", loader)
 dp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dp)
 text = dp.render_page(sys.argv[3], os.path.join(sys.argv[2], "repo"))
-ok = "Extended article: docs/articles/" in text
+ok = "Extended article: fight-testland-fixture-war-escalates " \
+     "(local edition only)" in text
 print(("ok: " if ok else "FAIL: ") + "public edition links the article")
 raise SystemExit(0 if ok else 1)
 PY
