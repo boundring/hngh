@@ -51,6 +51,7 @@ test:
 	python3 -B tests/test-plan-acceptance.py
 	python3 -B tests/test-plan-feed-graph.py
 	python3 -B tests/test-notify-email.py
+	python3 -B tests/test-notify-send-path.py
 	python3 -B tests/test-credentials.py
 	python3 -B tests/test-doc-secrets.py
 	python3 -B tests/test-doc-hygiene.py
