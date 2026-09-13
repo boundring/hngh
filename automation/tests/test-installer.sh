@@ -48,6 +48,18 @@ have_all=1
 for t in python3 git curl jq flock sqlite3 sbcl; do
   if p="$(command -v "$t")"; then ln -sf "$p" "$SANDBOX/all/$t"; else have_all=0; fi
 done
+# systemctl stub: under env -i the real binary stalls ~2s per call on a
+# D-Bus timeout (x2 per installer run); the tests assert installer
+# behavior, not the host's user-manager state, so answer instantly.
+printf '#!/usr/bin/env bash\necho running\n' >"$SANDBOX/all/systemctl"
+chmod +x "$SANDBOX/all/systemctl"
+# curl stub: the --check services plate probes registry health URLs with
+# curl -m 2; in the env -i sandbox those are 2s stalls each. The tests
+# assert installer behavior, not live service health -- answer exit 7
+# (connection refused), which svc_health already treats as "down".
+rm -f "$SANDBOX/all/curl" # the prereq loop symlinked the real curl
+printf '#!/usr/bin/env bash\nexit 7\n' >"$SANDBOX/all/curl"
+chmod +x "$SANDBOX/all/curl"
 if [ "$have_all" -eq 1 ] && [ -f "$INSTALLER" ]; then
   out="$(env -i HOME="$HOME" PATH="$SANDBOX/all:/usr/bin:/bin" /bin/bash "$INSTALLER" --non-interactive --check 2>&1)"
   rc=$?

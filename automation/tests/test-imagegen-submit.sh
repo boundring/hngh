@@ -18,6 +18,12 @@ ln -s "$root/lib/comfyui.sh" "$sb/automation/lib/comfyui.sh"
 ln -s "$root/jobs/imagegen-submit.sh" "$sb/automation/jobs/imagegen-submit.sh"
 cp "$root/config/imagegen-styles.tsv" "$sb/automation/config/imagegen-styles.tsv"
 : >"$sb/curl-hits"
+printf '0.10 0.20 0.10 1/900 1234\n' >"$sb/loadavg"
+cat >"$sb/shim/rocm-smi" <<'EOF'
+#!/usr/bin/env bash
+printf 'GPU[0]\t\t: VRAM Total Used Memory (B): %s\n' "${VRAM_STUB_USED:-1000000000}"
+EOF
+chmod +x "$sb/shim/rocm-smi"
 
 # curl stub: records full argv to $CURL_STUB_HITS (last arg = URL),
 # prints the emulated HTTP code on stdout, and in non-dead modes writes
@@ -80,6 +86,7 @@ run() { # args... -> stdout; stderr passes through for the caller to catch
   export PATH="$sb/shim:$PATH"
   export IMAGEGEN_STYLES_TSV="$sb/automation/config/imagegen-styles.tsv"
   export IMAGEGEN_OUT_DIR="${TEST_OUT_DIR:-$sb/docs/media/imagegen}"
+  export IMAGEGEN_LOADAVG_FILE="${TEST_LOADAVG_FILE:-$sb/loadavg}"
   export CURL_STUB_HITS="$sb/curl-hits"
   unset IMAGEGEN_POLLINATIONS_BASE
   bash "$sb/automation/jobs/imagegen-submit.sh" "$@"
@@ -182,6 +189,20 @@ run --free --style nope --subject 'x' >/dev/null 2>&1
 rc=$?
 ck "unknown style: exit 2" "2" "$rc"
 
+# 9b. load gate, deterministic: a stubbed BUSY loadavg skips the local
+# leg exit-0 with zero endpoint calls -- the gate is behavior-tested
+# through a fake signal, never the host's real load.
+: >"$sb/curl-hits"
+printf '99.00 99.00 99.00 900/900 1234\n' >"$sb/loadavg-busy"
+err="$(TEST_LOADAVG_FILE="$sb/loadavg-busy" \
+ IMAGEGEN_URL=http://127.0.0.1:8188 \
+ run --style manga-panel --subject 'x' 2>&1 >/dev/null)"
+rc=$?
+ck "load gate: exit 0 skip" "0" "$rc"
+ck "load gate: no curl calls" "" "$(cat "$sb/curl-hits" 2>/dev/null)"
+case "$err" in *"loadavg1 99.00 busy"*) ck "load gate: skip note" ok ok ;;
+*) ck "load gate: skip note" "busy skip note" "$err" ;; esac
+
 # --- managed-start lifecycle (operator directive 2026-09-12) ---
 mkdir -p "$sb/server"
 export STUB_SERVER_MARKER="$sb/server/marker"
@@ -193,11 +214,6 @@ sleep 120 &
 wait $!
 EOF
 chmod +x "$sb/shim/stub-server"
-cat >"$sb/shim/rocm-smi" <<'EOF'
-#!/usr/bin/env bash
-printf 'GPU[0]\t\t: VRAM Total Used Memory (B): %s\n' "${VRAM_STUB_USED:-1000000000}"
-EOF
-chmod +x "$sb/shim/rocm-smi"
 clean() {
  rm -f "$sb/curl-hits"
  rm -rf "$outdir"/* "$outdir"/.imagegen-* 2>/dev/null
@@ -275,6 +291,7 @@ ck "trap: child killed" "" "$(pgrep -f "$sb/shim/stub-server" 2>/dev/null)"
 homedir="$sb/home"
 err="$(PATH="$sb/shim:$PATH" CURL_STUB_HITS="$sb/curl-hits" \
  CURL_STUB_MODE=managed-up IMAGEGEN_URL=http://127.0.0.1:8188 \
+ IMAGEGEN_LOADAVG_FILE="$sb/loadavg" \
  IMAGEGEN_STYLES_TSV="$sb/automation/config/imagegen-styles.tsv" \
  HNGH_HOME_DIR="$homedir" \
  bash "$sb/automation/jobs/imagegen-submit.sh" --style manga-panel \

@@ -60,6 +60,11 @@ class PlanIdentity(unittest.TestCase):
         self.env = {
             **os.environ,
             "DRY_RUN": "0",
+            # per-run TMPDIR: accept-plans serializes gate runs under
+            # $TMPDIR/hngh-gate.lock, which defaults to the host-wide
+            # /tmp lock -- a concurrent real gate evaluation on this
+            # host would flake these tests with "gate-lock-busy".
+            "TMPDIR": str(self.root),
             "HNGH_HOME": str(self.kernel),
             "HNGH_AUTOMATION_ROOT": str(self.auto),
             "ACCEPT_KERNEL_GATE": "%s 0" % self.gate,

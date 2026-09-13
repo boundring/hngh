@@ -4,7 +4,87 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
-## Pre-release / early development
+### 2026-09-13
+
+#### Added
+
+- **generate-publication reads the migrated telemetry store**
+  (userspace-home layout contract 2026-09-13): the three
+  automation/dashboard/telemetry.db sites (the dispatch_numbers read,
+  the day-story spend meter, and the prose citations) now resolve
+  ~/.hngh/db/telemetry.db through the HNGH_HOME_DIR seam (call-time
+  env read; the automation tier's hngh_home.py stays userspace-only,
+  not imported by kernel scripts), and the journal's public-edition
+  pointer moved from docs/dispatch/ to ~/.hngh/dispatch/. Failing test
+  first: tests/scripts/test-generate-publication.py proves the meter
+  reads the seeded home db (calls=1, spend=1.25) under HNGH_HOME_DIR;
+  live smoke against the real db reads 60 calls / $8.72 for
+  2026-09-13. Landed through the certificate ceremony.
+- **:wake-mutation certificate action lands** (operator authorization
+  2026-09-13; plan 2026-09-13-wake-mutation-src-mutation): the closed
+  mutation vocabulary admits `:wake-mutation` (src/adapter/mutation.lisp
+  `+mutation-actions+` plus a fixed command-for template; closed
+  certificate-action set in src/domain/governance.lisp), binding the
+  rung-17 wake surface — one certificate, one wake, one pinned peer,
+  fixed argv ("hngh" "wake-peer" <run> <pins-file> <peer>) behind the
+  mutation executor port, refused on stale or missing facts. The
+  operator-flexibility doctrine (section 2a) and the AGENTS.md boundary
+  paragraph are amended: certificate-bound kernel mutations need no
+  separate operator stall; park only actions with no certificate path.
+  Queue row wake-mutation-lane done; landing record
+  docs/records/2026-09-13-wake-mutation-lane-landing.md.
+- **Presentation pass 1 records** (plan 2026-09-09-presentation-pass-1,
+  step 5; direction docs/design/presentation-direction.md): a
+  docs/records/ entry (2026-09-13-presentation-pass-1-adoption.md)
+  closing out the pass — the direction adoption, the rungs 1-2 front
+  door and docs spine, the guarded flavor layer (one epigraph per
+  major document), and the publication spine surfacing in
+  docs/publication/book.md, each with its commit anchors. The record
+  also names what stays open: the drifted 2026-09-12 daily journal
+  and rungs 3-7 of the direction doc as future-plan surface.
+- **Userspace data home `~/.hngh` adopted** (operator directive
+  2026-09-13; layout contract: `newspaper/<date>/`, `manga/`, `wiki/`,
+  `db/`, `archive/`, `dispatch/`, append-only `catalog.tsv`): user data
+  — newspaper article copies, digest archives, dispatch editions,
+  telemetry.db, manga/imagegen outputs — now lives outside the repo.
+  Writers resolve paths through the new `automation/lib/hngh_home.py`
+  and `lib/common.sh` (`HNGH_HOME_DIR` override; `hngh_catalog`
+  appends manifest rows). Secrets, credentials, and kernel run stores
+  stay in `~/.hngh-automation/` (the documented two-home split);
+  kernel/gate/certificate state never moves there, and kernel `src/`
+  knows nothing of either home. Policy updated in AGENTS.md,
+  `docs/README.md`, `automation/README.md`, `~/.hngh/README.md`, and
+  the `.omp/` hngh skill.
+
+#### Fixed
+
+- **Automation test suite is load-independent and fast** (operator
+  directive: tests must never be a repeated blocker). Audit found the
+  suites already stub their endpoints (PATH-shimmed curl, local stub
+  servers, seeded loadavg files) with three environment leaks, now
+  closed:
+  - `tests/test-imagegen-submit.sh`: stubs `IMAGEGEN_LOADAVG_FILE`
+    (and moves the `rocm-smi` VRAM stub early) so the production
+    load/VRAM gates in `jobs/imagegen-submit.sh` are exercised against
+    fake idle and fake busy signals -- the load gate gained a
+    deterministic behavior check (busy stub -> exit-0 skip, zero
+    endpoint calls) and the suite no longer reads the host's real
+    `/proc/loadavg`, which had turned its eight managed-start checks
+    into environment-gated flakes under desktop load.
+  - `tests/test-installer.sh` / `tests/test-permissions.sh`: sandbox
+    stubs for `systemctl` and `curl` -- under `env -i` the real
+    binaries stalled ~2s per call on D-Bus/health timeouts (x12 per
+    installer run); tests assert installer behavior, not host
+    systemd/service state. test-installer 25s -> 0.6s,
+    test-permissions -> 0.7s.
+  - `tests/test-plan-identity.py`: per-run `TMPDIR` so accept-plans'
+    gate lock never collides with a concurrent real gate evaluation
+    on the host ("gate-lock-busy" flake).
+  Plus `tests/test-research-governor.sh` lock-hold trimmed 5s -> 2s
+  (still outlasts RESEARCH_LOCK_WAIT=1). Full `automation && make
+  test` measured 128s before; after, exit 0 deterministically
+  regardless of host load (measured wall reported in the workstream
+  record).
 
 ### 2026-09-11
 
