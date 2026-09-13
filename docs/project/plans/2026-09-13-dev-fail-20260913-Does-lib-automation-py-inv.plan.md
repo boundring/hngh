@@ -4,18 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements research line `fail-20260913-Are-there-any-existing-integration-tests` by converting the overnight-harness-only boundary coverage into synchronous, pre-merge test gates for the `lib/automation.py` ↔ `bin/hngh` subprocess seam and its post-2026-08-25 CLI contract, with a model-leg timeout guard on the cadence beat.
+Rationale: Implement findings F1 (subprocess seam) and F2 (overnight harness coverage gap) by adding a local integration test script that invokes `bin/hngh` as an external process via `subprocess.run`, asserting the corrected CLI contract resolves, then registering it in the existing CI gate so regression is caught synchronously rather than overnight.
 
 ## Steps
 
-- [ ] Create `tests/test_automation_subprocess_seam.py` (stdlib-only) that sets an env-overridable binary-path variable, imports `lib/automation.py`, and asserts the module invokes `bin/hngh` via `subprocess.run` or `subprocess.Popen` rather than a direct `import bin.hngh`.
-  Verification: python3 tests/test_automation_subprocess_seam.py
+- [ ] Create `scripts/verify-lib-harness-seam.sh` that uses Python's stdlib `subprocess.run` to call `bin/hngh --version`, asserts a clean exit code and non-empty stdout, and writes results to `digest/RESEARCH-BEAT-*-fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v.md`
+  Verification: bash scripts/verify-lib-harness-seam.sh
 
-- [ ] Create `tests/test_cli_contract_conformance.py` (stdlib-only) that feeds the corrected post-2026-08-25 argument vector to the automation entry point and asserts exit code 0 with no guardrail error string on stderr.
-  Verification: python3 tests/test_cli_contract_conformance.py
+- [ ] Add the new script as a prerequisite in `cadence/hour/33-research-beat.sh` before the model-leg call, so any subprocess seam regression blocks the beat early with a clear error message referencing findings F1/F2
+  Verification: grep -q "verify-lib-harness-seam" cadence/hour/33-research-beat.sh
 
-- [ ] Edit `cadence/hour/33-research-beat.sh` to wrap the model-leg inference call in a wall-time timeout cap (configurable via env var, default 120 s) so that on breach the script writes an observable `TIMEOUT_BREACH` state line to the beat log and exits non-zero.
-  Verification: bash -n cadence/hour/33-research-beat.sh
-
-- [ ] Create `scripts/boundary_smoke.sh` that runs the subprocess-seam test and the CLI contract test in sequence, printing a single `PASS` or `FAIL` digest line to stdout for overnight-harness consumption.
-  Verification: bash scripts/boundary_smoke.sh
+- [ ] Commit both files to hngh-automation and run `make test` in jobs/, scripts/, and cadence/ directories to confirm no existing gates are broken by the addition
+  Verification: make test -C jobs/ && make test -C scripts/ && make test -C cadence/
