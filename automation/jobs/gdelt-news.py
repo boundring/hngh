@@ -43,6 +43,8 @@ import urllib.request
 import zipfile
 from datetime import datetime, timedelta, timezone
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 LASTUPDATE_URL = os.environ.get(
     "GDELT_LASTUPDATE_URL",
     "https://data.gdeltproject.org/gdeltv2/lastupdate.txt")
@@ -57,6 +59,95 @@ ROOTS = {  # CAMEO root codes (EventRootCode #28), manual table in ch. 6
 }
 WORLD_CRITICAL, NOTABLE, GOOD_NOTABLE = 60.0, 20.0, 15.0
 MAX_WORLD, MAX_GOOD = 4, 2  # items per lane per block
+
+# Category front structure: a deterministic CAMEO mapping (root code
+# first, QuadClass fallback) so every Deck A item nests under a section
+# header. GKG THEMES overlap (Economics/Technology/Culture from theme
+# prefixes) applies only when a fetch carries themes -- the export lane
+# does not fetch GKG today; the hook is exercised by tests.
+CATEGORY_ROOTS = {
+    "13": "Conflict", "15": "Conflict", "17": "Conflict",
+    "18": "Conflict", "19": "Conflict", "20": "Conflict",
+    "14": "Politics",
+    "01": "Politics", "02": "Politics", "03": "Politics",
+    "04": "Politics", "09": "Politics", "10": "Politics",
+    "11": "Politics", "12": "Politics", "16": "Politics",
+    "05": "World News", "07": "World News", "08": "World News",
+    "06": "Economics",
+}
+CATEGORY_QUADS = {"1": "Politics", "2": "Economics",
+                  "3": "Politics", "4": "Conflict"}
+THEME_CATEGORIES = (  # (GKG THEME prefix, category); first match wins
+    ("MILITARY", "Conflict"), ("WAR", "Conflict"),
+    ("ECON", "Economics"), ("MARKET", "Economics"), ("STOCK", "Economics"),
+    ("TECH", "Technology"), ("CULTURE", "Culture"), ("ARTS", "Culture"),
+    ("SPORT", "Culture"), ("POLITIC", "Politics"),
+)
+
+
+def category_of(item):
+    """Ranked item -> section-front category. GKG theme overlap beats
+    the CAMEO table when themes are present; root code beats QuadClass;
+    fail-closed default World News."""
+    for theme in item.get("themes") or ():
+        for prefix, cat in THEME_CATEGORIES:
+            if theme.upper().startswith(prefix):
+                return cat
+    return CATEGORY_ROOTS.get(item["root"]) or \
+        CATEGORY_QUADS.get(item.get("quad", ""), "World News")
+
+
+POLISH_BUDGET = "2048"
+
+_NA = None
+
+
+def _na():
+    """jobs/news-articles.py loaded once for its model_call seam (the
+    shell seam lives there; this lane renders fetched content as inert
+    data only, per the external-content guard)."""
+    global _NA
+    if _NA is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "news_articles", os.path.join(ROOT, "jobs",
+                                          "news-articles.py"))
+        _NA = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_NA)
+    return _NA
+
+
+def polish_headline(item, raw):
+    """Raw slug headline + wire data -> one rational headline sentence,
+    via the local model chain. Fail-closed: chain down -> the raw
+    headline passes through unchanged (never empty, never invented)."""
+    if os.environ.get("GDELT_NEWS_POLISH", "1") != "1":
+        return raw
+    actors = item["actors"] or "unidentified parties"
+    out = _na().model_reply(
+        """You are the headline desk of a newspaper.
+Write ONE clean newspaper headline from the wire data: a single sentence,
+inverted pyramid, plain English, ASCII, at most 18 words. Name the actor
+and the action. No source names, no significance adjectives, no invented
+facts: restate only what the raw headline and wire data contain.
+Output the headline text only.
+
+raw headline: %s
+wire event: %s between %s""" % (raw, ROOTS.get(item["root"], "EVENT"),
+                                actors), "", POLISH_BUDGET)
+    if not out or "\n" in out or len(out) > 200:
+        return raw  # fail-closed: raw slug headline passes through
+    # fetched content = data: the model's rewrite never carries shell
+    # primitives or imperative-voice signatures (the bigeye precedent).
+    if _HOSTILE_RE.search(out):
+        return raw
+    return out.strip(' "\'')
+
+
+_HOSTILE_RE = re.compile(
+    r"(?:rm|sudo|dd|mkfs|chmod|chown)\s+-"
+    r"|(?:curl|wget)\b[^ ]*\|\s*(?:ba)?sh\b"
+    r"|&&|\|\s*(?:ba)?sh\b")
 
 
 def _ascii(text):
@@ -145,7 +236,7 @@ def rank_rows(raw_csv, hhmm):
             item = {"lane": "good", "score": ns * (tone + 5.0)}
         else:
             continue
-        item.update(url=url, root=root, hhmm=hhmm,
+        item.update(url=url, root=root, quad=quad, hhmm=hhmm,
                     actors="/".join(a for a in (row[6], row[16]) if a))
         prev = best.get(url)
         if prev is None or item["score"] > prev["score"]:
@@ -178,9 +269,11 @@ def render_block(items, hhmm, day):
         if rank > 0 and tag == "CRITICAL":
             tag = "NOTABLE"  # one CRITICAL lead per block
         who = item["actors"] + ": " if item["actors"] else ""
-        lines.append("%s: %s %s%s (%s)" % (
-            tag, ROOTS.get(item["root"], "EVENT"), who,
-            _ascii(_headline(item["url"])), _ascii(item["url"])))
+        raw = _ascii(_headline(item["url"]))
+        head = _ascii(polish_headline(item, raw))
+        lines.append("%s: [%s] %s %s%s (%s)" % (
+            tag, category_of(item), ROOTS.get(item["root"], "EVENT"), who,
+            head, _ascii(item["url"])))
     return "\n".join(lines) + "\n" if len(lines) > 2 else ""
 
 
@@ -250,6 +343,8 @@ def main(argv):
             picked.append(i); world += 1
         elif i["lane"] == "good" and good < MAX_GOOD:
             picked.append(i); good += 1
+    for i in picked:
+        i["category"] = category_of(i)
     block = render_block(picked, hhmm, day)
     if not block.strip():
         return 0

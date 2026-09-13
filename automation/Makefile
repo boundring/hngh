@@ -67,6 +67,7 @@ test:
 	python3 -B tests/test-dashboard-p1-ui.py
 	python3 -B tests/test-digest-html.py
 	python3 -B tests/test-gdelt-news.py
+	python3 -B tests/test-news-desk.py
 	bash tests/test-news-articles.sh
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-manga-collage.py
@@ -128,6 +129,7 @@ test:
 	bash tests/test-permissions.sh
 	bash tests/test-imagegen-submit.sh
 	bash tests/test-dispatch.sh
+	python3 -B tests/test-digest-local.py
 	bash scripts/lint-identifiers.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 

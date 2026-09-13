@@ -25,6 +25,7 @@ NEWS_ARTICLES_IMAGEGEN_CMD, NEWS_ARTICLES_FETCH=0.
 usage: jobs/news-articles.py <YYYY-MM-DD> [--digest PATH]
 """
 import json
+import hashlib
 import os
 import re
 import subprocess
@@ -38,6 +39,7 @@ DIGESTS = os.path.join(ROOT, "digest")
 ARTICLES = os.path.join(REPO, "docs", "articles")
 IMAGES = os.path.join(REPO, "docs", "media", "news")
 IMAGEGEN = os.path.join(ROOT, "jobs", "imagegen-submit.sh")
+PROFILES = os.path.join(ROOT, "config", "writer-profiles.tsv")
 MODEL_BUDGET = "1024"
 IMAGE_BUDGET = 3
 FETCH_TIMEOUT = 10
@@ -84,6 +86,35 @@ URL_RE = re.compile(r"\((https?://[^)]+)\)\s*$")
 PLACE_RE = re.compile(r"^[A-Z][A-Z-]+ ([A-Z][A-Z0-9 /&'.-]+):\s")
 
 
+def load_profiles(path=None):
+    """writer-profiles.tsv -> [{name, beat, register, notes}] (the
+    editorial cast; comment lines skipped). Empty list when absent."""
+    path = path or PROFILES
+    rows = []
+    try:
+        for line in open(path, encoding="utf-8"):
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            f = line.split("\t")
+            if len(f) >= 4:
+                rows.append({"name": f[0], "beat": f[1],
+                             "register": f[2], "notes": f[3]})
+    except OSError:
+        pass
+    return rows
+
+
+def pick_profile(date, slug, profiles=None):
+    """Deterministic rotation: seed = date + slug, hashed into the cast
+    list. Articles on different days rotate through different profiles."""
+    profiles = profiles if profiles is not None else load_profiles()
+    if not profiles:
+        return None
+    seed = hashlib.sha1((date + "\x00" + slug).encode("utf-8")).digest()
+    return profiles[seed[0] % len(profiles)]
+
+
 def collect_items(digest_path):
     """Digest text -> ranked story items: [{tag, head, rest, url, time,
     sources, place}]. CRITICAL first, then NOTABLE, CONTEXT; stable
@@ -108,6 +139,10 @@ def collect_items(digest_path):
             m = URL_RE.search(body)
             url = m.group(1) if m else ""
             head, rest = dh.split_headline(body)
+            cat_m = dh.CAT_RE.match(head)
+            category = cat_m.group(1) if cat_m else ""
+            if cat_m:
+                head = head[cat_m.end():]
             # the display title strips a trailing source URL; the
             # digest_headline join key keeps the exact split-headline text
             title = URL_RE.sub("", head).strip() if m else head
@@ -118,6 +153,7 @@ def collect_items(digest_path):
             items.append({"tag": tag, "head": head, "title": title,
                           "rest": rest, "url": url, "time": s["time"],
                           "sources": s["sources"],
+                          "category": category,
                           "place": p.group(1).title() if p else ""})
     items.sort(key=lambda i: TAG_RANK[i["tag"]])
     return items
@@ -154,7 +190,7 @@ def fetch_source(url):
     return None
 
 
-def build_prompt(item, source_text, ledger_line):
+def build_prompt(item, source_text, ledger_line, profile=None):
     """The article prompt: story data + register law + deadpan-closer
     guidance. The data block is the ONLY permitted fact source."""
     src = ("SOURCE PAGE TEXT (verbatim extract, may be truncated):\n%s"
@@ -187,10 +223,20 @@ House law (writing register, LAW):
 - Never invent names, numbers, quotes, or events beyond the data above;
   unverifiable gaps read "unverified per source".
 
+%s
 File the article now.""" % (item["title"], item["tag"],
                             item["place"] or "unlisted",
                             item["url"] or "none",
-                            ledger_line or "none on record", src)
+                            ledger_line or "none on record", src,
+                            """WRITER PROFILE (voice, never facts): you
+file as "%s" -- %s. Register: %s. %s The profile shapes cadence and
+framing only; every fact still comes from the story data above. Never
+add scenes, quotes, names, or events the persona's flavor might
+suggest; the character lives in the prose, not in invented content."""
+                            % (profile["name"], profile["beat"],
+                               profile["register"], profile["notes"])
+                            if profile else
+                            "No writer profile on rotation this edition.")
 
 
 def pick_pin():
@@ -211,12 +257,12 @@ def pick_pin():
     return "local"
 
 
-def model_reply(prompt, pin):
+def model_reply(prompt, pin, budget=MODEL_BUDGET):
     """One chain call through lib/model.sh model_call (the research-beat
     seam). Returns the text or '' (archive-only = no article; the job
     never fabricates a fallback)."""
     cmd = os.environ.get("NEWS_ARTICLES_MODEL_CMD") or \
-        '. "%s/lib/model.sh"; model_call %s' % (ROOT, MODEL_BUDGET)
+        '. "%s/lib/model.sh"; model_call %s' % (ROOT, budget)
     env = dict(os.environ)
     env.update({"AUTOMATION_ROOT": ROOT, "MODEL_PIN": pin,
                 "STATE_FILE": os.path.join(ROOT, "STATE.md")})
@@ -280,7 +326,7 @@ def ledger_line(dh_sections):
     return ""
 
 
-def write_article(date, item, body, image, used):
+def write_article(date, item, body, image, used, profile=None):
     """Commit one article under docs/articles/<date>/<slug>.md.
     Returns the file path. The first comment carries the metadata the
     editions read back (digest-headline joins the Deck-A item)."""
@@ -288,7 +334,9 @@ def write_article(date, item, body, image, used):
     meta = {"date": date, "slug": slug,
             "digest_headline": item["head"], "url": item["url"],
             "place": item["place"], "provenance": item["provenance"],
-            "model": used, "image": image}
+            "model": used, "image": image,
+            "category": item.get("category", ""),
+            "profile": profile["name"] if profile else ""}
     src_note = ("the cited source page" if item["provenance"] == "source"
                 else "wire data alone (source page unreachable)")
     lines = ["<!-- article: %s -->" % json.dumps(meta, sort_keys=True),
@@ -299,6 +347,9 @@ def write_article(date, item, body, image, used):
               "2.0 event data and %s. Nothing beyond the cited data is "
               "asserted; gaps read \"unverified per source\". Model draft: "
               "%s." % (src_note, used or "unattributed"), ""]
+    if profile:
+        lines += ["Editorial voice: %s (the hngh editorial cast; voice "
+                  "only, no invented content)." % profile["name"], ""]
     d = os.path.join(ARTICLES, date)
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, slug + ".md")
@@ -329,7 +380,9 @@ def generate(date, digest_path=None):
         if os.environ.get("NEWS_ARTICLES_FETCH") != "0":
             source_text = fetch_source(item["url"])
         item["provenance"] = "source" if source_text else "wire"
-        body = model_reply(build_prompt(item, source_text, ledger),
+        profile = pick_profile(date, slugify(item["title"]))
+        body = model_reply(build_prompt(item, source_text, ledger,
+                                        profile),
                            pick_pin())
         if not body:
             continue  # chain down: fail-closed, never fabricate
@@ -338,8 +391,8 @@ def generate(date, digest_path=None):
             image = make_image(item["title"][:120])
             if image:
                 images += 1
-        made.append(write_article(date, item, body, image,
-                                  _last_used()))
+        made.append(write_article(date, item, body, image, _last_used(),
+                                  profile=profile))
     try:
         n = int(open(os.path.join(ROOT, "state",
                                   "news-articles-count")).read().strip())

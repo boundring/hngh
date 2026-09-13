@@ -256,12 +256,12 @@ def render_page(date, repo):
                 if tagless.startswith(t):
                     tagless = tagless[len(t):]
                     break
-            head, _rest = dh.split_headline(tagless)
+            head, _rest = dh.split_headline(dh.split_cat(tagless)[1])
             art = articles.get(head)
             if QUIET_RE.search(it):
                 out.append("- %s" % _ascii(it))
                 continue
-            head, rest = dh.split_headline(it)
+            head, rest = dh.split_headline(dh.split_cat(it)[1])
             out.append("- **%s**" % _ascii(head))
             if not rest:
                 rest = ("Standfirst: filed via %s, screened by %s at "
