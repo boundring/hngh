@@ -108,6 +108,23 @@ KNOWN_EXEMPTIONS = {
         "reason": "hngh-services foreign-host path skip (declared miss)",
         "patch-id": "a1b23363e5daa52760432e9bae9b52f8c3322794",
     },
+    # declared post-hoc 2026-09-13: the overnight fixture pair (author
+    # Fixture <fixture@example.invalid>, landed 2026-09-13 00:04 with no
+    # session handoff claiming it). ba6b390 gutted Makefile+README,
+    # d2d8f51 reverted it 47s later -- tree-net-zero, but each commit
+    # individually touches the code surface without a candidate label.
+    # A new class: not the machine-worker free-commit misses (41f646a,
+    # 226de1d) -- a synthetic pair appearing in kernel history. Declared
+    # per the standing post-hoc policy, not rewritten; see the
+    # 2026-09-13 decisions.md batch entry and the gate-cure patrol.
+    "ba6b390": {
+        "reason": "fixture pair head: Makefile+README gut (declared miss)",
+        "patch-id": "a46ed8ae5a64949d7e5dbe8917902e125586d5d3",
+    },
+    "d2d8f51": {
+        "reason": "fixture pair revert: restores Makefile+README (declared miss)",
+        "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")

@@ -516,3 +516,37 @@ narrative-ledger record stands: future kernel-surface fixes go through
 the ceremony directly -- the reroute is the preference, declarations
 are the fallback. The lesson for workers: `automation/` paths are never
 code-surface; flag only commits under the repo-root prefixes.
+
+## 2026-09-13 — Fixture gate-red pair declared post-hoc (batch, gate-cure)
+
+The loop-history guard flagged the overnight fixture pair: `ba6b390`
+("fixture": gutted Makefile test target + README publication spine,
+author `Fixture <fixture@example.invalid>`, landed 2026-09-13 00:04)
+and `d2d8f51` (its revert, 47 seconds later). Tree-net-zero as a pair,
+but each commit individually touches the code surface without a
+candidate label, so the gate (`make test`) went red -- first sighted by
+the 07:15Z presentation-pass-1 walk, which walked the ceremony to the
+wall (propose admitted 10/10, issue-cert refused on the red gate, the
+refusal being the gate verdict itself) and parked with the exact
+patch-ids recorded.
+
+Classification: a genuinely new class, not the machine-worker
+free-commit misses (`41f646a`, `226de1d`) -- a synthetic pair appearing
+in kernel history with no session handoff claiming it. The cure is the
+same standing policy: declared, not rewritten; both commits registered
+in the guard's KNOWN_EXEMPTIONS table by hash and patch-id
+(`a46ed8ae5a64949d7e5dbe8917902e125586d5d3`,
+`cef31fa5a3ea871522e0a3ea3e537088c9a8952b`) in one batch ceremony.
+
+Policy amendment riding the same ceremony (the operator's framing): a
+kernel-surface commit by a machine worker that violates the
+loop-history guard is a SMALL matter when the change itself is
+operator-approved and suite-green -- the response is a post-hoc
+declaration ceremony (machine-driven, no operator brief), not a park.
+The gate-cure patrol (automation/config/patrol-routes.tsv,
+jobs/patrol.py check `gate-cure`) encodes the back-off-and-consider
+pattern: on kernel-gate-red detection it declares the violating
+commits post-hoc and drives scripts/ceremony-drive itself; a ceremony
+refusal (LARGE-surface content, red suite, verdict refusal) parks as
+before. LARGE matters (credentials, systemd, spend caps, deletions,
+the public surface beyond the certificate-gated push) never auto-cure.

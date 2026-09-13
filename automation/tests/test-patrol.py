@@ -120,6 +120,25 @@ class Patrol(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return r, (self.sb / "alerts.tsv").read_text().splitlines()
 
+    def _red_guard(self, subjects):
+        """A kernel guard fixture that reports violations and exits 1,
+        carrying a KNOWN_EXEMPTIONS table the cure can append to."""
+        lines = ["#!/usr/bin/env python3",
+                 "KNOWN_EXEMPTIONS = {",
+                 "    \"seed123\": {",
+                 "        \"reason\": \"seed\",",
+                 "        \"patch-id\": \"%s\","
+                 % ("0" * 40),
+                 "    },",
+                 "}",
+                 "print('loop-history guard: %d violation(s):')"
+                 % len(subjects)]
+        for s in subjects:
+            lines.append("print('  %s')" % s)
+        lines.append("raise SystemExit(1)")
+        (self.kernel / "tests" / "scripts"
+         / "test-loop-history-guard.py").write_text("\n".join(lines) + "\n")
+
     # --- (1) a fresh healthy ledger is quiet ---
     def test_healthy_ledger_is_quiet(self):
         r, alerts = self.run_walk()
@@ -127,7 +146,8 @@ class Patrol(unittest.TestCase):
                           if ln.startswith("FAIL")], [])
         self.assertEqual(alerts, [])
         # feeds emits 3 PASSes (one per feed), the other 7 routes one each
-        self.assertEqual(r.stdout.count("\nPASS "), 9)
+        # (gate-cure's green-gate PASS included)
+        self.assertEqual(r.stdout.count("\nPASS "), 10)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -182,7 +202,76 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 8)  # the walk continued
+        self.assertEqual(len(results), 9)  # the walk continued
+
+    # --- gate-cure: a green gate is quiet, no ceremony is driven ---
+    def test_gate_cure_green_quiet(self):
+        r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                       "date": "2026-09-12"})
+        self.assertEqual(r["fails"], [])
+        self.assertEqual(r["passes"], [("gate-cure", "gate green")])
+
+    # --- gate-cure: a red gate declares and drives the ceremony ---
+    def test_gate_red_fires_ceremony(self):
+        self._red_guard(["ba6b390 fixture",
+                         "d2d8f51 Revert \"fixture\""])
+        (self.kernel / "docs" / "project").mkdir(parents=True)
+        (self.kernel / "docs" / "project" / "decisions.md").write_text(
+            "# Decisions\n")
+        log = self.sb / "cure-log.tsv"
+        stub = self.sb / "cure-stub.sh"
+        stub.write_text("#!/usr/bin/env bash\n"
+                        "printf '%%s\\n' \"$*\" >>\"%s\"\n"
+                        % (log))
+        stub.chmod(0o755)
+        os.environ["PATROL_CEREMONY_BIN"] = str(stub)
+        self.addCleanup(os.environ.pop, "PATROL_CEREMONY_BIN", None)
+        self._mod.patch_id = lambda kernel, sha: "p" * 40
+        self._mod.commit_subject = lambda kernel, sha: "fixture"
+        r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                       "date": "2026-09-12"})
+        self.assertEqual(r["fails"], [])
+        self.assertTrue(r["passes"][0][1].startswith("declared ba6b390"))
+        # the guard table carries both declared entries + patch-id
+        guard = (self.kernel / "tests" / "scripts"
+                 / "test-loop-history-guard.py").read_text()
+        self.assertIn('"ba6b390"', guard)
+        self.assertIn('"d2d8f51"', guard)
+        self.assertIn("p" * 40, guard)
+        self.assertIn("declared miss, gate-cure patrol", guard)
+        # decisions.md carries the dated auto-entry
+        dec = (self.kernel / "docs" / "project" / "decisions.md").read_text()
+        self.assertIn("## 2026-09-12 — Kernel-gate red declared post-hoc",
+                      dec)
+        # the ceremony was driven once with objective + both files
+        args = log.read_text().splitlines()
+        self.assertEqual(len(args), 1)
+        self.assertIn("declare kernel-gate violations post-hoc", args[0])
+        self.assertIn("test-loop-history-guard.py", args[0])
+        self.assertIn("decisions.md", args[0])
+
+    # --- gate-cure: a ceremony refusal parks (the LARGE boundary) ---
+    def test_cure_refusal_fails(self):
+        self._red_guard(["ba6b390 fixture"])
+        (self.kernel / "docs" / "project").mkdir(parents=True)
+        (self.kernel / "docs" / "project" / "decisions.md").write_text(
+            "# Decisions\n")
+        stub = self.sb / "cure-stub.sh"
+        stub.write_text("#!/usr/bin/env bash\n"
+                        "echo 'refused: LARGE-surface content'\n"
+                        "exit 1\n")
+        stub.chmod(0o755)
+        os.environ["PATROL_CEREMONY_BIN"] = str(stub)
+        self.addCleanup(os.environ.pop, "PATROL_CEREMONY_BIN", None)
+        self._mod.patch_id = lambda kernel, sha: "p" * 40
+        self._mod.commit_subject = lambda kernel, sha: "fixture"
+        r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                       "date": "2026-09-12"})
+        self.assertEqual(r["passes"], [])
+        self.assertEqual(r["fails"],
+                         [("kernel", "gate-cure-refused",
+                           "ceremony-drive rc=1: "
+                           "refused: LARGE-surface content")])
 
     # --- (8) a runner crash files one alert and exits 0 ---
     def test_runner_crash_suppressed_exit_zero(self):
