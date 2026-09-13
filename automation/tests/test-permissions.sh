@@ -122,6 +122,17 @@ mkdir -p "$SANDBOX/all"
 for t in python3 git curl jq flock sqlite3 sbcl; do
   p="$(command -v "$t")" && ln -sf "$p" "$SANDBOX/all/$t"
 done
+# systemctl stub: env -i sandbox makes the real binary stall ~2s per call
+# on a D-Bus timeout; permissions tests assert installer behavior, not
+# the host's user-manager state.
+printf '#!/usr/bin/env bash\necho running\n' >"$SANDBOX/all/systemctl"
+chmod +x "$SANDBOX/all/systemctl"
+# curl stub: svc_health probes registry URLs with curl -m 2 -> 2s stalls
+# each in the env -i sandbox; these tests assert installer behavior, not
+# live service health. Exit 7 = connection refused = "down" to svc_health.
+rm -f "$SANDBOX/all/curl" # the prereq loop symlinked the real curl
+printf '#!/usr/bin/env bash\nexit 7\n' >"$SANDBOX/all/curl"
+chmod +x "$SANDBOX/all/curl"
 if [ -f "$INSTALLER" ]; then
   choices="$SANDBOX/installer-choices.json"
   profout="$SANDBOX/resolved-profile.json"

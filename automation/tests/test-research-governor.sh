@@ -122,7 +122,7 @@ rm -f "$sb/ff/failfirst-research"
  exec 9>"$sb/lock-ext"
  flock 9
  touch "$sb/locked"
- sleep 5
+ sleep 2
 ) &
 lockpid=$!
 while [ ! -e "$sb/locked" ]; do sleep 0.05; done
