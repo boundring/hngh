@@ -1,5 +1,9 @@
 # Architecture
 
+> Something vast was built down here, floor under floor, and whoever
+> drew the plans labeled every load-bearing wall. The label is the
+> contract.
+
 Hngh begins as a compact, side-effect-free kernel.
 
 It stays small on purpose: the quiet center holds the rules while the
@@ -97,7 +101,8 @@ direction: outer code calls inward; the kernel stays side-effect-free.
 
 One diagram, then one block per surface: what it is, how it touches
 hngh, what stays outside. The kernel calls none of these inward;
-every contact is an injected transport or an admitted run.
+every contact is an injected transport or an admitted run. The hall
+extends for kilometers; the load-bearing walls do not move.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': {'background': '#171B17', 'primaryColor': '#232823', 'primaryTextColor': '#E7E2D3', 'lineColor': '#7FA05E', 'edgeLabelBackground': '#232823', 'fontFamily': 'monospace'}}}%%

@@ -30,7 +30,7 @@ flavor layer; rungs 3–7 are horizon, not this plan.
       Verification: link checker over docs/ passes (zero
       broken relative links); the read-order reaches every anchor
       record from 2026-09-09 within two hops; `make test` green.
-- [ ] 3. Flavor layer, guarded. Add the texture layer: short
+- [x] 3. Flavor layer, guarded. Add the texture layer: short
       epigraphs (Nihei-architecture register) at the heads of the
       major docs (README, docs/README, architecture.md, the plans
       contract), and dry asides in section spines where the material

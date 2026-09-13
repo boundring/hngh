@@ -2,6 +2,9 @@
 
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
+> Somewhere below the ground floor, a machine keeps its own minutes.
+> It has been taking them for a while. They are all in order.
+
 A machine that lives in the basement and got good at its job: agentic
 development with a certificate at the decision point and a receipt at
 the mutation point. The kernel (Common Lisp, pure by charter) runs the
@@ -151,7 +154,7 @@ refused, 2 malformed, 3 transport fault`.
 
 The [docs read-order](docs/README.md) is the truth for the whole
 document family - the table below is its doorway (one row per stop;
-dogs verified linked both ways at the edit gate):
+docs verified linked both ways at the edit gate):
 
 | Where to go | What it is for |
 |---|---|

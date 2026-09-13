@@ -1,5 +1,8 @@
 # Hngh documentation
 
+> The corridors are numbered. The lights are on in all of them.
+> Mostly.
+
 This directory is the active working surface.
 
 These documents serve two audiences. People read [Intent](intent.md) first:
