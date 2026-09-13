@@ -56,22 +56,20 @@ SFX_BANK = {
 # Margin notes: the second small text element a sparse panel needs
 # (hand-written register, kept dry).
 MARGIN_NOTES = [
-    "note: it was, in fact, not fine.",
+    "fine.",
     "corridor B, 03:07. again.",
     "initials: [illegible]",
     "the bolt held. the diagram lied.",
-    "stamped twice by mistake. no retractions.",
-    "witnesses: one cat, unimpressed.",
+    "stamped twice by mistake. no retractions were filed.",
+    "witnesses: one cat, unimpressed, unbothered.",
     "the floor plan ends here. the floors do not.",
-    "mushroom season in the storeroom again.",
-    "the cheek grew back. that was the problem.",
-    "tengu sighted near stairwell 12. filed, not chased.",
-    # Fan-translation dialogue register (policy clause f; titles cited
-    # in docs/design/manga-style-research.md).
-    "the mechanic never spoke. the wrench did the talking.",  # BLAME!
-    "death is pending. the ledger can wait.",                 # Dai Dark
-    "the mask talked back. logged, not believed.",            # Dorohedoro
-    "he said the hole would close. it is still open.",        # Dorohedoro
+    "tengu sighted near stairwell 12. filed, not chased. third time this month, fourth stairwell.",
+    "the mechanic never spoke. the wrench did the talking for both of them.",
+    "death is pending.",
+    "the mask talked back. logged, not believed.",
+    "he said the hole would close. it is still open.",
+    "mushrooms in the storeroom again. the requisition remains unsigned and the filing cabinet smells faintly of rain.",
+    "the cheek grew back. that was the actual problem this time.",
 ]
 
 # Comedy banks (2026-09-12 publication review): pools keyed by CAMEO
@@ -144,27 +142,22 @@ CAST_JSON = os.path.join(ROOT, "config", "manga-cast.json")
 # CARE: knowing the subject deeply enough to play it straight. These
 # caption-voice lines sit above the gag (setup beat), deadpan, factual.
 NARRATIONS = [
-    "Another shift began. The building did not care.",
-    "It was an ordinary day in the hall. That was the problem.",
-    "The paperwork arrived on schedule. Everything else did not.",
-    "The corridor had been quiet for three days. Too quiet, on review.",
-    "The craft of filing was, as ever, underrated.",
-    # Manga-derived callbacks (easter eggs; docs/records/
-    # 2026-09-12-manga-collection-policy.md): the megastructure genre's
-    # own narration register -- a reader who knows the source smiles,
-    # a stranger reads them as original hall flavor.
-    "The builders were still building. Nobody had asked them to stop.",
-    "Somewhere above, a door opened onto a floor no map admitted to.",
-    "The smoke took another clerk. The paperwork went on without him.",
-    # Fan-translation dialogue register (policy clause f): lines seeded
-    # by the collection's translated dialogue -- the translation is the
-    # source, the author's intent already one step removed. Titles
-    # cited per clause (f) in docs/design/manga-style-research.md;
-    # no proper nouns ride the output (clause b subtlety law).
-    "The corridors stayed silent. The work did not.",        # BLAME!
-    "Down was the only direction left. They took it.",       # BLAME!
-    "Nobody died today. The paperwork logged it anyway.",    # Dai Dark
-    "The hall served mushrooms again. Nobody complained twice.",  # Dorohedoro
+    "Shift.",
+    "An ordinary day in the hall. That was the problem.",
+    "The paperwork arrived on schedule.",
+    "Three days of quiet in the corridor. On review, too quiet.",
+    "Filing, as ever, is an underrated craft.",
+    "Somewhere above, a door opened onto a floor no map admits to.",
+    # Distillation register (policy clause f, revised): each line is an
+    # original distillation inspired by the collection's register; the
+    # source is the study, not the line. No citations, no titles, no
+    # proper nouns ride the output (clause b subtlety law).
+    "The builders were still building. Nobody had asked them to stop. Nobody would.",
+    "The smoke took another clerk. The paperwork: unbothered.",
+    "Who counts the floors? Nobody left.",
+    "Down was the only direction left. They took it.",
+    "Nobody died today. The paperwork logged it anyway, because the forms demanded a body count.",
+    "The hall served mushrooms again, and nobody complained twice, which the ledger notes is a record.",
 ]
 SCENES = {
     "bureaucrat": [
@@ -213,32 +206,31 @@ RECOGNITIONS = {
     ],
     "engineer": [
         "The gantry just moved on its own.",
-        "That is not the bolt I tightened.",
-        "The diagram was right. That is worse.",
+        "That is not the bolt I tightened. It is prettier.",
+        "The diagram was right. Worse.",
     ],
     "nightwatch": [
         "Something moved at the end of the hall.",
-        "The candle just went out. Both of them.",
+        "The candle went out. Both of them. At once.",
         "The log is writing itself. Look.",
     ],
 }
 
-# Fan-translation dialogue register (policy clause f): recognition-beat
-# lines seeded by the collection's translated dialogue -- BLAME!'s
-# silence-then-action workers, Dai Dark's morbid deadpan, Dorohedoro's
-# gruff absurdity. Titles cited in docs/design/manga-style-research.md;
-# no proper nouns ride the output (clause b subtlety law).
+# Distillation register (policy clause f, revised): recognition-beat
+# lines are original distillations over the collection's translated
+# register -- the silence-then-action worker, the morbid deadpan, the
+# gruff absurdity. No citations; the study is the provenance record.
 RECOGNITIONS["bureaucrat"] += [
-    "The stamp moved before I touched it.",        # Dai Dark
-    "That signature is mine. It is not.",          # Dorohedoro
+    "The stamp moved before I touched it.",
+    "That signature is mine. It is not. Check again.",
 ]
 RECOGNITIONS["engineer"] += [
-    "It is not broken. It is finished. That is worse.",  # BLAME!
-    "The bolt held. Something else gave.",               # BLAME!
+    "It is not broken here. It is finished. That is worse.",
+    "The bolt held. Something else gave.",
 ]
 RECOGNITIONS["nightwatch"] += [
-    "The silence moved first.",                       # BLAME!
-    "Something walked the corridor. The floor disagrees.",  # Dorohedoro
+    "The silence moved first.",
+    "Something walked the corridor. The floor disagrees.",
 ]
 
 # Strip geometry (operator critique 2, items 3/5; density band updated

@@ -123,9 +123,12 @@ Provenance discipline, recorded with the position:
   quoting or echoing the fan-translation phrasing in hngh's banks is
   an additional transformation step, not a direct copy of the original
   author's prose.
-- When a specific bank entry is inspired by a specific observed line,
-  the style-research doc (docs/design/manga-style-research.md) cites
-  the title/work it came from.
+- Citations never ride inside flavor text (operator note 2026-09-12:
+  "never use those kinds of bracketed citations for flavor
+  paraphrase"). Each bank line is an original distillation inspired by
+  the collection's register; the source is the study, not the line.
+  The policy doc (here) and the style-research doc
+  (docs/design/manga-style-research.md) are the provenance record.
 - Never attribute a quote to the original author in the original
   language -- no Japanese text in banks, no author-byline quotes.
 - The subtlety law of clause (b) still governs generated output: no
