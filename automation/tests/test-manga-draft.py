@@ -477,5 +477,49 @@ class TestAssemble(unittest.TestCase):
         self.assertIn("DRAMATIZATION", svg)  # attribution footer
 
 
+class TestBankExtensions(unittest.TestCase):
+    """Policy clause (f) bank extensions (2026-09-12): every bank line
+    is distinct, and the subtlety law holds everywhere the banks feed
+    generated output -- no artist names in any bank text."""
+
+    BANNED = ["tatsumi", "tezuka", "nihei", "hayashida", "matsumoto"]
+
+    def test_bank_lines_distinct(self):
+        self.assertEqual(len(set(md.NARRATIONS)), len(md.NARRATIONS))
+        self.assertEqual(len(set(md.MARGIN_NOTES)), len(md.MARGIN_NOTES))
+        for cameo in md.CAMEOS:
+            pool = md.RECOGNITIONS[cameo]
+            self.assertEqual(len(set(pool)), len(pool))
+
+    def test_quips_bank_lines_distinct(self):
+        quips = _load("quips_test", "lib/quips.py")
+        for bank in quips.BANKS.values():
+            self.assertEqual(len(set(bank)), len(bank))
+
+    def test_no_artist_names_in_banks(self):
+        pools = [md.NARRATIONS, md.MARGIN_NOTES]
+        pools += [md.RECOGNITIONS[c] for c in md.CAMEOS]
+        quips = _load("quips_test", "lib/quips.py")
+        pools += [b for b in quips.BANKS.values()]
+        for line in [ln for pool in pools for ln in pool]:
+            low = line.lower()
+            for name in self.BANNED:
+                self.assertNotIn(name, low)
+
+    def test_quip_banks_format_without_crash(self):
+        """A new bank line must never crash the paper: every bank is
+        renderable with the facts its renderer actually passes (none
+        for comic/machine_hall; each bank's own placeholders are the
+        renderer's contract)."""
+        quips = _load("quips_test", "lib/quips.py")
+        self.assertTrue(quips.quip("comic", "2026-09-12"))
+        self.assertTrue(quips.quip("machine_hall", "2026-09-12"))
+        self.assertTrue(quips.quip("ledger", "2026-09-12", spend=1.25,
+                                   calls=10, quiet=2))
+        self.assertTrue(quips.quip("patrol", "2026-09-12", surfaces=3,
+                                   passes=2, fails=1))
+        self.assertTrue(quips.quip("deck_b", "2026-09-12", tokens=99))
+
+
 if __name__ == "__main__":
     unittest.main()
