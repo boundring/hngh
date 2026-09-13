@@ -82,6 +82,7 @@ test:
 	python3 -B tests/test-beat-watchdog.py
 	python3 -B tests/test-patrol.py
 	python3 -B tests/test-report-queue-evidence.py
+	python3 -B tests/test-hngh-home-catalog.py
 	bash tests/test-beat-blockers.sh
 	bash tests/test-plan-priority-selector.sh
 	python3 -B tests/test-session-launch.py
