@@ -21,6 +21,7 @@ root), HNGH_AUTOMATION_ROOT, ACCEPT_KERNEL_GATE / ACCEPT_AUTOMATION_GATE
 HNGH_REPORT_ROOT (report writer), ACCEPT_LOG (execution log), DRY_RUN=1
 (report what would happen, write nothing).
 """
+import fcntl
 import os
 import re
 import shlex
@@ -52,6 +53,20 @@ ACCEPT_LOG = os.environ.get(
 EMAIL_NOTIFY = AUTOMATION / "scripts" / "notify-email.py"
 EMAIL_LOG = AUTOMATION / "logs" / "notify-email.log"
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
+# gate-evaluation isolation (2026-09-09 plan step 5): the two make test
+# subprocesses serialize under an exclusive flock so competing gate runs
+# (overlapping ticks, watchdog respawns) never compile side by side --
+# the 2026-09-09 load-correlated kernel/automation gate-red-rc2 flap
+# happened when parallel delegated sessions compiled during a gate.
+# A busy lock is a loud skip: alert row + noted lines, plans untouched,
+# gates never half-run. Default lock path lives under TMPDIR;
+# ACCEPT_GATE_LOCK overrides it (test seam).
+# The lock is separate from the beat's overnight flock: a child within
+# the beat opens its own fd, and flock denies a second description even
+# inside the same process tree.
+GATE_LOCK = Path(os.environ.get(
+    "ACCEPT_GATE_LOCK", os.path.join(
+        os.environ.get("TMPDIR", "/tmp"), "hngh-gate.lock")))
 
 now_utc = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -334,8 +349,37 @@ def main():
         runnable.append((slug, text))
     if not runnable:
         return 0
+    # gate-evaluation isolation: hold the gate flock across BOTH repo
+    # gates, or skip loudly (never half-run a gate, never block silently
+    # -- 2026-08-31 lesson). The next timer tick re-evaluates.
+    try:
+        lock_fd = open(GATE_LOCK, "w")
+    except OSError:
+        lock_fd = None
+    gate_lock_held = False
+    if lock_fd is not None:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            gate_lock_held = True
+        except (BlockingIOError, OSError):
+            pass
+    if not gate_lock_held:
+        try:
+            lock_fd.close()
+        except OSError:
+            lock_fd = None
+        report("alert", "plan acceptance deferred: gate lock busy "
+               "(another gate evaluation compiles; isolated retry next tick)",
+               "overnight:plan-accept-gate:busy", 86400)
+        for slug, _ in runnable:
+            note("blocked %s gate-lock-busy" % slug)
+        return 0
     krc, kout = run_gate(KERNEL_GATE, KERNEL)
     arc, aout = run_gate(AUTOMATION_GATE, AUTOMATION)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    finally:
+        lock_fd.close()
     if krc != 0:
         report("alert", "plan acceptance blocked: kernel make test FAILED "
                "(rc=%d)\n%s" % (krc, kout.strip()),
