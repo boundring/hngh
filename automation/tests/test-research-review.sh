@@ -181,6 +181,29 @@ beat_run "${kimi_env[@]}"
  } ||
  echo "ok: parked verdict queues no follow-on subjects"
 
+# --- d) stale 6-column header upgraded to the writer schema ---------------
+printf 'line\taction\tverdict\treviewer\tevidence\tdate\n' \
+ >"$sb/research-dispositions.tsv"
+printf 'old-line\tadopted\ta\tm\tdocs/old.md\t2026-09-01\n' \
+ >>"$sb/research-dispositions.tsv"
+printf 'line-old\tcrystallized\t2026-09-05T00:00:00Z\tcompaction patterns\n' \
+ >"$sb/research-lines.tsv"
+beat_run "${kimi_env[@]}"
+hdr_nf="$(head -n 1 "$sb/research-dispositions.tsv" | awk -F'\t' '{print NF}')"
+[ "$hdr_nf" -eq 9 ] &&
+ echo "ok: stale header upgraded to 9 columns" ||
+ {
+  echo "FAIL: stale header field count: $hdr_nf"
+  fails=$((fails + 1))
+ }
+grep -qxF $'old-line\tadopted\ta\tm\tdocs/old.md\t2026-09-01' \
+ "$sb/research-dispositions.tsv" &&
+ echo "ok: pre-existing row preserved under upgraded header" ||
+ {
+  echo "FAIL: pre-existing row lost during header upgrade"
+  fails=$((fails + 1))
+ }
+
 echo
 if [ "$fails" -eq 0 ]; then echo "ALL OK"; else
  echo "FAILED: $fails assertion(s)"
