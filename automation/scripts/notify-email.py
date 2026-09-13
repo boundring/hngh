@@ -93,9 +93,6 @@ def op_run(*args):
 
 def op_password(item):
     """Secret from `op read`, or None on any failure. Never logged."""
-    ready = op_run("whoami")
-    if ready is None or ready.returncode != 0:
-        return None
     got = op_run("read", item)
     if got is None or got.returncode != 0:
         return None
