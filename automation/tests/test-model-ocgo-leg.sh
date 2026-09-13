@@ -16,7 +16,7 @@ sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
-mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/jobs" "$sb/.config/hngh"
+mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/jobs" "$sb/.config/hngh"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 cp "$root/jobs/telemetry.py" "$sb/jobs/"
 : >"$sb/cadence-params.tsv" # no ocgo rows unless a case sets one
@@ -26,7 +26,7 @@ cp "$root/jobs/telemetry.py" "$sb/jobs/"
 seed_events() { # source n [age_seconds] -> n model/<source> events that old
  python3 - "$@" <<PY
 import sqlite3, datetime, sys
-db = sqlite3.connect("$sb/dashboard/telemetry.db")
+db = sqlite3.connect("$sb/home/db/telemetry.db")
 db.execute("CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT, tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL, wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
 src, n = sys.argv[1], int(sys.argv[2])
 age = int(sys.argv[3]) if len(sys.argv) > 3 else 0
@@ -42,7 +42,7 @@ call() { # prompt [K=V ...] -> stdout
  local k
  (
   export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
-  export HOME="$sb" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
+  export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama DECK_URL=http://127.0.0.1:1
@@ -93,7 +93,7 @@ out="$(call "hello-3" "OPENCODE_API_KEY=stub-key-never-real" \
 ck "env key+model: stub content" "stub-says-hi" "$out"
 ck "env key+model: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "env key+model: telemetry row emitted" "1" \
- "$(sqlite3 "$sb/dashboard/telemetry.db" "select count(*) from events where kind='model' and source='ocgo'")"
+ "$(sqlite3 "$sb/home/db/telemetry.db" "select count(*) from events where kind='model' and source='ocgo'")"
 grep -q '"messages"' "$stubdir/stubB-bodies" &&
  echo "ok: chat-completions body shape" || {
  echo "FAIL: body not chat-completions"
@@ -101,7 +101,7 @@ grep -q '"messages"' "$stubdir/stubB-bodies" &&
 }
 
 # --- 4. file-key path: mode 600 key file answers; mode 644 is refused.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 printf 'stub-key-never-real' >"$sb/.config/hngh/opencode-key"
 chmod 600 "$sb/.config/hngh/opencode-key"
 out="$(call "hello-4a" "OCGO_MODEL=glm-test-model" "OCGO_URL=http://127.0.0.1:$stubB_port")"
@@ -120,47 +120,48 @@ chmod 600 "$sb/.config/hngh/opencode-key"
 
 # --- 5. 5h-window pace-blocked (above the pace line, below the cap) ->
 #        breadcrumb, leg skipped (nothing after ocgo: archive-only).
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 seed_events ocgo "$(pace_seed_count_5h 100)" 60 # just above the pace line
 out="$(call "hello-5" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100")"
 ck "5h pace-blocked: ocgo skipped, archive-only used" "" "$out"
 ck "5h pace-blocked: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "quota pace 5h: ocgo used " "$sb/STATE.md" &&
+grep -q "quota pace: ocgo+ocgo-agent 5h-window used " "$sb/STATE.md" &&
  echo "ok: 5h pace-blocked: breadcrumb written" || {
  echo "FAIL: no pace breadcrumb"
  fails=$((fails + 1))
 }
 
 # --- 6. events aged OUT of the 5h window (6h old) do NOT count -> leg goes.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
-seed_events ocgo 95 21600 # 6h old: outside the tightest window
+seed_events ocgo 95 21600 # 6h old: outside the 5h window
 out="$(call "hello-6" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100" \
- "OCGO_CAP_5H_CALLS=100")"
+ "OCGO_CAP_5H_CALLS=100" "OCGO_CAP_7D_CALLS=100000" \
+ "OCGO_CAP_MONTH_CALLS=100000")"
 ck "outside-window events ignored: ocgo answers" "stub-says-hi" "$out"
 ck "outside-window events ignored: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 
 # --- 7. hard cap reached inside the window -> skipped the same way.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 seed_events ocgo 3 60
 out="$(call "hello-7" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=3" \
  "OCGO_CAP_5H_CALLS=3")"
 ck "hard cap: ocgo skipped, archive-only used" "" "$out"
-grep -q "quota pace 5h: ocgo used 3/cap 3" "$sb/STATE.md" &&
+grep -q "quota pace: ocgo+ocgo-agent 5h-window used 3 of cap 3" "$sb/STATE.md" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: no cap breadcrumb"
  fails=$((fails + 1))
 }
 
 # --- 8. helper boundaries: used==cap blocks; fresh window goes.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 seed_events ocgo 3 60
-got="$(AUTOMATION_ROOT="$sb" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked_5h ocgo 3')"
+got="$(AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked_5h ocgo 3')"
 ck "helper: used==cap blocks (3 3)" "3 3" "$got"
 got="$(
  AUTOMATION_ROOT="$sb" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked_5h ocgo 100000'
@@ -169,7 +170,7 @@ got="$(
 ck "helper: fresh window goes" "rc=1" "$got"
 
 # --- 9. dead ocgo endpoint -> HTTP 000 breadcrumb + fall-through.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-9" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:1")"
@@ -183,7 +184,7 @@ grep -q "| model | ocgo | HTTP 000 -> next backend" "$sb/STATE.md" &&
 }
 
 # --- 10. MODEL_PIN=ocgo routes there first; miss falls through to local.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-10" "MODEL_PIN=ocgo" "OCGO_URL=http://127.0.0.1:1" \
  "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model")"
@@ -191,7 +192,7 @@ ck "pin=ocgo, dead leg: falls through to archive" "none:archive-only" \
  "$(cat "$sb/tmp-modelused.txt")"
 
 # --- 11. MODEL_PIN=ocgo + live leg: ocgo answers, remote/kimi skipped.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-11" "MODEL_PIN=ocgo" "OCGO_URL=http://127.0.0.1:$stubB_port" \
  "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
@@ -207,7 +208,7 @@ ck "pin=ocgo, live leg: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelus
 
 # --- 12. telemetry wall_s + tokens: a slow stubbed call (0.15s sleep)
 #         emits its row with wall_s > 0 and usage tokens from the reply.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 stub_start stubU 0.15
 stubU_port="$(cat "$stubdir/stubU-port")"
@@ -218,7 +219,7 @@ stubU_port="$(cat "$stubdir/stubU-port")"
 out="$(call "hello-12" "OPENCODE_API_KEY=stub-key-never-real" \
  "OCGO_MODEL=glm-test-model" "OCGO_URL=http://127.0.0.1:$stubU_port")"
 ck "wall_s case: stub content" "stub-says-hi" "$out"
-row="$(sqlite3 "$sb/dashboard/telemetry.db" \
+row="$(sqlite3 "$sb/home/db/telemetry.db" \
  "select wall_s, tokens_in, tokens_out from events where kind='model' and source='ocgo'")"
 wall="${row%%|*}"
 ck "wall_s case: wall_s is a number > 0" "yes" \
@@ -227,7 +228,7 @@ ck "wall_s case: tokens_in from usage" "11" "$(printf '%s' "$row" | cut -d'|' -f
 ck "wall_s case: tokens_out from usage" "7" "$(printf '%s' "$row" | cut -d'|' -f3 | tr -d ' ')"
 
 # --- 13. unsloth leg also emits wall_s (own curl path, not _post_chat).
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 stub_start stubA 0.15
 stubA_port="$(cat "$stubdir/stubA-port")"
@@ -239,7 +240,7 @@ printf 'stub-token-never-real' >"$sb/unsloth-token"
 out="$(call "hello-13" "MODEL_PIN=local" \
  "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port")"
 ck "unsloth wall_s case: stub content" "stub-says-hi" "$out"
-row="$(sqlite3 "$sb/dashboard/telemetry.db" \
+row="$(sqlite3 "$sb/home/db/telemetry.db" \
  "select wall_s from events where kind='model' and source='unsloth'")"
 ck "unsloth wall_s case: wall_s > 0" "yes" \
  "$(awk -v w="$row" 'BEGIN{print (w+0 > 0) ? "yes" : "no"}')"

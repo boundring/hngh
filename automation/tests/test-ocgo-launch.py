@@ -24,7 +24,8 @@ from pathlib import Path
 AUTO = Path(__file__).resolve().parent.parent
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "params.sh",
-       "context-pack.sh", "launch-session.sh", "model-demote.sh")
+       "context-pack.sh", "launch-session.sh", "model-demote.sh",
+       "model.sh")
 
 DRIVER = """#!/usr/bin/env bash
 set -u
@@ -37,6 +38,8 @@ printf 'rc=%s log=%s cause=%s\\n' "$LAUNCH_RC" "$LAUNCH_LOG" "$LAUNCH_CAUSE"
 OC_STUB = """#!/usr/bin/env bash
 printf 'opencode %s config=%s\\n' "$*" "$OPENCODE_CONFIG" >> "$OC_MARKER"
 printf 'keylen=%s\\n' "${#OPENCODE_API_KEY}" >> "$OC_MARKER"
+printf 'kimilen=%s\\n' "${#KIMI_API_KEY}" >> "$OC_MARKER"
+printf 'zailen=%s\\n' "${#ZAI_API_KEY}" >> "$OC_MARKER"
 printf 'proxy=%s\\n' "${HTTPS_PROXY:-}" >> "$OC_MARKER"
 printf 'ca=%s\\n' "${NODE_EXTRA_CA_CERTS:-}" >> "$OC_MARKER"
 if [ -n "${OC_FAIL:-}" ]; then
@@ -193,6 +196,153 @@ class OcgoLaunch(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("-p --model", self.omp_marker.read_text())
         self.assertFalse(self.oc_marker.exists())
+
+    def test_kimi_provider_routes_kimi_quota(self):
+        # OCGO_PROVIDER=kimi: the kimi-model row drives the model id, the
+        # executor-kimi agent runs, the Kimi key rides ONLY as
+        # KIMI_API_KEY (never OPENCODE_API_KEY), and the emitter
+        # attributes source=kimi so the kimi daily pacer counts the call
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "kimi-model\tk3-256k\ttest\ttest row\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_PROVIDER="kimi", KIMI_AI_KEY="k" * 40,
+                        OPENCODE_API_KEY=None)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("--agent executor-kimi", marker)
+        self.assertIn("-m kimi/k3-256k", marker)
+        self.assertIn("kimilen=40", marker)
+        self.assertIn("keylen=0", marker) # the OTHER quota's key never rides
+        conn = sqlite3.connect(self.telem)
+        row = conn.execute("select source, identity from events").fetchall()
+        conn.close()
+        self.assertEqual(row, [("kimi", "ses_test1")])
+
+    def _seed_pacer_db(self, source, n):
+        # every pacer reads $HNGH_TELEMETRY_DB (userspace-home seam); the
+        # test env pins it to self.telem -- seed the SAME file
+        return self._seed_pacer_db_at(source, n, "now")
+
+    def _seed_pacer_db_at(self, source, n, ts_mod):
+        # ts_mod: a strftime modifier (e.g. "-6 hours" = inside the 7d
+        # window but outside the 5h window) for window-isolation tests
+        ts_expr = ("strftime('%Y-%m-%dT%H:%M:%SZ','now')" if ts_mod == "now"
+                   else f"strftime('%Y-%m-%dT%H:%M:%SZ','now','{ts_mod}')")
+        db = sqlite3.connect(self.telem)
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT,"
+            " kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT,"
+            " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
+            " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        for _ in range(n):
+            db.execute("INSERT INTO events(ts, source, kind)"
+                       " VALUES (%s, ?, 'model')" % ts_expr, (source,))
+        db.commit()
+        db.close()
+
+    def _seed_pacer_db_ts(self, source, n, iso_ts):
+        # absolute-timestamp seeding (weekly fixed-window tests)
+        db = sqlite3.connect(self.telem)
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT,"
+            " kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT,"
+            " tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,"
+            " wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+        for _ in range(n):
+            db.execute("INSERT INTO events(ts, source, kind)"
+                       " VALUES (?, ?, 'model')", (iso_ts, source))
+        db.commit()
+        db.close()
+
+    def test_opencode_go_5h_pacer_blocks_at_the_branch(self):
+        # choke-point guarantee (quota-tightest-window-pacing): even a
+        # direct launch_session caller cannot land an unpaced
+        # opencode-go call -- 5h pacer blocked -> omp fallback, no
+        # opencode child
+        self._seed_pacer_db("ocgo", 3)
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_CAP_5H_CALLS="3")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_kimi_daily_pacer_blocks_at_the_branch(self):
+        self._seed_pacer_db("kimi", 3)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "kimi-model\tk3-256k\ttest\ttest row\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_PROVIDER="kimi", KIMI_AI_KEY="k" * 40,
+                        OPENCODE_API_KEY=None, KIMI_DAILY_CAP_CALLS="3")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_7d_window_refuses_while_5h_has_headroom(self):
+        # tightest-wins (quota-tightest-window-pacing): 5h sees zero but
+        # the 7d window is exhausted -> refused to omp, no opencode child
+        self._seed_pacer_db_at("ocgo", 150, "-6 hours")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_CAP_7D_CALLS="150")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_month_window_refuses_while_5h_and_7d_have_headroom(self):
+        self._seed_pacer_db_at("ocgo", 300, "-8 days")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_CAP_MONTH_CALLS="300")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_zai_provider_routes_zai_quota(self):
+        # OCGO_PROVIDER=zai: the zai-model row drives the model id, the
+        # executor-zai agent runs, the subscription key rides ONLY as
+        # ZAI_API_KEY, and the emitter attributes source=zai (the shared
+        # bucket pair with the model.sh zai_chat leg)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "zai-model\tglm-5.3-flash\ttest\ttest row\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_PROVIDER="zai", Z_AI_API_KEY="z" * 40,
+                        OPENCODE_API_KEY=None)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("--agent executor-zai", marker)
+        self.assertIn("-m zai/glm-5.3-flash", marker)
+        self.assertIn("zailen=40", marker)
+        self.assertIn("keylen=0", marker) # the OTHER quota's key never rides
+        conn = sqlite3.connect(self.telem)
+        row = conn.execute("select source, identity from events").fetchall()
+        conn.close()
+        self.assertEqual(row, [("zai", "ses_test1")])
+
+    def test_zai_weekly_window_refuses(self):
+        # weekly is a FIXED window (Monday 00:00 UTC reset), gated beside
+        # the 5h bucket: exhausted weekly -> refused to omp. Seeded 6h
+        # into the running week (outside the 5h window once the week is
+        # >= 11h old; earlier than that the 5h gate trips instead and the
+        # assertions below still hold)
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        week_start = (now - datetime.timedelta(
+            days=now.weekday())).replace(hour=0, minute=0, second=0,
+                                         microsecond=0)
+        seed_ts = (week_start + datetime.timedelta(hours=6)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+        self._seed_pacer_db_ts("zai", 3, seed_ts)
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OCGO_PROVIDER="zai", Z_AI_API_KEY="z" * 40,
+                        OPENCODE_API_KEY=None, ZAI_CAP_WEEK_CALLS="3",
+                        ZAI_CAP_5H_CALLS="500")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
 
     def test_opencode_unavailable_falls_back_to_omp(self):
         # model row emptied: fail-closed fallback with a breadcrumb
@@ -449,6 +599,30 @@ class OcgoDelegateTool(OcgoLaunch):
         r = self.launch(DELEGATE_MIN="")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("timeout_s=600", r.stdout)
+
+    def test_kimi_pacer_blocks_before_any_launch(self):
+        # kimi provider paces against kimi-daily-cap (the SAME quota the
+        # deck-chat leg spends): hard cap reached -> rc=75 refusal, no
+        # session, no bridge run
+        self.seed_events("kimi", 3)
+        r = self.launch(OCGO_PROVIDER="kimi", KIMI_DAILY_CAP_CALLS="3",
+                        KIMI_AI_KEY="k" * 40, OPENCODE_API_KEY=None)
+        self.assertEqual(r.returncode, 75, r.stdout + r.stderr)
+        self.assertIn("kimi used 3 of cap 3", r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+
+    def test_kimi_provider_wrapper_reports_provider(self):
+        # below cap: one bounded session on the kimi leg; the result
+        # line names the provider that actually spent
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "kimi-model\tk3-256k\ttest\ttest row\n")
+        r = self.launch(OCGO_PROVIDER="kimi", KIMI_AI_KEY="k" * 40,
+                        OPENCODE_API_KEY=None)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("provider=kimi", r.stdout)
+        self.assertIn("-m kimi/k3-256k", self.oc_marker.read_text())
 
 
 # the subclass reuses the sandbox but runs the wrapper driver — the base

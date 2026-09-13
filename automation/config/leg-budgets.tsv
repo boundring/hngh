@@ -32,7 +32,8 @@ ollama	300	1024	-	lib/model.sh ollama_chat/_post_chat (local, no edge)
 remote	300	1024	-	lib/model.sh remote_chat (OpenRouter; cap REMOTE_DAILY_CAP_CALLS=200/day, config.env:31)
 deck	300	1024	-	lib/model.sh deck_chat (probe deck-probe-timeout 4, cadence-params.tsv:19)
 kimi	300	1024	-	lib/model.sh kimi_chat (cap kimi-daily-cap 40/day, cadence-params.tsv:24)
-ocgo	300	1024	-	lib/model.sh ocgo_chat (cap opencode-cap-5h-calls 60/5h, cadence-params.tsv:28)
+ocgo	300	1024	-	lib/model.sh ocgo_chat (caps opencode-cap-5h-calls 60/5h + opencode-cap-7d-calls 150/7d + opencode-cap-month-calls 300/30d, cadence-params.tsv:28-30)
+zai	300	1024	-	lib/model.sh zai_chat (caps zai-cap-5h-calls 5h-rolling + zai-cap-week-calls fixed-Monday-week, cadence-params.tsv:28-29)
 opencode-agent	1800	50000	1800	lib/launch-session.sh:118,235 (session wall-clock TIMEOUT_S + loadout token-limit 50000)
 #
 # --- image legs (not model-completion legs: no max_tokens exists; max-time

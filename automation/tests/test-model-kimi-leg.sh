@@ -14,7 +14,7 @@ sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
-mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/jobs" "$sb/.config/hngh"
+mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/jobs" "$sb/.config/hngh"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
 : >"$sb/cadence-params.tsv" # Inventory: no kimi/ocgo rows unless a case sets one
@@ -24,7 +24,7 @@ ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
 seed_events() { # source n -> n telemetry model/<source> events stamped today
  python3 - "$1" "$2" <<PY
 import sqlite3, datetime, sys
-db = sqlite3.connect("$sb/dashboard/telemetry.db")
+db = sqlite3.connect("$sb/home/db/telemetry.db")
 db.execute("CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT, tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL, wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
 today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 for _ in range(int(sys.argv[2])):
@@ -45,7 +45,7 @@ call() { # prompt [K=V ...] -> stdout
  local kv
  (
   export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
-  export HOME="$sb" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
+  export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama
@@ -91,10 +91,10 @@ out="$(call "hello-3" "KIMI_AI_KEY=stub-key-never-real" \
 ck "env key+model: stub content" "stub-says-hi" "$out"
 ck "env key+model: kimi used" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "env key+model: telemetry row emitted" "1" \
- "$(sqlite3 "$sb/dashboard/telemetry.db" "select count(*) from events where kind='model' and source='kimi'")"
+ "$(sqlite3 "$sb/home/db/telemetry.db" "select count(*) from events where kind='model' and source='kimi'")"
 
 # --- 4. file-key path: mode 600 key file answers; mode 644 is refused.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 printf 'stub-key-never-real' >"$sb/.config/hngh/kimi-key"
 chmod 600 "$sb/.config/hngh/kimi-key"
 out="$(call "hello-4a" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubB_port")"
@@ -113,7 +113,7 @@ chmod 600 "$sb/.config/hngh/kimi-key"
 
 # --- 5. pace-blocked (above the pace line, below the cap) -> breadcrumb,
 #        next quota leg (ocgo) answers.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 set_ocgo_rows "http://127.0.0.1:$stubB_port"
 seed_events kimi "$(pace_seed_count 100)"
@@ -130,7 +130,7 @@ grep -q "quota pace: kimi used " "$sb/STATE.md" &&
 }
 
 # --- 6. hard cap reached -> skipped the same way.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 seed_events kimi 2
 out="$(call "hello-6" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
@@ -145,12 +145,12 @@ grep -q "quota pace: kimi used 2/cap 2" "$sb/STATE.md" &&
 }
 
 # --- 7. helper boundaries: used == cap blocks; used == 1 with a huge cap goes.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 seed_events kimi 3
-got="$(AUTOMATION_ROOT="$sb" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked kimi 3')"
+got="$(AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked kimi 3')"
 ck "helper: used==cap blocks (3 3)" "3 3" "$got"
 got="$(
- AUTOMATION_ROOT="$sb" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked kimi 100000'
+ AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" bash -c '. "'"$root"'/lib/model.sh"; quota_pace_blocked kimi 100000'
  echo "rc=$?"
 )"
 ck "helper: used=1, huge cap goes" "rc=1" "$got"
@@ -164,7 +164,7 @@ stubA_port="$(cat "$stubdir/stubA-port")"
  exit 1
 }
 printf 'stub-token-never-real' >"$sb/unsloth-token"
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$stubdir/stubB-hits" # earlier cases legitimately hit stubB; this one must not
 out="$(call "hello-8" "MODEL_PIN=local" \
  "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port" \
@@ -177,7 +177,7 @@ ck "MODEL_PIN=local: kimi/ocgo/deck stub never hit" "0" "$(hits stubB)"
 ck "MODEL_PIN=local: unsloth stub hit" "1" "$(hits stubA)"
 
 # --- 9. dead kimi endpoint -> HTTP 000 breadcrumb + fall-through.
-rm -f "$sb/dashboard/telemetry.db"
+rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-9" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:1" "OCGO_URL=http://127.0.0.1:$stubB_port" \
