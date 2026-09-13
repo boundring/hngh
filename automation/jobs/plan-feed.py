@@ -24,6 +24,21 @@ QUEUE = os.path.join(HOME, "docs", "project", "queue.md")
 FRONT = re.compile(r"<!--\s*plan:\s*status=(\w+)\s+risk=(\w+)"
                    r"\s+accepted=([^\s>]+)[^>]*-->")
 
+# Optional front-matter keys, extracted independently of FRONT so the
+# legacy status/risk/accepted parsing stays byte-compatible (plans
+# carrying priority= before accepted= still parse exactly as before:
+# no summary field changes, no invented defaults).
+PRIO = re.compile(r"\bpriority=(\w+)")
+CAUSE = re.compile(r"\bcause=([\w-]+)")
+COMMENT = re.compile(r"<!--\s*plan:[^>]*-->")
+
+# Work-graph edge vocabulary: edges come ONLY from execution-notes
+# lines matching this fixed convention ("- Step N unlocks Step M" /
+# "- Step N feeds Step M"). Prose that does not match emits no edge --
+# blocked-by is drawn only from real evidence, never invented.
+EDGE = re.compile(r"^\s*[-*]\s*Step\s+(\d+)\s+(unlocks|feeds)\s+"
+                  r"[Ss]tep\s+(\d+)\s*\.?\s*$", re.M)
+
 # The queue.md `## Next` parse, same approach as scripts/omp-bridge
 # (reused, never imported across repos).
 NEXT_RE = re.compile(r"## Next\s*\n(.*?)(?=\n## |\Z)", re.S)
@@ -70,15 +85,55 @@ def last_ceremony():
     return None
 
 
+def _sections(text):
+    """Get a `## Title` section body (until the next top-level `## ")."""
+    def body(title):
+        parts = text.split("## " + title, 1)
+        return parts[1].split("\n## ", 1)[0] if len(parts) > 1 else ""
+    return body
+
+
+def _work_graph(text):
+    """Parse the work graph for one plan: (steps, edges). Raises on
+    malformed input -- the caller isolates the fault per plan and
+    keeps the legacy summary fields intact."""
+    body = _sections(text)
+    steps = []
+    cur = None
+    for line in body("Steps").splitlines():
+        m = re.match(r"^- \[([^\]]*)\] ?(.*)$", line)
+        if m is not None:
+            box, title = m.group(1), m.group(2).strip()
+            if box not in (" ", "", "x", "X"):
+                raise ValueError("malformed checkbox marker [" + box + "]")
+            title = re.sub(r"^\d+[.:]\s*", "", title)
+            title = re.sub(r"^\w{1,20}:\s*", "", title)
+            cur = {"n": len(steps) + 1, "title": title,
+                   "done": box.lower() == "x", "verification": ""}
+            steps.append(cur)
+        elif cur is not None and line[:1].isspace():
+            cur["verification"] = (cur["verification"] + " "
+                                   + line.strip()).strip()
+    for step in steps:
+        m = re.search(r"Verification:\s*(.*)", step["verification"])
+        step["verification"] = (m.group(1).strip().rstrip(".")
+                                if m else "")
+    edges = [
+        {"type": etype, "from": int(src), "to": int(dst)}
+        for src, etype, dst in EDGE.findall(body("Execution notes"))]
+    return steps, edges
+
+
 def read_plans():
-    out = []
+    out, alerts = [], []
     try:
         names = sorted(os.listdir(PLANS))
     except OSError:
-        return out
+        return out, alerts
     for name in names:
         if not name.endswith(".plan.md"):
             continue
+        slug = name[:-len(".plan.md")]
         try:
             with open(os.path.join(PLANS, name), encoding="utf-8") as fh:
                 text = fh.read()
@@ -90,24 +145,50 @@ def read_plans():
         sec = sec[1].split("\n## ", 1)[0] if len(sec) > 1 else ""
         steps = len(re.findall(r"(?m)^- \[[ x]\]", sec))
         done = len(re.findall(r"(?m)^- \[x\]", sec))
-        out.append({
-            "slug": name[:-len(".plan.md")],
+        front = COMMENT.search(text)
+        front_text = front.group(0) if front else ""
+        prio, cm = PRIO.search(front_text), CAUSE.search(front_text)
+        priority = prio.group(1) if prio else None
+        cause = cm.group(1) if cm else None
+        try:
+            graph_steps, edges = _work_graph(text)
+            if cause and (m.group(1) if m else "proposed") == "parked":
+                edges = (edges + [{"type": "parked-because",
+                                   "cause": cause, "from": None,
+                                   "to": None}])
+            parse_error = None
+        except Exception as exc:
+            # per-plan failure isolation: the legacy summary fields
+            # still emit; the graph fails closed with an alert row
+            graph_steps, edges, parse_error = [], [], "%s: %s" % (
+                type(exc).__name__, exc)
+            alerts.append({"slug": slug, "detail": parse_error})
+        plan = {
+            "slug": slug,
             "status": m.group(1) if m else "proposed",
             "risk": m.group(2) if m else "normal",
             "accepted": m.group(3) if m else "-",
             "steps_total": steps,
             "steps_done": done,
-        })
-    return out
+            "priority": priority,
+            "cause": cause,
+            "steps": graph_steps,
+            "edges": edges,
+        }
+        if parse_error:
+            plan["parse_error"] = True
+        out.append(plan)
+    return out, alerts
 
 
 def main():
     try:
-        plans = read_plans()
+        plans, alerts = read_plans()
         feed = {"generated": __import__("datetime").datetime.now(
             __import__("datetime").timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "queue_next": queue_next(),
             "last_ceremony_commit": last_ceremony(),
+            "alerts": alerts,
             "plans": plans}
         # per-PID tmp — never share a tmp across processes (see sessions-feed.py)
         tmp = "%s.%d.tmp" % (OUT, os.getpid())
