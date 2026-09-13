@@ -8,3 +8,7 @@ at 2026-09-13T01:00:49Z. Alert text: [oversight] slow-unit: dropin:41-news-artic
 
 - [ ] Delve: open research subject fail-20260913-slow-unit-dropin-41-news-articles.sh for slow-unit:dropin:41-news-articles.sh; record disposition; then fix or park
       Verification: research subject fail-20260913-slow-unit-dropin-41-news-articles.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-13T02:00:49Z re-occurred (dedup window expired)
