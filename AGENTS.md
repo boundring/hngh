@@ -12,6 +12,17 @@
 3. Inspect `git status --short` before editing.
 4. Run the smallest named verification before reporting a result.
 
+## hngh brief: start oriented, do not re-walk
+
+Run `python3 scripts/omp-bridge --orient` once for the current-state brief
+(queue next, roadmap next, working tree, last ceremony commit), then act on
+it -- do not re-run orientation reads (queue/roadmap files) before acting.
+If your assignment already carries a pre-digested context pack or brief, use
+that and skip `--orient`. Read-only hngh state is also exposed as MCP tools
+(server `hngh`: `hngh_present`, `hngh_status`, `queue_report`,
+`dashboard_readout`, `research_lines`) -- prefer those over opening repo
+files for hngh-state questions.
+
 ## Current boundary
 
 Hngh is a side-effect-free local kernel. Do not start a daemon, service,

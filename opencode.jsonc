@@ -1,0 +1,23 @@
+// hngh project-level opencode config (2026-09-13, opencode-parity workstream).
+// opencode discovers ./opencode.jsonc at the project root and merges it OVER
+// the global ~/.config/opencode/opencode.jsonc, so this applies to EVERY
+// opencode session opened in this repo -- interactive or headless. Only what
+// must be repo-owned lives here: the hngh read-only MCP server (the omp
+// parity surface). Providers/models/agents stay in
+// automation/config/opencode/opencode.jsonc -- the hngh config layer wired
+// by automation/lib/launch-session.sh via OPENCODE_CONFIG (executor/executor-
+// kimi/executor-zai/hngh-scout roles, zai/kimi quota legs, secret-deny
+// block). Never put credentials in this file.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "hngh": {
+      "type": "local",
+      "command": [
+        "python3",
+        "~/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py"
+      ],
+      "enabled": true
+    }
+  }
+}
