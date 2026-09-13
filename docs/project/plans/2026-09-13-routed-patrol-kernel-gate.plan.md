@@ -8,3 +8,7 @@ at 2026-09-13T10:00:49Z. Alert text: patrol kernel-gate: gate-red on kernel -- g
 
 - [ ] Delve: open research subject fail-20260913-patrol-kernel-gate for patrol:kernel-gate; record disposition; then fix or park
       Verification: research subject fail-20260913-patrol-kernel-gate present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-13T11:00:49Z re-occurred (dedup window expired)
