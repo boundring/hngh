@@ -6,5 +6,5 @@ at 2026-09-09T01:00:16Z. Alert text: [oversight] slow-unit: dropin:33-research-b
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260909-slow-unit-dropin-33-research-beat.sh for slow-unit:dropin:33-research-beat.sh; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260909-slow-unit-dropin-33-research-beat.sh for slow-unit:dropin:33-research-beat.sh; record disposition; then fix or park — parked 2026-09-13 (expected model-leg latency; disposition commit ffb104a; research line planned->reviewed)
       Verification: research subject fail-20260909-slow-unit-dropin-33-research-beat.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
