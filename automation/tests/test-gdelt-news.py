@@ -85,7 +85,7 @@ class TestRank(unittest.TestCase):
 
     def test_bands_and_block_shape(self):
         with unittest.mock.patch.dict(os.environ,
-                                      {"GDELT_NEWS_POLISH": "0"}):
+                                      {}):
             items = gn.rank_rows("\n".join(FIXTURE_ROWS), "0400")
             block = gn.render_block(items, "0400", "2026-09-12")
         lines = block.splitlines()
@@ -110,7 +110,7 @@ class TestCli(unittest.TestCase):
         env = dict(gn.os.environ,
                    GDELT_LASTUPDATE_URL="http://127.0.0.1:1/lastupdate.txt",
                    STATE_FILE=str(tmp / "STATE.md"),
-                   GDELT_NEWS_POLISH="0")
+                   )
         return subprocess.run(cmd, capture_output=True, text=True,
                               timeout=60, env=env)
 

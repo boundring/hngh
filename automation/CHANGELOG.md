@@ -1,5 +1,50 @@
 # Changelog
 
+## 2026-09-13
+
+- feat: newspaper paid-cost conversion - procedural pipeline, local-only
+  model sessions, overnight scheduling. Operator directive 2026-09-13
+  (metered spend hit $5.55 / 220 calls / 5.09M tokens in 24h, edition
+  no. 7): mechanical work becomes zero-LLM code and only genuinely
+  editorial steps keep a model, always the LOCAL leg, always inside the
+  operator's sleeping hours.
+  - gdelt-news.py: headline polish is now a deterministic slug
+    normalizer (collapse whitespace, strip wire prefixes, ASCII, 120-char
+    cap) -- the hourly per-headline model call through the paid chain is
+    gone; the model seam and GDELT_NEWS_POLISH flag are removed.
+  - news-articles.py: pick_pin() returns LOCAL always (unsloth ->
+    ollama); the kimi/ocgo quota-leg rotation and paid remote/deck
+    fallbacks are never touched by this lane. Token cap per session is
+    the cadence-params row newspaper-article-budget (default 1024, env
+    NEWS_ARTICLES_BUDGET). Articles + story images now live under
+    ~/.hngh/newspaper/<date>/articles|media (HNGH_NEWSPAPER_DIR seam,
+    operator userspace-home policy: never in the repo); LAST_USAGE
+    accumulates per-edition model-call telemetry from model.sh's usage
+    counters.
+  - newspaper-edition.py (new) + cadence/hour/41-newspaper-edition.sh
+    (replacing 41-news-articles.sh): one edition per UTC date, built
+    only inside the sleep window (cadence-params row
+    newspaper-sleep-window, default 01:30-06:30 LOCAL; env
+    HNGH_NEWSPAPER_WINDOW overrides; hour-tier ticks at :00 so keep the
+    window spanning an hourly boundary). Edition = digest.md copy +
+    local-model articles + rendered index.html + edition.json metadata
+    with the cost line (sessions, tokens in/out, paid_calls=0) also
+    appended to logs/newspaper-edition.log. Fail-closed: bad window /
+    no digest / chain down = breadcrumb + exit 0, next hour tick
+    retries; edition.json is the idempotence marker.
+  - digest-public.py: extended-article links now read the hngh
+    newspaper dir and say "(local edition only)" -- newspaper user data
+    no longer lives under docs/ for the public edition to link.
+  - Tests: new tests/test-newspaper-window.py (window parse/gate/
+    idempotence + a full in-window build with the model stubbed: paid
+    calls 0, usage counters recorded); test-news-desk.py polish cases
+    rewritten procedural; test-gdelt-news.py + test-external-content.py
+    drop the dead GDELT_NEWS_POLISH pin; test-news-articles.sh paths +
+    hermetic HNGH_HOME_DIR/HNGH_NEWSPAPER_DIR seams. Targeted suites
+    green (news-articles, news-desk, newspaper-window, gdelt-news,
+    external-content, digest-html, digest-local); live smoke: one real
+    edition end-to-end on the local llama-server, paid_calls=0.
+
 ## 2026-09-12
 
 - feat: privilege model - 1password keyed access, sudoers.d delegation,

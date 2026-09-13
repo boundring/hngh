@@ -31,53 +31,18 @@ ITEM = {"root": "19", "quad": "4", "lane": "world",
 
 
 class HeadlinePostProcessor(unittest.TestCase):
-    def test_polish_via_model_seam(self):
-        script = "#!/usr/bin/env bash\ncat >/dev/null; echo 'Eight killed" \
-                 " in Russian strikes on Ukrainian cities'\n"
-        with tempfile.TemporaryDirectory() as d:
-            stub = os.path.join(d, "stub.sh")
-            with open(stub, "w") as f:
-                f.write(script)
-            os.chmod(stub, 0o755)
-            with unittest.mock.patch.dict(
-                    os.environ, {"NEWS_ARTICLES_MODEL_CMD": stub}):
-                out = gn.polish_headline(ITEM, "73703865")
-        self.assertEqual(out,
-                         "Eight killed in Russian strikes on Ukrainian "
-                         "cities")
+    def test_polish_is_procedural_no_model_calls(self):
+        # paid-cost conversion 2026-09-13: the slug headline passes
+        # through normalization only -- never a model call.
+        self.assertEqual(gn.polish_headline(ITEM, "73703865"), "73703865")
+        self.assertEqual(gn.polish_headline(ITEM, "Raw Slug"), "Raw Slug")
 
-    def test_chain_down_passes_raw_through(self):
-        with unittest.mock.patch.dict(
-                os.environ, {"NEWS_ARTICLES_MODEL_CMD": "exit 1"}):
-            self.assertEqual(gn.polish_headline(
-                ITEM, "73703865"), "73703865")
-
-    def test_disabled_flag_and_multiline_fail_closed(self):
-        with unittest.mock.patch.dict(
-                os.environ, {"GDELT_NEWS_POLISH": "0"}):
-            self.assertEqual(gn.polish_headline(ITEM, "Raw Slug"),
-                             "Raw Slug")
-        # multiline model output never publishes
-        with tempfile.TemporaryDirectory() as d:
-            stub = os.path.join(d, "s.sh")
-            with open(stub, "w") as f:
-                f.write("printf 'line one\\nline two\\n'\n")
-            os.chmod(stub, 0o755)
-            with unittest.mock.patch.dict(
-                    os.environ, {"NEWS_ARTICLES_MODEL_CMD": stub,
-                                 "GDELT_NEWS_POLISH": "1"}):
-                self.assertEqual(gn.polish_headline(ITEM, "Raw"), "Raw")
-
-    def test_polish_rejects_shell_primitive_output(self):
-        with tempfile.TemporaryDirectory() as d:
-            stub = os.path.join(d, "s.sh")
-            with open(stub, "w") as f:
-                f.write("echo 'Protesters demand wipe with rm -rf slash'\n")
-            os.chmod(stub, 0o755)
-            with unittest.mock.patch.dict(
-                    os.environ, {"NEWS_ARTICLES_MODEL_CMD": stub,
-                                 "GDELT_NEWS_POLISH": "1"}):
-                self.assertEqual(gn.polish_headline(ITEM, "Raw"), "Raw")
+    def test_polish_normalizes_deterministically(self):
+        self.assertEqual(gn.polish_headline(
+            ITEM, '  "BREAKING:   Two  Divisions Engaged"  '),
+            "Two Divisions Engaged")
+        self.assertEqual(gn.polish_headline(
+            ITEM, "Report - Fixture War Escalates"), "Fixture War Escalates")
 
 
 class CategoryMapping(unittest.TestCase):

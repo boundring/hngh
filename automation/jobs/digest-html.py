@@ -29,10 +29,18 @@ import sqlite3
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(ROOT)
-TELEMETRY = os.path.join(ROOT, "dashboard", "telemetry.db")
-DIGESTS = os.path.join(ROOT, "digest")
+HNGH_HOME = (os.environ.get("HNGH_HOME_DIR")
+             or os.path.join(os.path.expanduser("~"), ".hngh"))
+TELEMETRY = os.path.join(
+    HNGH_HOME, "db", "telemetry.db")
+DIGESTS = (os.environ.get("HNGH_DIGESTS_DIR")
+           or os.path.join(HNGH_HOME, "archive", "digest"))
 MEDIA = os.path.join(REPO, "docs", "media")
-ARTICLES = os.path.join(REPO, "docs", "articles")
+ARTICLES = (os.environ.get("HNGH_NEWSPAPER_DIR")
+            or os.path.join(
+                os.environ.get("HNGH_HOME_DIR")
+                or os.path.join(os.path.expanduser("~"), ".hngh"),
+                "newspaper"))
 SECTION_BUDGET = int(os.environ.get("DIGEST_SECTION_BUDGET", "1200"))
 BEAT_SENTENCES = 3
 BEAT_RE = re.compile(r"^RESEARCH-BEAT-(\d{4}-\d{2}-\d{2})-.*\.md$")
@@ -159,11 +167,17 @@ def load_articles(date, articles_dir=None):
     d = articles_dir or ARTICLES
     out = {}
     try:
-        names = sorted(os.listdir(os.path.join(d, date)))
+        # writer layout: <date>/articles/<slug>.md (digest.md/index.html
+        # live beside it); legacy roots keep flat <date>/<slug>.md.
+        day_dir = os.path.join(d, date)
+        names_dir = os.path.join(day_dir, "articles")
+        if not os.path.isdir(names_dir):
+            names_dir = day_dir
+        names = sorted(os.listdir(names_dir))
     except OSError:
         return out
     for n in names:
-        a = load_article(os.path.join(d, date, n))
+        a = load_article(os.path.join(names_dir, n))
         if a and a.get("digest_headline"):
             out[a["digest_headline"]] = a
     return out
@@ -561,11 +575,15 @@ def render_article(art):
     img = art.get("image")
     if img:
         name = os.path.basename(img)
+        # edition-relative "media/<file>" resolves beside the index.html
+        # in ~/.hngh/newspaper/<date>/; legacy repo paths keep the jailed
+        # dashboard route.
+        src = ("media/%s" % esc(name) if not img.startswith("docs/")
+               else "/hngh-docs/media/news/%s" % esc(name))
         parts.append('<figure class="storyart"><img '
-                     'src="/hngh-docs/media/news/%s" alt="story '
-                     'illustration: %s"><figcaption>Illustration: %s'
-                     '</figcaption></figure>'
-                     % (esc(name), esc(art.get("digest_headline", name)),
+                     'src="%s" alt="story illustration: %s">'
+                     '<figcaption>Illustration: %s</figcaption></figure>'
+                     % (src, esc(art.get("digest_headline", name)),
                         esc(art.get("digest_headline", name))))
     if art.get("attribution"):
         parts.append('<p class="artnote">%s</p>'
@@ -627,7 +645,7 @@ def render_ledger(date, hourly, ticks, db=TELEMETRY):
     tokens = sum(h[2] for h in hourly)
     return "\n".join([
         '<div class="deck-plate">The Ledger<small>24h &middot; %s &middot; '
-        'dashboard/telemetry.db</small></div>' % esc(date),
+        '~/.hngh/db/telemetry.db</small></div>' % esc(date),
         '<div class="ledger">',
         '<div class="stat"><div class="k">metered spend</div>'
         '<div class="v">$%.2f</div><div class="d">%d calls</div>%s</div>'
@@ -671,7 +689,7 @@ def render_page(digest_path, digests_dir=DIGESTS, db=TELEMETRY):
     edition = len(digest_index(digests_dir))
     head = ('<div class="masthead"><h1>The Machine Hall &mdash; Daily '
             'Dispatch</h1><div class="edition">edition no. %d &middot; '
-            '%s &middot; automation/digest/%s.md &middot; two decks: '
+            '%s &middot; ~/.hngh/archive/digest/%s.md &middot; two decks: '
             'the outside world, the megastructure</div></div>'
             % (edition, esc(date), esc(date)))
     spend = sum(h[1] for h in hourly)

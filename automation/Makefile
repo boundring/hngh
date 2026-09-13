@@ -69,6 +69,7 @@ test:
 	python3 -B tests/test-gdelt-news.py
 	python3 -B tests/test-news-desk.py
 	bash tests/test-news-articles.sh
+	python3 -B tests/test-newspaper-window.py
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-manga-collage.py
 	python3 -B tests/test-narrative-ledger.py
