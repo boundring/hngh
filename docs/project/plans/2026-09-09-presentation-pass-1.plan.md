@@ -46,7 +46,7 @@ flavor layer; rungs 3–7 are horizon, not this plan.
       regenerate docs/publication/book.md + EPUB.
       Verification: the generated book lists the new records; --check
       passes against the real git/timeline records.
-- [ ] 5. Records: CHANGELOG entry for the presentation pass, and a
+- [x] 5. Records: CHANGELOG entry for the presentation pass, and a
       docs/records/ entry recording the direction adoption (linking
       docs/design/presentation-direction.md).
       Verification: `make test` green; record cross-linked from
@@ -139,3 +139,17 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   staging exactly those two files. Kernel scripts/ and tests/ remain
   forbidden to plan sessions; no further step-5 session should re-run
   the gate until the userspace-home slice lands.
+
+- LANDS 2026-09-13T21:12Z (step-5 session, final): both blockers had
+  cleared in the working tree per the 18:40Z note's terms -- the
+  userspace-home GNGH_HOME_DIR implementation had landed at HEAD
+  (committed via ceremony fd4ccbd/6bb8e66; CHANGELOG 2026-09-13
+  section including the step-5 entry landed with it, cross-linked to
+  this record), and the loop-history-guard exemptions were in (guard:
+  108 commits / 12 exemptions / 0 violations). `make test` re-verified
+  green (rc=0) before and after the commit. Both former test-first-red
+  suites pass standalone. The ceremony ran through
+  scripts/ceremony-drive with all 10 principles passing twice
+  (commit + push legs): docs/records/2026-09-13-presentation-pass-1-adoption.md
+  committed as 4b28c58 (hngh: candidate 054fff154a16f93f...) and
+  pushed to origin. Plan complete (steps 1-5 all checked).
