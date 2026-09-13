@@ -55,6 +55,27 @@ lives under Pre-release / early development until the first release.
   knows nothing of either home. Policy updated in AGENTS.md,
   `docs/README.md`, `automation/README.md`, `~/.hngh/README.md`, and
   the `.omp/` hngh skill.
+- **Quota legs: Z.AI leg and every-window pacing** (operator
+  directive 2026-09-13): `lib/model.sh` gains `zai_chat` /
+  `zai_pace_blocked` (Z.AI GLM Coding Plan gateway, 5h + fixed-Monday-
+  weekly windows) and `ocgo_pace_blocked` (OpenCode Go 7d + monthly
+  windows) — every product window is now gated, tightest wins, and
+  pacing is enforced at the launch branch itself so direct
+  `launch_session` callers cannot land an unpaced call.
+  `launch-session.sh` and `lib/ocgo-delegate.sh` route
+  PROVIDER=opencode-go|kimi|zai with per-leg agents and attribution;
+  `config/opencode/opencode.jsonc` carries the executor-zai role;
+  window caps live in `config/leg-budgets.tsv` and
+  `automation/cadence-params.tsv`.
+- **Newspaper paid-cost conversion** (operator directive 2026-09-13;
+  automation/CHANGELOG.md carries the full entry): GDELT headline
+  polish becomes a deterministic slug normalizer (the paid
+  per-headline model call is gone), article generation pins the LOCAL
+  leg only with a per-session token budget, and a new
+  `jobs/newspaper-edition.py` + `cadence/hour/41-newspaper-edition.sh`
+  builds one edition per UTC date inside the operator sleep window,
+  idempotent via `edition.json` and fail-closed with a retry next
+  tick; editions live under `~/.hngh/newspaper/<date>/`.
 
 #### Fixed
 
