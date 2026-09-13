@@ -4,15 +4,13 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: Implement findings F1 (subprocess seam) and F2 (overnight harness coverage gap) by adding a local integration test script that invokes `bin/hngh` as an external process via `subprocess.run`, asserting the corrected CLI contract resolves, then registering it in the existing CI gate so regression is caught synchronously rather than overnight.
-
 ## Steps
 
-- [ ] Create `scripts/verify-lib-harness-seam.sh` that uses Python's stdlib `subprocess.run` to call `bin/hngh --version`, asserts a clean exit code and non-empty stdout, and writes results to `digest/RESEARCH-BEAT-*-fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v.md`
-  Verification: bash scripts/verify-lib-harness-seam.sh
-
-- [ ] Add the new script as a prerequisite in `cadence/hour/33-research-beat.sh` before the model-leg call, so any subprocess seam regression blocks the beat early with a clear error message referencing findings F1/F2
-  Verification: grep -q "verify-lib-harness-seam" cadence/hour/33-research-beat.sh
-
-- [ ] Commit both files to hngh-automation and run `make test` in jobs/, scripts/, and cadence/ directories to confirm no existing gates are broken by the addition
-  Verification: make test -C jobs/ && make test -C scripts/ && make test -C cadence/
+- [ ] Add a test case in `tests/` that verifies `lib/automation.py` does not invoke `bin/hngh` via subprocess or direct module import
+  Verification: bash -n tests/test_automation_invocation_mechanism.py
+- [ ] Create a script under `scripts/` to check if existing integration tests cover the `lib/automation.py` ↔ `bin/hngh` boundary
+  Verification: python3 scripts/check_integration_test_coverage.py
+- [ ] Ensure the guardrail bug from 2026-08-25 is resolved in the current kernel version and that `lib/automation.py` handles the corrected CLI contract without errors
+  Verification: bash -n tests/test_guardrail_bug_resolution.py
+- [ ] Address the latency issue in `cadence/hour/33-research-beat.sh` where wall=28.3s is observed against a 0.1s median
+  Verification: python3 scripts/check_beat_latency_metrics.py

@@ -8,3 +8,7 @@ at 2026-09-13T22:00:39Z. Alert text: research review verdict unparseable for fai
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-13T23:00:39Z re-occurred (dedup window expired)
