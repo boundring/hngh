@@ -87,7 +87,7 @@ PY
 breadcrumb "$JOB_NAME" "bench" "$(wc -l <"$OUT" 2>/dev/null || echo 0) models probed; best: $best"
 
 # ranking summary for the morning report
-python3 - "$OUT" "$AUTOMATION_ROOT/digest/BENCH-$DATE.md" <<'PY'
+python3 - "$OUT" "$DIGEST_DIR/BENCH-$DATE.md" <<'PY'
 import json, os, sys
 src, dst = sys.argv[1:3]
 rows = []

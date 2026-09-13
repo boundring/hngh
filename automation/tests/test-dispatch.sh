@@ -25,11 +25,11 @@ git -C "$kernel" config user.name t
 day="$(date -u +%Y-%m-%d)"
 
 # fixture feeds (the automation tree the generator reads as ROOT/automation)
-mkdir -p "$kernel/automation/logs" "$kernel/automation/dashboard"
+mkdir -p "$kernel/automation/logs" "$kernel/automation/dashboard" "$kernel/home/db"
 printf '%s | lane-a | session-run\n%s | lane-b | session-run\n' \
  "$day" "$day" >"$kernel/automation/logs/budget.md"
 printf '%s | other | cron\n' "$day" >>"$kernel/automation/logs/budget.md"
-python3 - "$kernel/automation/dashboard/telemetry.db" <<'PY'
+python3 - "$kernel/home/db/telemetry.db" <<'PY'
 import sqlite3, sys
 con = sqlite3.connect(sys.argv[1])
 con.execute("CREATE TABLE events(ts TEXT, source TEXT, kind TEXT, identity TEXT,"
@@ -50,7 +50,7 @@ git -C "$kernel" add -A
 git -C "$kernel" commit -qm "test: fixture"
 
 # --- (a) journal DISPATCH lead section --------------------------------------
-HNGH_PUB_ROOT="$kernel" python3 "$root/../scripts/generate-publication" --daily --force "$day" >/dev/null ||
+HNGH_PUB_ROOT="$kernel" HNGH_HOME_DIR="$kernel/home" python3 "$root/../scripts/generate-publication" --daily --force "$day" >/dev/null ||
  fail "generate-publication --daily failed"
 j="$kernel/docs/journal/$day.md"
 grep -q '^## DISPATCH$' "$j" || fail "journal missing the DISPATCH section"
@@ -72,7 +72,7 @@ readme="$td/README.md"
  printf '<!-- dispatch:begin -->\n| 2000-01-01 | 0 | $0.00 | 0 | 0 |\n\nDeep read: [the journal](docs/journal/2000-01-01.md).\n<!-- dispatch:end -->\n\n'
  printf 'tail section stays put\n'
 } >"$readme"
-HNGH_PUB_ROOT="$kernel" python3 "$root/../scripts/generate-publication" --readme "$readme" "$day" >/dev/null ||
+HNGH_PUB_ROOT="$kernel" HNGH_HOME_DIR="$kernel/home" python3 "$root/../scripts/generate-publication" --readme "$readme" "$day" >/dev/null ||
  fail "generate-publication --readme failed"
 grep -q "^| $day | 2 | \$3.75 | 2 | 2 |$" "$readme" ||
  fail "README dispatch table row not rewritten with live numbers"
@@ -87,7 +87,7 @@ ok "README sentinel block rewrites rows; content outside stays byte-identical"
 # --- (c) README without sentinels is refused --------------------------------
 noreadme="$td/plain.md"
 printf '# no sentinels here\n' >"$noreadme"
-if HNGH_PUB_ROOT="$kernel" python3 "$root/../scripts/generate-publication" --readme "$noreadme" "$day" >/dev/null 2>&1; then
+if HNGH_PUB_ROOT="$kernel" HNGH_HOME_DIR="$kernel/home" python3 "$root/../scripts/generate-publication" --readme "$noreadme" "$day" >/dev/null 2>&1; then
  fail "dispatch table injected into a sentinel-less README"
 fi
 grep -q '^# no sentinels here$' "$noreadme" || fail "sentinel-less README was modified"

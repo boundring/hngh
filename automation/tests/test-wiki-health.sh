@@ -31,7 +31,7 @@ sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
-mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" \
+mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" "$sb/db" \
  "$sb/digest" "$sb/kernel/docs/research" "$sb/kernel/scripts" \
  "$sb/kernel/docs/project" "$sb/.config/hngh" "$sb/report-root"
 mkdir -p "$sb/stubbin" "$sb/stamps"
@@ -105,7 +105,7 @@ for r in json.load(sys.stdin)["reports"]:
 probe_run() { # one health-probe pass in the sandbox
  (
   cd "$sb"
-  env -i PATH="$PATH" HOME="$sb" JOB_NAME=25-wiki-health.sh \
+  env -i PATH="$PATH" HOME="$sb" HNGH_HOME_DIR="$sb" JOB_NAME=25-wiki-health.sh \
    AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" \
    HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root" \
    HNGH_WIKI_PERSONAL="$sb/p1/vhealthy/.llm-wiki" HNGH_WIKI_PROJECT="$sb/p4/vsplit/.llm-wiki" \
@@ -121,7 +121,7 @@ probe_run() { # one health-probe pass in the sandbox
 probe_extra() { # PERS PROJ -> one pass with arbitrary vault pair
  (
   cd "$sb"
-  env -i PATH="$PATH" HOME="$sb" JOB_NAME=25-wiki-health.sh \
+  env -i PATH="$PATH" HOME="$sb" HNGH_HOME_DIR="$sb" JOB_NAME=25-wiki-health.sh \
    AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" \
    HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root" \
    HNGH_WIKI_PERSONAL="$1" HNGH_WIKI_PROJECT="$2" \
@@ -136,13 +136,13 @@ probe_extra() { # PERS PROJ -> one pass with arbitrary vault pair
 call_count() { [ -f "$sb/omp-calls" ] && wc -l <"$sb/omp-calls" || echo 0; }
 
 telemetry_rows() { # kind -> dump of telemetry events for that kind
- sqlite3 "$sb/dashboard/telemetry.db" \
+ sqlite3 "$sb/db/telemetry.db" \
   "select identity||' '||body from events
    where kind='$1' order by ts" 2>/dev/null
 }
 
 telemetry_wall() { # identity -> wall_s of its first wiki-rebuild row
- sqlite3 "$sb/dashboard/telemetry.db" \
+ sqlite3 "$sb/db/telemetry.db" \
   "select coalesce(wall_s,-1) from events where kind='wiki-rebuild'
    and identity='$1' order by ts limit 1" 2>/dev/null
 }
@@ -360,6 +360,7 @@ printf 'wiki-surface\tplanned\t2026-09-07T00:00:00Z\tHow does the wiki surface c
 
 BEAT_ENV=(
  AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh
+ HNGH_HOME_DIR="$sb"
  HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root"
  TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
  REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1

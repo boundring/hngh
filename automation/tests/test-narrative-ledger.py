@@ -66,12 +66,15 @@ class Fixture:
         auto = self.tmp / "automation"
         for sub in ("logs", "dashboard", "state", "digest"):
             (auto / sub).mkdir(parents=True)
+        # the userspace home db (generate-publication and digest-public
+        # both read it via HNGH_HOME_DIR / HNGH_TELEMETRY_DB)
+        (self.tmp / "home" / "db").mkdir(parents=True)
         for sub in ("docs/journal", "docs/project", "docs/dispatch"):
             (self.tmp / sub).mkdir(parents=True)
         (auto / "logs" / "budget.md").write_text(
             "%s | lane-a | session-run\n%s | lane-b | session-run\n"
             "%s | other | cron\n" % (DAY, DAY, DAY))
-        db = auto / "dashboard" / "telemetry.db"
+        db = self.tmp / "home" / "db" / "telemetry.db"
         con = sqlite3.connect(db)
         con.execute("CREATE TABLE events(ts TEXT, source TEXT, kind TEXT,"
                     " identity TEXT, lane TEXT, unit TEXT, model TEXT,"
@@ -120,10 +123,18 @@ class Fixture:
                    GIT_COMMITTER_DATE=DAY + "T12:00:00")
         subprocess.run(["git", "-C", str(self.tmp), "commit", "-qm",
                         "test: fixture"], env=env, check=True)
+        # hngh-home seams: the renderer reads feeds from the userspace
+        # home; pin all three to the fixture so nothing real is touched.
+        os.environ["HNGH_HOME_DIR"] = str(self.tmp / "home")
+        os.environ["HNGH_DIGESTS_DIR"] = str(self.tmp / "automation" / "digest")
+        os.environ["HNGH_TELEMETRY_DB"] = str(
+            self.tmp / "home" / "db" / "telemetry.db")
         return self.tmp
 
     def __exit__(self, *exc):
         subprocess.run(["rm", "-rf", str(self.tmp)], check=True)
+        for k in ("HNGH_HOME_DIR", "HNGH_DIGESTS_DIR", "HNGH_TELEMETRY_DB"):
+            os.environ.pop(k, None)
         return False
 
 
@@ -146,7 +157,8 @@ class TestJournalNarrative(unittest.TestCase):
         self.assertLess(story, book)
         self.assertIn("- **1** commits; **0** candidate-bound.", text)
         self.assertIn("- **0** check-ins (none).", text)
-        self.assertIn("- Public edition: docs/dispatch/%s.md" % DAY, text)
+        self.assertIn(
+            "- Public edition: ~/.hngh/dispatch/%s.md" % DAY, text)
 
     def test_story_paragraphs_grounded(self):
         text = self.genpub.story_section(DAY)
@@ -169,7 +181,7 @@ class TestJournalNarrative(unittest.TestCase):
     def test_story_skips_when_feeds_missing(self):
         # all feeds gone: no telemetry, no digest, no blockers, no
         # lessons -> the story still renders, structured and honest
-        (self.fix / "automation" / "dashboard" / "telemetry.db").unlink()
+        (self.fix / "home" / "db" / "telemetry.db").unlink()
         (self.fix / "automation" / "digest" / (DAY + ".md")).unlink()
         (self.fix / "automation" / "state" / "beat-blockers.tsv").unlink()
         (self.fix / "automation" / "state" / "ocgo-agent-lessons.md").unlink()
@@ -196,7 +208,7 @@ class TestDigestPublic(unittest.TestCase):
             dp = _load_digest_public(fix)
             target = dp.write_publication(DAY, str(fix))
             self.assertEqual(
-                target, str(fix / "docs" / "dispatch" / (DAY + ".md")))
+                target, str(fix / "home" / "dispatch" / (DAY + ".md")))
             text = Path(target).read_text()
             self.assertIn("## THE LEDGER", text)
             self.assertIn("docs/journal/%s.md" % DAY, text)
@@ -245,7 +257,8 @@ class TestSentinelsAndDaily(unittest.TestCase):
             self.assertEqual(out.returncode, 0, out.stderr)
             journal = (fix / "docs" / "journal" / (DAY + ".md")).read_text()
             self.assertIn("## The day's story", journal)
-            dispatch = (fix / "docs" / "dispatch" / (DAY + ".md")).read_text()
+            dispatch = (fix / "home" / "dispatch" /
+                        (DAY + ".md")).read_text()
             self.assertIn("## THE LEDGER", dispatch)
             # --check still verifies the machine ledger
             chk = subprocess.run(

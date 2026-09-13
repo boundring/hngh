@@ -271,8 +271,7 @@ def check_paper_edition(ctx):
     if ctx["now_struct"].tm_hour < 2:
         out["passes"].append(("paper-edition", "edition not yet due (< 02:00 UTC)"))
         return out
-    path = os.path.join(ctx["root"], "digest",
-                        "%s.md" % ctx["date"])
+    path = os.path.join(ctx["digest_dir"], "%s.md" % ctx["date"])
     try:
         text = open(path, encoding="utf-8", errors="replace").read()
     except OSError:
@@ -912,7 +911,10 @@ def build_ctx(args, now_s):
         "subjects": os.environ.get(
             "PATROL_SUBJECTS", os.path.join(root, "research-subjects.txt")),
         "digest_dir": os.environ.get(
-            "PATROL_DIGEST_DIR", os.path.join(root, "digest")),
+            "PATROL_DIGEST_DIR", os.path.join(
+                os.environ.get("HNGH_HOME_DIR")
+                or os.path.join(os.path.expanduser("~"), ".hngh"),
+                "archive", "digest")),
         "feedback": os.environ.get(
             "PATROL_FEEDBACK",
             os.path.join(root, "dashboard", "feedback")),

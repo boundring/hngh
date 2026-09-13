@@ -17,7 +17,6 @@ docs/project/report-bodies/
 automation/STATE.md
 automation/agent-handoffs.md
 automation/dashboard/
-automation/digest/
 automation/logs/
 automation/archive/
 automation/snapshots/
@@ -27,7 +26,6 @@ automation/deck-facts/
 automation/bridge/
 automation/node_modules/
 automation/tmp-*
-automation/telemetry.db
 # secrets and per-run state — mirrors automation/.gitignore
 automation/*.token
 automation/store/

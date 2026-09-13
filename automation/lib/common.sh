@@ -8,12 +8,23 @@ AUTOMATION_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 JOB_NAME="${JOB_NAME:-$(basename "$0")}"
 
+# hngh userspace home (layout contract 2026-09-13): user data — digests,
+# newspaper copies, manga, databases, archives — lives under ~/.hngh,
+# never inside the dev repo. HNGH_HOME_DIR overrides for hermetic tests.
+HNGH_HOME_DIR="${HNGH_HOME_DIR:-$HOME/.hngh}"
+DIGEST_DIR="${DIGEST_DIR:-$HNGH_HOME_DIR/archive/digest}"
+
+hngh_catalog() { # kind path [note] -> append to ~/.hngh/catalog.tsv
+ printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  "$1" "$2" "${3:-}" >>"$HNGH_HOME_DIR/catalog.tsv"
+}
+
 log() { # console line (breadcrumbs are separate)
  printf '%s [%s] %s\n' "$(date -u +%H:%M:%S)" "$JOB_NAME" "${*-}" >&2
 }
 
-mkdir -p "$AUTOMATION_ROOT/snapshots" "$AUTOMATION_ROOT/digest" \
- "$AUTOMATION_ROOT/archive" "$AUTOMATION_ROOT/dashboard"
+mkdir -p "$AUTOMATION_ROOT/snapshots" "$AUTOMATION_ROOT/archive" \
+ "$AUTOMATION_ROOT/dashboard" "$DIGEST_DIR"
 
 # newest snapshot file for a source in a day dir ("" if none).
 # Filenames are <name>-<HHMM>.json; iterate the sorted glob and keep the last

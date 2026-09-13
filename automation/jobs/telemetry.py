@@ -17,7 +17,10 @@ import sys
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB = os.path.join(ROOT, "dashboard", "telemetry.db")
+DB = os.path.join(
+    os.environ.get("HNGH_HOME_DIR")
+    or os.path.join(os.path.expanduser("~"), ".hngh"),
+    "db", "telemetry.db")
 
 SCHEMA = """CREATE TABLE IF NOT EXISTS events(
   ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT,

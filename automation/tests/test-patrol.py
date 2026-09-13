@@ -116,6 +116,7 @@ class Patrol(unittest.TestCase):
                     for f in ("enabled", "active")))
         for k, v in [("PATROL_ROOT", str(self.auto)),
                      ("HNGH_HOME_DIR", str(self.sb / "home")),
+                     ("PATROL_DIGEST_DIR", str(self.auto / "digest")),
                      ("PATROL_KERNEL", str(self.kernel)),
                      ("PATROL_ROUTES", str(self.auto / "config" / "patrol-routes.tsv")),
                      ("PATROL_SUBJECTS", str(self.auto / "research-subjects.txt")),

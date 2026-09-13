@@ -12,7 +12,7 @@ set -u
 
 DATE="$(date +%F)"
 TS="$(date +%H%M)"
-MORNING_FILE="$AUTOMATION_ROOT/digest/MORNING-$DATE.md"
+MORNING_FILE="$DIGEST_DIR/MORNING-$DATE.md"
 
 # --- 1. fresh fetch (also lands in today's snapshots) ---
 body="$(fetch_sources)"

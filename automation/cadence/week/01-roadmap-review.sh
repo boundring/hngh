@@ -58,7 +58,6 @@ if [ -f "$QUEUE" ]; then
 fi
 
 # outward comms row — a dated market/outreach observation (pull from digest)
-DIGEST_DIR="$AUTOMATION_ROOT/digest"
 if [ -d "$DIGEST_DIR" ]; then
   newest="$(ls "$DIGEST_DIR"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md 2>/dev/null | tail -1)"
   if [ -n "$newest" ]; then
