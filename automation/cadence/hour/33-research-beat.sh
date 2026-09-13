@@ -551,8 +551,9 @@ line="$(printf '%s' "$row" | cut -f4)"
 
 # MODEL_PIN rotation (operator quota directive, 2026-09-07): every Nth run
 # (kimi-research-share; 0/absent-config = never pin) pins the kimi quota leg
-# primary, spreading K3 quota across the window -- 1 beat/hour, share 3 ->
-# <=8 kimi calls/day against the 40/day cap; quota_pace_blocked still guards
+# primary, spreading K3 quota across the window -- 1 beat/hour, share 2 ->
+# <=12 kimi calls/day against the 40/day cap (2026-09-13 utilization raise,
+# was share 3 / <=8); quota_pace_blocked still guards
 # bursts, and a pace-blocked or 429ing kimi falls through to the local chain
 # inside model_call (research never blocks). The
 # OpenCode Go leg (opencode-research-share, 5h-window paced) rotates after
