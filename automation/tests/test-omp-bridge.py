@@ -9,8 +9,10 @@ plan file is ever touched. Fail-closed exits follow the house protocol:
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import time
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -120,6 +122,69 @@ class OmpBridge(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout)["slug"],
                          "2026-09-10-fixture-slug")
+
+
+class CeremonyStoreCleanup(unittest.TestCase):
+    """--ceremony must not leak its ephemeral /tmp/hngh-cer-* receipt
+    root: removed on success AND refusal (2026-09-13 stale-store
+    alerts), plus a >6h stale sweep at start."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.root = Path(self._td.name) / "hngh"
+        scripts = self.root / "scripts"
+        scripts.mkdir(parents=True)
+        self.env = dict(os.environ, HNGH_BRIDGE_ROOT=str(self.root),
+                        OMP_CEREMONY_LOCK=str(self.root / "lock"))
+        self.env.pop("OMP_CEREMONY_STORE", None)
+        self.drive = scripts / "ceremony-drive"
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def run_ceremony(self, script_body):
+        self.drive.write_text("#!/bin/sh\n" + script_body)
+        self.drive.chmod(0o755)
+        (self.root / "work.txt").write_text("payload\n")
+        before = {p for p in Path("/tmp").glob("hngh-cer-*")}
+        r = subprocess.run(
+            [sys.executable, str(BRIDGE), "--ceremony", "test-obj",
+             "work.txt"], env=self.env, capture_output=True, text=True)
+        return r, before
+
+    def assert_no_leak(self, r, before):
+        self.assertEqual({p for p in Path("/tmp").glob("hngh-cer-*")}, before,
+                         "ceremony store leaked to /tmp")
+
+    def test_store_removed_on_success(self):
+        r, before = self.run_ceremony("exit 0\n")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assert_no_leak(r, before)
+
+    def test_store_removed_on_refusal(self):
+        r, before = self.run_ceremony("echo refused >&2\nexit 1\n")
+        self.assertEqual(r.returncode, 1)
+        self.assert_no_leak(r, before)
+
+    def test_store_removed_on_timeout(self):
+        self.env["OMP_CEREMONY_TIMEOUT"] = "1"
+        r, before = self.run_ceremony("sleep 30\n")
+        self.assertEqual(r.returncode, 3)
+        self.assert_no_leak(r, before)
+
+    def test_stale_sweep_removes_old_store_keeps_fresh(self):
+        stale = Path("/tmp/hngh-cer-teststale")
+        stale.mkdir(exist_ok=True)
+        old = time.time() - 7 * 3600
+        os.utime(stale, (old, old))
+        fresh = Path("/tmp/hngh-cer-testfresh")
+        fresh.mkdir(exist_ok=True)
+        try:
+            self.run_ceremony("exit 0\n")  # cleanup verified elsewhere
+            self.assertFalse(stale.exists(), "stale store not swept")
+            self.assertTrue(fresh.exists(), "fresh evidence dir removed")
+        finally:
+            shutil.rmtree(fresh, ignore_errors=True)
 
 
 if __name__ == "__main__":
