@@ -59,8 +59,10 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from fcntl import flock, LOCK_EX, LOCK_NB, LOCK_UN
 from pathlib import Path
@@ -91,6 +93,7 @@ BRIDGE_STORE = Path(os.environ.get("OMP_BRIDGE_STORE")
                     or AUTOMATION_ROOT / "bridge")
 LOCK = Path(os.environ.get("OMP_CEREMONY_LOCK") or "/tmp/hngh-ceremony.lock")
 CEREMONY_TIMEOUT = int(os.environ.get("OMP_CEREMONY_TIMEOUT") or 1800)
+STALE_STORE_HOURS = 6
 
 NEXT_RE = re.compile(r"## Next\s*\n(.*?)(?=\n## |\Z)", re.S)
 BULLET_ITEM = re.compile(r"^\s*(?:-\s*\*\*|1\.\s*\*\*|-\s+|1\.\s+)"
@@ -348,7 +351,19 @@ def register_cmd(session, note):
     return 0
 
 
-# --- ceremony --------------------------------------------------------------
+def sweep_stale_stores(stale_hours=STALE_STORE_HOURS):
+    """Remove leftover /tmp/hngh-cer-* dirs older than STALE_HOURS (a
+    dead run's receipt root, flagged by [oversight] stale-store
+    alerts). Fresh dirs (today's evidence, an in-flight run) stay.
+    Best-effort: a missing dir or one already removed is fine."""
+    cutoff = time.time() - stale_hours * 3600
+    for d in Path("/tmp").glob("hngh-cer-*"):
+        try:
+            if d.is_dir() and d.stat().st_mtime < cutoff:
+                shutil.rmtree(d, ignore_errors=True)
+        except OSError:
+            pass
+
 
 def ceremony_cmd(objective, files):
     """Run scripts/ceremony-drive over FILES from a fresh store, serialized.
@@ -369,8 +384,11 @@ def ceremony_cmd(objective, files):
     if not files:
         print("omp-bridge: no FILES given to commit", file=sys.stderr)
         return 2
+    sweep_stale_stores()
     now = now_ts().replace(":", "").replace("-", "").replace("T", "-")[:-1]
-    store = Path(os.environ.get("OMP_CEREMONY_STORE") or f"/tmp/hngh-cer-{now}")
+    env_store = os.environ.get("OMP_CEREMONY_STORE")
+    store = Path(env_store or f"/tmp/hngh-cer-{now}")
+    generated = env_store is None  # our own ephemeral dir: we clean it
     try:
         store.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -397,7 +415,7 @@ def ceremony_cmd(objective, files):
                                   capture_output=True, text=True)
         except subprocess.TimeoutExpired:
             print(f"omp-bridge: ceremony exceeded {CEREMONY_TIMEOUT}s; "
-                  "store left at " + str(store), file=sys.stderr)
+                  "no commit landed; store removed", file=sys.stderr)
             return 3
         out = (proc.stdout or "") + (proc.stderr or "")
         if out:
@@ -412,6 +430,8 @@ def ceremony_cmd(objective, files):
         except OSError:
             pass
         lockfd.close()
+        if generated:
+            shutil.rmtree(store, ignore_errors=True)
 
 
 # --- run lifecycle (delegation loop) -------------------------------------
