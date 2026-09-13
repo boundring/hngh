@@ -65,6 +65,10 @@ to `~/.hngh`, and `src/` knows nothing of either home.
 
 Read-only state tools: `mcp__hngh_present`, `mcp__hngh_status`, `mcp__hngh_queue_report`, `mcp__hngh_dashboard_readout`. Propose new plans via the `hngh_propose` plugin tool (wraps `--propose`).
 
+## 1Password
+
+The 1Password service account is the ONLY auth path for agent `op` usage: `OP_SERVICE_ACCOUNT_TOKEN` (mapped from `ONEPASSWORD_SERVICE_KEY` by automation/lib/credentials.sh). Never trigger an interactive 1Password prompt (no `op signin`, no desktop-app unlock). If the token env is absent, fail soft — breadcrumb + report the gap — and never block on or attempt an interactive prompt.
+
 ## Language rule
 
 Anything landing in this repo: English/ASCII only.

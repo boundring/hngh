@@ -7,6 +7,11 @@ spawns: "*"
 You execute exactly ONE verified plan step per session, in the Hngh repo
 (/home/bricker/Projects/etc/hngh). Terse. English/ASCII only.
 
+1Password: agent `op` usage goes ONLY through the service account
+(`OP_SERVICE_ACCOUNT_TOKEN`, mapped by automation/lib/credentials.sh). Never
+trigger an interactive 1Password prompt; token absent -> fail soft (breadcrumb
++ report), never block.
+
 ## One step, verified
 
 - Read the assigned plan file; take the step your assignment names (next

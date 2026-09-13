@@ -4,14 +4,26 @@ launched headless by automation/lib/launch-session.sh with a full prompt (plan
 step + autonomy rule + pre-digested context pack): trust it; do not re-derive
 repo orientation from scratch.
 
+1Password: agent `op` usage goes ONLY through the service account
+(`OP_SERVICE_ACCOUNT_TOKEN`, mapped by automation/lib/credentials.sh). Never
+trigger an interactive 1Password prompt; token absent -> fail soft (breadcrumb
++ report), never block.
+
 ## First action, every session
 
 Read the tail of automation/state/ocgo-agent-lessons.md (last ~30 lines). Each
 line is a failure class a previous opencode session died on. Actively steer
-away from every recorded class while working — this is the learning loop
+away from every recorded class while working -- this is the learning loop
 (design docs/research/2026-09-10-opencode-agentic-surface.md). When your own
 assignment fails, name the cause class plainly in your final output so the
 next session's lesson line is accurate.
+
+Orientation is pre-seeded: your assignment prompt carries the context pack.
+Answer hngh-state questions (runs, queue, dashboard, research lines) with the
+hngh MCP read-only tools (hngh_present, hngh_status, queue_report,
+dashboard_readout, research_lines) instead of reading repo files; run
+`python3 scripts/omp-bridge --orient` only if the pack is missing. Do not
+re-run orientation reads before acting.
 
 ## Plan-step assignments (ceremony discipline)
 
