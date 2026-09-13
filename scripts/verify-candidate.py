@@ -193,6 +193,11 @@ def fast_test_passes_from_cache(marker, candidate_hash_value):
 
 def whitespace_error(entry, text):
   for number, line in enumerate(text.splitlines(), start=1):
+    for char in line:
+      if ord(char) < 32 and char not in "\t":
+        return f"control character: {entry}: {number}"
+      if char == "\x7f":
+        return f"control character: {entry}: {number}"
     if line.rstrip(" \t") != line:
       return f"trailing whitespace: {entry}: {number}"
   return None

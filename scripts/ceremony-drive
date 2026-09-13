@@ -125,11 +125,17 @@ candidate files. Returns (values dry-run store positionals)."
 
 (defun dream-store-path ()
   "A fresh /tmp/hngh-dream-<ts> scratch store (the rehearsal-lane
-dream-store convention)."
-  (format nil "/tmp/hngh-dream-~A"
-            (nth-value 0 (uiop:run-program '("date" "+%Y%m%JT%H%M%S%NZ")
-                                           :output '(:string :stripped t)
-                                           :ignore-error-status t))))
+dream-store convention). The directory is created here: a dream
+store is disposable scratch, unlike an explicit --store, which the
+operator must create first (fail-closed)."
+  (let ((path (format nil "/tmp/hngh-dream-~A"
+            (nth-value 0 (uiop:run-program '("date" "+%Y%m%dT%H%M%S%NZ")
+                                    :output '(:string :stripped t)
+                                    :ignore-error-status t)))))
+    ;; trailing slash: ensure-directories-exist creates the directory
+    ;; component only, so the store itself must be the last component.
+    (ensure-directories-exist (concatenate 'string path "/"))
+    path))
 
 (defun drive-loop (dry-run store objective files)
   (let* ((evidence (gather-evidence files))
@@ -173,7 +179,7 @@ dream-store convention)."
                                      "repository"))))
           (when (plusp code) (return-from drive-loop code))
           ;; 2 -- deterministic verdict; capture its rendered text
-          (let ((verdict-text "verdict pending")
+          (let* ((verdict-text "verdict pending")
                 (verdict-file
                   (uiop:with-temporary-file
                       (:pathname path :keep t :type "txt")
