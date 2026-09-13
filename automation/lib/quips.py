@@ -44,6 +44,8 @@ BANKS = {
     "machine_hall": [
         "The machine hall, rendered in the only medium it respects: text.",
         "Twenty-four columns of spent attention; the floor never blinks.",
+        "The builders finished long ago. The hall still runs itself; "
+        "nobody has asked it to stop.",
     ],
     "patrol": [
         "{surfaces} surfaces walked, {passes} green crumbs, {fails} red "
@@ -52,6 +54,10 @@ BANKS = {
         "that need a key.",
         "{fails} red marks across {surfaces} surfaces. The rounds walked; "
         "the paper counted.",
+        "{passes} green doors, {fails} doors a key alone will open. The "
+        "corridors were quiet. The corridors are always quiet.",
+        "{surfaces} surfaces, {fails} marks. Somewhere above, a stair "
+        "went down a level the map does not keep.",
     ],
 }
 

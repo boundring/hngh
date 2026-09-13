@@ -62,6 +62,10 @@ MARGIN_NOTES = [
     "the bolt held. the diagram lied.",
     "stamped twice by mistake. no retractions.",
     "witnesses: one cat, unimpressed.",
+    "the floor plan ends here. the floors do not.",
+    "mushroom season in the storeroom again.",
+    "the cheek grew back. that was the problem.",
+    "tengu sighted near stairwell 12. filed, not chased.",
 ]
 
 # Comedy banks (2026-09-12 publication review): pools keyed by CAMEO
@@ -139,6 +143,13 @@ NARRATIONS = [
     "The paperwork arrived on schedule. Everything else did not.",
     "The corridor had been quiet for three days. Too quiet, on review.",
     "The craft of filing was, as ever, underrated.",
+    # Manga-derived callbacks (easter eggs; docs/records/
+    # 2026-09-12-manga-collection-policy.md): the megastructure genre's
+    # own narration register -- a reader who knows the source smiles,
+    # a stranger reads them as original hall flavor.
+    "The builders were still building. Nobody had asked them to stop.",
+    "Somewhere above, a door opened onto a floor no map admitted to.",
+    "The smoke took another clerk. The paperwork went on without him.",
 ]
 SCENES = {
     "bureaucrat": [
