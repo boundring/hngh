@@ -66,6 +66,14 @@ README = ROOT / "README.md"
 INTENT = ROOT / "docs" / "intent.md"
 ARCH = ROOT / "docs" / "architecture.md"
 AUTOMATION = ROOT / "automation"
+
+
+def hngh_home():
+    """The userspace home (~/.hngh): local dbs, dispatch editions.
+    Same HNGH_HOME_DIR seam the automation tier's hngh_home.py
+    exposes; the kernel does not import it."""
+    return Path(os.environ.get("HNGH_HOME_DIR")
+                or Path(os.path.expanduser("~")) / ".hngh")
 JOBS = Path(__file__).resolve().parent.parent / "automation" / "jobs"
 
 
@@ -137,7 +145,7 @@ def dispatch_numbers(day):
         sessions = sum(1 for ln in budget.read_text(errors="replace").splitlines()
                        if ln.startswith(day) and ln.rstrip().endswith("session-run"))
     spend, calls = 0.0, 0
-    db = AUTOMATION / "dashboard" / "telemetry.db"
+    db = hngh_home() / "db" / "telemetry.db"
     if db.exists():
         try:
             con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=2)
@@ -191,7 +199,7 @@ def dispatch_section(day):
         f"Verdict: {d['verdict']}.",
         "",
         "<!-- sources: sessions = automation/logs/budget.md (date-prefix + "
-        "session-run suffix); spend/calls = automation/dashboard/telemetry.db "
+        "session-run suffix); spend/calls = ~/.hngh/db/telemetry.db "
         "(events, kind=session-cost, 24h window); operator items = "
         "automation/dashboard/operator-items.json (status=open); research "
         "lines = automation/research-lines.tsv (state column) -->",
@@ -287,7 +295,7 @@ def story_section(day):
     paragraph is preceded by its feeds citation (the digest's
     <!-- feeds: --> convention). Never touches the ledger's format."""
     dl = _load_job("digest_ledger")
-    telem = dl.spend(day, str(AUTOMATION / "dashboard" / "telemetry.db"))
+    telem = dl.spend(day, str(hngh_home() / "db" / "telemetry.db"))
     sess = dl.sessions(day, str(AUTOMATION / "logs" / "budget.md"))
     plans = dl.plans(day, str(AUTOMATION / "dashboard" / "plans.json"))
     d = dispatch_numbers(day)
@@ -303,7 +311,7 @@ def story_section(day):
                          % (len(entries), len(accepted), len(executed),
                             queue_next or "-"))
         blocks.append((
-            "automation/dashboard/telemetry.db + automation/logs/"
+            "~/.hngh/db/telemetry.db + automation/logs/"
             "budget.md + automation/dashboard/plans.json",
             "The hall fired %d session(s) across %d plan lane(s); the "
             "meter read $%.2f across %d model calls, tokens in %s.%s"
@@ -412,7 +420,7 @@ def build_journal(day):
         + (("#" + " #".join(str(c) for c in checkins))
            if checkins else "(none)") + ".",
         f"- **{len(timeline)}** timeline rows: {kind_text}.",
-        f"- Public edition: docs/dispatch/{day}.md (same feeds, markdown).",
+        f"- Public edition: ~/.hngh/dispatch/{day}.md (same feeds, markdown).",
         "",
         "## The day's story",
         "",
