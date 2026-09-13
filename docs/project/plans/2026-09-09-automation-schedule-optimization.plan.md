@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T06:01:51Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-09T06:01:51Z -->
 # 2026-09-09 — automation schedule optimization: backlog sweep, selector priority, throughput review
 
 Authorization: operator-directed 2026-09-09. The operator asked this session
@@ -22,7 +22,7 @@ is already complete (operator-procedural sweep, twice over).
 
 ## Steps
 
-- [x] 1. Backlog disposition sweep. Classify every currently `status=accepted`
+- [x] 1. Backlog disposition sweep. Classify every currently `status=executed`
       plan in docs/project/plans/ as live / superseded / obsolete / duplicate,
       with evidence per plan (alert history, automation/research-dispositions.tsv,
       work already landed in git log, references from other plans, dashboard
