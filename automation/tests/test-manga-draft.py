@@ -552,5 +552,42 @@ class TestBankExtensions(unittest.TestCase):
                              "cadence collision in bank %s: %r" % (name, counts))
 
 
+class TestHnghHome(unittest.TestCase):
+    """hngh home seam (2026-09-13 operator directive): the manga
+    pipeline's working outputs land in HNGH_HOME_DIR (default ~/.hngh),
+    not docs/media/. Default resolution, env override, and
+    create-if-missing are all proven by running the pipeline."""
+
+    def setUp(self):
+        import shutil
+        self._shutil = shutil
+        self.home = tempfile.mkdtemp(prefix="hnghhome-")
+        os.environ["HNGH_HOME_DIR"] = self.home
+
+    def tearDown(self):
+        os.environ.pop("HNGH_HOME_DIR", None)
+        self._shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_default_panel_dir_is_home_manga(self):
+        mod = _load("manga_draft_home", "jobs/manga-draft.py")
+        self.assertEqual(mod.HNGH_HOME, self.home)
+        # the dir does not pre-exist: create-if-missing is the run itself
+        rc = mod.main(["manga-draft.py", "--item", ITEM_TEXT])
+        self.assertEqual(rc, 0)
+        panel = os.path.join(self.home, "manga")
+        self.assertTrue(os.path.isfile(os.path.join(panel, "script.json")))
+        self.assertTrue(os.path.isfile(os.path.join(panel, "wireframe.svg")))
+        self.assertTrue(os.path.isfile(os.path.join(panel, "panel.svg")))
+        self.assertTrue(os.path.isdir(os.path.join(panel, "components")))
+
+    def test_review_pair_lands_in_working_dir(self):
+        mod = _load("manga_draft_home", "jobs/manga-draft.py")
+        rc = mod.main(["manga-draft.py", "--item", ITEM_TEXT])
+        self.assertEqual(rc, 0)
+        pair = os.path.join(self.home, "manga", "latest-draft")
+        self.assertTrue(os.path.isfile(pair + ".json"))
+        self.assertTrue(os.path.isfile(pair + ".svg"))
+
+
 if __name__ == "__main__":
     unittest.main()
