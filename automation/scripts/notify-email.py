@@ -83,6 +83,14 @@ def load_conf():
 
 
 def op_run(*args):
+    # Service-account-only (2026-09-13): `op` is invoked ONLY when a
+    # service token exists (mapped here from ONEPASSWORD_SERVICE_KEY —
+    # this script may run without lib/credentials.sh, e.g. via notify.sh).
+    # No token -> fail soft to the conf pass fallback; never reach the
+    # desktop-app integration, which can demand an interactive prompt.
+    if not (os.environ.get("OP_SERVICE_ACCOUNT_TOKEN")
+            or os.environ.get("ONEPASSWORD_SERVICE_KEY")):
+        return None
     try:
         return subprocess.run(
             [os.environ.get("HNGH_OP_BIN", "op")] + list(args),
