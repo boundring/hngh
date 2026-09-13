@@ -12,3 +12,4 @@ at 2026-09-13T10:00:49Z. Alert text: patrol kernel-gate: gate-red on kernel -- g
 ## Occurrences
 
 - 2026-09-13T11:00:49Z re-occurred (dedup window expired)
+- 2026-09-13T12:00:49Z re-occurred (dedup window expired)
