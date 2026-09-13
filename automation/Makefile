@@ -90,6 +90,7 @@ test:
 	python3 -B tests/test-ocgo-attribution.py
 	python3 -B tests/test-ocgo-launch.py
 	python3 -B tests/test-ocgo-config-cost.py
+	bash tests/test-model-zai-proxy.sh
 	python3 -B tests/test-causes.py
 	python3 -B tests/test-resume-pass.py
 	python3 -B tests/test-context-ratio.py
