@@ -141,6 +141,7 @@ test:
 	bash tests/test-imagegen-submit.sh
 	bash tests/test-dispatch.sh
 	python3 -B tests/test-digest-local.py
+	bash tests/test-deck-availability.sh
 	bash scripts/lint-identifiers.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 
