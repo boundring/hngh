@@ -52,6 +52,7 @@ test:
 	python3 -B tests/test-plan-feed-graph.py
 	python3 -B tests/test-notify-email.py
 	python3 -B tests/test-notify-send-path.py
+	python3 -B tests/test-cap-block-operator-item.py
 	python3 -B tests/test-credentials.py
 	python3 -B tests/test-doc-secrets.py
 	python3 -B tests/test-doc-hygiene.py
@@ -63,6 +64,7 @@ test:
 	python3 -B tests/test-router-feed.py
 	python3 -B tests/test-slow-units.py
 	python3 -B tests/test-readout-writers.py
+	python3 -B tests/test-story-view.py
 	python3 -B tests/test-dashboard-feedback.py
 	python3 -B tests/test-dashboard-p0.py
 	python3 -B tests/test-dashboard-p1.py

@@ -101,6 +101,13 @@ done <<<"$accept_out"
 today_count="$(grep "overnight|" "$ROOT/logs/budget.md" 2>/dev/null | grep -c "$(date -u +%Y-%m-%d)" || true)"
 if [ "${today_count:-0}" -ge "$MAX_SESSIONS_DAY" ]; then
  breadcrumb "$JOB_NAME" "budget-cap" "overnight sessions today >= $MAX_SESSIONS_DAY; research-only beat"
+ # 2026-09-09 budget-governance directive (docs/records/
+ # 2026-09-09-budget-governance-directive.md): a cap block against
+ # operator-priority work files an operator-item requesting the cap
+ # amendment; the machine never amends the cap row or env itself.
+ # Dated identity dedupes to one request per UTC day.
+ operator_item "cap-block-$(date -u +%Y-%m-%d)" \
+  "overnight session cap ($MAX_SESSIONS_DAY/day) reached at cap check; requesting operator amendment per 2026-09-09 budget-governance directive; research-only beat"
  bash "$ROOT/cadence/hour/33-research-beat.sh"
  exit 0
 fi
