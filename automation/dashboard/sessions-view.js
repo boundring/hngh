@@ -129,8 +129,10 @@
 
   var STYLE = [
     '.sv{display:grid;grid-template-columns:minmax(320px,38fr) 62fr;gap:12px;',
-    '  min-height:420px;max-height:calc(100dvh - 120px);color:var(--ink)}',
-    '@media (max-width:900px){.sv{grid-template-columns:1fr;height:auto}',
+    '  grid-template-rows:minmax(0,1fr);min-height:420px;',
+    '  max-height:calc(100dvh - 120px);color:var(--ink)}',
+    '@media (max-width:900px){.sv{grid-template-columns:1fr;',
+    '  grid-template-rows:auto;height:auto}',
     '  .sv-side{max-height:46vh}.sv-list{max-height:40vh}}',
     '.sv-side{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);',
     '  border-radius:0;background:var(--panel);overflow:hidden}',

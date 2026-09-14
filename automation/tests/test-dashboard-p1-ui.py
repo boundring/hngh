@@ -154,5 +154,24 @@ class FeedbackPipPlacement(unittest.TestCase):
         self.assertIn("tabs.parentNode.appendChild(makePip", v)
 
 
+class SessionsScrollBothSides(unittest.TestCase):
+    def test_sv_row_bounded_so_both_panes_scroll(self):
+        # fail-20260912-correction-b61fed0f: "Scrolling seems to be broken,
+        # both sides." The .sv grid clamps itself with max-height, but an
+        # auto row sizes to content, so .sv-side/.sv-main grew to the full
+        # transcript height (4216px inside a 680px box) and the panes'
+        # overflow-y:auto never engaged — neither the session list (left)
+        # nor the transcript detail (right) could scroll. The row must be
+        # bounded so the flex panes actually overflow; mobile (<=900px)
+        # stacks and bounds panes with vh caps, so it resets the row.
+        v = src("sessions-view.js")
+        self.assertIn(".sv{display:grid;grid-template-columns:minmax(320px,38fr) 62fr;", v)
+        self.assertIn("grid-template-rows:minmax(0,1fr)", v)
+        self.assertIn("grid-template-rows:auto", v)  # mobile stack reset
+
+
+if __name__ == "__main__":
+    unittest.main()
+
 if __name__ == "__main__":
     unittest.main()
