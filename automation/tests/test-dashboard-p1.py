@@ -391,6 +391,26 @@ class JailEscapes(ServerTest):
         self.assertEqual(self.get("/hngh-docs/research/..%2f..%2fx.md")[0], 404)
         self.assertEqual(self.get("/digest/..%2f..%2fsecret.md")[0], 404)
 
+    def test_plans_doc_served_and_jailed(self):
+        plans = self.tmp / "plansdocs"
+        plans.mkdir()
+        (plans / "2026-09-12-demo.plan.md").write_text("# demo plan")
+        ds.PLANS_DOCS = str(plans)
+        try:
+            st, ctype, body = self.get(
+                "/hngh-docs/plans/2026-09-12-demo.plan.md")
+            self.assertEqual(st, 200)
+            self.assertEqual(body, b"# demo plan")
+            self.assertIn("text/markdown", ctype)
+            # jail: traversal, missing file, wrong suffix all 404
+            self.assertEqual(
+                self.get("/hngh-docs/plans/..%2f..%2fsecret.md")[0], 404)
+            self.assertEqual(
+                self.get("/hngh-docs/plans/2026-09-12-demo.plan.md.bak")[0], 404)
+            self.assertEqual(
+                self.get("/hngh-docs/plans/2026-09-12-absent.plan.md")[0], 404)
+        finally:
+            del ds.PLANS_DOCS
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

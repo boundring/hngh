@@ -2,7 +2,7 @@
    + review B1 2026-09-11). Renders dashboard/plans.json (jobs/plan-feed.py)
    as two fact cards plus a plans table with search, status filter chips,
    newest-first sort, and a per-row link to the plan doc in the repo
-   (docs/project/plans/<slug>.plan.md — target until the jailed P2 route).
+   (jailed dashboard route /hngh-docs/plans/<slug>.plan.md).
 
    Filter state lives in module ui{} and only the <tbody> re-renders per
    keystroke/chip: input focus is never stolen and state survives refresh().
@@ -75,9 +75,11 @@
     var body = document.getElementById('plans-rows');
     if (!body) return;
     var rows = visiblePlans().map(function (p) {
-      var doc = 'docs/project/plans/' + (p.slug || '') + '.plan.md'; // jailed P2 later
+      var doc = '/hngh-docs/plans/' + encodeURIComponent(p.slug || '')
+        + '.plan.md';  // jailed docs route, served by dashboard-server.py
       return '<tr><td><a class="pl-link" href="' + esc(doc) + '"'
-        + ' title="plan doc (repo path; jailed route is P2)">' + esc(p.slug) + '</a></td>'
+        + ' title="plan doc (jailed route; served by dashboard-server.py)">'
+        + esc(p.slug) + '</a></td>'
         + '<td>' + esc(p.status) + '</td>'
         + '<td>' + esc(p.risk) + '</td>'
         + '<td>' + esc(p.accepted) + '</td>'

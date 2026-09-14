@@ -137,7 +137,9 @@ HNGH = os.environ.get("HNGH_REPO", "/home/bricker/Projects/etc/hngh")
 BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
+PLANS_DOCS = os.path.join(HNGH, "docs", "project", "plans")
 DOC_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,120}\.md$")
+PLANS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,120}\.plan\.md$")
 MEDIA_DOCS = os.path.join(HNGH, "docs", "media")
 MEDIA_NAME_RE = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}(/[A-Za-z0-9][A-Za-z0-9_.-]{0,80})*"
@@ -348,6 +350,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
+            return
+        if self.path.startswith("/hngh-docs/plans/"):
+            self._serve_md(PLANS_DOCS, PLANS_NAME_RE)
             return
         if self.path.startswith("/hngh-docs/media/"):
             self._serve_media()
