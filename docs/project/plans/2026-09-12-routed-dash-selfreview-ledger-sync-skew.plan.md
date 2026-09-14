@@ -11,7 +11,7 @@ cause missing-design; the 2026-09-11 sibling stays parked obsolete.
 
 ## Steps
 
-- [ ] Make the ledger-sanity check skew-aware (tree-freshness guard) in
+- [x] Make the ledger-sanity check skew-aware (tree-freshness guard) in
       automation/jobs/dashboard-self-review.py, test-first: new tunable
       LEDGER_SKEW_MAX_AGE (default 7200s); fresh tree + drift past
       LEDGER_DRIFT_MAX files unacceptable-now "stale skew — reconcile";
@@ -25,3 +25,11 @@ cause missing-design; the 2026-09-11 sibling stays parked obsolete.
 - 2026-09-12T14:13:26Z plan created by the executor session on brickertop
   (design line landed in the same slice; 2026-09-08 plan disposed
   superseded). Implementation step left unchecked for the next executor.
+- 2026-09-14T12:33Z step landed by the executor session on brickertop:
+  LEDGER_SKEW_MAX_AGE (default 7200s, env-overridable) + HEAD-age probe in
+  automation/jobs/dashboard-self-review.py; hermetic fixture test
+  automation/tests/test-dashboard-selfreview-ledger-skew.py covers
+  fresh+drift (unacceptable-now), stale+drift (acceptable-for-now
+  transient), fresh+clean (silent), unmeasurable age (fail closed);
+  automation `make test` green (ALL PASS, lint clean); automation slice
+  66b67cf pushed. Plan tick via ceremony in the same pass.
