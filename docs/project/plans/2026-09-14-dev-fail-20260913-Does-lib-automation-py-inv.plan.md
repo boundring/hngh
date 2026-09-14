@@ -4,18 +4,17 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the adopted research lines on the `lib/automation.py` ↔ `bin/hngh` subprocess boundary and corrected CLI contract conformance by adding hermetic integration tests and a cadence beat for ongoing boundary verification, closing the coverage gap where only a deferred overnight harness existed.
+The plan implements the research line `fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v` by verifying the invocation mechanism and adding a synchronous integration test for the `lib/automation.py` ↔ `bin/hngh` boundary.
 
 ## Steps
 
-- [ ] Add `tests/test_automation_subprocess_seam.py`, a stdlib-only Python test asserting that `lib/automation.py` resolves the hngh binary through an environment-overridable path variable (subprocess seam) rather than a direct module import.
-  Verification: python3 tests/test_automation_subprocess_seam.py
-
-- [ ] Add `scripts/check-hngh-cli-contract.sh`, a bash script that invokes the hngh binary with the post-2026-08-25 corrected argument shape and asserts exit code 0, confirming downstream conformance to the upstream guardrail fix.
-  Verification: bash scripts/check-hngh-cli-contract.sh
-
-- [ ] Add `cadence/hour/34-boundary-check.sh`, a cadence beat that runs the boundary test on schedule and records wall time separately for the mechanical leg (file reads, state append) and the model leg to distinguish expected latency from defects.
-  Verification: bash -n cadence/hour/34-boundary-check.sh
-
-- [ ] Create `digest/RESEARCH-BEAT-20260913-fail-20260913-Are-there-any-existing-integration-tests.md` documenting that synchronous boundary test coverage is now in place, referencing the Hngh Test Boundary concept (SRC-2026-08-24-029) and the subprocess seam pattern.
-  Verification: grep -q 'subprocess-seam' digest/RESEARCH-BEAT-20260913-fail-20260913-Are-there-any-existing-integration-tests.md
+- [ ] Inspect `lib/automation.py` to confirm whether it invokes `bin/hngh` via `subprocess` or direct module import
+  Verification: grep -n "subprocess\|import.*hngh" lib/automation.py
+- [ ] Create a minimal integration test script under `tests/` that exercises the `lib/automation.py` ↔ `bin/hngh` boundary using a stubbed subprocess seam
+  Verification: bash -n tests/test_automation_boundary.sh
+- [ ] Add a make target or update existing test suite to run the new integration test as part of `make test`
+  Verification: make test
+- [ ] Verify that the overnight harness configuration references the corrected CLI contract post-2026-08-25 guardrail fix
+  Verification: grep -n "guardrail\|cli-contract" cadence/overnight-harness.sh
+- [ ] Add a latency assertion to `cadence/hour/33-research-beat.sh` that flags wall-time deviations exceeding 2x the median
+  Verification: bash -n cadence/hour/33-research-beat.sh
