@@ -86,3 +86,17 @@ demoted-model evidence re-check). The nightly timer and the
   unchecked: hngh-model-bench.timer re-verified enabled+active 05:07Z;
   director-routed plan 2026-09-14-routed-bench-lane-timer-disable carries
   the disable; alert 4e63a558 stands.
+- 2026-09-14T08:38Z wake: step 3 sweep ran live-surface verification.
+  Live systemctl: hngh-model-bench.timer verified enabled+active
+  twice this wake; reports.md carries only alert 4e63a558, so the
+  evidence row is still missing - step 3 stays UNCHECKED, no
+  fabrication (dream check 3). No duplicate routing:
+  2026-09-14-routed-bench-lane-timer-disable carries the disable
+  (status=proposed; do not re-file, dream check 4).
+  Verified landed machine-doable portion: 26cf873, day drop-in
+  10-bench-fresh.sh is note-only and executed live at 08:37:24Z
+  (breadcrumb: staleness note, newest bench 12228s old), never redone.
+  Post-disable sweep (PENDING comment update + step-3 tick + evidence
+  row) runs the session after live systemctl shows disabled+inactive.
+  Kernel-gate note: full-gate reds of the tailscale skew shape did not
+  reproduce (lesson 08:12Z) — retry the full gate before staging mocks.
