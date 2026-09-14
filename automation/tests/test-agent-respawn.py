@@ -47,6 +47,12 @@ class RespawnGuards(unittest.TestCase):
 
     def run_job(self, **extra):
         env = dict(self.base_env, **extra)
+        # hermeticity: HNGH_SESSION_EXECUTOR leaks from a live jcode
+        # session (this very test suite runs under one). Unset unless a
+        # test explicitly pins an executor, else every test silently
+        # spawns a real `jcode run` child (run-1 bad-execution: rc=124).
+        if "HNGH_SESSION_EXECUTOR" not in extra:
+            env.pop("HNGH_SESSION_EXECUTOR", None)
         return subprocess.run(["bash", str(JOB)], env=env,
                               capture_output=True, text=True)
 
@@ -182,6 +188,39 @@ class RespawnGuards(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.rows(), [])
         self.assertFalse(self.marker.exists())
+
+    def test_jcode_stall_death_respawns_once_via_jcode_executor(self):
+        """Seeded-stall auto-replace (governed-fleet §4, plan step 3):
+        a jcode-executor session whose timeout kill classifies as the
+        transient stall class (bad-execution, rc=124) is
+        respawned exactly once through the same gated launcher, with the
+        jcode branch selected and the corrective brief attached."""
+        self.handoffs.write_text(DEAD.format(slug="m-jc", cause="bad-execution"))
+        env = self.stubs(self.root)
+        env["HNGH_SESSION_EXECUTOR"] = "jcode"
+        # run_job scrubbed any inherited executor env only when unset;
+        # here it is pinned. The real jcode binary must not be
+        # reachable: the jcode branch probes command -v jcode before
+        # falling back to the OMP_BIN_CMD stub, so scope PATH to the
+        # stub dir (run-1 bad-execution: live binary hung `jcode run`).
+        stub_dir = str(self.root)
+        r = self.run_job(PATH=f"{stub_dir}:/usr/bin:/bin", **env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertTrue(rows[0].startswith("respawn | "), rows)
+        self.assertIn("prev-cause=bad-execution", rows[0])
+        self.assertIn("run=run-42", rows[0])
+        # the jcode branch really ran (marker carries the jcode exec line,
+        # written by OMP_BIN_CMD through launch_session's jcode branch)
+        self.assertTrue(self.marker.exists(), "launcher never invoked")
+        # exactly one session launched (loop-break guard): one budget row
+        self.assertEqual(
+            (self.root / "logs" / "budget.md").read_text().count("session-run"),
+            1)
+        # the brief carries the stall cause + corrective instruction
+        brief = next((self.root / "prompts" / "respawn").glob("m-jc-*.md"))
+        self.assertIn("failure-mode: bad-execution", brief.read_text())
 
 
 if __name__ == "__main__":
