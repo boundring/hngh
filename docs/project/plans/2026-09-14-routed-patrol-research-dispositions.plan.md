@@ -8,3 +8,7 @@ at 2026-09-14T10:00:39Z. Alert text: patrol research-dispositions: adopted-no-fo
 
 - [ ] Delve: open research subject fail-20260914-patrol-research-dispositions for patrol:research-dispositions; record disposition; then fix or park
       Verification: research subject fail-20260914-patrol-research-dispositions present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T11:00:39Z re-occurred (dedup window expired)
