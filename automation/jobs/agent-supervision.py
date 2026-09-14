@@ -54,10 +54,10 @@ REPORT_QUEUE = os.environ.get(
                  "scripts", "report-queue"))
 HNGH_BIN = os.environ.get(
     "HNGH_BIN",
-    os.path.join(ROOT, "..", "hngh", "scripts", "hngh"))
+    os.path.join(ROOT, "..", "scripts", "hngh"))
 OMP_BRIDGE_BIN = os.environ.get(
     "OMP_BRIDGE_BIN",
-    os.path.join(ROOT, "..", "hngh", "scripts", "omp-bridge"))
+    os.path.join(ROOT, "..", "scripts", "omp-bridge"))
 
 STALL_TOOLCALL_MIN = 20   # last tool-call older than this => stalled
 STALL_MINUTES = 15        # size+toolcalls unchanged this long => stalled
