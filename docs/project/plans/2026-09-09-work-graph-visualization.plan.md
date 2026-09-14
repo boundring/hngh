@@ -9,7 +9,7 @@ the gantt. Story/comic/animation rungs read this same graph later.
 
 ## Steps
 
-- [ ] 1. Extend automation/jobs/plan-feed.py to emit the work graph:
+- [x] 1. Extend automation/jobs/plan-feed.py to emit the work graph:
       for each plan in docs/project/plans/, parse the step list
       (checked/unchecked + Verification names), the front-matter
       (status/risk/accepted/priority/cause), and execution-notes
