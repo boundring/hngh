@@ -136,5 +136,16 @@ class PollHygiene(unittest.TestCase):
             self.assertNotIn("setInterval(", js.read_text(), str(js))
 
 
+class FeedbackPipPlacement(unittest.TestCase):
+    def test_tab_bar_pip_never_inside_tablist(self):
+        # axe aria-required-children: a role=tablist may own only role=tab
+        # children. The feedback pip is an implicit button, so it must mount
+        # on the nav wrapper around #tabs, never as a child of #tabs
+        # (ui-audit alert identity ui-audit:axe:aria-required-children).
+        v = src("feedback-view.js")
+        self.assertNotIn("tabs.appendChild(makePip", v)
+        self.assertIn("tabs.parentNode.appendChild(makePip", v)
+
+
 if __name__ == "__main__":
     unittest.main()

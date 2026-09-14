@@ -40,7 +40,12 @@
   }
   function injectPips() {
     var tabs = document.getElementById('tabs');
-    if (tabs && !tabs.querySelector('.fb-pip')) tabs.appendChild(makePip('tab bar'));
+    // pip mounts on the nav wrapper, never inside the tablist: a
+    // role=tablist may own only role=tab children (axe
+    // aria-required-children flagged the implicit-button pip).
+    if (tabs && tabs.parentNode &&
+        !tabs.parentNode.querySelector('.fb-pip'))
+      tabs.parentNode.appendChild(makePip('tab bar'));
     document.querySelectorAll('.panel > .panel-head').forEach(function (head) {
       var panel = head.closest('.panel');
       var topic = (head.querySelector('.p-title') || {}).textContent || panel.id;
