@@ -138,6 +138,12 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       present on the host; cadence wiring (30m/20-config-backup)
       unchanged and picks the rows up automatically. Installer option
       remains specified-not-built, per the OS-harness ladder trigger.
+      **Bootstrap check landed 2026-09-14 (d1c3933):** `bootstrap.sh
+      --check/--install` now reports jcode as an optional harness
+      (presence + version, or degradation note plus the three operator
+      install routes); never auto-installed — the official installer is
+      curl|bash, which bootstrap doctrine forbids. The interactive
+      installer-option rung itself stays behind the OS-harness ladder.
 - [x] 7. **Omp coexistence review.** Inventory omp surfaces vs Jcode
       equivalents; retirement is a named record per surface, never a
       default. Verification: inventory table in a record.
