@@ -43,13 +43,30 @@ with the in-flight session slugs from a /tmp scratch list — the run id
 only exists after a launch completes) and exits non-zero. No new state
 files: the record lives in STATE.md alongside the existing breadcrumbs.
 
-On entry (after the existing flock — extended, not duplicated) the
+On entry (after the existing flock - extended, not duplicated) the
 cycle scans STATE.md for a `shutdown-signal` newer than the last
 `overnight-done`. If found, it breadcrumbs `cold-start-unclean` and
 skips that beat's session batch (one tick, via the same STOP flag the
 trap honors) so orphaned in-flight sessions from the killed beat are
 not double-spawned; the beat still exits cleanly with `overnight-done`,
 which restores the ordering and the next tick runs normally.
+
+## Restart sequence (concise)
+
+1. Stop: SIGTERM/SIGINT hits the traps
+   (automation/scripts/overnight-cycle.sh:69-70); the handler writes one
+   `shutdown-signal` breadcrumb naming the in-flight slugs and exits 1
+   (lines 63-68). No new sessions spawn after the signal.
+2. Cold start: on the next tick the cycle scans STATE.md for a
+   `shutdown-signal` newer than the last `overnight-done`
+   (lines 72-84); if found it breadcrumbs `cold-start-unclean` and sets
+   STOP=1, skipping that beat's session batch so orphaned work is not
+   double-spawned, and still exits cleanly with `overnight-done`.
+3. Resume: the following tick runs the normal batch.
+4. Durable state: failfirst ladders and model-demote counters live under
+   `automation/state/` (lib/failfirst.sh:40 defaults FF_DIR to
+   `$AUTOMATION_ROOT/state/failfirst`, with a one-shot `mv` from
+   `/tmp/hngh-failfirst`, lines 43-48); only lockfiles stay in /tmp.
 
 What survives a halt now: failfirst ladders and model-demote counters
 (durable state/, section above), the shutdown breadcrumb, the ledger

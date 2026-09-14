@@ -199,12 +199,6 @@ PY
  printf '%s|paid-fallback\n' "$paid"
  printf '%s|paid-fallback\n' "${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
 }
-# model routing (future, not implemented): when the KIMI quota
-# keys go live (sibling lane), a session-model-preference Inventory row
-# can route bounded delegated sessions to a quota model ahead of the
-# paid fallback; until that lands, the paid fallback below stays
-# load-bearing for overnight leads. Hook point: override SESSION_MODEL
-# here from `get_param session-model-preference` when the row exists.
 MODEL_SPEC="$(select_model)"
 SESSION_MODEL="${MODEL_SPEC%%|*}"
 SESSION_SOURCE="${MODEL_SPEC##*|}"
