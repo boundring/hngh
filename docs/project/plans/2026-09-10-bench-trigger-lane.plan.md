@@ -10,7 +10,7 @@ demoted-model evidence re-check). The nightly timer and the
 
 ## Steps
 
-- [ ] 1. Bench-trigger state + diff probe (test-first). New
+- [x] 1. Bench-trigger state + diff probe (test-first). New
       automation/jobs/bench-trigger.sh with two verbs:
       `new-model-check` (diff config.env BENCH_MODELS +
       UNSLOTH_FALLBACK_MODELS against the union of models in
@@ -31,7 +31,7 @@ demoted-model evidence re-check). The nightly timer and the
       Verification: suite test covers new-model fire, no-op diff,
       recalibrate-stale-fire, quiet-guard defer; full `make test`
       green.
-- [ ] 2. Mount the week-tier drop-in + params row. New
+- [x] 2. Mount the week-tier drop-in + params row. New
       automation/cadence/week/02-bench-trigger.sh running both verbs
       (week tier exists: cadence/week/); add
       `benchmark-recalibrate-days  30  docs/design/bench-triggering.md`
@@ -62,3 +62,27 @@ demoted-model evidence re-check). The nightly timer and the
   BENCH_MODELS is already environment-parametrizable (config.env
   default).
 - Voice check: design doc has one epigraph, no exclamation marks.
+- 2026-09-14T04:45Z machine session: step 3 machine-doable work verified
+  landed in 26cf873 (10-bench-fresh.sh is a staleness note only,
+  benchmarking-backburner row points at this plan, no cadence drop-in
+  invokes the full fleet on a schedule; automation make test green).
+  Remaining loop is director-only: systemctl --user disable --now
+  hngh-model-bench.timer (unit verified still enabled+active at
+  04:39Z; alert 4e63a558 live, router already spawned plan candidate
+  2026-09-14-routed-bench-lane-timer-disable). Step 3 stays unchecked
+  until the disable has its evidence row in reports.md. Plan-file
+  commit itself is blocked this session: kernel gate red on
+  test-fleet-manager/tailscale environment skew (mesh up asserts
+  logged-out) - candidate staged, not committed.
+- 2026-09-14T05:12Z wake: steps 1-2 verified and TICKED. Suite
+  tests/test-bench-trigger.sh ALL PASS (new-model fire, no-op diff,
+  recalibrate stale-fire, quiet-guard defer, day drop-in retired/note-only);
+  week-tier breadcrumb is live evidence for step 2 (STATE.md 03:04:07Z:
+  02-bench-trigger mounted, bench-new-model no-op "config fleet fully
+  benched", bench-recalibrate fresh "BENCH-2026-09-13.md 78638s < 30d");
+  params rows benchmark-recalibrate-days=30 and row-51 note verified.
+  Docs-only plan tick is a plain docs commit, not ceremony-gated (2a5c371
+  precedent; ceremony covers kernel code surface only). Step 3 stays
+  unchecked: hngh-model-bench.timer re-verified enabled+active 05:07Z;
+  director-routed plan 2026-09-14-routed-bench-lane-timer-disable carries
+  the disable; alert 4e63a558 stands.
