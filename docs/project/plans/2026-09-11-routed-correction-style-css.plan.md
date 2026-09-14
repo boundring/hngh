@@ -6,5 +6,5 @@ at 2026-09-11T04:00:48Z. Alert text: feedback-apply: style.css missing or unpars
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260911-correction-style-css for correction-style-css; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260911-correction-style-css for correction-style-css; record disposition; then fix or park
       Verification: research subject fail-20260911-correction-style-css present in research-subjects.txt with a recorded disposition; alert fixed or parked
