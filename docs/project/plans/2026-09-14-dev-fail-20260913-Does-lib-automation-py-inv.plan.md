@@ -4,15 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the `lib/automation.py` ↔ `bin/hngh` boundary research lines by adding a hermetic subprocess-seam integration test and documenting the corrected CLI contract, ensuring the overnight harness's regression coverage is gated synchronously.
+Implements the `fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v` research line (with supporting boundary-coverage and guardrail-contract findings) by adding hermetic subprocess-seam verification, dedicated boundary integration test coverage, a CLI contract conformance check, and a model-leg wall-time guard to the cadence beat.
 
 ## Steps
 
-- [ ] Create `tests/test_automation_subprocess_seam.py` that stubs the env-overridable binary path and asserts `lib/automation.py` invokes `bin/hngh` via `subprocess` rather than direct import.
-  Verification: make test
-- [ ] Add a guardrail regression case in `tests/test_cli_contract_guardrail.py` verifying `lib/automation.py` handles the post-2026-08-25 corrected CLI contract without raising on upstream kernel responses.
-  Verification: make test
-- [ ] Extend `cadence/hour/33-research-beat.sh` to emit a structured `wall_s` and `model_leg_s` breakdown so latency spikes are attributable to the inference call rather than I/O.
+- [ ] Create tests/test_subprocess_seam.sh that greps lib/automation.py for `subprocess` usage and asserts an env-overridable binary-path seam exists (no direct module import of bin/hngh).
+  Verification: bash -n tests/test_subprocess_seam.sh
+- [ ] Create tests/test_boundary_integration.sh that exercises the lib/automation.py → bin/hngh process boundary using a stub binary on PATH, matching the hermetic-seam pattern from prior material.
+  Verification: bash -n tests/test_boundary_integration.sh
+- [ ] Create scripts/check_cli_contract.sh that invokes lib/automation.py against a corrected post-2026-08-25 CLI contract fixture and asserts clean exit with no guardrail regression.
+  Verification: bash -n scripts/check_cli_contract.sh
+- [ ] Edit cadence/hour/33-research-beat.sh to wrap the model-leg call in a wall-time guard that logs elapsed seconds and caps execution at a configurable threshold before appending state.
   Verification: bash -n cadence/hour/33-research-beat.sh
-- [ ] Update `digest/RESEARCH-BEAT-fail-20260913-Are-there-any-existing-integration-tests.md` to record that the new synchronous test now blocks merges on the automation boundary.
-  Verification: grep -q "synchronous gate" digest/RESEARCH-BEAT-fail-20260913-Are-there-any-existing-integration-tests.md

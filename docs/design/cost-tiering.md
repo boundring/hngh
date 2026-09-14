@@ -50,7 +50,7 @@ the taxonomy exists so the cap sees what it is actually buying.
 ## Decomposition rule
 
 Plans are already the decomposition unit
-(docs/project/plans/README.md); what is missing is the class tag. A
+(docs/project/plans/README.md); the class tag is live. A
 step may carry a `class=T1|T2|T3` marker in its text (checked by the
 same conventions as the Verification line). The selector reads it:
 
@@ -65,8 +65,10 @@ same conventions as the Verification line). The selector reads it:
 
 Decomposition quality is a plan-authoring concern: when a plan's step
 can only be T3, the author either decomposes it into T1/T2 steps or
-leaves it for the director. The overnight-cycle "Plan authoring"
-prompt block gains one line: tag each step's class.
+leaves it for the director. Both overnight-cycle prompt blocks (the
+"Plan authoring" draft prompt and the per-step wake prompt) carry
+the tagging line since 2026-09-10 step 3: tag each step
+class=T1|T2|T3, untagged means T2.
 
 ## The foresight loop (cost prevention)
 

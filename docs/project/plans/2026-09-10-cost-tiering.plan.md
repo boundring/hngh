@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T18:31:14Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-10T18:31:14Z -->
 # 2026-09-10 - cost tiering: class tags and worker tiering
 
 Operator directive 2026-09-10: local for mechanical, quota for
@@ -33,7 +33,7 @@ First rungs only - no provider-key changes, no systemd lifecycle.
       demoted-quota interplay, T3 operator-item filed.
       Verification: suite test covers class pins for T1/T2/T3 and the
       T3 operator-item; full `make test` green.
-- [ ] 3. Plan-authoring prompt line. The "Plan authoring" and
+- [x] 3. Plan-authoring prompt line. The "Plan authoring" and
       wake-prompt blocks in overnight-cycle.sh gain the tagging
       convention line: tag each step class=T1|T2|T3 (mechanical /
       bounded intelligence / deep intelligence) so the selector can
@@ -43,6 +43,17 @@ First rungs only - no provider-key changes, no systemd lifecycle.
       `make test` green.
 
 ## Execution notes
+- Landed 2026-09-14 (step 3): automation part committed 929015b
+  (hngh-automation, free-commit rule; the prompt blocks carry the
+  tag line, grep-checked; automation `make test` green). Kernel part
+  (docs/design/cost-tiering.md decomposition pointer + this tick)
+  is a staged candidate: kernel `make test` is red under the
+  2026-09-14T02:46 tailscale skew (test-fleet-manager asserts the
+  real mesh is logged out while the mesh is up). Remaining loop:
+  land the tailscale mock through the wake-mutation lane, then
+  issue-cert + mutation-check for one kernel commit confined to
+  docs/design/cost-tiering.md + this plan file.
+- Steps 1 and 2 are independent; 3 depends on neither (prompt text
 
 - Steps 1 and 2 are independent; 3 depends on neither (prompt text
   only) but lands last for a single ceremony.
