@@ -8,3 +8,7 @@ at 2026-09-14T19:00:13Z. Alert text: git push non-fast-forward (2nd): local main
 
 - [ ] Delve: open research subject fail-20260914-push-divergence-jcode-20260914 for push-divergence-jcode-20260914; record disposition; then fix or park
       Verification: research subject fail-20260914-push-divergence-jcode-20260914 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T20:00:33Z re-occurred (dedup window expired)
