@@ -50,9 +50,10 @@ docs/records/ with its first commit.
       automation/lib/notify.sh and test that instead.
       Verification: one test send recorded in logs/notify-email.log with
       rc=0 (or telegram equivalent); no repeat sends.
-- [ ] 3. Budget-governance directive record. Evidence: cap chain
+- [x] 3. Budget-governance directive record.
+      Evidence: cap chain
       env OVERNIGHT_MAX_SESSIONS_DAY > inventory sessions-day-max
-      (operator authorization 2026-09-07) exhausted at 01:12:38Z today;
+      (operator authorization 2026-09-07) exhausted at 01:12:38Z 2026-09-09;
       the operator's 2026-09-09 directive is "as few blockers and stalls
       as possible today". Change: record the directive; when the cap
       blocks an operator-priority plan, file an operator-item requesting
@@ -60,6 +61,12 @@ docs/records/ with its first commit.
       never amend spend caps unilaterally.
       Verification: directive recorded in the record doc; operator-item
       path demonstrated once in a suite test (no real cap change).
+      LANDED 2026-09-14 (automation commit 04554cd): the record doc and
+      the helper+proof (lib/operator-item.sh, tests/test-cap-block-
+      operator-item.py) were already green from the staging commit; the
+      residual wiring landed — the cap-block branch of the overnight
+      beat now calls operator_item() with a per-UTC-day deduped identity
+      and the test is registered in the automation Makefile test target.
 - [ ] 4. Tmux-based subagent observer. Evidence: auto-tiling Konsole
       observer already works (automation/jobs/window-tile.py, POST /tile,
       ui-config tiling.enabled=true) but tails raw s-expr logs; a tracked
