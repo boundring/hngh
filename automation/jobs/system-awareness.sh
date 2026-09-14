@@ -4,7 +4,7 @@
 # Writes dashboard/system.json for the command center + oversight tick:
 #   cpu% / mem% / disk% / net-reachability (model endpoint ok|fail, tailscale
 #   peers count, WAN ok|fail) + resource headroom flags (low-disk / low-mem /
-#   network-down),
+#   network-down) + uptime (seconds / human string / last boot),
 #   each field carrying a timestamp.
 #
 # Fail-closed: a failing probe yields that field "unavailable" — never a
@@ -95,11 +95,18 @@ network_down=false
 # flags network-down — add a second independent target if it misfires.
 [ "$wan" = "fail" ] && network_down=true
 
+# uptime + last boot ---------------------------------------------------------
+up_secs="$(awk '{printf "%d", $1}' /proc/uptime 2>/dev/null)" || up_secs=""
+up_human="$(uptime -p 2>/dev/null)" || up_human=""
+last_boot="$(uptime -s 2>/dev/null)" || last_boot=""
+
 # write JSON  (python assembles to dodge shell quoting) ----------------------
 python3 - "$ts" "$cpu" "$mem" "$disk" "$model" "$peers" "$tailscale" "$wan" \
- "$low_disk" "$low_mem" "$network_down" "$OUT" <<'PY'
+ "$low_disk" "$low_mem" "$network_down" "$up_secs" "$up_human" "$last_boot" \
+ "$OUT" <<'PY'
 import json, os, sys
-ts, cpu, mem, disk, model, peers, tailscale, wan, low_disk, low_mem, ndown, out = sys.argv[1:]
+ts, cpu, mem, disk, model, peers, tailscale, wan, low_disk, low_mem, ndown, \
+ up_secs, up_human, last_boot, out = sys.argv[1:]
 doc = {
     "generated_at": ts,
     "cpu":  {"pct": cpu,  "ts": ts},
@@ -109,6 +116,9 @@ doc = {
              "tailscale_state": tailscale, "wan_endpoint": wan, "ts": ts},
     "headroom": {"low-disk": low_disk == "true", "low-mem": low_mem == "true",
                  "network-down": ndown == "true"},
+    "uptime": {"seconds": int(up_secs) if up_secs.isdigit() else None,
+               "human": up_human or None,
+               "last_boot": last_boot or None, "ts": ts},
 }
 tmp = out + ".tmp"
 with open(tmp, "w") as fh:
