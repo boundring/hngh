@@ -12,6 +12,7 @@ socket so the suite never emits packets.
 import importlib.machinery
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -31,9 +32,29 @@ def load():
     return mod
 
 
+# Stub the tailscale binary on PATH: the offline contract is about the
+# logged-out daemon's honest output, not about whatever mesh the host
+# happens to have up. A stub keeps the suite hermetic on meshed hosts.
+def stubbed_env():
+    stub_dir = tempfile.TemporaryDirectory()
+    shim = Path(stub_dir.name) / "tailscale"
+    shim.write_text("#!/bin/sh\n"
+                    "if [ \"$1\" = status ] && [ \"$2\" = --json ]; then\n"
+                    "  echo '{}'\n  exit 0\nfi\nexit 1\n")
+    shim.chmod(0o755)
+    env = dict(os.environ)
+    env["PATH"] = f"{stub_dir.name}{os.pathsep}{env.get('PATH', '')}"
+    return stub_dir, env
+
+
 def run(args):
-    return subprocess.run([sys.executable, str(SCRIPT), *args],
-                          capture_output=True, text=True, cwd=ROOT)
+    stub_dir, env = stubbed_env()
+    try:
+        return subprocess.run([sys.executable, str(SCRIPT), *args],
+                              capture_output=True, text=True, cwd=ROOT,
+                              env=env)
+    finally:
+        stub_dir.cleanup()
 
 
 class FleetGuard(unittest.TestCase):
