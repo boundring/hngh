@@ -76,6 +76,18 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       orientation question correctly (queue-next node-lattice-admission).
       Remaining: seeded-stall auto-replace evidence (governed-fleet §4),
       which the watchdog respawn path owns.
+      **Seeded-stall evidence 2026-09-14:** hermetic respawn test added
+      (`test_jcode_stall_death_respawns_once_via_jcode_executor`): a
+      jcode session death classified bad-execution (rc=124, the
+      transient stall class) respawns exactly once through the one
+      gated launcher with the corrective brief; suite 9/9 green.
+      **Hermeticity incident (same beat):** the test suite runs under a
+      live jcode session, so an inherited `HNGH_SESSION_EXECUTOR=jcode`
+      made every pre-existing respawn test silently spawn a real
+      `jcode run` child against the zai subscription (several stray
+      legs found and killed; the env is now scrubbed per-test unless
+      pinned). Lesson recorded: test envs must be scrubbed of
+      executor-selection variables before asserting hermeticity.
       **SDK-shim witness + stall evidence (2026-09-14T19:00Z):** a
       parallel lane witnessed the bounded read-only SDK cycle through
       the wired `launch_session` jcode branch (budget row
