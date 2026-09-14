@@ -24,8 +24,8 @@ from pathlib import Path
 AUTO = Path(__file__).resolve().parent.parent
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "params.sh",
-       "context-pack.sh", "launch-session.sh", "model-demote.sh",
-       "model.sh")
+       "context-pack.sh", "launch-session.sh", "launch-jcode.sh",
+       "model-demote.sh", "model.sh")
 
 DRIVER = """#!/usr/bin/env bash
 set -u

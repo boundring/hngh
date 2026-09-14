@@ -457,13 +457,18 @@ launch) before re-deriving any repo fact from scratch."
  # cause classification for the disposition spine (lib/causes.sh bestiary);
  # a missing/unreadable log classifies as unknown
  LAUNCH_CAUSE="$(classify_cause "$ROOT/$log" "$LAUNCH_RC")"
- # self-steering loop: one lesson line per opencode session (after
- # classification — the lesson cites the cause class). Happy-path skip:
- # a clean exit (rc=0) classified unknown matched no failure keyword —
- # recording it would pollute the file with "you failed" noise on every
- # success (first-session finding 2026-09-11).
- if [ "$oc_ran" = 1 ] && { [ "$LAUNCH_RC" -ne 0 ] ||
-  [ "$LAUNCH_CAUSE" != unknown ]; }; then
+ # self-steering loop: one lesson line per opencode OR jcode session
+ # (after classification — the lesson cites the cause class). Happy-path
+ # skip: a clean exit (rc=0) classified unknown matched no failure
+ # keyword — recording it would pollute the file with "you failed" noise
+ # on every success (first-session finding 2026-09-11). jcode parity
+ # (coexistence review gap #3, 2026-09-14): the executor column already
+ # reads the tail at launch; the append side now covers jcode-attributed
+ # sessions too, keyed on the executor that actually ran.
+ if { [ "$oc_ran" = 1 ] ||
+  [ "${outcome_model:-}" = "jcode/${jc_provider:-}/${jc_model_flag:-}/sdk" ] ||
+  [ "${outcome_model:-}" = "jcode/${jc_provider:-}${jc_model_flag:+/${jc_model_flag:-}}" ]; } &&
+  { [ "$LAUNCH_RC" -ne 0 ] || [ "$LAUNCH_CAUSE" != unknown ]; }; then
   append_ocgo_lesson "$LAUNCH_CAUSE"
  fi
  # budget row carries the cost class (plan 2026-09-10-cost-tiering
