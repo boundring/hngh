@@ -3,7 +3,7 @@
 # The 2026-09-10 bench-trigger lane retired the nightly full-fleet catch-up:
 # benchmarks are event-driven now (cadence/week/02-bench-trigger.sh, plan
 # docs/project/plans/2026-09-10-bench-trigger-lane.plan.md; the 01:10 timer
-# disable is director-executed). This drop-in only notes staleness —
+# disable is director-routed — PENDING as of 2026-09-14: unit still
 # re-benching belongs to the recalibrate verb.
 # usage: cadence/day/10-bench-fresh.sh   (via cadence-tick.sh TIER=day)
 set -u
