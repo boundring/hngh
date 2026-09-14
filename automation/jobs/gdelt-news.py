@@ -196,6 +196,7 @@ def rank_rows(raw_csv, hhmm):
         else:
             continue
         item.update(url=url, root=root, quad=quad, hhmm=hhmm,
+                    num_sources=ns,
                     actors="/".join(a for a in (row[6], row[16]) if a))
         prev = best.get(url)
         if prev is None or item["score"] > prev["score"]:
@@ -208,6 +209,68 @@ def _gold_or_none(text):
         return float(text)
     except ValueError:
         return None
+
+
+def num_sources_window(records, window_hours, now=None):
+    """Trailing-window NumSources aggregation (research R3): records are
+    timestamps, or (epoch_seconds, num_sources) pairs where a bare
+    timestamp means one source. `now` defaults to the newest record
+    epoch so the function stays pure and testable. Records outside the
+    window and malformed entries fail closed (skipped, never counted).
+    ponytail: a record's NumSources may overlap across export windows
+    (same event re-reported per 15-min export); the sum is the honest
+    ceiling until per-source identity is persisted for the R1 replay
+    harness."""
+    recs = []
+    for r in records:
+        try:
+            epoch, ns = (r, 1) if isinstance(r, (int, float)) else r
+            recs.append((float(epoch), int(ns)))
+        except (TypeError, ValueError):
+            continue
+    if now is None:
+        now = max(e for e, _ in recs) if recs else 0.0
+    cutoff = now - window_hours * 3600.0
+    return sum(ns for e, ns in recs if cutoff <= e <= now)
+
+
+def story_history(snap_dir, now):
+    """snapshots/<day>/gdelt-*.json -> {url: [(epoch, num_sources)]}.
+    Snapshot headers carry date + window (HHMM); epochs before `now`
+    only. Fail-open: unreadable or malformed snapshots are skipped."""
+    hist = {}
+    try:
+        names = sorted(os.listdir(snap_dir))
+    except OSError:
+        return hist
+    for name in names:
+        if not (name.startswith("gdelt-") and name.endswith(".json")):
+            continue
+        try:
+            with open(os.path.join(snap_dir, name)) as fh:
+                snap = json.load(fh)
+            epoch = datetime.strptime(
+                "%s %s" % (snap["date"], snap["window"]),
+                "%Y-%m-%d %H%M").replace(tzinfo=timezone.utc).timestamp()
+            if epoch > now:
+                continue
+            for item in snap.get("items", []):
+                if item.get("url"):
+                    hist.setdefault(item["url"], []).append(
+                        (epoch, item.get("num_sources", 1)))
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return hist
+
+
+def attach_ns24(items, history, now):
+    """Story-selection metadata: trailing-24h NumSources per item across
+    snapshot history plus this run's record (24h absolute = maturity
+    floor, per the crystallized gdelt-gkg-trends record)."""
+    for item in items:
+        recs = list(history.get(item.get("url"), []))
+        recs.append((now, item.get("num_sources", 1)))
+        item["ns24"] = num_sources_window(recs, 24, now=now)
 
 
 def band_of(item):
@@ -300,6 +363,8 @@ def main(argv):
     if not fresh:
         breadcrumb("quiet", "no fresh ranked items in window %s" % hhmm)
         return 0
+    history = story_history(snap_dir, now)
+    attach_ns24(fresh, history, now)
     world, good = 0, 0
     picked = []
     for i in fresh:
