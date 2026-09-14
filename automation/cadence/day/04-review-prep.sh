@@ -64,7 +64,7 @@ Use this exact shape, one section per repo, in this order:
 - nit: <finding>
 
 If a repo has no findings, write exactly: no findings
-If a section's evidence ends with an explicit "[truncated at N bytes]"
+If a section's evidence ends with an explicit \"[truncated at N bytes]\"
 marker, that is this packet's cap — never report it as a truncated,
 corrupted, or partially-written file.
 

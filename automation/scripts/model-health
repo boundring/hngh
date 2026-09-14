@@ -13,7 +13,7 @@ KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 . "$ROOT/lib/model-demote.sh" 2>/dev/null
 
 DEMOTE_STATE="${DEMOTE_STATE:-$AUTOMATION_ROOT/state/model-demote.tsv}"
-FF_STATE="${FAILFIRST_STATE_DIR:-/tmp/hngh-failfirst}/failfirst-development"
+FF_STATE="${FAILFIRST_STATE_DIR:-$AUTOMATION_ROOT/state/failfirst}/failfirst-development"
 
 python3 - "$DEMOTE_STATE" "$FF_STATE" "${OVERNIGHT_MODEL:-}" "$ROOT/stats" <<'PY'
 import glob, json, os, sys, time

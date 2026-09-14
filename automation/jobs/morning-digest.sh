@@ -31,6 +31,10 @@ if [ "${n:-0}" -le 0 ] 2>/dev/null; then
 fi
 
 prompt="$(build_prompt "$DATE" "$names" "$MAX_MORNING_WORDS" "morning")"
+# digest model leg rides the same quota-ladder lane as the fresh-eyes
+# review (stall-recovery step 10): deck -> kimi -> zai -> ocgo, the local
+# bench LAST resort; unarmed legs skip fail-closed.
+MODEL_PIN="${MODEL_PIN:-review}"
 summary="$(printf '%s' "$prompt" | model_call "$MODEL_MAX_TOKENS")"
 summary="$(printf '%s' "$summary" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
 used="$(last_model_used)"
