@@ -20,7 +20,7 @@ set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
-HNGH_REPO="${HNGH_REPO:-/home/bricker/Projects/etc/hngh}"
+HNGH_REPO="${HNGH_REPO:-$(dirname "$AUTOMATION_ROOT")}"
 FLEET="$HNGH_REPO/scripts/fleet-manager"
 PROBE_ROUTE="$HNGH_REPO/scripts/probe-model-route"
 ROUTE_CONF="${PROBE_ROUTE_CONF:-$HOME/.hngh-automation/reviewer-local.conf}"
