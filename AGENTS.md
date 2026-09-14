@@ -82,3 +82,7 @@ base, not imported back into this repository. Treat prior-state records
 - Repo-root `scripts/` is kernel code surface: machine-session commits
   there require the ceremony label (`hngh: candidate <hash>`); the
   automation free-commit rule covers `automation/` only.
+
+## Jcode orientation addendum
+
+@docs/agent-notes/jcode-orientation.md

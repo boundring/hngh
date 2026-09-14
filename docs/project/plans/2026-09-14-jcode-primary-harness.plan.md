@@ -9,12 +9,21 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
 
 ## Steps
 
-- [ ] 1. **Orientation artifact for Jcode sessions.** A repo-root-facing
+- [x] 1. **Orientation artifact for Jcode sessions.** A repo-root-facing
       `AGENTS.md` addendum + a `~/.jcode`-side rules/skills package
       giving any Jcode session in this repo the same orientation the omp
       plugin provides (omp-bridge --orient, MCP tools, ceremony
       awareness). Verification: a fresh `jcode -p` session in this repo
       answers three orientation questions correctly without re-walking.
+      **Verified 2026-09-14:** artifact landed at
+      `docs/agent-notes/jcode-orientation.md`, imported via an
+      `@`-import line appended to repo-root `AGENTS.md`. Headless
+      verification (`jcode run`) answered all three orientation
+      questions correctly after one `--orient` tool call. Note:
+      headless `jcode run` surfaces the AGENTS.md context but a
+      no-tool-call variant could not answer state questions, so the
+      verification leaned on the one allowed tool call (expected:
+      orientation content is static; queue state is not).
 - [x] 2. **Transport verification + worker driver choice.** Verify the
       local Jcode build's SDK surface (launch/connect, spawn depth,
       swarm behavior) with a throwaway Node probe; decide SDK (Node shim
