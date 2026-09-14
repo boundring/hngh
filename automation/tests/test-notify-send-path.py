@@ -272,7 +272,8 @@ class SuccessSend(SendPathBase):
         self.assertEqual(
             sum(1 for ln in log.splitlines() if "send ok rc=0" in ln), 1)
         sink = self.sink_log.read_bytes() if self.sink_log.exists() else b""
-        self.assertIn(b"rcpt to:", sink)  # SMTP really delivered
+        # smtplib verb casing varies by Python (3.12 sends "rcpt TO:")
+        self.assertIn(b"rcpt to:", sink.lower())  # SMTP really delivered
         self.assertNotIn(b"dummy-sink-pass", log.encode())  # no secret in log
 
 
