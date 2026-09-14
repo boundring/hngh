@@ -4,17 +4,24 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line "Are there any existing integration tests or CI pipelines that already exercise the lib/automation.py bin/hngh boundary, and do they pass with the current implementation?" by adding a synchronous, gateable integration test for the automation boundary to close the gap between deferred overnight harnesses and preventive CI checks.
+Implements the research line on cadence beat latency by adding a synchronous, bounded integration test that exercises the lib/automation.py ↔ bin/hngh boundary with explicit timeout and max_tokens guards to prevent unguarded model-leg drift.
 
 ## Steps
 
-- [ ] Create `tests/integration/test_automation_boundary.sh` that invokes `bin/hngh` via `lib/automation.py` in a dry-run or mock mode to verify the CLI contract is handled without errors.
+- [ ] Add a new integration test script `tests/integration/test_automation_boundary.sh` that invokes `bin/hngh` via `lib/automation.py` using a mock or stubbed model endpoint, asserting clean exit code 0 and verifying the corrected CLI contract is handled without errors.
   Verification: bash -n tests/integration/test_automation_boundary.sh
-- [ ] Add a test case to `tests/integration/test_automation_boundary.sh` that asserts the exit code is zero and stdout contains the expected success marker for the corrected CLI contract.
-  Verification: grep -q "exit_code" tests/integration/test_automation_boundary.sh
-- [ ] Update `Makefile` or `tests/Makefile` to include a target `test-integration` that runs `bash tests/integration/test_automation_boundary.sh`.
+
+- [ ] Modify `cadence/hour/33-research-beat.sh` to wrap the model invocation with an explicit `timeout` command (e.g., `timeout 60`) and add a `--max-tokens` flag to the model call, ensuring `wall_s` measurement brackets only the guarded model leg.
+  Verification: grep -q "timeout" cadence/hour/33-research-beat.sh && grep -q -- "--max-tokens" cadence/hour/33-research-beat.sh
+
+- [ ] Update `lib/automation.py` to expose a configurable `MAX_WALL_S` constant (default 60) and pass it as the timeout value when invoking model-dependent subprocesses, ensuring downstream conformance with the corrected CLI contract.
+  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); import automation; assert hasattr(automation, 'MAX_WALL_S')"
+
+- [ ] Add a unit test `tests/unit/test_automation_timeout.py` that verifies `lib/automation.py` correctly passes the timeout parameter to subprocess calls and handles timeout exceptions gracefully without crashing.
+  Verification: python3 tests/unit/test_automation_timeout.py
+
+- [ ] Create a CI gate script `scripts/ci-gate.sh` that runs `make test` and explicitly executes `tests/integration/test_automation_boundary.sh`, failing the build if either step returns non-zero, converting overnight harness coverage into a blocking pre-merge check.
+  Verification: bash -n scripts/ci-gate.sh && grep -q "make test" scripts/ci-gate.sh
+
+- [ ] Update `Makefile` to add a `test-integration` target that invokes `scripts/ci-gate.sh`, ensuring the new boundary tests are included in the standard test suite gated by `make test`.
   Verification: make test
-- [ ] Create `scripts/run_integration_test.sh` that wraps the integration test invocation with timing and logging for CI observability.
-  Verification: bash -n scripts/run_integration_test.sh
-- [ ] Add a unit test in `tests/unit/test_integration_runner.py` that verifies `scripts/run_integration_test.sh` is executable and contains the correct path to the boundary test.
-  Verification: python3 tests/unit/test_integration_runner.py
