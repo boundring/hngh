@@ -30,7 +30,7 @@ beat; existing priority plans outrank this one.
       here as env-dependent, each guarded); ci.yml gains the
       automation job; a pushed commit shows the automation job green
       on CI; `make test` green in both repos.
-- [ ] 2. automation/bootstrap.sh + env contract (review finding 1,
+- [x] 2. automation/bootstrap.sh + env contract (review finding 1,
       the blocks-peers one). The script: (a) declares the env
       contract as key NAMES hngh requires (read from a documented
       list - OPENCODE_API_KEY, KIMI_AI_KEY, LOBEHUB_KEY, OP_SERVICE
@@ -106,6 +106,18 @@ beat; existing priority plans outrank this one.
   (run 34806924097, commit 307e958); kernel gate locally green after
   the fleet-manager tailscale stub (candidate 9ca1270a) cured the
   meshed-host env skew that had been blocking kernel commits.
+- Step 2 closed 2026-09-14: the machinery landed across earlier residue
+  beats (bootstrap.sh + lib/prereqs.sh pass/fail table, env.example as
+  the key-names-only contract, config/machine.env(.example) profile
+  consumed by cadence/day/06-remote-posture.sh and
+  cadence/hour/32-deck-facts.sh). This beat verified the three
+  verification items on the step's surface: automation/tests/
+  test-bootstrap.sh PASS (table shape, fail-closed on stripped PATH,
+  profile override beats the hardcoded default), `bootstrap --check`
+  exits 0 on this machine, automation `make test` green. Names diverged
+  from the plan text by convention: machine profile is
+  config/machine.env (the documented config.env convention), not
+  machine-profile.env at the automation root.
 - Steps 1-3 are the peer-gates; 4-5 are polish. Land one ceremony
   per beat; a slice is committed when its own Verification holds.
 - Step 1's hermeticity measurement is the gate for the CI job - do
