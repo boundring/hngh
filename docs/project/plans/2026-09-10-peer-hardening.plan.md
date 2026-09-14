@@ -78,7 +78,7 @@ beat; existing priority plans outrank this one.
       Verification: lint test green against the current
       credential-health.sh; a deliberately headerless mutation fails
       the test (checked once, locally); `make test` green.
-- [ ] 5. Getting-started page + docs current/historical split
+- [x] 5. Getting-started page + docs current/historical split
       (review findings 7-8). New docs/getting-started.md: one kernel
       cycle transcript (create-run through close-run with real
       scripts/hngh output), one automation beat walkthrough (a tick
@@ -158,3 +158,21 @@ beat; existing priority plans outrank this one.
   (exit 0, all 9 cases ok); a deliberately headerless mutation (kimi
   Authorization header stripped on a /tmp copy) failed the test with 2
   failures as expected; automation `make test` green (exit 0).
+- Step 5 closed 2026-09-14: the machinery landed in an earlier residue
+  beat (docs/getting-started.md with the four sections - kernel cycle
+  transcript captured live, automation beat walkthrough from tick to
+  breadcrumbs/ledger, dashboard surface plus the shots caveat,
+  prerequisites pointing at bootstrap --check; docs/README.md
+  CURRENT/HISTORICAL markers and the getting-started read-order
+  entry already committed; the durable link check
+  automation/tests/test-getting-started-links.py wired into the
+  automation gate at Makefile:59). This beat verified the four
+  verification items on the step's surface: the page exists with all
+  four sections and cites bootstrap; docs/README.md carries the split
+  markers; the link check passes (5/5, every cited path exists); the
+  kernel cycle in the transcript re-run live (create-run -> close-run
+  -> present, RC=0); automation `make test` green (exit 0). Ceremony
+  note: the first drive refused on public-content evidence - the
+  page's verbatim STATE.md excerpt carried absolute /home paths (the
+  known lesson class); home prefixes elided to ~ with the excerpt
+  wording adjusted, second drive green.
