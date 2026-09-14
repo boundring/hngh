@@ -59,3 +59,15 @@ the gantt. Story/comic/animation rungs read this same graph later.
   protagonist).
 - Honesty rules are binding: no invented dates, estimates labeled,
   blocked-by drawn only from real evidence.
+- 2026-09-14 session: step 2 landed in gitignored machine-data
+  dashboard/ (gantt.js fetches plans.json fail-closed, renders the
+  work-graph plan block: per-plan step cells filled/pulse/hollow from
+  release checkboxes, blocked-by markers from real unlocks/feeds edges,
+  park-cause chips, data-uri favicon silencing the only console error).
+  Verified live via puppeteer against 127.0.0.1:8890/gantt.html: 34 plan
+  lanes, 3 cause chips, zero console errors; screenshot at
+  docs/media/gantt/plan-rows-20260914.png. Script-suite gate red from an
+  unrelated pre-existing failure: tests/test-research-accel2.sh (5 model
+  routing FAILs) plus a sibling session mid-edit on
+  cadence/hour/33-research-beat.sh, lib/model.sh, cadence-params.tsv;
+  alert filed to report-queue — sibling lane owns the fix.
