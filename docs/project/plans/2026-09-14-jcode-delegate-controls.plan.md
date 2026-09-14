@@ -22,7 +22,7 @@ itself. No free-form command, no shell interpolation of user text.
 
 ## Steps
 
-- [ ] 1. **Server route `POST /delegate`.** In
+- [x] 1. **Server route `POST /delegate`.** In
       `automation/dashboard-server.py`: validate body
       `{slug, objective, provider, minutes}` — slug through SESSION_RE,
       provider closed-set (zai|unsloth), minutes int clamped 1..30;
@@ -34,7 +34,7 @@ itself. No free-form command, no shell interpolation of user text.
       ledger/breadcrumbs instead.
       Verification: pytest with a stubbed delegate script asserts the
       fixed argv, refusal paths, and 202 shape.
-- [ ] 2. **Sessions-tab control.** In `sessions-view.js`: a
+- [x] 2. **Sessions-tab control.** In `sessions-view.js`: a
       "delegate" control on the Sessions panel header — small form
       (slug, objective, provider select zai/unsloth, minutes 1-30)
       posting to `/delegate`; result surfaced as a transient status
@@ -45,7 +45,15 @@ itself. No free-form command, no shell interpolation of user text.
 - [ ] 3. **Grade loop evidence.** Run `scripts/grade-interface`
       against the changed panel; attach before/after to the record.
       Verification: grade passes; evidence filed in docs/records/.
-- [ ] 4. **Non-clobbering fanout doc.** Extend the shared-sense
+      Partial (2026-09-14, coordinator): evidence filed in
+      docs/records/2026-09-14-jcode-delegate-controls-landing.md —
+      before/after captures (shots per the record), axe ui-audit
+      shows the form adds zero findings, 12/12 pytest green. The
+      vision-model grade itself did NOT run: reviewer endpoint has
+      no image-input-capable model (HTTP 400). Remaining loop:
+      add a vl/vision model to the reviewer endpoint, regrade the
+      after capture, tick.
+- [x] 4. **Non-clobbering fanout doc.** Extend the shared-sense
       record: subagent swarm lanes take separate working directories
       or disjoint file slices; the coordinator commits. Reference the
       existing single-writer rule.
