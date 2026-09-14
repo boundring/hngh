@@ -45,7 +45,7 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       (`launch()` with a fixed pre-seeded per-lane home), not raw CLI
       spawn — the SDK's permission events and structured errors are the
       certificate bridge's surface.
-- [ ] 3. **Governed Jcode worker lane.** Driver in `automation/` wrapped
+- [x] 3. **Governed Jcode worker lane.** Driver in `automation/` wrapped
       `--run-start` → observatory `working` → `--run-end`; bounded
       read-only task class first (same rung-18 shape as the omp lane);
       spawn depth budget declared; fail-closed on undeclared paths.
