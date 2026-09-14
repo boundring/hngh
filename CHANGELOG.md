@@ -8,6 +8,17 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Graph feed refresh path proven + `all-sessions=1` plumbing**
+  (node sg-refresh-wiring; docs/records/2026-09-14-graph-feed-refresh-wiring.md):
+  `automation/tests/test-graph-feed-refresh.py` pins the `/graph.json`
+  refresh contract end-to-end over an ephemeral-port server — 30s cache
+  reuse without a rebuild, fail-soft to the last good graph when the
+  builder raises (cold start still fails closed), and pass-through of
+  unknown node kinds (`jcode-session`, `swarm`) unmodified.
+  `automation/dashboard-server.py` now forwards `?all-sessions=1` to
+  `graph_data.build(all_sessions=...)` with its own cache slot, so the
+  builder can adopt the extended session-shaped graph without further
+  server changes.
 - **Work-graph feed + gantt plan reality + story view skeleton**
   (plan 2026-09-09-work-graph-visualization, steps 1-4;
   docs/records/2026-09-14-work-graph-feed.md; direction:
