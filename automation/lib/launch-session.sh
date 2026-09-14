@@ -27,6 +27,8 @@ declare -F context_pack >/dev/null ||
  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context-pack.sh"
 declare -F breadcrumb >/dev/null ||
  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/breadcrumbs.sh"
+declare -F launch_jcode_worker >/dev/null ||
+ . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-jcode.sh"
 
 # append_ocgo_lesson -- the self-steering loop's write side (2026-09-11,
 # hngh opencode configuration layer): one line per opencode session into
@@ -368,18 +370,20 @@ launch) before re-deriving any repo fact from scratch."
     "$body" >"$ROOT/$log" 2>&1
   fi
  elif [ "$executor" = "jcode" ]; then
-  # jcode executor (2026-09-14, the swarm-lane CLI): the ONE branch with
-  # no key plumbing -- jcode holds its own auth in its config
-  # ([providers.zai] / [providers.unsloth]); no bili MITM, no R2 emitter
-  # (the plain-text log feeds the classifier directly). Fail-closed:
-  # jcode binary absent -> omp fallback with a breadcrumb, same contract
-  # as the opencode branch. Proxy envs are dropped for the child only
-  # (env -u): a stale HTTPS_PROXY inherited from a bili-wrapped parent
-  # breaks every fetch (same lesson as the opencode no-wrap path).
+  # jcode executor (2026-09-14): the ONE branch with no key plumbing --
+  # jcode holds its own auth in its config ([providers.zai] /
+  # [providers.unsloth]); no bili MITM, no R2 emitter (the plain-text
+  # log feeds the classifier directly). Order: SDK worker shim (plan
+  # 2026-09-14-jcode-primary-harness step 2 decision: permission
+  # events are the certificate bridge surface, not raw CLI spawn) ->
+  # CLI `jcode run` -> omp, each leg taken only when the previous is
+  # unavailable (shim/node/binary absent), each with a breadcrumb.
+  # Proxy envs are dropped for the CLI child only (env -u): a stale
+  # HTTPS_PROXY inherited from a bili-wrapped parent breaks every
+  # fetch (same lesson as the opencode no-wrap path).
   # oc_ran stays 0: LAUNCH_RC is already the branch rc, and the lesson
   # loop stays an ocgo-attributed surface.
-  local jc_bin jc_provider jc_model_flag jc_model=()
-  jc_bin="$(command -v jcode || true)"
+  local jc_provider jc_model_flag jc_model=() jw_rc=75 jc_bin
   jc_provider="${JCODE_PROVIDER:-$(get_param jcode-provider zai)}"
   case "$jc_provider" in
   zai | unsloth) ;;
@@ -391,15 +395,35 @@ launch) before re-deriving any repo fact from scratch."
   esac
   jc_model_flag="$(get_param jcode-model '')"
   [ -n "$jc_model_flag" ] && jc_model=(-m "$jc_model_flag")
-  if [ -n "$jc_bin" ]; then
-   outcome_model="jcode/$jc_provider${jc_model_flag:+/$jc_model_flag}"
-   env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
-    timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
-    "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+  if [ -r "$ROOT/jcode/worker.mjs" ] && command -v node >/dev/null 2>&1 \
+   && declare -F launch_jcode_worker >/dev/null; then
+   local jc_prompt_file
+   jc_prompt_file="$(mktemp "${TMPDIR:-/tmp}/hngh-jc-prompt.XXXXXX")"
+   printf '%s' "$body" >"$jc_prompt_file"
+   outcome_model="jcode/$jc_provider/sdk"
+   JCODE_PROMPT_FILE="$jc_prompt_file" JCODE_LOG="$ROOT/$log" \
+    timeout "$TIMEOUT_S" bash -c \
+    ". '$AUTOMATION_ROOT/lib/launch-jcode.sh'; launch_jcode_worker"
+   jw_rc=$?
+   rm -f "$jc_prompt_file"
+   [ "$jw_rc" -ne 0 ] && breadcrumb launch-session "jcode-executor" \
+    "sdk worker rc=$jw_rc -> cli fallback"
   else
-   breadcrumb launch-session "jcode-executor" "jcode binary absent -> omp"
-   timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
-    "$body" >"$ROOT/$log" 2>&1
+   breadcrumb launch-session "jcode-executor" \
+    "sdk shim or node absent -> cli fallback"
+  fi
+  if [ "$jw_rc" -ne 0 ]; then
+   jc_bin="$(command -v jcode || true)"
+   if [ -n "$jc_bin" ]; then
+    outcome_model="jcode/$jc_provider${jc_model_flag:+/$jc_model_flag}"
+    env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
+     timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
+     "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+   else
+    breadcrumb launch-session "jcode-executor" "jcode binary absent -> omp"
+    timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
+     "$body" >"$ROOT/$log" 2>&1
+   fi
   fi
  elif [ -n "$bctx_bin" ]; then
   timeout "$TIMEOUT_S" "$bctx_bin" omp -- -p --model "$SESSION_MODEL" \
