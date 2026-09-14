@@ -79,6 +79,26 @@ priority directive. Stages 2 and 3 (the current landing stages) are not
 preempted: the Jcode worker lane lands *as* governed-fleet stage-3 evidence
 (one witnessed delegation cycle), so the two advance together.
 
+## Step 3 exit evidence (2026-09-14)
+
+- Witnessed delegation cycle (SDK shim): budget row
+  `overnight|jcode-witness | session-run | model=jcode/zai/sdk`;
+  bounded read-only prompt answered correctly; rc 0. A parallel lane
+  witnessed the same through the `jcode run` CLI branch
+  (`model=jcode/zai`); budget row and wrapper prose committed 820aa22.
+- Witnessed seeded-stall auto-replace (governed-fleet §4): live
+  supervision tick against a sandbox bridge store with a seeded
+  non-terminal run — stall flagged, `close-run dead` accepted, record
+  rotated to a timestamped subdir, `auto-replace` run-start
+  re-provisioned the same mission. Required fix landed:
+  `automation/jobs/agent-supervision.py` default hngh/omp-bridge paths
+  (ROOT/../scripts; the old ROOT/../hngh/scripts default was
+  nonexistent — bare-env ticks could never close a run).
+- Fail-closed surface: worker refuses an unpinned or unsafe instance
+  home (exit 2); `launch_session` jcode branch order is SDK shim ->
+  CLI `jcode run` -> omp, each leg taken only when the previous is
+  unavailable, breadcrumb per hop.
+
 ## Honest unknowns
 
 - The SDK is Node 20+; the automation tier is Python/bash. The worker driver
