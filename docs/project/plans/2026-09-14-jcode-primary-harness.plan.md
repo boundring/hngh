@@ -60,6 +60,15 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       step: wire `launch_session`'s executor selector to dispatch
       `jcode` → `launch_jcode_worker`, then the witnessed-cycle +
       seeded-stall exit evidence.
+      **Reconciliation 2026-09-14:** the executor selector was already
+      wired 2026-09-13 (aa12fc1) as a direct `jcode run` CLI branch with
+      zai pacing and a standalone wrapper (`lib/jcode-delegate.sh`,
+      omp `hngh_jcode` tool) — the paced delegation lane. The SDK shim
+      (worker.mjs + launch-jcode.sh) is the permission-safe driver the
+      CLI branch lacks (deny-by-default permission bridge, pinned
+      instance home); plan step 4 builds the certificate bridge on it.
+      Both paths pass the automation gate. Step 3's remainder narrows
+      to the witnessed-cycle + seeded-stall exit evidence.
 - [ ] 4. **Permission bridge.** `permission_request` events routed to the
       certificate loop: default deny; allow only against a live mutation
       certificate naming the action class; `autoApprove` forbidden
