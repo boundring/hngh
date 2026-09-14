@@ -6,5 +6,7 @@ at 2026-09-10T03:00:18Z. Alert text: [oversight] slow-unit: dropin:16-remote-pus
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260910-slow-unit-dropin-16-remote-push.sh for slow-unit:dropin:16-remote-push.sh; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260910-slow-unit-dropin-16-remote-push.sh for slow-unit:16-remote-push.sh; record disposition; then fix or park
+      Verification: research subject fail-20260910-slow-unit-dropin-16-remote-push.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+      Resolved 2026-09-14: subject added to research-subjects.txt, disposition "adopted -- fixed" in research-dispositions.tsv, doc docs/research/2026-09-14-fail-20260910-slow-unit-dropin-16-remote-push.sh.md; fix = ENVELOPE entry (290+60) in automation/jobs/slow-units.py with failing test first (tests/test-slow-units.py 9/9 green).
       Verification: research subject fail-20260910-slow-unit-dropin-16-remote-push.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
