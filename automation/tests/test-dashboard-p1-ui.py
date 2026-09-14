@@ -93,6 +93,16 @@ class SpawnTileControls(unittest.TestCase):
         self.assertIn("403: tiling disabled, verbatim", v)
 
 
+class FlagControl(unittest.TestCase):
+    def test_flag_button_confirm_gated_notes_via_shared_post(self):
+        v = src("sessions-view.js")
+        self.assertIn("data-flag-yes", v)
+        self.assertIn("window.HnghOps.post('/flag', { session: id, note: note })", v)
+        # shared token + 403-expired chip ride HnghOps.post; errors verbatim
+        self.assertNotIn("fetch('/flag'", v)
+        self.assertIn("opNote(false, e.message || String(e))", v)
+
+
 class MarkRead(unittest.TestCase):
     def test_unread_rows_derived_from_ledger_mirror(self):
         a = src("app.js")
