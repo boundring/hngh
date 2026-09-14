@@ -6,8 +6,15 @@ at 2026-09-10T23:00:33Z. Alert text: overnight beat 2026-09-06-routed-tree-skew-
 
 ## Steps
 
-- [ ] Whitelist check + handoff/commit of the stalled edit
+- [x] Whitelist check + handoff/commit of the stalled edit
       Verification: dirty-tree whitelist clean; stalled edit committed or handed off
+      Executed 2026-09-14T07:13Z: automation-scope stalled edits committed
+      (1907079, pushed; automation gate rc=0); docs/README.md lands via
+      ceremony-drive this session (kernel gate rc=0). Residual non-whitelisted
+      dirt handed off: the dev-fail-20260913 plan rewrite (owning lane commits
+      it) and the automation/tests/test-model-zai-noproxy.sh deletion
+      (tracked deletion outside any verified 48h prune -- forbidden to
+      touch this session, parked for the operator/prune lane).
 
 ## Occurrences
 
