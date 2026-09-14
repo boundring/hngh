@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:automation-gate -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:automation-gate  cause=obsolete disposed=2026-09-14T13:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:automation-gate`
@@ -13,3 +13,4 @@ at 2026-09-14T10:00:39Z. Alert text: patrol automation-gate: gate-red on hngh-au
 
 - 2026-09-14T11:00:39Z re-occurred (dedup window expired)
 - 2026-09-14T12:00:39Z re-occurred (dedup window expired)
+- 2026-09-14T13:00:39Z re-occurred (dedup window expired)
