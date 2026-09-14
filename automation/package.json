@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Programmatic UI audit for the hngh-automation dashboard (axe-core + register rules over the served page).",
   "dependencies": {
+    "@1jehuang/jcode-sdk": "^1.1.0",
     "axe-core": "^4.10.0",
     "puppeteer-core": "^23.0.0"
   }

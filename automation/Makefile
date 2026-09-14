@@ -93,6 +93,7 @@ test:
 	bash tests/test-beat-blockers.sh
 	bash tests/test-plan-priority-selector.sh
 	bash tests/test-session-class.sh
+	bash tests/test-launch-jcode.sh
 	python3 -B tests/test-session-launch.py
 	python3 -B tests/test-bctx-launch.py
 	python3 -B tests/test-ocgo-attribution.py
