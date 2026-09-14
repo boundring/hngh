@@ -12,3 +12,4 @@ at 2026-09-14T10:00:39Z. Alert text: patrol research-dispositions: adopted-no-fo
 ## Occurrences
 
 - 2026-09-14T11:00:39Z re-occurred (dedup window expired)
+- 2026-09-14T12:00:39Z re-occurred (dedup window expired)
