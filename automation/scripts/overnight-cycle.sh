@@ -488,6 +488,21 @@ $response"
 # the rotation, no queue-dry precondition
 synthesize_dev_plan
 
+# class tier of the next unchecked step (cost-tiering plan step 1): the
+# first `class=T1|T2|T3` tag inside the step's text block (from the
+# `- [ ]` line through its wrapped lines to the next step/section).
+# Untagged, malformed, or absent plan -> T2 (fail-closed default).
+step_class() { # plan_file -> T1|T2|T3
+ local pf="$1" block tag
+ [ -f "$pf" ] || { printf 'T2'; return 0; }
+ block="$(awk '/^- \[ \]/{if(f){exit} f=1} /^- \[x\]/{if(f)exit} f&&/^## /{exit} f{print}' "$pf" 2>/dev/null)"
+ tag="$(printf '%s\n' "$block" | grep -m1 -o 'class=T[0-9]' || true)"
+ case "$tag" in
+  class=T1 | class=T2 | class=T3) printf '%s' "${tag#class=}" ;;
+  *) printf 'T2' ;;
+ esac
+}
+
 # --- selector (a): accepted plan's next unchecked step -------------------
 # (held plans are non-supply by construction: only status=accepted matches)
 # ALL open accepted plans are collected: the fail-first development tier
@@ -727,7 +742,12 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  local slug="$1" objective="$2" prompt_file="$3" pfile="$4" dream_step="$5"
  local start rc run_id log disposition cause result
  local dream_informed=0
- # crash-safety net: never spawn past a stop signal or a cold-start skip
+ # cost tier of this step (plan 2026-09-10-cost-tiering step 1): the
+ # selector knows which step it launches; the launcher reads the
+ # SESSION_CLASS global for the budget row (dream pass included — one
+ # step's cost). Unplanned lanes default T2 inside launch_session.
+ SESSION_CLASS="T2"
+ [ -n "$pfile" ] && SESSION_CLASS="$(step_class "$pfile")"
  [ "$STOP" -eq 1 ] && return 0
  printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
  start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
