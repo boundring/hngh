@@ -10,6 +10,12 @@
 # unreachable is a breadcrumb, never an alert -- unless it answered earlier
 # the same UTC day, when the gap files an alert row. An ssh auth failure
 # behaves the same (BatchMode means no prompt is ever possible).
+# Availability window (stall-recovery step 8, operator directive
+# 2026-09-09): the cadence-params row deck-availability (env
+# DECK_AVAILABILITY overrides) names the weekday hours the deck is
+# EXPECTED reachable (tz name handles EST/EDT). Outside the window an
+# unreachable probe is expected-state: status off-duty, no alert. Inside
+# the window the alert path is unchanged.
 # Fail-closed: exits 0 on every expected path.
 #
 # usage: cadence/hour/32-deck-facts.sh  (via cadence-tick.sh TIER=hour)
@@ -28,7 +34,9 @@ PRODUCER="$AUTOMATION_ROOT/jobs/deck-producer.sh"
 FACTS_DIR="$AUTOMATION_ROOT/deck-facts"
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="$KERNEL/scripts/report-queue"
-day="$(date -u +%F)"
+# DECK_NOW overrides the clock (test seam; set by tests, not operators).
+deck_now="${DECK_NOW:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+day="$(date -u -d "$deck_now" +%F)"
 jsonl="$FACTS_DIR/deck-facts-$day.jsonl"
 
 ssh_deck() { # $1 = timeout seconds, rest = remote command
@@ -39,7 +47,12 @@ ssh_deck() { # $1 = timeout seconds, rest = remote command
 }
 
 unreachable() { # $1 = context
-  if [ -s "$jsonl" ]; then
+  if ! deck_on_duty; then
+    # outside the availability window, unreachable is expected-state:
+    # breadcrumb it and exit, never an alert (stall-recovery step 8)
+    breadcrumb "$JOB_NAME" "off-duty" \
+      "deck unreachable outside the availability window (expected-state, no alert) ($1)"
+  elif [ -s "$jsonl" ]; then
     HNGH_REPORT_ROOT="$KERNEL" python3 "$REPORT" --add alert \
       "deck was reachable earlier today but the pull now fails ($1)" \
       --identity "deck-unreachable-$day" --window 86400 >/dev/null 2>&1 || true
@@ -48,6 +61,28 @@ unreachable() { # $1 = context
     breadcrumb "$JOB_NAME" "progress" "deck unreachable (normal) ($1)"
   fi
   exit 0
+}
+
+deck_on_duty() { # exit 0 = inside the deck-availability window
+  local w="${DECK_AVAILABILITY:-$(get_param deck-availability '')}"
+  [ -n "$w" ] || return 0 # no window row = always on duty (pre-step-8)
+  local days span tz rest d1 d2 s e dow hm
+  days="${w%% *}"; rest="${w#* }"; span="${rest%% *}"; tz="${rest#* }"
+  [ -n "$tz" ] || tz=UTC
+  d1="$(_day_num "${days%-*}")"; d2="$(_day_num "${days#*-}")"
+  s="${span%-*}"; e="${span#*-}"
+  [ "$d1" -ge 1 ] && [ "$d1" -le "$d2" ] || return 0 # malformed = on duty
+  case "$s$e" in *[!0-9:]*) return 0 ;; esac # non time chars = on duty
+  dow="$(TZ="$tz" date -d "$deck_now" +%u 2>/dev/null)" || return 0
+  hm="$(TZ="$tz" date -d "$deck_now" +%H%M 2>/dev/null)" || return 0
+  [ "$dow" -ge "$d1" ] && [ "$dow" -le "$d2" ] \
+    && [ "$((10#$hm))" -ge "$((10#${s//:}))" ] \
+    && [ "$((10#$hm))" -lt "$((10#${e//:}))" ]
+}
+_day_num() { # Mon..Sun -> 1..7, anything else 0
+  case "$1" in Mon) printf 1;; Tue) printf 2;; Wed) printf 3;;
+    Thu) printf 4;; Fri) printf 5;; Sat) printf 6;; Sun) printf 7;;
+    *) printf 0;; esac
 }
 
 [ -f "$PRODUCER" ] || {

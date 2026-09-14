@@ -274,23 +274,86 @@ def budget_lines(cap=12):
 
 
 
+def _deck_window():
+    """The deck-availability window (stall-recovery step 8): the env
+    DECK_AVAILABILITY override, else the cadence-params row. Empty = no
+    window configured (fail toward the pre-step-8 behavior)."""
+    w = os.environ.get("DECK_AVAILABILITY")
+    if w is None:
+        try:
+            tsv = os.path.join(AUTOMATION, "cadence-params.tsv")
+            with open(tsv, encoding="utf-8", errors="replace") as fh:
+                for ln in fh:
+                    parts = ln.rstrip("\n").split("\t")
+                    if parts and parts[0] == "deck-availability" and len(parts) > 1:
+                        return parts[1]
+        except OSError:
+            pass
+        return ""
+    return w
+
+
+def _deck_on_duty(now=None):
+    """True when now (ISO UTC, default real clock) is inside the
+    deck-availability window. Mirrors 32-deck-facts.sh deck_on_duty:
+    'Mon-Fri 09:00-17:30 America/New_York' -> weekday(=Mon..Fri) with
+    09:00 <= local < 17:30 in the named tz. Missing tz = UTC; a
+    malformed window parses as always-on (never hides an alert)."""
+    w = _deck_window()
+    if not w:
+        return True
+    days, _, rest = w.partition(" ")
+    span, _, tz = rest.partition(" ")
+    tz = tz.strip() or "UTC"
+    d1, _, d2 = days.partition("-")
+    s, _, e = span.partition("-")
+    names = {"Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4,
+             "Fri": 5, "Sat": 6, "Sun": 7}
+    try:
+        a, b = names[d1.strip()[:3]], names[d2.strip()[:3]]
+        lo = int(s.replace(":", ""))
+        hi = int(e.replace(":", ""))
+    except (KeyError, ValueError):
+        return True  # malformed = on duty (fail toward alerting)
+    if a > b:
+        return True
+    from datetime import datetime as _dt
+    if now is None:
+        now = os.environ.get("DECK_NOW") or datetime.now(
+            timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from zoneinfo import ZoneInfo
+    try:
+        loc = _dt.fromisoformat(now.replace("Z", "+00:00")).astimezone(
+            ZoneInfo(tz))
+    except Exception:
+        return True
+    dow, hm = loc.isoweekday(), loc.hour * 100 + loc.minute
+    return a <= dow <= b and lo <= hm < hi
+
+
 def classify_alerts(rows):
     """Classify alert rows into critical/notable/info tiers.
     Critical: mentions 'P0', 'gate-red', 'blocked', 'failed' (rc=2).
     Notable: mentions 'escalated', 're-occurred', 'stall', 'router dedup escalation'.
+    Off-duty: a deck-unreachable row while outside the deck-availability
+    window (stall-recovery step 8) — expected-state, never down/alert.
     Info: everything else.
-    Returns dict with 'critical', 'notable', 'info' lists."""
+    Returns dict with 'critical', 'notable', 'info', 'offduty' lists."""
     critical_re = re.compile(r'(P0|gate-red|blocked|FAILED\s+\(rc=2\))', re.I)
     notable_re = re.compile(r'(escalated|re-occurred|stall|router dedup escalation)', re.I)
-    critical, notable, info = [], [], []
+    deck_re = re.compile(r'deck was reachable earlier today but the pull now fails', re.I)
+    critical, notable, info, offduty = [], [], [], []
     for r in rows:
-        if critical_re.search(r):
+        if deck_re.search(r) and not _deck_on_duty():
+            offduty.append(r)
+        elif critical_re.search(r):
             critical.append(r)
         elif notable_re.search(r):
             notable.append(r)
         else:
             info.append(r)
-    return {'critical': critical, 'notable': notable, 'info': info}
+    return {'critical': critical, 'notable': notable, 'info': info,
+            'offduty': offduty}
 
 
 def dedup_alerts(rows):
@@ -519,10 +582,17 @@ def compose(g=None):
     if alerts24:
         classified = classify_alerts(alerts24)
         deduped = dedup_alerts(alerts24)
-        out.append("%d alert(s) in the last 24h — %d critical, %d notable, %d info."
+        offduty_n = len(classified.get('offduty', []))
+        out.append("%d alert(s) in the last 24h — %d critical, %d notable, "
+                   "%d info, %d off-duty."
                    % (len(alerts24), len(classified['critical']),
-                      len(classified['notable']), len(classified['info'])))
+                      len(classified['notable']), len(classified['info']),
+                      offduty_n))
         out += [ellipsize(r) for r in deduped]
+        if offduty_n:
+            out.append("(%d deck-unreachable alert(s) fall outside the deck"
+                       "-availability window — expected-state, no action.)"
+                       % offduty_n)
     else:
         out.append("none — quiet window")
     out.append("")
