@@ -39,6 +39,12 @@
 #          priorities), then unsloth -> ollama -> deck -> archive;
 #          kimi/ocgo skipped. A miss (no key file, cap, 429) falls
 #          through to the local chain.
+#   feedback remote first (openrouter, budget-gated) with the model from
+#          REMOTE_MODEL_FEEDBACK / cadence-params `remote-model-feedback`
+#          (design-feedback/coverage second opinions on design docs and
+#          plans; the contributor-priced Muse Spark legs, per the
+#          operator's 2026-09-13 addendum -- $0.10/$0.20 per 1M in/out),
+#          then unsloth -> ollama -> deck -> archive; kimi/ocgo skipped.
 #   other  ignored: the full chain runs.
 # A pinned quota leg that misses (pace-block, 429, endpoint down) falls
 # through to the local chain inside model_call -- research/reviews never
@@ -755,7 +761,7 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
 model_call() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
  local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0 pin_remote=0 \
-  pin_review=0
+  pin_feedback=0 pin_review=0
  case "${MODEL_PIN:-}" in
  local) pin_local=1 ;;
  kimi) pin_kimi=1 ;;
@@ -763,6 +769,7 @@ model_call() {
  ocgo) pin_ocgo=1 ;;
  zai) pin_zai=1 ;;
  remote) pin_remote=1 ;;
+ feedback) pin_feedback=1 ;;
  review) pin_review=1 ;;
  esac # unknown values: ignore (full chain)
  prompt="$(cat)"
@@ -790,6 +797,19 @@ model_call() {
    MODEL_USED="openrouter:$rmodel"
    printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
    _model_emit remote "$rmodel"
+   return 0
+  fi
+ fi
+ if [ "$pin_feedback" = 1 ]; then
+  local fmodel="${REMOTE_MODEL_FEEDBACK:-$(get_param remote-model-feedback '')}"
+  [ -n "$fmodel" ] || fmodel="${REMOTE_MODEL:-}"
+  if (
+   REMOTE_MODEL="$fmodel"
+   remote_chat "$prompt" "$max_tokens"
+  ); then
+   MODEL_USED="openrouter:$fmodel"
+   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+   _model_emit remote "$fmodel"
    return 0
   fi
  fi

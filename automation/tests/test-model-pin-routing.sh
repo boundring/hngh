@@ -9,6 +9,9 @@
 #   pin=deck  -> deck stub answers first; unsloth/kimi never hit.
 #   pin=remote -> remote stub answers first with the coding-class model
 #                (REMOTE_MODEL_CODING); no key file -> local unsloth.
+#   pin=feedback -> remote stub answers with the design-feedback model
+#                (REMOTE_MODEL_FEEDBACK, contributor Muse Spark legs);
+#                same budget gate as pin=remote.
 #   pin=bogus -> ignored: full chain, unsloth answers.
 #   33-research-beat rotation: runs 1,2 local / runs 3,6 zai design-class
 #   glm-5.3 non-flash (share=3); share=0 never pins; REVIEW transition
@@ -172,6 +175,24 @@ out="$(call "hello-5c" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/nope3")"
 ck "pin=remote no key: local answers" "stub-says-hi" "$out"
 ck "pin=remote no key: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "pin=remote no key: remote stub never hit" "0" "$(hits stubZ)"
+
+# --- 5d. pin=feedback -> remote stub answers with the feedback model.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+out="$(call "hello-5d" "MODEL_PIN=feedback" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_FEEDBACK=meta/muse-spark-1.3-contributor")"
+ck "pin=feedback: remote stub content" "stub-says-hi" "$out"
+ck "pin=feedback: feedback model used" "openrouter:meta/muse-spark-1.3-contributor" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=feedback: request model field" "meta/muse-spark-1.3-contributor" \
+ "$(tail -n 1 "$stubdir/stubZ-bodies" | jq -r '.model')"
+
+# --- 5e. pin=feedback second-opinion pass: env swaps the slug to 1.2.
+reset_hits
+out="$(call "hello-5e" "MODEL_PIN=feedback" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_FEEDBACK=meta/muse-spark-1.2-contributor")"
+ck "pin=feedback alt: alt model used" "openrouter:meta/muse-spark-1.2-contributor" "$(cat "$sb/tmp-modelused.txt")"
+
+reset_hits
 
 # --- 6. research-beat rotation: runs 1,2 local; run 3 zai design-class;
 #        wraps at 6.
