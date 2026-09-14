@@ -66,7 +66,7 @@ beat; existing priority plans outrank this one.
       Verification: suite test covers persistence and one-time
       migration; `make test` green; the live ladder state carries
       over on the next beat (breadcrumb evidence).
-- [ ] 4. Probe-class lint (review finding 3). New suite test
+- [x] 4. Probe-class lint (review finding 3). New suite test
       automation/tests/test-credential-probes.sh encoding the rule:
       every curl in automation/jobs/credential-health.sh that targets
       a key-gated endpoint must pass an Authorization header built
@@ -144,3 +144,17 @@ beat; existing priority plans outrank this one.
   omp-hngh-integration step 1 and this plan only raises its priority
   rationale (LobeHub's MCP-client adoption path makes it the peer
   surface).
+- Step 4 closed 2026-09-14: the machinery landed in an earlier residue
+  beat as automation/tests/test-probe-hygiene.sh (committed; wired
+  into the automation gate at Makefile:138) - the plan named it
+  test-credential-probes.sh, but the landed name is the same contract,
+  not a duplicate: every curl in jobs/credential-health.sh joined
+  across continuations, exactly one authenticated curl per key-gated
+  endpoint var (UNSLOTH_URL, kimi_models_url, ocgo_models_url), the
+  deck /health bare GET as the single documented exemption, and a
+  fail-closed catch-all for any other headerless curl. This beat
+  verified the three verification items on the step's surface:
+  test-probe-hygiene.sh PASS against the current credential-health.sh
+  (exit 0, all 9 cases ok); a deliberately headerless mutation (kimi
+  Authorization header stripped on a /tmp copy) failed the test with 2
+  failures as expected; automation `make test` green (exit 0).
