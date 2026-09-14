@@ -344,7 +344,7 @@ author_draft_plan() { # day -> drafts one normal-risk plan proposal
   breadcrumb "$JOB_NAME" "plan-draft-skip" "no source material for a draft"
   return 0
  fi
- prompt="You are the hngh night-agent plan author. Draft ONE normal-risk plan the operator will review and accept (or reject) in the morning. Output ONLY the plan body: a '# <date> - <slug>' title line, a 1-2 sentence rationale naming the source row it serves, then a '## Steps' section with 3-6 unchecked steps, one per line, formatted '- [ ] <action> -- verify: <how completion is proven: a runnable command or observable state>'. Steps must be small, concrete, and land as plain commits in hngh-automation (gated by its make test). Normal-risk ONLY. FORBIDDEN, critical class, never include: provider or credential configuration, systemd unit lifecycle, hngh kernel src/tests/Makefile/hngh.asd changes, non-prune deletions, secrets or security posture.
+prompt="You are the hngh night-agent plan author. Draft ONE normal-risk plan the operator will review and accept (or reject) in the morning. Output ONLY the plan body: a '# <date> - <slug>' title line, a 1-2 sentence rationale naming the source row it serves, then a '## Steps' section with 3-6 unchecked steps, one per line, formatted '- [ ] <action> -- verify: <how completion is proven: a runnable command or observable state>'. Tag each step's execution cost class in its text: class=T1|T2|T3 (mechanical / bounded intelligence / deep intelligence) so the selector can route cost tiers; untagged means T2. Steps must be small, concrete, and land as plain commits in hngh-automation (gated by its make test). Normal-risk ONLY. FORBIDDEN, critical class, never include: provider or credential configuration, systemd unit lifecycle, hngh kernel src/tests/Makefile/hngh.asd changes, non-prune deletions, secrets or security posture.
 
 Grounded constraints (binding):
 1. Every 'verify:' command MUST exist in this repository. Allowed verifications ONLY: 'make test' (the repo's ONLY gate), 'bash -n <file>', 'bash <script>', 'python3 <script>' (stdlib only), 'node --check <file>', 'git log'/'git status'/'grep' checks. NEVER pytest, jsonschema, npm, curl-based test suites, or make targets other than the existing ones (test, smoke, sweep, adhoc, enable, disable, status).
@@ -705,6 +705,7 @@ verified increment in hngh-automation — small, tested, committed."
  {
   printf 'WAKE CONTEXT: %s UTC. You are waking mid-stream — check the\nplan ledger, queue state, and unread alerts before acting.\n\n' "$wake"
   printf 'PLAN-FILE RULE: never overwrite an existing plan file. New plans\nget new slugs (docs/project/plans/<date>-<slug>.plan.md); check the\ndirectory for the filename before writing.\n\n'
+  printf 'COST-TIER TAGGING: tag each step class=T1|T2|T3 (mechanical /\nbounded intelligence / deep intelligence) so the selector can route cost\ntiers; untagged means T2.\n\n'
   printf 'Objective: %s\n\n' "$objective"
   cat <<'RULE'
 
