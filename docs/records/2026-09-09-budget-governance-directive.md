@@ -60,10 +60,11 @@ operator-priority stall on a day the operator asked for the opposite.
    money-adjacent knob.
 
 Wiring note: the cap-block path in
-automation/scripts/overnight-cycle.sh (lines 71-75) adopts
-`operator_item()` as a follow-up; the helper and its proof exist first
-so the call site lands as a one-line change with the surface already
-green.
+automation/scripts/overnight-cycle.sh (cap-check branch,
+landed in the overnight step-3 session, automation commit
+04554cd (2026-09-14), with the test registered in the automation
+Makefile test target; identity is dated so it dedupes to one
+request per UTC day.
 
 ## Guardrails (unchanged)
 
