@@ -76,6 +76,15 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       orientation question correctly (queue-next node-lattice-admission).
       Remaining: seeded-stall auto-replace evidence (governed-fleet §4),
       which the watchdog respawn path owns.
+      **SDK-shim witness + stall evidence (2026-09-14T19:00Z):** a
+      parallel lane witnessed the bounded read-only SDK cycle through
+      the wired `launch_session` jcode branch (budget row
+      `overnight|jcode-witness | session-run | model=jcode/zai/sdk`,
+      rc 0, correct read-only answer, log
+      `automation/logs/overnight-jcode-witness-*.log`), and the
+      seeded-stall auto-replace ran against the live supervision stack
+      (real close-run dead + real `auto-replace` run-start, stubbed
+      report queue; landed `agent-supervision` default-path fix).
 - [ ] 4. **Permission bridge.** `permission_request` events routed to the
       certificate loop: default deny; allow only against a live mutation
       certificate naming the action class; `autoApprove` forbidden
