@@ -8,3 +8,7 @@ at 2026-09-14T02:00:20Z. Alert text: patrol journal-error: propose on kglobalacc
 
 - [ ] Delve: open research subject fail-20260914-patrol-journal-error for patrol:journal-error; record disposition; then fix or park
       Verification: research subject fail-20260914-patrol-journal-error present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T03:00:39Z re-occurred (dedup window expired)

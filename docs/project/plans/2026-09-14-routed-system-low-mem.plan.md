@@ -8,3 +8,7 @@ at 2026-09-14T02:00:20Z. Alert text: [oversight] system-low-mem: critical resour
 
 - [ ] Delve: open research subject fail-20260914-system-low-mem for system-low-mem; record disposition; then fix or park
       Verification: research subject fail-20260914-system-low-mem present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T03:00:39Z re-occurred (dedup window expired)

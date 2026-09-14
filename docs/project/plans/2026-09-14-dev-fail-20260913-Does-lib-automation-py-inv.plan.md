@@ -4,21 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements research line fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v by adding a hermetic subprocess-seam test that pins the `lib/automation.py` → `bin/hngh` invocation contract (env-overridable binary path, no direct module import) and gates it via `make test`.
+The plan implements the `lib/automation.py` ↔ `bin/hngh` boundary research lines by adding a hermetic subprocess-seam integration test and documenting the corrected CLI contract, ensuring the overnight harness's regression coverage is gated synchronously.
 
 ## Steps
 
-- [ ] Add `tests/test_automation_subprocess_seam.py` asserting `lib.automation` resolves the hngh binary through an env var (e.g. `HNHG_BIN`) and invokes it via `subprocess`, not a direct `import bin.hngh`.
-  Verification: python3 tests/test_automation_subprocess_seam.py
-
-- [ ] Add a stub fixture `tests/fixtures/fake-hngh` (a minimal bash script that echoes its argv) so the seam test can point `HNHG_BIN` at it without touching real credentials or kernel paths.
-  Verification: bash -n tests/fixtures/fake-hngh
-
-- [ ] Extend `lib/automation.py` invocation path to honor the `HNHG_BIN` env override (falling back to default `bin/hngh`) so the seam is testable in-repo; keep behavior identical when unset.
+- [ ] Create `tests/test_automation_subprocess_seam.py` that stubs the env-overridable binary path and asserts `lib/automation.py` invokes `bin/hngh` via `subprocess` rather than direct import.
   Verification: make test
-
-- [ ] Add a regression guard `tests/test_no_direct_import_of_bin_hngh.py` that fails if `lib/automation.py` contains a direct module import of `bin.hngh`.
-  Verification: python3 tests/test_no_direct_import_of_bin_hngh.py
-
-- [ ] Wire the new seam test into the existing suite so `make test` runs it (update the test discovery list or add to `tests/` auto-discovery) and confirm a clean pass.
+- [ ] Add a guardrail regression case in `tests/test_cli_contract_guardrail.py` verifying `lib/automation.py` handles the post-2026-08-25 corrected CLI contract without raising on upstream kernel responses.
   Verification: make test
+- [ ] Extend `cadence/hour/33-research-beat.sh` to emit a structured `wall_s` and `model_leg_s` breakdown so latency spikes are attributable to the inference call rather than I/O.
+  Verification: bash -n cadence/hour/33-research-beat.sh
+- [ ] Update `digest/RESEARCH-BEAT-fail-20260913-Are-there-any-existing-integration-tests.md` to record that the new synchronous test now blocks merges on the automation boundary.
+  Verification: grep -q "synchronous gate" digest/RESEARCH-BEAT-fail-20260913-Are-there-any-existing-integration-tests.md

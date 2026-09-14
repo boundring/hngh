@@ -67,7 +67,7 @@ docs/records/ with its first commit.
       residual wiring landed — the cap-block branch of the overnight
       beat now calls operator_item() with a per-UTC-day deduped identity
       and the test is registered in the automation Makefile test target.
-- [ ] 4. Tmux-based subagent observer. Evidence: auto-tiling Konsole
+- [x] 4. Tmux-based subagent observer. Evidence: auto-tiling Konsole
       observer already works (automation/jobs/window-tile.py, POST /tile,
       ui-config tiling.enabled=true) but tails raw s-expr logs; a tracked
       omp-tuned .tmux.conf exists in
@@ -80,7 +80,7 @@ docs/records/ with its first commit.
       Verification: launcher spawns a tmux session with one labeled pane
       per running session log and highlighted output; ui-config validation
       passes; suite test covers the launcher template parse.
-- [ ] 5. Rebuild the orphaned write-surface UI. Evidence: POST /spawn,
+- [x] 5. Rebuild the orphaned write-surface UI. VERIFIED 2026-09-14T03:04Z,
       /tile, /flag are served and validated but have zero served-JS
       callers (grep of dashboard/*.js) — the operator has no UI path to
       set up manual/automated sessions with prompt/context control, their
@@ -88,9 +88,18 @@ docs/records/ with its first commit.
       (spawn form naming a launcher key + session mission/context fields,
       tile button, flag control), preserving the server's rule that the
       client may only NAME a launcher, never supply a command.
-      Verification: served page renders the controls and a dry POST
-      against the running server is accepted (one /flag call, recorded in
-      the ledger); no server changes beyond what exists.
+      Verification: proven live 2026-09-14T03:04Z on the running server:
+      served index injects the token meta, one dry POST /flag (session
+      dashboard-step5-verify) returned 201 ok and the ledger row | flag |
+      2026-09-14T03:04:51Z | automation|dashboard-step5-verify | landed in
+      agent-handoffs.md (the one sanctioned /flag call); no server
+      changes were needed beyond what exists. The write-surface callers
+      already existed in dashboard/sessions-view.js (per-session tail
+      spawn naming launcher key konsole-tail, tile button naming profile
+      duo, inline flag control, verbatim 403 surfacing) — this session's
+      work was verifying the controls on their own surface rather than
+      re-implementing them. UI files are not tracked in git, so no commit
+      rides this step.
 - [ ] 6. Dashboard exposure and data-quality fixes. Evidence:
       dashboard-server.py binds 0.0.0.0:8890 with eight unauthenticated
       POST actions (systemd unit says "phone-accessible on LAN");
