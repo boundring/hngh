@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal priority=high accepted=2026-09-14 -->
+<!-- plan: status=complete risk=normal priority=high accepted=2026-09-14 completed=2026-09-14 -->
 # 2026-09-14 — Jcode primary harness: staged integration plan
 
 Operator-directed 2026-09-14. Companion record:
@@ -138,9 +138,13 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       present on the host; cadence wiring (30m/20-config-backup)
       unchanged and picks the rows up automatically. Installer option
       remains specified-not-built, per the OS-harness ladder trigger.
-- [ ] 7. **Omp coexistence review.** Inventory omp surfaces vs Jcode
+- [x] 7. **Omp coexistence review.** Inventory omp surfaces vs Jcode
       equivalents; retirement is a named record per surface, never a
       default. Verification: inventory table in a record.
+      **Landed 2026-09-14:** `docs/records/2026-09-14-omp-coexistence-review.md`.
+      Disposition: no retirement yet — gaps named (spend pacing, plan
+      proposal, lessons append) with retirement order for when they
+      close; MCP and observatory are shared surfaces that never retire.
 
 ## Priority
 
