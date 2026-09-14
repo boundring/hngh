@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-12T14:13:26Z routed-from=dash-selfreview:summary -->
+<!-- plan: status=executed risk=normal accepted=2026-09-12T14:13:26Z routed-from=dash-selfreview:summary -->
 # 2026-09-12 — dash-selfreview ledger-sync skew (supersedes 2026-09-08-routed-dash-selfreview-summary)
 
 Routed by hand from the staged diagnosis in the 2026-09-08 plan
