@@ -11,8 +11,9 @@ Procedural recognition of sufficient vs insufficient dashboard state
   3. served      dashboard pages return 200 and contain their expected
                  markers (catches served-stale / cached regressions).
   4. ledger      report-queue --json row count vs report-bodies file
-                 count; drift > LEDGER_DRIFT_MAX = finding.
-
+                 count; drift > LEDGER_DRIFT_MAX = finding, downgraded to a
+                 transient when the tree itself is stale (skew guard,
+                 LEDGER_SKEW_MAX_AGE).
 Every finding is classified per the two-tier vocabulary:
   unacceptable-now   immediate attention (stale 3x, invalid feed, missing
                      page marker) — detail names why.
@@ -44,6 +45,8 @@ DASH_DIR = os.environ.get(
 HNGH_REPO = os.environ.get("HNGH_REPO", "~/Projects/etc/hngh")
 STALE_MULT = 3          # feed is stale when older than N x its tier
 LEDGER_DRIFT_MAX = 50   # |ledger rows - body files| tolerated
+LEDGER_SKEW_MAX_AGE = int(
+    os.environ.get("LEDGER_SKEW_MAX_AGE", "7200"))  # tree-freshness window (s)
 REPORT_WINDOW = "86400" # dedup window (s) for report-queue identities
 
 # feed -> expected refresh tier (seconds)
@@ -154,6 +157,17 @@ def check_served():
     return f
 
 
+def _head_age_seconds():
+    """Age (s) of the kernel repo HEAD, or None when unmeasurable."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", HNGH_REPO, "log", "-1", "--format=%ct"],
+            capture_output=True, text=True, timeout=10, check=True).stdout
+        return max(0, int(time.time()) - int(out.strip()))
+    except Exception:
+        return None
+
+
 def check_ledger():
     f = []
     rq = Path(HNGH_REPO) / "scripts" / "report-queue"
@@ -161,17 +175,40 @@ def check_ledger():
         out = subprocess.run(
             [str(rq), "--json"], capture_output=True, text=True,
             cwd=HNGH_REPO, timeout=30, check=True).stdout
-        rows = len(json.loads(out).get("reports", []))
+        payload = json.loads(out)
+        # --json `reports` is the unread-only subset (the dashboard-stop
+        # cursor hides old rows); counting it against the body-file
+        # glob fired a 2767-row pseudo-emergency while the ledger was
+        # actually coherent (2026-09-14). The kinds in `summary` sum
+        # to the total read_rows count — compare on that level.
+        summary = payload.get("summary") or {}
+        rows = (sum(summary.values()) if summary
+                else len(payload.get("reports", [])))
     except Exception as e:
         f.append(finding("ledger-sanity", True, f"report-queue --json failed: {e}"))
         return f
     bodies = len(list((Path(HNGH_REPO) / "docs/project/report-bodies").glob("*.md")))
-    if abs(rows - bodies) > LEDGER_DRIFT_MAX:
-        f.append(finding(
-            "ledger-sanity", True,
-            f"drift {abs(rows - bodies)} rows ({rows} ledger vs {bodies} "
-            f"bodies) > {LEDGER_DRIFT_MAX} — queue panel would show rows "
-            f"whose bodies are gone; reconcile/prune"))
+    drift = abs(rows - bodies)
+    if drift > LEDGER_DRIFT_MAX:
+        # Tree-freshness guard: cross-machine ledger-sync skew makes the
+        # delta flap with zero local corruption, so a count past the
+        # threshold is an emergency only when the tree has had a fair
+        # chance to sync. Unknown age fails closed (never downgrade an
+        # unexplained drift).
+        age = _head_age_seconds()
+        if age is not None and age > LEDGER_SKEW_MAX_AGE:
+            f.append(finding(
+                "ledger-sanity", False,
+                f"drift {drift} rows ({rows} ledger vs {bodies} bodies) > "
+                f"{LEDGER_DRIFT_MAX} but tree HEAD is {age}s old (> "
+                f"LEDGER_SKEW_MAX_AGE={LEDGER_SKEW_MAX_AGE}) — transient "
+                f"cross-machine sync skew; re-evaluated post-sync"))
+        else:
+            f.append(finding(
+                "ledger-sanity", True,
+                f"drift {drift} rows ({rows} ledger vs {bodies} bodies) > "
+                f"{LEDGER_DRIFT_MAX} — stale skew — reconcile; queue panel "
+                f"would show rows whose bodies are gone"))
     return f
 
 
