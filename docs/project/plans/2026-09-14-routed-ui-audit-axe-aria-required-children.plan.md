@@ -8,3 +8,7 @@ at 2026-09-14T05:00:39Z. Alert text: ui-audit axe:aria-required-children: 1 viol
 
 - [ ] Delve: open research subject fail-20260914-ui-audit-axe-aria-required-children for ui-audit:axe:aria-required-children; record disposition; then fix or park
       Verification: research subject fail-20260914-ui-audit-axe-aria-required-children present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T06:00:39Z re-occurred (dedup window expired)
