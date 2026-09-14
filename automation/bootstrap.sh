@@ -91,6 +91,23 @@ if [ "$MODE" != check ]; then
 fi
 
 echo "prerequisites ok: ${PREQS[*]}"
+# 4. optional agent harness: jcode (primary harness, admission record
+#    docs/records/2026-09-14-jcode-primary-harness-admission.md).
+#    OPTIONAL — the automation tier degrades gracefully without it
+#    (the executor ladder falls back: jcode -> omp). Never auto-
+#    installed here: the official installer is curl|bash, which this
+#    script forbids by doctrine (see header); the operator routes are
+#    the official installer, `npm install -g @1jehuang/jcode-sdk`
+#    (brings the runtime), or the SHA256-verified GitHub release
+#    tarball. --check reports presence; --install only prints routes.
+if command -v jcode >/dev/null 2>&1; then
+  echo "optional harness: jcode $(jcode version 2>/dev/null | head -1 | awk '{print $NF}') present"
+else
+  echo "optional harness: jcode absent (worker lanes fall back to omp; fine to skip)"
+  echo "  operator routes: official installer (curl -fsSL https://jcode.sh/install | bash),"
+  echo "    npm i -g @1jehuang/jcode-sdk, or the SHA256-verified release tarball"
+  echo "    (manual review of the install script is the operator's call — never auto-run here)"
+fi
 echo "env contract: $ROOT/env.example (key names only - no values, no secrets)"
 echo "secret path: 1Password service account interface -"
 echo "  $KERNEL/docs/records/2026-09-09-1password-service-account-interface.md"
