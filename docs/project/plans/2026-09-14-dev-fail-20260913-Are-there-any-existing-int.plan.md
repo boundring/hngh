@@ -4,21 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line on cadence beat latency and guardrails by adding a synchronous, bounded integration test that exercises the lib/automation.py to bin/hngh boundary with explicit timeout and token limits. This converts the overnight harness into a preventive gate and closes the open verification items regarding wall_s scope and missing guards.
+Implements the research line on cadence beat latency and missing timeout guards by adding a synchronous, bounded integration test that exercises the lib/automation.py ↔ bin/hngh boundary with a mock model call to prevent unguarded wall-time drift.
 
 ## Steps
 
-- [ ] Add a new integration test script `tests/integration/test_boundary_guardrails.sh` that invokes `bin/hngh` via `lib/automation.py` with a strict 10-second timeout wrapper.
-  Verification: bash -n tests/integration/test_boundary_guardrails.sh
-
-- [ ] Modify `cadence/hour/33-research-beat.sh` to explicitly wrap the model invocation in a `timeout` command and pass `--max-tokens` to cap output size, ensuring `wall_s` only measures the bounded leg.
-  Verification: grep -q "timeout" cadence/hour/33-research-beat.sh && grep -q -- "--max-tokens" cadence/hour/33-research-beat.sh
-
-- [ ] Create a helper function in `lib/automation.py` that validates the CLI contract returned by `bin/hngh`, raising an error if the exit code or stdout format deviates from the post-2026-08-25 corrected specification.
-  Verification: python3 -c "import lib.automation; assert hasattr(lib.automation, 'validate_cli_contract')"
-
-- [ ] Update the `Makefile` in `hngh-automation` to include a target `test-integration` that runs the new boundary test script and fails if the timeout or contract validation errors occur.
-  Verification: make -n test-integration
-
-- [ ] Execute the new integration test locally to confirm it passes under normal conditions and correctly fails when the timeout is artificially reduced to 1 second.
+- [ ] Create `tests/integration_test_boundary.sh` that sources `lib/automation.py` helpers and invokes `bin/hngh` with a mocked model response, asserting exit code 0 and output contains "boundary-ok".
+  Verification: bash -n tests/integration_test_boundary.sh
+- [ ] Add a timeout guard to the test script using `timeout 10s` around the `bin/hngh` invocation to ensure it fails fast if the boundary hangs.
+  Verification: grep -q "timeout 10s" tests/integration_test_boundary.sh
+- [ ] Update `makefile` or existing test runner to include `tests/integration_test_boundary.sh` in the standard test suite execution path.
+  Verification: grep -q "integration_test_boundary" Makefile
+- [ ] Run the full test suite to verify the new integration test passes and does not break existing unit tests.
   Verification: make test

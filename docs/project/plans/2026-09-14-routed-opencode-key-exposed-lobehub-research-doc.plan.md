@@ -8,3 +8,7 @@ at 2026-09-14T10:00:39Z. Alert text: residual exposure from push-blocked:openrou
 
 - [ ] Delve: open research subject fail-20260914-opencode-key-exposed-lobehub-research-doc for opencode-key-exposed:lobehub-research-doc; record disposition; then fix or park
       Verification: research subject fail-20260914-opencode-key-exposed-lobehub-research-doc present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T11:00:39Z re-occurred (dedup window expired)
