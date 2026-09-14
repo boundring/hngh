@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hngh-automation · nervous system</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="h-left">
+    <h1>hngh-automation <span class="sub">nervous system</span></h1>
+    <span id="pulse" class="beacon" title="feed freshness: green fresh, amber stale, red unreachable"></span>
+    <span id="verdict-pill" class="strip-verdict" title="">…</span>
+  </div>
+  <div class="h-mid strip-counts">
+    <span class="cnt" title="runs"><b id="c-runs">—</b><span class="clab"> runs</span></span>
+    <span class="cnt" title="queued"><b id="c-queued">—</b><span class="clab"> queued</span></span>
+    <span class="cnt" title="agents active"><b id="c-agents">—</b><span class="clab"> agents</span></span>
+    <span class="cnt" id="cnt-attention" title="attention"><b id="c-attention">—</b><span class="clab"> attn</span></span>
+  </div>
+  <div class="lcd-ticker" title="live status line"><span class="lcd-ticker-inner" id="lcd-ticker-text">…</span></div>
+  <div class="h-right">
+    <a class="ghost" href="story.html" title="today's chapters from the work graph + report ledger">story</a>
+    <button id="refresh-btn" class="ghost" title="refresh now">refresh</button>
+    <button id="refresh-btn" class="ghost" title="refresh now">refresh</button>
+  </div>
+</header>
+
+<nav aria-label="dashboard sections">
+  <div id="tabs" role="tablist">
+  <button role="tab" id="tab-overview" aria-controls="p-overview" data-tab="overview">Camp</button>
+  <button role="tab" id="tab-plans" aria-controls="p-plans" data-tab="plans">Plans</button>
+  <button role="tab" id="tab-schedule" aria-controls="p-schedule" data-tab="schedule">Schedule</button>
+  <button role="tab" id="tab-sessions" aria-controls="p-sessions" data-tab="sessions">Sessions</button>
+  <button role="tab" id="tab-system"   aria-controls="p-system"   data-tab="system">System</button>
+  <button role="tab" id="tab-research" aria-controls="p-research" data-tab="research">Research</button>
+  <button role="tab" id="tab-logs"     aria-controls="p-logs"     data-tab="logs">Logs</button>
+  <button role="tab" id="tab-kb"       aria-controls="p-kb"       data-tab="kb">KB</button>
+  <button role="tab" id="tab-graph"    aria-controls="p-graph"    data-tab="graph">Graph</button>
+  </div>
+</nav>
+
+<main id="grid">
+
+  <section class="panel" id="p-overview" role="tabpanel" aria-labelledby="tab-overview" data-open="1">
+    <div class="panel-head">
+      <span class="p-title">Camp · overview</span>
+      <span class="p-summary" id="overview-sum"></span>
+    </div>
+    <div class="p-body"><div id="overview-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-schedule" role="tabpanel" aria-labelledby="tab-schedule" hidden>
+    <div class="panel-head">
+      <span class="p-title">Schedule · cascade</span>
+      <span class="p-summary" id="sched-sum"></span>
+    </div>
+    <div class="p-body"><div id="sched-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-plans" role="tabpanel" aria-labelledby="tab-plans" hidden>
+    <div class="panel-head">
+      <span class="p-title">Plans · queue &amp; ceremony</span>
+      <span class="p-summary" id="plans-sum"></span>
+    </div>
+    <div class="p-body"><div id="plans-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-sessions" role="tabpanel" aria-labelledby="tab-sessions" hidden>
+    <div class="panel-head">
+      <span class="p-title">Sessions · observatory</span>
+      <span class="p-summary" id="sess-sum"></span>
+    </div>
+    <div class="p-body"><div id="sess-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-system" role="tabpanel" aria-labelledby="tab-system" hidden>
+    <div class="panel-head">
+      <span class="p-title">System · host feed</span>
+      <span class="p-summary" id="system-sum"></span>
+    </div>
+    <div class="p-body"><div id="system-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-research" role="tabpanel" aria-labelledby="tab-research" hidden>
+    <div class="panel-head">
+      <span class="p-title">Research · campaign board</span>
+      <span class="p-summary" id="research-sum"></span>
+    </div>
+    <div class="p-body"><div id="research-root"><div class="placeholder">loading…</div></div></div>
+  </section>
+
+  <section class="panel" id="p-logs" role="tabpanel" aria-labelledby="tab-logs" hidden>
+    <div class="panel-head">
+      <span class="p-title">Logs · reports &amp; digest</span>
+      <span class="p-summary" id="logs-sum"></span>
+    </div>
+    <div class="p-body">
+      <div class="ops" id="logs-ops"></div>
+      <div class="ops" id="logs-queue"></div>
+      <div class="logtoggle" role="tablist" aria-label="logs sub-view">
+        <button id="lt-reports" class="ghost fbtn on"
+          role="tab" aria-selected="true" title="the breadcrumb event stream">Reports · events</button>
+        <button id="lt-digest" class="ghost fbtn"
+          role="tab" aria-selected="false" title="the curated daily layer">Digest · daily</button>
+      </div>
+      <div id="logs-reports"></div>
+      <div id="logs-digest" hidden></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-kb" role="tabpanel" aria-labelledby="tab-kb" hidden>
+    <div class="panel-head">
+      <span class="p-title">KB · wiki</span>
+      <span class="p-summary" id="kb-sum"></span>
+    </div>
+    <div class="p-body"><div id="kb-root"></div></div>
+  </section>
+
+  <section class="panel" id="p-graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
+    <div class="panel-head">
+      <span class="p-title">Graph · operations</span>
+      <span class="p-summary" id="graph-sum"></span>
+    </div>
+    <div class="p-body"><div id="graph-root"></div></div>
+  </section>
+
+</main>
+
+<div class="orient" role="region" aria-label="orientation">
+  <p class="orient-line">Operator console over the automation spine — queue, agents, rotation, logs. Governance stays certificate-gated; this page never feeds a gate.</p>
+  <details class="glossary">
+    <summary>Glossary — what the terms mean</summary>
+    <dl>
+      <dt>hngh</dt><dd>the self-governed run/commit engine whose work this collection tracks.</dd>
+      <dt>run</dt><dd>one bounded execution (create → admit → review → close).</dd>
+      <dt>agent</dt><dd>a live worker attached to the collection.</dd>
+      <dt>evacuated</dt><dd>an agent/run parked or shelved — not failed.</dd>
+      <dt>rotation</dt><dd>a timed state checkpoint (day marker on the schedule axis).</dd>
+      <dt>lane</dt><dd>an ordering slot in the backlog; each lane <i>depends on</i> the lane ahead of it — no fixed date.</dd>
+      <dt>spine</dt><dd>the JSON feed (verdict + timeline + queue + lanes + roster) behind the header strip.</dd>
+      <dt>beacon</dt><dd>the pulse dot in the strip: green = fresh data, amber = stale, red = unreachable.</dd>
+      <dt>run id</dt><dd>session ids look like run-20260827T200145Z-2672106: run-&lt;UTC timestamp&gt;-&lt;pid&gt; of the wake that spawned the agent.</dd>
+      <dt>loadout</dt><dd>the model plus time/budget limits a worker is admitted with for one run.</dd>
+      <dt>certificate-gated</dt><dd>a change only commits when a certificate binds it to operator-verified evidence.</dd>
+      <dt>tier</dt><dd>cadence bucket of a recurring job: 1m / 5m / 10m / hour / day / quarter.</dd>
+      <dt>drop-in</dt><dd>a one-off lane inserted between recurring lanes in the rotation ("cadence drop-in" source).</dd>
+      <dt>record.lisp / receipt tail</dt><dd>per-run store file and the last lines of its log; dashboards read only the tail.</dd>
+      <dt>gbd-lane</dt><dd>git-back-dots — the operator-run config-parity lane; no fixed cadence.</dd>
+      <dt>grow / research beat</dt><dd>the recurring exploration/learning slot in the rotation (Research tab).</dd>
+      <dt>ledger p50</dt><dd>median wall time of a unit's past runs — the preferred duration estimate for lanes.</dd>
+      <dt>Camp</dt><dd>the landing view (canonical term: overview) — verdict with its reasons, open operator items, attention crumbs, today's dispatch excerpt.</dd>
+      <dt>winamp</dt><dd>the dashboard's one fixed theme; there is no theme button.</dd>
+      <dt>KB</dt><dd>the knowledge-base tab: snapshots of the wiki's source pages.</dd>
+      <dt>OMP</dt><dd>oh-my-pi — the agent harness whose sessions appear in the roster.</dd>
+      <dt>steer</dt><dd>a mid-run course-correction message sent to a live agent; shows up in Reports.</dd>
+    </dl>
+  </details>
+</div>
+
+<footer id="meta">
+  <span id="flow"></span> · <span id="last-refresh"></span>
+</footer>
+
+<script src="app.js" defer></script>
+<script src="overview-view.js" defer></script>
+<script src="plans-view.js" defer></script>
+<script src="schedule-view.js" defer></script>
+<script src="sessions-view.js" defer></script>
+<script src="system-view.js" defer></script>
+<script src="research-view.js" defer></script>
+<script src="kb-view.js" defer></script>
+<script src="graph-view.js" defer></script>
+<script src="feedback-view.js" defer></script>
+</body>
+</html>
