@@ -125,14 +125,67 @@ file_alert() { # identity text — the row is the contract; email is convenience
 # fallback. The source is logged with every session for spend
 # attribution: roguelike budget loop — free local when it proves itself,
 # paid only as fallback while the bench keeps re-validating.
-select_model() { # -> "model|source" on stdout
- local dm
+#
+# Class-aware pinning (cost-tiering plan step 2, docs/design/cost-tiering.md):
+# select_model [class] — the class is the launched step's tier (step_class).
+#   T1 mechanical: pins the local-bench rung (quota and paid skipped unless
+#     the bench is empty or its model demoted — then the T2 ladder applies);
+#   T2 bounded intelligence: the default ladder, untouched;
+#   T3 deep intelligence: the ladder untouched (the director should take
+#     it) plus ONE deduped operator-item naming the T3 step; the operator
+#     decides whether to decompose or take over. Malformed class -> T2
+#     (fail-closed, same convention as step_class).
+# Demotion (stall-recovery step 1) and health gates (step 9) apply to
+# every rung in every class.
+best_bench_model() { # stats_dir -> best fresh 5/5 bench model on stdout ("" none)
+ python3 - "$1" <<'PY'
+import glob, json, os, sys, time
+best, top = "", 0
+cutoff = time.time() - 86400
+for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
+    try:
+        if os.path.getmtime(f) < cutoff:
+            continue
+    except OSError:
+        continue
+    for ln in open(f, errors="replace"):
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        if r.get("score", 0) >= 5 and r.get("score", 0) > top:
+            best, top = r.get("model", ""), r["score"]
+print(best)
+PY
+}
+
+select_model() { # [class] -> "model|source" on stdout
+ local cls="${1:-T2}" best
+ case "$cls" in T1 | T2 | T3) ;; *) cls="T2" ;; esac
  declare -F model_demoted >/dev/null ||
   . "$ROOT/lib/model-demote.sh"
  # demotion guard (stall-recovery step 1): a model with 2 consecutive
  # bad-execution outcomes is skipped, whatever rung would have served it
  if [ -n "${OVERNIGHT_MODEL:-}" ] && [ "$(model_demoted "$OVERNIGHT_MODEL")" != 1 ]; then
   printf '%s|env\n' "$OVERNIGHT_MODEL"
+  return 0
+ fi
+ # T3: the ladder is untouched, but the beat files the operator-item
+ # (ONE deduped request — the director should take this step; the
+ # operator decides whether to decompose or take over).
+ if [ "$cls" = "T3" ]; then
+  declare -F operator_item >/dev/null || . "$ROOT/lib/operator-item.sh"
+  operator_item "t3-step-session" \
+   "T3 step (deep intelligence) routed to a delegated session; the director should take it per docs/design/cost-tiering.md — decompose into T1/T2 or take over"
+ fi
+ # bench scan is shared by the T1 pin and the standard local-bench rung
+ best="$(best_bench_model "$ROOT/stats")"
+ # T1 pins the local-bench rung BEFORE the quota rung: mechanical work
+ # never burns quota unless the bench yields nothing (empty or its
+ # model demoted) — then the T2 ladder applies ("unless bench is empty").
+ if [ "$cls" = "T1" ] && [ -n "$best" ] &&
+  [ "$(model_demoted "$best")" != 1 ]; then
+  printf '%s|local-bench\n' "$best"
   return 0
  fi
  # quota preference (stall-recovery step 9): a session-model-preference
@@ -165,32 +218,12 @@ select_model() { # -> "model|source" on stdout
     --identity "quota-leg-unhealthy:$q" --window 86400 >/dev/null 2>&1 || true
   done
  fi
- local best
- best="$(
-  python3 - "$ROOT/stats" <<'PY'
-import glob, json, os, sys, time
-best, top = "", 0
-cutoff = time.time() - 86400
-for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
-    try:
-        if os.path.getmtime(f) < cutoff:
-            continue
-    except OSError:
-        continue
-    for ln in open(f, errors="replace"):
-        try:
-            r = json.loads(ln)
-        except ValueError:
-            continue
-        if r.get("score", 0) >= 5 and r.get("score", 0) > top:
-            best, top = r.get("model", ""), r["score"]
-print(best)
-PY
- )"
- [ -n "$best" ] && [ "$(model_demoted "$best")" != 1 ] && {
+ # standard bench rung (the T1 fall-through lands here on an empty or
+ # demoted-but-unpinned scan: the demotion gate applies per rung)
+ if [ -n "$best" ] && [ "$(model_demoted "$best")" != 1 ]; then
   printf '%s|local-bench\n' "$best"
   return 0
- }
+ fi
  # bench leg demoted (or no bench): paid fallback, unless it too is demoted
  local paid="${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
  if [ "$(model_demoted "$paid")" != 1 ]; then
@@ -199,14 +232,15 @@ PY
  fi
  # every rung demoted: last known non-demoted wins via env leg echo; the
  # session will fail closed through the bridge instead of burning budget
- [ -n "$OVERNIGHT_MODEL" ] && {
+ if [ -n "$OVERNIGHT_MODEL" ]; then
   printf '%s|env-all-demoted\n' "$OVERNIGHT_MODEL"
   return 0
- }
+ fi
  printf '%s|paid-fallback\n' "$paid"
- printf '%s|paid-fallback\n' "${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
 }
-MODEL_SPEC="$(select_model)"
+# beat-level default (T2: the safe middle); run_one re-selects per slot
+# with the launched step's class (cost-tiering step 2).
+MODEL_SPEC="$(select_model T2)"
 SESSION_MODEL="${MODEL_SPEC%%|*}"
 SESSION_SOURCE="${MODEL_SPEC##*|}"
 export SESSION_SOURCE
@@ -748,6 +782,18 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  # step's cost). Unplanned lanes default T2 inside launch_session.
  SESSION_CLASS="T2"
  [ -n "$pfile" ] && SESSION_CLASS="$(step_class "$pfile")"
+ # class-aware model pinning (cost-tiering step 2): re-select per slot
+ # with the step's class; T1 pins local, T3 files its operator-item, T2
+ # keeps the ladder. The beat-level SESSION_MODEL stays the T2 default
+ # for unplanned lanes.
+ local mspec msrc
+ if [ "${SESSION_CLASS:-T2}" != "T2" ]; then
+ 	mspec="$(select_model "$SESSION_CLASS")"
+ 	SESSION_MODEL="${mspec%%|*}"
+ 	msrc="${mspec##*|}"
+ else
+ 	msrc="$MODEL_SOURCE"
+ fi
  [ "$STOP" -eq 1 ] && return 0
  printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
  start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -822,7 +868,7 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
 
  printf 'overnight-lead | %s | %s|%s | rc=%d %s log=%s model=%s(%s) cause=%s\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$run_id" "$rc" "$disposition" "$log" \
-  "$SESSION_MODEL" "$MODEL_SOURCE" "$cause" \
+  "$SESSION_MODEL" "$msrc" "$cause" \
   >>"$ROOT/agent-handoffs.md"
 
  # failure -> research demand: a dead session classified as a knowledge
