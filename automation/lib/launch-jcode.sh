@@ -10,8 +10,12 @@
 #   JCODE_PROMPT_FILE   prompt file (required)
 #   JCODE_LOG           output log path (required; plain text for
 #                       lib/causes.sh keyword classification)
-#   JCODE_WORKER_APPROVE  set to 1 ONLY by a certificate-scoped lane;
-#                       forwarded to worker.mjs (deny-by-default bridge)
+#   JCODE_WORKER_APPROVE  set to 1 ONLY with a valid JCODE_WORKER_CERT;
+#                       forwarded to worker.mjs (certificate bridge)
+#   JCODE_WORKER_CERT   certificate scope file (JSON: {"actions": [...],
+#                       "expires": "<ISO-8601>"}); REQUIRED when approve
+#                       is set; the wrapper validates shape + expiry
+#                       fail-closed before any child spawns
 #   JCODE_WORKER_HOME   instance home (default ~/.hngh-jcode-worker;
 #                       created pinned, one runtime dir per lane)
 #   JCODE_WORKER_TIMEOUT_MS  turn timeout (default 300000)
@@ -39,6 +43,29 @@ launch_jcode_worker() {
   printf 'jcode-worker: node absent\n' >&2
   return 75
  }
+ # certificate bridge (plan step 4): approve mode is invalid without a
+ # certificate file that parses, has a non-empty actions array, and is
+ # unexpired. Fail-closed BEFORE any child spawns (no spend on a bad
+ # certificate). The shim re-validates (defense in depth).
+ if [ "${JCODE_WORKER_APPROVE:-0}" = "1" ]; then
+  [ -n "${JCODE_WORKER_CERT:-}" ] && [ -r "$JCODE_WORKER_CERT" ] || {
+   printf 'jcode-worker: approve set but JCODE_WORKER_CERT missing\n' >&2
+   return 75
+  }
+  python3 - "$JCODE_WORKER_CERT" <<'PYEOF' || return 75
+import json, sys
+from datetime import datetime, timezone
+try:
+    cert = json.load(open(sys.argv[1]))
+    actions = cert["actions"]
+    assert isinstance(actions, list) and actions, "actions must be a non-empty array"
+    exp = datetime.fromisoformat(cert["expires"].replace("Z", "+00:00"))
+    assert exp > datetime.now(timezone.utc), "certificate expired"
+except Exception as exc:
+    print(f"jcode-worker: certificate invalid: {exc}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
+ fi
  # node --input-type keeps argv as the single prompt source; the prompt
  # is passed as one argv blob (no shell interpolation of file content).
  local prompt_blob
