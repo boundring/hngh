@@ -1,6 +1,17 @@
 # Changelog
 
 ## 2026-09-14
+- feat: jcode permission bridge (plan 2026-09-14-jcode-primary-harness
+  step 4) — `lib/launch-jcode.sh` refuses `JCODE_WORKER_APPROVE=1`
+  without a readable `JCODE_WORKER_CERT` scope file (JSON
+  `{"actions": [...], "expires": "<ISO-8601>"}`) that parses,
+  declares a non-empty action list, and is unexpired (fail-closed
+  rc 75 before any child spawns); `jcode/worker.mjs` re-validates the
+  scope, denies every `permission_request` in an uncertified lane,
+  allows only tool names inside the certified action list, and
+  writes an allow/deny audit line to stderr per decision. Blanket
+  auto-approval stays forbidden. Test `tests/test-launch-jcode.sh`
+  cases 8-13 wired into `make test`.
 
 - fix: dashboard report-queue mark-read failures surface inline instead of
   being silently swallowed (dashboard/app.js). Any non-403 POST failure now
