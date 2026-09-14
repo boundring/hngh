@@ -6,5 +6,6 @@ at 2026-09-12T19:00:14Z. Alert text: correction 407311fb: no named check found (
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260912-correction-407311fb for correction-407311fb; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260912-correction-407311fb for correction-407311fb; record disposition; then fix or park
+      Disposition 2026-09-14: parked -- feedback-apply correction() behaved fail-closed as designed on operator prose (jobs/feedback-apply.py:238-246); wake-mutation lane reference already landed 2026-09-13; see docs/research/2026-09-14-fail-20260912-correction-407311fb.md and research-dispositions.tsv
       Verification: research subject fail-20260912-correction-407311fb present in research-subjects.txt with a recorded disposition; alert fixed or parked
