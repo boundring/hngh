@@ -76,6 +76,28 @@ class SlowUnits(unittest.TestCase):
         self.assertEqual(r.stdout.strip(),
                          "dropin:16-remote-push.sh wall=350.1s median=0.0s")
 
+    def test_research_beat_in_envelope_never_flagged(self):
+        # 33-research-beat.sh is bimodal by design: throttled failfirst
+        # skip-exit ~0.2s (the median), GO ticks run bounded model_call
+        # work — observed 28.3-552.5s (time-ledger max 501.3s; p50 drifts
+        # 0.2 -> 146.2s as GO ticks cluster, so the median rule alone
+        # fires on every legitimate mode transition — the routed alert
+        # 2026-09-12, identity re-routed 5x since 2026-09-08). 800s is
+        # the parked disposition's own revisit threshold (~2x the
+        # model-call ceiling), +60s margin.
+        for last, p50 in [(28.3, 0.1), (137.4, 0.2), (552.5, 108.9),
+                          (501.3, 146.2)]:
+            r = self.run_probe([{"unit": "dropin:33-research-beat.sh",
+                                 "last_wall_s": last, "p50_s": p50}])
+            self.assertEqual((r.returncode, r.stdout.strip()),
+                             (0, ""), (last, p50))
+
+    def test_research_beat_over_envelope_flagged(self):
+        r = self.run_probe([{"unit": "dropin:33-research-beat.sh",
+                             "last_wall_s": 861.0, "p50_s": 0.2}])
+        self.assertEqual(r.stdout.strip(),
+                         "dropin:33-research-beat.sh wall=861.0s median=0.2s")
+
     def test_plain_unit_median_rule_still_fires(self):
         r = self.run_probe([{"unit": "dropin:01-system.sh",
                              "last_wall_s": 60.0, "p50_s": 1.8}])

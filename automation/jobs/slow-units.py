@@ -30,6 +30,14 @@ ENVELOPE = {
     # 290s, so it is bimodal by design like the workbeat above (432
     # duplicate slow-unit alerts through 2026-09-14).
     "dropin:16-remote-push.sh": 290.0 + 60.0,
+    # 33-research-beat.sh: bimodal like the workbeat — throttled failfirst
+    # skip-exit ~0.2s (the median), GO ticks run bounded model_call work
+    # (observed 28.3-552.5s; every leg capped by curl --max-time
+    # MODEL_TIMEOUT=300, <=2 calls per beat). 800s is the parked
+    # disposition's own revisit threshold (~2x the model-call ceiling),
+    # +60s margin (routed alert 2026-09-12, identity re-routed 5x since
+    # 2026-09-08).
+    "dropin:33-research-beat.sh": 800.0 + 60.0,
 }
 
 
