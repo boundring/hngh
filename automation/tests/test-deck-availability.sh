@@ -46,6 +46,7 @@ printf '#!/usr/bin/env python3\nimport sys\nopen("%s/rq.log", "a").write(" ".joi
 cat >"$sb/bin/ssh" <<STUB
 #!/usr/bin/env bash
 sb="\$SSH_STUB_SANDBOX"
+printf '%s\n' "\${@: -2}" >>"\$sb/ssh.log" # log the target host (2nd-to-last arg)
 [ "\${SSH_STUB_MODE:-down}" = "up" ] || exit 255
 cmd="\${@: -1}"
 case "\$cmd" in
@@ -69,8 +70,9 @@ chmod +x "$sb/bin/ssh"
 
 run_probe() { # DECK_NOW SSH_STUB_MODE [extra env via env]
   rm -f "$sb/rq.log"
-  DECK_NODE_ENABLED=1 DECK_HOST="deck@stub" DECK_KEY="$sb/id_test" \
-    DECK_AVAILABILITY="${DECK_AVAILABILITY:-}" DECK_NOW="$1" \
+  DECK_NODE_ENABLED=1 DECK_HOST="${DECK_HOST-deck@stub}" DECK_KEY="$sb/id_test" \
+    DECK_AVAILABILITY="${DECK_AVAILABILITY:-}" \
+    HNGH_MACHINE_PROFILE="${HNGH_MACHINE_PROFILE:-}" DECK_NOW="$1" \
     SSH_STUB_MODE="$2" SSH_STUB_SANDBOX="$sb" AUTOMATION_ROOT="$sb" \
     HNGH_HOME="$sb" PATH="$sb/bin:$PATH" \
     bash "$sb/cadence/hour/32-deck-facts.sh"
@@ -81,6 +83,10 @@ alerts_filed() { # -> count of --add alert rows in the stub log
 }
 crumb_kind() { # kind -> count in the sandbox STATE.md
   if [ -f "$sb/STATE.md" ]; then grep -c " | $1 | " "$sb/STATE.md" || :;
+  else printf 0; fi
+}
+ssh_calls() { # -> count of stub ssh invocations
+  if [ -f "$sb/ssh.log" ]; then grep -c . "$sb/ssh.log" || :;
   else printf 0; fi
 }
 
@@ -126,6 +132,30 @@ printf '# nothing here\n' >"$sb/cadence-params.tsv"
 DECK_AVAILABILITY= run_probe "2026-09-14T23:00:00Z" down
 ck "no window row keeps the alert path" "1" "$(alerts_filed)"
 printf 'deck-availability\t%s\ttest\ttest\n' "$WINDOW" >"$sb/cadence-params.tsv"
+
+# (f) machine profile supplies the deck host (step 2c): HNGH_MACHINE_PROFILE
+#     points at a sandbox profile setting DECK_HOST; the ssh stub must see
+#     that host and never the runner default (profile wins over absence)
+mkdir -p "$sb/config"
+printf 'DECK_HOST="deck@profile"\n' >"$sb/config/machine.env"
+rm -f "$sb/ssh.log" # cases (a)-(e) logged stub calls under deck@stub
+DECK_HOST= HNGH_MACHINE_PROFILE="$sb/config/machine.env" \
+  run_probe "2026-09-14T14:00:00Z" up
+ck "profile DECK_HOST drives the ssh stub" "3" \
+  "$(grep -c 'deck@profile' "$sb/ssh.log" || :)"
+ck "no fallback host reaches ssh" "0" "$(grep -c 'deck@stub' "$sb/ssh.log" || :)"
+rm -f "$sb/config/machine.env" "$sb/ssh.log"
+
+# (g) no profile file and no DECK_HOST: fail-closed skip - exit 0, one
+#     breadcrumb, zero ssh invocations (never a baked-in address)
+HNGH_MACHINE_PROFILE="$sb/config/absent.env" DECK_HOST= \
+  run_probe "2026-09-14T23:00:00Z" up
+ck "no-DECKHOST skip exits 0" "0" "$?"
+ck "no-DECKHOST skip crumbed" "1" "$(crumb_kind deck-facts)"
+grep -q "no DECK_HOST (config/machine.env missing" "$sb/STATE.md" &&
+  ck "skip breadcrumb text" "y" "y" ||
+  ck "skip breadcrumb text" "y" "n"
+ck "no-DECKHOST skip makes no ssh calls" "0" "$(ssh_calls)"
 
 # --- digest classifier (scripts/email-digest.py classify_alerts): an
 # outside-window deck-unreachable row renders off-duty, not down/alert.
