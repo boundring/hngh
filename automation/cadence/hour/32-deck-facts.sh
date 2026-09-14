@@ -27,7 +27,20 @@ set -u
 enabled="${DECK_NODE_ENABLED:-$(get_param deck-node-enabled 0)}"
 [ "$enabled" = "1" ] || exit 0
 
-DECK_HOST="${DECK_HOST:-deck@100.79.162.3}"
+# machine profile: host identity (deck ssh host) lives in config/machine.env
+# (gitignored; example: config/machine.env.example) - peer-review finding 1:
+# machine defaults never bake into job code. The profile path is
+# env-selectable (HNGH_MACHINE_PROFILE) for tests.
+MACHINE_PROFILE="${HNGH_MACHINE_PROFILE:-$AUTOMATION_ROOT/config/machine.env}"
+[ -f "$MACHINE_PROFILE" ] && . "$MACHINE_PROFILE"
+DECK_HOST="${DECK_HOST:-}" # deck ssh host; machine profile or exported env
+# fail-closed: without a machine profile (and no env DECK_HOST) there is no
+# deck host to pull from - skip, never fall back to a baked-in address.
+if [ -z "$DECK_HOST" ]; then
+  breadcrumb "$JOB_NAME" "deck-facts" \
+    "no DECK_HOST (config/machine.env missing - see config/machine.env.example): skipped"
+  exit 0
+fi
 DECK_KEY="${DECK_KEY:-$HOME/.ssh/id_ed25519_hngh}"
 DECK_DIR="${DECK_DIR:-hngh-deck}"
 PRODUCER="$AUTOMATION_ROOT/jobs/deck-producer.sh"
