@@ -7,7 +7,7 @@ First rungs only - no provider-key changes, no systemd lifecycle.
 
 ## Steps
 
-- [ ] 1. Session-class plumbing (test-first). Generalize the
+- [x] 1. Session-class plumbing (test-first). Generalize the
       SESSION_SOURCE pattern (overnight-cycle.sh, eb8c242 lineage):
       launch-session.sh appends `class=<T1|T2|T3>` to the budget
       session-run row, taken from the plan step's tag (the selector
@@ -21,7 +21,7 @@ First rungs only - no provider-key changes, no systemd lifecycle.
       with the stub bridge pattern from test-remote-push.sh).
       Verification: suite test covers tagged, untagged, and budget-row
       cases; full `make test` green.
-- [ ] 2. Class-aware model pinning in select_model (test-first).
+- [x] 2. Class-aware model pinning in select_model (test-first).
       select_model accepts a class argument (from the selector's plan
       step): class=T1 pins the local-bench rung (skips quota and paid
       unless bench is empty), class=T2 keeps the current ladder
