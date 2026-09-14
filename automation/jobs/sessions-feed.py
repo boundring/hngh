@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +43,21 @@ OMP_TAIL_BYTES = 512 * 1024
 OMP_HEAD_BYTES = 64 * 1024  # head must clear the session_init system prompt
 ROSTER_MATCH_WINDOW_S = 1200  # run start vs transcript session-start skew
 LIVE_S = 300                  # mtime younger than this => state "live"
+
+# other CLIs' session stores — one observatory row per live/recent
+# session; env-overridable for hermetic tests (same seam as BRIDGE_STORE)
+JCODE_SESSIONS_DIR = os.environ.get(
+    "JCODE_SESSIONS_DIR",
+    os.path.join(os.path.expanduser("~"), ".jcode", "sessions"))
+JCODE_LOG_DIR = os.environ.get(
+    "JCODE_LOG_DIR",
+    os.path.join(os.path.expanduser("~"), ".jcode", "logs"))
+OPENCODE_DATA_DIR = os.environ.get(
+    "OPENCODE_DATA_DIR",
+    os.path.join(os.path.expanduser("~"), ".local", "share", "opencode"))
+PI_SESSIONS_DIR = os.environ.get(
+    "PI_SESSIONS_DIR",
+    os.path.join(os.path.expanduser("~"), ".pi", "agent", "sessions"))
 
 ENTRY_CAP = 400               # last N entries per session
 ENTRY_BUDGET = 196608         # ~192KB of entry text per session
@@ -265,12 +281,36 @@ def _iso_ts(s):
         return None
 
 
-def omp_candidates(now):
+def _log_tail(log_glob, needle, max_lines=20, max_bytes=65536):
+    """Last log lines containing needle across the newest matching logs,
+    tail-read only (no whole-log scans)."""
+    try:
+        paths = sorted(glob.glob(log_glob), key=os.path.getmtime,
+                       reverse=True)[:3]
+    except OSError:
+        return None
+    hits = []
+    for path in paths:
+        try:
+            with open(path, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                f.seek(max(0, f.tell() - max_bytes))
+                for ln in f.read().decode(
+                        "utf-8", errors="replace").splitlines():
+                    if needle in ln:
+                        hits.append(ln.strip())
+        except OSError:
+            continue
+    return "\n".join(hits[-max_lines:]) or None
+
+
+def omp_candidates(now, root=None):
     """Recent omp transcripts (main sessions + per-agent jsonl), newest
     activity first, capped. Each: {path, start, mtime, stem, first_user}."""
     out = []
-    for path in glob.glob(os.path.join(OMP_SESSIONS, "*", "*.jsonl")) + \
-            glob.glob(os.path.join(OMP_SESSIONS, "*", "*", "*.jsonl")):
+    root = root or OMP_SESSIONS
+    for path in glob.glob(os.path.join(root, "*", "*.jsonl")) + \
+            glob.glob(os.path.join(root, "*", "*", "*.jsonl")):
         try:
             mtime = os.path.getmtime(path)
         except OSError:
@@ -295,7 +335,7 @@ def omp_candidates(now):
                         pass
         except OSError:
             continue
-        project = os.path.relpath(path, OMP_SESSIONS).split(os.sep)[0]
+        project = os.path.relpath(path, root).split(os.sep)[0]
         out.append({"path": path, "start": start, "mtime": mtime,
                     "stem": os.path.splitext(os.path.basename(path))[0],
                     "project": project.lstrip("-")[:40],
@@ -304,10 +344,10 @@ def omp_candidates(now):
     return out[:OMP_MAX_SESSIONS]
 
 
-def omp_row_id(cand):
+def omp_row_id(cand, prefix="omp"):
     digest = hashlib.md5(cand["path"].encode()).hexdigest()[:6]
     base = re.sub(r"[^A-Za-z0-9_-]", "", cand["stem"])[:28] or digest
-    return "omp-%s-%s" % (base, digest)
+    return "%s-%s-%s" % (prefix, base, digest)
 
 
 def omp_mission(cand):
@@ -443,6 +483,144 @@ def bridge_rows(store_root):
     return rows
 
 
+def jcode_rows(now):
+    """jcode sessions (~/.jcode/sessions/session_*.json): one row per
+    session, live = last activity inside LIVE_S. Status tail = the log's
+    per-session "API call complete" lines (cost telemetry rides there)."""
+    cands = []
+    for path in glob.glob(os.path.join(JCODE_SESSIONS_DIR,
+                                       "session_*.json")):
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            continue
+        if now - mtime > OMP_WINDOW_S:
+            continue
+        try:
+            with open(path, encoding="utf-8") as f:
+                s = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if isinstance(s, dict) and s.get("id"):
+            cands.append((path, mtime, s))
+    cands.sort(key=lambda t: t[1], reverse=True)
+    rows = []
+    for path, mtime, s in cands[:OMP_MAX_SESSIONS]:
+        first = ""
+        for m in s.get("messages") or []:
+            if isinstance(m, dict) and m.get("role") == "user":
+                c = m.get("content")
+                first = c if isinstance(c, str) else _parts_text(c or [])
+                if first.lstrip().startswith("<system-reminder>"):
+                    continue  # wrapper text; the real ask is a later turn
+                break
+        cwd = s.get("working_dir") or ""
+        created = _iso_ts(s.get("created_at") or "")
+        # jcode log tags truncate the session id to its first 20 chars
+        # (measured 502/502 lines, 2026-09-13): ses:session_herb_1789346|
+        tail = _log_tail(os.path.join(JCODE_LOG_DIR, "jcode-*.log"),
+                         "ses:%s" % s["id"][:20])
+        rows.append({
+            "id": s["id"],
+            "state": "live" if now - mtime < LIVE_S else "complete",
+            "age": max(0, int(now - created)) if created else None,
+            "last_active_age": max(0, int(now - mtime)),
+            "mission": clip_title(s.get("title") or first
+                                  or "(untitled)", 110),
+            "source": "jcode/" + (os.path.basename(cwd.rstrip("/"))
+                                  or "unknown"),
+            "model": s.get("model"),
+            "pid": s.get("last_pid"),
+            "detail": {
+                "transcript": path,
+                "tail": tail,
+                "truncated": False,
+                "entries": [],
+                "counts": {"shown": 0},
+                "reason": ("jcode log tail (api calls)" if tail
+                           else "no jcode log lines for this session"),
+            },
+        })
+    return rows
+
+
+def opencode_rows(now):
+    """opencode sessions (~/.local/share/opencode/opencode.db, opened
+    read-only): one row per recent session, live = time_updated inside
+    LIVE_S. Status tail = the newest log lines naming the session id."""
+    db = os.path.join(OPENCODE_DATA_DIR, "opencode.db")
+    if not os.path.isfile(db):
+        return []
+    try:
+        con = sqlite3.connect("file:%s?mode=ro" % db, uri=True)
+        try:
+            got = con.execute(
+                "SELECT id, directory, title, model, cost, time_created,"
+                " time_updated FROM session"
+                " ORDER BY time_updated DESC LIMIT ?",
+                (OMP_MAX_SESSIONS,)).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+    rows = []
+    for sid, directory, title, model, cost, tc, tu in got:
+        try:
+            model = json.loads(model).get("id") if model else model
+        except (ValueError, AttributeError):
+            pass
+        updated = (tu or tc or 0) / 1000.0
+        if now - updated > OMP_WINDOW_S:
+            continue
+        tail = _log_tail(os.path.join(OPENCODE_DATA_DIR, "log", "*.log"),
+                         sid)
+        rows.append({
+            "id": sid,
+            "state": "live" if now - updated < LIVE_S else "complete",
+            "age": (max(0, int(now - (tc or tu) / 1000.0))
+                    if (tc or tu) else None),
+            "last_active_age": max(0, int(now - updated)),
+            "mission": clip_title(title or "(untitled)", 110),
+            "source": "opencode/" + (
+                os.path.basename((directory or "").rstrip("/"))
+                or "unknown"),
+            "model": model,
+            "cost": cost,
+            "detail": {
+                "transcript": None,
+                "tail": tail,
+                "truncated": False,
+                "entries": [],
+                "counts": {"shown": 0},
+                "reason": ("opencode log tail (session lines)" if tail
+                           else "no opencode log lines for this session"),
+            },
+        })
+    return rows
+
+
+def pi_rows(now):
+    """pi sessions (~/.pi/agent/sessions/<cwd>/*.jsonl): the same JSONL
+    shape as omp transcripts, so the omp parser renders full entries."""
+    rows = []
+    for cand in omp_candidates(now, root=PI_SESSIONS_DIR):
+        parsed, reason = parse_omp_entries(cand["path"])
+        detail = parsed or {"entries": [], "counts": {"shown": 0},
+                            "reason": reason or "unparseable"}
+        detail["transcript"] = cand["path"]
+        rows.append({
+            "id": omp_row_id(cand, prefix="pi"),
+            "state": "live" if now - cand["mtime"] < LIVE_S else "complete",
+            "age": (max(0, int(now - cand["start"]))
+                    if cand["start"] else None),
+            "last_active_age": max(0, int(now - cand["mtime"])),
+            "mission": omp_mission(cand),
+            "source": "pi/" + cand["project"],
+            "detail": detail,
+        })
+    return rows
+
+
 def main():
     try:
         with open(READOUT, encoding="utf-8") as f:
@@ -458,6 +636,13 @@ def main():
     for row in rows:
         row["detail"] = enrich(row, cands)
     rows.extend(bridge_rows(BRIDGE_STORE))
+    # other CLIs' sessions — per-CLI fail-open so one broken store
+    # never kills the whole feed
+    for discover in (jcode_rows, opencode_rows, pi_rows):
+        try:
+            rows.extend(discover(now))
+        except Exception:
+            pass
     # unmatched omp transcripts become rows too — live sessions grow here
     matched = {r["detail"].get("transcript") for r in rows
                if isinstance(r.get("detail"), dict)}

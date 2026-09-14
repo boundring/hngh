@@ -359,6 +359,40 @@ launch) before re-deriving any repo fact from scratch."
    timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
     "$body" >"$ROOT/$log" 2>&1
   fi
+ elif [ "$executor" = "jcode" ]; then
+  # jcode executor (2026-09-14, the swarm-lane CLI): the ONE branch with
+  # no key plumbing -- jcode holds its own auth in its config
+  # ([providers.zai] / [providers.unsloth]); no bili MITM, no R2 emitter
+  # (the plain-text log feeds the classifier directly). Fail-closed:
+  # jcode binary absent -> omp fallback with a breadcrumb, same contract
+  # as the opencode branch. Proxy envs are dropped for the child only
+  # (env -u): a stale HTTPS_PROXY inherited from a bili-wrapped parent
+  # breaks every fetch (same lesson as the opencode no-wrap path).
+  # oc_ran stays 0: LAUNCH_RC is already the branch rc, and the lesson
+  # loop stays an ocgo-attributed surface.
+  local jc_bin jc_provider jc_model_flag jc_model=()
+  jc_bin="$(command -v jcode || true)"
+  jc_provider="${JCODE_PROVIDER:-$(get_param jcode-provider zai)}"
+  case "$jc_provider" in
+  zai | unsloth) ;;
+  *)
+   breadcrumb launch-session "jcode-executor" \
+    "unknown JCODE_PROVIDER '$jc_provider' -> zai"
+   jc_provider="zai"
+   ;;
+  esac
+  jc_model_flag="$(get_param jcode-model '')"
+  [ -n "$jc_model_flag" ] && jc_model=(-m "$jc_model_flag")
+  if [ -n "$jc_bin" ]; then
+   outcome_model="jcode/$jc_provider${jc_model_flag:+/$jc_model_flag}"
+   env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
+    timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
+    "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+  else
+   breadcrumb launch-session "jcode-executor" "jcode binary absent -> omp"
+   timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
+    "$body" >"$ROOT/$log" 2>&1
+  fi
  elif [ -n "$bctx_bin" ]; then
   timeout "$TIMEOUT_S" "$bctx_bin" omp -- -p --model "$SESSION_MODEL" \
    "$body" >"$ROOT/$log" 2>&1
