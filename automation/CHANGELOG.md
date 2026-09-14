@@ -2,6 +2,16 @@
 
 ## 2026-09-14
 
+- fix: dashboard report-queue mark-read failures surface inline instead of
+  being silently swallowed (dashboard/app.js). Any non-403 POST failure now
+  shows "mark-read failed: <error>" in the queue header and clears on the
+  next successful fetch — the 2026-09-12 stale-server incident (live
+  process predated the mark-read endpoint, 9b0876c) left 76 operator clicks
+  invisible with zero feedback. Contract pinned in
+  tests/test-dashboard-p1-ui.py (MarkRead). Research subject
+  fail-20260912-correction-3146c023 killed with recorded disposition;
+  position-cursor semantics tracked by plan
+  2026-09-14-routed-correction-5dfa8329.
 - fix: dashboard operator-items dismiss arm (armedId) revalidates at the
   fetch boundary (dashboard/app.js fetchOpState) — it survives a data
   refresh only while the armed item is still live (present and not

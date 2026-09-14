@@ -270,7 +270,14 @@
       dismissAllHandled();
     } else if ((b = e.target.closest('[data-markread]'))) {
       postJson('/report-queue/mark-read', { id: b.getAttribute('data-markread') })
-        .then(fetchQueue).catch(fetchQueue);
+        .then(fetchQueue)
+        .catch(function (e) {
+          // failures surface inline, never silently: the Sep-12 stale-server
+          // incident made 76 clicks invisible. 403 still rides the expired
+          // chip from postJson; this note covers 404/400/500/network.
+          rqState.error = String((e && e.message) || e);
+          renderQueue();
+        });
     }
   });
   // ---- health verdict over the digest text (pure reader, no dates invented) ----
@@ -333,7 +340,7 @@
   // scripts/report-queue unread_rows (unknown cursor => all unread).
   // mark-read advances the operator's own reading cursor via the
   // token-guarded POST; --prune stays CLI-only (destructive).
-  var rqState = { rows: [], unread: [], live: false };
+  var rqState = { rows: [], unread: [], live: false, error: null };
   function parseReportRows(txt) {
     var rows = [];
     String(txt || '').split('\n').forEach(function (l) {
@@ -359,6 +366,7 @@
       // unknown cursor id fails open: nothing silently hidden by a stale cursor
       rqState.unread = idx >= 0 ? rows.slice(idx + 1) : rows.slice();
       rqState.live = true;
+      rqState.error = null; // a successful fetch clears any stale failure note
       renderQueue();
     }).catch(function () {
       var was = rqState.live;
@@ -385,6 +393,7 @@
     }).join('');
     el.innerHTML = '<span class="ops-title">Report queue <span class="dim">' +
       (u.length ? u.length + ' unread report' + (u.length === 1 ? '' : 's') : 'all read') +
+      (rqState.error ? ' — mark-read failed: ' + esc(rqState.error) : '') +
       '</span></span>' + (u.length ? rows : '<span class="ok-note">no unread reports</span>');
   }
 

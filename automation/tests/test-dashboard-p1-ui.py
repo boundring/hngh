@@ -111,6 +111,13 @@ class MarkRead(unittest.TestCase):
         self.assertIn("rqState.unread = idx >= 0 ? rows.slice(idx + 1) : rows.slice()", a)
         self.assertIn("data-markread=", a)
         self.assertIn("postJson('/report-queue/mark-read', { id:", a)
+        # failures surface inline, never silently: the Sep-12 stale-server
+        # incident made 76 clicks invisible (.catch(fetchQueue) swallowed
+        # every non-403 error)
+        self.assertNotIn(".catch(fetchQueue)", a)
+        self.assertIn("rqState.error = String((e && e.message) || e)", a)
+        self.assertIn("rqState.error = null", a)
+        self.assertIn("mark-read failed: ' + esc(rqState.error)", a)
         # the mirror is served: the symlinks exist and point at the ledger
         for name, target in (("reports.md", "../../docs/project/reports.md"),
                              ("report-cursor", "../../docs/project/report-cursor")):
