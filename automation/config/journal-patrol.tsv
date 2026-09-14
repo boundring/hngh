@@ -1,0 +1,47 @@
+# journal-patrol.tsv -- known journal-error signatures mapped to
+# allowlisted corrective actions (2026-09-14, operator directive
+# "automatically check for and address journal errors"). Consumed by
+# jobs/patrol.py check "journal-errors": scans journalctl --user -b and
+# journalctl -k -b, warning-and-worse, SINCE the last patrol run (epoch
+# watermark in logs/journal-patrol.watermark; the first run after a
+# cold start baselines -- boot history is old news, not a finding).
+# Each warning+ line is matched against this table in order, first
+# match wins. A line matching NO signature stays silent at warning
+# level, but an err-or-worse line that nothing claims is an
+# unknown-journal-error alert: unknown errors are never silenced, they
+# are research demands (the bestiary grows by usage, never by guess).
+#
+# THE ACTION COLUMN IS THE SAFETY CORE. The code refuses any action
+# outside {transient, restart-unit, propose, alert} (config-bug
+# alert). Every action is idempotent and safe to repeat:
+#   transient     count occurrences; escalate to alert once the guard
+#                 threshold is crossed (guard "alert>=N"); no side effect
+#   restart-unit  systemctl --user restart <unit> ONLY for units in the
+#                 guard allowlist (units= comma list), at most max=N
+#                 per UTC day (guard "max=N units=a,b"); over budget ->
+#                 alert, never a restart loop
+#   propose       NEVER executes: the alert row carries the exact
+#                 recommended command (guard "cmd=...") for operator
+#                 eyes -- used where the fix touches the live desktop
+#                 session (kglobalaccel), outside the practiced set
+#   alert         no auto-action; alert with the captured evidence
+#
+# Seeded from lines actually observed on this host (2026-09-13 boot:
+# swap-thrash page-allocation failures 18:58Z, kwin XCB BadDamage/
+# BadWindow 20:26Z, kglobalaccel "not activatable" 20:59Z -- the
+# wired-mouse and media-key symptoms were session-level, kernel input
+# side was clean).
+# Columns (tab-separated):
+#   id      stable signature id (findings rows + tests reference it)
+#   kind    bestiary family: kwin | unit | shortcut | journald | memory | libinput
+#   regex   python re, searched against the journal MESSAGE field
+#   action  one of the allowlisted actions above
+#   guard   action parameters: alert>=N | max=N units=a,b | cmd=...
+id	kind	regex	action	guard
+kwin-xcb-error	kwin	XCB error: \d+ \((BadDamage|BadWindow)\)	transient	alert>=10
+unit-failed	unit	([\w@.-]+\.service): (Main process exited|Failed with result|Failed to start)	restart-unit	max=2 units=hngh-dashboard.service
+kglobalaccel-dead	shortcut	(kglobalaccel|org\.kde\.kglobalaccel).*(not activatable|ServiceUnknown)	propose	cmd=systemctl --user restart plasma-kglobalaccel.service
+journald-suppressed	journald	Suppressed \d+ messages from (\S+)	alert
+oom-kill	memory	Out of memory: Killed process \d+ \(([^)]+)\)	alert
+mem-alloc-failure	memory	page allocation failure	alert
+input-transport-fault	libinput	(usb \d+-[\d.]+: (device descriptor read|unable to enumerate|device not accepting address)|over-current conditions)	alert

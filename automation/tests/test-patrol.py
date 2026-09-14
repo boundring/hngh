@@ -115,6 +115,12 @@ class Patrol(unittest.TestCase):
                               "hngh-cadence-5m.timer",
                               "hngh-overnight.timer")
                     for f in ("enabled", "active")))
+        # hermetic journal: the same stub every test sees; without a
+        # fixture it exits 0 silently -- a dormant journal channel is
+        # quiet, never a real-journal read in the sandbox
+        self._write_journal_stub()
+        os.environ["PATROL_JOURNALCTL"] = str(self.sb / "journalctl-stub.sh")
+        os.environ["JOURNAL_FIXTURE"] = ""
         for k, v in [("PATROL_ROOT", str(self.auto)),
                      ("HNGH_HOME_DIR", str(self.sb / "home")),
                      ("PATROL_DIGEST_DIR", str(self.auto / "digest")),
@@ -145,6 +151,213 @@ class Patrol(unittest.TestCase):
         r = self.run_py("--tier", "30m")
         self.assertEqual(r.returncode, 0, r.stderr)
         return r, (self.sb / "alerts.tsv").read_text().splitlines()
+
+    # -- journal-error patrol ------------------------------------------
+
+    def _journal_setup(self):
+        """The real journal-patrol.tsv plus a restart-recording
+        systemctl stub: journal seeds are tested against the landed
+        table, not a test-private one."""
+        (self.auto / "config" / "journal-patrol.tsv").write_text(
+            (REPO / "automation" / "config"
+             / "journal-patrol.tsv").read_text())
+        (self.sb / "restart-log.tsv").write_text("")
+        (self.sb / "restart-stub.sh").write_text(
+            "#!/usr/bin/env bash\n"
+            "printf '%s\\n' \"$*\" >>\"$RESTART_LOG\"\n")
+        (self.sb / "restart-stub.sh").chmod(0o755)
+        os.environ["PATROL_SYSTEMCTL"] = str(self.sb / "restart-stub.sh")
+        os.environ["RESTART_LOG"] = str(self.sb / "restart-log.tsv")
+
+    def _write_journal_stub(self):
+        """journalctl stub honoring the real --since=@S contract: emits
+        fixture json lines newer than S (epoch seconds); -k mode keeps
+        only SYSLOG_IDENTIFIER=kernel rows, --user the rest."""
+        (self.sb / "journalctl-stub.sh").write_text(
+            "#!/usr/bin/env bash\n"
+            "since=0\n"
+            "for a in \"$@\"; do case \"$a\" in "
+            "--since=@*) since=\"${a#--since=@}\" ;; esac; done\n"
+            "[ -n \"$JOURNAL_FIXTURE\" ] || exit 0\n"
+            "mode=user\n"
+            "for a in \"$@\"; do [ \"$a\" = -k ] && mode=kernel; done\n"
+            "python3 - \"$since\" \"$JOURNAL_FIXTURE\" \"$mode\" <<'PY'\n"
+            "import json, sys\n"
+            "since = int(sys.argv[1]) * 1000000\n"
+            "for ln in open(sys.argv[2]):\n"
+            "    ln = ln.strip()\n"
+            "    if not ln:\n"
+            "        continue\n"
+            "    j = json.loads(ln)\n"
+            "    is_kernel = j.get(\"SYSLOG_IDENTIFIER\") == \"kernel\"\n"
+            "    if (sys.argv[3] == \"kernel\") != is_kernel:\n"
+            "        continue\n"
+            "    if int(j.get(\"__REALTIME_TIMESTAMP\", 0)) > since:\n"
+            "        print(ln)\n"
+            "PY\n")
+        (self.sb / "journalctl-stub.sh").chmod(0o755)
+
+    def _journal_fixture(self, lines):
+        """json journal lines -> fixture path (returns it)."""
+        fx = self.sb / "journal-fixture.json"
+        fx.write_text("\n".join(lines) + ("\n" if lines else ""))
+        os.environ["JOURNAL_FIXTURE"] = str(fx)
+        return fx
+
+    @staticmethod
+    def _jline(msg, pri=4, ts=NOW + 30, ident="test"):
+        return json.dumps({"MESSAGE": msg, "PRIORITY": str(pri),
+                           "SYSLOG_IDENTIFIER": ident,
+                           "__REALTIME_TIMESTAMP": str(int(ts * 1000000))})
+
+    def test_journal_seeds_fire_mapped_actions(self):
+        """Each landed seed row fires its allowlisted action from the
+        real 2026-09-13 journal shapes; unknown warnings stay silent,
+        unknown err+ lines alert."""
+        self._journal_setup()
+        self._journal_fixture([
+            self._jline("kwin_x11: XCB error: 152 (BadDamage), "
+                        "sequence: 20475, resource id: 20725460", 4,
+                        ident="kwin_x11"),
+            self._jline("hngh-dashboard.service: Main process exited, "
+                        "code=killed, status=9/KILL", 3, ident="systemd"),
+            self._jline("Couldn't start kglobalaccel from "
+                        "org.kde.kglobalaccel.service: QDBusError("
+                        "\"org.freedesktop.DBus.Error.ServiceUnknown\", "
+                        "\"The name is not activatable\")", 2,
+                        ident="spectacle"),
+            self._jline("Suppressed 4321 messages from spammy-unit", 4,
+                        ident="systemd-journald"),
+            self._jline("HeapHelper: page allocation failure: order:0, "
+                        "mode:0xc0de0", 3, ident="kernel"),
+            self._jline("usb 1-5.2: device descriptor read/64, error -71",
+                        3, ident="kernel"),
+            self._jline("plasmashell: Cannot read property "
+                        "'effectiveDestUrl' of null", 4,
+                        ident="plasmashell"),
+            self._jline("segfault at 0 error 4 in libc.so.6", 3,
+                        ident="kernel"),
+        ])
+        r = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        o = r.stdout
+        self.assertIn("PASS journal-error/journal-error:kwin-xcb-error", o)
+        self.assertIn("restart-unit applied: systemctl --user restart "
+                      "hngh-dashboard.service (today 1/2)", o)
+        self.assertIn("FAIL journal-error/kglobalaccel-dead propose", o)
+        self.assertIn("systemctl --user restart plasma-kglobalaccel"
+                      ".service", o)
+        self.assertIn("FAIL journal-error/journald-suppressed alert", o)
+        self.assertIn("FAIL journal-error/mem-alloc-failure alert", o)
+        self.assertIn("FAIL journal-error/input-transport-fault alert", o)
+        self.assertIn("FAIL journal-error/unknown-journal-error "
+                      "unclaimed-err", o)
+        self.assertNotIn("effectiveDestUrl", o)  # unknown warning: silent
+        self.assertIn("restart hngh-dashboard.service",
+                      (self.sb / "restart-log.tsv").read_text())
+        self.assertNotIn("plasma-kglobalaccel",
+                         (self.sb / "restart-log.tsv").read_text())
+        self.assertIn("unit-failed\thngh-dashboard.service\t2026-09-12\t1",
+                      (self.auto / "logs"
+                       / "journal-patrol-counts.tsv").read_text())
+
+    def test_journal_watermark_prevents_refire(self):
+        """A consumed window stays consumed: run 1 baselines (skips
+        pre-baseline history), run 2 sees fresh lines once, run 3 is
+        quiet -- and the mark advances only to the run's now."""
+        self._journal_setup()
+        # pre-baseline history: the cold start must NOT file it
+        self._journal_fixture([self._jline("Suppressed 99 messages "
+                                           "from old-unit", ts=NOW - 30)])
+        r1 = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r1.returncode, 0, r1.stderr)
+        self.assertNotIn("journald-suppressed", r1.stdout)
+        # fresh lines after the baseline: seen exactly once
+        os.environ["PATROL_NOW_EPOCH"] = str(NOW + 60)
+        self._journal_fixture([self._jline("Suppressed 77 messages "
+                                           "from spammy-unit",
+                                           ts=NOW + 30)])
+        r2 = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r2.returncode, 0, r2.stderr)
+        self.assertIn("FAIL journal-error/journald-suppressed alert", r2.stdout)
+        # third run, same fixture: the watermark ate it
+        os.environ["PATROL_NOW_EPOCH"] = str(NOW + 120)
+        r3 = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r3.returncode, 0, r3.stderr)
+        self.assertNotIn("journald-suppressed", r3.stdout)
+        mark = (self.auto / "logs" / "journal-patrol.watermark").read_text()
+        self.assertEqual(int(mark), NOW + 120)
+
+    def test_journal_restart_guard(self):
+        """restart-unit fires only for allowlisted units, at most max
+        per day; everyone else gets unit-not-practiced, and the cap
+        over budget gets restart-guard instead of a loop. Run 0 is the
+        cold-start baseline (its line predates the mark: quiet)."""
+        self._journal_setup()
+        for i, now in enumerate((NOW, NOW + 60, NOW + 120, NOW + 180)):
+            os.environ["PATROL_NOW_EPOCH"] = str(now)
+            self._journal_fixture([self._jline(
+                "hngh-dashboard.service: Main process exited, "
+                "code=killed, status=9/KILL", 3, ts=now - 30,
+                ident="systemd")])
+            r = self.run_py("--patrol", "journal-error")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            if i == 0:
+                # line predates the cold-start baseline: quiet
+                self.assertNotIn("restart-unit applied", r.stdout)
+            elif i in (1, 2):
+                self.assertIn("restart-unit applied", r.stdout)
+            else:
+                self.assertIn("FAIL journal-error/unit-failed "
+                              "restart-guard", r.stdout)
+                self.assertIn("at the daily cap (2/2)", r.stdout)
+        self.assertEqual(
+            (self.sb / "restart-log.tsv").read_text().count(
+                "--user restart hngh-dashboard.service"), 2)
+        # a unit outside the allowlist never restarts
+        os.environ["PATROL_NOW_EPOCH"] = str(NOW + 240)
+        self._journal_fixture([self._jline(
+            "plasma-plasmashell.service: Failed with result 'exit-code'",
+            3, ts=NOW + 210, ident="systemd")])
+        r = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("FAIL journal-error/unit-failed unit-not-practiced",
+                      r.stdout)
+        self.assertNotIn("plasmashell.service",
+                         (self.sb / "restart-log.tsv").read_text())
+
+    def test_journal_transient_escalation_and_config_bug(self):
+        """A repeated transient signature escalates at its alert>=N
+        guard; a table row whose action is outside the allowlist (or
+        whose regex does not compile) is a config-bug FAIL, never a
+        silent skip."""
+        self._journal_setup()
+        self._journal_fixture([
+            self._jline("kwin_x11: XCB error: %d (BadDamage), "
+                        "sequence: %d" % (152, 100 + i), 4,
+                        ts=NOW + 30 + i, ident="kwin_x11")
+            for i in range(10)])
+        r = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("FAIL journal-error/kwin-xcb-error "
+                      "transient-escalation", r.stdout)
+        self.assertIn("10 hits >= alert>=10", r.stdout)
+        # config bugs: unallowlisted action + uncompilable regex
+        (self.auto / "config" / "journal-patrol.tsv").write_text(
+            "id\tkind\tregex\taction\tguard\n"
+            "rogue-thing\tkernel\tkernel panic\trm-rf\t\n"
+            "bad-regex\tkernel\t([unclosed\talert\t\n")
+        self._journal_fixture([self._jline("kernel panic - not syncing",
+                                           2, ident="kernel")])
+        r = self.run_py("--patrol", "journal-error")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("FAIL journal-error/rogue-thing config-bug", r.stdout)
+        self.assertIn("outside the allowlist", r.stdout)
+        self.assertIn("FAIL journal-error/bad-regex config-bug", r.stdout)
+        self.assertIn("uncompilable regex", r.stdout)
+        # the rogue action never reached execution
+        self.assertNotIn("PASS journal-error/journal-error:rogue-thing",
+                         r.stdout)
 
     def _ci_runs(self, status, conclusion=None):
         runs = {"workflow_runs": [{
@@ -184,8 +397,9 @@ class Patrol(unittest.TestCase):
         # feeds emits 3 PASSes (one per feed), the other 7 routes one each
         # (gate-cure's green-gate PASS included); systemd-units adds 1
         # systemd-units emits one PASS per unit (4), not one per route;
-        # github-ci adds 1 (the latest-run verdict)
-        self.assertEqual(r.stdout.count("\nPASS "), 15)
+        # github-ci adds 1 (the latest-run verdict); journal-errors adds
+        # 1 (the dormant no-signature-table row)
+        self.assertEqual(r.stdout.count("\nPASS "), 16)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -240,7 +454,8 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 11)  # the walk continued
+        self.assertEqual(len(results), 12)  # 11 routes + journal-errors;
+        # the walk continued past the crashed check
 
     # --- gate-cure: a green gate is quiet, no ceremony is driven ---
     def test_gate_cure_green_quiet(self):
