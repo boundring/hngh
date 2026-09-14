@@ -22,12 +22,12 @@ day="$(day_of)"
 
 # overnight session-runs logged today + distinct lane names (field 2)
 rows="$(grep "^$day" "$AUTOMATION_ROOT/logs/budget.md" 2>/dev/null \
-  | grep "session-run[[:space:]]*$")"
+  | grep -E 'session-run([[:space:]]+class=T[0-9]+)?[[:space:]]*$')"
 n="$(printf '%s\n' "$rows" | grep -c .)"
 [ "$n" -ge 1 ] 2>/dev/null || n=0
 lanes=""
 [ "$n" -gt 0 ] && lanes=" ($(printf '%s\n' "$rows" \
-  | sed 's/^[^|]*|[[:space:]]*//; s/[[:space:]]*|[[:space:]]*session-run[[:space:]]*$//; s/|/,/g' \
+  | sed -E 's/^[^|]*\|[[:space:]]*//; s/[[:space:]]*\|[[:space:]]*session-run([[:space:]]+class=T[0-9]+)?[[:space:]]*$//; s/\|/,/g' \
   | sort -u | paste -sd, -))"
 
 # remote model calls/cost today; missing/locked db reads as 0/0

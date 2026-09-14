@@ -76,6 +76,14 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
  LAUNCH_RC=0 LAUNCH_RUN_ID="" LAUNCH_LOG="" \
   LAUNCH_DISPOSITION="" LAUNCH_CAUSE="" LAUNCH_BRIDGE_MSG=""
  local slug="$1" objective="$2" prompt_file="$3"
+ # session class for the budget row (cost-tiering plan step 1): set
+ # by the selector for a plan step, defaults T2; anything other than
+ # an exact T1/T2/T3 fails closed to the T2 default.
+ local sclass="${SESSION_CLASS:-T2}"
+ case "$sclass" in
+  T1 | T2 | T3) ;;
+  *) sclass="T2" ;;
+ esac
  local role="${4:-overnight-lead}"
  local outcome_model="$SESSION_MODEL" oc_ran=0 oc_rc=0
  local bridge_bin="${OMP_BRIDGE_BIN:-$BRIDGE}"
@@ -422,8 +430,10 @@ launch) before re-deriving any repo fact from scratch."
   [ "$LAUNCH_CAUSE" != unknown ]; }; then
   append_ocgo_lesson "$LAUNCH_CAUSE"
  fi
- printf '%s | overnight|%s | session-run\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" >>"$ROOT/logs/budget.md"
+ # budget row carries the cost class (plan 2026-09-10-cost-tiering
+ # step 1): `class=T1|T2|T3` appended to the session-run row.
+ printf '%s | overnight|%s | session-run | class=%s\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$sclass" >>"$ROOT/logs/budget.md"
  OMP_BRIDGE_STORE="$bridge_store" "$bridge_bin" --run-end "$run_id" \
   "$LAUNCH_DISPOSITION" >/dev/null 2>&1 || true
  # model-outcome demotion counter (stall-recovery step 1): ok resets,
