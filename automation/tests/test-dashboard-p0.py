@@ -98,6 +98,18 @@ class TitleBadge(unittest.TestCase):
         self.assertIn("'(' + openOp + ') hngh'", a)
 
 
+class HonestDismiss(unittest.TestCase):
+    def test_armed_state_revalidates_on_fetch(self):
+        # finding 2026-09-10 dashboard-logs:2 — a stale arm must not
+        # survive a fetch whose feed no longer shows the item live; the
+        # revalidation lives at the data boundary (fetchOpState), not the
+        # render path.
+        a = src("app.js")
+        f = a[a.index("function fetchOpState"):a.index("function dismissedToday")]
+        self.assertIn("it.id === armedId && !opState.dismissed[it.id]", f)
+        self.assertIn("armedId = null", f)
+
+
 class LayoutTightening(unittest.TestCase):
     def test_density_floor_11px(self):
         self.assertNotIn("9.5px", src("style.css"))
