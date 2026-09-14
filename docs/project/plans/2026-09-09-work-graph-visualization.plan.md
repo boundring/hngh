@@ -43,7 +43,7 @@ the gantt. Story/comic/animation rungs read this same graph later.
       link checker passes; a11y spot-check (aria labels on sections,
       keyboard focus) folded in from the parked ux-review findings;
       `make test` green.
-- [ ] 4. Records: CHANGELOG entry + docs/records/ entry for the
+- [x] 4. Records: CHANGELOG entry + docs/records/ entry for the
       work-graph feed (cross-linking
       docs/design/work-visualization-direction.md).
       Verification: `make test` green; record cross-linked from
@@ -86,3 +86,9 @@ the gantt. Story/comic/animation rungs read this same graph later.
   per section max, a11y flags pass, zero console errors; screenshot
   at docs/media/gantt/story-20260914.png. make test fully green
   (rc=0) — the step-2-era accel2 reds were fixed by the sibling lane.
+- 2026-09-14 session (C): step 4 landed — docs/records/2026-09-14-work-graph-feed.md
+  (close-out of all four steps: feed graph, gantt plan rows, story view
+  skeleton, honesty rules held, comic/animation rungs named as later
+  consumers) plus the CHANGELOG 2026-09-14 Added entry cross-linking the
+  direction doc and the record. Automation-suite gate green at commit
+  time. Plan complete: no unchecked steps remain.

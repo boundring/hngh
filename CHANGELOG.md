@@ -6,6 +6,26 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-14
 
+#### Added
+
+- **Work-graph feed + gantt plan reality + story view skeleton**
+  (plan 2026-09-09-work-graph-visualization, steps 1-4;
+  docs/records/2026-09-14-work-graph-feed.md; direction:
+  docs/design/work-visualization-direction.md): `automation/jobs/
+  plan-feed.py` now emits the work graph — per-plan steps arrays and
+  an edges list (unlocks/feeds/parked-because) into
+  `dashboard/plans.json` beside byte-compatible summary fields,
+  failing closed per plan with an alert row on a parse error. The
+  gantt renders accepted/executing plans as step rows (filled = done,
+  pulse = next unchecked, blocked-by from real edges, park-cause
+  chips; estimates still labeled projections, step checkmarks the
+  facts) and the new story view renders today's chapters (accepted,
+  steps-completed with commit-hash footnotes from real evidence,
+  blockers, parks) with one dry aside per section and the a11y
+  findings folded in. Comic/animation renderers are later rungs on
+  the same graph. Suite: automation/tests/test-plan-feed-graph.py,
+  automation/tests/test-story-view.py, wired into make test.
+
 #### Changed
 
 - **kglobalaccel journal patrol row promoted propose -> restart-unit**
