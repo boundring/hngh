@@ -126,6 +126,34 @@ else
   echo "skip: bootstrap pass-case (host lacks a prerequisite binary)"
 fi
 
+# --- (d) optional jcode harness report ---------------------------------------
+# absent case: a PATH with every prereq but NO jcode -> exit stays 0
+# (optional, never fatal) and the degradation note prints with routes.
+jout="$(env -i HOME="$HOME" PATH="$SANDBOX/all" /bin/bash "$ROOT/bootstrap.sh" --check 2>&1)"
+if printf '%s' "$jout" | grep -q 'optional harness: jcode absent' &&
+   printf '%s' "$jout" | grep -q 'npm i -g @1jehuang/jcode-sdk'; then
+  ok "bootstrap reports jcode absent with operator install routes (nonfatal)"
+else
+  bad "bootstrap missing the jcode-absent degradation note"
+fi
+# present case: a jcode stub on the sandbox PATH -> presence line, no routes
+cat >"$SANDBOX/all/jcode" <<'STUB'
+#!/usr/bin/env bash
+echo "jcode v0.0.0-test (stub)"
+STUB
+chmod +x "$SANDBOX/all/jcode"
+if [ "$have_all" -eq 1 ]; then
+  jout2="$(env -i HOME="$HOME" PATH="$SANDBOX/all" /bin/bash "$ROOT/bootstrap.sh" --check 2>&1)"
+  if printf '%s' "$jout2" | grep -q 'optional harness: jcode .* present' &&
+     ! printf '%s' "$jout2" | grep -q 'jcode absent'; then
+    ok "bootstrap reports jcode present (stub) without the absent note"
+  else
+    bad "bootstrap present-case report"
+  fi
+else
+  echo "skip: bootstrap jcode present-case (host lacks a prerequisite binary)"
+fi
+
 # --- summary ----------------------------------------------------------------
 if [ "$fails" -eq 0 ]; then
   echo "test-bootstrap: PASS"
