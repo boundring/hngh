@@ -26,7 +26,14 @@ reachable from the root README in two hops or fewer.
 > closed governance loop's driver, and the token stays as-is even as the
 > prose around it varies.
 
+<!-- CURRENT: the living surface - the read-order below is how the
+     project wants to be read now; start with getting-started.md. -->
+
 ## Start here
+
+- [Getting started](getting-started.md) - one bounded kernel cycle,
+  one automation beat, the dashboard, and the honest prerequisite
+  list; the first working session starts here.
 
 - [README](../README.md) - the front door: what Hngh is, its status, and
   how to navigate.
@@ -141,12 +148,20 @@ kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
   fleet of nodes under one governance: resource pool, config manager,
   security manager.
 
+<!-- HISTORICAL: records/, journal/, research/ - point-in-time evidence,
+     decisions, and long-form history. Rule: trust CURRENT for how things
+     work today; cite HISTORICAL for how they got that way, never as
+     current behavior. -->
+
 ## Records and history
 
-Evidence, decisions, and the long-form record.
+Evidence, decisions, and the long-form record. Point-in-time only:
+`records/`, `journal/`, and `research/` are the HISTORICAL tree.
 
 - [Records](records/README.md) - evidence, decisions, and cutover
   records; the prior state's retirement archive is covered there.
+- [Journal](journal/) - dated working entries.
+- [Research](research/) - research-line findings and reviews.
 - [The book](publication/book.md) - the long-form record, generated
   from the git/timeline spine by `scripts/generate-publication`.
 
