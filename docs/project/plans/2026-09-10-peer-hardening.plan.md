@@ -16,7 +16,7 @@ beat; existing priority plans outrank this one.
 
 ## Steps
 
-- [ ] 1. CI for the automation tier (review finding 2). First
+- [x] 1. CI for the automation tier (review finding 2). First
       measure hermeticity: run `cd automation && make test` under a
       stripped environment locally (env -i with PATH only; no systemd
       user env, no /tmp/hngh state, no hngh units). Whatever fails is
@@ -94,6 +94,18 @@ beat; existing priority plans outrank this one.
 
 ## Execution notes
 
+- Step 1 landed 2026-09-14: the env-dependent class measured by the
+  stripped-env/CI bring-up chase was the hngh-bridge plugin tests
+  (the omp plugin lives outside the repo) - skip-guarded in-suite
+  under the HNGH_CI=1 marker (ci.yml exports it; guards at
+  automation/tests/test-hngh-bridge-plugin.py:31,80,138) instead of
+  the originally named CI_HERMETIC. ci.yml carries the test-automation
+  job (ubuntu-latest, sqlite3+sbcl added, bootstrap --check prereq);
+  kernel job unchanged apart from the session-store fixture seed and
+  full fetch-depth for the loop-history guard. Both jobs green on CI
+  (run 34806924097, commit 307e958); kernel gate locally green after
+  the fleet-manager tailscale stub (candidate 9ca1270a) cured the
+  meshed-host env skew that had been blocking kernel commits.
 - Steps 1-3 are the peer-gates; 4-5 are polish. Land one ceremony
   per beat; a slice is committed when its own Verification holds.
 - Step 1's hermeticity measurement is the gate for the CI job - do
