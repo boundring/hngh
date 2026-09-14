@@ -8,3 +8,7 @@ at 2026-09-14T03:00:39Z. Alert text: bench-trigger lane step 3 residue: hngh-mod
 
 - [ ] Delve: open research subject fail-20260914-bench-lane-timer-disable for bench-lane-timer-disable; record disposition; then fix or park
       Verification: research subject fail-20260914-bench-lane-timer-disable present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T04:00:39Z re-occurred (dedup window expired)
