@@ -455,6 +455,10 @@ html[data-theme="winamp"] .panel.p-shade .panel-head {
   background: linear-gradient(180deg, #3a3e44, #222428); }
 
 /* ---- formal tabs: classic desktop tab strip, seamless join ---- */
+/* The feedback pip mounts on this nav (never inside the role=tablist:
+   a tablist may own only role=tab children — axe aria-required-children).
+   flex + flex-end keeps the pip on the strip's baseline next to #tabs. */
+nav[aria-label="dashboard sections"] { display: flex; align-items: flex-end; }
 #tabs { display: flex; flex-wrap: nowrap; gap: 2px; padding: 0 20px;
   margin-top: 6px;
   border-bottom: 1px solid var(--line); }
