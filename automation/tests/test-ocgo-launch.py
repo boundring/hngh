@@ -256,6 +256,38 @@ class OcgoLaunch(unittest.TestCase):
         db.commit()
         db.close()
 
+    def test_jcode_zai_pacer_blocks_at_the_branch(self):
+        # coexistence review gap #1 (2026-09-14): the jcode executor
+        # branch rides the SAME zai subscription windows zai_chat spends.
+        # Pacer blocked -> no jcode child (shim or CLI), omp fallback.
+        self._seed_pacer_db("zai", 3)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\tempty = omp fail-closed\n"
+            "jcode-provider\tzai\ttest\ttest row\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="jcode",
+                        ZAI_CAP_5H_CALLS="3")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_jcode_unsloth_provider_skips_the_zai_pacer(self):
+        # unsloth rides the local box (no subscription windows): the
+        # pacer must NOT block, and the jcode CLI leg must run (a jcode
+        # stub on PATH marks it; no omp fallback for pacing reasons)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\tempty = omp fail-closed\n"
+            "jcode-provider\tunsloth\ttest\ttest row\n")
+        jc_stub = self.td / "stubs" / "jcode"
+        jc_stub.write_text(
+            'printf "jcode-cli %s\\n" "$*" >> "$OC_MARKER"\nexit 0\n')
+        jc_stub.chmod(0o755)
+        r = self.launch(HNGH_SESSION_EXECUTOR="jcode")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("jcode-cli run", self.oc_marker.read_text())
+        self.assertFalse(self.omp_marker.exists())
+
     def test_opencode_go_5h_pacer_blocks_at_the_branch(self):
         # choke-point guarantee (quota-tightest-window-pacing): even a
         # direct launch_session caller cannot land an unpaced
