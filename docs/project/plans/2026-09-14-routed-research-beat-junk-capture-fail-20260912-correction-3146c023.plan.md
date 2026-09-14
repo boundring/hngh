@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:junk-capture:fail-20260912-correction-3146c023 -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=research-beat:junk-capture:fail-20260912-correction-3146c023  cause=obsolete disposed=2026-09-14T18:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:junk-capture:fail-20260912-correction-3146c023`
@@ -13,3 +13,4 @@ at 2026-09-14T15:00:36Z. Alert text: research beat capture for fail-20260912-cor
 
 - 2026-09-14T16:00:39Z re-occurred (dedup window expired)
 - 2026-09-14T17:00:39Z re-occurred (dedup window expired)
+- 2026-09-14T18:00:39Z re-occurred (dedup window expired)

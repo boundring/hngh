@@ -8,3 +8,7 @@ at 2026-09-14T17:00:39Z. Alert text: [oversight] slow-unit: dropin:05-operator-i
 
 - [ ] Delve: open research subject fail-20260914-slow-unit-dropin-05-operator-items.sh for slow-unit:dropin:05-operator-items.sh; record disposition; then fix or park
       Verification: research subject fail-20260914-slow-unit-dropin-05-operator-items.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T18:00:39Z re-occurred (dedup window expired)

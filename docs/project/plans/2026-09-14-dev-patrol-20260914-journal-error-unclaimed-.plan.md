@@ -4,18 +4,19 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the patrol-20260914-journal-error-unclaimed-err research line by adding a run-close invariant that requires every filed journal error to be claimed or waived before a patrol run is scored clean, preventing unclaimed errors from resurfacing on consecutive runs.
+## Rationale
+This plan implements the `patrol-20260914-journal-error-unclaimed-err` research line by establishing a run-close invariant that requires all journal errors to be claimed or waived before a patrol run is scored as clean, preventing unclaimed errors from persisting across consecutive runs.
 
 ## Steps
 
-- [ ] Add a `claim_or_waive` function to `lib/journal_error.py` that marks a filed error as claimed or waived and returns the updated state
-  Verification: python3 -c "import lib.journal_error; assert hasattr(lib.journal_error, 'claim_or_waive')"
-
-- [ ] Update `jobs/patrol_run.py` to invoke `claim_or_waive` for each filed journal error before scoring and fail with reason `unclaimed-err` if any remain unclaimed
-  Verification: grep -q "unclaimed-err" jobs/patrol_run.py
-
-- [ ] Add a test case in `tests/test_patrol_unclaimed_err.py` that simulates a run with an unclaimed error and asserts the run fails with reason `unclaimed-err`
+- [ ] Add a `claim_or_waive` function to `lib/journal_error.py` that marks a filed error as either claimed (with owner) or waived (with reason), updating the error's state field in the journal record
   Verification: make test
 
-- [ ] Add a test case in `tests/test_patrol_unclaimed_err.py` that simulates a run where all errors are claimed or waived and asserts the run scores clean
+- [ ] Create `scripts/patrol_run_close_check.py` that iterates over all errors filed during the current patrol run and exits non-zero with reason `unclaimed-err` if any error lacks a terminal state (claimed or waived)
+  Verification: python3 scripts/patrol_run_close_check.py
+
+- [ ] Add a test case to `tests/test_patrol_run_close.py` that verifies a patrol run with an unclaimed error fails the close check and a run where all errors are claimed or waived passes
+  Verification: make test
+
+- [ ] Update `jobs/patrol.py` to invoke the run-close check after scoring and before marking the run as clean, ensuring the invariant is enforced in the production path
   Verification: make test
