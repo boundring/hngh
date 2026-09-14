@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T19:01:32Z routed-from=push-blocked:openrouter-key-hngh -->
+<!-- plan: status=executed risk=normal accepted=2026-09-10T19:01:32Z routed-from=push-blocked:openrouter-key-hngh -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `push-blocked:openrouter-key-hngh`
