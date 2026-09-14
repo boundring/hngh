@@ -121,6 +121,12 @@ kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
   - the operator-directed 2026-09-14 admission of Jcode as the primary
   agent harness: staged route, permission bridge to the certificate
   loop, observatory surface, and omp coexistence doctrine.
+- [Omp coexistence review](records/2026-09-14-omp-coexistence-review.md)
+  + [shared-sense design](records/2026-09-14-jcode-shared-sense.md) -
+  surface-by-surface retirement doctrine (retire nothing by default),
+  and the three-channel shared-sense model: Jcode sessions as hngh
+  agents coordinating through the ledger spine, swarm channels, and
+  the observation trail.
 - [omp-hngh integration](project/plans/2026-09-09-omp-hngh-integration.plan.md)
   + [plans contract](project/plans/README.md) omp plugin interface -
   the omp propose surface, MCP/plugin plan, and the 2026-09-09
