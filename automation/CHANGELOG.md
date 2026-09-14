@@ -521,3 +521,14 @@
 - test: `tests/test-plan-acceptance.py` — 10 hermetic tests (fixture
   plans, stub gates, stub report-queue, temp dirs only), wired into
   `make test`.
+
+## 2026-09-14
+
+- feat: `lib/harness/` capability-adapter layer (plan
+  2026-09-13-dev-os-harness-cross-platform-patterns) — `TargetAdapter`
+  ABC (`probe()` capability dict, `execute()` fail-closed on non-dict
+  action) with static-capability `KDEAdapter`/`GNOMEAdapter`, and
+  `registry.resolve_adapter()` mapping `HNGH_DE` (kde|gnome, case/space
+  tolerant) to an adapter instance; unknown or unset value raises
+  ValueError. Test `tests/test-harness-adapters.py` (10 hermetic cases)
+  wired into `make test`.

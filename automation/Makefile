@@ -89,6 +89,7 @@ test:
 	python3 -B tests/test-patrol.py
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-hngh-home-catalog.py
+	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
 	bash tests/test-plan-priority-selector.sh
 	bash tests/test-session-class.sh
