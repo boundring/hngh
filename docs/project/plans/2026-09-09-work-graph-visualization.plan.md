@@ -23,7 +23,7 @@ the gantt. Story/comic/animation rungs read this same graph later.
       and per-plan failure isolation; regenerated plans.json carries
       steps+edges for at least the three 2026-09-09 priority plans;
       `make test` green.
-- [ ] 2. Gantt upgrade: accepted/executing plans render as step rows —
+- [x] 2. Gantt upgrade: accepted/executing plans render as step rows —
       one lane per plan, sub-bars per step (filled = done, pulse =
       next unchecked), blocked-by edges drawn from the edges list,
       park-cause chips from the cause field. The estimate-honesty
