@@ -116,15 +116,28 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       / expired / malformed / empty-actions -> 75; valid cert passes;
       audit-line source greps) green inside the automation `make test`
       gate (rc 0). Commit 4eaf1f0 (changelog 485a0a2).
-- [ ] 5. **Observatory surface.** Nerve-center Sessions preview of Jcode
+- [x] 5. **Observatory surface.** Nerve-center Sessions preview of Jcode
       sessions via `connect()`/`peekSession`. Verification: preview
       renders a live session transcript without attaching.
-- [ ] 6. **Config lane + installer option.** `~/.jcode` declared in the
+      **Witnessed 2026-09-14:** already landed by the universal
+      session-registration commit (aa12fc1, 2026-09-13):
+      `sessions-feed.py jcode_rows` reads `~/.jcode/sessions/`
+      transcripts (fixture-first tests, 6/6 green) and the live feed
+      returned 24 jcode rows on witness. Note: file-transcript parsing
+      was chosen over a live `connect()` bridge — read-only, no
+      daemon dependency, same preview-without-disturb property.
+- [x] 6. **Config lane + installer option.** `~/.jcode` declared in the
       governed-fleet config lanes on the 30m cadence; Hngh installer
       gains a Jcode install option (deferred to the OS-harness
       installer-skeleton rung, 2026-09-11 ladder). Verification: config
       lane lands in the cadence matrix; installer option specified (not
       necessarily built).
+      **Landed 2026-09-14:** `config-lanes.tsv` agent-configs lane now
+      carries `.jcode/config.toml`; new `jcode-skills` lane covers
+      `.jcode/skills` + `.jcode/mcp.json`; all lane sources verified
+      present on the host; cadence wiring (30m/20-config-backup)
+      unchanged and picks the rows up automatically. Installer option
+      remains specified-not-built, per the OS-harness ladder trigger.
 - [ ] 7. **Omp coexistence review.** Inventory omp surfaces vs Jcode
       equivalents; retirement is a named record per surface, never a
       default. Verification: inventory table in a record.
