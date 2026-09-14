@@ -52,7 +52,7 @@ beat; existing priority plans outrank this one.
       Verification: suite test covers table shape, fail-closed exit,
       profile override; bootstrap --check exits 0 on THIS machine;
       `make test` green.
-- [ ] 3. failfirst state persistence (review finding 4; state path
+- [x] 3. failfirst state persistence (review finding 4; state path
       only - the trap handlers stay in stall-recovery step 7's lane).
       Move the failfirst state dir from /tmp/hngh-failfirst
       (automation/lib/failfirst.sh:38) to
@@ -118,6 +118,20 @@ beat; existing priority plans outrank this one.
   from the plan text by convention: machine profile is
   config/machine.env (the documented config.env convention), not
   machine-profile.env at the automation root.
+- Step 3 closed 2026-09-14: the machinery landed across earlier residue
+  beats (lib/failfirst.sh state dir now $AUTOMATION_ROOT/state/
+  failfirst with the FAILFIRST_STATE_DIR override preserved, one-shot
+  /tmp/hngh-failfirst -> state/failfirst mv-on-migration in
+  failfirst_state_file; suite sections d1-d2 cover durable state
+  across shells and exactly-once legacy migration). This beat verified
+  the three verification items on the step's surface: test-failfirst.sh
+  d1/d2 PASS, /tmp/hngh-failfirst empty on this machine (migration
+  already naturally done), live ladder state in the durable path
+  (failfirst-research: speed=1 oks=51 last=ok), automation
+  `make test` green. Plan-note correction: state lives as one
+  key=value file per operation under state/failfirst/ (the
+  model-demote pattern's durability convention, not a single tsv);
+  format and override semantics unchanged.
 - Steps 1-3 are the peer-gates; 4-5 are polish. Land one ceremony
   per beat; a slice is committed when its own Verification holds.
 - Step 1's hermeticity measurement is the gate for the CI job - do
