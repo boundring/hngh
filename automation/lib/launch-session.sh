@@ -383,7 +383,7 @@ launch) before re-deriving any repo fact from scratch."
   # fetch (same lesson as the opencode no-wrap path).
   # oc_ran stays 0: LAUNCH_RC is already the branch rc, and the lesson
   # loop stays an ocgo-attributed surface.
-  local jc_provider jc_model_flag jc_model=() jw_rc=75 jc_bin
+  local jc_provider jc_model_flag jc_model=() jw_rc=75 jc_bin jc_pace=""
   jc_provider="${JCODE_PROVIDER:-$(get_param jcode-provider zai)}"
   case "$jc_provider" in
   zai | unsloth) ;;
@@ -393,9 +393,21 @@ launch) before re-deriving any repo fact from scratch."
    jc_provider="zai"
    ;;
   esac
+  # spend pacing (2026-09-14 coexistence review gap #1): the zai leg
+  # counts against the SAME subscription windows zai_chat spends
+  # (zai-cap-5h-calls + zai-cap-week-calls, tightest wins). Blocked ->
+  # omp fallback leg with a breadcrumb — identical contract to the
+  # opencode branch. unsloth rides the local box: unpaced.
+  if [ "$jc_provider" = "zai" ]; then
+   declare -F zai_pace_blocked >/dev/null ||
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model.sh"
+   jc_pace="$(zai_pace_blocked || true)"
+   [ -n "$jc_pace" ] && breadcrumb launch-session "jcode-executor" \
+    "Z.AI pacer blocked (${jc_pace%% *}-window used ${jc_pace#* }) -> cli/omp fallback"
+  fi
   jc_model_flag="$(get_param jcode-model '')"
   [ -n "$jc_model_flag" ] && jc_model=(-m "$jc_model_flag")
-  if [ -r "$ROOT/jcode/worker.mjs" ] && command -v node >/dev/null 2>&1 \
+  if [ -z "$jc_pace" ] && [ -r "$ROOT/jcode/worker.mjs" ] && command -v node >/dev/null 2>&1 \
    && declare -F launch_jcode_worker >/dev/null; then
    local jc_prompt_file
    jc_prompt_file="$(mktemp "${TMPDIR:-/tmp}/hngh-jc-prompt.XXXXXX")"
@@ -414,7 +426,7 @@ launch) before re-deriving any repo fact from scratch."
   fi
   if [ "$jw_rc" -ne 0 ]; then
    jc_bin="$(command -v jcode || true)"
-   if [ -n "$jc_bin" ]; then
+   if [ -n "$jc_bin" ] && [ -z "$jc_pace" ]; then
     outcome_model="jcode/$jc_provider${jc_model_flag:+/$jc_model_flag}"
     env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
      timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
