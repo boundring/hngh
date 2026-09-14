@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T20:45:18Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-09T20:45:18Z -->
 # 2026-09-09 — work-graph feed + gantt plan reality (visualization rung 1)
 
 Authorization: operator-directed 2026-09-09 (dashboard gantt as the
