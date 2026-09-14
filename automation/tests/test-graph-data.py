@@ -7,6 +7,11 @@ reports.md) and a seeded telemetry db, then asserts node kinds, edges,
 and live states the /graph.json endpoint serves. A second contract class
 checks the dashboard-server route wiring textually (skipped on fresh
 clones, same discipline as test-dashboard-p0).
+
+JcodeSessionNodes covers the jcode session/swarm node kinds over fixture
+session files (id == filename stem, nanosecond ISO timestamps), including
+state mapping, the malformed-JSON alerting decision, the 24h scale filter
+with parent-link closure, and the all-sessions escape.
 """
 
 import importlib.util
@@ -105,7 +110,8 @@ class BuildGraph(unittest.TestCase):
         self.now = datetime.now(timezone.utc).replace(microsecond=0)
         config, dash, db = _seed(root, self.now)
         self.graph = graph_data.build(config, dash, db, root / "config.env",
-                                      now=self.now)
+                                      now=self.now,
+                                      sessions_dir=root / "no-sessions")
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -207,6 +213,171 @@ class ServerWiring(unittest.TestCase):
         self.assertIn("graph-view.js", html)
         self.assertIn('data-tab="graph"', html)
         self.assertIn("vendor/three.min.js", html)
+
+
+def _session(mid, short_name=None, status="Active", model="glm-5.3-flash",
+             provider="openai-compatible:zai", cwd="/home/u/proj",
+             age_min=5, pid=1234, effort="high", parent_id=None):
+    """Fixture session json dict with nanosecond-precision timestamps."""
+    ts = (datetime.now(timezone.utc) - timedelta(minutes=age_min))
+    # nanosecond fraction, like the real jcode files (9 digits)
+    stamp = ts.strftime("%Y-%m-%dT%H:%M:%S") + ".123456789Z"
+    d = {"id": "session_%s_1789413055609_deadbeefcafe" % mid,
+         "created_at": stamp, "updated_at": stamp,
+         "last_active_at": stamp, "status": status, "model": model,
+         "provider_key": provider, "working_dir": cwd, "last_pid": pid,
+         "parent_id": parent_id, "title": "t %s" % mid}
+    if short_name is not None:
+        d["short_name"] = short_name
+    if effort is not None:
+        d["reasoning_effort"] = effort
+    return d
+
+
+class JcodeSessionNodes(unittest.TestCase):
+    """Session/swarm nodes over fixture files in a fake ~/.jcode/sessions."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self.now = datetime.now(timezone.utc).replace(microsecond=0)
+        self.sessions = root / "sessions"
+        self.sessions.mkdir()
+        config, dash, db = _seed(root, self.now)
+        self.root, self.config, self.dash, self.db = root, config, dash, db
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, name, data):
+        (self.sessions / name).write_text(
+            data if isinstance(data, str) else json.dumps(data))
+
+    def build(self, **kw):
+        return graph_data.build(self.config, self.dash, self.db,
+                                self.root / "config.env", now=self.now,
+                                sessions_dir=self.sessions, **kw)
+
+    def sess(self, graph, sid):
+        for n in graph["nodes"]:
+            if n["id"] == "jcode:" + sid:
+                return n
+        self.fail("no node jcode:" + sid)
+
+    def test_session_nodes_with_detail_and_edges(self):
+        par = _session("p", short_name="coord", age_min=2)
+        sub = _session("sub1", short_name="worker", parent_id=par["id"])
+        self.write(par["id"] + ".json", par)
+        self.write(sub["id"] + ".json", sub)
+        # non-session files and backup copies must be skipped entirely
+        self.write("session_x_1_skipme.journal.jsonl", {"id": "x"})
+        self.write(par["id"] + ".json.bak", {"id": "bak"})
+        g = self.build()
+        kinds = {n["id"]: n["kind"] for n in g["nodes"]}
+        self.assertEqual(kinds["jcode:" + par["id"]], "jcode-session")
+        self.assertEqual(kinds["jcode:" + sub["id"]], "jcode-session")
+        self.assertNotIn("jcode:x", kinds)
+        self.assertNotIn("jcode:bak", kinds)
+        coord, worker = self.sess(g, par["id"]), self.sess(g, sub["id"])
+        self.assertEqual(worker["label"], "worker")
+        self.assertEqual(coord["label"], "coord")
+        for key, val in (("status", "Active"), ("model", "glm-5.3-flash"),
+                         ("provider", "openai-compatible:zai"),
+                         ("cwd", "/home/u/proj"), ("pid", 1234),
+                         ("effort", "high")):
+            self.assertIn("%s=%s" % (key, val), worker["detail"])
+        self.assertIn("age=", worker["detail"])
+        self.assertTrue(any(e == {"src": "jcode:" + par["id"],
+                                  "dst": "jcode:" + sub["id"],
+                                  "rel": "spawns"} for e in g["edges"]))
+
+    def test_label_falls_back_to_truncated_id(self):
+        s = _session("lbl")  # short_name omitted by default
+        self.write(s["id"] + ".json", s)
+        node = self.sess(self.build(), s["id"])
+        self.assertEqual(node["label"], s["id"][:12])
+
+    def test_state_mapping_four_states(self):
+        a = _session("a", age_min=5)
+        b = _session("b", age_min=30)
+        c = _session("c", status="Closed")
+        for s in (a, b, c):
+            self.write(s["id"] + ".json", s)
+        g = self.build()
+        self.assertEqual(self.sess(g, a["id"])["state"], "healthy")
+        self.assertEqual(self.sess(g, b["id"])["state"], "stale")
+        self.assertEqual(self.sess(g, c["id"])["state"], "neutral")
+
+    def test_malformed_json_emits_alerting_node(self):
+        self.write("session_bad_1_b.json", "{not json")
+        good = _session("good")
+        self.write(good["id"] + ".json", good)
+        g = self.build()
+        bad = self.sess(g, "session_bad_1_b")
+        self.assertEqual(bad["state"], "alerting")
+        self.assertIn("malformed", bad["detail"])
+        self.assertEqual(self.sess(g, good["id"])["state"], "healthy")
+
+    def test_swarm_hub_edges_only_when_subagents(self):
+        par = _session("par", short_name="hub")
+        s1 = _session("s1", parent_id=par["id"])
+        s2 = _session("s2", parent_id=par["id"])
+        lone = _session("lone")
+        for s in (par, s1, s2, lone):
+            self.write(s["id"] + ".json", s)
+        g = self.build()
+        kinds = {n["id"]: n["kind"] for n in g["nodes"]}
+        self.assertEqual(kinds["swarm:" + par["id"]], "swarm")
+        self.assertNotIn("swarm:" + lone["id"], kinds)
+        rels = {(e["src"], e["dst"], e["rel"]) for e in g["edges"]}
+        cid = "swarm:" + par["id"]
+        self.assertIn((cid, "jcode:" + par["id"], "coordinates"), rels)
+        self.assertIn((cid, "jcode:" + s1["id"], "hosts"), rels)
+        self.assertIn((cid, "jcode:" + s2["id"], "hosts"), rels)
+
+    def test_works_on_edge_inside_hngh_repo(self):
+        # fixture repo-root analog is self.root.parent (config/ sits at
+        # <automation>/config in the real tree); subdir cwd also counts
+        inside = _session("in", cwd=str(self.root.parent))
+        subin = _session("subin", cwd=str(self.root / "jobs"))
+        outside = _session("out", cwd="/home/u/other")
+        for s in (inside, subin, outside):
+            self.write(s["id"] + ".json", s)
+        g = self.build()
+        rels = {(e["src"], e["rel"]) for e in g["edges"]}
+        self.assertIn(("jcode:" + inside["id"], "works-on"), rels)
+        self.assertIn(("jcode:" + subin["id"], "works-on"), rels)
+        self.assertNotIn(("jcode:" + outside["id"], "works-on"), rels)
+
+    def test_scale_filter_24h_plus_parent_closure(self):
+        recent = _session("rec", age_min=60)
+        old = _session("old", age_min=60 * 30)
+        # old coordinator kept alive by a recent sub (upward closure)
+        pold = _session("pold", age_min=60 * 30)
+        crec = _session("crec", age_min=60, parent_id=pold["id"])
+        # recent coordinator drags its old chain in (downward, transitively)
+        rc = _session("rc", age_min=60)
+        mid = _session("mid", age_min=60 * 30, parent_id=rc["id"])
+        leaf = _session("leaf", age_min=60 * 30, parent_id=mid["id"])
+        for s in (recent, old, pold, crec, rc, mid, leaf):
+            self.write(s["id"] + ".json", s)
+        ids = {n["id"] for n in self.build()["nodes"]}
+        self.assertIn("jcode:" + recent["id"], ids)
+        self.assertNotIn("jcode:" + old["id"], ids)  # no anchor: stays out
+        self.assertIn("jcode:" + crec["id"], ids)
+        self.assertIn("jcode:" + pold["id"], ids)  # recent sub keeps coord
+        self.assertIn("jcode:" + mid["id"], ids)
+        self.assertIn("jcode:" + leaf["id"], ids)  # transitive drag-in
+        # escape hatch: all_sessions=True emits the stale session too
+        ids_all = {n["id"] for n in self.build(all_sessions=True)["nodes"]}
+        self.assertIn("jcode:" + old["id"], ids_all)
+
+    def test_sessions_dir_absent_is_noop(self):
+        g = graph_data.build(self.config, self.dash, self.db,
+                             self.root / "config.env", now=self.now,
+                             sessions_dir=self.root / "missing")
+        self.assertFalse([n for n in g["nodes"]
+                          if n["kind"] in ("jcode-session", "swarm")])
 
 
 if __name__ == "__main__":

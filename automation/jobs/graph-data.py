@@ -2,9 +2,10 @@
 """graph-data.py — pure builder for the dashboard /graph.json operations graph.
 
 Reads the governed registries (config/*.tsv), live state (telemetry db,
-service-state.json, reports.md) and returns {"generated_at", "nodes",
-"edges"}. Node kinds: kernel, leg, service, package, seam, spawn-path,
-patrol, surface, cap, guard, research-line. No governance decisions here:
+service-state.json, reports.md), and jcode session files (~/.jcode/sessions)
+and returns {"generated_at", "nodes", "edges"}. Node kinds: kernel, leg,
+service, package, seam, spawn-path, patrol, surface, cap, guard,
+research-line, jcode-session, swarm. No governance decisions here:
 display layer only, never governance input (same rule as the KB view).
 """
 
@@ -78,6 +79,187 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+def _parse_any_ts(text):
+    """ISO parse tolerant of jcode's nanosecond fractions (9 digits);
+    returns None on anything unparsable (fail closed)."""
+    if not isinstance(text, str):
+        return None
+    t = text.strip()
+    m = re.match(r"^(.*T\d{2}:\d{2}:\d{2})\.(\d+)(.*)$", t)
+    if m:  # truncate fraction to microseconds for fromisoformat
+        t = "%s.%s%s" % (m.group(1), m.group(2)[:6], m.group(3))
+    return _parse_ts(t)
+
+
+def _session_status(data):
+    """Status as a plain word: jcode writes strings ('Active') or
+    one-key tagged dicts ({"Crashed": {...}}); anything else fails
+    closed to None (non-Active)."""
+    status = data.get("status")
+    if isinstance(status, dict) and len(status) == 1:
+        status = next(iter(status))
+    return status if isinstance(status, str) else None
+
+
+def _session_state(data, active_dt, now):
+    """Existing 4-state vocabulary, no new colors: Active + last
+    activity <=10min -> healthy; non-Active -> neutral; Active but
+    >10min (or activity unparsable) -> stale."""
+    if _session_status(data) != "Active":
+        return "neutral"
+    if active_dt is None:
+        return "stale"
+    age_s = (now - active_dt).total_seconds()
+    return "healthy" if age_s <= 600 else "stale"
+
+
+def _session_detail(data, now):
+    """k=v detail string (viewer parseDetail caps at 12 pairs).
+    tokens=N is reserved, not emitted, until a real source exists
+    (journal/budget ledger is phase 2)."""
+    parts = []
+    status = _session_status(data)
+    if status is not None:
+        parts.append("status=%s" % status)
+    for key, out in (("model", "model"), ("provider_key", "provider")):
+        val = data.get(key)
+        if isinstance(val, str) and val:
+            parts.append("%s=%s" % (out, val))
+    cwd = data.get("working_dir")
+    if isinstance(cwd, str) and cwd:
+        parts.append("cwd=%s" % cwd)
+    updated = _parse_any_ts(data.get("updated_at")
+                            or data.get("last_active_at"))
+    if updated is not None:
+        age_s = max(0, (now - updated).total_seconds())
+        if age_s < 86400:
+            parts.append("age=%dm" % int(age_s // 60))
+        else:
+            parts.append("age=%dh" % int(age_s // 3600))
+    pid = data.get("last_pid")
+    if isinstance(pid, int) or isinstance(pid, str) and pid:
+        parts.append("pid=%s" % pid)
+    effort = data.get("reasoning_effort")
+    if isinstance(effort, str) and effort:
+        parts.append("effort=%s" % effort)
+    return " ".join(parts)
+
+
+def _read_sessions(sessions_dir):
+    """session_id -> parsed dict for session_*.json (journal logs and
+    .bak copies excluded); unparsable files come back as malformed ids.
+    Filename stem == session id by jcode layout, so malformed files
+    still get a stable node id."""
+    raw, malformed = {}, []
+    for path in sorted(Path(sessions_dir).glob("session_*.json")):
+        name = path.name
+        if name.endswith(".journal.jsonl") or name.endswith(".bak"):
+            continue  # belt-and-braces; the glob already excludes these
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, UnicodeDecodeError):
+            malformed.append(path.stem)
+            continue
+        sid = data.get("id") if isinstance(data, dict) else None
+        if not isinstance(sid, str) or not sid:
+            malformed.append(path.stem)  # fail closed: no id, no node
+            continue
+        raw[sid] = data
+    return raw, malformed
+
+
+def _emit_sessions(nodes, edges, raw, malformed, repo_root, now,
+                   all_sessions):
+    """jcode-session + swarm nodes/edges. Default scale filter: only
+    sessions active within 24h plus the parent chain needed to anchor
+    spawns edges; all_sessions=True lifts the filter. Malformed files
+    always surface as alerting nodes (never hidden by the filter)."""
+    active = {}
+    cutoff = now - timedelta(hours=24)
+    for sid, data in raw.items():
+        dt = _parse_any_ts(data.get("last_active_at"))
+        if dt is not None and dt >= cutoff:
+            active[sid] = data
+    emitted = dict(raw) if all_sessions else dict(active)
+    if not all_sessions:
+        # parent-linked closure, both directions, transitively: an
+        # emitted session keeps its coordinator (spawns anchor) and its
+        # subagents (hosts edges), so swarm groups never draw half-drawn
+        children = {}
+        for sid, data in raw.items():
+            pid = data.get("parent_id")
+            if isinstance(pid, str):
+                children.setdefault(pid, []).append(sid)
+        queue = list(emitted)
+        while queue:
+            sid = queue.pop()
+            pid = raw[sid].get("parent_id")
+            if isinstance(pid, str) and pid in raw and pid not in emitted:
+                emitted[pid] = raw[pid]
+                queue.append(pid)
+            for cid in children.get(sid, ()):
+                if cid not in emitted:
+                    emitted[cid] = raw[cid]
+                    queue.append(cid)
+
+    def label_of(data):
+        name = data.get("short_name")
+        if isinstance(name, str) and name:
+            return name
+        return (data.get("id") or "")[:12]  # truncated id fallback
+
+    for sid, data in sorted(emitted.items()):
+        active_dt = _parse_any_ts(data.get("last_active_at"))
+        state = _session_state(data, active_dt, now)
+        nodes.append({"id": "jcode:" + sid, "kind": "jcode-session",
+                      "label": label_of(data), "state": state,
+                      "detail": _session_detail(data, now)})
+
+    # spawn edges only when both endpoints are emitted (no danglers)
+    for sid, data in sorted(emitted.items()):
+        pid = data.get("parent_id")
+        if isinstance(pid, str) and pid in emitted:
+            edges.append({"src": "jcode:" + pid, "dst": "jcode:" + sid,
+                          "rel": "spawns"})
+
+    # swarm hubs: one per coordinator holding >=1 emitted subagent
+    for pid in sorted({d.get("parent_id") for d in emitted.values()
+                       if isinstance(d.get("parent_id"), str)
+                       and d.get("parent_id") in emitted}):
+        subs = [s for s, d in emitted.items()
+                if d.get("parent_id") == pid]
+        hub = "swarm:" + pid
+        nodes.append({"id": hub, "kind": "swarm",
+                      "label": label_of(emitted[pid]), "state": "neutral",
+                      "detail": "sessions=%d" % len(subs)})
+        edges.append({"src": hub, "dst": "jcode:" + pid,
+                      "rel": "coordinates"})
+        for sid in sorted(subs):
+            edges.append({"src": hub, "dst": "jcode:" + sid, "rel": "hosts"})
+
+    # works-on: emitted session whose working_dir sits inside this repo
+    try:
+        repo_res = Path(repo_root).resolve()
+    except OSError:
+        repo_res = None
+    for sid, data in sorted(emitted.items()):
+        cwd = data.get("working_dir")
+        if not isinstance(cwd, str) or not cwd or repo_res is None:
+            continue
+        try:
+            cwd_res = Path(cwd).expanduser().resolve()
+        except OSError:
+            continue
+        if cwd_res == repo_res or repo_res in cwd_res.parents:
+            edges.append({"src": "jcode:" + sid, "dst": "kernel",
+                          "rel": "works-on"})
+
+    for sid in sorted(malformed):
+        nodes.append({"id": "jcode:" + sid, "kind": "jcode-session",
+                      "label": sid[:12], "state": "alerting",
+                      "detail": "malformed session file (json unparsable)"})
+
+
 def leg_states(telemetry_db, now=None):
     """model -> (state, last_seen_iso, events_24h) from telemetry events."""
     now = now or _now()
@@ -139,7 +321,8 @@ def _leg_state(model, live, now):
     return state, "last %s" % info["last"], info["n"]
 
 
-def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None):
+def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
+          sessions_dir=None, all_sessions=False):
     now = now or _now()
     registries_dir, dashboard_dir = Path(registries_dir), Path(dashboard_dir)
     nodes, edges = [], []
@@ -293,6 +476,17 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None):
              "status=%s ts=%s title=%s" % (row["status"], row["timestamp"],
                                            row["title"]))
         edge("research:" + rid, "kernel", "research-beat")
+
+    # --- jcode sessions + swarm hubs (~/.jcode/sessions) ---
+    if sessions_dir is None:
+        sessions_dir = Path.home() / ".jcode" / "sessions"
+    if Path(sessions_dir).is_dir():
+        raw, malformed = _read_sessions(sessions_dir)
+        # resolve() first: a relative registries_dir ('config') must not
+        # collapse to '.' when walking to the hngh repo root
+        _emit_sessions(nodes, edges, raw, malformed,
+                       registries_dir.resolve().parent.parent, now,
+                       all_sessions)
 
     return {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nodes": nodes, "edges": edges}

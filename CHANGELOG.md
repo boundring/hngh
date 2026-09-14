@@ -8,6 +8,18 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Jcode session/swarm nodes in the operations graph**
+  (docs/records/2026-09-14-graph-jcode-sessions.md): `automation/jobs/
+  graph-data.py` emits a `jcode-session` node per jcode session file and
+  a `swarm` hub per coordinating session (coordinates/hosts/spawns
+  edges, optional works-on into the kernel). Same 4-state vocabulary;
+  malformed session files surface as alerting nodes instead of being
+  skipped; default output is scoped to 24h-active sessions plus
+  parent-linked ones with an `all_sessions` builder escape. Injectable
+  sessions dir keeps the suite hermetic; tokens=N stays reserved until
+  a real token source exists. Suite:
+  automation/tests/test-graph-data.py (`JcodeSessionNodes`).
+
 - **Graph viewer absorbs jcode-session/swarm kinds + tab-visible auto-load**
   (deep-task node sg-viewer-rendering;
   docs/records/2026-09-14-graph-view-kind-absorption.md): the
