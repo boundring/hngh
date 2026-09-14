@@ -58,6 +58,24 @@ class SlowUnits(unittest.TestCase):
                              "last_wall_s": 1799.0, "p50_s": 150.0}])
         self.assertEqual(r.stdout.strip(), "")
 
+    def test_remote_push_in_envelope_never_flagged(self):
+        # 16-remote-push.sh is bimodal by design: skip-exit ~0.0s (median),
+        # but the red/stale-gate branch re-runs the kernel gate inline under
+        # `timeout 290 make test` — observed walls 28.6-40.8s while the
+        # 2026-09-13 gate-red crumb stood (432 duplicate slow-unit alerts
+        # through 2026-09-14). The script's own upstream cap is 290s.
+        for last, p50 in [(28.6, 0.016), (40.8, 0.0), (289.0, 0.0)]:
+            r = self.run_probe([{"unit": "dropin:16-remote-push.sh",
+                                 "last_wall_s": last, "p50_s": p50}])
+            self.assertEqual((r.returncode, r.stdout.strip()),
+                             (0, ""), (last, p50))
+
+    def test_remote_push_over_envelope_flagged(self):
+        r = self.run_probe([{"unit": "dropin:16-remote-push.sh",
+                             "last_wall_s": 350.1, "p50_s": 0.016}])
+        self.assertEqual(r.stdout.strip(),
+                         "dropin:16-remote-push.sh wall=350.1s median=0.0s")
+
     def test_plain_unit_median_rule_still_fires(self):
         r = self.run_probe([{"unit": "dropin:01-system.sh",
                              "last_wall_s": 60.0, "p50_s": 1.8}])
