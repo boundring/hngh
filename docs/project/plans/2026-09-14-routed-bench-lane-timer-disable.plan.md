@@ -12,3 +12,4 @@ at 2026-09-14T03:00:39Z. Alert text: bench-trigger lane step 3 residue: hngh-mod
 ## Occurrences
 
 - 2026-09-14T04:00:39Z re-occurred (dedup window expired)
+- 2026-09-14T05:00:39Z re-occurred (dedup window expired)

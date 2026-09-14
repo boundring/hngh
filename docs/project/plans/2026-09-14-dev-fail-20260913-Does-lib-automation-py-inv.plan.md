@@ -4,15 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the `fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v` research line (with supporting boundary-coverage and guardrail-contract findings) by adding hermetic subprocess-seam verification, dedicated boundary integration test coverage, a CLI contract conformance check, and a model-leg wall-time guard to the cadence beat.
+This plan implements the research line `fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v` by resolving the open question of whether `lib/automation.py` invokes `bin/hngh` via `subprocess` or direct import, and establishing a synchronous CI gate for the boundary as identified in the "Hngh Test Boundary" concept.
 
 ## Steps
 
-- [ ] Create tests/test_subprocess_seam.sh that greps lib/automation.py for `subprocess` usage and asserts an env-overridable binary-path seam exists (no direct module import of bin/hngh).
-  Verification: bash -n tests/test_subprocess_seam.sh
-- [ ] Create tests/test_boundary_integration.sh that exercises the lib/automation.py → bin/hngh process boundary using a stub binary on PATH, matching the hermetic-seam pattern from prior material.
-  Verification: bash -n tests/test_boundary_integration.sh
-- [ ] Create scripts/check_cli_contract.sh that invokes lib/automation.py against a corrected post-2026-08-25 CLI contract fixture and asserts clean exit with no guardrail regression.
-  Verification: bash -n scripts/check_cli_contract.sh
-- [ ] Edit cadence/hour/33-research-beat.sh to wrap the model-leg call in a wall-time guard that logs elapsed seconds and caps execution at a configurable threshold before appending state.
+- [ ] Create `tests/test_automation_invocation.py` to assert that `lib/automation.py` uses `subprocess` for invoking `bin/hngh` rather than direct module imports.
+  Verification: python3 tests/test_automation_invocation.py
+- [ ] Add a guardrail check in `lib/automation.py` to validate the post-2026-08-25 CLI contract before executing the subprocess call.
+  Verification: make test
+- [ ] Create `scripts/check_boundary.sh` to verify that the overnight harness is configured as a blocking pre-merge gate rather than a deferred schedule.
+  Verification: bash -n scripts/check_boundary.sh
+- [ ] Update `cadence/hour/33-research-beat.sh` to instrument the model leg separately from the local mechanical portion to clarify latency sources.
   Verification: bash -n cadence/hour/33-research-beat.sh
