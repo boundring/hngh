@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T01:01:05Z routed-from=overnight:plan-accept-blocked:2026-09-09-stall-recovery-and-operator-surfaces -->
+<!-- plan: status=executed risk=normal accepted=2026-09-10T01:01:05Z routed-from=overnight:plan-accept-blocked:2026-09-09-stall-recovery-and-operator-surfaces -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-blocked:2026-09-09-stall-recovery-and-operator-surfaces`
