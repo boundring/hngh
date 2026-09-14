@@ -16,14 +16,14 @@
 # alert). Every action is idempotent and safe to repeat:
 #   transient     count occurrences; escalate to alert once the guard
 #                 threshold is crossed (guard "alert>=N"); no side effect
-#   restart-unit  systemctl --user restart <unit> ONLY for units in the
-#                 guard allowlist (units= comma list), at most max=N
-#                 per UTC day (guard "max=N units=a,b"); over budget ->
-#                 alert, never a restart loop
+#   restart-unit  systemctl --user restart <unit>, either the regex's
+#                 captured unit (guard "max=N units=a,b") or a pinned
+#                 operator-verified unit (guard "max=N unit=NAME"),
+#                 at most max=N per UTC day; over budget -> alert,
+#                 never a restart loop
 #   propose       NEVER executes: the alert row carries the exact
 #                 recommended command (guard "cmd=...") for operator
-#                 eyes -- used where the fix touches the live desktop
-#                 session (kglobalaccel), outside the practiced set
+#                 eyes
 #   alert         no auto-action; alert with the captured evidence
 #
 # Seeded from lines actually observed on this host (2026-09-13 boot:
@@ -40,7 +40,12 @@
 id	kind	regex	action	guard
 kwin-xcb-error	kwin	XCB error: \d+ \((BadDamage|BadWindow)\)	transient	alert>=10
 unit-failed	unit	([\w@.-]+\.service): (Main process exited|Failed with result|Failed to start)	restart-unit	max=2 units=hngh-dashboard.service
-kglobalaccel-dead	shortcut	(kglobalaccel|org\.kde\.kglobalaccel).*(not activatable|ServiceUnknown)	propose	cmd=systemctl --user restart plasma-kglobalaccel.service
+# kglobalaccel-dead promoted propose -> restart-unit 2026-09-14: the
+# operator ran the propose command by hand, confirmed the fix (media
+# keys live again), and asked for automation coverage. unit= pins the
+# verified unit (the regex captures the DBus name, not the systemd
+# unit); the cap stays -- 2 re-fails a day means something deeper.
+kglobalaccel-dead	shortcut	(kglobalaccel|org\.kde\.kglobalaccel).*(not activatable|ServiceUnknown)	restart-unit	max=2 unit=plasma-kglobalaccel.service
 journald-suppressed	journald	Suppressed \d+ messages from (\S+)	alert
 oom-kill	memory	Out of memory: Killed process \d+ \(([^)]+)\)	alert
 mem-alloc-failure	memory	page allocation failure	alert

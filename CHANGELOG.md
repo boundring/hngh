@@ -4,6 +4,20 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-14
+
+#### Changed
+
+- **kglobalaccel journal patrol row promoted propose -> restart-unit**
+  (automation tier 2026-09-14): the operator ran the propose-recommended
+  command (`systemctl --user restart plasma-kglobalaccel.service`) by
+  hand, confirmed the fix, and asked for automation coverage of that
+  situation. The `kglobalaccel-dead` row now auto-restarts via a new
+  `unit=` guard token that pins the operator-verified unit (the row's
+  regex captures the DBus name, not the systemd unit), keeping the
+  restart-loop guard at max=2 per UTC day -- re-fails beyond that alert
+  for human eyes instead of masking a deeper fault.
+
 ### 2026-09-13
 
 #### Added
