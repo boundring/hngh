@@ -226,7 +226,7 @@ def observe(out=TSV):
     try:
         st = _local_api("/api/inference/status")
         model_id = st.get("active_model")
-        if st.get("loaded"):
+        if st.get("loaded") and not st.get("loading"):
             value = st.get("max_context_length") or st.get("context_length")
     except Exception as e:
         print(f"  status endpoint unavailable: {e}", file=sys.stderr)
