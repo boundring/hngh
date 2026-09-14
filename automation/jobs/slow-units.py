@@ -18,12 +18,15 @@ import json
 import sys
 
 # cap = scripts/overnight-cycle.sh TIMEOUT_S (default 1800), the hard
-# `timeout $TIMEOUT_S` on the delegated session; +60s margin = timeout
-# kill-after (5s) + post-session audit tail (observed <1s). Both keys
-# run the same overnight-cycle.sh (hourly drop-in, systemd ExecStart).
+# `timeout $TIMEOUT_S` on the delegated session, plus the synchronous
+# forethought dream leg OVERNIGHT_DREAM_TIMEOUT (default 600, landed
+# 2026-09-10, runs inside the same unit wall before the executor leg);
+# +60s margin = timeout kill-after (5s) + post-session audit tail
+# (observed <1s). Both keys run the same overnight-cycle.sh (hourly
+# drop-in, systemd ExecStart).
 ENVELOPE = {
-    "dropin:20-workbeat.sh": 1800.0 + 60.0,
-    "hngh-overnight.service": 1800.0 + 60.0,
+    "dropin:20-workbeat.sh": 1800.0 + 600.0 + 60.0,
+    "hngh-overnight.service": 1800.0 + 600.0 + 60.0,
     # 16-remote-push.sh: the red/stale-gate branch re-runs the kernel gate
     # inline under `timeout 290 make test` (gate crumb red/stale + unpushed
     # commits -> gate-refresh, observed 28-41s); its own upstream cap is
