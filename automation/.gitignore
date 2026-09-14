@@ -18,6 +18,8 @@ state/*
 STATE.md
 agent-handoffs.md
 dashboard/
+!dashboard/story.html
+!dashboard/story-view.js
 digest/
 logs/
 archive/

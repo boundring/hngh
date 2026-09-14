@@ -5,7 +5,7 @@
 > Somewhere below the ground floor, a machine keeps its own minutes.
 > It has been taking them for a while. They are all in order.
 
-A machine that lives in the basement and got good at its job: agentic
+A machine that does very little, and files everything: agentic
 development with a certificate at the decision point and a receipt at
 the mutation point. The kernel (Common Lisp, pure by charter) runs the
 ledger; an automation tier runs the clock around it; the human's final
