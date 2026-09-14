@@ -47,3 +47,5 @@ config/installer-choices.json
 !dashboard/sessions.html
 !dashboard/sessions.js
 !dashboard/system-view.js
+!dashboard/reports.md
+!dashboard/report-cursor
