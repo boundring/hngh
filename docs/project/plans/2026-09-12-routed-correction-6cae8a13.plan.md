@@ -6,5 +6,5 @@ at 2026-09-12T19:00:14Z. Alert text: correction 6cae8a13: no named check found (
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260912-correction-6cae8a13 for correction-6cae8a13; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260912-correction-6cae8a13 for correction-6cae8a13; record disposition; then fix or park (fixed 2026-09-14: jailed /hngh-docs/plans/ dashboard route + plans-view link fix, tests updated; disposition in automation/research-dispositions.tsv)
       Verification: research subject fail-20260912-correction-6cae8a13 present in research-subjects.txt with a recorded disposition; alert fixed or parked
