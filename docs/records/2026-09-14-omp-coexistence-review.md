@@ -13,7 +13,7 @@ when the Jcode equivalent passes the same verification.
 | Delegated worker lane | omp branch in `launch_session` (bili-wrapped) | `jcode` branch: SDK shim → CLI → omp fallback ladder | Jcode live, witnessed cycle |
 | Spend pacing | zai caps via `model.sh zai_pace_blocked` | jcode holds own provider auth; pacing NOT yet ported to the jcode branch | **Gap: omp retains the paced lane** until Jcode pacing lands |
 | Cost attribution | `ocgo-attribution.py` emitter (R2) | budget row `model=jcode/zai` + `[Tokens]` log lines | Jcode parity reached for the budget row; deep telemetry still omp |
-| Plan proposal surface | `hngh_propose` (omp plugin tool) | none yet | Omp keeps this surface |
+| Plan proposal surface | `hngh_propose` (omp plugin tool) | `~/.jcode/skills/hngh-plan-proposal` skill over the same `omp-bridge --propose` CLI | **Closed 2026-09-14:** skill landed in userspace (never committed to hngh), verified via headless `jcode run` (2/2 questions) |
 | MCP read tools | `automation/mcp/hngh_mcp_server.py` (registered for omp) | same stdio MCP server, Jcode `~/.jcode/mcp.json` registration | Shared; no retirement needed |
 | Session observatory | sessions-feed omp rows | `jcode_rows` (24 live rows witnessed) | Both live; shared surface |
 | Fail-first selector | overnight-cycle plan slots (omp executor default) | `session-executor=jcode` option | Both available; selection per lane |
