@@ -9,6 +9,18 @@
   (ux-review finding dashboard-logs:2, routed plan 2026-09-10). Tab
   switches carry no new data and keep the arm. Contract pinned in
   tests/test-dashboard-p0.py.
+- park (cause: premise stale): ux-review finding dashboard-logs:1 —
+  "rerenderWithOpState and rerenderOp call renderLogs without checking
+  lastRender.res, crashing when operator state updates before the
+  initial spine load". Unreachable in the served sources: both entry
+  points early-return on `lastRender.d === undefined` before any render
+  call — the pre-load window routes to the known empty state, exactly
+  the behavior the finding asks for; `lastRender.d` and `.res` are
+  assigned atomically in renderLogs, so no state has d defined with res
+  undefined; the renderLogs chain consumes no `res`; the sole res
+  consumer (renderHeader) is call-site guarded. A literal res check
+  would skip the op-items re-render these functions exist for. Contract
+  pinned in tests/test-dashboard-p0.py (OpRerenderPreloadSafety).
 
 ## 2026-09-13
 
