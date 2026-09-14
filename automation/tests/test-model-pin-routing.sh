@@ -7,9 +7,13 @@
 #   pin=kimi + kimi pace-block -> local (unsloth) answers; local never
 #                blocked by kimi state.
 #   pin=deck  -> deck stub answers first; unsloth/kimi never hit.
+#   pin=remote -> remote stub answers first with the coding-class model
+#                (REMOTE_MODEL_CODING); no key file -> local unsloth.
 #   pin=bogus -> ignored: full chain, unsloth answers.
-#   33-research-beat rotation: runs 1,2 local / runs 3,6 kimi (share=3);
-#   share=0 never pins; REVIEW transition always pins kimi.
+#   33-research-beat rotation: runs 1,2 local / runs 3,6 zai design-class
+#   glm-5.3 non-flash (share=3); share=0 never pins; REVIEW transition
+#   always pins kimi (kimi conserved for review work per the 2026-09-13
+#   benchmark-priority routing).
 # Hermetic: no real endpoints, no real keys, sandbox repo copy so the beat
 # never touches the live telemetry/research state.
 set -u
@@ -30,9 +34,11 @@ cp -r "$root/cadence/." "$sb/cadence/"
 stub_start stubU # unsloth
 stub_start stubK # kimi
 stub_start stubD # deck
+stub_start stubZ # zai (design-class rotation)
 stubU_port="$(cat "$stubdir/stubU-port")"
 stubK_port="$(cat "$stubdir/stubK-port")"
 stubD_port="$(cat "$stubdir/stubD-port")"
+stubZ_port="$(cat "$stubdir/stubZ-port")"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
 seed_events() { # source n -> n telemetry model/<source> events stamped today
  python3 - "$1" "$2" <<PY
@@ -66,6 +72,8 @@ call() { # prompt [K=V ...] -> stdout
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
   # hermetic: start bare of the operator's session env
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
+  unset Z_AI_API_KEY ZAI_MODEL ZAI_URL ZAI_MODEL_DESIGN ZAI_KEY_FILE
+  unset REMOTE_MODEL_CODING
   unset KIMI_DAILY_CAP_CALLS
   unset DECK_URL DECK_MODEL MODEL_PIN
   for kv in "$@"; do export "$kv"; done
@@ -84,10 +92,12 @@ reset_hits() {
  : >"$stubdir/stubU-hits"
  : >"$stubdir/stubK-hits"
  : >"$stubdir/stubD-hits"
+ : >"$stubdir/stubZ-hits"
 }
 kimi_env=("KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubK_port")
 deck_env=("DECK_URL=http://127.0.0.1:$stubD_port" "DECK_MODEL=deck-test")
 ocgo_env=("OCGO_URL=http://127.0.0.1:1" "OCGO_MODEL=glm-test-model" "OPENCODE_API_KEY=stub-key-never-real")
+zai_env=("Z_AI_API_KEY=stub-key-never-real" "ZAI_URL=http://127.0.0.1:$stubZ_port")
 
 # --- 1. MODEL_PIN=kimi -> kimi answers; unsloth/deck/ocgo never hit;
 #        the kimi body keeps the max_tokens passthrough and stays lean.
@@ -143,7 +153,28 @@ out="$(call "hello-5" "MODEL_PIN=kimi" "KIMI_AI_KEY=stub-key-never-real" \
 ck "pin=kimi dead endpoint: unsloth answers" "stub-says-hi" "$out"
 ck "pin=kimi dead endpoint: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 
-# --- 6. research-beat rotation: runs 1,2 local; run 3 kimi; wraps at 6.
+# --- 5b. pin=remote -> remote stub answers with the coding-class model.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+printf 'stub-openrouter-token' >"$sb/openrouter-token"
+out="$(call "hello-5b" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash")"
+ck "pin=remote: remote stub content" "stub-says-hi" "$out"
+ck "pin=remote: coding model used" "openrouter:google/gemini-3.8-flash" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote: request model field" "google/gemini-3.8-flash" \
+ "$(tail -n 1 "$stubdir/stubZ-bodies" | jq -r '.model')"
+ck "pin=remote: telemetry row" "1" \
+ "$(sqlite3 "$sb/home/db/telemetry.db" "select count(*) from events where kind='model' and source='remote'")"
+
+# --- 5c. pin=remote + no key file -> falls through to local unsloth.
+reset_hits
+out="$(call "hello-5c" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/nope3")"
+ck "pin=remote no key: local answers" "stub-says-hi" "$out"
+ck "pin=remote no key: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote no key: remote stub never hit" "0" "$(hits stubZ)"
+
+# --- 6. research-beat rotation: runs 1,2 local; run 3 zai design-class;
+#        wraps at 6.
 #        Sandbox repo copy (cp -r above) so the beat touches only $sb.
 beat_run() { # [K=V ...] -> runs one full beat against the sandbox
  (
@@ -168,6 +199,7 @@ reset_beat() { # n-lines seeded planned
  : >"$sb/STATE.md"
  rm -f "$sb/home/db/telemetry.db"
  : >"$stubdir/stubK-bodies"
+ : >"$stubdir/stubZ-bodies"
  local i
  {
   for i in $(seq 1 "$1"); do
@@ -198,19 +230,23 @@ ck "rotation run1 (1%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-mo
 ck "rotation run1: kimi stub never hit" "0" "$(hits stubK)"
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
 ck "rotation run2 (2%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
-beat_run "${kimi_env[@]}" "${ROTA[@]}"
-ck "rotation run3 (3%%3): kimi answers" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
-ck "rotation run3: kimi stub hit once" "1" "$(hits stubK)"
+beat_run "${zai_env[@]}" "ZAI_MODEL_DESIGN=glm-design-model" "${ROTA[@]}"
+ck "rotation run3 (3%%3): zai design-class answers" "zai:glm-design-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "rotation run3: zai stub hit once" "1" "$(hits stubZ)"
+ck "rotation run3: request model field is the design model" "glm-design-model" \
+ "$(tail -n 1 "$stubdir/stubZ-bodies" | jq -r '.model')"
+ck "rotation run3: kimi stub never hit" "0" "$(hits stubK)"
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
 ck "rotation run4 (4%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
 ck "rotation run5 (5%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
-beat_run "${kimi_env[@]}" "${ROTA[@]}"
-ck "rotation run6 (6%%3): kimi answers again" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
-ck "rotation: kimi telemetry rows" "2" "$(kimi_rows)"
-# the kimi request from the beat kept the beat's 4096 budget passthrough
-ck "rotation: beat kimi body max_tokens=4096" "4096" \
- "$(tail -n 1 "$stubdir/stubK-bodies" | jq -r '.max_tokens')"
+beat_run "${zai_env[@]}" "ZAI_MODEL_DESIGN=glm-design-model" "${ROTA[@]}"
+ck "rotation run6 (6%%3): zai design-class answers again" "zai:glm-design-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "rotation: zai telemetry rows" "2" \
+ "$(sqlite3 "$sb/home/db/telemetry.db" "select count(*) from events where kind='model' and source='zai'")"
+# the zai request from the beat kept the beat's 4096 budget passthrough
+ck "rotation: beat zai body max_tokens=4096" "4096" \
+ "$(tail -n 1 "$stubdir/stubZ-bodies" | jq -r '.max_tokens')"
 # line transitioned normally through the pinned run
 grep -q $'line-1\tcrystallized\t' "$sb/research-lines.tsv" &&
  echo "ok: rotation: line-1 reached crystallized" || {
@@ -225,6 +261,8 @@ beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
 beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
 beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
 ck "share=0: kimi stub never hit in 3 runs" "0" "$(hits stubK)"
+beat_run "${zai_env[@]}" "ZAI_MODEL_DESIGN=glm-design-model" KIMI_RESEARCH_SHARE=0
+ck "share=0: zai stub never hit in 3 runs" "0" "$(hits stubZ)"
 ck "share=0: telemetry has no kimi rows" "0" "$(kimi_rows)"
 
 # --- 8. REVIEW transition: always pins kimi (counter at 1, share would
@@ -248,12 +286,12 @@ grep -q $'line-old\tparked\t' "$sb/research-dispositions.tsv" 2>/dev/null &&
 }
 
 # --- 9. review-prep pins kimi + chain-accurate alert text (static asserts).
-grep -q 'MODEL_PIN="${MODEL_PIN:-kimi}"' "$root/cadence/day/04-review-prep.sh" &&
- echo "ok: review-prep: kimi pin present" || {
- echo "FAIL: review-prep: kimi pin missing"
+grep -q 'MODEL_PIN="${MODEL_PIN:-review}"' "$root/cadence/day/04-review-prep.sh" &&
+ echo "ok: review-prep: review-lane pin present" || {
+ echo "FAIL: review-prep: review-lane pin missing"
  fails=$((fails + 1))
 }
-grep -q 'model chain down (pin=kimi exhausted through local)' \
+grep -q 'model chain down (pin=review quota ladder exhausted through local)' \
  "$root/cadence/day/04-review-prep.sh" &&
  echo "ok: review-prep: chain-accurate alert text" || {
  echo "FAIL: review-prep: alert text not chain-accurate"

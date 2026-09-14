@@ -112,6 +112,18 @@
         "apiKey": "{env:ZAI_API_KEY}"
       },
       "models": {
+        // glm-5.3 non-flash: design/practical-intelligence class
+        // (operator benchmark priorities, 2026-09-13; verified live 200
+        // on the coding gateway 2026-09-13). Agentic sessions stay on
+        // glm-5.3-flash above.
+        "glm-5.3": {
+          "name": "GLM 5.3 (Z.AI subscription, design class)",
+          "reasoning": true,
+          "tool_call": true,
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] },
+          "limit": { "context": 262144, "output": 32768 }
+        },
         "glm-5.3-flash": {
           "name": "GLM 5.3 Flash (Z.AI subscription)",
           "reasoning": true,

@@ -108,7 +108,9 @@ printf '%s\n' "$run_n" >"$RESEARCH_COUNT_FILE" 2>/dev/null
 # (Inventory; env RESEARCH_LOAD_CEILING overrides) does not defer
 # anything: the pin SHIFTS. Deck first when armed AND responsive (deck_up
 # probe in lib/failfirst.sh -- the deck is idle hardware the operator
-# directed into the chain), else the kimi quota leg. An unarmed
+# directed into the chain), else the design-class quota leg
+# (zai glm-5.3 non-flash per the operator's 2026-09-13 benchmark
+# priorities). An unarmed
 # quota pin falls through to the local chain inside model_call, so
 # routing never blocks. Test seams: RESEARCH_LOADAVG_FILE (loadavg
 # source), RESEARCH_BEAT_GATE_ONLY=1 (exit 0 right after the gates).
@@ -130,7 +132,8 @@ if [ -z "$OVERFLOW_PIN" ] && busy="$(load_busy)"; then
   breadcrumb "$JOB_NAME" "research-route-deck" \
    "local busy - research routed to deck (load ${busy%% *} >= ceiling ${busy##* }; deck responsive)"
  else
-  ROUTE_PIN=kimi
+  ROUTE_PIN=zai
+  ZAI_MODEL="${ZAI_MODEL_DESIGN:-$(get_param zai-model-design '')}"
   breadcrumb "$JOB_NAME" "research-route-quota" \
    "local busy - research routed to $ROUTE_PIN (load ${busy%% *} >= ceiling ${busy##* }; deck unavailable)"
  fi
@@ -549,12 +552,15 @@ id="$(printf '%s' "$row" | cut -f1)"
 state="$(printf '%s' "$row" | cut -f2)"
 line="$(printf '%s' "$row" | cut -f4)"
 
-# MODEL_PIN rotation (operator quota directive, 2026-09-07): every Nth run
-# (kimi-research-share; 0/absent-config = never pin) pins the kimi quota leg
-# primary, spreading K3 quota across the window -- 1 beat/hour, share 2 ->
-# <=12 kimi calls/day against the 40/day cap (2026-09-13 utilization raise,
-# was share 3 / <=8); quota_pace_blocked still guards
-# bursts, and a pace-blocked or 429ing kimi falls through to the local chain
+# MODEL_PIN rotation (operator quota directive, 2026-09-07; benchmark-priority
+# routing 2026-09-13): every Nth run (kimi-research-share; 0/absent-config =
+# never pin) pins the design-class quota leg -- zai glm-5.3 non-flash
+# (zai-model-design row; verified live on api.z.ai 2026-09-13), spreading
+# the Z.AI bucket across the window -- 1 beat/hour, share 2 -> <=12
+# pinned calls/day against the 300/5h + 1500/week caps. Kimi K3 (40/day,
+# scarce) is conserved for the intelligence-shaped review work only.
+# quota_pace_blocked still guards
+# bursts, and a pace-blocked or 429ing leg falls through to the local chain
 # inside model_call (research never blocks). The
 # OpenCode Go leg (opencode-research-share, 5h-window paced) rotates after
 # the kimi cycle. The review transition
@@ -575,7 +581,8 @@ elif [ "$MODEL_PIN" = "local" ]; then
  if [ "$REVIEW" = "1" ]; then
   MODEL_PIN=kimi
  elif [ "$kimi_share" -gt 0 ] && [ $((run_n % kimi_share)) -eq 0 ]; then
-  MODEL_PIN=kimi
+  MODEL_PIN=zai
+  ZAI_MODEL="${ZAI_MODEL_DESIGN:-$(get_param zai-model-design '')}"
  else
   ocgo_share="${OCGO_RESEARCH_SHARE:-$(get_param opencode-research-share 3)}"
   case "$ocgo_share" in '' | *[!0-9]*) ocgo_share=0 ;; esac
