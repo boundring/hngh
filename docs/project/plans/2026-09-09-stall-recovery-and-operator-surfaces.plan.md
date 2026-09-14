@@ -100,7 +100,7 @@ docs/records/ with its first commit.
       work was verifying the controls on their own surface rather than
       re-implementing them. UI files are not tracked in git, so no commit
       rides this step.
-- [ ] 6. Dashboard exposure and data-quality fixes. Evidence:
+- [x] 6. Dashboard exposure and data-quality fixes. VERIFIED 2026-09-14T04:35Z,
       dashboard-server.py binds 0.0.0.0:8890 with eight unauthenticated
       POST actions (systemd unit says "phone-accessible on LAN");
       system.json reports tailscale_peers:'0' contradicting its own raw
@@ -113,6 +113,19 @@ docs/records/ with its first commit.
       Verification: POST without token refused rc=401/403 in a suite
       test; system.json peers matches raw tailscale state; uptime field
       present.
+      Landed by sibling commits 9b0876c (P1 server: token guard),
+      e1610b3 (system feed: peers at the consumer + uptime/last-boot).
+      Verified 2026-09-14T04:35Z on its own surface: test-dashboard-p1.py
+      22 cases first-run OK (403 without/with-wrong token at
+      test_403_without_wrong_with_right); test-system-feed.py 4 cases OK;
+      served dashboard/system.json net.tailscale_peers=2 equals the
+      live `tailscale status --json` Peer count (2); uptime block present
+      (seconds/human/last_boot). Plan-file tick staged, uncommitted: the kernel
+      gate stays red on test-fleet-manager.py
+      test_discover_offline_is_honest (asserts 'no tailscale peers' while
+      the mesh is up on this host — the wake-mutation lane mock is a sibling
+      session's in-flight work), so commit waits for that lane; only this
+      plan file is touched.
 - [ ] 7. Lifecycle accommodation: traps and persistent state. Evidence:
       timeout wraps bili so SIGTERM kills the whole tree (rc=124) with no
       trap handlers in overnight-cycle.sh; no mid-plan checkpoint beyond
