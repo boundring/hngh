@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T03:01:05Z routed-from=slow-unit:dropin:16-remote-push.sh -->
+<!-- plan: status=executed risk=normal accepted=2026-09-10T03:01:05Z routed-from=slow-unit:dropin:16-remote-push.sh -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:16-remote-push.sh`
