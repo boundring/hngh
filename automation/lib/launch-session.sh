@@ -431,9 +431,13 @@ launch) before re-deriving any repo fact from scratch."
   append_ocgo_lesson "$LAUNCH_CAUSE"
  fi
  # budget row carries the cost class (plan 2026-09-10-cost-tiering
- # step 1): `class=T1|T2|T3` appended to the session-run row.
- printf '%s | overnight|%s | session-run | class=%s\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$sclass" >>"$ROOT/logs/budget.md"
+ # step 1): `class=T1|T2|T3` appended to the session-run row, plus
+ # model+source quota-leg attribution (rule quota-leg-attribution:
+ # SimDesign/QueueDeps coordinator rows carried neither, so their
+ # spend was untrackable).
+ printf '%s | overnight|%s | session-run | class=%s | model=%s | source=%s\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$sclass" \
+  "${outcome_model:-unknown}" "${SESSION_SOURCE:-unknown}" >>"$ROOT/logs/budget.md"
  OMP_BRIDGE_STORE="$bridge_store" "$bridge_bin" --run-end "$run_id" \
   "$LAUNCH_DISPOSITION" >/dev/null 2>&1 || true
  # model-outcome demotion counter (stall-recovery step 1): ok resets,
