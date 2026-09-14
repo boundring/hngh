@@ -8,3 +8,7 @@ at 2026-09-14T15:00:36Z. Alert text: research beat capture for fail-20260912-cor
 
 - [ ] Delve: open research subject fail-20260914-research-beat-junk-capture-fail-20260912-correction-3146c023 for research-beat:junk-capture:fail-20260912-correction-3146c023; record disposition; then fix or park
       Verification: research subject fail-20260914-research-beat-junk-capture-fail-20260912-correction-3146c023 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T16:00:39Z re-occurred (dedup window expired)
