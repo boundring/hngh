@@ -24,6 +24,12 @@ import sys
 ENVELOPE = {
     "dropin:20-workbeat.sh": 1800.0 + 60.0,
     "hngh-overnight.service": 1800.0 + 60.0,
+    # 16-remote-push.sh: the red/stale-gate branch re-runs the kernel gate
+    # inline under `timeout 290 make test` (gate crumb red/stale + unpushed
+    # commits -> gate-refresh, observed 28-41s); its own upstream cap is
+    # 290s, so it is bimodal by design like the workbeat above (432
+    # duplicate slow-unit alerts through 2026-09-14).
+    "dropin:16-remote-push.sh": 290.0 + 60.0,
 }
 
 
