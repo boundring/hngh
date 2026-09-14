@@ -8,11 +8,16 @@
 #      cautious pacing is 4 ticks; per-operation state isolation.
 #   b) saturation feed: the state files the day instrument reads carry
 #      the outcome counts it reports.
+#   d) persistence + migration: state written through the DEFAULT state
+#      dir (FAILFIRST_STATE_DIR unset, AUTOMATION_ROOT = throwaway
+#      sandbox) is durable across shells; legacy /tmp state migrates
+#      exactly once (mv only when target absent).
 # Hermetic: sandbox state dir only, no model chain, no real repos.
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
-trap 'rm -rf "$sb"' EXIT
+lcop="test-migrate-$$" # legacy /tmp fixture name, unique to this test run
+trap 'rm -rf "$sb" "/tmp/hngh-failfirst/failfirst-$lcop"' EXIT
 mkdir -p "$sb/ff"
 
 ok() { echo "ok: $1"; }
@@ -33,6 +38,16 @@ ff() { # run one failfirst command in a clean shell with the sandbox state
  "
 }
 
+ff_default() { # run one failfirst command on the DEFAULT state dir:
+ local expr="$1" home="$2" # FAILFIRST_STATE_DIR unset, AUTOMATION_ROOT=throwaway sandbox
+ env -u FAILFIRST_STATE_DIR AUTOMATION_ROOT="$home" bash -c "
+  . '$root/lib/params.sh'
+  . '$root/lib/failfirst.sh'
+  breadcrumb() { :; } # alert fallback: silent in this test
+  $expr
+ "
+}
+
 ff_env() { # run one failfirst command with extra env (AUTOMATION_ROOT etc)
  local expr="$1"
  shift
@@ -46,6 +61,10 @@ ff_env() { # run one failfirst command with extra env (AUTOMATION_ROOT etc)
 
 state() { # op key -> value from the state file
  sed -n "s/^$2=//p" "$sb/ff/failfirst-$1"
+}
+
+state_default() { # sandbox-root op key -> value from the DEFAULT-dir state file
+ sed -n "s/^$3=//p" "$1/state/failfirst/failfirst-$2"
 }
 
 # --- a) state machine ----------------------------------------------------
@@ -195,5 +214,34 @@ v="$(ff_env 'record_outcome development 2 failed; failfirst_concurrency developm
  AUTOMATION_ROOT="$sb/inv")"
 need test "$v" = "2"
 ok "Inventory rows failfirst-dev-concurrent-* drive the mapping"
+
+# --- d) persistence + migration -------------------------------------------
+
+# d1: durable default dir -- one shell records through the default state
+# dir, a SECOND fresh shell reads speed/ceiling/lastrun carried back.
+mkdir -p "$sb/d1"
+ff_default 'record_outcome persist-check 1 degraded' "$sb/d1"
+need test -e "$sb/d1/state/failfirst/failfirst-persist-check"
+lr1="$(state_default "$sb/d1" persist-check lastrun)"
+v="$(ff_default 'failfirst_gate persist-check' "$sb/d1")"
+need test "$v" = "THROTTLE:speed-2" # a lost lastrun (default 0) would GO
+need test "$(state_default "$sb/d1" persist-check speed)" = "2"
+need test "$(state_default "$sb/d1" persist-check ceiling)" = "1"
+need test "$(state_default "$sb/d1" persist-check lastrun)" = "$lr1"
+ok "durable default dir: second shell reads speed/ceiling/lastrun carried"
+
+# d2: one-time migration -- legacy /tmp state moves to the default dir
+# exactly once (mv only when the target is absent).
+mkdir -p /tmp/hngh-failfirst "$sb/d2"
+printf 'speed=3\n' >"/tmp/hngh-failfirst/failfirst-$lcop"
+ff_default "failfirst_gate $lcop" "$sb/d2" >/dev/null
+need test ! -e "/tmp/hngh-failfirst/failfirst-$lcop" # old path gone
+need test "$(state_default "$sb/d2" "$lcop" speed)" = "3" # contents intact
+# rerun with a FRESH legacy fixture: target exists -> no move, no clobber
+printf 'speed=1\n' >"/tmp/hngh-failfirst/failfirst-$lcop"
+ff_default "failfirst_gate $lcop" "$sb/d2" >/dev/null
+need test "$(state_default "$sb/d2" "$lcop" speed)" = "3"
+need test "$(sed -n 's/^speed=//p' "/tmp/hngh-failfirst/failfirst-$lcop")" = "1"
+ok "one-time migration: legacy /tmp state carried once, never clobbers target"
 
 echo "failfirst engine contract: all cases passed"
