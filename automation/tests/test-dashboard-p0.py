@@ -58,7 +58,7 @@ class PlansSearchFilterSort(unittest.TestCase):
             self.assertIn(chip, v)
         # newest-first: accepted desc, slug fallback
         self.assertLess(v.index("tb - ta"), v.index("localeCompare"))
-        self.assertIn("docs/project/plans/", v)
+        self.assertIn("/hngh-docs/plans/", v)
 
     def test_filter_state_survives_refresh_and_keeps_focus(self):
         v = src("plans-view.js")
