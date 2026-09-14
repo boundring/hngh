@@ -994,13 +994,17 @@ def journal_lines(ctx, out):
 def journal_guard(guard):
     """Guard column -> params: alert>=N (transient threshold, default
     10), max=N (restart-unit daily cap, default 2), units=a,b (restart
-    allowlist, default empty = nobody is restartable), cmd=... (propose
-    recommendation, never executed)."""
-    g = {"threshold": 10, "max": 2, "units": set(), "cmd": ""}
+    allowlist, default empty = nobody is restartable), unit=NAME (pin
+    the restarted unit when the regex captures a DBus name, not the
+    systemd unit -- the pinned name is the operator-verified command),
+    cmd=... (propose recommendation, never executed)."""
+    g = {"threshold": 10, "max": 2, "units": set(), "unit": "", "cmd": ""}
     for tok in (guard or "").split():
         k, _, v = tok.partition("=")
         if k == "units":
             g["units"] = {u for u in v.split(",") if u}
+        elif k == "unit":
+            g["unit"] = v
         elif k in ("max", "alert") and v.lstrip(">=").isdigit():
             g["threshold" if k == "alert" else "max"] = int(v.lstrip(">="))
     if "cmd=" in (guard or ""):
@@ -1068,8 +1072,9 @@ def check_journal_errors(ctx):
                                       "%d hit(s) counted (alert>=%d), quiet: %s"
                                       % (len(ms), g["threshold"], latest)))
         elif action == "restart-unit":
-            unit = ms[-1][0].group(1) or "(no unit captured)"
-            if unit not in g["units"]:
+            unit = (g["unit"] or ms[-1][0].group(1)
+                    or "(no unit captured)")
+            if not g["unit"] and unit not in g["units"]:
                 out["fails"].append((sig, "unit-not-practiced",
                                      "%s failed; not in the restart allowlist, "
                                      "no auto-action: %s" % (unit, latest)))

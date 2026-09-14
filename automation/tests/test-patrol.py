@@ -158,9 +158,13 @@ class Patrol(unittest.TestCase):
         """The real journal-patrol.tsv plus a restart-recording
         systemctl stub: journal seeds are tested against the landed
         table, not a test-private one."""
-        (self.auto / "config" / "journal-patrol.tsv").write_text(
-            (REPO / "automation" / "config"
-             / "journal-patrol.tsv").read_text())
+        rows = (REPO / "automation" / "config"
+                / "journal-patrol.tsv").read_text()
+        # propose stays covered by a test-only row: every landed row is
+        # now an acting action (kglobalaccel promoted to restart-unit).
+        rows += ("test-propose\tunit\t(zz-test-service).*died\t"
+                 "propose\tcmd=systemctl --user restart zz-test.service\n")
+        (self.auto / "config" / "journal-patrol.tsv").write_text(rows)
         (self.sb / "restart-log.tsv").write_text("")
         (self.sb / "restart-stub.sh").write_text(
             "#!/usr/bin/env bash\n"
@@ -237,6 +241,8 @@ class Patrol(unittest.TestCase):
                         ident="plasmashell"),
             self._jline("segfault at 0 error 4 in libc.so.6", 3,
                         ident="kernel"),
+            self._jline("zz-test-service: died unexpectedly", 3,
+                        ident="systemd"),
         ])
         r = self.run_py("--patrol", "journal-error")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -244,9 +250,13 @@ class Patrol(unittest.TestCase):
         self.assertIn("PASS journal-error/journal-error:kwin-xcb-error", o)
         self.assertIn("restart-unit applied: systemctl --user restart "
                       "hngh-dashboard.service (today 1/2)", o)
-        self.assertIn("FAIL journal-error/kglobalaccel-dead propose", o)
-        self.assertIn("systemctl --user restart plasma-kglobalaccel"
-                      ".service", o)
+        self.assertIn("PASS journal-error/journal-error:kglobalaccel-dead",
+                      o)
+        self.assertIn("kglobalaccel-dead -> restart-unit applied: "
+                      "systemctl --user restart plasma-kglobalaccel"
+                      ".service (today 1/2)", o)
+        self.assertIn("FAIL journal-error/test-propose propose", o)
+        self.assertIn("systemctl --user restart zz-test.service", o)
         self.assertIn("FAIL journal-error/journald-suppressed alert", o)
         self.assertIn("FAIL journal-error/mem-alloc-failure alert", o)
         self.assertIn("FAIL journal-error/input-transport-fault alert", o)
@@ -255,9 +265,14 @@ class Patrol(unittest.TestCase):
         self.assertNotIn("effectiveDestUrl", o)  # unknown warning: silent
         self.assertIn("restart hngh-dashboard.service",
                       (self.sb / "restart-log.tsv").read_text())
-        self.assertNotIn("plasma-kglobalaccel",
+        self.assertIn("restart plasma-kglobalaccel.service",
+                      (self.sb / "restart-log.tsv").read_text())
+        self.assertNotIn("zz-test.service",
                          (self.sb / "restart-log.tsv").read_text())
         self.assertIn("unit-failed\thngh-dashboard.service\t2026-09-12\t1",
+                      (self.auto / "logs"
+                       / "journal-patrol-counts.tsv").read_text())
+        self.assertIn("kglobalaccel-dead\tplasma-kglobalaccel.service",
                       (self.auto / "logs"
                        / "journal-patrol-counts.tsv").read_text())
 
