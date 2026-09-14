@@ -76,5 +76,53 @@ class FixtureEmitTest(unittest.TestCase):
         self.assertEqual(rows["unsloth/Z-Image-Turbo-unsloth-bnb-4bit"][2], "")
 
 
+class ObserveTest(unittest.TestCase):
+    def setUp(self):
+        # hermetic: no journal reads, no live 400 probe
+        self._orig = (uc._local_api, uc.journal_n_ctx, uc.probe_400)
+        uc.journal_n_ctx = lambda: (None, None)
+        uc.probe_400 = lambda: None
+
+    def tearDown(self):
+        uc._local_api, uc.journal_n_ctx, uc.probe_400 = self._orig
+
+    def _tsv(self, d):
+        p = os.path.join(d, "r.tsv")
+        open(p, "w").write(
+            "model_id\tserver_observed\tcard_native\tcard_max_extended\t"
+            "source_url\tchecked_at\n"
+            "unsloth/Qwen3.8-27B-GGUF\t\t262144\t1000000\thttps://x\t2026-09-13\n"
+            "unsloth/Z-Image-Turbo-unsloth-bnb-4bit\t\t\t\thttps://y\t2026-09-13\n")
+        return p
+
+    def test_match_row_longest_suffix(self):
+        rows = [["unsloth/Qwen3.8-27B-GGUF"],
+                ["unsloth/Z-Image-Turbo-unsloth-bnb-4bit"]]
+        self.assertEqual(uc.match_row(rows, "unsloth/Qwen3.8-27B-GGUF:UD-Q2_K_XL"), 0)
+        self.assertEqual(uc.match_row(rows, "unsloth/Qwen3.8-27B-GGUF"), 0)
+        self.assertIsNone(uc.match_row(rows, "other/vendor-1B-GGUF"))
+
+    def test_observe_loaded_updates_row(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            uc._local_api = lambda path: {
+                "loaded": True, "active_model": "unsloth/Qwen3.8-27B-GGUF:UD-Q2_K_XL",
+                "max_context_length": 102400, "context_length": 102400}
+            self.assertEqual(uc.observe(p), 0)
+            row = [l.split("\t") for l in open(p).read().splitlines()][1]
+            self.assertEqual(row[1], "102400")
+            self.assertEqual(row[5], uc.datetime.date.today().isoformat())
+
+    def test_observe_unloaded_noop(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            before = open(p).read()
+            uc._local_api = lambda path: {
+                "loaded": False, "active_model": None,
+                "max_context_length": None, "context_length": None}
+            self.assertEqual(uc.observe(p), 0)
+            self.assertEqual(open(p).read(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
