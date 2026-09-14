@@ -5,6 +5,7 @@
 # oh-my-openagent.json, day-ralph.*, ~/.local/bin scripts); gbd syncs only tracked_paths but never deletes old worktree
 # copies, and its `git add -A` keeps committing them. The dry-run parity diff reports those as head-only leftovers; this
 # lane declares gbd's CURRENT tracked set only.
-agent-configs	.local/state/git-back-dots/agent-configs	git@github.com:boundring/agent-configs.git	.config/opencode/opencode.jsonc .config/opencode/tui.json .config/opencode/package.json .hermes/config.yaml .hermes/SOUL.md .config/llmtrim/config.toml .config/rtk/config.toml .config/rtk/filters.toml .tmux.conf
+agent-configs	.local/state/git-back-dots/agent-configs	git@github.com:boundring/agent-configs.git	.config/opencode/opencode.jsonc .config/opencode/tui.json .config/opencode/package.json .hermes/config.yaml .hermes/SOUL.md .config/llmtrim/config.toml .config/rtk/config.toml .config/rtk/filters.toml .tmux.conf .jcode/config.toml
+jcode-skills	.local/state/git-back-dots/agent-configs	git@github.com:boundring/agent-configs.git	.jcode/skills .jcode/mcp.json
 hermes-mcp-proxy	.local/state/git-back-dots/workarounds/hermes-mcp-proxy		.hermes/hermes-agent/tools/mcp_tool.py
 hermes-nous-off	.local/state/git-back-dots/workarounds/hermes-nous-off		.hermes/hermes-agent/agent/system_prompt.py
