@@ -69,6 +69,13 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       instance home); plan step 4 builds the certificate bridge on it.
       Both paths pass the automation gate. Step 3's remainder narrows
       to the witnessed-cycle + seeded-stall exit evidence.
+      **Witnessed cycle 2026-09-14T18:45Z:** one bounded read-only
+      delegation through `lib/jcode-delegate.sh` (zai leg, 5-min cap):
+      clean rc 0, disposition cancelled, bridge run-1 closed, budget
+      row `model=jcode/zai` written, and the session answered the
+      orientation question correctly (queue-next node-lattice-admission).
+      Remaining: seeded-stall auto-replace evidence (governed-fleet §4),
+      which the watchdog respawn path owns.
 - [ ] 4. **Permission bridge.** `permission_request` events routed to the
       certificate loop: default deny; allow only against a live mutation
       certificate naming the action class; `autoApprove` forbidden
