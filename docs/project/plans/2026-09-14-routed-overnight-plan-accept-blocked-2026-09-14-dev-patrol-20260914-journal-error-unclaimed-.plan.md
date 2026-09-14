@@ -12,3 +12,4 @@ at 2026-09-14T20:00:32Z. Alert text: plan 2026-09-14-dev-patrol-20260914-journal
 ## Occurrences
 
 - 2026-09-14T21:00:13Z re-occurred (dedup window expired)
+- 2026-09-14T22:00:13Z re-occurred (dedup window expired)

@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal priority=high accepted=2026-09-14 -->
+<!-- plan: status=executed risk=normal priority=high accepted=2026-09-14 -->
 # 2026-09-14 — Nerve-center Jcode delegation controls: /delegate route + Sessions-tab launch UI
 
 Operator-directed 2026-09-14 ("let's proceed with that plan and
@@ -42,17 +42,19 @@ itself. No free-form command, no shell interpolation of user text.
       existing `.sv-fbtn` visual register.
       Verification: UI-audit route renders; manual witness in the
       operator's browser.
-- [ ] 3. **Grade loop evidence.** Run `scripts/grade-interface`
+- [x] 3. **Grade loop evidence.** Run `scripts/grade-interface`
       against the changed panel; attach before/after to the record.
       Verification: grade passes; evidence filed in docs/records/.
-      Partial (2026-09-14, coordinator): evidence filed in
+      Done (2026-09-14, vision-grade session): evidence filed in
       docs/records/2026-09-14-jcode-delegate-controls-landing.md —
       before/after captures (shots per the record), axe ui-audit
-      shows the form adds zero findings, 12/12 pytest green. The
-      vision-model grade itself did NOT run: reviewer endpoint has
-      no image-input-capable model (HTTP 400). Remaining loop:
-      add a vl/vision model to the reviewer endpoint, regrade the
-      after capture, tick.
+      shows the form adds zero findings, 12/12 pytest green.
+      Vision grade completed 2026-09-14 18:08 on the after capture
+      via local ollama gemma3:4b (vision leg added outside the
+      reviewer endpoint — its catalogue is operator/serving
+      configuration): grade 3/10, honest, row appended to
+      docs/project/ui-grades.md. Reviewer-endpoint VL model stays
+      parked for the operator.
 - [x] 4. **Non-clobbering fanout doc.** Extend the shared-sense
       record: subagent swarm lanes take separate working directories
       or disjoint file slices; the coordinator commits. Reference the

@@ -8248,3 +8248,26 @@ scores are kept, not sanded — a flattering ledger is a broken instrument.
 | 2026-09-14 17:00 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-09-14 17:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-09-14 17:00 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-09-14 17:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:10 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.6:1 |
+| 2026-09-14 17:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:20 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.6:1 |
+| 2026-09-14 17:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:30 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:30 | dashboard-tui-hngh-gen2 | 7/10 | self-grade 7/10 fg/bg contrast 1.1:1 |
+| 2026-09-14 17:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.3:1 |
+| 2026-09-14 17:40 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:50 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 13.2:1 |
+| 2026-09-14 17:50 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 17:50 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:00 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:00 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:00 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:05 | dashboard-sessions-delegate | 8/10 | witness: form served with slug/objective/provider/minutes controls, aria-live opNote, real POST /delegate returned 202 {ok:true,slug:witness-175944} and run landed in logs/budget.md as jcode/unsloth T2; but the delegated session died: jcode run -p unsloth is not a valid CLI provider (enum lacks unsloth) and the sdk shim leg was skipped (jcode/worker.mjs absent) |
+| 2026-09-14 18:08 | sessions-delegate-after | 3/10 | vision grade (ollama gemma3:4b, local — reviewer endpoint lacked aVL model) 1) title/header text: “hngh automation nervous system” |
+| 2026-09-14 18:10 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:10 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 18:10 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
