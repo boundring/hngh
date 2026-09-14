@@ -2,9 +2,10 @@
 """slow-units contract (oversight probe_time_ledger): a unit is flagged
 when its last wall exceeds max(2x trailing p50, 10s floor) — unless the
 wall is inside the unit's design envelope. The workbeat is bimodal BY
-DESIGN (skip-exit ~0.2s / bounded beat ~150-240s / timeout-capped
-session up to 1800s in overnight-cycle.sh), so plan-session walls
-within the cap are NOT slow — the median rule alone fired on every
+The workbeat is multimodal BY
+DESIGN (skip-exit ~0.2s / bounded beat ~150-240s / dream leg up to 600s
++ timeout-capped session up to 1800s in overnight-cycle.sh), so plan-session
+walls within the cap are NOT slow
 legitimate mode transition (44 false rows 2026-08-27..09-01, the
 routed alert 2026-09-01-routed-slow-unit-dropin-20-workbeat.sh). Over
 the envelope both rules flag. Fail-closed: missing/unparsable ledger
@@ -21,7 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PROBE = ROOT / "jobs" / "slow-units.py"
 CAP = 1800.0
-ENVELOPE = CAP + 60.0
+DREAM = 600.0  # OVERNIGHT_DREAM_TIMEOUT, synchronous inside the same wall
+ENVELOPE = CAP + DREAM + 60.0
 
 
 class SlowUnits(unittest.TestCase):
@@ -37,9 +39,16 @@ class SlowUnits(unittest.TestCase):
 
     def test_workbeat_in_envelope_never_flagged(self):
         # observed real walls: routed alert 657.7s, timeout-killed 1800.6s,
-        # session-after-skip-window 229.4s, quick exit 0.06s
+        # session-after-skip-window 229.4s, quick exit 0.06s; since the
+        # 2026-09-10 dream leg: routed alert 1964.6s and time-ledger max
+        # 2384.771s (both dream+session work, under 2460 = 1800+600+60)
         for last, p50 in [(657.7, 150.0), (1800.6, 150.0),
-                          (229.4, 0.2), (0.06, 18.04)]:
+                          (229.4, 0.2), (0.06, 18.04),
+                          (1964.6, 40.3), (2384.771, 799.257)]:
+            r = self.run_probe([{"unit": "dropin:20-workbeat.sh",
+                                 "last_wall_s": last, "p50_s": p50}])
+            self.assertEqual((r.returncode, r.stdout.strip()),
+                             (0, ""), (last, p50))
             r = self.run_probe([{"unit": "dropin:20-workbeat.sh",
                                  "last_wall_s": last, "p50_s": p50}])
             self.assertEqual((r.returncode, r.stdout.strip()),
@@ -50,7 +59,7 @@ class SlowUnits(unittest.TestCase):
                              "last_wall_s": ENVELOPE + 1.0,
                              "p50_s": 150.0}])
         self.assertEqual(r.stdout.strip(),
-                         "dropin:20-workbeat.sh wall=1861.0s median=150.0s")
+                         "dropin:20-workbeat.sh wall=2461.0s median=150.0s")
 
     def test_systemd_overnight_service_enveloped_too(self):
         # same overnight-cycle.sh behind systemd ExecStart
