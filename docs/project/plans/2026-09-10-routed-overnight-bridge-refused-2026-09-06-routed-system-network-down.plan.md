@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-10T23:01:58Z routed-from=overnight:bridge-refused:2026-09-06-routed-system-network-down -->
+<!-- plan: status=executed risk=normal accepted=2026-09-10T23:01:58Z routed-from=overnight:bridge-refused:2026-09-06-routed-system-network-down -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:bridge-refused:2026-09-06-routed-system-network-down`
