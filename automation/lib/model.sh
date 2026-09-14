@@ -222,6 +222,23 @@ unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
  printf '%s' "$code"
 }
 
+# the llama-server auto-sizes its context window from free VRAM; ask the
+# webapp for the ACTIVE window (cached ~10 min so we don't probe every call).
+# Unreachable/unknown -> empty (guard disabled; the call itself fails as today).
+_unsloth_ctx_limit() { # token -> context_length or empty
+ local cache="$AUTOMATION_ROOT/tmp-unsloth-ctx.txt" v
+ if [ -f "$cache" ] && [ -n "$(find "$cache" -mmin -10 2>/dev/null)" ]; then
+  cat "$cache"
+  return 0
+ fi
+ v="$(curl -s --max-time 5 -H "Authorization: Bearer $1" \
+  "$UNSLOTH_URL/api/inference/status" 2>/dev/null |
+  jq -r '.context_length // empty' 2>/dev/null)"
+ case "$v" in '' | *[!0-9]*) return 0 ;; esac
+ printf '%s' "$v" >"$cache"
+ printf '%s' "$v"
+}
+
 # chat via Unsloth. Handles: 401 -> refresh once & retry; 200+empty content ->
 # retry once with budget*8 and thinking disabled, then reasoning_content as last resort.
 unsloth_chat() {
@@ -231,6 +248,18 @@ unsloth_chat() {
   breadcrumb model "unsloth" "no token file -> next backend"
   return 1
  }
+
+ # context guard: skip this leg when the prompt cannot fit the server's
+ # ACTIVE window (est = word count * 1.3, capped at 90% of the window).
+ local ctx est
+ ctx="$(_unsloth_ctx_limit "$tok")"
+ if [ -n "$ctx" ]; then
+  est=$(($(printf '%s' "$prompt" | wc -w) * 13 / 10))
+  if [ "$est" -gt $((ctx * 9 / 10)) ]; then
+   breadcrumb model "unsloth" "prompt ~$est tokens exceeds server window $ctx -> next backend"
+   return 1
+  fi
+ fi
 
  # --- phase A: default budget, thinking enabled ---
  tmp="$(mktemp)"
