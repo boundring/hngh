@@ -43,6 +43,21 @@ plan-proposal skill).
 - Never write another session's state files — coordinate instead.
 - Durable over perishable: commit the fact, message the pointer.
 
+## Fanout: non-clobbering subagent swarms (2026-09-14 extension)
+
+Swarm lanes (the nerve-center delegation fanout) inherit the
+single-writer rule structurally, not by politeness: each subagent
+lane works in its OWN working directory (jcode delegate launches
+through `lib/jcode-delegate.sh` -> `lib/launch-session.sh`, one
+working dir per slug) or, when lanes must share the checkout, on
+disjoint file slices agreed up front (route/step headers name the
+file set per lane). Only the coordinator commits shared surfaces —
+a subagent never git-commits in the shared checkout, so two lanes
+cannot clobber each other's staged index (the sweep hazard of
+lesson 2026-09-14T08:44:40Z is unrepresentable when subagents do
+not stage at all). Durable outcomes flow back the same way every
+channel above does: the lane reports, the coordinator commits.
+
 ## Deliberately not built
 
 No new shared-state machinery (no session-to-session bus, no central
