@@ -8092,3 +8092,9 @@ scores are kept, not sanded — a flattering ledger is a broken instrument.
 | 2026-09-14 08:20 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-09-14 08:20 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 13.2:1 |
 | 2026-09-14 08:20 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 08:30 | dashboard-tui-hngh-gen1 | 4/10 | self-grade 4/10 fg/bg contrast 2.2:1 |
+| 2026-09-14 08:30 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.6:1 |
+| 2026-09-14 08:30 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 08:40 | dashboard-tui-hngh-gen1 | 6/10 | self-grade 6/10 fg/bg contrast 1.1:1 |
+| 2026-09-14 08:40 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-09-14 08:40 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
