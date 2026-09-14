@@ -55,15 +55,18 @@ flock -n 9 || {
 
 # --- crash-safety net (plan 19 step 7) ------------------------------------
 # SIGTERM/SIGINT: stop spawning new sessions, record a dated breadcrumb
-# with the in-flight session ids, exit non-zero cleanly. No new state
-# files: the record lives in STATE.md (breadcrumbs) only. INFLIGHT is a
-# /tmp scratch list, same class as RESULTS — never durable state.
+# with the in-flight plan slugs and their dispositions (slug=disposition
+# pairs; "running" = the signal landed mid-session), exit non-zero
+# cleanly. No new state files: the record lives in STATE.md (breadcrumbs)
+# only. INFLIGHT is a /tmp scratch list, same class as RESULTS — never
+# durable state.
 STOP=0
 INFLIGHT="$(mktemp "${TMPDIR:-/tmp}/hngh-overnight-inflight.XXXXXX")"
 over_shutdown() { # sig
- local ids
- ids="$(tr '\n' ',' <"$INFLIGHT" 2>/dev/null | sed 's/,$//')"
- breadcrumb "$JOB_NAME" "shutdown-signal" "signal=$1 in_flight=$ids"
+ local st
+ st="$(awk -F'\t' '{d[$1]=$2} END{for (s in d) printf "%s=%s,", s, d[s]}' \
+  "$INFLIGHT" 2>/dev/null | sed 's/,$//')"
+ breadcrumb "$JOB_NAME" "shutdown-signal" "signal=$1 in_flight=$st"
  exit 1
 }
 trap 'over_shutdown TERM' TERM
@@ -796,7 +799,7 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  	msrc="$MODEL_SOURCE"
  fi
  [ "$STOP" -eq 1 ] && return 0
- printf '%s\n' "$slug" >>"$INFLIGHT" # run id exists only post-completion
+ printf '%s\trunning\n' "$slug" >>"$INFLIGHT" # disposition appended post-completion
  start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
  # forethought dream pass: one bounded read-only session before the
  # executor; fail-open — a dream that dies files a breadcrumb and the
@@ -831,6 +834,9 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  log="$LAUNCH_LOG"
  disposition="$LAUNCH_DISPOSITION"
  cause="$LAUNCH_CAUSE"
+ # final disposition for the shutdown breadcrumb (step 7): over_shutdown
+ # reports the last entry per slug; the pre-launch entry says "running".
+ printf '%s\t%s\n' "$slug" "${disposition:-unknown}" >>"$INFLIGHT"
  if [ "$rc" -eq 75 ]; then
   file_alert "overnight:bridge-refused:$slug" \
    "overnight beat $slug could not open a bridge run: $LAUNCH_BRIDGE_MSG"
