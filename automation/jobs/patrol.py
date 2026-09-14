@@ -903,6 +903,221 @@ def check_systemd_units(ctx):
     return out
 
 
+JOURNAL_ACTIONS = ("transient", "restart-unit", "propose", "alert")
+
+
+def load_journal_sigs(path, out):
+    """journal-patrol.tsv -> [(id, kind, compiled, action, guard)]. The
+    action column IS the corrective allowlist: a row with an action
+    outside JOURNAL_ACTIONS, or an uncompilable regex, is a config-bug
+    FAIL -- the table refuses anything it cannot vouch for, it never
+    silently skips."""
+    sigs = []
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            rows = [ln.rstrip("\n").split("\t") for ln in fh
+                    if ln.strip() and not ln.startswith("#")]
+    except OSError:
+        out["passes"].append(("journal-error:no-signature-table",
+                              "no %s -- dormant channel" % path))
+        return sigs
+    for f in rows:
+        if len(f) < 4 or f[0] == "id":
+            continue
+        f = f + [""] * (5 - len(f))  # guard column optional
+        if f[3] not in JOURNAL_ACTIONS:
+            out["fails"].append((f[0], "config-bug",
+                                 "action %r outside the allowlist" % f[3]))
+            continue
+        try:
+            rx = re.compile(f[2])
+        except re.error as exc:
+            out["fails"].append((f[0], "config-bug",
+                                 "uncompilable regex: %s" % exc))
+            continue
+        sigs.append((f[0], f[1], rx, f[3], f[4]))
+    return sigs
+
+
+def journal_lines(ctx, out):
+    """[(message, priority, epoch)] warning-and-worse from both
+    journals (user + kernel), since the epoch watermark. Cold start
+    baselines at now: boot history is old news, not a finding. The
+    watermark advances only when BOTH streams read clean -- a failed
+    stream keeps the old window, and the guarded actions make the one
+    repeated window safe. Tests stub the binary via PATROL_JOURNALCTL."""
+    ctl = os.environ.get("PATROL_JOURNALCTL", "journalctl")
+    try:
+        since = int(open(ctx["journal_state"],
+                         encoding="utf-8").read().strip())
+    except (OSError, ValueError):
+        since = int(ctx["now"])
+    lines, ok = [], True
+    for flags in (["--user"], ["-k"]):
+        try:
+            r = subprocess.run(
+                [ctl, *flags, "-b", "-p", "warning",
+                 "--since=@%d" % since, "--output=json", "--no-pager"],
+                capture_output=True, text=True, timeout=90)
+        except (OSError, subprocess.SubprocessError) as exc:
+            out["fails"].append(("journalctl-" + flags[-1].strip("-"),
+                                 "check-crash",
+                                 "journalctl fault: %s"
+                                 % exc.__class__.__name__))
+            ok = False
+            continue
+        if r.returncode != 0:
+            detail = "rc=%d" % r.returncode
+            if r.stderr.strip():
+                detail += " " + r.stderr.strip().splitlines()[-1][:120]
+            out["fails"].append(("journalctl-" + flags[-1].strip("-"),
+                                 "journal-unreadable", detail))
+            ok = False
+            continue
+        for ln in r.stdout.splitlines():
+            try:
+                j = json.loads(ln)
+                lines.append((str(j.get("MESSAGE", "")),
+                              int(j.get("PRIORITY", 6)),
+                              int(j.get("__REALTIME_TIMESTAMP", 0)) // 1000000))
+            except (ValueError, TypeError):
+                pass  # unparseable line: fail open, keep walking
+    if ok:
+        try:
+            with open(ctx["journal_state"], "w", encoding="utf-8") as fh:
+                fh.write(str(int(ctx["now"])))
+        except OSError:
+            pass  # lost mark = next run re-baselines, never a crash
+    return lines
+
+
+def journal_guard(guard):
+    """Guard column -> params: alert>=N (transient threshold, default
+    10), max=N (restart-unit daily cap, default 2), units=a,b (restart
+    allowlist, default empty = nobody is restartable), cmd=... (propose
+    recommendation, never executed)."""
+    g = {"threshold": 10, "max": 2, "units": set(), "cmd": ""}
+    for tok in (guard or "").split():
+        k, _, v = tok.partition("=")
+        if k == "units":
+            g["units"] = {u for u in v.split(",") if u}
+        elif k in ("max", "alert") and v.lstrip(">=").isdigit():
+            g["threshold" if k == "alert" else "max"] = int(v.lstrip(">="))
+    if "cmd=" in (guard or ""):
+        g["cmd"] = guard.split("cmd=", 1)[1].strip()
+    return g
+
+
+def journal_counts_load(path, day):
+    """journal-patrol-counts.tsv -> {(sig, unit): n} for the UTC day.
+    One line per applied restart: the restart-loop guard's memory."""
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+    cur = {}
+    for ln in text.splitlines():
+        f = ln.split("\t")
+        if len(f) == 4 and f[2] == day:
+            try:
+                cur[(f[0], f[1])] = int(f[3])
+            except ValueError:
+                pass
+    return cur
+
+
+def journal_counts_save(path, counts, day):
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            for (sig, unit), n in sorted(counts.items()):
+                fh.write("%s\t%s\t%s\t%d\n" % (sig, unit, day, n))
+    except OSError:
+        pass  # lost counts = cap resets; restart-unit stays capped per run
+
+
+def check_journal_errors(ctx):
+    """The journal rounds: warning-and-worse journal lines since the
+    last run matched against config/journal-patrol.tsv, first match
+    wins. The action column IS the corrective allowlist -- nothing
+    outside it acts. A line matching NO signature stays silent at
+    warning level, but an err-or-worse line that nothing claims is an
+    unknown-journal-error FAIL: unknown errors are never silenced, the
+    repeated pair auto-queues research (house convention)."""
+    out = {"passes": [], "fails": []}
+    sigs = load_journal_sigs(ctx["journal_sigs"], out)
+    hits, unknown = {}, []
+    for msg, pri, _ts in journal_lines(ctx, out):
+        for sig, _kind, rx, action, guard in sigs:
+            m = rx.search(msg)
+            if m:
+                hits.setdefault((sig, action, guard), []).append((m, msg))
+                break
+        else:
+            if pri <= 3:
+                unknown.append(msg)
+    for (sig, action, guard), ms in hits.items():
+        g = journal_guard(guard)
+        latest = ms[-1][1][:110]
+        if action == "transient":
+            if len(ms) >= g["threshold"]:
+                out["fails"].append((sig, "transient-escalation",
+                                     "%d hits >= alert>=%d; latest: %s"
+                                     % (len(ms), g["threshold"], latest)))
+            else:
+                out["passes"].append(("journal-error:" + sig,
+                                      "%d hit(s) counted (alert>=%d), quiet: %s"
+                                      % (len(ms), g["threshold"], latest)))
+        elif action == "restart-unit":
+            unit = ms[-1][0].group(1) or "(no unit captured)"
+            if unit not in g["units"]:
+                out["fails"].append((sig, "unit-not-practiced",
+                                     "%s failed; not in the restart allowlist, "
+                                     "no auto-action: %s" % (unit, latest)))
+                continue
+            done = journal_counts_load(ctx["journal_counts"], ctx["date"])
+            n = done.get((sig, unit), 0)
+            if n >= g["max"]:
+                out["fails"].append((sig, "restart-guard",
+                                     "%s at the daily cap (%d/%d); human eyes"
+                                     % (unit, n, g["max"])))
+                continue
+            ctl = os.environ.get("PATROL_SYSTEMCTL", "systemctl")
+            try:
+                r = subprocess.run([ctl, "--user", "restart", unit],
+                                   capture_output=True, text=True, timeout=30)
+            except (OSError, subprocess.SubprocessError) as exc:
+                out["fails"].append((sig, "restart-failed",
+                                     "systemctl fault on %s: %s"
+                                     % (unit, exc.__class__.__name__)))
+                continue
+            if r.returncode != 0:
+                err = (r.stderr.strip().splitlines() or [""])[-1][:100]
+                out["fails"].append((sig, "restart-failed",
+                                     "systemctl --user restart %s rc=%d %s"
+                                     % (unit, r.returncode, err)))
+                continue
+            done[(sig, unit)] = n + 1
+            journal_counts_save(ctx["journal_counts"], done, ctx["date"])
+            out["passes"].append(("journal-error:" + sig,
+                                  "%s -> restart-unit applied: systemctl "
+                                  "--user restart %s (today %d/%d)"
+                                  % (sig, unit, n + 1, g["max"])))
+        elif action == "propose":
+            out["fails"].append((sig, "propose",
+                                 "%d hit(s); NOT auto-applied (live-session "
+                                 "fix, operator eyes): %s -- latest: %s"
+                                 % (len(ms), g["cmd"], latest)))
+        else:  # alert: evidence only, no side effect
+            out["fails"].append((sig, "alert",
+                                 "%d hit(s), no auto-action; latest: %s"
+                                 % (len(ms), latest)))
+    if unknown:
+        out["fails"].append(("unknown-journal-error", "unclaimed-err",
+                             "%d err+ line(s) no signature claims; latest: %s"
+                             % (len(unknown), unknown[-1][:100])))
+    return out
+
+
 CHECKS = {
     "feed-freshness": check_feed_freshness,
     "blocker-escalations": check_blocker_escalations,
@@ -924,6 +1139,7 @@ CHECKS = {
     "disposition-followons": check_disposition_followons,
     "systemd-units": check_systemd_units,
     "github-ci-latest": check_github_ci,
+    "journal-errors": check_journal_errors,
 }
 
 
@@ -993,6 +1209,15 @@ def build_ctx(args, now_s):
         "dispositions": os.environ.get(
             "PATROL_DISPOSITIONS",
             os.path.join(root, "research-dispositions.tsv")),
+        "journal_sigs": os.environ.get(
+            "PATROL_JOURNAL_SIGS",
+            os.path.join(root, "config", "journal-patrol.tsv")),
+        "journal_state": os.environ.get(
+            "PATROL_JOURNAL_STATE",
+            os.path.join(root, "logs", "journal-patrol.watermark")),
+        "journal_counts": os.environ.get(
+            "PATROL_JOURNAL_COUNTS",
+            os.path.join(root, "logs", "journal-patrol-counts.tsv")),
     }
 
 
