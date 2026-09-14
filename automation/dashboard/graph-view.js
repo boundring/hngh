@@ -16,6 +16,13 @@
    dimming, shareable selection (#tab-graph/n=<id>), staleness badge,
    refresh, Esc clears.
 
+   v3 (2026-09-14): 'jcode-session' and 'swarm' node kinds join the
+   size map and kind chips (state vocabulary unchanged — colors/legend
+   stay state-keyed), and the graph tab auto-refreshes /graph.json
+   every 60s through the shared HnghPoll helper (interval override,
+   no raw timer); the fetch is skipped entirely while the graph panel
+   is hidden, so a parked tab never polls.
+
    Nodes/edges come from /graph.json (jobs/graph-data.py). Display layer
    only — never governance input. All styles live in one owned <style>
    tag (gv- prefix); style.css is not touched. */
@@ -28,10 +35,12 @@
   };
   var KIND_SIZE = {
     kernel: 11, leg: 6.5, service: 6.5, package: 5, seam: 5, 'spawn-path': 5,
-    patrol: 4.5, surface: 4, cap: 4, guard: 4, 'research-line': 3.5
+    patrol: 4.5, surface: 4, cap: 4, guard: 4, 'research-line': 3.5,
+    'jcode-session': 4, 'swarm': 6
   };
   var KINDS = ['kernel', 'leg', 'service', 'package', 'seam', 'spawn-path',
-    'patrol', 'surface', 'cap', 'guard', 'research-line'];
+    'patrol', 'surface', 'cap', 'guard', 'research-line',
+    'jcode-session', 'swarm'];
   var STATES = ['healthy', 'stale', 'alerting', 'neutral'];
 
   function esc(s) {
@@ -156,6 +165,8 @@
   var data = null, pos = null, mode = '3d', inited = false;
   var selId = null, hoverId = null, matches = null, pendSel = null;
   var kindOff = {}, stateOff = {}, lastLoad = 0;
+  var POLL_MS = 60000;      // auto-refresh cadence for the graph tab
+  var pollTimer = null;
   var W = 0, H = 0;
   var cam = { th: 0.6, ph: 0.35, r: 640 };
   // projected screen state — preallocated, reused every frame
@@ -291,6 +302,7 @@
     });
     panel.querySelector('.gv-x').addEventListener('click', clearSel);
     window.HnghPoll.start(tickBadge, { interval: 5000 });
+    pollTimer = window.HnghPoll.start(autoLoad, { interval: POLL_MS });
   }
 
   function visible(nd) {
@@ -615,6 +627,18 @@
     }).join('');
   }
 
+  // auto-refresh: only the active graph tab fetches. A hidden #p-graph
+  // panel means another dashboard tab is in front — skip silently (no
+  // fetch) and let the poll re-check next tick; HnghPoll itself already
+  // pauses the whole timer while the browser tab is hidden.
+  function graphTabVisible() {
+    var pg = document.getElementById('p-graph');
+    return !!pg && !pg.hidden;
+  }
+  function autoLoad() {
+    return graphTabVisible() ? load() : undefined;
+  }
+
   function load() {
     badge.textContent = '…';
     fetchJson('/graph.json').then(function (g) {
@@ -648,7 +672,8 @@
       inited = true;
       mount(el);
       pendSel = hashNode();
-      load();
+      // first tick of the auto-refresh poll below performs the initial
+      // load (it fires immediately), so init does not fetch separately
     },
     refresh: function () { if (inited) load(); }
   };

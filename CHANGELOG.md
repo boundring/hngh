@@ -8,6 +8,17 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Graph viewer absorbs jcode-session/swarm kinds + tab-visible auto-load**
+  (deep-task node sg-viewer-rendering;
+  docs/records/2026-09-14-graph-view-kind-absorption.md): the
+  dashboard operations-graph view (`automation/dashboard/
+  graph-view.js`) renders the two new node kinds — size-map entries
+  and filter chips, state colors/legend untouched — and auto-refreshes
+  /graph.json every 60s through the shared HnghPoll helper, gated on
+  the graph panel being the active tab so a parked tab never fetches.
+  Contract tests in tests/test-dashboard-p0.py; producer-side
+  emission of the kinds is a sibling change.
+
 - **Graph feed refresh path proven + `all-sessions=1` plumbing**
   (node sg-refresh-wiring; docs/records/2026-09-14-graph-feed-refresh-wiring.md):
   `automation/tests/test-graph-feed-refresh.py` pins the `/graph.json`
