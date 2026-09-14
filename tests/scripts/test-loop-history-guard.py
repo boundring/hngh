@@ -135,6 +135,15 @@ KNOWN_EXEMPTIONS = {
         "reason": "fix: omp-bridge --ceremony cleans its ephemeral store on every exit path (declared miss, gate-cure patrol)",
         "patch-id": "dff584c160b3d902f8cf36ad977f11a7386b7730",
     },
+    # declared post-hoc 2026-09-14: CI-green chase (operator-directed,
+    # "commit and push at-will for CI fixes") touched scripts/fleet-manager
+    # without a candidate label: the capitalized Peer map acceptance that
+    # test-system-awareness.sh case C exercises. Automation suite green at
+    # commit time; declared per the 41f646a precedent, not rewritten.
+    "c3bf986": {
+        "reason": "fleet-manager capitalized Peer map acceptance (declared miss, CI-green chase)",
+        "patch-id": "643d451075296e2dca554060f86d0d13a27607d2",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
