@@ -15,12 +15,27 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       plugin provides (omp-bridge --orient, MCP tools, ceremony
       awareness). Verification: a fresh `jcode -p` session in this repo
       answers three orientation questions correctly without re-walking.
-- [ ] 2. **Transport verification + worker driver choice.** Verify the
+- [x] 2. **Transport verification + worker driver choice.** Verify the
       local Jcode build's SDK surface (launch/connect, spawn depth,
       swarm behavior) with a throwaway Node probe; decide SDK (Node shim
       in `automation/`) vs direct CLI spawn for the worker driver, with
       the decision recorded. Verification: probe script asserts one
       launched session runs a prompt to `turn_done` and `close()` reaps.
+      **Verified 2026-09-14:** probe passed end to end (launch →
+      createSession → run → `text: OK` → getRuntimeInfo proto v1 healthy
+      → close reaped). Operational finding: a fresh `jcodeHome`
+      auto-updates the binary and restarts the daemon mid-session,
+      severing the SDK connection (probe failed twice before the update
+      was pinned). Worker-driver requirement: pre-seed the instance home
+      with update disabled (config `update.auto: false`) or use a fixed,
+      maintained home; never a bare temp home. Also confirmed: a home
+      already running a server rejects a second launch for the same
+      runtime dir ("Another jcode server process is already running"),
+      so each worker lane needs its own runtime dir. Decision: the
+      worker driver uses the Node SDK in a small `automation/` shim
+      (`launch()` with a fixed pre-seeded per-lane home), not raw CLI
+      spawn — the SDK's permission events and structured errors are the
+      certificate bridge's surface.
 - [ ] 3. **Governed Jcode worker lane.** Driver in `automation/` wrapped
       `--run-start` → observatory `working` → `--run-end`; bounded
       read-only task class first (same rung-18 shape as the omp lane);
