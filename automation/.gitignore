@@ -34,3 +34,16 @@ bridge/
 config/machine.env
 # installer choice record - what THIS operator picked (install.sh)
 config/installer-choices.json
+!dashboard/app.js
+!dashboard/feedback-view.js
+!dashboard/gantt.js
+!dashboard/graph-view.js
+!dashboard/kb-view.js
+!dashboard/overview-view.js
+!dashboard/plans-view.js
+!dashboard/research-view.js
+!dashboard/schedule-view.js
+!dashboard/sessions-view.js
+!dashboard/sessions.html
+!dashboard/sessions.js
+!dashboard/system-view.js
