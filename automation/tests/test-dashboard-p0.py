@@ -24,6 +24,23 @@ def src(name):
     return (DASH / name).read_text()
 
 
+def run_node(script):
+    """Run a node -e script; nonzero exit or stderr -> AssertionError.
+    Lets tests execute extracted dashboard-JS functions for real instead
+    of only pattern-matching their text. Skips when node is absent so a
+    browser-less CI runner still passes."""
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if node is None:
+        raise unittest.SkipTest("node not available for JS execution")
+    out = subprocess.run([node, "-e", script], capture_output=True,
+                         text=True, timeout=30)
+    if out.returncode != 0:
+        raise AssertionError("node script failed: " + out.stderr.strip()[:400])
+    return out.stdout
+
+
 class ContrastToken(unittest.TestCase):
     def test_dim_meets_wcag_aa(self):
         css = src("style.css")
@@ -191,6 +208,100 @@ class LayoutTightening(unittest.TestCase):
             v = src(name)
             self.assertIn("max-height:calc(100dvh - 120px)", v)
             self.assertNotIn("height:calc(100vh - 120px)", v)
+
+
+class GraphTwoShellLayout(unittest.TestCase):
+    """Two-shell layout contract (deep-task node sg-layout-density,
+    2026-09-14): the default feed carries ~125 jcode-session nodes, so
+    they move to a secondary outer shell instead of crowding the ~225
+    kernel-side nodes at R=190. Textual contract + real execution of the
+    extracted layout over a synthetic feed via node (both skip-guarded:
+    dashboard/ is quarantined machine data; node may be absent)."""
+
+    def source(self):
+        return src("graph-view.js")
+
+    def test_layout_contract_text(self):
+        v = self.source()
+        self.assertIn("function layout(nodes)", v)
+        self.assertIn("var R2 = R + 34 * Math.pow(Math.max(0, outer.length - 1), 0.42);",
+                      v, "outer shell radius growth formula changed")
+        self.assertIn("if (k === 'jcode-session' || k === 'swarm') outer.push(nodes[i]);",
+                      v, "outer-shell kind set changed")
+        self.assertIn("var R = 190, phi", v, "kernel shell radius unchanged")
+        self.assertIn("cam.r = Math.max(640, (layout.shellRadius || 190) * 1.9);",
+                      v, "camera re-fit to the outer shell")
+        self.assertIn("Math.min(W, H) / ((layout.shellRadius || 190) * 2.4);",
+                      v, "2D projection scale re-fit to the outer shell")
+        self.assertNotIn("var cx = W / 2, cy = H / 2, sc = Math.min(W, H) / 480;",
+                         v, "fixed 2D scale must be gone")
+
+    def extract_body(self):
+        import json
+        v = self.source()
+        start = v.index("function layout(nodes)")
+        end = v.index("var root, wrap", start)
+        return json.dumps(v[start:end] + "\nreturn layout;")
+
+    def test_executed_layout_invariants(self):
+        # real execution, not just text matching: extract the served
+        # layout function, run its checkInvariants hook (unpositioned,
+        # NaN/Inf, duplicate keys, kernel at origin, per-kind shell
+        # radius) over a synthetic two-shell feed via node
+        import json
+        feed = {"nodes": [{"id": "kernel", "kind": "kernel"}]}
+        for i in range(20):
+            feed["nodes"].append({"id": "leg:%d" % i, "kind": "leg"})
+        for i in range(30):
+            feed["nodes"].append({"id": "research-line:%d" % i,
+                                  "kind": "research-line"})
+        for i in range(60):
+            feed["nodes"].append({"id": "jcode-session:%d" % i,
+                                  "kind": "jcode-session"})
+        feed["nodes"].append({"id": "swarm:0", "kind": "swarm"})
+        out = run_node(
+            "const layout = (new Function(%s))();\n"
+            "const feed = %s;\n"
+            "layout.checkInvariants(feed);\n"
+            "console.log('INVARIANTS_OK nodes=' + feed.nodes.length +\n"
+            "  ' shell=' + layout.shellRadius);"
+            % (self.extract_body(), json.dumps(feed)))
+        self.assertIn("INVARIANTS_OK nodes=112", out)
+        self.assertIn("shell=379.8", out)  # 61 outer: 190+34*60^0.42
+
+    def test_executed_layout_keeps_small_kernel_side_feed_unchanged(self):
+        # no outer-kind nodes -> positions must match the legacy single-
+        # shell algorithm exactly (byte-identical JSON): the mitigation is
+        # a no-op for a small graph
+        import json
+        legacy = """
+function legacy(nodes) {
+  var n = nodes.length, R = 190, phi = Math.PI * (3 - Math.sqrt(5));
+  var pos = {};
+  nodes.forEach(function (nd, i) {
+    if (nd.kind === 'kernel') { pos[nd.id] = [0, 0, 0]; return; }
+    var k = Math.max(0, i - 1), y = 1 - (2 * k + 1) / Math.max(1, n - 2);
+    var r = Math.sqrt(Math.max(0, 1 - y * y)), th = phi * k;
+    pos[nd.id] = [R * r * Math.cos(th), R * y, R * r * Math.sin(th)];
+  });
+  return pos;
+}
+return legacy;
+"""
+        nodes = [{"id": "kernel", "kind": "kernel"}]
+        for i in range(40):
+            nodes.append({"id": "leg:%d" % i, "kind": "leg"})
+        out = run_node(
+            "const layout = (new Function(%s))();\n"
+            "const legacy = (new Function(%s))();\n"
+            "const nodes = %s;\n"
+            "const a = JSON.stringify(legacy(nodes));\n"
+            "const b = JSON.stringify(layout(nodes));\n"
+            "if (a !== b) { console.error('kernel-side layout diverged');\n"
+            "  process.exit(1); }\n"
+            "console.log('BACKCOMPAT_OK nodes=' + nodes.length);"
+            % (self.extract_body(), json.dumps(legacy), json.dumps(nodes)))
+        self.assertIn("BACKCOMPAT_OK nodes=41", out)
 
 
 if __name__ == "__main__":
