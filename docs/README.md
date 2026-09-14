@@ -116,6 +116,11 @@ kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
 - [Presentation direction](design/presentation-direction.md) - the
   binding voice for README and docs presentation work; the arbiter of
   register for this spine.
+- [Jcode primary harness](project/plans/2026-09-14-jcode-primary-harness.plan.md)
+  + [admission record](records/2026-09-14-jcode-primary-harness-admission.md)
+  - the operator-directed 2026-09-14 admission of Jcode as the primary
+  agent harness: staged route, permission bridge to the certificate
+  loop, observatory surface, and omp coexistence doctrine.
 - [omp-hngh integration](project/plans/2026-09-09-omp-hngh-integration.plan.md)
   + [plans contract](project/plans/README.md) omp plugin interface -
   the omp propose surface, MCP/plugin plan, and the 2026-09-09
