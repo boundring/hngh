@@ -8,13 +8,23 @@ This plan implements the os-harness-cross-platform-patterns research line by est
 
 ## Steps
 
-- [ ] Define a `TargetAdapter` abstract base class with `probe()` and `execute()` methods in `lib/harness/adapters.py`.
+- [x] Define a `TargetAdapter` abstract base class with `probe()` and `execute()` methods in `lib/harness/adapters.py`.
   Verification: python3 -c "from lib.harness.adapters import TargetAdapter; assert hasattr(TargetAdapter, 'probe')"
-- [ ] Implement a `KDEAdapter` subclass in `lib/harness/adapters/kde.py` that returns a static capability dict for KDE Plasma.
+- [x] Implement a `KDEAdapter` subclass in `lib/harness/adapters/kde.py` that returns a static capability dict for KDE Plasma.
   Verification: python3 -c "from lib.harness.adapters.kde import KDEAdapter; assert KDEAdapter().probe()['de'] == 'kde'"
-- [ ] Implement a `GNOMEAdapter` subclass in `lib/harness/adapters/gnome.py` that returns a static capability dict for GNOME.
+- [x] Implement a `GNOMEAdapter` subclass in `lib/harness/adapters/gnome.py` that returns a static capability dict for GNOME.
   Verification: python3 -c "from lib.harness.adapters.gnome import GNOMEAdapter; assert GNOMEAdapter().probe()['de'] == 'gnome'"
-- [ ] Create a registry function `resolve_adapter()` in `lib/harness/registry.py` that maps environment variables to adapter instances.
+- [x] Create a registry function `resolve_adapter()` in `lib/harness/registry.py` that maps environment variables to adapter instances.
   Verification: python3 -c "import os; os.environ['HNGH_DE']='kde'; from lib.harness.registry import resolve_adapter; assert type(resolve_adapter()).__name__ == 'KDEAdapter'"
-- [ ] Add a unit test in `tests/test_adapters.py` verifying that `resolve_adapter()` returns the correct adapter for each supported DE.
+- [x] Add a unit test in `tests/test_adapters.py` verifying that `resolve_adapter()` returns the correct adapter for each supported DE.
   Verification: make test
+
+## Execution note (2026-09-14)
+
+Landed in hngh-automation. Two layout adaptations, both pinned by the
+steps' own Verification imports: the ABC lives in
+`lib/harness/adapters/__init__.py` (a sibling `adapters.py` module would
+shadow the `adapters/` package the next steps require), and the unit
+test is `tests/test-harness-adapters.py` (automation's hyphen-named
+test convention). All step verifications pass; `make test` ALL PASS,
+identifier lint clean.
