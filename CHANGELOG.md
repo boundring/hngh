@@ -31,6 +31,19 @@ lives under Pre-release / early development until the first release.
   Contract tests in tests/test-dashboard-p0.py; producer-side
   emission of the kinds is a sibling change.
 
+- **Graph viewer two-shell layout (density mitigation)**
+  (deep-task node sg-layout-density;
+  docs/records/2026-09-14-graph-view-two-shell-layout.md): the default
+  feed actually carries ~350 nodes (124 jcode-session + 226 kernel-side),
+  so the viewer moves jcode-session/swarm nodes onto a secondary outer
+  fibonacci shell (radius grows sublinearly with their count; kernel
+  side keeps the origin shell, kernel at origin). Camera default, reset
+  button, and the 2D-fallback scale re-fit to the outer shell. With no
+  session nodes the layout is byte-identical to the legacy algorithm —
+  executed-invariant regression tests (new `run_node` helper in
+  tests/test-dashboard-p0.py) pin both properties; min pairwise
+  distance on the real feed improves 14.4 → 31.4 world units.
+
 - **Graph feed refresh path proven + `all-sessions=1` plumbing**
   (node sg-refresh-wiring; docs/records/2026-09-14-graph-feed-refresh-wiring.md):
   `automation/tests/test-graph-feed-refresh.py` pins the `/graph.json`

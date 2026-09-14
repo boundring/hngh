@@ -23,6 +23,11 @@
    no raw timer); the fetch is skipped entirely while the graph panel
    is hidden, so a parked tab never polls.
 
+   v4 (2026-09-14): two-shell layout — jcode-session/swarm nodes sit on
+   a secondary outer shell (radius grows with their count) so ~125 new
+   nodes stop crowding the ~225 kernel-side nodes on the origin shell.
+   Camera default and 2D scale re-fit to the outer shell.
+
    Nodes/edges come from /graph.json (jobs/graph-data.py). Display layer
    only — never governance input. All styles live in one owned <style>
    tag (gv- prefix); style.css is not touched. */
@@ -149,10 +154,33 @@
   }
 
   // Deterministic fibonacci-sphere layout; kernel pinned to the origin.
+  // v4 (sg-layout-density): the default feed carries ~125 jcode-session
+  // nodes alongside ~225 kernel-side nodes, so one R=190 shell packs
+  // everything at ~36 world units of pitch — unreadable. Kind-aware
+  // mitigation: jcode-session/swarm nodes move to a secondary outer shell
+  // whose radius grows sublinearly with their count; kernel-side nodes
+  // keep the original single-shell layout unchanged (byte-identical
+  // positions when the feed has no session nodes).
   function layout(nodes) {
-    var n = nodes.length, R = 190, phi = Math.PI * (3 - Math.sqrt(5));
-    var pos = {};
+    var R = 190, phi = Math.PI * (3 - Math.sqrt(5));
+    var outer = [], i;
+    for (i = 0; i < nodes.length; i++) {
+      var k = nodes[i].kind;
+      if (k === 'jcode-session' || k === 'swarm') outer.push(nodes[i]);
+    }
+    // sublinear growth: 125 outer nodes -> R2 ~450 (2.4x kernel shell);
+    // outer-shell pitch roughly doubles vs a fixed radius
+    var R2 = R + 34 * Math.pow(Math.max(0, outer.length - 1), 0.42);
+    layout.shellRadius = R2;
+    var pos = {}, m = outer.length;
+    for (i = 0; i < m; i++) {
+      var y = m > 1 ? 1 - (2 * i) / (m - 1) : 0;
+      var r = Math.sqrt(Math.max(0, 1 - y * y)), th = phi * i;
+      pos[outer[i].id] = [R2 * r * Math.cos(th), R2 * y, R2 * r * Math.sin(th)];
+    }
+    var n = nodes.length;
     nodes.forEach(function (nd, i) {
+      if (pos[nd.id]) return;
       if (nd.kind === 'kernel') { pos[nd.id] = [0, 0, 0]; return; }
       var k = Math.max(0, i - 1), y = 1 - (2 * k + 1) / Math.max(1, n - 2);
       var r = Math.sqrt(Math.max(0, 1 - y * y)), th = phi * k;
@@ -160,6 +188,28 @@
     });
     return pos;
   }
+  // headless invariant hook (tests only; no behavior in the browser)
+  layout.checkInvariants = function (g) {
+    var pos = layout(g.nodes), seen = {};
+    g.nodes.forEach(function (nd) {
+      var p = pos[nd.id];
+      if (!p || p.length !== 3) throw new Error('unpositioned: ' + nd.id);
+      p.forEach(function (v) {
+        if (typeof v !== 'number' || !isFinite(v))
+          throw new Error('NaN/Inf coordinate: ' + nd.id);
+      });
+      if (seen[nd.id]) throw new Error('duplicate position key: ' + nd.id);
+      seen[nd.id] = 1;
+      if (nd.kind === 'kernel' && (p[0] !== 0 || p[1] !== 0 || p[2] !== 0))
+        throw new Error('kernel not at origin');
+      var hyp = Math.hypot(p[0], p[1], p[2]);
+      var want = (nd.kind === 'jcode-session' || nd.kind === 'swarm') ?
+        layout.shellRadius : 190;
+      if (nd.kind !== 'kernel' && Math.abs(hyp - want) > 1e-6)
+        throw new Error('shell radius mismatch: ' + nd.id + ' ' + hyp);
+    });
+    return pos;
+  };
 
   var root, wrap, tip, panel, badge, canvasBox, svgBox, ctx;
   var data = null, pos = null, mode = '3d', inited = false;
@@ -169,6 +219,12 @@
   var pollTimer = null;
   var W = 0, H = 0;
   var cam = { th: 0.6, ph: 0.35, r: 640 };
+  // default camera distance follows the outer shell so the v4 two-shell
+  // layout fits on load; small feeds keep the original 640 view
+  function resetView() {
+    cam.th = 0.6; cam.ph = 0.35;
+    cam.r = Math.max(640, (layout.shellRadius || 190) * 1.9);
+  }
   // projected screen state — preallocated, reused every frame
   var scr = { x: null, y: null, s: null, d: null, n: 0 };
   var order = [];           // node indices, sorted far -> near each draw
@@ -258,7 +314,7 @@
       if (act === 'zoomin') zoom(0.82);
       else if (act === 'zoomout') zoom(1.22);
       else if (act === 'reset') {
-        cam.th = 0.6; cam.ph = 0.35; cam.r = 640; redraw();
+        resetView(); redraw();
       } else if (act === 'rotate') setSpin(b.textContent.indexOf('off') >= 0);
       else if (act === 'refresh') load();
     });
@@ -362,7 +418,7 @@
     redraw();
   }
   function zoom(k) {
-    cam.r = clamp(cam.r * k, 320, 2400);
+    cam.r = clamp(cam.r * k, 480, 4800);
     redraw();
   }
   function redraw() {
@@ -644,6 +700,7 @@
     fetchJson('/graph.json').then(function (g) {
       if (!g || !g.nodes || !g.nodes.length) throw new Error('empty graph');
       setData(g);
+      resetView(); // re-fit the camera to the new outer-shell radius
       buildChips();
       resize();
       lastLoad = Date.now();
@@ -683,7 +740,9 @@
   function render2d() {
     if (!data || !svgBox) return;
     var f = focusSet(), m = matches;
-    var cx = W / 2, cy = H / 2, sc = Math.min(W, H) / 480;
+    var cx = W / 2, cy = H / 2;
+    // flat projection scale follows the outer shell (two-shell layout)
+    var sc = Math.min(W, H) / ((layout.shellRadius || 190) * 2.4);
     var s = '';
     data.edges.forEach(function (e) {
       var a = pos[e.src], b = pos[e.dst];
