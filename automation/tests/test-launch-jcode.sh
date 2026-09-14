@@ -71,5 +71,41 @@ grep -q 'update:\\n  auto: false' "$WRAPPED" ||
 grep -q 'respondToPermission(session.session_id, ev.request_id, "deny")' "$WRAPPED" ||
  { echo "FAIL: deny-by-default missing"; fails=$((fails + 1)); }
 
+# 8. certificate bridge (plan step 4): approve without certificate -> 75
+export JCODE_WORKER_APPROVE=1
+unset JCODE_WORKER_CERT
+launch_jcode_worker 2>/dev/null; check "approve without cert refused" 75 $?
+
+# 9. approve with expired certificate -> 75
+printf '{"actions":["Bash"],"expires":"2020-01-01T00:00:00Z"}\n' >"$SCRATCH/expired.json"
+export JCODE_WORKER_CERT="$SCRATCH/expired.json"
+launch_jcode_worker 2>/dev/null; check "expired cert refused" 75 $?
+
+# 10. approve with malformed certificate -> 75
+printf 'not json\n' >"$SCRATCH/bad.json"
+export JCODE_WORKER_CERT="$SCRATCH/bad.json"
+launch_jcode_worker 2>/dev/null; check "malformed cert refused" 75 $?
+
+# 11. approve with empty actions array -> 75
+printf '{"actions":[],"expires":"2030-01-01T00:00:00Z"}\n' >"$SCRATCH/empty.json"
+export JCODE_WORKER_CERT="$SCRATCH/empty.json"
+launch_jcode_worker 2>/dev/null; check "empty actions refused" 75 $?
+
+# 12. valid certificate passes the wrapper gate (stub worker runs)
+printf '{"actions":["Bash","Read"],"expires":"2030-01-01T00:00:00Z"}\n' >"$SCRATCH/valid.json"
+export JCODE_WORKER_CERT="$SCRATCH/valid.json"
+launch_jcode_worker; check "valid cert passes gate" 0 $?
+unset JCODE_WORKER_APPROVE JCODE_WORKER_CERT
+
+# 13. shim source carries the per-request scope check + audit lines
+grep -q 'outside certificate scope' "$WRAPPED" ||
+ { echo "FAIL: scope-deny audit missing"; fails=$((fails + 1)); }
+grep -q 'certificate scope' "$WRAPPED" ||
+ { echo "FAIL: scope-allow audit missing"; fails=$((fails + 1)); }
+grep -q 'no certificate lane' "$WRAPPED" ||
+ { echo "FAIL: deny-by-default audit missing"; fails=$((fails + 1)); }
+grep -q 'certificate expired; refusing approve mode' "$WRAPPED" ||
+ { echo "FAIL: shim expiry guard missing"; fails=$((fails + 1)); }
+
 echo "----"
 [ "$fails" -eq 0 ] && echo "PASS" || { echo "FAIL ($fails)"; exit 1; }

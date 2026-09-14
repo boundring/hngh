@@ -42,7 +42,41 @@ if (!prompt) {
   process.exit(2);
 }
 const timeoutMs = Number(process.env.JCODE_WORKER_TIMEOUT_MS || 300000);
+const certFile = process.env.JCODE_WORKER_CERT || "";
+
+// Certificate-scoped approval (plan step 4). JCODE_WORKER_APPROVE=1 alone
+// is NOT sufficient: a scope file must exist, parse, and be unexpired.
+// Scope format (one JSON object): {"actions": ["Bash","Read","..."],
+// "expires": "<ISO-8601>"}. A permission_request is allowed only when
+// its tool name is in "actions" and the certificate is unexpired;
+// everything else is denied. Every decision is logged to stderr so the
+// lane log carries the audit trail.
+let scope = null;
 const autoApprove = process.env.JCODE_WORKER_APPROVE === "1";
+if (autoApprove) {
+  if (!certFile || !existsSync(certFile)) {
+    console.error("jcode-worker: approve set but certificate file absent; refusing approve mode");
+    process.exit(2);
+  }
+  try {
+    scope = JSON.parse(readFileSync(certFile, "utf8"));
+  } catch {
+    console.error("jcode-worker: certificate file unparsable; refusing approve mode");
+    process.exit(2);
+  }
+  if (!Array.isArray(scope.actions) || typeof scope.expires !== "string") {
+    console.error("jcode-worker: certificate missing actions/expires; refusing approve mode");
+    process.exit(2);
+  }
+  if (Date.parse(scope.expires) <= Date.now()) {
+    console.error("jcode-worker: certificate expired; refusing approve mode");
+    process.exit(2);
+  }
+}
+
+function certAllows(toolName) {
+  return scope && scope.actions.includes(toolName);
+}
 
 ensurePinnedHome();
 const client = await JcodeClient.launch({
@@ -55,10 +89,20 @@ try {
   const runPromise = client.run(session.session_id, prompt, {
     autoApprove,
     onEvent(ev) {
-      // Permission requests with no approver are denied, never parked:
-      // the worker lane is bounded, and a parked prompt is a stall.
-      if (ev.ev === "permission_request" && !autoApprove) {
+      if (ev.ev !== "permission_request") return;
+      if (!autoApprove) {
+        // No certificate lane: deny every request, never park (a parked
+        // prompt is a stall).
         client.respondToPermission(session.session_id, ev.request_id, "deny");
+        console.error(`jcode-worker: denied ${ev.tool_name} (no certificate lane)`);
+        return;
+      }
+      if (certAllows(ev.tool_name)) {
+        client.respondToPermission(session.session_id, ev.request_id, "allow");
+        console.error(`jcode-worker: allowed ${ev.tool_name} (certificate scope)`);
+      } else {
+        client.respondToPermission(session.session_id, ev.request_id, "deny");
+        console.error(`jcode-worker: denied ${ev.tool_name} (outside certificate scope)`);
       }
     },
   });
