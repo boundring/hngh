@@ -8,3 +8,7 @@ at 2026-09-14T21:00:12Z. Alert text: patrol handoffs: bad-execution on agent-han
 
 - [ ] Delve: open research subject fail-20260914-patrol-handoffs for patrol:handoffs; record disposition; then fix or park
       Verification: research subject fail-20260914-patrol-handoffs present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-14T22:00:13Z re-occurred (dedup window expired)
