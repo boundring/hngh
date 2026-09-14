@@ -16,6 +16,7 @@ import unittest
 import unittest.mock
 import zipfile
 from pathlib import Path
+from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent.parent  # automation/
 
@@ -139,6 +140,56 @@ class TestCli(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             files = list((tmp / "digest").iterdir())
             self.assertEqual(files, [])
+
+
+class TestNumSourcesWindow(unittest.TestCase):
+    def test_window_boundary_filters_old_records(self):
+        now, day = 100000.0, 86400.0
+        recs = [(now - day, 4),      # exactly at the 24h boundary: in
+                (now - day - 1, 3),  # one second older: out
+                (now - 3600, 10)]    # recent: in
+        self.assertEqual(gn.num_sources_window(recs, 24, now=now), 14)
+
+    def test_scalar_timestamps_count_one_source(self):
+        self.assertEqual(gn.num_sources_window([1, 2, 3], 1), 3)
+
+    def test_malformed_and_empty_fail_closed(self):
+        self.assertEqual(gn.num_sources_window([], 24), 0)
+        self.assertEqual(
+            gn.num_sources_window([("bad", 5), (50, "x"), (59, 2)],
+                                  1, now=60), 2)
+
+
+class TestNs24Aggregation(unittest.TestCase):
+    def test_history_and_aggregate_from_snapshots(self):
+        with tempfile.TemporaryDirectory() as d:
+            snap = Path(d)
+            (snap / "gdelt-0300.json").write_text(json.dumps(
+                {"date": "2026-09-12", "window": "0300",
+                 "items": [{"url": "https://example.test/story",
+                            "num_sources": 6}]}))
+            now = datetime(2026, 9, 12, 14, 30,
+                           tzinfo=timezone.utc).timestamp()
+            hist = gn.story_history(str(snap), now)
+            self.assertEqual(
+                hist["https://example.test/story"],
+                [(datetime(2026, 9, 12, 3, 0,
+                           tzinfo=timezone.utc).timestamp(), 6)])
+            item = {"url": "https://example.test/story", "num_sources": 4}
+            gn.attach_ns24([item], hist, now)
+            self.assertEqual(item["ns24"], 10)
+            hist["https://example.test/stale"] = [(now - 90000, 100)]
+            stale = {"url": "https://example.test/stale",
+                     "num_sources": 4}
+            gn.attach_ns24([stale], hist, now)
+            self.assertEqual(stale["ns24"], 4)  # stale record filtered
+
+    def test_rank_rows_retains_num_sources(self):
+        items = gn.rank_rows("\n".join(FIXTURE_ROWS), "0400")
+        by_url = {i["url"]: i for i in items}
+        self.assertEqual(
+            by_url["https://example.test/war-escalates-in-region"]
+            ["num_sources"], 10)
 
 
 if __name__ == "__main__":

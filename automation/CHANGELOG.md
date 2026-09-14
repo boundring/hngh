@@ -532,3 +532,12 @@
   tolerant) to an adapter instance; unknown or unset value raises
   ValueError. Test `tests/test-harness-adapters.py` (10 hermetic cases)
   wired into `make test`.
+- feat: gdelt lane multi-window NumSources signal (plan
+  2026-09-12-dev-bigeye-caution-audit; research R3 from
+  docs/research/2026-09-12-gdelt-gkg-trends.md) — `rank_rows` retains
+  `num_sources` per item, `num_sources_window()` aggregates
+  trailing-window records (bare timestamp = one source; malformed fail
+  closed), and the hourly run reads the day's snapshots via
+  `story_history()` to attach a 24h aggregate (`ns24`) to each fresh
+  item's story-selection metadata before pick/render. Test
+  `tests/test-gdelt-news.py` (9 hermetic cases) failing-first, green.
