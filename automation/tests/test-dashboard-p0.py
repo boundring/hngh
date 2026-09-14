@@ -110,6 +110,28 @@ class HonestDismiss(unittest.TestCase):
         self.assertIn("armedId = null", f)
 
 
+class OpRerenderPreloadSafety(unittest.TestCase):
+    def test_op_rerender_cannot_crash_before_first_render(self):
+        # finding 2026-09-10 dashboard-logs:1 (parked, premise stale) — an
+        # op-state update landing before the initial spine render must
+        # route to the known empty state, never crash: both entry points
+        # early-return on lastRender.d (assigned atomically with res in
+        # renderLogs), the renderLogs chain consumes no res, and the sole
+        # res consumer (renderHeader) is call-site guarded.
+        a = src("app.js")
+        both = a[a.index("function rerenderWithOpState"):a.index("var armedId = null")]
+        rwo = both[:both.index("function rerenderOp")]
+        ro = both[both.index("function rerenderOp"):]
+        self.assertIn("if (lastRender.d === undefined) return;", rwo)
+        self.assertIn("if (lastRender.res) renderHeader(", rwo)
+        self.assertLess(rwo.index("lastRender.d === undefined"), rwo.index("renderLogs("))
+        self.assertLess(ro.index("lastRender.d === undefined"), ro.index("renderLogs("))
+        self.assertLess(ro.index("opRerenders.forEach"), ro.index("renderLogs("))
+        logs = a[a.index("function renderLogs("):a.index("// ---------- mini markdown")]
+        self.assertIn("lastRender = { d: d, spine: spine, res: res };", logs)
+        self.assertNotIn("res.", logs)
+
+
 class LayoutTightening(unittest.TestCase):
     def test_density_floor_11px(self):
         self.assertNotIn("9.5px", src("style.css"))
