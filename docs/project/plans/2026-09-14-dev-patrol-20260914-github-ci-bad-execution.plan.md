@@ -4,21 +4,24 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the patrol-20260914-github-ci-bad-execution research line by adding a guardrail check that detects two consecutive bad-execution outcomes and demotes the line, ensuring the intended closure mechanism is explicitly tested.
+Implements the crystallized run-close invariant from patrol-20260914-journal-error-unclaimed-err, upstream feed attribution for guardrail verdicts from patrol-20260914-github-ci-bad-execution, and comic-specific action/reaction beat-pair annotation with narrative_mode mapping from story-beat-taxonomy.
 
 ## Steps
 
-- [ ] Create `lib/patrol_guardrails.py` implementing a function `check_consecutive_bad_executions(outcomes: list[str]) -> bool` that returns True if the last two entries are both "bad-execution".
-  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); from patrol_guardrails import check_consecutive_bad_executions; assert check_consecutive_bad_executions(['ok', 'bad-execution', 'bad-execution']) == True"
-
-- [ ] Create `tests/test_patrol_guardrails.py` with a test case that asserts `check_consecutive_bad_executions` returns False for non-consecutive failures and True for two consecutive "bad-execution" entries.
+- [ ] Add `lib/patrol_run_close.py` implementing the run-close invariant: a function that inspects a patrol run's filed journal-errors and returns failure reason `unclaimed-err` with attribution metadata (error id, run ordinal) when any error lacks a claim or waiver record before scoring.
   Verification: make test
 
-- [ ] Add a CLI entry point in `scripts/patrol_check.py` that reads a JSON file of recent outcomes from stdin and exits with code 1 if the guardrail fires, printing "DEMOTE: two consecutive bad-executions".
-  Verification: bash -n scripts/patrol_check.py
+- [ ] Extend the cadence guardrail verdict emitter in `cadence/verdict_emit.sh` to include upstream feed attribution fields (source job name, input fingerprint, consecutive-run ordinal) in the payload emitted for bad-execution filings.
+  Verification: bash -n cadence/verdict_emit.sh
 
-- [ ] Create `tests/test_patrol_check_cli.py` that pipes a sample JSON array containing two trailing "bad-execution" entries into `scripts/patrol_check.py` and asserts the exit code is 1 and stdout contains "DEMOTE".
+- [ ] Refactor `jobs/manga-draft.py` beat annotation to resolve each panel/beat unit via comic-specific action-beat/reaction-beat pairs, assigning exactly one narrative_mode value (image-only, dialogue-only, or mixed) per unit.
+  Verification: python3 jobs/manga-draft.py --self-check
+
+- [ ] Add `lib/beat_narrative_map.py` defining the mapping from beat class to expected narrative_mode ratio bounds for consumption by `jobs/manga-vision.py`.
   Verification: make test
 
-- [ ] Update `cadence/patrol-cadence.yml` to include a step that invokes `python3 scripts/patrol_check.py < digest/outcomes.json` before scoring, ensuring the guardrail runs in the standard cadence.
-  Verification: grep -q "patrol_check.py" cadence/patrol-cadence.yml
+- [ ] Write `tests/test_run_close_invariant.py` asserting that a patrol run with an unclaimed journal-error is scored as failed with reason `unclaimed-err` and carries attribution metadata.
+  Verification: make test
+
+- [ ] Append the crystallized invariant conclusion and guardrail closure condition to `digest/RESEARCH-BEAT-20260914-patrol-20260914-journal-error-unclaimed-err.md` linking the implemented check to the line's contracted record.
+  Verification: grep -q 'run-close invariant' digest/RESEARCH-BEAT-20260914-patrol-20260914-journal-error-unclaimed-err.md
