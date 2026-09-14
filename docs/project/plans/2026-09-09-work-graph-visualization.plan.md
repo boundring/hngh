@@ -33,7 +33,7 @@ the gantt. Story/comic/animation rungs read this same graph later.
       shows the priority plans' step structure; a parked plan renders
       its cause chip; no console errors; screenshot captured to the
       dashboard evidence path.
-- [ ] 3. Story view skeleton (rung 2 of the direction): a new
+- [x] 3. Story view skeleton (rung 2 of the direction): a new
       dashboard page rendering today's chapters from the work graph +
       report-queue ledger: accepted, steps-completed (commit-hash
       footnotes), blockers, parks. Static fetch-and-render like the
@@ -71,3 +71,18 @@ the gantt. Story/comic/animation rungs read this same graph later.
   routing FAILs) plus a sibling session mid-edit on
   cadence/hour/33-research-beat.sh, lib/model.sh, cadence-params.tsv;
   alert filed to report-queue — sibling lane owns the fix.
+- 2026-09-14 session (B): step 3 landed in gitignored machine-data
+  dashboard/ (story.html + story-view.js: four sections — accepted,
+  steps-completed with commit-hash footnotes drawn only from the feed's
+  last_ceremony_commit and hex tokens in today's report-queue rows,
+  blockers from real edges + today's alert rows, parks with
+  front-matter cause chips; "today" taken from the feed's own
+  generated stamp; one dry aside per section; aria-labelledby +
+  tabindex on every section; story link added to index + gantt
+  headers). New suite tests/test-story-view.py (7 checks, hermetic)
+  wired into make test. Verified live via puppeteer against
+  127.0.0.1:8890/story.html: four sections rendered from live
+  plans.json + reports.md, 40 cause chips, 90 plan links, one aside
+  per section max, a11y flags pass, zero console errors; screenshot
+  at docs/media/gantt/story-20260914.png. make test fully green
+  (rc=0) — the step-2-era accel2 reds were fixed by the sibling lane.
