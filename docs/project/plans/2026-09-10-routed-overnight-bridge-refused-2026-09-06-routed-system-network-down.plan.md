@@ -6,5 +6,5 @@ at 2026-09-10T23:00:33Z. Alert text: overnight beat 2026-09-06-routed-system-net
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260910-overnight-bridge-refused-2026-09-06-routed-system-network-down for overnight:bridge-refused:2026-09-06-routed-system-network-down; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260910-overnight-bridge-refused-2026-09-06-routed-system-network-down for overnight:bridge-refused:2026-09-06-routed-system-network-down; record disposition; then fix or park
       Verification: research subject fail-20260910-overnight-bridge-refused-2026-09-06-routed-system-network-down present in research-subjects.txt with a recorded disposition; alert fixed or parked
