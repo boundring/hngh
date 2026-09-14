@@ -6,7 +6,7 @@ at 2026-09-10T19:00:18Z. Alert text: push origin main declined: GitHub push prot
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260910-push-blocked-openrouter-key-hngh for push-blocked:openrouter-key-hngh; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260910-push-blocked-openrouter-key-hngh for push-blocked:openrouter-key-hngh; record disposition; then fix or park
       Verification: research subject fail-20260910-push-blocked-openrouter-key-hngh present in research-subjects.txt with a recorded disposition; alert fixed or parked
 
 ## Occurrences
@@ -20,3 +20,10 @@ at 2026-09-10T19:00:18Z. Alert text: push origin main declined: GitHub push prot
   Operator action unchanged: rotate the key, redact lines 11+81,
   allowlist-or-repush. The gate-fix candidate f2f04e3 is among the
   blocked commits (gate now green locally).
+- 2026-09-14T09Z resolved: disposition killed (resolved before research) —
+  OpenRouter key redacted in HEAD (acd3d9f, on origin/main), key-carrying
+  commits 13007a8/857d1de unreachable from origin/main, main == origin/main
+  (2a2abe0), push green ("Everything up-to-date"). Subject + disposition in
+  automation/research-subjects.txt and automation/research-dispositions.tsv; research record at
+  docs/research/2026-09-14-fail-20260910-push-blocked-openrouter-key-hngh.md;
+  residual single: OPENCODE_API_KEY still plaintext on origin/main (alert opencode-key-exposed, operator-owned).
