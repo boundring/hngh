@@ -6,7 +6,9 @@ at 2026-09-12T19:00:14Z. Alert text: correction b61fed0f: no named check found (
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260912-correction-b61fed0f for correction-b61fed0f; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260912-correction-b61fed0f for correction-b61fed0f; record disposition; then fix or park
+      Verification: research subject fail-20260912-correction-b61fed0f present in research-subjects.txt with a recorded disposition; alert fixed or parked
+      -> killed (fixed): .sv grid row was content-sized inside the max-height clamp, so both panes (.sv-list left, .sv-detail right) had overflow-y:auto never engage; fix = grid-template-rows:minmax(0,1fr) + mobile auto reset, failing-first contract test, live headless-Chrome probe both sides scrolling; fix 344ec39, disposition fe801bd (research-subjects.txt + research-dispositions.tsv), automation make test green rc=0
       Verification: research subject fail-20260912-correction-b61fed0f present in research-subjects.txt with a recorded disposition; alert fixed or parked
 
 ## Occurrences
