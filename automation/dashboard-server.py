@@ -312,25 +312,34 @@ def dashboard_token():
 
 
 _tele_cache = (0.0, None)
-_graph_cache = (0.0, None)
+# Two independent cache slots: [0] default graph, [1] ?all-sessions=1.
+# Split so a wide fetch never poisons (or extends the TTL of) the
+# default feed the other views consume.
+_graph_cache = [(0.0, None), (0.0, None)]
 
 
-def graph_feed():
+def graph_feed(all_sessions=False):
     """Operations graph from the governed registries + live state
     (graph-data.build), cached 30s like telemetry_24h; fail-soft to the
-    last good graph so the view never blanks on a registry hiccup."""
-    global _graph_cache
-    if _graph_cache[1] is not None and time.monotonic() - _graph_cache[0] < TELEMETRY_TTL_S:
-        return _graph_cache[1]
+    last good graph so the view never blanks on a registry hiccup.
+    all_sessions=True forwards the builder's extended-session variant
+    (GET /graph.json?all-sessions=1); presence of the query param is the
+    switch. Node kinds are the builder's business — the server passes
+    the payload through unfiltered."""
+    slot = 1 if all_sessions else 0
+    cached_ts, cached_graph = _graph_cache[slot]
+    if cached_graph is not None and time.monotonic() - cached_ts < TELEMETRY_TTL_S:
+        return cached_graph
     try:
         graph = graph_data.build(
             os.path.join(ROOT, "config"), DASHBOARD, TELEMETRY_DB,
-            os.path.join(ROOT, "config.env"))
-        _graph_cache = (time.monotonic(), graph)
+            os.path.join(ROOT, "config.env"),
+            all_sessions=bool(all_sessions))
+        _graph_cache[slot] = (time.monotonic(), graph)
     except Exception:
-        if _graph_cache[1] is None:
-            raise
-    return _graph_cache[1]
+        if cached_graph is None:
+            raise  # cold start, nothing good to fall back to: fail closed
+    return _graph_cache[slot][1]
 
 
 def telemetry_24h():
@@ -391,7 +400,10 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(200, telemetry_24h())
             return
         if route == "/graph.json":
-            self._json(200, graph_feed())
+            # ?all-sessions=1 — forward the extended (session-shaped)
+            # variant to the builder; anything else is the default feed.
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            self._json(200, graph_feed(all_sessions=qs.get("all-sessions") == ["1"]))
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
