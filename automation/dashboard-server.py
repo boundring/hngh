@@ -56,6 +56,18 @@ POST /tile  {"profile": str, "sessions": [str, ...]}
     400 unknown profile / bad input; 403 tiling disabled; 500 tiler
     binary missing. Ledger: tile | <UTC ts> | <profile> | <session ids>
 
+POST /delegate  {"slug": str, "objective": str, "provider": str,
+                 "minutes": int}
+    Fire-and-forget jcode delegation (plan 2026-09-14-jcode-delegate-
+    controls step 1): launches lib/jcode-delegate.sh with the sanitized
+    argv [slug, objective, minutes, provider] (no shell interpolation),
+    detached via start_new_session; the delegate ledger is the record of
+    the outcome. 202 {"ok": true, "slug": slug}; 400 on bad input
+    (slug must match [A-Za-z0-9-]{1,64}, objective non-empty <=2000
+    chars, provider in {zai, unsloth}, minutes int 1..30 — out-of-range
+    is rejected, never clamped; control characters rejected so nothing
+    unreachable-by-argv sneaks into the ledger); 500 on exec failure.
+
 POST /research-line  {"name": str, "intent": str}
     Appends a proposal-ready lane to the operator's backlog.md
     (docs/project/backlog.md in the hngh repo) — append-only, never
@@ -150,6 +162,39 @@ FEEDBACK = os.path.join(DASHBOARD, "feedback")
 FEEDBACK_TYPES = ("css-theme", "data-format", "correction", "idea")
 
 SESSION_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
+DELEGATE_SLUG_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+DELEGATE_PROVIDERS = ("zai", "unsloth")
+
+
+def validate_delegate_body(body):
+    """Validate a POST /delegate body (fail closed).
+
+    Returns (True, params_dict) or (False, error_string naming the
+    offending field). Module-level so tests can drive it without a
+    server. Minutes must be a real int in 1..30; out-of-range is
+    rejected, never clamped; bools and numeric strings are rejected.
+    """
+    if not isinstance(body, dict):
+        return False, "body must be a JSON object"
+    slug = body.get("slug")
+    if not isinstance(slug, str) or not DELEGATE_SLUG_RE.fullmatch(slug):
+        return False, "invalid slug ([A-Za-z0-9-]{1,64} required)"
+    objective = body.get("objective")
+    if not isinstance(objective, str) or not objective.strip():
+        return False, "objective must be a non-empty string"
+    if len(objective) > 2000:
+        return False, "objective too long (max 2000 chars)"
+    if any(ord(ch) < 32 for ch in objective):
+        return False, "objective must not contain control characters"
+    provider = body.get("provider")
+    if provider not in DELEGATE_PROVIDERS:
+        return False, "invalid provider (must be 'zai' or 'unsloth')"
+    minutes = body.get("minutes")
+    if isinstance(minutes, bool) or not isinstance(minutes, int) \
+            or not 1 <= minutes <= 30:
+        return False, "minutes must be an int in 1..30"
+    return True, {"slug": slug, "objective": objective,
+                  "provider": provider, "minutes": minutes}
 UNIT_RE = re.compile(r"^[A-Za-z0-9.@_-]{1,80}$")
 
 TOKEN_FILE = os.path.join(DASHBOARD, "token.txt")
@@ -565,6 +610,7 @@ class Handler(SimpleHTTPRequestHandler):
             {"flag": self._flag,
              "operator-item/dismiss": self._dismiss,
              "spawn": self._spawn,
+             "delegate": self._delegate,
              "tile": self._tile,
              "research-line": self._research_line,
              "research-note": self._research_note,
@@ -788,6 +834,28 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(500, {"ok": False, "error": "spawn failed"})
             return
         self._json(201, {"ok": True, "launcher": launcher})
+
+    def _delegate(self):
+        try:
+            body = self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        ok, err_or_params = validate_delegate_body(body)
+        if not ok:
+            self._json(400, {"ok": False, "error": err_or_params})
+            return
+        p = err_or_params
+        try:
+            subprocess.Popen(
+                ["bash", os.path.join(ROOT, "lib", "jcode-delegate.sh"),
+                 p["slug"], p["objective"], str(p["minutes"]), p["provider"]],
+                start_new_session=True, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            self._json(500, {"ok": False, "error": "delegate exec failed"})
+            return
+        self._json(202, {"ok": True, "slug": p["slug"]})
 
     def _tile(self):
         try:

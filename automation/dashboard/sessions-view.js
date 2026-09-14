@@ -226,7 +226,14 @@
     '.sv-opnote{font-size:11px;white-space:nowrap;overflow:hidden;' +
     'text-overflow:ellipsis;max-width:34ch}' +
     '.sv-opnote.ok{color:var(--ok)}' +
-    '.sv-opnote.err{color:var(--warn)}';
+    '.sv-opnote.err{color:var(--warn)}' +
+    '/* delegate launch control (gated jcode worker) */' +
+    '.sv-dg{display:flex;align-items:center;gap:4px;flex-wrap:wrap}' +
+    '.sv-dg input,.sv-dg select{background:var(--bg);border:1px solid var(--line);' +
+    'border-radius:0;color:var(--ink);font:inherit;font-size:11px;padding:2px 6px}' +
+    '.sv-dg input.sv-dg-slug{width:14ch}' +
+    '.sv-dg input.sv-dg-obj{flex:1;min-width:100px;max-width:40ch}' +
+    '.sv-dg input.sv-dg-min{width:6ch}';
 
   /* ---- state ---- */
   var root = null, timer = null, data = null;
@@ -242,6 +249,7 @@
   var armedTail = null;      // session whose spawn is armed, awaiting confirm
   var armedTile = false;     // toolbar tile confirm
   var armedFlag = null;      // session whose flag is armed, awaiting confirm
+  var opTimer = null;        // transient opnote auto-clear (delegate status)
 
   function $(cls, el) { return (el || root).querySelector(cls); }
   function $all(cls, el) {
@@ -562,8 +570,15 @@
   function opNote(ok, msg) {
     var el = $('.sv-opnote');
     if (!el) return;
+    if (opTimer) { clearTimeout(opTimer); opTimer = null; }
     el.textContent = msg;
     el.className = 'sv-opnote' + (ok ? ' ok' : ' err');
+    // transient status: clear after ~4s so stale results never linger
+    opTimer = setTimeout(function () {
+      el.textContent = '';
+      el.className = 'sv-opnote';
+      opTimer = null;
+    }, 4000);
   }
   function doTail(id) {
     window.HnghOps.post('/spawn', { session: id, launcher: 'konsole-tail' })
@@ -603,6 +618,33 @@
       .then(function () { opNote(true, 'flagged ' + shortId(id)); })
       .catch(function (e) { opNote(false, e.message || String(e)); });
   }
+  /* delegate (gated jcode worker launch): client re-validates the same rules
+     the server enforces; status surfaces via the shared sv-opnote line. */
+  function doDelegate() {
+    var form = $('[data-delegate]');
+    if (!form) return;
+    var slug = form.elements.slug.value.trim();
+    var objective = form.elements.objective.value.trim();
+    var provider = form.elements.provider.value;
+    var minutes = Number(form.elements.minutes.value);
+    if (!/^[A-Za-z0-9-]+$/.test(slug) || slug.length > 64) {
+      opNote(false, 'slug must match [A-Za-z0-9-], max 64'); return;
+    }
+    if (!objective || objective.length > 2000) {
+      opNote(false, 'objective must be 1..2000 chars'); return;
+    }
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 30) {
+      opNote(false, 'minutes must be an integer 1..30'); return;
+    }
+    if (!window.HnghOps || !window.HnghOps.post) {
+      opNote(false, 'ops bridge unavailable'); return;
+    }
+    opNote(true, 'delegating ' + slug + '…');
+    window.HnghOps.post('/delegate',
+        { slug: slug, objective: objective, provider: provider, minutes: minutes })
+      .then(function () { opNote(true, 'delegated ' + slug); })
+      .catch(function (e) { opNote(false, e.message || String(e)); });
+  }
   function init(el) {
     if (root) return; // idempotent
     root = el;
@@ -625,6 +667,19 @@
       'title="tile the selected transcript into a desktop terminal window (profile: duo)">tile</button>' +
       '<button class="sv-fbtn sv-x" data-x="open">expand all</button>' +
       '<button class="sv-fbtn sv-x" data-x="close">collapse all</button>' +
+      /* delegate: launch a gated jcode worker (slug, objective, provider, minutes) */
+      '<form class="sv-dg" data-delegate>' +
+      '<input class="sv-dg-slug" name="slug" placeholder="slug" maxlength="64" ' +
+      'pattern="[A-Za-z0-9-]+" aria-label="delegate slug" required>' +
+      '<input class="sv-dg-obj" name="objective" placeholder="objective" ' +
+      'maxlength="2000" aria-label="delegate objective" required>' +
+      '<select name="provider" aria-label="delegate provider">' +
+      '<option value="zai" selected>zai</option>' +
+      '<option value="unsloth">unsloth</option></select>' +
+      '<input class="sv-dg-min" name="minutes" type="number" min="1" max="30" ' +
+      'value="10" aria-label="delegate minutes">' +
+      '<button type="submit" class="sv-fbtn" title="launch a gated jcode worker session">delegate</button>' +
+      '</form>' +
       '<span class="sv-opnote" role="status"></span>' +
       '<span class="sv-live-note"></span></div>' +
       '<div class="sv-detail" tabindex="0"><div class="sv-note">loading…</div></div>' +
@@ -696,6 +751,23 @@
         }
       }
     });
+
+    var dg = $('[data-delegate]');
+    if (dg) {
+      dg.addEventListener('submit', function (ev) {
+        ev.preventDefault(); // no page reload; doDelegate owns validation
+        doDelegate();
+      });
+      dg.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') { // escape drops focus back to the toolbar
+          var b0 = dg.querySelector('button[type="submit"]');
+          if (b0) b0.blur();
+        }
+      });
+      // a11y: the live status line is announced for screen readers
+      var note = $('.sv-opnote');
+      if (note) note.setAttribute('aria-live', 'polite');
+    }
 
     timer = window.HnghPoll.start(fetch, { interval: REFRESH_MS });
   }
