@@ -2,10 +2,11 @@
 """system-feed — CachyOS system-integration feed for the dashboard System tab.
 
 Builds dashboard/system-ops.json: pending pacman updates, package/ orphan
-counts, systemd user/system unit state, per-mount disk usage, memory, 24h
-journal error count, temperatures (lm_sensors, when present), a small
-network summary (first global v4 address + listening TCP port count),
-the last config-backup ledger rows, and dashboard session counts.
+counts, systemd user/system unit state, per-mount disk usage, memory,
+uptime/last-boot, 24h journal error count, temperatures (lm_sensors,
+when present), a small network summary (first global v4 address +
+listening TCP port count), the last config-backup ledger rows, and
+dashboard session counts.
 
 READ-ONLY: every command here is a query. Nothing is installed, upgraded,
 reset, removed, or restarted. Governed updates are a future rung.
@@ -145,6 +146,20 @@ def probe_memory():
         return None, "/proc/meminfo unreadable — memory omitted"
 
 
+def probe_uptime(path="/proc/uptime"):
+    """uptime: {seconds, human, last_boot} — /proc/uptime seconds plus
+    `uptime -p`/`-s` human strings; a missing tool leaves that field null."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            secs = int(float(fh.read().split()[0]))
+    except (OSError, ValueError, IndexError):
+        return None, "/proc/uptime unreadable — uptime omitted"
+    human, _rc = run(["uptime", "-p"])
+    boot, _rc = run(["uptime", "-s"])
+    return {"seconds": secs, "human": human.strip() or None,
+            "last_boot": boot.strip() or None}, None
+
+
 def probe_journal():
     """journal_err_24h — err+ priority lines, last 24h (user+system vantage)."""
     out, rc = run(["sh", "-c",
@@ -266,7 +281,8 @@ def build():
     notes = []
     probes = {"updates": probe_updates, "packages": probe_packages,
               "units": probe_units, "disk": probe_disk,
-              "memory": probe_memory, "journal_err_24h": probe_journal,
+              "memory": probe_memory, "uptime": probe_uptime,
+              "journal_err_24h": probe_journal,
               "temps": probe_temps, "network": probe_network,
               "backups": probe_backups, "remote": probe_remote,
               "sessions": probe_sessions}
