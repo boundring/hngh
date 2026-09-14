@@ -38,11 +38,11 @@ Regenerated weekly from live ledgers by
 hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 69 reviewed, 14 planned, 1 crystallized (hngh-automation/research-lines.tsv).
-- Queue Next: wake-mutation-lane, set 2026-08-25 (19 days old) (hngh docs/project/queue.md).
-- Plan ledger: 203 plan files, 173 routed candidates (hngh docs/project/plans/).
-- Operator items: 34 open (hngh-automation/dashboard/operator-items.json; display cap 40).
-- Gates: oversight-tick — alert — gate-red: hngh make test red — gate-check alert row unread in ledger (hngh-automation/STATE.md crumb tail).
+- Research lines: 87 reviewed, 1 expanding, 9 crystallized (hngh-automation/research-lines.tsv).
+- Queue Next: node-lattice-admission, set 2026-09-13 (1 days old) (hngh docs/project/queue.md).
+- Plan ledger: 237 plan files, 201 routed candidates (hngh docs/project/plans/).
+- Operator items: 32 open (hngh-automation/dashboard/operator-items.json; display cap 40).
+- Gates: 03-gate-check.sh — gate-red — hngh-automation: make test rc=2 (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
 
 ## What is broken and being fixed
