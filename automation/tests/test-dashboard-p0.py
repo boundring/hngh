@@ -67,6 +67,48 @@ class PlansSearchFilterSort(unittest.TestCase):
         self.assertIn("renderRows(); // rows-only: focus kept", v)
 
 
+class GraphViewVocabularyAndAutoRefresh(unittest.TestCase):
+    """graph-view contract (2026-09-14): new node kinds render + chip, and
+    the 60s auto-refresh goes through the shared helper with a panel-
+    visibility guard so a parked graph tab never fetches. Textual contract
+    on the served source, same discipline as the rest of this suite."""
+
+    def kinds_segment(self):
+        v = src("graph-view.js")
+        return v[v.index("var KINDS"):v.index("];", v.index("var KINDS"))]
+
+    def test_new_kinds_in_size_map_and_chips(self):
+        v = src("graph-view.js")
+        size = v[v.index("var KIND_SIZE"):v.index("};", v.index("var KIND_SIZE"))]
+        for size_entry, kind in (("'jcode-session': 4", "jcode-session"),
+                                 ("'swarm': 6", "swarm")):
+            self.assertIn(size_entry, size, "KIND_SIZE missing " + size_entry)
+            self.assertIn("'" + kind + "'", self.kinds_segment(),
+                          "KINDS chips missing " + kind)
+
+    def test_state_vocabulary_untouched(self):
+        v = src("graph-view.js")
+        states = v[v.index("var STATES"):v.index("];", v.index("var STATES"))]
+        self.assertEqual(states, "var STATES = ['healthy', 'stale', 'alerting', 'neutral'")
+        for kind in ("jcode-session", "swarm"):
+            self.assertNotIn(kind, states, "kind leaked into the state vocabulary")
+
+    def test_auto_refresh_through_helper_skips_hidden_panel(self):
+        v = src("graph-view.js")
+        self.assertNotIn("setInterval(", v, "graph-view still has a raw timer")
+        self.assertIn("POLL_MS = 60000", v, "60s auto-refresh cadence")
+        self.assertIn("HnghPoll.start(autoLoad, { interval: POLL_MS })", v,
+                      "auto-refresh must reuse the shared poll helper")
+        self.assertIn("function graphTabVisible()", v)
+        auto = v[v.index("function autoLoad()"):
+                 v.index("}", v.index("function autoLoad()"))]
+        self.assertIn("graphTabVisible()", auto)
+        self.assertIn("load()", auto)
+        self.assertLess(auto.index("graphTabVisible()"), auto.index("load()"),
+                        "visibility gate runs before the fetch")
+        self.assertIn("'p-graph'", v, "guard keys on the graph panel id")
+
+
 class PollHygiene(unittest.TestCase):
     def test_shared_poll_helper_pauses_and_backs_off(self):
         a = src("app.js")
