@@ -20,6 +20,9 @@ agent-handoffs.md
 dashboard/
 !dashboard/story.html
 !dashboard/story-view.js
+!dashboard/style.css
+!dashboard/index.html
+!dashboard/gantt.html
 digest/
 logs/
 archive/

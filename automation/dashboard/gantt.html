@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hngh-automation · cascading gantt</title>
+<link rel="stylesheet" href="style.css?v=gantt2">
+</head>
+<body class="gantt-page">
+<header>
+  <div class="h-left">
+    <h1>cascading gantt</h1>
+    <span class="sub">queued lanes · ESTIMATE bars only · projected starts are relative, never scheduled dates</span>
+  </div>
+  <div class="h-right">
+    <a class="ghost" href="index.html">&larr; nerve center</a>
+    <a class="ghost" href="sessions.html">sessions</a>
+    <a class="ghost" href="story.html" title="today's chapters from the work graph + report ledger">story</a>
+    <span id="fresh" class="headline">awaiting feed&hellip;</span>
+    <button id="refresh-btn" class="ghost" title="refetch readout + ledger now">refresh now</button>
+    <button id="theme-btn" class="ghost" title="toggle theme">theme</button>
+  </div>
+</header>
+
+<p class="legend-line">each row = one queued lane in the rotation queue &middot; bars are ESTIMATE projections, not schedule facts
+(source shown per row) &middot; starts are relative
+&mdash; &ldquo;now&rdquo; for independent lanes, &ldquo;depends-on satisfied&rdquo; for chained ones &mdash; no fabricated dates &middot;
+shaded past shows actual readout timeline events (day precision) &middot; drag to pan &middot; hover a bar for details &middot;
+flags are advisory steers &middot; never governance input</p>
+
+<div class="gtoolbar">
+  <span class="gt-lab">window</span>
+  <button class="ghost fbtn on" data-win="6">6h</button>
+  <button class="ghost fbtn" data-win="24">24h</button>
+  <button class="ghost fbtn" data-win="72">72h</button>
+  <span class="gcount" id="gsum"></span>
+</div>
+
+<main id="gmain">
+  <div id="gerr" class="error" hidden></div>
+  <div class="gchart" id="gchart">
+    <div class="gcol-labels" id="glabels"></div>
+    <div class="gcol-tracks" id="gtracks"></div>
+  </div>
+</main>
+
+<div id="gtip" class="gtip" hidden></div>
+
+<script src="gantt.js"></script>
+</body>
+</html>
