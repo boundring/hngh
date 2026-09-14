@@ -125,5 +125,56 @@ class HnghOpencodeTool(unittest.TestCase):
                           "disposition": "dead", "log": "logs/x.log"})
 
 
+JCODE_TS = Path.home() / ".omp" / "plugins" / "hngh-bridge" / "src" / "jcode.ts"
+
+JCODE_RUNNER = """
+const m = await import(FILE);
+console.log(JSON.stringify({
+  candidates: m.delegateCandidates(CWD),
+}));
+"""
+
+
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
+                 "hngh-bridge plugin lives outside the repo "
+                 "(~/.omp/plugins/hngh-bridge) "
+                 "-- pure-helper coverage runs on the operator host only")
+class HnghJcodeTool(unittest.TestCase):
+    """The hngh_jcode tool file (2026-09-14 swarm-lane delegation):
+    registered in the plugin manifest, parses under bun, and its pure
+    helper behaves (wrapper discovery gated on jcode-delegate.sh; the
+    key=value parse it re-uses from opencode.ts is covered by
+    HnghOpencodeTool)."""
+
+    def run_helpers(self, cwd):
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
+            f.write(JCODE_RUNNER
+                    .replace("FILE", json.dumps(str(JCODE_TS)))
+                    .replace("CWD", json.dumps(cwd)))
+            script = f.name
+        r = subprocess.run(["bun", "run", script],
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def test_tool_registered_and_parses(self):
+        self.assertTrue(JCODE_TS.exists())
+        pkg = json.loads((JCODE_TS.parent.parent / "package.json").read_text())
+        for key in ("pi", "omp"):
+            self.assertIn("./src/jcode.ts", pkg[key]["tools"])
+
+    def test_helpers_discover_parse(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = self.run_helpers(td)
+        self.assertEqual(out["candidates"],
+                         [str(Path.home() / "Projects/etc/hngh"
+                              / "automation/lib/jcode-delegate.sh")])
+        (Path(td) / "automation" / "lib").mkdir(parents=True)
+        (Path(td) / "automation" / "lib" / "jcode-delegate.sh").touch()
+        out = self.run_helpers(td)
+        self.assertEqual(out["candidates"][0],
+                         str(Path(td) / "automation/lib/jcode-delegate.sh"))
+
+
 if __name__ == "__main__":
     unittest.main()
