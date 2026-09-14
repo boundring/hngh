@@ -5,11 +5,16 @@
 > Somewhere below the ground floor, a machine keeps its own minutes.
 > It has been taking them for a while. They are all in order.
 
-A machine that does very little, and files everything: agentic
-development with a certificate at the decision point and a receipt at
-the mutation point. The kernel (Common Lisp, pure by charter) runs the
-ledger; an automation tier runs the clock around it; the human's final
-say rides the whole surface.
+A machine that runs itself on the record, and files everything: a
+certificate at the decision point, a receipt at the mutation point, a
+cadence tier watching the clock, a watchdog watching the watchers,
+and every delegated agent session landed through one gated launcher
+with its spend, cause class, and disposition on the ledger. Agentic
+project management and system harnessing where nothing is trusted
+without evidence - and the machine does the filing, so the human's
+final say is spent on decisions, not bookkeeping. The kernel (Common
+Lisp, pure by charter) runs the ledger; an automation tier runs the
+clock around it; the human's final say rides the whole surface.
 
 **Type:** agent harness with a ledger spine · ako/design lineage:
 [clean-architecture-charter](docs/core/clean-architecture-charter.md)
@@ -105,9 +110,9 @@ journal](docs/journal/2026-09-11.md); the whole verified run is
 the stranger's version, under [what exists](#what-exists).
 
 <!-- dispatch:begin -->
-| 2026-09-13 | 23 | $8.72 | 9 | 34 |
+| 2026-09-14 | 13 | $11.39 | 11 | 0 |
 
-Deep read: [the journal](docs/journal/2026-09-13.md).
+Deep read: [the journal](docs/journal/2026-09-14.md).
 <!-- dispatch:end -->
 
 ---

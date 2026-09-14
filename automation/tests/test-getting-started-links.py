@@ -11,11 +11,36 @@ Born with the page, peer-hardening plan step 5 (2026-09-10).
 """
 
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 PAGE = REPO / "docs" / "getting-started.md"
+
+
+def _gitignored():
+    """Paths gitignored somewhere under the repo (host-provisioned set).
+
+    The page documents the operator's live host, where artifacts like
+    automation/STATE.md are created at runtime and deliberately never
+    committed. A fresh checkout (CI) cannot have them, so a missing
+    gitignored path is expected, not a broken citation. Computed once;
+    a static allowlist would rot.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "--others", "--ignored", "--exclude-standard",
+             "--directory", "--no-empty-directory"],
+            cwd=REPO, capture_output=True, text=True, timeout=30)
+        if out.returncode != 0:
+            return frozenset()
+        return frozenset(line.rstrip("/") for line in out.stdout.splitlines() if line)
+    except Exception:
+        return frozenset()
+
+
+IGNORED = _gitignored()
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 CODE_RE = re.compile(r"`([^`\n]+)`")
@@ -55,6 +80,10 @@ def unresolved(text):
         if token in seen:
             continue
         seen.add(token)
+        # a gitignored path is host-provisioned (created at runtime on
+        # the operator's machine); CI checkouts legitimately lack it
+        if token.rstrip("/") in IGNORED:
+            continue
         candidates = [REPO / token]
         if kind == "link":
             candidates.append(PAGE.parent / token)
