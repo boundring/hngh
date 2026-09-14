@@ -1736,3 +1736,34 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** writing-register check; Hngh run evidence.
 - **Review trigger:** first verified upstream-able diagnosis from a real
   run.
+
+## Jcode primary-harness worker lane — operator directive 2026-09-14
+
+- **Problem:** Jcode is admitted as the primary agent harness
+  (records/2026-09-14-jcode-primary-harness-admission.md) but no hngh
+  delegation lane drives it; the existing bounded worker lane is omp/pi.
+- **Smallest useful outcome:** one governed Jcode worker cycle:
+  `launch()`-based driver (or CLI-equivalent) wrapped `--run-start` →
+  observatory `working` → `--run-end`, permissions deny-by-default bridged
+  to the certificate loop, one witnessed run with evidence.
+- **Evidence:** admission record 2026-09-14; governed-fleet.md §4
+  delegation invariants; 2026-09-12 harness-delegation research line.
+- **Risk:** medium — new transport into the delegation matrix; spawn depth
+  and token seams must be declared before first witnessed cycle.
+- **Dependencies:** hngh MCP server (landed, shared stdio standard);
+  certificate loop; observatory working state.
+- **Review trigger:** operator directive 2026-09-14 (prioritized ahead of
+  discretionary queue work).
+
+## Jcode observatory surface — operator directive 2026-09-14
+
+- **Problem:** the nerve-center Sessions tab has no Jcode session source;
+  the operator runs Jcode sessions the observatory cannot see.
+- **Smallest useful outcome:** read-only Jcode session preview in the
+  observatory via `connect()`/`peekSession` (preview-without-disturb),
+  behind the existing read-only probe architecture.
+- **Evidence:** admission record 2026-09-14; system-awareness-map design.
+- **Risk:** low — read-only, owner-only socket, no mutation path.
+- **Dependencies:** worker lane first (or independently via the operator's
+  `jcode api-bridge`).
+- **Review trigger:** worker lane's first witnessed cycle.
