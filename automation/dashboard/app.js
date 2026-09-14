@@ -131,6 +131,16 @@
       if (r[1] && r[1].dismissed) {
         opState.dismissed = r[1].dismissed;
       }
+      // stale-arm revalidation (ux-review dashboard-logs:2): an arm only
+      // survives a fetch while its item is still live — the same live
+      // predicate the render uses; never cleared on every fetch, a poll
+      // would kill the two-click confirm mid-flow.
+      if (armedId && opState.items &&
+          !opState.items.some(function (it) {
+            return it && it.id === armedId && !opState.dismissed[it.id];
+          })) {
+        armedId = null;
+      }
       return opState;
     });
   }

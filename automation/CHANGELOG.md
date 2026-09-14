@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-14
+
+- fix: dashboard operator-items dismiss arm (armedId) revalidates at the
+  fetch boundary (dashboard/app.js fetchOpState) — it survives a data
+  refresh only while the armed item is still live (present and not
+  dismissed) and clears otherwise, instead of persisting across fetches
+  (ux-review finding dashboard-logs:2, routed plan 2026-09-10). Tab
+  switches carry no new data and keep the arm. Contract pinned in
+  tests/test-dashboard-p0.py.
+
 ## 2026-09-13
 
 - feat: newspaper paid-cost conversion - procedural pipeline, local-only

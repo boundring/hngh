@@ -278,3 +278,13 @@ diffs against it. Queue is append-only, so dispositions live here.
 
 No ttsr-fit / ttsr-rule-drift / model-saturation / news-quarantine /
 context-ratio rows were open in the queue at pass time (2026-09-07).
+
+## Findings disposition pass 2 (2026-09-14)
+
+Second pass over the ux-review surface, diffing against pass 1 above
+(routed plan 2026-09-10-routed-ux-review-dashboard-logs-2-The-comment-
+claims-honest-dismiss-arm).
+
+| Finding | Verdict | Action / evidence |
+|---|---|---|
+| dashboard-logs 2: "honest dismiss: arm first" — armedId persisted across renders with no clear on tab switch or new data fetch (routed candidate 2026-09-10) | FIXED | Stale-arm revalidation added at the data boundary (dashboard/app.js fetchOpState): the arm survives a fetch only while its item is still live under the render's own predicate (present and not dismissed), and clears otherwise. Cross-item stale confirms were impossible by construction — the confirm renders only where armedId === it.id inside the shown list. Tab switches carry no new data, so they legitimately keep the arm. Contract pinned in tests/test-dashboard-p0.py (HonestDismiss). |
