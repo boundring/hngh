@@ -19,28 +19,25 @@ REPO = Path(__file__).resolve().parents[2]
 PAGE = REPO / "docs" / "getting-started.md"
 
 
-def _gitignored():
-    """Paths gitignored somewhere under the repo (host-provisioned set).
+def _gitignored(token):
+    """True when REPO/token is gitignored (host-provisioned artifact).
 
     The page documents the operator's live host, where artifacts like
     automation/STATE.md are created at runtime and deliberately never
     committed. A fresh checkout (CI) cannot have them, so a missing
-    gitignored path is expected, not a broken citation. Computed once;
-    a static allowlist would rot.
+    gitignored path is expected, not a broken citation. check-ignore is
+    evaluated per token because git ls-files --others only reports
+    ignored files that EXIST on disk — on a fresh CI checkout the
+    host-provisioned ones do not, and the allowlist would silently
+    empty out (the 2026-09-14 CI failure streak).
     """
     try:
-        out = subprocess.run(
-            ["git", "ls-files", "--others", "--ignored", "--exclude-standard",
-             "--directory", "--no-empty-directory"],
-            cwd=REPO, capture_output=True, text=True, timeout=30)
-        if out.returncode != 0:
-            return frozenset()
-        return frozenset(line.rstrip("/") for line in out.stdout.splitlines() if line)
+        r = subprocess.run(
+            ["git", "check-ignore", "-q", token],
+            cwd=REPO, capture_output=True, timeout=30)
+        return r.returncode == 0
     except Exception:
-        return frozenset()
-
-
-IGNORED = _gitignored()
+        return False
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 CODE_RE = re.compile(r"`([^`\n]+)`")
@@ -82,7 +79,7 @@ def unresolved(text):
         seen.add(token)
         # a gitignored path is host-provisioned (created at runtime on
         # the operator's machine); CI checkouts legitimately lack it
-        if token.rstrip("/") in IGNORED:
+        if _gitignored(token.rstrip("/")):
             continue
         candidates = [REPO / token]
         if kind == "link":
