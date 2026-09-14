@@ -19,6 +19,15 @@
 #   JCODE_WORKER_HOME   instance home (default ~/.hngh-jcode-worker;
 #                       created pinned, one runtime dir per lane)
 #   JCODE_WORKER_TIMEOUT_MS  turn timeout (default 300000)
+#   JCODE_WORKER_RENDER   render passthrough mode for worker.mjs:
+#                       off|markers|fd3|both (default off; inherited by
+#                       the child). markers appends an HNGH-RENDER section
+#                       after the turn text; fd3 writes one JSON envelope
+#                       line to the side channel.
+#   JCODE_RENDER_LOG    optional side-channel capture file: when set AND
+#                       JCODE_WORKER_RENDER includes fd3, fd 3 is opened
+#                       on this file for the child. Unset -> fd 3 stays
+#                       closed and the worker skips the write (never fatal).
 set -u
 
 launch_jcode_worker() {
@@ -70,8 +79,21 @@ PYEOF
  # is passed as one argv blob (no shell interpolation of file content).
  local prompt_blob
  prompt_blob="$(cat "$JCODE_PROMPT_FILE")"
- node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err"
- rc=$?
+ # Render side channel: only when the mode includes fd3 AND a capture
+ # file is configured. fd 3 is opened write-only on the capture file
+ # for the child; otherwise fd 3 stays closed and worker.mjs skips the
+ # write (writeSideChannel returns false, never fatal). The case uses
+ # a helper variable (not an inline redirect after a quoted -e string)
+ # to avoid a bash multiline-quote parse pitfall.
+ local render_mode="${JCODE_WORKER_RENDER:-off}"
+ local render_log="${JCODE_RENDER_LOG:-}"
+ if [[ "$render_mode" == *fd3* || "$render_mode" == *both* ]] && [ -n "$render_log" ]; then
+  node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err" 3>"$render_log"
+  rc=$?
+ else
+  node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err"
+  rc=$?
+ fi
  # errors go to a side log so the classifier reads only model text
  [ "$rc" -ne 0 ] && printf 'stderr:\n' >>"$JCODE_LOG" && \
   tail -c 2000 "$JCODE_LOG.err" >>"$JCODE_LOG"

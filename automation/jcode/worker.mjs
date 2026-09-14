@@ -15,6 +15,11 @@
 import { JcodeClient } from "@1jehuang/jcode-sdk";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  buildEnvelope,
+  formatRenderSection,
+  writeSideChannel,
+} from "./render-blocks.mjs";
 
 const HOME = process.env.JCODE_WORKER_HOME || join(process.env.HOME, ".hngh-jcode-worker");
 
@@ -113,6 +118,26 @@ try {
     ),
   ]);
   process.stdout.write(turn.text || "");
+  // Render passthrough (viz-transport slice): opt-in via
+  // JCODE_WORKER_RENDER=markers|fd3|both (default off, stdout contract
+  // unchanged). Markers append a parseable section after the turn text;
+  // fd3 writes one JSON envelope line to the side-channel fd (ignored
+  // when the fd is not open). Envelopes never carry the prompt.
+  try {
+    const mode = process.env.JCODE_WORKER_RENDER || "off";
+    if (mode !== "off") {
+      const envelope = buildEnvelope(turn);
+      if (mode === "markers" || mode === "both") {
+        process.stdout.write(formatRenderSection(envelope));
+      }
+      if (mode === "fd3" || mode === "both") {
+        const fd = Number(process.env.JCODE_WORKER_RENDER_FD || 3);
+        writeSideChannel(envelope, fd);
+      }
+    }
+  } catch {
+    // Render transport must never fail a turn.
+  }
   process.exit(0);
 } catch (err) {
   console.error(`jcode-worker: ${err.code || "error"}: ${err.message || err}`);
