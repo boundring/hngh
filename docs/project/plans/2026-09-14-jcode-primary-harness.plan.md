@@ -97,12 +97,25 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       seeded-stall auto-replace ran against the live supervision stack
       (real close-run dead + real `auto-replace` run-start, stubbed
       report queue; landed `agent-supervision` default-path fix).
-- [ ] 4. **Permission bridge.** `permission_request` events routed to the
+- [x] 4. **Permission bridge.** `permission_request` events routed to the
       certificate loop: default deny; allow only against a live mutation
       certificate naming the action class; `autoApprove` forbidden
       outside certificate-scoped lanes. Verification: forced permission
       request in an uncertified lane is denied and logged; certified lane
       allows exactly the named action.
+      **Verified 2026-09-14:** `lib/launch-jcode.sh` refuses
+      `JCODE_WORKER_APPROVE=1` unless a readable `JCODE_WORKER_CERT`
+      scope file (JSON `{"actions": [...], "expires": "<ISO-8601>"}`)
+      parses, declares a non-empty action list, and is unexpired —
+      rc 75 before any child spawns. `jcode/worker.mjs` re-validates the
+      scope (defense in depth), denies every `permission_request` in an
+      uncertified lane (never parks), allows exactly the tool names in
+      the certified action list, and writes an allow/deny audit line to
+      stderr per decision; blanket `autoApprove` is gone from the run
+      path. `tests/test-launch-jcode.sh` cases 8-13 (approve-without-cert
+      / expired / malformed / empty-actions -> 75; valid cert passes;
+      audit-line source greps) green inside the automation `make test`
+      gate (rc 0). Commit 4eaf1f0 (changelog 485a0a2).
 - [ ] 5. **Observatory surface.** Nerve-center Sessions preview of Jcode
       sessions via `connect()`/`peekSession`. Verification: preview
       renders a live session transcript without attaching.

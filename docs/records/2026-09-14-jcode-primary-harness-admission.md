@@ -99,6 +99,31 @@ preempted: the Jcode worker lane lands *as* governed-fleet stage-3 evidence
   CLI `jcode run` -> omp, each leg taken only when the previous is
   unavailable, breadcrumb per hop.
 
+## Step 4 exit evidence (2026-09-14)
+
+- Certificate bridge on the worker lane: `lib/launch-jcode.sh`
+  refuses `JCODE_WORKER_APPROVE=1` (rc 75, before any child spawns)
+  unless `JCODE_WORKER_CERT` is a readable JSON scope file —
+  `{"actions": [...], "expires": "<ISO-8601>"}` — that parses, names
+  a non-empty action list, and is unexpired. `jcode/worker.mjs`
+  re-validates the scope, denies every `permission_request` in an
+  uncertified lane (never parks a prompt), allows exactly the tool
+  names inside the certified action list, and writes an allow/deny
+  audit line to stderr per decision. Blanket `autoApprove` is removed
+  from the run path.
+- Verified hermetically: `tests/test-launch-jcode.sh` cases 8-13 —
+  approve without cert, expired, malformed, and empty-actions
+  certificates all refused 75; a valid certificate passes the wrapper
+  gate; source greps pin the audit lines. Green inside the automation
+  `make test` gate (rc 0). Commit 4eaf1f0 (changelog 485a0a2).
+- Scope of the rung: the gate is the automation-tier scope file the
+  launching lane captures; binding it to a kernel-issued rendered
+  certificate record (the `scripts/hngh issue-cert` one-liner,
+  `action=`/`expiry=`/`policy-profile=real`) is the named follow-up if
+  kernel-grade binding is demanded — the kernel ceremony itself closes
+  issue-cert -> mutation-check inside one invocation and never hands
+  a certificate to a child process.
+
 ## Honest unknowns
 
 - The SDK is Node 20+; the automation tier is Python/bash. The worker driver
