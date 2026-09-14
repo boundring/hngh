@@ -11,7 +11,7 @@ day's records slice.
 
 ## Steps
 
-- [ ] 1. Add `--dry-run` to scripts/ceremony-drive (test-first). The
+- [x] 1. Add `--dry-run` to scripts/ceremony-drive (test-first). The
       flag runs the full loop — create-run + admit-transport + propose
       + issue-cert prepare-candidate — against a fresh scratch store
       (`/tmp/hngh-dream-<ts>`), then stops: no `mutation-check` at all
