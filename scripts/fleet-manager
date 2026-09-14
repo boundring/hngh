@@ -63,7 +63,9 @@ def tailscale_nodes():
     except ValueError:
         return []
     nodes = []
-    for peer in data.get("peer", {}).values():
+    # key casing varies across tailscale versions (Peer vs peer); Self is
+    # a separate key, so the Peer map never contains self.
+    for peer in (data.get("peer") or data.get("Peer") or {}).values():
         ips = peer.get("tailscaleIPs") or peer.get("addresses") or [""]
         nodes.append({
             "name": peer.get("hostname") or peer.get("dnsName") or "?",
