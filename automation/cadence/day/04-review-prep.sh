@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # 04-review-prep — day-tier self-improvement drop-in: fresh-eyes review of
 # the last 36h of commits in BOTH repos (hngh + hngh-automation) via the
-# sanctioned local model path (model_call; unsloth -> ollama fallback; no
-# remote API keys). Writes digest/REVIEW-<date>.md (range + response),
+# quota-ladder lane (MODEL_PIN=review: deck -> kimi -> zai -> ocgo, the
+# local bench LAST resort; no remote/paid API keys). Writes
+# digest/REVIEW-<date>.md (range + response),
 # files a progress row per repo and an alert row per P0/P1 finding.
 # Local-model failure files an alert and exits 0 — never hangs the tick.
 #
@@ -69,11 +70,13 @@ corrupted, or partially-written file.
 
 $packet"
 
-# operator quota directive (2026-09-07): intelligence-shaped bounded work
-# rotates onto the quota models -- fresh-eyes review pins the kimi leg
-# primary; a pace-blocked or failing kimi falls through to unsloth/ollama
-# inside model_call, so the review never blocks on quota state.
-MODEL_PIN="${MODEL_PIN:-kimi}"
+# stall-recovery step 10 (2026-09-13): the review rides the CURRENT quota
+# ladder deck -> kimi -> zai -> ocgo with the local bench as LAST resort
+# (2026-09-09 evidence: the old kimi pin fell through to the unsloth bench
+# and REVIEW-2026-09-09.md recorded a bench non-review). Unarmed or
+# pace-blocked legs skip fail-closed inside model_call; remote (paid
+# openrouter) is never in this lane.
+MODEL_PIN="${MODEL_PIN:-review}"
 
 t0=$(date +%s)
 response="$(printf '%s' "$prompt" | model_call 4096)"
@@ -84,7 +87,7 @@ used="$(last_model_used)"
 if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
   # chain-accurate: with pin=kimi the alert fires only when the whole
   # pinned chain (kimi -> unsloth -> ollama) has failed.
-  file_report alert "review unavailable: model chain down (pin=kimi exhausted through local) ($used)"
+  file_report alert "review unavailable: model chain down (pin=review quota ladder exhausted through local) ($used)"
   exit 0
 fi
 
@@ -104,6 +107,13 @@ if [ -z "$verdicts" ]; then
     file_report progress "review: $repo response did not match the expected format (see digest/REVIEW-$day.md)"
   done
   file_report alert "review: model response unparseable — read digest/REVIEW-$day.md" "review:parse" 86400
+  # stall-recovery step 10: an unparseable review is a bad-execution
+  # outcome for the serving model -- the same demotion counter step 1
+  # uses, so a leg that keeps emitting garbage is skipped by select_model
+  # until an ok outcome clears it.
+  declare -F record_model_outcome >/dev/null ||
+    . "$AUTOMATION_ROOT/lib/model-demote.sh"
+  record_model_outcome "$used" bad-execution
   python3 "$TELEMETRY" emit --kind review --model "$used" --wall-s "$wall" --source review-prep
   breadcrumb "$JOB_NAME" "review-done" "digest/REVIEW-$day.md written (unparseable response)"
   exit 0

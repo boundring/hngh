@@ -25,6 +25,20 @@
 #          kimi -> archive; remote skipped.
 #   zai    zai first (Z.AI subscription, 5h + weekly paced), then
 #          unsloth -> ollama -> deck -> archive; remote + kimi skipped.
+#   review deck -> kimi -> zai -> ocgo first (the current quota ladder),
+#          then unsloth -> ollama -> archive; remote skipped. The
+#          fresh-eyes review (04-review-prep) and the digest model leg
+#          (morning-digest) ride this lane: quota legs first, the local
+#          bench LAST resort (2026-09-09 evidence: the old kimi pin fell
+#          through to the unsloth bench and REVIEW-2026-09-09.md recorded
+#          a bench non-review).
+#   remote remote first (openrouter, budget-gated) with the model from
+#          REMOTE_MODEL_CODING / cadence-params `remote-model-coding`
+#          (task-class route: coding completions that generate whole
+#          files or patches, per the operator's 2026-09-13 benchmark
+#          priorities), then unsloth -> ollama -> deck -> archive;
+#          kimi/ocgo skipped. A miss (no key file, cap, 429) falls
+#          through to the local chain.
 #   other  ignored: the full chain runs.
 # A pinned quota leg that misses (pace-block, 429, endpoint down) falls
 # through to the local chain inside model_call -- research/reviews never
@@ -296,7 +310,7 @@ remote_chat() {
  count="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source='remote' and ts like '$(date -u +%Y-%m-%d)%'" 2>/dev/null)"
  case "$count" in '' | *[!0-9]*) count=0 ;; esac
- [ "$count" -ge "$REMOTE_DAILY_CAP_CALLS" ] && {
+ [ "$count" -ge "${REMOTE_DAILY_CAP_CALLS:-200}" ] && {
   breadcrumb model "remote" "daily cap reached -> next backend"
   return 1
  }
@@ -740,19 +754,45 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
 
 model_call() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
- local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0
+ local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0 pin_remote=0 \
+  pin_review=0
  case "${MODEL_PIN:-}" in
  local) pin_local=1 ;;
  kimi) pin_kimi=1 ;;
  deck) pin_deck=1 ;;
  ocgo) pin_ocgo=1 ;;
  zai) pin_zai=1 ;;
+ remote) pin_remote=1 ;;
+ review) pin_review=1 ;;
  esac # unknown values: ignore (full chain)
  prompt="$(cat)"
  MODEL_USED=""
  printf '' >"$MODEL_TRUNC_FILE" 2>/dev/null
+ # review lane: the current quota ladder deck -> kimi -> zai -> ocgo with
+ # the local bench LAST; unarmed or pace-blocked legs skip fail-closed
+ # inside their _*_leg gates, and remote (paid openrouter) is never in
+ # this lane.
+ if [ "$pin_review" = 1 ]; then
+  _deck_leg "$prompt" "$max_tokens" && return 0
+  _kimi_leg "$prompt" "$max_tokens" && return 0
+  _zai_leg "$prompt" "$max_tokens" && return 0
+  _ocgo_leg "$prompt" "$max_tokens" && return 0
+ fi
  # pinned quota legs run first; a miss (pace-block, 429, down) falls
  # through to the local chain -- the caller never blocks on quota state.
+ if [ "$pin_remote" = 1 ]; then
+  local rmodel="${REMOTE_MODEL_CODING:-$(get_param remote-model-coding '')}"
+  [ -n "$rmodel" ] || rmodel="${REMOTE_MODEL:-}"
+  if (
+   REMOTE_MODEL="$rmodel"
+   remote_chat "$prompt" "$max_tokens"
+  ); then
+   MODEL_USED="openrouter:$rmodel"
+   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+   _model_emit remote "$rmodel"
+   return 0
+  fi
+ fi
  if [ "$pin_kimi" = 1 ] && _kimi_leg "$prompt" "$max_tokens"; then
   return 0
  fi
@@ -783,7 +823,7 @@ model_call() {
    return 0
   fi
  done
- if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
   [ "$pin_ocgo" = 0 ] &&
   [ "$pin_zai" = 0 ] &&
   _zai_leg "$prompt" "$max_tokens"; then
@@ -791,7 +831,7 @@ model_call() {
   # direct leg first (bucket-gated), openrouter stays the fallback
   return 0
  fi
- if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
   [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
   remote_chat "$prompt" "$max_tokens"; then
   MODEL_USED="openrouter:$REMOTE_MODEL"
@@ -805,16 +845,16 @@ model_call() {
   _model_emit ollama "$OLLAMA_MODEL"
   return 0
  fi
- if [ "$pin_local" = 0 ] && [ "$pin_deck" = 0 ] &&
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_deck" = 0 ] &&
   _deck_leg "$prompt" "$max_tokens"; then
   return 0
  fi
- if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
   [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
   _kimi_leg "$prompt" "$max_tokens"; then
   return 0
  fi
- if [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
   [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] && [ "$pin_zai" = 0 ] &&
   _ocgo_leg "$prompt" "$max_tokens"; then
   return 0

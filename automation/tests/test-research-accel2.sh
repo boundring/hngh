@@ -88,7 +88,9 @@ reset_beat() { # n-planned-lines -> fresh pool, counters, telemetry, hits
  rm -rf "$sb/ff"
  rm -f "$stubdir/synth-reply"
  : >"$sb/STATE.md"
- rm -f "$sb/dashboard/telemetry.db"
+ # telemetry db: userspace home layout (2026-09-13); the dashboard/ path
+ # is stale — leftover rows here soft-pace-block kimi early in the UTC day.
+ rm -rf "$sb/.hngh"
  : >"$stubdir/stubU-hits"
  : >"$stubdir/stubK-hits"
  : >"$stubdir/stubD-hits"
