@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hngh-automation · the daily story</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="story-page">
+<header>
+  <div class="h-left">
+    <h1>the daily story</h1>
+    <span class="sub">today's chapters · facts from the work graph + report-queue only · one dry aside per section, and it is earned &middot;</span>
+  </div>
+  <div class="h-right">
+    <a class="ghost" href="index.html">&larr; nerve center</a>
+    <a class="ghost" href="gantt.html">gantt</a>
+    <button id="refresh-btn" class="ghost" title="refetch plans.json + reports.md now">refresh</button>
+  </div>
+</header>
+
+<p class="legend-line">timestamps and hashes are evidence pulled from the feeds &mdash; plans.json
+(<span class="tstamp" id="stamp"></span>) and today's report-queue rows &mdash; never
+projected dates &mdash; plan rows link back to the ledger in docs/project/plans/</p>
+
+<main id="storymain">
+  <div id="storyerr" class="error" hidden></div>
+
+  <section id="sec-accepted" class="panel" aria-labelledby="sec-accepted-lab" tabindex="0">
+    <h2 id="sec-accepted-lab">accepted &amp; executing</h2>
+    <div id="sec-accepted-body" class="sec-body"><div class="placeholder">loading&hellip;</div></div>
+  </section>
+
+  <section id="sec-steps" class="panel" aria-labelledby="sec-steps-lab" tabindex="0">
+    <h2 id="sec-steps-lab">steps completed today</h2>
+    <div id="sec-steps-body" class="sec-body"><div class="placeholder">loading&hellip;</div></div>
+  </section>
+
+  <section id="sec-blockers" class="panel" aria-labelledby="sec-blockers-lab" tabindex="0">
+    <h2 id="sec-blockers-lab">blockers</h2>
+    <div id="sec-blockers-body" class="sec-body"><div class="placeholder">loading&hellip;</div></div>
+  </section>
+
+  <section id="sec-parks" class="panel" aria-labelledby="sec-parks-lab" tabindex="0">
+    <h2 id="sec-parks-lab">parks</h2>
+    <div id="sec-parks-body" class="sec-body"><div class="placeholder">loading&hellip;</div></div>
+  </section>
+</main>
+
+<script src="story-view.js"></script>
+</body>
+</html>
