@@ -51,6 +51,15 @@ is edge-tier (`automation/`); the kernel never learns Jcode exists.
       spawn depth budget declared; fail-closed on undeclared paths.
       Verification: one witnessed cycle in the run ledger; seeded stall
       auto-replaced per governed-fleet §4.
+      **Progress 2026-09-14:** shim (`automation/jcode/worker.mjs`),
+      wrapper (`automation/lib/launch-jcode.sh`), and hermetic tests
+      (`automation/tests/test-launch-jcode.sh`, wired into the
+      automation `make test` gate) landed, plus the cadence-params
+      `session-executor` row documenting the `jcode` option. Live smoke
+      passed (one orient turn through the shim). Remaining for this
+      step: wire `launch_session`'s executor selector to dispatch
+      `jcode` → `launch_jcode_worker`, then the witnessed-cycle +
+      seeded-stall exit evidence.
 - [ ] 4. **Permission bridge.** `permission_request` events routed to the
       certificate loop: default deny; allow only against a live mutation
       certificate naming the action class; `autoApprove` forbidden
