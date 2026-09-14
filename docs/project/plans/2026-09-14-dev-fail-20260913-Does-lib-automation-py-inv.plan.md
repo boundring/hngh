@@ -4,17 +4,21 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line `fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v` by verifying the invocation mechanism and adding a synchronous integration test for the `lib/automation.py` ↔ `bin/hngh` boundary.
+Implements research line fail-20260913-Does-lib-automation-py-invoke-bin-hngh-v by adding a hermetic subprocess-seam test that pins the `lib/automation.py` → `bin/hngh` invocation contract (env-overridable binary path, no direct module import) and gates it via `make test`.
 
 ## Steps
 
-- [ ] Inspect `lib/automation.py` to confirm whether it invokes `bin/hngh` via `subprocess` or direct module import
-  Verification: grep -n "subprocess\|import.*hngh" lib/automation.py
-- [ ] Create a minimal integration test script under `tests/` that exercises the `lib/automation.py` ↔ `bin/hngh` boundary using a stubbed subprocess seam
-  Verification: bash -n tests/test_automation_boundary.sh
-- [ ] Add a make target or update existing test suite to run the new integration test as part of `make test`
+- [ ] Add `tests/test_automation_subprocess_seam.py` asserting `lib.automation` resolves the hngh binary through an env var (e.g. `HNHG_BIN`) and invokes it via `subprocess`, not a direct `import bin.hngh`.
+  Verification: python3 tests/test_automation_subprocess_seam.py
+
+- [ ] Add a stub fixture `tests/fixtures/fake-hngh` (a minimal bash script that echoes its argv) so the seam test can point `HNHG_BIN` at it without touching real credentials or kernel paths.
+  Verification: bash -n tests/fixtures/fake-hngh
+
+- [ ] Extend `lib/automation.py` invocation path to honor the `HNHG_BIN` env override (falling back to default `bin/hngh`) so the seam is testable in-repo; keep behavior identical when unset.
   Verification: make test
-- [ ] Verify that the overnight harness configuration references the corrected CLI contract post-2026-08-25 guardrail fix
-  Verification: grep -n "guardrail\|cli-contract" cadence/overnight-harness.sh
-- [ ] Add a latency assertion to `cadence/hour/33-research-beat.sh` that flags wall-time deviations exceeding 2x the median
-  Verification: bash -n cadence/hour/33-research-beat.sh
+
+- [ ] Add a regression guard `tests/test_no_direct_import_of_bin_hngh.py` that fails if `lib/automation.py` contains a direct module import of `bin.hngh`.
+  Verification: python3 tests/test_no_direct_import_of_bin_hngh.py
+
+- [ ] Wire the new seam test into the existing suite so `make test` runs it (update the test discovery list or add to `tests/` auto-discovery) and confirm a clean pass.
+  Verification: make test
