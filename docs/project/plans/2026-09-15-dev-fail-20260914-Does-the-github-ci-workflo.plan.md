@@ -4,16 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line investigating whether the GitHub CI workflow definition contains an embedded copy of the patrol verdict rule and lacks a diff against the kernel's canonical rules file, addressing the drift between surfaces.
-
 ## Steps
 
-- [ ] Create `scripts/check-verdict-rule-drift.sh` that extracts the verdict rule from the CI workflow surface and compares it against the canonical source path using `diff`.
+- [ ] Create `scripts/check-verdict-rule-drift.sh` that greps for the canonical patrol verdict rule string in both the CI workflow definition and the kernel rules file, failing if they differ.
   Verification: bash -n scripts/check-verdict-rule-drift.sh
-- [ ] Add a step to `.github/workflows/ci.yml` that executes `scripts/check_verdict_rule_drift.sh` before the test suite.
-  Verification: grep -q "check_verdict_rule_drift" .github/workflows/ci.yml
-- [ ] Implement the comparison logic in `scripts/check-verdict-rule-drift.sh` to exit non-zero if the embedded rule differs from the canonical file.
+- [ ] Add a test case to `tests/` that executes the drift check script against fixture files representing drifted and identical rule surfaces.
   Verification: make test
-- [ ] Create `tests/test_verdict_rule_drift.sh` that mocks a drifted state and asserts the check script fails correctly.
-  Verification: bash tests/test_verdict_rule_drift.sh
+- [ ] Create `lib/reaction-vocabulary.py` defining a closed set of external reaction outputs and a validation function that rejects unbounded or dynamically named payloads.
+  Verification: python3 -c "import lib.reaction_vocabulary as rv; assert rv.validate('known_output') == True"
+- [ ] Add a unit test in `tests/` verifying that the reaction vocabulary validator accepts only closed-vocabulary outputs and raises on arbitrary strings.
+  Verification: make test
+- [ ] Create `dashboard/sessions-scroll-probe.js` that inspects the DOM for shared layout components across dashboard tabs and logs scroll container heights.
+  Verification: node --check dashboard/sessions-scroll-probe.js
