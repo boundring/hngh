@@ -64,6 +64,16 @@ KNOWN_EXEMPTIONS = {
         # so only this id changes under the recipe
         "patch-id": "df45cd42506c643d5ecdfbe357708b46035e14d2",
     },
+    # 2026-09-15 declared miss: docs-ledger repair commit accidentally
+    # swept the staged guard-cure edit (docs: message touching tests/);
+    # the guard-cure content itself was separately certified by candidate
+    # 2f9e618f (117d463f) in the same hour. Declared post-hoc per the
+    # 526cd3f precedent; cured by this declaration -- not rewritten.
+    "7637c560": {
+        "reason": "docs ledger repair that swept a staged tests/ edit "
+                  "(repair content certified separately by 117d463f)",
+        "patch-id": "09bc3d024489f06457155358eb8afcc6ee58c0b8",
+    },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
     # itself was being built; declared by name per the 2026-09-06 decision,
