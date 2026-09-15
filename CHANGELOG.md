@@ -8,6 +8,14 @@ lives under Pre-release / early development until the first release.
 
 #### Added
 
+- **Doctrine reconciliation record** (docs/records/2026-09-15-doctrine-reconciliation-kernel-gates.md):
+  kernel-gates operator-only (host grant layer) and flexibility
+  doctrine 2a (authorization routing layer) documented as layered, not
+  contradictory; zoom-gating inertia flags closed.
+
+
+#### Added
+
 - **Swarm-resume mission completed; ambient mode enabled (garden-only)**
   (docs/records/2026-09-15-swarm-resume-and-ambient-enablement.md):
   the interrupted 2026-09-14 exploration graph was recovered and
