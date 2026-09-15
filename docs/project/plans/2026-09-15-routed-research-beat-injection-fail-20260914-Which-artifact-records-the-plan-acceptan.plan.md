@@ -8,3 +8,7 @@ at 2026-09-15T13:00:14Z. Alert text: injection signature(s) redacted from resear
 
 - [ ] Delve: open research subject fail-20260915-research-beat-injection-fail-20260914-which-artifact-records-the-plan-acceptan for research-beat:injection:fail-20260914-Which-artifact-records-the-plan-acceptan; record disposition; then fix or park
       Verification: research subject fail-20260915-research-beat-injection-fail-20260914-which-artifact-records-the-plan-acceptan present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-15T14:00:39Z re-occurred (dedup window expired)
