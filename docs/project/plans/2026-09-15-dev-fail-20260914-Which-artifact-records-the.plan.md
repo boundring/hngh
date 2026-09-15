@@ -5,18 +5,21 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line regarding the distinction between clean-complete and timeout-complete states in the beat script, specifically addressing the untested gap by adding explicit state markers and verification logic to hngh-automation.
+This plan implements the research line `fail-20260915-Does-the-beat-script-s-state-model-disti` by establishing a structured, auditable state model in hngh-automation that explicitly distinguishes between clean-complete and timeout-complete markers, closing the gap where completion status was previously conflated or derived ambiguously.
 
 ## Steps
 
-- [ ] Create `lib/state_markers.sh` defining distinct sentinel strings for "clean_complete" and "timeout_complete" states
-  Verification: bash -n lib/state_markers.sh
+- [ ] Define a canonical state enum in `lib/state_model.sh` containing distinct tokens for `clean_complete` and `timeout_complete`.
+  Verification: grep -q "timeout_complete" lib/state_model.sh && grep -q "clean_complete" lib/state_model.sh
 
-- [ ] Add a test case in `tests/test_state_distinction.sh` that asserts the two state markers are not identical
+- [ ] Implement a finalization function in `scripts/finalize_run.sh` that writes the resolved state token to a status file.
+  Verification: bash -n scripts/finalize_run.sh
+
+- [ ] Add a unit test in `tests/test_state_distinction.sh` asserting that timeout-complete does not resolve to clean-complete.
+  Verification: bash tests/test_state_distinction.sh
+
+- [ ] Update the reconciliation logic in `cadence/reconcile.sh` to treat `timeout_complete` as a non-terminal state requiring retry.
+  Verification: grep -q "timeout_complete" cadence/reconcile.sh && grep -q "retry" cadence/reconcile.sh
+
+- [ ] Integrate the new state model into the main automation entrypoint in `jobs/run_automation.sh`.
   Verification: make test
-
-- [ ] Update `scripts/beat_finalize.sh` to write the appropriate state marker based on exit conditions
-  Verification: bash -n scripts/beat_finalize.sh
-
-- [ ] Create `digest/STATE_DISTINCTION_NOTES.md` documenting the semantic difference between timeout and clean completion
-  Verification: grep -q "timeout_complete" digest/STATE_DISTINCTION_NOTES.md
