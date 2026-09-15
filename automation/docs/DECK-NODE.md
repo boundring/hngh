@@ -1,5 +1,13 @@
 # DECK-NODE.md -- admit the Steam Deck as a ledgered Hngh node (Phase 1)
 
+> **DEACTIVATED 2026-09-15** (operator directive: deck slowdowns). All
+> deck integration is switched off via config, not removed:
+> `cadence-params.tsv` `deck-node-enabled=0` (gates the hourly facts
+> pull, remote-posture probe, and deck-load routing) and an emptied
+> `deck-model-endpoint` value (deck_chat / deck_up legs skip
+> fail-closed). Re-enable: set `deck-node-enabled=1` and restore
+> `http://100.79.162.3:8082` in the `deck-model-endpoint` row.
+
 Runbook, 2026-09-06 (machine-runnable redesign; original operator-runbook
 version retired the same day). The deck (`steamdeck`, tailnet
 100.79.162.3, user `deck`) is already paired and hardened per

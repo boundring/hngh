@@ -14,6 +14,16 @@
 set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
+. "$AUTOMATION_ROOT/lib/params.sh"
+
+# deck-node-enabled gates ALL deck activity (2026-09-15 operator
+# deactivation): 0 = skip the probe entirely, never file degraded alerts
+# for a node the operator has switched off. env DECK_NODE_ENABLED overrides.
+if [ "${DECK_NODE_ENABLED:-$(get_param deck-node-enabled 0)}" != "1" ]; then
+  breadcrumb "$JOB_NAME" "remote-posture" \
+    "deck-node-enabled != 1: deck deactivated, probe skipped"
+  exit 0
+fi
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
