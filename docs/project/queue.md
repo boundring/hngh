@@ -11,7 +11,7 @@ id); this file is the rotation state.
 ```
 id	status	title	evidence
 wake-mutation-lane	done	Certificate-bound wake mutation lane	landed 2026-09-13 through the certificate ceremony: :wake-mutation in the closed mutation vocabulary (src/adapter/mutation.lisp, src/domain/governance.lisp, tests/adapter/test-mutation.lisp, tests/domain/test-governance.lisp) binding the r17 wake surface; docs/records/2026-09-13-wake-mutation-lane-landing.md
-node-lattice-admission	queued	Node-lattice admission rung	backlog entry; README vision
+node-lattice-admission	done	Node-lattice admission rung	rotated 2026-09-15
 bridge-operator-host	queued	Bridge-as-operator-host (run → worker → review → certify)	backlog entry; bridge README
 doc-sync-loop	done	Documentation-sync loop (make numbers guard)	rotated 2026-08-25 by rotate-queue
 key-rotation-freshness	queued	Evidence-freshness + key-rotation rung	backlog entry; node-lattice risk
