@@ -60,6 +60,9 @@ class Base(unittest.TestCase):
         fa.STATE_TSV = str(self.tmp / "state" / "feedback-applied.tsv")
         fa.APPLIED_MD = str(self.applied)
         fa.ITEMS_JSON = str(self.items)
+        fa.SIGHTINGS_TSV = str(
+            self.tmp / "state" / "correction-sightings.tsv")
+        fa.PENDING_TSV = str(self.tmp / "state" / "pending-checks.tsv")
         fa.REPORT_KERNEL = str(ROOT.parent)  # real scripts/report-queue
         os.environ["HNGH_REPORT_ROOT"] = str(self.tmp / "report-root")
 
@@ -159,13 +162,33 @@ class CorrectionTest(Base):
         self.assertEqual(self.css(), FIXTURE_CSS)
 
     def test_correction_without_named_check_reports_no_check(self):
+        # convergence fold (2026-09-15): the FIRST sighting stays silent
+        # (below threshold); recurrence at >=2 converges then suppresses.
         self.load_items([(
             "f6", "feedback-ingest | alert | "
             "[feedback:correction] layout: something looks off")])
         self.assertEqual(self.fa.main([]), 0)
         body = (self.tmp / "report-root" / "docs" / "project" /
                 "report-bodies")
+        # first sighting: below threshold, still the classic blind alert
         self.assertTrue(any(b.exists() for b in body.glob("*.md")))
+        alerts = len(list(body.glob("*.md")))
+        self.load_items([(
+            "f6", "feedback-ingest | alert | "
+            "[feedback:correction] layout: something looks off")])
+        self.assertEqual(self.fa.main([]), 0)
+        # converged: pending check created instead of a blind alert
+        pending = self.tmp / "state" / "pending-checks.tsv"
+        self.assertTrue(pending.exists())
+        self.assertIn("check:correction-f6", pending.read_text())
+        # further recurrences neither duplicate nor re-alert
+        n = len(pending.read_text().splitlines())
+        self.load_items([(
+            "f6", "feedback-ingest | alert | "
+            "[feedback:correction] layout: something looks off")])
+        self.assertEqual(self.fa.main([]), 0)
+        self.assertEqual(len(pending.read_text().splitlines()), n)
+        self.assertEqual(len(list(body.glob("*.md"))), alerts)
 
 
 if __name__ == "__main__":

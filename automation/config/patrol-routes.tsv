@@ -37,3 +37,4 @@ research-dispositions	research-dispositions	disposition-followons	day	bad-execut
 systemd-units	systemd-user-units	systemd-units	30m	bad-execution
 github-ci	github-actions-latest	github-ci-latest	30m	bad-execution
 journal-error	user+kernel-journal	journal-errors	30m	bad-execution
+pending-checks	pending-checks-ledger	pending-checks	30m	check-pending

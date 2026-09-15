@@ -1142,6 +1142,52 @@ def check_journal_errors(ctx):
     return out
 
 
+def check_pending_checks(ctx):
+    """Correction convergence fold (2026-09-15): each pending named check
+    from state/pending-checks.tsv surfaces once as check-pending:<id>
+    until promoted (the row is removed); rows older than 7 days escalate
+    as check-pending-stale:<id>."""
+    out = {"passes": [], "fails": []}
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location(
+        "correction_linkage",
+        os.path.join(HERE, os.pardir, "lib", "correction-linkage.py"))
+    correction_linkage = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(correction_linkage)
+    rows = correction_linkage.load_pending(ctx["pending_checks"])
+    if not rows:
+        out["passes"].append(("pending-checks",
+                              "no pending checks (nothing converged)"))
+        return out
+    stale_s = correction_linkage.STALE_DAYS * 86400
+    stale = pending = 0
+    for r in rows:
+        if r["status"] != "pending":
+            continue
+        pending += 1
+        try:
+            created = time.mktime(time.strptime(
+                r["created"], "%Y-%m-%dT%H:%M:%SZ")) - time.timezone
+        except ValueError:
+            created = 0
+        if ctx["now"] - created > stale_s:
+            stale += 1
+            out["fails"].append(
+                (r["id"], "check-pending-stale",
+                 "%s (%s) pending since %s: %s (promote into "
+                 "config/patrol-routes.tsv or park it)"
+                 % (r["check"], r["id"], r["created"],
+                    r["condition"][:80])))
+        else:
+            out["fails"].append(
+                (r["id"], "check-pending",
+                 "%s awaiting promotion (tier %s): %s"
+                 % (r["check"], r["tier"], r["condition"][:80])))
+    out["passes"].append(("pending-checks",
+                          "pending=%d stale=%d" % (pending, stale)))
+    return out
+
+
 CHECKS = {
     "feed-freshness": check_feed_freshness,
     "blocker-escalations": check_blocker_escalations,
@@ -1164,6 +1210,7 @@ CHECKS = {
     "systemd-units": check_systemd_units,
     "github-ci-latest": check_github_ci,
     "journal-errors": check_journal_errors,
+    "pending-checks": check_pending_checks,
 }
 
 
@@ -1203,6 +1250,9 @@ def build_ctx(args, now_s):
         "blockers": os.environ.get(
             "PATROL_BLOCKERS",
             os.path.join(root, "state", "beat-blockers.tsv")),
+        "pending_checks": os.environ.get(
+            "PATROL_PENDING_CHECKS",
+            os.path.join(root, "state", "pending-checks.tsv")),
         "params": params,
         "research_lines": os.environ.get(
             "PATROL_RESEARCH_LINES", os.path.join(root, "research-lines.tsv")),
