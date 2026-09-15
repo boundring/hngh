@@ -4,16 +4,13 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line "Does the beat script's state model distinguish between 'timeout-complete' and 'in-progress' markers, and if not, what is the minimal patch to close this gap?" by adding a distinct status token to the cadence scripts and asserting its presence in tests.
-
 ## Steps
 
-- [ ] Add a `TIMEOUT_COMPLETE` status constant or string literal to the state model in `cadence/beat.sh` (or equivalent shell script) to distinguish from clean-complete.
-  Verification: grep -q "TIMEOUT_COMPLETE" cadence/beat.sh
-- [ ] Update the finalization logic in `cadence/beat.sh` to write the new timeout status token when a deadline expires without completion.
-  Verification: bash -n cadence/beat.sh
-- [ ] Create a test script in `tests/test_timeout_status.sh` that simulates a timeout scenario and asserts the output contains the distinct timeout marker.
-  Verification: bash tests/test_timeout_status.sh
-- [ ] Register the new test case in the main test suite entry point (e.g., `tests/run_tests.sh` or `Makefile` test target) to ensure it runs during `make test`.
+- [ ] Add a schema validation script that enforces distinct `parse_pass` and `operator_override` fields in plan-acceptance artifacts.
+  Verification: python3 scripts/validate_acceptance_artifact.py
+- [ ] Implement a state model patch in the beat script to explicitly distinguish "timeout-complete" from "in-progress" markers.
+  Verification: bash -n scripts/beat_state_model.sh
+- [ ] Create a test suite asserting the distinction between clean-complete and timeout-complete states.
   Verification: make test
+- [ ] Add a probe script to capture failing target, trailing stderr, and /proc metrics at make failure time.
+  Verification: bash -n scripts/capture_make_failure.sh
