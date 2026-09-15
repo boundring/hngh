@@ -126,17 +126,26 @@ docs/records/ with its first commit.
       the mesh is up on this host — the wake-mutation lane mock is a sibling
       session's in-flight work), so commit waits for that lane; only this
       plan file is touched.
-- [ ] 7. Lifecycle accommodation: traps and persistent state. Evidence:
-      timeout wraps bili so SIGTERM kills the whole tree (rc=124) with no
-      trap handlers in overnight-cycle.sh; no mid-plan checkpoint beyond
-      git/checkboxes; failfirst state lives in /tmp/hngh-failfirst and
-      resets on reboot. Operator requires smooth safe stop/restart on
-      updates and shutdowns.
-      Change: trap SIGTERM/SIGINT in overnight-cycle.sh to log the
-      in-flight slug and disposition before exit; move failfirst state
-      under a persistent path (automation/state/ or
-      ~/.local/state/hngh-failfirst) so pacing survives reboots; document
-      the restart sequence. No systemd unit changes (critical boundary).
+- [x] 7. Lifecycle accommodation: traps and persistent state. VERIFIED
+      2026-09-15T06:15Z: the production surfaces already carry the full
+      change — overnight-cycle.sh traps TERM/INT in over_shutdown()
+      (:65-73) writing a shutdown-signal breadcrumb with slug=disposition
+      pairs plus the cold-start-unclean double-spawn suppression (:77-90);
+      failfirst.sh:40 defaults FF_DIR to $AUTOMATION_ROOT/state/failfirst
+      (durable) with /tmp/hngh-failfirst as a one-shot migration fallback
+      only (:43-48). Evidence-as-read in the plan text was superseded:
+      docs/records/2026-09-10-restart-resilience.md documents the
+      restart-sequence (stop/cold-start/resume/durable-state),
+      automation/README.md:198 documents state/ durability, and the
+      wrap kill-after hole is covered by "timeout -k 5" on the kernel
+      selector (:319-320, SBCL-ignores-bare-SIGTERM note).
+      Verification on each own surface, first run, no implementation
+      changes: test-lifecycle-traps.sh ALL PASS (7 cases: trap exit 1
+      clean, breadcrumb slug+disposition, cold-start guard);
+      test-overnight-shutdown.sh all cases passed (rc=1 + breadcrumb,
+      no double-spawn, clean resume); test-failfirst.sh all cases
+      passed including durable-default cross-shell carry and one-shot
+      /tmp migration.
       Verification: suite test simulates SIGTERM mid-beat and asserts the
       breadcrumb + clean exit; state path survives a simulated reboot
       (dir not under /tmp); `make test` green.
