@@ -244,6 +244,11 @@ _gspec = importlib.util.spec_from_file_location(
 graph_data = importlib.util.module_from_spec(_gspec)
 _gspec.loader.exec_module(graph_data)
 
+_hfeed_spec = importlib.util.spec_from_file_location(
+    "history_feed", os.path.join(ROOT, "jobs", "history-feed.py"))
+history_feed = importlib.util.module_from_spec(_hfeed_spec)
+_hfeed_spec.loader.exec_module(history_feed)
+
 
 def _launchers():
     merged = dict(DEFAULT_LAUNCHERS)
@@ -316,6 +321,7 @@ _tele_cache = (0.0, None)
 # Split so a wide fetch never poisons (or extends the TTL of) the
 # default feed the other views consume.
 _graph_cache = [(0.0, None), (0.0, None)]
+_history_cache = (0.0, None)
 
 
 def graph_feed(all_sessions=False):
@@ -340,6 +346,23 @@ def graph_feed(all_sessions=False):
         if cached_graph is None:
             raise  # cold start, nothing good to fall back to: fail closed
     return _graph_cache[slot][1]
+
+
+def history_feed_json():
+    """Merged history/1 feed (history-feed.build) over the repo sources,
+    cached 30s like the graph feed; fail-soft to the last good feed.
+    Served at GET /history.json."""
+    global _history_cache
+    cached_ts, cached_feed = _history_cache
+    if cached_feed is not None and time.monotonic() - cached_ts < TELEMETRY_TTL_S:
+        return cached_feed
+    try:
+        feed = history_feed.build(ROOT)
+        _history_cache = (time.monotonic(), feed)
+    except Exception:
+        if cached_feed is None:
+            raise  # cold start, nothing good to fall back to: fail closed
+    return _history_cache[1]
 
 
 def telemetry_24h():
@@ -404,6 +427,9 @@ class Handler(SimpleHTTPRequestHandler):
             # variant to the builder; anything else is the default feed.
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             self._json(200, graph_feed(all_sessions=qs.get("all-sessions") == ["1"]))
+            return
+        if route == "/history.json":
+            self._json(200, history_feed_json())
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
