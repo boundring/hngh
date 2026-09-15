@@ -72,6 +72,7 @@ test:
 	python3 -B tests/test-dashboard-p0.py
 	python3 -B tests/test-dashboard-p1.py
 	python3 -B tests/test-dashboard-p1-ui.py
+	python3 -B tests/test-history-view.py
 	python3 -B tests/test-dashboard-selfreview-ledger-skew.py
 	python3 -B tests/test-digest-html.py
 	python3 -B tests/test-gdelt-news.py

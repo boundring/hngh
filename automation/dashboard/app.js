@@ -843,7 +843,8 @@
     'system-root':  ['system',   'SystemView'],
     'research-root': ['research', 'ResearchView'],
     'kb-root':      ['kb',       'KBView'],
-    'graph-root':   ['graph',    'GraphView']
+    'graph-root':   ['graph',    'GraphView'],
+    'history-root': ['history',  'HistoryView']
   };
   var mounted = {};
   var currentTab = null;

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hngh-automation · the history spine</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="story-page">
+<header>
+  <div class="h-left">
+    <h1>the history spine</h1>
+    <span class="sub">merged history/1 stream · commits, ledger rows, records, journal · newest first &middot; evidence links through the jailed docs route only &middot; never governance input</span>
+  </div>
+  <div class="h-right">
+    <a class="ghost" href="index.html">&larr; nerve center</a>
+    <a class="ghost" href="gantt.html">gantt</a>
+    <a class="ghost" href="story.html">story</a>
+    <button id="refresh-btn" class="ghost" title="refetch /history.json now">refresh</button>
+  </div>
+</header>
+
+<p class="legend-line">timestamps and sources are evidence pulled from the feed
+(<span class="tstamp" id="stamp"></span>) &mdash; never projected dates &mdash; the
+7-day window is built server-side; the page caps at 100 rows and says so &middot;
+ref links resolve only inside the repo docs jail</p>
+
+<main id="histmain">
+  <div id="histerr" class="error" hidden></div>
+
+  <section id="hist-filters" class="panel" aria-label="history filters" tabindex="0">
+    <div class="hv-toolbar" role="group" aria-label="source and kind filters"></div>
+    <div id="hist-body" class="sec-body"><div class="placeholder">loading&hellip;</div></div>
+  </section>
+</main>
+
+<script src="history-view.js"></script>
+</body>
+</html>

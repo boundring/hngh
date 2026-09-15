@@ -158,6 +158,10 @@ MEDIA_NAME_RE = re.compile(
     r"\.(png|svg)$")
 DIGESTS = os.path.join(ROOT, "digest")
 DIGEST_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.md$")
+DOCS_DOCS = os.path.join(HNGH, "docs")
+DOCS_NAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}(/[A-Za-z0-9][A-Za-z0-9_.-]{0,80})*"
+    r"\.md$")
 FEEDBACK = os.path.join(DASHBOARD, "feedback")
 FEEDBACK_TYPES = ("css-theme", "data-format", "correction", "idea")
 
@@ -440,6 +444,9 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/hngh-docs/media/"):
             self._serve_media()
             return
+        if self.path.startswith("/hngh-docs/docs/"):
+            self._serve_docs()
+            return
         if self.path.startswith("/digest/"):
             self._serve_md(DIGESTS, DIGEST_NAME_RE)
             return
@@ -507,6 +514,26 @@ class Handler(SimpleHTTPRequestHandler):
         ctype = ("image/svg+xml" if doc.endswith(".svg") else "image/png")
         self.send_response(200)
         self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    # GET /hngh-docs/docs/<path>.md — read-only serve of ONE markdown
+    # document from the jailed kernel docs tree (the history view's
+    # evidence links: report sidecars, docs/records, docs/journal).
+    # Strict relative-path validation + realpath jail (same discipline
+    # as _serve_media); anything else 404s. Display-only, fail closed.
+    def _serve_docs(self):
+        name = urllib.parse.unquote(
+            self.path[len("/hngh-docs/docs/"):].split("?")[0])
+        doc = jailed_doc_path(DOCS_DOCS, DOCS_NAME_RE, name)
+        if not doc:
+            self.send_error(404)
+            return
+        with open(doc, "rb") as f:
+            payload = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/markdown; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
