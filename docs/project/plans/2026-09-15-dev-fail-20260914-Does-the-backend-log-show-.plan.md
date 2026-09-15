@@ -4,16 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the instrumentation and verification gaps identified in the adopted research lines regarding `mark-read` persistence ambiguity, crumb writer staleness detection, and CI verdict rule drift by adding machine-checkable scripts to hngh-automation.
+The plan implements the research line `fail-20260914-Does-the-github-ci-workflow-definition-c` by adding a CI verification step that diffs the embedded patrol verdict rule against the kernel's canonical rules file to prevent drift.
 
 ## Steps
 
-- [ ] Create a script that parses backend logs to correlate `200 OK` responses with database commit events for `mark-read` requests
-  Verification: bash -n scripts/verify-mark-read-persistence.sh
-- [ ] Add a cadence check script that validates the crumb writer's last-run timestamp against a staleness threshold
-  Verification: python3 cadence/check_crumb_staleness.py
-- [ ] Implement a CI verification step that diffs the embedded patrol verdict rule in workflows against the kernel's canonical rules file
-  Verification: grep -q "diff.*verdict" .github/workflows/ci.yml
-- [ ] Define a closed vocabulary registry for reaction outputs to satisfy R1 constraints without splitting classes
-  Verification: python3 -c "import json; json.load(open('lib/reaction_vocabulary.json'))"
+- [ ] Create `scripts/verify-verdict-rule.sh` containing logic to extract the embedded verdict rule from the CI workflow and diff it against the canonical source path.
+  Verification: bash -n scripts/verify-verdict-rule.sh
+- [ ] Add a step in `.github/workflows/ci.yml` that executes `scripts/verify-verdict-rule.sh` before the test suite runs.
+  Verification: grep -q "verify-verdict-rule.sh" .github/workflows/ci.yml
+- [ ] Create `tests/test_verdict_rule_drift.py` to assert that the diff command returns zero differences when rules are in sync.
+  Verification: python3 tests/test_verdict_rule_drift.py
+- [ ] Update `Makefile` to include a `test-verdict` target that runs the new verification script and test file.
+  Verification: make test
