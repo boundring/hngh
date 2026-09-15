@@ -2,6 +2,57 @@
 
 ## 2026-09-15
 
+- feat: adopted-lessons block in the context pack (node d1-surface) —
+  closes the d1-harvest open question "should harvested lessons be
+  surfaced in context-pack consumption". `lib/context-pack.sh` renders
+  up to 5 `lesson: <ISO Z date> <line_id>: <sentence>` lines under an
+  `adopted lessons (top-5 newest active, from research-lessons.tsv)`
+  header, immediately after the `research index:` line: active rows
+  only, newest first, lesson text visibly cut at 160 chars (marked_cut
+  convention), block omitted silently when the ledger is absent, empty,
+  or header-only. Derived-data rule respected — the ledger and wiki
+  pages stay the sources of truth; the pack only cites. The
+  `$(cat)`-swallows-trailing-newline trap was caught by live-ledger
+  rendering before landing (last lesson line concatenated with the
+  frontier header); a regression assert pins the next section's line
+  start. `tests/test-context-pack.sh` +3 cases (absent ledger silent,
+  empty ledger silent, populated: cap/order/placement/frontier
+  intact).
+- feat: research harvest organ (node d1-harvest) — the lifecycle audit
+  (.agent-scratch/consider/research-lifecycle.md) showed adopted
+  dispositions were a terminus (0 of them fed any runtime decision).
+  `lib/research-harvest.py` now runs inside the 33-research-beat review
+  transition after the disposition row lands: every adopted verdict is
+  condensed into one actionable row in `research-lessons.tsv`
+  (lesson_id=les-<yyyymmdd>-<line_id>, date ISO Z, line_id, subject,
+  one-sentence lesson from the verdict reason, status=active), keyed by
+  line_id — a re-adoption REFRESHES the row (never duplicates), a later
+  non-adopted disposition retires it, and a rerun is a no-op. With the
+  llm-wiki project vault mounted the lesson also appends
+  `wiki/sources/LES-<line_id>.md` in the vault's established
+  source-page shape (type: source frontmatter; the contract was
+  determinable from local evidence: WIKI_SCHEMA.md packet/page shapes,
+  the SRC-* pages, and hngh-lessons-current.md already indexed in the
+  vault registry); hngh never writes meta/ or raw/ — the extension's
+  wiki_rebuild_meta owns indexing and the wiki-health UNINDEXED alert
+  covers the interim honestly. Fail-closed: malformed disposition
+  input (header drift, prefix-short rows, over-wide rows) exits
+  non-zero writing nothing (the beat alerts); legacy narrow rows from
+  the pre-2026-09-12 6-column writer schema are padded, never fatal
+  (the live dispositions file carries 72 of them). Malformed line
+  enrichment is skipped. Vault absent: lessons TSV alone lands.
+  Test `tests/test-research-harvest.py` (hermetic, 9 scenarios:
+  harvest-on-adopted, non-adopted ignored, refresh-not-duplicate,
+  idempotence, wiki shape, absent vault, fail-closed, fallback
+  lesson), wired into `make test`; beat wiring proven end-to-end in a
+  HOME-sandboxed stub run (disposition row -> lesson row in one beat).
+- known-limit: the wiki page is not in the vault registry/index until
+  the extension's next wiki_rebuild_meta run (once-daily auto-rebuild
+  fires only when the probe flags the vault UNHEALTHY; a healthy vault
+  with new pages turns UNINDEXED, which the probe alerts and the
+  rebuild then heals). Operator-visible only as the standard
+  wiki-health alert path.
+
 - feat: isolated-worktree gate rehearsal (plan 2026-09-09-rehearsal-lane
   step 2) — `scripts/rehearse-gate.sh` runs a repo's gate inside a
   `git archive HEAD` temp-dir copy (plus named candidate overlays);
