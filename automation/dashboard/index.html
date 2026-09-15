@@ -22,6 +22,7 @@
   <div class="lcd-ticker" title="live status line"><span class="lcd-ticker-inner" id="lcd-ticker-text">…</span></div>
   <div class="h-right">
     <a class="ghost" href="story.html" title="today's chapters from the work graph + report ledger">story</a>
+    <a class="ghost" href="history.html" title="merged history/1 stream: commits, ledger rows, records, journal">history</a>
     <button id="refresh-btn" class="ghost" title="refresh now">refresh</button>
   </div>
 </header>
@@ -37,6 +38,7 @@
   <button role="tab" id="tab-logs"     aria-controls="p-logs"     data-tab="logs">Logs</button>
   <button role="tab" id="tab-kb"       aria-controls="p-kb"       data-tab="kb">KB</button>
   <button role="tab" id="tab-graph"    aria-controls="p-graph"    data-tab="graph">Graph</button>
+  <button role="tab" id="tab-history"  aria-controls="p-history"  data-tab="history">History</button>
   </div>
 </nav>
 
@@ -125,6 +127,14 @@
     <div class="p-body"><div id="graph-root"></div></div>
   </section>
 
+  <section class="panel" id="p-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+    <div class="panel-head">
+      <span class="p-title">History · spine</span>
+      <span class="p-summary" id="hist-sum"></span>
+    </div>
+    <div class="p-body"><div id="history-root"></div></div>
+  </section>
+
 </main>
 
 <div class="orient" role="region" aria-label="orientation">
@@ -171,6 +181,7 @@
 <script src="research-view.js" defer></script>
 <script src="kb-view.js" defer></script>
 <script src="graph-view.js" defer></script>
+<script src="history-view.js" defer></script>
 <script src="feedback-view.js" defer></script>
 </body>
 </html>
