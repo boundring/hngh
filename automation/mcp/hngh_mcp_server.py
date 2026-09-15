@@ -70,8 +70,12 @@ def tool_dashboard_readout(args):
 
 
 def read_tsv(path, header):
-    """Parse a TSV into rows (header-keyed, or positional keys). Cap rows."""
-    rows = []
+    """Parse a TSV into rows (header-keyed, or positional keys). Cap rows.
+
+    Files are oldest-first append order, so when capped keep the NEWEST
+    (last) ROW_CAP rows; the kept slice preserves in-file order.
+    """
+    lines = []
     truncated = False
     with open(path, encoding="utf-8") as fh:
         if header:
@@ -80,16 +84,19 @@ def read_tsv(path, header):
             line = raw.rstrip("\n")
             if not line:
                 continue
-            if header:
-                keys = header
-            else:
-                keys = ["line", "status", "date", "title"][:max(1, len(line.split("\t")))]
-            if len(keys) < len(line.split("\t")):
-                raise RuntimeError("%s:%d has more columns than expected" % (path, lineno + 1))
-            if len(rows) >= ROW_CAP:
-                truncated = True
-                break
-            rows.append(dict(zip(keys, line.split("\t"))))
+            lines.append((lineno, line))
+    if len(lines) > ROW_CAP:
+        truncated = True
+        lines = lines[-ROW_CAP:]
+    rows = []
+    for lineno, line in lines:
+        if header:
+            keys = header
+        else:
+            keys = ["line", "status", "date", "title"][:max(1, len(line.split("\t")))]
+        if len(keys) < len(line.split("\t")):
+            raise RuntimeError("%s:%d has more columns than expected" % (path, lineno + 1))
+        rows.append(dict(zip(keys, line.split("\t"))))
     return rows, truncated
 
 

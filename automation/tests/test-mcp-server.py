@@ -193,7 +193,9 @@ class McpServer(unittest.TestCase):
             data = json.loads(resp["result"]["content"][0]["text"])
             self.assertTrue(data["truncated"])
             self.assertEqual(data["counts"]["lines"], cap)
-            self.assertEqual(data["lines"][-1]["line"], "r199")
+            # Oldest-first append order: cap keeps the NEWEST rows.
+            self.assertEqual(data["lines"][0]["line"], "r%03d" % 50)
+            self.assertEqual(data["lines"][-1]["line"], "r%03d" % (cap + 49))
         finally:
             proc.stdin.close(); proc.stdout.close()
             proc.wait(timeout=10)
