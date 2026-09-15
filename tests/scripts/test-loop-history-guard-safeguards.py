@@ -32,14 +32,12 @@ def main():
     os.chdir(ROOT)
     guard = load_guard()
 
+    # use the guard's shared hermetic recipe
+    # (`git diff-tree -p --full-index --root <sha> | git patch-id
+    # --stable`); a local `git show`-based copy would reintroduce the
+    # core.abbrev=auto CI drift on binary diffs
     def patch_id_of(sha):
-        out = subprocess.run(["git", "patch-id", "--stable"],
-                             input=subprocess.run(
-                                 ["git", "show", sha],
-                                 capture_output=True, text=True,
-                                 check=True).stdout,
-                             capture_output=True, text=True, check=True).stdout
-        return out.split()[0]
+        return guard.patch_id(sha)
 
     # deterministic, never-referenced dangling commit: content-addressed,
     # so the object is created once and reused across runs; it stays
