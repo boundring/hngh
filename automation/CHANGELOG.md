@@ -1,6 +1,28 @@
 # Changelog
 
 ## 2026-09-15
+
+- feat: isolated-worktree gate rehearsal (plan 2026-09-09-rehearsal-lane
+  step 2) — `scripts/rehearse-gate.sh` runs a repo's gate inside a
+  `git archive HEAD` temp-dir copy (plus named candidate overlays);
+  `scripts/accept-plans.py` gained the off-by-default
+  `ACCEPT_ISOLATED_GATE=1` seam: with it, both gate runs go through the
+  rehearsal instead of contending with parallel delegated sessions (the
+  2026-09-09 gate-red-rc2 blocks were load-correlated); a red — or rc=2
+  refused — rehearsal blocks acceptance fail-closed with the tail in the
+  alert row. `REHEARSE_LOG` is the rehearsal breadcrumb (log rows:
+  `ts | repo=... | gate=... | rc=N`), used as the script's `--log`
+  default. Test `tests/test-rehearse-gate.py` (10 hermetic cases),
+  landed 550e8ff5 red (fixture inconsistency + missing wiring), repaired
+  to green; wired into `make test`.
+- known-limit: the rehearsal refuses (rc=2, fail-closed, with evidence)
+  on the kernel tree as-is — the kernel suite's
+  `tests/scripts/test-loop-history-guard.py` runs `git log` in the
+  working repo, which an archive copy lacks. Operator-item: an
+  out-of-repo seam there (kernel tests/ surface, forbidden in machine
+  sessions today 2026-09-15) before an archived-tree kernel `make test`
+  can run; the automation-repo rehearsal surface is proven on sandbox
+  trees and the automation suite is green in the working tree.
 - test: viz schema version-gate acceptance tests
   (`tests/test-viz-schema-version.py`, 14 cases, wired into
   `make test`) — hermetic gate for the versioning behavior of the

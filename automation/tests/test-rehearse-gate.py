@@ -54,17 +54,17 @@ class RehearseGate(unittest.TestCase):
         self._td = tempfile.TemporaryDirectory()
         self.root = Path(self._td.name)
         self.repo = self.root / "repo"
-        (self.repo / "log").mkdir(parents=True)
-        # log/ is gitignored: present in the working tree, absent from the
-        # archive copy -- the gate creates it (mkdir -p) before appending.
-        (self.repo / ".gitignore").write_text("log/\n")
+        self.repo.mkdir(parents=True)
+        # The stub gate appends to an ABSOLUTE path outside the repo:
+        # the archive copy lives in a temp dir the script's EXIT trap
+        # destroys, so anything the gate writes there dies with it.
+        self.gatelog = self.root / "gatelog"
         (self.repo / "Makefile").write_text(
-            "test:\n\tmkdir -p log\n\techo committed-version >> log/gatelog\n")
+            "test:\n\techo committed-version >> %s\n" % self.gatelog)
         git(self.repo, "init", "-q")
         git(self.repo, "add", "-A")
         git(self.repo, "-c", "user.email=t@t", "-c", "user.name=t",
             "commit", "-qm", "init")
-        self.gatelog = self.repo / "log" / "gatelog"
         self.rlog = self.root / "rehearse.log"
         self.env = {**os.environ, "REHEARSE_LOG": str(self.rlog)}
 
@@ -150,6 +150,13 @@ class IsolatedGateOptIn(unittest.TestCase):
             "commit", "-qm", "init")
         self.auto = self.root / "auto"
         self.auto.mkdir()
+        # the rehearsal archives the automation repo too: give the
+        # fixture a commit so `git archive HEAD` has something to unpack
+        (self.auto / "README.md").write_text("sandbox automation\n")
+        git(self.auto, "init", "-q")
+        git(self.auto, "add", "-A")
+        git(self.auto, "-c", "user.email=t@t", "-c", "user.name=t",
+            "commit", "-qm", "init")
         self.gate = self.root / "gate.sh"
         self.gate.write_text(
             "#!/usr/bin/env bash\n"
