@@ -87,6 +87,7 @@ test:
 	python3 -B tests/test-agent-respawn.py
 	python3 -B tests/test-beat-watchdog.py
 	python3 -B tests/test-patrol.py
+	python3 -B tests/test-viz-schema-patrol.py
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py

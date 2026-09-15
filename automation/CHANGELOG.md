@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-15
+- test: patrol/1 viz payload acceptance tests
+  (`tests/test-viz-schema-patrol.py`, 23 cases, wired into
+  `make test`) — strict validator for the viz synthesis input envelope
+  `{"schema": "patrol/1", "findings": [...]}` with entries
+  `{id (patrol:<id>), date, surface, cause, detail, supportive}`:
+  malformed JSON, schema tag missing/wrong, unknown envelope/finding
+  keys, missing fields, wrong types (id prefix, non-bool supportive,
+  non-calendar YYYY-MM-DD), and duplicate ids all fail closed; unknown
+  cause values WARN-accept (the cause vocabulary grows additively,
+  journal rounds file unclaimed-err by design). Producer drift
+  cross-check: a hermetic seeded patrol run (handoffs 3-dead fixture)
+  must file its alert at identity `patrol:<id>` (stub report-queue
+  argv) and the producer-shaped finding must validate clean, so the
+  schema cannot silently drift from `jobs/patrol.py`. Fully hermetic
+  (tempfile sandbox, PATROL_* env, no real ledgers/queue/home).
+
 ## 2026-09-14
 - feat: jcode permission bridge (plan 2026-09-14-jcode-primary-harness
   step 4) — `lib/launch-jcode.sh` refuses `JCODE_WORKER_APPROVE=1`
