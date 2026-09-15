@@ -5,17 +5,15 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the instrumentation and verification gaps identified across the adopted research lines by adding machine-checkable staleness detection for the crumb writer, enforcing idempotency keys for mark-read persistence, and establishing a canonical diff check for the patrol verdict rule to prevent drift.
+This plan implements the instrumentation and verification gaps identified in the adopted research lines regarding `mark-read` persistence ambiguity, crumb writer staleness detection, and CI verdict rule drift by adding machine-checkable scripts to hngh-automation.
 
 ## Steps
 
-- [ ] Add an idempotency key generation step to the mark-read client script in scripts/
-  Verification: grep -q "idempotency" scripts/mark-read.sh && bash -n scripts/mark-read.sh
-- [ ] Create a crumb writer staleness checker script that compares last-run timestamp against threshold
-  Verification: bash -n scripts/check-crumb-staleness.sh && make test
-- [ ] Add a CI verification step that diffs the embedded patrol verdict rule against the canonical kernel rules file
-  Verification: grep -q "verdict-rule" .github/workflows/ci.yml && make test
-- [ ] Update the dashboard digest to include crumb writer last-run timestamp and failure state fields
-  Verification: grep -q "last_run_timestamp" dashboard/digest-template.md && make test
-- [ ] Add a test fixture that simulates a mark-read response with missing idempotency key to verify client-side error handling
-  Verification: python3 tests/test_mark_read_idempotency.py && make test
+- [ ] Create a script that parses backend logs to correlate `200 OK` responses with database commit events for `mark-read` requests
+  Verification: bash -n scripts/verify-mark-read-persistence.sh
+- [ ] Add a cadence check script that validates the crumb writer's last-run timestamp against a staleness threshold
+  Verification: python3 cadence/check_crumb_staleness.py
+- [ ] Implement a CI verification step that diffs the embedded patrol verdict rule in workflows against the kernel's canonical rules file
+  Verification: grep -q "diff.*verdict" .github/workflows/ci.yml
+- [ ] Define a closed vocabulary registry for reaction outputs to satisfy R1 constraints without splitting classes
+  Verification: python3 -c "import json; json.load(open('lib/reaction_vocabulary.json'))"
