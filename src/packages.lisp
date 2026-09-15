@@ -133,6 +133,11 @@
            #:make-key-pin-registry
            #:lookup-key-pin
            #:key-pin-registry-pins
+           ;; node-lattice admission evidence (src/domain/attestation.lisp)
+           #:admission-fingerprint-valid-p
+           #:utc-string-seconds
+           #:stale-last-seen-p
+           #:parse-admission-evidence
            ;; machine-steered course selection (src/domain/course.lisp)
            #:course-candidate
            #:make-course-candidate
