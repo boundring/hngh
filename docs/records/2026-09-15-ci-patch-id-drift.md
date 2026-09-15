@@ -54,3 +54,30 @@ including the exact CI recipe (scratch HOME + seeded
 Parked with cause for the operator: cure is a kernel-test change and
 must go through the ceremony (propose -> issue-cert -> mutation-check).
 No kernel code or tests were modified in producing this record.
+
+## Correction (2026-09-15, same day)
+
+The "newer runner git build" mechanism above is falsified: the runner log
+shows git 2.55.0, identical to local. The verified mechanism:
+
+1. `git patch-id` ignores abbreviated `index` lines for text-only diffs:
+   commit `915e0e3` renders differently across repos (7- vs 8-hex index
+   lines) yet yields the identical patch-id, and neutralizing its index
+   lines does not change the hash.
+2. For a diff containing a binary-file section, the index lines ARE part
+   of the hashed input: neutralizing them changes `526cd3f`'s patch-id.
+3. The abbreviations come from `core.abbrev=auto`, whose length is an
+   object-count heuristic: this long-lived repo renders 8-hex; a fresh
+   init+fetch (the CI checkout recipe, and an exact local repro) renders
+   7-hex. Same blobs, same git, different hash.
+4. Pinning abbreviations (`core.abbrev=40` / `--full-index`) makes the
+   id deterministic but different from the registered values - so the
+   cure necessarily includes a one-pass re-registration of every
+   KNOWN_EXEMPTIONS patch-id under the pinned recipe, in addition to
+   making `patch_id_of` hermetic (e.g. `git diff-tree -p --full-index
+   <sha> | git patch-id --stable`, which also sidesteps `git show`
+   config surface).
+
+Discriminating repro (local, git 2.55.0 both sides): fresh clone passes;
+init+fetch with `+refs/heads/*` fails with the CI assertion. The drift
+is repo-state-dependent abbreviation, not git-build encoding.
