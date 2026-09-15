@@ -12,3 +12,4 @@ at 2026-09-15T19:00:12Z. Alert text: patrol pending-checks: check-pending on cor
 ## Occurrences
 
 - 2026-09-15T20:00:13Z re-occurred (dedup window expired)
+- 2026-09-15T21:00:39Z re-occurred (dedup window expired)

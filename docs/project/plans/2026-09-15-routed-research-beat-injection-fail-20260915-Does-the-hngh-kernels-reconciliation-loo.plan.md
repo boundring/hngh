@@ -8,3 +8,7 @@ at 2026-09-15T20:00:13Z. Alert text: injection signature(s) redacted from resear
 
 - [ ] Delve: open research subject fail-20260915-research-beat-injection-fail-20260915-does-the-hngh-kernels-reconciliation-loo for research-beat:injection:fail-20260915-Does-the-hngh-kernels-reconciliation-loo; record disposition; then fix or park
       Verification: research subject fail-20260915-research-beat-injection-fail-20260915-does-the-hngh-kernels-reconciliation-loo present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-15T21:00:39Z re-occurred (dedup window expired)
