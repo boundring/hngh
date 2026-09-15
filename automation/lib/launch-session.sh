@@ -428,9 +428,20 @@ launch) before re-deriving any repo fact from scratch."
    jc_bin="$(command -v jcode || true)"
    if [ -n "$jc_bin" ] && [ -z "$jc_pace" ]; then
     outcome_model="jcode/$jc_provider${jc_model_flag:+/$jc_model_flag}"
-    env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
-     timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
-     "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+    # provider-profile configs ([providers.<name>] in config.toml, e.g.
+    # unsloth) must use --provider-profile: `-p <name>` only accepts the
+    # built-in provider enum (first-session finding: the witnessed-cycle
+    # runs of 2026-09-14 21:59/22:05 flash-failed on `invalid value
+    # 'unsloth'`)
+    if [ "$jc_provider" = "unsloth" ]; then
+     env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
+      timeout "$TIMEOUT_S" "$jc_bin" run --provider-profile unsloth \
+      "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+    else
+     env -u HTTPS_PROXY -u NODE_EXTRA_CA_CERTS \
+      timeout "$TIMEOUT_S" "$jc_bin" run -p "$jc_provider" \
+      "${jc_model[@]}" -C "$ROOT" --quiet "$body" >"$ROOT/$log" 2>&1
+    fi
    else
     breadcrumb launch-session "jcode-executor" "jcode binary absent -> omp"
     timeout "$TIMEOUT_S" "$omp_bin" -p --model "$SESSION_MODEL" \
