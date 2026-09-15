@@ -456,6 +456,10 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
             cols = [c.strip() for c in line.split("|")]
             if len(cols) >= 4 and cols[1] >= cutoff and cols[3].startswith("patrol:"):
                 alerting.add(cols[3].split(":", 1)[1])
+    seen_surfaces = set()  # surfaces repeat across patrol rows (e.g.
+    # kernel-gate and services are each walked by two patrols); the
+    # surface node is emitted once while every patrol keeps its own
+    # watches edge, so node ids stay unique and edges stay N:1.
     for row in read_tsv(registries_dir / "patrol-routes.tsv"):
         pid, surface = row["patrol-id"], row["surface"]
         state = "alerting" if pid in alerting else "healthy"
@@ -463,8 +467,10 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
              "surface=%s check=%s freq=%s finding=%s%s"
              % (surface, row["check"], row["freq-tier"], row["finding-class"],
                 " — FAIL reported trailing 24h" if pid in alerting else ""))
-        node("surface:" + surface, "surface", surface, "neutral",
-             "patrolled surface %s" % surface)
+        if surface not in seen_surfaces:
+            seen_surfaces.add(surface)
+            node("surface:" + surface, "surface", surface, "neutral",
+                 "patrolled surface %s" % surface)
         edge("patrol:" + pid, "surface:" + surface, "watches")
 
     # --- research lines (research-lines.tsv) ---

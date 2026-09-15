@@ -1,6 +1,21 @@
 # Changelog
 
 ## 2026-09-15
+- fix: graph feed emits each surface node once
+  (`jobs/graph-data.py`) — patrol-routes.tsv repeats surface values
+  (kernel-gate and services are each walked by two patrols), and the
+  patrol loop emitted `surface:<name>` once per row, so every feed
+  carried duplicate node ids (`surface:kernel-gate`, `surface:services`)
+  that corrupted graph-view's idxOf map (last-write-wins) and would
+  trip the S2 feed validator. Surface nodes are now deduped per build;
+  each patrol row still gets its own `watches` edge (edges stay N:1).
+  Regression `BuildGraph.test_repeated_surface_node_emitted_once`
+  extends the fixture with a second `services` patrol and asserts the
+  global invariants end to end: unique node ids, zero self-loops, no
+  dangling edges. read_tsv comment-row skipping untouched. Headless
+  probe over real registries: dup_ids=[] and self_loops=0 in both
+  all_sessions modes (545 nodes / 879 edges default).
+
 - test: patrol/1 viz payload acceptance tests
   (`tests/test-viz-schema-patrol.py`, 23 cases, wired into
   `make test`) — strict validator for the viz synthesis input envelope

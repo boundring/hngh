@@ -74,7 +74,11 @@ def _seed(root, now):
         "patrol-id\tsurface\tcheck\tfreq-tier\tfinding-class\n"
         "budget\tbudget\tsession-budget\tday\tbudget-breach\n"
         "feeds\tdashboard-feeds\tfeed-freshness\t30m\tbad-execution\n"
-        "service-children\tservices\tservice-children\tday\tsvc-crumb\n")
+        "service-children\tservices\tservice-children\tday\tsvc-crumb\n"
+        # repeated surface: two patrols walk 'services', the surface
+        # node must still be emitted exactly once (real patrol-routes
+        # carries the same repetition: kernel-gate x2, services x2)
+        "service-crumbs\tservices\tcrumb-scan\t30m\tsvc-crumb\n")
     (root / "research-lines.tsv").write_text(
         "log-patterns\treviewed\t%s\tsome title\n" % _ts(now))
     (root / "tests" / "test-credentials.py").write_text("# guard\n")
@@ -185,6 +189,35 @@ class BuildGraph(unittest.TestCase):
         self.assertEqual(pat["patrol:feeds"]["state"], "healthy")
         self.assertTrue(self._edges(src="patrol:budget",
                                     dst="surface:budget", rel="watches"))
+
+    def test_repeated_surface_node_emitted_once(self):
+        # two patrols walk the same surface (fixture: service-children +
+        # service-crumbs -> 'services'; real patrol-routes repeats
+        # kernel-gate and services the same way): the surface node must
+        # be emitted exactly once while each patrol still gets its own
+        # watches edge (edges stay N:1).
+        surfaces = self._nodes("surface")
+        self.assertIn("surface:services", surfaces)
+        services = [n for n in self.graph["nodes"]
+                    if n["id"] == "surface:services"]
+        self.assertEqual(len(services), 1,
+                         "duplicate surface node emitted: %d copies"
+                         % len(services))
+        watchers = {e["src"] for e in self._edges(dst="surface:services",
+                                                  rel="watches")}
+        self.assertEqual(watchers, {"patrol:service-children",
+                                    "patrol:service-crumbs"})
+        # global invariants over the whole fixture feed: unique node
+        # ids, no self-loop edges, no dangling edges.
+        ids = [n["id"] for n in self.graph["nodes"]]
+        self.assertEqual(len(ids), len(set(ids)),
+                         "duplicate node ids: %s" % sorted(
+                             i for i in ids if ids.count(i) > 1))
+        node_ids = set(ids)
+        for e in self.graph["edges"]:
+            self.assertIn(e["src"], node_ids, str(e))
+            self.assertIn(e["dst"], node_ids, str(e))
+            self.assertNotEqual(e["src"], e["dst"], str(e))
 
     def test_no_dangling_edges_and_json_roundtrip(self):
         ids = {n["id"] for n in self.graph["nodes"]}
