@@ -253,6 +253,11 @@ _hfeed_spec = importlib.util.spec_from_file_location(
 history_feed = importlib.util.module_from_spec(_hfeed_spec)
 _hfeed_spec.loader.exec_module(history_feed)
 
+_rrspec = importlib.util.spec_from_file_location(
+    "research_routes", os.path.join(ROOT, "jobs", "research-routes.py"))
+research_routes = importlib.util.module_from_spec(_rrspec)
+_rrspec.loader.exec_module(research_routes)
+
 
 def _launchers():
     merged = dict(DEFAULT_LAUNCHERS)
@@ -326,6 +331,7 @@ _tele_cache = (0.0, None)
 # default feed the other views consume.
 _graph_cache = [(0.0, None), (0.0, None)]
 _history_cache = (0.0, None)
+_routes_cache = (0.0, None)
 
 
 def graph_feed(all_sessions=False):
@@ -367,6 +373,24 @@ def history_feed_json():
         if cached_feed is None:
             raise  # cold start, nothing good to fall back to: fail closed
     return _history_cache[1]
+
+
+def research_routes_json():
+    """routes/1 research-routes map payload (research_routes.build over
+    the research TSVs), cached 30s like the graph/history feeds;
+    fail-soft to the last good payload so the map never blanks on a TSV
+    hiccup. Served at GET /research-routes.json."""
+    global _routes_cache
+    cached_ts, cached_feed = _routes_cache
+    if cached_feed is not None and time.monotonic() - cached_ts < TELEMETRY_TTL_S:
+        return cached_feed
+    try:
+        feed = research_routes.build(ROOT)
+        _routes_cache = (time.monotonic(), feed)
+    except Exception:
+        if cached_feed is None:
+            raise  # cold start, nothing good to fall back to: fail closed
+    return _routes_cache[1]
 
 
 def telemetry_24h():
@@ -434,6 +458,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/history.json":
             self._json(200, history_feed_json())
+            return
+        if route == "/research-routes.json":
+            self._json(200, research_routes_json())
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)

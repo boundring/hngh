@@ -844,7 +844,8 @@
     'research-root': ['research', 'ResearchView'],
     'kb-root':      ['kb',       'KBView'],
     'graph-root':   ['graph',    'GraphView'],
-    'history-root': ['history',  'HistoryView']
+    'history-root': ['history',  'HistoryView'],
+    'routes-root': ['routes',  'RoutesView']
   };
   var mounted = {};
   var currentTab = null;

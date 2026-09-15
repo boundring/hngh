@@ -23,6 +23,7 @@
   <div class="h-right">
     <a class="ghost" href="story.html" title="today's chapters from the work graph + report ledger">story</a>
     <a class="ghost" href="history.html" title="merged history/1 stream: commits, ledger rows, records, journal">history</a>
+    <a class="ghost" href="routes.html" title="routes/1 map: research lines as routes over a time axis">routes</a>
     <button id="refresh-btn" class="ghost" title="refresh now">refresh</button>
   </div>
 </header>
@@ -39,6 +40,7 @@
   <button role="tab" id="tab-kb"       aria-controls="p-kb"       data-tab="kb">KB</button>
   <button role="tab" id="tab-graph"    aria-controls="p-graph"    data-tab="graph">Graph</button>
   <button role="tab" id="tab-history"  aria-controls="p-history"  data-tab="history">History</button>
+  <button role="tab" id="tab-routes"   aria-controls="p-routes"   data-tab="routes">Routes</button>
   </div>
 </nav>
 
@@ -135,6 +137,14 @@
     <div class="p-body"><div id="history-root"></div></div>
   </section>
 
+  <section class="panel" id="p-routes" role="tabpanel" aria-labelledby="tab-routes" hidden>
+    <div class="panel-head">
+      <span class="p-title">Routes · research map</span>
+      <span class="p-summary" id="routes-sum"></span>
+    </div>
+    <div class="p-body"><div id="routes-root"></div></div>
+  </section>
+
 </main>
 
 <div class="orient" role="region" aria-label="orientation">
@@ -182,6 +192,7 @@
 <script src="kb-view.js" defer></script>
 <script src="graph-view.js" defer></script>
 <script src="history-view.js" defer></script>
+<script src="routes-view.js" defer></script>
 <script src="feedback-view.js" defer></script>
 </body>
 </html>
