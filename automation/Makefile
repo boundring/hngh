@@ -63,6 +63,7 @@ test:
 	python3 -B tests/test-hngh-services.py
 	python3 -B tests/test-doc-filter.py
 	python3 -B tests/test-router-tick.py
+	python3 -B tests/test-alert-lifecycle.py
 	python3 -B tests/test-router-feed.py
 	python3 -B tests/test-slow-units.py
 	python3 -B tests/test-readout-writers.py
@@ -81,6 +82,7 @@ test:
 	python3 -B tests/test-manga-collage.py
 	python3 -B tests/test-narrative-ledger.py
 	python3 -B tests/test-feedback-apply.py
+	python3 -B tests/test-correction-linkage.py
 	python3 -B tests/test-service-ctl.py
 	python3 -B tests/test-queue-progress.py
 	python3 -B tests/test-email-qa.py

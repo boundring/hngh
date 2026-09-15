@@ -43,6 +43,24 @@ STATE_TSV = os.path.join(AUTOMATION_ROOT, "state",
 REPORT_KERNEL = os.environ.get("HNGH_HOME", os.path.dirname(ROOT))
 STATE_MD = os.environ.get("STATE_FILE")
 
+
+def _cl():
+    """correction-linkage lib (dashed filename, loaded by path)."""
+    import importlib.util
+    path = os.path.join(ROOT, "lib", "correction-linkage.py")
+    spec = importlib.util.spec_from_file_location(
+        "correction_linkage", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+CL = _cl()
+SIGHTINGS_TSV = os.environ.get(
+    "CORRECTION_SIGHTINGS_FILE",
+    os.path.join(AUTOMATION_ROOT, "state", "correction-sightings.tsv"))
+PENDING_TSV = CL.pending_path(AUTOMATION_ROOT)
+
 QUICK_RE = re.compile(
     r"\[feedback:([\w-]+)\](\[quick\])?\s*(?:(.*?):\s*)?(.*)")
 ITEM_ROW_RE = re.compile(r"\|\s*alert\s+\|\s*(.*)$")
@@ -236,9 +254,24 @@ def report(kind, text, identity, window="604800"):
 
 
 def correction(item_id, element, body):
-    """Auto-inspect only: run the named check, file the result row."""
+    """Auto-inspect only: run the named check, file the result row.
+    Convergence fold (2026-09-15): once the correction identity recurs,
+    it converges into one pending named check (state/pending-checks.tsv)
+    and the blind re-route alert is suppressed -- the pending check now
+    represents the correction until an operator promotes it."""
     m = CHECK_RE.search("%s %s" % (element, body))
     if not m:
+        if CL.is_converged(PENDING_TSV, item_id):
+            crumb("inspect", "%s: converged into pending check "
+                  "(suppressed)" % item_id)
+            return 0
+        CL.record_sighting(SIGHTINGS_TSV, item_id)
+        if CL.maybe_converge(item_id, body or element,
+                             SIGHTINGS_TSV, PENDING_TSV):
+            note("%s correction converged into pending check "
+                 "check:correction-%s" % (now(), CL.id_tail(item_id)))
+            crumb("converge", "%s: pending check created" % item_id)
+            return 0
         report("alert", "correction %s: no named check found (%s)"
                % (item_id, (body or element or "unparseable")[:120]),
                "correction-" + item_id)

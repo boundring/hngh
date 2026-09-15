@@ -414,7 +414,7 @@ class Patrol(unittest.TestCase):
         # systemd-units emits one PASS per unit (4), not one per route;
         # github-ci adds 1 (the latest-run verdict); journal-errors adds
         # 1 (the dormant no-signature-table row)
-        self.assertEqual(r.stdout.count("\nPASS "), 16)
+        self.assertEqual(r.stdout.count("\nPASS "), 17)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -469,7 +469,8 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 12)  # 11 routes + journal-errors;
+        self.assertEqual(len(results), 13)  # 11 routes + journal-errors
+        # + pending-checks
         # the walk continued past the crashed check
 
     # --- gate-cure: a green gate is quiet, no ceremony is driven ---
