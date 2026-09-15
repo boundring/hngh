@@ -255,6 +255,85 @@ ordering; bounded nonnegative skew; and a duplicate-free claim set."
         (bad-at "malformed-attestation"))
       (values t nil))))
 
+;;; Node-lattice admission evidence ------------------------------------------
+;;; Rung 18: the pure pieces of admit-peer. An admission evidence file is
+;;; exactly two lines: a bounded plain FINGERPRINT, then a fixed-width UTC
+;;; LAST-SEEN timestamp. Everything here is pure string shaping: no clock,
+;;; no file, no process. The CLI maps any error to the closed
+;;; malformed-admission-evidence refusal and applies the staleness bound
+;;; against its injected clock.
+
+(defun admission-fingerprint-valid-p (value)
+  "True when VALUE is a bounded admission fingerprint: nonempty, at most
++max-attestation-fingerprint-length+ characters, no whitespace or control
+characters (one line, one token)."
+  (and (stringp value)
+       (plusp (length value))
+       (<= (length value) +max-attestation-fingerprint-length+)
+       (every (lambda (char)
+                (and (graphic-char-p char)
+                     (not (find char '(#\Space #\Tab)))))
+              value)))
+
+(defun utc-string-seconds (text)
+  "Decode a valid fixed-width UTC string into seconds since the epoch
+(proleptic Gregorian, no leap seconds), or NIL when TEXT is not a valid
+UTC string. Pure arithmetic so staleness needs no clock library."
+  (when (utc-string-p text)
+    (flet ((field (start end) (parse-integer text :start start :end end)))
+      (let* ((year (field 0 4))
+             (days (+ (* 365 (- year 1970))
+                      (floor (- year 1969) 4)
+                      (- (floor (- year 1901) 100))
+                      (floor (- year 1601) 400)
+                      (1- (field 8 10)))))
+        ;; days-since-epoch for the first of the month, then the day field
+        (let* ((month (field 5 7))
+               (leap (and (zerop (mod year 4))
+                          (or (plusp (mod year 100))
+                              (zerop (mod year 400)))))
+               (cum #(0 31 59 90 120 151 181 212 243 273 304 334))
+               (month-days (+ (aref cum (1- month))
+                              (if (and (> month 2) leap) 1 0))))
+          (+ (* (+ days month-days) 86400)
+             (* (field 11 13) 3600)
+             (* (field 14 16) 60)
+             (field 17 19)))))))
+
+(defun stale-last-seen-p (last-seen now-seconds
+                          &optional (max-age-seconds
+                                     +max-attestation-skew-seconds+))
+  "True when the LAST-SEEN UTC string is older than MAX-AGE-SECONDS
+relative to NOW-SECONDS. An unparseable last-seen is stale (fails
+closed)."
+  (let ((seen (utc-string-seconds last-seen)))
+    (or (null seen)
+        (> (- now-seconds seen) max-age-seconds))))
+
+(defun parse-admission-evidence (text)
+  "Strict-parse one admission evidence file's text. Exactly two nonblank
+lines: FINGERPRINT then LAST-SEEN (a fixed-width UTC string). Returns
+(values fingerprint last-seen); any deviation raises, and the caller maps
+the raise to the closed malformed-admission-evidence refusal."
+  (unless (stringp text)
+    (error "admission evidence must be text"))
+  (let* ((lines (remove-if
+                 (lambda (line) (uiop:emptyp
+                                 (string-right-trim '(#\Return) line)))
+                 (uiop:split-string text :separator '(#\Newline))))
+         (cleaned (mapcar (lambda (line)
+                            (string-right-trim '(#\Return #\Space) line))
+                          lines)))
+    (unless (= 2 (length cleaned))
+      (error "admission evidence must be exactly fingerprint and last-seen"))
+    (let ((fingerprint (first cleaned))
+          (last-seen (second cleaned)))
+      (unless (admission-fingerprint-valid-p fingerprint)
+        (error "malformed admission fingerprint: ~S" fingerprint))
+      (unless (utc-string-p last-seen)
+        (error "malformed admission last-seen: ~S" last-seen))
+      (values (copy-seq fingerprint) (copy-seq last-seen)))))
+
 ;;; Operator-pinned keys -----------------------------------------------------
 ;;; The pinned-key registry is the trust anchor for cross-machine
 ;;; attestation (design record 2026-08-24): a closed list of named

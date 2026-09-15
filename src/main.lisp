@@ -429,7 +429,8 @@ commands:~%~
   mutation-check ACTION RUN [VERDICT-FILE] [EVIDENCE...]  present [RUN]~%~
   review RUN content-hash=HASH paths=PATH,... [reviewer=PATH]  terminal RUN~%~
   fetch-evidence RUN peer=ID [max-facts=N]  verify-attestation RUN FILE [pins=PATH]~%~
-  list-pins PATH  wake-peer RUN PINS-FILE PEER  run-worker RUN task=T [payload=X] [worker=FILE]~%~
+  list-pins PATH  wake-peer RUN PINS-FILE PEER  admit-peer RUN EVIDENCE-FILE PEER~%~
+  run-worker RUN task=T [payload=X] [worker=FILE]~%~
   select-course ID:MOUNTED-P:LAST-INCREMENT:RANK...  status~%~
 options: --store=PATH record the run ledger under PATH"))
 
@@ -1798,6 +1799,101 @@ injection the command refuses no-wake-transport."
           (:refused (values (hngh.presentation:render result) 1))
           (:fault (values (hngh.presentation:render result) 3))))))))
 
+(defun dispatch-admit-peer (args store clock)
+  "admit-peer RUN FINGERPRINT-FILE PEER: one explicit, recorded,
+human-closable admission of PEER as a pinned federation peer. The
+fingerprint file is the offline admission evidence: exactly two lines, a
+bounded plain FINGERPRINT and a fixed-width UTC LAST-SEEN. The pins
+registry already IS the admitted-peer registry, so admission records the
+peer as a key-pin in the registry rendered next to the run receipt; the
+admission step itself is written to the run ledger. Refuses closed on:
+missing evidence file, malformed evidence, oversized fingerprint, stale
+or future last-seen, unknown run, missing :federation admission receipt,
+duplicate peer. One request carries one certificate: a single run
+admits a single peer in this step, and no background process is started."
+  (multiple-value-bind (positionals options) (collect-options args)
+    (when (or options (/= 3 (length positionals)))
+      (return-from dispatch-admit-peer (values (command-usage) 2)))
+    (let ((identifier (first positionals))
+          (evidence-path (second positionals))
+          (peer (third positionals))
+          (run (run-from-store store (first positionals))))
+      (unless run
+        (return-from dispatch-admit-peer (missing-run-output identifier)))
+      (unless (store-has-transport-admission-receipt-p store identifier
+                                                       :federation)
+        (return-from dispatch-admit-peer
+          (values (format nil "admit-peer refused: run ~A not admitted for federation"
+                          identifier)
+                  1)))
+      ;; Validate the peer identifier before touching the evidence file so
+      ;; a hostile peer never reaches the ledger.
+      (unless (handler-case
+                  (progn (hngh.domain:make-key-pin
+                          :key-identifier peer
+                          :key-path "/admit-peer/placeholder.pub")
+                         t)
+                (error () nil))
+        (return-from dispatch-admit-peer
+          (values (format nil "admit-peer refused: malformed peer identifier: ~A"
+                          peer)
+                  2)))
+      ;; Offline evidence: read and strict-parse; any deviation refuses.
+      (multiple-value-bind (fingerprint last-seen)
+          (handler-case
+              (hngh.domain:parse-admission-evidence
+               (uiop:read-file-string evidence-path))
+            (file-error () (values nil nil))
+            (error () (values nil nil)))
+        (unless fingerprint
+          (return-from dispatch-admit-peer
+            (values "admit-peer refused: malformed-admission-evidence" 2)))
+        ;; Staleness bound against the injected clock: the last-seen must
+        ;; be within the one-day admission window.
+        (when (hngh.domain:stale-last-seen-p
+               last-seen
+               (hngh.domain:utc-string-seconds (funcall clock)))
+          (return-from dispatch-admit-peer
+            (values "admit-peer refused: stale-admission-evidence" 1)))
+        ;; Duplicate peer refuses: the registry is duplicate-free by
+        ;; construction, so check any existing pins for this identifier.
+        (let ((existing
+                (find-if
+                 (lambda (entry)
+                   (and (eq :admission (entry-receipt-kind entry))
+                        (member (format nil "peer: ~A" peer)
+                                (entry-receipt-facts entry)
+                                :test #'string=)))
+                 (store-entries-of store))))
+          (when existing
+            (return-from dispatch-admit-peer
+              (values (format nil "admit-peer refused: duplicate peer: ~A" peer)
+                      1))))
+        ;; Record the one explicit admission step in the run ledger with
+        ;; the bounded attestation facts: peer, fingerprint, last-seen.
+        (let ((timestamp (funcall clock)))
+          (hngh.adapters.filesystem:store-record-run
+           store
+           (list :identifier identifier
+                 :kind :admission
+                 :state (hngh.domain:run-state run)
+                 :run (serialize-run run)
+                 :receipt (serialize-receipt
+                           (hngh.domain:make-receipt
+                            :kind :admission
+                            :facts (list "transport: federation"
+                                         (format nil "peer: ~A" peer)
+                                         (format nil "fingerprint: ~A"
+                                                 fingerprint)
+                                         (format nil "last-seen: ~A"
+                                                 last-seen)
+                                         (format nil "run: ~A" identifier)
+                                         (format nil "timestamp: ~A"
+                                                 timestamp))))))
+          (values (format nil "admit-peer peer=~A fingerprint=~A last-seen=~A status=admitted~%"
+                          peer fingerprint last-seen)
+                  0))))))
+
 (defun dispatch-run-worker (args store worker-ports)
   "run-worker RUN task=LABEL [payload=TEXT] [worker=FILE]: run one
 bounded, read-only worker task through the injected WORKER-PORTS or,
@@ -2375,6 +2471,8 @@ besides a bare `status` is malformed (exit 2). Pure read: no mutation."
     ((string= command "list-pins") (dispatch-list-pins args))
     ((string= command "wake-peer")
      (dispatch-wake-peer args store wake-ports))
+    ((string= command "admit-peer")
+     (dispatch-admit-peer args store clock))
     ((string= command "run-worker")
      (dispatch-run-worker args store worker-ports))
     ((string= command "select-course")

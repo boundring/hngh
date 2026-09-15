@@ -79,6 +79,7 @@
 (load (cl-user::project-file "tests/adapter/test-terminal.lisp"))
 (load (cl-user::project-file "tests/adapter/test-filesystem.lisp"))
 (load (cl-user::project-file "tests/adapter/test-federation.lisp"))
+(load (cl-user::project-file "tests/adapter/test-node-lattice-admission.lisp"))
 (load (cl-user::project-file "tests/adapter/test-worker.lisp"))
 (load (cl-user::project-file "tests/adapter/test-worker-driver.lisp"))
 (load (cl-user::project-file "tests/adapter/test-worker-file.lisp"))
