@@ -18,6 +18,11 @@ has exactly one source of truth and one future gate:
   history/1 — NOT YET IMPLEMENTED by any producer. Gate:
               automation/tests/test-viz-schema-history.py (deep-task node
               viz-history-payload owns the producer).
+  routes/1  — automation/jobs/research-routes.py build(): the
+              {"generated", "routes"} research-routes map payload served
+              at /research-routes.json. Gate:
+              automation/tests/test-routes-view.py (deep-task node
+              d6-routes-view owns the producer).
 
 Fail-closed exit contract: the CLI exits 0 on accept (clean or warn),
 exits 2 whenever any ERROR-level finding exists (malformed JSON; missing,
@@ -52,7 +57,8 @@ RC_REJECTED = 2
 GRAPH_SCHEMA = "graph/1"
 PATROL_SCHEMA = "patrol/1"
 HISTORY_SCHEMA = "history/1"
-SUPPORTED = (GRAPH_SCHEMA, PATROL_SCHEMA, HISTORY_SCHEMA)
+ROUTES_SCHEMA = "routes/1"
+SUPPORTED = (GRAPH_SCHEMA, PATROL_SCHEMA, HISTORY_SCHEMA, ROUTES_SCHEMA)
 # Source: graph-data.py build() -- every literal the builder can emit
 # today (STATES tuple, the node() call, _emit_sessions, and the edge()
 # call sites in this file).
@@ -75,6 +81,7 @@ _ENVELOPE_FIELDS = {
                     "pass_count", "fail_count", "quip_present", "results",
                     "rounds", "queued_subjects", "alerts"),
     HISTORY_SCHEMA: ("schema", "entries"),
+    ROUTES_SCHEMA: ("schema", "generated", "routes"),
 }
 _REQUIRED_FIELDS = {
     GRAPH_SCHEMA: ("schema", "generated_at", "nodes", "edges"),
@@ -82,10 +89,12 @@ _REQUIRED_FIELDS = {
                     "pass_count", "fail_count", "quip_present", "results",
                     "rounds", "queued_subjects", "alerts"),
     HISTORY_SCHEMA: ("schema", "entries"),
+    ROUTES_SCHEMA: ("schema", "generated", "routes"),
 }
 
 TYPES = {
     "generated_at": str,
+    "generated": str,
     "run_ts": str,
     "date": str,
     "quip_present": bool,
@@ -95,6 +104,7 @@ TYPES = {
     "nodes": list,
     "edges": list,
     "entries": list,
+    "routes": list,
     "results": list,
     "rounds": list,
     "queued_subjects": list,
@@ -295,6 +305,78 @@ def _validate_patrol(payload, issues):
                 "got %s" % (i, _type_name(item))))
 
 
+# routes/1 vocabulary: status families come from research-lines.tsv col
+# 2 (the live writer's set); terminus actions from the disposition
+# ledger's action column plus "open" for a route with no terminus yet.
+ROUTE_STATUSES = ("planned", "expanding", "contracting", "crystallized",
+                  "reviewed")
+ROUTE_ACTIONS = ("adopted", "parked", "killed", "open")
+
+
+def _validate_routes(payload, issues):
+    routes = payload.get("routes")
+    if not isinstance(routes, list):
+        return
+    seen_ids = set()
+    for i, rt in enumerate(routes):
+        where = _check_entry_fields(
+            rt, i, "routes",
+            ("id", "title", "status", "segments", "terminus", "harvested"),
+            {"id": str, "title": str, "status": str, "segments": list,
+             "terminus": dict, "harvested": bool}, issues)
+        if where is None:
+            continue
+        _warn_scalar_extra(
+            where, rt,
+            ("id", "title", "status", "segments", "terminus", "harvested"),
+            issues)
+        rid = rt.get("id")
+        if isinstance(rid, str):
+            if rid in seen_ids:
+                issues.append(_err(
+                    "duplicate-route-id",
+                    "%s duplicate route id %r" % (where, rid)))
+            seen_ids.add(rid)
+        if "status" in rt and rt["status"] not in ROUTE_STATUSES:
+            issues.append(_err(
+                "unknown-status-value",
+                "%s unknown status %r (known: %s)"
+                % (where, rt["status"], ", ".join(ROUTE_STATUSES))))
+        segments = rt.get("segments")
+        if isinstance(segments, list):
+            for j, seg in enumerate(segments):
+                if not isinstance(seg, str):
+                    issues.append(_err(
+                        "wrong-type",
+                        "%s.segments[%d] must be str, got %s"
+                        % (where, j, _type_name(seg))))
+        terminus = rt.get("terminus")
+        if isinstance(terminus, dict):
+            twhere = "%s.terminus" % where
+            for field in ("action", "date"):
+                if field not in terminus:
+                    issues.append(_err(
+                        "missing-required-field",
+                        "%s missing required field %r" % (twhere, field)))
+            for field in ("action", "date"):
+                if field in terminus and not isinstance(terminus[field], str):
+                    issues.append(_err(
+                        "wrong-type",
+                        "%s.%s must be str, got %s"
+                        % (twhere, field, _type_name(terminus[field]))))
+            if terminus.get("action") not in ROUTE_ACTIONS:
+                issues.append(_err(
+                    "unknown-terminus-action",
+                    "%s unknown terminus action %r (known: %s)"
+                    % (twhere, terminus.get("action"),
+                       ", ".join(ROUTE_ACTIONS))))
+            if rt.get("harvested") is True and terminus.get("action") != "adopted":
+                issues.append(_err(
+                    "harvest-requires-adopted",
+                    "%s harvested=true requires terminus action "
+                    "'adopted', got %r" % (twhere, terminus.get("action"))))
+
+
 def _validate_history(payload, issues):
     entries = payload.get("entries")
     if not isinstance(entries, list):
@@ -333,6 +415,7 @@ _VALIDATORS = {
     GRAPH_SCHEMA: _validate_graph,
     PATROL_SCHEMA: _validate_patrol,
     HISTORY_SCHEMA: _validate_history,
+    ROUTES_SCHEMA: _validate_routes,
 }
 
 # Public schema table: tag -> envelope/required contract (the machine
@@ -458,6 +541,10 @@ def validate_patrol(payload_text):
 
 def validate_history(payload_text):
     return validate(payload_text, HISTORY_SCHEMA)
+
+
+def validate_routes(payload_text):
+    return validate(payload_text, ROUTES_SCHEMA)
 
 
 class _Parser(argparse.ArgumentParser):
