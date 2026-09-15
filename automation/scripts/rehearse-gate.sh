@@ -27,7 +27,7 @@ set -u
 usage() { printf 'usage: %s [--gate CMD] [--log FILE] -- REPO [CANDIDATE...]\n' "$0" >&2; exit 2; }
 
 GATE_CMD="make test"
-LOG_FILE=""
+LOG_FILE="${REHEARSE_LOG:-}"  # env seam (matches accept-plans' ACCEPT_LOG)
 while [ $# -gt 0 ]; do
   case "$1" in
     --gate) [ $# -ge 2 ] || usage; GATE_CMD="$2"; shift 2 ;;

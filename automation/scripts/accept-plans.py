@@ -19,7 +19,9 @@ Seams (hermetic tests, never real gates/plans): HNGH_HOME (kernel
 root), HNGH_AUTOMATION_ROOT, ACCEPT_KERNEL_GATE / ACCEPT_AUTOMATION_GATE
 (command string, default "make test"), HNGH_REPORT_QUEUE /
 HNGH_REPORT_ROOT (report writer), ACCEPT_LOG (execution log), DRY_RUN=1
-(report what would happen, write nothing).
+(report what would happen, write nothing), ACCEPT_ISOLATED_GATE=1 with
+REHEARSE_LOG (gate runs rehearsal inside scripts/rehearse-gate.sh on a
+git-archive copy of each repo instead of a direct run).
 """
 import fcntl
 import os
@@ -53,6 +55,21 @@ ACCEPT_LOG = os.environ.get(
 EMAIL_NOTIFY = AUTOMATION / "scripts" / "notify-email.py"
 EMAIL_LOG = AUTOMATION / "logs" / "notify-email.log"
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
+# rehearsal breadcrumb (ACCEPT_ISOLATED_GATE=1)
+REHEARSE_LOG = os.environ.get(
+    "REHEARSE_LOG", str(AUTOMATION / "logs" / "rehearse.log"))
+# gate-evaluation isolation (2026-09-09 rehearsal-lane plan step 2):
+# with ACCEPT_ISOLATED_GATE=1 each gate runs inside scripts/
+# rehearse-gate.sh on a `git archive HEAD` copy (plus any named
+# candidate overlays) instead of contending with parallel delegated
+# sessions -- the 2026-09-09 kernel/automation gate-red-rc2 blocks were
+# load-correlated, and the 2026-09-02 routed-review wake proved the
+# archived-tree pattern green while the working tree was red. Off by
+# default: direct gate runs are preserved.
+ISOLATED_GATE = os.environ.get("ACCEPT_ISOLATED_GATE", "") == "1"
+# resolved script-adjacent, not from HNGH_AUTOMATION_ROOT: the rehearsal
+# archive target is a sandbox root in tests, which carries no scripts/
+REHEARSE_GATE_SH = Path(__file__).resolve().parent / "rehearse-gate.sh"
 # gate-evaluation isolation (2026-09-09 plan step 5): the two make test
 # subprocesses serialize under an exclusive flock so competing gate runs
 # (overlapping ticks, watchdog respawns) never compile side by side --
@@ -248,6 +265,26 @@ def run_gate(cmd, cwd):
         return 127, str(exc)[-400:]
 
 
+def rehearse_gate(cmd, cwd):
+    """Gate rehearsal on a git-archive copy (ACCEPT_ISOLATED_GATE=1).
+
+    Delegates to scripts/rehearse-gate.sh: `git archive HEAD` (plus
+    candidate overlays) unpacks into a temp dir and runs the gate
+    there; a refuse (rc=2) blocks acceptance fail-closed like a red
+    gate. Breadcrumbs append one row per rehearsal to REHEARSE_LOG.
+    """
+    try:
+        p = subprocess.run(
+            ["bash", str(REHEARSE_GATE_SH), "--gate", cmd,
+             "--log", REHEARSE_LOG, "--", str(cwd)],
+            capture_output=True, text=True, timeout=600)
+        # red/refuse: keep the tail (rc + last failing check) for the
+        # alert row; green: the breadcrumb row is the record
+        return p.returncode, "" if p.returncode == 0 else p.stderr[-400:]
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 127, str(exc)[-400:]
+
+
 def note(line):
     print(line)
     if DRY_RUN:
@@ -374,8 +411,15 @@ def main():
         for slug, _ in runnable:
             note("blocked %s gate-lock-busy" % slug)
         return 0
-    krc, kout = run_gate(KERNEL_GATE, KERNEL)
-    arc, aout = run_gate(AUTOMATION_GATE, AUTOMATION)
+    if ISOLATED_GATE:
+        krc, kout = rehearse_gate(KERNEL_GATE, KERNEL)
+        # a red kernel gate blocks acceptance outright; the automation
+        # rehearsal never has to run against a load that will be rejected
+        arc, aout = (None, "") if krc != 0 else \
+            rehearse_gate(AUTOMATION_GATE, AUTOMATION)
+    else:
+        krc, kout = run_gate(KERNEL_GATE, KERNEL)
+        arc, aout = run_gate(AUTOMATION_GATE, AUTOMATION)
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
     finally:
