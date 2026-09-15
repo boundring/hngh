@@ -6,9 +6,10 @@ no `dashboard/` dependency.
 
 ## What landed
 
-- `automation/tests/test-viz-schema-version.py` — 14 cases in 7 classes,
-  all against `automation/jobs/viz_schema.py` (the seam landed in
-  ea265b86; interface settled by direct DM with that node):
+- `automation/tests/test-viz-schema-version.py` — 15 cases in 8 classes
+  (14 version-gate cases + the `probe-verify-suite` self-check added in
+  3e4834df), all against `automation/jobs/viz_schema.py` (the seam
+  landed in ea265b86; interface settled by direct DM with that node):
   - each family accepts its own current version (`graph/1`,
     `patrol/1`, `history/1`), asserted through both the library API
     (`validate_payload` -> issue list, ERROR rejects) and the CLI;
@@ -29,6 +30,32 @@ no `dashboard/` dependency.
     and still validates.
 - `automation/Makefile` — wires the new gate (and the history sibling)
   into `make test` next to the existing patrol gate.
+
+## probe-verify-suite definition (node probe-verify-suite)
+
+Per the committed probe pattern (probe-head-drift /
+probe-schema-seam / probe-tmp / probe-worktree-scan): a small headless
+check living inside `test-viz-schema-version.py`, callable standalone
+(`--probe`, exit 0 verified / 1 drift) and invoked by the suite itself
+(`TestProbeVerifySuite`), printing one machine-parsable line:
+
+```
+PROBE-VERIFY-SUITE as-of-utc=<ts> head=<short> \
+  suite(automation/tests/test-viz-schema-version.py)_clean=yes \
+  seam(automation/jobs/viz_schema.py)_clean=yes
+```
+
+It certifies, byte-for-byte against `HEAD:` at
+`git rev-parse --show-toplevel`: (1) the gate suite that ran equals the
+committed suite, and (2) the CLI binary the suite invokes equals the
+committed seam module. Rationale: with concurrent swarm committers, an
+uncommitted edit to a shared gate means an auditor reviews different
+bytes than the ones that produced the green run (the probe-head-drift
+lesson). A not-yet-committed suite is reported (`committed=no`), not
+failed, so the probe works in the pre-first-commit window. The probe
+validated itself on first run: it flagged exactly the uncommitted probe
+edit it was introduced in (suite_clean=no) and went green only after
+that commit landed.
 
 ## Verification
 
