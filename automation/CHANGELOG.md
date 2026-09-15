@@ -1,6 +1,17 @@
 # Changelog
 
 ## 2026-09-15
+- test: viz schema version-gate acceptance tests
+  (`tests/test-viz-schema-version.py`, 14 cases, wired into
+  `make test`) — hermetic gate for the versioning behavior of the
+  validation seam (viz_schema.py, ea265b86): each family accepts its
+  own current version (graph/1, patrol/1, history/1) through both the
+  library API and the CLI; 'schema' absent/non-string/unknown fails
+  closed (graph/99 detail names both versions); malformed JSON fails
+  closed; unknown envelope keys fail closed while additive scalar keys
+  inside entries WARN-accept; validate -> rc 2 contract asserted end to
+  end; payloads survive json round-trip and still validate.
+
 - fix: graph feed emits each surface node once
   (`jobs/graph-data.py`) — patrol-routes.tsv repeats surface values
   (kernel-gate and services are each walked by two patrols), and the
