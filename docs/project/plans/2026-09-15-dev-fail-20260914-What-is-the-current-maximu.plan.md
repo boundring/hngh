@@ -4,15 +4,16 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements research line fail-20260915-Does-the-beat-script-s-state-model-disti by adding a stored completion-token state model to hngh-automation so timeout-complete is distinguishable from in-progress.
+## Rationale
+This plan implements the research line "Does the beat script's state model distinguish between 'timeout-complete' and 'in-progress' markers, and if not, what is the minimal patch to close this gap?" by adding a distinct status token to the cadence scripts and asserting its presence in tests.
 
 ## Steps
 
-- [ ] Add `lib/beat_state.py` with stdlib-only constants for `in_progress` and `timeout_complete`, a classifier, and a self-test that exits 0.
-  Verification: python3 lib/beat_state.py
-- [ ] Add `scripts/beat-state-probe.sh` that reads a status file path and prints the classified state token using `lib/beat_state.py`.
-  Verification: bash -n scripts/beat-state-probe.sh
-- [ ] Add `tests/test-beat-state.sh` asserting missing marker classifies as in-progress and explicit timeout-complete marker classifies as timeout-complete.
+- [ ] Add a `TIMEOUT_COMPLETE` status constant or string literal to the state model in `cadence/beat.sh` (or equivalent shell script) to distinguish from clean-complete.
+  Verification: grep -q "TIMEOUT_COMPLETE" cadence/beat.sh
+- [ ] Update the finalization logic in `cadence/beat.sh` to write the new timeout status token when a deadline expires without completion.
+  Verification: bash -n cadence/beat.sh
+- [ ] Create a test script in `tests/test_timeout_status.sh` that simulates a timeout scenario and asserts the output contains the distinct timeout marker.
+  Verification: bash tests/test_timeout_status.sh
+- [ ] Register the new test case in the main test suite entry point (e.g., `tests/run_tests.sh` or `Makefile` test target) to ensure it runs during `make test`.
   Verification: make test
-- [ ] Add `cadence/beat-state.md` documenting that completion is stored at finalization, not derived from elapsed time.
-  Verification: grep -q "timeout-complete" cadence/beat-state.md
