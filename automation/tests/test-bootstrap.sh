@@ -77,7 +77,7 @@ chmod +x "$SANDBOX/bin/tailscale"
 TS_LOG="$SANDBOX/ts-hits"
 : >"$TS_LOG"
 SANDBOX_STATE="$SANDBOX/STATE.md"
-env TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" DECK_IP= \
+env TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" DECK_IP= DECK_NODE_ENABLED=1 \
   PATH="$SANDBOX/bin:$PATH" HNGH_MACHINE_PROFILE="$SANDBOX/machine.env" \
   bash "$ROOT/cadence/day/06-remote-posture.sh" >/dev/null 2>&1
 if grep -qF '203.0.113.7' "$TS_LOG" && grep -q 'remote-posture | ok' "$SANDBOX_STATE" 2>/dev/null; then
@@ -89,7 +89,7 @@ fi
 # fail-closed: no profile, no env DECK_IP -> skip probe, never the baked IP.
 : >"$TS_LOG"
 rm -f "$SANDBOX_STATE"
-env -u DECK_IP TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" \
+env -u DECK_IP TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" DECK_NODE_ENABLED=1 \
   PATH="$SANDBOX/bin:$PATH" \
   HNGH_MACHINE_PROFILE="$SANDBOX/missing.env" \
   bash "$ROOT/cadence/day/06-remote-posture.sh" >/dev/null 2>&1
@@ -99,6 +99,24 @@ elif grep -q 'no DECK_IP' "$SANDBOX_STATE" 2>/dev/null; then
   ok "06-remote-posture skips fail-closed when no profile sets DECK_IP"
 else
   bad "06-remote-posture missing-profile path did not crumb 'no DECK_IP'"
+fi
+
+# deck deactivated (deck-node-enabled=0): probe skipped even when DECK_IP
+# resolves and tailscale would answer -- ONE switch gates all deck activity
+# (2026-09-15 operator deactivation).
+printf 'deck-node-enabled\t0\ttest\ttest\n' >"$SANDBOX/cadence-params.tsv"
+: >"$TS_LOG"
+rm -f "$SANDBOX_STATE"
+env TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" \
+  PATH="$SANDBOX/bin:$PATH" AUTOMATION_ROOT="$SANDBOX" \
+  HNGH_MACHINE_PROFILE="$SANDBOX/machine.env" \
+  bash "$ROOT/cadence/day/06-remote-posture.sh" >/dev/null 2>&1
+if [ -s "$TS_LOG" ]; then
+  bad "06-remote-posture pinged with deck-node-enabled=0 (deck must stay off)"
+elif grep -q 'deck-node-enabled != 1' "$SANDBOX_STATE" 2>/dev/null; then
+  ok "06-remote-posture skips the deck probe when deck-node-enabled=0"
+else
+  bad "06-remote-posture deck-disabled path did not crumb the skip"
 fi
 
 # --- (c) bootstrap --check --------------------------------------------------

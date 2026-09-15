@@ -49,6 +49,14 @@ ls "$sb"/archive/skipped-*.txt >/dev/null 2>&1 && echo "ok: unset row: prompt ar
   fails=$((fails + 1))
 }
 
+# 1b. row PRESENT but value EMPTY (deactivation mechanism, 2026-09-15) ->
+# leg skipped fail-closed exactly like the unset row. get_param must return
+# '' for an empty value, never fall through to a stale default.
+set_row ''
+out="$(call "hello-1b")"
+ck "empty-value row: empty stdout" "" "$out"
+ck "empty-value row: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
+
 # 2. row set to the live stub -> deck leg answers.
 stub_start deck
 port="$(cat "$stubdir/deck-port" 2>/dev/null)"
