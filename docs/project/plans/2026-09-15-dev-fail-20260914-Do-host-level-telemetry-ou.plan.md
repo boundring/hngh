@@ -4,21 +4,21 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the fail-20260914-Do-host-level-telemetry-outside-the-line research line by establishing a probe-and-classify procedure for host-level telemetry survival, enabling retroactive defect-vs-transient classification without waiting for controlled retests.
+This plan implements the fail-20260914-push-divergence-jcode-20260914 research line by adding a pre-push synchronization guard to prevent non-fast-forward refusals caused by same-host session races.
 
 ## Steps
 
-- [ ] Create `scripts/probe_telemetry_survival.sh` to check for sysstat/sar archives, journald OOM entries, and cron logs within the 2026-09-12 window
-  Verification: bash -n scripts/probe_telemetry_survival.sh
+- [ ] Create `scripts/push-guard.sh` that fetches origin main and verifies the local HEAD is a descendant of the remote tip before allowing a push
+  Verification: bash -n scripts/push-guard.sh
 
-- [ ] Add `lib/telemetry_classifier.py` to classify telemetry findings into defect-vs-transient categories based on survival status
-  Verification: python3 lib/telemetry_classifier.py --help
+- [ ] Add a unit test in `tests/test_push_guard.py` that simulates a diverged branch scenario and asserts the guard script exits non-zero with a specific error message
+  Verification: python3 tests/test_push_guard.py
 
-- [ ] Create `tests/test_telemetry_probe.sh` to verify the probe script handles missing telemetry sources gracefully
-  Verification: bash tests/test_telemetry_probe.sh
+- [ ] Integrate the push guard into the existing job workflow by editing `jobs/push.yaml` to invoke `scripts/push-guard.sh` as a pre-hook before the git push command
+  Verification: grep -q "push-guard.sh" jobs/push.yaml
 
-- [ ] Add `digest/TELEMETRY_SURVIVAL_REPORT.md` documenting the three-class probe-and-classify procedure and structural asymmetry findings
-  Verification: grep -q "three-class" digest/TELEMETRY_SURVIVAL_REPORT.md
+- [ ] Update the cadence documentation in `cadence/coordination-rules.md` to explicitly state that same-host jcode sessions must serialize pushes via the new guard script
+  Verification: grep -q "serialize pushes" cadence/coordination-rules.md
 
-- [ ] Create `scripts/classify_retroactive.sh` to apply the classification logic to archived telemetry data from the 2026-09-12 window
-  Verification: bash -n scripts/classify_retroactive.sh
+- [ ] Run the full test suite to ensure no regressions were introduced by the new script and job integration
+  Verification: make test
