@@ -44,7 +44,7 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
 ```
 ## Next
 
-- **node-lattice-admission** — rotate next (unblocked: wake-mutation-lane landed 2026-09-13 through the ceremony).
+- **bridge-operator-host** — rotate next (unblocked: bridge, worker-driver refusal, r13 reviewer, and the :model loadout are all present; node-lattice-admission rotated 2026-09-15 through the ceremony, candidate 9e0779b0).
 
 ## Scheduling
 
