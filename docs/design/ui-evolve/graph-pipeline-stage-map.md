@@ -74,7 +74,7 @@ last frame. Picking (S7) deliberately reuses the last frame's projection.
 | S5 | Projection | `Scene` + `Camera` + viewport | projected `scr.{x,y,s,d}` | Y-orbit `th`, X-orbit `ph`, `z = cam.r - depth`, perspective `s = FOCAL*(H/2)/max(20,z)` (50deg vfov), zero allocation | `project` 413-429; DPR via `ctx.setTransform` in `resize` 431-441 |
 | S6 | Draw | projected buffers + `Scene` + view state | pixels / SVG DOM | pass 1 edges (depth-tinted alpha, focus highlighting), pass 2 nodes painter's far->near, rings/gloss/labels | `draw3d` 451-520; fallback `render2d` 815-847 |
 | S7 | Interaction | DOM events | `Camera` + selection/hover/filter mutations | drag orbit 0.006 rad/px (ph clamp +-1.35), wheel zoom clamp [480,4800], nearest-first pick on last frame's projection, chips/search/history-hash | `bindPointer` 543-579, `pickAt` 583-595, `select`/`jumpTo` 630-681, `wire` 331+ |
-| S8 | Cadence | timers | reload / badge / spin | 60s `autoLoad` (skipped when `#p-graph` hidden), 5s badge, optional rAF spin 0.12 rad/s (pauses on pointer/down/hidden), `snapshotView`/`restoreView` camera preserve across reloads | 224, 382-383, 522-541, 682-718, 720-799 |
+| S8 | Cadence | timers | reload / badge / spin | 60s `autoLoad` (skipped when `#p-graph` hidden), 5s badge, optional rAF spin 0.12 rad/s (pauses on pointer/down/hidden), `snapshotView`/`restoreView` camera preserve across reloads (camera/selection/spin only: hover and the `pendSel` hash target are deliberately not preserved -- `pendSel` wins only if it arrives before the fetch resolves, 788-790; see §7.6) | 224, 238-248, 382-383, 522-541, 682-718, 720-799 |
 
 ## 3. Proposed stage interfaces
 
@@ -224,20 +224,66 @@ contract tests keep working unchanged.
 
 ## 7. Open questions for the synthesis
 
+RESOLVED 2026-09-15 (node docs-viz-open-questions): each question below
+carries a one-line Resolution so synthesis inherits decisions, not
+dangling questions. Line pins are the same working tree as the source
+table above.
+
 1. rAF-coalescing of drag/wheel redraws: current per-event synchronous
    redraw is fine at ~350-535 nodes; the stage map makes the fix local
    (queue intents in `gv-interact`, run S5+S6 in one rAF) if node count
    grows (render-loop node raised the same).
+   Resolution: **keep per-event redraw**; revisit with rAF-coalescing
+   in `gv-interact` when feed size exceeds 1000 nodes (live feed now
+   548 nodes default / 565 all-sessions, measured 2026-09-15 via
+   `graph-data.build()` with server-identical args,
+   dashboard-server.py:330-337).
 2. Edges always underdraw nodes (no depth interleaving). Wireframe style;
    confirm intent before anyone "fixes" it.
+   Resolution: **intended wireframe style, confirmed** -- edges are a
+   depth-tinted underlay pass and nodes are painter's far->near on top
+   (draw3d 451-520, edge pass precedes node pass); any interleaving
+   change opens a new design node, it is not part of viz synthesis.
 3. `spinLoop` reschedules rAF before the pause check (531-538); swap the
    guard order when `gv-interact` is extracted.
+   Resolution: **swap the guard order** (early-return `if (!spinning)`
+   after the pause test, before `requestAnimationFrame(spinLoop)`) at
+   `gv-interact` extraction time; not a bug today (rAF stops firing for
+   hidden tabs and `setSpin(false)` already zeroes `spinning`, 524-530),
+   it just keeps a paused-but-registered callback alive one extra frame
+   (graph-view.js:531-538).
 4. `restoreView` grow-only clamp recomputes `Math.max(snap.r, minFit)` on
    every refresh even when the shell did not grow; intentional per the v5
    header but worth an operator eyeball.
+   Resolution: **intentional per the v5 header, keep** -- the recompute
+   is the documented grow-only semantics ("grow-only distance so a
+   bigger shell never clips", header v5, graph-view.js:31-35; clamp
+   re-derived each load at 241-248); one `Math.max` per 60s refresh is
+   unmeasurable, no fix scoped.
 5. The SVG fallback re-implements the projection transform inline
    (819-820) instead of sharing `gv-project`; the proposed flat projector
    in `gv-project` is where that dedup lands.
+   Resolution: **cross-referenced, out of scope here** -- dedup is owned
+   by the `gv-project` extraction in the §5 module plan (flat projector
+   row, table at 184-191 and extraction order 193-199); `render2d` /
+   `bindSvg` stay dual-implemented until that extraction lands
+   (graph-view.js:815-868).
 6. Camera-preserve snapshot does not include hover or the `pendSel` hash
    target across reload; probably fine, but it is a behavior the synthesis
    should state explicitly rather than leave implicit.
+   Resolution: **stated S8 behavior, accepted as-is** -- `snapshotView`
+   captures `{th, ph, r, sel, spin}` only (238-248); `hoverId` is
+   transient pointer state and is never restored (declared 222); a
+   pending hash target wins if it arrived before the fetch resolved and
+   is otherwise lost, by explicit ordering in `load()` (pendSel branch
+   precedes snapshot re-select, 788-790; `pendSel` is set from the
+   location hash in `wire`, 806). See the S8 row (§2) for the normative
+   statement.
+7. The server exposes `?all-sessions=1` (second cache slot, forwarded to
+   `build(all_sessions=1)`, dashboard-server.py:315-342, 402-406) with
+   passing tests (test-graph-feed-refresh.py:166-190), but the viewer has
+   no UI toggle for it.
+   Resolution: **out of scope for viz synthesis** -- no toggle is added
+   in the current synthesis; if one is ever wanted it belongs to
+   `gv-feed` (S1 transport owns the request URL, §5 module table), to be
+   opened as its own design node at that time.
