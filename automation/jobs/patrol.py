@@ -61,6 +61,9 @@ RESEARCH_STALL_HOURS = 48
 STUCK_STATES = ("planned", "expanding", "contracting")
 FEEDBACK_FLOOD = 20  # unprocessed dashboard feedback json backlog cap
 MANGA_STALE_HOURS = 48  # newest draft older than this = pipeline stalled
+ROADMAP_STALE_DAYS = 14  # landing stage without movement this long fires
+ROADMAP_HISTORY_DAYS = 30  # movement older than this is not fresh evidence
+ROTATION_DUE_DAYS = 7  # queue Next item held this long fires rotation-due
 
 def _manga_dir(root):
     """Working manga dir: the hngh home manga dir when it exists (the
@@ -1188,6 +1191,192 @@ def check_pending_checks(ctx):
     return out
 
 
+def _roadmap_movements(ctx):
+    """[(epoch, subject, path)] of recent movement evidence for the
+    roadmap/records fold. Documented heuristic (2026-09-15): movement
+    is any commit in the last ROADMAP_HISTORY_DAYS whose changed path
+    is docs/project/roadmap.md OR a docs/records/ file whose name or
+    the commit subject mentions 'stage<N>'. A `git log --format=%ct
+    -1 -L` per row was considered and rejected as fragile (row text
+    shifts across merges); path-level movement is honest enough to
+    catch "this stage's surface moved". Overridable by
+    PATROL_ROADMAP_GIT_LOG (a fixture file of '<epoch>\\t<subject>\\t
+    <path>' lines) so the check stays hermetic under test."""
+    since = ctx["now"] - ROADMAP_HISTORY_DAYS * 86400
+    fixture = os.environ.get("PATROL_ROADMAP_GIT_LOG")
+    rows = []
+    if fixture:
+        try:
+            with open(fixture, encoding="utf-8", errors="replace") as fh:
+                for ln in fh:
+                    f = ln.rstrip("\n").split("\t")
+                    if len(f) == 3:
+                        rows.append((int(f[0]), f[1], f[2]))
+        except (OSError, ValueError):
+            pass
+        return rows
+    try:
+        r = subprocess.run(
+            ["git", "-C", ctx["kernel"], "log",
+             "--since=@%d" % int(since), "--name-only", "--pretty="
+             "format:%ct%x09%s"],
+            capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    subject, ts = "", None
+    for ln in r.stdout.splitlines():
+        if "\t" in ln and ln.split("\t")[0].isdigit():
+            head = ln.split("\t")
+            ts, subject = int(head[0]), head[1]
+            continue
+        if not ln.strip() or ts is None:
+            continue
+        rows.append((ts, subject, ln.strip()))
+    return rows
+
+
+STAGE_ROW_RE = re.compile(
+    r"^\|\s*\*\*(\d+)\s*[^*]*?[—-]\s*([^*]+)\*\*.*\*\*(green|landing|done)\*\*",
+    re.IGNORECASE)
+
+
+def check_roadmap_stale(ctx):
+    """Roadmap rot fold (2026-09-15, adversarial pass): stages 2/3 sat
+    'landing' ~3 weeks with unchanged frontier text while the roadmap
+    claims 'a stage is done when its exit criteria hold'. For each
+    'landing' stage row, movement = a commit in the last
+    ROADMAP_HISTORY_DAYS touching docs/project/roadmap.md or a
+    docs/records/ file whose name/subject mentions 'stage<N>' (exact
+    heuristic in _roadmap_movements). No movement within
+    ROADMAP_STALE_DAYS -> fail identity stage:stage<N>-stale (the
+    report-queue identity dedups repeats). Missing roadmap fails soft:
+    a dormant surface is quiet, never a crash."""
+    out = {"passes": [], "fails": []}
+    path = os.path.join(ctx["kernel"], "docs", "project", "roadmap.md")
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        out["passes"].append(("roadmap-stale", "no roadmap (dormant)"))
+        return out
+    landing = []
+    for ln in text.splitlines():
+        m = STAGE_ROW_RE.match(ln)
+        if m and m.group(3).lower() == "landing":
+            landing.append((m.group(1), m.group(2)))
+    if not landing:
+        out["passes"].append(("roadmap-stale", "no landing stages"))
+        return out
+    movements = [mv for mv in _roadmap_movements(ctx)
+                 if mv[0] >= ctx["now"] - ROADMAP_HISTORY_DAYS * 86400]
+    stale_s = ROADMAP_STALE_DAYS * 86400
+    for n, name in landing:
+        stage_tok = "stage%s" % n
+        alt_tok = "stage-%s" % n
+        # stage-name tokens: distinctive words of the stage title, so a
+        # record like governed-fleet.md counts as stage-3 movement even
+        # when it never says "stage3"
+        name_toks = [w.lower() for w in re.findall(r"[A-Za-z]{4,}", name)]
+        # a commit moves ONE stage only when its subject/path names that
+        # stage (stage2/stage-2 or a distinctive stage-title word,
+        # normalized so "stage 2 polish" matches "stage2"); a bare
+        # roadmap.md touch is not evidence for every landing stage
+        toks = tuple(re.sub(r"[^a-z0-9]", "", t)
+                     for t in (stage_tok, alt_tok) + tuple(name_toks))
+        recent = [mv for mv in movements
+                  if any(tok in re.sub(r"[^a-z0-9]", "",
+                                       (mv[2] + " " + mv[1]).lower())
+                         for tok in toks)]
+        if not recent:
+            out["fails"].append(
+                (stage_tok, "%s-stale" % stage_tok,
+                 "stage %s landing with no roadmap/records movement "
+                 "in %dd" % (n, ROADMAP_HISTORY_DAYS)))
+            continue
+        age_d = (ctx["now"] - max(mv[0] for mv in recent)) / 86400.0
+        if age_d >= ROADMAP_STALE_DAYS:
+            out["fails"].append(
+                (stage_tok, "%s-stale" % stage_tok,
+                 "stage %s landing, newest movement %.1fd old (>= %dd)"
+                 % (n, age_d, ROADMAP_STALE_DAYS)))
+        else:
+            out["passes"].append(
+                (stage_tok, "moved %.1fd ago (%s)"
+                 % (age_d, max(recent, key=lambda mv: mv[0])[1][:60])))
+    return out
+
+
+NEXT_RE = re.compile(r"^- \*\*([A-Za-z0-9._-]+)\*\*\s*[—-]")
+
+
+def check_rotation_due(ctx):
+    """Queue rotation fold (2026-09-15, adversarial pass): items marked
+    unblocked ('## Next' in docs/project/queue.md, `- **<id>** - <why>`
+    shape) never rotate -- nothing machine-checks rotation readiness.
+    First-seen per Next item is tracked in state/rotation-watch.tsv
+    (TSV: item\\tfirst-seen ISO Z; the beat-blockers.tsv flat-row
+    convention, created on demand). The Next item held >=
+    ROTATION_DUE_DAYS -> fail identity queue:rotation-due with the id
+    and age; a changed Next item replaces the watch row (reset)."""
+    out = {"passes": [], "fails": []}
+    path = os.path.join(ctx["kernel"], "docs", "project", "queue.md")
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        out["passes"].append(("rotation-due", "no queue (dormant)"))
+        return out
+    nxt = None
+    in_next = False
+    for ln in text.splitlines():
+        if ln.startswith("## "):
+            in_next = ln.strip() == "## Next"
+            continue
+        if in_next:
+            m = NEXT_RE.match(ln.strip())
+            if m:
+                nxt = m.group(1)
+    if not nxt:
+        out["passes"].append(("rotation-due", "no Next item named"))
+        return out
+    watch = ctx["rotation_watch"]
+    rows = {}
+    try:
+        with open(watch, encoding="utf-8", errors="replace") as fh:
+            for ln in fh:
+                f = ln.rstrip("\n").split("\t")
+                if len(f) == 2:
+                    rows[f[0]] = f[1]
+    except OSError:
+        pass
+    if nxt not in rows:
+        rows = {nxt: time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(ctx["now"]))}
+        try:
+            os.makedirs(os.path.dirname(watch), exist_ok=True)
+            with open(watch, "w", encoding="utf-8") as fh:
+                for k in sorted(rows):
+                    fh.write("%s\t%s\n" % (k, rows[k]))
+        except OSError:
+            pass  # lost watch = next run re-baselines, never a crash
+        out["passes"].append((nxt, "watch row created (reset)"))
+        return out
+    first = ts_epoch(rows[nxt])
+    if first is None:
+        # unparseable first-seen: re-baseline, fail soft
+        rows.pop(nxt)
+        out["passes"].append((nxt, "watch row unparseable, re-baselined"))
+        return out
+    age_d = (ctx["now"] - first) / 86400.0
+    if age_d >= ROTATION_DUE_DAYS:
+        out["fails"].append(
+            (nxt, "rotation-due",
+             "%s named Next for %.1fd (>= %dd): rotate it or re-rank it"
+             % (nxt, age_d, ROTATION_DUE_DAYS)))
+    else:
+        out["passes"].append(
+            (nxt, "Next %.1fd old (< %dd)" % (age_d, ROTATION_DUE_DAYS)))
+    return out
+
+
 CHECKS = {
     "feed-freshness": check_feed_freshness,
     "blocker-escalations": check_blocker_escalations,
@@ -1211,6 +1400,8 @@ CHECKS = {
     "github-ci-latest": check_github_ci,
     "journal-errors": check_journal_errors,
     "pending-checks": check_pending_checks,
+    "roadmap-stale": check_roadmap_stale,
+    "rotation-due": check_rotation_due,
 }
 
 
@@ -1292,6 +1483,9 @@ def build_ctx(args, now_s):
         "journal_counts": os.environ.get(
             "PATROL_JOURNAL_COUNTS",
             os.path.join(root, "logs", "journal-patrol-counts.tsv")),
+        "rotation_watch": os.environ.get(
+            "PATROL_ROTATION_WATCH",
+            os.path.join(root, "state", "rotation-watch.tsv")),
     }
 
 
