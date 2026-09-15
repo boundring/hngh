@@ -2,6 +2,19 @@
 
 ## 2026-09-15
 
+- feat: research lessons + routes surfaces admitted to patrol and
+  registry (GAP closure) — patrol-routes.tsv `research-ledger` row
+  (30m, bad-execution) backed by `check_research_ledger`
+  (ledger-missing / header-drift / row-malformed / lineage-contradiction
+  / harvest-stale, 6h LESSONS_STALE_HOURS freshness vs the last adopted
+  disposition); `research-routes.json` joins FEEDS freshness at 8h
+  (build-on-demand feed tier); torch-ledger.tsv rows for
+  research-lessons.tsv and research-routes (both audited live: 8 and 4
+  non-writer consumers). tests/test-patrol.py red-first: 8 new cases,
+  healthy fixture seeds both surfaces, counts 19->21 PASSes / 15->16
+  results. Record:
+  docs/records/2026-09-15-lessons-routes-patrol-admission.md.
+
 - feat: adopted-lessons block in the context pack (node d1-surface) —
   closes the d1-harvest open question "should harvested lessons be
   surfaced in context-pack consumption". `lib/context-pack.sh` renders
