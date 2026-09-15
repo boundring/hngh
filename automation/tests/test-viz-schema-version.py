@@ -29,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -358,5 +359,96 @@ class TestSerializationRoundTrip(unittest.TestCase):
                                  "round-tripped %s must still validate" % tag)
 
 
+# --- probe-verify-suite --------------------------------------------------
+#
+# Headless verification probe in the committed probe pattern (cf.
+# probe-head-drift / probe-schema-seam / probe-worktree-scan): a small,
+# self-contained check the suite itself calls, printing one
+# machine-parsable PROBE line. This probe certifies that the gate suite
+# on disk matches the committed suite and that the CLI binary it invokes
+# is exactly the committed seam module (worktree drift check, the
+# probe-head-drift lesson: concurrent swarm committers make uncommitted
+# edits to shared gates silently, so an audited gate may not be the gate
+# that ran). Exit 0 = verified.
+
+def _git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True)
+
+
+def _toplevel():
+    out = _git("rev-parse", "--show-toplevel")
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def _tracked_and_clean(toplevel, repo_rel):
+    tracked = _git("-C", toplevel, "ls-files", "--error-unmatch",
+                   repo_rel).returncode == 0
+    if not tracked:
+        return False, False
+    head = _git("-C", toplevel, "show", "HEAD:" + repo_rel)
+    clean = head.returncode == 0 and \
+        head.stdout.encode() == Path(toplevel, repo_rel).read_bytes()
+    return True, clean
+
+
+def probe_verify_suite():
+    """Returns (ok, PROBE line). Drift in either artifact fails the probe."""
+    toplevel = _toplevel()
+    probe = []
+    ok = True
+
+    # 1. Suite bytes vs HEAD: an uncommitted edit here means the gate
+    #    someone audits is not the gate that ran. A not-yet-committed
+    #    suite is reported (committed=no), not failed, so the probe is
+    #    usable in the pre-first-commit window.
+    if toplevel:
+        suite_rel = str(Path(__file__).resolve().relative_to(toplevel))
+        tracked, suite_clean = _tracked_and_clean(toplevel, suite_rel)
+        if not tracked:
+            probe.append("committed=no")
+            suite_clean = True
+        elif not suite_clean:
+            ok = False
+
+        # 2. CLI binary identity: VIZ_CLI must be the committed seam
+        #    module, byte-for-byte.
+        if VIZ_CLI.exists():
+            seam_rel = str(VIZ_CLI.resolve().relative_to(toplevel))
+            _, seam_clean = _tracked_and_clean(toplevel, seam_rel)
+        else:
+            seam_rel, seam_clean = "jobs/viz_schema.py", False
+        if not seam_clean:
+            ok = False
+
+        head = _git("-C", toplevel, "rev-parse", "--short", "HEAD")
+        probe.insert(0, "head=%s" % head.stdout.strip())
+        probe.append("suite(%s)_clean=%s" % (suite_rel,
+                                             "yes" if suite_clean else "no"))
+        probe.append("seam(%s)_clean=%s" % (seam_rel,
+                                            "yes" if seam_clean else "no"))
+    else:
+        ok = False
+        probe.append("git-toplevel=unresolved")
+
+    line = ("PROBE-VERIFY-SUITE as-of-utc="
+            + datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            + " " + " ".join(probe))
+    return ok, line
+
+
+class TestProbeVerifySuite(unittest.TestCase):
+    """The suite calls its own probe: drift in the gate itself is a test
+    failure, so a green suite run certifies the exact bytes that ran."""
+
+    def test_probe_reports_clean_state(self):
+        ok, line = probe_verify_suite()
+        self.assertTrue(ok, line)
+
+
 if __name__ == "__main__":
+    # Standalone probe mode: ./test-viz-schema-version.py --probe
+    if "--probe" in sys.argv:
+        ok, line = probe_verify_suite()
+        print(line)
+        sys.exit(0 if ok else 1)
     unittest.main()
