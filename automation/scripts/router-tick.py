@@ -110,6 +110,93 @@ def report(kind, text, ident, window):
         pass
 
 
+def ttl_s():
+    """Routed-candidate TTL seconds before an unaccepted candidate is
+    marked expired: env HNGH_ROUTER_TTL_HOURS, then the cadence-params
+    row routed-candidate-ttl-hours, else 24h (env->tsv->default)."""
+    v = os.environ.get("HNGH_ROUTER_TTL_HOURS")
+    if not v:
+        try:
+            with open(os.path.join(AUTOMATION, "cadence-params.tsv"),
+                      encoding="utf-8") as fh:
+                for line in fh:
+                    if line.startswith("#"):
+                        continue
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) > 1 and parts[0] == \
+                            "routed-candidate-ttl-hours":
+                        v = parts[1]
+                        break
+        except OSError:
+            pass
+    try:
+        return max(0.0, float(v)) * 3600.0
+    except (TypeError, ValueError):
+        return 24 * 3600.0
+
+
+def mark_expired(path, text):
+    """Header rewrite status=<x> -> status=expired (plan file kept:
+    plans are ceremony artifacts); atomic, mtime preserved."""
+    st = os.stat(path)
+    new = re.sub(r"(?<![\w-])status=\w+", "status=expired", text[:400],
+                 count=1) + text[400:]
+    tmp = tempfile.NamedTemporaryFile("w", delete=False, dir=PLANS,
+                                      suffix=".tmp", encoding="utf-8")
+    tmp.write(new)
+    tmp.close()
+    os.replace(tmp.name, path)
+    os.utime(path, (st.st_atime, st.st_mtime))
+
+
+def expire_stale_candidates(identity):
+    """Expire every non-terminal routed candidate for this identity
+    older than ttl_s(); files one router:routed-expired row per run
+    (unlimited lookback -> later repeats never add rows). Returns the
+    (slug, age_s, text) of the oldest expired candidate, else None."""
+    ident = re.sub(r"[^A-Za-z0-9._-]+", "-", identity)
+    dup_re = re.compile(r"^\d{4}-\d{2}-\d{2}-routed-%s(-\d+)?\.plan\.md$"
+                        % re.escape(ident))
+    ttl = ttl_s()
+    oldest = None
+    try:
+        names = os.listdir(PLANS)
+    except OSError:
+        return None
+    expired_any = False
+    for name in names:
+        if not dup_re.match(name):
+            continue
+        path = os.path.join(PLANS, name)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        m = re.search(r"(?<![\w-])status=(\w+)", text[:400])
+        status = m.group(1) if m else "proposed"
+        age = max(0.0, time.time() - os.path.getmtime(path))
+        if status in TERMINAL_STATUS or status == "accepted":
+            continue  # execution supply or disposed: never expired
+        if age < ttl and status != "expired":
+            continue
+        if status != "expired":
+            mark_expired(path, text)
+            expired_any = True
+        elif age < ttl:
+            continue
+        if oldest is None or age > oldest[1]:
+            oldest = (name[:-8], age)
+    if expired_any or oldest:
+        # expiry itself must be visible; --window 0 keeps it one row
+        report("alert", "router expired candidate %s (unaccepted %dh past "
+               "routing; identity %s)" % (oldest[0] if oldest else "?",
+                                          int(ttl // 3600), identity),
+               "router:routed-expired:%s" % (oldest[0] if oldest else ident),
+               0)
+    return oldest
+
+
 def dedup_window_s():
     """Dedup window seconds: HNGH_ROUTER_DEDUP_HOURS (default 12h)."""
     try:
@@ -313,7 +400,11 @@ def route(identity, text):
                "router:parked:%s" % identity, 604800)
         breadcrumb("router", "parked", "%s critical-class parks" % identity)
         return 0
-    dup = live_duplicate(identity, dedup_window_s())
+    # expiry runs first: a candidate past its TTL is dead even while a
+    # shorter dedup window would still call it live
+    dup = expire_stale_candidates(identity)
+    if dup is None:
+        dup = live_duplicate(identity, dedup_window_s())
     if dup:
         # keep the signal (alert row still lands in reports.md), keep
         # the plan queue clean; >=3 dedups in a day escalate once/day
@@ -346,18 +437,36 @@ def route(identity, text):
                      "landing; operator escalation stands" % occurrences],
                     env={**os.environ}, capture_output=True, timeout=30)
         count = dedup_count_today(identity)
-        report("alert", "router dedup: %s suppressed (routed candidate %s "
-               "still live, %dh old; day count %d)"
-               % (identity, dup_slug, int(age // 3600), count),
-               "router:dedup:%s" % identity, 86400)
-        if count >= 3:
-            report("alert", "router dedup escalation: %s recurring — "
-                   "suppressed %d times today — escalated to operator "
-                   "visibility" % (identity, count),
-                   "router:dedup-escalated:%s" % identity, 86400)
-        breadcrumb("router", "plan-dedup",
-                   "%s suppressed (%s live, %dh old); day count %d"
-                   % (identity, dup_slug, int(age // 3600), count))
+        if status == "expired":
+            # expired candidate whose alert re-fires: escalate
+            # immediately (skip remaining suppressions); the alert then
+            # routes fresh below
+            occ = occurrence_count(dup_text)
+            occ_ts = re.findall(
+                r"^- (\S+) re-occurred", dup_text, re.M) if occ else []
+            oldest = occ_ts[0] if occ_ts else now_utc()
+            report("alert", "router escalation: %s re-fired %dx with no "
+                   "landing (oldest occurrence %s; candidate %s expired "
+                   "after %dh unaccepted)" % (identity, max(occ, 1), oldest,
+                                              dup_slug, int(ttl_s() // 3600)),
+                   "router:escalated:%s" % identity, 0)
+            breadcrumb("router", "escalated",
+                       "%s re-fired past expired candidate %s" %
+                       (identity, dup_slug))
+            dup = None  # route fresh past the corpse
+        else:
+            report("alert", "router dedup: %s suppressed (routed candidate "
+                   "%s still live, %dh old; day count %d)"
+                   % (identity, dup_slug, int(age // 3600), count),
+                   "router:dedup:%s" % identity, 86400)
+            if count >= 3:
+                report("alert", "router dedup escalation: %s recurring — "
+                       "suppressed %d times today — escalated to operator "
+                       "visibility" % (identity, count),
+                       "router:dedup-escalated:%s" % identity, 86400)
+            breadcrumb("router", "plan-dedup",
+                       "%s suppressed (%s live, %dh old); day count %d"
+                       % (identity, dup_slug, int(age // 3600), count))
         if disposed is not None and disposed.returncode == 0:
             report("alert", "router escalated: %s re-occurred %d times "
                    "without landing — plan %s parked (cause=obsolete); "
@@ -367,7 +476,12 @@ def route(identity, text):
             breadcrumb("router", "escalated-park",
                        "%s -> %s parked after %d occurrences"
                        % (identity, dup_slug, occurrences))
-        return 0
+        if dup is None:
+            # expired-candidate escalation falls through: the alert
+            # routes fresh below (past the corpse)
+            pass
+        else:
+            return 0
     path = os.path.join(PLANS, slug + ".plan.md")
     if os.path.exists(path):
         # window-aged same-day plan routes fresh: suffix, never overwrite
