@@ -6,6 +6,20 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-15
 
+#### Added
+
+- **Swarm-resume mission completed; ambient mode enabled (garden-only)**
+  (docs/records/2026-09-15-swarm-resume-and-ambient-enablement.md):
+  the interrupted 2026-09-14 exploration graph was recovered and
+  re-driven in 15 gentle batches to 56 evidence artifacts including
+  both parent syntheses (megastructure viz ladder; history/upcoming
+  view designs); ceremony-bound implement nodes parked for the
+  operator. Ambient mode enabled scoped (ocgo, 75k/day, 30m min
+  interval, proactive work off) and verified through a first
+  gardening cycle; quota-check tooling added at ~/.hngh/tools/
+  (outside the repo).
+
+
 #### Fixed
 
 - **Loop-history guard 526cd3f exemption cure completed**
