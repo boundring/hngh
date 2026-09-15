@@ -149,8 +149,12 @@ def _read_sessions(sessions_dir):
     """session_id -> parsed dict for session_*.json (journal logs and
     .bak copies excluded); unparsable files come back as malformed ids.
     Filename stem == session id by jcode layout, so malformed files
-    still get a stable node id."""
-    raw, malformed = {}, []
+    still get a stable node id. Two files can carry the same internal
+    id (swarm coordinator + child mapping to one run): the first file
+    (sorted order) wins the id, later files come back as shadowed
+    (stem, id) pairs so the emitter surfaces them instead of silently
+    overwriting one node's detail with the other's."""
+    raw, malformed, shadowed = {}, [], []
     for path in sorted(Path(sessions_dir).glob("session_*.json")):
         name = path.name
         if name.endswith(".journal.jsonl") or name.endswith(".bak"):
@@ -164,16 +168,28 @@ def _read_sessions(sessions_dir):
         if not isinstance(sid, str) or not sid:
             malformed.append(path.stem)  # fail closed: no id, no node
             continue
+        if sid in raw:
+            if path.stem != sid:
+                shadowed.append((path.stem, sid))
+            else:
+                shadowed.append((path.stem + "#dup", sid))
+            continue
         raw[sid] = data
-    return raw, malformed
+    return raw, malformed, shadowed
 
 
 def _emit_sessions(nodes, edges, raw, malformed, repo_root, now,
-                   all_sessions):
+                   all_sessions, shadowed=()):
     """jcode-session + swarm nodes/edges. Default scale filter: only
     sessions active within 24h plus the parent chain needed to anchor
     spawns edges; all_sessions=True lifts the filter. Malformed files
-    always surface as alerting nodes (never hidden by the filter)."""
+    always surface as alerting nodes (never hidden by the filter).
+    Shadowed files (same internal id as an earlier file, e.g. swarm
+    coordinator + child mapping to one run) surface as alerting nodes
+    under their own filename stem; self-loop spawns edges are skipped
+    so a session never spawns itself. Node ids are unique by
+    construction: malformed stems colliding with a live id get a
+    -malformed suffix."""
     active = {}
     cutoff = now - timedelta(hours=24)
     for sid, data in raw.items():
@@ -215,10 +231,12 @@ def _emit_sessions(nodes, edges, raw, malformed, repo_root, now,
                       "label": label_of(data), "state": state,
                       "detail": _session_detail(data, now)})
 
-    # spawn edges only when both endpoints are emitted (no danglers)
+    # spawn edges only when both endpoints are emitted (no danglers,
+    # no self-loops: a coordinator and child sharing one run id must
+    # never draw a spawns edge to itself)
     for sid, data in sorted(emitted.items()):
         pid = data.get("parent_id")
-        if isinstance(pid, str) and pid in emitted:
+        if isinstance(pid, str) and pid in emitted and pid != sid:
             edges.append({"src": "jcode:" + pid, "dst": "jcode:" + sid,
                           "rel": "spawns"})
 
@@ -254,8 +272,29 @@ def _emit_sessions(nodes, edges, raw, malformed, repo_root, now,
             edges.append({"src": "jcode:" + sid, "dst": "kernel",
                           "rel": "works-on"})
 
+    seen = {n["id"] for n in nodes}
+    for stem, sid in sorted(shadowed):
+        nid = "jcode:" + stem
+        if nid in seen:  # same stem twice (or stem == live id twice)
+            k = 2
+            while "jcode:%s#%d" % (stem, k) in seen:
+                k += 1
+            nid = "jcode:%s#%d" % (stem, k)
+        seen.add(nid)
+        nodes.append({"id": nid, "kind": "jcode-session",
+                      "label": stem[:12], "state": "alerting",
+                      "detail": "duplicate session file shadows id %s" % sid})
+
     for sid in sorted(malformed):
-        nodes.append({"id": "jcode:" + sid, "kind": "jcode-session",
+        nid = "jcode:" + sid
+        if nid in seen:  # malformed stem collides with a live node id
+            nid += "-malformed"
+            k = 2
+            while nid in seen:
+                nid = "jcode:%s-malformed%d" % (sid, k)
+                k += 1
+        seen.add(nid)
+        nodes.append({"id": nid, "kind": "jcode-session",
                       "label": sid[:12], "state": "alerting",
                       "detail": "malformed session file (json unparsable)"})
 
@@ -487,12 +526,12 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
     if sessions_dir is None:
         sessions_dir = Path.home() / ".jcode" / "sessions"
     if Path(sessions_dir).is_dir():
-        raw, malformed = _read_sessions(sessions_dir)
+        raw, malformed, shadowed = _read_sessions(sessions_dir)
         # resolve() first: a relative registries_dir ('config') must not
         # collapse to '.' when walking to the hngh repo root
         _emit_sessions(nodes, edges, raw, malformed,
                        registries_dir.resolve().parent.parent, now,
-                       all_sessions)
+                       all_sessions, shadowed)
 
     return {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nodes": nodes, "edges": edges}

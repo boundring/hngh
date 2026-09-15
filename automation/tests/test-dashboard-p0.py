@@ -304,5 +304,98 @@ return legacy;
         self.assertIn("BACKCOMPAT_OK nodes=41", out)
 
 
+class GraphCameraPreserve(unittest.TestCase):
+    """Camera/selection/filter preservation across the 60s auto-refresh
+    (deep-task node sg-load-camera-preserve, 2026-09-14): a reload must not
+    yank the camera, clear the selection, or drop filter/search/spin state.
+    Textual contract + headless execution of the pure snapshot/restore
+    helpers via node (same discipline as GraphTwoShellLayout)."""
+
+    def source(self):
+        return src("graph-view.js")
+
+    def test_preserve_contract_text(self):
+        v = self.source()
+        self.assertIn("function snapshotView()", v)
+        self.assertIn("function restoreView(snap,", v)
+        load = v[v.index("  function load()"):v.index("  window.GraphView")]
+        self.assertIn("var first = (data === null)", load)
+        self.assertIn("snapshotView()", load)
+        self.assertIn("restoreView(snap, first)", load)
+        self.assertIn("select(snap.sel)", load, "selection re-applied")
+        self.assertIn("clearSel()", load, "vanished selection cleared")
+        self.assertIn("snap.sel && byId(snap.sel)", load)
+        for token in ("kindOff[k] = true", "stateOff[s] = true",
+                      "sb.value = keepQ", "setSpin(true)"):
+            self.assertIn(token, load, "state not re-applied: " + token)
+        self.assertIn("hash", load.lower(), "hash navigation must win")
+        first_branch = load[:load.index("restoreView(snap, first)")]
+        self.assertNotIn("resetView()", first_branch.replace(
+            "// still re-fits to the outer shell via resetView.", ""),
+            "resetView must only run on first load, never on refresh")
+
+    def extract_helpers(self):
+        import json
+        v = self.source()
+        start = v.index("function clamp(v, lo, hi)")
+        end = v.index("snapshotView._isFirstLoad")
+        # clamp/resetView/snapshotView/restoreView only; the real layout()
+        # sits between parseDetail and checkInvariants and is NOT included —
+        # the harness injects a stub whose shellRadius it controls.
+        head = v[start:v.index("// Deterministic fibonacci-sphere layout")]
+        tail_start = v.index("  function resetView()")
+        tail = v[tail_start:end]
+        pre = ("var COLORS={healthy:'#3fb950'}, KIND_SIZE={leg:6.5};\n"
+               "var data=null, pos=null, selId=null, spinning=false;\n"
+               "var kindOff={}, stateOff={};\n"
+               "var cam={th:0.6,ph:0.35,r:640};\n"
+               "function layout(nodes){}\nlayout.shellRadius=190;\n")
+        return json.dumps(pre + head + tail +
+                          "\nreturn {snapshotView, restoreView, cam, layout,"
+                          "\n setSel: function(id){ selId = id; },"
+                          "\n setSpin: function(b){ spinning = b; }};")
+
+    def test_executed_snapshot_restore(self):
+        import json
+        out = run_node(
+            "const h = (new Function(%s))();\n"
+            "const {snapshotView, restoreView} = h;\n"
+            "const cam = h.cam, layout = h.layout;\n"
+            "let fails = [];\n"
+            "function eq(name, got, want) {\n"
+            "  if (JSON.stringify(got) !== JSON.stringify(want))\n"
+            "    fails.push(name + ' got=' + JSON.stringify(got) +\n"
+            "      ' want=' + JSON.stringify(want)); }\n"
+            "// 1. snapshot captures the live view\n"
+            "cam.th=1.2; cam.ph=-0.5; cam.r=900; h.setSel('leg:3'); h.setSpin(true);\n"
+            "const snap = snapshotView();\n"
+            "eq('snap', snap, {th:1.2,ph:-0.5,r:900,sel:'leg:3',spin:true});\n"
+            "// 2. first load re-fits (small feed -> 640)\n"
+            "layout.shellRadius=190;\n"
+            "cam.th=9; cam.ph=9; cam.r=999;\n"
+            "restoreView(null, true);\n"
+            "eq('first', cam, {th:0.6,ph:0.35,r:640});\n"
+            "// 3. refresh preserves orbit + zoom at the same shell\n"
+            "cam.th=0; cam.ph=0; cam.r=640;\n"
+            "restoreView(snap, false);\n"
+            "eq('preserve', cam, {th:1.2,ph:-0.5,r:900});\n"
+            "// 4. grow-only: bigger shell pulls back a close-up view\n"
+            "layout.shellRadius=450;\n"  # minFit = 855
+            "const close = {th:1.2,ph:-0.5,r:700,sel:'leg:3',spin:true};\n"
+            "cam.th=0; cam.ph=0; cam.r=640;\n"
+            "restoreView(close, false);\n"
+            "eq('grow', cam, {th:1.2,ph:-0.5,r:855});\n"
+            "// 5. operator zoomed far out stays (no yank inward)\n"
+            "const far = {th:1.2,ph:-0.5,r:1200,sel:'leg:3',spin:true};\n"
+            "cam.th=0; cam.ph=0; cam.r=640;\n"
+            "restoreView(far, false);\n"
+            "eq('far', cam, {th:1.2,ph:-0.5,r:1200});\n"
+            "if (fails.length) { console.error(fails.join('\\n'));\n"
+            "  process.exit(1); }\n"
+            "console.log('CAMERA_OK');"
+            % self.extract_helpers())
+        self.assertIn("CAMERA_OK", out)
+
+
 if __name__ == "__main__":
     unittest.main()
