@@ -26,7 +26,8 @@ History is not rewritten; enforcement starts from the restatement, with
 that one blemish declared.
 
 Declarations are purge-proof by construction. The registered hash is
-primary; the patch-id (git show <hash> | git patch-id --stable) is the
+primary; the patch-id (`git diff-tree -p --full-index --root <hash> |
+git patch-id --stable`) is the
 purge-proof fallback: a history rewrite (filter-branch/filter-repo)
 re-keys descendant hashes but leaves patch content untouched, so a
 commit whose registered hash dangles is still matched by patch-id. A
@@ -57,7 +58,11 @@ KNOWN_EXEMPTIONS = {
     "526cd3f": {
         "reason": "portfolio ebook/journal commit touching a kernel script "
                   "(declared miss 2026-09-06, gate-cure 2026-09-14)",
-        "patch-id": "5b6840dfb796a0baeb4a7193a134a94b8b0ebf36",
+        # re-registered under the hermetic full-index recipe
+        # (2026-09-15 CI patch-id drift cure); only entry whose diff
+        # contains a binary section (docs/publication/hngh-memoir.epub),
+        # so only this id changes under the recipe
+        "patch-id": "df45cd42506c643d5ecdfbe357708b46035e14d2",
     },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
@@ -195,8 +200,13 @@ def reachable(sha):
 
 
 def patch_id(sha):
-    show = run(["git", "show", sha]).stdout
-    out = subprocess.run(["git", "patch-id", "--stable"], input=show,
+    # Hermetic recipe (2026-09-15 CI patch-id drift cure): full-index and
+    # pinned EMPTY_TREE base remove core.abbrev=auto dependence, which
+    # made binary-diff ids differ between this aged repo (8-hex index
+    # lines) and a fresh CI checkout (7-hex). See
+    # docs/records/2026-09-15-ci-patch-id-drift.md (Correction section).
+    diff = run(["git", "diff-tree", "-p", "--full-index", "--root", sha]).stdout
+    out = subprocess.run(["git", "patch-id", "--stable"], input=diff,
                          capture_output=True, text=True, check=True).stdout
     parts = out.split()
     return parts[0] if parts else ""
