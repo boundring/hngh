@@ -116,6 +116,52 @@
   schema cannot silently drift from `jobs/patrol.py`. Fully hermetic
   (tempfile sandbox, PATROL_* env, no real ledgers/queue/home).
 
+- feat: research-routes map view (routes/1, node d6-routes-view,
+  0bb09044 + b9f58dc8) — research lines rendered as routes across a
+  time axis. `jobs/research-routes.py` builds the payload from the
+  research ledgers (dispositions transitions as segments, terminus
+  shape by action: adopted filled / killed x / parked hollow / open
+  origin dot, harvested = active row in research-lessons.tsv, violet
+  dot); `viz_schema.py` gains the routes/1 family (`ROUTES_SCHEMA`,
+  envelope `("schema", "generated", "routes")`, extras fail closed,
+  live-vocab statuses incl. `contracting`); `dashboard-server.py`
+  serves `GET /research-routes.json` (30 s cache, fail-soft);
+  `dashboard/routes-view.js` + `routes.html` draw SVG polylines in
+  lanes reviewed/crystallized/planned with a Routes tab (source files
+  `git add -f` per the 6fbe8000 precedent — the `dashboard/` gitignore
+  dir rule skipped them; b9f58dc8). Test `tests/test-routes-view.py`
+  (37 hermetic cases, red-first) green post-commit; the
+  viz-schema-version probe red-while-uncommitted by design went green
+  on the slice commit. Record:
+  `docs/records/2026-09-15-research-routes-view.md`.
+- known-limit: no patrol/registry admission for the routes surface yet
+  (jobs/research-routes.py, /research-routes.json, routes-view.js are
+  not in config/patrol-routes.tsv); the running dashboard service needs
+  a reload to serve the live route. Owned by the
+  admit-lessons-routes-surfaces node.
+
+- feat: report-link reply grammar (node d2-replyparse,
+  `scripts/imap-poll.py`) — a reply whose subject carries
+  `[hngh <report-id>]` (the same 8-hex id docs/project/reports.md
+  carries) now drives state: `annotate_report()` appends an
+  operator-reply annotation block to the report's body sidecar
+  `docs/project/report-bodies/<ts>-<kind>-<id>.md` (absent sidecar
+  recreated when the ledger row exists; the ledger itself and plan
+  drafts are never touched), and `apply_directive()` scans the reply
+  for the first `approve:`/`deny:`/`note:` line (colon is grammar; bare
+  words never count) and transitions matching OPEN operator-items in
+  `dashboard/operator-items.json` (approve -> handled, deny ->
+  dismissed, note/missing/unknown -> annotation only) with an evidence
+  string appended. Fail-closed: errors leave the feed byte-identical
+  (tmp + os.replace); no subject link means behavior unchanged. Test
+  `tests/test-imap-poll.py` +`ReportLinks` (12 cases; suite 32, green
+  in-tree). Record: `docs/records/2026-09-15-email-reply-parse.md`.
+- known-limit: `operator-items.json` feed rebuilds clobber
+  email-driven dismiss/handled transitions (items reappear open);
+  owned by the fix-email-dismiss-clobber node. The imap-poll suite is
+  not wired into `make test` (runs via cadence/30m/56-imap-poll.sh);
+  wiring is a candidate for the same admission pass.
+
 ## 2026-09-14
 - feat: jcode permission bridge (plan 2026-09-14-jcode-primary-harness
   step 4) — `lib/launch-jcode.sh` refuses `JCODE_WORKER_APPROVE=1`
