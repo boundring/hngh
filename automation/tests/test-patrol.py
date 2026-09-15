@@ -86,6 +86,13 @@ class Patrol(unittest.TestCase):
         (self.auto / "research-dispositions.tsv").write_text(
             "line\taction\tverdict\treviewer\tevidence\tdate\n"
             "some-line\tadopted\tadopted -- fine\tm\te\t%s\n" % iso(3600))
+        (self.auto / "research-lessons.tsv").write_text(
+            "lesson_id\tdate\tline_id\tsubject\tlesson\tstatus\n"
+            "les-20260912-some-line\t%s\tsome-line\ts\t"
+            "one actionable sentence\tactive\n" % iso(3600))
+        (self.auto / "dashboard" / "research-routes.json").write_text(
+            '{"schema": "routes/1", "generated": "%s", "routes": []}'
+            % iso(300))
         (self.auto / "config" / "patrol-routes.tsv").write_text(
             (REPO / "automation" / "config" / "patrol-routes.tsv").read_text())
         (self.auto / "lib" / "quips.py").write_text(
@@ -414,8 +421,9 @@ class Patrol(unittest.TestCase):
         # systemd-units emits one PASS per unit (4), not one per route;
         # github-ci adds 1 (the latest-run verdict); journal-errors adds
         # 1 (the dormant no-signature-table row); +pending-checks;
-        # roadmap-stale/rotation-due add 2 (dormant no-fixture passes)
-        self.assertEqual(r.stdout.count("\nPASS "), 19)
+        # roadmap-stale/rotation-due add 2 (dormant no-fixture passes);
+        # research-ledger adds 1; feeds grows by research-routes.json (1)
+        self.assertEqual(r.stdout.count("\nPASS "), 21)
 
     # --- (2) a stale feed fires the feeds check + files an alert ---
     def test_stale_feed_fails_and_files_alert(self):
@@ -470,8 +478,8 @@ class Patrol(unittest.TestCase):
         self.assertEqual(res["fails"],
                          [("dashboard-feeds", "check-crash",
                            repr(RuntimeError("boom")))])
-        self.assertEqual(len(results), 15)  # 11 routes + journal-errors
-        # + pending-checks + roadmap-stale + rotation-due
+        self.assertEqual(len(results), 16)  # 12 routes + journal-errors
+        # + pending-checks + roadmap-stale + rotation-due + research-ledger
         # the walk continued past the crashed check
 
     # --- gate-cure: a green gate is quiet, no ceremony is driven ---
@@ -744,6 +752,95 @@ class Patrol(unittest.TestCase):
             digest.count("## The rounds") + 1,
             (self.auto / "digest" / "2026-09-12.md").read_text()
             .count("## The rounds"))
+    # --- research-ledger: the harvest + routes surfaces are watched ---
+    def _seed_research_ledger(self, lessons_rows="", lessons_text=None):
+        """Healthy d1/d6 fixtures: lessons ledger with one fresh active
+        row matching the fresh adopted disposition (the default), the
+        header-only variant, or caller-supplied raw rows."""
+        (self.auto / "research-lessons.tsv").write_text(
+            lessons_text if lessons_text is not None else
+            "lesson_id\tdate\tline_id\tsubject\tlesson\tstatus\n"
+            + (lessons_rows or "les-20260912-some-line\t%s\tsome-line\t"
+               "s\tone actionable sentence\tactive\n" % iso(3600)))
+        (self.auto / "dashboard" / "research-routes.json").write_text(
+            '{"schema": "routes/1", "generated": "%s", "routes": []}'
+            % iso(300))
+
+    def test_research_ledger_healthy_is_quiet(self):
+        self._seed_research_ledger()
+        r, alerts = self.run_walk()
+        self.assertEqual([ln for ln in r.stdout.splitlines()
+                          if ln.startswith("FAIL")], [])
+        self.assertIn("PASS research-ledger/", r.stdout)
+
+    def test_stale_routes_feed_fails(self):
+        self._seed_research_ledger()
+        p = self.auto / "dashboard" / "research-routes.json"
+        os.utime(p, (NOW - 90000, NOW - 90000))  # 25h old > 8h budget
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL feeds/dashboard/research-routes.json feed-stale "
+                      "age=90000s > 28800s", r.stdout)
+        self.assertTrue(any("patrol feeds:" in a for a in alerts))
+
+    def test_missing_routes_feed_fails(self):
+        self._seed_research_ledger()
+        (self.auto / "dashboard" / "research-routes.json").unlink()
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL feeds/dashboard/research-routes.json "
+                      "feed-missing no feed file", r.stdout)
+        self.assertTrue(any("patrol feeds:" in a for a in alerts))
+
+    def test_lessons_ledger_missing_fires(self):
+        self._seed_research_ledger()
+        (self.auto / "research-lessons.tsv").unlink()
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL research-ledger/research-lessons.tsv "
+                      "ledger-missing", r.stdout)
+        self.assertTrue(any("patrol research-ledger:" in a for a in alerts))
+
+    def test_lessons_ledger_header_drift_fires(self):
+        self._seed_research_ledger(lessons_text=
+            "lesson_id\tdate\tline_id\tsubject\tlesson\n"
+            "les-1\t%s\tsome-line\ts\tl\n" % iso(3600))
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL research-ledger/research-lessons.tsv "
+                      "header-drift", r.stdout)
+        self.assertTrue(any("patrol research-ledger:" in a for a in alerts))
+
+    def test_lessons_ledger_malformed_row_fires(self):
+        self._seed_research_ledger(lessons_text=
+            "lesson_id\tdate\tline_id\tsubject\tlesson\tstatus\n"
+            "les-1\t%s\tsome-line\ts\n" % iso(3600))
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL research-ledger/research-lessons.tsv "
+                      "row-malformed", r.stdout)
+        self.assertTrue(any("patrol research-ledger:" in a for a in alerts))
+
+    def test_lessons_lineage_contradicts_dispositions_fires(self):
+        # harvest retired the lesson (non-adopted re-disposition) but the
+        # ledger still says active: the knowledge record outlived its verdict
+        self._seed_research_ledger()
+        (self.auto / "research-dispositions.tsv").write_text(
+            "line\taction\tverdict\treviewer\tevidence\tdate\n"
+            "some-line\tadopted\tadopted -- fine\tm\te\t%s\n"
+            "some-line\tkilled\tkilled -- superseded\tm\te2\t%s\n"
+            % (iso(7200), iso(1800)))
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL research-ledger/research-lessons.tsv "
+                      "lineage-contradiction", r.stdout)
+        self.assertTrue(any("patrol research-ledger:" in a for a in alerts))
+
+    def test_lessons_stale_vs_last_disposition_fires(self):
+        # harvest missed the latest adoption: the fresh disposition has
+        # no matching fresh lesson row (harvest dead -> nothing notices)
+        self._seed_research_ledger(lessons_rows=
+            "les-20260912-some-line\t%s\tsome-line\ts\told sentence\tactive\n"
+            % iso(48 * 3600))
+        r, alerts = self.run_walk()
+        self.assertIn("FAIL research-ledger/research-lessons.tsv "
+                      "harvest-stale", r.stdout)
+        self.assertTrue(any("patrol research-ledger:" in a for a in alerts))
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 

@@ -34,6 +34,7 @@ email	notify-email	email-sends	30m	bad-execution
 packages	hngh-packages	package-ghosts	day	bad-execution
 service-children	services	service-children	day	bad-execution
 research-dispositions	research-dispositions	disposition-followons	day	bad-execution
+research-ledger	lessons-ledger	research-ledger	30m	bad-execution
 systemd-units	systemd-user-units	systemd-units	30m	bad-execution
 github-ci	github-actions-latest	github-ci-latest	30m	bad-execution
 journal-error	user+kernel-journal	journal-errors	30m	bad-execution

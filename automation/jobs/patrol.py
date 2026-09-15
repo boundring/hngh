@@ -51,7 +51,9 @@ ROOT = os.path.dirname(HERE)  # automation/
 REPO = os.path.dirname(ROOT)  # the hngh repo (kernel home)
 
 FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
-         ("sessions.json", 600)]  # tier-scaled: 30m feed vs 1m feeds
+         ("sessions.json", 600),  # tier-scaled: 30m feed vs 1m feeds
+         ("research-routes.json", 28800)]  # build-on-demand d6 feed: 8h
+LESSONS_STALE_HOURS = 6  # disposition landing -> harvest refresh budget
 HANDOFFS_LAST_N = 10
 HANDOFFS_THRESHOLD = 3
 GATE_STALE_HOURS = 26  # the day gate runs once a day; 24h + one tier slack
@@ -466,6 +468,108 @@ def check_research_stall(ctx):
                           "%d line(s) stalled" % stuck if stuck
                           else "all lines moving"))
     return out
+
+
+def check_research_ledger(ctx):
+    """Lessons ledger (d1-harvest): research-lessons.tsv parses and its
+    active rows stay consistent with the dispositions verdicts -- a
+    retired-but-active lineage row, or a fresh adopted disposition with
+    no matching fresh lesson row, means the harvest organ is dead and
+    nothing else will notice."""
+    out = {"passes": [], "fails": []}
+    path = os.path.join(ctx["root"], "research-lessons.tsv")
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            raw = fh.read().splitlines()
+    except OSError:
+        out["fails"].append(("research-lessons.tsv", "ledger-missing",
+                             "no research-lessons.tsv (harvest never ran?)"))
+        return out
+    header = ["lesson_id", "date", "line_id", "subject", "lesson", "status"]
+    if raw and raw[0].split("\t") != header:
+        out["fails"].append(("research-lessons.tsv", "header-drift",
+                             "%r" % raw[0][:100]))
+        return out
+    active = {}
+    for ln in raw[1:]:
+        if not ln.strip():
+            continue
+        f = ln.split("\t")
+        if len(f) != len(header) or not f[0]:
+            out["fails"].append(("research-lessons.tsv", "row-malformed",
+                                 "%r" % ln[:100]))
+            continue
+        if f[5] == "active":
+            active[f[2]] = f
+    # lineage: the newest disposition of an actively-harvested line must
+    # still be adopted (non-adoption retires the row -- never outlives
+    # the verdict), the harvest contract lib/research-harvest.py keeps
+    disps = _disposition_actions(ctx["dispositions"])
+    for lid, row in sorted(active.items()):
+        action = disps.get(lid)
+        if action is not None and action != "adopted":
+            out["fails"].append(
+                ("research-lessons.tsv", "lineage-contradiction",
+                 "%s active but disposition %s" % (lid, action)))
+    # freshness: a fresh adopted disposition needs a fresh lesson row
+    # (the beat harvest runs at disposition landing; missed = dead organ)
+    budget = LESSONS_STALE_HOURS * 3600
+    missing = []
+    for lid, epoch in _recent_adoptions(ctx["dispositions"], ctx["now"],
+                                        budget):
+        row = active.get(lid)
+        e = ts_epoch(row[1]) if row else None
+        if e is None or ctx["now"] - e > budget:
+            missing.append(lid)
+    if missing:
+        out["fails"].append(
+            ("research-lessons.tsv", "harvest-stale",
+             "%d adopted disposition(s) in the last %.0fh without a fresh "
+             "lesson row: %s" % (len(missing), LESSONS_STALE_HOURS,
+                                 ", ".join(missing[:3]))))
+    out["passes"].append(("research-ledger",
+                          "%d active lesson(s), lineage ok" % len(active)
+                          if not missing else "lineage ok, harvest stale"))
+    return out
+
+
+def _disposition_actions(path):
+    """line_id -> newest known-action disposition (scan order wins; the
+    harvest reads the same way). Unknown-action rows (e.g. 'fixed' from
+    the blocker ledger) are skipped, matching the routes builder."""
+    known = ("adopted", "parked", "killed")
+    out = {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for ln in fh:
+                if ln.startswith("#"):
+                    continue
+                f = ln.rstrip("\n").split("\t")
+                if len(f) >= 2 and f[1] in known:
+                    out[f[0]] = f[1]
+    except OSError:
+        pass
+    return out
+
+
+def _recent_adoptions(path, now, budget):
+    """[(line_id, epoch)] of adopted dispositions inside the freshness
+    budget (same newest-wins scan rule as _disposition_actions)."""
+    out = {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for ln in fh:
+                if ln.startswith("#"):
+                    continue
+                f = ln.rstrip("\n").split("\t")
+                if len(f) < 6 or f[1] != "adopted":
+                    continue
+                e = ts_epoch(f[5])
+                if e is not None and now - e <= budget:
+                    out[f[0]] = e
+    except OSError:
+        pass
+    return list(out.items())
 
 
 def check_session_budget(ctx):
@@ -1387,6 +1491,7 @@ CHECKS = {
     "service-health": check_service_health,
     "disk-usage": check_disk_usage,
     "research-stall": check_research_stall,
+    "research-ledger": check_research_ledger,
     "session-budget": check_session_budget,
     "loop-history-guard": check_loop_history_guard,
     "gate-cure": check_gate_cure,
