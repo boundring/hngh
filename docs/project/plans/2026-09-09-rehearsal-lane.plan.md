@@ -104,3 +104,29 @@ day's records slice.
   `git status` after deliberately dirtying the fixture, which no
   drive code path can satisfy), wire it into make test, then tick
   step 1.
+- 2026-09-15 step-2 code landed in the automation lane (commit
+  72e0d7a6): the committed-but-red rehearsal artifacts from 550e8ff5
+  were repaired rather than recreated — test fixture now writes the
+  stub gate log to an ABSOLUTE path outside the archive temp dir (the
+  EXIT trap destroyed the relative log/ write; 7/7 RehearseGate cases
+  green red-then-green), rehearse-gate.sh gained the REHEARSE_LOG env
+  seam as its --log default (the test pins the env, one line),
+  accept-plans.py gained the off-by-default ACCEPT_ISOLATED_GATE=1
+  opt-in (both gates rehearse through the script; red or rc=2 refuse
+  blocks acceptance fail-closed; automation rehearsal skipped when the
+  kernel rehearsal is red; script resolved adjacent to accept-plans.py,
+  not under HNGH_AUTOMATION_ROOT, so sandbox test roots work), and the
+  suite is wired into the automation Makefile. tests/test-rehearse-gate
+  .py 10/10 green; automation `make test` green; kernel `make test`
+  green in the working tree (lisp suite, rc=0).
+- 2026-09-15 step-2 verification blocker (box stays unticked): the
+  plan's "isolated rehearsal on this repo exits 0" clause is not met —
+  the rehearsal refused rc=2 fail-closed on the kernel tree because
+  tests/scripts/test-loop-history-guard.py runs `git log` in the
+  working repo, which a `git archive HEAD` copy lacks (breadcrumb row
+  2026-09-15T08:44:57Z | rc=2, tail: CalledProcessError git log
+  1915713..HEAD exit 128). Sandbox rehearsal behavior itself is proven
+  by the suite. Operator-item: an out-of-repo seam in
+  test-loop-history-guard.py (kernel tests/ surface, forbidden this
+  session) before archived-tree kernel gates can run; no
+  improvisation around a forbidden surface.
