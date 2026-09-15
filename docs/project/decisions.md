@@ -586,3 +586,12 @@ guard's KNOWN_EXEMPTIONS table and cured through the ceremony
 loop -- declared, not rewritten; the SMALL-matter policy is the
 2026-09-13 amendment (docs/design/autonomous-development-
 control.md). A ceremony refusal parks for the operator.
+
+## 2026-09-15 — Kernel-gate red declared post-hoc (gate-cure)
+
+The gate-cure patrol found the loop-history guard red on e6e98f75.
+The commits were declared post-hoc (hash + patch-id) in the
+guard's KNOWN_EXEMPTIONS table and cured through the ceremony
+loop -- declared, not rewritten; the SMALL-matter policy is the
+2026-09-13 amendment (docs/design/autonomous-development-
+control.md). A ceremony refusal parks for the operator.
