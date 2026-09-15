@@ -38,3 +38,5 @@ systemd-units	systemd-user-units	systemd-units	30m	bad-execution
 github-ci	github-actions-latest	github-ci-latest	30m	bad-execution
 journal-error	user+kernel-journal	journal-errors	30m	bad-execution
 pending-checks	pending-checks-ledger	pending-checks	30m	check-pending
+roadmap-stale	roadmap-stages	roadmap-stale	30m	governance-stall
+rotation-due	queue-rotation	rotation-due	30m	governance-stall
