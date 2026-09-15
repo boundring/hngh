@@ -50,10 +50,14 @@ KNOWN_EXEMPTIONS = {
     },
     # portfolio docs commit that also touched a kernel script (2026-09-06),
     # landed outside the loop and already pushed; declared by name per the
-    # 2026-08-25 decision, cured by ceremony record -- not rewritten
+    # 2026-08-25 decision, cured by ceremony record -- not rewritten.
+    # patch-id corrected by the 2026-09-14 gate-cure (declared separately as
+    # 526cd3fd the same day; the two declarations are merged here into one
+    # entry -- one commit, one exemption)
     "526cd3f": {
-        "reason": "portfolio ebook/journal commit touching a kernel script (declared miss)",
-        "patch-id": "4496b3361bc3d606837acfd377b9ead29a636a4d",
+        "reason": "portfolio ebook/journal commit touching a kernel script "
+                  "(declared miss 2026-09-06, gate-cure 2026-09-14)",
+        "patch-id": "5b6840dfb796a0baeb4a7193a134a94b8b0ebf36",
     },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
@@ -144,6 +148,8 @@ KNOWN_EXEMPTIONS = {
         "reason": "fleet-manager capitalized Peer map acceptance (declared miss, CI-green chase)",
         "patch-id": "643d451075296e2dca554060f86d0d13a27607d2",
     },
+    # (526cd3fd gate-cure declaration of 2026-09-14 merged into the 526cd3f
+    # entry above: same commit, correct patch-id 5b6840df... registered once)
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
