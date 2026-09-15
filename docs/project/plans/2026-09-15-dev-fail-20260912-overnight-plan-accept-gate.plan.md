@@ -4,17 +4,17 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the contracted research lines on gate-closure artifacts, slow-unit instrumentation, dashboard link integrity, and mark-read persistence verification by adding bounded, verifiable checks to hngh-automation.
+The plan implements the crystallized research lines on gate-stale patrol alerts, kernel test artifact capture, and dashboard link integrity by adding bounded instrumentation and verification scripts to hngh-automation.
 
 ## Steps
 
-- [ ] Add a script under scripts/ that parses the last kernel make test log for rc=2 and extracts the failing target name into digest/gate-artifact.txt
-  Verification: bash -n scripts/capture-gate-artifact.sh && grep -q "rc=2" scripts/capture-gate-artifact.sh
-- [ ] Create a helper under lib/ that detects bimodal latency clusters in slow-unit rows and writes a summary to digest/slow-unit-summary.md
-  Verification: python3 lib/detect-bimodal-latency.py --help && grep -q "median" lib/detect-bimodal-latency.py
-- [ ] Update the dashboard Plans page generator under dashboard/ to validate that each enumerated plan link resolves to an existing file before rendering
-  Verification: bash -n dashboard/generate-plans.sh && grep -q "404\|exists" dashboard/generate-plans.sh
-- [ ] Add a test under tests/ that asserts mark-read requests only return 200 after persistence completes, using a mock backend log fixture
-  Verification: make test && grep -q "mark-read" tests/test-mark-read-persistence.sh
-- [ ] Extend the patrol gate check under jobs/ to require a fresh gate crumb timestamp before accepting routed plans, logging missing crumbs to digest/patrol-gate-missing.log
-  Verification: bash -n jobs/check-gate-crumbs.sh && grep -q "crumb" jobs/check-gate-crumbs.sh
+- [ ] Create `scripts/verify-gate-crumb.sh` that checks for a recent gate crumb file in `digest/` and exits non-zero if missing or stale
+  Verification: bash -n scripts/verify-gate-crumb.sh
+- [ ] Add `tests/test-gate-crumb.sh` that runs the verification script against a mock crumb file to prove pass/fail behavior
+  Verification: make test
+- [ ] Create `scripts/capture-make-test-artifact.sh` that wraps `make test` and saves stderr plus failing target name to `digest/` on rc!=0
+  Verification: bash -n scripts/capture-make-test-artifact.sh
+- [ ] Add `tests/test-capture-artifact.sh` that simulates a failing make run and asserts the artifact file contains the target name and stderr
+  Verification: make test
+- [ ] Create `dashboard/verify-plan-links.py` (stdlib only) that parses `research-lines.tsv` and checks each plan link resolves to an existing file in `digest/`
+  Verification: python3 dashboard/verify-plan-links.py
