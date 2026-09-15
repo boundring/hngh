@@ -4,21 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the instrumentation gap identified in the research line "Does the current systemctl status or equivalent execution log for the hngh-automation crumb writer show a failure state or last-run timestamp prior to 2026-09-12T21:03Z?", which found that manual observation is required due to missing automatic detection mechanisms.
+The plan implements the research line `fail-20260914-Does-the-current-systemctl-status-or-equ` by adding a machine-checkable staleness probe to close the identified instrumentation gap, ensuring crumb writer failure states are detected automatically rather than via manual observation.
 
 ## Steps
 
-- [ ] Create `scripts/crumb-writer-health-check.sh` that reads the crumb writer's last-run timestamp file and compares it against a 24-hour staleness threshold, exiting non-zero if stale
-  Verification: bash -n scripts/crumb-writer-health-check.sh
-
-- [ ] Add a unit test in `tests/test-crumb-writer-health.sh` that mocks a stale timestamp file and asserts the health check script exits with failure status
+- [ ] Create `scripts/crumb-staleness-probe.sh` that reads the crumb file's modification time and compares it against a 24-hour threshold
+  Verification: bash -n scripts/crumb-staleness-probe.sh
+- [ ] Add a unit test in `tests/test_crumb_staleness.sh` that mocks an old timestamp to verify the probe exits non-zero on staleness
   Verification: make test
-
-- [ ] Create `cadence/crumb-writer-staleness-probe.sh` that invokes the health check script and writes a structured JSON result to stdout for machine consumption
-  Verification: bash -n cadence/crumb-writer-staleness-probe.sh
-
-- [ ] Add a digest entry in `digest/CRUMB-WRITER-STALENESS-INSTRUMENTATION.md` documenting the new probe's purpose, invocation contract, and expected output schema
-  Verification: grep -q "staleness" digest/CRUMB-WRITER-STALENESS-INSTRUMENTATION.md
-
-- [ ] Update `lib/crumb-writer-utils.sh` to expose a `get_last_run_timestamp()` function that parses the timestamp file format used by the crumb writer
-  Verification: bash -n lib/crumb-writer-utils.sh
+- [ ] Create `cadence/staleness-check.yaml` defining the cadence interval and failure criteria for the crumb writer
+  Verification: grep -q "interval:" cadence/staleness-check.yaml
+- [ ] Add a digest entry in `digest/RESEARCH-BEAT-staleness-probe.md` documenting the new probe's purpose and verification method
+  Verification: test -f digest/RESEARCH-BEAT-staleness-probe.md
