@@ -4,19 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line `fail-20260915-Are-there-existing-tests-in-the-reposito` by establishing a testable distinction between clean-complete and timeout-complete states in the beat script's state model, closing the untested gap identified in the adopted findings.
+This plan implements research line fail-20260915-Does-the-beat-script-s-state-model-disti by adding a stored completion-token state model to hngh-automation so timeout-complete is distinguishable from in-progress.
 
 ## Steps
 
-- [ ] Create `lib/state_markers.py` defining a stdlib-only module with constants `CLEAN_COMPLETE = "clean_complete"` and `TIMEOUT_COMPLETE = "timeout_complete"`, plus a function `classify_state(status: str) -> bool` that returns True only if status equals `CLEAN_COMPLETE`.
-  Verification: python3 -c "from lib.state_markers import classify_state; assert classify_state('clean_complete') is True; assert classify_state('timeout_complete') is False"
-
-- [ ] Create `tests/test_state_markers.py` containing a stdlib-only test script that imports `lib.state_markers`, asserts `classify_state("clean_complete")` is True, asserts `classify_state("timeout_complete")` is False, and asserts `classify_state("in_progress")` is False.
-  Verification: python3 tests/test_state_markers.py
-
-- [ ] Create `scripts/verify_state_distinction.sh` that runs `python3 -c "from lib.state_markers import classify_state; assert classify_state('clean_complete') != classify_state('timeout_complete')"` and exits with status 0 on success.
-  Verification: bash scripts/verify_state_distinction.sh
-
-- [ ] Add a `test-state-distinction` target to the existing Makefile that executes `bash scripts/verify_state_distinction.sh`, ensuring the distinction is gated by `make test`.
+- [ ] Add `lib/beat_state.py` with stdlib-only constants for `in_progress` and `timeout_complete`, a classifier, and a self-test that exits 0.
+  Verification: python3 lib/beat_state.py
+- [ ] Add `scripts/beat-state-probe.sh` that reads a status file path and prints the classified state token using `lib/beat_state.py`.
+  Verification: bash -n scripts/beat-state-probe.sh
+- [ ] Add `tests/test-beat-state.sh` asserting missing marker classifies as in-progress and explicit timeout-complete marker classifies as timeout-complete.
   Verification: make test
+- [ ] Add `cadence/beat-state.md` documenting that completion is stored at finalization, not derived from elapsed time.
+  Verification: grep -q "timeout-complete" cadence/beat-state.md
