@@ -8,3 +8,7 @@ at 2026-09-15T05:00:25Z. Alert text: patrol journal-error: unit-not-practiced on
 
 - [ ] Delve: open research subject fail-20260915-patrol-journal-error for patrol:journal-error; record disposition; then fix or park
       Verification: research subject fail-20260915-patrol-journal-error present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-15T06:00:39Z re-occurred (dedup window expired)
