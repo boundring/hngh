@@ -4,21 +4,18 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements bounded instrumentation for the slow-unit dropin re-fire and dashboard link integrity by adding completion markers and canonical rule diffing to hngh-automation. It addresses the structural bimodality in execution classes and semantic disagreements between enumerators and renderers without altering kernel or security posture.
+## Rationale
+This plan implements the instrumentation and consistency verification lines from `fail-20260912-slow-unit-dropin-33-research-beat.sh` and `fail-20260914-Does-the-github-ci-workflow-definition-c`, focusing on adding bounded logging for slow-unit execution classes and enforcing a diff check against the canonical patrol verdict rule to prevent surface drift.
 
 ## Steps
 
-- [ ] Add a completion marker flag to `scripts/dropin:33-research-beat.sh` to prevent re-firing of slow-mode rows
-  Verification: bash -n scripts/dropin:33-research-beat.sh
-
-- [ ] Create `lib/verdict-rule-diff.sh` to compare embedded CI rules against the kernel's canonical source
-  Verification: bash -n lib/verdict-rule-diff.sh
-
-- [ ] Update `jobs/dashboard-link-check.sh` to validate plan enumerator links against renderer artifacts
-  Verification: bash -n jobs/dashboard-link-check.sh
-
-- [ ] Add a test case in `tests/test-dropin-completion.sh` to verify slow-mode rows are marked complete
+- [ ] Create a helper script in `scripts/` that logs execution class boundaries (fast/slow path) for dropin units, capturing wall-time and median metrics to a local JSONL file.
+  Verification: bash -n scripts/log-dropin-execution-class.sh
+- [ ] Add a unit test in `tests/` that verifies the new logging script correctly partitions rows into fast-path (<1s) and slow-path (>=1s) based on simulated timing data.
   Verification: make test
-
-- [ ] Integrate the verdict rule diff check into `cadence/patrol-verdict.sh` to prevent drift
-  Verification: bash -n cadence/patrol-verdict.sh
+- [ ] Create a verification script in `scripts/` that diffs the embedded patrol verdict rule in the CI workflow definition against the canonical rules file path to detect drift.
+  Verification: bash -n scripts/check-verdict-rule-drift.sh
+- [ ] Integrate the drift check into the existing CI workflow by adding a step that executes the new verification script and fails if differences are detected.
+  Verification: grep -q "check-verdict-rule-drift" .github/workflows/ci.yml
+- [ ] Update the dashboard digest generation logic in `digest/` to include a summary of slow-unit re-fires based on the new execution class logs, ensuring no sensitive data is exposed.
+  Verification: make test
