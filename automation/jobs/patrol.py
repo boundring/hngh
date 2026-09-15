@@ -55,6 +55,7 @@ FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
 HANDOFFS_LAST_N = 10
 HANDOFFS_THRESHOLD = 3
 GATE_STALE_HOURS = 26  # the day gate runs once a day; 24h + one tier slack
+GATE_CRUMB_TTL_S = 86400  # a crumb older than this is not gate evidence
 DISK_PCT = 90
 RESEARCH_STALL_HOURS = 48
 STUCK_STATES = ("planned", "expanding", "contracting")
@@ -266,10 +267,21 @@ def check_handoff_deaths(ctx):
 
 def check_gate_crumbs(ctx):
     """Automation gate by crumb, not by re-run: 03-gate-check.sh files
-    gate-green/gate-red crumbs per label; the newest one decides, and a
-    gate with no crumb in 26h is stale."""
+    gate-green/gate-red crumbs per label; the newest crumb within the
+    freshness window (GATE_CRUMB_TTL_S, default 86400s, PATROL_GATE_
+    CRUMB_TTL_S override) decides; a red or green crumb older than the
+    TTL is not evidence of the current gate state, so it degrades to a
+    single "gate-stale" fail (fail-closed: absent/unfresh evidence is
+    the alert-worthy condition, and one stable identity dedups via the
+    report path instead of streaming a stale red for hours). Crumb
+    timestamps come from the STATE.md ledger lines the crumbs() parser
+    reads, so no mtime fallback is needed. check_gate_cure does NOT
+    share this crumb stream (it runs the guard script directly), so it
+    needs no freshness handling of its own."""
     out = {"passes": [], "fails": []}
     label = ctx["gate_label"]
+    ttl_s = float(os.environ.get("PATROL_GATE_CRUMB_TTL_S",
+                                 GATE_CRUMB_TTL_S))
     try:
         with open(ctx["state"], encoding="utf-8", errors="replace") as fh:
             text = fh.read()
@@ -281,8 +293,15 @@ def check_gate_crumbs(ctx):
     if not rows:
         out["fails"].append((label, "gate-stale", "no gate crumb found"))
         return out
-    _, event, detail = rows[-1]
-    age_h = (ctx["now"] - rows[-1][0]) / 3600.0
+    fresh = [r for r in rows if ctx["now"] - r[0] <= ttl_s]
+    if not fresh:
+        age_h = (ctx["now"] - rows[-1][0]) / 3600.0
+        out["fails"].append((label, "gate-stale",
+                             "newest gate crumb %.1fh old (> TTL %.0fs)"
+                             % (age_h, ttl_s)))
+        return out
+    _, event, detail = fresh[-1]
+    age_h = (ctx["now"] - fresh[-1][0]) / 3600.0
     if event == "gate-red":
         out["fails"].append((label, "gate-red", detail))
     elif age_h > GATE_STALE_HOURS:
