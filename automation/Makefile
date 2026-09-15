@@ -130,6 +130,7 @@ test:
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
 	bash tests/test-research-review.sh
+	python3 -B tests/test-research-harvest.py
 	bash tests/test-publication-review.sh
 	bash tests/test-research-blockers.sh
 	bash tests/test-failfirst.sh

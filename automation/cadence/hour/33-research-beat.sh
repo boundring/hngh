@@ -21,7 +21,15 @@
 # related findings, and the verdict -- both passes recorded in the
 # dispositions support/oppose/followons columns plus a committed sidecar
 # transcript; adopted findings queue up to 2 follow-on subjects per pass
-# (fail-<date> id convention). Research lines use the orchestrator
+# (fail-<date> id convention). The review also HARVESTS (2026-09-15
+# lifecycle audit: adopted dispositions were a terminus that fed
+# nothing): lib/research-harvest.py condenses each adopted verdict into
+# one actionable row in research-lessons.tsv (keyed by line_id,
+# re-adoption refreshes, later non-adopted retires) and, with the
+# project vault mounted, appends wiki/sources/LES-<id>.md in the vault's
+# own source-page shape (meta/ and raw/ stay the extension's;
+# wiki_rebuild_meta indexes the page on its next rebuild).
+# Research lines use the orchestrator
 # blocker ledger (lib/beat-blockers.sh, scope research:<id>): two
 # same-cause failures (dead model lane, junk capture) park a line,
 # success clears it, and parked lines auto-unpark after the shared
@@ -713,6 +721,32 @@ $related}"
  printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$id" "$action" "$reason" "$used" "$doc" "$day" \
   "$sup_line" "$opp_line" "$followons" >>"$DISPOSITIONS"
+ # harvest (2026-09-15 lifecycle audit: adopted dispositions were a
+ # terminus that fed nothing): condense every adopted verdict into ONE
+ # actionable lesson row in research-lessons.tsv, keyed by line_id --
+ # a re-adoption REFRESHES the row (never duplicates) and a later
+ # non-adopted verdict retires it. With the project vault mounted the
+ # lesson also lands as wiki/sources/LES-<id>.md in the vault's own
+ # source-page shape (meta/ and raw/ stay the extension's;
+ # wiki_rebuild_meta indexes the page, the wiki-health UNINDEXED alert
+ # covers the gap until then). Fail-closed on malformed input: the
+ # disposition above was already recorded, so a harvest failure never
+ # loses the verdict -- the alert names it for the operator.
+ HARVEST_VAULT="${HNGH_WIKI_PROJECT:-$HOME/Projects/etc/llm-wiki/.llm-wiki}"
+ if [ ! -d "$HARVEST_VAULT/wiki" ]; then
+  breadcrumb "$JOB_NAME" "research-harvest-skip" \
+   "wiki vault absent ($HARVEST_VAULT): lesson TSV only"
+  HARVEST_VAULT=""
+ fi
+ hv_out="$(python3 "$AUTOMATION_ROOT/lib/research-harvest.py" \
+  --dispositions "$DISPOSITIONS" --lines "$LINES" \
+  --lessons "$AUTOMATION_ROOT/research-lessons.tsv" \
+  ${HARVEST_VAULT:+--vault "$HARVEST_VAULT"} 2>&1)" || {
+  file_report alert "research harvest failed for $id: $(printf '%s' "$hv_out" | tail -1 | cut -c1-160)" \
+   "research-beat:harvest-failed" 86400
+ }
+ [ -n "$hv_out" ] && breadcrumb "$JOB_NAME" "research-harvest" \
+  "$id: $hv_out"
  set_state "$id" "reviewed"
  blocker_clear "research:$id"
  rev_rel="digest/RESEARCH-REVIEW-$day-$id.md"
@@ -725,7 +759,7 @@ $related}"
    printf '## Related findings cross-considered\n\n%s\n' "$related"
  } >"$AUTOMATION_ROOT/$rev_rel"
  research_commit "$id" "reviewed-$action" "$DISPOSITIONS" "$LINES" \
-  "$AUTOMATION_ROOT/$rev_rel"
+  "$AUTOMATION_ROOT/$rev_rel" "$AUTOMATION_ROOT/research-lessons.tsv"
  python3 "$TELEMETRY" emit --kind research --model "$used" --wall-s "$wall" \
   --source research-review --subject "$id:crystallized->reviewed" \
   --data "{\"unit\":\"$id\"}"

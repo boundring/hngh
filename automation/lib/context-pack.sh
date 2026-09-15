@@ -87,6 +87,23 @@ context_pack() { # role slug -> pack path on stdout
     printf 'ledgers: STATE.md agent-handoffs.md logs/budget.md cadence-params.tsv\n'
     printf 'kernel ledgers: docs/project/STATE-OF-PROJECT.md docs/project/reports.md docs/project/plans/\n'
     printf 'research index: %s/docs/research/\n' "$krepo"
+    # adopted lessons block (d1-surface): top-5 newest active rows from
+    # the harvest ledger (research-lessons.tsv, d1-harvest). Derived
+    # data — the ledger and the wiki pages behind it are the sources of
+    # truth. Absent or empty ledger -> the block is omitted silently.
+    if [ -s "$root/research-lessons.tsv" ]; then
+      awk -F'\t' 'NR > 1 && $6 == "active" {print $2 "\t" $3 "\t" $5}' \
+        "$root/research-lessons.tsv" | sort -r | head -5 |
+        cut -c1-160 |
+        while IFS="$(printf '\t')" read -r d lid lesson; do
+          printf 'lesson: %s %s: %s\n' "$d" "$lid" "$lesson"
+        done | {
+          block="$(cat)"
+          if [ -n "$block" ]; then
+            printf 'adopted lessons (top-5 newest active, from research-lessons.tsv):\n%s\n' "$block"
+          fi
+        }
+    fi
     printf 'frontier (kernel Verified numbers):\n'
     sed -n '/torch:begin/,/torch:end/p' \
       "$krepo/docs/project/STATE-OF-PROJECT.md" 2>/dev/null | marked_cut 700
