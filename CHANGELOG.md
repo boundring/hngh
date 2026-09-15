@@ -4,6 +4,31 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-15
+
+#### Added
+
+- **Viz payload schema validation seam**
+  (docs/records/2026-09-15-viz-schema-validation-seam.md):
+  `automation/jobs/viz_schema.py` — one stdlib-only validator (no
+  jsonschema) for the dashboard viz payload families (`graph/1`,
+  `patrol/1`, `history/1`) with `validate(payload_text, tag) ->
+  (ok, detail, warns)`, a public `SCHEMA` table, per-family adapters,
+  and a CLI (`--schema TAG payload.json`) whose contract is rc 0 accept
+  (warns on stderr, never fatal), rc 2 fail closed, rc 1 usage. Fail
+  closed on: malformed JSON; missing/non-string/wrong/unknown `schema`;
+  unknown envelope keys; missing required fields; wrong types; duplicate
+  node ids or entry keys; self-loop edges; dangling edge endpoints;
+  nested payloads behind unknown keys. Additive tolerance is warn-only:
+  unknown scalar keys inside nodes/edges/entries, unknown
+  rel/state/kind values. Envelope keys fail closed (versioned surface).
+  Known gap gated, not papered over: `graph-data.build()` does not
+  stamp `"schema": "graph/1"` yet, so live /graph.json fails closed
+  until the one-line stamp lands. Suite:
+  automation/tests/test-viz-schema-seam.py (32), plus the pre-existing
+  history acceptance gate (16), and the sibling patrol (23) and
+  version (14) gates.
+
 ### 2026-09-14
 
 #### Added
