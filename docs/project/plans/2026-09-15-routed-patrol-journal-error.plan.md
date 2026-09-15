@@ -12,3 +12,4 @@ at 2026-09-15T05:00:25Z. Alert text: patrol journal-error: unit-not-practiced on
 ## Occurrences
 
 - 2026-09-15T06:00:39Z re-occurred (dedup window expired)
+- 2026-09-15T07:00:39Z re-occurred (dedup window expired)
