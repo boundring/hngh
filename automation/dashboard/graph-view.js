@@ -28,6 +28,12 @@
    nodes stop crowding the ~225 kernel-side nodes on the origin shell.
    Camera default and 2D scale re-fit to the outer shell.
 
+   v5 (2026-09-14, sg-load-camera-preserve): the 60s auto-refresh preserves
+   the operator's view — camera orbit/zoom (grow-only distance so a bigger
+   shell never clips), selection (re-applied when the node survives, cleared
+   when it vanishes, hash navigation wins), kind/state filters, search text
+   + matches, and the spin toggle. First load still re-fits via resetView.
+
    Nodes/edges come from /graph.json (jobs/graph-data.py). Display layer
    only — never governance input. All styles live in one owned <style>
    tag (gv- prefix); style.css is not touched. */
@@ -225,6 +231,22 @@
     cam.th = 0.6; cam.ph = 0.35;
     cam.r = Math.max(640, (layout.shellRadius || 190) * 1.9);
   }
+  // sg-load-camera-preserve: snapshot/restore the operator's view across
+  // the 60s auto-refresh so a parked camera, selection, filters, search
+  // and spin state survive a feed reload. Pure helpers (no DOM) so the
+  // headless contract test can execute them via node.
+  function snapshotView() {
+    return { th: cam.th, ph: cam.ph, r: cam.r, sel: selId, spin: spinning };
+  }
+  function restoreView(snap, isFirst) {
+    if (isFirst || !snap) { resetView(); return; }
+    cam.th = snap.th; cam.ph = snap.ph;
+    // grow-only distance: keep the operator's zoom, but pull back when a
+    // bigger outer shell would otherwise clip out of frame
+    var minFit = Math.max(640, (layout.shellRadius || 190) * 1.9);
+    cam.r = clamp(Math.max(snap.r, minFit), 480, 4800);
+  }
+  snapshotView._isFirstLoad = function () { return !data; };
   // projected screen state — preallocated, reused every frame
   var scr = { x: null, y: null, s: null, d: null, n: 0 };
   var order = [];           // node indices, sorted far -> near each draw
@@ -697,11 +719,62 @@
 
   function load() {
     badge.textContent = '…';
+    // sg-load-camera-preserve: capture the operator's live view before the
+    // reload so the 60s auto-refresh never yanks the camera, clears the
+    // selection, or drops filter/search/spin state. First load (data null)
+    // still re-fits to the outer shell via resetView.
+    var first = (data === null);
+    var snap = first ? null : snapshotView();
+    var keepKinds = first ? null : Object.keys(kindOff).filter(function (k) {
+      return kindOff[k];
+    });
+    var keepStates = first ? null : Object.keys(stateOff).filter(function (s) {
+      return stateOff[s];
+    });
+    var keepQ = null, wasSpinning = false;
+    if (!first) {
+      var sb0 = root.querySelector('.gv-search');
+      keepQ = sb0 ? sb0.value : null;
+      wasSpinning = spinning;
+    }
     fetchJson('/graph.json').then(function (g) {
       if (!g || !g.nodes || !g.nodes.length) throw new Error('empty graph');
       setData(g);
-      resetView(); // re-fit the camera to the new outer-shell radius
+      restoreView(snap, first);
       buildChips();
+      if (!first) {
+        // re-apply the operator's filter/search/spin state onto the fresh
+        // chip DOM, then re-select the snapshot node (or the hash target,
+        // which wins on explicit navigation)
+        keepKinds.forEach(function (k) {
+          kindOff[k] = true;
+          var c = root.querySelector('[data-kind="' + k + '"]');
+          if (c) c.classList.add('off');
+        });
+        keepStates.forEach(function (s) {
+          stateOff[s] = true;
+          var c = root.querySelector('[data-state="' + s + '"]');
+          if (c) c.classList.add('off');
+        });
+        if (keepQ) {
+          var sb = root.querySelector('.gv-search');
+          if (sb) {
+            sb.value = keepQ;
+            var q = keepQ.trim().toLowerCase();
+            if (q.length >= 2) {
+              matches = {};
+              g.nodes.forEach(function (nd) {
+                if ((nd.label + ' ' + nd.id + ' ' + (nd.detail || '') +
+                     ' ' + nd.kind).toLowerCase().indexOf(q) >= 0)
+                  matches[nd.id] = 1;
+              });
+            } else {
+              matches = null;
+            }
+          }
+        }
+        if (wasSpinning && !spinning) setSpin(true);
+      }
       resize();
       lastLoad = Date.now();
       tickBadge();
@@ -713,6 +786,8 @@
       }
       root.querySelector('.gv-err').style.display = 'none';
       if (pendSel) { var p = pendSel; pendSel = null; if (byId(p)) select(p); }
+      else if (!first && snap && snap.sel && byId(snap.sel)) select(snap.sel);
+      else if (!first && snap && snap.sel && !byId(snap.sel)) clearSel();
     }).catch(function (err) {
       var eb = root.querySelector('.gv-err');
       eb.textContent = 'graph feed unavailable: ' + err.message +

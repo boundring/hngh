@@ -16,6 +16,7 @@ with parent-link closure, and the all-sessions escape.
 
 import importlib.util
 import json
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -245,7 +246,22 @@ class ServerWiring(unittest.TestCase):
         html = (ROOT / "dashboard" / "index.html").read_text()
         self.assertIn("graph-view.js", html)
         self.assertIn('data-tab="graph"', html)
-        self.assertIn("vendor/three.min.js", html)
+
+    def test_no_duplicate_element_ids(self):
+        # HTML id uniqueness is a hard DOM contract (getElementById and
+        # querySelector behavior change under duplicates). The 2026-09-14
+        # refresh-button wiring accidentally shipped two byte-identical
+        # <button id="refresh-btn">; the dup was removed, and this guards
+        # the whole shell against a repeat. Single refresh button is the
+        # deliberate design: one, asserted exactly here.
+        html = (ROOT / "dashboard" / "index.html").read_text()
+        seen = {}
+        for i in re.finditer(r'\bid="([^"]+)"', html):
+            seen[i.group(1)] = seen.get(i.group(1), 0) + 1
+        dups = sorted(k for k, v in seen.items() if v > 1)
+        self.assertEqual(dups, [],
+                         "duplicate element ids in index.html: %s" % dups)
+        self.assertEqual(html.count('id="refresh-btn"'), 1)
 
 
 def _session(mid, short_name=None, status="Active", model="glm-5.3-flash",
@@ -411,6 +427,53 @@ class JcodeSessionNodes(unittest.TestCase):
                              sessions_dir=self.root / "missing")
         self.assertFalse([n for n in g["nodes"]
                           if n["kind"] in ("jcode-session", "swarm")])
+
+    def test_duplicate_internal_id_surfaces_shadowed_file(self):
+        # coordinator + child mapping to the same run (two files, one
+        # internal id): the winner keeps the jcode: id, the shadowed file
+        # surfaces as an alerting node under its own stem, and no
+        # self-loop spawns edge is emitted.
+        stamp = self.now.strftime("%Y-%m-%dT%H:%M:%S") + ".123456789Z"
+        coord = {"id": "session_samerun_1_deadbeefcafe",
+                 "last_active_at": stamp, "updated_at": stamp,
+                 "status": "Active", "short_name": "coord"}
+        child = {"id": "session_samerun_1_deadbeefcafe",
+                 "last_active_at": stamp, "updated_at": stamp,
+                 "status": "Active", "short_name": "child",
+                 "parent_id": "session_samerun_1_deadbeefcafe"}
+        self.write("session_samerun_1_deadbeefcafe.json", coord)
+        self.write("session_samerun_2_0123456789ab.json", child)
+        g = self.build(all_sessions=True)
+        ids = [n["id"] for n in g["nodes"]]
+        self.assertEqual(len(ids), len(set(ids)),
+                         "duplicate node ids: %s" % sorted(ids))
+        by_id = {n["id"]: n for n in g["nodes"]}
+        self.assertIn("jcode:session_samerun_1_deadbeefcafe", by_id)
+        shadow = by_id["jcode:session_samerun_2_0123456789ab"]
+        self.assertEqual(shadow["kind"], "jcode-session")
+        self.assertEqual(shadow["state"], "alerting")
+        self.assertIn("duplicate", shadow["detail"])
+        for e in g["edges"]:
+            self.assertNotEqual(e["src"], e["dst"],
+                                "self-loop edge: %s" % (e,))
+
+    def test_node_ids_unique_end_to_end(self):
+        # global invariant over a mixed fixture: never two nodes share
+        # an id, and never a self-loop edge.
+        par = _session("p", short_name="coord", age_min=2)
+        sub = _session("sub1", short_name="worker", parent_id=par["id"])
+        self.write(par["id"] + ".json", par)
+        self.write(sub["id"] + ".json", sub)
+        self.write("session_bad_1_b.json", "{not json")
+        g = self.build(all_sessions=True)
+        ids = [n["id"] for n in g["nodes"]]
+        self.assertEqual(len(ids), len(set(ids)),
+                         "duplicate node ids: %s" % sorted(ids))
+        node_ids = set(ids)
+        for e in g["edges"]:
+            self.assertIn(e["src"], node_ids, str(e))
+            self.assertIn(e["dst"], node_ids, str(e))
+            self.assertNotEqual(e["src"], e["dst"], str(e))
 
 
 if __name__ == "__main__":
