@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-15
 
+#### Fixed
+
+- **Loop-history guard 526cd3f exemption cure completed**
+  (docs/records/2026-09-15-loop-history-526cd3f-exemption-cure-completed.md):
+  the 2026-09-14 gate-cure of portfolio commit `526cd3fd` had left the
+  `KNOWN_EXEMPTIONS` table with two entries for the same commit -- the
+  stale `526cd3f` declaration (wrong patch-id `4496b336…`) and an
+  uncommitted `526cd3fd` re-declaration -- reding the safeguards suite
+  (`registered patch-id drift for 526cd3f`). Merged into one `526cd3f`
+  entry with the verified patch-id `5b6840df…`; both guard suites green
+  at the certificate-bound commit `30966c38`
+  (`hngh: candidate 785e57b1…`), pushed.
+
 #### Added
 
 - **Viz payload schema validation seam**
