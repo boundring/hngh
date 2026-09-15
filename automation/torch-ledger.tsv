@@ -24,3 +24,5 @@ email-qa.log	email-qa\.log	13-email-qa.sh,email-qa.py	write-only	digest-QA trend
 reports.md+report-bodies	reports\.md|report-bodies	-	live	kernel report ledger; readers: system-feed backups probe, overnight-cycle draft source, dashboard-self-review ledger check
 active-work.md	active-work\.md	-	live	kernel artifact; readers: 01-activity-tick implementation/refactor/cleanup increments
 dashboard-json-feeds	dashboard/	-	live	readers: ui-audit, dashboard-self-review, smoke-test, refresh-dashboard; served by dashboard-server.py at repo root
+research-lessons.tsv	research-lessons\.tsv	research-harvest.py	live	readers: research-routes.py harvested set, lib/context-pack.sh adopted-lessons block, jobs/patrol.py research-ledger check; writer: lib/research-harvest.py (33-research-beat)
+research-routes	research-routes	research-routes.py	live	readers: dashboard-server /research-routes.json serve, viz_schema routes/1 family, jobs/patrol.py FEEDS freshness; writer: jobs/research-routes.py (on-demand via the serve path)
