@@ -82,6 +82,15 @@ KNOWN_EXEMPTIONS = {
                   "export edit (swept content inert exports)",
         "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
     },
+
+    # 2026-09-16 declared miss: the e6e98f7-cure commit swept an
+    # automation tests/ edit into a kernel-tests/ declaration (mixed-lane
+    # message); automation content separately gated by the automation tier.
+    "a5520fb2": {
+        "reason": "mixed-lane cure commit (kernel declaration + automation "
+                  "test tracking); automation content separately gated",
+        "patch-id": "6c7f8cbd145ef255cf2d575704b7e2a50567e70d",
+    },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
     # itself was being built; declared by name per the 2026-09-06 decision,
