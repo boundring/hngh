@@ -261,6 +261,9 @@ House law (writing register, LAW):
 - At most ONE quote, only if present verbatim in the source page text.
 - Never invent names, numbers, quotes, or events beyond the data above;
   unverifiable gaps read "unverified per source".
+- No host filesystem paths in the prose: never write /home/..., /tmp/,
+  or ~/... tokens, even when the data above shows them redacted; refer
+  to such items generically ("a local file").
 
 %s
 File the article now.""" % (scrub_paths(item["title"]), item["tag"],
@@ -295,7 +298,11 @@ LAST_USAGE = {"calls": 0, "tokens_in": 0, "tokens_out": 0, "paid": 0}
 def model_reply(prompt, pin, budget=MODEL_BUDGET):
     """One chain call through lib/model.sh model_call (the research-beat
     seam). Returns the text or '' (archive-only = no article; the job
-    never fabricates a fallback)."""
+    never fabricates a fallback). The reply gets the same PATH_TOKEN_RE
+    no-echo seam as the prompt (model-hygiene audit 2026-09-16: the
+    input-side scrub cannot stop a model from echoing a path it saw,
+    inferred, or hallucinated; lib/model.sh sends a single user message
+    with no system prompt, so the caller owns output hygiene)."""
     cmd = os.environ.get("NEWS_ARTICLES_MODEL_CMD") or \
         '. "%s/lib/model.sh"; model_call %s' % (ROOT, budget)
     env = dict(os.environ)
@@ -326,7 +333,8 @@ def model_reply(prompt, pin, budget=MODEL_BUDGET):
             except (OSError, ValueError):
                 pass
     text = re.sub(r"^```[a-z]*\n|\n```$", "", r.stdout.strip())
-    text = _ascii(text).strip()
+    # output-side no-echo guard: same fail-closed seam as the prompt.
+    text = scrub_paths(_ascii(text)).strip()
     if text[-1] not in ".!?\"'":
         # a mid-sentence model stop never publishes: cut to the last
         # complete sentence (attribution footer still marks the gaps)
