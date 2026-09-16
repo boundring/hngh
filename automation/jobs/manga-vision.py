@@ -41,6 +41,25 @@ MAX_SPREADS = int(os.environ.get("MANGA_VISION_SPREADS", "4"))
 VISION_CALL = None  # type: ignore
 
 
+class TokenFileModeError(RuntimeError):
+    """The token file's mode is not exactly 0600: its value is never
+    read or sent (same posture as scripts/probe-model-route and the
+    kimi/ocgo/zai key readers in lib/model.sh)."""
+
+
+def _bearer_header():
+    """Authorization header value from TOKEN_FILE, fail-closed on the
+    file mode: anything looser than exactly 0600 refuses before the
+    value is read."""
+    mode = os.stat(TOKEN_FILE).st_mode & 0o777
+    if mode != 0o600:
+        raise TokenFileModeError(
+            "%s: token file too open (mode %04o); chmod 0600 required"
+            % (TOKEN_FILE, mode))
+    with open(TOKEN_FILE) as f:  # value never logged/echoed
+        return "Bearer " + f.read().strip()
+
+
 def _one_call(prompt, image_paths, max_tokens, thinking, timeout):
     parts = [{"type": "text", "text": prompt}]
     for p in image_paths:
@@ -54,11 +73,7 @@ def _one_call(prompt, image_paths, max_tokens, thinking, timeout):
                        "messages": [{"role": "user", "content": parts}]
                        }).encode()
     headers = {"Content-Type": "application/json"}
-    try:
-        with open(TOKEN_FILE) as f:  # value never logged/echoed
-            headers["Authorization"] = "Bearer " + f.read().strip()
-    except OSError:
-        pass
+    headers["Authorization"] = _bearer_header()
     req = urllib.request.Request(VISION_URL, body, headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         out = json.loads(r.read())

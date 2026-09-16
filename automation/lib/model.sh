@@ -1,6 +1,7 @@
 # model.sh — model-call with fail-closed fallback chain.
 #   model_call [MAX_TOKENS]   <- stdin prompt
-#   echoes the completion text (EMPTY output only in archive-only mode);
+#   echoes the completion text, path-scrubbed at the output chokepoint
+#   (EMPTY output only in archive-only mode);
 #   writes $MODEL_USED to $AUTOMATION_ROOT/tmp-modelused.txt so callers can
 #   read it from OUTSIDE the command-substitution subshell.
 # Chain: unsloth (401 auto-refresh + empty-content retry) -> zai (Z.AI
@@ -75,6 +76,21 @@ TOKOUT_FILE="$AUTOMATION_ROOT/tmp-tokensout.txt"
 # clean stop. Callers mark the doc instead of writing a silently
 # mid-syntax capture (2026-09-11 research-beat corpus loss).
 MODEL_TRUNC_FILE="$AUTOMATION_ROOT/tmp-modeltrunc.txt"
+
+# reply-side no-echo scrub (chain-wide extension of the news-lane law,
+# llc-model-hygiene-law follow-up 2026-09-16): host path tokens coming
+# BACK from any leg never reach a consumer verbatim. Same four-branch
+# token law news-articles.py scrubs both directions with (PATH_TOKEN_RE):
+# /home, /tmp, ~ tokens (bare or with a trailing segment) redact to the
+# fixed [redacted path] marker; URL-shaped tokens match first and are
+# preserved verbatim (wire data, not the operator's filesystem -- the
+# named group decides, not the token's content); ordinary prose is kept.
+# Fail-closed: jq absent or the scrub failing yields empty output, so a
+# broken guard can never leak pathy text through. Input hygiene stays
+# with the caller (archive_only persists raw prompts unmutated).
+_scrub_paths() { # text -> scrubbed text on stdout
+ jq -Rsr 'rtrimstr("\n") | gsub("(?<url>\\b(?:[a-z][a-z0-9+.-]*://|www\\.)\\S*)|(?<home>/home(?:/\\S*)?(?![\\w-]))|(?<tmp>/tmp(?:/\\S*)?(?![\\w-]))|(?<tilde>~/\\S*)"; if .url then .url else "[redacted path]" end)' <<<"$1" 2>/dev/null
+}
 
 last_model_used() {
  cat "$MODEL_USED_FILE" 2>/dev/null || true
@@ -338,6 +354,17 @@ ollama_chat() {
 # day in telemetry (kind=model, source=remote) against REMOTE_DAILY_CAP_CALLS.
 remote_chat() {
  local prompt="$1" max_tokens="$2" key content count
+ # the key file gates the leg on its mode too: absent -> dormant,
+ # too open -> skip fail-closed before the value is read or sent (same
+ # posture as the kimi/ocgo/zai key-file readers in this file).
+ if [ ! -f "$REMOTE_TOKEN_FILE" ]; then
+  breadcrumb model "remote" "no key file -> next backend"
+  return 1
+ fi
+ if [ "$(stat -c %a "$REMOTE_TOKEN_FILE" 2>/dev/null)" != "600" ]; then
+  breadcrumb model "remote" "key file too open (chmod 600 required) -> next backend"
+  return 1
+ fi
  key="$(cat "$REMOTE_TOKEN_FILE" 2>/dev/null)" || {
   breadcrumb model "remote" "no key file -> next backend"
   return 1
@@ -787,7 +814,7 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  return 0
 }
 
-model_call() {
+_model_call_impl() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
  local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0 pin_remote=0 \
   pin_feedback=0 pin_review=0
@@ -912,4 +939,20 @@ model_call() {
  MODEL_USED="none:archive-only"
  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
  return 0
+}
+
+# model_call [MAX_TOKENS] <- stdin prompt — the public consumer entry:
+# runs the chain (_model_call_impl) and scrubs the winning reply through
+# _scrub_paths at this ONE output-side chokepoint, so every consumer lane
+# (news, research beat, reviews, digest, overnight, ping) inherits the
+# no-echo law without owning it (llc-model-hygiene-law follow-up,
+# 2026-09-16). Archive-only outcome (empty stdout) passes through
+# unchanged; a scrub failure yields empty (fail-closed, never leaks
+# pathy text), leaving MODEL_USED pointing at the leg that answered.
+model_call() {
+ local scrubbed
+ if ! scrubbed="$(_model_call_impl "$@" | _scrub_paths "$(cat)")"; then
+  return 0
+ fi
+ printf '%s\n' "$scrubbed"
 }

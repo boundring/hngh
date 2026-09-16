@@ -160,6 +160,7 @@ ck "pin=kimi dead endpoint: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-m
 rm -f "$sb/home/db/telemetry.db"
 reset_hits
 printf 'stub-openrouter-token' >"$sb/openrouter-token"
+chmod 600 "$sb/openrouter-token" # remote leg mode-gates its key file (2026-09-16 token-file-0600-gates)
 out="$(call "hello-5b" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
  "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash")"
 ck "pin=remote: remote stub content" "stub-says-hi" "$out"
