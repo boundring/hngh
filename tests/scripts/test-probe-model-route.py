@@ -10,10 +10,12 @@ key, duplicate, empty) is asserted directly via import.
 
 import importlib.machinery
 import importlib.util
+import io
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -41,6 +43,16 @@ def good_config(tmp, endpoint="http://127.0.0.1:9/v1/chat/completions"):
         f"endpoint={endpoint}\nmodel=test/model\nmax-tokens=512\n"
         f"timeout=2\ntoken-file={tok}\n")
     return conf
+
+
+def tighten(token_path):
+    token_path.chmod(0o600)
+    return token_path
+
+
+def fake_urlopen(request, timeout=None):
+    """A urlopen stand-in: answers like a live server, no network."""
+    return io.BytesIO(b'{"data": []}')
 
 
 class ProbeRouteParser(unittest.TestCase):
@@ -74,6 +86,41 @@ class ProbeRouteParser(unittest.TestCase):
         ok, err = mod.probe(str(Path("/nonexistent/reviewer.conf")))
         self.assertFalse(ok)
         self.assertIn("not present", err)
+
+
+class ProbeTokenMode(unittest.TestCase):
+    def test_too_open_token_file_refused(self):
+        """A 0644 token file is fail-closed refused, never read or sent."""
+        mod = load()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            conf = good_config(tmp)
+            config = mod.parse_config(conf)
+            with self.assertRaises(ValueError) as cm:
+                mod.reachable(config)
+            self.assertIn("0600", str(cm.exception))
+            self.assertIn(str(tmp / "token"), str(cm.exception))
+            # probe form: refusal is (False, message) like any bad input.
+            ok, err = mod.probe(str(conf))
+            self.assertFalse(ok)
+            self.assertIn("0600", err)
+            # subprocess form: one-file exit 1 with the message on stderr.
+            out = run([str(conf)])
+            self.assertEqual(out.returncode, 1, out.stdout)
+            self.assertIn("too open", out.stderr)
+
+    def test_tight_token_file_still_probes(self):
+        """The 0600 control: with urlopen stubbed, the probe succeeds."""
+        mod = load()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            good_config(tmp)
+            tighten(tmp / "token")
+            with unittest.mock.patch.object(
+                    mod.urllib.request, "urlopen", fake_urlopen):
+                ok, err = mod.probe(str(tmp / "reviewer.conf"))
+            self.assertTrue(ok)
+            self.assertIsNone(err)
 
 
 class ProbeRouteOffline(unittest.TestCase):

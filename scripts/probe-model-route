@@ -21,6 +21,7 @@ One call, one job, no watcher, no default provider.
 """
 
 import argparse
+import stat
 import sys
 import urllib.error
 import urllib.request
@@ -73,7 +74,17 @@ def probe_endpoint(endpoint):
 
 
 def reachable(config, timeout=2.0):
-    """True when the configured endpoint answers ANY HTTP status."""
+    """True when the configured endpoint answers ANY HTTP status.
+
+    Fail closed on the token file: it must exist with mode exactly
+    0600 before it is read or its secret is sent (same posture as the
+    kimi/ocgo/zai key readers in automation/lib/model.sh)."""
+    token_file = Path(config["token-file"])
+    mode = stat.S_IMODE(token_file.stat().st_mode)
+    if mode != 0o600:
+        raise ValueError(
+            f"{token_file}: token file too open (mode {mode:04o}); "
+            "chmod 0600 required")
     token = Path(config["token-file"]).read_text().strip()
     if not token:
         raise ValueError("empty provider token")
