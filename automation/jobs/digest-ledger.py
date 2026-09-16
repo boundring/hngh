@@ -30,15 +30,23 @@ def _ascii(text):
 
 import re
 
-PATH_TOKEN_RE = re.compile(r"/home/\S*|/tmp/\S*|~/\S*")
+PATH_TOKEN_RE = re.compile(
+    r"(?P<url>\b(?:[a-z][a-z0-9+.-]*://|www\.)\S*)"
+    r"|(?P<home>/home(?:/\S*)?(?![\w-]))"
+    r"|(?P<tmp>/tmp(?:/\S*)?(?![\w-]))"
+    r"|(?P<tilde>~/\S*)")
 
 
 def scrub_paths(text):
     """No-echo guard (digest seam audit 2026-09-16): host path tokens
-    (/home/..., /tmp/..., ~/...) never ride the mega line into deck B
-    or the public edition; fail-closed redaction to a fixed marker,
-    ordinary prose untouched. Same identity seam as news-articles.py."""
-    return PATH_TOKEN_RE.sub("[redacted path]", str(text or ""))
+    never ride the mega line into deck B or the public edition;
+    fail-closed redaction to a fixed marker, ordinary prose untouched.
+    Same identity seam as news-articles.py (regex-gap audit
+    2026-09-16): bare /home //tmp die too, URLs consumed first and
+    kept verbatim (named group decides, never token content)."""
+    return PATH_TOKEN_RE.sub(
+        lambda m: m.group("url") if m.group("url") else "[redacted path]",
+        str(text or ""))
 
 
 def spend(date, db=TELEMETRY):

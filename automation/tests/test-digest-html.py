@@ -365,6 +365,14 @@ class BuilderTest(unittest.TestCase):
         # redaction replaces tokens; rows are kept, never dropped
         self.assertIn("1 open of 1", text)
         self.assertIn("1 alert crumbs today", text)
+        # regex-gap extension (2026-09-16 audit follow-up): same seam
+        # rules as news-articles.py — bare /home //tmp die, URLs stay
+        # untouched (no marker sprayed into them)
+        self.assertNotIn("/home", dl.scrub_paths("cd /home alone"))
+        self.assertNotIn("/tmp", dl.scrub_paths("wrote /tmp then left"))
+        url_text = ("fetched https://example.com/x~/s and "
+                    "https://example.com/~user/p today")
+        self.assertEqual(dl.scrub_paths(url_text), url_text)
 
     def test_build_block(self):
         with Fixture() as fx:
