@@ -2,6 +2,28 @@
 
 ## 2026-09-16
 
+- harden: credential-evidence integrity close-outs on the repaired rung
+  (test-first; lib/credential-evidence.py + hermetic suite only) —
+  duplicate credential names now fail closed (every instance reports
+  `duplicate-row`, no `ok` for a duplicated name: a ledger that repeats
+  a credential is untrustworthy); epoch fields enforce an unsigned-digits
+  grammar and a future-vs-clock rotate epoch is malformed (same-host
+  clock, no skew allowance); OLA 0 disables stale findings only
+  (integrity findings still fire), pinning the cadence-params
+  `credential-fresh-ola` semantics; record() stores canonical absolute
+  evidence paths only — a relative path resolves beside the LEDGER or
+  the record refuses, and a relative row can never verify from any cwd
+  (raw-path rows' meaning depended on the invoking process). Epoch 0
+  remains a stored-verbatim legal timestamp (fail-visible: it then
+  reports stale) per the 06fa18d7 strict-parse decision; an ABSENT
+  record epoch stamps the live clock. Suite: 22 hermetic cases including
+  the exact production argv shapes (record positional epoch; bare
+  `check LEDGER OLA` live clock). Full gate verified green on HEAD +
+  this slice in a scratch clone (shared tree carries an unrelated
+  in-flight dashboard lane's WIP).
+
+## 2026-09-15
+
 - fix: key-rotation-freshness rung un-deadened (three defects that only
   worked together to produce silence, then an alert storm when half
   fixed): (1) `lib/credential-evidence.py` record's production argv

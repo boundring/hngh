@@ -16,13 +16,22 @@ CLI:
   check LEDGER OLA_S [--now EPOCH]                -> print findings; each
       finding is `finding-class: credential detail`. A clean ledger prints
       `ok` lines. Classes: ledger-missing / stale / hash-mismatch /
-      evidence-missing / malformed-row / malformed-argv. No --now = live
-      clock (never a silent 0).
+      evidence-missing / malformed-row / duplicate-row / malformed-argv.
+      No --now = live clock (never a silent 0). OLA 0 disables stale
+      findings only (integrity findings still fire) per the
+      cadence-params `credential-fresh-ola` row contract.
 
 Fail-closed: anything unparseable, unhashable, or older than the OLA is a
 finding, never a silent pass. Ledger is created mode 600 and re-chmodded
 600 on every write (O_TRUNC alone would keep an existing wider mode). No
-secrets in rows — only digests and paths.
+secrets in rows — only digests and paths. Rows are trusted only with an
+absolute, canonical evidence path: record() resolves a relative evidence
+path against the ledger's directory (or refuses it), so a check from any
+cwd verifies the same file and a relative row can never dodge integrity
+by caller location. A duplicated credential name makes the whole ledger
+untrustworthy: every instance reports duplicate-row, no ok is printed.
+Epoch grammar is unsigned digits; a rotate epoch in the future vs the
+check clock is malformed (same-host clock, no skew allowance).
 
 Steady state (credential-health wiring): the first healthy unsloth probe
 seeds the ledger (bootstrap); afterwards only the tracked 401-rotate path
@@ -34,9 +43,12 @@ cadence-params `credential-fresh-ola` row.
 
 import hashlib
 import os
+import re
 import sys
 import time
 from pathlib import Path
+
+_EPOCH_RE = re.compile(r"\d+\Z")  # unsigned digits only (no sign, no spaces)
 
 
 def _digest(path):
@@ -51,13 +63,24 @@ def _digest(path):
 
 
 def record(name, evidence_path, ledger, now):
-    """Append (replacing a prior row for NAME) a freshness-evidence row."""
-    digest = _digest(evidence_path)
+    """Append (replacing a prior row for NAME) a freshness-evidence row.
+
+    The row stores a canonical ABSOLUTE evidence path: a relative
+    evidence_path is trusted only when it resolves beside the ledger
+    (same trust domain), otherwise the record refuses (fail-closed).
+    """
+    ev = Path(evidence_path)
+    if not ev.is_absolute():
+        beside = Path(ledger).absolute().parent / ev
+        if not beside.is_file():
+            raise SystemExit(f"evidence-missing: {name} {evidence_path}")
+        ev = beside.resolve()
+    digest = _digest(ev)
     if digest is None:
-        raise SystemExit(f"evidence-missing: {name} {evidence_path}")
+        raise SystemExit(f"evidence-missing: {name} {ev}")
     rows = _read(ledger) or []
     rows = [(n, row) for (n, row) in rows if n != name]
-    rows.append((name, [name, str(now), str(now), digest, str(Path(evidence_path))]))
+    rows.append((name, [name, str(now), str(now), digest, str(ev)]))
     os.makedirs(os.path.dirname(ledger) or ".", exist_ok=True)
     fd = os.open(ledger, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(fd, 0o600)  # O_TRUNC keeps an existing file's (wider) mode
@@ -105,19 +128,33 @@ def check(ledger, ola_s, now):
     if rows is None:
         yield f"ledger-missing: {redact(ledger)}"
         return
+    counts = {}
+    for name, _fields in rows:
+        counts[name] = counts.get(name, 0) + 1
     for name, fields in rows:
         if len(fields) != 5 or fields[0] != name:
             yield f"malformed-row: {name}"
             continue
+        if counts[name] > 1:
+            # a ledger that repeats a credential name is untrustworthy:
+            # every instance reports, no ok is printed for the name
+            yield f"duplicate-row: {name} ({counts[name]} rows)"
+            continue
         rotate_epoch, _scan_epoch, digest, evpath = (
             fields[1], fields[2], fields[3], fields[4],
         )
-        try:
-            rotate_epoch = int(rotate_epoch)
-        except ValueError:
-            yield f"malformed-row: {name} (rotate epoch)"
+        if not (_EPOCH_RE.fullmatch(rotate_epoch)
+                and _EPOCH_RE.fullmatch(_scan_epoch)):
+            # unsigned-digits grammar: negatives, signs, spaces, NaN are
+            # malformed, never compared as values
+            yield f"malformed-row: {name} (epoch grammar)"
             continue
-        if now - rotate_epoch > ola_s:
+        rotate_epoch = int(rotate_epoch)
+        if rotate_epoch > now:
+            yield (f"malformed-row: {name} "
+                   f"(rotate epoch {rotate_epoch} in the future)")
+            continue
+        if ola_s > 0 and now - rotate_epoch > ola_s:
             yield f"stale: {name} (rotate epoch {rotate_epoch} older than OLA)"
             continue
         if not os.path.isfile(evpath):

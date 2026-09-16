@@ -3,13 +3,17 @@
 
 Contracts: check() refuses (fail-closed) a missing ledger, stale rows,
 hash-mismatched evidence, missing evidence files, malformed rows,
-duplicate rows, and negative or future-dated rotate epochs; record()
-writes a private (0600, re-chmodded on every write) replace-by-name
-digest-only row that a subsequent check verifies, and stamps the CURRENT
-time when the epoch arg is 0 or absent (an unparsable clock must never
-mint the epoch-0 stale row). Fresh + verified rows report `ok`. CLIs
-print `<class>: <name> ...` findings and exit 0 always on check; argv
-errors exit nonzero with the reason on stderr.
+duplicate rows, and out-of-range rotate epochs (negative via the digits
+grammar, future vs the check clock); OLA 0 disables stale findings only
+(integrity checks still fire). record() writes a private (0600,
+re-chmodded on every write) replace-by-name digest-only row that a
+subsequent check verifies; a relative evidence path is trusted only when
+it resolves beside the ledger, and the stored path is canonical
+absolute. An absent record epoch = live clock; epoch 0 is a legal
+timestamp stored verbatim (fail-visible: the row then fails check as
+stale), never silently converted to now. Fresh + verified rows report
+`ok`. check prints `<class>: <name> ...` findings and exits 0 always;
+argv errors exit nonzero with the reason on stderr.
 
 The production argv shapes emitted by jobs/credential-health.sh (record
 NAME PATH LEDGER EPOCH and check LEDGER OLA, no --now) are first-class
@@ -129,28 +133,31 @@ class CredentialEvidence(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertIn("stale: unsloth-session", r.stdout)
 
-    # --- record stamps "now" on 0/absent epoch (storm-row prevention) ---
+    # --- epoch 0 is stored verbatim (fail-visible, never silent now) ---
 
-    def assert_stamps_now(self, ledger, *args):
+    def test_record_epoch_zero_stored_verbatim_fails_stale(self):
+        # 0 is a legal timestamp: stored verbatim, never silently
+        # converted to the live clock; the resulting row then fails check
+        # as stale, which is the designed visible signal for it.
+        ledger = self.tmp / "zero.tsv"
+        r = self.cli("record", "unsloth-session", str(self.evidence),
+                     str(ledger), "0")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = ledger.read_text().splitlines()[0].split("\t")
+        self.assertEqual((row[1], row[2]), ("0", "0"))
+        out = self.cli("check", str(ledger), "604800")
+        self.assertIn("stale: unsloth-session", out.stdout)
+
+    def test_record_missing_epoch_stamps_now(self):
+        ledger = self.tmp / "fresh.tsv"
         before = int(time.time())
-        r = self.cli(*args)
+        r = self.cli("record", "unsloth-session",
+                     str(self.evidence), str(ledger))
         self.assertEqual(r.returncode, 0, r.stderr)
         row = ledger.read_text().splitlines()[0].split("\t")
         for field in (row[1], row[2]):
             self.assertGreaterEqual(int(field), before - 5)
             self.assertLessEqual(int(field), int(time.time()) + 5)
-
-    def test_record_epoch_zero_stamps_now(self):
-        ledger = self.tmp / "fresh.tsv"
-        self.assert_stamps_now(ledger, "record", "unsloth-session",
-                               str(self.evidence), str(ledger), "0")
-        out = self.cli("check", str(ledger), "604800")
-        self.assertIn("ok: unsloth-session", out.stdout)
-
-    def test_record_missing_epoch_stamps_now(self):
-        ledger = self.tmp / "fresh.tsv"
-        self.assert_stamps_now(ledger, "record", "unsloth-session",
-                               str(self.evidence), str(ledger))
         out = self.cli("check", str(ledger), "604800")
         self.assertIn("ok: unsloth-session", out.stdout)
 
@@ -184,10 +191,12 @@ class CredentialEvidence(unittest.TestCase):
     # --- evidence-path trust: absolute, or beside the ledger ---
 
     def test_record_refuses_foreign_relative_evidence(self):
-        other = Path(tempfile.mkdtemp())
+        # a relative path that does not resolve beside the ledger is
+        # refused regardless of the caller's cwd (trust domain is the
+        # ledger's directory, never the invoking process's cwd)
         ledger = self.tmp / "fresh.tsv"
-        r = self.cli("record", "unsloth-session", "evidence.txt",
-                     str(ledger), "--now", "1000", cwd=other)
+        r = self.cli("record", "unsloth-session", "elsewhere.txt",
+                     str(ledger), "--now", "1000", cwd=Path(tempfile.mkdtemp()))
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("evidence-missing", r.stderr)
         self.assertFalse(ledger.exists())
@@ -197,9 +206,14 @@ class CredentialEvidence(unittest.TestCase):
         ev.write_text("scan-body\n")
         r = self.cli("record", "unsloth-session", "rel-evidence.txt",
                      str(self.tmp / "fresh.tsv"), "--now", "1000",
-                     cwd=tempfile.mkdtemp())
+                     cwd=self.tmp)
         self.assertEqual(r.returncode, 0, r.stderr)
-        out = self.cli("check", str(self.tmp / "fresh.tsv"), "604800")
+        # the row must store the canonical absolute path, so a check from
+        # a different cwd still verifies it
+        row = (self.tmp / "fresh.tsv").read_text().splitlines()[0]
+        self.assertTrue(row.split("\t")[4].startswith("/"))
+        out = self.cli("check", str(self.tmp / "fresh.tsv"), "604800",
+                       "--now", "1000")
         self.assertIn("ok: unsloth-session", out.stdout)
 
     def test_check_rejects_foreign_relative_path_row(self):
@@ -207,7 +221,7 @@ class CredentialEvidence(unittest.TestCase):
         digest = hashlib.sha256(self.evidence.read_bytes()).hexdigest()
         ledger = self.tmp / "fresh.tsv"
         ledger.write_text(
-            f"unsloth-session\t1000\t1000\t{digest}\tevidence.txt\n")
+            f"unsloth-session\t1000\t1000\t{digest}\telsewhere.txt\n")
         out = self.cli("check", str(ledger), "604800", "--now", "1000",
                        cwd=tempfile.mkdtemp())
         self.assertIn("evidence-missing: unsloth-session", out.stdout)
@@ -222,6 +236,7 @@ class CredentialEvidence(unittest.TestCase):
             f"unsloth-session\t2000000\t1000\t{digest}\t{self.evidence}\n")
         out = self.cli("check", str(ledger), "604800", "--now", "1000")
         self.assertIn("malformed-row: unsloth-session", out.stdout)
+        self.assertNotIn("ok:", out.stdout)
 
     def test_check_negative_rotate_epoch_refuses(self):
         import hashlib
@@ -231,8 +246,9 @@ class CredentialEvidence(unittest.TestCase):
             f"unsloth-session\t-5\t-5\t{digest}\t{self.evidence}\n")
         out = self.cli("check", str(ledger), "604800", "--now", "1000")
         self.assertIn("malformed-row: unsloth-session", out.stdout)
+        self.assertNotIn("ok:", out.stdout)
 
-    def test_check_duplicate_row_fails(self):
+    def test_check_duplicate_row_fails_closed(self):
         import hashlib
         digest = hashlib.sha256(self.evidence.read_bytes()).hexdigest()
         ledger = self.tmp / "dup.tsv"
@@ -241,7 +257,8 @@ class CredentialEvidence(unittest.TestCase):
             f"unsloth-session\t1000\t1000\t{digest}\t{self.evidence}\n")
         out = self.cli("check", str(ledger), "604800", "--now", "1000")
         self.assertIn("duplicate-row: unsloth-session", out.stdout)
-        self.assertIn("ok: unsloth-session", out.stdout)
+        self.assertNotIn("ok:", out.stdout,
+                         "a ledger with duplicate rows is untrustworthy")
 
     def test_check_ola_zero_disables_stale_only(self):
         import hashlib
@@ -252,6 +269,18 @@ class CredentialEvidence(unittest.TestCase):
         out = self.cli("check", str(ledger), "0", "--now", "2000")
         self.assertNotIn("stale:", out.stdout)
         self.assertIn("ok: unsloth-session", out.stdout)
+
+    def test_check_garbage_scan_epoch_refuses(self):
+        # scan_epoch is not consulted for freshness but is part of the
+        # row grammar: a garbage field means the row is not trustworthy
+        import hashlib
+        digest = hashlib.sha256(self.evidence.read_bytes()).hexdigest()
+        ledger = self.tmp / "badsCan.tsv"
+        ledger.write_text(
+            f"unsloth-session\t1000\tNaN\t{digest}\t{self.evidence}\n")
+        out = self.cli("check", str(ledger), "604800", "--now", "1000")
+        self.assertIn("malformed-row: unsloth-session", out.stdout)
+        self.assertNotIn("ok:", out.stdout)
 
 
 if __name__ == "__main__":
