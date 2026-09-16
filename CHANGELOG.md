@@ -8,6 +8,27 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Launch-session provider key argv transit eliminated** (docs/records/2026-09-16-launchsession-key-argv-elimination.md):
+  the opencode executor branch of `automation/lib/launch-session.sh`
+  spawned the child via `env "KEY=<value>"`, putting the provider key
+  VALUE on env(1)'s argv (readable in `/proc/<pid>/cmdline` for env's
+  pre-exec lifetime; the child's own argv was always clean). The spawn
+  is now a literal per-provider prefix assignment
+  (`KIMI_API_KEY="$oc_key" ... "${oc_cmd[@]}"`) over a command array —
+  no intermediate argv, and the launcher's own environment stays
+  untouched for the other legs. Test-first in
+  `automation/tests/test-ocgo-launch.py`: an argv-recording env stub
+  pins all three provider legs (opencode-go/kimi/zai) red under the old
+  spawn, green under the prefix, with key delivery asserted intact.
+
+- **Probe-model-route token file mode enforced** (docs/records/2026-09-16-probe-token-mode-check.md):
+  `scripts/probe-model-route` `reachable()` now stats the reviewer conf's
+  `token-file` before reading and refuses (ValueError, one-file exit 1)
+  anything not exactly 0600, closing the loose-perm-secret hole that the
+  kimi/ocgo/zai readers in `automation/lib/model.sh` already closed;
+  test-first (`tests/scripts/test-probe-model-route.py`
+  `ProbeTokenMode`: 0644 refusal + 0600 control with a stubbed urlopen).
+
 - **Notify-seam token argv exposure closed** (docs/records/2026-09-16-notify-token-argv-exposure.md):
   `automation/lib/notify.sh` telegram and webhook sends now carry the
   secret-bearing URL through the stdin curl config (`curl -K -`,
