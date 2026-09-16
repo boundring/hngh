@@ -12,11 +12,17 @@
 #
 # Mechanical form: join continuation lines, classify every curl in
 # jobs/credential-health.sh. Each known key gate (unsloth /v1/models,
-# kimi /models) must appear in exactly one curl that
-# carries "Authorization: Bearer"; the deck /health curl is the single
-# exempt bare GET; ANY other headerless curl fails (fail-closed: a new
-# probe with a new endpoint var must authenticate or update this
-# exemption list consciously).
+# kimi /models, ocgo /models) must appear in exactly one curl invoked
+# with the stdin config (`-K -`) fed by a
+# `printf 'header = "Authorization: Bearer %s"\n'` directive (the
+# 2026-09-16 argv-hygiene conversion: the secret never rides argv —
+# docs/records/2026-09-16-notify-token-argv-exposure.md and its
+# credential-health follow-up). A curl record carrying "Authorization:"
+# on argv is a hard failure (regression guard). The deck /health curl is
+# the single exempt bare GET; ANY other non-stdin-config curl fails, and
+# the number of probed gates may not exceed the number of Bearer
+# directives (fail-closed: a new probe with a new endpoint var must
+# authenticate or update this exemption list consciously).
 #
 # Hermetic: static grep of one file; no network, no state.
 set -u
@@ -46,27 +52,52 @@ for line in text.splitlines():
 PY
 )
 
-# per-known-gate: exactly one authed curl per key-gated endpoint var
+# per-known-gate: exactly one stdin-config curl per key-gated endpoint var
 for var in 'UNSLOTH_URL' 'kimi_models_url' 'ocgo_models_url'; do
   n="$(printf '%s\n' "${curls[@]}" | grep -c "\$${var}" || true)"
   ck "exactly one curl probes \$$var" "1" "$n"
-  h="$(printf '%s\n' "${curls[@]}" | grep "\$${var}" | grep -c 'Authorization: Bearer' || true)"
-  ck "the \$${var} probe is authenticated" "1" "$h"
+  k="$(printf '%s\n' "${curls[@]}" | grep "\$${var}" | grep -c ' -K ' || true)"
+  ck "the \$${var} probe uses the stdin curl config" "1" "$k"
+done
+
+# argv regression guard: no curl record may carry the header on argv —
+# after the join, the only legitimate "Authorization: Bearer" lines are
+# the printf stdin-config directives, which are not curl records.
+for c in "${curls[@]}"; do
+  case "$c" in *'Authorization:'*) echo "FAIL: header on curl argv: $c"; fails=$((fails + 1)) ;; esac
+done
+
+# one printf Bearer directive per probed gate (the $var feeds the stdin
+# header; the key vars are tok/kimi_key/ocgo_key)
+n_dir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file" || true)"
+ck "exactly three stdin Bearer directives" "3" "$n_dir"
+for kv in '"$tok"' '"$kimi_key"' '"$ocgo_key"'; do
+  n="$(grep -cF "printf 'header = \"Authorization: Bearer %s\"\\n' $kv" "$file" || true)"
+  ck "stdin Bearer directive present for $kv" "1" "$n"
 done
 
 # the single documented exemption: bare deck /health GET, no key gate
 n="$(printf '%s\n' "${curls[@]}" | grep -c '\$deck_url/health' || true)"
 ck "exempt bare probes == 1 (deck /health, no key gate)" "1" "$n"
 
-# fail-closed catch-all: every remaining curl must be authenticated
+# fail-closed catch-all: every remaining curl must use the stdin config,
+# and directives must cover every probed gate (a new key-gated probe
+# without a directive cannot hide)
 headerless=0
 for c in "${curls[@]}"; do
   case "$c" in *'$deck_url/health'*) continue ;; esac
-  case "$c" in *'Authorization: Bearer'*) continue ;; esac
+  case "$c" in *' -K '*) continue ;; esac
   headerless=$((headerless + 1))
   echo "FAIL: headerless curl against non-exempt endpoint: $c"
 done
 ck "headerless non-exempt curls == 0" "0" "$headerless"
+n_gates=0
+for c in "${curls[@]}"; do
+  case "$c" in *'$deck_url/health'*) continue ;; esac
+  n_gates=$((n_gates + 1))
+done
+ck "Bearer directives cover every probed gate" "yes" \
+  "$([ "$n_dir" -ge "$n_gates" ] && echo yes || echo no)"
 ck "suite found curl records at all (file not drifted)" "yes" "$([ "${#curls[@]}" -ge 4 ] && echo yes || echo no)"
 
 if [ "$fails" -gt 0 ]; then
