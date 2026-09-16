@@ -8,3 +8,7 @@ at 2026-09-16T10:00:39Z. Alert text: defect: "pace: stalling (0 steps in 24h; 3 
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-16T11:00:39Z re-occurred (dedup window expired)
