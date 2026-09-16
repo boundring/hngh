@@ -12,18 +12,45 @@ set -u
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/notify.sh"
 # freshness evidence (key-rotation-freshness rung, 2026-09-16): ledger of
-# machine-checkable rotate rows + OLA budget (cadence-params `credential-fresh-ola`,
-# env overrides win). Evidence rows digest the token file — values never stored.
+# machine-checkable rotate rows + OLA budget (cadence-params
+# `credential-fresh-ola`, env overrides win). params.sh is sourced BEFORE
+# the get_param call (an earlier revision called it first: the OLA then
+# silently became empty via command-not-found). Evidence rows digest the
+# token file — values never stored.
+. "$AUTOMATION_ROOT/lib/params.sh"
 freshness_ledger="${CREDENTIAL_FRESHNESS_LEDGER:-$HOME/.hngh-automation/credential-freshness.tsv}"
 freshness_ola="${CREDENTIAL_FRESHNESS_OLA:-$(get_param credential-fresh-ola 604800)}"
-. "$AUTOMATION_ROOT/lib/params.sh"
+case "$freshness_ola" in
+  ''|*[!0-9]*) freshness_ola=604800 ;; # fail-open to the designed bound: a malformed OLA must not turn every future run into a freshness alert storm
+esac
 report_root="${HNGH_REPORT_ROOT:-$HNGH_HOME}" # hngh repo by default; overridable for tests
 report_queue="python3 $HNGH_HOME/scripts/report-queue"
 
 # file an alert row + body in the hngh report ledger and breadcrumb it.
+# The ledger is git-tracked and publicly pushed, so rows are deduped
+# (2026-09-16 public-push exposure fix): identity = credential + finding
+# shape (digits normalized) folds repeated identical findings into one
+# row's ×N marker forever; evidence = the observed fact (http code when
+# present, else a checksum of the finding text) means a persisting
+# condition re-fires only when the underlying failure changes. Alert text
+# is public: no absolute $HOME paths (paths arrive pre-redacted from
+# credential-evidence.py; here they are tilde-redacted as a backstop).
+redact_home() { # text -> text with $HOME -> ~
+  local text="$1"
+  printf '%s' "${text//"$HOME"/\~}"
+}
+
 alert() { # name failure -> 0
   local name="$1" failure="$2"
-  HNGH_REPORT_ROOT="$report_root" $report_queue --add alert "credential $name: $failure" &&
+  local ident ev
+  failure="$(redact_home "$failure")"
+  ident="credential:${name}:$(printf '%s' "$failure" | sed -E 's/[0-9]{4,}/N/g')"
+  case "$failure" in
+    *"http="*) ev="$(printf '%s' "$failure" | sed -n 's/.*http=\([0-9]*\).*/http=\1/p')" ;;
+    *) ev="$(printf '%s' "$failure" | cksum | cut -d' ' -f1)" ;;
+  esac
+  HNGH_REPORT_ROOT="$report_root" $report_queue --add alert "credential $name: $failure" \
+    --identity "$ident" --evidence "$ev" --window 0 &&
     breadcrumb "$JOB_NAME" "alert" "credential $name: $failure"
 }
 
@@ -55,7 +82,8 @@ elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
     if ok "$after"; then
       # freshness evidence at rotate time: row pins the token file's digest,
       # so any later unrecorded rotation shows up as a verification finding.
-      python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)" >/dev/null 2>&1
+      # stderr stays visible (a digest refusal must not vanish into /dev/null).
+      python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)"
       breadcrumb "$JOB_NAME" "credential-health" "session token was expired; rotated ok (http=$after)"
       alert "unsloth-token" "refreshed but still http=$after after rotate"
     fi
@@ -178,7 +206,21 @@ fi
 
 # --- 7. freshness evidence (key-rotation-freshness rung, 2026-09-16) ---
 # Machine-checkable rotate/scan freshness rows (lib/credential-evidence.py).
-# Fail-closed: unverifiable evidence is an alert finding, never a silent pass.
-python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$freshness_ola" 2>/dev/null |
-  grep -Ev '^(ok:|$)' | while IFS= read -r finding; do alert "credential-freshness" "$finding"; done
+# Fail-closed: unverifiable evidence is an alert finding, never a silent
+# pass — including stderr. Steady state: the first healthy-probe run seeds
+# the ledger at the live clock (bootstrap, nothing stale can pre-exist a
+# seed); only the tracked 401-rotate path re-records afterwards. So a
+# `stale` finding means no tracked rotation within the OLA, and
+# `hash-mismatch` means the token changed outside the tracked path.
+# Findings are bounded (head -N) so a degraded ledger cannot flood the
+# public repo; identity dedup in alert() folds repeats into ×N.
+if [ ! -s "$freshness_ledger" ]; then
+  # Bootstrap: no row exists yet, so recording at the live clock is the
+  # honest epoch; a stale epoch-0 row can only be a legacy bug artifact.
+  # Token VALUE is never read here — record() digests the file itself.
+  python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)"
+  breadcrumb "$JOB_NAME" "credential-health" "freshness ledger seeded (bootstrap)"
+fi
+python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$freshness_ola" |
+  grep -Ev '^(ok:|$)' | head -n 5 | while IFS= read -r finding; do alert "credential-freshness" "$finding"; done
 exit 0

@@ -1,6 +1,38 @@
 # Changelog
 
+## 2026-09-16
+
+- fix: report-ledger public-push exposure closed (decision record
+  docs/records/2026-09-16-report-ledger-public-push-exposure.md) —
+  credential-health alert() now dedups via --identity
+  credential:<name>:<shape> + --evidence (observed fact; unchanged
+  evidence suppresses, changed evidence re-fires, --window 0), so a
+  persisting condition folds into one row's ×N marker instead of one
+  public row per 5m run; path-bearing credential-evidence.py findings
+  (ledger-missing / evidence-missing / hash-mismatch) and alert text
+  are tilde-redacted ($HOME -> ~) before reaching the git-tracked,
+  publicly pushed ledger; hygiene.py report root pinned structurally to
+  the kernel repo (parent of automation/) — the cwd fallback had forked
+  a second ledger at automation/docs/project/ whose two stray rows are
+  migrated to the kernel ledger and the fork reverted. Tests:
+  test-credential-alert-dedup.sh (new, sources the real alert() seam
+  against a fake queue), test-credential-evidence.py path-leak case,
+  test-hygiene.py hermetic kernel-root pin case.
+
 ## 2026-09-15
+
+- docs: consideration deliverables promoted from .agent-scratch/consider/
+  into the committed evidence ledger (docs free-commit lane) —
+  docs/design/hnnghh-minimal-core-spec.md (minimal-core design exercise;
+  d4-principles correction sidecar folded into its errata paragraph:
+  patrol gate-crumb TTL exists, GATE_CRUMB_TTL_S=86400 in
+  jobs/patrol.py, and cadence tier count is 8 live tiers) plus six
+  docs/design/consider/ copies (memory-systems-survey.md,
+  memory-bridge-design.md, research-lifecycle-audit.md,
+  refactor-assessment.md, email-notification-comparison.md,
+  pivot-synthesis.md). Copies per governed-fleet.md promotion
+  convention (scratch originals retained); internal cross-references
+  repointed to the promoted paths. No code changed.
 
 - feat: research lessons + routes surfaces admitted to patrol and
   registry (GAP closure) — patrol-routes.tsv `research-ledger` row
