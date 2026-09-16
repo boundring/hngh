@@ -333,7 +333,8 @@ def story_section(day):
                 "automation/digest/%s.md (Deck A)" % day,
                 "Outside the wire, %d dispatch block(s) crossed; the "
                 "loudest line was %s UTC: \"%s\"." % (
-                    len(items), lead[0][0], lead[0][1][:140])))
+                    len(items), lead[0][0],
+                    dl.scrub_paths(lead[0][1][:140]))))
     blockers = day_blockers(day)
     if blockers:
         bits = "; ".join("%s stalled (%s, x%s) and now sits %s"
