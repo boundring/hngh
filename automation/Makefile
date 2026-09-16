@@ -131,6 +131,7 @@ test:
 	python3 -B jobs/agent-supervision.py --selfcheck
 	bash tests/test-model-deck-leg.sh
 	bash tests/test-model-remote-token-mode.sh
+	bash tests/test-model-reply-scrub.sh
 
 	bash tests/test-overnight-shutdown.sh
 	bash tests/test-overnight-forethought.sh
