@@ -28,10 +28,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "dashboard", "system-ops.json")
 
 TEMP_CAP = 16  # sensors can list dozens of chips; the tab needs the hot few
-HNGH_ROOT = (os.environ.get("HNGH_HOME")
-             or os.environ.get("HNGH_REPO")
-             or "~/Projects/etc/hngh")
-REPORTS_MD = os.path.join(HNGH_ROOT, "docs", "project", "reports.md")
+
+
+def report_ledger_path(root=None):
+    """docs/project/reports.md inside the hngh repo: explicit root arg
+    or HNGH_HOME/HNGH_REPO wins, else the repo that ships this script
+    (automation/ -> its parent). Never a hardcoded machine path."""
+    if root is None:
+        root = (os.environ.get("HNGH_HOME")
+                or os.environ.get("HNGH_REPO")
+                or os.path.dirname(ROOT))
+    return os.path.join(root, "docs", "project", "reports.md")
+
+
+REPORTS_MD = report_ledger_path()
 SESSIONS_JSON = os.path.join(ROOT, "dashboard", "sessions.json")
 BACKUP_ROWS = 6  # recent config-backup runs surfaced on the backups card
 

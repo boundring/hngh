@@ -123,7 +123,7 @@ Peer-review finding 1 counted ~18 user-home-style paths baked into job code.
 rest, for a later slice (env twins already exist where noted):
 
 - `jobs/agent-supervision.py:53`, `jobs/dashboard-self-review.py:44`,
-  `jobs/research-feed.py:34`, `jobs/system-feed.py:32`,
+  `jobs/research-feed.py:34`,
   `jobs/agent-watchdog.sh:27`, `jobs/oversight-tick.sh:24`,
   `jobs/system-awareness.sh:22`, `cadence/day/01-lesson-harvest.sh:27` —
   `HNGH_REPO`/kernel default `~/Projects/etc/hngh`.

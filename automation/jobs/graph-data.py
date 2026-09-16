@@ -19,6 +19,13 @@ from pathlib import Path
 # Node states -> viewer colors (healthy/stale/alerting/neutral).
 STATES = ("healthy", "stale", "alerting", "neutral")
 
+# 'patrol:<registry-id>' occurrences in free ledger text: the token must
+# start at the string start or after whitespace/punctuation (never
+# mid-path like /home/x/patrol:not-a-surface), and the id may not itself
+# contain a colon (registry ids are single tokens).
+PATROL_TOKEN_RE = re.compile(
+    r"(?:^|[^\w:-])patrol:([A-Za-z0-9][A-Za-z0-9_-]*)")
+
 SEAM_GUARDS = {
     "op-cli": ("lib/credentials.sh",
                ["test-credentials.py", "test-doc-secrets.py"]),
@@ -485,6 +492,15 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
              ("automation/tests/%s%s" % (guard, "" if exists else " MISSING")))
 
     # --- patrols + surfaces (patrol-routes.tsv + reports.md alerts) ---
+    # The ledger row shape is | ts | kind | id | first line | body |
+    # (report-queue): kind=alert rows carry free first-line text that may
+    # name a patrol surface (router/patrol FAILs) and may carry absolute
+    # paths (emitter-side redaction is best-effort only). Extract only
+    # 'patrol:<registry-id>' tokens anchored at string start or after
+    # whitespace/punctuation, then intersect with the registry below, so
+    # raw text can never mint a node id nor leak into the served graph.
+    # Legacy rows (kind=patrol-fail, surface token in the id column)
+    # keep their direct parse.
     alerting = set()
     reports = dashboard_dir / "reports.md"
     if reports.exists():
@@ -493,7 +509,14 @@ def build(registries_dir, dashboard_dir, telemetry_db, config_env, now=None,
             if not line.startswith("|"):
                 continue
             cols = [c.strip() for c in line.split("|")]
-            if len(cols) >= 4 and cols[1] >= cutoff and cols[3].startswith("patrol:"):
+            # leading pipe -> cols[0] is ''; ts=1, kind=2 for both formats
+            if len(cols) < 5 or cols[1] < cutoff:
+                continue
+            if cols[2] == "alert":
+                for m in PATROL_TOKEN_RE.finditer(cols[4]):
+                    alerting.add(m.group(1))
+            elif (cols[2] == "patrol-fail"
+                  and cols[3].startswith("patrol:")):
                 alerting.add(cols[3].split(":", 1)[1])
     seen_surfaces = set()  # surfaces repeat across patrol rows (e.g.
     # kernel-gate and services are each walked by two patrols); the

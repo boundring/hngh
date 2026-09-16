@@ -101,6 +101,8 @@ test:
 	python3 -B tests/test-viz-schema-history.py
 	python3 -B tests/test-history-feed.py
 	python3 -B tests/test-fleet-feed.py
+	python3 -B tests/test-graph-data.py
+	python3 -B tests/test-system-feed.py
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-report-queue-redaction.py
 	bash tests/test-config-backup-fail-redact.sh
