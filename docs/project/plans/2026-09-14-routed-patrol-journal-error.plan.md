@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:journal-error -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:journal-error -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:journal-error`
@@ -12,3 +12,4 @@ at 2026-09-14T02:00:20Z. Alert text: patrol journal-error: propose on kglobalacc
 ## Occurrences
 
 - 2026-09-14T03:00:39Z re-occurred (dedup window expired)
+- 2026-09-16T13:00:39Z re-occurred (dedup window expired)
