@@ -8,3 +8,7 @@ at 2026-09-16T01:00:40Z. Alert text: plan 2026-09-13-governed-fleet-consolidatio
 
 - [ ] Delve: open research subject fail-20260916-overnight-plan-accept-blocked-2026-09-13-governed-fleet-consolidation for overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation; record disposition; then fix or park
       Verification: research subject fail-20260916-overnight-plan-accept-blocked-2026-09-13-governed-fleet-consolidation present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-16T02:00:13Z re-occurred (dedup window expired)
