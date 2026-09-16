@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=overnight:plan-accept-gate:kernel  cause=obsolete disposed=2026-09-09T06:00:16Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=overnight:plan-accept-gate:kernel  cause=obsolete disposed=2026-09-09T06:00:16Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-16T22:00:19Z reason=identity re-occurred 7 times without landing; operator escalation stands -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`
@@ -17,3 +17,4 @@ at 2026-09-09T03:00:16Z. Alert text: plan acceptance blocked: kernel make test F
 - 2026-09-09T07:00:16Z re-occurred (dedup window expired)
 - 2026-09-09T08:00:16Z re-occurred (dedup window expired)
 - 2026-09-09T09:00:16Z re-occurred (dedup window expired)
+- 2026-09-16T22:00:19Z re-occurred (dedup window expired)
