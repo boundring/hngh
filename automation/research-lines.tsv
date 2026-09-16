@@ -154,7 +154,7 @@ fail-20260915-Does-the-git-reflog-for-origin-main-arou	reviewed	2026-09-15T19:49
 fail-20260915-FOLLOWON	reviewed	2026-09-16T03:19:16Z	FOLLOWON:
 fail-20260915-Does-the-hngh-TUI-render-loop-use-altern	reviewed	2026-09-15T23:09:09Z	Does the `hngh` TUI render loop use alternate-screen mode, and if so, does it implement a "last K rows" windowing slice before drawing?
 fail-20260915-On-host-touch-which-exact-file-and-line-	reviewed	2026-09-16T07:49:27Z	On host touch, which exact file and line in ~/Projects/etc/hngh consumes the make exit code, and is it a `set -e` abort or an explicit status branch?
-fail-20260915-What-make-version-does-the-repo-s-toolch	planned	2026-09-15T13:07:05Z	What make version does the repo's toolchain use, and does its failure-line format match `make: *** [target] Error N` for reliable failing-target extraction?
+fail-20260915-What-make-version-does-the-repo-s-toolch	crystallized	2026-09-16T09:12:27Z	What make version does the repo's toolchain use, and does its failure-line format match `make: *** [target] Error N` for reliable failing-target extraction?
 fail-20260915-Does-the-file-structure-at-home-bricker-	reviewed	2026-09-15T19:03:27Z	Does the file structure at ~/Projects/etc/hngh contain a JSON or YAML record with keys `parse_pass` and `operator_override` for the run tag 2026-09-09-stall-recovery-and-operator-surfaces?
 fail-20260915-If-no-structured-artifact-exists-does-th	reviewed	2026-09-16T04:51:23Z	If no structured artifact exists, does the source note [[sources/hngh-2026-09-09-stall-lessons]] contain prose that explicitly describes a failure mode where parse_pass was true but operator_override was false?
 patrol-20260915-manga-manga-stale	planned	2026-09-15T15:00:37Z	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
@@ -179,3 +179,5 @@ fail-20260916-Does-the-hngh-kernel-retain-any-mainline	planned	2026-09-16T05:18:
 fail-20260916-What-is-the-exact-format-string-used-by-	planned	2026-09-16T05:18:32Z	What is the exact format string used by the hngh OOM handler, as extracted from source via `grep -rn "Out of memory" ~/Projects/etc/hngh --include='*.c'`?
 fail-20260916-Does-the-hngh-automation-CI-workflow-cur	planned	2026-09-16T08:36:26Z	Does the hngh-automation CI workflow currently import the kernel verdict logic or duplicate it inline?
 fail-20260916-Is-there-a-VERDICT-RULE-VERSION-constant	planned	2026-09-16T08:36:26Z	Is there a `VERDICT_RULE_VERSION` constant defined in the kernel repo to facilitate drift detection?
+patrol-20260916-automation-gate-gate-stale	planned	2026-09-16T09:00:40Z	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260916-feeds-feed-stale	planned	2026-09-16T09:00:40Z	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
