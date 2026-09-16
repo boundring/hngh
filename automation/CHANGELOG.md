@@ -2,6 +2,22 @@
 
 ## 2026-09-16
 
+- harden: reply-side no-echo scrub + no-paths house law on the news
+  lane (test-first, red-proven; record:
+  docs/records/2026-09-16-model-reply-path-scrub.md) — closing the
+  llc-news-prompt-audit open question: `lib/model.sh` has NO system
+  prompt on any leg (`_json_body` sends a single user message), so
+  hygiene law lives with the caller; `news-articles.py model_reply`
+  now runs the same `PATH_TOKEN_RE` seam over the reply after the
+  fence strip (input-side scrub alone cannot stop a model echoing a
+  path it saw, inferred, or hallucinated), and `build_prompt` gains a
+  no-paths house law (worded without the literal redaction marker so
+  the section-8 exact-marker-count pin stays exact). Pinned in
+  `tests/test-news-articles.sh` section 8: a stubbed pathy model draft
+  comes back with zero path tokens, exactly three identity-seam
+  markers, prose kept. model.sh itself untouched (kernel-surface
+  change would need the ceremony; chain-wide reply scrub is a
+  follow-up).
 - harden: credential-evidence integrity close-outs on the repaired rung
   (test-first; lib/credential-evidence.py + hermetic suite only) —
   duplicate credential names now fail closed (every instance reports

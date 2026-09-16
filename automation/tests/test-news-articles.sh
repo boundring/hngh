@@ -176,10 +176,15 @@ print(("ok: " if ok else "FAIL: ") + "public edition links the article")
 raise SystemExit(0 if ok else 1)
 PY
 
-# --- 8. no-echo guard: host-path tokens never ride the model prompt
-# (prompt-assembly audit 2026-09-16: digest/ledger/source text is host
-# data; scrub at the build_prompt seam, fail-closed redaction, pinned
-# by the captured stub request bodies).
+# --- 8. no-echo guard: host-path tokens never ride the model prompt or
+# the model REPLY (prompt-assembly audit 2026-09-16: digest/ledger/
+# source text is host data; scrub at the build_prompt seam. Model-hygiene
+# audit 2026-09-16: lib/model.sh sends a single user message with no
+# system prompt on any leg, and the input-side scrub cannot stop a model
+# from echoing a path it saw, inferred, or hallucinated -- so model_reply
+# runs the same seam over the reply, and the prompt carries a no-paths
+# house law. Fail-closed redaction both directions; pinned by the
+# captured stub request bodies).
 setup 6
 PATHY_DIGEST="## 0400 $DATE
 _sources: gdelt | model: procedural ranking_
@@ -223,6 +228,22 @@ ck("clean prose passes through", "Fixture breach escalate"
    in na.build_prompt({"title": "Fixture breach escalate",
                        "tag": "CRITICAL", "place": "", "url": ""},
                       None, ""))
+# output-side no-echo guard (model-hygiene audit 2026-09-16): the input
+# scrub cannot stop a model from echoing a path it saw, inferred, or
+# hallucinated, so model_reply must run the SAME PATH_TOKEN_RE seam over
+# the reply before it becomes an article body. Stub the model seam with
+# a pathy draft; the reply must come back redacted, prose kept.
+os.environ["NEWS_ARTICLES_MODEL_CMD"] = (
+    "printf 'audit notes at /home/bricker/h.txt and /tmp/vr-test-42;"
+    " tilde ~/.hngh/newspaper/x.md. kept prose.'")
+reply = na.model_reply("prompt", "local")
+ck("model_reply scrubs echoed /home/... tokens", "/home/bricker" not in reply)
+ck("model_reply scrubs echoed /tmp/... tokens", "/tmp/vr-test" not in reply)
+ck("model_reply scrubs echoed ~/.hngh tokens", "~/.hngh" not in reply)
+ck("model_reply carries the identity-seam markers",
+   reply.count("[redacted path]") == 3)
+ck("model_reply keeps ordinary prose", "kept prose" in reply)
+os.environ.pop("NEWS_ARTICLES_MODEL_CMD", None)
 raise SystemExit(1 if bad else 0)
 PY
 out="$(run_gen "MODEL_PIN=local" | wc -l)"
