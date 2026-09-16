@@ -12,3 +12,4 @@ at 2026-09-14T21:00:12Z. Alert text: patrol handoffs: bad-execution on agent-han
 ## Occurrences
 
 - 2026-09-14T22:00:13Z re-occurred (dedup window expired)
+- 2026-09-16T00:00:20Z re-occurred (dedup window expired)
