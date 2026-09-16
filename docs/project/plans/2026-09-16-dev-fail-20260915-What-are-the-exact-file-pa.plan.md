@@ -4,21 +4,19 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line on locating the canonical verdict rule paths and verifying Make failure-line format compatibility, grounding the automation's CI verification logic in concrete file evidence.
+## Rationale
+This plan implements the research line `fail-20260915-What-make-version-does-the-repo-s-toolch` by creating a robust failure-extraction script that tolerates recursive make invocations (`make[N]: *** [target] Error N`) and verifying its syntax.
 
 ## Steps
 
-- [ ] Create a script `scripts/verify-verdict-rule-paths.sh` that checks for the existence of candidate verdict rule files (e.g., `kernel/verdict.py`, `.github/workflows/ci-verify.yml`) and logs their presence or absence.
-  Verification: bash -n scripts/verify-verdict-rule-paths.sh
+- [ ] Create the failure extraction script at `scripts/extract_make_failures.sh` with a regex pattern that matches optional recursive depth markers (e.g., `make[0-9]*: \*\*\* \[.*\] Error [0-9]+`) to handle nested make invocations.
+  Verification: bash -n scripts/extract_make_failures.sh
 
-- [ ] Create a script `scripts/extract-make-errors.sh` that parses Make output for recursive error lines matching the pattern `make[N]: *** [target] Error M` where N >= 1, using standard shell tools.
-  Verification: bash -n scripts/extract-make-errors.sh
+- [ ] Add a test fixture file at `tests/fixtures/make_recursive_failure.log` containing sample lines for single-level (`make: *** [target] Error 1`) and recursive (`make[1]: *** [nested/target] Error 2`) make failures.
+  Verification: grep -q "make\[1\]: \*\*\* \[nested/target\] Error 2" tests/fixtures/make_recursive_failure.log
 
-- [ ] Add a test file `tests/test-verdict-rule-paths.sh` that runs the path verification script against a mock directory structure to confirm it correctly identifies present and absent files.
-  Verification: make test
+- [ ] Create a test script at `tests/test_extract_make_failures.sh` that runs the extraction logic against the fixture file and asserts that both single-level and recursive error lines are captured.
+  Verification: bash -n tests/test_extract_make_failures.sh
 
-- [ ] Add a test file `tests/test-make-error-extraction.sh` that feeds sample recursive Make error output to the extraction script and asserts correct parsing of nested targets.
-  Verification: make test
-
-- [ ] Create a digest entry `digest/VERDICT-RULE-PATHS-RECORD.md` documenting the resolved file paths for the canonical verdict rule and the embedded CI copy, citing the verification results from the scripts.
-  Verification: grep -q "verdict.py" digest/VERDICT-RULE-PATHS-RECORD.md
+- [ ] Execute the test script to verify that the extraction logic correctly identifies failing targets from the provided fixture data without relying solely on the literal `make:` prefix.
+  Verification: bash tests/test_extract_make_failures.sh
