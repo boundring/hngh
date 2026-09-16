@@ -80,12 +80,14 @@ test:
 	python3 -B tests/test-routes-view.py
 	python3 -B tests/test-dashboard-selfreview-ledger-skew.py
 	python3 -B tests/test-digest-html.py
+	python3 -B tests/test-digest-append-scrub.py
 	python3 -B tests/test-gdelt-news.py
 	python3 -B tests/test-news-desk.py
 	bash tests/test-news-articles.sh
 	python3 -B tests/test-newspaper-window.py
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-manga-collage.py
+	python3 -B tests/test-manga-vision-token-mode.py
 	python3 -B tests/test-narrative-ledger.py
 	python3 -B tests/test-feedback-apply.py
 	python3 -B tests/test-correction-linkage.py
@@ -128,6 +130,7 @@ test:
 	bash tests/test-news-screen.sh
 	python3 -B jobs/agent-supervision.py --selfcheck
 	bash tests/test-model-deck-leg.sh
+	bash tests/test-model-remote-token-mode.sh
 
 	bash tests/test-overnight-shutdown.sh
 	bash tests/test-overnight-forethought.sh
@@ -161,6 +164,7 @@ test:
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-credential-health-argv.sh
+	bash tests/test-probe-token-mode.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
 	bash tests/test-permissions.sh

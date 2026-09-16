@@ -100,6 +100,22 @@ class TestRank(unittest.TestCase):
             if "[aid]" in l or "PROVIDE-AID" in l:
                 self.assertFalse(l.startswith("CRITICAL: "))
 
+    def test_block_scrubs_path_tokens(self):
+        # digest writer guard (mega-block census 2026-09-16): the block
+        # is deck A on the dashboard/email/newspaper chain; actor tokens
+        # come from wire data, but any host path that ever transits an
+        # item field must not survive the render
+        rows = list(FIXTURE_ROWS)
+        pathy = _row("8", TS, "19", "190", "4", -10.0, 10, -4.0,
+                     "/home/aubergine", "~/dots/vimrc",
+                     "https://example.test/pathy-actors-story")
+        rows.append(pathy)
+        items = gn.rank_rows("\n".join(rows), "0400")
+        block = gn.render_block(items, "0400", "2026-09-12")
+        for token in ("/home/aubergine", "~/dots", "/tmp/hngh"):
+            self.assertNotIn(token, block)
+        self.assertIn("pathy-actors-story", block)  # kept, redacted
+
 
 class TestCli(unittest.TestCase):
     def _run(self, tmp, export=None, lastupdate=None):

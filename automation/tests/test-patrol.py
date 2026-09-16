@@ -752,6 +752,31 @@ class Patrol(unittest.TestCase):
             digest.count("## The rounds") + 1,
             (self.auto / "digest" / "2026-09-12.md").read_text()
             .count("## The rounds"))
+
+    def test_morning_rounds_redact_pathy_fail_details(self):
+        """Digest writer guard (mega-block writer census 2026-09-16):
+        the morning rounds block quotes FAIL detail strings into the
+        daily digest; a pathy detail (home path, /tmp, tilde token)
+        must not survive into digest.md -- redaction, not dropping."""
+        self._journal_setup()
+        # unknown err+ lines carry the raw journal message into the
+        # FAIL detail (the live 2026-09-16 shape: journal host detail
+        # verbatim); the fixture message is pathy in all three kinds
+        self._journal_fixture([
+            self._jline("konsole dumped core at /home/aubergine/log/k.txt",
+                        3, ident="konsole"),
+            self._jline("store walker lost /tmp/x.store and crumb ~/y",
+                        3, ident="konsole"),
+        ])
+        self.run_py("--patrol", "journal-error")
+        r = self.run_py("--morning")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        digest = (self.auto / "digest" / "2026-09-12.md").read_text()
+        self.assertIn("## The rounds", digest)  # the block is live
+        for token in ("/home/aubergine", "/tmp/x.store", "~/y"):
+            self.assertNotIn(token, digest)
+        self.assertIn("[redacted path]", digest)  # kept, redacted
+
     # --- research-ledger: the harvest + routes surfaces are watched ---
     def _seed_research_ledger(self, lessons_rows="", lessons_text=None):
         """Healthy d1/d6 fixtures: lessons ledger with one fresh active

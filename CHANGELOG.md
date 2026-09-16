@@ -8,6 +8,36 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Digest mega-block writer census: every daily-digest writer routes
+  through the one scrub seam** (docs/records/2026-09-16-digest-writer-census-scrub.md):
+  complete sweep of the automation tree found four writers of
+  `archive/digest/<date>.md` (ping-hourly block + digest-ledger mega
+  line, gdelt-news block, patrol morning rounds) and seven sidecar
+  per-artifact files; `git-auto-land.py` (named by the gate) does not
+  exist anywhere in the tree, history, or homes. The three unguarded
+  writers now scrub free text through `digest-ledger.scrub_paths`
+  (the single identity seam): ping-hourly writes its block via the new
+  `automation/lib/digest-block.sh` (`append_news_block` /
+  `digest_scrub_all`), gdelt `render_block` scrubs each rendered line,
+  and patrol `morning_report` + `findings_md` scrub FAIL detail
+  strings. Red-first tests per writer (`test-digest-append-scrub.py`
+  new, `test-gdelt-news.py`, `test-patrol.py`); fix-at-writer chosen
+  over fix-at-reader so new digest readers cannot leak by default.
+
+- **Token-file reads gated to exactly 0600 (kernel reader)** (docs/records/2026-09-16-token-file-0600-gates.md):
+  `scripts/grade-interface` read the reviewer conf's `token-file` with a
+  bare `read_text()` and no permission check — a 0644 token was silently
+  trusted and sent in the Authorization header. New `read_token(kv)`
+  helper stats the file first and fails closed (`token file too open
+  (mode NNNN); chmod 0600 required`, exit 1) before any read or send;
+  the value travels through a `with`-block read. Test-first
+  (`tests/scripts/test-grade-interface-token-mode.py`, mirroring
+  `ProbeTokenMode`): 0644 refusal, 0600 control, missing-file loudness.
+  The three automation-side readers of the same class
+  (manga-vision.py, model.sh remote_chat, credential-health.sh
+  probe_token) landed in the free-commit lane with their own red-proven
+  suites; landed through the ceremony as bf5e9b75.
+
 - **Launch-session provider key argv transit eliminated** (docs/records/2026-09-16-launchsession-key-argv-elimination.md):
   the opencode executor branch of `automation/lib/launch-session.sh`
   spawned the child via `env "KEY=<value>"`, putting the provider key
