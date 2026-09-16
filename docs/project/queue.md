@@ -12,7 +12,7 @@ id); this file is the rotation state.
 id	status	title	evidence
 wake-mutation-lane	done	Certificate-bound wake mutation lane	landed 2026-09-13 through the certificate ceremony: :wake-mutation in the closed mutation vocabulary (src/adapter/mutation.lisp, src/domain/governance.lisp, tests/adapter/test-mutation.lisp, tests/domain/test-governance.lisp) binding the r17 wake surface; docs/records/2026-09-13-wake-mutation-lane-landing.md
 node-lattice-admission	done	Node-lattice admission rung	rotated 2026-09-15
-bridge-operator-host	queued	Bridge-as-operator-host (run → worker → review → certify)	backlog entry; bridge README
+bridge-operator-host	done	Bridge-as-operator-host (run → worker → review → certify)	rotated 2026-09-16: certificate-gated session commits live through scripts/omp-bridge --ceremony (candidates 054f08f0, 9e0779b0, cf36b6f2 this week, ceremony-drive auto-push); bridge surface + worker-driver refusal + r13 reviewer + :model loadout all present; session watchdog visibility via --register handoff ledger; docs/agent-notes/jcode-orientation.md
 doc-sync-loop	done	Documentation-sync loop (make numbers guard)	rotated 2026-08-25 by rotate-queue
 key-rotation-freshness	queued	Evidence-freshness + key-rotation rung	backlog entry; node-lattice risk
 credential-rotation-auto	done		folded into key-rotation-freshness (retirement lane) 2026-08-27 — Full no-operator credential/token rotation + health alerts	2026-08-26 STATE 401; folds into key-rotation-freshness
@@ -44,7 +44,9 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
 ```
 ## Next
 
-- **bridge-operator-host** — rotate next (unblocked: bridge, worker-driver refusal, r13 reviewer, and the :model loadout are all present; node-lattice-admission rotated 2026-09-15 through the ceremony, candidate 9e0779b0).
+- **key-rotation-freshness** — next queued (deps open: resource pool
+  view, key-pin registry rung 12); bridge-operator-host rotated
+  2026-09-16 through the ceremony, candidate see git log.
 
 ## Scheduling
 
@@ -107,10 +109,9 @@ review). Helps the cadence pick the right instrument.
 Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
 Gives "future" a date so a gantt can place bars.
 
-- node-lattice-admission — next rotation (wake-mutation-lane done
-  2026-09-13)
+- node-lattice-admission — DONE (rotated 2026-09-15)
 - queue-eta — DONE today (this widget is the item)
-- bridge-operator-host — after node-lattice
+- bridge-operator-host — DONE (rotated 2026-09-16)
 - timeline-events — DONE (2026-08-25)
 - others — on rotation, roughly one per cadence
 
