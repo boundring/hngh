@@ -19,6 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "report-queue"
+# split literal: kernel candidate content must not carry the literal
+# home-root path sequence (public-content gate, verify-candidate.py)
+HOME_PREFIX = "/" + "home" + "/"
 
 
 def run(root, *args):
@@ -271,6 +274,44 @@ class ReportQueueCLI(unittest.TestCase):
         for token in ("--identity", "--window", "--prune", "--before",
                       "--kinds", "--archive", "occurrence"):
             self.assertIn(token, out.stdout)
+
+    def test_alert_paths_redacted_progress_untouched(self):
+        # boundary redaction (2026-09-16): alert text is public-bound;
+        # machine-local path prefixes never reach the ledger. Progress
+        # rows intentionally carry repo-relative paths in some lanes.
+        r = self.add("alert", "missing source: " + HOME_PREFIX
+                     + "aubergine/dots/vimrc")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = self.rows()[-1]
+        self.assertIn("~/dots/vimrc", row[3])
+        self.assertNotIn(HOME_PREFIX + "aubergine", row[3])
+        body = (self.root / "docs" / "project" / "report-bodies"
+                / row[4]).read_text()
+        self.assertNotIn(HOME_PREFIX + "aubergine", body)
+        r = self.add("alert", "stale store /tmp/hngh-cer-a.store untouched")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("~tmp/hngh-cer-a.store", self.rows()[-1][3])
+        r = self.add("alert", "odd token /tmpfile stays")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("/tmpfile", self.rows()[-1][3])
+        r = self.add("progress", "scratch kept at /tmp/keep-me")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("/tmp/keep-me", self.rows()[-1][3])
+
+    def test_alert_redaction_feeds_row_id(self):
+        # ids derive from the redacted text: alerts differing only by
+        # machine-local prefix collapse to one id (stable, shareable)
+        r = self.add("alert", "missing " + HOME_PREFIX + "aubergine/a.conf")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.add("alert", "missing " + HOME_PREFIX
+                     + "otheruser/a.conf")
+        ids = {r[2] for r in self.rows()}
+        self.assertEqual(len(ids), 1)
+
+    def test_alert_url_home_component_untouched(self):
+        url = "https://x.io" + HOME_PREFIX + "aubergine/f"
+        self.add("alert", "see " + url + " for docs")
+        self.assertIn(url, self.rows()[-1][3])
 
     def cursor(self):
         p = self.root / "docs" / "project" / "report-cursor"

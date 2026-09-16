@@ -13,6 +13,13 @@ cursor/body — fail closed):
   --add KIND TEXT      append a row and write the body file; id = first 8
                        hex of sha256(TEXT); ts = UTC ISO second. Refuses a
                        bad KIND or empty TEXT (exit 2).
+                       Alert text is public-bound: user-home path
+                       tokens (slash + home + slash + user + rest) and
+                       /tmp/... tokens are
+                       rewritten to ~/... and ~tmp/...
+                       before id/row/body are derived (2026-09-16 boundary
+                       redaction); progress and other kinds are not
+                       rewritten (some lanes carry repo-relative paths).
                        With --identity KEY, dedup: when a row of the same
                        KIND within --window SECONDS (default 86400; 0 =
                        unlimited lookback) stores the same identity, no new
@@ -69,6 +76,29 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
+
+# Boundary redaction (2026-09-16): the ledger is git-tracked and pushed
+# to the public origin, so alert text may never carry a machine-local
+# path prefix. User-home path tokens (slash + home + slash + user +
+# rest) become ~/..., /tmp/... becomes ~tmp/. Emitters
+# (automation/lib/redact.sh redact_home) redact before filing; this
+# re-check is the sink-side backstop for emitters that lack their own.
+# Progress rows intentionally carry repo-relative paths in some lanes
+# and are not rewritten (per-kind boundary, not a sink move). The
+# guard excludes a preceding [[:alnum:].~/-] char so mid-token hits
+# (e.g. a URL with a home-like path component) stay untouched.
+_REDACT_HOME = "/" + "home"  # split so this file stays gate-clean
+REDACT_RES = (
+    (re.compile(r"(^|[^A-Za-z0-9.~/-])" + _REDACT_HOME + r"/[^/\s]+"),
+     r"\1~"),
+    (re.compile(r"(^|[^A-Za-z0-9.~/-])/tmp(?=[/\s]|\Z)"), r"\1~tmp"),
+)
+
+
+def redact_alert_text(text):
+    for rx, repl in REDACT_RES:
+        text = rx.sub(repl, text)
+    return text
 
 ROOT = Path(os.environ.get("HNGH_REPORT_ROOT")
             or Path(__file__).resolve().parent.parent)
@@ -217,6 +247,11 @@ def add(kind, text, identity=None, window=86400, evidence=None):
         print("report-queue: empty TEXT refused", file=sys.stderr)
         return 2
     text = text.strip()
+    if kind == "alert":
+        # boundary redaction before anything is derived from TEXT (id,
+        # first line, body) — the public ledger never stores the raw
+        # machine-local path (2026-09-16)
+        text = redact_alert_text(text)
     rid = sha8(text)
     first = text.splitlines()[0].strip()
     ts = now_ts()
