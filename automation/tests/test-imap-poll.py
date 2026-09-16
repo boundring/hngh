@@ -11,7 +11,15 @@
     deleted or expunged, per-tick cap respected;
 (d) attachments saved under automation/inbox/ with path-only inline,
     plan decisions land as DRAFT files under automation/digest/ (never
-    auto-accepted -- accept-plans never scans automation/digest/).
+    auto-accepted -- accept-plans never scans automation/digest/);
+(e) report links: subject [hngh <report-id>] annotates the report's
+    body sidecar (docs/project/report-bodies/<ts>-<kind>-<id>.md,
+    created if absent) and applies the approve:/deny:/note: directive
+    grammar to matching open operator-items (approve -> handled,
+    deny -> dismissed, note/unknown/missing -> annotation only);
+    no-match replies keep (a)-(d) behavior unchanged, and the linked
+    path never touches the ledger, never auto-accepts plans, never
+    deletes anything.
 
 Seams: HNGH_NOTIFY_EMAIL_CONF, HNGH_AUTOMATION_ROOT, HNGH_HOME (a stub
 kernel whose scripts/report-queue appends argv to a log). No network,
@@ -22,6 +30,7 @@ import base64
 import hashlib
 import io
 import importlib.util
+import json
 import os
 import shutil
 import stat
@@ -440,6 +449,214 @@ class AttachmentsAndDrafts(Seamed):
             "DRAFT-PLAN-*-imap-%s.md" % SLUG))
         self.assertEqual(len(drafts), 1)
         self.assertIn("reject", drafts[0].read_text())
+
+
+REPORT_ID = "f7fd5d5b"
+TS = "2026-09-14T13:12:26Z"
+
+
+class ReportLinks(ReplyConversion):
+    """(e) reply subjects carrying `[hngh <report-id>]` link to the
+    kernel report row with that 8-hex id: the report's body sidecar
+    (docs/project/report-bodies/<ts>-<kind>-<id>.md, created if absent)
+    gets an appended annotation block with the reply date/from/body;
+    directive lines in the reply body transition matching operator-items:
+    approve -> handled, deny -> dismissed, note -> annotation only
+    (unknown/missing directives default to note). No-match replies keep
+    the (a)-(d) behavior byte-for-byte; malformed replies never delete
+    anything and never auto-accept plans."""
+
+    def seed_report(self, rid=REPORT_ID, ts=TS, kind="alert"):
+        """A real-shaped report row + sidecar in the stub kernel."""
+        (self.kernel / "docs" / "project" / "report-bodies").mkdir(
+            parents=True)
+        body = self.kernel / ("docs/project/report-bodies/%s-%s-%s.md"
+                              % (ts, kind, rid))
+        body.write_text(
+            "# %s — %s\n\n"
+            "- **timestamp:** %s\n"
+            "- **kind:** %s\n"
+            "- **first line:** deck pull fails\n"
+            "- **identity:** deck-unreachable\n\n"
+            "deck pull fails\n"
+            "- %s occurrence\n" % (kind, rid, ts, kind, ts))
+        ledger = self.kernel / "docs" / "project" / "reports.md"
+        ledger.write_text(
+            "# Report ledger\n\n"
+            "| timestamp | kind | id | first line | body |\n"
+            "|---|---|---|---|---|\n"
+            "| %s | %s | %s | deck pull fails | %s-%s-%s.md |\n"
+            % (ts, kind, rid, ts, kind, rid))
+        return body
+
+    def seed_item(self, iid, status="open", ref=True):
+        """One item in the operator-items feed + a matching STATE alert
+        crumb (the item's provenance, as the feed itself builds it).
+        ref=True: the item text references the linked report id, which
+        is what makes directive transitions apply to it."""
+        dash = self.auto / "dashboard"
+        dash.mkdir(exist_ok=True)
+        now = "2026-09-14T14:00:00Z"
+        with open(dash / "operator-items.json", "w") as f:
+            json.dump({"generated_at": now, "items": [
+                {"id": iid,
+                 "text": "imap-poll | alert | deck pull fails (%s)"
+                         % (REPORT_ID if ref else iid),
+                 "first_seen": now, "last_seen": now, "status": status,
+                 "evidence": ""}]}, f)
+        state = self.auto / "STATE.md"
+        state.touch()
+        with open(state, "a") as f:
+            f.write("%s | imap-poll | alert | deck pull fails (%s)\n"
+                    % (now, iid))
+        return dash / "operator-items.json"
+
+    def poll_one(self, subject, body_txt):
+        """Run one hermetic poll pass over a single crafted reply."""
+        self.poll_conf()
+        client = StubClient([make_message(subject, body_txt)])
+        with mock.patch.object(imap_poll, "file_item", return_value=R()):
+            imap_poll.poll(client)
+        return client
+
+    def sidecars(self):
+        return list((self.kernel / "docs" / "project" / "report-bodies")
+                    .glob("*.md"))
+
+    def test_linked_reply_annotates_sidecar(self):
+        body = self.seed_report()
+        self.poll_one("Re: [hngh %s] deck pull fails" % REPORT_ID,
+                      "saw this, looking into it today.")
+        txt = body.read_text()
+        self.assertIn("## operator reply", txt)
+        self.assertIn("from:** Operator <op@example.com>", txt)
+        self.assertIn("date:**", txt)
+        self.assertIn("looking into it today", txt)
+        # existing content preserved, nothing rewritten
+        self.assertIn("deck pull fails\n", txt)
+        self.assertIn("- %s occurrence\n" % TS, txt)
+
+    def test_link_creates_absent_sidecar(self):
+        # id in the ledger, body file missing (pruned/rotated away)
+        body = self.seed_report()
+        body.unlink()
+        self.poll_one("Re: [hngh %s] deck" % REPORT_ID, "on it")
+        self.assertEqual(len(self.sidecars()), 1)
+        self.assertIn("## operator reply", body.read_text())
+
+    def test_approve_directive_transitions_to_handled(self):
+        self.seed_report()
+        feed = self.seed_item("aabbccdd")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "approve: yes, the deck fix looks right.")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "handled")
+
+    def test_approve_directive_persists_approval_ledger(self):
+        """Red-first rebuild-clobber fix: approve: must persist durably
+        to dashboard/operator-approved.json (same schema as the
+        dismissal ledger) so the 1m feed rebuild keeps handled."""
+        self.seed_report()
+        self.seed_item("aabbccdd")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "approve: yes, the deck fix looks right.")
+        led = json.load(open(self.auto / "dashboard"
+                             / "operator-approved.json"))
+        self.assertEqual(set(led.keys()), {"approved"})
+        ts = led["approved"]["aabbccdd"]
+        self.assertRegex(ts, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    def test_note_directive_never_touches_approval_ledger(self):
+        self.seed_report()
+        self.seed_item("deadbeef")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "note: watching this one, no action yet.")
+        self.assertFalse((self.auto / "dashboard"
+                          / "operator-approved.json").exists())
+
+    def test_deny_directive_transitions_to_dismissed(self):
+        self.seed_report()
+        feed = self.seed_item("11223344")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "deny: this is a known false positive.")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "dismissed")
+
+    def test_note_directive_annotates_only(self):
+        self.seed_report()
+        feed = self.seed_item("deadbeef")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "note: watching this one, no action yet.")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "open")  # untouched
+        body = (self.kernel / "docs/project/report-bodies").glob("*.md")
+        self.assertIn("note: watching this one",
+                      list(body)[0].read_text())
+
+    def test_missing_directive_defaults_to_note(self):
+        self.seed_report()
+        feed = self.seed_item("00112233")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID, "still broken here?")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "open")
+
+    def test_unknown_directive_defaults_to_note(self):
+        self.seed_report()
+        feed = self.seed_item("44556677")
+        self.poll_one("Re: [hngh %s]" % REPORT_ID,
+                      "maybe: some other word\nand more prose")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "open")
+
+    def test_directive_without_matching_item_annotates_only(self):
+        self.seed_report()
+        feed = self.seed_item("aabbccdd", ref=False)  # no report-id ref
+        before = feed.read_text()
+        self.poll_one("Re: [hngh %s]" % REPORT_ID, "approve: fine")
+        self.assertEqual(feed.read_text(), before)  # only id-matching items
+
+    def test_no_match_keeps_behavior_unchanged(self):
+        body = self.seed_report()
+        feed = self.seed_item("99887766")
+        before = (body.read_text(), feed.read_text())
+        self.poll_one("Re: unrelated question", "plain prose reply")
+        self.assertEqual(body.read_text(), before[0])  # sidecar untouched
+        self.assertEqual(feed.read_text(), before[1])  # feed untouched
+        # kernel docs are never written by the no-match path
+        rq = self.kernel / "docs" / "project" / "reports.md"
+        self.assertIn("f7fd5d5b", rq.read_text())  # ledger intact
+
+    def test_malformed_body_still_records_safely(self):
+        self.seed_report()
+        feed = self.seed_item("1357acef")
+        client = self.poll_one(
+            "Re: [hngh %s]" % REPORT_ID,
+            "\x00\x01\x02 approve:\ndeny\nnote:\nnonsense: \xff lines")
+        it = json.load(open(feed))["items"][0]
+        self.assertEqual(it["status"], "open")  # malformed -> note default
+        self.assertEqual(len(client.seen), 1)   # processed once, \Seen
+        self.assertEqual(client.deleted, [])    # never deleted
+        txt = self.sidecars()[0].read_text()
+        self.assertIn("## operator reply", txt)  # annotation still landed
+
+    def test_plain_bad_id_never_annotates(self):
+        # `f7fd5d5` (7 chars) and `f7fd5d5g` (non-hex) are not report ids
+        self.seed_report()
+        for subj in ("Re: [hngh f7fd5d5]", "Re: [hngh f7fd5d5g]"):
+            self.poll_one(subj, "approve: x")
+        self.assertEqual(len(self.sidecars()), 1)  # only the seeded one
+
+    def test_annotation_never_touches_ledger_or_drafts(self):
+        """A linked reply adds no report row, no plan draft, ever."""
+        self.seed_report()
+        ledger_before = (self.kernel / "docs" / "project"
+                         / "reports.md").read_text()
+        self.poll_one("Re: [hngh %s] decision: accept" % REPORT_ID,
+                      "approve: go ahead")
+        self.assertEqual(
+            (self.kernel / "docs" / "project" / "reports.md").read_text(),
+            ledger_before)
+        self.assertFalse((self.auto / "digest").exists())
 
 
 if __name__ == "__main__":
