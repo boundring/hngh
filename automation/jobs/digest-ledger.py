@@ -28,6 +28,19 @@ def _ascii(text):
     return str(text).encode("ascii", "replace").decode("ascii")
 
 
+import re
+
+PATH_TOKEN_RE = re.compile(r"/home/\S*|/tmp/\S*|~/\S*")
+
+
+def scrub_paths(text):
+    """No-echo guard (digest seam audit 2026-09-16): host path tokens
+    (/home/..., /tmp/..., ~/...) never ride the mega line into deck B
+    or the public edition; fail-closed redaction to a fixed marker,
+    ordinary prose untouched. Same identity seam as news-articles.py."""
+    return PATH_TOKEN_RE.sub("[redacted path]", str(text or ""))
+
+
 def spend(date, db=TELEMETRY):
     """Metered spend + token volume for the day, from telemetry events."""
     if not os.path.isfile(db):
@@ -141,7 +154,8 @@ def build(date, feeds=None):
         out.append("<!-- feeds: dashboard/operator-items.json -->")
         out.append("- operator items: %d open of %d; newest: %s"
                    % (len(open_items), len(items),
-                      _ascii(newest[0]["text"][:80]) if newest else "none"))
+                      _ascii(scrub_paths(newest[0]["text"][:80]))
+                      if newest else "none"))
     rl = feeds.get("research_lines", research_lines())
     if rl:
         order = ("planned", "expanding", "contracting", "reviewed")
@@ -155,7 +169,8 @@ def build(date, feeds=None):
         out.append("<!-- feeds: STATE.md -->")
         out.append("- posture: %d alert crumbs today (%s); last: %s."
                    % (len(crumbs), ", ".join(_ascii(x) for x in scripts),
-                      _ascii(crumbs[-1][3][:70]) if len(crumbs[-1]) > 3 else "-"))
+                      _ascii(scrub_paths(crumbs[-1][3][:70]))
+                      if len(crumbs[-1]) > 3 else "-"))
     return out
 
 
