@@ -37,6 +37,7 @@ printf 'rc=%s log=%s cause=%s\\n' "$LAUNCH_RC" "$LAUNCH_LOG" "$LAUNCH_CAUSE"
 
 OC_STUB = """#!/usr/bin/env bash
 printf 'opencode %s config=%s\\n' "$*" "$OPENCODE_CONFIG" >> "$OC_MARKER"
+printf 'argv=%s\\n' "$*" >> "$OC_MARKER"
 printf 'keylen=%s\\n' "${#OPENCODE_API_KEY}" >> "$OC_MARKER"
 printf 'kimilen=%s\\n' "${#KIMI_API_KEY}" >> "$OC_MARKER"
 printf 'zailen=%s\\n' "${#ZAI_API_KEY}" >> "$OC_MARKER"
@@ -63,6 +64,26 @@ class H(http.server.BaseHTTPRequestHandler):
         self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
     def log_message(self, *a): pass
 http.server.HTTPServer(('127.0.0.1', int(os.environ['BILI_STUB_PORT'])), H).serve_forever()"
+"""
+
+# env stub: the e1 finding #3 red observable. The provider key VALUE
+# never reaches the child's argv (env(1) strips assignments before
+# exec), so the only argv surface the leak touches is env(1) itself
+# (/proc/<pid>/cmdline for its pre-exec lifetime). The stub records its
+# own argv verbatim, then emulates env(1)'s core contract (NAME=VALUE
+# assignment words, -u NAME, -- separator) and execs the command so the
+# oc stub still runs under it exactly like the real env binary.
+ENV_STUB = """#!/usr/bin/env bash
+printf 'envargv=%s\\n' "$*" >> "$ENV_MARKER"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -u) unset "$2"; shift 2 ;;
+    --) shift; break ;;
+    [A-Za-z_]*=* | *_=*) export "$1"; shift ;;
+    *) break ;;
+  esac
+done
+exec "$@"
 """
 
 
@@ -105,6 +126,7 @@ class OcgoLaunch(unittest.TestCase):
         self.prompt.write_text("do the thing\n")
         self.oc_marker = self.td / "oc.marker"
         self.omp_marker = self.td / "omp.marker"
+        self.env_marker = self.td / "env.marker"
         self.bridge = self.td / "bridge-stub.sh"
         self.bridge.write_text('echo "run run-42 started $*"\n')
         self.omp = self.td / "omp"
@@ -115,8 +137,11 @@ class OcgoLaunch(unittest.TestCase):
         self.oc.write_text(OC_STUB.replace("TIMESTAMP",
                                            str(int(self.td.stat().st_mtime)
                                                * 1000)))
+        env_stub = stubs / "env"
+        env_stub.write_text(ENV_STUB)
         for f in (self.bridge, self.omp, self.oc):
             f.chmod(0o755)
+        env_stub.chmod(0o755)
         self.driver = self.td / "driver.sh"
         self.driver.write_text(DRIVER)
         self.driver.chmod(0o755)
@@ -134,6 +159,7 @@ class OcgoLaunch(unittest.TestCase):
                  SESSION_MODEL="zai/glm-5.3",
                  OC_MARKER=str(self.oc_marker),
                  OMP_MARKER=str(self.omp_marker),
+                 ENV_MARKER=str(self.env_marker),
                  OMP_BRIDGE_BIN=str(self.bridge),
                  OMP_BIN_CMD=str(self.omp),
                  HNGH_TELEMETRY_DB=str(self.telem),
@@ -393,6 +419,58 @@ class OcgoLaunch(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(self.oc_marker.exists())
         self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def _assert_key_never_on_argv(self, env_extra, key_name, key_value,
+                                  marker_keylen):
+        # e1 finding #3 (2026-09-16): the provider key VALUE must never
+        # transit an argv. The child's own argv was never dirty (env(1)
+        # strips assignments pre-exec), so the observable is env(1)'s
+        # argv itself: the ENV_STUB on PATH records it verbatim. Red
+        # under the old `env KEY=VALUE ...` spawn (the assignment word
+        # carries the secret); green under the literal prefix assignment
+        # (_spawn_with_key). The key must still REACH the child env
+        # (marker_keylen) so the guard never breaks delivery.
+        self.env_marker.write_text("")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode", **env_extra)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn(marker_keylen, marker)  # key delivered via env
+        envargv = self.env_marker.read_text()
+        self.assertNotIn(key_value, envargv)  # no VALUE on any argv
+        self.assertNotIn(key_name + "=" + key_value, envargv)
+        self.assertNotIn(key_value, marker)  # never in child argv either
+
+    def test_opencode_key_value_never_rides_argv(self):
+        # opencode-go leg: OPENCODE_API_KEY from a 600 key file
+        kfile = self.td / "opencode-key"
+        kfile.write_text("k" * 42)
+        kfile.chmod(0o600)
+        self._assert_key_never_on_argv(
+            {"OPENCODE_API_KEY": None, "OPENCODE_KEY_FILE": str(kfile)},
+            "OPENCODE_API_KEY", "k" * 42, "keylen=42")
+
+    def test_kimi_key_value_never_rides_argv(self):
+        # kimi leg: KIMI_API_KEY from KIMI_AI_KEY (the other quota's key
+        # must not ride either)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "kimi-model\tk3-256k\ttest\ttest row\n")
+        self._assert_key_never_on_argv(
+            {"OCGO_PROVIDER": "kimi", "KIMI_AI_KEY": "k" * 40,
+             "OPENCODE_API_KEY": None},
+            "KIMI_API_KEY", "k" * 40, "kimilen=40")
+
+    def test_zai_key_value_never_rides_argv(self):
+        # zai leg: ZAI_API_KEY from Z_AI_API_KEY
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\n"
+            "session-executor\t\ttest\topencode via env override\n"
+            "zai-model\tglm-5.3-flash\ttest\ttest row\n")
+        self._assert_key_never_on_argv(
+            {"OCGO_PROVIDER": "zai", "Z_AI_API_KEY": "z" * 40,
+             "OPENCODE_API_KEY": None},
+            "ZAI_API_KEY", "z" * 40, "zailen=40")
 
     def test_failed_session_appends_lesson(self):
         # a real failure (rc!=0, keyword-classified) lands its lesson line

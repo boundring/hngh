@@ -279,19 +279,16 @@ launch) before re-deriving any repo fact from scratch."
    [ -z "$pace_blocked" ]; then
    outcome_model="$oc_provider/$oc_model" oc_ran=1
    local oc_agent="executor" oc_model_flag="opencode-go/$oc_model"
-   local key_arg="OPENCODE_API_KEY=${OPENCODE_API_KEY:-$oc_key}"
    local emit_src=()
    if [ "$oc_provider" = "kimi" ]; then
     # dedicated agent (config layer pins executor to opencode-go) and
     # attribution source=kimi so the kimi daily pacer counts these calls
     oc_agent="executor-kimi"
     oc_model_flag="kimi/$oc_model"
-    key_arg="KIMI_API_KEY=$oc_key"
     emit_src=(--source kimi)
    elif [ "$oc_provider" = "zai" ]; then
     oc_agent="executor-zai"
     oc_model_flag="zai/$oc_model"
-    key_arg="ZAI_API_KEY=$oc_key"
     emit_src=(--source zai)
    fi
    # bili compression on the opencode leg (2026-09-11): env-only MITM
@@ -346,12 +343,28 @@ launch) before re-deriving any repo fact from scratch."
    # automation/config/leg-budgets.tsv as leg `opencode-agent`
    # (max-time 1800s = TIMEOUT_S, max-output 50000 = loadout token-limit).
    # The opencode-go gateway declares no per-call edge timeout; the session
-   # wall-clock below is the enforced ceiling.
-   env "$key_arg" \
-    OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
-    timeout "$TIMEOUT_S" "$oc_bin" run --dir "$ROOT" --format json \
-    --agent "$oc_agent" -m "$oc_model_flag" --auto "$body" \
-    >"$ROOT/$log.json" 2>&1
+   # wall-clock below is the enforced ceiling. The key rides a LITERAL
+   # prefix assignment per provider (e1 finding #3, 2026-09-16): never an
+   # env(1) argv word (its /proc cmdline is readable for env's pre-exec
+   # lifetime) and never an export (the launcher's own environment stays
+   # untouched for the other legs). Quoted array words are never re-parsed
+   # as assignments, so only the prefix itself is an assignment.
+   local -a oc_cmd=(timeout "$TIMEOUT_S" "$oc_bin" run
+    --dir "$ROOT" --format json --agent "$oc_agent"
+    -m "$oc_model_flag" --auto "$body")
+   if [ "$oc_provider" = "kimi" ]; then
+    KIMI_API_KEY="$oc_key" \
+     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
+     "${oc_cmd[@]}" >"$ROOT/$log.json" 2>&1
+   elif [ "$oc_provider" = "zai" ]; then
+    ZAI_API_KEY="$oc_key" \
+     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
+     "${oc_cmd[@]}" >"$ROOT/$log.json" 2>&1
+   else
+    OPENCODE_API_KEY="${OPENCODE_API_KEY:-$oc_key}" \
+     OPENCODE_CONFIG="$AUTOMATION_ROOT/config/opencode/opencode.jsonc" \
+     "${oc_cmd[@]}" >"$ROOT/$log.json" 2>&1
+   fi
    oc_rc=$? # captured before the emitter masks $?
    if [ -n "$borigin" ]; then
     unset HTTPS_PROXY NODE_EXTRA_CA_CERTS
