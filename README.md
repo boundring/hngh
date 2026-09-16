@@ -21,7 +21,7 @@ clock around it; the human's final say rides the whole surface.
 & [presentation-boundary](docs/design/presentation-boundary.md) ·
 **Language:** Common Lisp (SBCL 2.x) · **License:**
 AGPL-3.0-or-later · **Status:** pre-release, not production ready
-([CHANGELOG](CHANGELOG.md)) · **Check count:** the suite states its own size - past 2,894 checks
+([CHANGELOG](CHANGELOG.md)) · **Check count:** the suite states its own size - past 2,931 checks
 (`make test`), with the count guarded by a doc-numbers test that
 refuses drift.
 
@@ -110,9 +110,9 @@ journal](docs/journal/2026-09-11.md); the whole verified run is
 the stranger's version, under [what exists](#what-exists).
 
 <!-- dispatch:begin -->
-| 2026-09-14 | 13 | $11.39 | 11 | 0 |
+| 2026-09-15 | 0 | $4.04 | 23 | 18 |
 
-Deep read: [the journal](docs/journal/2026-09-14.md).
+Deep read: [the journal](docs/journal/2026-09-15.md).
 <!-- dispatch:end -->
 
 ---
