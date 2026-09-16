@@ -66,14 +66,25 @@ never logs the value:
 - `automation/tests/test-probe-token-mode.sh`: 0644 -> literal
   `too-open`, fake curl never spawned, value never read or sent;
   0600 -> one authenticated probe; missing -> `missing` pinned.
+- `automation/tests/test-model-pin-routing.sh`: the remote-ladder
+  fixture's stub key file gains `chmod 600` — the pre-existing contract
+  test now exercises the leg through the new gate (its first full-gate
+  run went red exactly because the gate worked and the fixture's key
+  file was 0644).
 
 ## Gate
 
-- automation slice: `cd automation && make test` green before its
-  commit.
-- kernel slice (`scripts/grade-interface`, its test, root `Makefile`
-  registration, this record): full `make test` green before the
-  ceremony commit.
+- kernel slice: full `make test` green (2931 lisp checks, exit 0)
+  before the ceremony commit.
+- automation slice: full `cd automation && make test` green on an
+  isolated HEAD worktree carrying only this slice's diff
+  (`git worktree add <tmp> HEAD` + `git apply` of the slice patch).
+  Posture note: the shared checkout carries a foreign in-flight
+  sessions-view.js strip (a third lane's render-blocks WIP) whose raw
+  `setInterval` fails `test-dashboard-p0.py` for every session; the
+  worktree run excludes foreign WIP by construction and passed green
+  (the one earlier red, pin-routing's rotation section, reproduced only
+  under two concurrent full gates and passed in the sequential run).
 
 ## Ceremony
 

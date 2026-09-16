@@ -57,6 +57,15 @@ alert() { # name failure -> 0
 # authenticated probe of the unsloth session token; echoes the http code.
 probe_token() { # -> http code
   local tok
+  # the token file gates the probe on its mode: exactly 600 or the
+  # value is never read or sent (same posture as the kimi leg's
+  # stat -c %a gate and scripts/probe-model-route). "too-open" flows
+  # through ok() like any non-2xx/3xx code.
+  if [ -f "$TOKEN_FILE" ] &&
+    [ "$(stat -c %a "$TOKEN_FILE" 2>/dev/null)" != "600" ]; then
+    printf 'too-open'
+    return
+  fi
   tok="$(cat "$TOKEN_FILE" 2>/dev/null)" || {
     printf 'missing'
     return
@@ -96,6 +105,8 @@ elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
   fi
 elif [ "$code" = "missing" ]; then
   alert "unsloth-token" "session token file missing ($TOKEN_FILE)"
+elif [ "$code" = "too-open" ]; then
+  alert "unsloth-token" "token file too open; chmod 600 required ($TOKEN_FILE)"
 elif [ "$code" = "000" ]; then
   breadcrumb "$JOB_NAME" "credential-health" "unsloth endpoint unreachable (http=$code); model server health is separate"
 else

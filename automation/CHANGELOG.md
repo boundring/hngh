@@ -2,6 +2,28 @@
 
 ## 2026-09-16
 
+- security: token-file reads gated to exactly 0600 across the remaining
+  readers (test-first, red-proven; record:
+  docs/records/2026-09-16-token-file-0600-gates.md) — closing the class
+  probe-model-route's gate (f809a05f) left open: manga-vision.py read
+  TOKEN_FILE unguarded (a 0644 token was silently trusted and sent),
+  model.sh remote_chat read REMOTE_TOKEN_FILE with no mode check (the
+  one asymmetry in its own file — kimi/ocgo/zai always gated), and
+  credential-health.sh probe_token read TOKEN_FILE unguarded. All three
+  now refuse fail-closed BEFORE reading or sending: manga-vision raises
+  TokenFileModeError naming the path and 0600 (the headerless-send
+  fallback is gone), remote_chat breadcrumbs "key file too open (chmod
+  600 required) -> next backend" (kimi leg's exact shape, with the
+  absent-dormant contract preserved and made explicit first), and
+  probe_token returns the literal code `too-open` before curl spawns
+  (flows through ok(); new alert branch "token file too open; chmod 600
+  required"). New suites test-manga-vision-token-mode.py (guard proves
+  the file is never opened), test-model-remote-token-mode.sh (red run
+  reproduced the hole: the 0644 key POSTed to a live stub), and
+  test-probe-token-mode.sh (fake curl proves zero spawns and no value
+  leak); all registered in make test. Kernel-side sibling
+  (scripts/grade-interface read_token, same class) landed through the
+  ceremony as bf5e9b75.
 - security: read-side ledger surfaces closed (test-first, red-proven;
   record: docs/records/2026-09-16-readside-ledger-surfaces.md) —
   graph-data.py's patrol-alert matcher expected the obsolete ledger row
