@@ -23,6 +23,13 @@
 # KEY RULE: token/url VALUES are never logged, echoed, or tested. Presence
 # checks and source names only (env NAME or "key file").
 #
+# Argv hygiene: secret-bearing URLs (telegram bot-token URL, webhook URL —
+# webhook endpoints commonly embed auth tokens) are passed to curl via the
+# stdin config (`curl -K -`, "url = " line) so they never sit in
+# /proc/<pid>/cmdline for the call duration; only non-secret args stay on
+# argv. Telegram bot tokens are digit:alnum (no quotes/spaces) and the
+# double-quoted config form keeps the line safe regardless.
+#
 # Requires lib/common.sh + lib/breadcrumbs.sh sourced first.
 
 HNGH_NOTIFY_MIN_INTERVAL="${HNGH_NOTIFY_MIN_INTERVAL:-60}"
@@ -83,11 +90,12 @@ _notify_send_telegram() { # subject body -> 0
   local token chat_id code
   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then token="$TELEGRAM_BOT_TOKEN"; else token="$(_notify_kv "$HNGH_TELEGRAM_NOTIFY_FILE" TELEGRAM_BOT_TOKEN)"; fi
   if [ -n "${TELEGRAM_CHAT_ID:-}" ]; then chat_id="$TELEGRAM_CHAT_ID"; else chat_id="$(_notify_kv "$HNGH_TELEGRAM_NOTIFY_FILE" TELEGRAM_CHAT_ID)"; fi
-  code="$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' \
+  # token-bearing URL via stdin config, never argv (cmdline exposure).
+  code="$(printf 'url = "%s"\n' "https://api.telegram.org/bot${token}/sendMessage" |
+    curl -s --max-time 20 -K - -o /dev/null -w '%{http_code}' \
     --data-urlencode "chat_id=$chat_id" \
     --data-urlencode "text=$1
-$2" \
-    "https://api.telegram.org/bot${token}/sendMessage" 2>/dev/null)" || code=000
+$2" 2>/dev/null)" || code=000
   [ "$code" = "200" ] || breadcrumb "$JOB_NAME" "notify-seam" \
     "telegram-notify failed: HTTP $code"
   return 0
@@ -96,10 +104,11 @@ $2" \
 _notify_send_webhook() { # class subject body -> 0
   local url code
   if [ -n "${HNGH_WEBHOOK_URL:-}" ]; then url="$HNGH_WEBHOOK_URL"; else url="$(_notify_kv "$HNGH_WEBHOOK_NOTIFY_FILE" WEBHOOK_URL)"; fi
-  code="$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' \
+  # webhook URLs commonly embed auth tokens -> stdin config, never argv.
+  code="$(printf 'url = "%s"\n' "$url" |
+    curl -s --max-time 20 -K - -o /dev/null -w '%{http_code}' \
     -H 'Content-Type: application/json' \
-    --data "$(python3 -c 'import json,sys;print(json.dumps({"class":sys.argv[1],"subject":sys.argv[2],"body":sys.argv[3],"ts":int(__import__("time").time())}))' "$1" "$2" "$3")" \
-    "$url" 2>/dev/null)" || code=000
+    --data "$(python3 -c 'import json,sys;print(json.dumps({"class":sys.argv[1],"subject":sys.argv[2],"body":sys.argv[3],"ts":int(__import__("time").time())}))' "$1" "$2" "$3")" 2>/dev/null)" || code=000
   [ "$code" = "200" ] || breadcrumb "$JOB_NAME" "notify-seam" \
     "webhook-notify failed: HTTP $code"
   return 0
