@@ -2,6 +2,45 @@
 
 ## 2026-09-16
 
+- security: render-layer scrub closed the downstream half of the
+  digest leak chain (test-first, red-proven; record:
+  docs/records/2026-09-16-render-layer-scrub.md) — the writer census
+  scrubbed digest writers, but deck B, the beat side-notes, the
+  operator email HTML part (render_mega), the /digest-html/ LAN route
+  payload, and the public edition all rendered below-ledger digest
+  text (patrol morning rounds, any direct writer) verbatim. Both
+  renderers now re-export digest-ledger scrub_paths (no fourth regex)
+  and scrub at the parse chokepoint: digest-html.parse_sections (one
+  seam covering deck A rows, deck B mega items, the rounds table, the
+  route payload, and digest-public's parse) + beat_sidenotes excerpt,
+  html-digest.news_sections + render_mega. Marker stays the existing
+  [redacted path] identity seam; URLs survive verbatim. New
+  RenderLayerScrubTest (5 cases) injects a pathy append below the
+  ledger layer and asserts zero /home/, /tmp/, ~/ tokens across the
+  newspaper page, the bound-server route payload, the email HTML
+  part, the public edition, and the sidecar excerpt path — red on all
+  5 before the seams, green after, full make test ALL PASS.
+
+## 2026-09-16
+
+- security: chain-wide reply-side path scrub at the model_call
+  chokepoint (test-first, red-proven; record:
+  docs/records/2026-09-16-model-reply-path-scrub-chain.md) — extending
+  the news lane's no-echo law to every model.sh consumer: model_call
+  now scrubs the winning reply through _scrub_paths (the news
+  PATH_TOKEN_RE law ported to one jq gsub: /home //tmp ~ tokens redact
+  to [redacted path], URL-shaped tokens preserved, prose kept,
+  fail-closed empty on scrub failure), so research beat, reviews,
+  digest, overnight and ping lanes inherit the law at the single
+  consumer entry instead of owning a scrub each. Archive-only contract
+  intact (raw prompt archived unmutated — input hygiene stays with the
+  caller); JSON-mode callers: none exist. Red-first suite
+  tests/test-model-reply-scrub.sh pins deck + ollama leg echoes scrubbed
+  exactly (truncation flag preserved); research-beat reply-persistence
+  spot-audit: all reply surfaces flow from model_call captures, no
+  per-file scrub needed there. model.sh implementation landed inside
+  f8b0fe7f by the sibling lane's add sweep (attribution in the record);
+  this entry's slice is the suite + registration + docs.
 - security: token-file reads gated to exactly 0600 across the remaining
   readers (test-first, red-proven; record:
   docs/records/2026-09-16-token-file-0600-gates.md) — closing the class

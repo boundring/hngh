@@ -21,6 +21,7 @@ Palette: display-register tokens (dashboard/style.css) inlined: bg
 usage (module): render_html(g) -> str; g is email_digest.gather().
 """
 import html
+import importlib.machinery
 import importlib.util
 import os
 import re
@@ -29,6 +30,26 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
+
+
+def _load_scrub():
+    """One identity seam (llc-gate-render-layer-scrub 2026-09-16): the
+    email renderer re-exports digest-ledger's scrub_paths rather than
+    owning a regex — no fourth redaction definition in the tree.
+    digest/<date>.md is written by several writers and not every append
+    is scrubbed at the writer, so the email HTML part fail-closes host
+    path tokens at render. Fail-open to identity ONLY if the module
+    cannot load (same posture as jobs/gdelt-news.py)."""
+    try:
+        loader = importlib.machinery.SourceFileLoader(
+            "hngh_digest_ledger", os.path.join(
+                AUTOMATION, "jobs", "digest-ledger.py"))
+        spec = importlib.util.spec_from_loader("hngh_digest_ledger", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        return mod.scrub_paths
+    except Exception:
+        return lambda text: text
 
 SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 AUTOMATION = os.environ.get(
@@ -148,10 +169,16 @@ def delta_line(today_text):
 SECTION_RE = re.compile(r"^## (\d{4}) (\d{4}-\d{2}-\d{2})\s*$")
 
 
+scrub_paths = _load_scrub()
+
+
 def news_sections(text):
     """'## HHMM <date>' blocks from a daily digest (automation/digest/
     <date>.md): [{time, sources, model, items}] — the Outside World deck
-    (parse mirrors jobs/digest-html.parse_sections)."""
+    (parse mirrors jobs/digest-html.parse_sections). Item lines pass
+    the shared scrub_paths before becoming rows: the email HTML part
+    is an egress surface and digest text is not trusted below the
+    writer layer (render-layer scrub law 2026-09-16)."""
     out, cur = [], None
     for line in text.splitlines():
         m = SECTION_RE.match(line)
@@ -169,7 +196,7 @@ def news_sections(text):
             else:
                 cur["sources"] = body.strip()
         else:
-            cur["items"].append(line)
+            cur["items"].append(scrub_paths(line))
     return out
 
 
@@ -326,6 +353,7 @@ def render_mega(digest_text, base):
     linked = dashboard_up(base)
     rows = []
     for line in lines:
+        line = scrub_paths(line)
         m = mod.PLAN_ROW.match(line)
         if m and linked:
             body = ('<a href="%s/" style="color:%s">%s</a>%s'

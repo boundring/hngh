@@ -10,25 +10,25 @@
 set -u
 
 digest_scrub() { # text -> text; host path tokens -> [redacted path]
- DL_PATH="$AUTOMATION_ROOT/jobs/digest-ledger.py" DL_TEXT="$1" python3 -c '
-import importlib.util, os
+ python3 -c '
+import importlib.util, sys
 spec = importlib.util.spec_from_file_location(
-    "digest_ledger", os.environ["DL_PATH"])
+    "digest_ledger", sys.argv[2] + "/jobs/digest-ledger.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
-print(mod.scrub_paths(os.environ["DL_TEXT"]))'
+print(mod.scrub_paths(sys.argv[1]))' "$1" "$AUTOMATION_ROOT"
 }
 
-digest_scrub_all() { # multi-line text -> text, every line scrubbed
- DL_PATH="$AUTOMATION_ROOT/jobs/digest-ledger.py" python3 -c '
-import importlib.util, os, sys
+digest_scrub_all() { # multi-line text (stdin) -> text, every line scrubbed
+ python3 -c '
+import importlib.util, sys
 spec = importlib.util.spec_from_file_location(
-    "digest_ledger", os.environ["DL_PATH"])
+    "digest_ledger", sys.argv[1] + "/jobs/digest-ledger.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 text = sys.stdin.read()
 sys.stdout.write("".join(mod.scrub_paths(ln) + "\n"
-                         for ln in text.splitlines()))'
+                         for ln in text.splitlines()))' "$AUTOMATION_ROOT"
 }
 
 scrub() { digest_scrub "$@"; }
