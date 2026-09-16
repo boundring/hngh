@@ -65,8 +65,12 @@ probe_token() { # -> http code
     printf 'missing'
     return
   }
-  curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Bearer $tok" "$UNSLOTH_URL/v1/models" 2>/dev/null ||
+  # token rides the stdin curl config (`-K -`, header = directive), never
+  # the argv — a Bearer header on argv sits in /proc/<pid>/cmdline for the
+  # whole call (notify-seam argv-hygiene pattern, 2026-09-16).
+  printf 'header = "Authorization: Bearer %s"\n' "$tok" |
+    curl -s --max-time 10 -K - -o /dev/null -w '%{http_code}' \
+      "$UNSLOTH_URL/v1/models" 2>/dev/null ||
     echo 000
 }
 
@@ -134,6 +138,8 @@ fi
 # an alert; the key VALUE is never read, logged, or sent on the wire. The
 # probe reports WHICH source armed the leg (env name or key file), never
 # the value. Unconfigured = silent (the leg does not exist yet).
+# The Authorization header travels via the stdin curl config (`-K -`),
+# never argv (cmdline exposure; notify-seam argv-hygiene pattern).
 kimi_key_src=""
 [ -z "$kimi_key_src" ] && [ -n "${MOONSHOTAI_API_KEY:-}" ] && kimi_key_src="env MOONSHOTAI_API_KEY"
 [ -z "$kimi_key_src" ] && [ -n "${KIMI_AI_KEY:-}" ] && kimi_key_src="env KIMI_AI_KEY"
@@ -154,8 +160,9 @@ if [ -n "$kimi_key_src" ]; then
     kimi_key="$(cat "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}" 2>/dev/null)"
   kimi_url="${KIMI_URL:-$(get_param kimi-endpoint 'https://api.kimi.com/coding/v1/chat/completions')}"
   kimi_models_url="${kimi_url%/chat/completions}/models"
-  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Bearer $kimi_key" "$kimi_models_url" 2>/dev/null)" || code=000
+  code="$(printf 'header = "Authorization: Bearer %s"\n' "$kimi_key" |
+    curl -s --max-time 10 -K - -o /dev/null -w '%{http_code}' \
+    "$kimi_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) endpoint not answering (http=$code)"
   elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
@@ -168,7 +175,9 @@ fi
 # --- 5. opencode-go leg (opencode.ai/zen/go/v1; cadence-params rows
 # `opencode-url`/`opencode-model`; docs/OPENCODE-GO.md) ---
 # Same philosophy as the kimi probe: every outcome is a breadcrumb,
-# not an alert; the key VALUE is never logged or sent on the wire. The probe
+# not an alert; the key VALUE is never logged or sent on the wire. The
+# Authorization header travels via the stdin curl config (`-K -`), never
+# argv (cmdline exposure; notify-seam argv-hygiene pattern). The probe
 # exercises the SAME authenticated path ocgo_chat uses (Bearer header; the
 # 2026-09-10 lesson: a headerless probe measures only its own missing
 # header). Unconfigured = silent (the leg does not exist yet).
@@ -184,8 +193,9 @@ if [ -n "$ocgo_key_src" ]; then
     ocgo_key="$(cat "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}" 2>/dev/null)"
   ocgo_url="${OCGO_URL:-$(get_param opencode-url 'https://opencode.ai/zen/go/v1/chat/completions')}"
   ocgo_models_url="${ocgo_url%/chat/completions}/models"
-  code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Bearer $ocgo_key" "$ocgo_models_url" 2>/dev/null)" || code=000
+  code="$(printf 'header = "Authorization: Bearer %s"\n' "$ocgo_key" |
+    curl -s --max-time 10 -K - -o /dev/null -w '%{http_code}' \
+    "$ocgo_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "ocgo ($ocgo_key_src) endpoint not answering (http=$code)"
   elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
