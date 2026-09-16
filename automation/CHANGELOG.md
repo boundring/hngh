@@ -2,6 +2,21 @@
 
 ## 2026-09-16
 
+- security: read-side ledger surfaces closed (test-first, red-proven;
+  record: docs/records/2026-09-16-readside-ledger-surfaces.md) —
+  graph-data.py's patrol-alert matcher expected the obsolete ledger row
+  shape and matched zero live rows (graph patrol alerting was dead in
+  production); it now kind-gates live `alert` rows, extracts only
+  `patrol:<registry-id>` tokens anchored at non-id boundaries (pathy
+  text like `/home/x/patrol:not-a-surface` can never mint a node id),
+  and intersects with the patrol registry before any node id exists —
+  validated read-only against the live ledger (110 alert rows/24h, 9/9
+  tokens registry ids, zero foreign). system-feed.py dropped the
+  hardcoded `/home/bricker/...` root (README sweep item): env
+  HNGH_HOME/HNGH_REPO still wins, else the repo that ships the script.
+  Both suites (previously unregistered) registered in `make test`;
+  guard-node/patrol/surface behavior unchanged. Neighbor-lane WIP was
+  excluded: full gate verified ALL PASS on HEAD + this slice only.
 - security: credential-health bearer probes moved off argv to the stdin
   curl config (test-first; record:
   docs/records/2026-09-16-credential-health-bearer-stdin.md) — the

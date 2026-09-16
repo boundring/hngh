@@ -71,5 +71,36 @@ class ProbeUptime(unittest.TestCase):
                                "last_boot": None})
 
 
+class RepoRootResolution(unittest.TestCase):
+    """REPORTS_MD root: env first, then script-relative — never a
+    hardcoded machine path baked into the source (the repo must run
+    unmodified from any checkout location)."""
+
+    def test_fallback_root_is_never_a_hardcoded_machine_path(self):
+        source = (ROOT / "jobs" / "system-feed.py").read_text()
+        self.assertNotIn("/home/", source,
+                         "hardcoded home path in system-feed.py source")
+        self.assertNotIn("/Users/", source)
+        self.assertNotIn("/root/", source)
+        # del-refs gate discipline: no user @ host literals either.
+        self.assertNotRegex(source, r"[A-Za-z0-9._-]+@[A-Za-z0-9.-]+")
+
+    def test_env_unset_resolves_root_relative_to_script(self):
+        # HNGH_HOME/HNGH_REPO unset -> the hngh repo root is derived from
+        # this script's own location: ROOT/../docs/project/reports.md.
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("HNGH_HOME", "HNGH_REPO")}
+        with mock.patch.dict(os.environ, env, clear=True):
+            reports = sf.report_ledger_path()
+        expected = str((ROOT.parent / "docs" / "project" / "reports.md")
+                       .resolve())
+        self.assertEqual(reports, expected)
+
+    def test_env_still_wins_over_script_relative_default(self):
+        reports = sf.report_ledger_path("/srv/other-checkout")
+        self.assertEqual(reports, "/srv/other-checkout/docs/project/"
+                                  "reports.md")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

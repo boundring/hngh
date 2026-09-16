@@ -91,7 +91,23 @@ def _seed(root, now):
         "# Report ledger\n"
         "| %s | patrol-fail | patrol:budget | breach | b.md |\n"
         "| %s | patrol-fail | patrol:feeds | stale | f.md |\n"
-        % (_ts(now - timedelta(hours=2)), _ts(now - timedelta(hours=40))))
+        # live-format alert rows (kind=alert, hex id): first-line text is
+        # free prose and can carry absolute paths; the patrol reader must
+        # neither misread these as surface ids nor surface the text.
+        "| %s | alert | hex1 | research line x: planned -> expanding"
+        " -> /home/alice/.hngh/archive/digest/RESEARCH-BEAT.md | a.md |\n"
+        "| %s | alert | hex2 | missing source: /tmp/hngh-cer-1.store"
+        " (config-backup) | c.md |\n"
+        "| %s | alert | hex4 | router dedup: patrol:service-children"
+        " suppressed (routed candidate live, 0h old; day count 1) | r.md |\n"
+        "| %s | alert | hex5 | patrol:handoffs failed — see"
+        " /home/alice/x/patrol:not-a-surface for detail | n.md |\n"
+        "| %s | progress | hex3 | router routed patrol:services -> plan"
+        " candidate (routed-at) | p.md |\n"
+        % (_ts(now - timedelta(hours=2)), _ts(now - timedelta(hours=40)),
+           _ts(now - timedelta(hours=1)), _ts(now - timedelta(hours=1)),
+           _ts(now - timedelta(hours=1)), _ts(now - timedelta(hours=1)),
+           _ts(now - timedelta(hours=1))))
     db = root / "telemetry.db"
     conn = sqlite3.connect(db)
     conn.execute("CREATE TABLE events (ts TEXT, source TEXT, kind TEXT,"
@@ -190,6 +206,40 @@ class BuildGraph(unittest.TestCase):
         self.assertEqual(pat["patrol:feeds"]["state"], "healthy")
         self.assertTrue(self._edges(src="patrol:budget",
                                     dst="surface:budget", rel="watches"))
+
+    def test_alert_rows_never_leak_paths_or_prose_into_node_ids(self):
+        # Live ledger rows (kind=alert) carry arbitrary first-line text,
+        # including absolute paths (redact backstops are emitter-side and
+        # best-effort only). The patrol reader must never turn that raw
+        # text into patrol/surface node ids: ids stay registry-shaped.
+        pat = self._nodes("patrol")
+        for pid in pat:
+            self.assertRegex(pid, r"^patrol:budget$|^patrol:feeds$"
+                             r"|^patrol:service-children$"
+                             r"|^patrol:service-crumbs$",
+                             "registry-foreign patrol id leaked: %s" % pid)
+        ids = {n["id"] for n in self.graph["nodes"]}
+        for leak in ("/home/", "/tmp/", "research line", "missing source"):
+            for nid in ids:
+                self.assertNotIn(leak, nid,
+                                 "pathy/prose alert text in node id %r"
+                                 % nid)
+
+    def test_live_format_alert_rows_alert_matching_patrols_only(self):
+        # The live ledger shape is | ts | kind | id | first line | body |
+        # (kind=alert, hex id): the matching token lives in the first-line
+        # text, extracted only as 'patrol:<registry-id>' anchored to
+        # non-id characters (start, whitespace, or punctuation) so that
+        # pathy text like /home/x/patrol:not-a-surface can never mint a
+        # node id or alert a registry patrol. kind=progress never alerts.
+        pat = self._nodes("patrol")
+        self.assertEqual(pat["patrol:service-children"]["state"],
+                         "alerting",
+                         "live-format patrol:service-children alert row"
+                         " was not honored (dead matcher)")
+        self.assertEqual(pat["patrol:budget"]["state"], "alerting")
+        self.assertEqual(pat["patrol:feeds"]["state"], "healthy")
+        self.assertEqual(pat["patrol:service-crumbs"]["state"], "healthy")
 
     def test_repeated_surface_node_emitted_once(self):
         # two patrols walk the same surface (fixture: service-children +
