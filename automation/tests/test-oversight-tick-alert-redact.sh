@@ -26,10 +26,16 @@ export ALERT_LAST="$sb/alert-last"
 : >"$ALERT_LAST"
 touch "$sb/attention"
 
-# source only the job's alert() seam: keep lines 1..78 (arg loop +
-# alert() definition; probes start after). Rewrite ROOT so the sourced
-# header resolves inside this repo without side effects.
-sed -n '1,78p' "$root/jobs/oversight-tick.sh" |
+# source only the job's alert() seam: from the top of the file through
+# the end of the alert() definition (its closing brace at column 1 —
+# the first such brace after `alert()`), so the probe sections never
+# run and line drift above alert() cannot break the cut. Rewrite ROOT
+# so the sourced header resolves without side effects.
+awk '
+  /^alert\(\)/ {in_alert = 1}
+  in_alert && /^\}/ {print; exit}
+  {print}
+' "$root/jobs/oversight-tick.sh" |
   sed -e "s#^ROOT=.*#ROOT=\"$root\"#" \
       -e "s#^STATE_FILE=.*#STATE_FILE=\"\$STATE_FILE\"#" \
       >"$sb/job-head.sh"
