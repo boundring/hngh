@@ -385,7 +385,7 @@ def research_routes_json():
     if cached_feed is not None and time.monotonic() - cached_ts < TELEMETRY_TTL_S:
         return cached_feed
     try:
-        feed = research_routes.build(ROOT)
+        feed = research_routes.build(os.path.dirname(ROOT))  # repo root; ROOT is automation/ (str)
         _routes_cache = (time.monotonic(), feed)
     except Exception:
         if cached_feed is None:

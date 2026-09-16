@@ -9,7 +9,15 @@ through the existing contract (lib/operator-item.sh -> alert_row +
 breadcrumb). A reply carrying a decision on a parked plan additionally
 writes a plan-proposal DRAFT under automation/digest/ (draft only --
 accept-plans scans kernel docs/project/plans/, never automation/digest/,
-so nothing is ever auto-accepted).
+so nothing is ever auto-accepted). A reply whose subject carries
+[hngh <report-id>] (the 8-hex id of a docs/project/reports.md row)
+additionally annotates that report's body sidecar
+docs/project/report-bodies/<ts>-<kind>-<id>.md (created if absent) with
+the reply date/from/body, and applies its directive grammar to matching
+open operator-items (approve: -> handled, deny: -> dismissed,
+note: / unknown / missing -> annotation only). No-match replies keep
+the plain operator-item behavior; the linked path never writes the
+ledger itself, never auto-accepts plans, and never deletes anything.
 
 Config: the SAME notify-email.conf the send leg uses
 (env seam HNGH_NOTIFY_EMAIL_CONF); this script never creates or edits
@@ -42,6 +50,7 @@ import email
 import email.policy
 import email.utils
 import hashlib
+import json
 import os
 import re
 import shlex
@@ -173,6 +182,181 @@ def save_attachments(msg, msgid):
 
 DECISION_RE = re.compile(r"(?im)^\s*decision:\s*(\w+)")
 PLAN_REF_RE = re.compile(r"([0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+)\.plan\.md")
+# [hngh <report-id>]: links a reply to a kernel report row (the same
+# 8-hex id docs/project/reports.md carries in its third column).
+REPORT_REF_RE = re.compile(r"\[hngh ([0-9a-f]{8})\]")
+# directive grammar: approve/deny/note lines; anything else is a note
+DIRECTIVES = {"approve": "handled", "deny": "dismissed", "note": None}
+
+
+def annotate_report(report_id, msg, text):
+    """Append an operator-reply annotation block to the linked report's
+    body sidecar docs/project/report-bodies/<ts>-<kind>-<id>.md; create
+    the sidecar when the ledger has the row but the file was pruned.
+    Never touches docs/project/reports.md and never deletes anything."""
+    root = os.path.join(KERNEL, "docs", "project")
+    ledger = os.path.join(root, "reports.md")
+    try:
+        with open(ledger, encoding="utf-8") as f:
+            row = next((ln for ln in f
+                        if "| %s |" % report_id in ln), None)
+    except OSError:
+        row = None
+    if row is None:
+        return None
+    parts = [p.strip() for p in row.strip().strip("|").split("|")]
+    if len(parts) < 5:
+        return None
+    ts, kind = parts[0], parts[1]
+    if not re.match(r"^[0-9A-Za-z:.-]+$", ts) or \
+            not re.match(r"^[a-z0-9-]+$", kind):
+        return None  # malformed row: never guess at a path
+    bodies = os.path.join(root, "report-bodies")
+    os.makedirs(bodies, exist_ok=True)
+    path = os.path.join(bodies, "%s-%s-%s.md" % (ts, kind, report_id))
+    try:
+        exists = os.path.exists(path)
+        with open(path, "a", encoding="utf-8") as f:
+            if exists and f.tell() == 0:
+                exists = False
+            if not exists:
+                f.write("# %s — %s\n\n" % (kind, report_id))
+            f.write("\n## operator reply\n\n"
+                    "- **date:** %s\n"
+                    "- **from:** %s\n\n%s\n"
+                    % (msg.get("date", ""), msg.get("from", ""), text))
+    except OSError:
+        return None
+    return path
+
+
+def record_dismissal(item_ids):
+    """Persist deny: targets into dashboard/operator-dismissed.json --
+    the SAME ledger and schema dashboard-server.py POST
+    /operator-item/dismiss writes ({"dismissed": {"<id>": "<UTC ts>"}},
+    atomic replace). Existing entries (UI dismissals) are merged, never
+    dropped; an unparsable/absent ledger is rebuilt fresh. Fail-closed:
+    OSError leaves the prior ledger untouched."""
+    if not item_ids:
+        return
+    path = os.path.join(AUTOMATION, "dashboard", "operator-dismissed.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            dismissed = json.load(f).get("dismissed") or {}
+    except (OSError, ValueError):
+        dismissed = {}
+    if not isinstance(dismissed, dict):
+        dismissed = {}
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    for iid in item_ids:
+        dismissed[str(iid)] = ts
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"dismissed": dismissed}, f, indent=2)
+    os.replace(tmp, path)
+
+
+def record_approval(item_ids):
+    """Persist approve: targets into dashboard/operator-approved.json --
+    same schema/atomic-replace pattern as record_dismissal's ledger
+    ({"approved": {"<id>": "<UTC ts>"}}). Existing entries are merged,
+    never dropped; an unparsable/absent ledger is rebuilt fresh.
+    Fail-closed: OSError leaves the prior ledger untouched."""
+    if not item_ids:
+        return
+    path = os.path.join(AUTOMATION, "dashboard", "operator-approved.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            approved = json.load(f).get("approved") or {}
+    except (OSError, ValueError):
+        approved = {}
+    if not isinstance(approved, dict):
+        approved = {}
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    for iid in item_ids:
+        approved[str(iid)] = ts
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"approved": approved}, f, indent=2)
+    os.replace(tmp, path)
+
+
+def apply_directive(report_id, text):
+    """First approve:/deny:/note: line in the reply -> the matching
+    open operator-items' status transition (approve -> handled,
+    deny -> dismissed, note/default -> annotation only). Matches only
+    items whose text/identity references the report id; unknown or
+    missing directives default to note. Fail-closed: any error leaves
+    the feed byte-identical."""
+    feed = os.path.join(AUTOMATION, "dashboard", "operator-items.json")
+    try:
+        with open(feed, encoding="utf-8") as f:
+            data = json.load(f)
+        items = data.get("items")
+        if not isinstance(items, list):
+            return None
+        changed = False
+        dismissed_ids = []
+        approved_ids = []
+        for it in items:
+            if not isinstance(it, dict) or it.get("status") != "open":
+                continue
+            blob = "%s %s" % (it.get("id", ""), it.get("text", ""))
+            if report_id not in blob:
+                continue
+            status = None
+            for ln in text.splitlines():
+                # grammar: a line beginning approve:/deny:/note: (the
+                # colon is part of the grammar; bare words never count)
+                dm = re.match(r"\s*(approve|deny|note):", ln)
+                if dm:
+                    status = DIRECTIVES[dm.group(1)]
+                    break
+            it["status"] = status or "open"
+            if status:
+                prev = (it.get("evidence") or "").strip()
+                it["evidence"] = (
+                    "%s operator reply %s via imap-poll"
+                    % (prev, dm.group(1))).strip()
+                if status == "dismissed":
+                    # durable across feed rebuilds: the 1m rebuild
+                    # (jobs/operator-items-feed.py) resets the live
+                    # feed from sources, so the emailed decision is
+                    # also recorded in the dismissal ledger (the same
+                    # ledger the dashboard-server dismiss path owns).
+                    dismissed_ids.append(it.get("id", ""))
+                elif status == "handled":
+                    # same rebuild-clobber durability for approvals:
+                    # without this the 1m rebuild resets handled to
+                    # open within a minute.
+                    approved_ids.append(it.get("id", ""))
+            changed = True
+        if not changed:
+            return None
+        tmp = "%s.%d.tmp" % (feed, os.getpid())
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp, feed)
+        try:
+            record_dismissal(dismissed_ids)
+            record_approval(approved_ids)
+        except OSError:
+            pass  # ledgers are best-effort durability, never fatal
+        return feed
+    except (OSError, ValueError):
+        return None
+
+
+def handle_report_reply(msg, text):
+    """Subject carries [hngh <report-id>]: annotate the report sidecar,
+    apply the directive grammar to matching operator-items. Returns
+    (sidecar path or None). No match -> (None), behavior unchanged."""
+    m = REPORT_REF_RE.search(msg.get("subject", ""))
+    if not m:
+        return None
+    report_id = m.group(1)
+    return (annotate_report(report_id, msg, text),
+            apply_directive(report_id, text))
 
 
 def plan_decision(msg, text):
@@ -308,6 +492,7 @@ def process_one(client, num, dry=False):
     hit = plan_decision(msg, text)
     if hit:
         write_draft(hit[0], hit[1], msg, text)
+    handle_report_reply(msg, text)  # [hngh <report-id>]: annotate + directives
     client.mark_seen(num)  # processed: read, never deleted
     return identity
 

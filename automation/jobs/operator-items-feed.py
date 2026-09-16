@@ -11,9 +11,13 @@ Each item: {id: 8-hex of normalized text, text, first_seen, last_seen,
 status, evidence}. status = "handled" when a LATER breadcrumb containing
 resolved/fixed/closed shares a subject token with the item (date-ordered
 scan); evidence carries that resolving crumb. first_seen survives reruns
-via the prior operator-items.json. Dismissal lives in
+via the prior operator-items.json. The dismissal ledger
 dashboard/operator-dismissed.json (owned by dashboard-server.py POST
-/operator-item/dismiss) — this feed never touches it.
+/operator-item/dismiss, also written by scripts/imap-poll.py deny:
+directives) is read-only here: ids in it carry dismissed-status
+semantics (the display layer hides every ledger id, so the feed must
+not report them open or recurring), while a later RESOLVED crumb still
+outranks the ledger (handled wins).
 
 Fail-closed: any parse failure exits leaving the prior file untouched.
 Display layer only — never governance input.
@@ -29,6 +33,7 @@ DATA = os.path.join(ROOT, "dashboard", "data.json")
 STATE = os.path.join(ROOT, "STATE.md")
 OUT = os.path.join(ROOT, "dashboard", "operator-items.json")
 DISMISSED = os.path.join(ROOT, "dashboard", "operator-dismissed.json")
+APPROVED = os.path.join(ROOT, "dashboard", "operator-approved.json")
 
 RESOLVED_RE = re.compile(r"\b(resolved|fixed|closed)\b", re.I)
 KEYWORD_RE = re.compile(r"papercut|flagged|needs|operator decision", re.I)
@@ -124,15 +129,30 @@ def main():
         if is_operator_item(event, event + " " + detail) and not RESOLVED_RE.search(detail):
             items.append({"text": joined, "first_seen": ts})
 
-    # dismissal ledger is read-only here: an item whose id the operator
-    # already dismissed but the source still emits is marked recurring —
-    # its dismissal is temporary by nature.
+    # dismissal ledger is read-only here: ids in it were dismissed by
+    # the operator (dashboard POST or an emailed deny: via imap-poll)
+    # and are honored below with dismissed-status semantics — the
+    # display layer hides ledger ids, so reporting them open (or
+    # merely recurring) would resurrect an operator decision the feed
+    # rebuild must never clobber.
     dismissed = {}
     try:
         with open(DISMISSED, encoding="utf-8") as f:
             dismissed = json.load(f).get("dismissed") or {}
     except Exception:
         pass  # no ledger yet: nothing is recurring
+    approved = {}
+    try:
+        with open(APPROVED, encoding="utf-8") as f:
+            approved = json.load(f).get("approved") or {}
+    except Exception:
+        pass  # no approval ledger yet
+
+    # approval ledger is read-only here, same durability contract as
+    # the dismissal ledger: ids in it were approved by the operator
+    # (an emailed approve: via imap-poll) and keep handled-status
+    # across the rebuild — the rebuild must never clobber an operator
+    # decision; a later RESOLVED crumb still outranks (handled wins).
 
     # merge: dedupe by id, keep earliest first_seen
     by_id = {}
@@ -152,10 +172,18 @@ def main():
                 it["status"] = "handled"
                 it["evidence"] = "%s %s" % (ts, joined)
                 break
-        it.setdefault("status", "open")
-        it["last_seen"] = now
         if iid in dismissed:
-            it["recurring"] = True
+            # the operator dismissed this id; a later RESOLVED crumb
+            # above already set handled, which still outranks the
+            # ledger — so setdefault, never override.
+            it.setdefault("status", "dismissed")
+        elif iid in approved:
+            # the operator approved this id; keep handled across the
+            # rebuild (a RESOLVED crumb above already set handled too).
+            it.setdefault("status", "handled")
+        else:
+            it.setdefault("status", "open")
+        it["last_seen"] = now
 
     # [feedback:] operator submissions outrank the standing alert crowd:
     # 4.5k historical alert crumbs would otherwise fill the whole cap and
