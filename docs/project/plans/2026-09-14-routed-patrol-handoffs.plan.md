@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:handoffs -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:handoffs  cause=obsolete disposed=2026-09-16T21:00:14Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:handoffs`
@@ -13,3 +13,4 @@ at 2026-09-14T21:00:12Z. Alert text: patrol handoffs: bad-execution on agent-han
 
 - 2026-09-14T22:00:13Z re-occurred (dedup window expired)
 - 2026-09-16T00:00:20Z re-occurred (dedup window expired)
+- 2026-09-16T21:00:14Z re-occurred (dedup window expired)
