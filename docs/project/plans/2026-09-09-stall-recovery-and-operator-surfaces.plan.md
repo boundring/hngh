@@ -149,19 +149,25 @@ docs/records/ with its first commit.
       Verification: suite test simulates SIGTERM mid-beat and asserts the
       breadcrumb + clean exit; state path survives a simulated reboot
       (dir not under /tmp); `make test` green.
-- [ ] 8. Steamdeck availability windows. Evidence: hourly 32-deck-facts
-      probes file deck-unreachable alerts (rc=255) and the operator
-      receives email for what is normal gaming/travel; operator commits
-      the deck to weekday 09:00-17:30 EST availability when feasible and
-      expects Hngh to recognize unavailability otherwise.
-      Change: availability schedule in cadence params (weekday 09:00-17:30
-      EST expected; outside it, unreachable is expected-state — no alert,
-      dashboard shows "off-duty" instead of down); within-window
-      unreachable still alerts. Adjust automation/jobs system/remote
-      probes and the digest classifier accordingly.
-      Verification: suite test: unreachable outside window -> no alert,
-      status off-duty; unreachable inside window -> alert retained;
-      `make test` green.
+- [x] 8. Steamdeck availability windows. VERIFIED 2026-09-16T06:34Z, LANDED
+      on its own surface — no gap found, no code changed this session.
+      Evidence: cadence-params.tsv row 61 carries deck-availability =
+      "Mon-Fri 09:00-17:30 America/New_York" (env DECK_AVAILABILITY
+      overrides); cadence/hour/32-deck-facts.sh implements deck_on_duty()
+      (:79+) and the unreachable off-duty leg (:63+: outside window =
+      breadcrumb + exit 0, no alert; inside window still alerts, identity
+      deduped); scripts/email-digest.py carries the off-duty classifier
+      (:338, :587) and reads the cadence-params row (:288).
+      Verification: automation/tests/test-deck-availability.sh ran cold
+      this session, ALL PASS (21 cases: outside-window no alert + off-duty
+      crumb; inside-window alert retained with unchanged identity/text;
+      digest tiers and cadence-row read; no-window fallback keeps the
+      alert path; DECK_HOST/DECK_NOW seams). Caveat stated, not skipped:
+      deck-node-enabled=0 since 2026-09-15 (operator deactivation,
+      commit c6d485fd), so the hourly pull no-ops today — no live
+      unreachable observation was possible; the suite's seams cover it.
+      Plan-file-only slice per step-6/7 precedent (no kernel surface
+      touched). Re-enabling deck-node-enabled stays operator territory.
 - [ ] 9. Wire pre-paid quota models into session routing. Evidence:
       overnight-cycle.sh:123 itself says "model routing (future, not
       implemented): when the KIMI/LOBEHUB quota keys go live (sibling
