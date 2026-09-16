@@ -74,6 +74,14 @@ KNOWN_EXEMPTIONS = {
                   "(repair content certified separately by 117d463f)",
         "patch-id": "09bc3d024489f06457155358eb8afcc6ee58c0b8",
     },
+    # 2026-09-16 declared miss: queue Next-pointer advance swept the
+    # staged packages.lisp export edit (docs: message touching src/);
+    # the swept export content is inert (exports for landed kernel work).
+    "e6e98f7": {
+        "reason": "queue Next advance that swept a staged packages.lisp "
+                  "export edit (swept content inert exports)",
+        "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
+    },
     # omp-bridge --propose/--plan-status (integration plan step 3) and its
     # bare-slug fix: landed outside the loop on 2026-09-10 while the bridge
     # itself was being built; declared by name per the 2026-09-06 decision,
@@ -165,6 +173,11 @@ KNOWN_EXEMPTIONS = {
     },
     # (526cd3fd gate-cure declaration of 2026-09-14 merged into the 526cd3f
     # entry above: same commit, correct patch-id 5b6840df... registered once)
+    # docs: queue Next advances to bridge-operator-host (all dependencies present; node-lattice-admission rotated 2026-09-15 via ceremony candidate 9e0779b0) -- kernel-gate red cure 2026-09-15, declared not rewritten
+    "e6e98f75": {
+        "reason": "docs: queue Next advances to bridge-operator-host (all dependencies present; node-lattice-admission rotated 2026-09-15 via ceremony candidate 9e0779b0) (declared miss, gate-cure patrol)",
+        "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
