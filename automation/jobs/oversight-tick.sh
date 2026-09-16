@@ -21,6 +21,8 @@ export AUTOMATION_ROOT="$ROOT"
 STATE_FILE="${STATE_FILE:-$ROOT/STATE.md}"
 # shellcheck disable=SC1091
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
+# shellcheck disable=SC1091
+. "$ROOT/lib/redact.sh" 2>/dev/null || true
 HNGH_REPO="${HNGH_REPO:-~/Projects/etc/hngh}"
 REPORT_QUEUE="$HNGH_REPO/scripts/report-queue"
 LOCK="${LOCK:-/tmp/hngh-overseer.lock}"
@@ -62,17 +64,21 @@ alert() { # alert KIND DETAIL [IDENTITY WINDOW] — file an alert row in the
  # flapping suppression: the same (kind, detail) is not re-alerted
  # within SUPPRESS_MIN (default 60) — stops 5m-tick spam of an
  # unresolved condition while never hiding NEW distinct alerts.
- local key="$1: $2" last=0
+ local key redacted
+ redacted="$(redact_home "$1: $2" 2>/dev/null || printf '%s: %s' "$1" "$2")"
+ local key="$redacted" last=0
  local alert_last="${ALERT_LAST:-/tmp/hngh-oversight-alerts}"
  [ -f "$alert_last" ] && last=$(grep -F -m1 "$key" "$alert_last" 2>/dev/null | awk '{print $NF}' || echo 0)
  now=$(date +%s)
  if [ -n "$last" ] && [ $((now - last)) -lt ${SUPPRESS_MIN:-60} ]; then
   return 0
  fi
- local -a rq=(--add alert "[oversight] $1: $2")
- [ -n "$3" ] && rq+=(--identity "$3" --window "${4:-86400}")
+ local -a rq=(--add alert "[oversight] $redacted")
+ local ident="${3:-}"
+ [ -n "$ident" ] && ident="$(redact_home "$ident")"
+ [ -n "$ident" ] && rq+=(--identity "$ident" --window "${4:-86400}")
  "$REPORT_QUEUE" "${rq[@]}" >/dev/null 2>&1 &&
-  breadcrumb "oversight-tick" "alert" "$1: $2" || true
+  breadcrumb "oversight-tick" "alert" "$redacted" || true
  echo "$key $now" >>"${ALERT_LAST:-/tmp/hngh-oversight-alerts}"
  touch "$ATTENTION_FLAG" 2>/dev/null || true
 }

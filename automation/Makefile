@@ -102,6 +102,9 @@ test:
 	python3 -B tests/test-history-feed.py
 	python3 -B tests/test-fleet-feed.py
 	python3 -B tests/test-report-queue-evidence.py
+	python3 -B tests/test-report-queue-redaction.py
+	bash tests/test-config-backup-fail-redact.sh
+	bash tests/test-oversight-tick-alert-redact.sh
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
@@ -155,6 +158,7 @@ test:
 	bash tests/test-wiki-health.sh
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
+	bash tests/test-credential-health-argv.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
 	bash tests/test-permissions.sh

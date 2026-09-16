@@ -2,6 +2,25 @@
 
 ## 2026-09-16
 
+- security: credential-health bearer probes moved off argv to the stdin
+  curl config (test-first; record:
+  docs/records/2026-09-16-credential-health-bearer-stdin.md) — the
+  unsloth, kimi, and ocgo probes passed the resolved key as
+  `-H "Authorization: Bearer $key"` on the curl argv, leaving it
+  readable in `/proc/<pid>/cmdline` for the call duration (the same
+  class the notify-seam argv fix closed; silent carry-over from the
+  2026-09-10 authenticated-probe fix). All three now send
+  `printf 'header = "Authorization: Bearer %s"' | curl -K -`; only the
+  endpoint URL, timeouts, and `-o/-w` stay on argv; breadcrumb strings
+  and `-o /dev/null -w '%{http_code}'` semantics byte-identical. New
+  `tests/test-credential-health-argv.sh` (stub curl ARGV:/STDIN:
+  records, red-proven, plus a real-curl loopback ordering check),
+  registered in `make test`; `tests/test-probe-hygiene.sh` contract
+  consciously evolved to require `-K -` per probed gate, forbid any
+  `Authorization:` on a curl record, and pin one Bearer stdin directive
+  per gate (`$tok`, `$kimi_key`, `$ocgo_key`); deck `/health` remains
+  the single exempt bare GET. No exemptions. g2's missing TOKEN_FILE
+  pre-probe gate deliberately untouched (coordinate, no collision).
 - harden: reply-side no-echo scrub + no-paths house law on the news
   lane (test-first, red-proven; record:
   docs/records/2026-09-16-model-reply-path-scrub.md) — closing the
@@ -18,6 +37,29 @@
   markers, prose kept. model.sh itself untouched (kernel-surface
   change would need the ceremony; chain-wide reply scrub is a
   follow-up).
+- boundary: emitter-side path-redaction backstops + the report-queue
+  alert-kind boundary control (test-first, red-proven; record:
+  docs/records/2026-09-16-emitter-boundary-redaction.md in the kernel
+  repo) — new shared `lib/redact.sh` `redact_home()` rewrites
+  `/home/<user>/` to `~/` and `/tmp/` to `~tmp/`; wired into
+  `jobs/config-backup.sh` `fail()` (alert row + STATE.md crumb; the
+  console log keeps the raw path for the operator) and
+  `jobs/oversight-tick.sh` `alert()` (text, identity token, and crumb
+  redacted; flapping-suppression bookkeeping keyed on the redacted key
+  so a prefix-only drift cannot re-fire). Sink side: kernel
+  `scripts/report-queue --add alert` (ceremony-committed) rewrites the
+  same path class before id/row/body derivation — the backstop for
+  emitters that lack their own guard; progress kinds intentionally
+  untouched (some lanes carry repo-relative paths). New suites:
+  `tests/test-report-queue-redaction.py` (8 cases),
+  `tests/test-config-backup-fail-redact.sh` (real fail() seam vs a
+  fake queue), `tests/test-oversight-tick-alert-redact.sh` (real
+  alert() seam; caught the identity-token leak the first emitter pass
+  missed), plus 3 kernel contract cases in
+  `tests/scripts/test-report-queue.py`. Forward-only: the ~295
+  historical absolute-path progress rows stay (append-only ledger; no
+  public history rewrite for username-class content).
+
 - harden: credential-evidence integrity close-outs on the repaired rung
   (test-first; lib/credential-evidence.py + hermetic suite only) —
   duplicate credential names now fail closed (every instance reports
