@@ -8,6 +8,24 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Report-queue sink bypass closure: identity, evidence, and every
+  body write pass the boundary guard** (docs/records/2026-09-16-report-queue-sink-bypass-closure.md):
+  the kernel ledger sink redacted only alert TEXT; pathy tokens still
+  landed verbatim via `--evidence` (live leak: the 976f09b8 plan-accept
+  pytest traceback) and `--identity` (live leaks: the 3342f352 /
+  71d03fef `stale-store:/tmp/…` metas), direct `write_body` callers
+  bypassed the guard entirely, and occurrence appends were unguarded.
+  Identity/evidence are now rewritten at the argument boundary BEFORE
+  the dedup window lookup on every kind (dedup key = redacted form;
+  pre-guard raw stored metas are matched through the same rewrite so
+  no duplicate rows strand), `write_body` defaults to redacting
+  first/full text (progress argv keeps the per-kind carve-out), and
+  `set_body_evidence` + both append paths pass through the guard.
+  Red-first contract cases in `tests/scripts/test-report-queue.py`
+  (24/24 OK); sibling sink consumers verified through the real script
+  (evidence dedup, cap-block, router-feed, oversight/config-backup
+  redact probes, patrol) all green.
+
 - **Digest mega-block writer census: every daily-digest writer routes
   through the one scrub seam** (docs/records/2026-09-16-digest-writer-census-scrub.md):
   complete sweep of the automation tree found four writers of
