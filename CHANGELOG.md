@@ -37,6 +37,20 @@ lives under Pre-release / early development until the first release.
   breadcrumb behavior unchanged, stub-curl suites assert argv/stdin
   separation (test-first, red then green).
 
+- **Accepted-risk dispositions recorded for the credential-argv sweep candidates**
+  (docs/records/2026-09-16-risk-dispositions-cred-argv.md): the three
+  accepted-risk-candidate classes from the 2026-09-16 sweep now carry
+  explicit, evidence-backed dispositions instead of silent carry-over —
+  STEER_MODEL URL stays on curl argv as operator-trust-class config with a
+  binding no-embedded-key requirement added at the site (and a verified
+  reason NOT to convert to `curl -K -`: newline/quote in the value injects
+  following stdin lines as curl config directives); git-push.sh failure
+  text accepted after empirically verifying git strips userinfo from
+  push/fetch stderr across DNS-failure, connection-refused, and HTTP-401
+  classes (git 2.55.0, raw-token grep 0 in all three); notification/event
+  TEXT on argv accepted under the recorded no-credential-values invariant.
+  Docs + one site comment; no behavior change.
+
 ### 2026-09-15
 
 #### Added

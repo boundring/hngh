@@ -28,7 +28,13 @@ LAST_BEAT="${LAST_BEAT:-/tmp/hngh-overseer-steer-beat}"
 STEERING_BEAT_MIN="${STEERING_BEAT_MIN:-10}"
 STEERING_ATTENTION_MIN="${STEERING_ATTENTION_MIN:-1}"
 ATTENTION_FLAG="${ATTENTION_FLAG:-/tmp/hngh-overseer-attention}"
-STEER_MODEL="${STEER_MODEL:-}"
+STEER_MODEL="${STEER_MODEL:-}" # operator-set steer endpoint; argv BY DESIGN, see record
+# DISPOSITION (docs/records/2026-09-16-risk-dispositions-cred-argv.md): the URL
+# rides curl argv as accepted risk — operator-set config in the operator trust
+# class, not a per-run credential. BINDING: STEER_MODEL must not embed an API
+# key (no key-in-URL routes). Do NOT convert to `curl -K -`: a value carrying
+# a newline or an embedded double quote would let following stdin lines parse
+# as arbitrary curl config directives (verified empirically 2026-09-16).
 EVENT_MODE=0
 SELFREVIEW_MODE=0
 
