@@ -99,7 +99,13 @@ class FailClosed(SendPathBase):
 
 
 CURL_STUB = """#!/bin/sh
-printf '%s\\n' "$*" >> "$CURL_LOG"
+# ARGV: records the curl argv (cmdline-exposure surface); STDIN: records the
+# stdin curl -K - config when present. The token-bearing URL must travel
+# only on STDIN.
+{
+  printf 'ARGV: %s\\n' "$*"
+  case " $* " in *" -K "*) printf 'STDIN:'; cat; printf '\\n';; esac
+} >> "$CURL_LOG"
 printf '200'
 """
 
@@ -135,7 +141,12 @@ class SeamDispatch(SendPathBase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("rc=0", r.stdout)
         payload = self.curl_log.read_text()
-        self.assertIn("http://127.0.0.1:1/hook", payload)
+        # URL travels in the stdin curl config (line prefixed STDIN:), never
+        # on the argv line: webhook URLs commonly embed secret tokens.
+        argv_line = [ln for ln in payload.splitlines()
+                     if ln.startswith("ARGV:")][0]
+        self.assertNotIn("http://127.0.0.1:1/hook", argv_line)
+        self.assertIn('STDIN:url = "http://127.0.0.1:1/hook"', payload)
         self.assertIn('"class": "test"', payload)
         self.assertIn('"subject": "[TEST] hngh seam probe"', payload)
         self.assertIn('"ts"', payload)
@@ -150,6 +161,14 @@ class SeamDispatch(SendPathBase):
         self.assertIn("chat_id=12345", payload)
         self.assertIn("[TEST] hngh seam probe", payload)
         self.assertNotIn("stub-token-never-real", r.stdout + r.stderr)
+        # argv-exposure regression: the token-bearing URL must never sit in
+        # the curl argv (/proc/<pid>/cmdline); it travels via stdin config.
+        argv_line = [ln for ln in payload.splitlines()
+                     if ln.startswith("ARGV:")][0]
+        self.assertNotIn("stub-token-never-real", argv_line)
+        self.assertIn(
+            'STDIN:url = "https://api.telegram.org/'
+            'botstub-token-never-real/sendMessage"', payload)
 
 
 SMTP_SINK = '''#!/usr/bin/env python3

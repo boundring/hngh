@@ -4,6 +4,18 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-16
+
+#### Changed
+
+- **Notify-seam token argv exposure closed** (docs/records/2026-09-16-notify-token-argv-exposure.md):
+  `automation/lib/notify.sh` telegram and webhook sends now carry the
+  secret-bearing URL through the stdin curl config (`curl -K -`,
+  `url = ` line) instead of argv, so no token sits in
+  `/proc/<pid>/cmdline`; non-secret args stay on argv, fail-closed
+  breadcrumb behavior unchanged, stub-curl suites assert argv/stdin
+  separation (test-first, red then green).
+
 ### 2026-09-15
 
 #### Added

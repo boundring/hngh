@@ -13,10 +13,14 @@ trap 'rm -rf "$sb"' EXIT
 mkdir -p "$sb/lib" "$sb/bin" "$sb/scripts" "$sb/.config/hngh" "$sb/stamps"
 ln -s "$root/lib/notify.sh" "$sb/lib/"
 
-# stub curl: records args to $CURL_LOG, answers HTTP 200.
+# stub curl: records argv (prefixed ARGV:) plus, when -K - is present, the
+# stdin config (prefixed STDIN:) to $CURL_LOG; answers HTTP 200.
 cat >"$sb/bin/curl" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' "$*" >>"$CURL_LOG"
+{
+  printf 'ARGV: %s\n' "$*"
+  case " $* " in *" -K "*) printf 'STDIN:'; cat; printf '\n';; esac
+} >>"$CURL_LOG"
 echo "200"
 EOF
 chmod +x "$sb/bin/curl"
@@ -69,12 +73,33 @@ ck() { # desc expected actual
 }
 no_secret() { # desc value — the secret string must not appear in any seam
   # output (stdout/exit traces or breadcrumbs). curl.log is the stub's wire
-  # record and inherently contains the URL token, like the real transport.
+  # record: since the argv-exposure fix the token-bearing URL travels only
+  # via stdin curl config, so non-STDIN lines (the argv record) must never
+  # carry it either — asserted directly by the per-channel tests below.
   if grep -qF "$2" "$sb/STATE.md" 2>/dev/null || printf '%s' "$CAPTURED" | grep -qF "$2"; then
     echo "FAIL: $1: secret leaked"
     fails=$((fails + 1))
   else
     echo "ok: $1: value never printed"
+  fi
+}
+
+# argv-exposure check: secret strings may appear ONLY on STDIN (curl -K -
+# config), never on the curl argv line (real risk: /proc/<pid>/cmdline).
+no_argv_secret() { # desc value — value must not appear outside STDIN lines
+  if grep -v '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
+    echo "FAIL: $1: secret on curl argv"
+    fails=$((fails + 1))
+  else
+    echo "ok: $1: value absent from curl argv"
+  fi
+}
+in_stdin() { # desc value — value must appear on a STDIN line
+  if grep '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
+    echo "ok: $1: value carried in stdin curl config"
+  else
+    echo "FAIL: $1: stdin curl config missing value"
+    fails=$((fails + 1))
   fi
 }
 
@@ -127,6 +152,9 @@ grep -q "body-tg" "$sb/curl.log" &&
 }
 CAPTURED="$out"
 no_secret "telegram env" "stub-token-never-real"
+no_argv_secret "telegram env" "stub-token-never-real"
+in_stdin "telegram env" \
+  'url = "https://api.telegram.org/botstub-token-never-real/sendMessage"'
 
 rst
 # --- 4. telegram armed via mode-600 key file (644 refused).
@@ -142,6 +170,9 @@ grep -q "chat_id=67890" "$sb/curl.log" &&
 }
 CAPTURED="$out"
 no_secret "telegram key file" "stub-file-token-never-real"
+no_argv_secret "telegram key file" "stub-file-token-never-real"
+in_stdin "telegram key file" \
+  'url = "https://api.telegram.org/botstub-file-token-never-real/sendMessage"'
 rst
 chmod 644 "$sb/.config/hngh/telegram-notify.env"
 out="$(call test subj-tg3 body-tg3)"
@@ -165,6 +196,8 @@ grep -q '"class": *"cls-w"' "$sb/curl.log" &&
   echo "FAIL: webhook: payload fields missing"
   fails=$((fails + 1))
 }
+no_argv_secret "webhook env" "http://127.0.0.1:1/hook"
+in_stdin "webhook env" 'url = "http://127.0.0.1:1/hook"'
 # webhook via key file
 rst
 printf 'WEBHOOK_URL=http://127.0.0.1:1/hook2\n' >"$sb/.config/hngh/webhook-notify.env"
@@ -176,6 +209,8 @@ grep -q "hook2" "$sb/curl.log" &&
   echo "FAIL: webhook key file"
   fails=$((fails + 1))
 }
+no_argv_secret "webhook key file" "http://127.0.0.1:1/hook2"
+in_stdin "webhook key file" 'url = "http://127.0.0.1:1/hook2"'
 rm -f "$sb/.config/hngh/webhook-notify.env"
 
 rst
