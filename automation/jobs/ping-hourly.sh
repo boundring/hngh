@@ -5,6 +5,7 @@
 # dashboard, dogfood hngh. Fail-closed: always exits 0.
 set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
+. "$AUTOMATION_ROOT/lib/digest-block.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/sources.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
@@ -96,11 +97,11 @@ resolution, escalation, or a material fact added)."
   summary="$(printf '%s' "$summary" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
   used="$(last_model_used)"
   if [ -n "$summary" ]; then
-    {
-      printf '\n## %s %s\n' "$TS" "$DATE"
-      printf '_sources: %s | model: %s_\n' "$(printf '%s' "$new_names" | tr '\n' ',' | sed 's/,$//')" "$used"
-      printf '%s\n' "$summary"
-    } >>"$DIGEST"
+    # free text is model output: the digest writer seam scrubs host
+    # path tokens before anything lands (writer census 2026-09-16;
+    # deck B / email / dashboard / newspaper render this file verbatim)
+    append_news_block "$DIGEST" "$TS" "$DATE" "$used" \
+      "$(printf '%s' "$new_names" | tr '\n' ',' | sed 's/,$//')" "$summary"
     # grounded megastructure block: real feeds only, sources cited in
     # HTML comments; best-effort, never breaks the news block.
     python3 "$AUTOMATION_ROOT/jobs/digest-ledger.py" "$DATE" >>"$DIGEST" 2>/dev/null || true

@@ -36,6 +36,7 @@ usage: jobs/patrol.py [--patrol ID | --tier TIER | --all] [--repo DIR]
               [--kernel DIR] [--report-root DIR] [--date YYYY-MM-DD]
 """
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -49,6 +50,15 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)  # automation/
 REPO = os.path.dirname(ROOT)  # the hngh repo (kernel home)
+
+# one identity seam for every digest writer (writer census 2026-09-16):
+# scrub_paths re-exported from jobs/digest-ledger.py so the findings doc
+# and the morning rounds block cannot drift from the mega-line guard
+_dl_spec = importlib.util.spec_from_file_location(
+    "digest_ledger", os.path.join(ROOT, "jobs", "digest-ledger.py"))
+_dl = importlib.util.module_from_spec(_dl_spec)
+_dl_spec.loader.exec_module(_dl)
+scrub_paths = _dl.scrub_paths
 
 FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
          ("sessions.json", 600),  # tier-scaled: 30m feed vs 1m feeds
@@ -1625,7 +1635,13 @@ def read_runs(digest_dir, date, now_s):
 
 
 def findings_md(now_s, date, results, quip_line):
-    """One run section, publication-review two-pass format."""
+    """One run section, publication-review two-pass format. Every detail
+    line is scrubbed at the writer (digest writer census 2026-09-16):
+    FAIL details are journal/log-derived free text, and this doc feeds
+    read_runs (repeat detection) AND the morning rounds -- but it is
+    never an operator-visible surface, so the guard here is the
+    fail-details-in-two-places defense, the visible guard is
+    morning_report's."""
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_s))
     out = ["## %s run" % ts, ""]
     if quip_line:
@@ -1639,7 +1655,7 @@ def findings_md(now_s, date, results, quip_line):
     for r in results:
         for artifact, cause, detail in r["fails"]:
             out.append("- FAIL %s/%s: %s -- %s"
-                       % (r["id"], artifact, cause, detail))
+                       % (r["id"], artifact, cause, scrub_paths(detail)))
         if not r["fails"]:
             out.append("- ok %s -- no red findings" % r["id"])
     # the rounds: each FAIL mapped to the surface it touches and the
@@ -1862,7 +1878,7 @@ def morning_report(now_s):
         seen.add(pid)
         top.append("%d. %s (%s): %s on %s -- %s"
                    % (len(top) + 1, pid, surface_of.get(pid, "?"),
-                      cause, art, detail))
+                      cause, art, scrub_paths(detail)))
         if len(top) == 3:
             break
     if top:

@@ -43,7 +43,22 @@ import urllib.request
 import zipfile
 from datetime import datetime, timedelta, timezone
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(_HERE)  # automation/
+JOBS = _HERE
+
+scrub_paths = None  # injected from jobs/digest-ledger.py (one identity
+# seam for every digest writer; writer census 2026-09-16). Kept optional
+# so the pure-ranking tests can run without the ledger module.
+try:
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location(
+        "digest_ledger", os.path.join(JOBS, "digest-ledger.py"))
+    _dl = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_dl)
+    scrub_paths = _dl.scrub_paths
+except Exception:  # noqa: BLE001 -- the lane stays functional
+    scrub_paths = lambda text: text  # noqa: E731
 
 LASTUPDATE_URL = os.environ.get(
     "GDELT_LASTUPDATE_URL",
@@ -296,7 +311,12 @@ def render_block(items, hhmm, day):
         lines.append("%s: [%s] %s %s%s (%s)" % (
             tag, category_of(item), ROOTS.get(item["root"], "EVENT"), who,
             head, _ascii(item["url"])))
-    return "\n".join(lines) + "\n" if len(lines) > 2 else ""
+    # digest writer guard (writer census 2026-09-16): wire fields are
+    # mostly URLs/slugs, but any path token transiting actors or slugs
+    # dies at the writer -- the same seam as digest-ledger and the
+    # ping-hourly block; URLs are consumed first and kept verbatim
+    return "\n".join(scrub_paths(l) for l in lines) + "\n" \
+        if len(lines) > 2 else ""
 
 
 def load_seen(path, cutoff):
