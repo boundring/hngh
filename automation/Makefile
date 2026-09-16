@@ -57,6 +57,7 @@ test:
 	python3 -B tests/test-email-dismiss-durability.py
 	python3 -B tests/test-imap-poll.py
 	python3 -B tests/test-credentials.py
+	python3 -B tests/test-credential-evidence.py
 	python3 -B tests/test-doc-secrets.py
 	python3 -B tests/test-doc-hygiene.py
 	python3 -B tests/test-getting-started-links.py
