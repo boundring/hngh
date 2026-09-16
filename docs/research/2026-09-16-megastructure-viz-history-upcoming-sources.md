@@ -63,3 +63,27 @@ Confidence: high on sources (all read live today). Not verified: exact
 row counts at scale for budget.md/handoffs (bounded tails recommended),
 and whether reports.md rows are stable schema (rp-ledger hazards record
 2026-09-15 documents known row-format drift).
+
+## Render passthrough finding (supersedes the generic sketch)
+
+The transport half of render passthrough is ALREADY LANDED
+(commit 8d5a7805, viz-transport slice): `automation/jcode/render-blocks.mjs`
+extracts fenced ` ```hngh-render <kind> ` blocks from worker turn text
+(fail-closed, never throws on model text) and ships them two ways —
+marker-delimited stdout section, or fd3 JSON-lines side-channel
+(`JCODE_WORKER_RENDER=off|markers|fd3|both`, capture file via
+`JCODE_RENDER_LOG`; `lib/launch-jcode.sh` plumbs both). What is MISSING
+is the dashboard-side consumer: no file under `automation/dashboard/`
+parses `HNGH-RENDER` sections or render-block envelopes yet. That
+consumer is the actual remaining increment: parse the side-channel log
+in a feed build step (the `_graph_cache` pattern), validate envelopes
+against the v1 schema, and render blocks as dashboard cards.
+
+## Retry note
+
+This artifact covers the two stale queued graph nodes (viz-history-work,
+render-passthrough family) whose worker runs failed in the 2026-09-14
+zai outage window. The endpoint recovered ~19:10Z that evening (server
+log: 141 failures in the 19:00-19:09 window, zero in 19:10-19:19);
+these explores were completed coordinator-side 2026-09-16 instead of
+re-dispatched, to avoid double-driving the original session's graph.
