@@ -43,6 +43,16 @@ cursor/body — fail closed):
                        meta line and must be a token derived from fresh
                        failing state (e.g. the tail of the failing log
                        line), not a constant.
+                       Boundary closure (2026-09-16): --identity and
+                       --evidence are rewritten by the same guard as
+                       alert TEXT at the argument boundary, BEFORE the
+                       dedup window lookup — the dedup key is the
+                       redacted form, on every kind (the keys are
+                       ledger-bound, stored in the git-tracked body
+                       meta). Rows filed before this guard are matched
+                       through the same rewrite of their stored value,
+                       so raw and redacted spellings of one identity
+                       collide instead of stranding duplicate rows.
   --list [KIND]        rows, newest-first, optional KIND filter.
   --unread [KIND]      rows newer than the cursor (docs/project/
                        report-cursor). With no cursor file present, every
@@ -87,6 +97,13 @@ KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
 # and are not rewritten (per-kind boundary, not a sink move). The
 # guard excludes a preceding [[:alnum:].~/-] char so mid-token hits
 # (e.g. a URL with a home-like path component) stay untouched.
+# Sink bypass closure (2026-09-16, this guard applies to): alert TEXT
+# (the original scope), --identity and --evidence keys (stored in the
+# body meta), every body free-text write (direct write_body callers
+# included), and the occurrence/suppressed appends. The rewrite is
+# idempotent and runs BEFORE the dedup window scan, so the dedup key
+# is the redacted form; stored pre-guard raw values are read back
+# through the same rewrite (normalize_boundary) so they still match.
 _REDACT_HOME = "/" + "home"  # split so this file stays gate-clean
 REDACT_RES = (
     (re.compile(r"(^|[^A-Za-z0-9.~/-])" + _REDACT_HOME + r"/[^/\s]+"),
@@ -95,10 +112,35 @@ REDACT_RES = (
 )
 
 
-def redact_alert_text(text):
+def redact_boundary(text):
+    """The boundary rewrite for any sink-carried string (alert TEXT,
+    identity/evidence keys, body text, meta lines, appends)."""
     for rx, repl in REDACT_RES:
         text = rx.sub(repl, text)
     return text
+
+
+def redact_alert_text(text):
+    return redact_boundary(text)
+
+
+_RAW_BOUNDARY = re.compile(
+    r"(?:^|[^A-Za-z0-9.~/-])" + _REDACT_HOME + r"/"
+    r"|(?:^|[^A-Za-z0-9.~/-])/tmp(?=[/\s]|\Z)")
+
+
+def boundary_dirty(text):
+    """True when TEXT still carries a raw machine-local path token."""
+    return bool(_RAW_BOUNDARY.search(text))
+
+
+def normalize_boundary(text):
+    """Comparison form for stored identity/evidence metas: clean values
+    pass through byte-identical, raw (pre-guard) values get the
+    rewrite. Applied on BOTH sides of every identity/evidence
+    comparison, so redacted arguments still dedup against rows filed
+    before the sink guard existed."""
+    return redact_boundary(text) if boundary_dirty(text) else text
 
 ROOT = Path(os.environ.get("HNGH_REPORT_ROOT")
             or Path(__file__).resolve().parent.parent)
@@ -146,10 +188,21 @@ def body_name(ts, kind, rid):
     return f"{ts}-{kind}-{rid}.md"
 
 
-def write_body(ts, kind, rid, first, full, identity=None, evidence=None):
+def write_body(ts, kind, rid, first, full, identity=None, evidence=None,
+               redact_text=True):
+    """Write one body sidecar. The boundary rewrite applies to the
+    identity/evidence metas unconditionally and to FIRST/FULL unless
+    REDACT_TEXT is False -- the argv pass in add() sets that only for
+    progress rows (repo-relative paths are a per-kind carve-out), so a
+    direct caller (no --add argv pass) is guarded by construction."""
     BODIES.mkdir(parents=True, exist_ok=True)
-    ident = f"- **identity:** {identity}\n" if identity else ""
-    ev = f"- **last-evidence:** {evidence}\n" if evidence else ""
+    if redact_text:
+        first = redact_boundary(first)
+        full = redact_boundary(full)
+    ident = (f"- **identity:** {redact_boundary(identity)}\n"
+             if identity else "")
+    ev = (f"- **last-evidence:** {redact_boundary(evidence)}\n"
+          if evidence else "")
     body_path(ts, kind, rid).write_text(
         f"# {kind} — {rid}\n\n- **timestamp:** {ts}\n"
         f"- **kind:** {kind}\n- **first line:** {first}\n"
@@ -174,23 +227,28 @@ def ensure_header():
 
 
 def row_identity(row):
-    """The identity stored in a row's body meta, or None."""
+    """The identity stored in a row's body meta, in comparison form
+    (normalize_boundary), or None."""
     for line in body_text(*row[:3]).splitlines():
         if line.startswith("- **identity:** "):
-            return line[len("- **identity:** "):].strip()
+            return normalize_boundary(
+                line[len("- **identity:** "):].strip())
     return None
 
 
 def body_evidence(ts, kind, rid):
-    """The last-evidence token stored in a row's body, or None."""
+    """The last-evidence token stored in a row's body, in comparison
+    form (normalize_boundary), or None."""
     for line in body_text(ts, kind, rid).splitlines():
         if line.startswith("- **last-evidence:** "):
-            return line[len("- **last-evidence:** "):].strip()
+            return normalize_boundary(
+                line[len("- **last-evidence:** "):].strip())
     return None
 
 
 def set_body_evidence(ts, kind, rid, evidence):
-    """Store/replace the `last-evidence` body meta line."""
+    """Store/replace the `last-evidence` body meta line (rewritten)."""
+    evidence = redact_boundary(evidence)
     p = body_path(ts, kind, rid)
     out, seen = [], False
     for ln in p.read_text().splitlines(keepends=True):
@@ -235,7 +293,7 @@ def bump_row(row, ts):
         raise ValueError(f"report-queue: row {rid!r} vanished mid-bump")
     REPORTS.write_text("".join(lines))
     with body_path(ts0, kind, rid).open("a") as fh:
-        fh.write(f"- {ts} occurrence\n")
+        fh.write(redact_boundary(f"- {ts} occurrence\n"))
 
 
 def add(kind, text, identity=None, window=86400, evidence=None):
@@ -251,7 +309,16 @@ def add(kind, text, identity=None, window=86400, evidence=None):
         # boundary redaction before anything is derived from TEXT (id,
         # first line, body) — the public ledger never stores the raw
         # machine-local path (2026-09-16)
-        text = redact_alert_text(text)
+        text = redact_boundary(text)
+    # identity and evidence are ledger-bound dedup keys on every kind:
+    # they are stored in the git-tracked body meta, so they are
+    # rewritten at the argument boundary, BEFORE the window scan — the
+    # dedup key is the redacted form (2026-09-16 sink bypass closure;
+    # stored pre-guard raw values are matched via normalize_boundary).
+    if identity:
+        identity = redact_boundary(identity)
+    if evidence is not None:
+        evidence = redact_boundary(evidence)
     rid = sha8(text)
     first = text.splitlines()[0].strip()
     ts = now_ts()
@@ -267,8 +334,9 @@ def add(kind, text, identity=None, window=86400, evidence=None):
                 # failure).
                 if evidence is not None and body_evidence(*r[:3]) == evidence:
                     with body_path(*r[:3]).open("a") as fh:
-                        fh.write(f"- {ts} suppressed duplicate "
-                                 "(no new evidence)\n")
+                        fh.write(redact_boundary(
+                            f"- {ts} suppressed duplicate "
+                            "(no new evidence)\n"))
                     print(f"report-queue: suppressed duplicate alert "
                           f"{r[2]} (no new evidence since {r[0]})")
                     return 0
@@ -281,7 +349,8 @@ def add(kind, text, identity=None, window=86400, evidence=None):
                     print(str(exc), file=sys.stderr)
                     return 2
     ensure_header()
-    write_body(ts, kind, rid, first, text, identity, evidence)
+    write_body(ts, kind, rid, first, text, identity, evidence,
+               redact_text=(kind == "alert"))
     with REPORTS.open("a") as fh:
         fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
     return 0

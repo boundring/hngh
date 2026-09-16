@@ -31,6 +31,11 @@ def run(root, *args):
                           capture_output=True, text=True, env=env)
 
 
+# ledger table header, split so this file stays gate-clean (the plain
+# sequence would embed the boundary's own trigger token family)
+HDR = "| timestamp | kind | id | first line | body |"
+
+
 class ReportQueueCLI(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()
@@ -46,12 +51,14 @@ class ReportQueueCLI(unittest.TestCase):
         d = self.root / "docs" / "project" / "report-bodies"
         return sorted(p.name for p in d.glob("*.md")) if d.exists() else []
 
-    def add(self, kind, text, identity=None, window=None):
+    def add(self, kind, text, identity=None, window=None, evidence=None):
         args = ["--add", kind, text]
         if identity is not None:
             args += ["--identity", identity]
         if window is not None:
             args += ["--window", str(window)]
+        if evidence is not None:
+            args += ["--evidence", evidence]
         return run(self.root, *args)
 
     def rows(self):
@@ -178,7 +185,10 @@ class ReportQueueCLI(unittest.TestCase):
         self.assertTrue(rows[0][3].endswith(" ×2"), rows[0])
         body = self.bodies_md()
         self.assertEqual(body.count(" occurrence"), 1, body)
-        self.assertIn("- **identity:** " + ident, body)
+        # the identity key is stored redacted (2026-09-16 sink bypass
+        # closure): a /tmp token never reaches the body meta verbatim
+        self.assertIn("- **identity:** stale-store:~tmp/x", body)
+        self.assertNotIn("stale-store:/tmp/x", body)
         # third occurrence: ×3, and the marker replaces the old one
         self.assertEqual(self.add("alert", "third time", identity=ident)
                          .returncode, 0)
@@ -312,6 +322,137 @@ class ReportQueueCLI(unittest.TestCase):
         url = "https://x.io" + HOME_PREFIX + "aubergine/f"
         self.add("alert", "see " + url + " for docs")
         self.assertIn(url, self.rows()[-1][3])
+
+    # --- sink body bypass closure (2026-09-16): identity, evidence, and
+    # every body write pass the same boundary rewrite as alert TEXT ---
+
+    def seed_raw_row(self, raw_identity):
+        """Hand-file a pre-boundary row: a reports.md row plus a body
+        carrying a RAW (unredacted) identity meta, exactly as emitters
+        filed before the sink guard existed."""
+        from datetime import datetime, timedelta, timezone
+        ts = (datetime.now(timezone.utc)
+              - timedelta(seconds=60)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rid = "seed0001"
+        d = self.root / "docs" / "project"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "reports.md").write_text(
+            HDR + "\n"
+            f"| {ts} | alert | {rid} | seeded raw row |"
+            f" {ts}-alert-{rid}.md |\n")
+        bodies = d / "report-bodies"
+        bodies.mkdir(parents=True, exist_ok=True)
+        (bodies / f"{ts}-alert-{rid}.md").write_text(
+            f"# alert — {rid}\n\n- **identity:** {raw_identity}\n\nseeded\n")
+
+    def test_alert_identity_redacted_in_body(self):
+        ident = "stale-store:/tmp/hngh-cer-fix3.store"
+        r = self.add("alert", "stale store detected", identity=ident)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        body = self.bodies_md()
+        self.assertIn("- **identity:** stale-store:~tmp/hngh-cer-fix3.store",
+                      body)
+        self.assertNotIn(ident, body, "raw /tmp identity leaked to the body")
+
+    def test_alert_identity_redacted_before_window_lookup(self):
+        # the dedup key is the REDACTED identity: the same pathy identity
+        # twice must dedup to one row (redaction happens at the argument
+        # boundary, before the scan), not strand a second row
+        ident = "stale-store:/tmp/hngh-cer-fix3.store"
+        self.add("alert", "stale store detected", identity=ident)
+        r = self.add("alert", "stale store again", identity=ident)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1, "pathy identity did not dedup")
+        self.assertTrue(rows[0][3].endswith(" ×2"), rows[0])
+
+    def test_pre_boundary_raw_identity_still_dedups(self):
+        # rows filed before the guard carry raw identity metas; the scan
+        # compares through the same rewrite, so the redacted form of the
+        # same identity bumps the old row instead of stranding a new one
+        self.seed_raw_row("stale-store:/tmp/hngh-cer-x.store")
+        r = self.add("alert", "stale store again",
+                     identity="stale-store:~tmp/hngh-cer-x.store")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1, "raw stored identity must match its"
+                         " redacted form")
+        self.assertTrue(rows[0][3].endswith(" ×2"), rows[0])
+
+    def test_identity_url_home_component_untouched(self):
+        # mid-token guard semantics hold for identity too
+        ident = "docs:https://x.io" + HOME_PREFIX + "aubergine/f"
+        r = self.add("alert", "see docs", identity=ident)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("- **identity:** " + ident, self.bodies_md())
+
+    def test_alert_evidence_redacted_and_appends_stay_clean(self):
+        ev = "trace " + HOME_PREFIX + "aubergine/x/test-probe.py"
+        r = self.add("alert", "plan accept gate failed",
+                     identity="overnight:plan-accept-gate:kernel",
+                     evidence=ev)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        body = self.bodies_md()
+        self.assertIn("- **last-evidence:** trace ~/x/test-probe.py",
+                      body)
+        self.assertNotIn(HOME_PREFIX, body, "pathy evidence leaked")
+        # changed evidence bumps; the whole body (occurrence append
+        # included) stays free of machine-local tokens
+        ev2 = "trace /tmp/hngh-cer-b.store tail"
+        r = self.add("alert", "plan accept gate failed again",
+                     identity="overnight:plan-accept-gate:kernel",
+                     evidence=ev2)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0][3].endswith(" ×2"), rows[0])
+        body = self.bodies_md()
+        self.assertIn(" occurrence", body)
+        self.assertNotIn(HOME_PREFIX, body)
+        self.assertNotIn("/tmp/hngh-cer-b.store", body)
+        self.assertIn("~tmp/hngh-cer-b.store", body)
+        # the stored (redacted) token again compares equal: suppressed
+        # duplicate, no bump; a DIFFERENT token bumps instead (checked
+        # above), which is the recurrence contract
+        r = self.add("alert", "plan accept gate failed",
+                     identity="overnight:plan-accept-gate:kernel",
+                     evidence=ev2)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("suppressed duplicate", r.stdout)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertTrue(self.rows()[0][3].endswith(" ×2"))
+
+    def test_direct_write_body_call_redacts(self):
+        # the direct-caller path (no --add argv pass) inherits the
+        # boundary inside write_body itself: text, identity, and evidence
+        # all land redacted
+        prog = (
+            "import importlib.util, importlib.machinery, sys\n"
+            "loader = importlib.machinery.SourceFileLoader('rq', sys.argv[1])\n"
+            "spec = importlib.util.spec_from_loader('rq', loader)\n"
+            "rq = importlib.util.module_from_spec(spec)\n"
+            "loader.exec_module(rq)\n"
+            "rq.write_body('2026-09-16T00:00:00Z', 'alert', 'deadbeef',\n"
+            "              'landed ' + sys.argv[2] + 'a.conf',\n"
+            "              'landed ' + sys.argv[2] + 'a.conf\\n"
+            "second line /tmp/hngh-cer-c.store',\n"
+            "              identity='stale-store:/tmp/hngh-cer-c.store',\n"
+            "              evidence='trace ' + sys.argv[2] + 'a.conf')\n"
+        )
+        env = dict(os.environ, HNGH_REPORT_ROOT=str(self.root))
+        proc = subprocess.run(
+            [sys.executable, "-c", prog, str(SCRIPT),
+             HOME_PREFIX + "aubergine/"],
+            env=env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        body = self.bodies_md()
+        self.assertNotIn(HOME_PREFIX, body, "direct write_body leaked text")
+        self.assertNotIn("/tmp/hngh-cer-c.store", body)
+        self.assertIn("~/a.conf", body)
+        self.assertIn("~tmp/hngh-cer-c.store", body)
+        self.assertIn("- **identity:** stale-store:~tmp/hngh-cer-c.store",
+                      body)
+        self.assertIn("- **last-evidence:** trace ~/a.conf", body)
 
     def cursor(self):
         p = self.root / "docs" / "project" / "report-cursor"
