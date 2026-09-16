@@ -87,8 +87,17 @@ PYEOF
  # to avoid a bash multiline-quote parse pitfall.
  local render_mode="${JCODE_WORKER_RENDER:-off}"
  local render_log="${JCODE_RENDER_LOG:-}"
+ # fd3 mode with no explicit capture file defaults to the feed's
+ # documented input (jobs/render-blocks-feed.py DEFAULT_CAPTURE) so a
+ # bare JCODE_WORKER_RENDER=fd3 lands envelopes where the dashboard
+ # consumer reads them.
+ if [[ "$render_mode" == *fd3* || "$render_mode" == *both* ]] && [ -z "$render_log" ]; then
+  render_log="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/state/render-blocks.jsonl"
+ fi
  if [[ "$render_mode" == *fd3* || "$render_mode" == *both* ]] && [ -n "$render_log" ]; then
-  node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err" 3>"$render_log"
+  mkdir -p "$(dirname "$render_log")"
+  touch "$render_log" 2>/dev/null || true
+  node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err" 3>>"$render_log"
   rc=$?
  else
   node "$jcode_worker_bin" "$prompt_blob" >"$JCODE_LOG" 2>"$JCODE_LOG.err"
