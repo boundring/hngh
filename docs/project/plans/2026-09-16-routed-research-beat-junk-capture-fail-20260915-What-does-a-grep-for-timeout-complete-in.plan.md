@@ -12,3 +12,4 @@ at 2026-09-16T07:00:40Z. Alert text: research beat capture for fail-20260915-Wha
 ## Occurrences
 
 - 2026-09-16T08:00:39Z re-occurred (dedup window expired)
+- 2026-09-16T09:00:39Z re-occurred (dedup window expired)
