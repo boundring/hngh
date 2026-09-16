@@ -35,11 +35,16 @@ exit 0
 EOF
 chmod +x "$HNGH_HOME/scripts/report-queue"
 
-# extract exactly the job's fail() seam (single source of truth): the
-# job header through fail()'s closing brace (lines 1..43) carries
-# set -u, report(), and fail(); the sourcing lines are rewritten so
-# nothing real is touched.
-sed -n '1,43p' "$root/jobs/config-backup.sh" |
+# extract exactly the job's fail() seam (single source of truth): from
+# the top of the file through fail()'s closing brace (first column-1
+# brace after the fail() header) — carries set -u, report(), and
+# fail(); the sourcing lines are rewritten so nothing real is touched.
+# Brace-based so line drift above fail() cannot break the cut.
+awk '
+  /^fail\(\)/ {in_fail = 1}
+  in_fail && /^\}/ {print; exit}
+  {print}
+' "$root/jobs/config-backup.sh" |
   sed -e "s#^\. \"\$(cd \"\$(dirname \"\$0\")/..\" && pwd)/lib/common.sh\"#: #" \
       -e "s#^\. \"\$AUTOMATION_ROOT/lib/breadcrumbs.sh\"#. \"$root/lib/breadcrumbs.sh\" #" \
       -e "s#^report_queue=.*#report_queue=\"\$HNGH_HOME/scripts/report-queue\"#" \
