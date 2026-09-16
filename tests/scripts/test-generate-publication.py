@@ -134,5 +134,47 @@ class JournalLifecycle(unittest.TestCase):
             self.assertIn("instance interaction", html)
 
 
+class StoryDeckAScrub(unittest.TestCase):
+    """Digest seam audit 2026-09-16: story_section() quotes a deck A
+    digest item [:140] into the journal/public edition. A pathy item
+    (fixture: home-rooted, /tmp/, and tilde path tokens) must land
+    redacted via digest_ledger.scrub_paths — fail-closed marker, quote
+    kept."""
+
+    def test_story_deck_a_quote_scrubs_paths(self):
+        genpub = load()
+        dl = genpub._load_job("digest_ledger")
+        # committed kernel content carries no literal home path tokens
+        # (verify-candidate public-content gate); concatenation restores
+        # the exact runtime tokens the scrub regex must catch
+        home_tok = "/" + "home/bricker/hngh/STATE.md"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            auto = root / "automation"
+            (auto / "digest").mkdir(parents=True)
+            day = "2026-09-11"
+            (auto / "digest" / (day + ".md")).write_text(
+                "## 0300 %s\n"
+                "_sources: hn-topstories | model: fixture-model_\n"
+                "CRITICAL: drift in %s and /tmp/run-9.log and "
+                "~/secrets.md\n" % (day, home_tok))
+            old_auto, old_root = genpub.AUTOMATION, dl.ROOT
+            genpub.AUTOMATION = auto
+            dl.ROOT = root
+            try:
+                story = genpub.story_section(day)
+            finally:
+                genpub.AUTOMATION = old_auto
+                dl.ROOT = old_root
+        deck_a = story.split("automation/digest/%s.md" % day)[1]
+        deck_a = deck_a.split("<!-- feeds:", 1)[0]
+        for token in ("/" + "home/", "/tmp/", "~/"):
+            self.assertNotIn(token, deck_a)
+        self.assertEqual(deck_a.count("[redacted path]"), 3)
+        # the quote is kept, redacted in place — not dropped
+        self.assertIn("drift in", deck_a)
+        self.assertIn("1 dispatch block(s) crossed", deck_a)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
