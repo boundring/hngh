@@ -78,14 +78,24 @@ def _ascii(text):
     return str(text).encode("ascii", "replace").decode("ascii")
 
 
-PATH_TOKEN_RE = re.compile(r"/home/\S*|/tmp/\S*|~/\S*")
+PATH_TOKEN_RE = re.compile(
+    r"(?P<url>\b(?:[a-z][a-z0-9+.-]*://|www\.)\S*)"
+    r"|(?P<home>/home(?:/\S*)?(?![\w-]))"
+    r"|(?P<tmp>/tmp(?:/\S*)?(?![\w-]))"
+    r"|(?P<tilde>~/\S*)")
 
 
 def scrub_paths(text):
     """No-echo guard (prompt-assembly audit 2026-09-16): host path
     tokens (/home/..., /tmp/..., ~/...) never ride a model prompt;
-    fail-closed redaction to a fixed marker, ordinary prose untouched."""
-    return PATH_TOKEN_RE.sub("[redacted path]", text or "")
+    fail-closed redaction to a fixed marker, ordinary prose untouched.
+    Regex-gap audit 2026-09-16: bare /home //tmp (no trailing segment)
+    die too, and URL matches are consumed first and preserved verbatim
+    (source URLs are wire data, not the operator's filesystem; the
+    named group, not token content, decides)."""
+    return PATH_TOKEN_RE.sub(
+        lambda m: m.group("url") if m.group("url") else "[redacted path]",
+        text or "")
 
 
 def get_param(key, default):

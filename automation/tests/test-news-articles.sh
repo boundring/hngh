@@ -214,8 +214,39 @@ if hasattr(na, "scrub_paths"):
     ck("scrub_paths removes ~/.hngh tokens", "~/.hngh" not in scrubbed)
     ck("scrub_paths removes /tmp/... tokens", "/tmp/vr-test" not in scrubbed)
     ck("scrub_paths keeps ordinary prose", "notes at" in scrubbed)
+    # regex-gap extension (2026-09-16 audit follow-up): credential
+    # redact() emits tilde forms, so a pre-redacted finding line rides
+    # build_prompt with ~/ at line start; bare /home //tmp (no trailing
+    # segment) must also die; URLs keep their paths (hostnames are not
+    # the operator's filesystem).
+    pre_redacted = ("credential-health findings:\n"
+                    "evidence-missing: kimi\n"
+                    "~/.gnupg/private-keys-v1.d\n"
+                    "ledger line ok")
+    scrubbed2 = na.scrub_paths(pre_redacted)
+    ck("tilde token redacted at line start (redact interplay)",
+       "~/.gnupg" not in scrubbed2)
+    bare = "cd /home alone or wrote /tmp then left"
+    scrubbed3 = na.scrub_paths(bare)
+    ck("bare /home token redacted", "/home" not in scrubbed3)
+    ck("bare /tmp token redacted", "/tmp" not in scrubbed3)
+    url_text = ("fetched https://example.com/x/home/bricker/secret and "
+                "https://example.com/tmpdir/page and "
+                "https://example.com/~user/paper today")
+    ck("URLs keep their paths untouched",
+       na.scrub_paths(url_text) == url_text)
+    ck("marker never sprayed into URLs",
+       "[redacted path]" not in na.scrub_paths(url_text))
 else:
     ck("scrub_paths guard exists", False)
+prompt2 = na.build_prompt(
+    {"title": "Fixture breach escalate", "tag": "CRITICAL",
+     "place": "", "url": "https://127.0.0.1:1/leak"},
+    None,
+    "findings:\nevidence-missing: kimi\n~/.gnupg/private-keys-v1.d\n")
+ck("build_prompt scrubs tilde ledger lines", "~/.gnupg" not in prompt2)
+ck("build_prompt keeps the article URL", "https://127.0.0.1:1/leak"
+   in prompt2)
 item = {"title": "PATHLEAK TESTLAND: /home/bricker vault breach",
         "tag": "CRITICAL", "place": "", "url": "https://127.0.0.1:1/leak"}
 prompt = na.build_prompt(item, "extract cites /tmp/vr-test-42 dumps",
