@@ -4,18 +4,18 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the research line on duplicated-and-diverged dashboard behaviors by adding a contract test that pins the shared verdict rule to prevent silent drift across surfaces.
+Implements the contracted line on state-to-template mapping in `research-lines.tsv` by adding an explicit, testable rendering-target column to the schema and a validation script that fails on unmapped states.
 
 ## Steps
 
-- [ ] Create `tests/test_verdict_rule_contract.py` with a stdlib-only script that asserts the expected verdict rule constants match the canonical values.
-  Verification: python3 tests/test_verdict_rule_contract.py
+- [ ] Add a `render_target` column to the header of `digest/research-lines.tsv` and populate it with a concrete output path for every existing state value (`planned`, `expanding`, `contracting`, `crystallized`).
+  Verification: grep -q 'render_target' digest/research-lines.tsv && awk -F'\t' 'NR==1{print NF}' digest/research-lines.tsv | grep -q '^[0-9]+$'
 
-- [ ] Add a `scripts/check_verdict_drift.sh` script that greps for the shared verdict rule literals in the CI workflow and local lib to confirm they are identical.
-  Verification: bash -n scripts/check_verdict_drift.sh
+- [ ] Create `scripts/validate-research-lines-schema.sh` that parses the TSV header, asserts the presence of a `state` and `render_target` column, and exits non-zero if any data row has an empty `render_target`.
+  Verification: bash -n scripts/validate-research-lines-schema.sh
 
-- [ ] Update `lib/verdict.py` to export the canonical verdict rule as a single source of truth with a docstring referencing the drift prevention contract.
+- [ ] Add `tests/test_validate_research_lines_schema.py` that invokes the validation script against a fixture TSV with a missing `render_target` value and asserts a non-zero exit code.
+  Verification: python3 tests/test_validate_research_lines_schema.py
+
+- [ ] Wire the schema validator into the existing test suite by adding an invocation of `scripts/validate-research-lines-schema.sh` to the `test` target in `Makefile`.
   Verification: make test
-
-- [ ] Add a digest entry `digest/RESEARCH-BEAT-20260916-verdict-rule-contract.md` documenting the shared contract and the two surfaces it pins.
-  Verification: grep -q "verdict rule" digest/RESEARCH-BEAT-20260916-verdict-rule-contract.md
