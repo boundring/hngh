@@ -328,6 +328,44 @@ class ServerRouteTest(unittest.TestCase):
 class BuilderTest(unittest.TestCase):
     """digest-ledger.py: grounded block cites feeds, numbers match."""
 
+    def test_build_block_scrubs_path_tokens(self):
+        # digest seam audit 2026-09-16: STATE.md alert crumbs and
+        # operator-item text ride the mega line through _ascii() only,
+        # so a pathy row echoes /home/... /tmp/... ~/... into deck B
+        # (and onward into the public edition). The ledger must land
+        # them redacted (fail-closed marker), never dropped.
+        with Fixture() as fx:
+            (fx.tmp / "STATE.md").write_text(
+                "%sT00:30:00Z | 23-bctx-canary.sh | alert | drift in "
+                "~/Projects/etc/hngh/STATE.md line 9\n" % DAY)
+            (fx.tmp / "dashboard" / "operator-items.json").write_text(
+                json.dumps({"generated_at": "", "items": [
+                    {"id": "bb",
+                     "text": "check /tmp/vr-123/out.log and ~/notes.md now",
+                     "status": "open",
+                     "first_seen": DAY + "T02:00:00Z", "last_seen": ""}]}))
+            block = dl.build(DAY, {
+                "spend": (2, 1.25, 3000, 400),
+                "sessions": [["%sT01:00:00Z" % DAY, "overnight|fixture-plan",
+                              "session-run"]],
+                "plans": ([{"slug": "fixture-a", "status": "executed",
+                            "accepted": DAY + "T10:00:00Z"}],
+                          [{"slug": "fixture-a",
+                            "accepted": DAY + "T10:00:00Z"}], [], "queue-a"),
+                "operator_items": dl.operator_items(
+                    str(fx.tmp / "dashboard" / "operator-items.json")),
+                "research_lines": {"planned": 1, "reviewed": 1},
+                "posture": dl.posture(DAY, str(fx.tmp / "STATE.md")),
+            })
+        text = "\n".join(block)
+        for token in ("/home/", "/tmp/", "~/"):
+            self.assertNotIn(token, text)
+        # one marker per path token (2 in the item text, 1 in the crumb)
+        self.assertEqual(text.count("[redacted path]"), 3)
+        # redaction replaces tokens; rows are kept, never dropped
+        self.assertIn("1 open of 1", text)
+        self.assertIn("1 alert crumbs today", text)
+
     def test_build_block(self):
         with Fixture() as fx:
             tmp = str(fx.tmp)
