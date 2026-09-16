@@ -12,3 +12,4 @@ at 2026-09-16T15:00:40Z. Alert text: patrol manga: manga-stale on manga -- newes
 ## Occurrences
 
 - 2026-09-16T16:00:13Z re-occurred (dedup window expired)
+- 2026-09-16T17:00:21Z re-occurred (dedup window expired)
