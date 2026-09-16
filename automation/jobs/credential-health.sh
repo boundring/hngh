@@ -11,7 +11,12 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/notify.sh"
-
+# freshness evidence (key-rotation-freshness rung, 2026-09-16): ledger of
+# machine-checkable rotate rows + OLA budget (cadence-params `credential-fresh-ola`,
+# env overrides win). Evidence rows digest the token file — values never stored.
+freshness_ledger="${CREDENTIAL_FRESHNESS_LEDGER:-$HOME/.hngh-automation/credential-freshness.tsv}"
+freshness_ola="${CREDENTIAL_FRESHNESS_OLA:-$(get_param credential-fresh-ola 604800)}"
+. "$AUTOMATION_ROOT/lib/params.sh"
 report_root="${HNGH_REPORT_ROOT:-$HNGH_HOME}" # hngh repo by default; overridable for tests
 report_queue="python3 $HNGH_HOME/scripts/report-queue"
 
@@ -48,8 +53,10 @@ elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
   if refresh_unsloth_token; then
     after="$(probe_token)"
     if ok "$after"; then
+      # freshness evidence at rotate time: row pins the token file's digest,
+      # so any later unrecorded rotation shows up as a verification finding.
+      python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)" >/dev/null 2>&1
       breadcrumb "$JOB_NAME" "credential-health" "session token was expired; rotated ok (http=$after)"
-    else
       alert "unsloth-token" "refreshed but still http=$after after rotate"
     fi
   else
@@ -169,4 +176,9 @@ if [ -n "$armed" ]; then
   breadcrumb "$JOB_NAME" "credential-health" "notify seam armed: $armed"
 fi
 
+# --- 7. freshness evidence (key-rotation-freshness rung, 2026-09-16) ---
+# Machine-checkable rotate/scan freshness rows (lib/credential-evidence.py).
+# Fail-closed: unverifiable evidence is an alert finding, never a silent pass.
+python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$freshness_ola" 2>/dev/null |
+  grep -Ev '^(ok:|$)' | while IFS= read -r finding; do alert "credential-freshness" "$finding"; done
 exit 0
