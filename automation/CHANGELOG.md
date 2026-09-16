@@ -2,6 +2,35 @@
 
 ## 2026-09-16
 
+- fix: key-rotation-freshness rung un-deadened (three defects that only
+  worked together to produce silence, then an alert storm when half
+  fixed): (1) `lib/credential-evidence.py` record's production argv
+  shape `record NAME FILE LEDGER "$(date +%s)"` stored rotate_epoch=0
+  because the positional epoch was ignored (only `--now EPOCH` was
+  read) — the positional epoch is now accepted, `--now` kept for the
+  hermetic tests, and a non-integer epoch/OLA fails closed with a
+  `malformed-argv:` SystemExit instead of a silent 0 or an
+  os.time()-shaped AttributeError (check's no-`--now` default was
+  `os.time()`, which does not exist on Python 3 — the check leg had
+  never once emitted a finding because its stderr was discarded);
+  (2) `jobs/credential-health.sh` sourced params.sh only after its
+  `get_param` call, so the OLA silently became empty via
+  command-not-found — sourced first, with a non-numeric guard falling
+  back to the designed 604800; record/check stderr is no longer
+  discarded; (3) steady state decided and documented: the first
+  healthy-probe run seeds the ledger at the live clock (a stale epoch-0
+  row can only be a legacy artifact of defect 1), afterwards only the
+  tracked 401-rotate path re-records, so `stale` means no tracked
+  rotation within the OLA and `hash-mismatch` means an untracked token
+  change; findings are bounded (`head -n 5`) and ride the alert()
+  identity dedup. record() now fchmods the ledger 600 on every write
+  (O_TRUNC alone kept an existing wider mode). Tests: five new hermetic
+  cases in test-credential-evidence.py invoke the exact production argv
+  shapes (positional-epoch record pins a non-zero epoch, no-`--now`
+  check verifies against the live clock, re-chmod-on-rewrite,
+  malformed-argv refusals, extra-argv refusal); live epoch-0 ledger row
+  migrated to the live clock.
+
 - fix: report-ledger public-push exposure closed (decision record
   docs/records/2026-09-16-report-ledger-public-push-exposure.md) —
   credential-health alert() now dedups via --identity
