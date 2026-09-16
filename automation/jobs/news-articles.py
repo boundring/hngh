@@ -78,6 +78,16 @@ def _ascii(text):
     return str(text).encode("ascii", "replace").decode("ascii")
 
 
+PATH_TOKEN_RE = re.compile(r"/home/\S*|/tmp/\S*|~/\S*")
+
+
+def scrub_paths(text):
+    """No-echo guard (prompt-assembly audit 2026-09-16): host path
+    tokens (/home/..., /tmp/..., ~/...) never ride a model prompt;
+    fail-closed redaction to a fixed marker, ordinary prose untouched."""
+    return PATH_TOKEN_RE.sub("[redacted path]", text or "")
+
+
 def get_param(key, default):
     """cadence-params.tsv row -> value; fail-open to default."""
     try:
@@ -223,7 +233,7 @@ def build_prompt(item, source_text, ledger_line, profile=None):
     """The article prompt: story data + register law + deadpan-closer
     guidance. The data block is the ONLY permitted fact source."""
     src = ("SOURCE PAGE TEXT (verbatim extract, may be truncated):\n%s"
-           % source_text) if source_text else \
+           % scrub_paths(source_text)) if source_text else \
         "SOURCE PAGE: unreachable; article comes from the wire data alone."
     return """You are the wire desk of The Machine Hall Daily Dispatch,
 filing one short front-page article.
@@ -253,10 +263,11 @@ House law (writing register, LAW):
   unverifiable gaps read "unverified per source".
 
 %s
-File the article now.""" % (item["title"], item["tag"],
-                            item["place"] or "unlisted",
+File the article now.""" % (scrub_paths(item["title"]), item["tag"],
+                            scrub_paths(item["place"]) or "unlisted",
                             item["url"] or "none",
-                            ledger_line or "none on record", src,
+                            scrub_paths(ledger_line) or "none on record",
+                            src,
                             """WRITER PROFILE (voice, never facts): you
 file as "%s" -- %s. Register: %s. %s The profile shapes cadence and
 framing only; every fact still comes from the story data above. Never

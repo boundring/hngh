@@ -176,5 +176,62 @@ print(("ok: " if ok else "FAIL: ") + "public edition links the article")
 raise SystemExit(0 if ok else 1)
 PY
 
+# --- 8. no-echo guard: host-path tokens never ride the model prompt
+# (prompt-assembly audit 2026-09-16: digest/ledger/source text is host
+# data; scrub at the build_prompt seam, fail-closed redaction, pinned
+# by the captured stub request bodies).
+setup 6
+PATHY_DIGEST="## 0400 $DATE
+_sources: gdelt | model: procedural ranking_
+CRITICAL: PATHLEAK TESTLAND: /home/bricker vault breach noted in /tmp/vr-test-42 (https://127.0.0.1:1/leak)
+"
+printf '%s' "$PATHY_DIGEST" >"$sb/digest/$DATE.md"
+printf '%s' "$PATHY_DIGEST" >"$sb/home/archive/digest/$DATE.md"
+printf '%s' "$PATHY_DIGEST" >"$sb/repo/automation/digest/$DATE.md"
+HNGH_AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" \
+python3 - "$sb" <<'PY' || fails=$((fails + 1))
+import importlib.machinery, importlib.util, os, sys
+sb = sys.argv[1]
+loader = importlib.machinery.SourceFileLoader(
+    "na", os.path.join(sb, "jobs", "news-articles.py"))
+spec = importlib.util.spec_from_loader("na", loader)
+na = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(na)
+bad = 0
+def ck(desc, ok):
+    global bad
+    print(("ok: " if ok else "FAIL: ") + desc); bad += 0 if ok else 1
+if hasattr(na, "scrub_paths"):
+    sample = ("filed from /home/bricker/Projects/etc/hngh, notes at "
+              "~/.hngh/newspaper/x.md, dump at /tmp/vr-test-42")
+    scrubbed = na.scrub_paths(sample)
+    ck("scrub_paths removes /home/... tokens", "/home/" not in scrubbed)
+    ck("scrub_paths removes ~/.hngh tokens", "~/.hngh" not in scrubbed)
+    ck("scrub_paths removes /tmp/... tokens", "/tmp/vr-test" not in scrubbed)
+    ck("scrub_paths keeps ordinary prose", "notes at" in scrubbed)
+else:
+    ck("scrub_paths guard exists", False)
+item = {"title": "PATHLEAK TESTLAND: /home/bricker vault breach",
+        "tag": "CRITICAL", "place": "", "url": "https://127.0.0.1:1/leak"}
+prompt = na.build_prompt(item, "extract cites /tmp/vr-test-42 dumps",
+                         "spend: models 4; notes /home/bricker/h.txt")
+ck("build_prompt scrubs titles", "/home/bricker" not in prompt)
+ck("build_prompt scrubs source text", "/tmp/vr-test-42" not in prompt)
+ck("build_prompt scrubs ledger lines", "/home/bricker/h.txt" not in prompt)
+ck("build_prompt carries the redaction marker", "redacted path" in prompt)
+ck("clean prose passes through", "Fixture breach escalate"
+   in na.build_prompt({"title": "Fixture breach escalate",
+                       "tag": "CRITICAL", "place": "", "url": ""},
+                      None, ""))
+raise SystemExit(1 if bad else 0)
+PY
+out="$(run_gen "MODEL_PIN=local" | wc -l)"
+ck "pathy edition still files its article" "1" "$out"
+ck "model never receives host paths (captured stub bodies)" "0" \
+ "$(grep -c -e '/home/bricker' -e '/tmp/vr-test' -e '~/.hngh' \
+    "$stubdir/stubU-bodies" 2>/dev/null || true)"
+ck "model request carries the redaction marker" "1" \
+ "$(grep -c 'redacted path' "$stubdir/stubU-bodies" 2>/dev/null || true)"
+
 echo "test-news-articles: $fails failure(s)"
 [ "$fails" -eq 0 ]
