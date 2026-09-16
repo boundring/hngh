@@ -17,6 +17,7 @@ test:
 	python3 tests/scripts/test-evolve-dashboard-style.py
 	python3 tests/scripts/test-schedule-heartbeat.py
 	python3 tests/scripts/test-probe-model-route.py
+	python3 tests/scripts/test-grade-interface-token-mode.py
 	python3 tests/scripts/test-driver-routes.py
 	python3 tests/scripts/test-dashboard-live.py
 	python3 tests/scripts/test-generate-publication.py
