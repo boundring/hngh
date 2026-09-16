@@ -4,21 +4,21 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line on locating the canonical verdict rule and its embedded CI copy by adding a hermetic test that pins both file paths and asserts their contents match, closing the unresolved drift question.
+The plan implements the research line on make failure-line format and recursive depth markers by adding a parser that tolerates `make[N]:` prefixes for reliable failing-target extraction.
 
 ## Steps
 
-- [ ] Create `tests/test_verdict_rule_drift.py` with a stdlib-only script that reads the kernel-side verdict rule file and the hngh-automation CI workflow file, then asserts their embedded rule text is byte-identical.
-  Verification: python3 tests/test_verdict_rule_drift.py
+- [ ] Create `lib/make_error_parser.py` with a function that extracts target names from lines matching the pattern `^make(\[\d+\])?: \*\*\* \[(.+?)\] Error \d+`.
+  Verification: python3 -c "from lib.make_error_parser import extract_targets; assert extract_targets(['make[1]: *** [foo/bar.o] Error 1']) == ['foo/bar.o']"
 
-- [ ] Add a `make test` target entry or existing test runner invocation in `Makefile` (or `tests/Makefile`) that executes `python3 tests/test_verdict_rule_drift.py` so the drift check is gated by the standard test suite.
-  Verification: grep -q "test_verdict_rule_drift" Makefile
+- [ ] Add a test file `tests/test_make_error_parser.py` that asserts correct extraction for single-level, recursive depth 1, and recursive depth 2 make error lines.
+  Verification: python3 tests/test_make_error_parser.py
 
-- [ ] Create `scripts/check_verdict_paths.sh` that verifies the two exact file paths exist in the repository tree and prints their SHA256 hashes for auditability.
-  Verification: bash -n scripts/check_verdict_paths.sh
+- [ ] Create `scripts/extract_failing_targets.sh` that pipes input through grep with the pattern `^make\[[0-9]+\]: \*\*\* \[.*Error` to filter only recursive make errors.
+  Verification: bash -n scripts/extract_failing_targets.sh
 
-- [ ] Add a step to `Makefile` test target or `tests/` runner that invokes `bash scripts/check_verdict_paths.sh` to confirm path existence before content comparison.
-  Verification: grep -q "check_verdict_paths" Makefile
+- [ ] Add a test script `tests/test_extract_failing_targets.sh` that verifies the script correctly filters recursive error lines and ignores single-level errors.
+  Verification: bash tests/test_extract_failing_targets.sh
 
-- [ ] Run the full test suite to confirm the new drift check and path verification pass without breaking existing tests.
+- [ ] Update `Makefile` to include a `test` target that runs both Python and shell test files for the parser and extraction script.
   Verification: make test
