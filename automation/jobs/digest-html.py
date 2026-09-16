@@ -78,6 +78,30 @@ def _load_quips():
 quips = _load_quips()
 
 
+def _load_scrub():
+    """One identity seam (llc-gate-render-layer-scrub 2026-09-16): the
+    render layer re-exports digest-ledger's scrub_paths rather than
+    owning a regex. digest/<date>.md is written by several writers and
+    not every append passes a scrubbed seam (patrol morning rounds,
+    any future direct writer), so the renderer itself fail-closes host
+    path tokens before text reaches an egress surface. Fail-open to
+    identity ONLY if the module cannot load (same posture as
+    gdelt-news.py's import)."""
+    try:
+        loader = importlib.machinery.SourceFileLoader(
+            "hngh_digest_ledger", os.path.join(ROOT, "jobs",
+                                               "digest-ledger.py"))
+        spec = importlib.util.spec_from_loader("hngh_digest_ledger", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        return mod.scrub_paths
+    except Exception:
+        return lambda text: text
+
+
+scrub_paths = _load_scrub()
+
+
 def latest_media(pattern):
     """Newest repo media file matching <MEDIA>/<pattern>, or None.
     Display-only: the renderer references the LAN jail path; a missing
@@ -203,7 +227,16 @@ def digest_index(digests_dir=DIGESTS):
 
 def parse_sections(text):
     """Split digest text into news blocks: [{time, date, sources, model,
-    items, mega}] preserving order. Prose is kept verbatim."""
+    items, mega}] preserving order. Prose is kept verbatim.
+
+    Render-seam law (llc-gate-render-layer-scrub 2026-09-16): the
+    digest file is written by several writers and not every append is
+    scrubbed at the writer (patrol morning rounds, direct writers), so
+    every parsed line passes scrub_paths BEFORE it becomes an item —
+    no host path token can survive into any downstream render (deck B,
+    the email HTML part, the public edition) regardless of which
+    renderer or future reader consumes these sections. URLs are
+    consumed first by the shared seam and stay verbatim."""
     sections = []
     cur = None
     for line in text.splitlines():
@@ -230,7 +263,7 @@ def parse_sections(text):
         elif line.startswith("<!--") or line.startswith("###"):
             continue
         else:
-            cur["items"].append(line)
+            cur["items"].append(scrub_paths(line))
     return sections
 
 
@@ -299,7 +332,7 @@ def beat_sidenotes(date, digests_dir=DIGESTS):
                 text = f.read()
         except OSError:
             continue
-        body = re.sub(r"[#=*_`|>-]+", " ", text)
+        body = re.sub(r"[#=*_`|>-]+", " ", scrub_paths(text))
         body = re.sub(r"\s+", " ", body).strip()
         sentences = re.split(r"(?<=\.)\s+", body)
         excerpt = " ".join(sentences[:BEAT_SENTENCES])

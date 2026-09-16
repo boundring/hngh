@@ -51,6 +51,43 @@ none — quiet window
 - spend: $1.25 metered across 2 calls today; tokens in 3000, out 400.
 """.format(day=DAY)
 
+# Render-layer leak fixture (llc-gate-render-layer-scrub, red-first):
+# pathy text injected BELOW the digest-ledger builder — the shape a
+# patrol.py morning-rounds append or any future direct writer produces.
+# The ledger's own scrub never sees these lines; the render seam must
+# be the guard that keeps host paths out of the three egress surfaces:
+# the newspaper page (/digest-html/ route), the operator email HTML
+# part, and the public edition.
+PATHY_LINES = (
+    "### NEWS FROM THE MEGASTRUCTURE {day}\n"
+    "\n"
+    "- credential credential-freshness: hash-mismatch: unsloth-session "
+    "(evidence /home/bricker/.hngh-automation/unsloth.token)\n"
+    "## The rounds 2026-09-11\n"
+    "rounds: 4 ok, 1 fail — probe wrote /tmp/hngh-probe/store.db then "
+    "recovered, config at ~/Projects/etc/hngh/config\n"
+    "https://example.test/runs/42 stays a URL\n"
+).format(day=DAY)
+
+
+def _pathy_digest(base_text):
+    """Base fixture + a below-ledger pathy append (writer-sim shape)."""
+    return base_text + "\n" + PATHY_LINES
+
+
+def assert_no_path_tokens(testcase, html_text):
+    """The render-seam law: no /home/, /tmp/, ~/ token survives any
+    egress render of DIGEST CONTENT; the fixed [redacted path] marker
+    stands in; the URL-shaped token survives untouched (one identity
+    seam). Callers pass the content region of the render — the
+    renderers' own chrome literals (masthead pointers like
+    ~/.hngh/archive/digest/<date>.md) are machine-written constants,
+    not digest text, and stay out of scope (see the slice record)."""
+    for token in ("/home/", "/tmp/", "~/"):
+        testcase.assertNotIn(token, html_text)
+    testcase.assertIn("[redacted path]", html_text)
+    testcase.assertIn("https://example.test/runs/42", html_text)
+
 
 class Fixture:
     """Seams a tmp automation root: digest dir, telemetry.db, feeds."""
@@ -398,6 +435,179 @@ class BuilderTest(unittest.TestCase):
         self.assertIn("planned 1, reviewed 1", text)
         self.assertIn("1 alert crumbs today", text)
         self.assertIn("fixture-drift", text)
+
+
+class RenderLayerScrubTest(unittest.TestCase):
+    """llc-gate-render-layer-scrub: the ledger's build-time scrub is
+    necessary but not sufficient — a below-ledger writer (patrol.py
+    morning rounds, or any future direct writer) appends pathy lines
+    straight into archive/digest/<date>.md, and three downstream
+    renderers read that file verbatim. The render seam is the last
+    guard: the newspaper page (the /digest-html/ LAN route serves it),
+    the operator email HTML part, and the public edition must all carry
+    zero host-path tokens for any digest content, however it got
+    written. Red-first: written against the unscrubbed renderers and
+    proven failing before the seam landed."""
+
+    def _pathy_digest_file(self, fx):
+        """Overwrite the fixture digest with the below-ledger pathy
+        variant; returns its path."""
+        digest = fx.tmp / "digest" / (DAY + ".md")
+        digest.write_text(
+            _pathy_digest((fx.tmp / "digest" / (DAY + ".md"))
+                          .read_text()))
+        return str(digest)
+
+    def test_render_page_scrubs(self):
+        # newspaper renderer: deck B, the rounds table, and sidenotes
+        # all read the raw digest file
+        with Fixture() as fx:
+            dh.DIGESTS = str(fx.tmp / "digest")
+            dh.TELEMETRY = str(fx.tmp / "telemetry.db")
+            page = dh.render_page(self._pathy_digest_file(fx),
+                                  dh.DIGESTS, dh.TELEMETRY)
+        # content region only: Deck A plate onward (chrome literals in
+        # the masthead/ledger plates are renderer constants)
+        assert_no_path_tokens(self, page.split("Deck A", 1)[1])
+
+    def test_render_page_scrubs_sidecar_excerpt(self):
+        # beat side-notes read RESEARCH-BEAT sidecars, not the daily
+        # digest — a model-written sidecar is equally below-ledger text
+        with Fixture() as fx:
+            dh.DIGESTS = str(fx.tmp / "digest")
+            dh.TELEMETRY = str(fx.tmp / "telemetry.db")
+            (fx.tmp / "digest" / ("RESEARCH-BEAT-" + DAY
+                                  + "-ctx-leak.md")).write_text(
+                "# beat\n\nThe probe log is /tmp/beat-probe/state.db. "
+                "Second sentence grounds it. Third sentence.\n")
+            page = dh.render_page(
+                str(fx.tmp / "digest" / (DAY + ".md")),
+                dh.DIGESTS, dh.TELEMETRY)
+        self.assertNotIn("/tmp/beat-probe", page)
+        self.assertIn("[redacted path]", page)
+
+    def test_email_html_scrubs(self):
+        # the operator email HTML part embeds deck B and the day's
+        # sections verbatim from the same digest file. All lanes are
+        # seamed: digest file via HNGH_AUTOMATION_ROOT (set BEFORE the
+        # module loads — AUTOMATION is computed at import), telemetry
+        # text via HNGH_DIGEST_TELEMETRY, alerts/store/token/plans via
+        # their env seams — the only free text below-ledger is the
+        # pathy digest fixture.
+        with Fixture() as fx:
+            fx.tmp.joinpath("automation").mkdir()
+            self._pathy_digest_file(fx)
+            import shutil
+            shutil.move(str(fx.tmp / "digest"),
+                        str(fx.tmp / "automation" / "digest"))
+            # the fixture mirrors the deployed automation layout: the
+            # email renderer loads scrub_paths from
+            # <AUTOMATION>/jobs/digest-ledger.py, so the real module
+            # file is staged (no second regex anywhere)
+            (fx.tmp / "automation" / "jobs").mkdir()
+            shutil.copy(str(ROOT / "jobs" / "digest-ledger.py"),
+                        str(fx.tmp / "automation" / "jobs"
+                            / "digest-ledger.py"))
+            env = {
+                "HNGH_AUTOMATION_ROOT": str(fx.tmp / "automation"),
+                "HNGH_DIGEST_TELEMETRY": "spend: fixture $1.25 today",
+                "HNGH_DIGEST_ALERTS": "none — quiet window",
+                "HNGH_DIGEST_PLANS": str(fx.tmp / "missing-plans.json"),
+                "HNGH_DIGEST_QUEUE": "queue: fixture-queue",
+                "HNGH_DASHBOARD_TOKEN": "",
+                "HNGH_DIGEST_STORE_DIR": str(fx.tmp / "store"),
+                # an existing FILE: keeps the dormant-email setup lane
+                # quiet (that lane embeds AUTOMATION by design)
+                "HNGH_NOTIFY_EMAIL_CONF": str(
+                    fx.tmp / "automation" / "digest" / (DAY + ".md")),
+            }
+            saved = {k: os.environ.get(k) for k in env}
+            os.environ.update(env)
+            try:
+                hd = _load("html_digest", "scripts/html-digest.py")
+                html_part = hd.render_html(_fixture_g())
+            finally:
+                for k, v in saved.items():
+                    if v is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = v
+        assert_no_path_tokens(self, html_part)
+
+    def test_public_edition_scrubs(self):
+        # the pushable public edition renders the same parse
+        dp = _load("digest_public2", "jobs/digest-public.py")
+        with Fixture() as fx:
+            repo = Path(tempfile.mkdtemp())
+            try:
+                self._pathy_digest_file(fx)
+                os.environ["HNGH_DIGESTS_DIR"] = str(fx.tmp / "digest")
+                os.environ["HNGH_TELEMETRY_DB"] = str(
+                    fx.tmp / "telemetry.db")
+                text = dp.render_page(DAY, str(repo))
+            finally:
+                os.environ.pop("HNGH_DIGESTS_DIR", None)
+                os.environ.pop("HNGH_TELEMETRY_DB", None)
+                import shutil
+                shutil.rmtree(repo, ignore_errors=True)
+        # content region: Deck A heading through the reading room
+        # (the ledger band and reading room cite ~/.hngh/ paths as
+        # machine chrome)
+        assert_no_path_tokens(
+            self,
+            text.split("## Deck A", 1)[1].split("## Reading room")[0])
+
+    def setUp(self):
+        """A bound server + a pathy fixture digest (below-ledger text),
+        mirroring ServerRouteTest's seams so the leak assertion runs
+        against the real HTTP payload the LAN serves."""
+        self.fx = Fixture()
+        self.fx.__enter__()
+        ds.DIGESTS = str(self.fx.tmp / "digest")
+        ds.digest_html.TELEMETRY = str(self.fx.tmp / "telemetry.db")
+        self._pathy_digest_file(self.fx)
+        ds.Handler.protocol_version = "HTTP/1.1"
+        self.httpd = ds.ThreadingHTTPServer(("127.0.0.1", 0), ds.Handler)
+        threading.Thread(target=self.httpd.serve_forever,
+                         daemon=True).start()
+        self.port = self.httpd.server_address[1]
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+        self.fx.__exit__()
+
+    def _get(self, path):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", path)
+        resp = conn.getresponse()
+        body = resp.read()
+        conn.close()
+        return resp.status, body
+
+    def test_digest_html_route_scrubs(self):
+        # the LAN-reachable route must fail closed on the same fixture:
+        # 200 + rendered page, zero path tokens in the payload
+        status, body = self._get("/digest-html/%s.html" % DAY)
+        self.assertEqual(status, 200)
+        # content region only (renderer chrome literals out of scope)
+        assert_no_path_tokens(
+            self, body.decode("ascii", "replace").split("Deck A", 1)[1])
+
+
+def _fixture_g():
+    """Minimal gather-shaped dict for html-digest.render_html (the
+    email renderer needs only what the decks read; everything else
+    renders as quiet placeholders)."""
+    return {
+        "day": DAY,
+        "tel": {"spend": "1.25", "calls": "2", "tokens": "3000"},
+        "alerts24": [], "prog": "all plans executed/rejected",
+        "delta": 0, "pending": [], "spend_t": "1.25", "spend_y": "0.75",
+        "klines": [], "alines": [], "fresh": [], "untracked": [],
+        "have_prev": False, "lessons": "none", "night": "",
+        "bench": "",
+    }
 
 
 if __name__ == "__main__":
