@@ -1,0 +1,10 @@
+<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:github-ci -->
+# 2026-09-16 — routed candidate
+
+Routed by scripts/router-tick.py from alert identity `patrol:github-ci`
+at 2026-09-16T01:00:39Z. Alert text: patrol github-ci: bad-execution on github-actions-latest -- latest run 8354731 concluded failure -- https://github.com/boundring/hngh/actions/runs/35040075597
+
+## Steps
+
+- [ ] Delve: open research subject fail-20260916-patrol-github-ci for patrol:github-ci; record disposition; then fix or park
+      Verification: research subject fail-20260916-patrol-github-ci present in research-subjects.txt with a recorded disposition; alert fixed or parked
