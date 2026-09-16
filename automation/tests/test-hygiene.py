@@ -138,6 +138,49 @@ class HygieneTest(unittest.TestCase):
         r = run_job(env, "--json")
         self.assertEqual(r.returncode, 0, r.stderr)
 
+    def test_07_report_root_never_falls_back_to_cwd(self):
+        """With no HNGH_REPORT_ROOT, rows land in the KERNEL repo.
+
+        The 2026-09-16 second-ledger incident: report_root() fell back to
+        os.getcwd(), and under cadence-tick the cwd is the automation
+        checkout, silently forking a second ledger at
+        automation/docs/project/ that the kernel dashboard never reads.
+        The kernel root is structural (parent of automation/). Hermetic:
+        the job is copied into a sandbox tree, so the structural
+        derivation resolves inside the sandbox, never the real repo.
+        """
+        sandbox_auto = os.path.join(self.tmp, "sandbox", "automation")
+        os.makedirs(os.path.join(sandbox_auto, "jobs"))
+        job_copy = os.path.join(sandbox_auto, "jobs", "hygiene.py")
+        shutil.copy(JOB, job_copy)
+        # the kernel-root contract includes scripts/report-queue (hygiene
+        # invokes it from the derived kernel root): replicate that layout
+        real_root = os.path.dirname(os.path.dirname(HERE))
+        sandbox_scripts = os.path.join(os.path.dirname(sandbox_auto),
+                                       "scripts")
+        os.makedirs(sandbox_scripts)
+        shutil.copy(os.path.join(real_root, "scripts", "report-queue"),
+                    os.path.join(sandbox_scripts, "report-queue"))
+        make_session(self.jcode, "session_z1.json", "Active", 48 * 3600)
+        env = dict(self.env)
+        del env["HNGH_REPORT_ROOT"]
+        env["HYGIENE_REPO_ROOT"] = self.repo
+        # misleading cwd: a directory that is NOT any report root
+        r = subprocess.run(
+            [sys.executable, job_copy, "--json"], env=env, cwd=self.tmp,
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sandbox_docs = os.path.join(os.path.dirname(sandbox_auto),
+                                    "docs", "project")
+        with open(os.path.join(sandbox_docs, "reports.md")) as f:
+            kernel_rows = f.read()
+        self.assertIn("zombie Active session", kernel_rows)
+        # nothing was written under the misleading cwd
+        self.assertFalse(
+            os.path.exists(os.path.join(self.tmp, "docs", "project",
+                                        "reports.md")),
+            "cwd must never become a report root")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

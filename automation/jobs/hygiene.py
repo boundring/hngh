@@ -20,7 +20,10 @@ its workq-*.md siblings, observed 2026-09-15):
      summarizing the run (the cross-session notes convention).
 
 usage: jobs/hygiene.py [--fix] [--json]
-env:   HNGH_REPORT_ROOT (report-queue repo root, existing contract),
+env:   HNGH_REPORT_ROOT (report-queue repo root, existing contract; when
+       unset the report root is the KERNEL repo — the parent of
+       automation/ — never the process cwd, which forked a second ledger
+       at automation/docs/project/ until 2026-09-16),
        HYGIENE_REPO_ROOT (repo scan root, default cwd),
        HYGIENE_JCODE_HOME (fake ~/.jcode root, default ~/.jcode),
        HYGIENE_HANDOFF_FILE (default <repo>/automation/agent-handoffs.md),
@@ -55,8 +58,19 @@ def repo_root():
     return os.environ.get("HYGIENE_REPO_ROOT") or os.getcwd()
 
 
+KERNEL_ROOT = os.path.dirname(AUTOMATION)  # automation/ lives in the kernel repo
+
+
 def report_root():
-    return os.environ.get("HNGH_REPORT_ROOT") or repo_root()
+    """The report-queue root, always the KERNEL repo.
+
+    Never falls back to the process cwd: under cadence-tick the job runs
+    with cwd inside the automation checkout, and a cwd fallback silently
+    forked a second ledger at automation/docs/project/ (2026-09-16) whose
+    rows the kernel dashboard never sees. The kernel root is structural
+    (the parent of automation/); HNGH_REPORT_ROOT wins for hermetic tests.
+    """
+    return os.environ.get("HNGH_REPORT_ROOT") or KERNEL_ROOT
 
 
 def pid_alive(pid):
