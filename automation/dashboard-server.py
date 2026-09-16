@@ -332,6 +332,38 @@ _tele_cache = (0.0, None)
 _graph_cache = [(0.0, None), (0.0, None)]
 _history_cache = (0.0, None)
 _routes_cache = (0.0, None)
+_fleet_cache = (0.0, None)
+# Kernel fleet-manager --json path (rung B resource-pool feed). Seamed:
+# the module var is what hermetic tests point at a stub script.
+FLEET_MANAGER = os.environ.get("HNGH_FLEET_MANAGER",
+                      os.path.join(HNGH, "scripts", "fleet-manager"))
+FLEET_TIMEOUT_S = float(os.environ.get("HNGH_FLEET_TIMEOUT", "120"))
+
+
+def fleet_pool_json():
+    global _fleet_cache
+    """Rung B resource-pool feed (pooled-hardware rung): the kernel
+    fleet-manager --json discovery (read-only, one invocation — no
+    daemon, no ambient collector) served at GET /fleet.json, cached 30s
+    like the graph/history feeds; fail-soft to the last good payload so
+    the pool view never blanks on a mesh hiccup; a cold-start failure
+    fails closed instead of inventing an empty pool."""
+    cached_ts, cached = _fleet_cache
+    if cached is not None and time.monotonic() - cached_ts < TELEMETRY_TTL_S:
+        return cached
+    try:
+        out = subprocess.run([FLEET_MANAGER, "--json"],
+                             capture_output=True, text=True,
+                             timeout=FLEET_TIMEOUT_S)
+        payload = json.loads(out.stdout)
+    except Exception:
+        if cached is None:
+            raise  # cold start, nothing good to fall back to: fail closed
+    else:
+        cached = payload
+    _fleet_cache = (time.monotonic(), cached)
+    return cached
+
 
 
 def graph_feed(all_sessions=False):
@@ -461,6 +493,12 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/research-routes.json":
             self._json(200, research_routes_json())
+            return
+        if route == "/fleet.json":
+            # Rung B resource-pool feed (pooled-hardware rung): the fleet
+            # as data, refreshed on demand. Display-only; the JSON
+            # payload is fleet-manager's, never filtered here.
+            self._json(200, fleet_pool_json())
             return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)

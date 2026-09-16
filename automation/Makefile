@@ -99,6 +99,7 @@ test:
 	python3 -B tests/test-viz-schema-version.py
 	python3 -B tests/test-viz-schema-history.py
 	python3 -B tests/test-history-feed.py
+	python3 -B tests/test-fleet-feed.py
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
