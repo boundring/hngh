@@ -27,15 +27,18 @@
 set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
+. "$AUTOMATION_ROOT/lib/redact.sh"
 
 report_queue="python3 $HNGH_HOME/scripts/report-queue"
 report() { # kind text -> append one hngh report row (best effort)
  $report_queue --add "$1" "$2" >/dev/null 2>&1 || log "report-queue append failed"
 }
-fail() { # lane detail -> alert row, exit 1
+fail() { # lane detail -> redacted alert row, exit 1
  log "FAIL: $2"
- report alert "config-backup $1: $2"
- breadcrumb "$JOB_NAME" "alert" "config-backup $1: $2"
+ local detail
+ detail="$(redact_home "$2")"
+ report alert "config-backup $1: $detail"
+ breadcrumb "$JOB_NAME" "alert" "config-backup $1: $detail"
  exit 1
 }
 

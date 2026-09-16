@@ -164,7 +164,15 @@ probe_run
 out="$(rows_dump)"
 assert "healthy vault -> silent ok row" "$out" "progress wiki-health-ok:vhealthy"
 assert "split vault -> alert with fix" "$out" "alert wiki-health:vsplit"
-assert "alert carries exact fix path" "$out" "omp session with cwd $sb/p4/vsplit"
+# boundary redaction (2026-09-16): alert rows are public-bound, so the
+# fix path carries the tilde marker — ~ for paths under HOME, ~tmp for
+# /tmp (mktemp honors TMPDIR, so compute the expected form)
+case "$sb" in
+ "$HOME"/*) fix="~/${sb#"$HOME"/}" ;;
+ /tmp/*) fix="~tmp/${sb#/tmp/}" ;;
+ *) fix="$sb" ;;
+esac
+assert "alert carries redacted fix path" "$out" "omp session with cwd $fix"
 assert "alert names wiki_rebuild_meta" "$out" "wiki_rebuild_meta"
 probe_extra "$sb/p2/vunindexed/.llm-wiki" "$sb/p3/vstale/.llm-wiki"
 out="$(rows_dump)"
