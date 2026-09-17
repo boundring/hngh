@@ -158,7 +158,11 @@ KNOWN_EXEMPTIONS = {
         "reason": "UnicodeDecodeError fix: errors=replace on guard subprocess calls (Typesafe docs introduced 0xa9 bytes)",
         "patch-id": "c6a44ec855481f15508119b99b001f06748a64eb",
     },
-            "122ea6a0": {
+                "d2159de9": {
+        "reason": "cleanup of unreachable exemptions + 122ea6a0 exemption (post-force-push table correction)",
+        "patch-id": "83d7a2febe8d0ddb72d69b0028e371dc561d0dd1",
+    },
+    "122ea6a0": {
         "reason": "UnicodeDecodeError fix: errors=replace on guard subprocess calls (Typesafe docs 0xa9 bytes); exemptions for the unreachable force-push entries removed",
         "patch-id": "db1c70bf87d094696746f78a4bf25cb33f8d2b05",
     },
