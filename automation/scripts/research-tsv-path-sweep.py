@@ -10,7 +10,11 @@ Usage:
   --apply        rewrite via git show HEAD:<path> -> redact_home ->
                  write (then commit); refuses dirty files (rc=2,
                  distinct from rc=1 leaks-found)
-  --files a b c  files to process (defaults: the four research TSVs)
+  --files a b c  files to process (defaults: the four research TSVs;
+                 a git-tracked directory sweeps its tracked .md files
+                 -- the 2026-09-17 writer-gap follow-through added
+                 docs/research: the crystallize transition's title
+                 emitter landed raw /home/<user> there for weeks)
 
 Why git-blob-in, file-out: the research beat appends between our read
 and write; HEAD blobs are immutable snapshots, and working-tree appends
@@ -32,6 +36,21 @@ DEFAULT_FILES = [
     "research-lessons.tsv",
     "research-lines.tsv",
     "research-subjects.txt",
+]
+
+# Scope split (CWD-independent since the 2026-09-17 writer-gap
+# follow-through): the four data files resolve against this script's
+# automation root (the make-test gate runs from automation/, an
+# operator may run from the repo root, the live beat from anywhere);
+# glob entries expand against the enclosing git toplevel's tracked
+# files, so newly crystallized docs are covered without editing this
+# list.
+ROOT_FILES = [os.path.join(ROOT, f) for f in DEFAULT_FILES]
+TRACKED_GLOBS = [
+    # crystallized research docs (git-tracked, publicly pushed): the
+    # crystallize transition's title emitter landed raw /home/<user>
+    # here for weeks before the writer-seam cure.
+    "docs/research/*.md",
 ]
 
 LOADER = importlib.machinery.SourceFileLoader(
@@ -81,19 +100,61 @@ def worktree_status(path):
     return out.stdout.strip()
 
 
+def tracked_files(pattern, top):
+    """Tracked files under git toplevel TOP matching a pathspec glob
+    (absolute paths). Empty when the pattern tracks nothing."""
+    out = subprocess.run(
+        ["git", "ls-files", "-z", "--", pattern],
+        cwd=top, capture_output=True)
+    if out.returncode != 0:
+        return []
+    return [os.path.join(top, ln) for ln in
+            out.stdout.decode("utf-8", "replace").split("\0") if ln]
+
+
+def git_toplevel():
+    """Enclosing git toplevel for the CWD, or None outside a repo."""
+    out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                         capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--files", nargs="*", default=DEFAULT_FILES)
+    ap.add_argument("--files", nargs="*", default=None)
     args = ap.parse_args(argv)
 
     if not args.check and not args.apply:
         ap.error("one of --check / --apply is required")
 
+    if args.files is not None:
+        top = git_toplevel()
+        files = list(args.files)
+        expanded = []
+        for f in files:
+            if any(ch in f for ch in "*?["):
+                if top is None:
+                    sys.stderr.write(
+                        "sweep: %s: glob outside a git repo\n" % f)
+                    return 2
+                expanded.extend(tracked_files(f, top))
+            else:
+                expanded.append(f)
+    else:
+        top = git_toplevel()
+        if top is None:
+            sys.stderr.write("sweep: not inside a git repo\n")
+            return 2
+        files = ROOT_FILES
+        for g in TRACKED_GLOBS:
+            files.extend(tracked_files(g, top))
+        expanded = files
+
     failures = []
     refused = False
-    for rel in args.files:
+    for rel in expanded:
         status = worktree_status(rel)
         if args.check:
             try:
