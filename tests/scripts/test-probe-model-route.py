@@ -16,6 +16,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+import urllib.error
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -53,6 +54,17 @@ def tighten(token_path):
 def fake_urlopen(request, timeout=None):
     """A urlopen stand-in: answers like a live server, no network."""
     return io.BytesIO(b'{"data": []}')
+
+
+def http_error_urlopen(status, reason):
+    """A urlopen stand-in that raises the HTTP answer as HTTPError:
+    how urllib surfaces any non-2xx response with no network touched."""
+    def _raise(request, timeout=None):
+        err = urllib.error.HTTPError(
+            request.full_url, status, reason, None, io.BytesIO(b""))
+        err.close()
+        raise err
+    return _raise
 
 
 class ProbeRouteParser(unittest.TestCase):
@@ -121,6 +133,34 @@ class ProbeTokenMode(unittest.TestCase):
                 ok, err = mod.probe(str(tmp / "reviewer.conf"))
             self.assertTrue(ok)
             self.assertIsNone(err)
+
+
+class ProbeHttpErrorIsLive(unittest.TestCase):
+    """Pin the load-bearing HTTPError->True branch (probe-model-route:98-99):
+    any HTTP answer, even 401/403/500, is a reachable server. If this
+    branch ever flipped to False, the probe would mark live-but-unauthorized
+    endpoints unreachable and route selection would silently degrade."""
+
+    def _reachable_with(self, status, reason):
+        mod = load()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            conf = good_config(tmp)
+            tighten(tmp / "token")
+            config = mod.parse_config(conf)
+            with unittest.mock.patch.object(
+                    mod.urllib.request, "urlopen",
+                    http_error_urlopen(status, reason)):
+                return mod.reachable(config)
+
+    def test_http_401_is_live(self):
+        self.assertTrue(self._reachable_with(401, "Unauthorized"))
+
+    def test_http_403_is_live(self):
+        self.assertTrue(self._reachable_with(403, "Forbidden"))
+
+    def test_http_500_is_live(self):
+        self.assertTrue(self._reachable_with(500, "Internal Server Error"))
 
 
 class ProbeRouteOffline(unittest.TestCase):
