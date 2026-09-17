@@ -154,6 +154,14 @@ KNOWN_EXEMPTIONS = {
     # 226de1d) -- a synthetic pair appearing in kernel history. Declared
     # per the standing post-hoc policy, not rewritten; see the
     # 2026-09-13 decisions.md batch entry and the gate-cure patrol.
+        "3303cde8": {
+        "reason": "UnicodeDecodeError fix: errors=replace on guard subprocess calls (Typesafe docs introduced 0xa9 bytes)",
+        "patch-id": "c6a44ec855481f15508119b99b001f06748a64eb",
+    },
+        "29de3337": {
+        "reason": "meta-exemption: adds the UnicodeDecodeError fix exemption (terminal commit)",
+        "patch-id": "64e2b30e9c1d35518ce045ceb3fe2fbf971bc527",
+    },
     "ba6b390": {
         "reason": "fixture pair head: Makefile+README gut (declared miss)",
         "patch-id": "a46ed8ae5a64949d7e5dbe8917902e125586d5d3",
