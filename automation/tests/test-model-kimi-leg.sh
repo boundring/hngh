@@ -15,7 +15,7 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/jobs" "$sb/.config/hngh"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
 : >"$sb/cadence-params.tsv" # Inventory: no kimi/ocgo rows unless a case sets one
 : >"$sb/STATE.md"
@@ -164,6 +164,7 @@ stubA_port="$(cat "$stubdir/stubA-port")"
  exit 1
 }
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 rm -f "$sb/home/db/telemetry.db"
 : >"$stubdir/stubB-hits" # earlier cases legitimately hit stubB; this one must not
 out="$(call "hello-8" "MODEL_PIN=local" \

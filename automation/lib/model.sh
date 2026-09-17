@@ -127,15 +127,19 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
  # wall seconds in $WALL_S_FILE, usage tokens (chat-completions
  # .usage.prompt_tokens/completion_tokens or Responses
  # .usage.input_tokens/output_tokens) in $TOKIN/$TOKOUT files
- local url="$1" expr="$2" auth="${3:-}" session="${4:-}" noproxy="${5:-}" cacert="${6:-}" tmp code content
+ local url="$1" expr="$2" auth="${3:-}" session="${4:-}" noproxy="${5:-}" cacert="${6:-}" tmp btmp code content
  local raw t tin tout
  tmp="$(mktemp)"
- raw="$(curl -s --max-time "$MODEL_TIMEOUT" ${noproxy:+--noproxy "$noproxy"} \
+ btmp="$(mktemp)"
+ # the caller pipes the JSON body into this function's stdin; stage it to
+ # a file so stdin is free for the curl config (see below)
+ cat >"$btmp"
+ raw="$(printf '%s' "${auth:+x}" >/dev/null; if [ -n "$auth" ]; then printf 'header = "Authorization: Bearer %s"\n' "$auth"; fi |
+  curl -s --max-time "$MODEL_TIMEOUT" ${noproxy:+--noproxy "$noproxy"} \
   ${cacert:+--cacert "$cacert"} -X POST \
   -H "Content-Type: application/json" \
-  ${auth:+-H "Authorization: Bearer $auth"} \
   ${session:+-H "x-opencode-session: $session"} \
-  -d @- -w '%{http_code} %{time_total}' -o "$tmp" "$url" 2>/dev/null)" || raw="000 0"
+  -K - -d @"$btmp" -w '%{http_code} %{time_total}' -o "$tmp" "$url" 2>/dev/null)" || raw="000 0"
  case "$raw" in
  *' '*)
   code="${raw%% *}"
@@ -219,11 +223,15 @@ refresh_unsloth_token() {
 
 # one raw Unsloth attempt writing the response into $tmp; echoes the http code.
 unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
- local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code raw t tin tout
- raw="$(printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" |
-  curl -s --max-time "$MODEL_TIMEOUT" \
-   -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
-   -d @- -w '%{http_code} %{time_total}' -o "$tmp" "$UNSLOTH_URL/v1/chat/completions" \
+ local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code raw t tin tout btmp
+ btmp="$(mktemp)"
+ printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" >"$btmp"
+ # bearer via the stdin curl config (`-K -`), never argv (cmdline
+ # exposure; notify-seam argv-hygiene pattern, 2026-09-16).
+ raw="$(printf 'header = "Authorization: Bearer %s"\n' "$tok" |
+  curl -s --max-time "$MODEL_TIMEOUT" -K - \
+   -H "Content-Type: application/json" \
+   -d @"$btmp" -w '%{http_code} %{time_total}' -o "$tmp" "$UNSLOTH_URL/v1/chat/completions" \
    2>/dev/null)" || raw="000 0"
  case "$raw" in
  *' '*)

@@ -11,7 +11,7 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 : >"$sb/cadence-params.tsv" # Inventory: no deck row unless a case sets one
 : >"$sb/STATE.md"
 

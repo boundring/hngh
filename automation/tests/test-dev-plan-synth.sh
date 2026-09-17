@@ -76,6 +76,7 @@ printf 'seed draft\n' >"$sb/digest/DRAFT-PLAN-$today.md"
 
 . "$root/tests/stub-lib.sh"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 : >"$sb/STATE.md"
 
 run_cycle() { # [extra K=V...] -> runs one overnight beat in the sandbox

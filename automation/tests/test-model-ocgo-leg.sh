@@ -17,7 +17,7 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/jobs" "$sb/.config/hngh"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 cp "$root/jobs/telemetry.py" "$sb/jobs/"
 : >"$sb/cadence-params.tsv" # no ocgo rows unless a case sets one
 : >"$sb/STATE.md"
@@ -139,8 +139,14 @@ rm -f "$sb/home/db/telemetry.db"
 seed_events ocgo 95 21600 # 6h old: outside the 5h window
 out="$(call "hello-6" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100" \
- "OCGO_CAP_5H_CALLS=100" "OCGO_CAP_7D_CALLS=100000" \
- "OCGO_CAP_MONTH_CALLS=100000")"
+ "OCGO_CAP_7D_CALLS=100000000" \
+ "OCGO_CAP_MONTH_CALLS=100000000")"
+# NOTE: the 7d/month caps are huge so the soft-pace arithmetic
+# (allowed = cap * (now % window) / window) cannot trip near a window
+# boundary: with cap=100000 the 7d window blocks any used > ~566 for
+# the first ~9.4 minutes of each epoch-anchored cycle (Thursday
+# 00:00Z), a time-of-week flake observed 2026-09-17T00:00Z. 95 aged
+# events must only prove the 5h-window exclusion here.
 ck "outside-window events ignored: ocgo answers" "stub-says-hi" "$out"
 ck "outside-window events ignored: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
 
@@ -237,6 +243,7 @@ stubA_port="$(cat "$stubdir/stubA-port")"
  exit 1
 }
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 out="$(call "hello-13" "MODEL_PIN=local" \
  "TOKEN_FILE=$sb/unsloth-token" "UNSLOTH_URL=http://127.0.0.1:$stubA_port")"
 ck "unsloth wall_s case: stub content" "stub-says-hi" "$out"

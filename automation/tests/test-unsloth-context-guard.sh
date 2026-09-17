@@ -12,7 +12,7 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 : >"$sb/cadence-params.tsv"
 : >"$sb/STATE.md"
 
@@ -62,6 +62,7 @@ call() { # prompt [unsloth_url] -> stdout
     export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/tok" REFRESH_FILE="$sb/nope2"
     printf 'stub-token' >"$sb/tok"
+    chmod 600 "$sb/tok" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
     export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
     export UNSLOTH_URL="${2:-http://127.0.0.1:$port}" OLLAMA_URL=http://127.0.0.1:1
     export OLLAMA_MODEL=stub-ollama

@@ -40,6 +40,7 @@ STUB_CONTENT='<tool_call>
 stubU_port="$(cat "$stubdir/stubU-port")"
 stubJ_port="$(cat "$stubdir/stubJ-port")"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 DEAD=("UNSLOTH_URL=http://127.0.0.1:1" "OLLAMA_URL=http://127.0.0.1:1")
 
 BEAT_ENV=(
