@@ -697,20 +697,40 @@ _CRED_PATH_RE = re.compile(
 _SYSTEMD_SUFFIXES = (".service", ".timer", ".socket")
 _SPEND_RE = re.compile(r"(spend|cost|budget|cap)", re.I)
 _SPEND_CONFIG_PREFIX = "automation/config/"
+# A gut is not only the pure-deletion shape: the real gutting commit
+# (ba6b390) kept one vestigial line per file, so its numstat rows are
+# 1+/large- and invisible to an additions==0 rule (2026-09-17 record
+# amendment). A gut is a deletion-DOMINATED rewrite: deletions of at
+# least _GUT_MIN_DELETIONS lines AND a _GUT_PURITY_RATIO-to-one (or
+# worse) deletions-to-additions skew. The absolute floor is what keeps
+# honest small edits SMALL (a 1+/1- doc fix has ratio 1 but is not a
+# gut), and the ratio instead of a hard additions<=1 cap is what keeps
+# the rule from eroding as the vestige count grows (2+/386- is still a
+# gut); revert-shaped commits (large additions, e.g. d2d8f51's 36+/1-,
+# 386+/1-) fail the ratio and stay SMALL.
+_GUT_MIN_DELETIONS = 20
+_GUT_PURITY_RATIO = 20
 
 
 def is_large_cure_violation(kernel, shas):
     """LARGE-surface pre-check: refuse the auto-declare when the
     violating commit set touches credential-like paths, systemd units,
     spend/cost/budget/cap configs under automation/config/, or any
-    commit is a pure deletion (additions==0, deletions>0 -- a gutting
-    commit). Returns a reason string, or "" when SMALL (auto-curable).
+    commit is a gutting diff: a pure deletion (additions==0,
+    deletions>0) or a deletion-dominated rewrite (>= _GUT_MIN_DELETIONS
+    deletions at >= _GUT_PURITY_RATIO:1 deletions-to-additions -- the
+    ba6b390 shape that an additions==0 rule classified SMALL).
+    Returns a reason string, or "" when SMALL (auto-curable).
     The ceremony's own refusal stays the backstop; this pre-check keeps
     the refusal before the append, not after it."""
     for sha in shas:
         for additions, deletions, path in commit_numstat(kernel, sha):
             if additions == 0 and deletions > 0:
                 return "pure-deletion diff (%s)" % sha
+            if (deletions >= _GUT_MIN_DELETIONS
+                    and additions * _GUT_PURITY_RATIO <= deletions):
+                return "gut-shape diff %d+/%d- %s (%s)" % (
+                    additions, deletions, path, sha)
             norm = path.replace("\\", "/")
             if _CRED_PATH_RE.search(norm):
                 return "credential-like path %s (%s)" % (path, sha)

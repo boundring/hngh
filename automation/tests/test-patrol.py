@@ -36,6 +36,93 @@ GREEN_CRUMB = "%s | overnight-cycle.sh | overnight-done | sessions=1 " \
     "concurrency=1 speed=3 results=ok model=m(env)\n" % iso(30 * 60)
 
 
+class RealGitClassifier(unittest.TestCase):
+    """is_large_cure_violation against a REAL temp git repo (not a
+    mocked commit_numstat): the classifier input is commit_numstat's
+    subprocess output, so the gutting-shape rule must be exercised
+    through actual git history or it verifies only synthetic rows."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.repo = Path(self._td.name)
+        env = dict(os.environ)
+        for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
+                  "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+            env.setdefault(k, "t")
+        env.setdefault("GIT_AUTHOR_DATE", "2026-09-12T00:00:00Z")
+        env.setdefault("GIT_COMMITTER_DATE", "2026-09-12T00:00:00Z")
+        self._env = env
+
+        def git(*argv):
+            subprocess.run(["git"] + list(argv), cwd=self.repo, env=env,
+                           check=True, capture_output=True, text=True)
+        self._git = git
+        git("init", "-q")
+        git("checkout", "-q", "-b", "main")
+        # code surface the gut will attack
+        code = self.repo / "src" / "adapter.lisp"
+        code.parent.mkdir(parents=True)
+        code.write_text("".join("(defun f%d () 1)\n" % i
+                                for i in range(60)))
+        docs = self.repo / "README.md"
+        docs.write_text("".join("line %d\n" % i for i in range(100)))
+        git("add", "-A")
+        git("commit", "-q", "-m", "base")
+        # the ba6b390 shape: a gut that keeps one vestigial line per
+        # file -- additions is 1, NOT 0; the old additions==0 rule
+        # classified this exact diff SMALL
+        code.write_text("(defpackage :adapter)\n")
+        docs.write_text("# vestige\n")
+        git("add", "-A")
+        git("commit", "-q", "-m", "fixture")
+        out = subprocess.run(
+            ["git", "show", "--numstat", "--format=", "HEAD"],
+            cwd=self.repo, check=True, capture_output=True, text=True).stdout
+        rows = [ln.split("\t") for ln in out.splitlines()]
+        self.assertEqual(sorted((r[0], r[1]) for r in rows),
+                         [("1", "100"), ("1", "60")],
+                         "fixture must be the 1-addition gut shape")
+        self.sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.repo, check=True,
+            capture_output=True, text=True).stdout.strip()[:7]
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def test_gut_shape_one_addition_large_deletion_is_large(self):
+        """A 1-insertion/large-deletion gut on code surface is LARGE,
+        seen through the real commit_numstat, not a mock."""
+        reason = load_mod().is_large_cure_violation(str(self.repo),
+                                                    [self.sha])
+        self.assertTrue(reason, "gut shape classified SMALL: %r" % reason)
+
+    def test_revert_shape_large_addition_tiny_deletion_stays_small(self):
+        """A revert-shaped commit (large additions, one vestigial
+        deletion per file -- the real d2d8f51 numstat shape:
+        36/1, 386/1) is not a gut: stays SMALL for the paths here."""
+        self._git("revert", "--no-edit", "HEAD")
+        out = subprocess.run(
+            ["git", "show", "--numstat", "--format=", "HEAD"],
+            cwd=self.repo, check=True, capture_output=True, text=True).stdout
+        rows = [ln.split("\t") for ln in out.splitlines()]
+        self.assertEqual(sorted((r[0], r[1]) for r in rows),
+                         [("100", "1"), ("60", "1")],
+                         "fixture revert must be the d2d8f51 shape: %r"
+                         % rows)
+        reason = load_mod().is_large_cure_violation(str(self.repo),
+                                                    ["HEAD"])
+        self.assertFalse(reason, "revert shape flagged: %r" % reason)
+
+    def test_tiny_doc_touch_stays_small(self):
+        """A genuinely small 1-add/1-del doc edit is not LARGE."""
+        (self.repo / "README.md").write_text("# vestige\n# note\n")
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "doc touch")
+        reason = load_mod().is_large_cure_violation(str(self.repo),
+                                                    ["HEAD"])
+        self.assertFalse(reason, "small edit flagged: %r" % reason)
+
+
 def load_mod():
     spec = importlib.util.spec_from_file_location("patrol_mod", SPEC)
     mod = importlib.util.module_from_spec(spec)
