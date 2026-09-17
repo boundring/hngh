@@ -12,3 +12,4 @@ at 2026-09-17T10:00:14Z. Alert text: patrol research-flow: stalled-line on patro
 ## Occurrences
 
 - 2026-09-17T11:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T12:00:13Z re-occurred (dedup window expired)
