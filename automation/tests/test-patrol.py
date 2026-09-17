@@ -551,6 +551,138 @@ class Patrol(unittest.TestCase):
                            "ceremony-drive rc=1: "
                            "refused: LARGE-surface content")])
 
+    # --- gate-cure: LARGE violation sets refuse BEFORE any declaration ---
+    def _red_kernel(self):
+        """Red guard + writable guard table + decisions.md (the kernel
+        fixture a cure would mutate; the refusal must touch neither)."""
+        self._red_guard(["ba6b390 fixture"])
+        (self.kernel / "docs" / "project").mkdir(parents=True)
+        (self.kernel / "docs" / "project" / "decisions.md").write_text(
+            "# Decisions\n")
+
+    def _ceremony_ok_stub(self):
+        stub = self.sb / "cure-stub.sh"
+        stub.write_text("#!/usr/bin/env bash\nexit 0\n")
+        stub.chmod(0o755)
+        os.environ["PATROL_CEREMONY_BIN"] = str(stub)
+        self.addCleanup(os.environ.pop, "PATROL_CEREMONY_BIN", None)
+
+    def _assert_undeclared(self):
+        """No exemption entry, no decisions.md entry, no ceremony drive."""
+        guard = (self.kernel / "tests" / "scripts"
+                 / "test-loop-history-guard.py").read_text()
+        self.assertNotIn("declared miss", guard)
+        self.assertEqual(
+            (self.kernel / "docs" / "project" / "decisions.md").read_text(),
+            "# Decisions\n")
+
+    def test_large_cure_violation_classifier(self):
+        """The pre-check classifier: credential-like paths, systemd
+        units, spend/cost/budget/cap configs under automation/config,
+        and pure-deletion numstat diffs are LARGE; a plain small-matter
+        path set is not."""
+        self._mod.commit_subject = lambda kernel, sha: "fixture"
+        self._mod.commit_numstat = lambda kernel, sha: [
+            (10, 2, "src/adapter/mutation.lisp")]
+        self.assertFalse(self._mod.is_large_cure_violation(
+            str(self.kernel), ["ba6b390"]))
+        self._mod.commit_numstat = lambda kernel, sha: [
+            (0, 40, "src/adapter/mutation.lisp")]
+        self.assertEqual(
+            self._mod.is_large_cure_violation(str(self.kernel),
+                                              ["ba6b390"]),
+            "pure-deletion diff (ba6b390)")
+        for path in ("config/credentials.kdbx", "secrets/token.env",
+                     ".env", "keys/server.pem", "AUTH_TOKEN"):
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (3, 1, p)]
+            self.assertTrue(self._mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]), path)
+        for path in ("systemd/hngh-x.service", "systemd/hngh-x.timer",
+                     "systemd/hngh-x.socket"):
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (3, 1, p)]
+            self.assertTrue(self._mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]), path)
+        for path in ("automation/config/spend-caps.tsv",
+                     "automation/config/cost-limits.tsv",
+                     "automation/config/budget.tsv",
+                     "automation/config/model-cap.tsv"):
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (3, 1, p)]
+            self.assertTrue(self._mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]), path)
+        # a config path with no spend/cost/budget/cap token is not LARGE
+        self._mod.commit_numstat = lambda kernel, sha: [
+            (3, 1, "automation/config/patrol-routes.tsv")]
+        self.assertFalse(self._mod.is_large_cure_violation(
+            str(self.kernel), ["ba6b390"]))
+
+    def test_gate_cure_refuses_credential_surface(self):
+        """A credential-like violating commit set is refused before the
+        declaration append and the ceremony drive, even though the
+        ceremony stub would accept."""
+        self._red_kernel()
+        self._ceremony_ok_stub()
+        self._mod.patch_id = lambda kernel, sha: "p" * 40
+        self._mod.commit_subject = lambda kernel, sha: "rotate creds"
+        self._mod.commit_numstat = lambda kernel, sha: [
+            (5, 5, "config/credentials.kdbx")]
+        r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                       "date": "2026-09-12"})
+        self.assertEqual(r["passes"], [])
+        self.assertEqual(len(r["fails"]), 1)
+        where, cause, detail = r["fails"][0]
+        self.assertEqual((where, cause), ("kernel", "gate-cure-refused"))
+        self.assertIn("LARGE-surface pre-check", detail)
+        self.assertIn("credential-like path", detail)
+        self._assert_undeclared()
+
+    def test_gate_cure_refuses_systemd_and_spend_surfaces(self):
+        """Systemd units and spend/cost-cap configs under
+        automation/config are refused the same way."""
+        self._red_kernel()
+        self._ceremony_ok_stub()
+        for label, path, token in (
+                ("systemd unit", "systemd/hngh-x.service", "systemd unit"),
+                ("spend cap config", "automation/config/spend-caps.tsv",
+                 "spend/cost-cap config")):
+            self._mod.patch_id = lambda kernel, sha: "p" * 40
+            self._mod.commit_subject = lambda kernel, sha: "fixture"
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (2, 0, p)]
+            r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                           "date": "2026-09-12"})
+            self.assertEqual(r["passes"], [], label)
+            where, cause, detail = r["fails"][0]
+            self.assertEqual((where, cause),
+                             ("kernel", "gate-cure-refused"))
+            self.assertIn("LARGE-surface pre-check", detail)
+            self.assertIn(token, detail)
+            self._assert_undeclared()
+
+    def test_gate_cure_refuses_when_any_sha_is_large(self):
+        """One gutting (pure-deletion) commit in an otherwise small set
+        refuses the whole batch: declared, not rewritten, never
+        half-declared."""
+        self._red_guard(["d2d8f51 small", "ba6b390 gutted"])
+        (self.kernel / "docs" / "project").mkdir(parents=True)
+        (self.kernel / "docs" / "project" / "decisions.md").write_text(
+            "# Decisions\n")
+        self._ceremony_ok_stub()
+        self._mod.patch_id = lambda kernel, sha: "p" * 40
+        self._mod.commit_subject = lambda kernel, sha: "fixture"
+        self._mod.commit_numstat = lambda kernel, sha: (
+            [(0, 9, "src/gutted.lisp")] if sha == "ba6b390"
+            else [(4, 1, "src/small.lisp")])
+        r = self._mod.check_gate_cure({"kernel": str(self.kernel),
+                                       "date": "2026-09-12"})
+        self.assertEqual(r["passes"], [])
+        where, cause, detail = r["fails"][0]
+        self.assertEqual((where, cause), ("kernel", "gate-cure-refused"))
+        self.assertIn("ba6b390", detail)
+        self._assert_undeclared()
+
     # --- (8) a runner crash files one alert and exits 0 ---
     def test_runner_crash_suppressed_exit_zero(self):
         os.environ["PATROL_ROUTES"] = "/no-such/patrol-routes.tsv"
