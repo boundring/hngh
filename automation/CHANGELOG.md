@@ -2,6 +2,21 @@
 
 ## 2026-09-17
 
+- research TSV sweep gate-spec redesign (gap-g2-predicate-false-
+  positives): the proposed sweep predicate "redact_home delta OR
+  scrub_truncate_pathy delta" was empirically unusable (291 committed
+  research lines flagged, every one a prose false positive of the
+  bare-stem dash cut; the redact_home fixpoint component contributed
+  zero). The dash-form predicate is now DISCRIMINATING -- a stem cuts
+  only when followed by a path-shaped segment (stem / deployment
+  username / PATHY_COMPONENTS vocabulary; config.env default stem
+  reaches the env-less gate) -- and check/apply are two-phase:
+  redact_home deltas gate and rewrite, dash-form findings report-only
+  and parked for the operator. Real tree: --check rc=0, 18 parked
+  findings, all genuine `home-bricker` payload carriers, zero prose
+  FPs; all three real payload ids still caught (record:
+  docs/records/2026-09-17-dash-leak-predicate-discrimination.md).
+
 - dashboard: sessions-view render-blocks consumer strip landed p0-safe
   (sole copy rescued from dangling autostash 91ab48ca before gc;
   record: docs/records/2026-09-17-render-blocks-strip-and-userspace-

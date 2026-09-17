@@ -123,4 +123,72 @@ rc=$?
 echo "$out" | grep -q "dirty" || fail "dirty md refusal must name the file"
 pass "refuses dirty tracked md docs"
 
+# --- (g) 2026-09-17 gate-spec redesign (gap-g2-predicate-false-
+# positives): the dash-form predicate is DISCRIMINATING (stem followed
+# by a path-shaped segment) and check/apply are two-phase. A dash-only
+# finding parks (report-only, exit 0); only an actionable redact_home
+# delta turns --check red; --apply rewrites tilde deltas only and
+# never rewrites a committed dash-only id. Deployment stem defaults
+# from config.env when the env seam is unset (make test runs env-less).
+# Plumbing first: --apply never commits, so HEAD still holds the RAW
+# seed blob; commit the redacted baseline (plus (d)'s raw probe row,
+# itself re-swept) so (g) starts from a clean committed state.
+git -C "$tmp" add disp.tsv
+git -C "$tmp" commit -qm d-leftover
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --apply --files "$tmp/disp.tsv" 2>&1)"
+[ "$?" -eq 0 ] || fail "baseline re-sweep should succeed: $out"
+git -C "$tmp" add disp.tsv
+git -C "$tmp" commit -qm g-baseline
+# (g1) dash-only leak: parked, rc=0, zero raw-token lines
+printf 'disp-dash\tadopted\tadopted -- findings sound\tmodel:t\t# SUPPORTIVE fail-20260914-Where-exactly-in-home-bricker-Projects-e review pass\t2026-09-17\t\t\t\n' >>"$tmp/disp.tsv"
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --check --files "$tmp/disp.tsv" 2>&1)"
+rc=$?
+[ "$rc" -eq 0 ] || fail "dash-only check must park with rc=0, got $rc: $out"
+echo "$out" | grep -q "0 raw-token line(s)" || fail "dash-only must report zero raw-token lines: $out"
+echo "$out" | grep -q "1 dash-form finding(s) (report-only" \
+ || fail "dash-only finding must be reported as parked: $out"
+pass "dash-only finding parks: rc=0, report-only, no raw-token count"
+# (g2) tilde leak: still actionable red
+printf 'disp-tilde\tadopted\tadopted -- from /home/bri/x/y.md probes\tmodel:t\t\t2026-09-17\t\t\t\n' >>"$tmp/disp.tsv"
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --check --files "$tmp/disp.tsv" 2>&1)"
+rc=$?
+[ "$rc" -eq 1 ] || fail "tilde check must rc=1, got $rc: $out"
+echo "$out" | grep -q "1 raw-token line" || fail "tilde check must count 1 raw line: $out"
+pass "redact_home delta is the actionable rc=1 signal"
+# (g3) apply rewrites the tilde row; the dash-only id survives verbatim.
+# Commit both (g1)+(g2) rows so HEAD carries them; apply reads that
+# HEAD blob and rewrites tilde deltas only.
+git -C "$tmp" add disp.tsv
+git -C "$tmp" commit -qm g-seed
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --apply --files "$tmp/disp.tsv" 2>&1)"
+[ "$?" -eq 0 ] || fail "apply should succeed: $out"
+grep -q '/home/bri' "$tmp/disp.tsv" && fail "raw path survived apply"
+grep -q '~/x/y.md probes' "$tmp/disp.tsv" || fail "tilde row not rewritten"
+grep -q 'fail-20260914-Where-exactly-in-home-bricker-Projects-e' "$tmp/disp.tsv" \
+ || fail "committed dash-only research id must survive apply untouched"
+pass "apply rewrites tilde deltas only; dash-only id survives"
+# (g4) re-check green; the parked dash finding still reports
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --check --files "$tmp/disp.tsv" 2>&1)"
+rc=$?
+[ "$rc" -eq 0 ] || fail "recheck after apply must stay parked-green: $out"
+echo "$out" | grep -q "1 dash-form finding(s) (report-only" \
+ || fail "parked dash finding must still report after apply: $out"
+pass "recheck parked-green; park report persists for the operator"
+# (g5) the discriminating predicate keeps the real payload class red
+# when it rides WITH a raw slash token, and keeps the prose FP classes
+# silent (the corpus false-positive classes from the retired predicate)
+printf 'disp-both\tadopted\tadopted -- fail-20260916-Do-any-files-in-home-bricker-Projects-et /home/bri/q.md\tmodel:t\t\t2026-09-17\t\t\t\n' >>"$tmp/disp.tsv"
+printf 'prose\tadopted\tadopted -- root cause: the network-down headroom predicate; use tmp dir for fixtures\tmodel:t\t\t2026-09-17\t\t\t\n' >>"$tmp/disp.tsv"
+out="$(env -u HNGH_ROUTER_PATHY_STEMS AUTOMATION_ROOT="$root" \
+  python3 "$root/scripts/research-tsv-path-sweep.py" --check --files "$tmp/disp.tsv" 2>&1)"
+rc=$?
+[ "$rc" -eq 1 ] || fail "payload+raw check must rc=1, got $rc: $out"
+echo "$out" | grep -q "1 raw-token line" || fail "prose FP rows must stay silent: $out"
+pass "discriminating predicate: payload class caught, prose classes silent"
+
 echo "test-research-tsv-path-sweep: all assertions passed"

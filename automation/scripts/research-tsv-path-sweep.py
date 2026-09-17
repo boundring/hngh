@@ -20,6 +20,18 @@ Why git-blob-in, file-out: the research beat appends between our read
 and write; HEAD blobs are immutable snapshots, and working-tree appends
 by the live beat stay untouched. The filter uses lib/scrub.py's
 redact_home (the tilde family, one convention across every seam).
+
+Two-phase check/apply (2026-09-17 gate-spec redesign,
+gap-g2-predicate-false-positives): only the redact_home delta is the
+ACTIONABLE finding (a raw slash-form machine-local token; already-tilde
+rows are clean by the fixpoint). The dash-form predicate
+(scrub_truncate_pathy delta, now discriminating: stem followed by a
+path-shaped segment) is REPORT-ONLY and parks for the operator: it
+fires on committed research line ids by design (the payload class IS
+fail-<date>-<mangled-path> ids), so rewriting it would destroy the
+correct research record -- the retired bare-stem predicate mass-
+flagged 291 committed lines. rc reflects actionable findings only;
+dash-only findings exit 0 with a parked line per file.
 """
 import argparse
 import importlib.machinery
@@ -71,6 +83,15 @@ def leak_lines(text):
         if REDACT_HOME(line) != line:
             out.append(line)
     return out
+
+
+def pathy_findings(text):
+    """Lines the DISCRIMINATING dash-form predicate would cut
+    (scrub_truncate_pathy delta): stem followed by a path-shaped
+    segment. Report-only: the payload class is committed research
+    ids, so these park for the operator instead of gating."""
+    return [line for line in str(text or "").splitlines()
+            if SCRUB.scrub_truncate_pathy(line) != line]
 
 def head_blob(path):
     """HEAD blob text for path (refuses untracked). Paths are resolved
@@ -165,6 +186,13 @@ def main(argv):
                 continue
             leaks = leak_lines(text)
             print("%s: %d raw-token line(s)" % (rel, len(leaks)))
+            # dash-form findings are report-only (parked for the
+            # operator): the payload class is committed research ids,
+            # never rewritten by --apply, never gating rc
+            parked = pathy_findings(text)
+            if parked:
+                print("%s: %d dash-form finding(s) (report-only, "
+                      "parked for the operator)" % (rel, len(parked)))
             if leaks:
                 failures.append(rel)
             continue
