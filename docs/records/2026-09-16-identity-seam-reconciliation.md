@@ -25,6 +25,51 @@ supportive-4 artifact says "567". Both are wrong; this record is canonical.
 the 567 figure used an exclusive-window `git log` that drops the boundary
 commit. Use the method above.)
 
+## Full window census recount (2026-09-17, gate follow-up)
+
+The audit child's attribution table summed to 608 over the 566 population.
+Recount over `ba6b3905^..30556e67` (both boundary commits are
+Fixture-authored and inside the window: `ba6b3905` "fixture",
+`30556e67` "research: fail-20260916-..."), each commit assigned to exactly
+one bucket, writer-template subjects taking precedence:
+
+| Bucket | Subject template | Writer | Commits |
+|---|---|---|---|
+| research-beat | `research: <id> <state>` | `cadence/hour/33-research-beat.sh` | 240 |
+| kernel ledger sync | `docs: machine ledger sync — N changed file(s)` | `cadence/hour/30-kernel-ledger-sync.sh` | 89 |
+| ceremony candidates | `hngh: candidate ...` | kernel `src/adapter/mutation.lisp` | 42 |
+| torch audit | `automation: torch numbers refresh (date)` | `cadence/day/17-torch-audit.sh` | 4 |
+| plan-ledger sync | `automation: plan-ledger sync — N changed file(s)` | `cadence/day/14-plan-ledger-sync.sh` | 2 |
+| lesson harvest | `chore: lesson-harvest handoff counter tick` | `cadence/day/01-lesson-harvest.sh` | 2 |
+| plan-tick session commits | `docs: plan tick — ...` / `plan tick — ...` | one-off manual/overnight sessions | 6 |
+| one-off manual/overnight | everything else | ad-hoc sessions | 181 |
+| **Total** | | | **566** |
+
+Plan-ledger updates total 9 commits: the 2 writer ticks + 6 session ticks,
+plus `1f818776` (`research: fail-20260911-correction-style-css ...; plan
+ticked`), which combines a research-beat disposition with a plan tick and is
+counted under research-beat.
+
+The 181 one-off commits by subject family: `automation:` manual automation
+slices 77 (plus 2 `automation tests:`/`automation+kernel-tests:` variants →
+79 `automation*`), `docs:` manual docs edits 40, `fix:` 15, `feat:` 12,
+non-candidate `hngh:` (observe/registry/stall-verify) 6, `design:` 4,
+long-tail singletons (tests, slow-units, bench-trigger, routing,
+rehearsal-lane, dash-selfreview, cost-tiering, cap-block, journal,
+viz-transport, gdelt, jcode, patrol, plan, mcp server, model.sh, config,
+non-harvest `chore:`) 23, degenerate fixtures (`fixture`, `Revert
+"fixture"`) 2.
+
+Deltas vs the child's table (240 + 89 + 42 + 4 + 4 + 2 + 227 = 608): the
+overflow is exactly 42 = the candidate count, so the child counted the 42
+ceremony candidates twice (once as a lane, again inside its one-off
+residual). Its "plan-tick 4" matches only the 4 `docs: plan tick` subjects:
+the writer produced 2, and 6 session tick commits exist (8 plus the research
+overlap). Correct one-off figure is 181 (child's 227 − 42 double-counted
+candidates − 4 tick subjects reattributed). Verified by two independent
+methods: per-family `git log --grep` counts and a per-commit first-match
+assignment whose buckets sum to exactly 566 with a single overlap.
+
 ## Remediation landed (2026-09-16, operator-approved)
 
 1. Local `.git/config` identity set to `hngh-machine
@@ -78,7 +123,7 @@ The five writers fixed in this slice, with the window commits they
 authored as Fixture (family census above):
 
 - `automation/cadence/day/01-lesson-harvest.sh:86` (2, `chore:` ticks)
-- `automation/cadence/day/14-plan-ledger-sync.sh:39` (4, `docs: plan tick`)
+- `automation/cadence/day/14-plan-ledger-sync.sh:39` (2, `automation: plan-ledger sync —`)
 - `automation/cadence/day/17-torch-audit.sh:202` (4, torch refresh)
 - `automation/cadence/hour/30-kernel-ledger-sync.sh:45` (89)
 - `automation/cadence/hour/33-research-beat.sh:183` (240)
