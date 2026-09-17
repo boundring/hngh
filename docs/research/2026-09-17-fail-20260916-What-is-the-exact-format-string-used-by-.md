@@ -1,4 +1,4 @@
-# What is the exact format string used by the hngh OOM handler, as extracted from source via `grep -rn "Out of memory" /home/bricker/Projects/etc/hngh --include='*.c'`?
+# What is the exact format string used by the hngh OOM handler, as extracted from source via `grep -rn "Out of memory" ~/Projects/etc/hngh --include='*.c'`?
 
 Status: crystallized 2026-09-17 from research line `fail-20260916-What-is-the-exact-format-string-used-by-`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-What-is-the-exact-format-string-used-by-.md.
