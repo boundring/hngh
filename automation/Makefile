@@ -110,6 +110,7 @@ test:
 	python3 -B tests/test-report-queue-redaction.py
 	bash tests/test-config-backup-fail-redact.sh
 	bash tests/test-oversight-tick-alert-redact.sh
+	bash tests/test-research-beat-ingest-redact.sh
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
