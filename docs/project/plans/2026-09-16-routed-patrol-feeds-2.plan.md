@@ -12,3 +12,4 @@ at 2026-09-16T01:00:39Z. Alert text: patrol feeds: feed-missing on dashboard/res
 ## Occurrences
 
 - 2026-09-17T04:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T05:00:13Z re-occurred (dedup window expired)
