@@ -2,6 +2,31 @@
 
 ## 2026-09-17
 
+- router-tick: scrub-stem coverage closes the consumed-home gap (GAP E,
+  wiki-health-wiring-reconcile::gate) — the 2026-09-16 path scrub cut
+  only at home-/Users- stems, so a dash-mangled identity whose /home
+  segment was consumed upstream (manglers that drop /home or expand ~:
+  `review:bricker-Projects-etc-hngh-docs-secret`) sailed through whole
+  and baked the username into the slug, routed-from, and row identities.
+  Three scrub extensions, all leak-averse: (1) PATHY_STEMS gains tmp and
+  root; (2) the deployment username becomes a scrub stem through a
+  config seam, never hardcoded — config.env exports
+  HNGH_ROUTER_PATHY_STEMS (default `bricker`; the one config.env export:
+  unexported vars do not cross cadence-tick's `bash $f` drop-in boundary
+  or the python child env), env values override so tests stay hermetic
+  under any operator username; (3) a token-level path-likeness heuristic:
+  a token whose dash-segments contain two consecutive path fragments
+  (repeated component or two adjacent known components like
+  Projects-etc) cuts at that token, so home-less paths still truncate.
+  Tradeoff note, updated: the documented truncation tradeoff widens to
+  username/tmp/root-stemmed subject tokens and to tokens with two
+  consecutive pathy fragments; innocuous SINGLE-fragment subject words
+  (`review:bricker-x`, `slow-unit:matrix-worker`) still pass unchanged
+  (asserted). Stem matching is case-insensitive. Pathy-class tokens
+  still refuse whole fail-closed. Red-first: 4 new tests in
+  tests/test-router-tick.py fail on the pre-fix emitter (28 total OK
+  after); full automation suite green, lint-identifiers clean.
+
 - router-slug census definition pinned (GAP D waiver, docs/records/
   2026-09-17-routed-plan-slug-census-definition.md): "pathy" means
   dash-mangled OS path fragments (home-/Users-stems, usernames,

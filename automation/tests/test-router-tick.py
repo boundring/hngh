@@ -77,14 +77,22 @@ class RouterTick(unittest.TestCase):
     def run_tick(self, identity, text="", dedup_hours=None, dry=None):
         return self.tick_env(identity, text, dedup_hours, dry)
 
-    def tick_env(self, identity, text="", dedup_hours=None, dry=None):
+    def tick_env(self, identity, text="", dedup_hours=None, dry=None,
+                 env_overrides=None):
+        # env_overrides: a value of None removes the variable (hermetic
+        # seam-absent runs); any other value is set as-is.
+        env = {**self.env,
+               **({"HNGH_ROUTER_DEDUP_HOURS": dedup_hours}
+                  if dedup_hours else {}),
+               **({"DRY_RUN": dry} if dry else {})}
+        for k, v in (env_overrides or {}).items():
+            if v is None:
+                env.pop(k, None)
+            else:
+                env[k] = v
         return subprocess.run(
             [sys.executable, str(TICK), "--identity", identity, "--text", text],
-            env={**self.env,
-                 **({"HNGH_ROUTER_DEDUP_HOURS": dedup_hours}
-                    if dedup_hours else {}),
-                 **({"DRY_RUN": dry} if dry else {})},
-            capture_output=True, text=True)
+            env=env, capture_output=True, text=True)
 
     def rows(self):
         log = self.root / "queue.log"
@@ -376,6 +384,101 @@ class RouterTick(unittest.TestCase):
         self.assertTrue(any("alert" in r
                             and "--identity router:parked:remote-posture "
                             in r for r in self.rows()), self.rows())
+
+    def test_username_led_pathy_identity_never_slugs_the_username(self):
+        """GAP E (wiki-health-wiring-reconcile::gate): a dash-mangled path
+        whose home segment was consumed upstream (manglers that drop
+        /home or expand ~) reaches the scrub without any home-/Users-
+        stem, so the username rode the slug, routed-from, and row
+        identities. The username is a scrub stem via the config seam:
+        cut at the first username-stemmed token, class prefix survives."""
+        out = self.run_tick("review:bricker-Projects-etc-hngh-docs-secret")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 1, cands)
+        self.assertNotIn("bricker", cands[0])
+        for frag in ("Projects", "etc-hngh"):
+            self.assertNotIn(frag, cands[0])
+        text = (self.plans / cands[0]).read_text()
+        self.assertIn("routed-from=review -->", text)
+        self.assertNotIn("bricker", text)
+        self.assertFalse(any("bricker" in r for r in self.rows()), self.rows())
+        self.assertFalse(any("bricker" in b for b in self.breadcrumbs()),
+                         self.breadcrumbs())
+
+    def test_username_stem_seam_env_overrides_config(self):
+        """The username stem is deployment data, not kernel logic:
+        HNGH_ROUTER_PATHY_STEMS (config.env) is the default; the env
+        var wins so tests stay hermetic under any operator username."""
+        ident = "review:hermituser-Dropbox-hngh-notes-x"
+        kw = dict(env_overrides={"HNGH_ROUTER_PATHY_STEMS": "hermituser"})
+        out = self.tick_env(ident, "probe", **kw)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = [c for c in self.candidates() if "hermituser" not in c]
+        self.assertEqual(len(cands), 1, self.candidates())
+        self.assertIn("routed-from=review -->",
+                      (self.plans / cands[0]).read_text())
+        # seam absent: no stem at all -> the default chain applies and
+        # an unknown username does NOT scrub (documented limitation)
+        out = self.tick_env("review:hermituser-x:plan:y", "probe",
+                            env_overrides={"HNGH_ROUTER_PATHY_STEMS": None})
+        self.assertEqual(out.returncode, 0, out.stderr)
+
+    def test_two_consecutive_pathy_fragments_cut_before_the_first(self):
+        """Path-likeness heuristic: two consecutive dash-segments that
+        match known path components cut at that token even without any
+        stem. Single innocuous subject words pass unchanged (the
+        documented truncation tradeoff never widens to them)."""
+        cases_cut = (
+            ("slow-unit:Projects-etc-hngh-docs-x", "slow-unit"),
+            ("review:tmp-cache-sweep", "review"),
+            ("readout:root-caused-flake", "readout"),
+        )
+        for ident, kept in cases_cut:
+            before = set(self.candidates())
+            out = self.run_tick(ident, "probe")
+            self.assertEqual(out.returncode, 0, out.stderr)
+            fresh = [c for c in self.candidates() if c not in before]
+            self.assertEqual(len(fresh), 1, (ident, fresh))
+            self.assertIn("routed-from=%s -->" % kept,
+                          (self.plans / fresh[0]).read_text())
+        # innocuous single words: one dash-segment, no stem -> untouched
+        for ident in ("review:bricker-x", "gate-red:kernel-red",
+                      "slow-unit:matrix-worker"):
+            before = set(self.candidates())
+            out = self.run_tick(ident, "probe")
+            self.assertEqual(out.returncode, 0, out.stderr)
+            fresh = [c for c in self.candidates() if c not in before]
+            self.assertEqual(len(fresh), 1, (ident, fresh))
+            self.assertIn("routed-from=%s -->" % ident,
+                          (self.plans / fresh[0]).read_text())
+
+    def test_pathy_class_token_scrubs_not_refuses(self):
+        """Pathy SUBJECT token: the class prefix survives and the
+        candidate still drafts (never refused). Pathy CLASS token
+        (path at the first token): the whole identity is refused
+        fail-closed with a no-candidate crumb (pre-existing contract,
+        now also armed by username/tmp/root stems). Critical classes
+        still park after a subject cut."""
+        out = self.run_tick("dash-selfreview:Projects-etc-x")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(len(self.candidates()), 1, self.candidates())
+        text = (self.plans / self.candidates()[0]).read_text()
+        self.assertIn("routed-from=dash-selfreview -->", text)
+        self.assertNotIn("Projects", text)
+        before = set(self.candidates())
+        out = self.run_tick("home-bricker-Projects:x")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(sorted(self.candidates()), sorted(before))
+        self.assertTrue(any("| router | no-candidate |" in b
+                            for b in self.breadcrumbs()))
+        before = set(self.candidates())
+        out = self.run_tick("remote-posture:Projects-etc-secret-test")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(sorted(self.candidates()), sorted(before))
+        self.assertTrue(any(
+            "alert" in r and "--identity router:parked:remote-posture " in r
+            for r in self.rows()), self.rows())
 
 
 class PlanDispose(unittest.TestCase):
