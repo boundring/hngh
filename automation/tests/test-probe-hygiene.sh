@@ -100,8 +100,57 @@ ck "Bearer directives cover every probed gate" "yes" \
   "$([ "$n_dir" -ge "$n_gates" ] && echo yes || echo no)"
 ck "suite found curl records at all (file not drifted)" "yes" "$([ "${#curls[@]}" -ge 4 ] && echo yes || echo no)"
 
-if [ "$fails" -gt 0 ]; then
-  echo "probe-hygiene: $fails failure(s)"
+# --- model.sh (production chat legs; 2026-09-17 bearer-argv conversion) ---
+# Same mechanical form over lib/model.sh: after the 2026-09-17 conversion
+# (notify-seam pattern; credential-health probes of the SAME endpoints
+# were converted first in ccf8d7b5), no curl record may carry the
+# Authorization header on argv, every non-exempt curl must use the stdin
+# config, and three Bearer directives must exist (_post_chat cfg,
+# unsloth_attempt, _unsloth_ctx_limit). The single exemption is the
+# refresh-path curl ($UNSLOTH_URL/api/auth/refresh): it carries the
+# single-use refresh token in the JSON body, not a Bearer header —
+# refresh-path scope proper, tracked separately from this lint.
+file2="$root/lib/model.sh"
+mapfile -t mcurls < <(
+  python3 - "$file2" <<'PY'
+import re, sys
+text = open(sys.argv[1]).read()
+text = re.sub(r'\\\n\s*', ' ', text)
+for line in text.splitlines():
+    s = line.strip()
+    if s.startswith('#'):
+        continue
+    if re.search(r'(?<![\w-])curl(?![\w-])', s):
+        print(s)
+PY
+)
+m_fails=0
+mck() { # desc expected actual
+  if [ "$2" = "$3" ]; then echo "ok: $1"; else
+    echo "FAIL: $1 (want [$2] got [$3])"
+    m_fails=$((m_fails + 1))
+  fi
+}
+for c in "${mcurls[@]}"; do
+  case "$c" in *'Authorization:'*)
+    echo "FAIL: model.sh header on curl argv: $c"; m_fails=$((m_fails + 1)) ;; esac
+done
+mck "model.sh: no Authorization header on any curl argv" "0" "$m_fails"
+m_nonk=0
+for c in "${mcurls[@]}"; do
+  case "$c" in *'$UNSLOTH_URL/api/auth/refresh'*) continue ;; esac
+  case "$c" in *' -K '*) continue ;; esac
+  m_nonk=$((m_nonk + 1))
+  echo "FAIL: model.sh non-exempt curl without stdin config: $c"
+done
+mck "model.sh: non-exempt curls without -K - == 0 (refresh path exempt)" "0" "$m_nonk"
+n_mdir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file2" || true)"
+mck "model.sh: three stdin Bearer directives" "3" "$n_mdir"
+mck "model.sh: suite found curl records at all (file not drifted)" "yes" \
+  "$([ "${#mcurls[@]}" -ge 4 ] && echo yes || echo no)"
+
+if [ "$fails" -gt 0 ] || [ "$m_fails" -gt 0 ]; then
+  echo "probe-hygiene: $((fails + m_fails)) failure(s)"
   exit 1
 fi
 echo "probe-hygiene contract: all cases passed"
