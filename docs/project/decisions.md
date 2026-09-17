@@ -595,3 +595,15 @@ guard's KNOWN_EXEMPTIONS table and cured through the ceremony
 loop -- declared, not rewritten; the SMALL-matter policy is the
 2026-09-13 amendment (docs/design/autonomous-development-
 control.md). A ceremony refusal parks for the operator.
+
+## 2026-09-16 — Progress-kind path redaction (sink alert+progress)
+
+Progress-kind text on the public report ledger no longer carries
+machine-local path prefixes: `scripts/report-queue` routes `--add
+progress` through the same redaction class as alerts, repo-relative
+paths stay untouched (the 2026-09-16 per-kind objection only ever
+protected repo-relative paths), the research-beat ingest redacts
+before id/slug derivation (commit 2e51d01b), the historical rows stay
+forward-only (319 progress rows keep `/home/` paths; no history
+rewrite), and the 48-site `--add` census classifies every emitter
+(docs/records/2026-09-16-progress-kind-path-redaction.md).
