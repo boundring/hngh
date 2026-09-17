@@ -56,7 +56,7 @@ While the specific Cistern items remain unknown, the failure of this line points
 ## Open Threads
 
 1.  **Cistern DESIGN-SPEC §6 Content:** The actual list of deferred items remains unknown. This requires a direct file read from the Cistern repository, which is not currently accessible in this context.
-2.  **Hngh Repository Structure:** The specific files implementing "disposition spine," "research beats," and "context packs" within `/home/bricker/Projects/etc/hngh` have not been verified. Recommendations 1 and 2 assume these components exist as described; their exact implementation paths need confirmation to apply the schema changes.
+2.  **Hngh Repository Structure:** The specific files implementing "disposition spine," "research beats," and "context packs" within `~/Projects/etc/hngh` have not been verified. Recommendations 1 and 2 assume these components exist as described; their exact implementation paths need confirmation to apply the schema changes.
 3.  **Existing Provenance Fields:** It is unknown if Hngh-automation already has a partial grounding/provenance field. Recommendation 2 may be partially implemented or redundant.
 
 ## References
@@ -68,7 +68,7 @@ While the specific Cistern items remain unknown, the failure of this line points
     *   `cases/cistern-emacs-rewrite`: *Title only.* Referenced in prior beat; content not verified.
     *   `sources/cistern-project-findings`: *Title only.* Referenced in prior beat; content not verified.
 
-2.  **Hngh Kernel Repository (`/home/bricker/Projects/etc/hngh`):**
+2.  **Hngh Kernel Repository (`~/Projects/etc/hngh`):**
     *   *Paths for "disposition spine," "research beats," and "context packs" implementations:* *Unverified.* The prior material references these concepts but does not cite specific file paths (e.g., `src/disposition/spine.ts`, `tools/context-pack.js`). These need to be located to implement Recommendations 1 and 2.
 
 3.  **External Sources (Referenced in Prior Art, Unverified):**

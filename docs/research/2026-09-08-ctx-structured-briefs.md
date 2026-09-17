@@ -31,7 +31,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-ctx-structured-briefs.m
 
 1. **Construct Briefs with Known Field Subsets**:
    - Create briefs with varying subsets of fields to systematically test their impact on reorientation tokens.
-   - **Verification**: Check if the `hngh` kernel has a harness for checkpoint/restore of task state. This is a critical step and should be verified in `/home/bricker/Projects/etc/hngh`.
+   - **Verification**: Check if the `hngh` kernel has a harness for checkpoint/restore of task state. This is a critical step and should be verified in `~/Projects/etc/hngh`.
 
 2. **Kill the Session and Measure Tokens-to-First-Verified-Action**:
    - Simulate a session death and hand the brief to a fresh agent on an identical task state.

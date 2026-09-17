@@ -37,7 +37,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Do-the-di
      - currently unproven either way.
 
 4. **Kernel-side provenance remains open.**
-   - The hngh kernel repository root is referenced as `/home/bricker/Projects/etc/hngh`.
+   - The hngh kernel repository root is referenced as `~/Projects/etc/hngh`.
    - However, the available line material does not cite a specific mark-read handler file, test file, or log-emission site inside that repository.
    - Without direct inspection of the kernel source and tests, we cannot verify what status code the mark-read endpoint actually returns under success conditions.
 
@@ -96,7 +96,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Do-the-di
 
 5. **If files exist and contain raw status lines, compare them against the kernel repository before trusting them.**
    - The required reconciliation is:
-     - locate the mark-read handler in `/home/bricker/Projects/etc/hngh`;
+     - locate the mark-read handler in `~/Projects/etc/hngh`;
      - identify the success-code contract from implementation and tests;
      - compare that contract to the digest-derived census.
 
@@ -123,7 +123,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Do-the-di
 
 4. **Kernel-side success-code contract**
    - Unverified from this transition.
-   - Requires inspection of `/home/bricker/Projects/etc/hngh` to determine what status code mark-read actually returns on success.
+   - Requires inspection of `~/Projects/etc/hngh` to determine what status code mark-read actually returns on success.
 
 5. **Provenance mapping between digest excerpts and kernel log output**
    - Open.
@@ -144,5 +144,5 @@ Cannot be reported from the available evidence. No actual status-code values are
 ## References
 
 - `digest/RESEARCH-BEAT-*` — target glob for the digest files under investigation; existence and contents are **not verified** in this transition.
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root referenced for provenance reconciliation; specific mark-read handler, test, or log-emission files are **not cited here because they were not verified in this transition**.
+- `~/Projects/etc/hngh` — hngh kernel repository root referenced for provenance reconciliation; specific mark-read handler, test, or log-emission files are **not cited here because they were not verified in this transition**.
 - Current line prior material for `research beat 2026-09-15` — contains the contract/probe plan and kill conditions, but **no raw log excerpts** and **no status-code census**.

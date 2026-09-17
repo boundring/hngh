@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 
 **Line:** Does the `2026-08-28-session-cost-display.md` intent document specify a single canonical formatting function or module path that both dashboard surfaces should import?  
 **Lifecycle state:** contracting  
-**Contracted result:** Unresolved. From the supplied record, there is no verified basis to answer yes or no. No concrete file in `/home/bricker/Projects/etc/hngh` has been confirmed as containing the relevant specification, and no import graph for either dashboard surface has been verified.
+**Contracted result:** Unresolved. From the supplied record, there is no verified basis to answer yes or no. No concrete file in `~/Projects/etc/hngh` has been confirmed as containing the relevant specification, and no import graph for either dashboard surface has been verified.
 
 ---
 
@@ -15,7 +15,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 
 ### F1 — The question is not answered by verified repository evidence in this record
 
-The supplied prior material states that the earlier expansion produced **zero verified findings**. It explicitly says the model could not confirm the existence or contents of `2026-08-28-session-cost-display.md`, and no file path in `/home/bricker/Projects/etc/hngh` was confirmed.
+The supplied prior material states that the earlier expansion produced **zero verified findings**. It explicitly says the model could not confirm the existence or contents of `2026-08-28-session-cost-display.md`, and no file path in `~/Projects/etc/hngh` was confirmed.
 
 Therefore, this contraction cannot claim:
 
@@ -69,7 +69,7 @@ This is the blocking step. No other recommendation can be completed until the ta
 Search for the exact named file:
 
 ```bash
-find /home/bricker/Projects/etc/hngh -name "2026-08-28-session-cost-display.md" -type f 2>/dev/null
+find ~/Projects/etc/hngh -name "2026-08-28-session-cost-display.md" -type f 2>/dev/null
 ```
 
 If it is found, read it in full and extract:

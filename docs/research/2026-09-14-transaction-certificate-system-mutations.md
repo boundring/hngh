@@ -72,7 +72,7 @@ No new adapter, no daemon, no side-channel state. The multi-dependency complexit
 
 The prior art `Git Back Dots` (`SRC-2026-08-18-007`) and `hngh-ceremony-loop-mechanics` establish that hngh operations use **closed vocabularies** and **path positioning**: every action name, target path, and artifact identifier must be drawn from a pre-declared set. The certificate's `action_descriptor` field must therefore not be free-form; it must reference a vocabulary entry (e.g., `rung_d_package_install`, `rung_d_config_write`) that the adapter recognizes. This is consistent with the git commit model where the "type" of change is implicit in the tree diff, but here it is made explicit because the adapter dispatches on it.
 
-I note that I have not been able to open `/home/bricker/Projects/etc/hngh` to verify the specific vocabulary tokens or the adapter's dispatch table. The closed-vocabulary constraint is asserted from the prior art pointer; the exact token names are an open thread (see OT-3).
+I note that I have not been able to open `~/Projects/etc/hngh` to verify the specific vocabulary tokens or the adapter's dispatch table. The closed-vocabulary constraint is asserted from the prior art pointer; the exact token names are an open thread (see OT-3).
 
 ---
 

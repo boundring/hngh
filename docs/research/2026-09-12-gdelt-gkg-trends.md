@@ -49,7 +49,7 @@ Scope discipline note: one finding from the expanding beat (multi-window NumSour
 
 ## 4. Open threads
 
-- **OT1.** Whether document-level timestamps and raw V2Counts fields are actually retained by the current hngh GKG ingest — gates R3 and cheapens R2. Check against the ingest code in the hngh kernel repo (`/home/bricker/Projects/etc/hngh`) and the source record `docs/records/2026-09-12-gdelt-source.md`.
+- **OT1.** Whether document-level timestamps and raw V2Counts fields are actually retained by the current hngh GKG ingest — gates R3 and cheapens R2. Check against the ingest code in the hngh kernel repo (`~/Projects/etc/hngh`) and the source record `docs/records/2026-09-12-gdelt-source.md`.
 - **OT2.** The true precision@k baseline of current selection — needed before any signal can claim measurable improvement. No number exists yet on this line.
 - **OT3.** Whether theme deltas should use absolute share-of-coverage or source-normalized share (GDELT theme tallies may be sensitive to overall ingest volume fluctuations) — decide during R4 design, informed by replay data.
 - **OT4.** Interaction with the existing scout/wave machinery referenced in `[[sources/wave-delay-spec-fixes-20260827]]`: if selection signals change, scout schemas may need to carry the new features. Unexplored.
@@ -65,7 +65,7 @@ Scope discipline note: one finding from the expanding beat (multi-window NumSour
 ## References
 
 - `docs/records/2026-09-12-gdelt-source.md` — this repository; the deferral record that seeded the line.
-- `/home/bricker/Projects/etc/hngh` — the hngh kernel repository; ingest code and selection pipeline to be verified under OT1.
+- `~/Projects/etc/hngh` — the hngh kernel repository; ingest code and selection pipeline to be verified under OT1.
 - `[[sources/SRC-2026-08-24-030]]` — llm-wiki vault; overnight multi-agent sprint case study (process context).
 - `[[sources/hngh-storeless-cli-state-loss]]` — llm-wiki vault; basis for F5 / R1 persistence requirement.
 - `[[sources/wave-delay-spec-fixes-20260827]]` — llm-wiki vault; scout schema context underlying OT4.

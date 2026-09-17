@@ -10,7 +10,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-govbench-ci-evidence.md
 **Current Lifecycle State:** Contracting
 
 **Repository Structure Analysis:**
-- **`/home/bricker/Projects/etc/hngh`**: The kernel repository containing core logic, headers, and build scripts.
+- **`~/Projects/etc/hngh`**: The kernel repository containing core logic, headers, and build scripts.
 - **`hngh-automation`**: The CI/CD and automation layer containing pipeline definitions, scripts for testing, packaging, and deployment, and configuration files for linters, formatters, and security scanners.
 
 **Key Observation:**
@@ -27,7 +27,7 @@ For a kernel-level project, "change governance" involves ensuring binary integri
    - **Action:**
      - Integrate `sigstore` into the final packaging step of `hngh-automation`.
      - Generate an attestation file (`bundle.json`) that includes:
-       - The exact source commit hash from `/home/bricker/Projects/etc/hngh`.
+       - The exact source commit hash from `~/Projects/etc/hngh`.
        - The build environment fingerprint (OS, compiler version).
        - A cryptographic signature over the final binary artifact.
    - **Artifact Coverage:** This covers "who built it," "from which source," and "in what environment." It is machine-checkable via `cosign verify` or `in-toto verify`.

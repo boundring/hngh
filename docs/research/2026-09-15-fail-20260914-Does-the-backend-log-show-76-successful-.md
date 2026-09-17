@@ -28,7 +28,7 @@ The research line has been contracted from theoretical analysis to actionable re
 - **Action:** Ensure the HTTP response is only sent after the database transaction commits.
 - **Verification Step:**
   ```bash
-  grep -r "res.status(200)" /home/bricker/Projects/etc/hngh/src/api --include="*.ts" -A 5 | grep -B 2 "markRead\|mark_read"
+  grep -r "res.status(200)" ~/Projects/etc/hngh/src/api --include="*.ts" -A 5 | grep -B 2 "markRead\|mark_read"
   ```
 - **Expected Outcome:** No `res.status(200).send()` before `await db.query(...)` or `await redis.set(...)`.
 
@@ -38,7 +38,7 @@ The research line has been contracted from theoretical analysis to actionable re
 - **Action:** Ensure that only `2xx` status codes are treated as success, and `408`, `503`, and `500` responses trigger explicit failure states.
 - **Verification Step:**
   ```bash
-  grep -r "catch" /home/bricker/Projects/etc/hngh-automation/src --include="*.ts" -A 10 | grep -i "mark\|read"
+  grep -r "catch" ~/Projects/etc/hngh-automation/src --include="*.ts" -A 10 | grep -i "mark\|read"
   ```
 - **Expected Outcome:** No `catch (e) { return true; }` or similar patterns.
 
@@ -50,8 +50,8 @@ The research line has been contracted from theoretical analysis to actionable re
   - Log the request ID alongside the persistence outcome in the `hngh` kernel.
 - **Verification Step:**
   ```bash
-  grep -r "x-request-id\|requestId" /home/bricker/Projects/etc/hngh-automation/src --include="*.ts"
-  grep -r "req.headers['x-request-id']" /home/bricker/Projects/etc/hngh/src/api --include="*.ts"
+  grep -r "x-request-id\|requestId" ~/Projects/etc/hngh-automation/src --include="*.ts"
+  grep -r "req.headers['x-request-id']" ~/Projects/etc/hngh/src/api --include="*.ts"
   ```
 - **Expected Outcome:** Unique request IDs are present and logged.
 

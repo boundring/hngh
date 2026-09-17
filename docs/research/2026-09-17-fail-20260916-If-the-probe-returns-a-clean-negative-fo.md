@@ -1,4 +1,4 @@
-# If the probe returns a clean negative for `/home/bricker/Projects/etc/hngh`, has the research root been renamed to a different path (e.g., `/home/bricker/Projects/hngh`) or moved to a remote host accessible via the `remote-access-patterns` 
+# If the probe returns a clean negative for `~/Projects/etc/hngh`, has the research root been renamed to a different path (e.g., `~/Projects/hngh`) or moved to a remote host accessible via the `remote-access-patterns` 
 
 Status: crystallized 2026-09-17 from research line `fail-20260916-If-the-probe-returns-a-clean-negative-fo`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-If-the-probe-returns-a-clean-negative-fo.md.

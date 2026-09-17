@@ -16,7 +16,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Are-there
 
 ### F1 — No filesystem verification was performed; the question is unresolved, not answered
 
-The prior beat (2026-09-16) explicitly declined to assert the existence or absence of any CI configuration files, build logs, or artifact directories under `/home/bricker/Projects/etc/hngh` because no `ls`, `find`, or `git log` command was executed against that path. Per R5 in the prior material, all log-path claims remain **unverified**. The research question therefore does not resolve to "No" (which would require confirming the absence of CI configs) nor to "Yes" (which would require exhibiting a concrete log file containing `make[N]:` with N ≥ 2). It remains **open**.
+The prior beat (2026-09-16) explicitly declined to assert the existence or absence of any CI configuration files, build logs, or artifact directories under `~/Projects/etc/hngh` because no `ls`, `find`, or `git log` command was executed against that path. Per R5 in the prior material, all log-path claims remain **unverified**. The research question therefore does not resolve to "No" (which would require confirming the absence of CI configs) nor to "Yes" (which would require exhibiting a concrete log file containing `make[N]:` with N ≥ 2). It remains **open**.
 
 ### F2 — The demonstrable pattern is well-defined but unmet
 
@@ -33,7 +33,7 @@ No such excerpt has been located, generated, or cited in any prior beat. The dem
 
 ### F3 — CI configuration existence is the gating unknown
 
-R1 establishes a binary gate: if none of `.github/workflows/*.yml`, `.gitlab-ci.yml`, or `Jenkinsfile` exist at the root of `/home/bricker/Projects/etc/hngh`, then no CI runs have occurred and the question resolves to **No** (no captured logs can exist). If any one exists, the line pivots to R2: does that pipeline actually capture make output via `tee`, `actions/upload-artifact`, or a GitLab `artifacts: paths:` block? Neither branch has been evaluated because no filesystem access was exercised.
+R1 establishes a binary gate: if none of `.github/workflows/*.yml`, `.gitlab-ci.yml`, or `Jenkinsfile` exist at the root of `~/Projects/etc/hngh`, then no CI runs have occurred and the question resolves to **No** (no captured logs can exist). If any one exists, the line pivots to R2: does that pipeline actually capture make output via `tee`, `actions/upload-artifact`, or a GitLab `artifacts: paths:` block? Neither branch has been evaluated because no filesystem access was exercised.
 
 ### F4 — The Crystallized Rebuild Roadmap implies reproducibility as a design goal
 
@@ -49,12 +49,12 @@ R1 establishes a binary gate: if none of `.github/workflows/*.yml`, `.gitlab-ci.
 
 ### R1 — Execute the gate check (blocking, next beat)
 
-On any host with access to `/home/bricker/Projects/etc/hngh`, run:
+On any host with access to `~/Projects/etc/hngh`, run:
 
 ```bash
-ls /home/bricker/Projects/etc/hngh/.github/workflows/*.yml 2>/dev/null
-ls /home/bricker/Projects/etc/hngh/.gitlab-ci.yml 2>/dev/null
-ls /home/bricker/Projects/etc/hngh/Jenkinsfile 2>/dev/null
+ls ~/Projects/etc/hngh/.github/workflows/*.yml 2>/dev/null
+ls ~/Projects/etc/hngh/.gitlab-ci.yml 2>/dev/null
+ls ~/Projects/etc/hngh/Jenkinsfile 2>/dev/null
 ```
 
 Record the exact output (including "No such file or directory" if applicable) and the `git rev-parse HEAD` of the working tree in the line state. This single step resolves F3 and either closes the line (if all absent → **No**) or opens R2.
@@ -73,8 +73,8 @@ If none are present, the pipeline does not capture make output regardless of whe
 If no captured log exists in the repository (or if CI is absent), reproduce a recursive-make failure locally:
 
 ```bash
-cd /home/bricker/Projects/etc/hngh
-make -j$(nproc) 2>&1 | tee /tmp/hngh-recursive-make-error.log
+cd ~/Projects/etc/hngh
+make -j$(nproc) 2>&1 | tee ~tmp/hngh-recursive-make-error.log
 ```
 
 Verify the output contains `make[2]:` or deeper. Commit a minimal excerpt (≤ 50 lines) to a stable path such as `docs/build-examples/recursive-make-error.txt` (or equivalent, per project convention). This gives future beats a concrete artifact path rather than an ephemeral CI URL. Per R4 in the prior material, use `git add -f` if the path is `.gitignore`-excluded by default.
@@ -98,7 +98,7 @@ This discipline from the prior beat carries forward unchanged. No specific log f
 
 | # | Thread | Status | Blocking condition |
 |---|--------|--------|--------------------|
-| 1 | Confirm presence/absence of CI config in `/home/bricker/Projects/etc/hngh` | **Open** | Requires filesystem access or a public repo URL. No prior beat has executed the gate check. |
+| 1 | Confirm presence/absence of CI config in `~/Projects/etc/hngh` | **Open** | Requires filesystem access or a public repo URL. No prior beat has executed the gate check. |
 | 2 | If CI exists, extract one recursive-make error line with depth ≥ 2 | **Open** | Dependent on Thread 1. Cannot be evaluated until CI config existence is confirmed. |
 | 3 | Commit a minimal error excerpt as a canonical artifact | **Open** | Dependent on Thread 2 (or local reproduction if CI is absent). No such file has been committed or cited in any prior beat. |
 | 4 | Verify whether the Crystallized Rebuild Roadmap's verification step references a specific log path | **Open** | Requires reading `[[sources/SRC-2026-08-18-003]]` in full to determine if it names an artifact path. The prior material only cites it as implying reproducibility; the specific text has not been quoted. |
@@ -108,7 +108,7 @@ This discipline from the prior beat carries forward unchanged. No specific log f
 
 ## Disposition
 
-The line is **contracted in an unresolved state**. The research question has not been answered because the gating verification (R1) was never executed. The line carries five open threads into any future re-expansion. The most efficient next beat is a single filesystem check on a host with access to `/home/bricker/Projects/etc/hngh`, which will either close the line (all CI configs absent → **No**) or pivot to R2/R3 (CI exists → audit for capture, generate excerpt).
+The line is **contracted in an unresolved state**. The research question has not been answered because the gating verification (R1) was never executed. The line carries five open threads into any future re-expansion. The most efficient next beat is a single filesystem check on a host with access to `~/Projects/etc/hngh`, which will either close the line (all CI configs absent → **No**) or pivot to R2/R3 (CI exists → audit for capture, generate excerpt).
 
 The demonstration gap identified in F2 is not merely an evidentiary shortfall; per F4 and F5, it is a design gap against the project's stated reproducibility goal and SLSA alignment. Closing it requires both a local reproduction and a committed artifact path.
 
@@ -116,7 +116,7 @@ The demonstration gap identified in F2 is not merely an evidentiary shortfall; p
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository working tree (path as stated in line definition; existence of specific sub-paths unverified)
+- `~/Projects/etc/hngh` — hngh kernel repository working tree (path as stated in line definition; existence of specific sub-paths unverified)
 - `[[sources/SRC-2026-08-18-003]]` — Hngh Crystallized Rebuild Roadmap (cited in prior material; full text not quoted in this summary)
 - `[[sources/SRC-2026-08-24-006]]` — SLSA Supply Chain Levels for Software Artifacts (cited in prior material; full text not quoted in this summary)
 - Prior beat 2026-09-16, state expanding → contracting, model unsloth:unsloth/Qwen3.8-27B-GGUF (source of R1–R5 and residual open items table)

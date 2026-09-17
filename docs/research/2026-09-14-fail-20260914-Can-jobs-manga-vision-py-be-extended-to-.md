@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Can-jobs-
 
 ## Grounding note
 
-No filesystem access this turn. Per the grounding rule, only paths named in the line/process are treated as existing anchors: `jobs/manga-vision.py`, `/home/bricker/Projects/etc/hngh`, `research-lines.tsv`. The prior-art pointer `[[sources/rehearsal-dream-runs-governance-loop-without-mutation]]` is an llm-wiki vault reference (read-only), not a repo file path. Every other module name, class, function, or configuration key below is **inferred from the line's framing** and flagged where it appears.
+No filesystem access this turn. Per the grounding rule, only paths named in the line/process are treated as existing anchors: `jobs/manga-vision.py`, `~/Projects/etc/hngh`, `research-lines.tsv`. The prior-art pointer `[[sources/rehearsal-dream-runs-governance-loop-without-mutation]]` is an llm-wiki vault reference (read-only), not a repo file path. Every other module name, class, function, or configuration key below is **inferred from the line's framing** and flagged where it appears.
 
 ---
 
@@ -55,7 +55,7 @@ Two thresholds serve distinct purposes: `τ_flip` catches cases where the model 
 
 ### F4 — The hngh kernel repo is the likely integration surface
 
-The path `/home/bricker/Projects/etc/hngh` is named as the kernel repository. If `jobs/manga-vision.py` is a job that runs *under* or *alongside* the hngh kernel (i.e. the kernel orchestrates measurement runs and the manga-vision job is one of its workers), then the confidence scores would flow through whatever result-serialisation contract the kernel expects. The exact contract (JSON schema, protobuf, in-memory tensor handoff) is **unverified** this turn; I cannot confirm whether the kernel's result pipeline already has a field for per-class scores or whether a new field must be added.
+The path `~/Projects/etc/hngh` is named as the kernel repository. If `jobs/manga-vision.py` is a job that runs *under* or *alongside* the hngh kernel (i.e. the kernel orchestrates measurement runs and the manga-vision job is one of its workers), then the confidence scores would flow through whatever result-serialisation contract the kernel expects. The exact contract (JSON schema, protobuf, in-memory tensor handoff) is **unverified** this turn; I cannot confirm whether the kernel's result pipeline already has a field for per-class scores or whether a new field must be added.
 
 *Confidence: low — no file-level detail available.*
 
@@ -90,7 +90,7 @@ The vault reference `[[sources/rehearsal-dream-runs-governance-loop-without-muta
   The specific set of beat classes (narrative beats? action beats? panel-type labels?) is not named in the line or prior material. The cost of the re-ranking option (F2, third bullet) scales with |classes|; if the taxonomy is large (>50), token-level logprob aggregation is strongly preferred. *Unverified; needs a read of `jobs/manga-vision.py` or its config.*
 
 - **O2 — Kernel result-pipeline contract.**
-  Whether `/home/bricker/Projects/etc/hngh` exposes a typed result channel that already accommodates per-class scores, or whether the job must write a separate artefact that the kernel picks up. *Unverified; needs a read of the kernel's job-result interface.*
+  Whether `~/Projects/etc/hngh` exposes a typed result channel that already accommodates per-class scores, or whether the job must write a separate artefact that the kernel picks up. *Unverified; needs a read of the kernel's job-result interface.*
 
 - **O3 — T1 measurement-run wall-clock budget.**
   The prior beat hit a 187 s wall time on Qwen3.8-27B-GGUF. If the scored run adds a second generate pass (re-ranking), wall time roughly doubles per beat. Whether that fits the T1 budget is an operational question not answerable from this line alone. *Unverified.*
@@ -112,7 +112,7 @@ The vault reference `[[sources/rehearsal-dream-runs-governance-loop-without-muta
 ## References
 
 - `jobs/manga-vision.py` — job under extension; named in the research line. *(No filesystem read this turn; all internal structure inferred from the line's framing.)*
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository; named as integration surface. *(No filesystem read this turn.)*
+- `~/Projects/etc/hngh` — hngh kernel repository; named as integration surface. *(No filesystem read this turn.)*
 - `research-lines.tsv` — line-state file for this continuous research process. *(Named in process metadata.)*
 - `[[sources/rehearsal-dream-runs-governance-loop-without-mutation]]` — llm-wiki vault pointer (read-only); governs rehearsal-beat deployment. *(Not a repo file path; contents not read this turn.)*
 

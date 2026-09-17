@@ -33,20 +33,20 @@ opencode-acp-rel and ework-aio-rel added this beat (2 of the 3-feed budget).
 
 ## In-use packages (verified on this machine, 2026-09-11)
 
-- **omp** — `/home/bricker/.bun/bin/omp` (npm `@oh-my-pi/pi-coding-agent`;
+- **omp** — `~/.bun/bin/omp` (npm `@oh-my-pi/pi-coding-agent`;
   upstream https://github.com/can1357/oh-my-pi, MIT, npm latest 18.1.18).
   Extensions live under `~/.omp/plugins` (package.json deps re-pulled by the
   update script). Updated by `automation/scripts/hngh-omp-update.sh`, which
   deliberately never runs bare `omp update` (it once installed a stale 17.3.3
   over 18.x — note preserved in the script).
-- **bili** — `/home/bricker/.npm-global/bin/bili` (npm global
+- **bili** — `~/.npm-global/bin/bili` (npm global
   `billion-context@0.1.106`, upstream https://github.com/ranxianglei/billion-context,
   MIT). The compression proxy serving omp sessions. Same update script
   (`npm install -g billion-context@latest`). Feed: `bilirel`.
-- **pi** — `/home/bricker/.npm-global/bin/pi` (`@earendil-works/pi-coding-agent`
+- **pi** — `~/.npm-global/bin/pi` (`@earendil-works/pi-coding-agent`
   0.84.3, upstream https://github.com/earendil-works/pi, MIT), data in `~/.pi/`.
   Manual npm update; no feed (secondary harness, slow-moving surface).
-- **opencode** — `/home/bricker/.npm-global/bin/opencode` (npm `opencode-ai`
+- **opencode** — `~/.npm-global/bin/opencode` (npm `opencode-ai`
   1.18.30, upstream https://github.com/sst/opencode). The agentic executor
   surface behind the ocgo legs. Same update script.
 - **acp-kernel** — not installed standalone; its algorithm is embodied inside

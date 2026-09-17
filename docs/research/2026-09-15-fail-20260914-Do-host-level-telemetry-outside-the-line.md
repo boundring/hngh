@@ -23,7 +23,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Do-host-l
 
 **F3. An evidentiary bar for defect-vs-transient classification was adopted from prior art.** The classification protocol borrows the evidence-level semantics from SRC-2026-08-24-011 (MisakaNet Trust Semantics): a *defect* claim requires reproducible, in-band kernel-log correlation; a *transient* claim requires absence of the fault signature across all surviving telemetry plus a plausible external cause. This bar is defined but was never applied to real data on this line.
 
-**F4. A kernel-source dependency was identified but not verified.** The defect indicator hinges on log signatures emitted by the OOM-killer path — in a mainline-derived layout, `mm/oom_kill.c` (`oom_kill_process()`, `oom_reaper`). The line explicitly recorded that it **cannot verify** whether `/home/bricker/Projects/etc/hngh/mm/oom_kill.c` exists unmodified or whether hngh restructures this path. Any future application of the protocol must first confirm the OOM-path source file in the hngh tree and adjust grep patterns accordingly.
+**F4. A kernel-source dependency was identified but not verified.** The defect indicator hinges on log signatures emitted by the OOM-killer path — in a mainline-derived layout, `mm/oom_kill.c` (`oom_kill_process()`, `oom_reaper`). The line explicitly recorded that it **cannot verify** whether `~/Projects/etc/hngh/mm/oom_kill.c` exists unmodified or whether hngh restructures this path. Any future application of the protocol must first confirm the OOM-path source file in the hngh tree and adjust grep patterns accordingly.
 
 ## 2. What this line did *not* establish (honesty boundary)
 
@@ -55,7 +55,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Do-host-l
 
 1. **OT-1 — Verdict execution:** Run R1 and record per-host verdicts. Time-sensitive; each day of delay degrades sar/cron survival odds. If this thread is picked up after ~2026-09-19 (7 days post-window), assume cron/sar marginal and journald (if volatile) gone.
 2. **OT-2 — Provisioning audit:** Locate and read the hngh-automation provisioning templates; determine `Storage=` for journald, sysstat enablement, cron logging, and whether hosts are ephemeral. This resolves F2 from hypothesis to fact.
-3. **OT-3 — Kernel OOM-path confirmation:** Verify the OOM-killer source path in `/home/bricker/Projects/etc/hngh` (mainline-expected: `mm/oom_kill.c`); record the actual log-format strings the hngh kernel emits so future grep patterns are grounded, not assumed.
+3. **OT-3 — Kernel OOM-path confirmation:** Verify the OOM-killer source path in `~/Projects/etc/hngh` (mainline-expected: `mm/oom_kill.c`); record the actual log-format strings the hngh kernel emits so future grep patterns are grounded, not assumed.
 4. **OT-4 — Harness-level telemetry capture (from R4):** If adopted, this thread supersedes OT-1/OT-2 as the durable fix.
 5. **OT-5 — Line-record truncation:** The 2026-09-15 beat's tail was truncated in the record; if the untruncated original exists elsewhere (host logs, editor backups), reconcile against §2's honesty boundary.
 
@@ -64,8 +64,8 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Do-host-l
 ## References
 
 - `research-lines.tsv` — line state record (this repository; existence asserted by the line state header).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (in scope; specific internal paths **not** verified, see F4/OT-3).
-- `/home/bricker/Projects/etc/hngh/mm/oom_kill.c` — *expected* OOM-killer path per mainline convention; **unverified**, flagged throughout.
+- `~/Projects/etc/hngh` — hngh kernel repository (in scope; specific internal paths **not** verified, see F4/OT-3).
+- `~/Projects/etc/hngh/mm/oom_kill.c` — *expected* OOM-killer path per mainline convention; **unverified**, flagged throughout.
 - hngh-automation tree — referenced by the prior beat; specific provisioning-template paths not identified or verified.
 - [[sources/SRC-2026-08-24-011]] — MisakaNet Trust Semantics: Evidence Levels and Lesson Verification (evidentiary bar; llm-wiki vault, read-only, contents not re-verified).
 - [[sources/SRC-2026-08-24-006]] — SLSA Supply Chain Levels (vault pointer; not directly load-bearing for this line's findings).

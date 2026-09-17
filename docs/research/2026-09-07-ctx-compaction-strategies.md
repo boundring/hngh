@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-ctx-compaction-strategi
 **Line:** Which long-session compaction strategies (checkpointing state at turn boundaries) let a reborn session reorient in one bounded read without losing verified facts?
 **State:** Contracting → Crystallized (Terminal Record)
 **Date:** 2026-09-07
-**Verification Status:** **Unverified against source code.** This record synthesizes design principles based on the line's internal history and prior art pointers. No specific file paths within `/home/bricker/Projects/etc/hngh` or the current repository were read or verified during this contraction phase. Claims regarding existing implementation are absent; all recommendations are forward-looking design constraints.
+**Verification Status:** **Unverified against source code.** This record synthesizes design principles based on the line's internal history and prior art pointers. No specific file paths within `~/Projects/etc/hngh` or the current repository were read or verified during this contraction phase. Claims regarding existing implementation are absent; all recommendations are forward-looking design constraints.
 
 ---
 
@@ -77,7 +77,7 @@ Key insight: A reborn session cannot judge what to skip if the context is unboun
 *   `[[sources/SRC-2026-08-18-004]]` – Bounded Delegation Tooling
 *   `[[concepts/session-salvage]]` – Session Salvage (created: 2026-08-24)
 *   `[[sources/hngh-storeless-cli-state-loss]]` – Hngh storeless CLI state loss in multi-process flows
-*   `/home/bricker/Projects/etc/hngh` – Kernel repository root (contents unverified)
+*   `~/Projects/etc/hngh` – Kernel repository root (contents unverified)
 *   `research-lines.tsv` – Line-state file (referenced in prompt header)
 
 ---

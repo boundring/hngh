@@ -21,7 +21,7 @@ This is narrower than the original expanding-state question. It excludes "is the
 
 ## Epistemic Status (carried forward)
 
-I do **not** have a live read of `/home/bricker/Projects/etc/hngh` in this pass or any prior beat on this line. All file paths referenced below are **candidates to verify**, not confirmed citations. No primary-source claim about the hngh kernel's internal behavior is asserted as fact; each is framed as a testable hypothesis with an explicit decision criterion. The prior art vault entries listed in References are read-only pointers whose full text I cannot re-verify beyond the titles and dates shown in the line state.
+I do **not** have a live read of `~/Projects/etc/hngh` in this pass or any prior beat on this line. All file paths referenced below are **candidates to verify**, not confirmed citations. No primary-source claim about the hngh kernel's internal behavior is asserted as fact; each is framed as a testable hypothesis with an explicit decision criterion. The prior art vault entries listed in References are read-only pointers whose full text I cannot re-verify beyond the titles and dates shown in the line state.
 
 ---
 
@@ -77,7 +77,7 @@ These are the bounded set of actions that resolve the contracted question. They 
 ### R2 — Verify status-file atomicity in the timeout path
 
 **Action:**
-1. Identify the status artifact. Candidate paths to check (unverified): `hngh/status.json`, `hngh/run_state.yaml`, or any file written by a module matching `grep -rn "status\|run_state\|terminal" /home/bricker/Projects/etc/hngh --include="*.py"`. Confirm the actual path from source before proceeding.
+1. Identify the status artifact. Candidate paths to check (unverified): `hngh/status.json`, `hngh/run_state.yaml`, or any file written by a module matching `grep -rn "status\|run_state\|terminal" ~/Projects/etc/hngh --include="*.py"`. Confirm the actual path from source before proceeding.
 2. Trigger a timeout-complete run. Immediately after process exit, read the artifact. Check:
    - Does the file exist?
    - Is it syntactically valid (JSON-parseable / YAML-loadable)?
@@ -109,7 +109,7 @@ These are the bounded set of actions that resolve the contracted question. They 
 
 ## Open Threads
 
-These are items that **cannot be resolved without direct access** to `/home/bricker/Projects/etc/hngh` or a live run of the kernel. They remain open on the line; they do not block the contraction but they define what the next beat (if the line resumes) must verify.
+These are items that **cannot be resolved without direct access** to `~/Projects/etc/hngh` or a live run of the kernel. They remain open on the line; they do not block the contraction but they define what the next beat (if the line resumes) must verify.
 
 | ID | Thread | Blocker |
 |----|--------|---------|
@@ -127,7 +127,7 @@ All references below are named as they appear in the line state or prior materia
 
 | Reference | Type | Verification status |
 |-----------|------|---------------------|
-| `/home/bricker/Projects/etc/hngh` | hngh kernel repository (primary source) | **Unverified in this pass.** No file paths within this repo are confirmed to exist. All path mentions in R1–R3 are candidates. |
+| `~/Projects/etc/hngh` | hngh kernel repository (primary source) | **Unverified in this pass.** No file paths within this repo are confirmed to exist. All path mentions in R1–R3 are candidates. |
 | `[[concepts/delegated-contract-verification]]` | Vault pointer (prior art) | Title and creation date (2026-08-2x) visible in line state. Full text not re-verified. |
 | `[[concepts/llm-upstream-idle-timeout-incremental-writes]]` | Vault pointer (prior art) | Title visible in line state. Full text not re-verified. The "incremental writes" claim (F3) is derived from this title; I flag it as a hypothesis pending source confirmation. |
 | `[[sources/SRC-2026-08-24-020]]` — Hngh Run Contract | Vault pointer (prior art) | Title and creation date visible. Full text not re-verified. May contain a pre-existing contract specification (see OT-5). |

@@ -11,7 +11,7 @@ _line: Does the file `sources/obs-2026-08-25-hngh-automation-overnight-harness-b
 
 ## Verdict
 
-**UNRESOLVED at crystallization.** No recorded transition on this line has ever executed a direct content probe of the target file. The binary question was never answered from file contents — every artifact this line produced concerns *method*, not *content*. This is stated explicitly rather than papered over: in this transition I have no file-content access to the vault or to `/home/bricker/Projects/etc/hngh`, so no verdict (true or false) is asserted. The filename's semantics ("built-verified-enabled") were correctly never admitted as evidence, and must remain inadmissible.
+**UNRESOLVED at crystallization.** No recorded transition on this line has ever executed a direct content probe of the target file. The binary question was never answered from file contents — every artifact this line produced concerns *method*, not *content*. This is stated explicitly rather than papered over: in this transition I have no file-content access to the vault or to `~/Projects/etc/hngh`, so no verdict (true or false) is asserted. The filename's semantics ("built-verified-enabled") were correctly never admitted as evidence, and must remain inadmissible.
 
 ## Findings
 
@@ -23,7 +23,7 @@ _line: Does the file `sources/obs-2026-08-25-hngh-automation-overnight-harness-b
 
 4. **The corrected procedure is already specified and remains valid**: `LC_ALL=C grep -F -- 'Storage=persistent' sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled`, recording exit status, match count, context if matched, repository revision or working-tree state, and timestamp.
 
-5. **Near-miss hazard, flagged as external knowledge**: `Storage=persistent` is the systemd *journald* storage directive, whereas systemd *timer* units use the distinct key `Persistent=true`. This distinction is general platform knowledge, not verified against any file in this repository or in `/home/bricker/Projects/etc/hngh` during this line's lifetime; it motivates but does not substitute for the probe. An observation note about a harness being "enabled" could plausibly contain either form — which is precisely why only the literal probe settles membership.
+5. **Near-miss hazard, flagged as external knowledge**: `Storage=persistent` is the systemd *journald* storage directive, whereas systemd *timer* units use the distinct key `Persistent=true`. This distinction is general platform knowledge, not verified against any file in this repository or in `~/Projects/etc/hngh` during this line's lifetime; it motivates but does not substitute for the probe. An observation note about a harness being "enabled" could plausibly contain either form — which is precisely why only the literal probe settles membership.
 
 6. **No transition produced even indirect characterizations** (size, format, structure) of the target file, so no inference chain of any kind is available — nor would one be admissible if it were.
 

@@ -30,7 +30,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-ainglish-engagement.md.
 ### 2. Automate Proposal Selection via TSV Parsing, Not Hardcoded IDs
 
 **Recommendation:** Write a script in `hngh-automation` that:
-1. Reads `/home/bricker/Projects/ainglish.org/research-lines.tsv` (or the equivalent ledger file).
+1. Reads `~/Projects/ainglish.org/research-lines.tsv` (or the equivalent ledger file).
 2. Filters for lines where `state == "planned"` AND `priority >= threshold`.
 3. Selects the *oldest* entry by timestamp to ensure FIFO fairness.
 4. Extracts the `proposal_id` and `title` from that line.
@@ -41,7 +41,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-ainglish-engagement.md.
 
 **Recommendation:** Redefine "evidence-gathering" as the collection of **local artifacts** that prove the proposal was processed:
 - The diff of `research-lines.tsv` showing the state change.
-- A log file entry in `/home/bricker/Projects/hngh/logs/preflight.log` (if such a path exists; otherwise, create it) containing the hash and timestamp.
+- A log file entry in `~/Projects/hngh/logs/preflight.log` (if such a path exists; otherwise, create it) containing the hash and timestamp.
 - A JSON object representing the "Evidence Ledger Entry" described in Recommendation 1.
 
 **Why:** This is ver

@@ -14,7 +14,7 @@ The central question of this line—whether the OOM-killer log signature in the 
 
 1. **Mainline side (established as external fact, not re-verified in-environment):** In mainline Linux, OOM-kill logging resides in `mm/oom_kill.c`, emitted via `dump_header()` / `oom_kill_process()`, with the canonical signature `"Out of memory: Killed process %d (%s) total-vm:%lukB, anon-rss:%lukB, file-rss:%lukB..."`. This is a well-known property of the Linux kernel source tree. I did not re-verify it against any local copy in this session; it is asserted as external lore only.
 
-2. **hngh side (not established):** The prior beat's suggestion that `mm/oom_kill.c` is absent from `/home/bricker/Projects/etc/hngh` and that OOM handling was moved to `kernel/hngh/oom_handler.c` or `drivers/hngh/oom.c` was explicitly hedged ("I cannot confidently cite the exact path"). No tool access was available in the prior session to run a confirming `find`, so **no hngh file path is citable at this time**. I will not assert that any specific hngh OOM source file exists.
+2. **hngh side (not established):** The prior beat's suggestion that `mm/oom_kill.c` is absent from `~/Projects/etc/hngh` and that OOM handling was moved to `kernel/hngh/oom_handler.c` or `drivers/hngh/oom.c` was explicitly hedged ("I cannot confidently cite the exact path"). No tool access was available in the prior session to run a confirming `find`, so **no hngh file path is citable at this time**. I will not assert that any specific hngh OOM source file exists.
 
 3. **Hypothesized signature is invented and must not propagate:** The string `"HN-GH OOM: Killed process %d (%s) [agent_id=%d]..."` appearing in the prior material is a fabrication, not an observation. It carries no evidentiary weight and must not enter hngh-automation grep patterns, runbooks, or wiki notes as if observed.
 
@@ -27,8 +27,8 @@ The central question of this line—whether the OOM-killer log signature in the 
 **R-A. Verify before modifying. Do not ship pattern changes based on hypothesized signatures.**
 On an idle host with the hngh tree mounted:
 ```sh
-find /home/bricker/Projects/etc/hngh -name 'oom_kill.c' -o -name '*oom*' -type f
-grep -rn "Out of memory: Killed process" /home/bricker/Projects/etc/hngh --include='*.c'
+find ~/Projects/etc/hngh -name 'oom_kill.c' -o -name '*oom*' -type f
+grep -rn "Out of memory: Killed process" ~/Projects/etc/hngh --include='*.c'
 ```
 - If the second grep hits, the mainline format string survives somewhere in the tree; confirm the hit is reachable (not dead code or a vendored reference copy) before concluding R3 patterns are still valid.
 - If it misses, locate the replacement `printk`/log call and extract the literal format string from source—never guess it.
@@ -51,7 +51,7 @@ Any future beat on this line that names a specific hngh OOM source file must att
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root (path referenced by prior material; no specific file within it is citable from this session)
+- `~/Projects/etc/hngh` — hngh kernel repository root (path referenced by prior material; no specific file within it is citable from this session)
 - `mm/oom_kill.c` — mainline Linux OOM-killer source (external reference; not verified in-environment)
 - [[sources/grep-tab-escape-matches-nothing]] — GNU grep `\t` escape failure mode; use `awk -F'\t'` for TSV data
 - [[sources/supervision-must-be-hngh-native]] — supervision patterns must be derived from the running hngh kernel, not mainline assumptions

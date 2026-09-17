@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-What-is-t
 
 ## 0. Grounding caveat (read first)
 
-The prior beat (2026-09-13) planned a file-level exploration of `/home/bricker/Projects/etc/hngh` and `hngh-automation` to ground recommendations, but the record **truncates at 4000 bytes mid-exploration — before any command output was captured**. No `ls`/`find`/`grep` results exist in the surviving material. The exploration step was never actually executed on this line.
+The prior beat (2026-09-13) planned a file-level exploration of `~/Projects/etc/hngh` and `hngh-automation` to ground recommendations, but the record **truncates at 4000 bytes mid-exploration — before any command output was captured**. No `ls`/`find`/`grep` results exist in the surviving material. The exploration step was never actually executed on this line.
 
 Therefore: **no file paths inside either repository can be cited with confidence in this record.** The only paths asserted here are the two repository roots themselves, as named in the task framing and prior art. Everything below is conditional on repository structure that remains unverified, and where claims need verification, that is stated explicitly. This is recorded deliberately — the truncation of the grounding step is itself a finding (see F4).
 
@@ -68,7 +68,7 @@ Every T0/T1 outcome that is neither proven-pass nor proven-fail escalates to the
 
 ## 3. Open threads
 
-- **OT1 (blocking, carried from truncated beat):** Execute and *checkpoint* the repository exploration of `/home/bricker/Projects/etc/hngh` and `hngh-automation` — locate ingest entry points, existing T0/T1 implementations, R3 gate trigger logic, and any error-bound definition. Attach R2's tiers to concrete files. This was the prior beat's plan; it produced no surviving output.
+- **OT1 (blocking, carried from truncated beat):** Execute and *checkpoint* the repository exploration of `~/Projects/etc/hngh` and `hngh-automation` — locate ingest entry points, existing T0/T1 implementations, R3 gate trigger logic, and any error-bound definition. Attach R2's tiers to concrete files. This was the prior beat's plan; it produced no surviving output.
 - **OT2:** Locate the actual definition (if any) of the false-permissive error bound; if absent, R4 becomes a proposal, not a description.
 - **OT3:** Read the bounded-delegation source documents ([[sources/SRC-2026-08-18-004]]) to confirm T1 provenance checks fit the delegation envelope rather than inventing a parallel one.
 - **OT4:** Baseline measurement of R3 adjudication volume and current false-permissive rate (R3 prerequisite).
@@ -79,8 +79,8 @@ Every T0/T1 outcome that is neither proven-pass nor proven-fail escalates to the
 ## References
 
 Repositories (roots cited as given in the task framing; internal structure unverified on this line):
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (root asserted; no internal files verified)
-- `hngh-automation` (path referenced in prior material; the 2026-09-13 beat assumed `/home/bricker/Projects/etc/hngh-automation` — **unverified**)
+- `~/Projects/etc/hngh` — hngh kernel repository (root asserted; no internal files verified)
+- `hngh-automation` (path referenced in prior material; the 2026-09-13 beat assumed `~/Projects/etc/hngh-automation` — **unverified**)
 
 Line state:
 - `research-lines.tsv` (line state file; referenced by task framing)

@@ -15,7 +15,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-If-answer
 
 ### Bounded question (restated)
 
-Does any CI job in `/home/bricker/Projects/etc/hngh` parse `research-lines.tsv`, extract its state column values, and compare them against the set of state literals the kernel renderer recognizes — failing on mismatch in either direction?
+Does any CI job in `~/Projects/etc/hngh` parse `research-lines.tsv`, extract its state column values, and compare them against the set of state literals the kernel renderer recognizes — failing on mismatch in either direction?
 
 Two sub-questions:
 1. **Forward**: Does CI reject a TSV row whose state string is not a literal the renderer accepts?
@@ -64,7 +64,7 @@ The line cannot be closed with a "yes" or "no." It is closed as **unresolved** b
 
 1. **Execute Step 1 immediately on an idle host.** The single highest-value probe is:
    ```
-   grep -rn 'planned\|expanding\|contracting\|archived' /home/bricker/Projects/etc/hngh \
+   grep -rn 'planned\|expanding\|contracting\|archived' ~/Projects/etc/hngh \
      --include='*.py' --include='*.ts' --include='*.rs' -l
    ```
    This identifies whether state literals are centralized in one module or scattered across renderer call-sites. The answer determines the shape of any future check.
@@ -84,7 +84,7 @@ The line cannot be closed with a "yes" or "no." It is closed as **unresolved** b
 
 ## Open threads
 
-- **Verification steps 1–4 remain unexecuted.** The protocol is complete and ready; it needs a host with access to `/home/bricker/Projects/etc/hngh` and the TSV file. No subsequent beat in the prior material records execution.
+- **Verification steps 1–4 remain unexecuted.** The protocol is complete and ready; it needs a host with access to `~/Projects/etc/hngh` and the TSV file. No subsequent beat in the prior material records execution.
 - **Exact path of `research-lines.tsv` is unconfirmed.** The line name and prior material reference it by filename only. It may live at the repository root, under a `data/` or `state/` directory, or be generated. Step 2 of the protocol addresses this but was not run.
 - **Exact module containing renderer state literals is unconfirmed.** The expanding beat hypothesizes `states.py`, `lifecycle.rs`, or `states.ts` but explicitly flags these as unverified guesses. Step 1 addresses this but was not run.
 - **The adjacent vault lessons are unread from here.** If they contain a drift reproduction, that reproduction should be codified as the first test case in any new CI job.
@@ -96,7 +96,7 @@ The line cannot be closed with a "yes" or "no." It is closed as **unresolved** b
 
 All references below are named in the prior material or vault pointers. I cite them as *referenced*, not as *verified to exist at the given path*, because the expanding beat itself could not confirm any specific file path from its transition, and I have no filesystem access from this position.
 
-- `/home/bricker/Projects/etc/hngh` — named as the hngh kernel repository root in the line title and prior material. Existence and structure unverified from here.
+- `~/Projects/etc/hngh` — named as the hngh kernel repository root in the line title and prior material. Existence and structure unverified from here.
 - `research-lines.tsv` — referenced by filename in the line title, prior material, and vault pointer titles. Exact sub-path unconfirmed.
 - Vault: `[[concepts/moment-of-action-freshness]]` — attestation freshness recheck; adjacent to drift-detection concerns.
 - Vault: `[[sources/LES-fail-20260915-If-drift-is-confirmed-in-the-scroll-beha]]` — failure lesson, 2026-09-15; title fragment references drift confirmation. Full content unread from here.
@@ -104,4 +104,4 @@ All references below are named in the prior material or vault pointers. I cite t
 - Vault: `[[entities/hngh]]` — Hngh Agent Kernel entity stub.
 - Vault: `[[sources/debug-repro-sandboxes-only]]` — policy note that debug reproductions must run in sandboxes, not against live ledgers; relevant to any future execution of the verification protocol.
 
-No file paths within `/home/bricker/Projects/etc/hngh` are cited as confirmed. The expanding beat's hypothesized module names (`states.py`, `lifecycle.rs`, `states.ts`) are explicitly flagged in that material as unverified guesses and are not repeated here as references.
+No file paths within `~/Projects/etc/hngh` are cited as confirmed. The expanding beat's hypothesized module names (`states.py`, `lifecycle.rs`, `states.ts`) are explicitly flagged in that material as unverified guesses and are not repeated here as references.

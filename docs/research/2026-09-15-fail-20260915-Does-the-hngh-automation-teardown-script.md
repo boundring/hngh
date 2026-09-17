@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Does-the-
 
 ## Findings
 
-**The question is unresolved.** No file under `/home/bricker/Projects/etc/hngh` was inspected in either beat of this line. Zero verified evidence exists about the teardown script's contents, its invocation order relative to container destruction, or whether any explicit journal-vacuuming step is present.
+**The question is unresolved.** No file under `~/Projects/etc/hngh` was inspected in either beat of this line. Zero verified evidence exists about the teardown script's contents, its invocation order relative to container destruction, or whether any explicit journal-vacuuming step is present.
 
 What *is* established at title level only:
 
@@ -24,7 +24,7 @@ No claim can be made—positive or negative—about the presence or absence of `
 
 ## Recommendations
 
-1. **Inspect the teardown script directly.** Identify the entry point (likely a shell or Python script under `/home/bricker/Projects/etc/hngh` or an adjacent automation directory) and read its container-destruction sequence. Grep for `journalctl`, `vacuum`, `/var/log/journal`, `rm -rf`, and `podman stop|rm` / `docker stop|rm` to determine ordering.
+1. **Inspect the teardown script directly.** Identify the entry point (likely a shell or Python script under `~/Projects/etc/hngh` or an adjacent automation directory) and read its container-destruction sequence. Grep for `journalctl`, `vacuum`, `/var/log/journal`, `rm -rf`, and `podman stop|rm` / `docker stop|rm` to determine ordering.
 2. **Check for filesystem-discard-only reliance.** If no explicit journal purge is found, verify whether the underlying volume uses a discard-capable filesystem (e.g., XFS with `discard` mount option or btrfs) and whether container storage drivers are configured to propagate discards. This would confirm the "rely solely on filesystem discard" hypothesis.
 3. **Record the finding as a new observation** in the vault once verified, linking back to this line so the question is closed with evidence rather than inference.
 
@@ -39,4 +39,4 @@ No claim can be made—positive or negative—about the presence or absence of `
 - `[[sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled]]` — confirms harness existence and overnight operation; does not expose teardown script contents.
 - `[[sources/obs-2026-08-25-post-rung-11-documentation-refresh-attribution-record-and-au]]` — documentation refresh record; content not available in this context, no technical claims drawn from it here.
 
-No file paths under `/home/bricker/Projects/etc/hngh` are cited because none were verified to exist or contain relevant content during either beat of this line.
+No file paths under `~/Projects/etc/hngh` are cited because none were verified to exist or contain relevant content during either beat of this line.

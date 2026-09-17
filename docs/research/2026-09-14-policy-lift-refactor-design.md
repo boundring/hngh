@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-policy-lift-refactor-de
 
 **Line:** Which automation-tier policies (failfirst speed state machine, causes classification table, supervision triage thresholds, model/cost routing) lift into `hngh.domain/application` as pure fixture-tested use cases per the charter's policy law, and which mechanisms stay behind ports?
 **State:** contracting → **closed** (final record)
-**Verification constraint:** No live filesystem access to `/home/bricker/Projects/etc/hngh` or sibling repos in this transition. All file-path citations below are **user-asserted / prior-art pointers only**; I do not assert their existence beyond the vault pointers listed in References. Where a claim requires repo inspection, it is framed as an action item, not a fact.
+**Verification constraint:** No live filesystem access to `~/Projects/etc/hngh` or sibling repos in this transition. All file-path citations below are **user-asserted / prior-art pointers only**; I do not assert their existence beyond the vault pointers listed in References. Where a claim requires repo inspection, it is framed as an action item, not a fact.
 
 ## Findings
 
@@ -57,7 +57,7 @@ Do not merge a tier into `domain/application` until its fixture suite passes und
 
 ## Open Threads
 
-1. **Repo verification of the in-repo lift pattern.** The user-asserted pattern for `agent-supervision classify()` and kernel `select-course` has not been independently verified against `/home/bricker/Projects/etc/hngh`. Action item: inspect the actual module boundaries to confirm the pure/executor split matches the charter's policy law as stated in [[sources/SRC-2026-08-18-002]].
+1. **Repo verification of the in-repo lift pattern.** The user-asserted pattern for `agent-supervision classify()` and kernel `select-course` has not been independently verified against `~/Projects/etc/hngh`. Action item: inspect the actual module boundaries to confirm the pure/executor split matches the charter's policy law as stated in [[sources/SRC-2026-08-18-002]].
 
 2. **Whether any tier is irreducibly mechanism.** The decomposition assumes all four tiers yield a pure core. If, upon inspection, a tier's "policy" cannot be expressed without I/O (e.g., if the fail-first state machine inherently requires re-invocation as part of its transition), that tier stays behind the port and the recommendation set shrinks accordingly. This is an empirical question requiring repo access.
 

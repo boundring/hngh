@@ -17,19 +17,19 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 
 ### F1 — No workflow file has been observed in this repository.
 
-The kernel-repo root `/home/bricker/Projects/etc/hngh` is the only path treated as a given anchor (supplied in the line). No `.github/workflows/*.yml` file has been read, listed, or confirmed to exist at that location. The prior expansion explicitly records: *"I have not read any workflow file in this repository."*
+The kernel-repo root `~/Projects/etc/hngh` is the only path treated as a given anchor (supplied in the line). No `.github/workflows/*.yml` file has been read, listed, or confirmed to exist at that location. The prior expansion explicitly records: *"I have not read any workflow file in this repository."*
 
 ### F2 — The CI configuration's physical location is unresolved.
 
 The line references `hngh-automation` as a possible separate repository holding the workflows. No checkout path for `hngh-automation` has been confirmed, and no observation distinguishes between:
-- Workflows living inside `/home/bricker/Projects/etc/hngh/.github/workflows/`
+- Workflows living inside `~/Projects/etc/hngh/.github/workflows/`
 - Workflows living in a sibling or separate `hngh-automation` checkout
 
 This is the single gating unknown. No other finding is valid until it resolves.
 
 ### F3 — No Makefile version guard has been observed.
 
-No `Makefile`, `GNUmakefile`, or equivalent build-system file at `/home/bricker/Projects/etc/hngh` (or within two directory levels) has been confirmed to exist, let alone to contain a `MAKE_VERSION` guard of the form `$(error "GNU Make >= X.Y required")`. The second-order coupling mechanism is therefore unassessed.
+No `Makefile`, `GNUmakefile`, or equivalent build-system file at `~/Projects/etc/hngh` (or within two directory levels) has been confirmed to exist, let alone to contain a `MAKE_VERSION` guard of the form `$(error "GNU Make >= X.Y required")`. The second-order coupling mechanism is therefore unassessed.
 
 ### F4 — No container image digest or tag has been observed.
 
@@ -56,7 +56,7 @@ Each recommendation is executable on an idle host and ordered by dependency.
 ### R1 — Resolve the workflow inventory (gates all other work)
 
 ```bash
-ls -la /home/bricker/Projects/etc/hngh/.github/workflows/ 2>/dev/null \
+ls -la ~/Projects/etc/hngh/.github/workflows/ 2>/dev/null \
   || echo NO_WORKFLOWS_DIR
 ```
 
@@ -69,7 +69,7 @@ Once R1 names files:
 
 ```bash
 grep -rnE 'make-version|make=|/make:|container:|image:|runs-on|bootstrap' \
-  /home/bricker/Projects/etc/hngh/.github/workflows/ 2>/dev/null
+  ~/Projects/etc/hngh/.github/workflows/ 2>/dev/null
 ```
 
 Any hit is a candidate pin. Zero hits means fall through to R3/R4.
@@ -85,7 +85,7 @@ Any hit is a candidate pin. Zero hits means fall through to R3/R4.
 ### R4 — Check Makefile-side version guards (second-order coupling)
 
 ```bash
-find /home/bricker/Projects/etc/hngh -maxdepth 2 -name 'Makefile*' -print 2>/dev/null \
+find ~/Projects/etc/hngh -maxdepth 2 -name 'Makefile*' -print 2>/dev/null \
   | xargs grep -ln 'MAKE_VERSION' 2>/dev/null
 ```
 
@@ -139,7 +139,7 @@ The line's lasting contribution is:
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — kernel-repo root; the only path treated as a given anchor in this line. No sub-paths within it have been confirmed to exist beyond the root itself.
+- `~/Projects/etc/hngh` — kernel-repo root; the only path treated as a given anchor in this line. No sub-paths within it have been confirmed to exist beyond the root itself.
 - Prior material, beat 2026-09-16 (expansion → contracting transition) — source of the decision rule, honesty boundary, and recommendation sequence R1–R6 as carried into this contraction.
 - `[[concepts/evidence-ledger]]` — authority and evidence ledger; governs the requirement that every claim be bound to an observed artifact rather than an assumed external fact.
 - `[[sources/LES-fail-20260915-Does-the-obs-2026-08-25-hngh-automation-]]` — prior research lesson on the same line; documents the failure mode of asserting CI configuration without having read the workflow files.

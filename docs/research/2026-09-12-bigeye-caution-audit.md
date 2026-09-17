@@ -38,7 +38,7 @@ The following were named in the prior beat but **cannot be confirmed to exist**.
 | Persona-overwrite claims in Chinese docs | Unverified — translation never performed on record |
 | `bin/` directory with unlicensed binaries | Unverified — hypothetical path |
 | `config/credentials.yaml`, `config/secrets.json` | Unverified — hypothetical paths; no credential material was actually shown |
-| hngh kernel file paths under `/home/bricker/Projects/etc/hngh` | Unverified — no kernel file was cited from direct reading |
+| hngh kernel file paths under `~/Projects/etc/hngh` | Unverified — no kernel file was cited from direct reading |
 
 ### 2.3 Substantive output: proposed collection policy
 The one deliverable this line *can* legitimately crystallize is the policy recommendation, since policy design rests on reasoning rather than on unverified repo contents. Proposed policy for **unknown-provenance Chinese-language repos entering hngh**:
@@ -74,5 +74,5 @@ The one deliverable this line *can* legitimately crystallize is the policy recom
 
 **Referenced but unverified — named for completeness, not cited as evidence:**
 - `suanrongqieqiezi/bigeye`: `README.md`, `docs/zh_CN/`, `bin/`, `LICENSE`, `config/credentials.yaml`, `config/secrets.json` — all hypothetical paths from the prior beat's plan
-- `/home/bricker/Projects/etc/hngh` — kernel repository named in the grounding instruction; no specific file within it was confirmed read during this line
+- `~/Projects/etc/hngh` — kernel repository named in the grounding instruction; no specific file within it was confirmed read during this line
 - Prior-art vault pointers `[[sources/SRC-2026-08-18-007]]` and `[[sources/chartlibrary-io-developers-api]]` — listed in prior material; relevance to this line was never established on record and cannot be verified here

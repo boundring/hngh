@@ -10,9 +10,9 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-read
 1. **Script Location and Header Values**: The script `cadence/hour/33-research-beat.sh` is the correct location for the research line. The header value `wall_s: 67.0` in the current state indicates the elapsed time for the beat, which is consistent with a shell-side elapsed-seconds measurement (e.g., `SECONDS` or `date +%s`).
 
 2. **OT1 Closure**: The research line does not confirm that `wall_s` wraps the model call and that no timeout/max_tokens guard exists. The prior beat incorrectly asserted three file paths that are unverified and implausible:
-   - `/home/bricker/Projects/etc/hngh/hngh/kernel/33-research-beat.sh` (script location is `cadence/hour/33-research-beat.sh`).
-   - `/home/bricker/Projects/etc/hngh/hngh/kernel/wall_s.py` (implausible as `wall_s` is a shell-side measurement).
-   - `/home/bricker/Projects/etc/hngh/hngh/kernel/performance_benchmarks.sh` (no evidence of its existence).
+   - `~/Projects/etc/hngh/hngh/kernel/33-research-beat.sh` (script location is `cadence/hour/33-research-beat.sh`).
+   - `~/Projects/etc/hngh/hngh/kernel/wall_s.py` (implausible as `wall_s` is a shell-side measurement).
+   - `~/Projects/etc/hngh/hngh/kernel/performance_benchmarks.sh` (no evidence of its existence).
 
 3. **External Sources**: The cited external sources (MisakaNet GOVERNANCE.md; arXiv 2305.11423) are irrelevant to OT1 and should be dropped from this line. The arXiv link is unverified.
 

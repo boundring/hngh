@@ -174,7 +174,7 @@ Two words in the line carry the whole constraint:
 - **Implementation state of the menu itself.** `scripts/osd-operative.qml` (176 lines,
   read 2026-08-31) contains no menu, and its feeder (`scripts/osd-operative`) writes
   only state speech, queue counts, backlog summary, and one-line status to
-  `/tmp/hngh-osd.json` (override `HNGH_OSD_OUT`). There is no menu code and no learning
+  `~tmp/hngh-osd.json` (override `HNGH_OSD_OUT`). There is no menu code and no learning
   code anywhere in the repo to characterize; everything in §4 is contract design, not
   behavior description.
 - The persistence store and schema for learned menu state (where summon-choice counts

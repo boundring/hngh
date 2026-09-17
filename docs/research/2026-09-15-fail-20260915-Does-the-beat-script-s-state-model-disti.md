@@ -9,7 +9,7 @@ _line: Does the beat script's state model distinguish between "timeout-complete"
 
 ## Access disclaimer (binding, unchanged)
 
-I have no filesystem or tool access to `/home/bricker/Projects/etc/hngh` or to the working repository containing `research-lines.tsv`. I have never read the beat script in this session. Therefore **no claim below asserts that a specific file, symbol, enum member, or line exists** in the beat script. The only paths stated with confidence are the two the task itself names: `research-lines.tsv` (this line's state file) and `/home/bricker/Projects/etc/hngh` (the hngh kernel repository). Every concrete recommendation is a *conditional* instruction gated on a verification step; if verification contradicts it, verification wins. Where I would normally reach for an external source to confirm behavior, I say so explicitly rather than assert it.
+I have no filesystem or tool access to `~/Projects/etc/hngh` or to the working repository containing `research-lines.tsv`. I have never read the beat script in this session. Therefore **no claim below asserts that a specific file, symbol, enum member, or line exists** in the beat script. The only paths stated with confidence are the two the task itself names: `research-lines.tsv` (this line's state file) and `~/Projects/etc/hngh` (the hngh kernel repository). Every concrete recommendation is a *conditional* instruction gated on a verification step; if verification contradicts it, verification wins. Where I would normally reach for an external source to confirm behavior, I say so explicitly rather than assert it.
 
 ## Findings
 
@@ -65,7 +65,7 @@ After patching, confirm closed-vocabulary integrity per F3: grep for the old tok
 ## References
 
 - `research-lines.tsv` — this line's state file (named by the task; no contents asserted).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (named by the task; no file contents asserted).
+- `~/Projects/etc/hngh` — hngh kernel repository (named by the task; no file contents asserted).
 - `[[sources/hngh-ceremony-loop-mechanics]]` — prior-art pointer cited for "closed vocabularies"; characterized as such by the prior beat, not independently re-verified this session.
 - Prior beats on this line, 2026-09-15 (expanding) and 2026-09-15 (contraction) — source of F1–F4 reasoning and R1–R3 structure.
 

@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 
 **Line:** Does the CLI entry point (`bin/hngh`) or `lib/automation.py` expose a global logging filter or output sanitizer where a wink-marker guard could be applied without modifying `lib/quips.py` itself?
 
-**Verification status for this transition.** I had **no live read access** to `/home/bricker/Projects/etc/hngh` during this transition. No claim below asserts file *contents*; all content-level statements are labeled hypotheses. The three code paths are named by the research line itself, and `lib/automation.py` is corroborated by prior art recording that an automation overnight harness was built, verified, and enabled (2026-08-25). Path *existence* for `bin/hngh` and `lib/quips.py` rests on the line's own framing plus the guardrail prior art; treat as probable-but-unverified.
+**Verification status for this transition.** I had **no live read access** to `~/Projects/etc/hngh` during this transition. No claim below asserts file *contents*; all content-level statements are labeled hypotheses. The three code paths are named by the research line itself, and `lib/automation.py` is corroborated by prior art recording that an automation overnight harness was built, verified, and enabled (2026-08-25). Path *existence* for `bin/hngh` and `lib/quips.py` rests on the line's own framing plus the guardrail prior art; treat as probable-but-unverified.
 
 ---
 
@@ -40,7 +40,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 
 ## References
 
-Paths named but **not content-verified this transition** (in `/home/bricker/Projects/etc/hngh` unless noted):
+Paths named but **not content-verified this transition** (in `~/Projects/etc/hngh` unless noted):
 - `bin/hngh` — CLI entry point; candidate process-global guard site.
 - `lib/automation.py` — automation harness; corroborated by prior art (below).
 - `lib/quips.py` — emission source; edit-restricted per line framing.

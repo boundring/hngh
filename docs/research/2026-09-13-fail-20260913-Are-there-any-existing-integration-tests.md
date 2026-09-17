@@ -28,7 +28,7 @@ Source document `SRC-2026-08-24-029` ("Hngh Test Boundary") establishes that the
 
 The observation `obs-2026-08-25-guardrail-bug-filed-upstream-hngh-analytics-live-readme-curr` records that a guardrail bug was filed against the upstream hngh kernel. The expanding phase interpreted this as evidence that the CLI contract (exit codes, stdout format, flag surface) is in flux and that `lib/automation.py`'s assumptions about `bin/hngh` behavior are not yet stable.
 
-**Confidence:** Medium-High — the observation ID is cited; the specific bug details (which guardrail, which kernel version, resolution status) are not fully specified in the prior material I can see. I cannot verify whether this bug has been resolved in the current kernel at `/home/bricker/Projects/etc/hngh` without reading that repository's changelog or issue tracker.
+**Confidence:** Medium-High — the observation ID is cited; the specific bug details (which guardrail, which kernel version, resolution status) are not fully specified in the prior material I can see. I cannot verify whether this bug has been resolved in the current kernel at `~/Projects/etc/hngh` without reading that repository's changelog or issue tracker.
 
 ### F4 — No committed synchronous CI boundary test was identified in the expanding phase
 
@@ -90,7 +90,7 @@ If the overnight harness duplicates the CI job's scope exactly, it is redundant 
 
 ### R6 — Confirm current pass/fail status (immediate action)
 
-Before R1–R5 are implemented, run the existing overnight harness (or any other boundary exercise identified in F4) against the current `lib/automation.py` and the current kernel at `/home/bricker/Projects/etc/hngh`. Record the result. This closes gap F5 and establishes a baseline: if the boundary is currently passing, R1–R2 are *preventive*; if it is failing, they are *remedial* and should be prioritized accordingly.
+Before R1–R5 are implemented, run the existing overnight harness (or any other boundary exercise identified in F4) against the current `lib/automation.py` and the current kernel at `~/Projects/etc/hngh`. Record the result. This closes gap F5 and establishes a baseline: if the boundary is currently passing, R1–R2 are *preventive*; if it is failing, they are *remedial* and should be prioritized accordingly.
 
 ---
 
@@ -99,10 +99,10 @@ Before R1–R5 are implemented, run the existing overnight harness (or any other
 | Thread | Status | Why it remains open |
 |--------|--------|---------------------|
 | Current pass/fail of boundary exercise | Unconfirmed (F5) | Requires executing the test or reading recent CI/harness logs. Not resolvable from prior material alone. |
-| Resolution status of upstream guardrail bug | Unknown | The observation records the *filing*; no subsequent observation in the available material records resolution. Would require checking the hngh kernel repo's issue tracker or changelog at `/home/bricker/Projects/etc/hngh`. |
+| Resolution status of upstream guardrail bug | Unknown | The observation records the *filing*; no subsequent observation in the available material records resolution. Would require checking the hngh kernel repo's issue tracker or changelog at `~/Projects/etc/hngh`. |
 | Exact CI configuration surface | Unverified (F4) | The expanding phase found no synchronous boundary job, but I cannot confirm whether a `.github/workflows/`, `.gitlab-ci.yml`, or Makefile target was added after that survey. A fresh `grep -r "hngh" .github/ .gitlab-ci.yml Makefile` would close this. |
 | Overnight harness scope vs. CI scope overlap | Unquantified (R5) | The observation confirms the harness exists and is enabled, but its exact test matrix (which flags, which configs, which kernel versions) is not specified in the available material. Needed to decide redundancy. |
-| Kernel repo file layout at `/home/bricker/Projects/etc/hngh` | Not independently verified | Prior material references `bin/hngh` as the binary path within that repo. I am citing this path based on prior material's claims and the research line's own framing. I have not independently confirmed the directory structure in this session. |
+| Kernel repo file layout at `~/Projects/etc/hngh` | Not independently verified | Prior material references `bin/hngh` as the binary path within that repo. I am citing this path based on prior material's claims and the research line's own framing. I have not independently confirmed the directory structure in this session. |
 
 ---
 
@@ -120,7 +120,7 @@ Before R1–R5 are implemented, run the existing overnight harness (or any other
 
 6. **`concepts/hngh-lessons-current`** (created 2026-09-07) — Concept note on current hngh lessons. Referenced in prior art list; may contain distilled operational knowledge relevant to R3 (version pinning) and R5 (harness re-scoping), but its full content is not available in this session.
 
-7. **`/home/bricker/Projects/etc/hngh`** — The hngh kernel repository path, referenced as the location of `bin/hngh`. Cited based on prior material's framing and the research line's own question. I have not independently verified its directory structure in this session; see Open Threads row 5.
+7. **`~/Projects/etc/hngh`** — The hngh kernel repository path, referenced as the location of `bin/hngh`. Cited based on prior material's framing and the research line's own question. I have not independently verified its directory structure in this session; see Open Threads row 5.
 
 8. **`lib/automation.py`** — The automation library module whose boundary with `bin/hngh` is the subject of this line. Path cited per the research line's framing. Full contents not independently verified in this session.
 

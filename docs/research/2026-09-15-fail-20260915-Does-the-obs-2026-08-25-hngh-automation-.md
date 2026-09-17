@@ -17,7 +17,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Does-the-
    The vault pointer `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled` is present in the supplied prior art. Its slug and date indicate an observation dated 2026-08-25 concerning an overnight harness being built, verified, and enabled. That title alone does not establish journald-related content.
 
 3. **No supplied repository fragment confirms a journald configuration template.**  
-   Nothing in the supplied line material identifies a concrete path under `/home/bricker/Projects/etc/hngh` containing a journald template, a `Storage=` setting, or persistent-storage configuration.
+   Nothing in the supplied line material identifies a concrete path under `~/Projects/etc/hngh` containing a journald template, a `Storage=` setting, or persistent-storage configuration.
 
 4. **Both halves of the premise are unverified.**  
    - It is unverified that hngh-automation contains a journald configuration template at all.  
@@ -43,7 +43,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Does-the-
    - **Ambiguous:** quote the relevant surrounding text and keep only the narrow ambiguity open.
 
 3. **If the note references a template, verify the repository path before claiming hngh behavior.**  
-   Any claim that hngh-automation itself configures journald persistent storage should be limited to a verified file path under `/home/bricker/Projects/etc/hngh`. If no such path is verified, keep the claim limited to what the observation note actually contains.
+   Any claim that hngh-automation itself configures journald persistent storage should be limited to a verified file path under `~/Projects/etc/hngh`. If no such path is verified, keep the claim limited to what the observation note actually contains.
 
 4. **Terminate this line after that read unless new evidence appears.**  
    The line should not expand into general journald semantics or systemd behavior without repository-specific evidence.
@@ -57,7 +57,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Does-the-
   **Unknown from supplied material.**
 
 - If such a template exists, does it set `Storage=persistent`, and at what path?  
-  **Unknown; no concrete path under `/home/bricker/Projects/etc/hngh` is verified in the supplied material.**
+  **Unknown; no concrete path under `~/Projects/etc/hngh` is verified in the supplied material.**
 
 - What operational effect would persistent journald storage have in this deployment?  
   **External systemd documentation is not verified here; remains background only.**

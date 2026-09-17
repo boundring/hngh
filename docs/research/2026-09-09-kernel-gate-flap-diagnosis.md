@@ -134,17 +134,17 @@ than re-tuning the race.
 ## Archive-gate immediate failure (2026-09-10 addendum)
 
 The report of pushes refused since 23:51Z on gate-rerun logs showing
-`make[1]: *** [Makefile:2: test] Error 1` inside /tmp/tmp.*/c4 was NOT
+`make[1]: *** [Makefile:2: test] Error 1` inside ~tmp/tmp.*/c4 was NOT
 a kernel gate failure and NOT an archive problem. Two findings:
 
 1. 16-remote-push.sh never runs `git archive`; its inline re-run is
    `cd "$KERNEL" && make test` in the real repository. The
-   /tmp/tmp.XXX/c4 path in those logs is a TEST FIXTURE repository
+   ~tmp/tmp.XXX/c4 path in those logs is a TEST FIXTURE repository
    from automation/tests/test-remote-push.sh (case 4's sandbox,
    Makefile = `test:
 @exit 1`), not the kernel.
 2. The script wrote its gate output to a FIXED shared path
-   (/tmp/hngh-gate-rerun-<name>.log) and moved it into
+   (~tmp/hngh-gate-rerun-<name>.log) and moved it into
    automation/logs on failure. Concurrent invocations (hook-fired
    after ceremonies, hour ticks, and the test's own failing fixtures)
    shared that one file: the test's failing fixture repos (37/145-byte
@@ -158,7 +158,7 @@ a kernel gate failure and NOT an archive problem. Two findings:
 Fix (test-first, in test-remote-push.sh + the script):
 
 - gate log is now per-invocation
-  (/tmp/hngh-gate-rerun-<name>-<pid>.log) - no shared path, no
+  (~tmp/hngh-gate-rerun-<name>-<pid>.log) - no shared path, no
   clobber;
 - failure logs land in $GATE_RERUN_DIR (default automation/logs),
   so the test harness sandboxes its fixtures and asserts

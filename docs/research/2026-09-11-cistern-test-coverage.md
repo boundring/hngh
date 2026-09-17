@@ -16,13 +16,13 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-cistern-test-coverage.m
 To ground this research in verifiable evidence, we will inspect the relevant files in the repositories:
 
 1. **Cistern Project Repository:**
-   - **File:** `tests/run.el` (Path: `/home/bricker/Projects/cistern/tests/run.el`)
-   - **File:** `cistern-run-all-tests` (Path: `/home/bricker/Projects/cistern/cistern-run-all-tests`)
+   - **File:** `tests/run.el` (Path: `~/Projects/cistern/tests/run.el`)
+   - **File:** `cistern-run-all-tests` (Path: `~/Projects/cistern/cistern-run-all-tests`)
 
 2. **hngh Kernel Repository:**
-   - **File:** `view-render` (Path: `/home/bricker/Projects/etc/hngh/view-render`)
-   - **File:** `input-adapter` (Path: `/home/bricker/Projects/etc/hngh/input-adapter`)
-   - **File:** `driver-timers` (Path: `/home/bricker/Projects/etc/hngh/driver-timers`)
+   - **File:** `view-render` (Path: `~/Projects/etc/hngh/view-render`)
+   - **File:** `input-adapter` (Path: `~/Projects/etc/hngh/input-adapter`)
+   - **File:** `driver-timers` (Path: `~/Projects/etc/hngh/driver-timers`)
 
 ---
 

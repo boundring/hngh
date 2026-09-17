@@ -21,8 +21,8 @@ This research line aims to explore the governance properties of change-governanc
      - **Copilot-Class Guardrails:** Leverage AI-driven integrity checks to detect and prevent tampering.
      - **Procedural Voting:** Implement a consensus mechanism to ensure that all changes are approved by a majority of stakeholders.
    - **References:**
-     - `/home/bricker/Projects/etc/hngh/hngh-integrity-checks.py`
-     - `/home/bricker/Projects/etc/hngh/copilot-integrity.py`
+     - `~/Projects/etc/hngh/hngh-integrity-checks.py`
+     - `~/Projects/etc/hngh/copilot-integrity.py`
 
 2. **Approved=Executed and Change-Approval Mechanisms**
    - **Objective:** Assess the mechanisms by which changes are approved and executed in different systems.
@@ -32,9 +32,9 @@ This research line aims to explore the governance properties of change-governanc
      - **Copilot-Class Guardrails:** Implement AI-driven recommendations and manual overrides for approvals.
      - **Procedural Voting:** Utilize a formal voting process to approve changes.
    - **References:**
-     - `/home/bricker/Projects/etc/hngh/ci_cd_pipeline.py`
-     - `/home/bricker/Projects/etc/hngh/copilot_guardrails.py`
-     - `/home/bricker/Projects/etc/hngh/procedural_voting.py`
+     - `~/Projects/etc/hngh/ci_cd_pipeline.py`
+     - `~/Projects/etc/hngh/copilot_guardrails.py`
+     - `~/Projects/etc/hngh/procedural_voting.py`
 
 3. **Reconstruction-From-Record and Traceability**
    - **Objective:** Determine the ability of each system to reconstruct the history of changes and maintain traceability.
@@ -44,8 +44,8 @@ This research line aims to explore the governance properties of change-governanc
      - **Copilot-Class Guardrails:** Leverage AI-driven traceability logs to reconstruct the history of changes.
      - **Procedural Voting:** Maintain detailed records of all votes and decisions to ensure traceability.
    - **References:**
-     - `/home/bricker/Projects/etc/hngh/ci_cd_audit_logs.py`
-     - `/home/bricker/Projects/etc/hngh/copilot_traceability.py`
+     - `~/Projects/etc/hngh/ci_cd_audit_logs.py`
+     - `~/Projects/etc/hngh/copilot_traceability.py`
 
 #### Recommendations
 

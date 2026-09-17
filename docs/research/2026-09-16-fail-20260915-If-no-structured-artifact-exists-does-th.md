@@ -17,7 +17,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-If-no-str
 1. **This is a textual-evidence verification task with two required conditions.** An affirmative answer requires both values stated for the *same event*: `parse_pass` true/passed/yes **and** `operator_override` false/not-set/disabled, co-located in a single passage or structured record.
 2. **No structured artifact exists** (per the line's framing). Therefore the only possible affirmative evidence is explicit prose inside the source note itself — there is no field record to fall back on.
 3. **The source note's text has not been inspected on this line.** It has not been quoted, mapped to fields, or otherwise made available. I cannot read it from here.
-4. **I cannot verify repository file contents.** I am not asserting that any concrete file in `/home/bricker/Projects/etc/hngh` contains the relevant passage, because no such path or excerpt was supplied and I have no access to confirm on-disk existence or content.
+4. **I cannot verify repository file contents.** I am not asserting that any concrete file in `~/Projects/etc/hngh` contains the relevant passage, because no such path or excerpt was supplied and I have no access to confirm on-disk existence or content.
 5. **Related notes do not substitute for the target source.** Pointers such as `[[concepts/hngh-lessons-current]]` provide context only; they cannot confirm this specific failure mode unless they quote or reference the missing passage from the target note.
 6. **Resulting status: `unverified` / `evidence_missing`.**
 
@@ -40,11 +40,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-If-no-str
 
 Treat the line as **open but contractable**: the failure mode is **not established**. Any affirmative claim requires direct source text or a structured artifact with both values co-located for one event. Without that, correct automation behavior is to mark the item `unverified` and route it for source inspection rather than assume the failure mode occurred.
 
-I cannot verify external sources or repository file contents from this transition; I am explicitly not asserting that any specific file in `/home/bricker/Projects/etc/hngh` contains the relevant passage, because no such path or excerpt was supplied and I have no means to confirm it.
+I cannot verify external sources or repository file contents from this transition; I am explicitly not asserting that any specific file in `~/Projects/etc/hngh` contains the relevant passage, because no such path or excerpt was supplied and I have no means to confirm it.
 
 ## References
 
 - `[[sources/hngh-2026-09-09-stall-lessons]]` — target source note; text not supplied on this line; content and on-disk existence **not verifiable** from here.
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root as named in the line; I cannot verify that any specific file within it exists or contains the relevant passage.
+- `~/Projects/etc/hngh` — hngh kernel repository root as named in the line; I cannot verify that any specific file within it exists or contains the relevant passage.
 - `[[concepts/hngh-lessons-current]]` — related context only; insufficient to confirm the failure mode without direct source text.
 - Prior material on this line (the expanding → contracting transition) — established the unverified/not-established position and the co-location verification standard carried into this record.

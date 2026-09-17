@@ -11,7 +11,7 @@ _line: open-source data collection methods (libgen/sci-hub-class corpora, web ar
 
 ## Verification disclaimer (carried forward, still binding)
 
-This line has never had live filesystem access to the hngh kernel repository across any of its transitions. Three paths were asserted in earlier beats — `/home/bricker/Projects/etc/hngh/src/kernel.c`, `/home/bricker/Projects/etc/hngh/include/hngh_meta.h`, `/home/bricker/Projects/etc/hngh/src/license_check.c` — and **remain unconfirmed**. They appear in this record flagged as unverified, not as established citations. The only repository path this line can cite with confidence is `research-lines.tsv` (line-state ledger, this repository). Per llm-wiki prior art on mid-line verification blocks, verification must be run as a discrete pass, not interleaved into design work — that pass is now Open Thread OT1 and outlives this line's closure.
+This line has never had live filesystem access to the hngh kernel repository across any of its transitions. Three paths were asserted in earlier beats — `~/Projects/etc/hngh/src/kernel.c`, `~/Projects/etc/hngh/include/hngh_meta.h`, `~/Projects/etc/hngh/src/license_check.c` — and **remain unconfirmed**. They appear in this record flagged as unverified, not as established citations. The only repository path this line can cite with confidence is `research-lines.tsv` (line-state ledger, this repository). Per llm-wiki prior art on mid-line verification blocks, verification must be run as a discrete pass, not interleaved into design work — that pass is now Open Thread OT1 and outlives this line's closure.
 
 A second integrity note: **the prior beat's R4 is unrecoverable.** The 4000-byte truncation cut it mid-sentence and no transition in this line received the full text. R4's content is a genuine loss, recorded below as an open thread rather than reconstructed from guesswork.
 
@@ -47,7 +47,7 @@ R4 was lost to truncation mid-line; the hngh paths were asserted but never verif
 
 ## Open threads
 
-- **OT1 (verification, first action if line reopens):** run `find /home/bricker/Projects/etc/hngh -name '*.c' -o -name '*.h'` and read the build manifest; confirm, amend, or delete the three asserted paths (`src/kernel.c`, `include/hngh_meta.h`, `src/license_check.c`).
+- **OT1 (verification, first action if line reopens):** run `find ~/Projects/etc/hngh -name '*.c' -o -name '*.h'` and read the build manifest; confirm, amend, or delete the three asserted paths (`src/kernel.c`, `include/hngh_meta.h`, `src/license_check.c`).
 - **OT2 (data loss):** R4's original content is unrecoverable from this line's material. If the line reopens, R4 must be re-derived from scratch, not reconstructed.
 - **OT3 (external, unverified):** WARC field set per ISO 28500; Common Crawl and Internet Archive access terms; current arXiv API response schema. None confirmed within this line.
 - **OT4 (legal posture):** status of sci-hub-class corpora varies by jurisdiction. R3 is a conservative engineering posture, not legal advice; no legal claim is made or verified here.
@@ -60,7 +60,7 @@ R4 was lost to truncation mid-line; the hngh paths were asserted but never verif
 - `research-lines.tsv` — line-state ledger, this repository (cited with confidence; named in the line's operating instructions).
 - Prior beats on this line, dated 2026-09-12 (expanding and contracting passes; contracting pass truncated at 4000 bytes — R4 not preserved).
 - llm-wiki vault (read-only prior art): `[[sources/grep-tab-escape-matches-nothing]]`; `[[sources/mid-line-verification-block-triggers-long-acceptance-pending]]`.
-- hngh kernel repository, `/home/bricker/Projects/etc/hngh` — **no path within it is cited as confirmed**; `src/kernel.c`, `include/hngh_meta.h`, `src/license_check.c` are unverified assertions pending OT1.
+- hngh kernel repository, `~/Projects/etc/hngh` — **no path within it is cited as confirmed**; `src/kernel.c`, `include/hngh_meta.h`, `src/license_check.c` are unverified assertions pending OT1.
 - ISO 28500 (WARC specification) and Common Crawl / Internet Archive / Crossref / OpenAlex / arXiv terms and schemas — external sources referenced but **not verified** within this line; see OT3.
 
 _line state: crystallized. Lasting record complete; OT1–OT5 stand open for any successor line._

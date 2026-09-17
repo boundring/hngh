@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-What-is-t
 
 **Line:** What is the exact exit status and match count of running `LC_ALL=C grep -F -- 'Storage=persistent' sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled`?
 **State:** contracting → **closed**
-**Disposition:** Unresolvable without direct execution on the host owning `/home/bricker/Projects/etc/hngh`.
+**Disposition:** Unresolvable without direct execution on the host owning `~/Projects/etc/hngh`.
 
 ---
 
@@ -41,7 +41,7 @@ The research line asks for "the exact exit status **and** match count." The sing
 
 ### F3 — The answer is host-bound and cannot be derived from repository metadata alone
 
-The file `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled` is an observation artifact whose content is produced at runtime by the overnight harness (built → verified → enabled, per the filename's embedded state markers). Its contents are not a static source file checked into version control in a way that would let a reader infer the presence or absence of `Storage=persistent` without executing the grep on the actual byte stream. I do not have filesystem access to `/home/bricker/Projects/etc/hngh` in this session, and no prior beat in this line recorded an executed result. **The exact exit status and match count are therefore undetermined by this research process.**
+The file `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled` is an observation artifact whose content is produced at runtime by the overnight harness (built → verified → enabled, per the filename's embedded state markers). Its contents are not a static source file checked into version control in a way that would let a reader infer the presence or absence of `Storage=persistent` without executing the grep on the actual byte stream. I do not have filesystem access to `~/Projects/etc/hngh` in this session, and no prior beat in this line recorded an executed result. **The exact exit status and match count are therefore undetermined by this research process.**
 
 ### F4 — The filename encodes a three-phase state, not a storage-mode assertion
 
@@ -57,10 +57,10 @@ Because the pattern contains only ASCII bytes (`S t o r a g e = p e r s i s t e 
 
 ### R1 — Execute and record the result (immediate, one-shot)
 
-On the host owning `/home/bricker/Projects/etc/hngh`:
+On the host owning `~/Projects/etc/hngh`:
 
 ```bash
-cd /home/bricker/Projects/etc/hngh   # or the sub-repo root where sources/ lives
+cd ~/Projects/etc/hngh   # or the sub-repo root where sources/ lives
 LC_ALL=C grep -Fc -- 'Storage=persistent' \
   sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled
 echo "exit=$?"
@@ -70,7 +70,7 @@ Record both the count (stdout of `-c`) and the exit status. Append the result to
 
 ### R2 — Add the token check to the harness's own verification phase
 
-If `Storage=persistent` is a required field in the observation schema, the "verified" step should assert its presence **before** the filename is stamped `…-verified-enabled`. Concretely: inside the harness code that writes the obs file (expected to live under `/home/bricker/Projects/etc/hngh` in a directory such as `hngh-automation/` or an equivalent build/verify script), add a post-write check:
+If `Storage=persistent` is a required field in the observation schema, the "verified" step should assert its presence **before** the filename is stamped `…-verified-enabled`. Concretely: inside the harness code that writes the obs file (expected to live under `~/Projects/etc/hngh` in a directory such as `hngh-automation/` or an equivalent build/verify script), add a post-write check:
 
 ```bash
 if ! LC_ALL=C grep -qF -- 'Storage=persistent' "$OBS_FILE"; then
@@ -98,14 +98,14 @@ Add a regression test (shell or Python) to the harness CI that runs the exact co
 | **Exact exit status** | Undetermined | Requires execution on the host; no prior beat recorded a result. |
 | **Exact match count** | Undetermined | Same dependency; additionally requires `-c` or `wc -l` to be explicit. |
 | **Whether the file exists at all** | Undetermined | If the path is stale (e.g., the obs file was rotated or the harness run failed before writing), exit status will be 2, which is a different failure mode than "file exists but token absent" (status 1). Distinguishing these two cases requires `test -f` before the grep. |
-| **Schema enforcement in the harness** | Open design question | R2/R3 above are recommendations; whether and when they land in `/home/bricker/Projects/etc/hngh` is a future beat. |
+| **Schema enforcement in the harness** | Open design question | R2/R3 above are recommendations; whether and when they land in `~/Projects/etc/hngh` is a future beat. |
 
 ---
 
 ## What I cannot verify from this session
 
 - The existence, size, or byte content of `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled`.
-- Whether the path is relative to `/home/bricker/Projects/etc/hngh` root or to a sub-repository (e.g., `hngh-automation/`).
+- Whether the path is relative to `~/Projects/etc/hngh` root or to a sub-repository (e.g., `hngh-automation/`).
 - Any external documentation of the obs-file schema beyond what the filename and prior beats imply.
 
 I state these explicitly rather than asserting them.
@@ -116,10 +116,10 @@ I state these explicitly rather than asserting them.
 
 1. **Target file (referenced in the research line; existence on disk unverified in this session):**
    `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled`
-   — relative path, expected under `/home/bricker/Projects/etc/hngh` or a sub-repo thereof.
+   — relative path, expected under `~/Projects/etc/hngh` or a sub-repo thereof.
 
 2. **hngh kernel repository root (stated in the research-line prompt):**
-   `/home/bricker/Projects/etc/hngh`
+   `~/Projects/etc/hngh`
 
 3. **Prior art (llm-wiki vault entries, read-only pointers; I cannot verify their on-disk paths from this session):**
    - `sources/LES-fail-20260915-Does-the-obs-2026-08-25-hngh-automation-` — prior lesson on the same obs file.

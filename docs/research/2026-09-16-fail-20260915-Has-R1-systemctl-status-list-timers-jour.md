@@ -11,7 +11,7 @@ _line: Has R1 (systemctl status / list-timers / journalctl capture) been execute
 
 ## Scope and epistemic caveat
 
-This crystallization is produced from the line's prior material and the task brief. **I do not have verified read access to the live filesystem** — I cannot confirm the current contents of `research-lines.tsv`, the working repository, or the kernel repository at `/home/bricker/Projects/etc/hngh`. Every claim below is therefore grounded in (a) paths named directly in the task brief, or (b) the line's own prior beat. Anything beyond that is marked as unverified rather than asserted. This caveat is itself a load-bearing finding: a research line about "has an artifact been persisted" cannot be closed from narrative alone; closure requires the artifact.
+This crystallization is produced from the line's prior material and the task brief. **I do not have verified read access to the live filesystem** — I cannot confirm the current contents of `research-lines.tsv`, the working repository, or the kernel repository at `~/Projects/etc/hngh`. Every claim below is therefore grounded in (a) paths named directly in the task brief, or (b) the line's own prior beat. Anything beyond that is marked as unverified rather than asserted. This caveat is itself a load-bearing finding: a research line about "has an artifact been persisted" cannot be closed from narrative alone; closure requires the artifact.
 
 ## Findings
 
@@ -21,7 +21,7 @@ This crystallization is produced from the line's prior material and the task bri
 
 **F3 — The acceptance artifact was never precisely defined in the record.** The prior beat had to *construct* the R1 acceptance criteria (capture bundle contents, redaction notes, command transcript). The absence of a pre-registered acceptance definition is likely a contributing cause of R1's non-execution: an unscoped recommendation cannot be dispatched to an idle host.
 
-**F4 — Tooling ownership is unresolved.** Prior material references a recipe location in `hngh/hngh-automation`, but that path is **not confirmed to exist** from the material available here. Whether the capture recipe lives in the kernel repository (`/home/bricker/Projects/etc/hngh`), an automation subproject, or nowhere at all is an open precondition.
+**F4 — Tooling ownership is unresolved.** Prior material references a recipe location in `hngh/hngh-automation`, but that path is **not confirmed to exist** from the material available here. Whether the capture recipe lives in the kernel repository (`~/Projects/etc/hngh`), an automation subproject, or nowhere at all is an open precondition.
 
 ## Recommendations (final, for the lasting record)
 
@@ -52,7 +52,7 @@ This crystallization is produced from the line's prior material and the task bri
 ## References
 
 - `research-lines.tsv` — line-state file named in the task brief (existence asserted by the brief; contents not directly verified).
-- `/home/bricker/Projects/etc/hngh` — kernel repository named in the task brief (existence asserted by the brief; contents not directly verified).
+- `~/Projects/etc/hngh` — kernel repository named in the task brief (existence asserted by the brief; contents not directly verified).
 - Prior beat, 2026-09-16 (supplied in line material above) — source of findings F1–F3 and the acceptance-artifact definition.
 - `hngh/hngh-automation` — referenced in prior material; **existence unverified** (see OT1).
 

@@ -12,7 +12,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Is-there-
 
 ## Findings
 
-1. **The core question cannot be resolved from this turn's vantage.** The kernel repository root `/home/bricker/Projects/etc/hngh` was supplied as ground truth, but no filesystem inspection was available in any beat of this line. Consequently, the existence of `lib/logs.py`, `lib/display.py`, or any sanitizer module named in the line's phrasing remains **unverified** — these are hypotheses embedded in the research question, not confirmed files.
+1. **The core question cannot be resolved from this turn's vantage.** The kernel repository root `~/Projects/etc/hngh` was supplied as ground truth, but no filesystem inspection was available in any beat of this line. Consequently, the existence of `lib/logs.py`, `lib/display.py`, or any sanitizer module named in the line's phrasing remains **unverified** — these are hypotheses embedded in the research question, not confirmed files.
 
 2. **The design answer, however, is stable regardless of the audit outcome.** The line converged on a principle that does not depend on which files exist: **quips are untrusted display text and must pass through exactly one lexical guard choke point before rendering or logging.** This holds in all three audit outcomes (existing guard found / partial guard found / no guard found).
 
@@ -20,7 +20,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Is-there-
 
 ## Recommendations (lasting record)
 
-1. **Audit before adding code.** Search `/home/bricker/Projects/etc/hngh` for lexical-guard terms: `quip`, `sanitize`, `redact`, `scrub`, `escape`, `guard`, `display`, `log`. If a reusable text-output guard exists in the kernel, consume it from `hngh-automation` rather than building a parallel quip-specific sanitizer.
+1. **Audit before adding code.** Search `~/Projects/etc/hngh` for lexical-guard terms: `quip`, `sanitize`, `redact`, `scrub`, `escape`, `guard`, `display`, `log`. If a reusable text-output guard exists in the kernel, consume it from `hngh-automation` rather than building a parallel quip-specific sanitizer.
 
 2. **Prefer one choke point.** All quips — regardless of origin (static table, templated, model-generated) — should pass through a single guard function at the display/log boundary, not at each call site. This makes the guard auditable and prevents drift between output paths.
 
@@ -35,13 +35,13 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Is-there-
 
 ## Verification Limits
 
-- No file paths beyond the supplied repository root `/home/bricker/Projects/etc/hngh` are asserted to exist.
+- No file paths beyond the supplied repository root `~/Projects/etc/hngh` are asserted to exist.
 - Prior-art vault pointers were read-only prompt text; their linked content could not be verified beyond titles.
 - No external sources were consulted; none are claimed.
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root (supplied; contents unverified this line)
+- `~/Projects/etc/hngh` — hngh kernel repository root (supplied; contents unverified this line)
 - Prior-art vault pointers (titles only, unverified): `sources/supervision-must-be-hngh-native`, `sources/async-proof-pattern-for-long-drop-ins`, `sources/timezone-local-vs-utc-rendering-fabricates-missing-commits`
 - `research-lines.tsv` — line state record
 

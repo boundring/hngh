@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Can-lint-
 
 **Line:** Can lint-level checks mechanically flag unattributed async status emissions and unmarked trailers at authoring time, and at what false-positive cost?
 **Lifecycle state:** contracting → **closed (crystallized)**
-**Scope:** `hngh` kernel (`/home/bricker/Projects/etc/hngh`) and its automation tooling (`hngh-automation`)
+**Scope:** `hngh` kernel (`~/Projects/etc/hngh`) and its automation tooling (`hngh-automation`)
 
 > **Verification caveat for this transition:** No filesystem reads were exercised while producing this record. File paths below are carried forward from prior beats where they were asserted with confidence; where a path or symbol could not be re-verified, it is marked *(unverified)*. Nothing in this record asserts a path that prior material did not already establish.
 
@@ -60,7 +60,7 @@ Prior-art pointers (SLSA levels, MisakaNet trust semantics, async-proof patterns
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (emission API, job reclamation; specific symbols unverified this transition)
+- `~/Projects/etc/hngh` — hngh kernel repository (emission API, job reclamation; specific symbols unverified this transition)
 - `hngh-automation` — lint/automation tooling target (path within kernel repo unverified)
 - `/etc/hngh/components.json` — component registry candidate (referenced in prior material; existence unverified)
 - Prior beat: research beat 2026-09-13 (expanding → contracting), this line

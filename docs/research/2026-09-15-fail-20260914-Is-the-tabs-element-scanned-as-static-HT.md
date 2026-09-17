@@ -25,7 +25,7 @@ _line: Is the `#tabs` element scanned as static HTML or live DOM, and does the h
 
 3. **The DOM-injection concern is real in the general case but unobserved here** *(framework knowledge, not repo observation)*. Hydrating frameworks can insert sentinel/wrapper nodes and flip attributes (`inert`, `aria-hidden`, focus-trap sentinels) inside containers, which would break naive `childNodes`-based tab targeting. This is asserted as general web-platform behavior only; **no hngh file, bundle, or runtime was observed to confirm or refute it for this codebase.**
 
-4. **No kernel-repo file paths can be cited** *(high confidence about the absence)*. Neither the prior beat nor this crystallization had verified access to `/home/bricker/Projects/etc/hngh`. Naming paths would be fabrication, so none appear below. This is itself a finding: the research environment for this line lacked repo access, and any future work on the line must begin there.
+4. **No kernel-repo file paths can be cited** *(high confidence about the absence)*. Neither the prior beat nor this crystallization had verified access to `~/Projects/etc/hngh`. Naming paths would be fabrication, so none appear below. This is itself a finding: the research environment for this line lacked repo access, and any future work on the line must begin there.
 
 ## Recommendations (the line's actionable residue, in dependency order)
 
@@ -49,4 +49,4 @@ Prior-art vault notes named in this record (paths as given to the line; contents
 - [[sources/subprocess-stub-seam-for-hermetic-tests]] — Env-overridable binary seam for hermetic subprocess tests
 - [[sources/SRC-2026-08-18-008]], [[sources/SRC-2026-08-24-002]] — present in prior-art pointers but **not relevant to this line** (noted so future readers don't chase them)
 
-Kernel repository: `/home/bricker/Projects/etc/hngh` — **referenced but not accessed**; no file paths within it are cited because none could be verified. External framework-hydration behavior (finding 3) is asserted from general platform knowledge and is explicitly unverified against any source in this environment.
+Kernel repository: `~/Projects/etc/hngh` — **referenced but not accessed**; no file paths within it are cited because none could be verified. External framework-hydration behavior (finding 3) is asserted from general platform knowledge and is explicitly unverified against any source in this environment.

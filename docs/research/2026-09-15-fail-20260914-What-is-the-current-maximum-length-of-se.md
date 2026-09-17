@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-What-is-t
 
 **Line:** What is the current maximum length of session transcripts in the system, and does it exceed the viewport height without virtualization?
 **State:** expanding → **contracted** (final structured summary)
-**Target repositories:** `hngh/hngh-automation` (this repo) · `/home/bricker/Projects/etc/hngh` (kernel)
+**Target repositories:** `hngh/hngh-automation` (this repo) · `~/Projects/etc/hngh` (kernel)
 **Epistemic status of this record:** The prior beat and this contracting pass both operated **without a direct read** of either repository's filesystem. No file path, constant name, or line number below is asserted as verified unless explicitly flagged. Where the answer depends on an unread source, the gap is stated rather than papered over.
 
 ---
@@ -26,7 +26,7 @@ The question as posed presupposes one number. The prior beat's analysis, and sta
 
 These three caps are **not guaranteed to be equal**, and the binding constraint for any given session depends on which is smallest. The prior beat's F1 finding stands: any answer that quotes a single "max length" without specifying *which* cap is being referenced is incomplete.
 
-> **Verification gap:** I cannot name the specific constant(s) (e.g., `MAX_TRANSCRIPT_BYTES`, a ring-buffer size, a render-window row count) because I have not read the kernel source tree at `/home/bricker/Projects/etc/hngh` or this repository. The prior beat made the same explicit caveat.
+> **Verification gap:** I cannot name the specific constant(s) (e.g., `MAX_TRANSCRIPT_BYTES`, a ring-buffer size, a render-window row count) because I have not read the kernel source tree at `~/Projects/etc/hngh` or this repository. The prior beat made the same explicit caveat.
 
 ### F2 — Structural answer to "does it exceed the viewport without virtualization?": **Yes, for any non-trivial session** (logical, high confidence)
 
@@ -69,7 +69,7 @@ These are distilled from F1–F5 and are actionable for `hngh/hngh-automation` a
 
 ### R1 — Perform a targeted source read to resolve the three caps
 
-The single highest-value next action is a **direct read** of the kernel repository at `/home/bricker/Projects/etc/hngh`, specifically:
+The single highest-value next action is a **direct read** of the kernel repository at `~/Projects/etc/hngh`, specifically:
 
 1. **Storage layer:** Locate the write cap (ring buffer size, max file size, rotation policy). Search for constants like `MAX_.*BYTES`, `RING_.*SIZE`, `TRANSCRIPT_.*LIMIT`, or equivalent in the persistence module.
 2. **Load/salvage path:** Locate the read cap (max entries deserialized per session load). Check the salvage/replay code path referenced by `[[concepts/session-salvage]]`.
@@ -106,7 +106,7 @@ The finding that "maximum transcript length" is not one number should be recorde
 
 | ID | Thread | Status | Blocking dependency |
 |---|---|---|---|
-| **OT-1** | Does `hngh` use a render window / virtualization layer? | **Open.** Structural answer is "yes, it exceeds the viewport" *if* no windowing exists. The existence of windowing is unverified. | Direct read of TUI render loop in `/home/bricker/Projects/etc/hngh`. |
+| **OT-1** | Does `hngh` use a render window / virtualization layer? | **Open.** Structural answer is "yes, it exceeds the viewport" *if* no windowing exists. The existence of windowing is unverified. | Direct read of TUI render loop in `~/Projects/etc/hngh`. |
 | **OT-2** | What are the concrete values of the write, read, and render caps? | **Open.** No number can be cited from this record. | Same source read as OT-1. |
 | **OT-3** | Does `hngh` use alternate-screen mode? | **Open.** Determines whether terminal scrollback is a live constraint or irrelevant. | Source read of TUI initialization code. |
 | **OT-4** | How does the session-salvage path interact with the read cap? | **Open.** The salvage concept (`[[concepts/session-salvage]]`) implies a reconstruction path, but its interaction with transcript length limits is unexamined in this line. | Source read of salvage module; cross-reference with `[[concepts/session-salvage]]`. |
@@ -128,7 +128,7 @@ All open threads are blocked on the same prerequisite: **a direct source read of
 - The specific constant names and numeric values for any of the three caps.
 - Whether a render window or virtualization layer exists in `hngh`.
 - Whether the TUI uses alternate-screen mode.
-- Any specific file path within `/home/bricker/Projects/etc/hngh` or this repository, with the exception of the repository root itself, which is given in the line definition.
+- Any specific file path within `~/Projects/etc/hngh` or this repository, with the exception of the repository root itself, which is given in the line definition.
 
 Any downstream note that cites a specific constant (e.g., `MAX_TRANSCRIPT_BYTES = 65536`) or file path (e.g., `hngh/src/tui/render.rs`) **without a verified source read** should be treated as a hypothesis, not a fact.
 
@@ -138,7 +138,7 @@ Any downstream note that cites a specific constant (e.g., `MAX_TRANSCRIPT_BYTES 
 
 All references below are either given in the line definition or cited from prior art pointers. **No file path within the kernel repository or this repository is cited as a verified existence**, because no direct filesystem read was performed in this pass or the prior beat.
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root (given in line definition; contents unverified in this pass)
+- `~/Projects/etc/hngh` — hngh kernel repository root (given in line definition; contents unverified in this pass)
 - `hngh/hngh-automation` — this repository (target of recommendations; specific file paths unverified)
 - `[[concepts/session-salvage]]` — Session Salvage concept note (prior art pointer, created 2026-08-24; content not read in this pass)
 - `[[concepts/clean-architecture]]` — Clean Architecture for Agent Systems (prior art pointer; content not read in this pass)

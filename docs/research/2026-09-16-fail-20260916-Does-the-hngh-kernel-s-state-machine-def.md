@@ -18,7 +18,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
    - A direct comparison between those two enumerated sets.
 
 2. **The supplied material identifies only the repository root and the line-state file name.**  
-   It names the hngh kernel repository root as `/home/bricker/Projects/etc/hngh` and refers to `research-lines.tsv` as the line-state file. However, it does not verify a specific state-machine definition file path inside that repository, nor does it provide verified text from such a file.
+   It names the hngh kernel repository root as `~/Projects/etc/hngh` and refers to `research-lines.tsv` as the line-state file. However, it does not verify a specific state-machine definition file path inside that repository, nor does it provide verified text from such a file.
 
 3. **No verified R2 Step 2 enumeration is present in the supplied material.**  
    The phrase “R2 Step 2” is referenced as the source of an enumerated domain, but the supplied material does not quote or verify that enumeration. Without that text, there is no second set against which to compare any kernel-defined state list.
@@ -32,7 +32,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 ## Recommendations
 
 1. **Locate the kernel state-machine definition file.**  
-   Search `/home/bricker/Projects/etc/hngh` for files that define lifecycle states, valid states, state transitions, or references to `research-lines.tsv`. The target artifact should explicitly list the valid states for `research-lines.tsv`, not merely mention the filename.
+   Search `~/Projects/etc/hngh` for files that define lifecycle states, valid states, state transitions, or references to `research-lines.tsv`. The target artifact should explicitly list the valid states for `research-lines.tsv`, not merely mention the filename.
 
 2. **Extract the exact valid-state list.**  
    Once a candidate file is found, record:
@@ -58,7 +58,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 
 ## Open threads
 
-- Does a state-machine definition file exist inside `/home/bricker/Projects/etc/hngh` that explicitly lists valid states for `research-lines.tsv`?
+- Does a state-machine definition file exist inside `~/Projects/etc/hngh` that explicitly lists valid states for `research-lines.tsv`?
 - If such a file exists, what is its exact path and enumeration?
 - What is the exact R2 Step 2 enumeration of the domain?
 

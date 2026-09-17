@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260912-patrol-au
 
 ## Epistemic status (read first)
 
-This line's recorded beats contain the research question and prior-art pointers, but **no verified in-repository findings were captured in the record** — the expanding beat opened with intent to investigate and the trail ends there. I have not been able to confirm specific file contents in `/home/bricker/Projects/etc/hngh` or the automation harness repo during this transition. Accordingly:
+This line's recorded beats contain the research question and prior-art pointers, but **no verified in-repository findings were captured in the record** — the expanding beat opened with intent to investigate and the trail ends there. I have not been able to confirm specific file contents in `~/Projects/etc/hngh` or the automation harness repo during this transition. Accordingly:
 
 - Findings below are split into **(A)** claims grounded in the prior-material record and **(B)** hypotheses that remain unverified and are labeled as such.
 - I name concrete paths only where the prior record itself names them. Candidate repo paths are listed under "Verification steps" as *places to check*, not as confirmed citations.
@@ -45,7 +45,7 @@ Distinguishing H1/H2/H3 requires repository inspection that is **not in this lin
 1. **Disposition: conditional FIX, not park — pending one verification pass.** The record shows a real, previously-flagged drift on this exact harness (finding A2), which biases toward H1/H2 over H3. Parking without checking risks silencing a true-positive guard on infrastructure other lines depend on. Fix is the disposition; park only if verification confirms H3.
 
 2. **Verification steps before closing (each is a place to *check*, not a confirmed citation):**
-   - In `/home/bricker/Projects/etc/hngh`: locate the patrol check that emits "no gate crumb found" and confirm the crumb path and staleness threshold it reads.
+   - In `~/Projects/etc/hngh`: locate the patrol check that emits "no gate crumb found" and confirm the crumb path and staleness threshold it reads.
    - In the hngh-automation harness: confirm whether the crumb-writing step (timer unit / rung) is installed, enabled, and has run since 2026-09-12T21:03Z; reconcile against the drift noted in the 2026-08-25 night check.
    - Compare the writer's output path against the patrol's read path to rule out H2.
 
@@ -68,7 +68,7 @@ Distinguishing H1/H2/H3 requires repository inspection that is **not in this lin
 Paths named in this line's own record (prior material and prompt); confidence is limited to their being named in the record, not re-verified on disk this transition:
 
 - `research-lines.tsv` — line state file (named in prompt).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (named in prompt).
+- `~/Projects/etc/hngh` — hngh kernel repository (named in prompt).
 - `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled` — llm-wiki vault, prior art.
 - `sources/obs-2026-08-25-night-check-hngh-harness-healthy-timer-doc-vs-install-drift-` — llm-wiki vault, prior art (title truncated in record).
 - `sources/backlog-disposition-sweep-reduces-accepted-plans-by-half` — llm-wiki vault, prior art.

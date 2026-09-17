@@ -1,18 +1,18 @@
-# Where exactly in /home/bricker/Projects/etc/hngh does the plan-accept gate harness consume the make exit code, and what is the minimal patch surface to capture failing target, trailing stderr, and /proc metrics at failure time (R2 precondit
+# Where exactly in ~/Projects/etc/hngh does the plan-accept gate harness consume the make exit code, and what is the minimal patch surface to capture failing target, trailing stderr, and /proc metrics at failure time (R2 precondit
 
 Status: crystallized 2026-09-15 from research line `fail-20260914-Where-exactly-in-home-bricker-Projects-e`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Where-exactly-in-home-bricker-Projects-e.md.
 
 # Contracted line — FINAL SUMMARY
 
-**Line:** Where in `/home/bricker/Projects/etc/hngh` does the plan-accept gate harness consume the make exit code, and what is the minimal patch surface to capture failing target, trailing stderr, and /proc metrics at failure time (R2 precondition)?
+**Line:** Where in `~/Projects/etc/hngh` does the plan-accept gate harness consume the make exit code, and what is the minimal patch surface to capture failing target, trailing stderr, and /proc metrics at failure time (R2 precondition)?
 **State:** expanding → contracting → **closed (crystallized)** | accumulated wall: ~108s (prior beat) + this beat
 
 ---
 
 ## Epistemic status (standing, applies to everything below)
 
-No filesystem access to `/home/bricker/Projects/etc/hngh` was available at any point in this line's lifetime. The repo root and the existence of a "plan-accept gate harness" are **premises of the line, not verified facts**. Accordingly, **no file path inside the repo is asserted as existing** — every "where" is expressed as a probe to be run on host touch. External behavior (GNU make error format, `/proc` semantics) is flagged as external rather than asserted. This constraint shaped the whole line: it converged on a *probe-first, schema-first* plan instead of a concrete diff.
+No filesystem access to `~/Projects/etc/hngh` was available at any point in this line's lifetime. The repo root and the existence of a "plan-accept gate harness" are **premises of the line, not verified facts**. Accordingly, **no file path inside the repo is asserted as existing** — every "where" is expressed as a probe to be run on host touch. External behavior (GNU make error format, `/proc` semantics) is flagged as external rather than asserted. This constraint shaped the whole line: it converged on a *probe-first, schema-first* plan instead of a concrete diff.
 
 ---
 
@@ -56,7 +56,7 @@ Because the "where" could not be pinned in-line, the lasting artifact is the fai
 ## References
 
 **Repo premises (not file-verified — no host access during this line):**
-- `/home/bricker/Projects/etc/hngh` — repo root and plan-accept gate harness, taken as premise only. No internal path asserted.
+- `~/Projects/etc/hngh` — repo root and plan-accept gate harness, taken as premise only. No internal path asserted.
 
 **Prior art (llm-wiki vault, read-only pointers as provided; content not re-verified this beat):**
 - `concepts/crowdsourced-failure-intake`

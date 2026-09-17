@@ -54,7 +54,7 @@ A single idle-host pass resolves the line. In order:
 
 ## References
 
-- hngh kernel repository root (only path asserted with confidence): `/home/bricker/Projects/etc/hngh`
+- hngh kernel repository root (only path asserted with confidence): `~/Projects/etc/hngh`
 - Line state: `research-lines.tsv` (as named in the line header; contents not re-verified at crystallization)
 - Prior-art pointers (llm-wiki vault, read-only):
   - `sources/pi-llm-wiki-guardrail-blocks-apply-patch-edits`

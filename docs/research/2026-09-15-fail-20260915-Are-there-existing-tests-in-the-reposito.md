@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Are-there
 
 ## Findings
 
-**The gap is empirically unverified, not confirmed.** The expanding beat recorded intent (two shell commands against `/home/bricker/Projects/etc/hngh`) but preserved no output: no file listing, no grep result, no test-tree enumeration. No state-machine definition, sentinel value, exit-code contract, or status-file schema has been located. Consequently:
+**The gap is empirically unverified, not confirmed.** The expanding beat recorded intent (two shell commands against `~/Projects/etc/hngh`) but preserved no output: no file listing, no grep result, no test-tree enumeration. No state-machine definition, sentinel value, exit-code contract, or status-file schema has been located. Consequently:
 
 - **No test asserting the clean-complete / timeout-complete distinction has been identified.** This is an absence of evidence, not evidence of absence. The line's motivating question — "is this gap untested?" — remains open.
 - **No file paths inside the repository are cited in this record.** I am not confident any specific path exists beyond the repository root itself. Any stronger claim would conflate studied intent with verified fact, violating the authored-vs-studied discipline that governs this line.
@@ -22,7 +22,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Are-there
 
 **1. Execute the three-search protocol and record raw output.**
 
-Run against `/home/bricker/Projects/etc/hngh`, in this order:
+Run against `~/Projects/etc/hngh`, in this order:
 
 ```bash
 # (a) Locate state definitions — the distinction must be named before it can be tested
@@ -37,7 +37,7 @@ find . -type f \( -name 'test_*' -o -name '*_test.*' -o -name 'test.*' -o -name 
 #     A definition-site hit with zero test-site hits is the signature of the untested gap.
 ```
 
-Adjust `--include` extensions to whatever `ls /home/bricker/Projects/etc/hngh` reveals on first contact. Record raw output verbatim in the next beat; do not paraphrase.
+Adjust `--include` extensions to whatever `ls ~/Projects/etc/hngh` reveals on first contact. Record raw output verbatim in the next beat; do not paraphrase.
 
 **2. Classify into exactly one verdict and contract accordingly.**
 
@@ -68,7 +68,7 @@ Given the project's existing rung/attestation model, a timeout-complete state mu
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — repository root (guaranteed by line definition; no internal paths verified)
+- `~/Projects/etc/hngh` — repository root (guaranteed by line definition; no internal paths verified)
 - `[[sources/obs-2026-08-25-hngh-promotion-rung-11-distributed-attestation-completed-pus]]` — promotion-rung / attestation model (vault pointer; full contents not read in this beat)
 - `[[sources/subprocess-stub-seam-for-hermetic-tests]]` — env-overridable binary seam for hermetic subprocess tests (vault pointer; full contents not read in this beat)
 - `[[sources/obs-2026-08-19-authored-vs-studied-project-distinction]]` — authored-vs-studied discipline governing what may be claimed as verified (vault pointer)

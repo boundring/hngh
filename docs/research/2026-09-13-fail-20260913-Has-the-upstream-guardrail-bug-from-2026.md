@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Has-the-u
 
 **Line:** Has the upstream guardrail bug from 2026‑08‑25 been resolved in the current kernel version, and does `lib/automation.py` now handle the corrected CLI contract without errors?
 **State:** contracting → **closed (recorded)**
-**Epistemic status:** This turn performs no live reads. The summary below is a *decision record*, not a verification result. Claims are labeled **[G]** (grounded in prior material / vault pointers), **[H]** (hypothesis), or **[U]** (unverifiable from here; requires host access to `/home/bricker/Projects/etc/hngh` and the automation repo).
+**Epistemic status:** This turn performs no live reads. The summary below is a *decision record*, not a verification result. Claims are labeled **[G]** (grounded in prior material / vault pointers), **[H]** (hypothesis), or **[U]** (unverifiable from here; requires host access to `~/Projects/etc/hngh` and the automation repo).
 
 ---
 
@@ -15,7 +15,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Has-the-u
 
 The line decomposes into two conjunctive claims that must **both** hold for the question to be answered "yes" [G]:
 
-- **C1 — Upstream resolution.** The guardrail fix is present in the hngh kernel at `/home/bricker/Projects/etc/hngh` *and* in the version actually deployed on idle hosts.
+- **C1 — Upstream resolution.** The guardrail fix is present in the hngh kernel at `~/Projects/etc/hngh` *and* in the version actually deployed on idle hosts.
 - **C2 — Downstream conformance.** `lib/automation.py` invokes the *corrected* CLI contract (post‑2026‑08‑25) and exits cleanly under that contract.
 
 **Established [G]:**
@@ -24,7 +24,7 @@ The line decomposes into two conjunctive claims that must **both** hold for the 
 3. A post‑dating artifact exists: `[[concepts/hngh-lessons-current]]` (created 2026‑09‑07, ~13 days after the bug) is the single most likely place to already record resolution status, fix commit, and corrected CLI shape.
 
 **Open / Unverifiable [U]:**
-- The actual fix commit hash, tag, or version number in `/home/bricker/Projects/etc/hngh`.
+- The actual fix commit hash, tag, or version number in `~/Projects/etc/hngh`.
 - Whether the deployed kernel version on idle hosts ≥ the version containing that commit.
 - The concrete corrected contract (flag names, argument order, exit codes, streaming/incremental‑write behavior).
 - Line‑by‑line conformance of `lib/automation.py`'s CLI invocation site(s) against that contract.
@@ -42,7 +42,7 @@ These are ordered so that each step gates the next; stop and record if any pass 
 Open `[[concepts/hngh-lessons-current]]`. If it names a commit hash, version, or corrected CLI shape, R2 becomes a *confirmation* check rather than a forensic search. This is the cheapest step and should gate all others.
 
 **R2 — Kernel forensics: pin fix commit + deployed version [G method / U outcome].**
-On an idle host against `/home/bricker/Projects/etc/hngh`:
+On an idle host against `~/Projects/etc/hngh`:
 - `git log --since=2026-08-25 --oneline --all` filtered for guardrail / idle‑timeout / incremental‑write terms.
 - `git tag --sort=-creatordate | head` to find any release cut after 2026‑08‑25.
 - **Pass criterion (C1):** a post‑08‑25 commit modifying the guardrail path **and** deployed kernel version ≥ the version containing that commit. A fix on `main` that is not what's running does *not* resolve C1.
@@ -78,10 +78,10 @@ Grounded in prior material and vault pointers (read‑only):
 - `[[concepts/llm-upstream-idle-timeout-incremental-writes]]` — names the failure class (upstream idle timeout / incremental writes) that the guardrail bug belongs to.
 - `[[sources/SRC-2026-08-24-020]]` — Hngh Run Contract; background on the CLI contract shape pre‑ and post‑fix.
 - `[[sources/SRC-2026-08-24-026]]` — Hngh Roadmap (current state, 2026‑08‑24); context for upstream resolution timing.
-- `[[entities/hngh]]` — Hngh Agent Kernel; entity record for the kernel at `/home/bricker/Projects/etc/hngh`.
+- `[[entities/hngh]]` — Hngh Agent Kernel; entity record for the kernel at `~/Projects/etc/hngh`.
 
 Repositories (host access required; not read in this turn):
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (C1 forensics, R2/R3).
+- `~/Projects/etc/hngh` — hngh kernel repository (C1 forensics, R2/R3).
 - The automation repository containing `lib/automation.py` (C2 conformance, R4/R5).
 
 **External sources:** None required. All claims above are either grounded in the prior material / vault pointers or explicitly marked **[U]** as unverifiable from here. No external citation is asserted where verification was not possible.

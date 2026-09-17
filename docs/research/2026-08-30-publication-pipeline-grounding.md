@@ -59,7 +59,7 @@ writes exactly one file: `docs/site/index.html`.
   line 488);
 - live, non-committed sources rendered read-only: session stores under
   `~/.hngh-automation/store` with a `record.lisp` (`session_rows()`, line 155) and
-  rosters from `/tmp/hngh-heartbeat-*`, `/tmp/hngh-auto-*`, and the automation store
+  rosters from `~tmp/hngh-heartbeat-*`, `~tmp/hngh-auto-*`, and the automation store
   (`_roster_sources()`, line 205).
 
 So the public site today is the dashboard spine (timeline + queue + ETAs + live

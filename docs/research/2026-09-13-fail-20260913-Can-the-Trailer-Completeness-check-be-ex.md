@@ -19,7 +19,7 @@ The "Trailer Completeness" check in `hngh-automation` flags a unit as incomplete
 
 ### F2 — Dynamic dispatch defeats purely intraprocedural suppression
 
-Go permits terminal emissions to be reached through interface method calls (`emitter.Emit(ctx, rec)`) and function-value invocation (`emitFn(ctx, rec)`). A checker that only inspects the lexical body of the checked unit cannot determine whether an interface-typed receiver or a `func`-typed variable ultimately dispatches to a concrete emitter. Resolving this requires at minimum a conservative points-to analysis (CHA-style) across package boundaries, or runtime-type-analysis (RTA) if precision is demanded. The line found that building such an analyzer inside `hngh-automation` would introduce a dependency on the full type graph of every transitively imported package, including the hngh kernel repository at `/home/bricker/Projects/etc/hngh`, which is outside the automation repo's own compilation scope. This coupling is disproportionate to the check's purpose.
+Go permits terminal emissions to be reached through interface method calls (`emitter.Emit(ctx, rec)`) and function-value invocation (`emitFn(ctx, rec)`). A checker that only inspects the lexical body of the checked unit cannot determine whether an interface-typed receiver or a `func`-typed variable ultimately dispatches to a concrete emitter. Resolving this requires at minimum a conservative points-to analysis (CHA-style) across package boundaries, or runtime-type-analysis (RTA) if precision is demanded. The line found that building such an analyzer inside `hngh-automation` would introduce a dependency on the full type graph of every transitively imported package, including the hngh kernel repository at `~/Projects/etc/hngh`, which is outside the automation repo's own compilation scope. This coupling is disproportionate to the check's purpose.
 
 ### F3 — The check is path-sensitive reachability, not mere presence
 
@@ -59,7 +59,7 @@ If the direct-call class dominates as predicted, Tier 1 alone suppresses the bul
 
 ### R4 — Do not couple `hngh-automation` to the kernel's internal type graph
 
-The hngh kernel repository (`/home/bricker/Projects/etc/hngh`) defines the emission API, but `hngh-automation`'s checker should depend only on the *exported* emission signatures (the structural pattern in R2), not on the kernel's internal call graph. This keeps the automation repo's analysis self-contained and avoids a build-order dependency where the checker must re-analyze kernel internals on every change.
+The hngh kernel repository (`~/Projects/etc/hngh`) defines the emission API, but `hngh-automation`'s checker should depend only on the *exported* emission signatures (the structural pattern in R2), not on the kernel's internal call graph. This keeps the automation repo's analysis self-contained and avoids a build-order dependency where the checker must re-analyze kernel internals on every change.
 
 ---
 
@@ -67,7 +67,7 @@ The hngh kernel repository (`/home/bricker/Projects/etc/hngh`) defines the emiss
 
 1. **Empirical false-positive census (R3).** The classification of historical failures was initiated but not completed. Without it, the expected suppression rate for Tier 1 is an estimate, not a measurement. This should be the first action when the line reopens or a successor line inherits this thread.
 
-2. **Goroutine emission semantics (F4).** Whether `go emitTrailer(...)` satisfies the moment-of-action freshness invariant is a kernel-level semantic question, not an analysis-technique question. It requires either a kernel maintainer's ruling or a formal reading of the attestation protocol in `/home/bricker/Projects/etc/hngh`. The vault entry `[[concepts/moment-of-action-freshness]]` frames the freshness recheck but does not resolve the async case.
+2. **Goroutine emission semantics (F4).** Whether `go emitTrailer(...)` satisfies the moment-of-action freshness invariant is a kernel-level semantic question, not an analysis-technique question. It requires either a kernel maintainer's ruling or a formal reading of the attestation protocol in `~/Projects/etc/hngh`. The vault entry `[[concepts/moment-of-action-freshness]]` frames the freshness recheck but does not resolve the async case.
 
 3. **Cross-package helper delegation.** If a unit in `hngh-automation` calls a helper in a *different* package (e.g., a shared internal utility), Tier 1's intrapackage walk cannot see the emission. The line did not determine how common this pattern is. If it is rare, the fail-safe diagnostic suffices. If it is common, a narrow cross-package points-to analysis over a small set of known helper packages may be warranted without full interprocedural machinery.
 
@@ -87,7 +87,7 @@ The question resolves to: **intrapackage call-graph analysis, augmented by a str
 
 - **This line's prior beats** (research-lines.tsv; state: expanding → contracting). The findings F1–F4 and recommendations R1–R4 are synthesized from the beat material recorded under this line, including the truncated 2026-09-13 beat that established the two-tier strategy and the path-sensitivity reframe.
 - **`hngh-automation` repository** — the automation repo where the "Trailer Completeness" check resides and where Tier 1 / Tier 2 suppression would be implemented. Specific file paths within this repository (e.g., the exact checker source file, CI configuration) were not independently verified in this contraction and should be confirmed against the working tree before implementation.
-- **`/home/bricker/Projects/etc/hngh`** — the hngh kernel repository, which defines the emission API (`EmitTrailer` or equivalent) and the attestation model. The checker's structural pattern (R2) must match the kernel's exported emission signatures. Internal file paths within the kernel were not cited here as they were not verified in this contraction.
+- **`~/Projects/etc/hngh`** — the hngh kernel repository, which defines the emission API (`EmitTrailer` or equivalent) and the attestation model. The checker's structural pattern (R2) must match the kernel's exported emission signatures. Internal file paths within the kernel were not cited here as they were not verified in this contraction.
 - **Go standard library: `go/ast`, `go/types`** — external, well-documented packages for AST parsing and type resolution. No further citation needed; behavior is specified by the Go language specification and the `go/types` package documentation.
 - **Vault: `[[concepts/moment-of-action-freshness]]`** — frames the attestation freshness recheck; relevant to open thread 2 (goroutine semantics).
 - **Vault: `[[concepts/delegated-contract-verification]]`** — broader delegated-contract pattern; relevant to open thread 4.

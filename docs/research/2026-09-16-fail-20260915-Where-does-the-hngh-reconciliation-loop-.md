@@ -15,7 +15,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Where-doe
 
 ### F1 — State persistence location: unresolved
 
-No source file in `/home/bricker/Projects/etc/hngh` was examined during this line's lifetime. The sole prior beat (expanding phase, 2026-09-16) states explicitly that "without filesystem access, architectural deduction is speculative." Every inference about where state lives—whether a single JSON file, a directory of tick logs, an SQLite database, or some other mechanism—was derived from assumed language conventions (Rust, inferred from `.rs` extension) and generic CLI patterns, not from repository contents.
+No source file in `~/Projects/etc/hngh` was examined during this line's lifetime. The sole prior beat (expanding phase, 2026-09-16) states explicitly that "without filesystem access, architectural deduction is speculative." Every inference about where state lives—whether a single JSON file, a directory of tick logs, an SQLite database, or some other mechanism—was derived from assumed language conventions (Rust, inferred from `.rs` extension) and generic CLI patterns, not from repository contents.
 
 **No verified claim can be made about the storage path, format, or write strategy.**
 
@@ -49,7 +49,7 @@ The honest result of this research line is negative: the two core questions cann
 
 | # | Action | Rationale |
 |---|--------|-----------|
-| 1 | Obtain filesystem access to `/home/bricker/Projects/etc/hngh`; locate the reconciliation loop's entry point, its state I/O calls, and any lock acquisition logic. | Single action that resolves both core questions. |
+| 1 | Obtain filesystem access to `~/Projects/etc/hngh`; locate the reconciliation loop's entry point, its state I/O calls, and any lock acquisition logic. | Single action that resolves both core questions. |
 | 2 | Inspect `hngh-automation` orchestration scripts and deployment configuration (systemd units, cron entries) to determine whether multi-process invocation is *actually* scheduled. | The resilience question is moot if only one process ever runs; the threat model must be confirmed before engineering effort is directed. |
 | 3 | If source access confirms a single-file state store without locking, convert F3's conditional recommendations into concrete engineering tasks with file paths. | Moves from speculation to actionable work. |
 | 4 | Re-open this line if any of the above investigations produce new evidence. | The current record is an absence-of-verification, not a positive finding; the questions remain live. |
@@ -60,7 +60,7 @@ The honest result of this research line is negative: the two core questions cann
 
 | Thread | Status | Blocking condition |
 |--------|--------|--------------------|
-| Identify state persistence path and format in hngh kernel source | **Open** | Requires filesystem access to `/home/bricker/Projects/etc/hngh` |
+| Identify state persistence path and format in hngh kernel source | **Open** | Requires filesystem access to `~/Projects/etc/hngh` |
 | Determine whether multi-process invocation is actually scheduled (timers, cron, manual) | **Open** | Requires inspection of `hngh-automation` deployment configuration |
 | Validate or refute the last-writer-wins race hypothesis against actual code | **Open** | Dependent on the two threads above |
 | Clarify causal relationship between drift failure mode and state staleness | **Open** | Requires runtime observation or source-level tracing of the reconciliation loop |
@@ -75,4 +75,4 @@ The honest result of this research line is negative: the two core questions cann
 - **`[[sources/SRC-2026-08-24-030]]`** — "Case Study: Overnight Multi-Agent Sprint (2026-08-24)." Contextual; no direct bearing on the state persistence mechanism.
 - **`[[concepts/roguelike-discipline]]`** — conceptual framework for agent execution discipline. Not directly relevant to the storage-mechanism question.
 
-*No file paths from `/home/bricker/Projects/etc/hngh` are cited in this summary because none could be verified as existing during the lifetime of this research line. All prior material on this line explicitly disclaims filesystem access. Any claim requiring verification against that repository is marked as such above rather than asserted.*
+*No file paths from `~/Projects/etc/hngh` are cited in this summary because none could be verified as existing during the lifetime of this research line. All prior material on this line explicitly disclaims filesystem access. Any claim requiring verification against that repository is marked as such above rather than asserted.*

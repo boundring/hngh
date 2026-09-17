@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260912-Does-lib-
 **Line:** Does `lib/quips.py` expose any existing template-validation or rendering hook where a wink-marker lexical guard could land as configuration rather than new infrastructure?  
 **Lifecycle state:** contracting → contracted record  
 **Date of this transition:** 2026-09-12  
-**Repository context:** hngh kernel repository at `/home/bricker/Projects/etc/hngh`
+**Repository context:** hngh kernel repository at `~/Projects/etc/hngh`
 
 ---
 
@@ -18,7 +18,7 @@ There is no verified basis in the available material to conclude that `lib/quips
 
 The line can be contracted into a decision gate:
 
-- If `/home/bricker/Projects/etc/hngh/lib/quips.py` contains an existing template-expansion call site, validation hook, or configuration surface, then a wink-marker lexical guard may land there as configuration or minimal config-gated code.
+- If `~/Projects/etc/hngh/lib/quips.py` contains an existing template-expansion call site, validation hook, or configuration surface, then a wink-marker lexical guard may land there as configuration or minimal config-gated code.
 - If it does not contain such a surface, the premise “configuration rather than new infrastructure” is not supported for this file.
 - Until that inspection is performed, no implementation recommendation should be treated as settled.
 
@@ -32,7 +32,7 @@ This is not a claim that the guard is impossible. It is a claim that the configu
 
 The research line names:
 
-- `/home/bricker/Projects/etc/hngh/lib/quips.py`
+- `~/Projects/etc/hngh/lib/quips.py`
 
 That path is treated as the object of investigation because it is named in the line itself. Its internal structure, public API, docstring, imports, validation functions, configuration surface, and rendering behavior are not verified in this contraction.
 

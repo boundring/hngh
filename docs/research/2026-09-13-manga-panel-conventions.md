@@ -9,29 +9,29 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-manga-panel-conventions
 - **Objective:** Understand traditional layout and panel grammar of gag newspaper strips.
 - **Method:** Analyze existing gag newspaper strips from various publications and time periods.
 - **Data Sources:**
-  - **hngh kernel repository:** `/home/bricker/Projects/etc/hngh/manga/gag_newspaper_samples`
+  - **hngh kernel repository:** `~/Projects/etc/hngh/manga/gag_newspaper_samples`
   - **External Sources:** Historical newspaper archives and comic studies databases.
 
 #### 2. User Experience and Reader Engagement
 - **Objective:** Determine how different panel layouts and grammars affect reader engagement and humor perception.
 - **Method:** Conduct user testing with a sample of readers to gather qualitative and quantitative data.
 - **Data Sources:**
-  - **hngh kernel repository:** `/home/bricker/Projects/etc/hngh/user_tests`
+  - **hngh kernel repository:** `~/Projects/etc/hngh/user_tests`
   - **External Sources:** User experience research in comics and graphic novels.
 
 #### 3. Technical Implementation and Usability
 - **Objective:** Ensure that the chosen panel grammar can be effectively implemented in the hngh kernel and is user-friendly.
 - **Method:** Develop prototypes and conduct usability testing.
 - **Data Sources:**
-  - **hngh kernel repository:** `/home/bricker/Projects/etc/hngh/prototypes`
+  - **hngh kernel repository:** `~/Projects/etc/hngh/prototypes`
   - **External Sources:** Usability guidelines for digital comics and graphic novels.
 
 ### References
 
 1. **hngh kernel repository:**
-   - `/home/bricker/Projects/etc/hngh/manga/gag_newspaper_samples`: Contains a collection of historical and contemporary gag newspaper strips.
-   - `/home/bricker/Projects/etc/hngh/user_tests`: Repository for user testing data and feedback.
-   - `/home/bricker/Projects/etc/hngh/prototypes`: Prototypes and usability testing results.
+   - `~/Projects/etc/hngh/manga/gag_newspaper_samples`: Contains a collection of historical and contemporary gag newspaper strips.
+   - `~/Projects/etc/hngh/user_tests`: Repository for user testing data and feedback.
+   - `~/Projects/etc/hngh/prototypes`: Prototypes and usability testing results.
 
 2. **External Sources:**
    - Historical newspaper archives and comic studies databases.

@@ -9,11 +9,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260913-gate-cu
 
 1. **Overly Restrictive Guardrails:**
    - The `gate-cure` process is failing due to overly restrictive guardrails that are preventing legitimate fixes.
-   - Specific guardrails in `/home/bricker/Projects/etc/hngh/.gitattributes`, `/home/bricker/Projects/etc/hngh/.github/workflows/`, and `/home/bricker/Projects/etc/hngh/config/guardrails.yaml` are identified as overly broad.
+   - Specific guardrails in `~/Projects/etc/hngh/.gitattributes`, `~/Projects/etc/hngh/.github/workflows/`, and `~/Projects/etc/hngh/config/guardrails.yaml` are identified as overly broad.
 
 2. **Specific Constraints Blocking the Cure:**
    - The `gate-cure` process is failing because of specific constraints that are blocking the cure.
-   - Logs from `/home/bricker/Projects/etc/hngh/logs/gate-cure/` and `/home/bricker/Projects/etc/hngh/logs/guardrails/` indicate that the `surface` guardrail is the primary constraint.
+   - Logs from `~/Projects/etc/hngh/logs/gate-cure/` and `~/Projects/etc/hngh/logs/guardrails/` indicate that the `surface` guardrail is the primary constraint.
 
 3. **Robustness and Compliance Issues:**
    - The `gate-cure` agent is not robust enough to handle guardrail constraints, leading to frequent failures.
@@ -22,11 +22,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260913-gate-cu
 #### Recommendations
 
 1. **Audit the Guardrail Configuration for Over-Broad Protection:**
-   - Review and refine the guardrails in `/home/bricker/Projects/etc/hngh/.gitattributes`, `/home/bricker/Projects/etc/hngh/.github/workflows/`, and `/home/bricker/Projects/etc/hngh/config/guardrails.yaml` to ensure they are not overly restrictive.
+   - Review and refine the guardrails in `~/Projects/etc/hngh/.gitattributes`, `~/Projects/etc/hngh/.github/workflows/`, and `~/Projects/etc/hngh/config/guardrails.yaml` to ensure they are not overly restrictive.
    - Implement a pre-check mechanism in the `gate-cure` agent to validate proposed changes against the guardrails.
 
 2. **Identify the Specific Constraints Blocking the Cure:**
-   - Analyze the logs from `/home/bricker/Projects/etc/hngh/logs/gate-cure/` and `/home/bricker/Projects/etc/hngh/logs/guardrails/` to pinpoint the specific rule or constraint that is blocking the cure.
+   - Analyze the logs from `~/Projects/etc/hngh/logs/gate-cure/` and `~/Projects/etc/hngh/logs/guardrails/` to pinpoint the specific rule or constraint that is blocking the cure.
    - Refactor the `gate-cure` agent to handle these constraints more robustly.
 
 3. **Ensure Robustness and Compliance of the Automated Cure Process:**
@@ -50,8 +50,8 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260913-gate-cu
 ### References
 
 1. **Audit the Guardrail Configuration for Over-Broad Protection:**
-   - `.gitattributes` in `/home/bricker/Projects/etc/hngh/.gitattributes`
-   - Pre-commit hooks in `/home/bricker/Projects/etc/hngh/.git/hooks/pre-commit`
-   - Custom validation scripts in `/home/bricker/Projects/etc/hngh/.github/workflows/` and `/home/bricker/Projects/etc/h
+   - `.gitattributes` in `~/Projects/etc/hngh/.gitattributes`
+   - Pre-commit hooks in `~/Projects/etc/hngh/.git/hooks/pre-commit`
+   - Custom validation scripts in `~/Projects/etc/hngh/.github/workflows/` and `~/Projects/etc/h
 
 [truncated at model call: completion hit the max_tokens cap (finish_reason=length) - re-run the beat]

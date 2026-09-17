@@ -20,7 +20,7 @@ This statement creates a **verification gap** rather than a generation problem. 
 3.  **No generator exists:** The header is aspirational or legacy; the line reopens as "write the generator," and the provenance note in SRC-2026-08-24-027 must be corrected to reflect reality.
 
 ### 2. Artifact Identity is Unconfirmed
-The line references a "tab registry," while the provenance note cites `meta/registry.json`. **It has not been verified from this repository or `/home/bricker/Projects/etc/hngh` that either file exists at these paths.** Until `ls meta/registry.json` and `ls /home/bricker/Projects/etc/hngh/meta/registry.json` are executed, any code written against a specific path is speculative. The "tab registry" may be a conceptual name for `meta/registry.json`, or they may be distinct files. This ambiguity must be resolved before implementation.
+The line references a "tab registry," while the provenance note cites `meta/registry.json`. **It has not been verified from this repository or `~/Projects/etc/hngh` that either file exists at these paths.** Until `ls meta/registry.json` and `ls ~/Projects/etc/hngh/meta/registry.json` are executed, any code written against a specific path is speculative. The "tab registry" may be a conceptual name for `meta/registry.json`, or they may be distinct files. This ambiguity must be resolved before implementation.
 
 ### 3. Determinism is a Hard Requirement for Verification
 For the map to be "continuously verified," the generation process must be **deterministic**. If the generator emits non-deterministic output (e.g., unordered iteration, timestamps in content), a diff-based check will flake. The generator must:
@@ -39,7 +39,7 @@ For the map to be "continuously verified," the generation process must be **dete
 ## Recommendations
 
 ### R1: Resolve Artifact Identity (Pre-Code)
-Execute `ls meta/registry.json` and `ls /home/bricker/Projects/etc/hngh/meta/registry.json`. Read whichever exists. Confirm whether "tab registry" and `meta/registry.json` are the same file. **Do not write code until this is confirmed.**
+Execute `ls meta/registry.json` and `ls ~/Projects/etc/hngh/meta/registry.json`. Read whichever exists. Confirm whether "tab registry" and `meta/registry.json` are the same file. **Do not write code until this is confirmed.**
 
 ### R2: Locate or Create the Generator
 Search both repositories for the exact strings `"Do not edit manually"`, `"Auto-generated"`, and `SRC-2026-08-24-027`. Any code emitting that header *is* the generator.
@@ -82,4 +82,4 @@ Record the outcome in **SRC-2026-08-18-003** (Crystallized Rebuild Roadmap) if r
 -   `[[sources/SRC-2026-08-24-006]]` — SLSA Supply Chain Levels for Software Artifacts
 -   `[[sources/SRC-2026-08-18-003]]` — Hngh Crystallized Rebuild Roadmap
 -   `[[sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled]]` — Observation: overnight harness pointer
--   `/home/bricker/Projects/etc/hngh` — hngh kernel repository (path cited, existence of `meta/registry.json` unconfirmed)
+-   `~/Projects/etc/hngh` — hngh kernel repository (path cited, existence of `meta/registry.json` unconfirmed)

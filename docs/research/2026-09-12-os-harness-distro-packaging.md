@@ -11,9 +11,9 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-os-harness-distro-packa
 
 ## Verification Posture
 
-- The hngh kernel repository root is given as `/home/bricker/Projects/etc/hngh`.
+- The hngh kernel repository root is given as `~/Projects/etc/hngh`.
 - From the supplied context, I cannot verify specific internal file paths inside that repository. Therefore this record does **not** assert concrete hngh file paths beyond the repository root itself.
-- The prior material mentioned possible paths such as `/home/bricker/Projects/etc/hngh/nixpkgs` and `/home/bricker/Projects/etc/hngh/debian`. I treat those as unverified and do not rely on them as evidence.
+- The prior material mentioned possible paths such as `~/Projects/etc/hngh/nixpkgs` and `~/Projects/etc/hngh/debian`. I treat those as unverified and do not rely on them as evidence.
 - Claims about PKGBUILD/AUR, deb/rpm, Nix, and systemd-style declarative layers are external packaging prior art. Where they depend on upstream documentation or implementation behavior that I cannot verify here, I mark them explicitly as unverified in this context.
 
 ---

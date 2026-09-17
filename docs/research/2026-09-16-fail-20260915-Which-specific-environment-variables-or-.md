@@ -19,7 +19,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Which-spe
 |---|-------|-------|
 | 1 | A vault pointer is *referenced* in the line's framing as documenting a "subprocess-stub-seam" for hermetic testing. | Line title itself; prior beat framing. |
 | 2 | The pointer's **content was never read, quoted, or cited by path** in any prior beat of this line. | Prior contraction assessment (beat 2026-09-16): "The pointer is referenced in the prior material's framing but its content was never quoted or cited by path." |
-| 3 | No file from `/home/bricker/Projects/etc/hngh` was examined in any beat of this line. | Prior contraction assessment: "No file from that tree was read." |
+| 3 | No file from `~/Projects/etc/hngh` was examined in any beat of this line. | Prior contraction assessment: "No file from that tree was read." |
 | 4 | The expanding beat produced **zero repository-anchored findings**; every candidate mechanism (env-var toggle, `LD_PRELOAD`, stub binary directory) was explicitly labelled hypothetical and generic to standard hermetic-testing practice. | Prior contraction assessment table, row 3: "Hypothetical pattern only." |
 
 ### What is NOT established
@@ -68,15 +68,15 @@ Once candidate names exist from step 1 (or even without them):
 
 ```bash
 # Env-var lookups
-grep -rn 'getenv\|secure_getenv' /home/bricker/Projects/etc/hngh \
+grep -rn 'getenv\|secure_getenv' ~/Projects/etc/hngh \
   --include='*.c' --include='*.h' --include='*.rs' --include='*.go'
 
 # Subprocess call sites
-grep -rn 'execve\|posix_spawn\|fork\b\|system(' /home/bricker/Projects/etc/hngh \
+grep -rn 'execve\|posix_spawn\|fork\b\|system(' ~/Projects/etc/hngh \
   --include='*.c' --include='*.rs' --include='*.go'
 
 # Stub / hermetic markers
-grep -rni 'stub\|hermetic\|fake\|mock' /home/bricker/Projects/etc/hngh \
+grep -rni 'stub\|hermetic\|fake\|mock' ~/Projects/etc/hngh \
   --include='*.c' --include='*.h' --include='*.rs' --include='*.go' \
   --include='*.sh' --include='*.py'
 ```
@@ -88,11 +88,11 @@ Cross-reference hits against step-1 names. The intersection is the answer.
 Hermetic seams are typically wired in the *harness*, not kernel code:
 
 ```bash
-find /home/bricker/Projects/etc/hngh -type d \
+find ~/Projects/etc/hngh -type d \
   \( -name 'test' -o -name 'tests' -o -name 'stubs' -o -name 'fixtures' \) -print
 
 grep -rn 'PATH=\|LD_PRELOAD\|chroot\|unshare' \
-  /home/bricker/Projects/etc/hngh/{test,tests,stubs,scripts,.github} 2>/dev/null
+  ~/Projects/etc/hngh/{test,tests,stubs,scripts,.github} 2>/dev/null
 ```
 
 If a `stubs/` or `bin/stubs/` directory exists, list its contents—those *are* the binary paths in the seam.
@@ -126,7 +126,7 @@ Record that fact in the line's state file and re-open the line as a **new** rese
 
 ## References
 
-All citations below are to vault pointers present in the prior-art list for this line. **No file paths from `/home/bricker/Projects/etc/hngh` are cited because no file in that tree was read in any beat of this line.** No external sources beyond the vault are cited because none were consulted or verified.
+All citations below are to vault pointers present in the prior-art list for this line. **No file paths from `~/Projects/etc/hngh` are cited because no file in that tree was read in any beat of this line.** No external sources beyond the vault are cited because none were consulted or verified.
 
 - `[[sources/LES-fail-20260915-Does-the-obs-2026-08-25-hngh-automation-]]` — Research Lesson (title truncated in prior-art list; full title not available to this contraction)
 - `[[sources/LES-fail-20260915-Does-the-research-lines-tsv-schema-inclu]]` — Research Lesson (title truncated)

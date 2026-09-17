@@ -10,13 +10,13 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260914-journal
 
 ## Verification boundary
 
-This transition has no verified live read access to individual files in the working repository or `/home/bricker/Projects/etc/hngh`. Therefore, I do not assert specific source-file paths, function names, constants, error-code definitions, or upstream issue identifiers unless they are already present in the supplied prior material.
+This transition has no verified live read access to individual files in the working repository or `~/Projects/etc/hngh`. Therefore, I do not assert specific source-file paths, function names, constants, error-code definitions, or upstream issue identifiers unless they are already present in the supplied prior material.
 
 Claims below are grounded in:
 
 - the prior material attached to this research line;
 - the named prior-art pointers;
-- the supplied kernel repository root, `/home/bricker/Projects/etc/hngh`.
+- the supplied kernel repository root, `~/Projects/etc/hngh`.
 
 Where a claim depends on unverified repository detail or external source content, it is marked as an open thread rather than asserted.
 

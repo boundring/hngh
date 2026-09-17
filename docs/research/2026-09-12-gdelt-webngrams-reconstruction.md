@@ -62,7 +62,7 @@ These threads are explicitly *not* resolved by this crystallization and remain o
 *   **Local Vault (Unread Body):** `[[sources/sincetmw-ai-cultural-intelligence]]` (sincetmw.ai; cultural/aesthetic intelligence for AI)
 *   **Prior Art (Unverified in Cycle):** `iandreafc/gdeltnews` (GitHub repository)
 *   **Prior Art (Unverified in Cycle):** DOI 10.3390/bdcc10020045
-*   **Repository Context:** `/home/bricker/Projects/etc/hngh` (hngh kernel repository; no specific file paths cited as existing)
+*   **Repository Context:** `~/Projects/etc/hngh` (hngh kernel repository; no specific file paths cited as existing)
 *   **Research Line State:** `research-lines.tsv` (line state: contracting → crystallized)
 
 **End of Line Record.** This summary is the lasting record of the GDELT Web News NGrams 3.0 research line. No further transitions are scheduled for this line.

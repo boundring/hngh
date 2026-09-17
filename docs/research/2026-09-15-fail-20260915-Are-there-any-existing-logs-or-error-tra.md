@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Are-there
 
 **Line:** Are there any existing logs or error traces in the nightly cycle orchestrator that indicate file-write conflicts or skipped render steps for lines in the `planned` state during the last 7 days?
 **State:** contracting → **contracted** (this is the line's lasting record)
-**Scope / applicability:** `hngh/hngh-automation` and the hngh kernel repository rooted at `/home/bricker/Projects/etc/hngh`.
+**Scope / applicability:** `hngh/hngh-automation` and the hngh kernel repository rooted at `~/Projects/etc/hngh`.
 
 > Framing note: this line is in continuous motion on idle hosts; nothing below should be read as a batched or periodic pass. The "rolling 7-day window" refers to *data retention* under audit, not to the cadence of the research itself.
 
@@ -30,7 +30,7 @@ So the contracted position is neither "conflicts happened" nor "logs are clean."
 The prior beat's own bottom line states it plainly: the supplied material does not contain verified log entries, stack traces, or file-write error records from the last 7 days. I am carrying that forward as the operative fact of this contracted line.
 
 **F2 — Path-level verification is not possible from what was provided (stated explicitly).**
-I do **not** have a verified file listing, log contents, or git history for either `hngh/hngh-automation` or `/home/bricker/Projects/etc/hngh`. Per the grounding rule ("cite concrete file paths only where you are confident they exist"), I am **not** confident that any specific internal path exists — e.g. I will *not* assert a path like `orchestrator.py`, `logs/nightly.log`, or `render/*.log` because I cannot verify it. The two repository roots above are named only because they were supplied in the line's scope; their **internal** structure is unverified here. Any claim that needs me to name a concrete file inside those trees is, for this record, *unverifiable* and is flagged as such rather than asserted.
+I do **not** have a verified file listing, log contents, or git history for either `hngh/hngh-automation` or `~/Projects/etc/hngh`. Per the grounding rule ("cite concrete file paths only where you are confident they exist"), I am **not** confident that any specific internal path exists — e.g. I will *not* assert a path like `orchestrator.py`, `logs/nightly.log`, or `render/*.log` because I cannot verify it. The two repository roots above are named only because they were supplied in the line's scope; their **internal** structure is unverified here. Any claim that needs me to name a concrete file inside those trees is, for this record, *unverifiable* and is flagged as such rather than asserted.
 
 **F3 — Two grounded risk signals (from prior art, not from live logs).**
 These are the only substantive "evidence" in the line, and both come from named read-only vault pointers, not from a live 7-day log window:
@@ -88,7 +88,7 @@ Ensure retention covers at least 7 days and that the key in R3 survives rotation
 These remain open because they require on-host access this line does not have; they are the honest residue of the contraction.
 
 - **O1 — Does the orchestrator even have a configured log sink?** (Resolves F5-a / `no_log_sink_found`.) Unverifiable from the material.
-- **O2 — What concrete file paths host the orchestrator, its logs, and its render steps in `hngh/hngh-automation` and `/home/bricker/Projects/etc/hngh`?** No path is verified here (F2); this must be confirmed on-host before R1 can be executed literally.
+- **O2 — What concrete file paths host the orchestrator, its logs, and its render steps in `hngh/hngh-automation` and `~/Projects/etc/hngh`?** No path is verified here (F2); this must be confirmed on-host before R1 can be executed literally.
 - **O3 — Is locking actually used for the overnight multi-plan writes, and what is its failure mode** (`lock_failed`, `EACCES`/`EPERM`)? The risk signal says three plans write overnight, but the *mechanism* (flock? rename? advisory lock?) is unverified.
 - **O4 — Are commit/render timestamps stored in local time or UTC today?** Determines whether R4 is a fix or already satisfied; unverifiable from the material.
 - **O5 — Can render events currently be joined to a `planned` line id?** If not, R3/R2 are prerequisites before the original question becomes answerable at all.
@@ -100,7 +100,7 @@ These remain open because they require on-host access this line does not have; t
 Named per the grounding rule. I cite only what was supplied to this line; I do **not** assert internal file paths I cannot verify.
 
 - **`hngh/hngh-automation`** — repository named in the line's scope. *Internal file paths not verified from the material provided.*
-- **`/home/bricker/Projects/etc/hngh`** — hngh kernel repository root, named in the line's scope. *Internal file paths not verified from the material provided.*
+- **`~/Projects/etc/hngh`** — hngh kernel repository root, named in the line's scope. *Internal file paths not verified from the material provided.*
 - **[[sources/high-risk-file-collision-in-nightly-cycle-orchestrator]]** — prior art (read-only vault pointer): "Three plans writing overnight." Source of risk signal F3a. Treated as a named pointer, not as live log data.
 - **[[sources/timezone-local-vs-utc-rendering-fabricates-missing-commits]]** — prior art (read-only vault pointer): local-time git date display fabricating missing commits. Source of risk signal F3b and of constraint F4. Treated as a named pointer, not as live log data.
 - **[[sources/ainglish-org-evidence-lifecycle]]** — prior art (read-only vault pointer): evidence-first proposal lifecycle for `a`. Contextual; grounds the "evidence gap ≠ proof of safety" stance.

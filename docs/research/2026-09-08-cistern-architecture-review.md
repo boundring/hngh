@@ -35,7 +35,7 @@ Cistern’s success hinges on threading **one immutable state object** through a
 ## Recommendations
 
 ### 1. Adopt 5-Layer Module Layout with Strict Port Interfaces
-Implement the following module structure in `/home/bricker/Projects/etc/hngh`:
+Implement the following module structure in `~/Projects/etc/hngh`:
 
 | Layer | Hngh Path | Responsibility | Dependency Rule |
 | :--- | :--- | :--- | :--- |
@@ -70,7 +70,7 @@ Do not fuse `view` and `input` into a single "UI" module. Keep them separate to 
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` (Hngh Kernel Repository)
+- `~/Projects/etc/hngh` (Hngh Kernel Repository)
 - `[[cases/cistern-emacs-rewrite]]` (Cistern Emacs Rewrite Case Study)
 - `[[sources/cistern-project-findings]]` (Cistern Project Findings)
 - `[[concepts/clean-architecture]]` (Clean Architecture for Agent Systems)

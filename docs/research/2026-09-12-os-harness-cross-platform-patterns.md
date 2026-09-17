@@ -16,7 +16,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-os-harness-cross-platfo
 
 This record folds the expanding-phase findings (F1–F4, as referenced in the transition note of the prior beat) into enforceable recommendations for `hngh` / `hngh-automation`. The prior material was truncated at the model call boundary; the F1–F4 text is not fully recoverable from the record as stored. What follows reconstructs the finding structure from the research question, the prior-art pointers, and the stated intent of the contraction ("concrete, enforceable recommendations"). Where a claim depends on external technical documentation (D-Bus interface specifications, XCB protocol details, CDP wire format) rather than on content verifiable in this repository or the kernel repository, I flag it explicitly.
 
-I could not perform live inspection of `/home/bricker/Projects/etc/hngh` or the automation repository at the time of this contraction. File-path citations below are limited to root-level identifiers that appear in the prior material or are structurally implied by the repository names. **No specific sub-directory or file path is asserted as existing unless it appears verbatim in the prior record.**
+I could not perform live inspection of `~/Projects/etc/hngh` or the automation repository at the time of this contraction. File-path citations below are limited to root-level identifiers that appear in the prior material or are structurally implied by the repository names. **No specific sub-directory or file path is asserted as existing unless it appears verbatim in the prior record.**
 
 ---
 

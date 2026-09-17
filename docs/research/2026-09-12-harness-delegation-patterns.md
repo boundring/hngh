@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-harness-delegation-patt
 
 ## 0. Grounding statement (read first)
 
-This line never obtained verified filesystem reads against `/home/bricker/Projects/etc/hngh` or against the OpenSandbox, Multica, or jcode codebases. The expanding beat ended before any exploration; the contracting beat explicitly declined to invent paths. This crystallization honors that constraint:
+This line never obtained verified filesystem reads against `~/Projects/etc/hngh` or against the OpenSandbox, Multica, or jcode codebases. The expanding beat ended before any exploration; the contracting beat explicitly declined to invent paths. This crystallization honors that constraint:
 
 - **No file path inside the hngh kernel repository is cited as verified.** The repository location is known only as a pointer from the research program.
 - Vault notes under **Prior art** are cited as named; their existence is attested by the line's pointer list, but their contents were not re-read in this transition.
@@ -67,7 +67,7 @@ Ports-and-adapters layering, distributed barriers, and daemon fleets are multi-h
 
 ## 3. Open threads (for successor lines)
 
-1. **Spawn-site audit [verify].** The concrete deliverable this line could not produce: a verified list of every fork/exec/spawn call site in `/home/bricker/Projects/etc/hngh` and the automation repos. This gates R1.
+1. **Spawn-site audit [verify].** The concrete deliverable this line could not produce: a verified list of every fork/exec/spawn call site in `~/Projects/etc/hngh` and the automation repos. This gates R1.
 2. **Ceremony write-serialization check [verify].** Read the ceremony implementation; confirm or refute single-writer plan mutation. Gates R2.
 3. **Contract schema versioning.** If R3 adds fields to the Run Contract, how do in-flight workers on older contract versions behave? Interacts with Multica-style version-follow; no vault note yet covers contract versioning.
 4. **External verification [external].** All three comparison systems (OpenSandbox, Multica, jcode) were treated as pattern sources only. Any future line claiming their *mechanisms* must read their code; this line's descriptions should not be quoted as fact about those systems.
@@ -88,7 +88,7 @@ Named and attested by the line's prior-art pointers (existence attested, content
 
 Named but **not verified** (no file within cited confidently):
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (path from research program; unread in this line)
+- `~/Projects/etc/hngh` — hngh kernel repository (path from research program; unread in this line)
 - OpenSandbox, Multica, jcode codebases — external; all claims tagged [external]
 
 *Line closed in contracting state. The record's honest summary: four patterns studied, one principle extracted, five recommendations issued, zero files verified — and the verification debt is now the first open thread.*

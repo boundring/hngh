@@ -47,7 +47,7 @@ The latency itself is almost certainly by-design (a safety bound). The *re-fire 
 
 **Expected outcome:** A single constant (e.g., `TIMEOUT=137` or `RETRY_BACKOFF=109`) that explains the slow-mode cluster. If found, the "defect vs. by-design" question dissolves: the latency is *by design* as a safety bound, and the only real issue is why rows hit it repeatedly.
 
-**If not found in the beat script:** The constant lives in a dependency (a library call with an internal timeout). This expands scope to the hngh kernel repository at `/home/bricker/Projects/etc/hngh`; escalate there.
+**If not found in the beat script:** The constant lives in a dependency (a library call with an internal timeout). This expands scope to the hngh kernel repository at `~/Projects/etc/hngh`; escalate there.
 
 **Status:** Open. I cannot verify file contents from this position.
 
@@ -109,6 +109,6 @@ The line remains in motion on idle hosts; R1–R3 are the concrete next actions 
 ## References
 
 - `dropin:33-research-beat.sh` — subject script; path not confirmed from this position. Referenced throughout the research line and prior material as the firing mechanism under investigation.
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository; named in the research-line prompt as the escalation target if R1 does not find the constant in the beat script. I cannot verify its contents from here.
+- `~/Projects/etc/hngh` — hngh kernel repository; named in the research-line prompt as the escalation target if R1 does not find the constant in the beat script. I cannot verify its contents from here.
 - Prior material on this line (research beat 2026-09-14, state expanding → contracting) — source of findings F1–F5 and recommendations R1–R3 as reconstructed above. The R3 text was truncated at 4000 bytes in the prior record; the reconstruction in this summary is inferred from context.
 - `[[sources/SRC-2026-08-24-002]]`, `[[sources/SRC-2026-08-24-021]]`, `[[concepts/evidence-ledger]]`, `[[sources/SRC-2026-08-24-011]]`, `[[sources/SRC-2026-08-18-005]]`, `[[syntheses/portfolio-index]]` — llm-wiki vault pointers (read-only). Noted as prior-art context; contents not verified from this position.

@@ -3,9 +3,9 @@
 Status: crystallized 2026-09-07 from research line `govbench-weak-validation-baseline`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-govbench-weak-validation-baseline.md.
 
-I cannot produce the requested "final structured summary" grounded in the `hngh` kernel repository because I do not have access to the local filesystem path `/home/bricker/Projects/etc/hngh` or any other external file systems. As an AI model, I cannot verify the existence of specific files, read code, or validate claims against a private repository unless that content is explicitly provided in the prompt.
+I cannot produce the requested "final structured summary" grounded in the `hngh` kernel repository because I do not have access to the local filesystem path `~/Projects/etc/hngh` or any other external file systems. As an AI model, I cannot verify the existence of specific files, read code, or validate claims against a private repository unless that content is explicitly provided in the prompt.
 
-Therefore, I cannot cite concrete file paths from that repository, nor can I confirm if specific validation mechanisms (like "rubber-stamp approval" scripts or "auto-merge" configurations) exist within it. Any claim about the contents of `/home/bricker/Projects/etc/hngh` would be a hallucination.
+Therefore, I cannot cite concrete file paths from that repository, nor can I confirm if specific validation mechanisms (like "rubber-stamp approval" scripts or "auto-merge" configurations) exist within it. Any claim about the contents of `~/Projects/etc/hngh` would be a hallucination.
 
 However, based on standard software engineering principles and the terminology in your query, I can provide a **theoretical crystallization** of the research line. This serves as a template for you to fill in with verified evidence from your local environment.
 
@@ -27,9 +27,9 @@ However, based on standard software engineering principles and the terminology i
 3.  **Measure "Trust Gap":** Quantify the difference in defect rates or security incidents between code paths that bypass validation (e.g., via `--no-verify` or trusted maintainer flags) and those that undergo full governance. This provides empirical evidence of the baseline's weakness.
 
 #### Open Threads
-1.  **Repository-Specific Validation Paths:** *Requires local verification.* Identify all merge paths in `/home/bricker/Projects/etc/hngh`. Classify them by validation level (none, test-only, human-reviewed). Are there any "trusted maintainer" bypasses?
+1.  **Repository-Specific Validation Paths:** *Requires local verification.* Identify all merge paths in `~/Projects/etc/hngh`. Classify them by validation level (none, test-only, human-reviewed). Are there any "trusted maintainer" bypasses?
 2.  **Rubber-Stamp Detection Metrics:** *Requires local verification.* Can we detect rubber-stamp approval patterns in the commit history? Look for correlations between rapid approvals (<X minutes) and subsequent reverts or bug reports.
 3.  **Cost of Null Validation in Kernel Contexts:** *Requires local verification.* What is the historical cost of build failures or security exploits in `hngh` when validation was bypassed? This provides a concrete metric for the "null baseline."
 
 #### References
-*   **None.** I cannot cite files from `/home/bricker/Projects/etc/hngh` as I do not have access to this repository. Please replace this section with verified file paths and commit hashes from your local environment that support the findings above.
+*   **None.** I cannot cite files from `~/Projects/etc/hngh` as I do not have access to this repository. Please replace this section with verified file paths and commit hashes from your local environment that support the findings above.

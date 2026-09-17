@@ -9,7 +9,7 @@ _line: Does the hngh kernels reconciliation loop currently handle a "timeout_com
 
 ## Findings
 
-**1. The core question is NOT answered with verified evidence.** Neither this transition nor the recorded prior transition achieved working file-level access to `/home/bricker/Projects/etc/hngh`. No source file from the hngh kernel repository was read, grepped, or cited during this line's lifetime. Any claim about the reconciliation loop's actual branches would be fabrication, so none is made.
+**1. The core question is NOT answered with verified evidence.** Neither this transition nor the recorded prior transition achieved working file-level access to `~/Projects/etc/hngh`. No source file from the hngh kernel repository was read, grepped, or cited during this line's lifetime. Any claim about the reconciliation loop's actual branches would be fabrication, so none is made.
 
 **2. What is established from the prior expanding transition (unverified but structured):** the reconciliation loop's handling of `timeout_complete` resolves to exactly one of three shapes:
 
@@ -37,13 +37,13 @@ _line: Does the hngh kernels reconciliation loop currently handle a "timeout_com
 
 ## Verification gaps (explicit)
 
-- No file inside `/home/bricker/Projects/etc/hngh` was opened in this line. The repository path itself is given by the operator, so its existence is asserted by the environment, not verified by me.
+- No file inside `~/Projects/etc/hngh` was opened in this line. The repository path itself is given by the operator, so its existence is asserted by the environment, not verified by me.
 - All three implementation shapes are hypotheses; none is confirmed.
 - The semantics of the prior-art pointers are inferred from their titles; their contents were not read in this line.
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (path given by operator; contents unverified this line).
+- `~/Projects/etc/hngh` — hngh kernel repository (path given by operator; contents unverified this line).
 - `research-lines.tsv` — line state ledger (current repository).
 - `[[sources/SRC-2026-08-24-026]]` — Hngh Roadmap (current state, 2026-08-24) (llm-wiki vault, read-only pointer).
 - `[[concepts/llm-upstream-idle-timeout-incremental-writes]]` — LLM Upstream Idle Timeout and Incremental Writes (llm-wiki vault, read-only pointer).

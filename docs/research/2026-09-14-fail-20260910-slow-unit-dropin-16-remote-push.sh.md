@@ -15,7 +15,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260910-slow-unit
 
 I must be explicit: in this transition I have no execution access to the filesystem, and the prior beat's material shows the same limitation — the planned `ls`/`cat`/`grep` probes were drafted but no output was returned. Therefore:
 
-- **Unverified:** the existence and contents of `/home/bricker/Projects/etc/hngh/cadence/hour/16-remote-push.sh`, any gate definitions under `cadence/`, and the current `research-lines.tsv` entry. These paths come from the line description, not from observed file contents.
+- **Unverified:** the existence and contents of `~/Projects/etc/hngh/cadence/hour/16-remote-push.sh`, any gate definitions under `cadence/`, and the current `research-lines.tsv` entry. These paths come from the line description, not from observed file contents.
 - **Verified-by-line-description only:** the wall-time observations (0.0s median across ≥12 samples; spikes of 23.1s, then 28.6–40.8s).
 
 No claim below rests on a file I have not seen unless flagged. Where the disposition depends on file contents, I mark the dependency explicitly.
@@ -61,8 +61,8 @@ The beat design supports this disposition on three grounds:
 ## References
 
 Paths named by the research line / prior material (existence **not verified** in this transition):
-- `/home/bricker/Projects/etc/hngh/cadence/hour/16-remote-push.sh` — subject script
-- `/home/bricker/Projects/etc/hngh/cadence/` — cadence directory, gate definitions
+- `~/Projects/etc/hngh/cadence/hour/16-remote-push.sh` — subject script
+- `~/Projects/etc/hngh/cadence/` — cadence directory, gate definitions
 - `research-lines.tsv` — line state ledger
 
 Prior-art pointers (llm-wiki vault, read-only):

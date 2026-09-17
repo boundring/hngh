@@ -46,7 +46,7 @@ If implementation capacity is scarce, item 1 alone converts the failure from "si
 
 ## Open threads
 
-- **OT1 (verification):** Read `cadence/hour/33-research-beat.sh` in the hngh kernel (`/home/bricker/Projects/etc/hngh`) to confirm where `wall_s` is measured, whether any timeout/retry logic already exists, and how the prompt is assembled. All findings above about script internals are inferred, not read.
+- **OT1 (verification):** Read `cadence/hour/33-research-beat.sh` in the hngh kernel (`~/Projects/etc/hngh`) to confirm where `wall_s` is measured, whether any timeout/retry logic already exists, and how the prompt is assembled. All findings above about script internals are inferred, not read.
 - **OT2 (attribution):** Decompose the 387.1s tail — retries vs. prompt growth vs. endpoint contention — using the split instrumentation from recommendation 4.
 - **OT3 (fleet check):** Determine whether other scripts under `cadence/hour/` share the same unguarded model-leg pattern; if so, the fix should land as a shared wrapper, not a one-off edit.
 - **OT4 (metric provenance):** Establish where the "0.1s median" claim originated — legacy instrumentation of a pre-model beat, or a mislabeled log field — so future line entries compare like with like.
@@ -61,9 +61,9 @@ If implementation capacity is scarce, item 1 alone converts the failure from "si
 
 ## References
 
-- `cadence/hour/33-research-beat.sh` — the beat under study (hngh kernel repository, `/home/bricker/Projects/etc/hngh`; path named in the research line).
+- `cadence/hour/33-research-beat.sh` — the beat under study (hngh kernel repository, `~/Projects/etc/hngh`; path named in the research line).
 - `research-lines.tsv` — line state ledger (path named in the task prompt).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root (named in the task prompt).
+- `~/Projects/etc/hngh` — hngh kernel repository root (named in the task prompt).
 - `[[sources/long-gates-run-async-against-interjections]]` — llm-wiki vault, prior-art pointer: run long verification gates async so interjections are not blocked.
 - `[[sources/debug-repro-sandboxes-only]]` — llm-wiki vault, prior-art pointer (listed in prior material; not directly load-bearing for the findings).
 - Prior beat on this line (2026-09-13, deck:deck-7b, wall_s 56.0) — truncated at max_tokens cap; cited as evidence for F3.

@@ -13,7 +13,7 @@ _line: What do A Drifting Life-class works (gekiga autobiography) teach about de
 
 Two honesty constraints shaped this summary:
 
-1. **Repository access.** I cannot read the local filesystem in this transition. The prior beat material names `research-lines.tsv`, `manga-draft.py` (with a `NARRATIONS` bank), dialogue templates, and the hngh kernel at `/home/bricker/Projects/etc/hngh`. I treat these as **claimed-by-prior-material, unverified-by-me** — the References section marks each accordingly. I do not assert any additional file paths.
+1. **Repository access.** I cannot read the local filesystem in this transition. The prior beat material names `research-lines.tsv`, `manga-draft.py` (with a `NARRATIONS` bank), dialogue templates, and the hngh kernel at `~/Projects/etc/hngh`. I treat these as **claimed-by-prior-material, unverified-by-me** — the References section marks each accordingly. I do not assert any additional file paths.
 2. **Truncated prior beat.** The prior contracted thesis cut off at "The useful distillation from gekiga autobiography is not 'write…". I complete it below; the completion is my reconstruction, flagged as such.
 
 ---
@@ -55,7 +55,7 @@ The line's conclusion: this register maps almost one-to-one onto machine self-na
 
 Claimed by prior material; **not independently verified in this transition** (no filesystem access available):
 - `research-lines.tsv` — line state file (this repository)
-- `manga-draft.py` — comedy bank containing `NARRATIONS` (hngh kernel repository, `/home/bricker/Projects/etc/hngh`)
+- `manga-draft.py` — comedy bank containing `NARRATIONS` (hngh kernel repository, `~/Projects/etc/hngh`)
 - hngh "dialogue templates" — named in the line description; no path given in prior material
 - llm-wiki vault pointers: `[[concepts/context-distillation]]`, `[[sources/SRC-2026-08-18-006]]` (read-only; the second entry was itself truncated in the prior material)
 

@@ -22,7 +22,7 @@ The prior-art landscape synthesis (`hngh-prior-art-landscape-2026-08`) situates 
 
 ### What remains unconfirmed
 
-**Neither of the two specific technical questions has been resolved by direct source inspection.** The prior expanding beat explicitly flagged this limitation: it could not execute commands or read the file system at `/home/bricker/Projects/etc/hngh` or within `hngh/hngh-automation`. All inferences about parser internals (hardcoded string vs. schema validation, stateless re-validation vs. cached override) were framed as hypotheses grounded in architectural reasoning, not in confirmed source reads.
+**Neither of the two specific technical questions has been resolved by direct source inspection.** The prior expanding beat explicitly flagged this limitation: it could not execute commands or read the file system at `~/Projects/etc/hngh` or within `hngh/hngh-automation`. All inferences about parser internals (hardcoded string vs. schema validation, stateless re-validation vs. cached override) were framed as hypotheses grounded in architectural reasoning, not in confirmed source reads.
 
 Specifically:
 
@@ -43,9 +43,9 @@ These are the concrete actions that would resolve the two open questions. They a
 ### R1: Grep for the rejection string across both repositories
 
 ```bash
-grep -rn "has no Verification line" /home/bricker/Projects/etc/hngh/ hngh/hngh-automation/
-grep -rn "no.*[Vv]erification.*line" /home/bricker/Projects/etc/hngh/ hngh/hngh-automation/
-grep -rn "verification.line" /home/bricker/Projects/etc/hngh/ hngh/hngh-automation/ --include="*.py" --include="*.rs" --include="*.ts" --include="*.go"
+grep -rn "has no Verification line" ~/Projects/etc/hngh/ hngh/hngh-automation/
+grep -rn "no.*[Vv]erification.*line" ~/Projects/etc/hngh/ hngh/hngh-automation/
+grep -rn "verification.line" ~/Projects/etc/hngh/ hngh/hngh-automation/ --include="*.py" --include="*.rs" --include="*.ts" --include="*.go"
 ```
 
 This directly answers question 1 (hardcoded string or not) and locates the exact file. If the string appears in a schema definition, a validator module, or a test fixture rather than in parser logic, that refines the architectural understanding. **Confidence in this action's value: high.** The grep is cheap and disambiguating.
@@ -66,7 +66,7 @@ The prior beat's hypothesis that the check lives in the `hngh` kernel (shared wi
 
 ```bash
 # Look for a validation or parser module in the kernel
-find /home/bricker/Projects/etc/hngh -type f \( -name "*valid*" -o -name "*parse*" -o -name "*accept*" \) | head -40
+find ~/Projects/etc/hngh -type f \( -name "*valid*" -o -name "*parse*" -o -name "*accept*" \) | head -40
 # Check if hngh-automation imports from the kernel
 grep -rn "from.*hngh\|import.*hngh\|require.*hngh" hngh/hngh-automation/ --include="*.py" --include="*.rs" --include="*.ts"
 ```
@@ -116,4 +116,4 @@ The line's lasting value is the **operational signal**: the Verification-line ch
 - `[[sources/backlog-disposition-sweep-reduces-accepted-plans-by-half]]` — Evidence-gated disposition sweep; shows acceptance outcomes are quality-gated.
 - `[[sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled]]` — Confirms the overnight automation harness was built, verified, and enabled as a unit.
 
-*No file paths within `/home/bricker/Projects/etc/hngh` or `hngh/hngh-automation` are cited in this record because none have been verified to exist by direct inspection. All references above are vault notes (llm-wiki pointers) provided in the prior material.*
+*No file paths within `~/Projects/etc/hngh` or `hngh/hngh-automation` are cited in this record because none have been verified to exist by direct inspection. All references above are vault notes (llm-wiki pointers) provided in the prior material.*

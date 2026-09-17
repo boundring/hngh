@@ -32,7 +32,7 @@ At a 30-minute cadence (1800 s interval), 258.9 s is ≈ 14 % of the interval. A
 Per [[sources/long-gates-run-async-against-interjections]] and [[sources/debug-repro-sandboxes-only]], the established posture is: long legs are expected, isolated, and not poked on live hosts for debugging. Per [[sources/SRC-2026-08-24-021]] (Evidence Ledger Design) and [[concepts/governance-models]], a disposition must be recorded as an evidence-ledger entry, not left implicit. Under that posture, one long-but-bounded model leg on an idle host is a **park**, not a fix.
 
 **F5 — hngh kernel repository: no file-level claims made.**
-The kernel repository at `/home/bricker/Projects/etc/hngh` was not inspected in this line's transitions. No kernel-internal file paths are asserted here. This is an explicit evidence gap, not an omission; the disposition does not depend on kernel internals because the overflow script's behavior is self-contained in its own branch logic and model-leg invocation.
+The kernel repository at `~/Projects/etc/hngh` was not inspected in this line's transitions. No kernel-internal file paths are asserted here. This is an explicit evidence gap, not an omission; the disposition does not depend on kernel internals because the overflow script's behavior is self-contained in its own branch logic and model-leg invocation.
 
 ---
 
@@ -58,7 +58,7 @@ The kernel repository at `/home/bricker/Projects/etc/hngh` was not inspected in 
 
 2. **Beat-log evidence.** The per-run structured log (R2) does not yet exist. Until it does, defect hypotheses (retry loop, lock contention, reaped hang) remain neither confirmed nor ruled out. This is the single piece of evidence that could flip the disposition from park to fix. It accumulates passively on idle hosts; no active investigation is required.
 
-3. **Kernel-repository interaction.** If a future escalation trigger fires and the drain path's model leg interacts with kernel state (e.g., a lock in `/home/bricker/Projects/etc/hngh`), that repository becomes relevant. No claim here depends on it; the gap is noted for completeness.
+3. **Kernel-repository interaction.** If a future escalation trigger fires and the drain path's model leg interacts with kernel state (e.g., a lock in `~/Projects/etc/hngh`), that repository becomes relevant. No claim here depends on it; the gap is noted for completeness.
 
 4. **Queue-depth trend.** F3's static bound (14 % of interval) does not monitor dynamically. If R2's instrumentation shows queue depth trending upward across drain runs, the structural-risk question reopens without a new wall-time observation being needed.
 
@@ -76,7 +76,7 @@ The kernel repository at `/home/bricker/Projects/etc/hngh` was not inspected in 
 
 - `cadence/30m/50-research-overflow.sh` — the script under investigation; path named in the line itself.
 - `research-lines.tsv` — line-state file; target for R1 ledger entry.
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root; no internal paths asserted (evidence gap, F5).
+- `~/Projects/etc/hngh` — hngh kernel repository root; no internal paths asserted (evidence gap, F5).
 - [[sources/SRC-2026-08-24-021]] — Autonomous Development Control (Evidence Ledger Design); grounds the requirement to record disposition as a ledger entry.
 - [[concepts/governance-models]] — Governance Models; grounds the evidence-ledger recording requirement.
 - [[sources/long-gates-run-async-against-interjections]] — Run long verification gates async so interjections are not blocked; grounds the "long legs are expected and isolated" posture.

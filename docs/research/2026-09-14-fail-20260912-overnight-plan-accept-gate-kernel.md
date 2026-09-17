@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260912-overnight
 
 **Line:** Was the 2026-09-12 kernel `make test` rc=2 that blocked routed-plan acceptance a real kernel defect or a load transient, and what disposition (fix or park) closes alert identity `overnight:plan-accept-gate:kernel`?
 **Lifecycle state:** contracting — this record is the line's lasting form.
-**Repo under study:** `/home/bricker/Projects/etc/hngh` (hngh kernel repository; location as stated in the line, internal paths not verified from this position — see References).
+**Repo under study:** `~/Projects/etc/hngh` (hngh kernel repository; location as stated in the line, internal paths not verified from this position — see References).
 
 ---
 
@@ -42,7 +42,7 @@ The acceptance gate consumes bare rc=2 without parsing make output. [[sources/hn
 The line holds here until an artifact is produced; neither "fix" nor "park" is a valid closing action against the current record. Parking without reproduction would convert a possibly-transient rc=2 into an accepted durable blocker, contradicting the evidence-gated disposition discipline in F5.
 
 **R2 — Precondition: upgrade the gate to parse make output.**
-Before any disposition can be evidence-gated, the acceptance harness must capture and log, at failure time: (a) the specific failing target (e.g., `make[1]: *** [tests/... ] Error 2`), (b) the trailing stderr of the failing recipe, and (c) host load metrics from standard procfs — `/proc/loadavg`, `/proc/meminfo`, `/proc/stat` (these paths exist by construction on any Linux host running this kernel). Only then does a closing artifact become structured rather than a bare rc. *Note: I cannot verify the concrete source path of the acceptance harness inside `/home/bricker/Projects/etc/hngh` from this position; that is an open gap, not a claim.*
+Before any disposition can be evidence-gated, the acceptance harness must capture and log, at failure time: (a) the specific failing target (e.g., `make[1]: *** [tests/... ] Error 2`), (b) the trailing stderr of the failing recipe, and (c) host load metrics from standard procfs — `/proc/loadavg`, `/proc/meminfo`, `/proc/stat` (these paths exist by construction on any Linux host running this kernel). Only then does a closing artifact become structured rather than a bare rc. *Note: I cannot verify the concrete source path of the acceptance harness inside `~/Projects/etc/hngh` from this position; that is an open gap, not a claim.*
 
 **R3 — Run a controlled retest to force the classification.**
 As soon as an idle host presents, quiesce non-essential agent load, re-run `make test` at the same parallelism (`-j`) as the original failure, and capture full make output plus `/proc/loadavg`/`/proc/meminfo`. The result splits the line decisively:

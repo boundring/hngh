@@ -1,11 +1,11 @@
-# On host touch, which exact file and line in /home/bricker/Projects/etc/hngh consumes the make exit code, and is it a `set -e` abort or an explicit status branch?
+# On host touch, which exact file and line in ~/Projects/etc/hngh consumes the make exit code, and is it a `set -e` abort or an explicit status branch?
 
 Status: crystallized 2026-09-16 from research line `fail-20260915-On-host-touch-which-exact-file-and-line-`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-On-host-touch-which-exact-file-and-line-.md.
 
 # Contraction — final record for line
 
-**Line:** On host touch, which exact file and line in `/home/bricker/Projects/etc/hngh` consumes the make exit code, and is it a `set -e` abort or an explicit status branch?
+**Line:** On host touch, which exact file and line in `~/Projects/etc/hngh` consumes the make exit code, and is it a `set -e` abort or an explicit status branch?
 **State:** contracting → crystallized (record closed; core determination *not* resolvable from verifiable material — see §2)
 
 ---
@@ -13,12 +13,12 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-On-host-t
 ## 1. Question under investigation
 
 Two coupled sub-questions:
-1. **Location:** the exact file and line in `/home/bricker/Projects/etc/hngh` that consumes the exit status of a `make` invocation in the "host touch" flow.
+1. **Location:** the exact file and line in `~/Projects/etc/hngh` that consumes the exit status of a `make` invocation in the "host touch" flow.
 2. **Mechanism:** whether that consumption is (a) an implicit abort via `set -e` / `set -o errexit`, or (b) an explicit status branch (`rc=$?`, `|| exit`, `if ! make …`, etc.).
 
 ## 2. Findings
 
-**The core determination cannot be established from the material available to me, and I will not assert a file path or line number that I cannot verify.** I have no read access to `/home/bricker/Projects/etc/hngh` (or to "this repository") in this context; therefore I cannot ground the location claim in the repo as the line's grounding rule requires. Any specific filename or line number offered here would be fabricated, and I decline to offer one.
+**The core determination cannot be established from the material available to me, and I will not assert a file path or line number that I cannot verify.** I have no read access to `~/Projects/etc/hngh` (or to "this repository") in this context; therefore I cannot ground the location claim in the repo as the line's grounding rule requires. Any specific filename or line number offered here would be fabricated, and I decline to offer one.
 
 What *is* on record:
 - The prior contraction attempt for this date was truncated at the model call (completion hit the max-token cap, `finish_reason=length`) and recorded **no confirmed finding**. So before this crystallization there is no verified answer in the line's own history.

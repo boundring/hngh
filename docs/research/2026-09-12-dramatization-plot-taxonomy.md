@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-dramatization-plot-taxo
 
 _line: Which comedy dramatization plot types (incongruity, escalation, reversal, slapstick, deadpan) map cleanly onto CAMEO event lanes (conflict/cooperation/aid/yield) for procedural gag generation, with what attribution-safety boundaries? | state: contracting -> **closed**_
 
-**Grounding caveat, carried forward and restated for the record:** across this line's beats I have not been able to open the filesystem. The only path cited with confidence remains `research-lines.tsv` (named by the operator). I cannot verify the layout of `/home/bricker/Projects/etc/hngh` or any `hngh-automation` tree, so **no kernel file paths are asserted anywhere below**. The two prior-art vault pointers were supplied read-only and are cited unopened. Anything below that would need repo verification is explicitly flagged rather than asserted.
+**Grounding caveat, carried forward and restated for the record:** across this line's beats I have not been able to open the filesystem. The only path cited with confidence remains `research-lines.tsv` (named by the operator). I cannot verify the layout of `~/Projects/etc/hngh` or any `hngh-automation` tree, so **no kernel file paths are asserted anywhere below**. The two prior-art vault pointers were supplied read-only and are cited unopened. Anything below that would need repo verification is explicitly flagged rather than asserted.
 
 ---
 
@@ -66,7 +66,7 @@ This line has said what it has to say: the taxonomy question is answered (§1.1)
 ## References
 
 - `research-lines.tsv` — line state ledger (path named by operator; cited with confidence, contents not re-verified this beat)
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (named by operator; **layout unverified — no files within it are cited**)
+- `~/Projects/etc/hngh` — hngh kernel repository (named by operator; **layout unverified — no files within it are cited**)
 - `[[sources/obs-2026-08-25-post-rung-11-documentation-refresh-attribution-record-and-au]]` — llm-wiki vault pointer, read-only, unopened
 - `[[sources/session-budget-burn-prevents-discretionary-plan-selection]]` — llm-wiki vault pointer, read-only, unopened
 - CAMEO event-coding scheme and Goldstein intensity scale — external prior art relied on conceptually throughout; **not re-verified against external sources during this line**

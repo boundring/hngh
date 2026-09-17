@@ -17,7 +17,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 
 1. **Confirmed:** A machine-readable generation step exists in the pipeline. The Hngh Component Map is auto-generated from `meta/registry.json` and carries the explicit policy *"Do not edit manually"* (SRC-2026-08-24-027). This establishes that the registry is treated as an authoritative artifact from which derived documents are produced mechanically.
 
-2. **Unconfirmed:** Whether `meta/registry.json` itself is generated *from source code* or hand-maintained. No generator script, CI workflow, or schema file has been verified at any path under `/home/bricker/Projects/etc/hngh`. This is the gating fact for the lint-check half of the question, and it could not be resolved from the available material.
+2. **Unconfirmed:** Whether `meta/registry.json` itself is generated *from source code* or hand-maintained. No generator script, CI workflow, or schema file has been verified at any path under `~/Projects/etc/hngh`. This is the gating fact for the lint-check half of the question, and it could not be resolved from the available material.
 
 3. **Conditionally established:** A no-manual-maintenance lint check is *feasible by construction* — regenerate-and-diff in CI — but its concrete design depends on properties of a generator whose existence is not yet confirmed.
 
@@ -29,7 +29,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 SRC-2026-08-24-027 attests the Component Map is auto-generated from `meta/registry.json`. The one file path citable with confidence is `meta/registry.json` within the hngh kernel repository. The generation direction implies `registry.json` is the upstream source of truth for at least one consumer.
 
 ### F2 — Unconfirmed: source → registry generation
-No evidence was obtained for or against a generator producing `meta/registry.json` from source code. Candidate shapes (a script under a tools directory, a CI workflow, a build-system rule) are search targets only, not facts. I could not inspect `/home/bricker/Projects/etc/hngh` directly during this line's execution; this gap is recorded honestly rather than papered over.
+No evidence was obtained for or against a generator producing `meta/registry.json` from source code. Candidate shapes (a script under a tools directory, a CI workflow, a build-system rule) are search targets only, not facts. I could not inspect `~/Projects/etc/hngh` directly during this line's execution; this gap is recorded honestly rather than papered over.
 
 ### F3 — Conditional: lint design is well-formed regardless
 The regenerate-and-diff pattern requires no invention — it is standard practice for generated artifacts — but its error quality depends on two generator properties: **determinism** (stable key order, no embedded timestamps) and **source-location metadata** (file/line fields per registry entry). Neither property is verified. I note explicitly that the claim "regenerate-and-diff is standard practice" is an external-source claim I did not verify against literature during this line; it is asserted as engineering common knowledge, not as a cited finding.
@@ -60,11 +60,11 @@ A JSON Schema gate on `meta/registry.json` catches structural drift even if cont
 
 ## Lifecycle Note
 
-This line is contracted, not closed. OT-1 is a one-command resolution; if an idle host gains shell access to `/home/bricker/Projects/etc/hngh`, this line can be reopened and settled in a single beat. Until then, the honest terminal state is: **one generation stage confirmed, the decisive one unverified, and a ready-to-execute plan for both outcomes.**
+This line is contracted, not closed. OT-1 is a one-command resolution; if an idle host gains shell access to `~/Projects/etc/hngh`, this line can be reopened and settled in a single beat. Until then, the honest terminal state is: **one generation stage confirmed, the decisive one unverified, and a ready-to-execute plan for both outcomes.**
 
 ## References
 
-- `meta/registry.json` — hngh kernel repository (`/home/bricker/Projects/etc/hngh`); cited with confidence as the registry's canonical path per SRC-2026-08-24-027.
+- `meta/registry.json` — hngh kernel repository (`~/Projects/etc/hngh`); cited with confidence as the registry's canonical path per SRC-2026-08-24-027.
 - `[[sources/SRC-2026-08-24-027]]` — Hngh Component Map (llm-wiki vault); source of the "Auto-generated from meta/registry.json. Do not edit manually." attestation.
 - `[[entities/hngh]]` — Hngh Agent Kernel (llm-wiki vault).
 - `[[concepts/clean-architecture-for-machine-intelligences]]` — architectural framing (llm-wiki vault).

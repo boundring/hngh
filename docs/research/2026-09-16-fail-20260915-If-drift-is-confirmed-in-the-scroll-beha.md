@@ -27,7 +27,7 @@ Two of the three confirmed prior cases (verdict rule, timezone rendering) live i
 ### F3 — The candidate behaviors named in the line are plausible but NOT yet source-confirmed.
 The line names two specific candidates: **tab-state persistence** and **cost display** (per `2026-08-28-session-cost-display.md`). I must be explicit about the epistemic status of these:
 
-- The expanding beat completed only orientation (~6.0s wall). It located the line state and four prior-art pointers in the llm-wiki vault, but **did not finish a source-level sweep of `/home/bricker/Projects/etc/hngh`**.
+- The expanding beat completed only orientation (~6.0s wall). It located the line state and four prior-art pointers in the llm-wiki vault, but **did not finish a source-level sweep of `~/Projects/etc/hngh`**.
 - I therefore **cannot assert** that tab-state persistence or cost display are in fact duplicated-and-diverged. They are *candidates* selected because they match the known pattern's risk profile (shared state → rendered output, multiple surfaces), not because a fresh audit confirmed duplication.
 - The cost-display note (`2026-08-28-session-cost-display.md`) is referenced as the **intent document** for that behavior — i.e., it records what the behavior *should* be, which is exactly the artifact needed to detect divergence if two copies exist. Its existence in the vault is asserted by the line itself; I treat it as a pointer, not as evidence of duplication.
 
@@ -39,7 +39,7 @@ The honest state of this line is: **the pattern is confirmed; the specific scrol
 ## Recommendations
 
 **R1 — Enumerate the duplication surface before fixing anything.**
-Run a structural sweep of both repos (`/home/bricker/Projects/etc/hngh` and the automation repo) for the known suspect behaviors: scroll handling, tab-state persistence, and session cost display. Concrete grep targets: `addEventListener('scroll'` / `onscroll`, `sessionStorage` / `localStorage`, and the cost-formatting token(s) named in the cost-display note. Output: a two-column table (surface A path : surface B path) for each behavior found duplicated. **Do not start deduplication until this table exists** — fixing instances one at a time is precisely how the pattern got here.
+Run a structural sweep of both repos (`~/Projects/etc/hngh` and the automation repo) for the known suspect behaviors: scroll handling, tab-state persistence, and session cost display. Concrete grep targets: `addEventListener('scroll'` / `onscroll`, `sessionStorage` / `localStorage`, and the cost-formatting token(s) named in the cost-display note. Output: a two-column table (surface A path : surface B path) for each behavior found duplicated. **Do not start deduplication until this table exists** — fixing instances one at a time is precisely how the pattern got here.
 
 **R2 — Rank by user-visible asymmetry, not by code similarity.**
 The two confirmed prior cases (verdict rule, timezone rendering) were caught because they produced *observable contradictions*: two surfaces disagreeing about the same fact in the same session. Prioritize duplicated behaviors where the two copies can be rendered side-by-side in one dashboard session. On this criterion: cost display and tab-state persistence rank highest; scroll behavior ranks third unless the drift causes the layout regression described in `clean-at-any-size-1035px-lesson`.
@@ -67,7 +67,7 @@ Same epistemic status as O2: named in the line, referenced via `2026-08-28-sessi
 The drift-vs-install case shows the pattern also crosses the doc/code boundary, not just code/code. The sweep (R1) should include a pass over installed artifacts vs. their documentation to catch this class, which is currently under-weighted in R2's ranking (it produces observable contradictions only when a user reads the docs and then uses the install).
 
 **O5 — Cross-repo scope.**
-The line says "both repos" implicitly (hngh kernel + automation). The prior-art pointers are vault-level; I have not verified which specific files in `/home/bricker/Projects/etc/hngh` contain the duplicated logic. Any file-path claim in this record is a *search target*, not a confirmed path. The sweep must produce real paths before R3's deduplication can proceed.
+The line says "both repos" implicitly (hngh kernel + automation). The prior-art pointers are vault-level; I have not verified which specific files in `~/Projects/etc/hngh` contain the duplicated logic. Any file-path claim in this record is a *search target*, not a confirmed path. The sweep must produce real paths before R3's deduplication can proceed.
 
 ---
 
@@ -79,11 +79,11 @@ A **reusable detection-and-fix protocol** for the duplicated-and-diverged failur
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (sweep target; specific file paths not asserted in this record)
+- `~/Projects/etc/hngh` — hngh kernel repository (sweep target; specific file paths not asserted in this record)
 - `2026-08-28-session-cost-display.md` — intent document for session cost display behavior (referenced by the line as a pointer; treated as such, not as duplication evidence)
 - `[[sources/verdict-rule-drift-two-surfaces]]` — prior-art: shared verdict rule drifted across two surfaces in one repository
 - `[[sources/timezone-local-vs-utc-rendering-fabricates-missing-commits]]` — prior-art: local-time vs UTC git date display divergence
 - `[[sources/obs-2026-08-25-night-check-hngh-harness-healthy-timer-doc-vs-install-drift-]]` — prior-art: doc-vs-install drift observation
 - `[[sources/clean-at-any-size-1035px-lesson]]` — intent document for clean page behavior at any window size (scroll/layout)
 
-**Explicit non-verification note:** I have not performed a fresh source-level audit of `/home/bricker/Projects/etc/hngh` in this contraction. All file-path references above are either vault pointers or search targets from the line's prior material. No claim in this record asserts that a specific duplicated implementation exists at a specific path; those claims remain open threads O1–O5 pending the R1 sweep.
+**Explicit non-verification note:** I have not performed a fresh source-level audit of `~/Projects/etc/hngh` in this contraction. All file-path references above are either vault pointers or search targets from the line's prior material. No claim in this record asserts that a specific duplicated implementation exists at a specific path; those claims remain open threads O1–O5 pending the R1 sweep.

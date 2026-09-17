@@ -21,7 +21,7 @@ else
 fi
 
 # Check the hngh kernel repo for any references to this specific incident or key handling
-grep -r "OpenRouter" /home/bricker/Projects/etc/hngh --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | head -10
+grep -r "OpenRouter" ~/Projects/etc/hngh --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | head -10
 ```
 
 **Step 2: Analyze Findings from Verification**
@@ -63,7 +63,7 @@ The prior material's recommendation to "sanitize history" is **only necessary if
     *   The OpenRouter key itself is compromised and must be rotated.
 4.  **References:**
     *   `docs/research/2026-09-10-lobehub-api-research.md` (The file in question).
-    *   `/home/bricker/Projects/etc/hngh` (Kernel repo, context only).
+    *   `~/Projects/etc/hngh` (Kernel repo, context only).
 
 **Correction to Prior Material:**
 The prior material stated: *"GitHub’s secret scanning will block any push that includes a diff touching the file where the key was introduced... because the scanner re-evaluates the entire blob content of changed files."*
@@ -93,5 +93,5 @@ More accurately: The scanner checks the **new content** being pushed. If the key
 
 ### References
 1.  `docs/research/2026-09-10-lobehub-api-research.md:11,81` - The specific lines containing the OpenRouter key that triggered GitHub’s secret scanning rejection.
-2.  `/home/bricker/Projects/etc/hngh` - The kernel repository context; while not directly involved in the push failure, it represents the broader project structure where such automation repos reside.
+2.  `~/Projects/etc/hngh` - The kernel repository context; while not directly involved in the push failure, it represents the broader project structure where such automation repos reside.
 3.  `hngh/hngh-automation` - The target repository for the failed push.

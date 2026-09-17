@@ -10,17 +10,17 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-govbench-voting-prior-a
 1. **Signed-off-by Chain as Minimal Procedural Vote**
    - **Recommendation:** Adopt the `Signed-off-by` trailer convention as the minimal procedural vote. Each sign-off is a binary attestation: "I have reviewed this and take responsibility."
    - **Scoring Implication:** Under this model, scoring is binary per reviewer (signed / not signed). The only "count" that matters is whether the required set of identities appears in the trailer block.
-   - **Reference:** `/home/bricker/Projects/etc/hngh/Documentation/process/submitting-patches.rst` (Linux kernel's Contributor's Guide)
+   - **Reference:** `~/Projects/etc/hngh/Documentation/process/submitting-patches.rst` (Linux kernel's Contributor's Guide)
 
 2. **Formalize LGTM as a Structured Metadata Field**
    - **Recommendation:** Introduce a structured metadata field to capture LGTM or ack signals. This can be achieved by parsing review-thread LGTM counts into a score using a script.
    - **Verification Item:** Confirm the existence of a script that parses LGTM counts into a score.
-   - **Reference:** `/home/bricker/Projects/etc/hngh/scripts/` or `.github/workflows/`
+   - **Reference:** `~/Projects/etc/hngh/scripts/` or `.github/workflows/`
 
 3. **Define Explicit Quorum Rules**
    - **Recommendation:** Define explicit quorum rules in the repository governance documents. These rules should specify the minimum number of distinct sign-offs required before a change can be merged.
    - **Scoring Implication:** The quorum check should be a gate, not a score modifier. Changes without the required sign-offs should be invalid.
-   - **Reference:** `/home/bricker/Projects/etc/hngh/GOVERNANCE.md`, `/home/bricker/Projects/etc/hngh/CONTRIBUTING.md`, or `/home/bricker/Projects/etc/hngh/Documentation/process/`
+   - **Reference:** `~/Projects/etc/hngh/GOVERNANCE.md`, `~/Projects/etc/hngh/CONTRIBUTING.md`, or `~/Projects/etc/hngh/Documentation/process/`
 
 4. **Implement Weighted Sign-off or Review-Depth Score**
    - **Recommendation:** Consider implementing a weighted sign-off model or a review-depth score model. These models can provide a more nuanced scoring mechanism based on the seniority and time-to-review of the reviewers.

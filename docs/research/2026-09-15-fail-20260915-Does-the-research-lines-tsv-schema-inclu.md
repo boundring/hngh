@@ -20,7 +20,7 @@ The expansion beat established that the answer space partitions cleanly:
 | Answer | Meaning | Verification cost |
 |--------|---------|-------------------|
 | **(a)** | `research-lines.tsv` contains an explicit column (e.g., `template_path`, `render_target`) mapping each state value to a template or output path. | One header inspection. |
-| **(b)** | The TSV carries no such column; the mapping lives implicitly in renderer code inside the hngh kernel (`/home/bricker/Projects/etc/hngh`), keyed on state strings. | Grep across kernel source for state literals + template logic. |
+| **(b)** | The TSV carries no such column; the mapping lives implicitly in renderer code inside the hngh kernel (`~/Projects/etc/hngh`), keyed on state strings. | Grep across kernel source for state literals + template logic. |
 | **(c)** | No rendering pipeline exists; states are pure lifecycle metadata with no downstream page-rendering coupling. | Absence of templating code in the kernel. |
 
 This triad is the contract's decision tree. It is not re-derivable from first principles each time the line is revisited; treat it as fixed.
@@ -42,19 +42,19 @@ If the hngh kernel contains no templating or rendering code at all, answer (c) h
 
 ### F5 — The actual answer to the line's question remains unverified in this repository.
 
-No prior beat on this line has logged the output of any probe against `research-lines.tsv` or `/home/bricker/Projects/etc/hngh`. All findings above are structural (the question is well-posed, the method is constrained, the decision tree is fixed) but the *empirical* answer — which of (a), (b), (c) holds — has not been established. I do not have live filesystem access in this transition and will not assert a specific column name, state domain, or kernel file path without having read it.
+No prior beat on this line has logged the output of any probe against `research-lines.tsv` or `~/Projects/etc/hngh`. All findings above are structural (the question is well-posed, the method is constrained, the decision tree is fixed) but the *empirical* answer — which of (a), (b), (c) holds — has not been established. I do not have live filesystem access in this transition and will not assert a specific column name, state domain, or kernel file path without having read it.
 
 ---
 
 ## Recommendations
 
-These are carried forward from the expansion beat, sequenced per F4, and are the actionable residue of this line. They are intended for execution on an idle host with filesystem access to both `research-lines.tsv` and `/home/bricker/Projects/etc/hngh`.
+These are carried forward from the expansion beat, sequenced per F4, and are the actionable residue of this line. They are intended for execution on an idle host with filesystem access to both `research-lines.tsv` and `~/Projects/etc/hngh`.
 
 ### R1 — Precondition: does any rendering pipeline exist in the kernel? (Run first.)
 
 ```sh
 grep -rlniE 'template|render|\.html|jinja|mustache|handlebars' \
-     /home/bricker/Projects/etc/hngh \
+     ~/Projects/etc/hngh \
      --include='*.py' --include='*.sh' --include='*.ts' | head -20
 ```
 
@@ -73,7 +73,7 @@ head -1 research-lines.tsv | awk -F'\t' '{for(i=1;i<=NF;i++) print i": "$i}'
 awk -F'\t' 'NR>1 {print $N}' research-lines.tsv | sort -u
 
 # Step 3: settle (b) vs. (c) — search the kernel for state-keyed rendering logic
-grep -rn -e 'planned' -e 'expanding' /home/bricker/Projects/etc/hngh \
+grep -rn -e 'planned' -e 'expanding' ~/Projects/etc/hngh \
      --include='*.py' --include='*.sh' --include='*.ts' -l
 ```
 
@@ -98,7 +98,7 @@ These are the items that remain genuinely open and require filesystem access to 
 1. **The empirical answer (a / b / c) is unknown.** No probe output has been logged on this line. R1 and R2 must be executed on an idle host before the question can be marked empirically settled.
 2. **The state domain of `research-lines.tsv` is unenumerated.** Step 2 of R2 has not been run. We do not know whether the file contains only `planned` and `expanding`, or a larger set (e.g., `contracting`, `archived`, `blocked`). This matters for answer (b) because the renderer's state-keyed logic must cover the full domain.
 3. **The header of `research-lines.tsv` has not been inspected.** Step 1 of R2 has not been run. We do not know whether a `template_path`, `render_target`, or analogous column exists. This is the one-line check that settles answer (a).
-4. **The contents of `/home/bricker/Projects/etc/hngh` are unverified in this transition.** I cite the repository root because it is given as the ground-truth location in the line's scope. I do not assert the existence of any specific file, directory, or module within it. Any claim about kernel internals (e.g., "the renderer lives in `hngh/render.py`") would be unverified and is deliberately omitted here.
+4. **The contents of `~/Projects/etc/hngh` are unverified in this transition.** I cite the repository root because it is given as the ground-truth location in the line's scope. I do not assert the existence of any specific file, directory, or module within it. Any claim about kernel internals (e.g., "the renderer lives in `hngh/render.py`") would be unverified and is deliberately omitted here.
 5. **Whether the hngh-automation layer (distinct from the kernel) carries its own state-to-template mapping is out of scope for this line.** The question is bounded to `research-lines.tsv` and the hngh kernel. If a separate automation repo exists, it would be a new line, not a re-opening of this one.
 
 ---
@@ -107,5 +107,5 @@ These are the items that remain genuinely open and require filesystem access to 
 
 - `[[sources/grep-tab-escape-matches-nothing]]` — GNU grep treats `\t` as a stray escape; use `awk -F'\t'` for TSV inspection. (Vault pointer; read-only.)
 - `[[sources/mid-line-verification-block-triggers-long-acceptance-pending]]` — Mid-line verification is a non-blocking transition artifact, not a gate on the state machine. (Vault pointer; read-only.)
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root. Cited as the ground-truth location for probes R1 and R2. Internal file structure unverified in this transition.
+- `~/Projects/etc/hngh` — hngh kernel repository root. Cited as the ground-truth location for probes R1 and R2. Internal file structure unverified in this transition.
 - `research-lines.tsv` — The line-state file under investigation. Canonical name; full path not asserted in this record. Header, state domain, and column set are open threads (see Open Threads 2–3).

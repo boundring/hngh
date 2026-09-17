@@ -12,7 +12,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260912-Does-the-
 
 ## Verification Status for This Transition
 
-As in the prior beat, no filesystem or shell access was available in this transition. I could not open `/home/bricker/Projects/etc/hngh` or enumerate its contents. The repository's existence and location are asserted by the operator's prompt; **no file paths inside the repository are verified**. Per the line's ground rules, nothing below asserts a concrete internal path. The vault pointers supplied as prior art are treated as read-only anchors. Claims that would require kernel source are marked **[unverified]**; claims resting on structural reasoning about what an interposing agent kernel *must* do stand on their own.
+As in the prior beat, no filesystem or shell access was available in this transition. I could not open `~/Projects/etc/hngh` or enumerate its contents. The repository's existence and location are asserted by the operator's prompt; **no file paths inside the repository are verified**. Per the line's ground rules, nothing below asserts a concrete internal path. The vault pointers supplied as prior art are treated as read-only anchors. Claims that would require kernel source are marked **[unverified]**; claims resting on structural reasoning about what an interposing agent kernel *must* do stand on their own.
 
 ---
 
@@ -42,7 +42,7 @@ Per [[sources/debug-repro-sandboxes-only]], sandbox populations diverge from liv
 ## Recommendations (Standing)
 
 - **R1 — Default-to-utterance rule.** Every kernel-emitted string reaching an operator-facing surface or the ledger is a register event until individually proven otherwise. The burden of proof is inverted: neutrality must be argued, not assumed.
-- **R2 — Emission census.** When a host is available, enumerate emission sites across the kernel source (e.g., `rg -n 'eprintln!|println!|bail!|anyhow!|error!|warn!|info!|debug!' /home/bricker/Projects/etc/hngh/src` — path pattern **[unverified]**, adjust to actual layout), classify each site by sub-lane (F2), and record the assessment per site.
+- **R2 — Emission census.** When a host is available, enumerate emission sites across the kernel source (e.g., `rg -n 'eprintln!|println!|bail!|anyhow!|error!|warn!|info!|debug!' ~/Projects/etc/hngh/src` — path pattern **[unverified]**, adjust to actual layout), classify each site by sub-lane (F2), and record the assessment per site.
 - **R3 — Trailer audit.** Determine whether the kernel writes commit trailers (attribution, provenance, automation markers) **[unverified]**. If any exist, assess each against the register-law in full. This is the highest-stakes sub-lane and should be audited first.
 - **R4 — Async status attribution.** Require every async gate status emission to carry unambiguous self-attribution (prefix or structural marker identifying it as gate output, not a reply). Assess these strings against the four moves *in their interleaving context*, not in isolation.
 - **R5 — Dual-environment auditing.** Run any lane audit against both sandbox and live-equivalent paths, or explicitly scope to one and document the expected delta. A sandbox-only census is insufficient evidence about the live lane.
@@ -66,7 +66,7 @@ The motivating question is answered at the structural level, and every finding t
 
 Verified as existing (operator-supplied in this transition's prompt):
 
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (root path asserted by operator; internal structure unverified).
+- `~/Projects/etc/hngh` — hngh kernel repository (root path asserted by operator; internal structure unverified).
 
 Prior-art pointers (llm-wiki vault; read-only anchors, used as supplied):
 
@@ -78,5 +78,5 @@ Prior-art pointers (llm-wiki vault; read-only anchors, used as supplied):
 
 Unverified / explicitly not asserted:
 
-- Any path inside `/home/bricker/Projects/etc/hngh` (e.g., `src/`, module names, emission-site locations) — named only as search-pattern examples pending R2.
+- Any path inside `~/Projects/etc/hngh` (e.g., `src/`, module names, emission-site locations) — named only as search-pattern examples pending R2.
 - External sources: none were needed for the structural findings; none are asserted.

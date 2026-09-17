@@ -9,7 +9,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-ctx-retrieval-vs-repeti
 **State file:** `research-lines.tsv`
 **Lifecycle:** contracting — this document is the line's lasting summary.
 
-> **Verification note (read first):** In this transition I had no read access to the filesystem. The only artifacts I can ground against are (a) the line-state file `research-lines.tsv`, named in the transition prompt itself, and (b) the two read-only llm-wiki pointers supplied as prior art. I cannot verify the internal layout of the hngh kernel repository (`/home/bricker/Projects/etc/hngh`) or re-read the vault notes' contents. Accordingly, the quantitative findings below are presented as a *derivable cost model*, not as measured results — no token measurements were taken in this transition, and I say so rather than assert numbers I cannot cite.
+> **Verification note (read first):** In this transition I had no read access to the filesystem. The only artifacts I can ground against are (a) the line-state file `research-lines.tsv`, named in the transition prompt itself, and (b) the two read-only llm-wiki pointers supplied as prior art. I cannot verify the internal layout of the hngh kernel repository (`~/Projects/etc/hngh`) or re-read the vault notes' contents. Accordingly, the quantitative findings below are presented as a *derivable cost model*, not as measured results — no token measurements were taken in this transition, and I say so rather than assert numbers I cannot cite.
 
 ---
 
@@ -62,14 +62,14 @@ The model holds quality constant by assumption, but pointers degrade quality whe
 ## 3. Open threads (left for future lines, not this one)
 
 - **Measured, not modeled, break-even:** no token-level measurements of P, R, or real dereference rates exist in material I could verify. A future line should instrument this on idle hosts.
-- **The hngh kernel's actual pack format:** whether the 1500-byte cap is enforced, advisory, or envelope-inclusive could not be confirmed against `/home/bricker/Projects/etc/hngh` in this transition. The F3 asymmetry argument assumes the cap applies to payload; if it applies to envelope+payload, the cliff shifts but the direction of the conclusion is unchanged.
+- **The hngh kernel's actual pack format:** whether the 1500-byte cap is enforced, advisory, or envelope-inclusive could not be confirmed against `~/Projects/etc/hngh` in this transition. The F3 asymmetry argument assumes the cap applies to payload; if it applies to envelope+payload, the cliff shifts but the direction of the conclusion is unchanged.
 - **Quality parity testing:** F4's "equal task quality" premise needs an eval harness before the policy in §2 can be called validated rather than principled.
 - **Vault note contents:** whether [[concepts/session-salvage]] and the agentictrade.io source note materially bear on pack-cap design was assumed by the line's framing but not verified here.
 
 ## 4. References
 
 - `research-lines.tsv` — line state file (named in the transition prompt; lifecycle state *contracting*).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (path given in the transition prompt; **contents not verified this transition** — no specific files inside it are cited because none could be confirmed).
+- `~/Projects/etc/hngh` — hngh kernel repository (path given in the transition prompt; **contents not verified this transition** — no specific files inside it are cited because none could be confirmed).
 - llm-wiki vault (read-only, per prior art):
   - `[[concepts/session-salvage]]` — *Session Salvage* (created 2026-08-24); pointer only, body not dereferenced.
   - `[[sources/agentictrade-io-ai-service-marketplace]]` — agentictrade.io AI service marketplace, USDC; pointer only, body not dereferenced.

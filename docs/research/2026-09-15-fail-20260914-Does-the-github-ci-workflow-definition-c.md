@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Does-the-
 **Line:** Does the github-ci workflow definition contain an embedded copy of the patrol verdict rule, and does it diff against the kernel's canonical rules file?
 **State:** contracting → **closed (final record)**
 **Repository under investigation:** `hngh/hngh-automation` (GitHub Actions workflows)
-**Canonical source:** `/home/bracker/Projects/etc/hngh` (kernel repository)
+**Canonical source:** `~/Projects/etc/hngh` (kernel repository)
 
 ---
 
@@ -28,7 +28,7 @@ No artifact in the prior material or vault notes records a CI step that diffs th
 
 | Surface | Location (inferred) | Role |
 |---|---|---|
-| Kernel canonical rules file | Somewhere under `/home/bricker/Projects/etc/hngh` | Source of truth for the patrol verdict rule |
+| Kernel canonical rules file | Somewhere under `~/Projects/etc/hngh` | Source of truth for the patrol verdict rule |
 | CI-embedded copy | A workflow definition or invoked script in `hngh/hngh-automation` (e.g. `.github/workflows/*.yml` or a shell/Python helper it calls) | Operational copy used by the CI pipeline |
 
 I am **not confident** in the exact filename of the canonical rules file inside the kernel tree, nor in the exact workflow YAML path inside `hngh/hngh-automation`. The vault note does not record them, and I do not have filesystem access to enumerate them here. Citing a specific path without verification would violate the grounding constraint.
@@ -48,7 +48,7 @@ This aligns with the broader vault context: `voice-rules-as-binding-constraint-n
 ## Recommendations
 
 1. **Locate and inventory both surfaces.** On an idle host with access to both repositories, identify:
-   - The exact canonical rules file path under `/home/bricker/Projects/etc/hngh`.
+   - The exact canonical rules file path under `~/Projects/etc/hngh`.
    - The exact workflow YAML (or invoked script) in `hngh/hngh-automation` that contains the embedded verdict rule.
    Record both paths in the vault so future beats can cite them concretely.
 
@@ -79,5 +79,5 @@ This aligns with the broader vault context: `voice-rules-as-binding-constraint-n
 - `[[sources/long-gates-run-async-against-interjections]]` — Async gate pattern (informs recommendation 2)
 - `[[sources/async-proof-pattern-for-long-drop-ins]]` — Background job proof pattern (informs recommendation 2)
 - `[[sources/debug-repro-sandboxes-only]]` — Sandbox constraint (relevant if a repro of the drift is needed)
-- `/home/bricker/Projects/etc/hngh` — Kernel repository root (canonical source location; exact rules file path not yet recorded in vault)
+- `~/Projects/etc/hngh` — Kernel repository root (canonical source location; exact rules file path not yet recorded in vault)
 - `hngh/hngh-automation` — Automation repository (CI workflow surface; exact workflow/script path not yet recorded in vault)

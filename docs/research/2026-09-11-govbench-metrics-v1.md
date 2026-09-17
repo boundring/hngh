@@ -69,7 +69,7 @@ All four are instances of one pattern: **a claimed state vs. an observed state, 
 
 ## Open Threads (staying live)
 
-- **Unverified repository grounding.** The twelve `src/monitoring/*.py` paths from the expansion beat are unconfirmed. Either verify them against `/home/bricker/Projects/etc/hngh` and promote to references, or replace with the actual modules that carry these ledgers. This is the single largest gap between the prior material's claims and what is safely citable.
+- **Unverified repository grounding.** The twelve `src/monitoring/*.py` paths from the expansion beat are unconfirmed. Either verify them against `~/Projects/etc/hngh` and promote to references, or replace with the actual modules that carry these ledgers. This is the single largest gap between the prior material's claims and what is safely citable.
 - **Ledger existence.** The metrics assume an approval ledger, execution ledger, refusal ledger, and canonical record store exist (or will be built). Whether they already exist in the hngh kernel repo — and under what names/paths — is unverified here.
 - **External tamper-evidence schemes.** Hash-chains / Merkle / signed append-only logs are standard external material I cannot verify against this repository; they remain candidates pending a design decision, not asserted choices.
 - **Thresholds.** Pass/fail thresholds for detection rate, match rate, divergence count, and unaccounted-refusal rate are undefined; the line needs agreed tolerances before "measurable" becomes "passing."
@@ -81,7 +81,7 @@ All four are instances of one pattern: **a claimed state vs. an observed state, 
 
 Confirmed in this record (named as existing line/repo artifacts):
 - `research-lines.tsv` — line state file for this continuous research process.
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository root (grounding target; specific module paths unverified, see Open Threads).
+- `~/Projects/etc/hngh` — hngh kernel repository root (grounding target; specific module paths unverified, see Open Threads).
 
 Prior art (llm-wiki vault, read-only pointers as provided to the line):
 - `[[concepts/evidence-ledger]]` — Authority and Evidence Ledgers.

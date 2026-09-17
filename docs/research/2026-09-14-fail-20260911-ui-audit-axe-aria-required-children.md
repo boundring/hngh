@@ -15,7 +15,7 @@ This line is crystallized. The core finding is that **the alert cannot be dispos
 2.  **Rule Mechanics**: axe-core's `aria-required-children` rule for `role="tablist"` fires if *any* child element lacks `role="tab"`. The presence of nine valid `role="tab"` children in the static HTML does not guarantee compliance if a tenth node (or a wrapper) exists in the live DOM without the role.
 3.  **Diagnostic Gap**: The prior research beat hypothesized runtime-injected nodes (tooltips, focus traps, scroll containers) but produced no axe JSON output, no DOM snapshot, and no diff between static source and live DOM. Consequently, the "disallowed child" remains unidentified.
 4.  **Scan Target Unconfirmed**: It is not verified whether the ui-audit pipeline scans raw `.html` files, built bundles, or hydrated pages in a headless browser. The prior material asserted live DOM scanning without citing pipeline configuration. This distinction is critical: if static HTML is scanned, the issue is a source markup error; if live DOM is scanned, it may be a hydration artifact.
-5.  **Repository Verification Limitation**: I have not inspected the hngh kernel repository (`/home/bricker/Projects/etc/hngh`) or ui-audit pipeline configuration in this session. All file-path references are conditional on the reader verifying them against their working tree.
+5.  **Repository Verification Limitation**: I have not inspected the hngh kernel repository (`~/Projects/etc/hngh`) or ui-audit pipeline configuration in this session. All file-path references are conditional on the reader verifying them against their working tree.
 
 ## Recommendations
 
@@ -38,7 +38,7 @@ Once the disallowed child is identified:
 
 ### R3 — Verify Scan Target
 **Action**: Confirm whether ui-audit scans static files or live DOM.
-- Locate the ui-audit pipeline entry point (likely under `/home/bricker/Projects/etc/hngh` or adjacent `hngh-automation` directory).
+- Locate the ui-audit pipeline entry point (likely under `~/Projects/etc/hngh` or adjacent `hngh-automation` directory).
 - Check for files matching patterns like `ui-audit*`, `axe*`, `a11y*`, or `audit*.ts/.js/.py`.
 - If axe JSON output is not persisted, add a step to write it to an `artifacts/` or `reports/` subdirectory.
 
@@ -50,7 +50,7 @@ Once the disallowed child is identified:
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` (hngh kernel repository; path unverified in this session)
+- `~/Projects/etc/hngh` (hngh kernel repository; path unverified in this session)
 - ui-audit pipeline configuration (location unverified; likely under hngh or adjacent `hngh-automation` directory)
 - axe-core documentation for `aria-required-children` rule (external source; not verified in this session)
 - Prior research beat 2026-09-14 (provided in prior material)

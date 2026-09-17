@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 
 ## Epistemic status
 
-This line was opened because fixture authors in hngh-automation need a pinnable contract: something stable enough that capture-and-replay fixtures do not silently rot when the kernel changes. The prior beat (2026-09-13, expanding → contracting) produced **no empirical findings**. It ended at "Let me start by exploring the repository structure." No file was read, no flag was exercised, no output was captured. This contraction inherits that limitation: I am producing a text record, not executing commands or reading files in `/home/bricker/Projects/etc/hngh`. Every claim below about the current CLI surface of `bin/hngh` is therefore **a hypothesis to verify, not an observation**. The recommendations are phrased so they hold regardless of which way verification lands.
+This line was opened because fixture authors in hngh-automation need a pinnable contract: something stable enough that capture-and-replay fixtures do not silently rot when the kernel changes. The prior beat (2026-09-13, expanding → contracting) produced **no empirical findings**. It ended at "Let me start by exploring the repository structure." No file was read, no flag was exercised, no output was captured. This contraction inherits that limitation: I am producing a text record, not executing commands or reading files in `~/Projects/etc/hngh`. Every claim below about the current CLI surface of `bin/hngh` is therefore **a hypothesis to verify, not an observation**. The recommendations are phrased so they hold regardless of which way verification lands.
 
 ---
 
@@ -24,7 +24,7 @@ This line was opened because fixture authors in hngh-automation need a pinnable 
 1. **The line exists for a concrete engineering need.** Fixture authors require a pinnable contract so that capture-and-replay fixtures remain valid across kernel changes. This is the motivating constraint, not an academic question.
 2. **A run-contract notion already exists in the kernel's design discourse.** The vault pointer `[[sources/SRC-2026-08-24-020]]` is titled *"Hngh Run Contract"* (created: unknown). Its contents were not transcribed into any prior beat, so its specific claims are **unverified here**. What is established is only that the concept exists in the vault and predates this research line.
 3. **A delegated-contract-verification concept exists.** The vault pointer `[[concepts/delegated-contract-verification]]` (created: 2026-08-2[truncated date]) frames prior thinking on how contract verification can be delegated. Its contents were likewise not transcribed into the beat; only its existence as a framing concept is established.
-4. **The kernel repository path is known.** The hngh kernel lives at `/home/bricker/Projects/etc/hngh`. No file paths within that repository are cited in any prior material, and I will not invent them.
+4. **The kernel repository path is known.** The hngh kernel lives at `~/Projects/etc/hngh`. No file paths within that repository are cited in any prior material, and I will not invent them.
 
 ### What is NOT established (hypotheses requiring verification)
 
@@ -45,7 +45,7 @@ This line was opened because fixture authors in hngh-automation need a pinnable 
 
 ## Recommendations
 
-### For the hngh kernel repository (`/home/bricker/Projects/etc/hngh`)
+### For the hngh kernel repository (`~/Projects/etc/hngh`)
 
 1. **Define the contract as a small, explicit surface.** At minimum:
    - `hngh --version` printing a semver on stdout, exit 0, nothing on stderr.
@@ -73,7 +73,7 @@ These keep the line in motion on idle hosts; any one of them resolving re-opens 
 | 1 | **Empirical probe of `bin/hngh`** — run `--version`, `--help`, no-arg subcommands; record stdout/stderr/exit. | Converts every "hypothesis to verify" in the Findings section into an observation or refutation. This is the single highest-leverage next action. |
 | 2 | **Read `[[sources/SRC-2026-08-24-020]]` ("Hngh Run Contract")** and transcribe its claims into the line record. | If it already specifies a contract, the kernel-repo recommendations in items 1–3 may be partially or fully satisfied, and the automation-side work reduces to verification rather than upstream request. |
 | 3 | **Read `[[concepts/delegated-contract-verification]]`** and determine whether the fixture suite should implement delegated verification (e.g., a sidecar that checks the contract independently of the kernel binary). | Affects *where* the pinning logic lives, not just *what* is pinned. |
-| 4 | **Identify the CLI entry-point implementation path** in `/home/bricker/Projects/etc/hngh` (compiled binary? shell script? Go main? Rust bin?). | Determines whether adding `--version` / `--json` is a one-line change or requires a build-system edit, and whether the contract can be enforced at compile time. |
+| 4 | **Identify the CLI entry-point implementation path** in `~/Projects/etc/hngh` (compiled binary? shell script? Go main? Rust bin?). | Determines whether adding `--version` / `--json` is a one-line change or requires a build-system edit, and whether the contract can be enforced at compile time. |
 | 5 | **Determine whether any JSON/machine-readable mode already exists** (grep for `json`, `JSON`, `marshal`, `encode` in the kernel repo; check subcommand output). | If it exists but is undocumented, the fixture work is purely on the automation side. If it does not exist, the upstream request in item 7 applies. |
 | 6 | **Pin the exact file paths for contract documentation** once created (kernel-repo `docs/` or equivalent; automation-repo fixture directory). | The References section of this record currently cannot name these paths because they do not yet exist in any prior material. They become citable the moment they are committed. |
 
@@ -88,9 +88,9 @@ The line is **crystallized as a lasting record**. It is not "resolved" in the em
 ## References
 
 - **Prior beat material, 2026-09-13** (expanding → contracting transition; no empirical findings produced; epistemic status and recommendations as transcribed above).
-- **`/home/bricker/Projects/etc/hngh`** — hngh kernel repository root. Path known from line framing. No internal file paths are cited in any prior material; none are asserted here.
+- **`~/Projects/etc/hngh`** — hngh kernel repository root. Path known from line framing. No internal file paths are cited in any prior material; none are asserted here.
 - **`[[sources/SRC-2026-08-24-020]]`** — vault source note titled *"Hngh Run Contract"* (created: unknown). Existence confirmed by vault pointer; contents not transcribed into any beat and therefore unverified in this record.
 - **`[[concepts/delegated-contract-verification]]`** — vault concept note (created: 2026-08-2[truncated]). Existence confirmed by vault pointer; contents not transcribed into any beat and therefore unverified in this record.
 - **`research-lines.tsv`** — line state file for the continuous research process. The line's current lifecycle state (`contracting`) is recorded there.
 
-No external sources are cited. No claims are made about the contents of `bin/hngh`, its flags, its output format, or its implementation language beyond what the prior material and vault pointers establish. Where a claim would require reading a file in `/home/bricker/Projects/etc/hngh` or executing `bin/hngh`, it is marked as an open thread rather than asserted.
+No external sources are cited. No claims are made about the contents of `bin/hngh`, its flags, its output format, or its implementation language beyond what the prior material and vault pointers establish. Where a claim would require reading a file in `~/Projects/etc/hngh` or executing `bin/hngh`, it is marked as an open thread rather than asserted.

@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-humor-development.md.
 
 ## Verification status
 
-No live read of either tree was available in this transition. The only paths cited with confidence are those already attested in prior material: `lib/quips.py` (hngh-automation, quip lanes) and `meta/registry.json` (vault registry emitting the "Auto-generated… Do not edit manually" banner). The hngh kernel at `/home/bricker/Projects/etc/hngh` is asserted to exist by the line brief; no file inside it is confirmed. All claims touching a kernel path remain UNVERIFIED and are excluded from recommendations below.
+No live read of either tree was available in this transition. The only paths cited with confidence are those already attested in prior material: `lib/quips.py` (hngh-automation, quip lanes) and `meta/registry.json` (vault registry emitting the "Auto-generated… Do not edit manually" banner). The hngh kernel at `~/Projects/etc/hngh` is asserted to exist by the line brief; no file inside it is confirmed. All claims touching a kernel path remain UNVERIFIED and are excluded from recommendations below.
 
 ---
 
@@ -69,7 +69,7 @@ This boundary is complementary to, not identical with, move 3 (no wink punctuati
 1. **Guard implementation surface.** The prior material hedges: "a simple regex/template review checklist if no test harness exists for copy." Whether `lib/quips.py` (or an adjacent module) already carries a template-validation path, or whether the guard must be introduced as new infrastructure, is unresolved. No file in the quip-lane pipeline beyond `lib/quips.py` itself is confirmed.
 2. **"Subject" boundary in closers.** The register-law names users, contributors, external projects, and source material as off-limits objects. Whether a closer that references *the article's own topic* (e.g., a library being documented) counts as "source material" or as "the system's work product" is not settled. The quip lane is clear; the closer lane has one more degree of freedom and may need a worked example set.
 3. **Callback specificity.** The "one restrained callback" rule for closers names a concrete detail from the article's first third, but does not specify whether the callback must be *the same* detail or merely *a* detail from that region. If the article's first third contains multiple concrete details, the choice among them is currently unguided.
-4. **Kernel-side voice surface.** The line brief asserts `/home/bricker/Projects/etc/hngh` as a repository in scope. No file inside it has been read or confirmed. If the kernel emits user-facing strings (error messages, status output, commit trailers), those are a potential third lane not yet assessed against the four moves or the register-law. This thread is UNVERIFIED and cannot be advanced without a live read.
+4. **Kernel-side voice surface.** The line brief asserts `~/Projects/etc/hngh` as a repository in scope. No file inside it has been read or confirmed. If the kernel emits user-facing strings (error messages, status output, commit trailers), those are a potential third lane not yet assessed against the four moves or the register-law. This thread is UNVERIFIED and cannot be advanced without a live read.
 5. **Tone-drift detection over time.** The lexical guard (§2, quip lanes) catches individual sentences. There is no stated mechanism for detecting *cumulative* smugness across a generated article — e.g., three flat closers in a row that individually pass but collectively read as condescending. Whether this is a real failure mode or an over-worry is untested.
 
 ---
@@ -78,7 +78,7 @@ This boundary is complementary to, not identical with, move 3 (no wink punctuati
 
 - `lib/quips.py` — hngh-automation quip lanes (attested in prior material; path confidence: high)
 - `meta/registry.json` — vault registry, source of the "Auto-generated… Do not edit manually" banner (attested in prior material; path confidence: high)
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (asserted by line brief; existence accepted, internal file structure UNVERIFIED)
+- `~/Projects/etc/hngh` — hngh kernel repository (asserted by line brief; existence accepted, internal file structure UNVERIFIED)
 
 No other file paths are cited. External sources (the *Drifting Life* manga itself, any published writing-craft literature on deadpan narration) were used as mode-reference only and are not verifiable in-repository; specific panel or chapter citations from the manga are not provided here because no in-repo source document was available to ground them.
 

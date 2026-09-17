@@ -76,11 +76,11 @@ The line records that a plan acceptance occurred but does not record its mechani
 **O2 — Did the step-1 audit-close write back to the plan document?**
 If the audit-close produced a `Verification:` line in the plan's step 1, the parser input changed and the blocker is resolved. If the close lives only in a separate audit log that the acceptance parser does not consult, the blocker remains open by construction (R3). **I cannot verify which.** No audit artifact was present in the material.
 
-**O3 — Is there a file under `/home/bricker/Projects/etc/hngh` that records the acceptance mechanism?**
-The line asks for grounding in the hngh kernel repository. The prior material for this beat explicitly states no live file access was available, and I have not been handed any file paths from that repository. **I cannot name a concrete file path in `/home/bricker/Projects/etc/hngh` with confidence.** Any such claim would be unverified. This thread closes when an operator or a subsequent beat reads the acceptance log (or equivalent) and records whether the mechanism was `parse_pass` or `override`.
+**O3 — Is there a file under `~/Projects/etc/hngh` that records the acceptance mechanism?**
+The line asks for grounding in the hngh kernel repository. The prior material for this beat explicitly states no live file access was available, and I have not been handed any file paths from that repository. **I cannot name a concrete file path in `~/Projects/etc/hngh` with confidence.** Any such claim would be unverified. This thread closes when an operator or a subsequent beat reads the acceptance log (or equivalent) and records whether the mechanism was `parse_pass` or `override`.
 
 **O4 — Is the auto-accept parser's error string stable across versions?**
-The recommendation R1 depends on the linter and the parser emitting the same string. If the parser's error format changes between hngh versions, a linter hard-coded to the old string will silently pass plans the parser rejects. **I cannot verify the parser's current error-string implementation** without file access to the acceptance module in `/home/bricker/Projects/etc/hngh`. This thread closes when the parser source is read and the string is confirmed or the linter is updated to match.
+The recommendation R1 depends on the linter and the parser emitting the same string. If the parser's error format changes between hngh versions, a linter hard-coded to the old string will silently pass plans the parser rejects. **I cannot verify the parser's current error-string implementation** without file access to the acceptance module in `~/Projects/etc/hngh`. This thread closes when the parser source is read and the string is confirmed or the linter is updated to match.
 
 ---
 
@@ -96,7 +96,7 @@ The line therefore closes with the blocker's status **undetermined pending O1/O2
 
 ## References
 
-All references below are prior-art pointer titles from the llm-wiki vault as supplied to this beat. They are read-only pointers; I have not verified their full text beyond the truncated titles shown in the line's prior material. No file paths under `/home/bricker/Projects/etc/hngh` are cited because I cannot confirm their existence from the material available to this beat.
+All references below are prior-art pointer titles from the llm-wiki vault as supplied to this beat. They are read-only pointers; I have not verified their full text beyond the truncated titles shown in the line's prior material. No file paths under `~/Projects/etc/hngh` are cited because I cannot confirm their existence from the material available to this beat.
 
 - `[[sources/hngh-2026-09-09-stall-lessons]]` — "Hngh stall lessons: model burn, acceptance parsing, orp…" (directly relevant: names acceptance parsing as a lesson category for this exact event)
 - `[[sources/mid-line-verification-block-triggers-long-acceptance-pending]]` — "Mid-line Verification fi…" (directly relevant: documents the long-acceptance-pending failure mode triggered by a missing Verification field)
@@ -105,4 +105,4 @@ All references below are prior-art pointer titles from the llm-wiki vault as sup
 - `[[sources/chartlibrary-io-developers-api]]` — "chartlibrary.io free REST/MCP market-history research" (not relevant to this line)
 - `[[sources/evomap-ai-agent-experience-network]]` — "evomap.ai agent experience network (GEP), lo…" (not relevant to this line)
 
-No file paths in `/home/bricker/Projects/etc/hngh` are cited. The prior material for this beat explicitly states no live file access was available, and I have not been handed any such paths. Any claim about a specific file in that repository would be unverified from the material at hand.
+No file paths in `~/Projects/etc/hngh` are cited. The prior material for this beat explicitly states no live file access was available, and I have not been handed any such paths. Any claim about a specific file in that repository would be unverified from the material at hand.

@@ -10,7 +10,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 
 ## Epistemic status (binding constraint)
 
-From this transition I **cannot read `/home/bricker/Projects/etc/hngh`**, nor confirm that `hngh-automation/verify.sh` exists or contains any check. Therefore no claim below rests on the contents of a specific kernel-repo file, and no path in that tree is asserted to exist. The only paths named are the line's candidate (`hngh-automation/verify.sh`) and the kernel root (`/home/bricker/Projects/etc/hngh`); both remain **unverified here**. No external source is treated as verified.
+From this transition I **cannot read `~/Projects/etc/hngh`**, nor confirm that `hngh-automation/verify.sh` exists or contains any check. Therefore no claim below rests on the contents of a specific kernel-repo file, and no path in that tree is asserted to exist. The only paths named are the line's candidate (`hngh-automation/verify.sh`) and the kernel root (`~/Projects/etc/hngh`); both remain **unverified here**. No external source is treated as verified.
 
 ## Findings
 
@@ -27,7 +27,7 @@ From this transition I **cannot read `/home/bricker/Projects/etc/hngh`**, nor co
 - **R1 — Do not close on token presence.** Keep the line open until C1–C3 are evidenced; treat any discovered `grep -qF 'Storage=persistent'` as a smoke signal, not redundancy proof.
 - **R2 — Upgrade from token grep to scoped structural validation.** If `Storage=persistent` is a harness/unit config key, the check should at minimum: anchor the expected line (e.g. `grep -qE '^[[:space:]]*Storage=[[:space:]]*persistent[[:space:]]*$' "$artifact"`); assert no conflicting `Storage=` value; confirm the correct section/unit when the format is sectioned; and prefer a parser/validator over grep where one exists.
 - **R3 — Prove gate liveness, not script existence.** Evidence required: the exact command or CI/deploy hook that invokes the verification script; confirmation that a nonzero exit fails the pipeline; and a negative test in which `Storage=persistent` is removed/altered and the gate fails. An advisory, skippable, or failure-ignored script fails C2 → audit not redundant.
-- **R4 — Check the moment-of-action artifact.** Validate the artifact actually used at action time (final installed/generated path), with a hash/checksum, a timestamp close to the action point, and confirmation that no later step overwrites or regenerates it after verification. If the kernel repo generates/installs/rewrites storage configuration, the check must target that generated/installed output, not a hand-maintained source copy — *where that generation occurs in `/home/bricker/Projects/etc/hngh` is unverified from here.*
+- **R4 — Check the moment-of-action artifact.** Validate the artifact actually used at action time (final installed/generated path), with a hash/checksum, a timestamp close to the action point, and confirmation that no later step overwrites or regenerates it after verification. If the kernel repo generates/installs/rewrites storage configuration, the check must target that generated/installed output, not a hand-maintained source copy — *where that generation occurs in `~/Projects/etc/hngh` is unverified from here.*
 - **R5 — Add mutation/negative tests to the harness.** The harness should fail when the storage setting is absent or wrong, so C1 fidelity is demonstrated by behavior, not by reading the script.
 
 ## Open threads
@@ -43,7 +43,7 @@ From this transition I **cannot read `/home/bricker/Projects/etc/hngh`**, nor co
 All kernel-repo paths below are **named candidates, not confirmed to exist**; no claim in this record depends on their contents.
 
 - `hngh-automation/verify.sh` — named candidate harness verification script. **Existence UNVERIFIED** from this transition.
-- `/home/bricker/Projects/etc/hngh` — named kernel repository root. **Accessibility/contents UNVERIFIED** from this transition.
+- `~/Projects/etc/hngh` — named kernel repository root. **Accessibility/contents UNVERIFIED** from this transition.
 - `research-lines.tsv` — continuous line-state ledger for this research process (the line's own state record).
 - Prior-art vault pointers (read-only, as provided; taken on the strength of the pointer list, not independently re-read):
   - `sources/LES-fail-20260915-Does-the-obs-2026-08-25-hngh-automation-`

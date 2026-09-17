@@ -13,9 +13,9 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Does-the-
 
 ## Epistemic status of this record
 
-This transition, like the immediately prior beat, executed **without filesystem or shell tooling**. I could not read `/home/bricker/Projects/etc/hngh`, the host repository containing this vault, or `research-lines.tsv`. Therefore:
+This transition, like the immediately prior beat, executed **without filesystem or shell tooling**. I could not read `~/Projects/etc/hngh`, the host repository containing this vault, or `research-lines.tsv`. Therefore:
 
-- **No file path inside either repository is asserted to exist.** The only path I name with confidence is `/home/bricker/Projects/etc/hngh` itself, because the operator supplied it as ground truth.
+- **No file path inside either repository is asserted to exist.** The only path I name with confidence is `~/Projects/etc/hngh` itself, because the operator supplied it as ground truth.
 - The core factual question — whether the tab shares a layout component — **remains empirically unanswered**. This record crystallizes the *method, hypotheses, and decision rules*, not a verdict. Any stronger claim would be fabrication, and I decline to make one.
 
 ## Findings (what this line actually established)
@@ -47,7 +47,7 @@ This transition, like the immediately prior beat, executed **without filesystem 
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — the hngh kernel repository (path supplied by operator; contents unverified in this transition).
+- `~/Projects/etc/hngh` — the hngh kernel repository (path supplied by operator; contents unverified in this transition).
 - `research-lines.tsv` — line state register (named by operator; not readable in this transition).
 - [[sources/verdict-rule-drift-two-surfaces]] — prior-art pointer in the llm-wiki vault: shared verdict rule drifted across two surfaces (read-only pointer; content as described in supplied prior material).
 - [[sources/SRC-2026-08-24-027]] — "Hngh Component Map" (read-only pointer; creation date unknown, accuracy unverified).

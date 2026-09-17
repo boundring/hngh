@@ -30,7 +30,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Which-art
    - A single field such as `accepted: true` is insufficient, because it cannot represent “parse failed but operator overrode” or “parse passed but operator rejected.”
 
 5. **The decisive next step is inspection, not further conceptual expansion.**
-   The line cannot be resolved by title inference alone. It requires inspecting the hngh kernel repository at `/home/bricker/Projects/etc/hngh` and the relevant hngh-automation working tree for files or structured rows tied to the run tag `2026-09-09-stall-recovery-and-operator-surfaces`.
+   The line cannot be resolved by title inference alone. It requires inspecting the hngh kernel repository at `~/Projects/etc/hngh` and the relevant hngh-automation working tree for files or structured rows tied to the run tag `2026-09-09-stall-recovery-and-operator-surfaces`.
 
 6. **No external source is used or verified here.**
    The only prior-art material relied on is the supplied llm-wiki pointer and prior beat text. I cannot verify any external source, and no external claim is made.
@@ -42,11 +42,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Which-art
 Run at minimum:
 
 ```sh
-ls -la /home/bricker/Projects/etc/hngh
-find /home/bricker/Projects/etc/hngh -type f \
+ls -la ~/Projects/etc/hngh
+find ~/Projects/etc/hngh -type f \
   \( -name "*stall*" -o -name "*recovery*" -o -name "*operator*" \
      -o -name "*acceptance*" -o -name "*plan-accept*" \) 2>/dev/null
-grep -rl "2026-09-09-stall-recovery" /home/bricker/Projects/etc/hngh \
+grep -rl "2026-09-09-stall-recovery" ~/Projects/etc/hngh \
   --include="*.md" --include="*.json" --include="*.yaml" \
   --include="*.tsv" --include="*.log" 2>/dev/null
 ```

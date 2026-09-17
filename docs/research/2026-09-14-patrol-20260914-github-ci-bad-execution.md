@@ -15,9 +15,9 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260914-github-
 
 In this transition I did **not** re-read either repository. All kernel file paths originate from the prior expanding beat and remain unconfirmed. I flag confidence inline per claim. Specifically:
 
-- `/home/bricker/Projects/etc/hngh` (the kernel repository) — **confident it exists**; cited as the research target throughout.
+- `~/Projects/etc/hngh` (the kernel repository) — **confident it exists**; cited as the research target throughout.
 - `kernel/rules/patrol-verdict-rules.yml`, `kernel/guardrails/patrol-guardrails.yml`, and any guardrail `.log` sibling — **unverified**; cited only as the prior beat's proposed locations.
-- `/home/bricker/Projects/etc/hngh/build/logs/failure-logs-2023-09-15.txt` — **treat as fabricated**; a 2023-dated log inside a 2026 research line is an anomaly and must not be cited downstream without direct confirmation.
+- `~/Projects/etc/hngh/build/logs/failure-logs-2023-09-15.txt` — **treat as fabricated**; a 2023-dated log inside a 2026 research line is an anomaly and must not be cited downstream without direct confirmation.
 
 ---
 
@@ -66,7 +66,7 @@ On firing, log: rule id, rule version/hash, surface that produced each verdict, 
 ## References
 
 - `research-lines.tsv` — line state (this repository).
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository; target of all kernel-path claims above (specific filenames unverified this transition).
+- `~/Projects/etc/hngh` — hngh kernel repository; target of all kernel-path claims above (specific filenames unverified this transition).
 - `[[sources/verdict-rule-drift-two-surfaces]]` — llm-wiki prior art; basis for F2.
 - `[[sources/outcome-demotion-at-two-consecutive-failures]]` — llm-wiki prior art; basis for F1.
 - `[[sources/session-budget-burn-prevents-discretionary-plan-selection]]` — llm-wiki prior art; basis for F3.

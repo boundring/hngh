@@ -6,7 +6,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Does-the-
 # Research Line: CI/CD Invocation of `hngh-automation/verify.sh` and Failure Propagation
 
 **Line State:** Contracted (Final Record)
-**Repository Anchor:** `/home/bricker/Projects/etc/hngh`
+**Repository Anchor:** `~/Projects/etc/hngh`
 **Date:** 2026-09-16
 
 ## Executive Summary
@@ -16,7 +16,7 @@ The research question—whether the CI/CD pipeline configuration explicitly invo
 ## Findings
 
 1.  **Lack of Pipeline Evidence:** No supplied material contains `.github/workflows/*.yml`, `Jenkinsfile`, or `Makefile` content that explicitly names `hngh-automation/verify.sh`.
-2.  **Unverified Existence:** The existence of `hngh-automation/verify.sh` at the relative path under `/home/bricker/Projects/etc/hngh` is not confirmed in the provided context.
+2.  **Unverified Existence:** The existence of `hngh-automation/verify.sh` at the relative path under `~/Projects/etc/hngh` is not confirmed in the provided context.
 3.  **Exit Code Contract Unknown:** Without access to the script source or pipeline configuration, the exit-code contract (0 for pass, non-zero for fail) cannot be verified.
 4.  **No Failure Propagation Proof:** There is no evidence that the script's exit code is treated as a hard build failure (e.g., via `set -euo pipefail`, being the final command in a step, or explicit `exit $?` handling).
 
@@ -63,15 +63,15 @@ This converts an implicit convention into an auditable fact, allowing future res
 
 The following items remain open and require direct inspection of the repository on an idle host to close:
 
-1.  **File Existence:** Confirm whether `hngh-automation/verify.sh` exists at `/home/bricker/Projects/etc/hngh/hngh-automation/verify.sh`.
-    *   *Action:* `ls -la /home/bricker/Projects/etc/hngh/hngh-automation/verify.sh`
+1.  **File Existence:** Confirm whether `hngh-automation/verify.sh` exists at `~/Projects/etc/hngh/hngh-automation/verify.sh`.
+    *   *Action:* `ls -la ~/Projects/etc/hngh/hngh-automation/verify.sh`
 2.  **Pipeline Presence:** Confirm whether `.github/workflows/`, `Jenkinsfile`, or `Makefile` exists in the kernel repo and references the script.
-    *   *Action:* `grep -rn "verify.sh" /home/bricker/Projects/etc/hngh/.github/workflows/ /home/bricker/Projects/etc/hngh/Jenkinsfile /home/bricker/Projects/etc/hngh/Makefile`
+    *   *Action:* `grep -rn "verify.sh" ~/Projects/etc/hngh/.github/workflows/ ~/Projects/etc/hngh/Jenkinsfile ~/Projects/etc/hngh/Makefile`
 3.  **Script Logic:** Verify the exit-code contract of `verify.sh` itself (does it return 0 on pass, non-zero on fail?).
     *   *Action:* Read source code of `hngh-automation/verify.sh`.
 
 ## References
 
-*   `/home/bricker/Projects/etc/hngh` (Kernel repository root; existence of specific pipeline files unverified)
+*   `~/Projects/etc/hngh` (Kernel repository root; existence of specific pipeline files unverified)
 *   `hngh-automation/verify.sh` (Script path; existence and content unverified in current material)
 *   Prior Material: Research beat 2026-09-16 (Line state: expanding -> contracting)

@@ -24,7 +24,7 @@ The hypothesis therefore remains **unverified**. Any interim claim that it was "
 
 ### F2 — File-path claims are unverifiable from this transition
 
-I cannot read `/home/bricker/Projects/etc/hngh` or any subpath thereof from this environment. The prior material names `hngh/src/api` and the kernel root `/home/bricker/Projects/etc/hngh`, but I have no independent confirmation that either path exists, that `src/api` is the correct module for the ACK logic, or that the persistence point lives there rather than in a separate state-store or WAL module. **I say this explicitly rather than asserting it.**
+I cannot read `~/Projects/etc/hngh` or any subpath thereof from this environment. The prior material names `hngh/src/api` and the kernel root `~/Projects/etc/hngh`, but I have no independent confirmation that either path exists, that `src/api` is the correct module for the ACK logic, or that the persistence point lives there rather than in a separate state-store or WAL module. **I say this explicitly rather than asserting it.**
 
 ### F3 — The prior art is directly on-pattern but was not integrated into the evidence base
 
@@ -77,7 +77,7 @@ These are the questions this line leaves unresolved. They are not failures of th
 
 | # | Thread | What would close it |
 |---|--------|---------------------|
-| O1 | **Does `hngh/src/api` exist?** What is the real module path for the ACK logic? | A directory listing or file read of `/home/bricker/Projects/etc/hngh` confirming or correcting the path. |
+| O1 | **Does `hngh/src/api` exist?** What is the real module path for the ACK logic? | A directory listing or file read of `~/Projects/etc/hngh` confirming or correcting the path. |
 | O2 | **What is the actual persistence point?** Is it a WAL append, a transaction commit, a state-store apply? | A quoted code block from the real durability boundary with commit SHA and line range. |
 | O3 | **Was the re-run ever completed?** The line's name presupposes a "truncated final beat" that was re-run. No artifact records its outcome. | A re-run log containing all fields in R6. |
 | O4 | **Is the optimistic-ack pattern actually present in the codebase, or is it an inferred pattern?** The prior material's pseudocode is explicitly non-repository. | Either a real code quote showing pre-commit ACK, or a code quote showing the opposite (durable-intent-first), which would retract the hypothesis on different grounds. |
@@ -95,7 +95,7 @@ These are the questions this line leaves unresolved. They are not failures of th
 ## References
 
 - **Prior material on this line:** `research beat 2026-09-15` (supplied in this transition). Contains the inferred pseudocode explicitly labeled "Pseudocode based on typical hngh patterns," the contracting analysis, and the interim verdict that the hypothesis cannot be confirmed.
-- **Kernel repository root (unverified):** `/home/bricker/Projects/etc/hngh`. Named in the prior material. I cannot verify its existence or contents from this transition.
+- **Kernel repository root (unverified):** `~/Projects/etc/hngh`. Named in the prior material. I cannot verify its existence or contents from this transition.
 - **API module path (unverified):** `hngh/src/api`. Named in the line's question and the prior material. No file read or directory listing confirms it.
 - **Prior art pointer 1:** `sources/async-proof-pattern-for-long-drop-ins` — "Prove long-running drop-ins with background job." Read-only vault pointer; full text not available in this transition.
 - **Prior art pointer 2:** `sources/obs-2026-08-25-hngh-promotion-rung-11-distributed-attestation-completed-pus` — "Observati…" (truncated). Read-only vault pointer; full text not available in this transition.

@@ -1,4 +1,4 @@
-# Does the deployed kernel version on idle hosts match the latest tag in `/home/bricker/Projects/etc/hngh` that contains the guardrail fix commit?
+# Does the deployed kernel version on idle hosts match the latest tag in `~/Projects/etc/hngh` that contains the guardrail fix commit?
 
 Status: crystallized 2026-09-13 from research line `fail-20260913-Does-the-deployed-kernel-version-on-idle`; per-beat
 material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-deployed-kernel-version-on-idle.md.
@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 #### Findings
 
 1. **Commit Identification:**
-   - The guardrail fix commit was identified using the command `git log --grep="guardrail fix" --oneline` in the repository `/home/bricker/Projects/etc/hngh`.
+   - The guardrail fix commit was identified using the command `git log --grep="guardrail fix" --oneline` in the repository `~/Projects/etc/hngh`.
    - The latest tag containing this fix was determined using `git tag --contains <commit_hash>`.
 
 2. **Kernel Version Verification:**
@@ -65,7 +65,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 ### References
 
 1. **Commit Identification:**
-   - `/home/bricker/Projects/etc/hngh`
+   - `~/Projects/etc/hngh`
    - `git log --grep="guardrail fix" --oneline`
    - `git tag --contains <commit_hash>`
 
@@ -83,4 +83,4 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-the-
 
 ---
 
-This summary provides a structured approach to ensure that the deployed kernel version on idle hosts matches the latest tag in `/home/bricker/Projects/etc/hngh` that contains the guardrail fix commit.
+This summary provides a structured approach to ensure that the deployed kernel version on idle hosts matches the latest tag in `~/Projects/etc/hngh` that contains the guardrail fix commit.

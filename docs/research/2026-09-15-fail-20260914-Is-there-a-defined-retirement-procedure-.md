@@ -13,10 +13,10 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Is-there-
 
 ## Epistemic status
 
-This summary does not claim to have read `research-lines.tsv`, any governance document, the llm-wiki vault note bodies, or `/home/bricker/Projects/etc/hngh`. The only concrete paths cited are the two named in the task itself:
+This summary does not claim to have read `research-lines.tsv`, any governance document, the llm-wiki vault note bodies, or `~/Projects/etc/hngh`. The only concrete paths cited are the two named in the task itself:
 
 - `research-lines.tsv`
-- `/home/bricker/Projects/etc/hngh`
+- `~/Projects/etc/hngh`
 
 All other statements are either structural reasoning about what a retirement procedure must be, or greppable verification steps that remain open.
 
@@ -50,7 +50,7 @@ Therefore, the procedural question remains open.
 
 ### F3 — Absence in supplied material is not evidence of absence in the repository
 
-The fact that no retirement procedure appears in the prior material does not prove that no such procedure exists in `research-lines.tsv` or in governance documentation under `/home/bricker/Projects/etc/hngh`. It only means that this turn cannot verify one.
+The fact that no retirement procedure appears in the prior material does not prove that no such procedure exists in `research-lines.tsv` or in governance documentation under `~/Projects/etc/hngh`. It only means that this turn cannot verify one.
 
 ### F4 — A terminal state without a code fix is plausible, but unconfirmed
 
@@ -86,9 +86,9 @@ If any row already carries a terminal value other than “resolved” or “fixe
 
 then the procedural question may be answered **yes** by demonstrated convention, even in the absence of a written governance document. In a line-tracking system that is itself the governance artifact, precedent in the data can function as a defined procedure.
 
-### R2 — Search `/home/bricker/Projects/etc/hngh` for governance text
+### R2 — Search `~/Projects/etc/hngh` for governance text
 
-If `research-lines.tsv` does not reveal a terminal state, search `/home/bricker/Projects/etc/hngh` for retirement-relevant terms across documentation, TSV files, and any governance or process text. Useful search terms include:
+If `research-lines.tsv` does not reveal a terminal state, search `~/Projects/etc/hngh` for retirement-relevant terms across documentation, TSV files, and any governance or process text. Useful search terms include:
 
 - `retire`
 - `obsolete`
@@ -141,7 +141,7 @@ A retirement procedure may exist even if `patrol:automation-gate` is not yet est
 ## Open threads
 
 1. **Unverified:** Does `research-lines.tsv` contain a terminal state that permits closure without a code fix?
-2. **Unverified:** Do governance documents under `/home/bricker/Projects/etc/hngh` define a retirement procedure for research lines?
+2. **Unverified:** Do governance documents under `~/Projects/etc/hngh` define a retirement procedure for research lines?
 3. **Unverified:** Is `patrol:automation-gate` substantively obsolete, superseded, or no longer requiring a code fix?
 4. **Unresolved:** If no procedure exists, should the repository introduce an explicit terminal state and closure record for obsolete lines?
 5. **Unresolved:** What is the minimum audit metadata required to close a line without a code fix while preserving the line’s lasting record?
@@ -150,11 +150,11 @@ A retirement procedure may exist even if `patrol:automation-gate` is not yet est
 
 ## Final answer to the line
 
-No verified defined retirement procedure is established in the supplied material. The question remains open pending direct inspection of `research-lines.tsv` and any governance documentation under `/home/bricker/Projects/etc/hngh`. If such a procedure exists, it must define a terminal state whose semantics are “closed because obsolete,” “closed because superseded,” or “closed without fix required.” If no such procedure exists, the repository should not silently close the line; it should record the retirement decision explicitly and preserve the row as an audit trail.
+No verified defined retirement procedure is established in the supplied material. The question remains open pending direct inspection of `research-lines.tsv` and any governance documentation under `~/Projects/etc/hngh`. If such a procedure exists, it must define a terminal state whose semantics are “closed because obsolete,” “closed because superseded,” or “closed without fix required.” If no such procedure exists, the repository should not silently close the line; it should record the retirement decision explicitly and preserve the row as an audit trail.
 
 ---
 
 ## References
 
 - `research-lines.tsv` — named in the task as the line-state store; existence and contents not independently verified in this turn.
-- `/home/bricker/Projects/etc/hngh` — named in the task as the hngh kernel repository root; not inspected in this turn.
+- `~/Projects/etc/hngh` — named in the task as the hngh kernel repository root; not inspected in this turn.

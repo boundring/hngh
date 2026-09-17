@@ -13,7 +13,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Does-lib-
 ## Findings
 
 **F1 — The question is resolvable by a single local command, not by further research.**
-The prior expansion beat could not resolve the line because the verifier lacked filesystem access to `/home/bricker/Projects/etc/hngh`. I must state this explicitly: **I cannot read `lib/automation.py` or `bin/hngh` from this session.** No claim in this record is an assertion of observed file content; every finding below is either (a) grounded in prior material already in the line, or (b) a recommendation whose only remaining step is a local check. The line should not consume another expansion beat on a question that a `grep` answers in under a minute.
+The prior expansion beat could not resolve the line because the verifier lacked filesystem access to `~/Projects/etc/hngh`. I must state this explicitly: **I cannot read `lib/automation.py` or `bin/hngh` from this session.** No claim in this record is an assertion of observed file content; every finding below is either (a) grounded in prior material already in the line, or (b) a recommendation whose only remaining step is a local check. The line should not consume another expansion beat on a question that a `grep` answers in under a minute.
 
 **F2 — Circumstantial evidence strongly favors `subprocess`, but this remains a hypothesis until verified.**
 Three independent signals from prior material point the same way:
@@ -82,4 +82,4 @@ The line's question is scoped to `lib/automation.py`. If other modules (e.g., a 
 1. `sources/subprocess-stub-seam-for-hermetic-tests` — Vault note describing an env-overridable binary seam for hermetic subprocess testing. Cited for F2(1) and R2.
 2. `sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled` — Observation note confirming the overnight harness was built, verified, and enabled. Cited for F2(2).
 3. `lib/automation.py` — Target file in the automation repository. **Not read in this session.** Cited as the subject of R1's grep; no content is asserted.
-4. `bin/hngh` — Target binary in `/home/bricker/Projects/etc/hngh`. **Not read in this session.** Cited as the invocation target; no content or shebang is asserted.
+4. `bin/hngh` — Target binary in `~/Projects/etc/hngh`. **Not read in this session.** Cited as the invocation target; no content or shebang is asserted.

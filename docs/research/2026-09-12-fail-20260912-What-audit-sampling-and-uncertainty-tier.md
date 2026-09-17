@@ -9,7 +9,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260912-What-audi
 What audit sampling and uncertainty tiering should gate OpenAlex/Crossref OA-status fields before they are trusted to enforce the R3 two-class license split at ingest?
 
 ## Lifecycle State
-Contracting → Final Record. This is the crystallized, lasting record of the line. The prior expansion beat (2026-09-12) truncated without usable findings; this contraction rests on the line question itself, general properties of OpenAlex/Crossref OA metadata, and the prior-art vault pointers. **No kernel file paths are asserted** because I could not inspect `/home/bricker/Projects/etc/hngh` or hngh-automation during this transition. Implementation-specific details are marked as hooks to be located, not citations.
+Contracting → Final Record. This is the crystallized, lasting record of the line. The prior expansion beat (2026-09-12) truncated without usable findings; this contraction rests on the line question itself, general properties of OpenAlex/Crossref OA metadata, and the prior-art vault pointers. **No kernel file paths are asserted** because I could not inspect `~/Projects/etc/hngh` or hngh-automation during this transition. Implementation-specific details are marked as hooks to be located, not citations.
 
 ## Findings
 
@@ -61,7 +61,7 @@ License evidence must be tied to the specific content version being ingested (e.
 
 ## Open Threads
 
-1. **Kernel implementation location.** The gating logic (tier assignment, disagreement resolution, audit queue management, batch gate enforcement) must live somewhere in `/home/bricker/Projects/etc/hngh` or hngh-automation. I could not inspect these repositories during this transition. **Hook:** Locate the ingest pipeline's license-class assignment step and confirm that R1–R5 are implemented as a pre-enforcement gate, not a post-hoc annotation.
+1. **Kernel implementation location.** The gating logic (tier assignment, disagreement resolution, audit queue management, batch gate enforcement) must live somewhere in `~/Projects/etc/hngh` or hngh-automation. I could not inspect these repositories during this transition. **Hook:** Locate the ingest pipeline's license-class assignment step and confirm that R1–R5 are implemented as a pre-enforcement gate, not a post-hoc annotation.
 
 2. **Empirical validation of the n ≈ 59 sample size.** The binomial approximation assumes a worst-case error rate near the threshold. If the actual false-permissive rate is lower (e.g., <1%), a smaller sample may suffice; if higher, a larger sample or stricter gate is needed. **Hook:** After the first 3–5 audit batches, compute the observed per-stratum error rates and recalibrate n and the threshold.
 
@@ -79,4 +79,4 @@ License evidence must be tied to the specific content version being ingested (e.
 - `[[sources/obs-2026-08-19-hngh-knowledge-base-ingestion-in-llm-wiki]]` — Observation: Hngh Knowledge Base Ingestion in llm-wiki (llm-wiki vault; not read in full during this transition).
 - `[[sources/SRC-2026-08-24-014]]` — opensource.guide: Legal (Licenses, DCO vs CLA) (llm-wiki vault; not read in full during this transition).
 - General properties of OpenAlex and Crossref OA metadata as described in F1–F3. These are structural claims about the meaning of the fields, not version-specific empirical claims. I flag them as such: they reflect the documented semantics of `is_oa`, `oa_status`, and Crossref `license` arrays as understood from public documentation, but I did not verify against a specific API version or dataset snapshot in this transition.
-- **No kernel file paths are cited.** I could not inspect `/home/bricker/Projects/etc/hngh` or hngh-automation during this transition. All implementation references are hooks (Open Threads 1, 2, 3, 4, 6), not citations.
+- **No kernel file paths are cited.** I could not inspect `~/Projects/etc/hngh` or hngh-automation during this transition. All implementation references are hooks (Open Threads 1, 2, 3, 4, 6), not citations.

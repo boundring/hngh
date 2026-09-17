@@ -11,7 +11,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Are-there
 
 ## Epistemic status and verification boundary
 
-This contraction was produced **without live filesystem access** to `hngh/hngh-automation` or to `/home/bricker/Projects/etc/hngh`. Therefore:
+This contraction was produced **without live filesystem access** to `hngh/hngh-automation` or to `~/Projects/etc/hngh`. Therefore:
 
 - I do **not** assert any repository-internal file paths as confirmed.
 - I do **not** restate the exact paths of the two known surfaces, because their identity is established by the drift note in prior material, not independently re-verified here.
@@ -22,7 +22,7 @@ The search commands in the recommendations are the means by which the surface se
 
 ## Contracted question
 
-Bound the full surface set for the patrol verdict rule across `hngh/hngh-automation` and `/home/bricker/Projects/etc/hngh`, determine which surface is the source-of-truth, and make future drift structurally impossible in `hngh/hngh-automation`.
+Bound the full surface set for the patrol verdict rule across `hngh/hngh-automation` and `~/Projects/etc/hngh`, determine which surface is the source-of-truth, and make future drift structurally impossible in `hngh/hngh-automation`.
 
 ## Findings
 
@@ -44,7 +44,7 @@ The line’s question explicitly names three candidate classes that remain open 
 
 1. **Test fixtures** in `hngh/hngh-automation` or related test trees.
 2. **Documentation surfaces**, including install, timer, harness-health, or operational docs.
-3. **Other repositories**, including `/home/bricker/Projects/etc/hngh`.
+3. **Other repositories**, including `~/Projects/etc/hngh`.
 
 These are not asserted to contain copies. They are the remaining search space.
 
@@ -64,7 +64,7 @@ Status: **unverified as a third surface**.
 
 ## Recommendations
 
-These recommendations are applicable on an idle host with access to `hngh/hngh-automation` and `/home/bricker/Projects/etc/hngh`. They are not claims that any specific file exists.
+These recommendations are applicable on an idle host with access to `hngh/hngh-automation` and `~/Projects/etc/hngh`. They are not claims that any specific file exists.
 
 ### R1 — Decompose the rule into atoms before searching
 
@@ -84,7 +84,7 @@ Do not assume those atoms here; derive them from the drift note’s recorded rul
 On an idle host, run searches over:
 
 - `hngh/hngh-automation`
-- `/home/bricker/Projects/etc/hngh`
+- `~/Projects/etc/hngh`
 
 Use both exact and fuzzy patterns. Record:
 
@@ -97,8 +97,8 @@ Use both exact and fuzzy patterns. Record:
 Example command shapes, to be parameterized with the extracted atoms:
 
 ```bash
-rg -n -F '<exact-rule-atom>' /home/bricker/Projects/etc/hngh
-rg -n -i 'patrol|verdict|healthy|timer' /home/bricker/Projects/etc/hngh
+rg -n -F '<exact-rule-atom>' ~/Projects/etc/hngh
+rg -n -i 'patrol|verdict|healthy|timer' ~/Projects/etc/hngh
 rg -n -F '<exact-rule-atom>' <hngh-automation-checkout>
 rg -n -i 'patrol|verdict|healthy|timer' <hngh-automation-checkout>
 ```

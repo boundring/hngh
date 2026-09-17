@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-manga-layout-metrics.md
 #### Findings
 
 1. **Fabricated Kernel Scripts:**
-   - The prior material cites `/home/bricker/Projects/etc/hngh/panel-per-page-density.py`, `gutter-rhythm-analysis.py`, and `screentone-coverage.py`. These files do not exist in the `hngh` kernel repository.
+   - The prior material cites `~/Projects/etc/hngh/panel-per-page-density.py`, `gutter-rhythm-analysis.py`, and `screentone-coverage.py`. These files do not exist in the `hngh` kernel repository.
 
 2. **Hallucinated Literature:**
    - The "External Sources" list (Dr. Jane Smith, Dr. John Doe, Dr. Emily White) are generic placeholder names. These specific articles do not exist in the cited journals or repositories.
@@ -23,7 +23,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-manga-layout-metrics.md
    - If it exists, inspect its contents. Ensure it contains actual panel counts, gutter widths (in pixels or mm), or screentone coverage percentages.
 
 2. **Verify Kernel Script Existence:**
-   - Run `ls /home/bricker/Projects/etc/hngh/*.py` to check for the cited scripts.
+   - Run `ls ~/Projects/etc/hngh/*.py` to check for the cited scripts.
    - If scripts do not exist, do not attempt to run them. If you need panel-grammar analysis, you must first develop or import a valid image-processing pipeline (e.g., using OpenCV or Tesseract) within `hngh`.
 
 3. **Replace Hallucinated Literature with Verifiable Sources:**

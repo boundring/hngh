@@ -10,7 +10,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Does-the-
 
 ## Findings
 
-1.  **Unverifiable from Authoring Context:** The factual question regarding the specific failure state or last-run timestamp relative to `2026-09-12T21:03Z` remains **unresolved and unverifiable** within the current research context. There is no shell access, journal access, or filesystem read capability for `/home/bricker/Projects/etc/hngh` available in this environment.
+1.  **Unverifiable from Authoring Context:** The factual question regarding the specific failure state or last-run timestamp relative to `2026-09-12T21:03Z` remains **unresolved and unverifiable** within the current research context. There is no shell access, journal access, or filesystem read capability for `~/Projects/etc/hngh` available in this environment.
 2.  **No Direct Evidence of Failure:** No concrete evidence (logs, status outputs, or timestamps) confirming a failure state or stale timestamp prior to the threshold date exists in the provided prior material or accessible repository pointers.
 3.  **Instrumentation Gap Identified:** The necessity of manually asking this question indicates an instrumentation gap. The system lacks automatic detection and reporting mechanisms for crumb writer staleness or failure, relying on human observation rather than machine-checkable cadence enforcement.
 

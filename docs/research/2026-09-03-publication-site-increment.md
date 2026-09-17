@@ -8,10 +8,10 @@ the temp root was discarded after inventory.
 
 ## What the run consumed (grounded)
 
-Command (from /home/bricker/Projects/etc/hngh/automation):
+Command (from ~/Projects/etc/hngh/automation):
 
-    HNGH_PUB_ROOT=/tmp/hngh-pub-QxQU scripts/generate-publication --site
-    -> site index -> /tmp/hngh-pub-QxQU/docs/site/index.html  (exit 0)
+    HNGH_PUB_ROOT=~tmp/hngh-pub-QxQU scripts/generate-publication --site
+    -> site index -> ~tmp/hngh-pub-QxQU/docs/site/index.html  (exit 0)
 
 Output: one file, `docs/site/index.html`, 27,378 bytes, 7 `<section>`
 blocks. No "skipping missing" warnings: all 7 hard-coded sources
@@ -81,5 +81,5 @@ fourth source class. Moderated intake, readout, hosting, and
 rate-limits are the larger, separately-priced public-surface work and
 stay behind that backlog row's dependencies.
 
-Artifacts: /tmp/hngh-pub-QxQU (throwaway; never committed). `git
+Artifacts: ~tmp/hngh-pub-QxQU (throwaway; never committed). `git
 status` in the automation repo shows no publication artifacts.

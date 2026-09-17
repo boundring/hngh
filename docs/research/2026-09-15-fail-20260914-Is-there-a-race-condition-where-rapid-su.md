@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Is-there-
 
 _line: Is there a race condition where rapid successive clicks on "mark read" trigger an idempotency guard that silently drops subsequent writes? | state: contracting → contracted_
 
-**Verdict: UNRESOLVED — plausible mechanism, never grounded in code.** The line closes without confirmation or refutation. Across both the prior beat (2026-09-15) and this transition, the mark-read write path in the hngh kernel repository was never identified at file level, and no file under `/home/bricker/Projects/etc/hngh` could be enumerated from the material available in-transition. Everything below is either (a) process record of what was and was not verified, or (b) general reasoning about the failure class, flagged as such. No file paths are asserted that could not be verified; inventing them would poison the record.
+**Verdict: UNRESOLVED — plausible mechanism, never grounded in code.** The line closes without confirmation or refutation. Across both the prior beat (2026-09-15) and this transition, the mark-read write path in the hngh kernel repository was never identified at file level, and no file under `~/Projects/etc/hngh` could be enumerated from the material available in-transition. Everything below is either (a) process record of what was and was not verified, or (b) general reasoning about the failure class, flagged as such. No file paths are asserted that could not be verified; inventing them would poison the record.
 
 ## Findings
 

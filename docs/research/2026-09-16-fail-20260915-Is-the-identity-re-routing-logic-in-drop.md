@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Is-the-id
 
 **Line:** Is the identity re-routing logic in `dropin:33-research-beat.sh` scoped to a stable key that survives re-routes, or does it invalidate per-identity completion state?  
 **Lifecycle state:** contracting → crystallized  
-**Verification posture:** No repository contents were available in this transition. Therefore no implementation claim below is asserted as verified from this repository or from `/home/bricker/Projects/etc/hngh`.
+**Verification posture:** No repository contents were available in this transition. Therefore no implementation claim below is asserted as verified from this repository or from `~/Projects/etc/hngh`.
 
 ## Findings
 
@@ -61,7 +61,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Is-the-id
 ## Open threads
 
 1. **What is the canonical identity key in the hngh kernel?**  
-   Does `/home/bricker/Projects/etc/hngh` define a stable identity primitive that survives host or route changes? This cannot be confirmed without inspecting the repository.
+   Does `~/Projects/etc/hngh` define a stable identity primitive that survives host or route changes? This cannot be confirmed without inspecting the repository.
 
 2. **Does `dropin:33-research-beat.sh` use that primitive, or does it construct its own key?**  
    If it constructs its own key, the stability of that key must be evaluated field by field.
@@ -84,4 +84,4 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-Is-the-id
 
 - Research line state provided in this transition: “Is the identity re-routing logic in `dropin:33-research-beat.sh` scoped to a stable key that survives re-routes, or does it invalidate per-identity completion state?”
 - Prior material provided in this transition: research beat 2026-09-16 for this line.
-- No concrete file paths from this repository or `/home/bricker/Projects/etc/hngh` are cited here because their existence and contents could not be verified in this transition.
+- No concrete file paths from this repository or `~/Projects/etc/hngh` are cited here because their existence and contents could not be verified in this transition.

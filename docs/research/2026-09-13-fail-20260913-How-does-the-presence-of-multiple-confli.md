@@ -47,14 +47,14 @@ A `<funder>` element can impose an operationally binding OA condition that is no
 
 ## Verification limits (stated, not waved away)
 
-I do **not** have verified read access to `/home/bricker/Projects/etc/hngh`, to `hngh/hngh-automation`, or to `research-lines.tsv` from this environment. I therefore **cannot** cite concrete internal file paths — no tier enum, sampler module, license-signal struct, or reduction-policy constant can be confirmed to exist. R1–R6 are specified at the design level precisely because their landing sites in the kernel could not be inspected. Similarly, the Crossref schema claim (F1) and the binomial sampling model (F2) rest on the prior beat's assertions and general knowledge of the public Crossref API, not on sources verifiable here. The prior-art vault pointers listed below were provided read-only and could not be opened; none of them appears directly load-bearing for this line — they are adjacent (licensing legal background, unrelated data sources) rather than foundational.
+I do **not** have verified read access to `~/Projects/etc/hngh`, to `hngh/hngh-automation`, or to `research-lines.tsv` from this environment. I therefore **cannot** cite concrete internal file paths — no tier enum, sampler module, license-signal struct, or reduction-policy constant can be confirmed to exist. R1–R6 are specified at the design level precisely because their landing sites in the kernel could not be inspected. Similarly, the Crossref schema claim (F1) and the binomial sampling model (F2) rest on the prior beat's assertions and general knowledge of the public Crossref API, not on sources verifiable here. The prior-art vault pointers listed below were provided read-only and could not be opened; none of them appears directly load-bearing for this line — they are adjacent (licensing legal background, unrelated data sources) rather than foundational.
 
 ---
 
 ## References
 
 - `research-lines.tsv` — line state file (path asserted by the task prompt; not readable from this environment)
-- `/home/bricker/Projects/etc/hngh` — hngh kernel repository (referenced by the task prompt; contents not verified from this environment; no internal file paths cited)
+- `~/Projects/etc/hngh` — hngh kernel repository (referenced by the task prompt; contents not verified from this environment; no internal file paths cited)
 - Prior line material: research beat 2026-09-13 (expanding → contracting), reproduced in the task prompt — the sole verified source for F1–F3 and R1–R6
 - llm-wiki vault (read-only pointers, none load-bearing for this line): `[[sources/SRC-2026-08-24-014]]` opensource.guide: Legal (Licenses, DCO vs CLA); `[[sources/SRC-2026-08-18-008]]`; `[[sources/chartlibrary-io-developers-api]]`; `[[sources/sourcelibrary-org-ancient-texts-translated]]`
 - External, unverified from this environment: Crossref REST API schema (basis of F1); binomial audit-sampling model (basis of F2)

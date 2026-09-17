@@ -41,7 +41,7 @@ accepted. Evidence reviewed 2026-09-09T23:00Z.
 
 4. **RESEARCH — unsloth recovery/local-lane** (step 4 of 2026-09-03-staging, executed 2026-09-09T23:00Z)
    - Unit states: llama-server.service disabled, unsloth-warm.service disabled, unsloth-studio.service active
-   - Model file: /home/bricker/.cache/huggingface/hub/models--unsloth--Ornith-1.0-35B-GGUF/snapshots/78e1321ef86b69126dc991f481bb0cdc37614ed0/Ornith-1.0-35B-UD-Q2_K_XL.gguf (12.25 GB)
+   - Model file: ~/.cache/huggingface/hub/models--unsloth--Ornith-1.0-35B-GGUF/snapshots/78e1321ef86b69126dc991f481bb0cdc37614ed0/Ornith-1.0-35B-UD-Q2_K_XL.gguf (12.25 GB)
    - Operator-supervised start path required (critical-class systemd unit edit)
 
 5. **GROW — publications pipeline --site increment** (step 5 of 2026-09-03-staging, executed 2026-09-09T23:00Z)

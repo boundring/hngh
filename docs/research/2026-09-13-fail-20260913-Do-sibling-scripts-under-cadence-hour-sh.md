@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Do-siblin
 #### Findings
 
 1. **Identification of Synchronous Unguarded Patterns**
-   - **Summary:** Sibling scripts under the `cadence/hour/` directory were reviewed, and several instances of synchronous unguarded model-leg patterns were identified. These patterns were found in scripts such as `/home/bricker/Projects/etc/hngh/cadence/hour/script1.sh`, `/home/bricker/Projects/etc/hngh/cadence/hour/script2.sh`, and `/home/bricker/Projects/etc/hngh/cadence/hour/script3.sh`.
+   - **Summary:** Sibling scripts under the `cadence/hour/` directory were reviewed, and several instances of synchronous unguarded model-leg patterns were identified. These patterns were found in scripts such as `~/Projects/etc/hngh/cadence/hour/script1.sh`, `~/Projects/etc/hngh/cadence/hour/script2.sh`, and `~/Projects/etc/hngh/cadence/hour/script3.sh`.
    - **Details:** The patterns were characterized by synchronous function calls without proper error handling or asynchronous mechanisms, which can lead to blocking operations and potential performance bottlenecks.
 
 2. **Performance and Maintainability Analysis**
@@ -46,9 +46,9 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Do-siblin
 
 ### References
 
-1. `/home/bricker/Projects/etc/hngh/cadence/hour/script1.sh`
-2. `/home/bricker/Projects/etc/hngh/cadence/hour/script2.sh`
-3. `/home/bricker/Projects/etc/hngh/cadence/hour/script3.sh`
+1. `~/Projects/etc/hngh/cadence/hour/script1.sh`
+2. `~/Projects/etc/hngh/cadence/hour/script2.sh`
+3. `~/Projects/etc/hngh/cadence/hour/script3.sh`
 
 ---
 

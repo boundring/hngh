@@ -23,7 +23,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Can-the-v
    `verdict-rule-drift-two-surfaces` indicates that the line concerns drift or duplication across two surfaces, but it does not establish when, where, or how the duplication was introduced.
 
 5. **Any stronger claim would require direct repository evidence.**  
-   A defensible conclusion must come from inspecting the hngh kernel repository at the specified root, `/home/bricker/Projects/etc/hngh`, and identifying the exact duplicated text, files, and commits involved.
+   A defensible conclusion must come from inspecting the hngh kernel repository at the specified root, `~/Projects/etc/hngh`, and identifying the exact duplicated text, files, and commits involved.
 
 ## Evidence required to close the line
 
@@ -38,7 +38,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Can-the-v
 ## Recommendations
 
 1. **Identify the duplicated source locations first.**  
-   In `/home/bricker/Projects/etc/hngh`, locate the two surfaces where the verdict-rule drift or duplication appears. The search should begin with the exact case name only if that string is known to appear in source, comments, tests, or configuration. If it is a research label rather than source text, use semantic tokens from the duplicated rule itself.
+   In `~/Projects/etc/hngh`, locate the two surfaces where the verdict-rule drift or duplication appears. The search should begin with the exact case name only if that string is known to appear in source, comments, tests, or configuration. If it is a research label rather than source text, use semantic tokens from the duplicated rule itself.
 
 2. **Use commit-history pickaxe searches once candidate strings are known.**  
    Useful starting commands include:

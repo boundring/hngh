@@ -8,11 +8,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260912-email-s
 #### Findings
 
 1. **Log File Analysis:**
-   - **Log Files:** Review of `/home/bricker/Projects/etc/hngh/logs/run-2026-08-25.log` and `/home/bricker/Projects/etc/hngh/logs/run-2026-08-26.log` did not reveal any specific error messages or warnings that directly indicated the reason for the failure.
-   - **Configuration Files:** Comparison of `/home/bricker/Projects/etc/hngh/config/email-settings-2026-08-25.yaml` and `/home/bricker/Projects/etc/hngh/config/email-settings-2026-08-26.yaml` showed no significant differences in the configuration settings related to email sending, server settings, or network configurations.
+   - **Log Files:** Review of `~/Projects/etc/hngh/logs/run-2026-08-25.log` and `~/Projects/etc/hngh/logs/run-2026-08-26.log` did not reveal any specific error messages or warnings that directly indicated the reason for the failure.
+   - **Configuration Files:** Comparison of `~/Projects/etc/hngh/config/email-settings-2026-08-25.yaml` and `~/Projects/etc/hngh/config/email-settings-2026-08-26.yaml` showed no significant differences in the configuration settings related to email sending, server settings, or network configurations.
 
 2. **Guardrail Analysis:**
-   - **Guardrails:** Review of `/home/bricker/Projects/etc/hngh/guardrails/email-guardrails.yaml` and analysis of the behavior during the failed runs in `/home/bricker/Projects/etc/hngh/guardrails/logs/run-2026-08-25.log` and `/home/bricker/Projects/etc/hngh/guardrails/logs/run-2026-08-26.log` did not identify any specific guardrails that were responsible for closing the research line. The guardrails appeared to be functioning as intended, but there was no clear indication of why the surface emails were failing.
+   - **Guardrails:** Review of `~/Projects/etc/hngh/guardrails/email-guardrails.yaml` and analysis of the behavior during the failed runs in `~/Projects/etc/hngh/guardrails/logs/run-2026-08-25.log` and `~/Projects/etc/hngh/guardrails/logs/run-2026-08-26.log` did not identify any specific guardrails that were responsible for closing the research line. The guardrails appeared to be functioning as intended, but there was no clear indication of why the surface emails were failing.
 
 3. **Voice Rules and Verdict Drift:**
    - **Voice Rules:** Examination of the voice rules in place did not reveal any direct impact on the surface email filing process. The voice rules were not found to be binding constraints or contributing to the failure.
@@ -48,11 +48,11 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-patrol-20260912-email-s
 
 ### References
 
-- `/home/bricker/Projects/etc/hngh/logs/run-2026-08-25.log`
-- `/home/bricker/Projects/etc/hngh/logs/run-2026-08-26.log`
-- `/home/bricker/Projects/etc/hngh/config/email-settings-2026-08-25.yaml`
-- `/home/bricker/Projects/etc/hngh/config/email-settings-2026-08-26.yaml`
-- `/home/bricker/Projects/etc/hngh/guardrails/email-guardrails.yaml`
-- `/home/bricker/Projects/etc/hngh/guardrails/logs/run-20
+- `~/Projects/etc/hngh/logs/run-2026-08-25.log`
+- `~/Projects/etc/hngh/logs/run-2026-08-26.log`
+- `~/Projects/etc/hngh/config/email-settings-2026-08-25.yaml`
+- `~/Projects/etc/hngh/config/email-settings-2026-08-26.yaml`
+- `~/Projects/etc/hngh/guardrails/email-guardrails.yaml`
+- `~/Projects/etc/hngh/guardrails/logs/run-20
 
 [truncated at model call: completion hit the max_tokens cap (finish_reason=length) - re-run the beat]

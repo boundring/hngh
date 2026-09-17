@@ -45,7 +45,7 @@ The closing guardrail is the **consecutive bad-execution demotion/cancellation g
 
 - I cannot verify the prior beat’s candidate log, trace, guardrail-config, session-budget, or plan-selection paths as existing files.
 - I cannot verify the upstream Hngh Analytics live README observation from this transition; treat it as an external lead only.
-- The only concrete path cited below is the provided kernel repository root: `/home/bricker/Projects/etc/hngh`.
+- The only concrete path cited below is the provided kernel repository root: `~/Projects/etc/hngh`.
 
 ### References
 

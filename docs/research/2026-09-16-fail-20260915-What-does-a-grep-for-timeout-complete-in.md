@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-What-does
 
 **Line:** What does a grep for `timeout_complete` in the hngh kernel repository reveal about the current state dispatch logic?
 **Lifecycle:** contracting → **closed (crystallized)**
-**Verification status:** No filesystem or shell access to `/home/bricker/Projects/etc/hngh` was available in any beat on this line. All findings are structural and methodological; none are observed facts about the repository's contents.
+**Verification status:** No filesystem or shell access to `~/Projects/etc/hngh` was available in any beat on this line. All findings are structural and methodological; none are observed facts about the repository's contents.
 
 ---
 
@@ -50,7 +50,7 @@ Every claim above specifies what the grep *would* reveal under each class distri
 ## Recommendations
 
 **R1 — Run the classified grep as the first action on this line.**
-When shell access to `/home/bricker/Projects/etc/hngh` is available, execute:
+When shell access to `~/Projects/etc/hngh` is available, execute:
 
 ```bash
 grep -rn 'timeout_complete\|TimeoutComplete' --include='*.rs' --include='*.go' --include='*.c' --include='*.h' .
@@ -79,7 +79,7 @@ Both prior beats ran without repository access. R1–R4 are structural expectati
 
 ## Open Threads
 
-1. **Repository access.** The single blocking dependency for every recommendation above. No file path in `/home/bricker/Projects/etc/hngh` has been verified to exist. The next transition with shell access should run R1 and report the distribution; this line then either confirms or revises F1–F4 against observed data.
+1. **Repository access.** The single blocking dependency for every recommendation above. No file path in `~/Projects/etc/hngh` has been verified to exist. The next transition with shell access should run R1 and report the distribution; this line then either confirms or revises F1–F4 against observed data.
 
 2. **Dispatcher shape.** The four-class framework assumes a named-state match/router. If the hngh kernel uses table-driven dispatch, callback registration, or a state-machine library, class 3's syntactic signature changes (e.g., a table entry rather than a match arm). The classes still apply; the grep patterns in R1 must be re-derived. This is resolvable in one read of the dispatch function once access is available.
 
@@ -93,7 +93,7 @@ Both prior beats ran without repository access. R1–R4 are structural expectati
 
 ## What I Cannot Claim
 
-- **No file path in `/home/bricker/Projects/etc/hngh` is cited**, because none could be verified to exist.
+- **No file path in `~/Projects/etc/hngh` is cited**, because none could be verified to exist.
 - The kernel's programming language, state enum name, and dispatcher implementation are unknown.
 - The actual grep output (hit count, class distribution) has never been observed on this line.
 - The contents of any vault document beyond its title are unknown.

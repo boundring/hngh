@@ -11,7 +11,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-os-harness-systemd-inte
 
 ## Verification Caveat (Load-Bearing)
 
-This session I could not inspect the working tree of `/home/bricker/Projects/etc/hngh` or the host vault directly. The only paths asserted with confidence are:
+This session I could not inspect the working tree of `~/Projects/etc/hngh` or the host vault directly. The only paths asserted with confidence are:
 1. The repository root itself, as given in the task framing.
 2. systemd's documented user-unit search path (`~/.config/systemd/user/`), stated from prior knowledge of `systemd.unit(5)` — not re-verified this session.
 
@@ -71,7 +71,7 @@ Use `loginctl enable-linger` for boot persistence. Do not wire the harness into 
 
 ## References
 
-- `/home/bricker/Projects/etc/hngh` — repository root (given in task framing)
+- `~/Projects/etc/hngh` — repository root (given in task framing)
 - `[[sources/SRC-2026-08-18-010]]` — Unsloth ROCm libhsa Segfault Workaround & Systemd Watcher (canonical timer+oneshot example)
 - `[[sources/obs-2026-08-25-hngh-automation-overnight-harness-built-verified-enabled]]` — Observation: overnight harness built, verified, enabled
 - `[[concepts/agent-harness-governance]]` — Agent-Harness Governance Positioning

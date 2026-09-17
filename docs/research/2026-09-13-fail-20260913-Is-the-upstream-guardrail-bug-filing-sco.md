@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260913-Is-the-up
 
 **Research line:** Is the upstream guardrail bug filing scoped to `lib/quips.py` specifically or applied repo-wide?
 **Lifecycle state:** contracting → **crystallized (terminal record)**
-**Repositories in scope:** the working repository (containing `lib/quips.py`) and the hngh kernel repository (`/home/bricker/Projects/etc/hngh`)
+**Repositories in scope:** the working repository (containing `lib/quips.py`) and the hngh kernel repository (`~/Projects/etc/hngh`)
 
 ---
 
@@ -27,7 +27,7 @@ The line contracts on a single defensible answer: **the evidence supports a file
 
 ### F2. Mechanism: unverified — the prior beat's specificity was fabricated
 
-This is the line's most important correction. The contracting beat named candidate locations for the guardrail logic — `.pre-commit-config.yaml`, `scripts/validate.py`, `lib/guardrail.py`, `.git/hooks/pre-commit`, `scripts/guardrail_check.sh`, `MANIFEST.sha256` — but **none of these paths were confirmed to exist in `/home/bricker/Projects/etc/hngh` or in the working repository**. They were presented as hypotheses ("e.g., … or similar") but were then built upon as if grounded. They are not findings; they are a search plan. This record retracts them as findings and re-files them under Open Threads.
+This is the line's most important correction. The contracting beat named candidate locations for the guardrail logic — `.pre-commit-config.yaml`, `scripts/validate.py`, `lib/guardrail.py`, `.git/hooks/pre-commit`, `scripts/guardrail_check.sh`, `MANIFEST.sha256` — but **none of these paths were confirmed to exist in `~/Projects/etc/hngh` or in the working repository**. They were presented as hypotheses ("e.g., … or similar") but were then built upon as if grounded. They are not findings; they are a search plan. This record retracts them as findings and re-files them under Open Threads.
 
 The same applies to the "stale hash or permission lock" hypothesis and the "integrity manifest" hypothesis: plausible, consistent with the word "guardrail," but **no hash manifest, checksum file, or hook was actually located and read** during this line.
 
@@ -40,7 +40,7 @@ The same applies to the "stale hash or permission lock" hypothesis and the "inte
 ## Recommendations (final)
 
 1. **Scope the fix to `lib/quips.py`.** Patch tooling and automation targeting this file should implement a targeted bypass/exception for its guardrail failure, not a global patch-system overhaul. Do not disable guardrail behavior repo-wide on the basis of a single-file observation.
-2. **Before writing any fix, ground the mechanism.** Locate the actual guardrail implementation in `/home/bricker/Projects/etc/hngh` (check, in order: `.pre-commit-config.yaml`, any `scripts/` validation entry points, git hooks, and CI configuration) and read it. Every remediation in the prior beat was premised on a guessed location; none should be executed until the real one is found.
+2. **Before writing any fix, ground the mechanism.** Locate the actual guardrail implementation in `~/Projects/etc/hngh` (check, in order: `.pre-commit-config.yaml`, any `scripts/` validation entry points, git hooks, and CI configuration) and read it. Every remediation in the prior beat was premised on a guessed location; none should be executed until the real one is found.
 3. **Run the discriminating experiment.** Attempt an apply-patch edit against one other file in the same repository. A single success converts F1 from moderate to high confidence; a failure reopens the repo-wide hypothesis. This is the cheapest decisive test available and should have preceded the contracting beat.
 4. **Amend the upstream filing once the mechanism is known.** The filing's current wording ("blocks all apply patch edits") is the source of this line's entire ambiguity. A precise amendment — naming the guardrail component, the trigger condition, and the confirmed scope — prevents the next reader from re-running this investigation.
 
@@ -57,7 +57,7 @@ The same applies to the "stale hash or permission lock" hypothesis and the "inte
 
 ## References
 
-Paths and pointers cited in this record. **Confirmed to exist** (referenced consistently across the line's own material): `lib/quips.py` (working repository — the file at the center of the line); the hngh kernel repository root `/home/bricker/Projects/etc/hngh` (given as the line's grounding target). **Prior-art pointers** (read-only, llm-wiki vault): `[[sources/pi-llm-wiki-guardrail-blocks-apply-patch-edits]]`; `[[sources/obs-2026-08-25-guardrail-bug-filed-upstream-hngh-analytics-live-readme-curr]]`; `[[concepts/llm-upstream-idle-timeout-incremental-writes]]`. **Explicitly unverified** (named only as search targets in OT1; no existence claim is made): `.pre-commit-config.yaml`, `scripts/validate.py`, `lib/guardrail.py`, `scripts/guardrail_check.sh`, `.git/hooks/pre-commit`, `MANIFEST.sha256`.
+Paths and pointers cited in this record. **Confirmed to exist** (referenced consistently across the line's own material): `lib/quips.py` (working repository — the file at the center of the line); the hngh kernel repository root `~/Projects/etc/hngh` (given as the line's grounding target). **Prior-art pointers** (read-only, llm-wiki vault): `[[sources/pi-llm-wiki-guardrail-blocks-apply-patch-edits]]`; `[[sources/obs-2026-08-25-guardrail-bug-filed-upstream-hngh-analytics-live-readme-curr]]`; `[[concepts/llm-upstream-idle-timeout-incremental-writes]]`. **Explicitly unverified** (named only as search targets in OT1; no existence claim is made): `.pre-commit-config.yaml`, `scripts/validate.py`, `lib/guardrail.py`, `scripts/guardrail_check.sh`, `.git/hooks/pre-commit`, `MANIFEST.sha256`.
 
 **External-source disclaimer:** The general claim that "guardrail" in such systems typically denotes a pre-commit hook or hash-pinning check is an inference from common practice, not something this line verified against external documentation; it is offered as context for the search plan in OT1, not as a finding.
 

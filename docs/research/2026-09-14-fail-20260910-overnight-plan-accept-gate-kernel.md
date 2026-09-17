@@ -11,7 +11,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260910-overnight
 
 ## Executive Summary
 
-The research line investigated why the kernel plan acceptance gate failed with `make test rc=2` and whether the underlying blocker remains open. Due to lack of read access to the automation repository (`/home/bricker/Projects/etc/hngh`) and the specific gate implementation in this transition, the exact root cause (e.g., specific failing recipe, environment drift, or harness error) **cannot be definitively identified** from static analysis alone.
+The research line investigated why the kernel plan acceptance gate failed with `make test rc=2` and whether the underlying blocker remains open. Due to lack of read access to the automation repository (`~/Projects/etc/hngh`) and the specific gate implementation in this transition, the exact root cause (e.g., specific failing recipe, environment drift, or harness error) **cannot be definitively identified** from static analysis alone.
 
 However, the investigation established that the failure mode is primarily an **observability gap** in the gate layer: the gate records only the exit code (`rc=2`) without capturing diagnostic context (stderr, failing recipe line). This prevents automatic triage and leads to ambiguous plan rejections. The blocker is considered **technically open** until a fresh gate run with enhanced logging is performed to distinguish between kernel test failures, harness errors, and environment drift.
 
@@ -55,7 +55,7 @@ However, the investigation established that the failure mode is primarily an **o
     -   Running `make test` in the kernel repository.
     -   Capturing full output and exit code.
     -   Comparing against the enhanced logging schema (R1).
-2.  **Repo Access:** Read access to `/home/bricker/Projects/etc/hngh` is required to verify:
+2.  **Repo Access:** Read access to `~/Projects/etc/hngh` is required to verify:
     -   The specific Makefile targets involved in `make test`.
     -   The gate implementation details and current logging behavior.
 3.  **Environment Drift Analysis:** Further investigation into idle overnight host drift patterns may be warranted if R2 classification reveals a high frequency of environment failures.

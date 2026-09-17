@@ -7,14 +7,14 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260915-What-make
 
 **Research line:** What make version does the repo’s toolchain use, and does its failure-line format match `make: *** [target] Error N` for reliable failing-target extraction?  
 **Lifecycle state:** Contracting — final structured summary  
-**Target repository:** `/home/bricker/Projects/etc/hngh`  
+**Target repository:** `~/Projects/etc/hngh`  
 **Continuous-process note:** This is a contraction of an always-moving research line, not a periodic batch result.
 
 ---
 
 ## Verdict
 
-The exact Make version used by the `hngh` toolchain **cannot be established from the material available in this transition**. No specific file inside `/home/bricker/Projects/etc/hngh` was verified here to pin, declare, or reveal a Make version.
+The exact Make version used by the `hngh` toolchain **cannot be established from the material available in this transition**. No specific file inside `~/Projects/etc/hngh` was verified here to pin, declare, or reveal a Make version.
 
 The failure-line format **matches `make: *** [target] Error N` only under the condition that the toolchain is GNU Make and its output is not rewritten by a wrapper**. That condition is plausible for a kernel-style project, but it is not proven from the repository in this transition.
 
@@ -37,7 +37,7 @@ No grounded repository evidence was available in this transition to answer:
 
 > What exact Make version does the `hngh` toolchain use?
 
-The prior material suggested inspecting files such as top-level Makefiles, CI configuration, container definitions, or build wrappers. Those are reasonable places to look, but **no specific file path inside `/home/bricker/Projects/etc/hngh` is asserted here as existing**.
+The prior material suggested inspecting files such as top-level Makefiles, CI configuration, container definitions, or build wrappers. Those are reasonable places to look, but **no specific file path inside `~/Projects/etc/hngh` is asserted here as existing**.
 
 Until one of those sources is inspected, the Make version remains an open thread.
 

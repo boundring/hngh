@@ -117,7 +117,7 @@ The standard systemd journald configuration paths (`/etc/systemd/journald.conf.d
 
 3. **Prior art observation (vault pointer):** `[[sources/obs-2026-08-25-post-rung-11-documentation-refresh-attribution-record-and-au]]` — Post-rung-11 documentation refresh, attribution record, and audit. Full content not ingested into this line; may contain host lifecycle details relevant to Probe B.
 
-4. **hngh kernel repository:** `/home/bricker/Projects/etc/hngh` — Referenced as the kernel repository location. Specific file paths within this repository are not cited in this summary because I cannot verify their existence without direct access. The prior material does not cite specific kernel repo file paths relevant to this line.
+4. **hngh kernel repository:** `~/Projects/etc/hngh` — Referenced as the kernel repository location. Specific file paths within this repository are not cited in this summary because I cannot verify their existence without direct access. The prior material does not cite specific kernel repo file paths relevant to this line.
 
 5. **hngh-automation provisioning template:** Location within the hngh-automation repository is not fully specified in the available prior material. The template source is identified as living in hngh-automation (not on a live host), but the exact file path was not cited in the prior beat. This is a gap that Probe A must resolve.
 

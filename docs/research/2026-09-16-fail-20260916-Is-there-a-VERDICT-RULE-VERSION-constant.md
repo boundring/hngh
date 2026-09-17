@@ -7,7 +7,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-Is-there-
 
 _line: Is there a `VERDICT_RULE_VERSION` constant defined in the kernel repo to facilitate drift detection? | state: contracting → **contracted (record closed; empirical pickup remains live)**_
 
-This beat crystallizes the line. The record closes; the work does not — Thread T1 below is immediately actionable by any idle host with `/home/bricker/Projects/etc/hngh` mounted, and the line can be reopened or succeeded the moment that evidence lands.
+This beat crystallizes the line. The record closes; the work does not — Thread T1 below is immediately actionable by any idle host with `~/Projects/etc/hngh` mounted, and the line can be reopened or succeeded the moment that evidence lands.
 
 ---
 
@@ -15,7 +15,7 @@ This beat crystallizes the line. The record closes; the work does not — Thread
 
 **UNRESOLVED — VERIFICATION GAP, carried honestly to closure.**
 
-This transition had no tool access to the hngh kernel repository. No grep, directory listing, or file read against `/home/bricker/Projects/etc/hngh` was executed in this beat. For the second consecutive transition, the core empirical question — does `VERDICT_RULE_VERSION` exist in the repo? — has no direct answer. Nothing in this record should be read as confirming either presence or absence. The gap itself, repeating across two transitions, is now a process finding (F4).
+This transition had no tool access to the hngh kernel repository. No grep, directory listing, or file read against `~/Projects/etc/hngh` was executed in this beat. For the second consecutive transition, the core empirical question — does `VERDICT_RULE_VERSION` exist in the repo? — has no direct answer. Nothing in this record should be read as confirming either presence or absence. The gap itself, repeating across two transitions, is now a process finding (F4).
 
 ## Findings
 

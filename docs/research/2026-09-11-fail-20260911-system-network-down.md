@@ -68,7 +68,7 @@ A flag must be falsifiable by its own probe. For a label reading `network-down`,
 Artifacts named in this record, with confidence:
 
 - `research-lines.tsv` — line state file, named in the line framing itself. **Confident it exists** (designated in the prompt); contents not re-read this session.
-- `/home/bricker/Projects/etc/hngh` — the hngh kernel repository, named in the line framing. **Confident the tree exists**; no internal paths verified, so none cited.
+- `~/Projects/etc/hngh` — the hngh kernel repository, named in the line framing. **Confident the tree exists**; no internal paths verified, so none cited.
 - [[sources/high-risk-file-collision-in-nightly-cycle-orchestrator]] — llm-wiki vault pointer (read-only), basis for the nightly-orchestrator context in F2 and T4.
 - [[entities/camel]] — llm-wiki vault pointer (read-only); CaMeL control-and-measure framing is contextually relevant to the probe/predicate design question but was not load-bearing for any finding.
 - [[sources/evomap-ai-agent-experience-network]] — llm-wiki vault pointer (read-only); listed as prior art, not load-bearing for findings.
