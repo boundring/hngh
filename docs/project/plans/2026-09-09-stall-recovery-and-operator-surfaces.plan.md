@@ -168,7 +168,7 @@ docs/records/ with its first commit.
       unreachable observation was possible; the suite's seams cover it.
       Plan-file-only slice per step-6/7 precedent (no kernel surface
       touched). Re-enabling deck-node-enabled stays operator territory.
-- [ ] 9. Wire pre-paid quota models into session routing. Evidence:
+- [x] 9. Wire pre-paid quota models into session routing. Evidence:
       overnight-cycle.sh:123 itself says "model routing (future, not
       implemented): when the KIMI/LOBEHUB quota keys go live (sibling
       lane), a session-model-preference Inventory row can route bounded
@@ -189,6 +189,28 @@ docs/records/ with its first commit.
       when configured > local-bench > paid-fallback), budget.md source
       tagging, and refusal to route to a quota model with no key config;
       `make test` green.
+      LANDED 2026-09-17 (mechanism, prior slice); VERIFIED on its own
+      surface this session: the quota rung sits at
+      automation/scripts/overnight-cycle.sh:194-223 behind the fail-closed
+      gate (get_param session-model-quota-keys must equal 1) with
+      quota_leg_healthy + model_demoted guards per entry; cadence-params.tsv
+      rows 58-59 carry session-model-quota-keys=0 (unarmed -- arming is
+      critical-class operator territory) and an empty
+      session-model-preference; budget rows carry model|source attribution
+      via launch-session.sh:499-505 with SESSION_SOURCE exported at
+      overnight-cycle.sh:246-249; automation/tests/test-quota-routing.sh
+      runs ALL PASS rc=0 (24 cases: env > quota > local-bench > paid
+      ladder, no-key refusal, unhealthy-leg skip, T1/T2/T3 interactions,
+      source tags). The step's evidence line ("model routing (future, not
+      implemented)") was obsolete at write time -- the hook was already
+      landed; trusting it verbatim likely caused blocker blk-20260916.
+      Full automation make test red at tick time on the sibling
+      router-tick scrub-single-source lane (test-router-tick.py
+      test_two_consecutive_pathy_fragments...; scripts/router-tick.py and
+      lib/scrub.py carry sibling unstaged edits) -- unrelated to this
+      docs-only tick; kernel gate green (make test, 2931 checks); tick
+      staged uncommitted per the step-6 precedent, commit waits for that
+      lane. See docs/records/2026-09-17-stall-recovery-step9-quota-verify.md.
 - [ ] 10. Fix the fresh-eyes review beat's model selection. Evidence:
       operator item "review: model response unparseable — read
       digest/REVIEW-2026-09-09.md": the 2026-09-09 review ran on
