@@ -13,13 +13,17 @@ cursor/body — fail closed):
   --add KIND TEXT      append a row and write the body file; id = first 8
                        hex of sha256(TEXT); ts = UTC ISO second. Refuses a
                        bad KIND or empty TEXT (exit 2).
-                       Alert text is public-bound: user-home path
-                       tokens (slash + home + slash + user + rest) and
-                       /tmp/... tokens are
-                       rewritten to ~/... and ~tmp/...
-                       before id/row/body are derived (2026-09-16 boundary
-                       redaction); progress and other kinds are not
-                       rewritten (some lanes carry repo-relative paths).
+                       Alert and progress text are public-bound:
+                       user-home path tokens (slash + home + slash +
+                       user + rest) and /tmp/... tokens are rewritten
+                       to ~/... and ~tmp/... before id/row/body are
+                       derived (alert: 2026-09-16 boundary redaction;
+                       progress: 2026-09-17, the sink control extends
+                       to it). The rewrite only matches machine-local
+                       absolute prefixes, so repo-relative paths — the
+                       old progress carve-out's rationale — pass
+                       through untouched, and mid-token forms
+                       (/tmpfile, URL path components) stay as written.
                        With --identity KEY, dedup: when a row of the same
                        KIND within --window SECONDS (default 86400; 0 =
                        unlimited lookback) stores the same identity, no new
@@ -86,10 +90,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
+# kinds whose TEXT is public-bound and sink-redacted (alert was the
+# 2026-09-16 original scope; progress joined 2026-09-17 — its old
+# carve-out rested on repo-relative paths, which the rewrite preserves)
+PUBLIC_KINDS = ("alert", "progress")
 
-# Boundary redaction (2026-09-16): the ledger is git-tracked and pushed
-# to the public origin, so alert text may never carry a machine-local
-# path prefix. Sink-side backstop mirroring the ONE token family from
+# Boundary redaction (2026-09-16; widened to progress 2026-09-17): the
+# ledger is git-tracked and pushed to the public origin, so alert and
+# progress text may never carry a machine-local path prefix. Sink-side
+# backstop mirroring the ONE token family from
 # automation/lib/scrub.py (llc-gate-scrub-site-divergence consolidation
 # 2026-09-16; kernel code never imports automation/, so the family is
 # mirrored here and pinned by tests both sides): "home" / "Users" /
@@ -102,7 +111,8 @@ KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
 # (e.g. a URL with a home-like path component) and word fragments
 # (/rooted) stay untouched.
 # Sink bypass closure (2026-09-16, this guard applies to): alert TEXT
-# (the original scope), --identity and --evidence keys (stored in the
+# (the original scope), progress TEXT (2026-09-17 widening), --identity
+# and --evidence keys (stored in the
 # body meta), every body free-text write (direct write_body callers
 # included), and the occurrence/suppressed appends. The rewrite is
 # idempotent and runs BEFORE the dedup window scan, so the dedup key
@@ -153,7 +163,9 @@ def redact_boundary(text):
     return text
 
 
-def redact_alert_text(text):
+def redact_public_text(text):
+    """The public-bound TEXT rewrite for --add rows (alert and progress
+    kinds; named redact_alert_text before the 2026-09-17 widening)."""
     return redact_boundary(text)
 
 
@@ -226,7 +238,7 @@ def write_body(ts, kind, rid, first, full, identity=None, evidence=None,
     """Write one body sidecar. The boundary rewrite applies to the
     identity/evidence metas unconditionally and to FIRST/FULL unless
     REDACT_TEXT is False -- the argv pass in add() sets that only for
-    progress rows (repo-relative paths are a per-kind carve-out), so a
+    kinds outside PUBLIC_KINDS (alert and progress are redacted), so a
     direct caller (no --add argv pass) is guarded by construction."""
     BODIES.mkdir(parents=True, exist_ok=True)
     if redact_text:
@@ -338,10 +350,10 @@ def add(kind, text, identity=None, window=86400, evidence=None):
         print("report-queue: empty TEXT refused", file=sys.stderr)
         return 2
     text = text.strip()
-    if kind == "alert":
+    if kind in PUBLIC_KINDS:
         # boundary redaction before anything is derived from TEXT (id,
         # first line, body) — the public ledger never stores the raw
-        # machine-local path (2026-09-16)
+        # machine-local path (alert 2026-09-16; progress 2026-09-17)
         text = redact_boundary(text)
     # identity and evidence are ledger-bound dedup keys on every kind:
     # they are stored in the git-tracked body meta, so they are
@@ -383,7 +395,7 @@ def add(kind, text, identity=None, window=86400, evidence=None):
                     return 2
     ensure_header()
     write_body(ts, kind, rid, first, text, identity, evidence,
-               redact_text=(kind == "alert"))
+               redact_text=(kind in PUBLIC_KINDS))
     with REPORTS.open("a") as fh:
         fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
     return 0
