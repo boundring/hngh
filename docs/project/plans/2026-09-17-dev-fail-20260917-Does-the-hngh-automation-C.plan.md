@@ -4,15 +4,21 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the adopted normal-risk research line on cadence job manifest validation by adding stdlib-only manifest checks, a test wrapper, and documentation for hngh-automation without changing provider, credential, systemd, kernel, or security surfaces.
+Implements the pipeline-script-hardening research line by adding syntax validation, test coverage for shared helpers, and config linting across jobs, cadence, and dashboard surfaces so that malformed definitions are caught before they reach a live run.
 
 ## Steps
 
-- [ ] Add `lib/job_manifest_check.py` as a stdlib-only helper that validates minimal job manifest text and runs a self-test under `__main__`.
-  Verification: python3 lib/job_manifest_check.py
-- [ ] Add `scripts/check_job_manifests.py` to scan optional `jobs/*.yaml` files for required `job:` and `cadence:` markers, passing when no manifests are present.
-  Verification: python3 scripts/check_job_manifests.py
-- [ ] Add `tests/test_job_manifest_check.sh` that invokes the manifest checker and propagates its exit status.
-  Verification: bash -n tests/test_job_manifest_check.sh
-- [ ] Add `cadence/job-manifest-notes.md` documenting the normal-risk job manifest contract for automation jobs.
-  Verification: grep -q "job:" cadence/job-manifest-notes.md
+- [ ] Add scripts/check_job_scripts.sh that walks every .sh file under jobs/ and exits non-zero on any unparseable job script
+  Verification: bash -n scripts/check_job_scripts.sh
+
+- [ ] Extend tests/test_pipeline_helpers.py with unit cases for lib/pipeline_helpers.py covering empty-input and malformed-manifest paths
+  Verification: make test
+
+- [ ] Create cadence/validate_cadence.py using only stdlib to assert every schedule entry references an existing job name under jobs/
+  Verification: python3 cadence/validate_cadence.py
+
+- [ ] Add tests/test_digest_render.py with a fixture asserting the rendered digest structure matches expected keys and ordering
+  Verification: make test
+
+- [ ] Add dashboard/lint_dashboard.js that parses the dashboard config file and exits non-zero on unknown or duplicate top-level keys
+  Verification: node --check dashboard/lint_dashboard.js

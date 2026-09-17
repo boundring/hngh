@@ -46,6 +46,8 @@ class RealGitClassifier(unittest.TestCase):
         self._td = tempfile.TemporaryDirectory()
         self.repo = Path(self._td.name)
         env = dict(os.environ)
+        for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+            env.pop(hostile, None)
         for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
                   "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
             env.setdefault(k, "t")
@@ -143,6 +145,8 @@ class Patrol(unittest.TestCase):
         # includes the candidate-hash reconciliation check, whose input
         # is git history (a bare dir faults the check, 2026-09-17)
         kenv = dict(os.environ)
+        for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+            kenv.pop(hostile, None)
         for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
                   "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
             kenv.setdefault(k, "t")

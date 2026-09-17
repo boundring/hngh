@@ -74,7 +74,9 @@ def make_kernel(rows, bodies, head_age=None):
     if head_age is not None:
         when = f"@{int(time.time()) - head_age} +0000"
         env = dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
-        subprocess.run(["git", "init", "-q", str(k)], check=True)
+        for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+            env.pop(hostile, None)
+        subprocess.run(["git", "init", "-q", str(k)], check=True, env=env)
         subprocess.run(
             ["git", "-C", str(k), "-c", "user.email=t@t", "-c", "user.name=t",
              "commit", "--allow-empty", "-q", "-m", "fixture"],
@@ -153,7 +155,9 @@ class LedgerSkew(unittest.TestCase):
         if head_age is not None:
             when = f"@{int(time.time()) - head_age} +0000"
             env = dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
-            subprocess.run(["git", "init", "-q", str(k)], check=True)
+            for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+                env.pop(hostile, None)
+            subprocess.run(["git", "init", "-q", str(k)], check=True, env=env)
             subprocess.run(
                 ["git", "-C", str(k), "-c", "user.email=t@t", "-c", "user.name=t",
                  "commit", "--allow-empty", "-q", "-m", "fixture"],

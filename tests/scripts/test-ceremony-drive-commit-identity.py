@@ -32,6 +32,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "ceremony-drive"
 
+# Fixture containment (2026-09-17): repo-selection variables are
+# stripped for the whole test process so the leaky-ambient fixture repo
+# below can never be re-pointed at some other repository (the
+# 2026-09-13 rehearsal lane contaminated the kernel .git/config exactly
+# through a hostile exported GIT_DIR).
+for _HOSTILE_VAR in ("GIT_DIR", "GIT_WORK_TREE"):
+  os.environ.pop(_HOSTILE_VAR, None)
+for _CONFIG_VAR in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"):
+  os.environ.setdefault(_CONFIG_VAR, "/dev/null")
+
 MACHINE_NAME = "hngh-machine"
 MACHINE_EMAIL = "automation@hngh.local"
 LEAKY_NAME = "Leaky Ambient"
@@ -42,10 +52,14 @@ IDENTITY_ENV_KEYS = set(IDENTITY_ENV_PREFIXES) | {"EMAIL"}
 
 def scrubbed_env(overrides=None):
   """Inherited env with identity variables stripped, so the test never
-  depends on the host's exported GIT_* identity state."""
+  depends on the host's exported GIT_* identity state, and with
+  repo-selection variables stripped so the drive's subprocesses can
+  never resolve outside the fixture repo."""
   env = {key: value for key, value in os.environ.items()
          if not key.startswith(IDENTITY_ENV_PREFIXES)
-         and key not in IDENTITY_ENV_KEYS}
+         and key not in IDENTITY_ENV_KEYS
+         and key not in ("GIT_DIR", "GIT_WORK_TREE",
+                         "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM")}
   env.update(overrides or {})
   return env
 
@@ -67,14 +81,14 @@ class DriveCommitIdentity(unittest.TestCase):
     candidate-verification scripts, which run relative to the drive's
     working directory. The ambient identity is deliberately leaky."""
     subprocess.run(["git", "init", "-q", str(self.fixture)], check=True)
-    config = [
-      ("user.name", LEAKY_NAME),
-      ("user.email", LEAKY_EMAIL),
-      ("commit.gpgsign", "false"),
-    ]
-    for key, value in config:
-      subprocess.run(["git", "-C", str(self.fixture), "config", key, value],
-                     check=True)
+    # The ambient identity is deliberately leaky (that is the contract
+    # under test): it is pinned per commit invocation instead of written
+    # into the fixture config, so no identity state lands in any repo.
+    config = (
+      "-c", "user.name=" + LEAKY_NAME,
+      "-c", "user.email=" + LEAKY_EMAIL,
+      "-c", "commit.gpgsign=false",
+    )
     src = self.fixture / "docs" / "fixture.txt"
     src.parent.mkdir(parents=True)
     src.write_text("fixture candidate\n")
@@ -85,8 +99,8 @@ class DriveCommitIdentity(unittest.TestCase):
     for name in ("verify-candidate.py", "lint-parens.py"):
       shutil.copy(ROOT / "scripts" / name, scripts_dir / name)
     subprocess.run(["git", "-C", str(self.fixture), "add", "-A"], check=True)
-    subprocess.run(["git", "-C", str(self.fixture), "commit", "-qm",
-                    "fixture base"], check=True)
+    subprocess.run(["git", "-C", str(self.fixture), *config,
+                    "commit", "-qm", "fixture base"], check=True)
     # The candidate must differ from HEAD or the certificate-bound
     # commit has nothing to commit.
     src.write_text("fixture candidate, driven\n")

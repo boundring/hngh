@@ -73,6 +73,11 @@ class PlanIdentity(unittest.TestCase):
             "HNGH_REPORT_ROOT": str(self.kernel),
             "ACCEPT_LOG": str(self.root / "acceptance.log"),
         }
+        # containment: accept-plans commits inside the fixture kernel;
+        # never let a hostile exported GIT_DIR/GIT_WORK_TREE re-point
+        # that commit at another repository (2026-09-17 lesson)
+        for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+            self.env.pop(hostile, None)
 
     def tearDown(self):
         self._td.cleanup()

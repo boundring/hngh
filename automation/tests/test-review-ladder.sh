@@ -5,6 +5,8 @@
 # (record_model_outcome bad-execution). Hermetic: stub HTTP legs, sandbox
 # git repos, no real quota endpoints, no real telemetry db.
 set -u
+# fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
+unset GIT_DIR GIT_WORK_TREE
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"

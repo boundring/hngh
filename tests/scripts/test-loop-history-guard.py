@@ -36,6 +36,7 @@ is no longer reachable from HEAD, with a message that names the cure:
 re-declare via ceremony.
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -194,9 +195,25 @@ CANDIDATE = re.compile(r"^hngh: candidate [0-9a-f]{64}$")
 EXEMPT = "excluded from cert manifest by dependency guard"
 EXEMPT_ALLOWED_FILES = {"src/packages.lisp"}
 
+# The guard audits the repository its script lives in. Pin git repo
+# selection explicitly: an exported GIT_DIR/GIT_WORK_TREE would
+# otherwise silently re-point every read (commits_since, reachable,
+# patch_id) at a foreign repository -- or crash the gate outright
+# (2026-09-17 kernel-contamination lesson).
+HERE = os.path.dirname(os.path.abspath(__file__))
+KERNEL_GIT_DIR = subprocess.run(
+    ["git", "-C", os.path.join(HERE, "..", ".."),
+     "rev-parse", "--absolute-git-dir"],
+    capture_output=True, text=True, check=True,
+    env={k: v for k, v in os.environ.items()
+         if k not in ("GIT_DIR", "GIT_WORK_TREE")}).stdout.strip()
+
 
 def run(argv):
-    return subprocess.run(argv, capture_output=True, text=True, check=True)
+    return subprocess.run(
+        ["git", "--git-dir", KERNEL_GIT_DIR] + list(argv[1:]) if argv
+        and argv[0] == "git" else argv,
+        capture_output=True, text=True, check=True)
 
 
 def commits_since(rev):
@@ -226,8 +243,10 @@ UNREACHABLE_NOTE = ("exemption unreachable - history was rewritten; "
 
 
 def reachable(sha):
-    proc = subprocess.run(["git", "merge-base", "--is-ancestor", sha, "HEAD"],
-                          capture_output=True)
+    proc = subprocess.run(
+        ["git", "--git-dir", KERNEL_GIT_DIR,
+         "merge-base", "--is-ancestor", sha, "HEAD"],
+        capture_output=True)
     return proc.returncode == 0
 
 
@@ -238,8 +257,9 @@ def patch_id(sha):
     # lines) and a fresh CI checkout (7-hex). See
     # docs/records/2026-09-15-ci-patch-id-drift.md (Correction section).
     diff = run(["git", "diff-tree", "-p", "--full-index", "--root", sha]).stdout
-    out = subprocess.run(["git", "patch-id", "--stable"], input=diff,
-                         capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        ["git", "--git-dir", KERNEL_GIT_DIR, "patch-id", "--stable"],
+        input=diff, capture_output=True, text=True, check=True).stdout
     parts = out.split()
     return parts[0] if parts else ""
 

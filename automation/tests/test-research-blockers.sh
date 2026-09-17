@@ -9,6 +9,8 @@
 #   d) blocker-park-cooldown-hours auto-unpark returns the line to the pool.
 # Hermetic: stub endpoints only, sandbox repo copy, no real model.
 set -u
+# fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
+unset GIT_DIR GIT_WORK_TREE
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 stubdir="$(mktemp -d)"
