@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""report-queue alert-kind redaction contract (2026-09-16 boundary
-control): the report ledger is git-tracked and pushed to the public
-origin, so `--add alert` must rewrite /home/<user>/... to ~/... and
-/tmp/... to ~tmp/... before the text reaches a row or a body file.
-Progress rows intentionally carry repo-relative paths in some lanes and
-are NOT redacted (per-kind boundary, not a sink move). Redaction feeds
-the row id, so two alerts differing only by machine-local path prefix
+"""report-queue public-bound redaction contract (2026-09-16 boundary
+control, widened to progress 2026-09-17): the report ledger is
+git-tracked and pushed to the public origin, so `--add alert` and
+`--add progress` must rewrite /home/<user>/... to ~/... and /tmp/...
+to ~tmp/... before the text reaches a row or a body file. The rewrite
+only matches machine-local absolute prefixes, so repo-relative paths
+pass through untouched. Redaction feeds the row id, so two rows
+(alert or progress) differing only by machine-local path prefix
 collapse to one id. Hermetic: HNGH_REPORT_ROOT points at a sandbox."""
 
 import os
@@ -73,10 +74,16 @@ class AlertRedaction(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("/tmpfile", self.rows()[0])
 
-    def test_progress_kind_not_redacted(self):
+    def test_progress_kind_redacted_too(self):
+        # 2026-09-17 widening: progress text is public-bound as well;
+        # machine-local prefixes die at the sink, repo-relative survives
         r = self.add("progress", "lane note: scratch at /tmp/keep-me")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("/tmp/keep-me", self.rows("progress")[0])
+        self.assertIn("~tmp/keep-me", self.rows("progress")[0])
+        self.assertNotIn("/tmp/keep-me", self.rows("progress")[0])
+        r = self.add("progress", "edited automation/lib/scrub.sh")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("automation/lib/scrub.sh", self.rows("progress")[0])
 
     def test_url_home_component_not_redacted(self):
         r = self.add("alert", "see https://x.io/home/aubergine/f for docs")
