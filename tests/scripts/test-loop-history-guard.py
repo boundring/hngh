@@ -162,6 +162,10 @@ KNOWN_EXEMPTIONS = {
         "reason": "adds d2159de9 exemption (terminal: next commit is docs-only)",
         "patch-id": "ad1abbc8ccf86b6a3f3738c48c599773397eeb19",
     },
+        "24a5c470": {
+        "reason": "terminal exemption commit: breaks the exemption regress (docs-only after this)",
+        "patch-id": "5121b2b688200e341aef8d7da8e7e27786325dda",
+    },
     "d2159de9": {
         "reason": "cleanup of unreachable exemptions + 122ea6a0 exemption (post-force-push table correction)",
         "patch-id": "83d7a2febe8d0ddb72d69b0028e371dc561d0dd1",
