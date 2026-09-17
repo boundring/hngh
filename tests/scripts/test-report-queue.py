@@ -287,10 +287,13 @@ class ReportQueueCLI(unittest.TestCase):
                       "--kinds", "--archive", "occurrence"):
             self.assertIn(token, out.stdout)
 
-    def test_alert_paths_redacted_progress_untouched(self):
-        # boundary redaction (2026-09-16): alert text is public-bound;
-        # machine-local path prefixes never reach the ledger. Progress
-        # rows intentionally carry repo-relative paths in some lanes.
+    def test_alert_paths_redacted_progress_redacted_too(self):
+        # boundary redaction (2026-09-16, widened 2026-09-17): alert and
+        # progress text are public-bound; machine-local path prefixes
+        # never reach the ledger. The rewrite only matches machine-local
+        # absolute prefixes, so repo-relative progress paths still pass
+        # through untouched (see
+        # test_progress_repo_relative_path_untouched).
         r = self.add("alert", "missing source: " + HOME_PREFIX
                      + "aubergine/dots/vimrc")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -308,7 +311,8 @@ class ReportQueueCLI(unittest.TestCase):
         self.assertIn("/tmpfile", self.rows()[-1][3])
         r = self.add("progress", "scratch kept at /tmp/keep-me")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("/tmp/keep-me", self.rows()[-1][3])
+        self.assertIn("~tmp/keep-me", self.rows()[-1][3])
+        self.assertNotIn("/tmp/keep-me", self.rows()[-1][3])
 
     def test_alert_redaction_covers_full_canonical_family(self):
         # llc-gate-scrub-site-divergence 2026-09-16: the sink-side guard
@@ -488,6 +492,67 @@ class ReportQueueCLI(unittest.TestCase):
         self.assertIn("- **identity:** stale-store:~tmp/hngh-cer-c.store",
                       body)
         self.assertIn("- **last-evidence:** trace ~/a.conf", body)
+
+    def test_progress_paths_redacted_in_row_and_body(self):
+        # 2026-09-17 coordinator decision: progress text is public-bound
+        # too (the ledger is pushed to the public origin); the sink
+        # control extends to it. The D2 rationale ("some lanes carry
+        # repo-relative paths") never justified the exclusion: the
+        # redact_home-class rewrite preserves repo-relative paths.
+        r = self.add("progress", "wired dots: " + HOME_PREFIX
+                     + "aubergine/dots/vimrc")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = self.rows()[-1]
+        self.assertIn("~/dots/vimrc", row[3])
+        self.assertNotIn(HOME_PREFIX + "aubergine", row[3])
+        body = (self.root / "docs" / "project" / "report-bodies"
+                / row[4]).read_text()
+        self.assertIn("~/dots/vimrc", body)
+        self.assertNotIn(HOME_PREFIX + "aubergine", body)
+
+    def test_progress_repo_relative_path_untouched(self):
+        r = self.add("progress", "edited automation/lib/scrub.sh and "
+                     "src/main.lisp")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = self.rows()[-1]
+        self.assertIn("automation/lib/scrub.sh", row[3])
+        self.assertIn("src/main.lisp", row[3])
+
+    def test_progress_tmpfile_style_word_untouched(self):
+        r = self.add("progress", "odd token /tmpfile stays in progress")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("/tmpfile", self.rows()[-1][3])
+
+    def test_progress_url_home_component_untouched(self):
+        url = "https://x.io" + HOME_PREFIX + "aubergine/f"
+        r = self.add("progress", "see " + url + " for docs")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(url, self.rows()[-1][3])
+
+    def test_progress_id_computed_from_redacted_text(self):
+        # ids derive from the redacted text: two progress rows differing
+        # only by the local username collapse to one id
+        self.assertEqual(self.add("progress",
+                                  "missing " + HOME_PREFIX + "aubergine/a.conf")
+                         .returncode, 0)
+        self.assertEqual(self.add("progress",
+                                  "missing " + HOME_PREFIX + "otheruser/a.conf")
+                         .returncode, 0)
+        ids = {r[2] for r in self.rows()}
+        self.assertEqual(len(ids), 1)
+
+    def test_alert_redaction_contract_still_green(self):
+        # the widened sink must not disturb the alert contract
+        r = self.add("alert", "missing source: " + HOME_PREFIX
+                     + "aubergine/dots/vimrc")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = self.rows()[-1]
+        self.assertIn("~/dots/vimrc", row[3])
+        self.assertNotIn(HOME_PREFIX + "aubergine", row[3])
+        r = self.add("progress", "scratch kept at /tmp/keep-me")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("~tmp/keep-me", self.rows()[-1][3])
+        self.assertNotIn("/tmp/keep-me", self.rows()[-1][3])
 
     def cursor(self):
         p = self.root / "docs" / "project" / "report-cursor"
