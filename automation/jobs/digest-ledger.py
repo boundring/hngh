@@ -13,6 +13,10 @@ import sqlite3
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "lib"))
+
+from scrub import scrub_paths  # single-source redaction (lib/scrub.py)
+
 TELEMETRY = os.path.join(
     os.environ.get("HNGH_HOME_DIR")
     or os.path.join(os.path.expanduser("~"), ".hngh"),
@@ -29,24 +33,6 @@ def _ascii(text):
 
 
 import re
-
-PATH_TOKEN_RE = re.compile(
-    r"(?P<url>\b(?:[a-z][a-z0-9+.-]*://|www\.)\S*)"
-    r"|(?P<home>/home(?:/\S*)?(?![\w-]))"
-    r"|(?P<tmp>/tmp(?:/\S*)?(?![\w-]))"
-    r"|(?P<tilde>~/\S*)")
-
-
-def scrub_paths(text):
-    """No-echo guard (digest seam audit 2026-09-16): host path tokens
-    never ride the mega line into deck B or the public edition;
-    fail-closed redaction to a fixed marker, ordinary prose untouched.
-    Same identity seam as news-articles.py (regex-gap audit
-    2026-09-16): bare /home //tmp die too, URLs consumed first and
-    kept verbatim (named group decides, never token content)."""
-    return PATH_TOKEN_RE.sub(
-        lambda m: m.group("url") if m.group("url") else "[redacted path]",
-        str(text or ""))
 
 
 def spend(date, db=TELEMETRY):
@@ -147,7 +133,7 @@ def build(date, feeds=None):
         out.append("<!-- feeds: logs/budget.md -->")
         out.append("- sessions: %d launched today across %d plan lane(s);"
                    " newest: %s at %s." % (len(sess), len(lanes),
-                                           _ascii(last_plan),
+                                           _ascii(scrub_paths(last_plan)),
                                            sess[-1][0][11:16]))
     p = feeds.get("plans", plans(date))
     if p is not None:
@@ -155,7 +141,8 @@ def build(date, feeds=None):
         out.append("<!-- feeds: dashboard/plans.json -->")
         out.append("- plans: %d recorded, %d accepted today, %d executed;"
                    " queue next: %s." % (len(entries), len(accepted),
-                                         len(executed), queue_next or "-"))
+                                         len(executed),
+                                         scrub_paths(queue_next or "-")))
     oi = feeds.get("operator_items", operator_items())
     if oi is not None:
         items, open_items, newest = oi

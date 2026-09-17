@@ -47,13 +47,14 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(_HERE)  # automation/
 JOBS = _HERE
 
-scrub_paths = None  # injected from jobs/digest-ledger.py (one identity
-# seam for every digest writer; writer census 2026-09-16). Kept optional
-# so the pure-ranking tests can run without the ledger module.
+scrub_paths = None  # injected from lib/scrub.py (one identity seam for
+# every digest writer; writer census 2026-09-16, seam consolidated into
+# lib/scrub.py 2026-09-16). Kept optional so the pure-ranking tests can
+# run without the module.
 try:
     import importlib.util as _ilu
     _spec = _ilu.spec_from_file_location(
-        "digest_ledger", os.path.join(JOBS, "digest-ledger.py"))
+        "hngh_scrub", os.path.join(ROOT, "lib", "scrub.py"))
     _dl = _ilu.module_from_spec(_spec)
     _spec.loader.exec_module(_dl)
     scrub_paths = _dl.scrub_paths

@@ -51,14 +51,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)  # automation/
 REPO = os.path.dirname(ROOT)  # the hngh repo (kernel home)
 
-# one identity seam for every digest writer (writer census 2026-09-16):
-# scrub_paths re-exported from jobs/digest-ledger.py so the findings doc
-# and the morning rounds block cannot drift from the mega-line guard
-_dl_spec = importlib.util.spec_from_file_location(
-    "digest_ledger", os.path.join(ROOT, "jobs", "digest-ledger.py"))
-_dl = importlib.util.module_from_spec(_dl_spec)
-_dl_spec.loader.exec_module(_dl)
-scrub_paths = _dl.scrub_paths
+# one identity seam for every digest writer (writer census 2026-09-16;
+# seam consolidated into lib/scrub.py 2026-09-16): scrub_paths imported
+# from the shared module so the findings doc and the morning rounds
+# block cannot drift from the mega-line guard
+sys.path.insert(0, os.path.join(ROOT, "lib"))
+from scrub import scrub_paths
 
 FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
          ("sessions.json", 600),  # tier-scaled: 30m feed vs 1m feeds

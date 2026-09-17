@@ -36,6 +36,7 @@ setup() { # -> sandbox: lib, jobs, digest, fixture digest
   >"$sb/cadence-params.tsv"
  : >"$sb/STATE.md"
  printf 'stub-token-never-real' >"$sb/unsloth-token"
+ chmod 600 "$sb/unsloth-token" # mode-600 gate (unsloth-contexts seam)
 }
 run_gen() { # [NEWS_ARTICLES_FETCH=v] -> stdout (article paths)
  local kv

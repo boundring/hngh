@@ -79,19 +79,19 @@ quips = _load_quips()
 
 
 def _load_scrub():
-    """One identity seam (llc-gate-render-layer-scrub 2026-09-16): the
-    render layer re-exports digest-ledger's scrub_paths rather than
-    owning a regex. digest/<date>.md is written by several writers and
-    not every append passes a scrubbed seam (patrol morning rounds,
-    any future direct writer), so the renderer itself fail-closes host
-    path tokens before text reaches an egress surface. Fail-open to
-    identity ONLY if the module cannot load (same posture as
-    gdelt-news.py's import)."""
+    """One identity seam (llc-gate-render-layer-scrub 2026-09-16; the
+    seam now lives in lib/scrub.py per the llc-gate-scrub-site-
+    divergence consolidation): the render layer re-exports the shared
+    scrub_paths rather than owning a regex. digest/<date>.md is written
+    by several writers and not every append passes a scrubbed seam
+    (patrol morning rounds, any future direct writer), so the renderer
+    itself fail-closes host path tokens before text reaches an egress
+    surface. Fail-open to identity ONLY if the module cannot load
+    (same posture as gdelt-news.py's import)."""
     try:
         loader = importlib.machinery.SourceFileLoader(
-            "hngh_digest_ledger", os.path.join(ROOT, "jobs",
-                                               "digest-ledger.py"))
-        spec = importlib.util.spec_from_loader("hngh_digest_ledger", loader)
+            "hngh_scrub", os.path.join(ROOT, "lib", "scrub.py"))
+        spec = importlib.util.spec_from_loader("hngh_scrub", loader)
         mod = importlib.util.module_from_spec(spec)
         loader.exec_module(mod)
         return mod.scrub_paths
