@@ -607,3 +607,23 @@ before id/slug derivation (commit 2e51d01b), the historical rows stay
 forward-only (319 progress rows keep `/home/` paths; no history
 rewrite), and the 48-site `--add` census classifies every emitter
 (docs/records/2026-09-16-progress-kind-path-redaction.md).
+
+## 2026-09-17 — Kernel certificates are ephemeral by omission; persist them at mint time (adopted direction)
+
+Kernel certificates are single-use artifacts: `issue-cert` renders the
+certificate to stdout only, nothing persists it, and the commit-subject
+content-hash is the only durable trace of a ceremony. The loop-history
+guard's candidate acceptance is format-only
+(tests/scripts/test-loop-history-guard.py:193), so post-hoc
+verification of a labeled commit against its certificate is
+structurally impossible and a fabricated self-consistent label passes
+history surveillance. Adjudicated a design gap, not a known
+limitation: no recorded decision ever chose ephemerality
+(decisions.md 2026-08-24 covers signing, not storage). Remediation
+direction adopted: a mint-time certificate receipt appended to the
+minting run's store record.lisp, plus a patrol-side `label-unbacked`
+checker, per the proposal in
+docs/records/2026-09-17-candidate-reconciliation-closure.md; the
+finding, evidence, and options with cost/benefit are of record in
+docs/records/2026-09-17-certificate-ephemerality-of-record.md. The
+kernel slice is proposed, not yet executed.

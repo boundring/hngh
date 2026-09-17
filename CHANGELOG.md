@@ -8,6 +8,22 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Certificate ephemerality of record; mint-time persistence adopted
+  as remediation direction**
+  (docs/records/2026-09-17-certificate-ephemerality-of-record.md):
+  the confirmed architectural finding is landed as a record. Kernel
+  certificates are single-use stdout renders with no store write
+  path; the commit-subject content-hash is their only durable trace
+  (299 labeled commits), the loop-history guard's candidate check is
+  format-only (tests/scripts/test-loop-history-guard.py:193), and
+  post-hoc label verification is structurally impossible. Adjudicated
+  a design gap, not a known limitation: no recorded decision chose
+  ephemerality. Mint-time certificate receipts (store record.lisp) +
+  a `label-unbacked` patrol checker are the adopted direction
+  (proposal: docs/records/2026-09-17-candidate-reconciliation-closure.md);
+  cross-linked from gate-inventory and decisions.md. Kernel src/
+  untouched.
+
 - **Progress-kind path redaction: sink widened to alert+progress**
   (docs/records/2026-09-16-progress-kind-path-redaction.md):
   the deferred progress-kind question from the 2026-09-16
