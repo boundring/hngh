@@ -2,6 +2,23 @@
 
 ## 2026-09-16
 
+- security: scrub consolidation — ONE path-token definition, family,
+  and marker mapping (test-first, red-proven on the two open digest
+  seams; record: docs/records/2026-09-16-scrub-consolidation-single-source.md)
+  — lib/scrub.py is now the single-source redaction module
+  (scrub.sh is the shell wrapper, redact.sh a compat shim): one token
+  family (home/Users/root/tmp bare or segmented, scheme-relative
+  //host/home/, tilde, credential URL userinfo) and one marker mapping
+  ([redacted path] for prompt/echo-guard seams; tilde ~/... ~tmp/...
+  as the kernel-ledger sink rendering — one family, two named
+  renderings, parity-tested both sides). digest-ledger last_plan and
+  queue_next seams closed (red-first: test-digest-plan-seam-scrub.py);
+  the previously uncovered /Users, /root, //host, userinfo families
+  die everywhere. Migrated: news-articles, digest-ledger, patrol,
+  digest-html, gdelt-news, model.sh (jq copy retired), digest-block.sh;
+  kernel scripts/report-queue mirrors the family sink-side (kernel
+  test red-first). All prior scrub suites green.
+
 - security: render-layer scrub closed the downstream half of the
   digest leak chain (test-first, red-proven; record:
   docs/records/2026-09-16-render-layer-scrub.md) — the writer census

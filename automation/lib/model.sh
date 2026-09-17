@@ -59,6 +59,8 @@
 # HNGH_TELEMETRY_DB overrides for hermetic tests.
 HNGH_TELEMETRY_DB="${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
+[ -f "$AUTOMATION_ROOT/lib/scrub.sh" ] &&
+ . "$AUTOMATION_ROOT/lib/scrub.sh" || :
 . "$AUTOMATION_ROOT/lib/params.sh"
 
 MODEL_USED=""
@@ -88,8 +90,11 @@ MODEL_TRUNC_FILE="$AUTOMATION_ROOT/tmp-modeltrunc.txt"
 # Fail-closed: jq absent or the scrub failing yields empty output, so a
 # broken guard can never leak pathy text through. Input hygiene stays
 # with the caller (archive_only persists raw prompts unmutated).
-_scrub_paths() { # text -> scrubbed text on stdout
- jq -Rsr 'rtrimstr("\n") | gsub("(?<url>\\b(?:[a-z][a-z0-9+.-]*://|www\\.)\\S*)|(?<home>/home(?:/\\S*)?(?![\\w-]))|(?<tmp>/tmp(?:/\\S*)?(?![\\w-]))|(?<tilde>~/\\S*)"; if .url then .url else "[redacted path]" end)' <<<"$1" 2>/dev/null
+_scrub_paths() { # text -> scrubbed text on stdout; the ONE
+# single-source definition (lib/scrub.py via scrub.sh,
+# llc-gate-scrub-site-divergence 2026-09-16 consolidation; the previous
+# inline jq regex copy is retired)
+ scrub_paths "$1"
 }
 
 last_model_used() {
@@ -260,6 +265,14 @@ _unsloth_ctx_limit() { # token -> context_length or empty
 unsloth_chat() {
  local prompt="$1" max_tokens="$2" model="$3"
  local refreshed="${4:-0}" tok code content reasoning big tmp
+ if [ ! -f "$TOKEN_FILE" ]; then
+  breadcrumb model "unsloth" "no token file -> next backend"
+  return 1
+ fi
+ if [ "$(stat -c %a "$TOKEN_FILE" 2>/dev/null)" != "600" ]; then
+  breadcrumb model "unsloth" "key file too open (chmod 600 required) -> next backend"
+  return 1
+ fi
  tok="$(cat "$TOKEN_FILE" 2>/dev/null)" || {
   breadcrumb model "unsloth" "no token file -> next backend"
   return 1
