@@ -130,3 +130,17 @@ day's records slice.
   test-loop-history-guard.py (kernel tests/ surface, forbidden this
   session) before archived-tree kernel gates can run; no
   improvisation around a forbidden surface.
+- 2026-09-17T10:20Z step-2 blocker refresh (rehearsal-lane wake): the
+  out-of-repo seam now EXISTS but is uncommitted — the
+  fixture-containment lane (dead session, edits stamped 05:56-06:16Z)
+  pinned test-loop-history-guard.py git reads to KERNEL_GIT_DIR and
+  wrote docs/records/2026-09-17-fixture-containment-gitdir.md, all
+  uncommitted in the kernel working tree; HEAD still carries the
+  pre-seam guard, so `git archive HEAD` rehearsals keep refusing rc=2.
+  The containment lane owns the ceremony landing of its own edits;
+  this session's autonomy rule keeps kernel tests/ forbidden. New live
+  signal: the kernel gate is currently red (STATE.md
+  kernel-gate-red-rc2 plan-blocked crumbs 10:01Z), so no live
+  ceremony can run today anyway. Step 2 verification stays parked on
+  the containment lane's ceremony commit; step 3 proceeds (it does
+  not depend on step 2's unmet rehearsal clause).
