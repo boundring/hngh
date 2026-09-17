@@ -2,6 +2,22 @@
 
 ## 2026-09-17
 
+- router-slug census definition pinned (GAP D waiver, docs/records/
+  2026-09-17-routed-plan-slug-census-definition.md): "pathy" means
+  dash-mangled OS path fragments (home-/Users-stems, usernames,
+  machine-local dot-dirs); repo-name tokens (hngh, hngh-automation,
+  omp, ocgo) and alert subject prose are operator-intended public
+  context, not pathy. Under this definition the 6762dcfa census claim
+  ("zero pathy tokens") stands: the challenged
+  2026-09-02-routed-review-hngh-automation-P1-STATE-md-contains-absolute-
+  plan carries repo-prose, not a path. Disposition:
+  waive-with-record — no rename, no routed-from rewrite (executed
+  ceremony artifact; ledger surfaces reference the exact filename;
+  nothing private present). Re-fire check recorded: scrub_pathy_identity
+  passes the identity through, the :182/:250 dedup regexes match the
+  historical filename, and status=executed in TERMINAL_STATUS keeps the
+  file permanently inert.
+
 - wiki-health: neutralize vault labels — the personal vault label was
   `basename(dirname "$HOME/.llm-wiki")`, i.e. the machine username,
   embedded in every daily ledger row text and dedup identity
