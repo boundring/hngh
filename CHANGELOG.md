@@ -8,6 +8,21 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Progress-kind path redaction: sink widened to alert+progress**
+  (docs/records/2026-09-16-progress-kind-path-redaction.md):
+  the deferred progress-kind question from the 2026-09-16
+  boundary-redaction work is closed. `scripts/report-queue` now
+  redacts `--add progress` text through the same machine-local
+  prefix class as alerts before id/row/body derivation (candidate
+  79eb4733, ceremony-admitted 10/10), while repo-relative paths
+  stay untouched. The research-beat line-ingest seam is redacted
+  at the source before id/slug derivation and TSV append
+  (2e51d01b), closing the id-slug leak
+  (`fail-20260914-Where-exactly-in-home-bricker-Projects-e`).
+  Forward-only: the 319 historical progress rows and 9
+  research-lines rows keep their absolute paths; no history
+  rewrite. Includes the 48-site `--add` call-site census.
+
 - **Supportive-record fact corrections of record**
   (docs/records/2026-09-17-supportive-record-fact-corrections.md):
   four adversarial findings reconciled against primary evidence.
