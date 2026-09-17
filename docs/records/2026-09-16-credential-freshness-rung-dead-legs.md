@@ -63,6 +63,43 @@ clock default, stderr visibility, seed semantics, and dedup.
   clock by this slice (the digest still matched the live token, so the
   re-record is the honest fact).
 
+## Zero-length-ledger amendment (2026-09-17)
+
+The absolute steady-state claim above — "`hash-mismatch` means the token
+file changed outside the tracked path" — held only while the ledger is
+intact. A ledger truncated to zero bytes (or blanked to whitespace-only
+rows) after the first seed broke both the bootstrap predicate (`[ ! -s ]`
+is true for an empty file, so the job silently re-seeded at the live
+clock, laundering any rotation that happened while the ledger was empty:
+the pre-truncation digest was gone, `hash-mismatch` could never fire for
+it again) and `check()` itself (an existing but rowless ledger yielded
+zero findings, rc=0 — a silent pass against this file's own fail-closed
+doctrine). Closed in the automation free-commit lane, fixture-backed,
+failing tests first:
+
+- `check()` reports `ledger-empty: <path>` for an existing ledger with
+  zero data rows (blank-only rows fold into the same class); new finding
+  class, bound by the same `head -n 5` alert path.
+- `record()` refuses an existing empty/blank ledger
+  (`ledger-empty-refusal`, exit nonzero, nothing written): the only
+  prior state a replace-by-name record may silently overwrite is a
+  verifiable row set. Bootstrap (absent ledger) is unchanged.
+- The job seeds only a MISSING ledger; an existing-but-empty ledger is
+  breadcrumbd (`re-seed REFUSED`) and left for the operator to re-arm by
+  removing the empty file — an automatic re-seed, even a breadcrumbd
+  one, would still launder the rotation gap.
+
+Scope note replacing the absolute claim: the `hash-mismatch` inference
+is valid while the ledger is intact; `ledger-empty` voids it until the
+operator re-arms bootstrap. Verified: unittest 28 cases OK
+(6 zero-length-ledger cases new), job-level regression sections 6a-6c
+in `tests/test-credential-health-argv.sh` (truncated ledger: refuse +
+crumb + still zero bytes; blank ledger: `ledger-empty` alert filed;
+absent ledger: bootstrap unchanged), full automation gate `make -C
+automation test` green (a transient red in test-router-tick during the
+run was a concurrent slice's red phase, proven unrelated by stashing
+this slice's files and re-running the suite green).
+
 ## Hardening while in the file
 
 - `record()` fchmods the ledger 600 on every write: `O_TRUNC` alone

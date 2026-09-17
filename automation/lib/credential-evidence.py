@@ -12,18 +12,23 @@ CLI:
       -> append/replace a row pinned at EPOCH. The positional epoch is the
       production call shape (jobs/credential-health.sh); --now EPOCH is the
       test shape. No epoch given = live clock. Fail-closed: a non-integer
-      epoch is a malformed-argv refusal, never a silent 0.
+      epoch is a malformed-argv refusal, never a silent 0. An existing
+      but empty (or blank-only) LEDGER is refused (ledger-empty-refusal):
+      re-recording into a rowless ledger would launder any rotation that
+      happened while it was empty (2026-09-17 zero-length-ledger fix).
   check LEDGER OLA_S [--now EPOCH]                -> print findings; each
       finding is `finding-class: credential detail`. A clean ledger prints
-      `ok` lines. Classes: ledger-missing / stale / hash-mismatch /
-      evidence-missing / malformed-row / duplicate-row / malformed-argv.
+      `ok` lines. Classes: ledger-missing / ledger-empty / stale /
+      hash-mismatch / evidence-missing / malformed-row / duplicate-row /
+      malformed-argv. An existing ledger with zero data rows is
+      ledger-empty (fail-closed: a truncated ledger must not read as a
+      clean pass; 2026-09-17 zero-length-ledger fix).
       No --now = live clock (never a silent 0). OLA 0 disables stale
       findings only (integrity findings still fire) per the
       cadence-params `credential-fresh-ola` row contract.
 
 Fail-closed: anything unparseable, unhashable, or older than the OLA is a
-finding, never a silent pass. Ledger is created mode 600 and re-chmodded
-600 on every write (O_TRUNC alone would keep an existing wider mode). No
+finding, never a silent pass. No
 secrets in rows — only digests and paths. Rows are trusted only with an
 absolute, canonical evidence path: record() resolves a relative evidence
 path against the ledger's directory (or refuses it), so a check from any
@@ -37,7 +42,9 @@ Steady state (credential-health wiring): the first healthy unsloth probe
 seeds the ledger (bootstrap); afterwards only the tracked 401-rotate path
 re-records. So `stale` means no tracked rotation within the OLA (the
 evidence chain stopped being exercised) and `hash-mismatch` means the
-token changed outside the tracked path. Operators tune the bound with the
+token changed outside the tracked path (inference valid while the ledger
+is intact; `ledger-empty` voids it — a truncated ledger has lost its
+prior digest, 2026-09-17). Operators tune the bound with the
 cadence-params `credential-fresh-ola` row.
 """
 
@@ -78,7 +85,20 @@ def record(name, evidence_path, ledger, now):
     digest = _digest(ev)
     if digest is None:
         raise SystemExit(f"evidence-missing: {name} {ev}")
-    rows = _read(ledger) or []
+    rows = _read(ledger)
+    if rows is not None and not rows:
+        # refusal gate (2026-09-17): the only prior state record() may
+        # silently replace-by-name is a verifiable row set. An existing
+        # but empty ledger would let a re-record launder any rotation
+        # that happened while it was empty (the pre-seed digest is gone,
+        # so hash-mismatch can never fire for it again); refuse and let
+        # the operator re-arm bootstrap deliberately (remove the empty
+        # ledger file — a zero-byte file carries no evidence to lose).
+        raise SystemExit(
+            f"ledger-empty-refusal: {name} "
+            "(existing ledger holds no verifiable prior row)"
+        )
+    rows = rows or []
     rows = [(n, row) for (n, row) in rows if n != name]
     rows.append((name, [name, str(now), str(now), digest, str(ev)]))
     os.makedirs(os.path.dirname(ledger) or ".", exist_ok=True)
@@ -127,6 +147,13 @@ def check(ledger, ola_s, now):
     rows = _read(ledger)
     if rows is None:
         yield f"ledger-missing: {redact(ledger)}"
+        return
+    if not rows:
+        # a ledger that exists but holds zero data rows (empty or
+        # blank-lines-only) must not read as a clean pass: either it was
+        # truncated (evidence lost) or nothing here was ever verifiable
+        # (2026-09-17 zero-length-ledger fix; previously a silent rc=0)
+        yield f"ledger-empty: {redact(ledger)}"
         return
     counts = {}
     for name, _fields in rows:

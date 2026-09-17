@@ -109,7 +109,65 @@ in_stdin "ocgo" 'header = "Authorization: Bearer stub-ocgo-key-abc"'
 ck "ocgo: crumb names env source" "1" \
   "$(crumb ocgo 'ocgo (env OPENCODE_API_KEY)')"
 
-# --- 5. real-curl loopback: -K - header directive + argv URL + -o/-w
+# --- 6. zero-length-ledger edge (2026-09-17 fix) — truncation must not
+# self-heal: no re-seed into an existing-but-empty ledger, a REFUSED
+# breadcrumb instead, and check() files the ledger-empty alert. Uses
+# call_keep (preserves CREDENTIAL_FRESHNESS_LEDGER across runs).
+call_keep() { # like call(), but keeps the freshness ledger between runs
+  local kv
+  (
+    export HOME="$sb" AUTOMATION_ROOT="$root" PATH="$sb/bin:$PATH"
+    export JOB_NAME=test-credhealth HNGH_HOME="$root/.."
+    export HNGH_REPORT_ROOT="$sb" HNGH_HOME_DIR="$sb/.hngh"
+    export CREDENTIAL_FRESHNESS_LEDGER="$sb/fresh.tsv"
+    export CREDENTIAL_FRESHNESS_OLA=604800
+    export CURL_LOG="$sb/curl.log" STATE_FILE="$sb/state/STATE.md"
+    export UNSLOTH_URL="$sb/no-such-endpoint" TOKEN_FILE="$sb/tok"
+    : >"$sb/curl.log"; : >"$sb/state/STATE.md"
+    # the operator's session may arm real channels — hermetic runs start bare
+    unset TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID HNGH_WEBHOOK_URL HNGH_NOTIFY_EMAIL_CONF
+    unset MOONSHOTAI_API_KEY KIMI_AI_KEY KIMI_FOR_CODING_KEY KIMI_KEY_FILE KIMI_URL
+    unset OPENCODE_API_KEY OPENCODE_KEY_FILE OCGO_URL
+    for kv in "$@"; do export "$kv"; done
+    printf 'stub-token-value-123\n' >"$sb/tok"
+    chmod 600 "$sb/tok"
+    timeout 30 bash "$root/jobs/credential-health.sh" >/dev/null 2>&1
+    echo "rc=$?"
+  )
+}
+
+# 6a. truncated-to-zero ledger: re-seed must be refused and breadcrumbd;
+# the ledger must still be zero bytes afterwards; job exits 0.
+: >"$sb/fresh.tsv"
+out="$(call_keep)"
+ck "zero-ledger: exit 0" "rc=0" "$out"
+ck "zero-ledger: refusal crumb" "1" \
+  "$(crumb refusal 're-seed REFUSED')"
+ck "zero-ledger: still zero bytes (no launder re-seed)" "0" \
+  "$(wc -c <"$sb/fresh.tsv")"
+
+# 6b. blank-lines-only ledger: nonzero size, so [ ! -s ] does not fire and
+# no breadcrumb branch runs — check() must file the `ledger-empty` alert.
+printf '\n   \n' >"$sb/fresh.tsv"
+out="$(call_keep)"
+ck "blank-ledger: exit 0" "rc=0" "$out"
+if [ "$(grep -c 'ledger-empty' "$sb/docs/project/reports.md" 2>/dev/null || true)" -ge 1 ]; then
+  echo "ok: blank-ledger: ledger-empty alert filed"
+else
+  echo "FAIL: blank-ledger: no ledger-empty alert row"; fails=$((fails + 1))
+fi
+
+# 6c. absent ledger: bootstrap seeds and crumbs (the original wiring).
+rm -f "$sb/fresh.tsv"
+out="$(call_keep)"
+ck "absent-ledger: exit 0" "rc=0" "$out"
+ck "absent-ledger: bootstrap crumb" "1" \
+  "$(crumb bootstrap 'freshness ledger seeded (bootstrap)')"
+[ -s "$sb/fresh.tsv" ] && echo "ok: absent-ledger: ledger seeded non-empty" || {
+  echo "FAIL: absent-ledger: ledger not seeded"; fails=$((fails + 1))
+}
+
+# --- real-curl loopback: -K - header directive + argv URL + -o/-w
 # ordering behaves identically (the exact probe shape the job uses).
 python3 - "$sb" <<'PY' &
 import http.server, sys

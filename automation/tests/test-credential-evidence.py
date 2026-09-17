@@ -180,11 +180,15 @@ class CredentialEvidence(unittest.TestCase):
     # --- mode 600 applies to re-records too (creation-only 0600 caveat) ---
 
     def test_record_rechmods_preexisting_ledger(self):
+        # preexisting = a ledger with a verifiable prior row (a zero-byte
+        # file is refused by the ledger-empty gate since 2026-09-17)
         ledger = self.tmp / "fresh.tsv"
-        ledger.write_text("")
-        ledger.chmod(0o644)
         r = self.cli("record", "unsloth-session", str(self.evidence),
                      str(ledger), "--now", "1000")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ledger.chmod(0o644)
+        r = self.cli("record", "unsloth-session", str(self.evidence),
+                     str(ledger), "--now", "2000")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(ledger.stat().st_mode & 0o777, 0o600)
 
@@ -281,6 +285,57 @@ class CredentialEvidence(unittest.TestCase):
         out = self.cli("check", str(ledger), "604800", "--now", "1000")
         self.assertIn("malformed-row: unsloth-session", out.stdout)
         self.assertNotIn("ok:", out.stdout)
+
+
+    # --- zero-length-ledger edge (2026-09-17 fix; was a silent rc=0) ---
+
+    def test_check_existing_empty_ledger_is_finding(self):
+        """An existing but empty ledger must report ledger-empty."""
+        ledger = self.tmp / "empty.tsv"
+        ledger.write_text("")
+        out = self.cli("check", str(ledger), "604800", "--now", "1000")
+        self.assertIn("ledger-empty:", out.stdout)
+
+    def test_check_blank_only_ledger_is_finding(self):
+        """Blank-lines-only rows fold into the same ledger-empty class."""
+        ledger = self.tmp / "blank.tsv"
+        ledger.write_text("\n   \n\t\n")
+        out = self.cli("check", str(ledger), "604800", "--now", "1000")
+        self.assertIn("ledger-empty:", out.stdout)
+
+    def test_record_into_existing_empty_ledger_refuses(self):
+        """Re-recording into a truncated ledger would launder an
+        unrecorded rotation (hash-mismatch can never fire again); it
+        must fail closed without writing."""
+        ledger = self.tmp / "empty.tsv"
+        ledger.write_text("")
+        out = self.cli("record", "unsloth-session", str(self.evidence),
+                       str(ledger), "--now", "1000")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("ledger-empty-refusal:", out.stderr)
+        self.assertEqual(ledger.read_text(), "")
+
+    def test_record_into_blank_only_ledger_refuses(self):
+        ledger = self.tmp / "blank.tsv"
+        ledger.write_text("\n  \n")
+        out = self.cli("record", "unsloth-session", str(self.evidence),
+                       str(ledger), "--now", "1000")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("ledger-empty-refusal:", out.stderr)
+
+    def test_record_absent_ledger_still_bootstraps(self):
+        """The refusal gate must not break the first-seed bootstrap."""
+        ledger = self.tmp / "fresh-absent.tsv"
+        out = self.cli("record", "unsloth-session", str(self.evidence),
+                       str(ledger), "--now", "1000")
+        self.assertEqual(out.returncode, 0)
+        self.assertIn("ok", self.cli("check", str(ledger), "604800",
+                                     "--now", "2000").stdout)
+
+    def test_check_still_reports_missing_ledger(self):
+        out = self.cli("check", str(self.tmp / "nope.tsv"), "604800",
+                       "--now", "1000")
+        self.assertIn("ledger-missing:", out.stdout)
 
 
 if __name__ == "__main__":
