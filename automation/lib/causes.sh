@@ -103,6 +103,16 @@ lesson_for_cause() { # cause-class -> one sentence on stdout
 # with AUTOMATION_ROOT pointed at a lib-less sandbox. Fail-closed:
 # redact_home yields empty output when the guard is broken, and the
 # empty-question guard refuses the append -- never a leak.
+#
+# Dash-form extension (2026-09-17 GAP, gate
+# wiki-health-wiring-reconcile): redact_home's token family matches
+# slash forms only, so a slug arriving PRE-mangled
+# ("Where-exactly-in-home-bricker-Projects-e") passed whole and baked
+# the username into the id. After redact_home, both inputs also run
+# through scrub_truncate (lib/scrub.sh, same single-source module):
+# dash-form pathy text is cut at the first stem segment, stem-starting
+# input dies to "" and the append is refused (fail closed). Truncation
+# is lossy by design -- router-tick's documented tradeoff.
 [ -n "${SCRUB_PY:-}" ] || . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/redact.sh"
 
 append_research_subject() { # slug question -> appends to research-subjects.txt
@@ -111,10 +121,12 @@ append_research_subject() { # slug question -> appends to research-subjects.txt
  [ -n "$slug" ] && [ -n "$q" ] || return 1
  redacted="$(redact_home "$q")"
  [ -n "$redacted" ] || return 1 # redaction fail-closed empty -> refuse
- q="$redacted"
+ q="$(scrub_truncate "$redacted")"
+ [ -n "$q" ] || return 1 # dash-form pathy -> refuse
  redacted="$(redact_home "$slug")"
  [ -n "$redacted" ] || return 1
- slug="$redacted"
+ slug="$(scrub_truncate "$redacted")"
+ [ -n "$slug" ] || return 1 # dash-form pathy -> refuse
  slug="$(printf '%s' "$slug" | tr -cs 'a-zA-Z0-9._-' '-' | sed 's/^-*//; s/-$//')"
  [ -n "$slug" ] || return 1
  root="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
