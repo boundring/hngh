@@ -177,6 +177,12 @@ authorize a future action.
   the loop-history guard's candidate check is format-only.
   Adjudicated a design gap, not a known limitation; mint-time
   certificate receipts are the adopted remediation direction.
+- [2026-09-17-cert-disposition-surface-closure.md](2026-09-17-cert-disposition-surface-closure.md)
+  — orphaned candidate certs (a3286b78, 65820f40, 9e1b74ee; labels
+  declared only on unreachable commits) are moot by mechanism: no
+  ledger tracks certs, commit-subject-on-main is the whole registry,
+  and all four contents landed via reachable twins. Corrects the
+  census wording that framed the external cert id as a git object.
 
 The harvest from 2026-09-01 onward is thin here on purpose: recent
 work-slice facts live closer to their surfaces (plan files, reports.md,

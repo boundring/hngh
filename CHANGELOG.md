@@ -8,6 +8,20 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Cert disposition surface closure: orphaned candidate certs are
+  moot by mechanism**
+  (docs/records/2026-09-17-cert-disposition-surface-closure.md):
+  the gate follow-up on cert `a3286b78` (declared only on unreachable
+  commit `5d9bd1ff`) resolved with no ledger surgery: no cert-id
+  registry exists anywhere (kernel store, automation ledgers, MCP
+  queue/dashboard surfaces, either home), commit-subject-on-main is
+  the whole registry, and every orphaned cert's content landed via a
+  reachable twin (`a25e82bb`/`cf36b6f2`, plus out-of-window
+  2026-08-25 pairs `65820f40` and `9e1b74ee`). Corrects the
+  wip-family-census wording that framed the external 64-hex cert id
+  as a git object (`git cat-file` rejects it). Gate-inventory
+  candidate-label row annotated; no code or ledger changes.
+
 - **Research-doc writer redaction: crystallized-doc title gap closed**
   (docs/records/2026-09-17-research-doc-writer-redaction.md):
   the crystallized research-doc writer emitted the RAW lines-TSV
