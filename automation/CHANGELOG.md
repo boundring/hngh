@@ -2,6 +2,19 @@
 
 ## 2026-09-16
 
+- security: identity-seam contract extended to all five cadence
+  auto-committers (16dae2eb covered config-backup.sh only). The
+  ambient-identity-writer-audit enumerated every git-invoking automation
+  writer; the five ambient committers (lesson-harvest tick,
+  plan-ledger-sync, torch-audit, kernel-ledger-sync, research-beat)
+  authored 339 of the 566 window commits as the leaked Fixture identity
+  and now pin hngh-machine per invocation. New contract test
+  tests/test-identity-seam.py (red-proven pre-fix, wired into
+  `make test`) fails on any future unpinned `git commit` in
+  cadence/jobs/lib/scripts. Kernel ceremony executor
+  (src/adapter/mutation.lisp) still rides ambient identity: reported in
+  docs/records/2026-09-16-identity-seam-reconciliation.md, not edited.
+
 - security: fifth token-file reader gated — unsloth_chat now refuses a
   non-0600 TOKEN_FILE fail-closed before the value is read or sent
   (test-first, red-proven; record:

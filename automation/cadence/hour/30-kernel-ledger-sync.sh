@@ -42,7 +42,8 @@ done
 [ "$count" -gt 0 ] || exit 0
 
 msg="docs: machine ledger sync — $count changed file(s) ($(date -u +%F))"
-if git -C "$KERNEL" commit -q -m "$msg"; then
+if git -C "$KERNEL" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+  commit -q -m "$msg"; then
   breadcrumb "$JOB_NAME" "kernel-ledger-sync" "committed: $msg"
 else
   breadcrumb "$JOB_NAME" "kernel-ledger-sync" "commit failed (tree changed mid-sync)"
