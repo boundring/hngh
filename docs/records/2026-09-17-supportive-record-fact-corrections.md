@@ -108,17 +108,30 @@ edge, not inference):
    list (msg 1948). What is true: no coordinator tool call created
    any adj-* node — every adj-* node came from ant's expansion or
    ox's gate injection.
-6. **The "verbatim 21-seed node list" does not exist as an artifact.**
-   The graph meter computes seed counts; verbatim meter lines are
-   "7 seeded -> 8 nodes (1 machinery-grown)" (d-graph), "15 seeded ->
-   51 nodes", "21 seeded -> 94 nodes (73 machinery-grown)" (v213),
-   "21 seeded -> 122 nodes (101 machinery-grown)" (v309). The only
-   node-listing seed calls found are the three enumerated in (1)
-   (dolphin 1416: 7 nodes; dolphin 1846: 8 nodes;
-   session_eagle msg 20: 1 node, `bypass-f-root-gov-files::seed-929f2dbe`)
-   plus the inject/expand vectors listed above; the exact ±1
-   composition of the meter's "21" is not recoverable from
-   transcripts (open question below).
+6. **The verbatim 21-seed node list, reconstructed exactly.** No single
+   coordinator call seeded 21 nodes; the meter counts only
+   `task_graph` calls as seeded (inject_gap / expand_node children are
+   machinery-grown). Enumerating every `task_graph` call with node
+   lists across all `~/.jcode/sessions/` transcripts yields exactly
+   21, matching the meter progression (7 -> 15 -> 21):
+   - dolphin msg 1416 (7): `d4-principles`, `d4-spec`, `d1-harvest`,
+     `d2-replyparse`, `d6-routes-view`, `d1-surface`,
+     `d3-memorybridge`;
+   - dolphin msg 1846 (8): `acp-architecture`,
+     `acp-evidence-audit`, `hngh-governance-map`,
+     `injection-comparison`, `gap-analysis`, `threat-model-hngh`,
+     `integration-candidates`, `comparison-doc`;
+   - bonehound msg 73 (5): `bypass-f-root-gov-files`,
+     `bypass-g-server-protection-resolved`,
+     `bypass-h-gate-skip-free-lanes`,
+     `bypass-i-ridealong-and-conventions`,
+     `bypass-j-identity-credential-seam`;
+   - eagle msg 20 (1): `bypass-f-root-gov-files::seed-929f2dbe`.
+   Meter lines (verbatim): "7 seeded -> 8 nodes (1 machinery-grown)",
+   "15 seeded -> 41/46/51 nodes", "21 seeded -> 94 nodes (73
+   machinery-grown)" (v213), "21 seeded -> 122 nodes (101
+   machinery-grown)" (v309). 7 + 8 + 5 + 1 = 21 exactly; no
+   coordinator seeded any `bypass-j-adj-*` node.
 
 ## Correction 4 — the 07:15Z handoff row lives in automation/agent-handoffs.md
 
@@ -156,10 +169,6 @@ edge, not inference):
 
 ## Open questions
 
-- Exact composition of the graph meter's "21 seeded" counter (the
-  three listed seed calls + which inject waves it counts) is not
-  recoverable from the transcripts; the meter line itself is verbatim
-  above.
 - Whether any downstream consumer already ingested the wrong
   figures from swarm artifacts (artifacts are append-only
   transcripts and are not edited; this record supersedes).
