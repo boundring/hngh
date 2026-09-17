@@ -2,6 +2,33 @@
 
 ## 2026-09-17
 
+- patrol: candidate-hash reconciliation check — the loop-history guard
+  accepts any `hngh: candidate <64hex>` subject with no artifact to
+  consult, and the a4e2 census confirmed no minted-certificate ledger
+  exists anywhere (store records carry no hashes, the certificate
+  struct is in-memory, the render goes to stdout only). The feasible
+  rung landed: CHECKS["candidate-reconciliation"] (day-tier route
+  `recon`) recomputes the label hash — sha256 over path+NUL+bytes+NUL
+  per scripts/verify-candidate.py:129 — from the newest 24 labeled
+  commits' own changed paths + blob bytes, git alone, and fails closed
+  (`label-content-divergence`) on divergence; no labels in the window
+  stays quiet; declared divergences
+  (config/patrol-candidate-recon-exempts.tsv, sha-prefix rows, the
+  guard's declared-miss convention) count in the pass detail, never
+  FAIL. Calibration on this repo: 9/9 newest exact, 38/40 across 40,
+  so the two known pre-closure stragglers (331fc6334bde,
+  117d463fe1ad) are declared rows. Live single-route run:
+  `PASS recon/candidate-reconciliation 22/24 reconciled, declared 2`.
+  Documented limit: this is content binding, not proof of a legitimate
+  mint — the strict label-to-LEDGER closure needs a kernel-side
+  mint-time artifact and is proposed, not implemented
+  (docs/records/2026-09-17-candidate-reconciliation-closure.md).
+  Failing tests first: 7 unittest cases
+  (tests/test-candidate-hash-reconciliation.py; FAILED 1 failure +
+  6 errors pre-implementation, OK after); test-patrol.py sandbox
+  kernel is now a real git repo (the check's input, 48/48 OK);
+  wired into automation/Makefile test.
+
 - credential-freshness: zero-length-ledger edge sealed — `check()` now
   reports `ledger-empty` for an existing but rowless (empty or
   blank-only) ledger instead of a silent rc=0 pass, and `record()`

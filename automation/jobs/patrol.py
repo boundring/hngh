@@ -36,6 +36,7 @@ usage: jobs/patrol.py [--patrol ID | --tier TIER | --all] [--repo DIR]
               [--kernel DIR] [--report-root DIR] [--date YYYY-MM-DD]
 """
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -623,6 +624,108 @@ def check_loop_history_guard(ctx):
                              "guard rc=%d: %s" % (r.returncode, last)))
     else:
         out["passes"].append(("loop-history-guard", last or "rc=0"))
+    return out
+
+
+# candidate-hash reconciliation (2026-09-17, a4e3 closure): the guard
+# accepts any `hngh: candidate <64hex>` subject and no minted-certificate
+# ledger exists (a4e2: store records carry no hashes, the certificate is
+# in-memory, the render goes to stdout only) -- but the hash is
+# deterministic over the certificate's candidate paths
+# (sha256(path+NUL+bytes+NUL), scripts/verify-candidate.py:129), which
+# for every recent commit equal the commit's own changed paths + blob
+# bytes, so git alone verifies the label-to-content binding. Calibration
+# on this repo: 9/9 newest exact, 38/40 across 40 (two known 2026-09-15
+# stragglers). This is content binding, NOT proof of a legitimate mint:
+# a forged self-consistent commit still needs the ledger closure proposed
+# in docs/records/2026-09-17-candidate-reconciliation-closure.md.
+RECON_DEFAULT_LOOKBACK = 24  # day-tier heavy surface
+RECON_SUBJECT_RE = re.compile(r"^hngh: candidate ([0-9a-f]{64})$")
+
+
+def check_candidate_reconciliation(ctx):
+    """Label-to-content binding for the newest RECON_DEFAULT_LOOKBACK
+    candidate-labeled commits: recompute the candidate hash from the
+    commit's changed paths + blob bytes and compare with the label.
+    Fail closed on divergence, quiet on a plain history, declared
+    exemptions (PATROL_RECON_EXEMPTS, sha-prefix + reason) are counted
+    in the pass detail, never FAILs (the two pre-closure stragglers)."""
+    out = {"passes": [], "fails": []}
+    kernel = ctx["kernel"]
+    lookback = int(os.environ.get("PATROL_RECON_LOOKBACK",
+                                  RECON_DEFAULT_LOOKBACK))
+    try:
+        r = subprocess.run(
+            ["git", "log", "--format=%H %s", "-%d" % lookback,
+             "--grep=^hngh: candidate "], cwd=kernel,
+            capture_output=True, text=True, check=True, timeout=60)
+    except (subprocess.SubprocessError, OSError) as exc:
+        out["fails"].append(("kernel", "recon-fault",
+                             "git log fault: %s" % exc))
+        return out
+    labeled = []
+    for ln in r.stdout.splitlines():
+        sha, _, subject = ln.partition(" ")
+        m = RECON_SUBJECT_RE.match(subject)
+        if m:
+            labeled.append((sha, m.group(1)))
+    if not labeled:
+        out["passes"].append(("candidate-reconciliation",
+                              "0 candidate commits in window"))
+        return out
+    exemptions = set()
+    exempt_path = os.environ.get("PATROL_RECON_EXEMPTS",
+                                 ctx.get("recon_exempts"))
+    if exempt_path and os.path.isfile(exempt_path):
+        try:
+            with open(exempt_path, encoding="utf-8",
+                      errors="replace") as fh:
+                for ln in fh:
+                    ln = ln.strip()
+                    if ln and not ln.startswith("#"):
+                        exemptions.add(ln.split("\t")[0].strip())
+        except OSError:
+            pass  # unreadable table = no declared exemptions
+    reconciled = declared = 0
+    for sha, labeled_hash in labeled:
+        try:
+            paths = subprocess.run(
+                ["git", "show", "--name-only", "--format=", sha],
+                cwd=kernel, capture_output=True, text=True, check=True,
+                timeout=60).stdout.split("\n")
+            digest = hashlib.sha256()
+            for path in paths:
+                if not path:
+                    continue
+                blob = subprocess.run(
+                    ["git", "show", "%s:%s" % (sha, path)], cwd=kernel,
+                    capture_output=True, check=True, timeout=60).stdout
+                digest.update(path.encode("utf-8"))
+                digest.update(b"\0")
+                digest.update(blob)
+                digest.update(b"\0")
+        except (subprocess.SubprocessError, OSError) as exc:
+            out["fails"].append(("kernel", "recon-fault",
+                                 "%s unreadable: %s" % (sha[:12], exc)))
+            continue
+        short = sha[:12]
+        if digest.hexdigest() == labeled_hash:
+            reconciled += 1
+        elif any(sha.startswith(tok) for tok in exemptions):
+            declared += 1
+        else:
+            out["fails"].append((
+                "kernel", "label-content-divergence",
+                "%s label %s != recomputed %s over the commit's own "
+                "paths+bytes" % (short, labeled_hash[:12],
+                                 digest.hexdigest()[:12])))
+    if out["fails"]:
+        return out
+    out["passes"].append((
+        "candidate-reconciliation",
+        "%d/%d reconciled%s" % (reconciled, len(labeled),
+                                ", declared %d" % declared
+                                if declared else "")))
     return out
 
 
@@ -1622,6 +1725,7 @@ CHECKS = {
     "research-ledger": check_research_ledger,
     "session-budget": check_session_budget,
     "loop-history-guard": check_loop_history_guard,
+    "candidate-reconciliation": check_candidate_reconciliation,
     "gate-cure": check_gate_cure,
     "feedback-backlog": check_feedback_backlog,
     "manga-pipeline": check_manga_pipeline,
@@ -1719,6 +1823,10 @@ def build_ctx(args, now_s):
         "rotation_watch": os.environ.get(
             "PATROL_ROTATION_WATCH",
             os.path.join(root, "state", "rotation-watch.tsv")),
+        "recon_exempts": os.environ.get(
+            "PATROL_RECON_EXEMPTS", os.path.join(
+                root, "config",
+                "patrol-candidate-recon-exempts.tsv")),
     }
 
 

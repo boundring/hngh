@@ -22,6 +22,7 @@ handoffs	handoffs-accumulation	handoff-deaths	30m	bad-execution
 automation-gate	automation-gate	gate-crumbs	30m	bad-execution
 stall	overnight-ledger	stall-crumbs	30m	bad-execution
 kernel-gate	kernel-gate	loop-history-guard	day	bad-execution
+recon	candidate-history	candidate-reconciliation	day	bad-execution
 gate-cure	kernel-gate	gate-cure	30m	bad-execution
 research-flow	research-flow	research-stall	day	bad-execution
 paper	paper-edition	paper-edition	day	bad-execution

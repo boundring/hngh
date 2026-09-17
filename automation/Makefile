@@ -99,6 +99,7 @@ test:
 	python3 -B tests/test-agent-respawn.py
 	python3 -B tests/test-beat-watchdog.py
 	python3 -B tests/test-patrol.py
+	python3 -B tests/test-candidate-hash-reconciliation.py
 	python3 -B tests/test-viz-schema-patrol.py
 	python3 -B tests/test-viz-schema-version.py
 	python3 -B tests/test-viz-schema-history.py

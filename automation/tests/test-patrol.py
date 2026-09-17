@@ -139,6 +139,21 @@ class Patrol(unittest.TestCase):
         for d in ("dashboard", "digest", "logs", "state", "config", "lib"):
             (self.auto / d).mkdir(parents=True, exist_ok=True)
         (self.kernel / "tests" / "scripts").mkdir(parents=True)
+        # the kernel surface is always a git repo: the day-tier walk
+        # includes the candidate-hash reconciliation check, whose input
+        # is git history (a bare dir faults the check, 2026-09-17)
+        kenv = dict(os.environ)
+        for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
+                  "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+            kenv.setdefault(k, "t")
+        subprocess.run(["git", "init", "-q"], cwd=self.kernel, env=kenv,
+                       check=True, capture_output=True)
+        (self.kernel / "README.md").write_text("kernel fixture\n")
+        subprocess.run(["git", "add", "-A"], cwd=self.kernel, env=kenv,
+                       check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-q", "-m", "base"],
+                       cwd=self.kernel, env=kenv, check=True,
+                       capture_output=True)
         # healthy fixture: everything green and fresh
         (self.auto / "cadence-params.tsv").write_text(
             "beat-stall-n\t3\tx\nblocker-escalate-n\t2\tx\n"

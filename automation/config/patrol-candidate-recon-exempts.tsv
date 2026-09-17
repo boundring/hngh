@@ -1,0 +1,21 @@
+# patrol-candidate-recon-exempts.tsv -- declared label-content
+# divergences for the candidate-reconciliation patrol check
+# (jobs/patrol.py CHECKS["candidate-reconciliation"], landed 2026-09-17,
+# a4e3 reconciliation closure). Columns (tab-separated):
+#   short-sha  commit sha prefix (12 hex; matched as a prefix) carrying
+#              the divergent label
+#   reason     why the divergence is declared, not a finding
+# A row tells the check "this divergence is known and accepted"; the
+# commit still counts in the pass detail ("declared N"). Remove a row
+# once the commit ages out of the lookback window
+# (PATROL_RECON_LOOKBACK, default 24 labeled commits).
+# The two rows here are the pre-closure stragglers found by the a4e2
+# recompute census (38/40 exact across the newest 40 candidate commits):
+# 117d463f's label matches only under its certificate's 2-path set
+# (cert paths can exceed the commit diff); 331fc633 matches under no
+# plausible path set (mint-time bytes likely differed from committed
+# bytes). Both predate the check; neither re-derivable from git alone.
+# Declared-miss convention: tests/scripts/test-loop-history-guard.py
+# exemption rows.
+331fc6334bde	not re-derivable from git alone (pre-closure straggler, a4e2 census 2026-09-15-era)
+117d463fe1ad	cert paths exceed the commit diff (pre-closure straggler, a4e2 census 2026-09-15-era)
