@@ -501,6 +501,64 @@ pass_line() { # response -> one-line distillation of a review pass
   tr '\t' ' ' | LC_ALL=C sed 's/[^[:print:]]//g' | cut -c1-160
 }
 
+append_disposition_impl() { # id action reason used doc day sup opp fon ->
+ # append one 9-column research-dispositions.tsv row, sealed: every
+ # free-text column (verdict col3 / evidence col5 / support col7 /
+ # oppose col8 / followons col9 -- all model output) runs redact_home
+ # AFTER tab-flattening and BEFORE the printf (2026-09-17 sink cure,
+ # forward-only: the sink-side ingest fix 2e51d01b redacts at MCP read
+ # time but the TSV is git-tracked and pushed publicly via
+ # research_commit, and post-fix rows still carried raw /home/<user>
+ # paths; harvest then interpolates evidence onward). id, reviewer and
+ # date are beat-generated and pass through untouched. Fail-closed: a
+ # broken redact backend yields EMPTY output; a row whose free-text
+ # columns redacted to empty from non-empty input is never written
+ # (the line stays crystallized and the next beat re-reviews it).
+ local id="$1" action="$2" reason="$3" used="$4" doc="$5" day="$6"
+ local sup_line="$7" opp_line="$8" followons="${9:-}"
+ # text fields are model output: tabs would widen the row past the schema
+ reason="$(printf '%s' "$reason" | tr '\t' ' ')"
+ sup_line="$(printf '%s' "$sup_line" | tr '\t' ' ')"
+ opp_line="$(printf '%s' "$opp_line" | tr '\t' ' ')"
+ followons="$(printf '%s' "$followons" | tr '\t' ' ')"
+ local reason_r="$reason" doc_r="$doc" sup_r="$sup_line" opp_r="$opp_line"
+ local fon_r="$followons"
+ # "|| :" keeps a failing backend from aborting a set -e caller: the
+ # assignment still yields empty, which the withhold check below turns
+ # into a skipped row.
+ reason="$(redact_home "$reason")" || :
+ doc="$(redact_home "$doc")" || :
+ sup_line="$(redact_home "$sup_line")" || :
+ opp_line="$(redact_home "$opp_line")" || :
+ followons="$(redact_home "$followons")" || :
+ if { [ -n "$reason_r" ] && [ -z "$reason" ]; } ||
+  { [ -n "$doc_r" ] && [ -z "$doc" ]; } ||
+  { [ -n "$sup_r" ] && [ -z "$sup_line" ]; } ||
+  { [ -n "$opp_r" ] && [ -z "$opp_line" ]; } ||
+  { [ -n "$fon_r" ] && [ -z "$followons" ]; }; then
+  breadcrumb "$JOB_NAME" "research-disposition-withheld" \
+   "$id: redact_home yielded empty output; disposition row not appended"
+  return 0
+ fi
+ # writer schema; upgrade a stale header (older schema) in place before
+ # appending 9-column rows, so the MCP reader never trips on column drift.
+ local schema='line\taction\tverdict\treviewer\tevidence\tdate\tsupport\toppose\tfollowons'
+ if [ -f "$DISPOSITIONS" ]; then
+  [ "$(head -n 1 "$DISPOSITIONS")" = "$(printf '%b\n' "$schema")" ] || {
+   {
+    printf '%b\n' "$schema"
+    tail -n +2 "$DISPOSITIONS"
+   } >"$DISPOSITIONS.tmp" &&
+    mv "$DISPOSITIONS.tmp" "$DISPOSITIONS"
+  }
+ else
+  printf '%b\n' "$schema" >"$DISPOSITIONS"
+ fi
+ printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\t%s\t%s\t%s\n' \
+  "$id" "$action" "$reason" "$used" "$doc" "$day" \
+  "$sup_line" "$opp_line" "$followons" >>"$DISPOSITIONS"
+}
+
 related_findings() { # id line -> bounded block of related crystallized
  # docs (keyword overlap, same deterministic shape as prior_art; the
  # review cross-considers these: agreement/conflict is judged in the
@@ -716,28 +774,11 @@ $related}"
   } |
    followon_queue)"
  fi
- # writer schema; upgrade a stale header (older schema) in place before
- # appending 9-column rows, so the MCP reader never trips on column drift.
- schema='line\taction\tverdict\treviewer\tevidence\tdate\tsupport\toppose\tfollowons'
- if [ -f "$DISPOSITIONS" ]; then
-  [ "$(head -n 1 "$DISPOSITIONS")" = "$(printf '%b\n' "$schema")" ] || {
-   {
-    printf '%b\n' "$schema"
-    tail -n +2 "$DISPOSITIONS"
-   } >"$DISPOSITIONS.tmp" &&
-    mv "$DISPOSITIONS.tmp" "$DISPOSITIONS"
-  }
- else
-  printf '%b\n' "$schema" >"$DISPOSITIONS"
- fi
- # text fields are model output: tabs would widen the row past the schema
- reason="$(printf '%s' "$reason" | tr '\t' ' ')"
- sup_line="$(printf '%s' "$sup_line" | tr '\t' ' ')"
- opp_line="$(printf '%s' "$opp_line" | tr '\t' ' ')"
- followons="$(printf '%s' "$followons" | tr '\t' ' ')"
- printf '%s\t%s\t%s\tmodel:%s\t%s\t%s\t%s\t%s\t%s\n' \
-  "$id" "$action" "$reason" "$used" "$doc" "$day" \
-  "$sup_line" "$opp_line" "$followons" >>"$DISPOSITIONS"
+ # sealed append seam (2026-09-17): schema upgrade, tab-flattening and
+ # redact_home over every free-text column live in append_disposition_impl
+ # (single source; test-research-dispositions-redact.sh extracts it).
+ append_disposition_impl "$id" "$action" "$reason" "$used" "$doc" "$day" \
+  "$sup_line" "$opp_line" "$followons"
  # harvest (2026-09-15 lifecycle audit: adopted dispositions were a
  # terminus that fed nothing): condense every adopted verdict into ONE
  # actionable lesson row in research-lessons.tsv, keyed by line_id --

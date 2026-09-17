@@ -2,6 +2,26 @@
 
 ## 2026-09-17
 
+- research-beat: dispositions append seam sealed — the 9-column
+  research-dispositions.tsv row append in cadence/hour/33-research-beat.sh
+  now runs redact_home (lib/scrub.py single token family, tilde
+  rendering, fail-closed) over every free-text column (verdict col3 /
+  evidence col5 / support col7 / oppose col8 / followons col9) AFTER
+  tab-flattening and BEFORE the printf, as a dedicated
+  append_disposition_impl seam function. The sink-side ingest fix
+  (2e51d01b) redacts at MCP read time, but the TSV is git-tracked and
+  pushed publicly via research_commit, so three post-fix rows (latest
+  732331a7) still carried raw /home/<user> paths in evidence plus
+  model-echoed raw paths in support/oppose; harvest
+  (lib/research-harvest.py) then interpolates evidence into
+  research-lessons.tsv and the vault pages. Fail-closed: a broken redact
+  backend yields empty output and the row is withheld (breadcrumb
+  research-disposition-withheld) rather than appended raw. Forward-only:
+  the 199 existing rows and git history untouched. Red-first contract
+  test tests/test-research-dispositions-redact.sh (extracts the REAL
+  append_disposition_impl via brace-anchored awk, same technique as
+  test-research-beat-ingest-redact.sh) wired into make test.
+
 - research-beat: source-side ingest redaction — both question-text
   ingest seams in cadence/hour/33-research-beat.sh (ensure_lines from
   research-subjects.txt, followon_queue from review FOLLOWON lines,
