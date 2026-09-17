@@ -2,6 +2,28 @@
 
 ## 2026-09-17
 
+- patrol: doctrine-coverage classifier extension — every doctrine LARGE
+  class now maps to a concrete pre-check rule on the repo's REAL
+  surfaces or a documented exception
+  (docs/records/2026-09-17-large-precheck-doctrine-coverage.md). New:
+  `<name>.env` basename forms match _CRED_PATH_RE (real files
+  automation/config/machine.env + automation/config.env were invisible
+  before); _SYSTEMD_PATH_RE catches the services registry
+  (hngh-services.tsv, no .service suffix), service-mgmt.sh, and
+  sudoers grants; _SPEND_PATH_RE catches the cadence-params Inventory
+  (sessions-day-max, kimi-daily-cap, zai/opencode cap windows —
+  OUTSIDE automation/config/) and lib/failfirst.sh (the fail-first
+  concurrency family); _PUBLIC_PATH_RE refuses publish code
+  (digest-public.py, dispatch/, newspaper/). Documented EXCEPTION: the
+  kernel surface (src/, tests/, Makefile, hngh.asd) is NOT refused —
+  every guard violation is kernel-surface and the ba6b390 Makefile
+  cure is the lane's founding precedent; its policy path is the
+  ceremony certificate plus the suite green. Rename numstat forms
+  ("old => new") now classify BOTH sides. Red-first: the new
+  test_large_cure_violation_real_repo_paths asserted real LARGE
+  surfaces (machine.env.example, cadence-params.tsv, failfirst.sh,
+  hngh-services.tsv, digest-public.py, leg-budgets.tsv) and failed on
+  the pre-extension classifier before going green.
 - patrol: gut-shape classifier fix — the LARGE pre-check's original
   pure-deletion rule (additions==0 and deletions>0) did not catch the
   real gut it was written for: ba6b390's actual numstat is 1+/36-

@@ -689,14 +689,44 @@ def commit_numstat(kernel, sha):
     return rows
 
 
-# LARGE cure classes (docs/project/decisions.md, the 2026-09-13
-# SMALL-matter amendment): never auto-declared by the gate-cure patrol.
+# LARGE cure classes (docs/design/autonomous-development-control.md,
+# "2026-09-12 amendments -- large vs small matters"; enforcement lane
+# per the 2026-09-13 SMALL-matter amendment): never auto-declared by
+# the gate-cure patrol. Every doctrine class maps to a rule below or
+# an explicit documented exception in
+# docs/records/2026-09-17-large-precheck-doctrine-coverage.md -- no
+# silent omissions.
 _CRED_PATH_RE = re.compile(
-    r"(^|/)(\.env(\..+)?|credentials?(\..+)?|secrets?(\..+)?|"
-    r"tokens?(\..+)?|auth[_-]?token|\.?\w*\.pem)(/|$|\.)", re.I)
+    r"(^|/)(\.env(\..+)?|[\w.-]+\.env(\..+)?|credentials?(\..+)?|"
+    r"secrets?(\..+)?|tokens?(\..+)?|auth[_-]?token|\.?\w*\.pem)(/|$|\.)",
+    re.I)
 _SYSTEMD_SUFFIXES = (".service", ".timer", ".socket")
+# Systemd unit lifecycle beyond unit files: the services registry
+# (automation/config/hngh-services.tsv), the lifecycle manager
+# (automation/lib/service-mgmt.sh), and sudoers privilege grants.
+_SYSTEMD_PATH_RE = re.compile(
+    r"(^|/)(hngh-services\.tsv$|service-mgmt\.sh$|.*\.sudoers(\..+)?$)")
 _SPEND_RE = re.compile(r"(spend|cost|budget|cap)", re.I)
 _SPEND_CONFIG_PREFIX = "automation/config/"
+# Spend caps on their REAL stores: cadence-params.tsv is the Inventory
+# that carries sessions-day-max, kimi-daily-cap and the zai/opencode
+# cap windows; automation/lib/failfirst.sh is the fail-first
+# concurrency family (full/standard/cautious concurrency mapping).
+_SPEND_PATH_RE = re.compile(
+    r"^(automation/cadence-params\.tsv$|automation/lib/failfirst)")
+# Documented EXCEPTION (docs/records/2026-09-17-large-precheck-
+# doctrine-coverage.md): the kernel surface (src/, tests/, Makefile,
+# hngh.asd) is deliberately NOT refused here. Every loop-history-guard
+# violation is kernel-surface by definition, and the cure lane exists
+# to declare exactly those (the ba6b390 Makefile precedent); its
+# pre-decided policy path is the ceremony certificate plus the suite
+# green that cure_red_gate runs. A path rule here would park every red
+# gate and dead-end the amendment. The public surface's published
+# digest CONTENT likewise lives in userspace (~/.hngh, outside git)
+# where the certificate-gated push and the egress boundary record stay
+# the guard; publish CODE below is refused before the declare.
+_PUBLIC_PATH_RE = re.compile(
+    r"(^|/)(digest-public\.py$|dispatch(/|$)|newspaper(/|$))")
 # A gut is not only the pure-deletion shape: the real gutting commit
 # (ba6b390) kept one vestigial line per file, so its numstat rows are
 # 1+/large- and invisible to an additions==0 rule (2026-09-17 record
@@ -714,15 +744,18 @@ _GUT_PURITY_RATIO = 20
 
 def is_large_cure_violation(kernel, shas):
     """LARGE-surface pre-check: refuse the auto-declare when the
-    violating commit set touches credential-like paths, systemd units,
-    spend/cost/budget/cap configs under automation/config/, or any
-    commit is a gutting diff: a pure deletion (additions==0,
-    deletions>0) or a deletion-dominated rewrite (>= _GUT_MIN_DELETIONS
-    deletions at >= _GUT_PURITY_RATIO:1 deletions-to-additions -- the
-    ba6b390 shape that an additions==0 rule classified SMALL).
-    Returns a reason string, or "" when SMALL (auto-curable).
-    The ceremony's own refusal stays the backstop; this pre-check keeps
-    the refusal before the append, not after it."""
+    violating commit set touches credential/provider-config paths,
+    systemd lifecycle surfaces, spend/cost/budget/cap configs
+    (including the cadence-params Inventory and the fail-first
+    family), publish-code paths, or any commit is a gutting diff: a
+    pure deletion (additions==0, deletions>0) or a deletion-dominated
+    rewrite (>= _GUT_MIN_DELETIONS deletions at >= _GUT_PURITY_RATIO:1
+    deletions-to-additions -- the ba6b390 shape that an additions==0
+    rule classified SMALL). Returns a reason string, or "" when SMALL
+    (auto-curable). The kernel surface is the documented exception (the
+    ceremony certificate plus the suite green is its guard); the
+    ceremony's own refusal stays the backstop. This pre-check keeps
+    refusals before the append, not after it."""
     for sha in shas:
         for additions, deletions, path in commit_numstat(kernel, sha):
             if additions == 0 and deletions > 0:
@@ -732,13 +765,24 @@ def is_large_cure_violation(kernel, shas):
                 return "gut-shape diff %d+/%d- %s (%s)" % (
                     additions, deletions, path, sha)
             norm = path.replace("\\", "/")
-            if _CRED_PATH_RE.search(norm):
-                return "credential-like path %s (%s)" % (path, sha)
-            if norm.endswith(_SYSTEMD_SUFFIXES):
-                return "systemd unit %s (%s)" % (path, sha)
-            if (norm.startswith(_SPEND_CONFIG_PREFIX)
-                    and _SPEND_RE.search(os.path.basename(norm))):
-                return "spend/cost-cap config %s (%s)" % (path, sha)
+            # rename numstat entries carry "old => new"; both sides are
+            # the touched surface (a rename into a LARGE path counts).
+            sides = [norm]
+            if " => " in norm:
+                sides = [s.strip('"') for s in norm.split(" => ")]
+            for side in sides:
+                if _CRED_PATH_RE.search(side):
+                    return "credential-like path %s (%s)" % (path, sha)
+                if (side.endswith(_SYSTEMD_SUFFIXES)
+                        or _SYSTEMD_PATH_RE.search(side)):
+                    return "systemd unit lifecycle %s (%s)" % (path, sha)
+                if (_SPEND_PATH_RE.search(side)
+                        or (side.startswith(_SPEND_CONFIG_PREFIX)
+                            and _SPEND_RE.search(
+                                os.path.basename(side)))):
+                    return "spend/cost-cap config %s (%s)" % (path, sha)
+                if _PUBLIC_PATH_RE.search(side):
+                    return "public-surface path %s (%s)" % (path, sha)
     return ""
 
 

@@ -705,6 +705,93 @@ class Patrol(unittest.TestCase):
         self.assertFalse(self._mod.is_large_cure_violation(
             str(self.kernel), ["ba6b390"]))
 
+    def test_large_cure_violation_real_repo_paths(self):
+        """Doctrine-class coverage asserted on the repo's REAL
+        LARGE-bearing surfaces (2026-09-17 doctrine-coverage record):
+        machine.env, config.env, cadence-params.tsv, failfirst.sh,
+        hngh-services.tsv, digest-public.py -- not only synthetic
+        shapes. Numstat is stubbed with (3, 1, path) rows carrying the
+        repo's real path names, and each real path is also asserted to
+        EXIST in this repo, so renaming a real LARGE surface fails here
+        until the classifier rule follows it. Also asserts the kernel
+        surface exception (src/, tests/, Makefile, hngh.asd are NOT
+        refused here) and rename numstat forms."""
+        self._mod.commit_subject = lambda kernel, sha: "fixture"
+        real_large = (
+            # provider configuration, real filename (was invisible to
+            # _CRED_PATH_RE: "machine.env" is not .env*/credential/...)
+            "automation/config/machine.env",
+            "automation/config.env",
+            # systemd unit lifecycle on its real registry (no .service
+            # suffix) and lifecycle manager
+            "automation/config/hngh-services.tsv",
+            "automation/lib/service-mgmt.sh",
+            "automation/config/hngh-automation.sudoers.example",
+            # spend caps on their real stores: sessions-day-max,
+            # kimi-daily-cap, zai/opencode cap windows live in the
+            # cadence-params Inventory (OUTSIDE automation/config/),
+            # and the fail-first concurrency family lives in
+            # lib/failfirst.sh -- both were invisible to the
+            # automation/config/-prefix rule
+            "automation/cadence-params.tsv",
+            "automation/lib/failfirst.sh",
+            "automation/config/leg-budgets.tsv",
+            # public surface publish code
+            "automation/jobs/digest-public.py",
+            "automation/dispatch/edition.md",
+        )
+        for path in real_large:
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (3, 1, p)]
+            self.assertTrue(self._mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]), path)
+        # rename numstat forms: both sides are the touched surface
+        for path in ("automation/params.tsv => "
+                     "automation/cadence-params.tsv",
+                     "automation/lib/model.sh => "
+                     "automation/lib/failfirst.sh"):
+            self._mod.commit_numstat = lambda kernel, sha, p=path: [
+                (3, 1, p)]
+            self.assertTrue(self._mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]), path)
+        # the kernel surface (src/, tests/, Makefile, hngh.asd) is the
+        # documented exception: NOT refused here -- the ceremony
+        # certificate plus the suite green is its guard, and refusing
+        # it would park every red-gate cure (the ba6b390 Makefile
+        # precedent is exactly a declared kernel-surface commit)
+        self._mod.commit_numstat = lambda kernel, sha: [
+            (3, 1, "Makefile"), (3, 1, "src/adapter/mutation.lisp")]
+        self.assertFalse(self._mod.is_large_cure_violation(
+            str(self.kernel), ["ba6b390"]))
+        # the real repo actually carries these LARGE-bearing files and
+        # the classifier rules hit them by their literal path (no
+        # synthetic stand-in): the module's own regexes, not copies
+        root = str(REPO)
+        mod = self._mod
+
+        def hits(path):
+            mod.commit_numstat = lambda kernel, sha, p=path: [(3, 1, p)]
+            return bool(mod.is_large_cure_violation(
+                str(self.kernel), ["ba6b390"]))
+
+        for path in ("automation/config/machine.env.example",
+                     "automation/cadence-params.tsv",
+                     "automation/lib/failfirst.sh",
+                     "automation/config/hngh-services.tsv",
+                     "automation/jobs/digest-public.py",
+                     "automation/config/leg-budgets.tsv"):
+            self.assertTrue(os.path.exists(os.path.join(root, path)),
+                            path)
+            self.assertTrue(hits(path), "%s not classified LARGE" % path)
+        # real SMALL surfaces stay SMALL (the non-LARGE side of the
+        # doctrine boundary)
+        for path in ("README.md",
+                     "automation/jobs/patrol.py",
+                     "automation/config/patrol-routes.tsv",
+                     "automation/config/imagegen-styles.tsv",
+                     "automation/config/manga-cast.json"):
+            self.assertFalse(hits(path), "%s should be SMALL" % path)
+
     def test_gate_cure_refuses_credential_surface(self):
         """A credential-like violating commit set is refused before the
         declaration append and the ceremony drive, even though the
