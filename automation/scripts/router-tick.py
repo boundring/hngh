@@ -56,14 +56,50 @@ REPORT_ROOT = os.environ.get("HNGH_REPORT_ROOT", KERNEL)
 
 IDENT_OK = re.compile(r"^[A-Za-z0-9._:-]+$")
 STEP_SUFFIX = re.compile(r":step-(\d+)$")
-# path-redaction scrub (2026-09-16 risk-dispositions-cred-argv family):
+# path-redaction scrub (2026-09-16 risk-dispositions-cred-argv family,
+# extended 2026-09-17 GAP E wiki-health-wiring-reconcile::gate):
 # pre-2026-09-16 alert identities were not path-redacted, so a dash-
 # mangled absolute path ("home-bricker-Projects-...") can ride in through
 # IDENT_OK and leak into public plan front-matter, filenames, and rows.
 # Raw '/', '~', '$' identities already fail IDENT_OK (fail closed); the
-# dash-mangled form is cut at the first home/Users-stemmed token. False
-# positives only truncate a subject word; false negatives would leak.
-PATHY_STEMS = ("home", "users")
+# dash-mangled form is cut at the first pathy-stemmed token. Stems are
+# home/Users, the deployment username (config.env seam, never hardcoded:
+# HNGH_ROUTER_PATHY_STEMS env overrides the config default), 'tmp', and
+# 'root'. A second token-level heuristic catches manglers that consumed
+# the home/username segment upstream: a token whose dash-segments hit
+# TWO consecutive PATH_COMPONENTS (repeated fragment or adjacent known
+# component) is path-derived. False positives only truncate a subject
+# word; false negatives would leak.
+PATHY_STEMS = ("home", "users", "tmp", "root")
+PATH_COMPONENTS = ("projects", "etc", "hngh", "dropbox", "documents",
+                   "downloads", "desktop", "config", "src", "lib", "bin",
+                   "docs", "tests", "opt", "usr", "var")
+# username stem default lives in automation/config.env:
+#   HNGH_ROUTER_PATHY_STEMS="${HNGH_ROUTER_PATHY_STEMS:-<username>}"
+# (deployment data; tests override via the env var and stay hermetic).
+
+
+def _pathy_stems():
+    """Scrub stems: PATHY_STEMS + config-supplied username stems
+    (HNGH_ROUTER_PATHY_STEMS, comma/space-separated), env first.
+    Matched case-insensitively (paths capitalize: Users, Dropbox)."""
+    extra = os.environ.get("HNGH_ROUTER_PATHY_STEMS", "")
+    return PATHY_STEMS + tuple(
+        s.lower() for s in extra.replace(",", " ").split() if s)
+
+
+def _token_two_consecutive_components(seg):
+    """True when the token's dash-segments contain two CONSECUTIVE
+    path-derived fragments: a repeated component ("Projects-etc") or
+    two distinct PATH_COMPONENTS in a row. One fragment alone never
+    trips it, so innocuous subject words pass."""
+    parts = [p.lower() for p in seg.split("-") if p]
+    for a, b in zip(parts, parts[1:]):
+        if a == b and a in PATH_COMPONENTS:
+            return True
+        if a in PATH_COMPONENTS and b in PATH_COMPONENTS:
+            return True
+    return False
 
 
 def scrub_pathy_identity(identity):
@@ -71,11 +107,14 @@ def scrub_pathy_identity(identity):
     identity so no path-derived token reaches the routed slug, plan
     front-matter, or progress-row identities. Returns None when the
     whole identity is path-derived (caller refuses it, fail closed)."""
+    stems = _pathy_stems()
     tokens = identity.split(":")
-    if tokens[0].startswith(("home-", "Users-")):
+    if tokens[0].split("-", 1)[0].lower() in stems:
         return None
     for i, tok in enumerate(tokens):
-        if i and tok.split("-", 1)[0] in PATHY_STEMS:
+        first = tok.split("-", 1)[0].lower()
+        if i and (first in stems
+                  or _token_two_consecutive_components(tok)):
             return ":".join(tokens[:i])
     return identity
 
