@@ -8,6 +8,22 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Research-doc writer redaction: crystallized-doc title gap closed**
+  (docs/records/2026-09-17-research-doc-writer-redaction.md):
+  the crystallized research-doc writer emitted the RAW lines-TSV
+  question text as the docs/research title with no path-token guard
+  (docfilter covers injection + char cap only; the model body's
+  chokepoint scrub never sees the title). Cure: fail-closed redact_home
+  over title AND body before any write, digest copy included; broken
+  scrub module = redaction-failed outcome (alert, blocker escalation,
+  no write). Red-first full-beat test proves the unguarded writer
+  leaks and the cured one does not. Back-redaction: the TSV sweep
+  tool's scope widened to tracked docs/research/*.md; 153 docs swept
+  through the redact_home tilde family (forward-only, history
+  untouched, tilde forms and URLs preserved; id slugs in filenames
+  stay as immutable research keys). `make test` now gate-checks the
+  full scope, so a newly committed raw research doc goes red.
+
 - **Certificate ephemerality of record; mint-time persistence adopted
   as remediation direction**
   (docs/records/2026-09-17-certificate-ephemerality-of-record.md):

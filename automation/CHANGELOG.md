@@ -2,6 +2,30 @@
 
 ## 2026-09-17
 
+- research-doc writer redaction (writer-gap, wiki-health-wiring-
+  reconcile::gate): the crystallize transition emitted the RAW
+  lines-TSV question text as the docs/research title (`printf '# %s'`)
+  with no path-token guard -- docfilter covers injection + char cap
+  only, and the model_call chokepoint scrub covers the body but never
+  sees the title (HEAD:docs/research/2026-09-17-fail-20260916-*
+  carried a literal /home/<user> on line 1; 144 tracked docs carried
+  'bricker'). Cure: fail-closed redact_home (lib/scrub.py tilde
+  family) over $line AND $body before ANY write -- digest beat copy
+  and crystallized doc stay byte-identical siblings; a broken scrub
+  module yields the redaction-failed outcome (alert + blocker
+  escalation + no write, state held). Red-first:
+  tests/test-research-doc-writer-redact.sh (full-beat harness, pathy
+  id + pathy STUB body) fails 4 assertions against the unguarded
+  writer, green after; HEAD-blob cleanliness, title tilde rendering,
+  the fixpoint invariant, marker-lane body, and URL preservation are
+  all asserted. Sweep: scripts/research-tsv-path-sweep.py scope
+  widened to tracked docs/research/*.md (toplevel-relative glob,
+  CWD-independent), md test groups added, and `make test` --check now
+  covers the full default scope so a newly committed raw research doc
+  goes red at the gate. Back-redaction of the 153 landed docs is the
+  docs-lane slice (9afe899b); record:
+  docs/records/2026-09-17-research-doc-writer-redaction.md.
+
 - research TSVs: disposition/lessons back-redaction + the harvest seam
   cure (GAP B, wiki-health-wiring-reconcile::gate follow-through). The
   writer-side cures had landed piecemeal (ingest 2e51d01b, disposition
