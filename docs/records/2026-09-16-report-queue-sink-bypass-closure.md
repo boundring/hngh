@@ -97,11 +97,30 @@ behavior.
 
 ## What this does not cover
 
-- Existing leaked bodies (976f09b8, 3342f352, 71d03fef) are already
-  in git history and on the public origin; this slice closes the sink
-  going forward and does not rewrite history. Scrubbing those live
-  body files (or pruning them) is a separate, operator-visible
-  decision — flagged as a follow-up.
+- ~~Existing leaked bodies (976f09b8, 3342f352, 71d03fef) are already
+  in git history and on the public origin~~ — REFUTED and replaced
+  (2026-09-17 publish-claim adjudication). Corrected state: the three
+  leaked bodies are untracked working-tree files, never committed to
+  any ref and absent from all reflogs (`git rev-list --all --reflog
+  --objects` matches zero fragments). At the 2026-09-17T04:37Z audit
+  they existed only as unreachable objects — blobs 1d34a452 and
+  ea88947d (reports.md snapshots listing the alerts) and d4452432
+  (a record draft quoting the leaks), held by the unreachable
+  stash/WIP commits dcacfb74 and 59f08875 (both "WIP on main",
+  2026-09-16) and 91ab48ca (autostash) — subject to `git gc`/prune.
+  At the 2026-09-17T10:13Z re-verification all six objects are pruned
+  from the object store (nothing unreachable holds the fragments), so
+  git carries no exposure surface at all; the
+  live working-tree body files remain, and scrubbing them is a
+  separate, operator-visible decision — flagged as a follow-up.
+- Historical published alert bodies did not leak this record's actual
+  leak class: the 20 tracked-era alert bodies at
+  6529562b32b1e4d64db3038c03a8443c00978ca5 (pre-2026-08-27 untrack
+  state) contain zero raw `/tmp/hngh-*.store` paths (`git grep -IlE
+  '/tmp/hngh-[a-z0-9]+\.store' 6529562b` over report-bodies is
+  empty; each file carries 2 `stale-store:` mentions with no raw
+  path). Closes the follow-up question of whether already-published
+  history exposed raw store paths — it did not.
 - Identity/evidence on progress and other non-alert kinds are now
   rewritten (this slice's deliberate widening); per-kind TEXT
   carve-out for progress is unchanged.
