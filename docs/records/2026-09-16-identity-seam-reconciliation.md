@@ -16,7 +16,13 @@ cross-checked with `git log ba6b3905..30556e67` plus the boundary commit.
   `30556e67` (2026-09-16T15:22:25-04:00)
 - **566** commits authored `fixture@example.invalid`
 - **2** commits authored `automation@hngh.local` (`e916af9e`, `8e376ff2`,
-  the only per-command `-c` identity commits in the window)
+  the only per-command `-c` identity commits in the window). Both are
+  2026-09-13 20:20:31 / 20:21:07 -0400 -- window **day 0**, not
+  2026-09-16: the per-command identity cure was demonstrated in-session
+  the same day the window opened, then not propagated to the ambient
+  `.git/config` for ~3 days (strengthens the cleanup-lag reading below;
+  corrected of record in
+  docs/records/2026-09-17-supportive-record-fact-corrections.md)
 - Total: **568**
 
 Count reconciliation: commit `16dae2eb`'s message says "564"; the
@@ -156,10 +162,15 @@ variable, so an explicit operator environment keeps precedence.
 
 ## Alert trail
 
-Alert `fb894f8d` (2026-09-13 04:10Z) named the Fixture identity hours
-after it appeared; the loop-history guard went red same-day and the
-ceremony refusal was correct behavior. The cleanup itself was not
-executed for three days — the gap was execution, not detection. Filed
+Alert `fb894f8d` (2026-09-13 04:10:41Z) named the Fixture identity
+minutes after it appeared: the pair landed 04:04:04Z / 04:04:51Z
+(commits stamped -0400), so detection latency was 6m37s / 5m50s.
+Earlier wording here ("hours after it appeared") was a -0400/UTC
+timezone misread, corrected 2026-09-17 (see
+docs/records/2026-09-17-supportive-record-fact-corrections.md); the
+near-immediate detection sharpens the point: the loop-history guard
+went red same-day and the ceremony refusal was correct behavior, and
+the gap was execution, not detection. Filed
 upstream (jcode maintainer): the deep-swarm machinery defects
 encountered while auditing this (gate ownership-strip variants, driver
 await-wedge) are separate records.

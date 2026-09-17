@@ -106,7 +106,13 @@ flavor layer; rungs 3–7 are horizon, not this plan.
   CHANGELOG.md 2026-09-13 section) remain staged in the working tree,
   unmodified. No further plan session should re-run this check until a
   wake-mutation session lands the exemption: the handoff row at 07:15Z
+  (automation/agent-handoffs.md, the 2026-09-13T07:15:00Z overnight-lead
+  row; mirrored in docs/project/lessons-2026-09-13.md; the alert chain
+  also survives verbatim in automation/logs/overnight-2026-09-09-presentation-pass-1-20260913T000118.log{,.json})
   and this note carry everything needed.
+  [Citation fixed 2026-09-17: the 07:15Z row never lived in
+  automation/STATE.md -- that file carries only cadence ticks. See
+  docs/records/2026-09-17-supportive-record-fact-corrections.md.]
 - Fourth check 2026-09-13T13:00Z (step-5 session, no gate re-run): a
   grep over tests/scripts/test-loop-history-guard.py confirms neither
   fixture patch-id (a46ed8ae... / cef31fa5...)
