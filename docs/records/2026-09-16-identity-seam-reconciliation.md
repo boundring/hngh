@@ -118,3 +118,99 @@ executed for three days — the gap was execution, not detection. Filed
 upstream (jcode maintainer): the deep-swarm machinery defects
 encountered while auditing this (gate ownership-strip variants, driver
 await-wedge) are separate records.
+
+## Non-sh/py writer audit (closed 2026-09-17, bounded negative)
+
+The contract test scanned only `*.sh`/`*.py` under
+`automation/{cadence,jobs,lib,scripts}` (`SURFACES` + the suffix
+filter); every executable automation artifact outside those two
+suffixes was enumerated and checked for git-commit capability. Result:
+**no non-sh/py writer can run `git commit`**. The negative is bounded
+by the exact file set below; the guard now covers the code classes so
+it stays true.
+
+### Exact files scanned and verdicts
+
+Code (read line-by-line for git/commit/subprocess capability):
+
+- `automation/dashboard/*.js` (15: app, sessions, gantt, graph,
+  history, story, system, plans, research, routes, schedule, kb,
+  overview, feedback, sessions-view) — browser-side display only, zero
+  `child_process`/exec/spawn usage. The only `git`-adjacent strings
+  are display prose and commit-hash footnote rendering.
+- `automation/jobs/ui-audit.mjs` — the only automation JS with
+  `child_process`; `execFileSync('python3', ...)` to report-queue /
+  telemetry only (no git argv anywhere).
+- `automation/jcode/worker.mjs`, `render-blocks.mjs` — SDK client over
+  a pinned Jcode instance home; mutations refused unless certificate-
+  scoped; no process spawn, no git.
+- `automation/dashboard-server.py` (root, outside all SURFACE dirs —
+  a path gap in the original guard, .py suffix not dir-scoped) — every
+  `subprocess` call enumerated: report-queue, system-feed, systemctl
+  reset-failed, `jobs/config-backup.sh agent-configs --mode push`
+  (the pinned seam itself, dashboard-server.py:827), fleet-manager,
+  launcher/tile spawn. Launcher templates come from built-in
+  `konsole tail` defaults or `~/.config/hngh/ui-config.json`
+  (operator-owned, display-only `tail -f` templates); none can express
+  git.
+- `automation/scripts/model-health` (bash, unsuffixed) — no git usage.
+- `automation/scripts/generate-publication` (python3, unsuffixed) —
+  the word "commit" appears once, in a docstring ("never committed").
+- `automation/Makefile` — `sweep` delegates to `jobs/sweep-artifacts.sh`
+  (a .sh, inside the scanned surface).
+- `automation/systemd/*.service|*.timer` ExecStart lines — all point
+  at `jobs/*.sh`, `scripts/*.sh|night-session.sh`, or
+  `dashboard-server.py`; the two non-automation entries are
+  `/usr/bin/python3 scripts/run-autonomous` and dashboard-server.py.
+- Kernel-adjacent executable `scripts/run-autonomous` (repo root,
+  referenced by `hngh-autonomy.service`) and `scripts/ceremony-drive`
+  (Lisp, .lisp-suffixed records under `automation/store/*/record.lisp`
+  are receipts, not executed code; the ceremony executor's identity
+  seam is closed separately above).
+
+Config / registration (no executable writer outside .sh/.py):
+
+- `automation/cadence-params.tsv` — every job reference is .sh/.py.
+- `automation/config/opencode/opencode.jsonc`,
+  `opencode-safety.jsonc` — MCP stdio servers (context7, docs,
+  codegraph) and agents; no shell/git command hooks.
+- User crontab: empty. All scheduling is systemd user timers driving
+  `cadence-tick.sh` (itself .sh, scanned).
+- `automation/package.json` — no `bin` entries, no scripts; node
+  entry points are the .mjs files above.
+- The broad `git commit` grep over all non-sh/py files matches only
+  DATA: `dashboard/plans.json` (plan-ledger prose), `logs/*.json`.
+
+### Guard scope extension (this slice)
+
+`automation/tests/test-identity-seam.py` now also scans `.js`/`.mjs`
+under `automation/{dashboard,jcode}` plus the four original surfaces,
+with JS comment stripping (//, /* */) and string contents KEPT (the
+ordinary JS invocation is quoted: `` execSync(`git commit ...`) `` /
+`spawn("git", ["commit", ...])` — fail-closed: reword prose instead),
+plus git-array/argv form detection (`["git", "commit"]`,
+`spawn("git", [... "commit" ...])`, `"git", "-c", ..., "commit"`) on
+shell/python raw lines. Built-in self-tests (tmp-dir fixture probes
+run on every invocation) keep the scanner itself from rotting.
+Red-proven: a planted unpinned `dashboard/*.mjs` writer failed the
+old guard (rc=0) and fails the new one (rc=1, single precise
+violation); green on the clean tree; full automation `make test`
+green. Remaining known blind spots (deliberate): `.lisp` store
+records (data), other suffixes under SURFACES (none exist today —
+the unsuffixed/non-sh/py inventory above is `.md/.tsv/.json/pyc`).
+
+### config-backup parity verification (post-fix, secondary)
+
+`16dae2eb` (2026-09-16 15:27 -0400) pinned the identity. Since then:
+exactly one `config-backup.sh` run in the journal (Sep 16 20:30:02,
+the 30m tick): `ok copied=10 skipped=0 committed=0 pushed=1
+target=git@github.com:boundring/agent-configs.git`. Lane repo
+`~/.local/state/git-back-dots/agent-configs` working tree is clean
+(zero drift), last gbd commits are `3f9e429` (Sep 16 13:30) and older,
+all authored `git-back-dots <gbd@localhost>` (the operator-run timer
+lane, expected), `workarounds/*` initial states authored boundring.
+`committed=0` with a push is correct parity behavior: no drift, no
+commit — the pin has simply not yet been exercised by a real commit.
+The hngh-machine author on this lane remains unobserved-by-design
+until the first drift; the contract test pins the mechanism, not the
+observation.
