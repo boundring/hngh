@@ -89,14 +89,18 @@ KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
 
 # Boundary redaction (2026-09-16): the ledger is git-tracked and pushed
 # to the public origin, so alert text may never carry a machine-local
-# path prefix. User-home path tokens (slash + home + slash + user +
-# rest) become ~/..., /tmp/... becomes ~tmp/. Emitters
-# (automation/lib/redact.sh redact_home) redact before filing; this
-# re-check is the sink-side backstop for emitters that lack their own.
-# Progress rows intentionally carry repo-relative paths in some lanes
-# and are not rewritten (per-kind boundary, not a sink move). The
-# guard excludes a preceding [[:alnum:].~/-] char so mid-token hits
-# (e.g. a URL with a home-like path component) stay untouched.
+# path prefix. Sink-side backstop mirroring the ONE token family from
+# automation/lib/scrub.py (llc-gate-scrub-site-divergence consolidation
+# 2026-09-16; kernel code never imports automation/, so the family is
+# mirrored here and pinned by tests both sides): "home" / "Users" /
+# "root" / "tmp" absolute-prefix families (slash + name, optional user
+# segment, optional rest) become ~/... with tmp rendered ~tmp/...
+# scheme-relative //host/home/... becomes ~/..., and credential URL
+# userinfo (user:pass@host) becomes [redacted]@host. Emitters
+# (automation/lib/scrub.sh redact_home) redact before filing; this
+# guard excludes a preceding [A-Za-z0-9.~/-] char so mid-token hits
+# (e.g. a URL with a home-like path component) and word fragments
+# (/rooted) stay untouched.
 # Sink bypass closure (2026-09-16, this guard applies to): alert TEXT
 # (the original scope), --identity and --evidence keys (stored in the
 # body meta), every body free-text write (direct write_body callers
@@ -105,10 +109,35 @@ KINDS = {"progress", "expense", "optimization", "scheduled", "alert"}
 # is the redacted form; stored pre-guard raw values are read back
 # through the same rewrite (normalize_boundary) so they still match.
 _REDACT_HOME = "/" + "home"  # split so this file stays gate-clean
+_R = "/"  # same split-literal discipline for the extended families
+_GUARD = r"(^|[^A-Za-z0-9.~/-])"  # mid-token guard, mirrors scrub.py
+_TOK_END = r"(?![\w-])"  # /home-x and /homepage are words, not paths
+
+
+def _tilde_rest(name):
+    """Replacement factory: drop the consumed prefix, keep the rest."""
+    return lambda m: m.group(1) + "~" + (m.group(name) or "")
+
+
 REDACT_RES = (
-    (re.compile(r"(^|[^A-Za-z0-9.~/-])" + _REDACT_HOME + r"/[^/\s]+"),
-     r"\1~"),
-    (re.compile(r"(^|[^A-Za-z0-9.~/-])/tmp(?=[/\s]|\Z)"), r"\1~tmp"),
+    # /home[/user][/rest] -> ~/rest   (user segment consumed and dropped)
+    (re.compile(_GUARD + _REDACT_HOME + r"(?:/[^/\s]+)?(?P<homerest>/\S*)?"
+                + _TOK_END), _tilde_rest("homerest")),
+    # /Users[/user][/rest] -> ~/rest
+    (re.compile(_GUARD + _R + r"Users(?:/[^/\s]+)?(?P<usersrest>/\S*)?"
+                + _TOK_END), _tilde_rest("usersrest")),
+    # /root[/rest] -> ~/rest
+    (re.compile(_GUARD + _R + r"root(?=[/\s]|\Z)(?P<rootrest>/\S*)?"),
+     _tilde_rest("rootrest")),
+    # //host/home[/user][/rest] -> ~/rest   (scheme-relative mounts; the
+    # leading guard excludes ':' so a URL's scheme:// colon-slash pair
+    # can never start this match — mid-token URL guard preserved)
+    (re.compile(r"(^|[^A-Za-z0-9.~:/-])//[^/\s]+" + _REDACT_HOME
+                + r"(?:/[^/\s]+)?(?P<srhrest>/\S*)?" + _TOK_END),
+     _tilde_rest("srhrest")),
+    # /tmp[/rest] -> ~tmp/rest
+    (re.compile(_GUARD + _R + r"tmp(?=[/\s]|\Z)(?P<tmprest>/\S*)?"),
+     lambda m: m.group(1) + "~tmp" + (m.group("tmprest") or "")),
 )
 
 
@@ -117,6 +146,10 @@ def redact_boundary(text):
     identity/evidence keys, body text, meta lines, appends)."""
     for rx, repl in REDACT_RES:
         text = rx.sub(repl, text)
+    # credential URL userinfo dies AFTER the path families so a URL the
+    # path rules preserved still loses user:pass@ (one family, kernel
+    # rendering: [redacted]@host; mirrors automation/lib/scrub.py).
+    text = re.sub(r"(?<=//)[^/@\s]+@", "[redacted]@", text)
     return text
 
 
