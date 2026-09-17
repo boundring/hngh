@@ -22,6 +22,8 @@ SCRIPT = ROOT / "scripts" / "report-queue"
 # split literal: kernel candidate content must not carry the literal
 # home-root path sequence (public-content gate, verify-candidate.py)
 HOME_PREFIX = "/" + "home" + "/"
+USERS_PREFIX = "/" + "Users" + "/"
+ROOT_PREFIX = "/" + "root" + "/"
 
 
 def run(root, *args):
@@ -307,6 +309,39 @@ class ReportQueueCLI(unittest.TestCase):
         r = self.add("progress", "scratch kept at /tmp/keep-me")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("/tmp/keep-me", self.rows()[-1][3])
+
+    def test_alert_redaction_covers_full_canonical_family(self):
+        # llc-gate-scrub-site-divergence 2026-09-16: the sink-side guard
+        # mirrors the ONE token family from automation/lib/scrub.py —
+        # Users, root, scheme-relative //host/home, and credential URL
+        # userinfo die too; rendering stays the readable tilde
+        # convention (~/..., ~tmp/...); bare forms die; word fragments
+        # and URL path components stay untouched.
+        r = self.add("alert", "mac editor " + USERS_PREFIX + "b/dots/vimrc")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("~/dots/vimrc", self.rows()[-1][3])
+        self.assertNotIn(USERS_PREFIX + "b", self.rows()[-1][3])
+        r = self.add("alert", "ssh key " + ROOT_PREFIX + ".ssh/id_ed25519")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("~/.ssh/id_ed25519", self.rows()[-1][3])
+        self.assertNotIn(ROOT_PREFIX + ".ssh", self.rows()[-1][3])
+        r = self.add("alert", "check " + ROOT_PREFIX[0] + "root alone")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn(ROOT_PREFIX[0] + "root", self.rows()[-1][3])
+        r = self.add("alert", "mount //filesrv" + HOME_PREFIX + "aubergine/x")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("~/x", self.rows()[-1][3])
+        self.assertNotIn("//filesrv", self.rows()[-1][3])
+        r = self.add("alert", "git https://user:s3cret@example.com/r")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("https://[redacted]@example.com/r",
+                      self.rows()[-1][3])
+        r = self.add("alert", "url path stays https://e.io/home/u/f")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("https://e.io/home/u/f", self.rows()[-1][3])
+        r = self.add("alert", "word " + ROOT_PREFIX[0] + "rooted cause stays")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(ROOT_PREFIX[0] + "rooted", self.rows()[-1][3])
 
     def test_alert_redaction_feeds_row_id(self):
         # ids derive from the redacted text: alerts differing only by

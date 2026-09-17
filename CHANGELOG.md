@@ -8,6 +8,19 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Boundary redaction extended to the canonical scrub family**
+  (docs/records/2026-09-16-scrub-consolidation-single-source.md): the
+  alert-kind sink guard previously covered only the "home" and "tmp"
+  absolute-prefix families; the consolidated family (mirrored from
+  automation/lib/scrub.py — kernel code never imports automation/,
+  parity is pinned by tests on both sides) also dies on the "Users"
+  and "root" absolute-prefix families (any user segment or rest),
+  scheme-relative //host/home/..., and credential URL userinfo
+  (user:pass@host -> [redacted]@host), bare forms included. Rendering
+  keeps the readable tilde convention. Red-first:
+  test_alert_redaction_covers_full_canonical_family in
+  tests/scripts/test-report-queue.py.
+
 - **Report-queue sink bypass closure: identity, evidence, and every
   body write pass the boundary guard** (docs/records/2026-09-16-report-queue-sink-bypass-closure.md):
   the kernel ledger sink redacted only alert TEXT; pathy tokens still
