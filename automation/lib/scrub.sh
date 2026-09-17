@@ -10,7 +10,14 @@
 # output, so a broken guard can never leak pathy text through.
 set -u
 
-SCRUB_PY="$AUTOMATION_ROOT/lib/scrub.py"
+SCRUB_PY="${AUTOMATION_ROOT:-}/lib/scrub.py"
+# scrub.py is CODE, never state: when the ambient AUTOMATION_ROOT
+# carries no lib copy (sandboxed callers redirect it to a state-only
+# root -- e.g. the mimic drill's research-subject leg), resolve the
+# module from this file's own tree so the guard keeps working (and
+# keeps failing closed on genuine breakage, not on relocation).
+[ -f "$SCRUB_PY" ] || \
+ SCRUB_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scrub.py"
 
 scrub_paths() { # text -> scrubbed text on stdout
  SCRUB_PY="$SCRUB_PY" SCRUB_TEXT="$1" python3 -c '

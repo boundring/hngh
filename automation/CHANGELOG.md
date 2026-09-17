@@ -2,6 +2,35 @@
 
 ## 2026-09-17
 
+- research-subjects: non-beat appenders sealed — both remaining
+  unredacted appenders into the git-tracked, publicly pushed
+  research-subjects.txt now run redact_home (lib/scrub.py single token
+  family, tilde rendering) over the question AND the slug BEFORE
+  id/slug derivation and BEFORE the append: lib/causes.sh
+  append_research_subject (fed by jobs/agent-respawn.sh,
+  scripts/overnight-cycle.sh missing-knowledge/missing-design,
+  cadence/day/25-wiki-health.sh, cadence/day/18-mimic-drill.sh) and
+  its python mirror scripts/accept-plans.py append_research_subject
+  (fed by the missing-design hold path). The 2026-09-17 ingest fix
+  (2e51d01b) covered only the beat seams; these two kept the same leak
+  shape — a pathy question appended verbatim and path tokens baked
+  into the public fail-<date>-<slug> id. Fail-closed both sides: shell
+  redact_home yields empty output on a broken guard and the
+  empty-question guard refuses the append (rc=1); python _SCRUB None
+  or empty redaction -> refuse (returns False). Own-tree resolution:
+  lib/causes.sh sources lib/redact.sh from its own directory,
+  lib/scrub.sh falls back to its own-tree scrub.py when the ambient
+  AUTOMATION_ROOT carries no lib copy (the mimic drill points
+  AUTOMATION_ROOT at a lib-less sandbox), and accept-plans.py's
+  _load_scrub tries AUTOMATION_ROOT then its own-tree lib. Both shells
+  scrub the slug too, so a pathy slug can never bake tokens into the
+  id. Forward-only: existing rows untouched. Red-first tests:
+  AppendResearchSubject in tests/test-causes.py (real shell appender,
+  AUTOMATION_ROOT->sandbox, red proven 5-fail) and in
+  tests/test-plan-acceptance.py (python mirror via module import,
+  red proven 4-fail); both green post-fix; full automation make test
+  rc=0.
+
 - research-beat: dispositions append seam sealed — the 9-column
   research-dispositions.tsv row append in cadence/hour/33-research-beat.sh
   now runs redact_home (lib/scrub.py single token family, tilde
