@@ -83,7 +83,8 @@ advance_markers() {
     if ! git -C "$HNGH_REPO" diff --quiet -- automation/.lesson-harvest-handoffs 2>/dev/null; then
       cmsg="chore: lesson-harvest handoff counter tick ($(date -u +%F))"
       if git -C "$HNGH_REPO" add -- automation/.lesson-harvest-handoffs && \
-         git -C "$HNGH_REPO" commit -q -m "$cmsg"; then
+         git -C "$HNGH_REPO" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+           commit -q -m "$cmsg"; then
         breadcrumb "lesson-harvest" "counter-commit" "committed: $cmsg"
       else
         breadcrumb "lesson-harvest" "counter-commit" "commit failed (tree changed mid-sync)"

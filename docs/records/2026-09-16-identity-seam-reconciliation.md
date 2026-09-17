@@ -47,17 +47,39 @@ an authorization surface. The certificate system (paths + content hashes
 + ten principles) verified every mutation in the window; the exposure is
 attribution/traceability only. This record is the correction of record.
 
-## Remaining unpinned committers (open)
+## Remaining unpinned committers (closed 2026-09-16, ~20:30)
 
-`config-backup.sh` is pinned, but five cadence writers still commit via
-ambient identity and would re-leak if `.git/config` regresses
-(tracked by the ambient-identity-writer-audit node):
+The ambient-identity-writer-audit (this node) enumerated every
+git-invoking automation writer (cadence/, jobs/, lib/, scripts/):
 
-- `automation/cadence/day/01-lesson-harvest.sh:86`
-- `automation/cadence/day/14-plan-ledger-sync.sh:39`
-- `automation/cadence/day/17-torch-audit.sh:202`
-- `automation/cadence/hour/30-kernel-ledger-sync.sh:45`
-- `automation/cadence/hour/33-research-beat.sh:183`
+- Committing writers: the five cadence committers below, plus
+  `jobs/config-backup.sh` (pinned by 16dae2eb). All now pin identity
+  per invocation (`-c user.name="hngh-machine"
+  -c user.email="automation@hngh.local"`); contract pinned by
+  `automation/tests/test-identity-seam.py` in the automation gate.
+- Read-only writers (never commit): `jobs/doc-suite-update.sh` (rev-parse
+  / log / cat-file fact checks), `lib/context-pack.sh` (status),
+  `cadence/hour/16-remote-push.sh` (fetch/push only),
+  `cadence/day/04-review-prep.sh`, `cadence/day/09-email-digest.sh`,
+  `jobs/security-check.sh` (fetch), the python feeds
+  (`plan-feed.py`, `research-feed.py`, `history-feed.py`, `patrol.py`),
+  `scripts/rehearse-gate.sh` / `scripts/accept-plans.py` (archive /
+  show), `scripts/email-digest.py` (log/status).
+- Kernel ceremony executor `src/adapter/mutation.lisp:362` builds a bare
+  `git commit` and still takes ambient identity; its 42 window commits
+  prove it fired under Fixture. Kernel src/ is outside the
+  automation free-commit surface, so it is reported here for the
+  operator rather than edited. Mitigation in depth: the remediated
+  local `.git/config` identity plus the automation contract test above.
+
+The five writers fixed in this slice, with the window commits they
+authored as Fixture (family census above):
+
+- `automation/cadence/day/01-lesson-harvest.sh:86` (2, `chore:` ticks)
+- `automation/cadence/day/14-plan-ledger-sync.sh:39` (4, `docs: plan tick`)
+- `automation/cadence/day/17-torch-audit.sh:202` (4, torch refresh)
+- `automation/cadence/hour/30-kernel-ledger-sync.sh:45` (89)
+- `automation/cadence/hour/33-research-beat.sh:183` (240)
 
 ## Alert trail
 

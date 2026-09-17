@@ -49,6 +49,7 @@ sweep:
 test:
 	find cadence jobs lib scripts -name '*.sh' -print0 | xargs -0 -n8 bash -n
 	python3 -B tests/test-plan-acceptance.py
+	python3 -B tests/test-identity-seam.py
 	python3 -B tests/test-plan-feed-graph.py
 	python3 -B tests/test-render-blocks-feed.py
 	python3 -B tests/test-rehearse-gate.py

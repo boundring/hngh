@@ -180,7 +180,8 @@ research_commit() { # id state path... -> commits exactly the named paths
   paths+=("$rel")
  done
  [ "${#paths[@]}" -ge 1 ] || return 0
- git -C "$KERNEL" commit -q -m "research: $id $state" -- "${paths[@]}" \
+ git -C "$KERNEL" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+  commit -q -m "research: $id $state" -- "${paths[@]}" \
   2>/dev/null &&
   breadcrumb "$JOB_NAME" "research-commit" "$id $state: ${paths[*]}"
  return 0
