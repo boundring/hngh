@@ -221,6 +221,11 @@ KNOWN_EXEMPTIONS = {
         "reason": "docs: queue Next advances to bridge-operator-host (all dependencies present; node-lattice-admission rotated 2026-09-15 via ceremony candidate 9e0779b0) (declared miss, gate-cure patrol)",
         "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
     },
+    # tests: break exemption infinite regress (terminal commit) -- kernel-gate red cure 2026-09-17, declared not rewritten
+    "f2a4551e": {
+        "reason": "tests: break exemption infinite regress (terminal commit) (declared miss, gate-cure patrol)",
+        "patch-id": "a214f7b06e3d11e4014b9d403210ab4065c5e686",
+    },
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
