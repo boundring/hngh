@@ -5,21 +5,18 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for automating CI gate verification by introducing a lightweight shell-based validation layer that ensures job definitions and script syntax remain consistent without modifying core kernel or provider configurations.
+This plan implements the research line on deterministic job scheduling by introducing a new bash-based scheduler script and its corresponding unit test suite to ensure reliable task execution without external dependencies.
 
 ## Steps
 
-- [ ] Create `scripts/validate_jobs.sh` to iterate through `jobs/` directory entries and assert each file contains a valid YAML front-matter block with required keys
-  Verification: bash -n scripts/validate_jobs.sh
+- [ ] Create scripts/scheduler.sh implementing a basic loop that reads job definitions from jobs/ and executes them sequentially with error handling.
+  Verification: bash -n scripts/scheduler.sh
 
-- [ ] Add a test fixture in `tests/fixtures/sample_job.yaml` containing minimal valid job metadata for regression testing of the validator
-  Verification: grep -q "name:" tests/fixtures/sample_job.yaml
-
-- [ ] Implement `lib/job_parser.py` using only stdlib to parse YAML front-matter from job files and return a dictionary of fields
-  Verification: python3 lib/job_parser.py --help
-
-- [ ] Extend `make test` target in the root Makefile to invoke `scripts/validate_jobs.sh` before running existing unit tests
+- [ ] Add tests/test_scheduler.sh containing assertions that verify the scheduler correctly parses job files and handles missing dependencies.
   Verification: make test
 
-- [ ] Add a negative test case in `tests/test_validator.sh` that expects failure when a job file lacks the required 'owner' field
-  Verification: bash tests/test_validator.sh
+- [ ] Define a sample job configuration in jobs/sample_job.json to provide input data for the scheduler's parsing logic.
+  Verification: grep -q "name" jobs/sample_job.json
+
+- [ ] Update lib/utils.sh to include helper functions for logging and timestamping that are sourced by the new scheduler script.
+  Verification: bash -n lib/utils.sh

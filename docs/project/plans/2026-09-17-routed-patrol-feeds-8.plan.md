@@ -8,3 +8,7 @@ at 2026-09-17T08:00:40Z. Alert text: patrol feeds: feed-stale on dashboard/resea
 
 - [ ] Delve: open research subject fail-20260917-patrol-feeds for patrol:feeds; record disposition; then fix or park
       Verification: research subject fail-20260917-patrol-feeds present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-17T09:00:14Z re-occurred (dedup window expired)
