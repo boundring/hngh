@@ -103,8 +103,12 @@ alert with an unfrozen ok row, still-unhealthy keeps the alert with
 carry the vault's 7d rebuild efficacy (attempts / unfrozen from
 telemetry) so a repeatedly failing vault is a visible pattern, not a
 repeated surprise. Two consecutive daily non-unfrozen attempts file a
-research subject (ctx-wiki-rebuild-<vault>) -- the cycle's own failures
-become research demand. The weekly lessons seed stays inside this
+research subject (ctx-wiki-rebuild-<role>-<pathdigest>) -- the cycle's
+own failures become research demand. Rows name vaults by role label
+(personal / project; `HNGH_WIKI_PERSONAL_LABEL` /
+`HNGH_WIKI_PROJECT_LABEL` override), never by path -- a path-derived
+label leaked the machine username into the public ledger until
+2026-09-17; identities are `<role>:<8-hex path digest>`. The weekly lessons seed stays inside this
 script but runs Mondays only (the probe went daily; the vault file
 churn stays weekly). Tunables: wiki-auto-rebuild, wiki-rebuild-timeout
 (Inventory); Torch's weekly audit reads the same wiki-rebuild
