@@ -4,17 +4,20 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The plan implements the research line `fail-20260916-Are-there-any-captured-build-logs-from-h` by establishing a local, reproducible fixture and verification pipeline to demonstrate recursive make error lines without relying on external CI artifacts.
-
+The plan implements the research line concerning the verification of `Storage=persistent` configuration strings and recursive make error logs by adding static content probes to the automation harness.
 ## Steps
 
-- [ ] Create `tests/fixtures/recursive-make-fail/Makefile` that invokes a subdirectory Makefile with `-C subdir` to trigger nested recursion.
-  Verification: `test -f tests/fixtures/recursive-make-fail/Makefile && grep -q "subdir" tests/fixtures/recursive-make-fail/Makefile`
-- [ ] Create `tests/fixtures/recursive-make-fail/subdir/Makefile` containing a rule that intentionally fails to generate the `make[1]` and `make[2]` error output.
-  Verification: `test -f tests/fixtures/recursive-make-fail/subdir/Makefile && grep -q "Error" tests/fixtures/recursive-make-fail/subdir/Makefile`
-- [ ] Add `scripts/capture-build-log.sh` that executes the fixture Makefile and redirects stderr to a log file in `tests/artifacts/`.
-  Verification: `bash -n scripts/capture-build-log.sh`
-- [ ] Extend `make test` target or add a dedicated test step to run `scripts/capture-build-log.sh` and assert the presence of `make[2]: ***` in the generated log.
-  Verification: `make test`
-- [ ] Add a grep-based assertion script `tests/check-recursive-error.sh` that verifies the captured log contains both `make[1]: Entering directory` and `make[2]: ***` lines.
-  Verification: `bash tests/check-recursive-error.sh tests/artifacts/recursive-make-fail.log`
+- [ ] Create a bash script in scripts/ that greps for the literal string 'Storage=persistent' within designated configuration files.
+  Verification: bash -n scripts/check_storage_persistent.sh
+
+- [ ] Add a test case in tests/ that asserts the exit status of the new grep script matches expected values for known fixture files.
+  Verification: make test
+
+- [ ] Create a log parser utility in lib/ that identifies recursive make error patterns (make[N] with N >= 2) from text input.
+  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); import log_parser"
+
+- [ ] Add a unit test in tests/ to verify the log parser correctly distinguishes between single-level and recursive make errors.
+  Verification: make test
+
+- [ ] Update the dashboard configuration to include a new metric for tracking the presence of persistent storage flags in CI artifacts.
+  Verification: grep -q "persistent_storage" dashboard/config.json
