@@ -10,6 +10,7 @@ Verification line and both gates are green; critical plans park;
 blocked acceptances file an alert naming the failed check.
 """
 
+import importlib.util
 import json
 import os
 import re
@@ -425,6 +426,92 @@ class PlansViewContract(unittest.TestCase):
         self.assertIn('id="plans-root"', page)
         self.assertIn('src="plans-view.js"', page)
         self.assertIn("'plans-root':    ['plans',    'PlansView']", app)
+
+
+class AppendResearchSubject(unittest.TestCase):
+    """scripts/accept-plans.py append_research_subject (the python mirror
+    of lib/causes.sh) must redact source-side, before id/slug derivation
+    and before the append (2026-09-17: same leak shape as the shell
+    appender -- a pathy question landed verbatim in the git-tracked TSV
+    and its path tokens baked into the public id). One token family via
+    lib/scrub.py imported directly; redaction fails closed to refusal."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.td = Path(self._td.name)
+        spec = importlib.util.spec_from_file_location(
+            "accept_plans_test", ROOT / "scripts" / "accept-plans.py")
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+        self.orig_auto = self.mod.AUTOMATION
+        self.mod.AUTOMATION = self.td  # state root only; scrub.py has
+        # its own repo-tree resolution and never consults AUTOMATION
+
+    def tearDown(self):
+        self.mod.AUTOMATION = self.orig_auto
+        self._td.cleanup()
+
+    def rows(self):
+        path = self.td / "research-subjects.txt"
+        if not path.exists():
+            return []
+        return path.read_text(
+            encoding="utf-8", errors="replace").splitlines()
+
+    def test_pathy_question_redacted_in_text_and_id(self):
+        self.assertTrue(self.mod.append_research_subject(
+            "gate-exit-code",
+            "Where exactly in /home/testuser/Projects/etc/hngh does the "
+            "plan gate consume stderr?"))
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("/home/testuser", text)
+        self.assertIn("~/Projects/etc/hngh", text)
+        self.assertNotIn("testuser", sid)
+        self.assertTrue(sid.startswith("fail-"), sid)
+
+    def test_slug_derived_from_redacted_question(self):
+        self.assertTrue(self.mod.append_research_subject(
+            "/home/testuser/Projects/which-gate",
+            "Which gate consumes the make exit code?"))
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("testuser", sid)
+        self.assertNotIn("testuser", text)
+        self.assertTrue(sid.startswith("fail-"), sid)
+
+    def test_tmp_question_tilde_tmp_rendered(self):
+        self.assertTrue(self.mod.append_research_subject(
+            "scratch-sweep",
+            "What lives in /tmp/scratch-dir after the sweep?"))
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("/tmp/scratch-dir", text)
+        self.assertIn("~tmp/scratch-dir", text)
+
+    def test_repo_relative_question_unchanged(self):
+        q = "Should automation/lib/redact.sh route through lib/scrub.py?"
+        self.assertTrue(self.mod.append_research_subject("repo-rel", q))
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertEqual(text, q)
+
+    def test_dedup_on_redacted_question_refuses(self):
+        q = "Does the gate in /home/testuser/Projects/etc/hngh consume rc?"
+        self.assertTrue(self.mod.append_research_subject("dup-check", q))
+        self.assertEqual(len(self.rows()), 1)
+        # the same raw question under a different slug dedups on the
+        # REDACTED text (one token family, one dedup identity)
+        self.assertFalse(self.mod.append_research_subject("other-slug", q))
+        self.assertEqual(len(self.rows()), 1)
+
+    def test_redaction_fail_closed_refuses_append(self):
+        # guard broken (scrub module unavailable): refuse the append,
+        # never write a leak
+        orig = self.mod._SCRUB
+        self.mod._SCRUB = None
+        try:
+            self.assertFalse(self.mod.append_research_subject(
+                "broken-guard", "pathy /home/testuser/x question"))
+            self.assertEqual(self.rows(), [])
+        finally:
+            self.mod._SCRUB = orig
 
 
 if __name__ == "__main__":

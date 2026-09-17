@@ -24,6 +24,7 @@ REHEARSE_LOG (gate runs rehearsal inside scripts/rehearse-gate.sh on a
 git-archive copy of each repo instead of a direct run).
 """
 import fcntl
+import importlib.util
 import os
 import re
 import shlex
@@ -86,6 +87,27 @@ GATE_LOCK = Path(os.environ.get(
         os.environ.get("TMPDIR", "/tmp"), "hngh-gate.lock")))
 
 now_utc = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _load_scrub():
+    """lib/scrub.py, THE single-source path-token family: try the
+    ambient AUTOMATION_ROOT copy first, then this file's own-tree lib
+    (test harnesses and sandboxed callers point AUTOMATION_ROOT at
+    state-only roots with no lib/). None when neither loads ->
+    append_research_subject fails closed."""
+    for base in (AUTOMATION, Path(__file__).resolve().parent.parent):
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "hngh_scrub", Path(base) / "lib" / "scrub.py")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+        except (OSError, AttributeError):
+            continue
+    return None
+
+
+_SCRUB = _load_scrub()
 
 
 def committed_plan_status(rel):
@@ -176,10 +198,27 @@ def append_research_subject(slug, question):
     """Python mirror of lib/causes.sh append_research_subject: append a
     fail-<date>-<slug> row to research-subjects.txt with the same dedup
     rule — skip when an id with that prefix already exists OR any row
-    already asks the same question. Returns True when a row was appended."""
+    already asks the same question. Returns True when a row was appended.
+
+    Source-side redaction seam (2026-09-17, same cure as the shell
+    mirror and the 33-research-beat ingest seams): research-subjects.txt
+    is git-tracked and pushed publicly, so both question AND slug run
+    through lib/scrub.py redact_home (one token family, tilde
+    rendering) BEFORE id/slug derivation -- a pathy token must never
+    bake into the public fail-<date>-<slug> id (the leaked
+    fail-20260914-Where-exactly-in-home-bricker-Projects-e id shape).
+    Fail-closed: scrub module broken or unavailable (_SCRUB None), or
+    redaction yielding empty output -> refuse the append."""
     path = Path(os.environ.get("HNGH_RESEARCH_SUBJECTS")
                 or (AUTOMATION / "research-subjects.txt"))
     day = datetime.now(timezone.utc).strftime("%Y%m%d")
+    try:
+        question = _SCRUB.redact_home(question)
+        slug = _SCRUB.redact_home(slug)
+    except Exception:
+        return False  # broken or missing guard: refuse, never leak
+    if not question or not slug:
+        return False  # redaction fail-closed empty -> refuse
     slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", slug).strip("-")
     if not slug:
         return False

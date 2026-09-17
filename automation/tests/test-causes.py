@@ -17,6 +17,7 @@ constraint).
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 AUTO = Path(__file__).resolve().parent.parent
@@ -27,6 +28,19 @@ set -u
 . {auto}/lib/causes.sh
 printf 'class=%s\\n' "$(classify_cause "$1" "$3")"
 printf 'lesson=%s\\n' "$(lesson_for_cause "$2")"
+"""
+
+# append_research_subject driver: AUTOMATION_ROOT points at a lib-less
+# SANDBOX (state only -- the exact mimic-drill 18-mimic-drill.sh leg (a)
+# configuration), so causes.sh must source the redaction loader from its
+# own tree and the loader must resolve scrub.py from its own tree too.
+# PRE runs between sourcing and the call (fail-closed simulation).
+DRIVER_APPEND = """#!/usr/bin/env bash
+set -u
+export AUTOMATION_ROOT={td}
+. {auto}/lib/causes.sh
+{pre}append_research_subject "$1" "$2"
+printf 'rc=%s\\n' "$?"
 """
 
 
@@ -118,6 +132,132 @@ class ClassifyCause(unittest.TestCase):
         self.assertIn("step was too big", lesson)
         _, lesson = self.classify("x", "unknown")
         self.assertIn("no known failure class", lesson)
+
+
+class AppendResearchSubject(unittest.TestCase):
+    """append_research_subject redacts source-side, before id/slug
+    derivation and before the append (2026-09-17: the ingest fix closed
+    only the beat seams; this appender had the same leak shape -- a
+    pathy question appended verbatim and baked path tokens into the
+    git-tracked public id). One token family via lib/scrub.py through
+    lib/redact.sh: /home/<user> -> ~, /tmp -> ~tmp, and the id slug is
+    derived from the REDACTED question. Redaction fails closed: a
+    broken guard yields empty output and the append is refused, never
+    a leak."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.td = Path(self._td.name)
+        self.subjects = self.td / "research-subjects.txt"
+        self.subjects.touch()
+        self.driver = self.td / "driver_append.sh"
+        self.driver.write_text(DRIVER_APPEND.format(
+            auto=AUTO, td=self.td, pre=""))
+        self.driver.chmod(0o755)
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def append(self, slug, question, pre=""):
+        """AUTOMATION_ROOT -> the sandbox (state only, no lib/): the
+        exact 18-mimic-drill.sh leg (a) configuration. `pre` runs after
+        sourcing causes.sh (fail-closed simulation)."""
+        if pre:
+            self.driver.write_text(DRIVER_APPEND.format(
+                auto=AUTO, td=self.td, pre=pre))
+        return subprocess.run(
+            ["bash", str(self.driver), slug, question],
+            capture_output=True, text=True, timeout=30)
+
+    def rows(self):
+        out = []
+        if self.subjects.exists():
+            out = self.subjects.read_text(
+                encoding="utf-8", errors="replace").splitlines()
+        return out
+
+    def today(self):
+        return datetime.now(timezone.utc).strftime("%Y%m%d")
+
+    def test_pathy_question_redacted_in_text_and_id(self):
+        r = self.append(
+            "gate-exit-code",
+            "Where exactly in /home/testuser/Projects/etc/hngh does the "
+            "plan gate consume stderr?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        sid, text = rows[0].split("\t", 1)
+        self.assertNotIn("/home/testuser", text)
+        self.assertIn("~/Projects/etc/hngh", text)
+        self.assertNotIn("testuser", sid)
+        # id slug derived from the redacted question
+        self.assertEqual(sid, "fail-%s-gate-exit-code" % self.today())
+
+    def test_slug_derived_from_redacted_question(self):
+        # slug itself pathy: it must be redacted before slug mangling.
+        # The id derives from the REDACTED slug: no /home or user token
+        # survives (interior fragments like Projects- are fine).
+        r = self.append(
+            "/home/testuser/Projects/which-gate",
+            "Which gate consumes the make exit code?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        sid, text = rows[0].split("\t", 1)
+        self.assertNotIn("testuser", sid)
+        self.assertNotIn("testuser", text)
+        self.assertIn("which-gate", sid)
+        self.assertTrue(sid.startswith("fail-%s-" % self.today()), sid)
+
+    def test_tmp_question_tilde_tmp_rendered(self):
+        r = self.append(
+            "scratch-sweep", "What lives in /tmp/scratch-dir after the sweep?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("/tmp/scratch-dir", text)
+        self.assertIn("~tmp/scratch-dir", text)
+
+    def test_repo_relative_question_unchanged(self):
+        # the guard must not mangle in-repo references
+        q = "Should automation/lib/redact.sh route through lib/scrub.py?"
+        r = self.append("repo-rel", q)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertEqual(text, q)
+        self.assertEqual(sid, "fail-%s-repo-rel" % self.today())
+
+    def test_dedup_still_refuses_same_id(self):
+        q1 = "Does the gate in /home/testuser/Projects/etc/hngh consume rc?"
+        self.assertEqual(self.append("dup-check", q1).returncode, 0)
+        self.assertEqual(len(self.rows()), 1)
+        # same slug again: id-prefix dedup must still refuse
+        r = self.append("dup-check", "a different question entirely")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertIn("Does the gate in", self.rows()[0])
+
+    def test_redaction_fail_closed_refuses_append(self):
+        # redact_home is a command substitution: a broken guard (here:
+        # stubbed to emit nothing, the exact scrub.sh fail-closed
+        # behavior) yields empty output, so the empty-question guard
+        # refuses the append. A leak is impossible; a silent empty row
+        # is impossible too.
+        r = self.append("fail-closed", "any question at all",
+                        pre="redact_home() { :; }\n")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rows(), [])
+        self.assertIn("rc=1", r.stdout)
+
+    def test_broken_scrub_fail_closed_refuses_append(self):
+        # scrub.py unreachable (SCRUB_PY severed -- loader fails closed
+        # to empty output): the append is refused, nothing is written.
+        missing = self.td / "missing" / "scrub.py"
+        r = self.append("broken-guard", "pathy /home/testuser/x question",
+                        pre="export SCRUB_PY=%s\n" % missing)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rows(), [])
+        self.assertIn("rc=1", r.stdout)
 
 
 if __name__ == "__main__":

@@ -90,9 +90,31 @@ lesson_for_cause() { # cause-class -> one sentence on stdout
  esac
 }
 
+# The appender is a source-side redaction seam (2026-09-17, same cure
+# as the 33-research-beat ingest seams): research-subjects.txt is
+# git-tracked and pushed publicly, so the report-queue sink-side guard
+# can never cover it. Both the question AND the slug run through
+# redact_home (one token family, lib/scrub.py, tilde rendering -- the
+# ledger convention) BEFORE id/slug derivation: a pathy question or
+# slug must never bake path tokens into the public fail-<date>-<slug>
+# id (the leaked fail-20260914-Where-exactly-in-home-bricker-Projects-e
+# id is the exact shape). redact.sh/scrub.sh resolve from this file's
+# own tree, not AUTOMATION_ROOT: the mimic drill calls this function
+# with AUTOMATION_ROOT pointed at a lib-less sandbox. Fail-closed:
+# redact_home yields empty output when the guard is broken, and the
+# empty-question guard refuses the append -- never a leak.
+[ -n "${SCRUB_PY:-}" ] || . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/redact.sh"
+
 append_research_subject() { # slug question -> appends to research-subjects.txt
- local slug="$1" q="$2" root file id
+ local slug redacted q root file id
+ slug="$1" q="$2"
  [ -n "$slug" ] && [ -n "$q" ] || return 1
+ redacted="$(redact_home "$q")"
+ [ -n "$redacted" ] || return 1 # redaction fail-closed empty -> refuse
+ q="$redacted"
+ redacted="$(redact_home "$slug")"
+ [ -n "$redacted" ] || return 1
+ slug="$redacted"
  slug="$(printf '%s' "$slug" | tr -cs 'a-zA-Z0-9._-' '-' | sed 's/^-*//; s/-$//')"
  [ -n "$slug" ] || return 1
  root="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
