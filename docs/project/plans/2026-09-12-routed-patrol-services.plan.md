@@ -19,3 +19,4 @@ at 2026-09-12T21:00:23Z. Alert text: patrol services: service-down on comfyui --
 - 2026-09-17T00:00:13Z re-occurred (dedup window expired)
 - 2026-09-17T01:00:13Z re-occurred (dedup window expired)
 - 2026-09-17T02:00:14Z re-occurred (dedup window expired)
+- 2026-09-17T03:00:35Z re-occurred (dedup window expired)
