@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation`
