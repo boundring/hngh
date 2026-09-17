@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-09-17
+
+- security: model.sh chat legs moved off bearer-on-argv — the three
+  remaining `/proc/<pid>/cmdline` exposures (the `_post_chat` scaffold
+  behind the remote/kimi/ocgo/zai/deck legs, `unsloth_attempt`, and the
+  `_unsloth_ctx_limit` probe) now feed
+  `printf 'header = "Authorization: Bearer %s"' | curl -K -`; the chat
+  request body is staged to a tmp file (`-d @"$btmp"`) because `-K -`
+  and `-d @-` cannot share stdin, and the keyless deck leg sends no
+  Authorization header at all. The e1 "already-audited
+  cred-refresh-hygiene" exclusion was backed by a nonexistent audit
+  record (candidates 2026-09-10-automation-ci-and-probe-hygiene,
+  credentials-posture, and the 2026-09-16 risk dispositions each
+  checked and none covers model.sh), so the sites were fixed outright
+  — the credential-health PROBES of the same endpoints were already
+  converted in ccf8d7b5, leaving these as the tree's last
+  Bearer-on-argv sites. Test-first: new
+  tests/test-model-bearer-argv.sh (stub curl ARGV:/STDIN: recorder,
+  red-proven, deck-leg negative case), test-probe-hygiene.sh extended
+  to classify lib/model.sh (no Authorization on argv, -K - required,
+  refresh-path body token the single documented exemption), real-curl
+  loopback co-delivery check; sibling suites
+  test-model-remote-token-mode / test-model-pin-routing /
+  test-credential-health-argv green. Record:
+  docs/records/2026-09-17-model-bearer-argv-stdin.md. Registered in
+  `make test`.
+
 ## 2026-09-16
 
 - security: identity-seam contract extended to all five cadence

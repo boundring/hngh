@@ -123,6 +123,14 @@ _mark_trunc() { # tmp
 # code (000 on transport failure) goes to $POST_CODE_FILE — a file, not a
 # variable, because the helper runs inside the caller's command-substitution
 # subshell (same reason MODEL_USED goes through tmp-modelused.txt).
+ # Argv hygiene: the bearer rides the stdin curl config (`-K -`,
+ # `header = "Authorization: Bearer %s"` directive), never the argv —
+ # a Bearer header on argv sits world-readable in /proc/<pid>/cmdline
+ # for the whole call (notify-seam argv-hygiene pattern, 2026-09-16;
+ # credential-health probes converted the same way, ccf8d7b5). The
+ # caller pipes the JSON body into this function's stdin; it is staged
+ # to $btmp so stdin is free for the curl config, and the body rides
+ # -d @"$btmp". No auth header is fed when bearer is empty (deck leg).
 _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> content on stdout; code in $POST_CODE_FILE,
  # wall seconds in $WALL_S_FILE, usage tokens (chat-completions
  # .usage.prompt_tokens/completion_tokens or Responses
@@ -134,7 +142,9 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
  # the caller pipes the JSON body into this function's stdin; stage it to
  # a file so stdin is free for the curl config (see below)
  cat >"$btmp"
- raw="$(printf '%s' "${auth:+x}" >/dev/null; if [ -n "$auth" ]; then printf 'header = "Authorization: Bearer %s"\n' "$auth"; fi |
+ local cfg=""
+ [ -n "$auth" ] && cfg="$(printf 'header = "Authorization: Bearer %s"\n' "$auth")"
+ raw="$(printf '%s' "$cfg" |
   curl -s --max-time "$MODEL_TIMEOUT" ${noproxy:+--noproxy "$noproxy"} \
   ${cacert:+--cacert "$cacert"} -X POST \
   -H "Content-Type: application/json" \
@@ -159,7 +169,7 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
  content=""
  [ "$code" = "200" ] && content="$(jq -r "$expr" "$tmp" 2>/dev/null || true)"
  _mark_trunc "$tmp"
- rm -f "$tmp"
+ rm -f "$tmp" "$btmp"
  [ -n "$content" ] || return 1
  printf '%s\n' "$content"
 }
@@ -233,6 +243,7 @@ unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
    -H "Content-Type: application/json" \
    -d @"$btmp" -w '%{http_code} %{time_total}' -o "$tmp" "$UNSLOTH_URL/v1/chat/completions" \
    2>/dev/null)" || raw="000 0"
+ rm -f "$btmp"
  case "$raw" in
  *' '*)
   code="${raw%% *}"
@@ -260,7 +271,10 @@ _unsloth_ctx_limit() { # token -> context_length or empty
   cat "$cache"
   return 0
  fi
- v="$(curl -s --max-time 5 -H "Authorization: Bearer $1" \
+ # bearer via the stdin curl config (`-K -`), never argv (cmdline
+ # exposure; notify-seam argv-hygiene pattern, 2026-09-16).
+ v="$(printf 'header = "Authorization: Bearer %s"\n' "$1" |
+  curl -s --max-time 5 -K - \
   "$UNSLOTH_URL/api/inference/status" 2>/dev/null |
   jq -r '.context_length // empty' 2>/dev/null)"
  case "$v" in '' | *[!0-9]*) return 0 ;; esac
