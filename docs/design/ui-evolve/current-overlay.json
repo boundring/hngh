@@ -2,18 +2,18 @@
   "preset": "hngh",
   "gen": 1,
   "grade": "10/10",
-  "seed": 2982697,
+  "seed": 2982704,
   "fields": {
-    "primary": "#5af78e",
-    "secondary": "#3d9c78",
+    "primary": "#5af796",
+    "secondary": "#359c78",
     "accent": "#5af78e",
-    "foreground": "#e6b450",
+    "foreground": "#c8d0d8",
     "background": "#0b0e11",
     "surface": "#11151a",
     "panel": "#14181e",
-    "warning": "#c0d0d8",
+    "warning": "#5af78e",
     "error": "#e06c6c",
-    "success": "#5aff8e",
+    "success": "#e6b450",
     "dark": true
   }
 }
