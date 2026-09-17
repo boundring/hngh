@@ -4,22 +4,18 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line regarding the verification of `Storage=persistent` configuration templates and build log artifacts, establishing a deterministic probe script to settle the unresolved file-content questions.
+The plan implements the research line "Are there any captured build logs from `hngh`'s CI runs available in the repository (e.g., in an `artifacts/` or `logs/` directory) that demonstrate actual recursive make error lines?" by creating a local, reproducible fixture and verification script to establish the evidentiary bar for recursive make errors without relying on external CI artifacts.
 
 ## Steps
 
-- [ ] Create `scripts/probe_storage_persistent.sh` containing a `grep -F -- 'Storage=persistent'` check against the target observation file path.
-  Verification: bash -n scripts/probe_storage_persistent.sh
+- [ ] Create a minimal test Makefile structure in `tests/fixtures/recursive-make/` with a parent `Makefile` invoking `make -C subdir` and a child `subdir/Makefile` containing a failing rule to generate recursive error output.
+  Verification: `test -f tests/fixtures/recursive-make/Makefile && test -f tests/fixtures/recursive-make/subdir/Makefile`
 
-- [ ] Add a test fixture file under `tests/fixtures/` that contains the literal string `Storage=persistent` to validate the probe script's positive match logic.
-  Verification: grep -qF 'Storage=persistent' tests/fixtures/storage_persistent_fixture.conf
+- [ ] Add a shell script `scripts/check-recursive-make-error.sh` that executes the fixture, captures stdout/stderr, and asserts the presence of `make[1]: Entering directory` and `make[2]: ***` patterns using `grep -q`.
+  Verification: `bash -n scripts/check-recursive-make-error.sh`
 
-- [ ] Implement a recursive make error log parser in `lib/log_parser.py` that identifies `make[2]:` or higher recursion levels in build logs.
-  Verification: python3 lib/log_parser.py --help
+- [ ] Integrate the new check into the existing test suite by adding a call to `scripts/check-recursive-make-error.sh` within the `test` target of the root `Makefile` or `tests/run-tests.sh`.
+  Verification: `grep -q "check-recursive-make-error" Makefile || grep -q "check-recursive-make-error" tests/run-tests.sh`
 
-- [ ] Create `tests/test_log_parser.py` to verify the parser correctly distinguishes single-level failures from recursive make errors.
-  Verification: python3 tests/test_log_parser.py
-
-- [ ] Update `digest/RESEARCH-BEAT-latest-fail-20260916-Are-there-any-captured-build-logs-from-h.md` to record the probe script path and verification status.
-  Verification: grep -q "scripts/probe_storage_persistent.sh" digest/RESEARCH-BEAT-latest-fail-20260916-Are-there-any-captured-build-logs-from-h.md
+- [ ] Execute the full test suite to ensure the new fixture and script pass without breaking existing functionality, confirming the recursive error pattern is correctly detected.
+  Verification: `make test`
