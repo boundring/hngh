@@ -53,6 +53,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/params.sh"
 . "$AUTOMATION_ROOT/lib/failfirst.sh"
 . "$AUTOMATION_ROOT/lib/beat-blockers.sh"
+. "$AUTOMATION_ROOT/lib/redact.sh"
 
 # one research transition at a time: the hour beat and the 15-minute
 # overflow beat share this body and research-lines.tsv. A beat arriving
@@ -197,6 +198,14 @@ file_report() {
  fi
 }
 
+# operator directive 2026-09-17: both ingest seams redact source-side
+# before id/slug derivation and before any TSV write (research-lines.tsv
+# and research-subjects.txt are git-tracked and pushed publicly; the
+# report-queue sink-side guard can never cover this seam, and the leaked
+# fail-20260914-Where-exactly-in-home-bricker-Projects-e id proved the
+# leak happens at/before derivation). Single token family via lib/scrub.py
+# (redact_home = tilde rendering, the ledger convention; fail-closed to
+# empty output if scrub.py breaks).
 ensure_lines() {
  local line
  local id
@@ -204,7 +213,8 @@ ensure_lines() {
  SEEDED=0
  while IFS= read -r line; do
   [ -n "$line" ] || continue
-  desc="$line"
+  desc="$(redact_home "$line")"
+  line="$desc"
   case "$line" in
   *$'\t'*)
    id="${line%%$'\t'*}"
@@ -381,6 +391,9 @@ output."
   sid="${ln%%$'\t'*}"
   sq="${ln#*$'\t'}"
   [ "$sq" != "$ln" ] || continue # no TAB -> malformed, discard
+  q="$(redact_home "$sq")"
+  sq="$q"
+  [ -n "$sq" ] || continue # redaction fail-closed empty -> discard
   case "$sid" in
   synth-"$day"-*) n="${sid#synth-$day-}" ;;
   *) continue ;;
@@ -521,6 +534,9 @@ followon_queue() { # response -> queues up to 2 follow-on subjects from
  local out=""
  while IFS= read -r q; do
   case "$q" in FOLLOWON:*) q="${q#FOLLOWON: }" ;; *) continue ;; esac
+  # redact BEFORE derivation: the slug is cut from q, so a pathy question
+  # would otherwise bake the machine-local path into the public id
+  q="$(redact_home "$q")"
   q="$(printf '%s' "$q" | tr -cd '\11\12\15\40-\176' | tr '\t' ' ' |
    sed 's/^ *//; s/ *$//' | cut -c1-240)"
   [ -n "$q" ] || continue

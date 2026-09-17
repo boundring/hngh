@@ -2,6 +2,21 @@
 
 ## 2026-09-17
 
+- research-beat: source-side ingest redaction — both question-text
+  ingest seams in cadence/hour/33-research-beat.sh (ensure_lines from
+  research-subjects.txt, followon_queue from review FOLLOWON lines,
+  plus the demand-synthesizer append) now run redact_home
+  (lib/scrub.py single token family, tilde rendering) BEFORE id/slug
+  derivation and BEFORE any write into research-lines.tsv /
+  research-subjects.txt. The TSVs are git-tracked and pushed publicly,
+  so the report-queue sink-side guard can never cover this seam; the
+  leaked fail-20260914-Where-exactly-in-home-bricker-Projects-e id and
+  9 pathy text rows proved the leak happens at/before derivation.
+  Forward-only: existing rows left untouched. Red-first contract test
+  tests/test-research-beat-ingest-redact.sh (sources the REAL seams
+  via brace-anchored extraction; red proven 5-fail against the
+  unpatched script) wired into make test.
+
 - patrol: doctrine-coverage classifier extension — every doctrine LARGE
   class now maps to a concrete pre-check rule on the repo's REAL
   surfaces or a documented exception
