@@ -236,6 +236,7 @@ class CuratorBeat(unittest.TestCase):
                 (plans_dir / name).write_text(text)
             before = {p.name: p.read_bytes() for p in plans_dir.iterdir()}
             state = Path(td) / "STATE.md"
+            state.write_text("# inventory\n")
             out = Path(td) / "plans.json"
             env = {**os.environ, "HNGH_HOME": str(home),
                    "HNGH_PLANS_FEED_OUT": str(out), "STATE_FILE": str(state),
