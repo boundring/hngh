@@ -8,6 +8,24 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Ceremony commit identity pinned at the drive layer**
+  (docs/records/2026-09-16-identity-seam-reconciliation.md, "Kernel
+  ceremony commit identity"): the certificate-bound `git commit` from
+  `scripts/ceremony-drive` (executed by the kernel mutation executor,
+  `src/adapter/mutation.lisp` `command-for`) inherited ambient
+  `.git/config` identity — 42 window commits rode the anonymous
+  Fixture identity, and a fresh clone without repo-local config would
+  ride the operator's personal identity. The drive now exports
+  `GIT_AUTHOR_*` / `GIT_COMMITTER_*` defaults
+  (`hngh-machine <automation@hngh.local>`) before the closed loop
+  runs; explicit caller env keeps precedence. Kernel `src/` untouched
+  (fixed-argv contract intact); covers every ceremony-drive caller
+  (patrol gate-cure, omp-bridge --ceremony, direct sbcl). Test-first:
+  `tests/scripts/test-ceremony-drive-commit-identity.py` red-proven
+  pre-fix (leaky-ambient fixture repo committed as the leak identity),
+  wired into `make test`. The fix itself landed through the pinned
+  ceremony, attributed hngh-machine.
+
 - **Refresh path obeys the credential-seam contract** (2026-09-17-refresh-argv-body-and-refreshfile-gate.md): the unsloth refresh curl interpolated the single-use refresh token VALUE into the `-d` argv argument (world-readable in /proc/<pid>/cmdline for the whole call); the body is now staged to a mktemp file (`-d @"$btmp"`, path on argv, value never — the chat-leg pattern), keeping the wire bytes, `%{http_code}`/`-o` semantics, and breadcrumbs identical. REFRESH_FILE gets the mode-600 stat gate every other credential-file read has (sixth reader; refusal `refresh key file too open (chmod 600 required)`, fail-closed before the read). test-probe-hygiene.sh now hard-fails any interpolated `-d "{...$var...}"` curl body in both lint targets and positively pins the staged refresh form, closing the -d blind spot in the zero-credentials-on-argv contract. Red proofs: value on argv + 0644 refresh file POSTed, pre-fix.
 
 ### 2026-09-16
