@@ -162,7 +162,11 @@ KNOWN_EXEMPTIONS = {
         "reason": "fixture pair revert: restores Makefile+README (declared miss)",
         "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
     },
-        "9d254bd1": {
+            "5ba90f8d": {
+        "reason": "STATE.md restore + guard meta-exemption for 9d254bd1 (STATE.md is runtime state tests expect tracked)",
+        "patch-id": "0f86cac917280d7f2f29bfe34ded86c31ea0c672",
+    },
+    "9d254bd1": {
         "reason": "loop-history guard test fix: errors='replace' + 514bdc00 exemption (meta-exemption: modifies the guard itself)",
         "patch-id": "7e04be069396144922c56a0b7518629df280ea8d",
     },
