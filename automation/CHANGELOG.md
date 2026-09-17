@@ -2,6 +2,21 @@
 
 ## 2026-09-17
 
+- patrol: gate-cure LARGE pre-check — `check_gate_cure` now refuses the
+  auto-declare (existing `gate-cure-refused` park, no exemption append,
+  no decisions.md entry, no ceremony drive) when the violating commit
+  set touches credential-like paths (.env/credential/secret/token/pem),
+  systemd units (.service/.timer/.socket), spend/cost/budget/cap
+  configs under `automation/config/`, or contains a pure-deletion
+  numstat diff (the ba6b390 gutting shape). New
+  `is_large_cure_violation` + `commit_numstat` in jobs/patrol.py;
+  the 2026-09-13 SMALL-matter amendment's LARGE classes are enforced
+  before the mutation instead of relying on the ceremony verdict after
+  it. Test-first: four new cases in tests/test-patrol.py (classifier
+  matrix + refusal wiring), red-proven (3F+1E) against the
+  pre-check-free patrol, green after; full make test rc=0.
+  Record: docs/records/2026-09-17-patrol-large-cure-refusal.md.
+
 - security: model.sh chat legs moved off bearer-on-argv — the three
   remaining `/proc/<pid>/cmdline` exposures (the `_post_chat` scaffold
   behind the remote/kimi/ocgo/zai/deck legs, `unsloth_attempt`, and the

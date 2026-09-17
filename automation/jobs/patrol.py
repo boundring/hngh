@@ -672,6 +672,56 @@ def commit_subject(kernel, sha):
     return r.stdout.strip()
 
 
+def commit_numstat(kernel, sha):
+    """[(additions, deletions, path)...] for sha (the LARGE-classifier
+    input: pure deletions are visible only here, not in --name-only)."""
+    try:
+        r = subprocess.run(["git", "show", "--numstat", "--format=",
+                            sha], cwd=kernel, capture_output=True,
+                           text=True, check=True)
+    except (subprocess.SubprocessError, OSError):
+        return []
+    rows = []
+    for ln in r.stdout.splitlines():
+        parts = ln.split("\t")
+        if len(parts) >= 3 and parts[0].isdigit() and parts[1].isdigit():
+            rows.append((int(parts[0]), int(parts[1]), parts[2]))
+    return rows
+
+
+# LARGE cure classes (docs/project/decisions.md, the 2026-09-13
+# SMALL-matter amendment): never auto-declared by the gate-cure patrol.
+_CRED_PATH_RE = re.compile(
+    r"(^|/)(\.env(\..+)?|credentials?(\..+)?|secrets?(\..+)?|"
+    r"tokens?(\..+)?|auth[_-]?token|\.?\w*\.pem)(/|$|\.)", re.I)
+_SYSTEMD_SUFFIXES = (".service", ".timer", ".socket")
+_SPEND_RE = re.compile(r"(spend|cost|budget|cap)", re.I)
+_SPEND_CONFIG_PREFIX = "automation/config/"
+
+
+def is_large_cure_violation(kernel, shas):
+    """LARGE-surface pre-check: refuse the auto-declare when the
+    violating commit set touches credential-like paths, systemd units,
+    spend/cost/budget/cap configs under automation/config/, or any
+    commit is a pure deletion (additions==0, deletions>0 -- a gutting
+    commit). Returns a reason string, or "" when SMALL (auto-curable).
+    The ceremony's own refusal stays the backstop; this pre-check keeps
+    the refusal before the append, not after it."""
+    for sha in shas:
+        for additions, deletions, path in commit_numstat(kernel, sha):
+            if additions == 0 and deletions > 0:
+                return "pure-deletion diff (%s)" % sha
+            norm = path.replace("\\", "/")
+            if _CRED_PATH_RE.search(norm):
+                return "credential-like path %s (%s)" % (path, sha)
+            if norm.endswith(_SYSTEMD_SUFFIXES):
+                return "systemd unit %s (%s)" % (path, sha)
+            if (norm.startswith(_SPEND_CONFIG_PREFIX)
+                    and _SPEND_RE.search(os.path.basename(norm))):
+                return "spend/cost-cap config %s (%s)" % (path, sha)
+    return ""
+
+
 def append_exemptions(kernel, shas, date):
     """Register each sha in the guard's KNOWN_EXEMPTIONS table (hash +
     patch-id, the declaration precedent) and append the decisions.md
@@ -781,6 +831,12 @@ def check_gate_cure(ctx):
         return out
     if rc == 0:
         out["passes"].append(("gate-cure", "gate green"))
+        return out
+    large = is_large_cure_violation(ctx["kernel"], shas)
+    if large:
+        out["fails"].append(("kernel", "gate-cure-refused",
+                             "LARGE-surface pre-check: %s -- park for "
+                             "the operator" % large))
         return out
     ok, detail = cure_red_gate(ctx["kernel"], shas, ctx["date"])
     if ok:
