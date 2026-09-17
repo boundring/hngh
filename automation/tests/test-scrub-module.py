@@ -176,12 +176,16 @@ class PathyStems(unittest.TestCase):
     PATH_TOKEN_RE unchanged and bakes the username into a public id).
     The dash-form family must stay one single-source mechanism with
     router-tick's PATHY_STEMS: home/users/tmp/root case-insensitive +
-    the HNGH_ROUTER_PATHY_STEMS deployment-username seam. Cutting a
-    dash-form token is lossy by design -- innocuous subject words
-    starting with the stems (homeopathy-, tmpdir-, userscript-) die to
-    "" with them; that documented truncation tradeoff matches
-    router-tick (false positives truncate a subject word, false
-    negatives would leak)."""
+    the HNGH_ROUTER_PATHY_STEMS deployment-username seam. 2026-09-17
+    gate-spec redesign (gap-g2-predicate-false-positives): the bare-
+    stem cut was empirically unusable as a gate predicate on real repo
+    content (291 committed research lines flagged, every one a prose
+    false positive). A stem segment now cuts only when the NEXT dash
+    segment is path-shaped (another stem, the deployment username, or
+    a PATHY_COMPONENTS vocabulary entry) -- the two-segment shape every
+    measured payload id carries (home-bricker-Projects...). A leading
+    pathy stem with a path-shaped successor still refuses the whole
+    input (""); leading prose ("Users should ...") survives."""
 
     def setUp(self):
         # capture once in setUp, restore once in tearDown: a
@@ -223,10 +227,14 @@ class PathyStems(unittest.TestCase):
             "Where-in-")
 
     def test_stems_case_insensitive_and_seam_casefolded(self):
+        # stems and the seam casefold; the SUCCESSOR must be path-shaped
+        # (stem, seam username, or component) -- "bricker" here would be
+        # inert under a different pinned username, so successors use the
+        # seam username / a component
         self.stem_env("HermitUser")
-        for tok, want in (("Where-in-Home-bricker-x", "Where-in-"),
-                          ("review-in-USERS-bricker-x", "review-in-"),
-                          ("x-TMP-cache-sweep", "x-")):
+        for tok, want in (("Where-in-Home-hermituser-x", "Where-in-"),
+                          ("review-in-USERS-hermituser-x", "review-in-"),
+                          ("x-TMP-Documents-cache", "x-")):
             self.assertEqual(scrub.scrub_truncate_pathy(tok), want)
 
     def test_innocuous_word_kept_when_not_seam_backed(self):
@@ -250,6 +258,89 @@ class PathyStems(unittest.TestCase):
             scrub.scrub_truncate_pathy(
                 "Where-exactly-in-home-bricker-Projects-e do gates die"),
             "Where-exactly-in-")
+
+    # --- 2026-09-17 gate-spec redesign (gap-g2-predicate-false-
+    # positives): the sweep gate needs a DISCRIMINATING dash-leak
+    # predicate. Positive controls are the three real committed payload
+    # ids; negative controls are the top false-positive classes the old
+    # bare-stem rule produced when run over the real 278-file sweep
+    # domain (291 lines). Measured contract: 0 corpus false positives,
+    # 3/3 payload ids caught.
+
+    def test_payload_class_cut_real_ids(self):
+        # the real leak class: stem followed by the deployment username
+        # / a capitalized path component (username pinned: the real
+        # committed payload ids embed this deployment's username)
+        self.stem_env("bricker")
+        for line, want in (
+            ("fail-20260914-Where-exactly-in-home-bricker-Projects-e",
+             "fail-20260914-Where-exactly-in-"),
+            ("fail-20260916-Do-any-files-in-home-bricker-Projects-et",
+             "fail-20260916-Do-any-files-in-"),
+            ("fail-20260915-Does-the-file-structure-at-home-bricker-",
+             "fail-20260915-Does-the-file-structure-at-"),
+        ):
+            self.assertEqual(scrub.scrub_truncate_pathy(line), want)
+
+    def test_prose_false_positive_classes_survive(self):
+        # the measured false-positive classes: bare stems in English
+        # prose and path-component words inside prose; none carries the
+        # stem-then-path-shape pair, so none is path-derived. Runs with
+        # the config-default username stem active (the gate's env-less
+        # condition); the classes must survive under ANY stem set
+        self.stem_env(None)
+        for line in (
+            "adopted -- root cause: the network-down headroom predicate",
+            "fixed -- dashboard-server.py now serves the jailed /hngh-docs route",
+            "the root cause is rc",
+            "use tmp dir for fixtures",
+            "users table grows",
+            "root-cause-analysis-of-leaks",
+            "Users should be able to jump to meaningful landmarks",
+        ):
+            self.assertEqual(scrub.scrub_truncate_pathy(line), line)
+
+    def test_config_default_username_stem_reaches_gate(self):
+        # the sweep gate runs env-less under make test: the deployment
+        # username stem must come from the committed config.env default
+        # line (whatever it says on this checkout), env unset
+        self.stem_env(None)
+        default = scrub._config_env_default("HNGH_ROUTER_PATHY_STEMS")
+        self.assertTrue(default, "config.env default line missing")
+        self.assertIn(default.lower(), scrub.pathy_leak_vocab())
+        # the real corpus shape must cut under the config default stem
+        payload = ("fail-20260915-Does-the-file-structure-at-home-%s-"
+                   % default)
+        self.assertNotEqual(scrub.scrub_truncate_pathy(payload), payload)
+
+    def test_stem_needs_path_shaped_successor(self):
+        # the discriminating core: a stem without a path-shaped
+        # successor is English prose, leading or not; a leading stem
+        # WITH a path-shaped successor still refuses the whole input
+        self.assertEqual(
+            scrub.scrub_truncate_pathy("home-advantage-was-confirmed"),
+            "home-advantage-was-confirmed")
+        self.assertEqual(scrub.scrub_truncate_pathy(
+            "users-bricker-shared-notes"), "")
+
+    def test_component_vocabulary_and_seam(self):
+        # the path-shape vocabulary mirrors router-tick's grammar data;
+        # HNGH_ROUTER_PATHY_COMPONENTS extends it without code edits
+        self.assertIn("projects", scrub.PATHY_COMPONENTS)
+        self.assertIn("dropbox", scrub.PATHY_COMPONENTS)
+        old = os.environ.get("HNGH_ROUTER_PATHY_COMPONENTS")
+        try:
+            os.environ["HNGH_ROUTER_PATHY_COMPONENTS"] = "Vault"
+            self.assertEqual(
+                scrub.scrub_truncate_pathy("in-tmp-Vault-x"), "in-")
+            self.assertEqual(
+                scrub.scrub_truncate_pathy("in-tmp-Cache-x"),
+                "in-tmp-Cache-x")
+        finally:
+            if old is None:
+                os.environ.pop("HNGH_ROUTER_PATHY_COMPONENTS", None)
+            else:
+                os.environ["HNGH_ROUTER_PATHY_COMPONENTS"] = old
 
     def test_router_tick_shares_the_mechanism(self):
         # single-source contract: router-tick binds its stem family from

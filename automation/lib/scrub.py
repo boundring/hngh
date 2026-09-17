@@ -169,6 +169,22 @@ def scrub_grep(text, tilde_ok=True):
 # operator username); it is deployment data, never hardcoded.
 PATHY_STEMS = ("home", "users", "tmp", "root")
 
+# Path-shape vocabulary for the dash-form predicate (2026-09-17
+# gate-spec redesign, gap-g2-predicate-false-positives): a dash
+# segment counts as path-derived only when the PREVIOUS segment is a
+# stem AND this segment is path-shaped -- another stem, the deployment
+# username, or one of these common path components (mirrors
+# router-tick's local PATH_COMPONENTS grammar data, which stays
+# router-local for identity-scoping reasons). A bare stem in prose
+# ("use tmp dir", "the root cause is rc") has no path-shaped successor
+# and survives: the retired bare-stem cut flagged 291 committed
+# research lines on the real 278-file sweep domain, every one a prose
+# false positive. HNGH_ROUTER_PATHY_COMPONENTS extends the vocabulary
+# without code edits (comma/space-separated, like the username seam).
+PATHY_COMPONENTS = ("projects", "etc", "hngh", "dropbox", "documents",
+                    "downloads", "desktop", "config", "src", "lib",
+                    "bin", "docs", "tests", "opt", "usr", "var")
+
 
 def pathy_stems():
     """Scrub stems: PATHY_STEMS + config-supplied username stems
@@ -178,9 +194,51 @@ def pathy_stems():
         s.lower() for s in extra.replace(",", " ").split() if s)
 
 
+def pathy_shape_vocab():
+    """Path-shape vocabulary for the dash-form predicate:
+    PATHY_COMPONENTS + HNGH_ROUTER_PATHY_COMPONENTS extras, env first.
+    Stems and username stems are shape-vocabulary too (a path can run
+    stem-into-stem: /home/<user> after a mangled /Users or /home
+    prefix); the username segments ride in via pathy_stems()."""
+    extra = os.environ.get("HNGH_ROUTER_PATHY_COMPONENTS", "")
+    return (PATHY_COMPONENTS
+            + tuple(s.lower() for s in extra.replace(",", " ").split()
+                    if s)
+            + pathy_leak_vocab())
+
+
+def _config_env_default(name):
+    """Bash-style default from automation/config.env:
+    NAME="${NAME:-value}". The sweep gate runs env-less under
+    `make test`, so the deployment username stem must come from the
+    config default line; an exported env value still wins via
+    pathy_stems() itself. Returns "" outside automation checkout."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        with open(os.path.join(root, "config.env"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return ""
+    m = re.search(r"^(?:export )?%s=\"?\$\{%s:-(?P<v>[^}\"]+)\}"
+                  % (name, name), text, re.M)
+    return m.group("v") if m else ""
+
+
+def pathy_leak_vocab():
+    """Stems + config-default username stems, for the gate predicate.
+    env first, then the config.env deployment default (the sweep runs
+    env-less under make test), then the shipped family only."""
+    stems = pathy_stems()
+    if len(stems) > len(PATHY_STEMS):
+        return stems
+    extra = _config_env_default("HNGH_ROUTER_PATHY_STEMS")
+    return stems + tuple(
+        s.lower() for s in extra.replace(",", " ").split() if s)
+
+
 def scrub_truncate_pathy(text):
-    """Cut dash-form path-derived text at its first pathy-stemmed dash
-    token; return "" when the text STARTS pathy (whole-input
+    """Cut dash-form path-derived text at its first path-derived dash
+    segment; return "" when the text STARTS path-derived (whole-input
     path-derived: the caller refuses it, fail closed).
 
     Tokens are maximal [\\w-] runs (dash segments inside, whitespace or
@@ -188,20 +246,33 @@ def scrub_truncate_pathy(text):
     ("Where-exactly-in-home-bricker-Projects-e") and on a sentence
     whose question text embeds a pre-mangled fragment. A token directly
     preceded by "~" is the redaction marker itself (~, ~tmp, ~/...) and
-    is never re-cut. Cutting is lossy by design and matches
-    router-tick's documented tradeoff: false positives only truncate a
-    subject word (a bare stem word "tmp dir" dies to "" before it);
-    false negatives would leak. Slash-form tokens never reach this
-    helper unchanged -- callers run redact_home/scrub_paths FIRST, then
-    this cut for the dash form."""
+    is never re-cut.
+
+    Discriminating rule (2026-09-17 gate-spec redesign,
+    gap-g2-predicate-false-positives): a segment cuts only when it is a
+    stem AND the NEXT segment is path-shaped (another stem, the
+    deployment username, or a PATHY_COMPONENTS vocabulary entry) -- the
+    two-segment shape every measured payload id carries
+    (home-bricker-Projects...). A bare stem in prose ("use tmp dir",
+    "the root cause is rc", a leading "Users should ...") has no
+    path-shaped successor and survives. The vocabulary check is
+    case-insensitive and exact-segment (a word that merely CONTAINS a
+    stem, "homework", never matches). A leading stem with a path-
+    shaped successor still refuses the whole input (""). Cutting is
+    lossy by design; false positives now truncate only stem-then-path
+    token pairs, false negatives would leak. Slash-form tokens never
+    reach this helper unchanged -- callers run redact_home/scrub_paths
+    FIRST, then this cut for the dash form."""
     text = str(text or "")
-    stems = frozenset(pathy_stems())
+    stems = frozenset(pathy_leak_vocab())
+    shape = frozenset(pathy_shape_vocab())
     for m in re.finditer(r"[\w-]+", text):
         if m.start() and text[m.start() - 1] == "~":
             continue  # tilde-rendered redaction marker, not a leak
         segs = m.group(0).split("-")
-        for j, seg in enumerate(segs):
-            if seg.lower() in stems:
+        low = [s.lower() for s in segs]
+        for j, seg in enumerate(low[:-1]):
+            if seg in stems and low[j + 1] in shape:
                 if m.start() == 0 and j == 0:
                     return ""
                 return text[:m.start() + sum(
