@@ -48,6 +48,11 @@ def main():
                GIT_COMMITTER_NAME="fixture",
                GIT_COMMITTER_EMAIL="fixture@invalid",
                GIT_COMMITTER_DATE="2026-01-01T00:00:00+0000")
+    # containment: the probe object must land in the cwd-resolved
+    # repository (the kernel checkout this guard reads), never in some
+    # hostile exported GIT_DIR (2026-09-17 kernel-contamination lesson)
+    for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+        env.pop(hostile, None)
     dangling = subprocess.run(
         ["git", "commit-tree", "ef803bd16e170d18c3b1a644a8b958c117b963a4",
          "-m", "fixture: dangling exemption probe"],

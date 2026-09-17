@@ -9,6 +9,8 @@
 # (c) bootstrap --check passes when prerequisites are present (sandbox PATH)
 #     and fails cleanly naming a missing one when PATH is stripped.
 set -u
+# fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
+unset GIT_DIR GIT_WORK_TREE
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
 SANDBOX="$(mktemp -d)"

@@ -5,6 +5,8 @@
 # a genuinely red gate still refuses; no crumb pushes on green. Hermetic:
 # fixture repos, no real origin, no real gate.
 set -u
+# fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
+unset GIT_DIR GIT_WORK_TREE
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 trap 'rm -rf "$sb"' EXIT

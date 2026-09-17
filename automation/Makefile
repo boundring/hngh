@@ -51,6 +51,7 @@ test:
 	python3 -B tests/test-plan-acceptance.py
 	python3 -B tests/test-identity-seam.py
 	python3 -B tests/test-plan-feed-graph.py
+	python3 -B tests/test-curator-beat.py
 	python3 -B tests/test-render-blocks-feed.py
 	python3 -B tests/test-rehearse-gate.py
 	python3 -B tests/test-notify-email.py

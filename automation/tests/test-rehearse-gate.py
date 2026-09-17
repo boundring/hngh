@@ -36,7 +36,13 @@ def run(argv, **kw):
 
 
 def git(repo, *args):
-    r = run(["git", "-C", repo] + list(args))
+    env = dict(os.environ)
+    # containment: never inherit repo selection from the caller's shell
+    # (2026-09-17 kernel-contamination lesson)
+    for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+        env.pop(hostile, None)
+    r = subprocess.run(["git", "-C", repo] + list(args),
+                       capture_output=True, text=True, env=env)
     if r.returncode != 0:
         raise AssertionError("git %s failed: %s" % (args[0], r.stderr))
     return r

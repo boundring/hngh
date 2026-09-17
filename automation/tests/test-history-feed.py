@@ -45,6 +45,11 @@ def validate(payload):
 
 def _git(repo, *args, date=None):
     env = dict(subprocess.os.environ)
+    # containment: never inherit repo-selection vars from the caller's
+    # shell (an exported GIT_DIR would redirect the fixture commits
+    # elsewhere; 2026-09-17 kernel-contamination lesson)
+    for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
+        env.pop(hostile, None)
     if date:
         env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = date
     env.setdefault("GIT_CONFIG_GLOBAL", "/dev/null")

@@ -112,10 +112,14 @@ class Fixture:
             "# Lessons\n- 2026-09-10-opencode-go-leg.md\n"
             "- 2026-09-11-omp-integration.md\n")
         (auto / "digest" / (DAY + ".md")).write_text(FIXTURE_DIGEST)
-        subprocess.run(["git", "init", "-q", str(self.tmp)], check=True)
+        subprocess.run(["git", "init", "-q", str(self.tmp)], check=True,
+                       env={k: v for k, v in os.environ.items()
+                            if k not in ("GIT_DIR", "GIT_WORK_TREE")})
         for k, v in (("user.email", "t@t"), ("user.name", "t")):
             subprocess.run(["git", "-C", str(self.tmp), "config", k, v],
-                           check=True)
+                           check=True,
+                           env={k2: v2 for k2, v2 in os.environ.items()
+                                if k2 not in ("GIT_DIR", "GIT_WORK_TREE")})
         (self.tmp / "docs" / "project" / "checkin.md").write_text("")
         (self.tmp / "docs" / "project" / "timeline.md").write_text("")
         subprocess.run(["git", "-C", str(self.tmp), "add", "-A"], check=True)

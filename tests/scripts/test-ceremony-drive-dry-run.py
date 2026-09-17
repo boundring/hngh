@@ -27,6 +27,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "ceremony-drive"
 
+# Fixture containment (2026-09-17): an exported GIT_DIR/GIT_WORK_TREE
+# would silently redirect the fixture `git init`/`config`/`commit` below
+# (and the drive's own subprocesses) into that repository instead of the
+# disposable fixture. Strip repo-selection variables for the whole test
+# process and pin global/system config to /dev/null so the fixture never
+# depends on host git state.
+for _HOSTILE_VAR in ("GIT_DIR", "GIT_WORK_TREE"):
+  os.environ.pop(_HOSTILE_VAR, None)
+for _CONFIG_VAR in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"):
+  os.environ.setdefault(_CONFIG_VAR, "/dev/null")
+
 
 class DreamDrive(unittest.TestCase):
   def setUp(self):
@@ -42,10 +53,8 @@ class DreamDrive(unittest.TestCase):
     (Makefile with a green test target) plus copies of the repo's
     candidate-verification scripts, which run relative to the drive's
     working directory."""
-    subprocess.run(["git", "init", "-q", str(self.fixture)], check=True)
-    for key in ("user.email", "user.name"):
-      subprocess.run(["git", "-C", str(self.fixture), "config", key,
-                      "test@example.com"], check=True)
+    subprocess.run(["git", "init", "-q", str(self.fixture)], check=True,
+                   env=dict(os.environ))
     src = self.fixture / "docs" / "fixture.txt"
     src.parent.mkdir(parents=True)
     src.write_text("fixture candidate\n")
@@ -57,8 +66,13 @@ class DreamDrive(unittest.TestCase):
       shutil.copy(ROOT / "scripts" / name, scripts_dir / name)
     subprocess.run(["git", "-C", str(self.fixture), "add", "-A"],
                    check=True)
-    subprocess.run(["git", "-C", str(self.fixture), "commit", "-qm",
-                    "fixture base"], check=True)
+    # Identity is pinned at commit time; nothing is written into the
+    # fixture's config (a stray config write can only pollute whichever
+    # repo git resolves to).
+    subprocess.run(["git", "-C", str(self.fixture),
+                    "-c", "user.email=test@example.com",
+                    "-c", "user.name=test@example.com",
+                    "commit", "-qm", "fixture base"], check=True)
     self.candidate = "docs/fixture.txt"
 
   def run_dream(self, candidate=None, pre_save=None):

@@ -1,0 +1,8 @@
+Reply with exactly: OK
+
+Lessons from previous opencode sessions (actively avoid the recorded failure classes):
+2026-09-13T03:02:17Z | obsolete | the target was superseded/duplicate/stale -- check the current ledger state before acting on anything you read earlier
+2026-09-13T04:31:18Z | unknown | the log tail matched no known failure class -- state plainly what you were doing when it failed so the next session can classify it
+2026-09-13T16:22:49Z | bad-execution | budget/cap/exhausted/timeout -- the step was too big or never verified: shrink the step and prove the thing works on its own surface before claiming done
+2026-09-13T16:23:34Z | bad-execution | budget/cap/exhausted/timeout -- the step was too big or never verified: shrink the step and prove the thing works on its own surface before claiming done
+2026-09-13T16:24:25Z | bad-execution | budget/cap/exhausted/timeout -- the step was too big or never verified: shrink the step and prove the thing works on its own surface before claiming done

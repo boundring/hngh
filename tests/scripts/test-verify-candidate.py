@@ -2,6 +2,7 @@
 """Fixture checks for the read-only candidate evidence verifier."""
 
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -10,6 +11,19 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "verify-candidate.py"
+
+# Fixture containment (2026-09-17 kernel-contamination lesson): the
+# git fixtures below must never resolve to the hngh kernel checkout.
+# An exported GIT_DIR/GIT_WORK_TREE silently redirects `git init`,
+# `git config`, and `git commit` into that repository -- the 2026-09-13
+# rehearsal lane wrote user.name=Fixture into the kernel .git/config
+# exactly this way -- so hostile repo-selection variables are stripped
+# from the whole test process up front, and global/system git config is
+# pointed at /dev/null so fixture identity never depends on host state.
+for _HOSTILE_VAR in ("GIT_DIR", "GIT_WORK_TREE"):
+  os.environ.pop(_HOSTILE_VAR, None)
+for _CONFIG_VAR in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"):
+  os.environ.setdefault(_CONFIG_VAR, "/dev/null")
 
 
 CHECKS = 0
@@ -32,15 +46,30 @@ def run(command, cwd):
   )
 
 
+def check_not_kernel_repo(root):
+  """Fail loudly if the resolved repository is the hngh checkout."""
+  resolved = Path(run(
+    ["git", "rev-parse", "--absolute-git-dir"], root).stdout.strip())
+  if resolved == (ROOT / ".git").resolve():
+    raise AssertionError(
+      "fixture repository resolved to the hngh kernel checkout; "
+      "refusing to touch it")
+
+
 def make_repository(directory):
   root = Path(directory)
   run(["git", "init", "--quiet"], root)
-  run(["git", "config", "user.email", "fixture@example.invalid"], root)
-  run(["git", "config", "user.name", "Fixture"], root)
+  check_not_kernel_repo(root)
   (root / "README.md").write_text("fixture\n", encoding="utf-8")
   (root / "Makefile").write_text("test:\n\t@true\n", encoding="utf-8")
   run(["git", "add", "README.md", "Makefile"], root)
-  run(["git", "commit", "--quiet", "-m", "fixture"], root)
+  # Identity is pinned per invocation, not written into the fixture
+  # config: the commit is the only step that needs it, and -c options
+  # are inert when cwd/GIT_DIR somehow resolve elsewhere.
+  run(["git",
+       "-c", "user.email=fixture@example.invalid",
+       "-c", "user.name=Fixture",
+       "commit", "--quiet", "-m", "fixture"], root)
   return root
 
 
@@ -147,6 +176,16 @@ def test_missing_or_directory_candidate_path_refuses():
     check(result.returncode == 1, f"{expected} is a policy refusal")
     check(expected in result.stdout, f"{expected} is reported")
     check(":refused" in result.stdout, f"{expected} has a closed refusal")
+
+
+def test_repository_guard_refuses_kernel_checkout():
+  try:
+    check_not_kernel_repo(ROOT)
+  except AssertionError as expected:
+    check("kernel checkout" in str(expected),
+          "guard names the hngh kernel checkout in its refusal")
+  else:
+    raise AssertionError("repo guard failed to refuse the kernel checkout")
 
 
 def test_valid_manifest_runs_fast_gate():
@@ -398,6 +437,7 @@ def test_unreadable_candidate_refuses():
 
 
 def main():
+  test_repository_guard_refuses_kernel_checkout()
   test_make_target_requires_manifest()
   test_missing_manifest_refuses()
   test_empty_manifest_refuses()

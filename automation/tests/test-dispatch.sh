@@ -6,6 +6,8 @@
 #      byte outside the sentinels identical
 #   c) a README without sentinels is refused (never injected)
 set -u
+# fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
+unset GIT_DIR GIT_WORK_TREE
 root="$(cd "$(dirname "$0")/.." && pwd)"
 td="$(mktemp -d)"
 trap 'rm -rf "$td"' EXIT

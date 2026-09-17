@@ -110,9 +110,9 @@ journal](docs/journal/2026-09-11.md); the whole verified run is
 the stranger's version, under [what exists](#what-exists).
 
 <!-- dispatch:begin -->
-| 2026-09-15 | 0 | $4.04 | 23 | 18 |
+| 2026-09-17 | 0 | $0.19 | 10 | 27 |
 
-Deep read: [the journal](docs/journal/2026-09-15.md).
+Deep read: [the journal](docs/journal/2026-09-17.md).
 <!-- dispatch:end -->
 
 ---

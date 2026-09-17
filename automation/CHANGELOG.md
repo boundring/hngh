@@ -66,6 +66,8 @@
   research artifacts is an operator-lane decision;
   docs/records/2026-09-17-dash-mangled-id-scrub-seams.md).
 
+## 2026-09-16
+
 - research-doc writer redaction (writer-gap, wiki-health-wiring-
   reconcile::gate): the crystallize transition emitted the RAW
   lines-TSV question text as the docs/research title (`printf '# %s'`)
