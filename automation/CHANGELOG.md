@@ -2,6 +2,22 @@
 
 ## 2026-09-17
 
+- credential-freshness: zero-length-ledger edge sealed — `check()` now
+  reports `ledger-empty` for an existing but rowless (empty or
+  blank-only) ledger instead of a silent rc=0 pass, and `record()`
+  refuses an existing empty ledger (`ledger-empty-refusal`) so a
+  truncated ledger can no longer be silently re-seeded at the live
+  clock (which laundered any rotation that happened while it was
+  empty — `hash-mismatch` could never fire for it again). The job now
+  seeds only a MISSING ledger; an existing-but-empty one gets a
+  `re-seed REFUSED` breadcrumb and stays alerting (`ledger-empty`)
+  until the operator re-arms bootstrap. The 2026-09-16
+  credential-freshness-rung-dead-legs record's absolute
+  `hash-mismatch` claim carries a scope note (ledger-intact
+  precondition). Failing tests first: 6 unittest cases
+  (tests/test-credential-evidence.py, 28 total OK) + job-level
+  regression sections 6a-6c in tests/test-credential-health-argv.sh.
+
 - router-tick: path-fragment scrub at the emitter — a dash-mangled
   absolute path riding in an alert identity (pre-2026-09-16 alert
   identities were not path-redacted, see

@@ -236,11 +236,21 @@ fi
 # Findings are bounded (head -N) so a degraded ledger cannot flood the
 # public repo; identity dedup in alert() folds repeats into ×N.
 if [ ! -s "$freshness_ledger" ]; then
-  # Bootstrap: no row exists yet, so recording at the live clock is the
-  # honest epoch; a stale epoch-0 row can only be a legacy bug artifact.
+  # Bootstrap (2026-09-17 zero-length-ledger fix): only a MISSING ledger
+  # seeds at the live clock (nothing stale can pre-exist a first seed).
   # Token VALUE is never read here — record() digests the file itself.
-  python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)"
-  breadcrumb "$JOB_NAME" "credential-health" "freshness ledger seeded (bootstrap)"
+  # An existing-but-empty ledger (truncated to zero bytes, or blank rows
+  # only) is treated as lost evidence: record() refuses it (a silent
+  # re-seed would launder any rotation that happened while the ledger
+  # was empty — the pre-truncation digest is gone, hash-mismatch could
+  # never fire again) and check() alerts `ledger-empty` every run until
+  # the operator re-arms bootstrap by removing the empty file.
+  if [ -e "$freshness_ledger" ]; then
+    breadcrumb "$JOB_NAME" "credential-health" "freshness ledger exists but has no data rows (truncated?); re-seed REFUSED; operator must re-arm bootstrap (remove the empty ledger)"
+  else
+    python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record unsloth-session "$TOKEN_FILE" "$freshness_ledger" "$(date +%s)"
+    breadcrumb "$JOB_NAME" "credential-health" "freshness ledger seeded (bootstrap)"
+  fi
 fi
 python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$freshness_ola" |
   grep -Ev '^(ok:|$)' | head -n 5 | while IFS= read -r finding; do alert "credential-freshness" "$finding"; done
