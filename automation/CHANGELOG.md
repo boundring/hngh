@@ -2,6 +2,28 @@
 
 ## 2026-09-17
 
+- research TSVs: disposition/lessons back-redaction + the harvest seam
+  cure (GAP B, wiki-health-wiring-reconcile::gate follow-through). The
+  writer-side cures had landed piecemeal (ingest 2e51d01b, disposition
+  append 6d154d0e), but the harvest interpolation
+  (lib/research-harvest.py) still wrote raw disposition
+  verdict/evidence/subject text into research-lessons.tsv and vault
+  pages — the two raw lesson rows proved it. Cure: REDACT_HOME (from
+  the single-source lib/scrub.py, tilde family) applied to every
+  interpolation source BEFORE write; loader is fail-closed (broken
+  scrub module = no harvest, never an unguarded write). Red-first: 3
+  new case groups in tests/test-research-harvest.py. Back-redaction:
+  scripts/research-tsv-path-sweep.py rewrites committed rows through
+  redact_home from HEAD blobs (refuses dirty files, rc=2 distinct from
+  rc=1 leaks-found; the redact_home fixpoint is the clean invariant,
+  so tilde rows and preserved URLs stay untouched); applied to the
+  four research data files (213 committed lines swept: dispositions
+  201, lines 9, subjects 1, lessons 2 — the same 201 the GAP-B gate
+  counted). Enforcement wired into `make test`: the sweep test suite
+  plus a --check pass over the four files, so a newly committed raw
+  research row goes red at the gate. Forward-only; live-beat appends
+  in the working tree stay uncommitted for their own lane.
+
 - router-tick: scrub-stem coverage closes the consumed-home gap (GAP E,
   wiki-health-wiring-reconcile::gate) — the 2026-09-16 path scrub cut
   only at home-/Users- stems, so a dash-mangled identity whose /home

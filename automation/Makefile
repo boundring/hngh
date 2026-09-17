@@ -113,6 +113,10 @@ test:
 	bash tests/test-oversight-tick-alert-redact.sh
 	bash tests/test-research-beat-ingest-redact.sh
 	bash tests/test-research-dispositions-redact.sh
+	bash tests/test-research-tsv-path-sweep.sh
+	python3 -B scripts/research-tsv-path-sweep.py --check \
+		--files research-dispositions.tsv research-lessons.tsv \
+		research-lines.tsv research-subjects.txt
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
