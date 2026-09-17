@@ -133,6 +133,7 @@ test:
 	bash tests/test-model-deck-leg.sh
 	bash tests/test-model-remote-token-mode.sh
 	bash tests/test-model-bearer-argv.sh
+	bash tests/test-model-refresh-hygiene.sh
 	bash tests/test-model-reply-scrub.sh
 
 	bash tests/test-overnight-shutdown.sh

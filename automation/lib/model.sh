@@ -201,7 +201,7 @@ PY
 # race — the loser would POST the already-consumed token and get a false 401.
 # The token is re-read INSIDE the lock so the winner's new pair is observed.
 refresh_unsloth_token() {
- local rtok tmp code lock
+ local rtok tmp code lock btmp
  lock="$(dirname "$REFRESH_FILE")/refresh.lock"
  mkdir -p "$(dirname "$REFRESH_FILE")"
  exec 9>"$lock"
@@ -210,14 +210,32 @@ refresh_unsloth_token() {
   return 1
  }
  # read INSIDE the lock: a concurrent winner may have rotated the pair already
+ # mode-600 gate above the read (sixth credential-file reader; the pair is
+ # chmod-600 only after a successful rotation, so an operator-created/
+ # restored 0644 refresh file must be refused BEFORE the value is read —
+ # possession of the single-use refresh token mints access tokens).
+ if [ ! -f "$REFRESH_FILE" ]; then
+  breadcrumb model "refresh" "no refresh token file ($REFRESH_FILE)"
+  return 1
+ fi
+ if [ "$(stat -c %a "$REFRESH_FILE" 2>/dev/null)" != "600" ]; then
+  breadcrumb model "refresh" "refresh key file too open (chmod 600 required)"
+  return 1
+ fi
  rtok="$(cat "$REFRESH_FILE" 2>/dev/null)" || {
   breadcrumb model "refresh" "no refresh token file ($REFRESH_FILE)"
   return 1
  }
  tmp="$(mktemp)"
+ # body staged to a file (`-d @"$btmp"`): the refresh token VALUE must
+ # never ride the curl argv (/proc/<pid>/cmdline exposure; same
+ # argv-hygiene contract as the bearer legs, 2026-09-16/17).
+ btmp="$(mktemp)"
+ printf '{"refresh_token":"%s"}' "$rtok" >"$btmp"
  code="$(curl -s --max-time 30 -X POST -H "Content-Type: application/json" \
-  -d "{\"refresh_token\":\"$rtok\"}" -w '%{http_code}' -o "$tmp" \
+  -d @"$btmp" -w '%{http_code}' -o "$tmp" \
   "$UNSLOTH_URL/api/auth/refresh" 2>/dev/null)" || code=000
+ rm -f "$btmp"
  if [ "$code" = "200" ] && jq -e '.access_token and .refresh_token' "$tmp" >/dev/null 2>&1; then
   jq -r '.access_token' "$tmp" >"$TOKEN_FILE"
   jq -r '.refresh_token' "$tmp" >"$REFRESH_FILE"

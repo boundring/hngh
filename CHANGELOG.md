@@ -4,6 +4,12 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-17
+
+#### Changed
+
+- **Refresh path obeys the credential-seam contract** (2026-09-17-refresh-argv-body-and-refreshfile-gate.md): the unsloth refresh curl interpolated the single-use refresh token VALUE into the `-d` argv argument (world-readable in /proc/<pid>/cmdline for the whole call); the body is now staged to a mktemp file (`-d @"$btmp"`, path on argv, value never — the chat-leg pattern), keeping the wire bytes, `%{http_code}`/`-o` semantics, and breadcrumbs identical. REFRESH_FILE gets the mode-600 stat gate every other credential-file read has (sixth reader; refusal `refresh key file too open (chmod 600 required)`, fail-closed before the read). test-probe-hygiene.sh now hard-fails any interpolated `-d "{...$var...}"` curl body in both lint targets and positively pins the staged refresh form, closing the -d blind spot in the zero-credentials-on-argv contract. Red proofs: value on argv + 0644 refresh file POSTed, pre-fix.
+
 ### 2026-09-16
 
 #### Changed

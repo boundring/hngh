@@ -67,6 +67,21 @@ for c in "${curls[@]}"; do
   case "$c" in *'Authorization:'*) echo "FAIL: header on curl argv: $c"; fails=$((fails + 1)) ;; esac
 done
 
+# credential-value-on-argv guard (the -d blind spot, closed 2026-09-17
+# with the refresh-path fix): an interpolated curl body
+# (`-d "{...$var...}"`) puts the VALUE on argv — world-readable in
+# /proc/<pid>/cmdline for the whole call, same class as the Bearer
+# guard above. Bodies must be staged to a file (`-d @"$tmp"`) or be
+# static text with no interpolation.
+n_body=0
+for c in "${curls[@]}"; do
+  if printf '%s' "$c" | grep -Eq -- '(-d|--data) "(\\.|[^"\\])*\$'; then
+    n_body=$((n_body + 1))
+    echo "FAIL: interpolated body on curl argv: $c"
+  fi
+done
+ck "interpolated -d bodies on curl argv == 0" "0" "$n_body"
+
 # one printf Bearer directive per probed gate (the $var feeds the stdin
 # header; the key vars are tok/kimi_key/ocgo_key)
 n_dir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file" || true)"
@@ -106,10 +121,14 @@ ck "suite found curl records at all (file not drifted)" "yes" "$([ "${#curls[@]}
 # were converted first in ccf8d7b5), no curl record may carry the
 # Authorization header on argv, every non-exempt curl must use the stdin
 # config, and three Bearer directives must exist (_post_chat cfg,
-# unsloth_attempt, _unsloth_ctx_limit). The single exemption is the
-# refresh-path curl ($UNSLOTH_URL/api/auth/refresh): it carries the
-# single-use refresh token in the JSON body, not a Bearer header —
-# refresh-path scope proper, tracked separately from this lint.
+# unsloth_attempt, _unsloth_ctx_limit). The single -K exemption is the
+# refresh-path curl ($UNSLOTH_URL/api/auth/refresh): it carries no
+# Bearer header — but its single-use refresh token is still credential
+# material, so (2026-09-17 refresh-hygiene closure) the value rides a
+# staged file (`-d @"$btmp"`, path on argv, never the value) and this
+# lint pins both the staged form and the absence of ANY interpolated
+# `-d "{...$var...}"` body (the -d blind spot the Bearer guard never
+# covered).
 file2="$root/lib/model.sh"
 mapfile -t mcurls < <(
   python3 - "$file2" <<'PY'
@@ -148,6 +167,28 @@ n_mdir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file2" || tr
 mck "model.sh: three stdin Bearer directives" "3" "$n_mdir"
 mck "model.sh: suite found curl records at all (file not drifted)" "yes" \
   "$([ "${#mcurls[@]}" -ge 4 ] && echo yes || echo no)"
+
+# model.sh credential-value-on-argv guard: no interpolated curl body
+# anywhere (the refresh token historically rode `-d "{\"refresh_
+# token\":\"$rtok\"}"` — value world-readable on /proc cmdline; closed
+# 2026-09-17 by staging the body to a file). -d @"$tmp" is fine: the
+# file PATH is not a secret.
+m_nbody=0
+for c in "${mcurls[@]}"; do
+  if printf '%s' "$c" | grep -Eq -- '(-d|--data) "(\\.|[^"\\])*\$'; then
+    m_nbody=$((m_nbody + 1))
+    echo "FAIL: model.sh interpolated body on curl argv: $c"
+  fi
+done
+mck "model.sh: interpolated -d bodies on curl argv == 0" "0" "$m_nbody"
+
+# the refresh path, positively pinned: exactly one refresh curl, and it
+# must stage its body (`-d @"...` form) — so the class cannot regress
+# to an interpolated body OR to any other argv-carried shape.
+n_ref="$(printf '%s\n' "${mcurls[@]}" | grep -c '\$UNSLOTH_URL/api/auth/refresh' || true)"
+mck "model.sh: exactly one refresh-path curl" "1" "$n_ref"
+n_staged="$(printf '%s\n' "${mcurls[@]}" | grep '\$UNSLOTH_URL/api/auth/refresh' | grep -c -- '-d @"' || true)"
+mck "model.sh: refresh body staged to a file (-d @)" "1" "$n_staged"
 
 if [ "$fails" -gt 0 ] || [ "$m_fails" -gt 0 ]; then
   echo "probe-hygiene: $((fails + m_fails)) failure(s)"
