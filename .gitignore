@@ -35,3 +35,7 @@ automation/.lesson-harvest-last
 automation/.research-beat-last
 automation/.lesson-harvest-handoffs
 /prompts/overnight/*.context.txt
+.agent-scratch/
+.jcode-scratch/
+.scratch/
+.pi/
