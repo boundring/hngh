@@ -141,6 +141,66 @@ ck "unsloth absent: empty stdout" "" "$out"
 ck "unsloth absent: no-token-file breadcrumb" "1" \
   "$(grep -c 'no token file -> next backend' "$sb/STATE.md")"
 
+# 5. refresh_unsloth_token — the SIXTH credential-file reader
+#    (gap-refresh-argv-body-and-refreshfile-gate): REFRESH_FILE is
+#    single-use but credential-bearing (possession mints access
+#    tokens), so it gets the identical mode-600 gate above its cat.
+#    Exposure: refresh_unsloth_token chmods the pair only AFTER a
+#    successful rotation; an operator-created/restored 0644 refresh
+#    file was silently read and POSTed as the request body. Same
+#    refusal shape as sections 1/4, above the cat (dead URL -> rc 1
+#    and the refresh-failure breadcrumb shape prove the flow died at
+#    the gate, not at curl).
+rcall() { # refreshfile -> refresh_unsloth_token rc
+  (
+    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export HOME="$sb" TOKEN_FILE="$sb/nope4" REFRESH_FILE="$1"
+    export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
+    export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
+    export OLLAMA_MODEL=stub-ollama
+    export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
+    export MODEL_MAX_TOKENS=512 REMOTE_MODEL=stub-remote
+    bash -c '. "'"$root"'/lib/model.sh"; refresh_unsloth_token'
+  )
+}
+rtok="$sb/unsloth.refresh"
+printf 'refresh-key-value-1\n' >"$rtok"
+
+# 5a. too-open refresh file (0644): the gate refuses fail-closed BEFORE
+#     the value is read or sent; no credential POST leaves the box.
+chmod 644 "$rtok"
+: >"$sb/STATE.md"
+rc=0
+out="$(rcall "$rtok")" || rc=$?
+ck "refresh 0644: refused (rc 1)" "1" "$rc"
+ck "refresh 0644: empty stdout" "" "$out"
+ck "refresh 0644: too-open breadcrumb" "1" \
+  "$(grep -c 'refresh key file too open (chmod 600 required)' "$sb/STATE.md")"
+
+# 5b. the 0600 control: gate passes; the flow proceeds past the gate to
+#     the POST (dead URL -> the FAILED token-refresh breadcrumb shape,
+#     and NO too-open crumb, prove the gate did not fire).
+chmod 600 "$rtok"
+: >"$sb/STATE.md"
+rc=0
+out="$(rcall "$rtok")" || rc=$?
+ck "refresh 0600: refused only at HTTP (rc 1)" "1" "$rc"
+ck "refresh 0600: got past the gate (FAILED token-refresh breadcrumb)" "1" \
+  "$(grep -c '| model | token-refresh | FAILED' "$sb/STATE.md")"
+ck "refresh 0600: no too-open breadcrumb" "0" \
+  "$(grep -c 'too open' "$sb/STATE.md")"
+
+# 5c. absent refresh file keeps its own dormant breadcrumb (existing
+#     contract, pinned so the new gate cannot shadow it).
+: >"$sb/STATE.md"
+rc=0
+out="$(rcall "$sb/definitely-absent.refresh")" || rc=$?
+ck "refresh absent: refused (rc 1)" "1" "$rc"
+ck "refresh absent: no-refresh-token-file breadcrumb" "1" \
+  "$(grep -c 'no refresh token file' "$sb/STATE.md")"
+ck "refresh absent: no too-open breadcrumb" "0" \
+  "$(grep -c 'too open' "$sb/STATE.md")"
+
 [ "$fails" = 0 ] && echo "test-model-remote-token-mode: all pass" || {
   echo "test-model-remote-token-mode: $fails failure(s)"
   exit 1

@@ -1,5 +1,14 @@
 # 2026-09-16 — fifth token-file reader gated: unsloth_chat mode-600 gate
 
+> **2026-09-17 census amendment:** the "five of five readers" claim in
+> this record was the TOKEN_FILE/REMOTE_TOKEN_FILE census only; the
+> `REFRESH_FILE` read inside `refresh_unsloth_token` was a SIXTH
+> ungated credential-file reader (and the refresh token's value rode
+> the curl argv inside the `-d` body argument). Closed the next day —
+> see `2026-09-17-refresh-argv-body-and-refreshfile-gate.md`. The
+> post-refresh TOKEN_FILE re-read exemption below stands; it never
+> covered the refresh-token read itself.
+
 ## The gap
 
 Node `gap-unsloth-tokenfile-600-gate` (follow-up to the
