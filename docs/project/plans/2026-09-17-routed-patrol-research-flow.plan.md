@@ -8,3 +8,7 @@ at 2026-09-17T10:00:14Z. Alert text: patrol research-flow: stalled-line on patro
 
 - [ ] Delve: open research subject fail-20260917-patrol-research-flow for patrol:research-flow; record disposition; then fix or park
       Verification: research subject fail-20260917-patrol-research-flow present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-17T11:00:13Z re-occurred (dedup window expired)
