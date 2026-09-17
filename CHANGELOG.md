@@ -8,6 +8,23 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Supportive-record fact corrections of record**
+  (docs/records/2026-09-17-supportive-record-fact-corrections.md):
+  four adversarial findings reconciled against primary evidence.
+  Alert `fb894f8d` latency is ~6 minutes (pair 04:04:04Z/04:04:51Z,
+  alert 04:10:41Z; the "~4h06m" and the reconciliation record's own
+  "hours after" wording were -0400/UTC misreads, both corrected).
+  `e916af9e`/`8e376ff2` are window day 0 (2026-09-13 20:20/20:21
+  -0400), not 2026-09-16 — the per-command identity cure was
+  demonstrated day 0 and not propagated for ~3 days, strengthening
+  the cleanup-lag reading. The `bypass-j-adjacent-credentials`
+  provenance chain is closed by verbatim transcript reads: gate-injected
+  by rose (4 nodes), expanded by ant into 4 `bypass-j-adj-*` children,
+  gate ox later injected 6 more adj-* gap nodes — supportive-5's
+  list was right modulo the prefix, Caveat A answered machinery-grown.
+  The plan's 07:15Z handoff row citation is fixed to its real location,
+  automation/agent-handoffs.md (never lived in automation/STATE.md).
+
 - **Ceremony commit identity pinned at the drive layer**
   (docs/records/2026-09-16-identity-seam-reconciliation.md, "Kernel
   ceremony commit identity"): the certificate-bound `git commit` from
