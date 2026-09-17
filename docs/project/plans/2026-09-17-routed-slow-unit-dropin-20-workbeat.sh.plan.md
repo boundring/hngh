@@ -12,3 +12,4 @@ at 2026-09-17T11:00:13Z. Alert text: [oversight] slow-unit: dropin:20-workbeat.s
 ## Occurrences
 
 - 2026-09-17T12:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T13:00:13Z re-occurred (dedup window expired)

@@ -8,3 +8,7 @@ at 2026-09-17T12:00:13Z. Alert text: patrol automation-gate: gate-red on hngh-au
 
 - [ ] Delve: open research subject fail-20260917-patrol-automation-gate for patrol:automation-gate; record disposition; then fix or park
       Verification: research subject fail-20260917-patrol-automation-gate present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-17T13:00:13Z re-occurred (dedup window expired)
