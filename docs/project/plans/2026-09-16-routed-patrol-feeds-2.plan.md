@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:feeds -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:feeds  cause=obsolete disposed=2026-09-17T06:00:34Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:feeds`
@@ -13,3 +13,4 @@ at 2026-09-16T01:00:39Z. Alert text: patrol feeds: feed-missing on dashboard/res
 
 - 2026-09-17T04:00:13Z re-occurred (dedup window expired)
 - 2026-09-17T05:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T06:00:34Z re-occurred (dedup window expired)

@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation  cause=obsolete disposed=2026-09-16T01:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation  cause=obsolete disposed=2026-09-16T01:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-17T06:00:35Z reason=identity re-occurred 4 times without landing; operator escalation stands -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-blocked:2026-09-13-governed-fleet-consolidation`
@@ -14,3 +14,4 @@ at 2026-09-13T23:00:39Z. Alert text: plan 2026-09-13-governed-fleet-consolidatio
 - 2026-09-15T23:00:39Z re-occurred (dedup window expired)
 - 2026-09-16T00:00:19Z re-occurred (dedup window expired)
 - 2026-09-16T01:00:39Z re-occurred (dedup window expired)
+- 2026-09-17T06:00:35Z re-occurred (dedup window expired)
