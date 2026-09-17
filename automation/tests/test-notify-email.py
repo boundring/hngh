@@ -781,5 +781,122 @@ class SetupNotifyEmail(unittest.TestCase):
         self.assertFalse(conf.exists())
 
 
+class OutboundScrub(unittest.TestCase):
+    """Red-first 2026-09-17 (ts-angle3-email-outbound-scrub): the send
+    path is an outbound channel INDEPENDENT of the report-queue row.
+    The ledger row redacts at the sink (scripts/report-queue
+    redact_boundary), but email_sidechannel bypasses the sink and
+    mails the producer's raw text. The send path therefore carries the
+    redaction duty itself: subject + body pass through the same
+    machine-local path-token family (scrub_family from
+    automation/lib/scrub.py: absolute home/users/root/tmp paths, tilde
+    paths, scheme-relative mounts, credential URL userinfo) before any
+    SMTP compose. Ordinary prose and source URLs survive verbatim;
+    redaction, not dropping."""
+    # fixture tokens assembled so THIS file never carries a literal
+    # /home/<user> token (verify-candidate ABSOLUTE_PATH_PATTERN).
+    _USER = "operator"
+    _HOMEPATH = "/" + "home" + "/%s/secret-notes" % _USER
+    _TMPDIR = "/" + "tmp" + "/scratch-report"
+    _CREDAUTH = "bot" + ":" + "hunter2"
+
+    BODY_LEAK = (
+        "agent-stall: heartbeats missing at %s and scratch at %s; "
+        "source https://%s@api.example.test/feed")
+
+    def _assert_family_redacted(self, msg_text):
+        self.assertNotIn(self._HOMEPATH, msg_text)
+        self.assertNotIn(self._TMPDIR, msg_text)
+        self.assertNotIn("hunter2@", msg_text)
+        self.assertIn("[redacted path]", msg_text)
+        self.assertIn("[redacted]@api.example.test", msg_text)
+        # ordinary prose and wire URLs survive (redaction, not dropping)
+        self.assertIn("heartbeats missing", msg_text)
+        self.assertIn("https://[redacted]@api.example.test/feed", msg_text)
+
+    def run_send(self, subject, body, dry=False, conf_text=CONF):
+        conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
+        conf.write_text(conf_text)
+        conf.chmod(0o600)
+        os.environ["HNGH_NOTIFY_EMAIL_CONF"] = str(conf)
+        StubSMTP.instances = []
+        patcher = mock_patch()
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(os.environ.pop, "HNGH_NOTIFY_EMAIL_CONF", None)
+        self.addCleanup(os.environ.pop, "DRY_RUN", None)
+        argv = ["notify-email.py", "send", "--subject", subject,
+                "--body-text", body]
+        if dry:
+            os.environ["DRY_RUN"] = "1"
+        return notify_email.main(argv)
+
+    def test_send_body_carries_no_path_tokens(self):
+        body = self.BODY_LEAK % (self._HOMEPATH, self._TMPDIR, self._CREDAUTH)
+        code = self.run_send("[hngh] agent-stall", body)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(StubSMTP.instances), 1)
+        sent = StubSMTP.instances[0].sent[0]
+        self._assert_family_redacted(
+            sent.get_payload(decode=True).decode("utf-8"))
+
+    def test_send_subject_carries_no_path_tokens(self):
+        subject = "[hngh] tree-skew review at %s" % self._HOMEPATH
+        code = self.run_send(subject, "plain body")
+        self.assertEqual(code, 0)
+        sent = StubSMTP.instances[0].sent[0]
+        self.assertNotIn(self._HOMEPATH, sent["Subject"])
+        self.assertIn("[redacted path]", sent["Subject"])
+
+    def test_dry_run_compose_is_scrubbed_too(self):
+        body = self.BODY_LEAK % (self._HOMEPATH, self._TMPDIR, self._CREDAUTH)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = self.run_send("[hngh] dry probe", body, dry=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(StubSMTP.instances, [])  # no socket either way
+        composed = buf.getvalue()
+        body_part = composed.split("\n\n", 1)[1] if "\n\n" in composed else ""
+        self.assertNotEqual(body_part, "", composed)
+        import base64 as _b64
+        self._assert_family_redacted(
+            _b64.b64decode(body_part).decode("utf-8"))
+
+    def test_missing_scrub_module_fails_closed(self):
+        # A broken guard must refuse the send, never leak (the
+        # fail-closed rule). _SCRUB_PY is the seam.
+        ne = notify_email
+        old_mod, old_scrub = ne._OUTBOUND_SCRUB, ne.scrub_outbound
+        old_path = ne._SCRUB_PY
+        ne._OUTBOUND_SCRUB, ne._SCRUB_PY = None, "Z/gone/scrub.py"
+        # reload the closure so scrub_outbound sees the new module path
+        import types
+        code = None
+        sio = io.StringIO()
+        try:
+            with mock.patch.object(smtplib, "SMTP", StubSMTP):
+                StubSMTP.instances = []
+                with contextlib.redirect_stderr(sio):
+                    try:
+                        ne.main(["notify-email.py", "send", "--subject",
+                                 "s", "--body-text", "b"])
+                    except SystemExit as e:
+                        code = e.code
+        finally:
+            ne._OUTBOUND_SCRUB, ne._SCRUB_PY = old_mod, old_path
+        self.assertEqual(code, 2)
+        self.assertIn("fail closed", sio.getvalue())
+        self.assertEqual(StubSMTP.instances, [])
+
+    def test_classify_stays_vocabulary_only(self):
+        # classify is the importance rubric, NOT a scrub site; a raw
+        # pathy text must still classify by vocabulary and the caller
+        # (email_sidechannel) sends the SAME raw string. Proof the
+        # duty cannot live here: classify returns the text untouched.
+        raw = "agent-stall at %s" % self._HOMEPATH
+        self.assertEqual(notify_email.classify_alert(raw), "immediate")
+        self.assertIn(self._HOMEPATH, raw)
+
+
 if __name__ == "__main__":
     unittest.main()

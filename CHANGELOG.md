@@ -8,6 +8,18 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **notify-email outbound scrub: the send path redacts alert bodies
+  itself** (docs/records/2026-09-17-email-outbound-scrub-seam.md):
+  `scripts/notify-email.py send` now scrubs `--subject` and body
+  through the machine-local token family (automation/lib/scrub.py,
+  one family) before SMTP compose — the report-queue row's sink-side
+  redaction never touched the email bytes, and emitters were not a
+  reliable pre-redaction source (census of 54 `--add` callers closed
+  in the record). Fail-closed: unreadable scrub module -> exit 2, no
+  send. classify stays the vocabulary rubric. Red-first tests in
+  `automation/tests/test-notify-email.py` (`OutboundScrub`, 5 cases).
+
+#### Changed
 - **Fixture containment: kernel tests can no longer contaminate the
   kernel .git/config**
   (docs/records/2026-09-17-fixture-containment-gitdir.md): the

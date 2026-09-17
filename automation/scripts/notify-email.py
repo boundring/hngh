@@ -41,6 +41,7 @@ usage: notify-email.py send --subject S (--body-file F | --body-text T)
        notify-email.py classify --text T   # prints immediate|digest
 """
 import configparser
+import importlib.util
 import os
 import smtplib
 import subprocess
@@ -56,6 +57,45 @@ OP_TIMEOUT = 45
 def fail(msg, code):
     sys.stderr.write("notify-email: %s\n" % msg)
     sys.exit(code)
+
+
+_SCRUB_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         os.pardir, "lib", "scrub.py")
+
+
+def fail_closed():
+    """True iff the outbound scrub guard loaded (or loads now). The
+    send path is an outbound channel independent of the report-queue
+    row (ts-angle3-email-outbound-scrub, 2026-09-17): subjects and
+    bodies pass through the machine-local path-token family
+    (automation/lib/scrub.py) before any SMTP compose. Ordinary prose
+    and source URLs survive verbatim except credential userinfo;
+    redaction, not dropping."""
+    global _OUTBOUND_SCRUB
+    if _OUTBOUND_SCRUB is not None:
+        return _OUTBOUND_SCRUB
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "notify_email_scrub", _SCRUB_PY)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _OUTBOUND_SCRUB = lambda text: mod.scrub_paths(str(text or ""))
+    except Exception:
+        _OUTBOUND_SCRUB = False
+    return _OUTBOUND_SCRUB
+
+
+_OUTBOUND_SCRUB = None
+
+
+def scrub_outbound(text):
+    """Fail-closed outbound scrub: unreadable module grades harder than
+    a leak, so a broken guard refuses the send (never leaks)."""
+    fn = fail_closed()
+    if fn is False:
+        fail("outbound scrub module unavailable at %s - fail closed"
+             % _SCRUB_PY, 2)
+    return fn(text)
 
 
 def conf_path():
@@ -223,6 +263,13 @@ def main(argv):
         fail("usage: notify-email.py send --subject S (--body-file F|--body-text T)\n"
              "       notify-email.py classify --text T", 2)
     subject, body, html_body = parse_args(argv[2:])
+    # Outbound scrub (ts-angle3-email-outbound-scrub 2026-09-17): the
+    # send path is an outbound channel INDEPENDENT of the report-queue
+    # row's sink-side redact_boundary; subject and body carry the
+    # machine-local token family here, at the last boundary before
+    # SMTP compose. classify stays vocabulary-only (the rubric).
+    subject = scrub_outbound(subject)
+    body = scrub_outbound(body)
     cp = load_conf()
     msg = compose(cp, subject, body, html_body)
     if os.environ.get("DRY_RUN") == "1":
