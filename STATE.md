@@ -1,1 +1,0 @@
-2026-09-14T02:36:44Z | overnight-lead | step 4 verified (tmux observer live-probed, labeled pane confirmed) | plan checkbox staged uncommitted: kernel gate red on fleet-manager offline test (mesh up, env skew), alert 36c18fa9
