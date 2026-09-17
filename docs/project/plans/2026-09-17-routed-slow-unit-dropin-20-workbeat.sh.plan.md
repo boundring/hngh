@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:20-workbeat.sh -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=slow-unit:dropin:20-workbeat.sh  cause=obsolete disposed=2026-09-17T14:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-17 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:20-workbeat.sh`
@@ -13,3 +13,4 @@ at 2026-09-17T11:00:13Z. Alert text: [oversight] slow-unit: dropin:20-workbeat.s
 
 - 2026-09-17T12:00:13Z re-occurred (dedup window expired)
 - 2026-09-17T13:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T14:00:13Z re-occurred (dedup window expired)
