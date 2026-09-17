@@ -35,6 +35,26 @@
 (require :asdf)
 (require :uiop)
 
+;; --- commit identity seam --------------------------------------------
+;;
+;; Every git mutation this drive performs (the certificate-bound commit
+;; and the gated push) inherits this process environment. The ambient
+;; .git/config identity leaked here before: 42 window commits (see
+;; docs/records/2026-09-16-identity-seam-reconciliation.md) rode
+;; whatever identity the working repo happened to carry, including the
+;; anonymous fixture identity from kernel test runs. Each pin is a
+;; default, not a hijack: it applies only when the caller did not
+;; already export the variable (unset or empty), so explicit
+;; GIT_AUTHOR_* / GIT_COMMITTER_* wins.
+
+(flet ((pin-identity-default (name value)
+         (unless (plusp (length (or (uiop:getenv name) "")))
+           (setf (uiop:getenv name) value))))
+  (pin-identity-default "GIT_AUTHOR_NAME" "hngh-machine")
+  (pin-identity-default "GIT_AUTHOR_EMAIL" "automation@hngh.local")
+  (pin-identity-default "GIT_COMMITTER_NAME" "hngh-machine")
+  (pin-identity-default "GIT_COMMITTER_EMAIL" "automation@hngh.local"))
+
 (let* ((script-path (or *load-truename* *compile-file-truename*
                         (truename (first sb-ext:*posix-argv*))))
        (repo-root (make-pathname :directory (butlast (pathname-directory script-path))))

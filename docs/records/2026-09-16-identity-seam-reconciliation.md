@@ -71,6 +71,8 @@ git-invoking automation writer (cadence/, jobs/, lib/, scripts/):
   automation free-commit surface, so it is reported here for the
   operator rather than edited. Mitigation in depth: the remediated
   local `.git/config` identity plus the automation contract test above.
+  CLOSED 2026-09-17: see "Kernel ceremony commit identity" below — the
+  pin landed in `scripts/ceremony-drive`, src/ untouched.
 
 The five writers fixed in this slice, with the window commits they
 authored as Fixture (family census above):
@@ -80,6 +82,32 @@ authored as Fixture (family census above):
 - `automation/cadence/day/17-torch-audit.sh:202` (4, torch refresh)
 - `automation/cadence/hour/30-kernel-ledger-sync.sh:45` (89)
 - `automation/cadence/hour/33-research-beat.sh:183` (240)
+
+## Kernel ceremony commit identity (closed 2026-09-17)
+
+The last open seam from this window is closed. The kernel ceremony
+executor (`src/adapter/mutation.lisp` `command-for`, the certificate
+bound `git commit`) still took ambient identity after the automation
+pins above: its 42 window commits prove it fired under Fixture, and
+`scripts/ceremony-drive` set no `GIT_*` identity before spawning the
+mutation-check subprocess. Kernel `src/` stays untouched (the fixed
+argv contract and its tests are intact); the pin landed at the drive
+layer instead, in `scripts/ceremony-drive` (kernel `scripts/` —
+committed through the ceremony itself, per the operator-flexibility
+doctrine): it exports `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` /
+`GIT_COMMITTER_NAME` / `GIT_COMMITTER_EMAIL` =
+`hngh-machine <automation@hngh.local>` as defaults before the loop
+runs, applied only when the caller did not already export the
+variable, so an explicit operator environment keeps precedence.
+
+- Contract test: `tests/scripts/test-ceremony-drive-commit-identity.py`
+  (red-proven pre-fix — a real drive over a leaky-ambient fixture repo
+  committed as `Leaky Ambient <leaky@example.invalid>`; green
+  post-fix; second case pins the operator-override precedence). Wired
+  into the kernel `make test` gate.
+- Post-land verification: the ceremony commit carrying this fix is
+  itself authored and committed `hngh-machine <automation@hngh.local>`
+  through the pinned path.
 
 ## Alert trail
 
