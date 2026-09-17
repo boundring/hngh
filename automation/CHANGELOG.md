@@ -2,6 +2,29 @@
 
 ## 2026-09-17
 
+- patrol: gut-shape classifier fix — the LARGE pre-check's original
+  pure-deletion rule (additions==0 and deletions>0) did not catch the
+  real gut it was written for: ba6b390's actual numstat is 1+/36-
+  Makefile, 1+/386- README.md (the gut kept one vestigial line per
+  file), so a replay and the c4 delete-KNOWN_EXEMPTIONS trigger
+  (ba6b390+d2d8f51) would both have auto-declared. The rule is now
+  deletion-dominance: pure deletion (additions==0, deletions>0) OR
+  >= 20 deletions at >= 20:1 deletions-to-additions per file
+  (_GUT_MIN_DELETIONS floor keeps 1+/1- doc edits SMALL; the ratio —
+  not a hard additions cap — keeps 2+/386- a gut; revert shapes like
+  d2d8f51's 36+/1-, 386+/1- fail the ratio and stay SMALL).
+  Red-first against a REAL temp-git fixture (new
+  tests/test-patrol.py::RealGitClassifier — gut/revert/tiny-edit
+  through unmocked commit_numstat; the gut test failed with reason ''
+  before the fix), green after. Live replay of the six production
+  declared SHAs through the fixed classifier: ba6b390 LARGE-refuse
+  (gut-shape diff 1+/36- Makefile); d2d8f51, 04f0001, 29d2a27,
+  526cd3fd, e6e98f75 all SMALL-declare; the c4 trigger set
+  ba6b390+d2d8f51 refuses. Full automation make test rc=0 (ALL PASS).
+  Record amendment:
+  docs/records/2026-09-17-patrol-large-cure-refusal.md (2026-09-17
+  gut-shape amendment).
+
 - security: identity-seam guard scan scope extended past `*.sh`/`*.py`
   (the non-sh/py writer audit, closing the admitted gap). The guard now
   also scans `.js`/`.mjs` under `automation/{dashboard,jcode}` plus the
