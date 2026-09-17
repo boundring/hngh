@@ -162,6 +162,11 @@ KNOWN_EXEMPTIONS = {
         "reason": "fixture pair revert: restores Makefile+README (declared miss)",
         "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
     },
+    "514bdc00": {
+        "reason": "batch stable-point snapshot before restart: worker-modified test files committed together (gate 2931 green, declared miss)",
+        "patch-id": "a9cdae6afaaf938a3910d0988c9d51838aba79b3",
+    },
+
     # fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed -- kernel-gate red cure 2026-09-13, declared not rewritten
     "04f0001": {
         "reason": "fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed (declared miss, gate-cure patrol)",
@@ -204,7 +209,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 KERNEL_GIT_DIR = subprocess.run(
     ["git", "-C", os.path.join(HERE, "..", ".."),
      "rev-parse", "--absolute-git-dir"],
-    capture_output=True, text=True, check=True,
+    capture_output=True, text=True, errors='replace', check=True,
     env={k: v for k, v in os.environ.items()
          if k not in ("GIT_DIR", "GIT_WORK_TREE")}).stdout.strip()
 
@@ -213,7 +218,7 @@ def run(argv):
     return subprocess.run(
         ["git", "--git-dir", KERNEL_GIT_DIR] + list(argv[1:]) if argv
         and argv[0] == "git" else argv,
-        capture_output=True, text=True, check=True)
+        capture_output=True, text=True, errors='replace', check=True)
 
 
 def commits_since(rev):
@@ -259,7 +264,7 @@ def patch_id(sha):
     diff = run(["git", "diff-tree", "-p", "--full-index", "--root", sha]).stdout
     out = subprocess.run(
         ["git", "--git-dir", KERNEL_GIT_DIR, "patch-id", "--stable"],
-        input=diff, capture_output=True, text=True, check=True).stdout
+        input=diff, capture_output=True, text=True, errors='replace', check=True).stdout
     parts = out.split()
     return parts[0] if parts else ""
 
