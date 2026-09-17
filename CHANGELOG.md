@@ -8,6 +8,23 @@ lives under Pre-release / early development until the first release.
 
 #### Changed
 
+- **Fixture containment: kernel tests can no longer contaminate the
+  kernel .git/config**
+  (docs/records/2026-09-17-fixture-containment-gitdir.md): the
+  2026-09-13 rehearsal-lane incident (rehearsal-lane-20260913T000118
+  log L159 sweep: hostile GIT_DIR exported over the kernel repo turned
+  test-verify-candidate.py's bare fixture `git config`/`git commit`
+  into kernel-repo writes, leaving author Fixture, kernel commits
+  ba6b3905+d2d8f515) is closed as a class. Kernel test fixtures pin
+  identity per commit invocation (`git -c user.*=`), strip
+  GIT_DIR/GIT_WORK_TREE at import, pin global/system config to
+  /dev/null, and verify-candidate carries a loud kernel-checkout
+  guard; the loop-history guard pins all reads to its own repo's git
+  dir. Automation test fixtures got the same GIT_DIR strip (7 python
+  suites, 9 shell suites). Acceptance: full `make test` green with
+  GIT_DIR pointed at a protected canary; canary .git/config
+  byte-identical after.
+
 - **Cert disposition surface closure: orphaned candidate certs are
   moot by mechanism**
   (docs/records/2026-09-17-cert-disposition-surface-closure.md):
@@ -105,6 +122,24 @@ lives under Pre-release / early development until the first release.
   ceremony, attributed hngh-machine.
 
 - **Refresh path obeys the credential-seam contract** (2026-09-17-refresh-argv-body-and-refreshfile-gate.md): the unsloth refresh curl interpolated the single-use refresh token VALUE into the `-d` argv argument (world-readable in /proc/<pid>/cmdline for the whole call); the body is now staged to a mktemp file (`-d @"$btmp"`, path on argv, value never — the chat-leg pattern), keeping the wire bytes, `%{http_code}`/`-o` semantics, and breadcrumbs identical. REFRESH_FILE gets the mode-600 stat gate every other credential-file read has (sixth reader; refusal `refresh key file too open (chmod 600 required)`, fail-closed before the read). test-probe-hygiene.sh now hard-fails any interpolated `-d "{...$var...}"` curl body in both lint targets and positively pins the staged refresh form, closing the -d blind spot in the zero-credentials-on-argv contract. Red proofs: value on argv + 0644 refresh file POSTed, pre-fix.
+
+- **Refuted publish-claim corrected in the sink-bypass record**
+  (docs/records/2026-09-16-report-queue-sink-bypass-closure.md, §What
+  this does not cover): the sentence "Existing leaked bodies (976f09b8,
+  3342f352, 71d03fef) are already in git history and on the public
+  origin" was adjudicated REFUTED (publish-claim audit,
+  2026-09-17T04:37Z) — the three body files are untracked, never
+  committed to any ref, absent from all reflogs (zero fragment matches
+  in `git rev-list --all --reflog --objects`), and at the 04:37Z audit
+  existed only as unreachable stash/WIP objects (blobs 1d34a452,
+  ea88947d, d4452432 held by WIP commits dcacfb74, 59f08875,
+  91ab48ca), since pruned by gc (10:13Z re-verification: all six
+  objects gone). Same correction folds in the closed follow-up: the
+  20 pre-2026-08-27 tracked-era alert bodies at 6529562b contain zero
+  raw `/tmp/hngh-*.store` paths (each has 2 `stale-store:` mentions,
+  no raw path), so published history never exposed this record's
+  actual leak class. Residual exposure is the live untracked
+  working-tree files only; scrub decision stays operator-visible.
 
 ### 2026-09-16
 
