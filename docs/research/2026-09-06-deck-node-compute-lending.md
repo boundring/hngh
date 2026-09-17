@@ -20,7 +20,7 @@ its path. Estimates are marked as such.
 | `lscpu` | 8 threads, "AMD Custom APU 0932" |
 | `free -h` | 14 GiB RAM usable, 8.2 GiB swap (16 GiB device) |
 | `mem_info_vram_total` | 1073741824 -- 1 GiB carved VRAM (SteamOS default; BIOS allows up to 4 GiB) |
-| `df -h /home` | 939G volume, 344G free |
+| `df -h [redacted path]` | 939G volume, 344G free |
 | `command -v sbcl ollama llama-server llama-cli gcc make` | all absent |
 | `command -v python3 git jq` | python3 3.13.5, git 2.50.1, jq present |
 | `pacman -Si sbcl` | sbcl 2.5.7-1, repository extra-3.8.1x -- installable |
@@ -68,7 +68,7 @@ Candidates, cheapest first:
   RDNA2 CUs with 1 GiB carved VRAM backed by 14 GiB shared RAM
   (probes above). Realistic llama.cpp/vulkan payload on that APU: a
   7-8B model at Q4_K_M quantization -- a roughly 4.5-5 GB file served
-  from the 344G free /home. Vulkan on RDNA2 can allocate beyond the
+  from the 344G free [redacted path]. Vulkan on RDNA2 can allocate beyond the
   1 GiB carve from shared system memory (the carve is a floor, not a
   ceiling, on Linux), and ~5-10 tok/s for a 7-8B Q4 on the deck is the
   community-reported range -- estimate, not a probe; the admission

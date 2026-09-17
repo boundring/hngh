@@ -67,13 +67,13 @@ gate-rerun log clobber (2026-09-10: fixture evidence mv'd into
 automation/logs as kernel-gate evidence, commit d214e591) was one
 instance of a pattern: automation/lib/model.sh's
 tmp-modelused.txt (fixed path, concurrent model_call writers),
-per-tier /tmp locks that assume one operator host, failfirst state
-in /tmp/hngh-failfirst (resets on reboot - the ladder forgets its
+per-tier ~tmp locks that assume one operator host, failfirst state
+in ~tmp/hngh-failfirst (resets on reboot - the ladder forgets its
 own degradations every boot, which is why speed-3 persisted
 'through' reboots only by luck of no reboot). model-demote.tsv got
 it right (automation/state/, durable). Fix direction: an audit pass
 that moves behavioral state to automation/state/ (failfirst first)
-and leaves only true serialization locks in /tmp.
+and leaves only true serialization locks in ~tmp.
 
 ### 5. major: automation/ sprawl with the abstractions the
 inventory already flagged. 149 plan files (8 overnight-continuity

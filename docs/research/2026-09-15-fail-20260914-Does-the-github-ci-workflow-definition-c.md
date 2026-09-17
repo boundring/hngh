@@ -8,7 +8,7 @@ material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260914-Does-the-
 **Line:** Does the github-ci workflow definition contain an embedded copy of the patrol verdict rule, and does it diff against the kernel's canonical rules file?
 **State:** contracting → **closed (final record)**
 **Repository under investigation:** `hngh/hngh-automation` (GitHub Actions workflows)
-**Canonical source:** `/home/bracker/Projects/etc/hngh` (kernel repository)
+**Canonical source:** `~/Projects/etc/hngh` (kernel repository)
 
 ---
 

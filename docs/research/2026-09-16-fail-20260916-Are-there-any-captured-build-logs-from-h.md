@@ -74,7 +74,7 @@ If no captured log exists in the repository (or if CI is absent), reproduce a re
 
 ```bash
 cd ~/Projects/etc/hngh
-make -j$(nproc) 2>&1 | tee /tmp/hngh-recursive-make-error.log
+make -j$(nproc) 2>&1 | tee ~tmp/hngh-recursive-make-error.log
 ```
 
 Verify the output contains `make[2]:` or deeper. Commit a minimal excerpt (≤ 50 lines) to a stable path such as `docs/build-examples/recursive-make-error.txt` (or equivalent, per project convention). This gives future beats a concrete artifact path rather than an ephemeral CI URL. Per R4 in the prior material, use `git add -f` if the path is `.gitignore`-excluded by default.

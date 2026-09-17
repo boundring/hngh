@@ -92,7 +92,7 @@ Nearly every routed candidate (#2–#4, #11–#18) follows the identical pattern
 **Proposal:** A plan template file (`docs/project/plans/routed-candidate-template.md`) that automated routing fills in with alert text, routed-from identity, and one concrete step derived from the alert investigation output. Currently each routed plan is handwritten despite having only 1 line of variable content.
 
 ### 5. Ceremony-drive invocation repetition
-Plans #1, #9, #10, and predecessors repeatedly describe the same ceremony process: "ONE certificate ceremony via scripts/ceremony-drive (fresh /tmp store; pre-flight candidates against the public-content gate first...)" with kernel `make test` green. This exact operational detail is repeated 10+ times across different plans. **Proposal:** Step descriptions reference `ceremony-drive` by name only; the operator-facing execution contract (fresh store, public-content gate, no src/ files) lives in README or a runbook.
+Plans #1, #9, #10, and predecessors repeatedly describe the same ceremony process: "ONE certificate ceremony via scripts/ceremony-drive (fresh ~tmp store; pre-flight candidates against the public-content gate first...)" with kernel `make test` green. This exact operational detail is repeated 10+ times across different plans. **Proposal:** Step descriptions reference `ceremony-drive` by name only; the operator-facing execution contract (fresh store, public-content gate, no src/ files) lives in README or a runbook.
 
 ## Ordering Conflicts
 
@@ -137,7 +137,7 @@ Conflict risk: low. S6 modifies auth and data feed; S2 adds page rendering. Diff
 | Plans | What they modify |
 |-------|-----------------|
 | #7 (automation-schedule-optimization) S2 | Add priority=high front-matter sort to slot-0 selection |
-| #19 (stall-recovery) S7/S9 | S7: trap SIGTERM/SIGINT for graceful shutdown; move failfirst state out of /tmp; S9: implement quota model routing in select_model path |
+| #19 (stall-recovery) S7/S9 | S7: trap SIGTERM/SIGINT for graceful shutdown; move failfirst state out of ~tmp; S9: implement quota model routing in select_model path |
 | #19 (stall-recovery) S10 | Route review/digest lane through lib/model.sh quota ladder |
 
 Conflict risk: HIGH. All three touch the central orchestrator. #7 changes slot-0 selection. #19 S7 changes trap/shutdown behavior. #19 S9/S10 change model selection logic. These CANNOT safely land in the same beat without coordinating. Must serialize in order: #7 S2 first (selector change), then #19 S9 (model routing), then #19 S7 (lifecycle traps).
@@ -150,13 +150,13 @@ Conflict risk: HIGH. All three touch the central orchestrator. #7 changes slot-0
 
 Conflict risk: medium. #19 actually writes model routing; #7 measures its impact. #4 can read #9's work but does not write it. Safe if #9 lands before #4 executes.
 
-### `failfirst` state (`/tmp/hngh-failfirst` vs `automation/state/`) — 2 plans
+### `failfirst` state (`~tmp/hngh-failfirst` vs `automation/state/`) — 2 plans
 | Plans | What they do |
 |-------|-------------|
-| #19 (stall-recovery) S7 | Move failfirst state from /tmp to persistent path |
+| #19 (stall-recovery) S7 | Move failfirst state from ~tmp to persistent path |
 | #19 (stall-recovery) S1 | launch-session.sh uses failfirst state for bad-execution counting |
 
-Same plan internally: S7 must land before S1 becomes effective, but both are in the same plan so ordering is guaranteed. External risk: if another session still reads from /tmp during transition.
+Same plan internally: S7 must land before S1 becomes effective, but both are in the same plan so ordering is guaranteed. External risk: if another session still reads from ~tmp during transition.
 
 ### `CHANGELOG.md` — 4 plans add entries
 | Plans | What they add |

@@ -30,7 +30,7 @@
 - unsloth empty content x2 (00:01:17, 00:01:43), retrying budget=8192 thinking=off, next backend each time
 - research-overflow: synthesized 1 sourced subject (synth-2026-09-10-3), seeded research line planned -> expanding via deck:deck-7b [00:02:04]
 - research-beat: synth-2026-09-10-3 expanding->contracting via kimi:k3-256k [00:04:14]
-- **stale-store alerts** appear first time: /tmp/hngh-cer-diag-1788995914 untouched 30min+, /tmp/hngh-cer-gatefix-1788994872, /tmp/hngh-cer-pushfix-1788995719 [00:00:15]
+- **stale-store alerts** appear first time: ~tmp/hngh-cer-diag-1788995914 untouched 30min+, ~tmp/hngh-cer-gatefix-1788994872, ~tmp/hngh-cer-pushfix-1788995719 [00:00:15]
 - slow-unit alert: dropin:33-research-beat.sh wall=234.0s median=0.1s [00:05:00]
 - 50-research-overflow: synth-2026-09-10-3 crystallized via deck:deck-7b [00:19:18]
 - Research overflow continued cycling every 5m (skipped until lines drain)
@@ -104,7 +104,7 @@ FAILFIRST speed has been locked at **speed=3** (cautious, 1 concurrent session m
 
 ## Anomalies
 
-1. **Three stale-store alerts** first seen at 00:00:15Z and repeating every 5m: `/tmp/hngh-cer-diag-1788995914`, `/tmp/hngh-cer-gatefix-1788994872`, `/tmp/hngh-cer-pushfix-1788995719` — these are leftover ceremony temporary stores from the 23:16-23:19 gate-fixing cycle, abandoned because the gate immediately flipped red again before any real mutation could occur. They represent wasted computation and should be cleaned.
+1. **Three stale-store alerts** first seen at 00:00:15Z and repeating every 5m: `~tmp/hngh-cer-diag-1788995914`, `~tmp/hngh-cer-gatefix-1788994872`, `~tmp/hngh-cer-pushfix-1788995719` — these are leftover ceremony temporary stores from the 23:16-23:19 gate-fixing cycle, abandoned because the gate immediately flipped red again before any real mutation could occur. They represent wasted computation and should be cleaned.
 
 2. **slow-unit:dropin:16-remote-push.sh wall=23.1s median=0.0s** appeared 5 times (02:05, 02:10, 02:15, 02:20, 02:25Z) — the push check itself is slow, likely due to the gate-red path taking longer than the fast-path skip. The consistent 23.1s wall time is suspicious.
 
@@ -189,7 +189,7 @@ the refusal crumb carries the last lines
   user units (verified: systemctl show ExecStart
   path expands to the user's home), so semantics are unchanged and the files are
   now ceremony-landable.
-- Stale ceremony stores swept (/tmp/hngh-cer-{diag,gatefix,pushfix}-*
+- Stale ceremony stores swept (~tmp/hngh-cer-{diag,gatefix,pushfix}-*
   removed, 2026-09-10 ~02:5xZ).
 
 ## Addendum: stall-recovery plan clobbered and recovered
@@ -423,7 +423,7 @@ schedule-heartbeat dry-run (2026-09-10)
   model:   unreachable (route=auto)
   network: reachable
   audio:   0/10
-  store:   /tmp/hngh-heartbeat-* (ephemeral, provisioned on a real tick)
+  store:   ~tmp/hngh-heartbeat-* (ephemeral, provisioned on a real tick)
 schedule-heartbeat: postponed — tree not clean ( M docs/project/queue.md)
 python3 tests/scripts/test-probe-model-route.py
 python3 tests/scripts/test-driver-routes.py
@@ -431,10 +431,10 @@ driver route smoke OK (rotate-queue + worker-driver route vocabulary + bare-cycl
 python3 tests/scripts/test-dashboard-live.py
 python3 tests/scripts/test-generate-publication.py
 generate-publication: journal 2026-08-20 verified (0 commits, 0 candidate-bound, 0 check-ins)
-generate-publication: /tmp/tmpqajb8y1e/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
-generate-publication: /tmp/tmpa6y2wlrq/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
-generate-publication: /tmp/tmpa6y2wlrq/2026-08-20.md exists; journals are the operator's as much as the machine's. Use --force to overwrite.
-generated journal -> /tmp/tmpa6y2wlrq/2026-08-20.md
+generate-publication: ~tmp/tmpqajb8y1e/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
+generate-publication: ~tmp/tmpa6y2wlrq/2026-08-20.md is operator-authored format; --check only verifies machine-generated journals (the ledger lines starting '- **').
+generate-publication: ~tmp/tmpa6y2wlrq/2026-08-20.md exists; journals are the operator's as much as the machine's. Use --force to overwrite.
+generated journal -> ~tmp/tmpa6y2wlrq/2026-08-20.md
 generate-publication: journal 2026-08-20 verified (0 commits, 0 candidate-bound, 0 check-ins)
 python3 tests/scripts/test-fleet-manager.py
 python3 tests/scripts/test-osd-operative.py

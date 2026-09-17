@@ -5,8 +5,8 @@ accepted. Evidence reviewed 2026-09-09T23:00Z.
 
 ## --site run output
 
-`scripts/generate-publication --site=/tmp/pub-temp` completed successfully:
-- Generated `/tmp/pub-temp/index.html` (7519 bytes)
+`scripts/generate-publication --site=~tmp/pub-temp` completed successfully:
+- Generated `~tmp/pub-temp/index.html` (7519 bytes)
 - Output: HTML page with dashboard title, timeline, queue, live sessions, live agents, instance interaction, leaderboard sections
 
 ## Gap inventory versus research-lines surface
@@ -22,7 +22,7 @@ The site currently lacks:
 ## Verification
 
 - No publication artifacts committed (git status clean for publication/site files)
-- The generated HTML is a throwaway artifact in `/tmp/pub-temp/` (not committed)
+- The generated HTML is a throwaway artifact in `~tmp/pub-temp/` (not committed)
 
 ## Kernel gate
 
