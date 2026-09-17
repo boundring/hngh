@@ -70,22 +70,30 @@ STEP_SUFFIX = re.compile(r":step-(\d+)$")
 # TWO consecutive PATH_COMPONENTS (repeated fragment or adjacent known
 # component) is path-derived. False positives only truncate a subject
 # word; false negatives would leak.
-PATHY_STEMS = ("home", "users", "tmp", "root")
+#
+# 2026-09-17 single-source re-point: the dash-form stem family and the
+# env seam live in lib/scrub.py (PATHY_STEMS / pathy_stems / 
+# scrub_truncate_pathy) so the research id seams share the exact
+# mechanism; PATHY_STEMS below is imported, not redefined. The
+# PATH_COMPONENTS heuristic stays router-local (plan-class identity
+# grammar is a router concern).
+import importlib.util as _ilutil
+
+_scrub_spec = _ilutil.spec_from_file_location(
+    "hngh_scrub_router",
+    os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "lib", "scrub.py"))
+_scrub_mod = _ilutil.module_from_spec(_scrub_spec)
+_scrub_spec.loader.exec_module(_scrub_mod)
+PATHY_STEMS = _scrub_mod.PATHY_STEMS
+pathy_stems = _scrub_mod.pathy_stems
+scrub_truncate_pathy = _scrub_mod.scrub_truncate_pathy
 PATH_COMPONENTS = ("projects", "etc", "hngh", "dropbox", "documents",
                    "downloads", "desktop", "config", "src", "lib", "bin",
                    "docs", "tests", "opt", "usr", "var")
 # username stem default lives in automation/config.env:
 #   HNGH_ROUTER_PATHY_STEMS="${HNGH_ROUTER_PATHY_STEMS:-<username>}"
 # (deployment data; tests override via the env var and stay hermetic).
-
-
-def _pathy_stems():
-    """Scrub stems: PATHY_STEMS + config-supplied username stems
-    (HNGH_ROUTER_PATHY_STEMS, comma/space-separated), env first.
-    Matched case-insensitively (paths capitalize: Users, Dropbox)."""
-    extra = os.environ.get("HNGH_ROUTER_PATHY_STEMS", "")
-    return PATHY_STEMS + tuple(
-        s.lower() for s in extra.replace(",", " ").split() if s)
 
 
 def _token_two_consecutive_components(seg):
@@ -107,7 +115,7 @@ def scrub_pathy_identity(identity):
     identity so no path-derived token reaches the routed slug, plan
     front-matter, or progress-row identities. Returns None when the
     whole identity is path-derived (caller refuses it, fail closed)."""
-    stems = _pathy_stems()
+    stems = pathy_stems()
     tokens = identity.split(":")
     if tokens[0].split("-", 1)[0].lower() in stems:
         return None

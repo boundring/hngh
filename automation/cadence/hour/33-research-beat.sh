@@ -205,7 +205,12 @@ file_report() {
 # fail-20260914-Where-exactly-in-home-bricker-Projects-e id proved the
 # leak happens at/before derivation). Single token family via lib/scrub.py
 # (redact_home = tilde rendering, the ledger convention; fail-closed to
-# empty output if scrub.py breaks).
+# empty output if scrub.py breaks). scrub_truncate (2026-09-17 GAP)
+# additionally cuts the dash-mangled form (home-bricker-...) that
+# redact_home's slash-form family cannot see: the tab-less branch
+# DERIVES the id from the text, so a pre-mangled dash-form line is cut
+# at the stem before derivation (empty = whole-input path-derived ->
+# the line is discarded, never a username-bearing id).
 ensure_lines() {
  local line
  local id
@@ -220,7 +225,10 @@ ensure_lines() {
    id="${line%%$'\t'*}"
    desc="${line#*$'\t'}"
    ;;
-  *) id="$(printf '%s' "$line" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-*$//')" ;;
+  *)
+   line="$(scrub_truncate "$line")"
+   [ -n "$line" ] || continue # dash-form pathy whole-input -> discard
+   id="$(printf '%s' "$line" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-*$//')" ;;
   esac
   awk -F'\t' -v id="$id" -v desc="$desc" \
    '$1==id || $4==desc{found=1} END{exit !found}' "$LINES" && continue
@@ -593,8 +601,14 @@ followon_queue() { # response -> queues up to 2 follow-on subjects from
  while IFS= read -r q; do
   case "$q" in FOLLOWON:*) q="${q#FOLLOWON: }" ;; *) continue ;; esac
   # redact BEFORE derivation: the slug is cut from q, so a pathy question
-  # would otherwise bake the machine-local path into the public id
+  # would otherwise bake the machine-local path into the public id.
+  # scrub_truncate (2026-09-17 GAP) additionally cuts the dash-mangled
+  # form (home-bricker-...) redact_home cannot see; empty = whole-input
+  # path-derived -> discard, never a username-bearing id.
   q="$(redact_home "$q")"
+  [ -n "$q" ] || continue # redaction fail-closed empty -> discard
+  q="$(scrub_truncate "$q")"
+  [ -n "$q" ] || continue # dash-form pathy whole-input -> discard
   q="$(printf '%s' "$q" | tr -cd '\11\12\15\40-\176' | tr '\t' ' ' |
    sed 's/^ *//; s/ *$//' | cut -c1-240)"
   [ -n "$q" ] || continue

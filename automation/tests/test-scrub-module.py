@@ -29,6 +29,7 @@ Canonical decisions recorded here:
 Hermetic: loads the module by path; no repo or home state."""
 
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 
@@ -167,6 +168,112 @@ class Hygiene(unittest.TestCase):
         self.assertEqual(scrub_paths(None), "")
         self.assertEqual(scrub_paths(""), "")
         self.assertEqual(redact_home(""), "")
+
+
+class PathyStems(unittest.TestCase):
+    """Dash-mangled path fragments (the GAP audit shape: a slug arriving
+    pre-mangled as `Where-exactly-in-home-bricker-Projects-e` passes
+    PATH_TOKEN_RE unchanged and bakes the username into a public id).
+    The dash-form family must stay one single-source mechanism with
+    router-tick's PATHY_STEMS: home/users/tmp/root case-insensitive +
+    the HNGH_ROUTER_PATHY_STEMS deployment-username seam. Cutting a
+    dash-form token is lossy by design -- innocuous subject words
+    starting with the stems (homeopathy-, tmpdir-, userscript-) die to
+    "" with them; that documented truncation tradeoff matches
+    router-tick (false positives truncate a subject word, false
+    negatives would leak)."""
+
+    def setUp(self):
+        # capture once in setUp, restore once in tearDown: a
+        # self-re-registering addCleanup here would flip-flop forever
+        self._orig_stems = os.environ.get("HNGH_ROUTER_PATHY_STEMS")
+
+    def tearDown(self):
+        if self._orig_stems is None:
+            os.environ.pop("HNGH_ROUTER_PATHY_STEMS", None)
+        else:
+            os.environ["HNGH_ROUTER_PATHY_STEMS"] = self._orig_stems
+
+    def stem_env(self, val):
+        # plain setter; tearDown restores the captured value
+        if val is None:
+            os.environ.pop("HNGH_ROUTER_PATHY_STEMS", None)
+        else:
+            os.environ["HNGH_ROUTER_PATHY_STEMS"] = val
+
+    def test_family_is_the_documented_four(self):
+        self.assertEqual(scrub.PATHY_STEMS, ("home", "users", "tmp", "root"))
+
+    def test_truncate_cuts_at_first_pathy_dash_segment(self):
+        # the exact leaked id stem: cut at the token, prefix survives
+        self.assertEqual(
+            scrub.scrub_truncate_pathy(
+                "Where-exactly-in-home-bricker-Projects-e"),
+            "Where-exactly-in-")
+
+    def test_truncate_leading_stem_refuses_to_empty(self):
+        # whole-token path-derived: "" is the refuse signal, fail closed
+        self.assertEqual(scrub.scrub_truncate_pathy(
+            "home-bricker-Projects-etc-hngh"), "")
+
+    def test_truncate_username_stem_via_seam(self):
+        self.stem_env("hermituser")
+        self.assertEqual(
+            scrub.scrub_truncate_pathy("Where-in-hermituser-Dropbox-x"),
+            "Where-in-")
+
+    def test_stems_case_insensitive_and_seam_casefolded(self):
+        self.stem_env("HermitUser")
+        for tok, want in (("Where-in-Home-bricker-x", "Where-in-"),
+                          ("review-in-USERS-bricker-x", "review-in-"),
+                          ("x-TMP-cache-sweep", "x-")):
+            self.assertEqual(scrub.scrub_truncate_pathy(tok), want)
+
+    def test_innocuous_word_kept_when_not_seam_backed(self):
+        # exact segment match only: a plain word that merely CONTAINS a
+        # stem ("homework" in "the-homework-question") is kept whole,
+        # and the username stem does not widen to prefix words either
+        self.stem_env("hermituser")
+        self.assertEqual(
+            scrub.scrub_truncate_pathy("the-homework-question"),
+            "the-homework-question")
+        self.assertEqual(
+            scrub.scrub_truncate_pathy("hermituserish-thing"),
+            "hermituserish-thing")
+
+    def test_plain_token_unchanged(self):
+        self.assertEqual(scrub.scrub_truncate_pathy("Which-gate-eats-rc"),
+                         "Which-gate-eats-rc")
+
+    def test_multi_token_dash_input_keeps_earlier_tokens(self):
+        self.assertEqual(
+            scrub.scrub_truncate_pathy(
+                "Where-exactly-in-home-bricker-Projects-e do gates die"),
+            "Where-exactly-in-")
+
+    def test_router_tick_shares_the_mechanism(self):
+        # single-source contract: router-tick binds its stem family from
+        # lib/scrub.py instead of redefining it. Module identity cannot
+        # be asserted across separately-executed copies, so the guard
+        # is the binding line itself plus value equality (a reverted
+        # re-point resurfaces as either assertion failing).
+        src = (ROOT / "scripts" / "router-tick.py").read_text()
+        self.assertIn("PATHY_STEMS = _scrub_mod.PATHY_STEMS", src)
+        spec = importlib.util.spec_from_file_location(
+            "hngh_router_tick_scrubcheck",
+            str(ROOT / "scripts" / "router-tick.py"))
+        tick = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tick)
+        self.assertEqual(tick.PATHY_STEMS, scrub.PATHY_STEMS)
+        # functions compare by identity across module copies; compare
+        # behavior on the audited leak shape instead
+        self.assertEqual(
+            tick.scrub_truncate_pathy("Where-exactly-in-home-bricker-x"),
+            scrub.scrub_truncate_pathy("Where-exactly-in-home-bricker-x"))
+
+    def test_module_has_stem_constant_for_reuse(self):
+        self.assertTrue(hasattr(scrub, "PATHY_STEMS"))
+        self.assertTrue(hasattr(scrub, "scrub_truncate_pathy"))
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ shell. Dependency direction stays inward: nothing here imports repo
 state, and kernel code never imports this module (it mirrors the
 family in scripts/report-queue as the git-tracked sink-side guard).
 """
+import os
 import re
 
 MARKER = "[redacted path]"
@@ -152,3 +153,57 @@ def scrub_grep(text, tilde_ok=True):
         if hits:
             out.append(line)
     return out
+
+
+# Dash-mangled path fragments (2026-09-17 GAP, gate
+# wiki-health-wiring-reconcile): PATH_TOKEN_RE matches slash forms
+# only, so a slug arriving PRE-mangled
+# ("Where-exactly-in-home-bricker-Projects-e") passes redact_home
+# unchanged and bakes the username into a public fail-<date>-<slug>
+# id. The dash-form family is ONE mechanism here (single source);
+# scripts/router-tick.py imports it instead of keeping its own copy.
+# Stem matching is case-insensitive (paths capitalize: Users, Dropbox).
+# The deployment username is a stem through the same
+# HNGH_ROUTER_PATHY_STEMS seam the router-tick cure introduced
+# (config.env default, env overrides so tests stay hermetic under any
+# operator username); it is deployment data, never hardcoded.
+PATHY_STEMS = ("home", "users", "tmp", "root")
+
+
+def pathy_stems():
+    """Scrub stems: PATHY_STEMS + config-supplied username stems
+    (HNGH_ROUTER_PATHY_STEMS, comma/space-separated), env first."""
+    extra = os.environ.get("HNGH_ROUTER_PATHY_STEMS", "")
+    return PATHY_STEMS + tuple(
+        s.lower() for s in extra.replace(",", " ").split() if s)
+
+
+def scrub_truncate_pathy(text):
+    """Cut dash-form path-derived text at its first pathy-stemmed dash
+    token; return "" when the text STARTS pathy (whole-input
+    path-derived: the caller refuses it, fail closed).
+
+    Tokens are maximal [\\w-] runs (dash segments inside, whitespace or
+    punctuation outside), so the cut works both on a pure slug
+    ("Where-exactly-in-home-bricker-Projects-e") and on a sentence
+    whose question text embeds a pre-mangled fragment. A token directly
+    preceded by "~" is the redaction marker itself (~, ~tmp, ~/...) and
+    is never re-cut. Cutting is lossy by design and matches
+    router-tick's documented tradeoff: false positives only truncate a
+    subject word (a bare stem word "tmp dir" dies to "" before it);
+    false negatives would leak. Slash-form tokens never reach this
+    helper unchanged -- callers run redact_home/scrub_paths FIRST, then
+    this cut for the dash form."""
+    text = str(text or "")
+    stems = frozenset(pathy_stems())
+    for m in re.finditer(r"[\w-]+", text):
+        if m.start() and text[m.start() - 1] == "~":
+            continue  # tilde-rendered redaction marker, not a leak
+        segs = m.group(0).split("-")
+        for j, seg in enumerate(segs):
+            if seg.lower() in stems:
+                if m.start() == 0 and j == 0:
+                    return ""
+                return text[:m.start() + sum(
+                    len(s) + 1 for s in segs[:j])].rstrip()
+    return text

@@ -132,6 +132,48 @@ case "$ridh" in
  *) ck "d2: id slug from redacted text" "Check-the-exit-code-consumer-in-* shape" "missing: $ridh" ;;
 esac
 
+# (e) dash-mangled path fragment (the exact audited leak shape
+# fail-20260914-Where-exactly-in-home-bricker-Projects-e): redact_home's
+# token family matches slash forms only, so a pre-mangled dash-form
+# question passed whole and the slug cut from it baked the username
+# into the public id. The slug-cut path must additionally truncate
+# dash-form pathy tokens at the stem (class/word prefix preserved).
+followon_queue <<'EOF' >"$sb/fq2.out"
+FOLLOWON: Where exactly in home-bricker-Projects-etc-hngh does the gate run?
+EOF
+rowe="$(tail -n 1 "$SUBJECTS")"
+ride="$(printf '%s' "$rowe" | cut -f1)"
+qe="$(printf '%s' "$rowe" | cut -f2)"
+case "$ride" in
+ *bricker*|*'-home-'*) ck "e: dash-form derived rid cut at stem" "no bricker/home token" "leak: $ride" ;;
+ fail-20260917-Where-exactly-in*) ck "e: rid slug truncated at pathy token" "clean" "clean" ;;
+ *) ck "e: rid slug truncated at pathy token" "fail-20260917-Where-exactly-in* shape" "missing: $ride" ;;
+esac
+case "$qe" in
+ *bricker*) ck "e: dash-form question text cut at stem" "no bricker" "leak: $qe" ;;
+ *) ck "e: dash-form question text cut at stem" "clean" "clean" ;;
+esac
+
+# (e2) fully path-derived dash-form input: truncation yields nothing ->
+# nothing is written (fail closed, the refuse half of the contract).
+before_e2="$(wc -l <"$SUBJECTS")"
+followon_queue <<'EOF' >"$sb/fq3.out"
+FOLLOWON: home-bricker-Projects-etc-hngh
+EOF
+ck "e2: whole-path-derived input refused" "$before_e2" "$(wc -l <"$SUBJECTS")"
+
+# (f) tab-less subject whose TEXT carries the dash-form fragment: the id
+# slug is derived from the text, so the cut must happen BEFORE that
+# derivation too (same leak shape as d2, dash form).
+printf 'Check the exit-code consumer in home-bricker-Projects-etc-hngh now\n' >>"$SUBJECTS"
+ensure_lines
+ridf="$(grep 'exit-code consumer' "$LINES" | tail -n 1 | cut -f1)"
+case "$ridf" in
+ *bricker*|*'-home-'*) ck "f: dash-form text-derived id cut at stem" "no bricker/home token" "leak: $ridf" ;;
+ Check-the-exit-code-consumer-in*) ck "f: id slug truncated at pathy token" "clean" "clean" ;;
+ *) ck "f: id slug truncated at pathy token" "Check-the-exit-code-consumer-in* shape" "missing: $ridf" ;;
+esac
+
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || {
   echo "$fails FAILED"

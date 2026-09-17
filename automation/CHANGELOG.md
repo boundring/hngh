@@ -21,6 +21,36 @@
   the copy in dangling 13ac26f9; substance mirrored in AGENTS.md,
   docs/README.md, automation/README.md, SKILL.md).
 
+- research id seams: dash-mangled pathy slug cure (gate
+  wiki-health-wiring-reconcile adversarial audit). redact_home's token
+  family (lib/scrub.py PATH_TOKEN_RE) matches slash forms only, so a
+  pre-mangled dash-form slug ("Where-exactly-in-home-bricker-Projects-e")
+  passed whole and baked the deployment username into the public
+  fail-<date>-<slug> id (the leaked id stems at HEAD: research-lines
+  :131,158,187; research-subjects :149,185; research-dispositions
+  :136,160,161,169,194,197). Cure is ONE stem mechanism, single-source
+  in lib/scrub.py: PATHY_STEMS + pathy_stems() (home/users/tmp/root
+  case-insensitive + the HNGH_ROUTER_PATHY_STEMS deployment-username
+  seam router-tick already reads) + scrub_truncate_pathy() (cut at the
+  first pathy dash token; empty = whole-input path-derived, caller
+  refuses fail-closed; tilde-marker tokens never re-cut; tokens are
+  [\w-] runs so sentence text cuts too). Shell seams get
+  scrub_truncate via lib/scrub.sh. Wired: causes.sh
+  append_research_subject, accept-plans.py append_research_subject,
+  33-research-beat followon_queue + ensure_lines derived-id branch;
+  router-tick re-pointed to bind the same family (no second copy; its
+  PATH_COMPONENTS heuristic stays router-local). Lossy-by-design
+  truncation documented, matching router-tick's tradeoff (false
+  positives truncate a subject word; false negatives would leak).
+  Red-first: PathyStems group in tests/test-scrub-module.py, three new
+  cases in tests/test-causes.py and tests/test-plan-acceptance.py,
+  cases e/e2/f in tests/test-research-beat-ingest-redact.sh all
+  reproduced the leak verbatim pre-fix. tests/test-scrub-module.py was
+  never gate-enforced since its 2026-09-16 landing; now in make test.
+  Historical home-bricker id rows are forward-only (renaming committed
+  research artifacts is an operator-lane decision;
+  docs/records/2026-09-17-dash-mangled-id-scrub-seams.md).
+
 - research-doc writer redaction (writer-gap, wiki-health-wiring-
   reconcile::gate): the crystallize transition emitted the RAW
   lines-TSV question text as the docs/research title (`printf '# %s'`)

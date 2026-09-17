@@ -259,6 +259,53 @@ class AppendResearchSubject(unittest.TestCase):
         self.assertEqual(self.rows(), [])
         self.assertIn("rc=1", r.stdout)
 
+    def test_dash_mangled_slug_never_bakes_username_into_id(self):
+        # the exact audited leak shape (fail-20260914-Where-exactly-in-
+        # home-bricker-Projects-e): redact_home's token family matches
+        # slash forms only, so a pre-mangled dash-form slug passed whole.
+        # The appender must additionally cut dash-form pathy tokens at
+        # the stem (class/word prefix preserved), never emit a
+        # username-bearing id.
+        r = self.append("Where-exactly-in-home-bricker-Projects-e",
+                        "Does the plan-accept gate consume stderr?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        sid, text = rows[0].split("\t", 1)
+        self.assertNotIn("bricker", sid)
+        self.assertNotIn("bricker", text)
+        self.assertNotIn("home-", sid)
+        self.assertTrue(sid.startswith("fail-%s-Where-exactly-in" %
+                                       self.today()), sid)
+
+    def test_dash_mangled_whole_path_slug_refused(self):
+        # fully path-derived slug: the truncation yields nothing, the
+        # appender refuses (fail closed), nothing is written.
+        r = self.append("home-bricker-Projects-etc-hngh",
+                        "Does the gate consume the exit code?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rows(), [])
+        self.assertIn("rc=1", r.stdout)
+
+    def test_username_stem_seam_cuts_dash_form(self):
+        # the deployment username is a stem through the same
+        # HNGH_ROUTER_PATHY_STEMS seam router-tick reads; a dash-form
+        # slug carrying it is cut before the username fragment.
+        self.driver.write_text(DRIVER_APPEND.format(
+            auto=AUTO, td=self.td,
+            pre="export HNGH_ROUTER_PATHY_STEMS=hermituser\n"))
+        r = self.append("Where-in-hermituser-Dropbox-hngh-notes-x",
+                        "Do the notes say which gate runs first?")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        sid, text = rows[0].split("\t", 1)
+        self.assertNotIn("hermituser", sid)
+        self.assertNotIn("hermituser", text)
+        # shell slug mangling strips the trailing dash
+        self.assertTrue(sid.startswith(
+            "fail-%s-Where-in" % self.today()), sid)
+
 
 if __name__ == "__main__":
     unittest.main()

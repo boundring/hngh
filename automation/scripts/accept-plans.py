@@ -207,6 +207,14 @@ def append_research_subject(slug, question):
     rendering) BEFORE id/slug derivation -- a pathy token must never
     bake into the public fail-<date>-<slug> id (the leaked
     fail-20260914-Where-exactly-in-home-bricker-Projects-e id shape).
+    Dash-form extension (2026-09-17 GAP, gate
+    wiki-health-wiring-reconcile): redact_home matches slash forms
+    only, so a pre-mangled dash-form slug passed whole; after
+    redact_home both inputs also run through scrub_truncate_pathy
+    (same single-source module): dash-form pathy text is cut at the
+    first stem segment, stem-starting input yields "" and the append
+    is refused. Truncation is lossy by design -- router-tick's
+    documented tradeoff.
     Fail-closed: scrub module broken or unavailable (_SCRUB None), or
     redaction yielding empty output -> refuse the append."""
     path = Path(os.environ.get("HNGH_RESEARCH_SUBJECTS")
@@ -219,6 +227,13 @@ def append_research_subject(slug, question):
         return False  # broken or missing guard: refuse, never leak
     if not question or not slug:
         return False  # redaction fail-closed empty -> refuse
+    try:
+        question = _SCRUB.scrub_truncate_pathy(question)
+        slug = _SCRUB.scrub_truncate_pathy(slug)
+    except Exception:
+        return False  # broken guard: refuse, never leak
+    if not question or not slug:
+        return False  # dash-form pathy whole-input -> refuse
     slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", slug).strip("-")
     if not slug:
         return False

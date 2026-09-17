@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -512,6 +513,50 @@ class AppendResearchSubject(unittest.TestCase):
             self.assertEqual(self.rows(), [])
         finally:
             self.mod._SCRUB = orig
+
+    def test_dash_mangled_slug_never_bakes_username_into_id(self):
+        # the exact audited leak shape: redact_home's token family
+        # matches slash forms only, so a pre-mangled dash-form slug
+        # passed whole and baked the username into the public id. The
+        # appender must additionally cut dash-form pathy tokens at the
+        # stem (class/word prefix preserved).
+        self.assertTrue(self.mod.append_research_subject(
+            "Where-exactly-in-home-bricker-Projects-e",
+            "Does the plan-accept gate consume stderr?"))
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("bricker", sid)
+        self.assertNotIn("bricker", text)
+        self.assertNotIn("home-", sid)
+        day = datetime.now(timezone.utc).strftime("%Y%m%d")
+        self.assertTrue(sid.startswith(
+            "fail-%s-Where-exactly-in" % day), sid)
+
+    def test_dash_mangled_whole_path_slug_refused(self):
+        # fully path-derived slug: truncation yields nothing -> refuse,
+        # nothing is written
+        self.assertFalse(self.mod.append_research_subject(
+            "home-bricker-Projects-etc-hngh",
+            "Does the gate consume the exit code?"))
+        self.assertEqual(self.rows(), [])
+
+    def test_username_stem_seam_cuts_dash_form(self):
+        # the deployment username is a stem through the same
+        # HNGH_ROUTER_PATHY_STEMS seam router-tick reads
+        old = os.environ.get("HNGH_ROUTER_PATHY_STEMS")
+        os.environ["HNGH_ROUTER_PATHY_STEMS"] = "hermituser"
+        try:
+            self.assertTrue(self.mod.append_research_subject(
+                "Where-in-hermituser-Dropbox-hngh-notes-x",
+                "Do the notes say which gate runs first?"))
+        finally:
+            if old is None:
+                os.environ.pop("HNGH_ROUTER_PATHY_STEMS", None)
+            else:
+                os.environ["HNGH_ROUTER_PATHY_STEMS"] = old
+        sid, text = self.rows()[0].split("\t", 1)
+        self.assertNotIn("hermituser", sid)
+        self.assertNotIn("hermituser", text)
+        self.assertTrue(sid.startswith("fail-"), sid)
 
 
 if __name__ == "__main__":
