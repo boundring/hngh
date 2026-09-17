@@ -40,6 +40,7 @@ stubU_port="$(cat "$stubdir/stubU-port")"
 stubK_port="$(cat "$stubdir/stubK-port")"
 stubD_port="$(cat "$stubdir/stubD-port")"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 kimi_env=("KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubK_port")
 deck_env=("DECK_URL=http://127.0.0.1:$stubD_port" "DECK_MODEL=deck-test")
 

@@ -2,6 +2,24 @@
 
 ## 2026-09-16
 
+- security: fifth token-file reader gated — unsloth_chat now refuses a
+  non-0600 TOKEN_FILE fail-closed before the value is read or sent
+  (test-first, red-proven; record:
+  docs/records/2026-09-16-unsloth-tokenfile-600-gate.md). g2's "all
+  four un-gated reads" miscounted: the unsloth chat read was a fifth
+  instance; an operator-created/restored 0644 unsloth.token was sent
+  as a bearer header on every chat call (chmod-600 only happens after
+  a successful refresh). Exact kimi-leg byte shape (too-open breadcrumb
+  -> next backend); post-refresh re-read needs no gate. New test
+  section in test-model-remote-token-mode.sh: 0644 -> zero POSTs vs a
+  live stub, 0600 -> exactly one POST, absent -> dormant. The four
+  unsloth-leg suites (pin-routing, kimi-leg, ocgo-leg, review-ladder)
+  now chmod 600 their sandbox tokens; ocgo-leg's outside-window case
+  deflaked (7d soft-pace cap raised to 1e8 — with 100000 it blocked
+  for ~9.4 min after each Thursday 00:00Z cycle start, observed live).
+
+## 2026-09-16
+
 - security: scrub consolidation — ONE path-token definition, family,
   and marker mapping (test-first, red-proven on the two open digest
   seams; record: docs/records/2026-09-16-scrub-consolidation-single-source.md)

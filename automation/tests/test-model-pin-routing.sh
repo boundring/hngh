@@ -43,6 +43,7 @@ stubK_port="$(cat "$stubdir/stubK-port")"
 stubD_port="$(cat "$stubdir/stubD-port")"
 stubZ_port="$(cat "$stubdir/stubZ-port")"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 seed_events() { # source n -> n telemetry model/<source> events stamped today
  python3 - "$1" "$2" <<PY
 import sqlite3, datetime, sys

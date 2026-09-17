@@ -321,6 +321,7 @@ FAKE_DOW=1 probe_extra "$sb/p1/vhealthy/.llm-wiki" "$sb/p3/vstale/.llm-wiki"
 
 # --- c) research-beat prior-art wire -----------------------------------
 printf 'stub-token-never-real' >"$sb/unsloth-token"
+chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 rm -f "$stubdir/stubU-port" "$stubdir/bodies"
 python3 - "$stubdir" <<'PY' &
 import http.server, socketserver, sys, json, os

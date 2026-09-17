@@ -11,7 +11,7 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/lib" "$sb/archive" "$sb/kernel/scripts" "$sb/jobs" "$sb/state" "$sb/digest"
-for f in common.sh breadcrumbs.sh params.sh model.sh model-demote.sh; do
+for f in common.sh breadcrumbs.sh params.sh model.sh model-demote.sh scrub.sh scrub.py; do
   ln -s "$root/lib/$f" "$sb/lib/"
 done
 # the beat script recomputes AUTOMATION_ROOT from $0 (04-review-prep.sh
@@ -102,6 +102,7 @@ ck "zai dead: MODEL_USED=ocgo" "ocgo:glm-5.3-flash" "$(used)"
 # --- all quota legs dead -> local bench (unsloth) as LAST resort ---------
 export OCGO_URL=http://127.0.0.1:1
 printf 'bench-tok' >"$sb/tok"
+chmod 600 "$sb/tok" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
 STUB_CONTENT=bench-says-hi stub_start unsloth
 export UNSLOTH_URL="http://127.0.0.1:$(cat "$stubdir/unsloth-port")"
 export TOKEN_FILE="$sb/tok" REFRESH_FILE="$sb/rtok"
