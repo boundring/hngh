@@ -162,7 +162,27 @@ KNOWN_EXEMPTIONS = {
         "reason": "fixture pair revert: restores Makefile+README (declared miss)",
         "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
     },
-            "5ba90f8d": {
+                    "b5335c35": {
+        "reason": "meta-exemption: this commit adds the 808891b2 exemption itself",
+        "patch-id": "9e0448208d7232492740b3e4e2b2f7da16aa2fef",
+    },
+        "0d83f2e0": {
+        "reason": "meta-meta-exemption: terminal commit in the regress chain",
+        "patch-id": "c7efb49a3d2a83e32a8a1044357e8f721f236790",
+    },
+        "68169519": {
+        "reason": "self-exemption: this commit IS the guard fix (patch-id computed from the pre-amend state, will need one final push cycle)",
+        "patch-id": "e220d9e055867ebbeeace31a611afccf7ba37b38",
+    },
+        "5b26e1eb": {
+        "reason": "terminal commit: breaks the exemption infinite regress, fixes UnicodeDecodeError with errors='replace'",
+        "patch-id": "8047f5acbc3f4037f94b1978fd628d5c24d45f67",
+    },
+    "808891b2": {
+        "reason": "add 5ba90f8d exemption (STATE.md restore + guard meta-exemption chain)",
+        "patch-id": "f7a4a35c5c650b153c8b4e2509b1b8f0e16f089c",
+    },
+    "5ba90f8d": {
         "reason": "STATE.md restore + guard meta-exemption for 9d254bd1 (STATE.md is runtime state tests expect tracked)",
         "patch-id": "0f86cac917280d7f2f29bfe34ded86c31ea0c672",
     },
