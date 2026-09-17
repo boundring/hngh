@@ -56,6 +56,30 @@ REPORT_ROOT = os.environ.get("HNGH_REPORT_ROOT", KERNEL)
 
 IDENT_OK = re.compile(r"^[A-Za-z0-9._:-]+$")
 STEP_SUFFIX = re.compile(r":step-(\d+)$")
+# path-redaction scrub (2026-09-16 risk-dispositions-cred-argv family):
+# pre-2026-09-16 alert identities were not path-redacted, so a dash-
+# mangled absolute path ("home-bricker-Projects-...") can ride in through
+# IDENT_OK and leak into public plan front-matter, filenames, and rows.
+# Raw '/', '~', '$' identities already fail IDENT_OK (fail closed); the
+# dash-mangled form is cut at the first home/Users-stemmed token. False
+# positives only truncate a subject word; false negatives would leak.
+PATHY_STEMS = ("home", "users")
+
+
+def scrub_pathy_identity(identity):
+    """Scrub dash-mangled path fragments from an already-IDENT_OK
+    identity so no path-derived token reaches the routed slug, plan
+    front-matter, or progress-row identities. Returns None when the
+    whole identity is path-derived (caller refuses it, fail closed)."""
+    tokens = identity.split(":")
+    if tokens[0].startswith(("home-", "Users-")):
+        return None
+    for i, tok in enumerate(tokens):
+        if i and tok.split("-", 1)[0] in PATHY_STEMS:
+            return ":".join(tokens[:i])
+    return identity
+
+
 # routing table (routing doc "Recommendation"): class key -> candidate shape
 CRITICAL_KEYS = ("remote-posture", "budget")
 NORMAL_SHAPES = [
@@ -389,6 +413,12 @@ def route(identity, text):
     if not IDENT_OK.match(identity):
         breadcrumb("router", "no-candidate", "%s identity not routable" % identity)
         return 0
+    scrubbed = scrub_pathy_identity(identity)
+    if scrubbed is None:
+        breadcrumb("router", "no-candidate",
+                   "%s identity not routable (path-derived)" % identity)
+        return 0
+    identity = scrubbed
     if ":plan:" in identity:
         return refire(identity)
     shape = shape_for(identity)
