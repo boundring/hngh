@@ -898,6 +898,31 @@ if [ -s "$AUTOMATION_ROOT/.docfilter-inj.$$" ]; then
 fi
 rm -f "$AUTOMATION_ROOT/.docfilter-inj.$$"
 
+# writer-seam redaction (2026-09-17 GAP cure, wiki-health-wiring-
+# reconcile::gate): docfilter covers injection + char cap only, and the
+# crystallize transition emits $line verbatim as the docs/research title
+# plus $body into the git-tracked, publicly pushed kernel repo -- the
+# leaked fail-20260916-If-the-probe-* doc title proved the raw path
+# emission. redact_home (lib/scrub.py, the single tilde token family;
+# fail-closed to empty output if scrub.py breaks) covers BOTH emitters
+# -- the digest beat copy and the crystallized doc -- before any write.
+line="$(redact_home "$line")"
+[ -n "$line" ] || {
+ ff_record degraded
+ block_escalate "$id" redaction-failed
+ file_report alert "research beat redaction failed for $id ($used): redact_home yielded empty output; no doc written, line state held for retry" \
+  "research-beat:redaction-failed:$id" 86400
+ exit 0
+}
+body="$(redact_home "$body")"
+[ -n "$body" ] || {
+ ff_record degraded
+ block_escalate "$id" redaction-failed
+ file_report alert "research beat redaction failed for $id ($used): redacted body came back empty; no doc written, line state held for retry" \
+  "research-beat:redaction-failed:$id" 86400
+ exit 0
+}
+
 out_rel="$DIGEST_DIR/RESEARCH-BEAT-$day-$id.md"
 mkdir -p "$DIGEST_DIR"
 {

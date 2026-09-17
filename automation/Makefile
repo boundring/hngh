@@ -114,9 +114,10 @@ test:
 	bash tests/test-research-beat-ingest-redact.sh
 	bash tests/test-research-dispositions-redact.sh
 	bash tests/test-research-tsv-path-sweep.sh
-	python3 -B scripts/research-tsv-path-sweep.py --check \
-		--files research-dispositions.tsv research-lessons.tsv \
-		research-lines.tsv research-subjects.txt
+	# default scope = the four research data files + docs/research/*.md
+	# (2026-09-17 writer-gap follow-through: the crystallized-doc title
+	# emitter is gate-covered too)
+	python3 -B scripts/research-tsv-path-sweep.py --check
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
