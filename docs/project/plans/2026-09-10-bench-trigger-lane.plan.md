@@ -100,3 +100,20 @@ demoted-model evidence re-check). The nightly timer and the
   row) runs the session after live systemctl shows disabled+inactive.
   Kernel-gate note: full-gate reds of the tailscale skew shape did not
   reproduce (lesson 08:12Z) — retry the full gate before staging mocks.
+- 2026-09-17T10:12Z wake (dream-guided, guard-first): five live-state
+  facts verified before any edit — (1) live systemctl: timer
+  enabled+active (last fire 2026-09-17 01:10 EDT, next 2026-09-18
+  01:10 EDT) -> Branch A hard no-op at the director boundary; (2)
+  reports.md greps 0 hits for 4e63a558 — the 09-14 notes' "alert
+  4e63a558 stands" assertion is stale (string absent from every
+  ledger grepped this wake); the routed plan file itself still carries
+  the disable, so the boundary stands on the plan text, not the alert
+  string; (3) routed plan 2026-09-14-routed-bench-lane-timer-disable
+  still status=proposed, not re-filed; (4) 10-bench-fresh.sh still
+  note-only with PENDING (26cf873 holds, not redone); (5)
+  cadence-params rows verified: 51 note points at this plan, row 60
+  benchmark-recalibrate-days=30. Zero slice edits, zero re-filing.
+  Step 3 stays UNCHECKED pending live disabled+inactive + evidence
+  row in reports.md. Blocker blk-20260916-2026-09-10-bench-trigger-lane
+  stands active (cause=unknown); counter-lesson held: live-state
+  evidence outranked the 09-14 notes.
