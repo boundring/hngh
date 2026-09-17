@@ -2,6 +2,25 @@
 
 ## 2026-09-17
 
+- dashboard: sessions-view render-blocks consumer strip landed p0-safe
+  (sole copy rescued from dangling autostash 91ab48ca before gc;
+  record: docs/records/2026-09-17-render-blocks-strip-and-userspace-
+  record-disposition.md). The strip (`.sv-rb` mount point,
+  `initRenderBlocks`, 60s fetch of `render-blocks.json`, XSS-safe
+  textContent cards, hidden when the feed is absent/empty) is the
+  consumer side of the producer slice already tracked on main
+  (render-blocks.mjs, render-blocks-feed.py, worker fd3 passthrough).
+  The autostash copy's raw `setInterval(load, 60000)` failed
+  test-dashboard-p0.py's poll-hygiene contract (no raw timers on any
+  view); the landed version rides the shared `HnghPoll` helper
+  (pause-when-hidden + backoff) at the same 60s feed cadence, plus an
+  rbPoll idempotence guard so a second init() cannot stack a second
+  poll. test-dashboard-p0.py: 22 green (0 skips, node-executed groups
+  included); full `make test` green. Same sweep deleted the untracked
+  2026-09-13-userspace-home.md record as superseded (byte-identical to
+  the copy in dangling 13ac26f9; substance mirrored in AGENTS.md,
+  docs/README.md, automation/README.md, SKILL.md).
+
 - research-doc writer redaction (writer-gap, wiki-health-wiring-
   reconcile::gate): the crystallize transition emitted the RAW
   lines-TSV question text as the docs/research title (`printf '# %s'`)

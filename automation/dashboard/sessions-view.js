@@ -682,6 +682,7 @@
       '</form>' +
       '<span class="sv-opnote" role="status"></span>' +
       '<span class="sv-live-note"></span></div>' +
+      '<div class="sv-rb" hidden></div>' +
       '<div class="sv-detail" tabindex="0"><div class="sv-note">loading…</div></div>' +
       '</section></div>';
 
@@ -770,11 +771,80 @@
     }
 
     timer = window.HnghPoll.start(fetch, { interval: REFRESH_MS });
+    initRenderBlocks();
   }
 
   function refresh() {
     sliceFails = 0;
     fetchFeed(applyWhole); // manual refresh also re-reads the rail metadata
+  }
+
+  /* render-blocks strip (viz consumer slice): shows HNGH-RENDER
+     envelopes captured by worker.mjs (fd3 side-channel -> feed). Hidden
+     entirely when the feed is absent or empty - never a placeholder
+     panel for a lane that has not produced blocks yet. Cards render
+     block kinds + payloads via textContent (XSS-safe). The 60s feed
+     cadence rides the shared HnghPoll helper (pause-when-hidden +
+     backoff, p0 poll hygiene) instead of a raw setInterval. Idempotent:
+     a second init() cannot stack a second poll (rbPoll guard). */
+  var RB_POLL_MS = 60000; // matches the 60s feed cadence
+  var rbSeen = null, rbPoll = null;
+  function initRenderBlocks() {
+    if (rbPoll) return;
+    var box = root.querySelector('.sv-rb');
+    if (!box) return;
+    function load() {
+      window.fetch('render-blocks.json', { cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (j) { render(j); })
+        .catch(function () { render(null); });
+    }
+    function render(j) {
+      var envs = j && j.envelopes || [];
+      var sig = envs.map(function (e) { return e.id; }).join(',');
+      if (sig === rbSeen) return;
+      rbSeen = sig;
+      box.textContent = '';
+      if (!envs.length) { box.hidden = true; return; }
+      box.hidden = false;
+      var head = document.createElement('div');
+      head.className = 'sv-rb-head';
+      head.textContent = 'render blocks (' + envs.length + ')';
+      box.appendChild(head);
+      envs.slice().reverse().forEach(function (e) {
+        var card = document.createElement('div');
+        card.className = 'sv-rb-card';
+        var meta = document.createElement('div');
+        meta.className = 'sv-rb-meta';
+        meta.textContent = (e.session || e.id) +
+          (e.ts ? ' · ' + e.ts : '') +
+          ' · blocks: ' + (e.blocks || []).length;
+        card.appendChild(meta);
+        (e.blocks || []).forEach(function (b) {
+          var bEl = document.createElement('div');
+          bEl.className = 'sv-rb-block';
+          var k = document.createElement('span');
+          k.className = 'sv-rb-kind';
+          k.textContent = b.kind || 'raw';
+          var p = document.createElement('pre');
+          p.className = 'sv-rb-payload';
+          p.textContent = typeof b.payload === 'string'
+            ? b.payload : JSON.stringify(b.payload);
+          bEl.appendChild(k);
+          bEl.appendChild(p);
+          card.appendChild(bEl);
+        });
+        if (!(e.blocks || []).length) {
+          var none = document.createElement('div');
+          none.className = 'sv-rb-none';
+          none.textContent = '(no blocks in this envelope)';
+          card.appendChild(none);
+        }
+        box.appendChild(card);
+      });
+    }
+    load();
+    rbPoll = window.HnghPoll.start(load, { interval: RB_POLL_MS });
   }
 
   window.SessionsView = { init: init, refresh: refresh };
