@@ -12,3 +12,4 @@ at 2026-09-16T03:00:39Z. Alert text: research review verdict unparseable for fai
 ## Occurrences
 
 - 2026-09-17T05:00:13Z re-occurred (dedup window expired)
+- 2026-09-17T06:00:34Z re-occurred (dedup window expired)
