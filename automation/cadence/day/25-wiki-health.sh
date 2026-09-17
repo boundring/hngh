@@ -156,7 +156,25 @@ EOF
  return 0
 }
 
-eff_note() { # label -> " rebuilds 7d: N attempts, M unfrozen" or ""
+# label_for() -> "personal" / "project" (role name, overridable); the
+# label is deliberately NOT path-derived: the personal vault lives under
+# $HOME, so basename(dirname) used to leak the machine username into
+# every public ledger row and identity (closed 2026-09-17).
+label_for() { # vault -> role label
+ case "$1" in
+  "$WIKI_PERSONAL") printf '%s\n' "${HNGH_WIKI_PERSONAL_LABEL:-personal}" ;;
+  "$WIKI_PROJECT") printf '%s\n' "${HNGH_WIKI_PROJECT_LABEL:-project}" ;;
+  *) basename "$(dirname "$1")" ;;
+ esac
+}
+
+vault_id() { # vault -> stable short path digest: keeps dedup identities
+ # per-vault (distinct vaults never share an identity window) without
+ # embedding the raw path (and its username) in public rows
+ printf '%s' "$1" | sha256sum | cut -c1-8
+}
+
+eff_note() { # ident -> " rebuilds 7d: N attempts, M unfrozen" or ""
  local n u
  read -r n u <<EOF
 $(sqlite3 "${HNGH_TELEMETRY_DB:-${HNGH_HOME_DIR:-$HOME/.hngh}/db/telemetry.db}" \
@@ -169,10 +187,10 @@ EOF
   printf ' rebuilds 7d: %s attempts, %s unfrozen' "$n" "${u:-0}"
 }
 
-attempt_rebuild() { # vault label before_disk before_reg
+attempt_rebuild() { # vault label ident bd br
  # -> sets RB_OUTCOME RB_SECS; one bounded omp one-shot turn, telemetry,
  # inline re-probe, once-daily stamp
- local vault="$1" label="$2" bd="$3" br="$4"
+ local vault="$1" label="$2" ident="$3" bd="$4" br="$5"
  local t0 rc ad ar ts
  t0="$(date +%s)"
  (
@@ -196,29 +214,29 @@ attempt_rebuild() { # vault label before_disk before_reg
  ar="$(reg_count "$vault")"
  ts="$(date -u +%FT%TZ)"
  printf '%s %s\n' "$(date -u +%F)" "$RB_OUTCOME" \
-  >"$STAMP_DIR/.hngh-wiki-rebuild-$label"
+  >"$STAMP_DIR/.hngh-wiki-rebuild-${ident//:/-}"
  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind wiki-rebuild \
-  --source day/25-wiki-health --identity "$label" --wall-s "$RB_SECS" \
+  --source day/25-wiki-health --identity "$ident" --wall-s "$RB_SECS" \
   --body "$RB_OUTCOME disk $bd->$ad reg $br->$ar" >/dev/null 2>&1 || true
  case "$RB_OUTCOME" in
  unfrozen)
-  file_report progress "wiki-health $label: healthy after rebuild attempt ($DISK pages on disk, $REG in registry, meta $AGE d old; was $bd on disk/$br in registry)$(eff_note "$label")" \
-   "wiki-health-ok:$label"
+  file_report progress "wiki-health $label: healthy after rebuild attempt ($DISK pages on disk, $REG in registry, meta $AGE d old; was $bd on disk/$br in registry)$(eff_note "$ident")" \
+   "wiki-health-ok:$ident"
   ;;
  attempt-failed)
-  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). rebuild attempted $ts -- attempt failed (rc $rc). Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$label")" \
-   "wiki-health-rebuild:$label"
+  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). rebuild attempted $ts -- attempt failed (rc $rc). Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$ident")" \
+   "wiki-health-rebuild:$ident"
   ;;
  *)
-  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). rebuild attempted $ts -- insufficient. Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$label")" \
-   "wiki-health-rebuild:$label"
+  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). rebuild attempted $ts -- insufficient. Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$ident")" \
+   "wiki-health-rebuild:$ident"
   ;;
  esac
  # failure routing: two consecutive daily non-unfrozen attempts turn the
  # cycle's own failure into research demand (dedup by id as usual)
  if [ "$RB_OUTCOME" != unfrozen ] && [ -n "$PREV_OUTCOME" ] &&
   [ "$PREV_OUTCOME" != unfrozen ] && [ "$PREV_DAY" != "$(date -u +%F)" ]; then
-  append_research_subject "ctx-wiki-rebuild-$label" \
+  append_research_subject "ctx-wiki-rebuild-$ident" \
    "why does the $label vault rebuild fail/underperform and what fixes it?"
  fi
  return 0
@@ -226,28 +244,29 @@ attempt_rebuild() { # vault label before_disk before_reg
 
 # --- probe both vaults ------------------------------------------------
 for vault in "$WIKI_PERSONAL" "$WIKI_PROJECT"; do
- label="$(basename "$(dirname "$vault")")" # bricker / llm-wiki
+ label="$(label_for "$vault")" # role label: personal / project (never the username)
+ ident="$label:$(vault_id "$vault")" # stable per-vault dedup token
  if ! probe_vault "$vault"; then
   breadcrumb "$JOB_NAME" "skip" "$vault unprobeable (no registry/wiki)"
   continue
  fi
  if [ "$VERDICT" = healthy ]; then
   file_report progress \
-   "wiki-health $label: healthy ($DISK pages on disk, $REG in registry, meta $AGE d old)$(eff_note "$label")" \
-   "wiki-health-ok:$label"
+   "wiki-health $label: healthy ($DISK pages on disk, $REG in registry, meta $AGE d old)$(eff_note "$ident")" \
+   "wiki-health-ok:$ident"
   continue
  fi
  # unhealthy: need-triggered rebuild, once per vault per UTC day
- stamp="$STAMP_DIR/.hngh-wiki-rebuild-$label"
+ stamp="$STAMP_DIR/.hngh-wiki-rebuild-${ident//:/-}"
  PREV_DAY=""
  PREV_OUTCOME=""
  [ -f "$stamp" ] && { read -r PREV_DAY PREV_OUTCOME _ <"$stamp" || true; }
  if [ "$AUTO_REBUILD" != 1 ] || [ "$PREV_DAY" = "$(date -u +%F)" ]; then
-  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$label")" \
-   "wiki-health:$label"
+  file_report alert "wiki-health $label: $VERDICT -- $DISK pages on disk, $REG in registry, meta $AGE d old (threshold $STALE_DAYS d). Fix: run the llm-wiki rebuild from an omp session with cwd $(dirname "$vault") -- extension tool wiki_rebuild_meta; Hngh never writes meta/$(eff_note "$ident")" \
+   "wiki-health:$ident"
   continue
  fi
- attempt_rebuild "$vault" "$label" "$DISK" "$REG"
+ attempt_rebuild "$vault" "$label" "$ident" "$DISK" "$REG"
 done
 
 # --- production seed (project vault only, Mondays) --------------------

@@ -162,8 +162,18 @@ chmod +x "$sb/stubbin/date"
 # --- a) verdicts -------------------------------------------------------
 probe_run
 out="$(rows_dump)"
-assert "healthy vault -> silent ok row" "$out" "progress wiki-health-ok:vhealthy"
-assert "split vault -> alert with fix" "$out" "alert wiki-health:vsplit"
+assert "healthy vault -> silent ok row" "$out" "progress wiki-health-ok:personal"
+assert "split vault -> alert with fix" "$out" "alert wiki-health:project"
+# label neutralization (2026-09-17): labels are role names (personal /
+# project), never path-derived (a $HOME-vault would leak the machine
+# username into every public ledger row and identity); the override
+# knobs keep explicit names possible
+case "$out" in
+ *":vhealthy"*|*":vsplit"*) bad "path-derived label leaked: $out" ;;
+ *) ok "labels are role names, not path-derived" ;;
+esac
+assert "personal slot label is personal" "$out" "wiki-health personal:"
+assert "project slot label is project" "$out" "wiki-health project:"
 # boundary redaction (2026-09-16): alert rows are public-bound, so the
 # fix path carries the tilde marker — ~ for paths under HOME, ~tmp for
 # /tmp (mktemp honors TMPDIR, so compute the expected form)
@@ -252,13 +262,15 @@ WIKI_AUTO_REBUILD=1 probe_run
 assert "stub cwd is the vault parent" "$(cat "$sb/omp-calls")" "$sb/p4/vsplit|"
 assert "stub asked to run wiki_rebuild_meta" "$(cat "$sb/omp-calls")" \
  "wiki_rebuild_meta"
+vpid="$(printf '%s' "$sb/p4/vsplit/.llm-wiki" | sha256sum | cut -c1-8)"
 assert "once-daily stamp written" \
- "$(cat "$sb/stamps/.hngh-wiki-rebuild-vsplit")" "$(date -u +%F) unfrozen"
+ "$(cat "$sb/stamps/.hngh-wiki-rebuild-project-$vpid")" "$(date -u +%F) unfrozen"
 assert "telemetry row kind=wiki-rebuild" "$(telemetry_rows wiki-rebuild)" \
- "vsplit unfrozen disk"
+ "project:$vpid unfrozen disk"
 assert "telemetry row carries reg delta" "$(telemetry_rows wiki-rebuild)" \
  "reg 1->"
-assert "telemetry row carries duration" "$(telemetry_wall vsplit)" "0"
+assert "telemetry row carries duration" \
+ "$(telemetry_wall "project:$vpid")" "0"
 out="$(rows_dump)"
 assert "unfrozen ok row filed" "$out" "healthy after rebuild attempt"
 case "$out" in
@@ -282,25 +294,34 @@ WIKI_AUTO_REBUILD=1 probe_extra "$sb/absent1/vmissing" "$sb/p2/vunindexed/.llm-w
 [ "$(call_count)" = 1 ] && ok "unhealthy vault attempted once" ||
  bad "expected 1 attempt, got $(call_count)"
 assert "still-unhealthy telemetry" "$(telemetry_rows wiki-rebuild)" \
- "vunindexed still-unhealthy"
+ "still-unhealthy"
 out="$(rows_dump)"
 assert "insufficient alert carries 'rebuild attempted'" "$out" \
  "rebuild attempted"
 assert "insufficient alert is honest" "$out" "insufficient"
-assert "insufficient alert identity" "$out" "wiki-health-rebuild:vunindexed"
+vuid="$(printf '%s' "$sb/p2/vunindexed/.llm-wiki" | sha256sum | cut -c1-8)"
+assert "insufficient alert identity is per-vault digest" "$out" \
+ "wiki-health-rebuild:project:$vuid"
 WIKI_AUTO_REBUILD=1 probe_extra "$sb/absent1/vmissing" "$sb/p2/vunindexed/.llm-wiki"
 [ "$(call_count)" = 1 ] && ok "second same-day run skips the attempt" ||
  bad "daily cap broken: $(call_count) calls"
 
 # two consecutive daily non-unfrozen attempts -> research subject
 printf '%s still-unhealthy\n' "$(date -u -d yesterday +%F)" \
- >"$sb/stamps/.hngh-wiki-rebuild-vunindexed"
+ >"$sb/stamps/.hngh-wiki-rebuild-project-$vuid"
 WIKI_AUTO_REBUILD=1 probe_extra "$sb/absent1/vmissing" "$sb/p2/vunindexed/.llm-wiki"
 [ "$(call_count)" = 2 ] && ok "next-day attempt runs again" ||
  bad "next-day attempt did not run: $(call_count)"
-grep -q 'ctx-wiki-rebuild-vunindexed' "$sb/research-subjects.txt" &&
+grep -q "ctx-wiki-rebuild-project-${vuid}" "$sb/research-subjects.txt" &&
  ok "consecutive failures file a research subject" ||
- bad "failure routing did not file ctx-wiki-rebuild-vunindexed"
+ bad "failure routing did not file ctx-wiki-rebuild"
+# the machine username never reaches the public surface: rows, bodies,
+# identities, subjects, and stamp names carry role labels + digests only
+leak_probe="$(cat "$sb/research-subjects.txt") $(rows_json) $(ls "$sb/stamps")"
+case "$leak_probe" in
+ *"$(id -un)"*) bad "machine username leaked into subjects/rows/stamps" ;;
+ *) ok "no username leak in subjects, stamps, or rows" ;;
+esac
 
 # timeout knob bounds the attempt
 printf 'sleep' >"$sb/omp-stub-mode"
@@ -308,7 +329,7 @@ rm -f "$sb/omp-calls"
 WIKI_AUTO_REBUILD=1 WIKI_REBUILD_TIMEOUT=2 \
  probe_extra "$sb/absent1/vmissing" "$sb/p3/vstale/.llm-wiki"
 assert "timeout knob -> attempt-failed outcome" \
- "$(telemetry_rows wiki-rebuild)" "vstale attempt-failed"
+ "$(telemetry_rows wiki-rebuild)" "attempt-failed"
 
 # --- e) production seed is Monday-gated ---------------------------------
 rm -f "$sb/p3/vstale/.llm-wiki/wiki/concepts/hngh-lessons-current.md"

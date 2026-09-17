@@ -2,6 +2,24 @@
 
 ## 2026-09-17
 
+- wiki-health: neutralize vault labels — the personal vault label was
+  `basename(dirname "$HOME/.llm-wiki")`, i.e. the machine username,
+  embedded in every daily ledger row text and dedup identity
+  (`wiki-health-ok:bricker` in the git-tracked, pushed reports ledger);
+  the path redaction layer never covers non-path tokens, so the leak
+  rode every row. Labels are now role names (`personal` / `project`,
+  overridable via `HNGH_WIKI_PERSONAL_LABEL` / `HNGH_WIKI_PROJECT_LABEL`);
+  dedup identities move to `<role>:<8-hex path digest>` so they stay
+  per-vault (distinct vaults never share a dedup window) and stay stable
+  across vault moves, at the cost of one identity churn: existing 7d
+  windows reset and today's rows re-file (daily progress rows —
+  acceptable). Stamp files use the hyphenated ident; research subjects
+  become `ctx-wiki-rebuild-<role>-<digest>`. Historical ledger rows keep
+  the old `bricker` label (append-only history; redaction of past rows
+  is a separate question). `wiki_rebuild_meta` fix-path semantics and
+  the omp rebuild leg are untouched. Test `tests/test-wiki-health.sh`
+  (49 hermetic cases) failing-first, green; full `make test` pass.
+
 - patrol: candidate-hash reconciliation check — the loop-history guard
   accepts any `hngh: candidate <64hex>` subject with no artifact to
   consult, and the a4e2 census confirmed no minted-certificate ledger
