@@ -171,6 +171,12 @@ authorize a future action.
 - [2026-09-09-budget-governance-directive.md](2026-09-09-budget-governance-directive.md)
 - [2026-09-09-operator-flexibility-doctrine.md](2026-09-09-operator-flexibility-doctrine.md)
 - [2026-09-09-wake-mutation-lane-rotation.md](2026-09-09-wake-mutation-lane-rotation.md)
+- [2026-09-17-certificate-ephemerality-of-record.md](2026-09-17-certificate-ephemerality-of-record.md)
+  — kernel certificates are single-use stdout artifacts with no store
+  write path; the commit-subject hash is the only durable trace and
+  the loop-history guard's candidate check is format-only.
+  Adjudicated a design gap, not a known limitation; mint-time
+  certificate receipts are the adopted remediation direction.
 
 The harvest from 2026-09-01 onward is thin here on purpose: recent
 work-slice facts live closer to their surfaces (plan files, reports.md,

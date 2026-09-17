@@ -6,6 +6,9 @@ Lane: automation free-commit (jobs/patrol.py + config + tests); kernel
 proposal only, no kernel edits
 Inputs: a4e1-store-inventory (store record census), a4e2-hash-
 reconciliation (feasibility verdict)
+Upgrade: 2026-09-17 — the gap classification (design gap, not known
+limitation) and the remediation adoption are of record in
+docs/records/2026-09-17-certificate-ephemerality-of-record.md.
 
 ## The gap
 
