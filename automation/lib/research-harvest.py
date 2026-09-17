@@ -29,6 +29,8 @@ adopted disposition re-harvests to a no-op.
 usage: research-harvest.py --dispositions TSV --lines TSV --lessons TSV
        [--vault DIR] [--now ISOZ]   (lib use: harvest(...))
 """
+import importlib.machinery
+import importlib.util
 import os
 import re
 import sys
@@ -41,6 +43,26 @@ LESS_SCHEMA = ["lesson_id", "date", "line_id", "subject", "lesson",
 LESSON_CAP = 240  # one actionable sentence; the verdict is prose
 
 
+def _load_redact_home():
+    """Load the sibling lib/scrub.py (THE single-source redaction
+    identity, 2026-09-17 GAP-B cure) without sys.path games: this
+    module is executed both as a script by 33-research-beat.sh and
+    hermetically via importlib by its test. Fail-closed: a missing or
+    broken scrub module raises here -- the beat reports the harvest
+    failure and no unguarded lesson row is ever written."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "scrub.py")
+    loader = importlib.machinery.SourceFileLoader("hngh_scrub_harvest",
+                                                  path)
+    spec = importlib.util.spec_from_loader("hngh_scrub_harvest", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod.redact_home
+
+
+REDACT_HOME = _load_redact_home()
+
+
 def _clean(text):
     """One printable single-spaced line, capped (model output is data)."""
     line = re.sub(r"\s+", " ", str(text or ""))
@@ -50,8 +72,11 @@ def _clean(text):
 
 def _lesson_sentence(verdict, doc_path, subject):
     """One actionable sentence from the verdict reason; doc heading or
-    subject as fallback when the verdict carries no reason."""
-    reason = _clean(verdict)
+    subject as fallback when the verdict carries no reason. Every
+    source passes redact_home BEFORE cleaning (2026-09-17 GAP-B cure:
+    machine-local tokens ride in verdict/evidence/subject text; the
+    tilde family is the established lesson convention)."""
+    reason = _clean(REDACT_HOME(verdict))
     reason = re.sub(r"^adopted\b[\s\-–—:]*", "", reason,
                     flags=re.IGNORECASE).strip()
     if reason:
@@ -61,10 +86,10 @@ def _lesson_sentence(verdict, doc_path, subject):
             for ln in f:
                 ln = ln.strip()
                 if ln.startswith("# ") and len(ln) > 2:
-                    return _clean(ln[2:])
+                    return _clean(REDACT_HOME(ln[2:]))
     except OSError:
         pass
-    return _clean(subject)
+    return _clean(REDACT_HOME(subject))
 
 
 def _load_rows(path, schema):
@@ -174,7 +199,7 @@ def harvest(dispositions_path, lines_path, lessons_path, vault,
             if prev and prev[4] == lesson and prev[5] == "active":
                 continue  # idempotent: unchanged content, no rewrite
             lessons[lid] = ["les-%s-%s" % (stamp, lid), now, lid,
-                            subject, lesson, "active"]
+                            REDACT_HOME(subject), lesson, "active"]
             changed.append(lid)
         elif prev and prev[5] == "active":
             # a later non-adopted disposition retires the lesson
@@ -206,6 +231,7 @@ def _write_wiki_page(vault, lesson, disp):
     lid = lesson[2]
     page = os.path.join(wiki, "LES-%s.md" % lid)
     title = "Research Lesson: %s" % lesson[3]
+    evidence = REDACT_HOME(disp["evidence"])
     text = (
         "---\n"
         "title: \"%s\"\n"
@@ -222,7 +248,7 @@ def _write_wiki_page(vault, lesson, disp):
         "at the file_path above. Harvested by the hngh research beat "
         "into automation/research-lessons.tsv (row `%s`).\n\n"
         "Back to [[index]].\n"
-        % (title, lid, lesson[1][:10], disp["evidence"], title,
+        % (title, lid, lesson[1][:10], evidence, title,
            lesson[4], lid, disp["date"], lesson[0]))
     tmp = page + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

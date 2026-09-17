@@ -121,7 +121,9 @@ def main():
     assert "type: source" in ptext, ptext
     assert "source_id: LES-line-a" in ptext, ptext
     assert "captured: 2026-09-15" in ptext, ptext
-    assert 'file_path: "%s"' % doc in ptext, ptext
+    assert 'file_path: "' in ptext, ptext
+    assert doc not in ptext, ptext  # raw path dies (2026-09-17 GAP-B cure)
+    assert os.path.basename(doc) in ptext, ptext  # tilde rendering keeps the tail
     assert "Refreshed:" in ptext, ptext  # refresh updated the page body
     srcdir = os.path.join(vault, "wiki", "sources")
     a_pages = [x for x in os.listdir(srcdir) if x.startswith("LES-line-a")]
@@ -187,6 +189,42 @@ def main():
     rh.harvest(d2, lines, lessons3, vault, now=NOW)
     f = read(lessons3).splitlines()[1].split("\t")
     assert f[4], f  # non-empty fallback lesson (doc heading or subject)
+
+    # 10. GAP-B cure (2026-09-17): raw machine-local tokens riding in
+    # disposition free-text (verdict col3 / evidence col5) and the lines
+    # subject die to the lib/scrub.py tilde family in BOTH sinks (lesson
+    # row + vault page) BEFORE any write. Red-first: fails against the
+    # unguarded interpolation that leaked into research-lessons.tsv.
+    raw_home = "/home/bri/Projects/etc/hngh"
+    d3 = os.path.join(td, "disp3.tsv")
+    write(d3, DISP_SCHEMA + "\n"
+          + "\t".join(["line-a", "adopted",
+                       "adopted -- Derived from %s/docs/research/x.md probes." % raw_home,
+                       "model:test",
+                       raw_home + "/docs/research/2026-09-01-line-a.md",
+                       "2026-09-17", "sup", "opp", ""]) + "\n")
+    lessons5 = os.path.join(td, "lessons5.tsv")
+    n = rh.harvest(d3, lines, lessons5, vault, now="2026-09-17T00:00:00Z")
+    assert n == 1, n
+    f = read(lessons5).splitlines()[1].split("\t")
+    assert "/home/" not in f[4], f
+    assert "~~" not in f[4], f  # /home/<user> renders one tilde, not two
+    assert f[4].count("~/") == 1, f[4]
+    page = os.path.join(vault, "wiki", "sources", "LES-line-a.md")
+    ptext = read(page)
+    assert raw_home not in ptext, ptext
+    assert "~/Projects/etc/hngh/docs/research/2026-09-01-line-a.md" in ptext, ptext
+
+    # 11. raw subject from the lines TSV dies in the lesson row too
+    write(lines, "line-a\treviewed\t2026-09-01T00:00:00Z\t"
+                 "line a subject under %s\n" % raw_home
+                 + "line-b\treviewed\t2026-09-02T00:00:00Z\tline b subject\n")
+    lessons6 = os.path.join(td, "lessons6.tsv")
+    rh.harvest(d3, lines, lessons6, os.path.join(td, "novault"),
+               now="2026-09-17T01:00:00Z")
+    f = read(lessons6).splitlines()[1].split("\t")
+    assert raw_home not in f[3], f
+    assert f[3].startswith("line a subject under ~/"), f[3]
 
     print("test-research-harvest: all assertions passed")
     return 0
