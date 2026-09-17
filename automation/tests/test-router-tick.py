@@ -321,6 +321,63 @@ class RouterTick(unittest.TestCase):
                          self.rows())
 
 
+    def test_pathy_identity_is_scrubbed_never_slugs_a_path(self):
+        """Pre-2026-09-16 alert identities were not path-redacted; a dash-
+        mangled absolute path must never reach the routed slug, plan
+        front-matter, or row identities (2026-09-16 risk-dispositions
+        cred-argv family). Raw '/', '~', '$' fail IDENT_OK fail-closed."""
+        out = self.run_tick(
+            "review:home-bricker-Projects-etc-hngh-docs-secret-plan")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 1, cands)
+        self.assertNotIn("bricker", cands[0])
+        self.assertNotIn("home-", cands[0])
+        self.assertRegex(cands[0], r"-routed-review\.plan\.md$")
+        text = (self.plans / cands[0]).read_text()
+        self.assertNotIn("bricker", text)
+        self.assertIn("routed-from=review -->", text)
+        self.assertFalse(any("bricker" in r for r in self.rows()), self.rows())
+        self.assertFalse(any("bricker" in b for b in self.breadcrumbs()),
+                         self.breadcrumbs())
+
+    def test_non_pathy_identity_passes_through_unchanged(self):
+        """The scrub is identity-preserving for clean shapes drawn from
+        the real routing census (no home/Users-stemmed subject token)."""
+        for ident in ("gate-red:kernel", "tree-skew:hngh",
+                      "agent-stall:omp-impl-9d5ab9", "review:hngh:P1-x",
+                      "dash-selfreview:summary",
+                      "slow-unit:dropin:20-workbeat.sh",
+                      "system-network-down", "ui-audit:name-completeness"):
+            before = set(self.candidates())
+            out = self.run_tick(ident, "probe")
+            self.assertEqual(out.returncode, 0, out.stderr)
+            fresh = [c for c in self.candidates() if c not in before]
+            self.assertEqual(len(fresh), 1, (ident, fresh))
+            self.assertIn("routed-from=%s -->" % ident,
+                          (self.plans / fresh[0]).read_text())
+
+    def test_pathy_subject_token_truncates_but_keeps_class(self):
+        """Documented scrub tradeoff: a subject token starting home-/
+        Users- is cut even when innocuous ("home-page-render"). The
+        class prefix survives so dedup still works; granularity loss is
+        accepted because the alternative risks leaking path tails."""
+        out = self.run_tick("dash-selfreview:home-tilde-widget", "probe")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(len(self.candidates()), 1, self.candidates())
+        text = (self.plans / self.candidates()[0]).read_text()
+        self.assertIn("routed-from=dash-selfreview -->", text)
+        self.assertNotIn("tilde", text)
+
+    def test_critical_pathy_class_still_parks(self):
+        out = self.run_tick("remote-posture:home-bricker-Projects-etc-hngh")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(self.candidates(), [])
+        self.assertTrue(any("alert" in r
+                            and "--identity router:parked:remote-posture "
+                            in r for r in self.rows()), self.rows())
+
+
 class PlanDispose(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()

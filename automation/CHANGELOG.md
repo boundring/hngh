@@ -2,6 +2,24 @@
 
 ## 2026-09-17
 
+- router-tick: path-fragment scrub at the emitter — a dash-mangled
+  absolute path riding in an alert identity (pre-2026-09-16 alert
+  identities were not path-redacted, see
+  docs/records/2026-09-16-risk-dispositions-cred-argv.md) could pass
+  IDENT_OK ([A-Za-z0-9._:-] admits "home-bricker-...") and bake path
+  tokens into the public routed-candidate slug, front-matter
+  routed-from, and router:routed progress-row identities. Census
+  confirmed zero pathy tokens in today's surfaces (routed plan
+  filenames/front-matter, router STATE.md rows), so this is hardening,
+  not incident response: route() now cuts the identity at the first
+  home/Users-stemmed token (class prefix survives for dedup) and
+  refuses whole-path-derived identities fail-closed with a
+  no-candidate crumb; raw '/', '~', '$' identities already fail
+  IDENT_OK. Documented tradeoff: an innocuous subject token starting
+  home-/Users- truncates (leak-averse direction). Red-first in
+  tests/test-router-tick.py (3 new tests fail on the pre-fix emitter,
+  24/24 green after; full automation suite green, lint clean).
+
 - research-subjects: non-beat appenders sealed — both remaining
   unredacted appenders into the git-tracked, publicly pushed
   research-subjects.txt now run redact_home (lib/scrub.py single token
