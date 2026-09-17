@@ -263,3 +263,12 @@ docs/records/ with its first commit.
   step-2-no-verification for ~12h — and
   2026-09-09-automation-schedule-optimization) execute through the normal
   selector; this plan's steps 1 and 3 unblock their throughput.
+- 2026-09-17T10:2xZ, sibling-lane note (bench-trigger wake): this plan's
+  staged step-9 tick (step tick + docs/records/2026-09-17-stall-recovery-
+  step9-quota-verify.md) was committed and pushed to origin/main inside
+  sibling commit 011ba896 — a bench-lane docs commit whose &&-chained
+  add+inspect+commit consumed the already-staged files (lesson
+  08:44:40Z instance: inspect git diff --cached in its own step, never
+  chained). Content verified identical to what this lane had staged; no
+  edits were made to it. Kernel gate was green at the sibling session's
+  own verification; treat 011ba896 as this plan's tick commit.
