@@ -2,6 +2,30 @@
 
 ## 2026-09-17
 
+- security: identity-seam guard scan scope extended past `*.sh`/`*.py`
+  (the non-sh/py writer audit, closing the admitted gap). The guard now
+  also scans `.js`/`.mjs` under `automation/{dashboard,jcode}` plus the
+  four original surfaces — JS comments stripped, string contents kept
+  (fail-closed: an execSync("git commit ...") or spawn("git", ["commit",
+  ...]) invocation shape is flagged even inside quotes; reword prose
+  instead) — and detects git-array/argv forms (`["git", "commit"]`,
+  `["git", "-c", ..., "commit"]`) on shell/python raw lines; built-in
+  tmp-dir self-test probes run on every invocation so the scanner
+  cannot rot. Audit
+  verdict (bounded negative, recorded in
+  docs/records/2026-09-16-identity-seam-reconciliation.md): no
+  non-sh/py automation artifact can run git commit — dashboard JS is
+  display-only (zero child_process), ui-audit.mjs spawns python3 only,
+  dashboard-server.py's subprocess set is enumerated (its backup
+  button calls the pinned config-backup.sh), crontab empty, opencode
+  configs carry no shell hooks, package.json has no bin/scripts. Same
+  record carries the config-backup parity verification: one post-16dae2eb
+  run, `committed=0 pushed=1` = expected no-drift parity, pin intact
+  but not yet drift-exercised. Red-proven: a planted unpinned
+  `dashboard/*.mjs` writer passed the old guard and fails the new one
+  with a single precise violation; clean tree green; full make test
+  rc=0.
+
 - patrol: gate-cure LARGE pre-check — `check_gate_cure` now refuses the
   auto-declare (existing `gate-cure-refused` park, no exemption append,
   no decisions.md entry, no ceremony drive) when the violating commit
