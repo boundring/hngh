@@ -668,6 +668,19 @@ line="$(printf '%s' "$row" | cut -f4)"
 # server) wins, then the busy ROUTE_PIN (capacity signal), then the
 # rotation below for an otherwise-unpinned (local) run.
 MODEL_PIN="${MODEL_PIN:-local}"
+# Operator-active guard (2026-09-18 beats hold): when the Jev beat-skip
+# verdict says the operator is using the machine, a local pin would hit
+# the operator's Unsloth server mid-session. Shift to the kimi quota leg
+# instead (falls through inside model_call if unarmed; research never
+# blocks). Overflow pins already avoid local; ROUTE_PIN wins as before.
+if [ -z "$OVERFLOW_PIN" ] && [ -z "$ROUTE_PIN" ] && [ "$MODEL_PIN" = "local" ]; then
+ _skip_file="${VIP_BEATSKIP_FILE:-$AUTOMATION_ROOT/tmp-beatskip.txt}"
+ if [ "$(cat "$_skip_file" 2>/dev/null)" = "skip" ]; then
+  breadcrumb "$JOB_NAME" "research-reroute" \
+   "operator active (beat-skip=skip) — local Unsloth leg shifted to kimi"
+  MODEL_PIN=kimi
+ fi
+fi
 if [ -n "$OVERFLOW_PIN" ]; then
  MODEL_PIN="$OVERFLOW_PIN"
 elif [ -n "$ROUTE_PIN" ]; then
