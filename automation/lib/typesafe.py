@@ -81,6 +81,31 @@ def ask_choice(state, name, instructions, criteria):
         return None
 
 
+def ask_score(state, name, instructions, criteria):
+    """Score question -> list of floats, or None fail-closed."""
+    c = _client()
+    if c is None:
+        _crumb(name)
+        return None
+    try:
+        from typesafe_sdk import Score
+
+        with c:
+            r = c.system_one(
+                state=state,
+                questions={
+                    name: Score(
+                        instructions=instructions,
+                        criteria=list(criteria),
+                    )
+                },
+            )
+        return r.scores[name].scores
+    except Exception:
+        _crumb(name)
+        return None
+
+
 def beat_skip_gate(operator_active_signals):
     """First wired decision: True iff the beat should SKIP (operator busy).
 
