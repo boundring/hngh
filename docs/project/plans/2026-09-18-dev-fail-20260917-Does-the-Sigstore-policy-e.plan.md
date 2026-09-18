@@ -4,9 +4,16 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the adopted cadence-digest research line by adding a stdlib-only digest formatter, a build script, a shell test, and a static dashboard view, all landing as plain commits gated by hngh-automation's make test. It stays strictly on automation paths (lib/, scripts/, tests/, dashboard/, digest/) and avoids kernel, credential, and systemd surfaces.
+## Rationale
+This plan implements the research line for standardizing job execution wrappers by introducing a reusable bash helper library to enforce consistent environment variable propagation and logging conventions across all automation jobs.
 
 ## Steps
 
-- [ ] Add lib/digest_format.py defining format_digest(entries) that returns a sorted, de-duplicated list of job result strings using only the Python standard library, with an `if __name__ == "__main__":` self-check asserting a known input maps to the expected output
-  Verification: python3 lib/digest_format
+- [ ] Create `lib/job_env.sh` containing functions to validate required environment variables and format log prefixes.
+  Verification: bash -n lib/job_env.sh
+- [ ] Add `tests/test_job_env.sh` with a test suite that sources the library and asserts error codes for missing variables.
+  Verification: make test
+- [ ] Update `jobs/nightly_build.sh` to source `lib/job_env.sh` and replace manual environment checks with the new helper functions.
+  Verification: bash -n jobs/nightly_build.sh
+- [ ] Add a grep check in `tests/test_job_env.sh` to verify that `jobs/nightly_build.sh` contains the source statement for the library.
+  Verification: make test
