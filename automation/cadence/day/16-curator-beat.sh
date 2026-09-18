@@ -17,7 +17,7 @@ set -u
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 [ -d "$KERNEL/docs/project/plans" ] || exit 0
-[ -f "$AUTOMATION_ROOT/dashboard/plans.json" ] || exit 0
+[ -f "${HNGH_PLANS_FEED_OUT:-$AUTOMATION_ROOT/dashboard/plans.json}" ] || exit 0
 
 out="$(python3 "$AUTOMATION_ROOT/jobs/curator-beat.py" 2>/dev/null)" || {
   breadcrumb "$JOB_NAME" curator "refused: curator-beat.py failed (rc=$?)"
