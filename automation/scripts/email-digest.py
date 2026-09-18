@@ -389,6 +389,45 @@ def dedup_alerts(rows):
 
 
 
+def _overwide_alert_rows(window_s=ALERT_WINDOW_S):
+    """Recover alert first lines the strict 5-cell ledger read drops
+    (backlog rq-gap-email-digest-intake): a patrol detail containing a
+    literal `|` (e.g. `send failed rc=2: ...` log lines) yields a 6-cell
+    table row that never reaches the report-queue --json payload. A row
+    qualifies when cells[0] is a fresh timestamp, cells[1] == 'alert',
+    the last cell is a well-formed alert body filename, and everything
+    between is the re-joined alert first line."""
+    rows = []
+    try:
+        with open(os.path.join(
+                os.environ.get("HNGH_HOME", KERNEL),
+                "docs", "project", "reports.md"),
+                encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+    except OSError:
+        return rows
+    cutoff = time.time() - window_s
+    body_re = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z-"
+                         r"alert-[0-9a-f]{8}\.md$")
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not (s.startswith("|") and s.endswith("|")):
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if len(cells) <= 5 or cells[1] != "alert":
+            continue
+        if not cells[0] or not cells[-1] or not body_re.match(cells[-1]):
+            continue
+        try:
+            ts = datetime.strptime(cells[0], "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            continue
+        if ts.replace(tzinfo=timezone.utc).timestamp() < cutoff:
+            continue
+        rows.append(" | ".join(cells[3:-1]))
+    return rows
+
+
 def alert_rows(window_s=ALERT_WINDOW_S):
     """Alert report-queue rows from the last window_s seconds (default
     7d; env seam for tests: HNGH_DIGEST_ALERTS = pre-rendered lines,
@@ -418,6 +457,9 @@ def alert_rows(window_s=ALERT_WINDOW_S):
                         rows.append(r.get("first", ""))
         except (OSError, ValueError, subprocess.TimeoutExpired):
             pass
+        extra = _overwide_alert_rows(window_s)
+        have = set(rows)
+        rows.extend(r for r in extra if r not in have)
     return rows
 
 
