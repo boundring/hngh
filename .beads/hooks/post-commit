@@ -1,0 +1,6 @@
+#!/bin/bash
+# push-on-commit: fire the push script after every verified commit.
+# The push script's own gating (make test, staleness guard, staged-changes
+# check) prevents bad pushes; this hook just triggers the CHECK sooner.
+~/Projects/etc/hngh/automation/cadence/hour/16-remote-push.sh &
+# fire-and-forget: the hook must not block the commit
