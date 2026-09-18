@@ -443,7 +443,11 @@ class RouterTick(unittest.TestCase):
             self.assertIn("routed-from=%s -->" % kept,
                           (self.plans / fresh[0]).read_text())
         # innocuous single words: one dash-segment, no stem -> untouched
-        for ident in ("review:bricker-x", "gate-red:kernel-red",
+        # plainword: never a pathy stem (stems are home/users/tmp/root
+        # plus the configured username -- bricker WAS one, so the old
+        # fixture cut to "review" and dedup-skipped; username-stem
+        # behavior lives in the seam test above)
+        for ident in ("review:plainword-x", "gate-red:kernel-red",
                       "slow-unit:matrix-worker"):
             before = set(self.candidates())
             out = self.run_tick(ident, "probe")

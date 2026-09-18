@@ -2,6 +2,18 @@
 
 ## 2026-09-18
 
+- rehearsal-lane step-2 verification unblock: the automation gate was
+  committed-red (not sibling dirt — red at clean-HEAD worktree 801a2e3c
+  and at d5f7dc0d, the commit that introduced the case): the
+  test-router-tick innocuous-case fixture `review:bricker-x` collided
+  with the config.env username-stem default
+  (`HNGH_ROUTER_PATHY_STEMS:-bricker`), scrubbed to `review`, and
+  dedup-skipped against the earlier `review:tmp-cache-sweep` cut in
+  the same test (fresh=0, 1 expected). Fixture swapped to
+  `review:plainword-x` (provably not a stem; username-stem behavior
+  stays covered by the seam and GAP-E tests); suite 28/28, full
+  `make test` green rc=0. Kernel rehearsal recipe verified in the same
+  session (TMPDIR=<repo> + OMP_PROJECT=hngh, rc=0 in 34.4s).
 - stall-recovery step 10 (fresh-eyes review model selection) closed as
   verify-and-tick: the mechanism was already landed (commits 6854d2d0,
   1907079f) -- MODEL_PIN=review ladder deck -> kimi -> zai -> ocgo with
