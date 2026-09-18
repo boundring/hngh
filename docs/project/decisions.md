@@ -636,3 +636,18 @@ guard's KNOWN_EXEMPTIONS table and cured through the ceremony
 loop -- declared, not rewritten; the SMALL-matter policy is the
 2026-09-13 amendment (docs/design/autonomous-development-
 control.md). A ceremony refusal parks for the operator.
+
+## 2026-09-18 — Decision-inventory absorb (hngh-4m1): absorb-and-record with ypb remainder
+
+The `hngh-decision-inventory` parent (BACKLOG.md TIER 2, item 2a) is
+absorbed on the landed children's findings: `automation/lib/typesafe.py`
+(`10cccb2d`, Noul/Choice/Score helpers, fail-closed), the `model.sh`
+beat-skip gate (`d740d967`, SKIP_LOCAL bypass, 30s cached verdict,
+fail-open), and the beads+Jev propagation record
+(`docs/records/2026-09-18-beads-jev-propagation.md`, `801a2e3c`).
+The Choice-driven absorb question was asked and returned fail-closed
+(`typesafe_sdk` not installed, no live key), so the deterministic rule
+applies: absorb-and-record rather than keep-open. Tracked remainder is
+exactly one bead: `hngh-ypb` (ts-integration-assessment synthesis doc,
+`docs/design/ts-integration-assessment.md` not yet written). No other
+2a remainder. Closing `hngh-4m1` unblocks `hngh-ypb`.

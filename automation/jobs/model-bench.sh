@@ -10,6 +10,11 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/hngh-record.sh"
+. "$AUTOMATION_ROOT/lib/vip-gate.sh"
+
+# hngh-vip: heavy Unsloth fleet run — midnight window only, and deferred
+# while the beat-skip verdict says the operator is active.
+if ! vip_gate; then exit 0; fi
 
 DATE="$(date +%F)"
 TS="$(date +%H%M)"
