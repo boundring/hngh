@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=held risk=normal accepted=- cause=missing-design held=2026-09-18T01:40:53Z -->
 # 2026-09-18 — Backlog P1 completions bundle (BACKLOG.md TIER 2)
 
 Governance completion: close the open P1 audit chains. Do not re-derive specs;
@@ -17,7 +17,7 @@ read-only and parallel-safe.
 
 ## Steps
 
-- [ ] 2a. Decision-inventory absorb + ts-integration-assessment synthesis doc: absorb the hngh-decision-inventory parent using the landed children's findings, then write the ts-integration-assessment synthesis doc at `docs/design/ts-integration-assessment.md` from the banked ts-* children artifacts (no new analysis, synthesis only); record the absorb decision in docs/project/decisions.md
+- [ ] 2a. Decision-inventory absorb + ts-integration-assessment synthesis doc: absorb the hngh-decision-inventory parent using the landed children's findings, then write the ts-integration-assessment synthesis doc under docs/design/ (file ts-integration-assessment.md) from the banked ts-* children artifacts (no new analysis, synthesis only); record the absorb decision in docs/project/decisions.md
       Verification: `grep -ril "ts-integration" docs/design/` finds the new doc; docs/project/decisions.md diff shows the absorb entry; `make test` at repo root passes
 
 - [ ] 2b. G2 reviewer-lane-attribution-mechanism: reconcile telemetry-vs-STATE.md breadcrumb ledger counts for the kimi/unsloth lanes. Scorpion spec (banked 14:32Z): STATE.md breadcrumb ledger is ground truth for lane fall-through counts; `automation/lib/model.sh:_model_emit` is success-only telemetry and structurally undercounts misses. Do NOT live-probe kimi.
