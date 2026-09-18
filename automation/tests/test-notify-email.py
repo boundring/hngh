@@ -731,7 +731,10 @@ class SetupNotifyEmail(unittest.TestCase):
         stub_path.write_text(stub)
         stub_path.chmod(0o755)
         env = dict(os.environ, HNGH_NOTIFY_EMAIL_CONF=str(conf),
-                   HNGH_OP_BIN=str(stub_path))
+                   HNGH_OP_BIN=str(stub_path),
+                   # hermetic: force a fake key so the keyed-only path is
+                   # exercised even on tokenless hosts (CI)
+                   ONEPASSWORD_SERVICE_KEY="sk-test-session")
         return subprocess.run(["bash", str(SETUP), "--from-1password", ref], env=env,
                               capture_output=True, text=True, timeout=60)
 
@@ -778,6 +781,61 @@ class SetupNotifyEmail(unittest.TestCase):
                                  "#!/usr/bin/env bash\nexit 0\n")
         self.assertEqual(p.returncode, 2)
         self.assertIn("op://<vault>/<item>/<field>", p.stderr)
+        self.assertFalse(conf.exists())
+
+    def test_from_1password_maps_service_key_to_token(self):
+        # keyed-entry contract (lib/credentials.sh): the service key must
+        # be mapped onto OP_SERVICE_ACCOUNT_TOKEN BEFORE any `op` call,
+        # so op never falls through to the desktop-app prompt.
+        conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
+        env_file = Path(tempfile.mkdtemp()) / "op-env"
+        stub = ("#!/usr/bin/env bash\n"
+                '[ "$1" = account ] && exit 0\n'
+                '[ "$2" = username ] && { grep -q OP_SERVICE_ACCOUNT_TOKEN= %s && exit 0 || exit 1; }\n'
+                'exit 1\n' % env_file)
+        stub_path = Path(tempfile.mkdtemp()) / "op-stub"
+        stub_path.write_text(stub)
+        stub_path.chmod(0o755)
+        env = dict(os.environ, HNGH_NOTIFY_EMAIL_CONF=str(conf),
+                   HNGH_OP_BIN=str(stub_path),
+                   ONEPASSWORD_SERVICE_KEY="sk-test-session")
+        # credentials.sh maps the key ONLY when the token is unset/empty;
+        # drop any host-provided token so the mapping path is exercised
+        env.pop("OP_SERVICE_ACCOUNT_TOKEN", None)
+        # stub dumps its inherited env; the token must be present
+        stub2 = ("#!/usr/bin/env bash\n"
+                 'env > %s\n'
+                 '[ "$1" = account ] && exit 0\n'
+                 '[ "$2" = username ] && echo setup-user && exit 0\n'
+                 'exit 1\n' % env_file)
+        stub_path.write_text(stub2)
+        # NOTE: test email will fail (no SMTP) but the conf write + token
+        # mapping happen first; we assert on the mapping, not the send.
+        subprocess.run(["bash", str(SETUP), "--from-1password",
+                        "op://v/i/password"], env=env,
+                       capture_output=True, text=True, timeout=60)
+        env_text = env_file.read_text()
+        self.assertIn("OP_SERVICE_ACCOUNT_TOKEN=sk-test-session", env_text)
+
+    def test_from_1password_refuses_tokenless_before_invoking_op(self):
+        # fail-closed: with no token AND no key, `op` must never run
+        # (a desktop-app integration would demand an interactive prompt).
+        conf = Path(tempfile.mkdtemp()) / "notify-email.conf"
+        marker = Path(tempfile.mkdtemp()) / "op-ran"
+        stub = ("#!/usr/bin/env bash\n"
+                "touch %s\nexit 0\n" % marker)
+        stub_path = Path(tempfile.mkdtemp()) / "op-stub"
+        stub_path.write_text(stub)
+        stub_path.chmod(0o755)
+        env = dict(os.environ, HNGH_NOTIFY_EMAIL_CONF=str(conf),
+                   HNGH_OP_BIN=str(stub_path))
+        env.pop("ONEPASSWORD_SERVICE_KEY", None)
+        env.pop("OP_SERVICE_ACCOUNT_TOKEN", None)
+        p = subprocess.run(["bash", str(SETUP), "--from-1password",
+                            "op://v/i/password"], env=env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 1)
+        self.assertFalse(marker.exists())  # op never invoked
         self.assertFalse(conf.exists())
 
 
