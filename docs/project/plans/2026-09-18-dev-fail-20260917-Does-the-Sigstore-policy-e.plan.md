@@ -4,13 +4,9 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the adopted cadence-reliability research line by adding a minimal health-check cadence artifact and its verification surface.
+This plan implements the adopted cadence-digest research line by adding a stdlib-only digest formatter, a build script, a shell test, and a static dashboard view, all landing as plain commits gated by hngh-automation's make test. It stays strictly on automation paths (lib/, scripts/, tests/, dashboard/, digest/) and avoids kernel, credential, and systemd surfaces.
 
 ## Steps
 
-- [ ] Add cadence/healthcheck.sh that prints `hngh-automation health ok` and exits 0
-  Verification: bash cadence/healthcheck.sh
-- [ ] Add tests/cadence_healthcheck.sh that runs the health check and fails unless its output contains the expected status line
-  Verification: bash tests/cadence_healthcheck.sh
-- [ ] Add digest/health.md documenting the cadence health output contract with the phrase `cadence health`
-  Verification: grep -q "cadence health" digest/health.md
+- [ ] Add lib/digest_format.py defining format_digest(entries) that returns a sorted, de-duplicated list of job result strings using only the Python standard library, with an `if __name__ == "__main__":` self-check asserting a known input maps to the expected output
+  Verification: python3 lib/digest_format
