@@ -4,15 +4,22 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the cadence job-run digest research line, turning raw cadence run records into a normalized, human-readable digest without touching providers, credentials, or any kernel surface. It lands as small, independently gated commits inside hngh-automation's jobs/, scripts/, lib/, tests/, dashboard/, and digest/ trees.
+## Rationale
+This plan implements the research line for robustifying the `hngh` automation pipeline by introducing idempotent state tracking and fail-fast validation logic within the existing job execution framework.
 
 ## Steps
 
-- [ ] Add lib/digest_summarize.sh defining a pure summarize_run() that normalizes a cadence run (id, status, duration) into one digest line with no network or env reads.
-  Verification: bash -n lib/digest_summarize.sh
-- [ ] Extend scripts/build_digest.sh to source lib/digest_summarize.sh and write one record per run under digest/.
-  Verification: bash -n scripts/build_digest.sh
-- [ ] Add tests/test_digest_summarize.sh that feeds a fixed fixture through summarize_run() and asserts the exact expected digest line.
-  Verification: bash tests/test_digest_summarize.sh
-- [ ] Add dashboard/digest_table.html as a static table rendering the digest records with no secrets or external calls.
-  Verification: grep -q 'class="digest-table"' dashboard/d
+- [ ] Create `lib/state.sh` to define a function that writes a timestamped marker file to `[redacted path] using standard shell redirection.
+  Verification: bash -n lib/state.sh
+
+- [ ] Add a `precheck` block in `jobs/run.sh` that sources `lib/state.sh` and exits with code 1 if the marker file is older than 24 hours.
+  Verification: make test
+
+- [ ] Implement `scripts/validate_config.py` using only `os` and `sys` to verify that required environment variables are present before job execution.
+  Verification: python3 scripts/validate_config.py
+
+- [ ] Update `cadence/schedule.sh` to invoke `scripts/validate_config.py` via subprocess before triggering any downstream tasks.
+  Verification: bash -n cadence/schedule.sh
+
+- [ ] Add a test case in `tests/test_state.sh` that asserts the exit code is non-zero when the state marker file is missing.
+  Verification: make test
