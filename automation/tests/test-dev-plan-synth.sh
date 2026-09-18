@@ -33,6 +33,7 @@ mkdir -p "$sb/lib" "$sb/scripts" "$sb/digest" "$sb/logs" \
  "$sb/kernel/docs/project/plans" "$sb/kernel/docs/research" "$sb/kernel/scripts"
 mkdir -p "$stubdir/bin"
 cp -r "$root/lib/." "$sb/lib/"
+cp "$root/config.env" "$sb/config.env" # scrub.py username stem default
 cp "$root/scripts/overnight-cycle.sh" "$root/scripts/accept-plans.py" "$sb/scripts/"
 cat >"$stubdir/bin/omp" <<'STUB'
 #!/usr/bin/env bash
@@ -213,4 +214,48 @@ run_cycle FAILFIRST_DEV_CONCURRENT_FULL=1 \
 need test "$(head -n1 "$sb/launched.marker")" = "$today-dev-synth-line"
 ok "synth plan alone in the rotation still runs (leftover-slot fallback)"
 
+# --- 7. slug-mint guard: credential-shaped line id cannot mint (step 3) ---
+clear_plans
+: >"$sb/STATE.md"
+# adopted line id carrying a pathy/credential-shaped token: the seam
+# (redact_home + scrub_truncate before slug derivation) must cut it at
+# the stem so no '/home/<user>' or '~' fragment reaches the minted
+# slug; clean ids keep minting unchanged.
+clean_doc="$sb/kernel/docs/research/2026-09-08-clean-line.md"
+printf 'findings: clean line\n' >"$clean_doc"
+printf 'line\taction\tverdict\treviewer\tevidence\tdate\n' >"$sb/research-dispositions.tsv"
+printf 'clean-line-for-mint\tadopted\tadopted\tmodel:stub\t%s\t%s\n' \
+ "$clean_doc" "$today" >>"$sb/research-dispositions.tsv"
+STUB_CONTENT="$PLAN_BODY" stub_start stubU4
+run_cycle UNSLOTH_URL="http://127.0.0.1:$(cat "$stubdir/stubU4-port")"
+need test "$(synth_plans)" -ge 1
+clean_plan="$(ls "$sb/kernel/docs/project/plans/"*-dev-*.plan.md)"
+need grep -q 'dev-clean-line-for-mint' "$clean_plan"
+ok "clean adopted line mints its expected dev- slug"
+
+# credential-shaped id: the guard cuts the pathy dash-form before mint
+rm -f "$sb/kernel/docs/project/plans/"*-dev-*.plan.md "$sb/digest/"SYNTH-PLAN-*
+rm -rf "$sb/ff"
+: >"$sb/STATE.md"
+dirty_doc="$sb/kernel/docs/research/2026-09-08-dirty-line.md"
+printf 'findings: dirty line\n' >"$dirty_doc"
+printf 'line\taction\tverdict\treviewer\tevidence\tdate\n' >"$sb/research-dispositions.tsv"
+printf 'Where-exactly-in-home-bricker-Projects-etc-hngh\tadopted\tadopted\tmodel:stub\t%s\t%s\n' \
+ "$dirty_doc" "$today" >>"$sb/research-dispositions.tsv"
+STUB_CONTENT="$PLAN_BODY" stub_start stubU5
+run_cycle UNSLOTH_URL="http://127.0.0.1:$(cat "$stubdir/stubU5-port")"
+synth_out="$(ls "$sb/kernel/docs/project/plans/"*-dev-*.plan.md 2>/dev/null || true)"
+if [ -n "$synth_out" ]; then
+ # a slug minted from the pathy id must carry no home-path fragment,
+ # and must not be empty (the cut survives the stem-segment prefix
+ # 'Where-in')
+ if grep -qE 'bricker|Projects-|-home' <<<"$(basename "$synth_out")"; then
+  echo "FAIL: pathy fragment leaked into minted slug: $synth_out"
+  exit 1
+ fi
+ ok "pathy adopted line id minted slug with no credential-shaped fragment"
+else
+ need crumb dev-synth-skip
+ ok "pathy adopted line id refused at the mint seam (fail-closed)"
+fi
 echo "dev plan synthesis contract: all cases passed"
