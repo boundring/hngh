@@ -627,3 +627,12 @@ docs/records/2026-09-17-candidate-reconciliation-closure.md; the
 finding, evidence, and options with cost/benefit are of record in
 docs/records/2026-09-17-certificate-ephemerality-of-record.md. The
 kernel slice is proposed, not yet executed.
+
+## 2026-09-17 — Kernel-gate red declared post-hoc (gate-cure)
+
+The gate-cure patrol found the loop-history guard red on f2a4551e.
+The commits were declared post-hoc (hash + patch-id) in the
+guard's KNOWN_EXEMPTIONS table and cured through the ceremony
+loop -- declared, not rewritten; the SMALL-matter policy is the
+2026-09-13 amendment (docs/design/autonomous-development-
+control.md). A ceremony refusal parks for the operator.
