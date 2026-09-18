@@ -15,6 +15,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
+STATE_FILE="${STATE_FILE:-$AUTOMATION_ROOT/STATE.md}"
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 [ -d "$KERNEL/docs/project/plans" ] || exit 0
 [ -f "${HNGH_PLANS_FEED_OUT:-$AUTOMATION_ROOT/dashboard/plans.json}" ] || exit 0
