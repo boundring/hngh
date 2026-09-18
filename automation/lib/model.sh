@@ -934,7 +934,37 @@ _model_call_impl() {
  if [ "$pin_deck" = 1 ] && _deck_leg "$prompt" "$max_tokens"; then
   return 0
  fi
- if unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
+ # Jev beat-skip gate (2026-09-18, hngh-4eh): before touching local
+ # Unsloth at all, ask Typesafe whether the operator is actively using
+ # the machine. SKIP_LOCAL=1 bypasses both Unsloth sites below (primary
+ # :937 and the ranked-fallback loop). Verdict cached 30s in
+ # $AUTOMATION_ROOT/tmp-beatskip (safe 2/min lane: at most ~2 inference
+ # calls per minute even under beat bursts). Fail-open: without key or
+ # on any error the existing quiet guards decide, never this gate.
+ SKIP_LOCAL=0
+ _beatskip_file="$AUTOMATION_ROOT/tmp-beatskip.txt"
+ _beatskip_now="$(date +%s)"
+ _beatskip_age=9999
+ [ -f "$_beatskip_file" ] && _beatskip_age=$((_beatskip_now - $(stat -c %Y "$_beatskip_file" 2>/dev/null || echo 0)))
+ if [ "$_beatskip_age" -gt 30 ]; then
+  _session_recent="no"
+  _last_run="$(grep ' | session-run' "$AUTOMATION_ROOT/logs/budget.md" 2>/dev/null | tail -n1 | cut -d' ' -f1)"
+  if [ -n "$_last_run" ]; then
+   _run_ts="$(date -d "$_last_run" +%s 2>/dev/null || echo 0)"
+   [ $((_beatskip_now - _run_ts)) -lt 1800 ] && _session_recent="yes"
+  fi
+  if _skip_verdict="$(printf '%s' '' | TYPESAFE_STATE="session_recent=$_session_recent" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import beat_skip_gate
+sig = dict(p.split('=', 1) for p in os.environ.get('TYPESAFE_STATE', '').split() if '=' in p)
+print('skip' if beat_skip_gate(sig) else 'keep')
+" 2>/dev/null)"; then
+   printf '%s' "$_skip_verdict" >"$_beatskip_file" 2>/dev/null || true
+  fi
+ fi
+ [ "$(cat "$_beatskip_file" 2>/dev/null)" = "skip" ] && SKIP_LOCAL=1
+ if [ "$SKIP_LOCAL" = 0 ] && unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
   MODEL_USED="unsloth:$MODEL"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
   _model_emit unsloth "$MODEL"
@@ -945,6 +975,7 @@ _model_call_impl() {
  # (the server auto-activates the named model per request)
  for m in $MODEL $UNSLOTH_FALLBACK_MODELS; do
   [ -z "$m" ] && continue
+  [ "$SKIP_LOCAL" = 1 ] && break
   if unsloth_chat "$prompt" "$max_tokens" "$m"; then
    MODEL_USED="unsloth:$m"
    printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
