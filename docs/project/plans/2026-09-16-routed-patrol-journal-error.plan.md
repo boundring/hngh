@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:journal-error -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:journal-error  cause=obsolete disposed=2026-09-18T16:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:journal-error`
@@ -12,3 +12,5 @@ at 2026-09-16T13:00:39Z. Alert text: patrol journal-error: unclaimed-err on unkn
 ## Occurrences
 
 - 2026-09-17T15:00:13Z re-occurred (dedup window expired)
+- 2026-09-18T15:00:14Z re-occurred (dedup window expired)
+- 2026-09-18T16:00:13Z re-occurred (dedup window expired)
