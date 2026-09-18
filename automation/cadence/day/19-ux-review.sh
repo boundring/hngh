@@ -23,6 +23,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
+[ -f "$AUTOMATION_ROOT/lib/redact.sh" ] && . "$AUTOMATION_ROOT/lib/redact.sh" || :
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
@@ -37,8 +38,25 @@ file_report() { # kind text ident
   fi
 }
 
+# slug-mint guard (2026-09-18, plan 2026-09-18-backlog-p0-security-fixes
+# step 4, gap-slug-residual-mints): alert-identity slugs are scrubbed at
+# the source (single-source guard, lib/redact.sh) so a pathy or
+# credential-shaped finding fragment cannot bake into the identity.
+# Fail-closed: guard unavailable -> the raw text slugifies as before
+# (identity dedup unchanged) but the row still files.
 slugify() {
-  printf '%s' "$1" | tr -cs 'A-Za-z0-9' '-' | cut -c1-40 |
+  local t
+  if type redact_home >/dev/null 2>&1; then
+    t="$(redact_home "$1")" || t=""
+  else
+    t="$1"
+  fi
+  [ -n "$t" ] || t="$1"
+  if type scrub_truncate >/dev/null 2>&1; then
+    t="$(scrub_truncate "$t")"
+  fi
+  [ -n "$t" ] || t="finding"
+  printf '%s' "$t" | tr -cs 'A-Za-z0-9' '-' | cut -c1-40 |
     sed 's/^-*//; s/-*$//'
 }
 

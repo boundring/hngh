@@ -57,7 +57,7 @@ REPO = os.path.dirname(ROOT)  # the hngh repo (kernel home)
 # from the shared module so the findings doc and the morning rounds
 # block cannot drift from the mega-line guard
 sys.path.insert(0, os.path.join(ROOT, "lib"))
-from scrub import scrub_paths
+from scrub import scrub_paths, scrub_truncate_pathy, redact_home
 
 FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
          ("sessions.json", 600),  # tier-scaled: 30m feed vs 1m feeds
@@ -1912,6 +1912,21 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
     except OSError:
         seen = set()
     for patrol, cause in sorted(repeats):
+        # slug-mint guard (2026-09-18, plan
+        # 2026-09-18-backlog-p0-security-fixes step 4,
+        # gap-slug-residual-mints): the rid carries the patrol+cause
+        # names into the append-only subjects file; both run through
+        # the single-source guard (redact_home then
+        # scrub_truncate_pathy) before mint. Exposure NIL (low
+        # priority), same treatment for uniformity. Fail-closed: a
+        # guard exception skips the mint (never a leaked fragment).
+        try:
+            patrol = scrub_truncate_pathy(redact_home(str(patrol)))
+            cause = scrub_truncate_pathy(redact_home(str(cause)))
+            if not patrol or not cause:
+                continue  # pre-mangled pathy fragment: refuse the mint
+        except Exception:
+            continue
         rid = "patrol-%s-%s-%s" % (rid_day, patrol, cause)
         q = ("patrol: surface %s filed %s on two consecutive runs -- "
              "why does it keep failing and which guardrail closes it?"
