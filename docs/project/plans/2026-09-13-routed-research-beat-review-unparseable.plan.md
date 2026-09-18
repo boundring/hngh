@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=research-beat:review-unparseable  cause=obsolete disposed=2026-09-16T04:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-17T08:00:39Z reason=identity re-occurred 4 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=research-beat:review-unparseable  cause=obsolete disposed=2026-09-16T04:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-17T08:00:39Z reason=identity re-occurred 4 times without landing; operator escalation stands -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:review-unparseable`
