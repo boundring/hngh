@@ -261,6 +261,21 @@ docs/records/ with its first commit.
       processed-marking; a live poll against the real mailbox lists
       unread state without mutating anything on a dry run;
       `make test` green.
+      MECHANISM LANDED (prior slices: 8354731b reply-parse lane +
+      suite wired into gate, c43f9127 op-password seam); VERIFIED on
+      its own surface 2026-09-18 (record:
+      docs/records/2026-09-18-stall-recovery-step11-imap-verify.md):
+      tests/test-imap-poll.py 34 cases OK cold (conf fail-closed,
+      reply->operator-item, dry-run-files-nothing, seen-marking,
+      failed-filing-stays-unseen, tick cap, no-delete client
+      surface, PEEK fetch, attachment paths), registered in the
+      Makefile gate; live dry-run poll 2026-09-18T13:02:51Z
+      fail-closed no-op (conf has no [imap] section). BLOCKED on the
+      operator: the live-mailbox unread-listing clause needs [imap]
+      keys in ~/.hngh-automation/notify-email.conf — credential/
+      provider config is operator territory (standing guardrail);
+      operator-item imap-conf-keys filed 2026-09-18T13:09Z. Ticks to
+      [x] when the live poll lists unread state against real conf.
 
 ## Execution notes
 
