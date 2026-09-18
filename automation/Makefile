@@ -153,6 +153,7 @@ test:
 	bash tests/test-model-kimi-leg.sh
 	bash tests/test-model-ocgo-leg.sh
 	bash tests/test-model-pin-routing.sh
+	bash tests/test-review-ladder.sh
 	bash tests/test-notify-seam.sh
 	bash tests/test-marked-cut.sh
 	bash tests/test-context-pack.sh
