@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=correction-correction-3146c023 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=correction-correction-3146c023 -->
 # 2026-09-15 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `correction-correction-3146c023`

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:dev-synth-bad:2026-09-14 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:dev-synth-bad:2026-09-14 -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:dev-synth-bad:2026-09-14`

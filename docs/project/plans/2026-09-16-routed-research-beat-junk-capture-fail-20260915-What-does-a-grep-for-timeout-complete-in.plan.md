@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:junk-capture:fail-20260915-What-does-a-grep-for-timeout-complete-in -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=research-beat:junk-capture:fail-20260915-What-does-a-grep-for-timeout-complete-in -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:junk-capture:fail-20260915-What-does-a-grep-for-timeout-complete-in`

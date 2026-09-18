@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=system-low-mem -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=system-low-mem -->
 <!-- disposition: step 1 closed 2026-09-14 — subject fail-20260914-system-low-mem recorded with disposition killed (transient spike; docs/research/2026-09-14-fail-20260914-system-low-mem.md; automation/research-dispositions.tsv) -->
 # 2026-09-14 — routed candidate
 

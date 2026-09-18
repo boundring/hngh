@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:gate-cure -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=patrol:gate-cure -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:gate-cure`

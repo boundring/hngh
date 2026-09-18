@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=repeat-crumbs -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=repeat-crumbs -->
 # 2026-09-15 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `repeat-crumbs`

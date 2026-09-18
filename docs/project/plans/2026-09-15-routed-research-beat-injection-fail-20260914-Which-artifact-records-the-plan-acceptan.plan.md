@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:injection:fail-20260914-Which-artifact-records-the-plan-acceptan -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=research-beat:injection:fail-20260914-Which-artifact-records-the-plan-acceptan -->
 # 2026-09-15 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:injection:fail-20260914-Which-artifact-records-the-plan-acceptan`
