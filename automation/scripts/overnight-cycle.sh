@@ -449,8 +449,31 @@ $(marked_cut 2000 "$path")
 
 "
  done <<<"$adopted"
- slug="dev-$(printf '%s' "$first" | tr -cs 'a-zA-Z0-9._-' '-' |
+ # slug-mint guard (2026-09-18, plan 2026-09-18-backlog-p0-security-fixes
+ # step 3, backlog gap-slug-synth-mint-uncured): the first adopted line id
+ # becomes `dev-<slug>`, which lands in the kernel plans feed
+ # (docs/project/plans/, git-tracked) as both the plan filename and the
+ # title slug. The id is derived from a research-line id that can carry a
+ # pathy token, so the mint input runs redact_home (slash/tilde token
+ # family) then scrub_truncate (dash-form pathy cut) before slug
+ # derivation — same single-source guard as causes.sh
+ # append_research_subject. Fail-closed: broken guard or empty output
+ # skips the synthesis (dev-synth-skip), never a leaked slug.
+ [ -f "$ROOT/lib/redact.sh" ] && . "$ROOT/lib/redact.sh" || :
+ if ! type redact_home >/dev/null 2>&1 \
+  || ! type scrub_truncate >/dev/null 2>&1; then
+  breadcrumb "$JOB_NAME" "dev-synth-skip" "slug-mint guard unavailable"
+  return 0
+ fi
+ first="$(redact_home "$first")"
+ [ -n "$first" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input redacted empty"; return 0; }
+ first="$(scrub_truncate "$first")"
+ [ -n "$first" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input pathy, refused"; return 0; }
+ slug="$(printf '%s' "$first" | tr -cs 'a-zA-Z0-9._-' '-' |
   sed 's/^-*//; s/-$//' | cut -c1-40)"
+ slug="dev-$slug"
+ slug="${slug#dev-dev-}" # guard already prefixed one 'dev-'
+ [ "$slug" != "dev-" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "slug empty after scrub"; return 0; }
  prompt="You are the hngh development-plan synthesizer. The research
 machine has adopted the findings below.
 Turn the ADOPTED findings into ONE normal-risk development plan for
