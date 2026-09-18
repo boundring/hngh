@@ -12,3 +12,4 @@ at 2026-09-18T20:00:13Z. Alert text: injection signature(s) redacted from resear
 ## Occurrences
 
 - 2026-09-18T21:00:13Z re-occurred (dedup window expired)
+- 2026-09-18T22:00:14Z re-occurred (dedup window expired)
