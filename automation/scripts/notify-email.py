@@ -123,6 +123,14 @@ def load_conf():
 
 
 def op_run(*args):
+    # Map the operator's service key onto op's service-account env FIRST
+    # (mirrors lib/credentials.sh; Python callers don't source it). The
+    # CLI falls back to the desktop-app integration — and its interactive
+    # password prompt — when only ONEPASSWORD_SERVICE_KEY is set.
+    if not os.environ.get("OP_SERVICE_ACCOUNT_TOKEN"):
+        _key = os.environ.get("ONEPASSWORD_SERVICE_KEY")
+        if _key:
+            os.environ["OP_SERVICE_ACCOUNT_TOKEN"] = _key
     # Service-account-only (2026-09-13): `op` is invoked ONLY when a
     # service token exists (mapped here from ONEPASSWORD_SERVICE_KEY —
     # this script may run without lib/credentials.sh, e.g. via notify.sh).

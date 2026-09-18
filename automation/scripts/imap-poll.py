@@ -113,6 +113,10 @@ def op_password(item):
     """Secret from `op read`, or None on any failure. Never logged.
     Service-token-guarded: never reach the desktop-app integration
     (same discipline as notify-email.py op_run)."""
+    if not os.environ.get("OP_SERVICE_ACCOUNT_TOKEN"):
+        _key = os.environ.get("ONEPASSWORD_SERVICE_KEY")
+        if _key:
+            os.environ["OP_SERVICE_ACCOUNT_TOKEN"] = _key
     if not (os.environ.get("OP_SERVICE_ACCOUNT_TOKEN")
             or os.environ.get("ONEPASSWORD_SERVICE_KEY")):
         return None
