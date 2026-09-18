@@ -23,6 +23,15 @@ NOTIFY="$ROOT/scripts/notify-email.py"
 OP_BIN="${HNGH_OP_BIN:-op}"
 FORCE="${FORCE:-0}"
 
+# op credential seam (2026-09-18 keyed-only): source lib/credentials.sh
+# so ONEPASSWORD_SERVICE_KEY is mapped onto OP_SERVICE_ACCOUNT_TOKEN
+# BEFORE any `op` call (from_1password below) — without this, keyed-entry
+# hosts fell through to the desktop-app interactive prompt. Requires
+# lib/common.sh + lib/breadcrumbs.sh sourced first.
+. "$ROOT/lib/common.sh"
+. "$ROOT/lib/breadcrumbs.sh"
+. "$ROOT/lib/credentials.sh"
+
 # --- config writer (the only function other paths may call; sourced in
 # tests with the HNGH_NOTIFY_EMAIL_CONF seam pointed at a temp file) ----
 write_conf() { # host port user pass from to [opref] -> 0 written / 1 refused
@@ -118,6 +127,14 @@ from_1password() { # ref -> conf written + test-send; never prompts
     printf 'setup-notify-email: %s already exists — rerun with --force to overwrite\n' "$CONF" >&2
     exit 1
   fi
+  # service-account-only (2026-09-18): refuse BEFORE invoking `op` when
+  # neither token nor key is present — a desktop-app integration would
+  # demand an interactive prompt (forbidden for agents). Mirrors
+  # cred_get / op_ready in lib/credentials.sh.
+  [ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ] || {
+    printf 'setup-notify-email: no 1Password service token — set ONEPASSWORD_SERVICE_KEY or OP_SERVICE_ACCOUNT_TOKEN (tokenless op runs are refused; the desktop-app prompt is not available to agents)\n' >&2
+    exit 1
+  }
   "$OP_BIN" account list >/dev/null 2>&1 || {
     printf 'setup-notify-email: 1Password locked or signed out — unlock the 1Password desktop app / run "op signin"\n' >&2
     exit 1
