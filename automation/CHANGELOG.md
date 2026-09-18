@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-18
+
+- stall-recovery step 10 (fresh-eyes review model selection) closed as
+  verify-and-tick: the mechanism was already landed (commits 6854d2d0,
+  1907079f) -- MODEL_PIN=review ladder deck -> kimi -> zai -> ocgo with
+  the unsloth bench as last resort and remote never, pinned at both
+  cadence/day/04-review-prep.sh and jobs/morning-digest.sh, and
+  unparseable reviews feed record_model_outcome bad-execution. The one
+  residual this slice lands is suite registration:
+  tests/test-review-ladder.sh now runs in the Makefile test target
+  beside the other model-leg suites (record:
+  docs/records/2026-09-18-stall-recovery-step10-review-verify.md).
+
 ## 2026-09-17
 
 - research TSV sweep gate-spec redesign (gap-g2-predicate-false-
