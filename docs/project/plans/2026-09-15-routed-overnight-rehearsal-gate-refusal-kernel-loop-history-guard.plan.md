@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:rehearsal-gate-refusal:kernel-loop-history-guard -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:rehearsal-gate-refusal:kernel-loop-history-guard -->
 # 2026-09-15 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:rehearsal-gate-refusal:kernel-loop-history-guard`

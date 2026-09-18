@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z -->
 # 2026-09-14 - dev-fail-20260912-slow-unit-dropin-33-resear (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

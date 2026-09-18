@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-16-dev-fail-20260915-What-are-the-exact-file-pa -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:plan-accept-blocked:2026-09-16-dev-fail-20260915-What-are-the-exact-file-pa -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-blocked:2026-09-16-dev-fail-20260915-What-are-the-exact-file-pa`

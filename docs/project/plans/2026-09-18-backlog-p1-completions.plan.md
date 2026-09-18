@@ -1,4 +1,4 @@
-<!-- plan: status=held risk=normal accepted=- cause=missing-design held=2026-09-18T01:40:53Z -->
+<!-- plan: status=proposed risk=normal accepted=- cause=missing-design held=2026-09-18T01:40:53Z -->
 # 2026-09-18 — Backlog P1 completions bundle (BACKLOG.md TIER 2)
 
 Governance completion: close the open P1 audit chains. Do not re-derive specs;

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z -->
 # 2026-09-13 - dev-fail-20260913-Does-the-CLI-entry-point-b (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ux-review:email-digest:defect-pace-stalling-0-steps-in-24h-3-pl -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=ux-review:email-digest:defect-pace-stalling-0-steps-in-24h-3-pl -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:email-digest:defect-pace-stalling-0-steps-in-24h-3-pl`

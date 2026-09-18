@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-10T19:01:32Z routed-from=dash-selfreview:summary  cause=obsolete disposed=2026-09-10T22:00:33Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=2026-09-10T19:01:32Z routed-from=dash-selfreview:summary  cause=obsolete disposed=2026-09-10T22:00:33Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-10 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:summary`

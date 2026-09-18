@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=vision-reviewer-gap-jcode-20260914 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=vision-reviewer-gap-jcode-20260914 -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `vision-reviewer-gap-jcode-20260914`

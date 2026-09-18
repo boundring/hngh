@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ui-audit:axe:color-contrast -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=ui-audit:axe:color-contrast -->
 # 2026-09-16 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:axe:color-contrast`

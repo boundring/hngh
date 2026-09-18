@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z -->
 # 2026-09-17 - dev-fail-20260917-Can-a-single-Merkle-tree-r (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

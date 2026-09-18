@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:injection:fail-20260913-Is-there-an-existing-pattern-in-the-repo -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=research-beat:injection:fail-20260913-Is-there-an-existing-pattern-in-the-repo -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:injection:fail-20260913-Is-there-an-existing-pattern-in-the-repo`
