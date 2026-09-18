@@ -270,3 +270,29 @@ commit — the pin has simply not yet been exercised by a real commit.
 The hngh-machine author on this lane remains unobserved-by-design
 until the first drift; the contract test pins the mechanism, not the
 observation.
+
+## Identity-record hygiene caveats (2026-09-18, plan step 8)
+
+Appended per backlog item identity-record-hygiene-caveats
+(plan 2026-09-18-backlog-p0-security-fixes.plan.md step 8). These
+caveats bound what the pins and this record can honestly claim:
+
+- Attribution-only exposure. The `hngh-machine
+  <automation@hngh.local>` pin answers "which writer acted", not
+  "who authenticated": every push rides the operator's stored SSH
+  credential, and the author string is set by whoever invokes git.
+  The pins support forensics and audit-log readability; they are not
+  user attribution in an authentication sense.
+- Forgeable authorship. Git author/committer identity is client-side
+  metadata with no cryptographic binding on this repo's push path.
+  Any process (or person) with repository write access can write
+  these strings verbatim. Audit conclusions drawn from
+  authorship-matching should therefore be corroborated by commit
+  content, timestamps in journal/breadcrumb data, or the push-side
+  provenance instead of resting on the author string.
+- Nil security value where applicable. The identity pin closes an
+  attribution and correctness gap (anonymous "Fixture" authors in
+  audit trails), not a confidentiality or authorization gap. It
+  neither restricts what a session can do nor protects the
+  repository; capability enforcement lives in the gate/certificate
+  ceremony and filesystem permissions, not in `git -c user.name`.
