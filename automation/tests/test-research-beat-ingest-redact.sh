@@ -80,10 +80,13 @@ case "$q2" in
  *'~/Projects/etc/hngh'*) ck "a2: subjects text tilde-rendered" "~/ present" "~/ present" ;;
  *) ck "a2: subjects text tilde-rendered" "~/Projects/etc/hngh present" "missing: $q2" ;;
 esac
+# derived rids mint with today's date (not a pinned literal); anchor expectations
+# to the current UTC date so the test does not red the gate at midnight.
+TODAY="$(date -u +%Y%m%d)"
 case "$rid2" in
  *testuser*|*home-bricker*) ck "a2: derived rid redacted before slug" "no testuser" "leak: $rid2" ;;
- fail-20260917-Where-exactly-in-*) ck "a2: rid slug from redacted text" "clean" "clean" ;;
- *) ck "a2: rid slug from redacted text" "fail-20260917-Where-exactly-in-* shape" "missing: $rid2" ;;
+ fail-"$TODAY"-Where-exactly-in-*) ck "a2: rid slug from redacted text" "clean" "clean" ;;
+ *) ck "a2: rid slug from redacted text" "fail-$TODAY-Where-exactly-in-* shape" "missing: $rid2" ;;
 esac
 
 # (b) repo-relative path text lands unchanged (the guard must not mangle
@@ -146,8 +149,8 @@ ride="$(printf '%s' "$rowe" | cut -f1)"
 qe="$(printf '%s' "$rowe" | cut -f2)"
 case "$ride" in
  *bricker*|*'-home-'*) ck "e: dash-form derived rid cut at stem" "no bricker/home token" "leak: $ride" ;;
- fail-20260917-Where-exactly-in*) ck "e: rid slug truncated at pathy token" "clean" "clean" ;;
- *) ck "e: rid slug truncated at pathy token" "fail-20260917-Where-exactly-in* shape" "missing: $ride" ;;
+ fail-"$TODAY"-Where-exactly-in*) ck "e: rid slug truncated at pathy token" "clean" "clean" ;;
+ *) ck "e: rid slug truncated at pathy token" "fail-$TODAY-Where-exactly-in* shape" "missing: $ride" ;;
 esac
 case "$qe" in
  *bricker*) ck "e: dash-form question text cut at stem" "no bricker" "leak: $qe" ;;
