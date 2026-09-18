@@ -41,6 +41,15 @@ is reserved for critical-class work.
 - Acceptance: a `proposed` normal-risk plan is auto-accepted when its
   Verification steps are runnable and both repos' gates are green;
   the accepted timestamp is written into the front-matter.
+- Body hold (2026-09-18): a proposed plan may park itself from
+  auto-acceptance with a line before `## Steps` matching
+  `**HOLD — do not accept/execute without promotion.**` (the marker is
+  a line-level `/HOLD.*do not accept/i`, precision-first — loose
+  "hold" wording does not trigger). accept-plans.py emits
+  `parked <slug> body-hold-promotion-required` and files one deduped
+  alert row; status stays `proposed`, so removing the marker re-enters
+  the normal pool. Promotion to executed remains an explicit operator
+  or later-session act.
 - New plans cite the reference sections below (verification contract,
   autonomy reference, ceremony runbook) instead of repeating that
   content inline.
