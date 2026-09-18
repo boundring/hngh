@@ -29,7 +29,7 @@ day's records slice.
       Verification: suite test green for success and refusal paths;
       no git commit or push observable during the dry run; existing
       ceremony tests and `make test` green.
-- [ ] 2. Isolated-worktree gate rehearsal (test-first). Add
+- [x] 2. Isolated-worktree gate rehearsal (test-first). Add
       automation/scripts/rehearse-gate.sh: `git archive HEAD` (+ any
       named candidate files) unpacks into a temp dir and runs the
       named repo's `make test` there, printing the exit code and
@@ -144,3 +144,29 @@ day's records slice.
   ceremony can run today anyway. Step 2 verification stays parked on
   the containment lane's ceremony commit; step 3 proceeds (it does
   not depend on step 2's unmet rehearsal clause).
+- 2026-09-18T22:20Z step-2 verified and ticked (rehearsal-lane wake):
+  the containment seam is committed at HEAD (514bdc00, 2026-09-17),
+  and this executor's own green rehearsal closed the clause — recipe:
+  `TMPDIR=$HOME/Projects/etc/hngh OMP_PROJECT=hngh
+  scripts/rehearse-gate.sh -- $HOME/Projects/etc/hngh`
+  (kernel repo root),
+  rc=0 in 34.4s (22:14Z), trap cleanup verified (no hngh-rehearse-*
+  leftovers). Both env seams are load-bearing and re-measured this
+  session: plain /tmp unpacks crash the guard's KERNEL_GIT_DIR
+  git-discovery at module scope (rev-parse exit 128, nonzero rc), and
+  TMPDIR-inside-repo without OMP_PROJECT fails rc=2 at
+  test-omp-bridge.py:142 because the omp-bridge slug defaults to the
+  mktemp basename (hngh-rehearse-XXXXXX) against the literal
+  '| hngh|sx |' row — the recipe above is the documented invocation
+  for archived-tree kernel rehearsals; during the run the guard audits
+  the real repo history read-only and fixture temp dirs land inside
+  the repo, trap-cleaned. Both-repos-green clause: the automation gate
+  was committed-red, not sibling dirt (red at a clean-HEAD worktree
+  801a2e3c and at d5f7dc0d, the introducing commit) — the router-tick
+  innocuous fixture review:bricker-x collided with the config.env
+  username-stem default, scrubbed to review, and dedup-skipped against
+  the earlier review:tmp-cache-sweep cut (fresh=0, 1 expected);
+  fixture swapped to review:plainword-x (automation commit 04f2af8e),
+  suite 28/28, automation `make test` green rc=0, kernel `make test`
+  green rc=0 in the working tree. Blocker
+  blk-20260916-2026-09-09-rehearsal-lane resolved this session.
