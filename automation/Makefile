@@ -50,6 +50,7 @@ test:
 	find cadence jobs lib scripts -name '*.sh' -print0 | xargs -0 -n8 bash -n
 	python3 -B tests/test-plan-acceptance.py
 	python3 -B tests/test-identity-seam.py
+	python3 -B tests/test-slug-mint-residual.py
 	python3 -B tests/test-plan-feed-graph.py
 	python3 -B tests/test-curator-beat.py
 	python3 -B tests/test-render-blocks-feed.py
