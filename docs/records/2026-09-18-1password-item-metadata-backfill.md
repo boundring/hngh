@@ -66,6 +66,13 @@ matched against the vault inventory by title.
   operator should decide whether to re-probe under a desktop-app
   auth session or refresh the service token scope.
 
+## Amendment 04:37Z
+
+The two Python mapping gaps named in this record are closed by commit
+c43f9127 (op_run in notify-email.py, op_password in imap-poll.py now
+mirror credentials.sh lines 26-27; both suites green, 2931-check gate
+green).
+
 Related: docs/records/2026-09-09-1password-service-account-interface.md,
 docs/design/credentials-posture.md,
 automation/scripts/setup-notify-email.sh.
