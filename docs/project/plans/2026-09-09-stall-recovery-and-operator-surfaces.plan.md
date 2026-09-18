@@ -211,7 +211,7 @@ docs/records/ with its first commit.
       docs-only tick; kernel gate green (make test, 2931 checks); tick
       staged uncommitted per the step-6 precedent, commit waits for that
       lane. See docs/records/2026-09-17-stall-recovery-step9-quota-verify.md.
-- [ ] 10. Fix the fresh-eyes review beat's model selection. Evidence:
+- [x] 10. Fix the fresh-eyes review beat's model selection. Evidence:
       operator item "review: model response unparseable — read
       digest/REVIEW-2026-09-09.md": the 2026-09-09 review ran on
       unsloth:unsloth/Qwen3-8B-class bench model and returned a
@@ -226,6 +226,20 @@ docs/records/ with its first commit.
       Verification: suite test covers the review-beat model ladder and
       the unparseable->demotion-signal wiring; one live review beat
       produces a parseable review; `make test` green.
+      LANDED (mechanism, prior slices: commits 6854d2d0, 1907079f);
+      VERIFIED + registered 2026-09-18 (record:
+      docs/records/2026-09-18-stall-recovery-step10-review-verify.md):
+      MODEL_PIN=review ladder (deck -> kimi -> zai -> ocgo, unsloth
+      bench last resort, remote never) at automation/lib/model.sh:874-896,
+      pinned at both 04-review-prep.sh:79 and morning-digest.sh:37
+      (digest-leg clause); unparseable -> record_model_outcome
+      bad-execution at 04-review-prep.sh:109-119; tests/test-review-
+      ladder.sh (all pass, cold) registered in the automation Makefile
+      test target (automation commit e69c119b); live parseable reviews
+      2026-09-14..17 (ocgo x3, unsloth last resort x1). Known ceiling:
+      the beat's colon-form demotion keys match no session-ladder rung
+      key and the review ladder has no model_demoted guard -- the feed
+      is real but inert downstream; follow-up slice, recorded.
 - [ ] 11. Bidirectional email contact (operator meta-agentic surface).
       Authorization: operator doctrine 2026-09-09
       (docs/records/2026-09-09-operator-flexibility-doctrine.md §4).
