@@ -26,12 +26,13 @@ post-hoc policy used for the 2026-09-14 and 2026-09-17 gate-cure
 patrols. History is NOT rewritten or amended; the declaration commit
 itself rides the ceremony (certificate-bound candidate).
 
-Also added a guard regression test in
-`automation/tests/test-loop-history-guard-safeguards.py`: labeled
-exemptions may never touch kernel `src/` beyond `src/packages.lisp`
-(within these fixtures), pinning the guard's labeled-exemption
-narrowness so future label abuse is caught by test, not just diff
-inspection.
+No new regression test was added for this cure. The existing guard
+narrowness coverage stands as-is: `tests/scripts/test-loop-history-guard.py`
+(b8bc-era guard, 0 violations post-cure) and the repo-root safeguards
+test `tests/scripts/test-loop-history-guard-safeguards.py` (passes).
+Corrected 2026-09-18: an earlier draft of this paragraph falsely claimed
+a new labeled-exemption-narrowness regression test had been added; that
+was inaccurate (only the KNOWN_EXEMPTIONS declaration was made).
 
 ## Verification
 
