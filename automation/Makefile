@@ -148,6 +148,7 @@ test:
 
 	bash tests/test-overnight-shutdown.sh
 	bash tests/test-overnight-forethought.sh
+	python3 -B tests/test-overnight-awk-disposition.py
 	bash tests/test-model-kimi-leg.sh
 	bash tests/test-model-ocgo-leg.sh
 	bash tests/test-model-pin-routing.sh

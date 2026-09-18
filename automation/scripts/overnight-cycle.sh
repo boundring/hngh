@@ -337,7 +337,7 @@ author_draft_plan() { # day -> drafts one normal-risk plan proposal
  local cutoff
  cutoff="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M)"
  alerts="$(awk -F'|' -v c="$cutoff" '
-    $3 ~ /alert/ && $2 >= c {row[$4]=$0}
+    $3 ~ /alert/ {ts=$2; sub(/^[ \t]+/, "", ts); if (ts >= c) row[$4]=$0}
     END {for (k in row) print row[k]}' "$KERNEL/docs/project/reports.md" 2>/dev/null |
   cut -c1-220 | head -n 15)"
  # source 3: crystallized research lines (text only)
