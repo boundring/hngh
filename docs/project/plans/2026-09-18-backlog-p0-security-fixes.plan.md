@@ -10,9 +10,9 @@ verification contract and autonomy reference instead of repeating them.
 
 ## Steps
 
-- [x] Fix the email-digest intake overwide-alert drop: widen or remove the `len==5` cell-count guard in `automation/jobs/06-email-digest.py` (patrol alerts wider than 5 fields at the intake site, backlog item rq-gap-email-digest-intake) so overwide patrol alerts parse instead of being silently dropped.
+- [x] Fix the email-digest intake overwide-alert drop: widen or remove the `len==5` cell-count guard in `automation/scripts/email-digest.py` (patrol alerts wider than 5 fields at the intake site, backlog item rq-gap-email-digest-intake) so overwide patrol alerts parse instead of being silently dropped.
       Verification: see plans/README verification contract; automation `make test` green plus `automation/tests/test-email-digest.py` (or the digest intake test file covering the alert-parse path) passing with a new overwide-row fixture case.
-- [x] Fix the dead overnight-cycle awk disposition pattern: repair the leading-space timestamp regex at `automation/overnight-cycle.sh:339-342` (backlog item rq-gap-overnight-awk-disposition) so ts cells with leading spaces match, and add a regression test for the fixed pattern.
+- [x] Fix the dead overnight-cycle awk disposition pattern: repair the leading-space timestamp regex at `automation/scripts/overnight-cycle.sh:339-342` (backlog item rq-gap-overnight-awk-disposition) so ts cells with leading spaces match, and add a regression test for the fixed pattern.
       Verification: see plans/README verification contract; automation `make test` green plus a new named test asserting the awk regex matches both flush and leading-space ts cells.
 - [x] Guard the synthesize_dev_plan mint site: add an accept-plans-style redact+scrub seam around the unguarded slug-mint path in the `synthesize_dev_plan` flow (backlog item gap-slug-synth-mint-uncured) so credential-bearing input cannot pass through into a minted plan slug or body.
       Verification: see plans/README verification contract; automation `make test` green plus a new test that a credential-shaped string fed through the seam is redacted before mint.
