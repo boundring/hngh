@@ -225,6 +225,16 @@ KNOWN_EXEMPTIONS = {
         "reason": "docs: queue Next advances to bridge-operator-host (all dependencies present; node-lattice-admission rotated 2026-09-15 via ceremony candidate 9e0779b0) (declared miss, gate-cure patrol)",
         "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
     },
+    # declared post-hoc 2026-09-18: tests-only pin commit touching
+    # tests/scripts/test-probe-model-route.py (HTTPError branch is live)
+    # without a candidate label; pre-existing origin history, gate-cured
+    # per the standing post-hoc policy (docs/records/
+    # 2026-09-18-loop-history-gate-cure-bbbec8f0.md), not rewritten.
+    "bbbec8f0": {
+        "reason": "tests: pin probe-model-route HTTPError-is-live branch "
+                  "(declared miss, gate-cure patrol 2026-09-18)",
+        "patch-id": "9fd6d94e9972ae4bc7e7dbb8adc5fc1a488d126a",
+    },
     # tests: break exemption infinite regress (terminal commit) -- kernel-gate red cure 2026-09-17, declared not rewritten
     "f2a4551e": {
         "reason": "tests: break exemption infinite regress (terminal commit) (declared miss, gate-cure patrol)",
