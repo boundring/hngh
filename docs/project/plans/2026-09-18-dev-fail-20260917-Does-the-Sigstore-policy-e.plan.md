@@ -4,16 +4,17 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line for standardizing job execution wrappers by introducing a reusable bash helper library to enforce consistent environment variable propagation and logging conventions across all automation jobs.
+Implements research line R3 (deterministic digest + cadence-gated release validation) by adding a stdlib-only digest helper, an emit script, and declarative job/cadence wiring that stay entirely inside hngh-automation and are gated by its `make test`.
 
 ## Steps
 
-- [ ] Create `lib/job_env.sh` containing functions to validate required environment variables and format log prefixes.
-  Verification: bash -n lib/job_env.sh
-- [ ] Add `tests/test_job_env.sh` with a test suite that sources the library and asserts error codes for missing variables.
-  Verification: make test
-- [ ] Update `jobs/nightly_build.sh` to source `lib/job_env.sh` and replace manual environment checks with the new helper functions.
-  Verification: bash -n jobs/nightly_build.sh
-- [ ] Add a grep check in `tests/test_job_env.sh` to verify that `jobs/nightly_build.sh` contains the source statement for the library.
-  Verification: make test
+- [ ] Add `lib/digest.py`, a stdlib-only module exposing `compute_digest(paths) -> str` (SHA-256 over sorted file bytes plus a combined digest) that runs a built-in fixture assertion when executed directly.
+  Verification: python3 lib/digest.py
+- [ ] Add `scripts/emit-digest.sh` that calls `python3 lib/digest.py` over a declared input set and writes `digest/manifest.json` containing per-file hashes and the combined digest.
+  Verification: bash -n scripts/emit-digest.sh
+- [ ] Add `jobs/digest-check.yml` declaring a job that runs `scripts/emit-digest.sh` and fails when the combined digest is absent, using only declarative fields (no provider or credential configuration).
+  Verification: grep -q "scripts/emit-digest.sh" jobs/digest-check.yml
+- [ ] Add `cadence/digest.yml` scheduling the `digest-check` job on a fixed cadence with declarative fields only (no systemd unit lifecycle).
+  Verification: grep -q "digest-check" cadence/digest.yml
+- [ ] Add `tests/test_digest.py`, a stdlib `unittest` module with a runnable main that asserts `compute_digest` is deterministic across two runs and matches a hardcoded fixture.
+  Verification: python3 tests/test_digest.py
