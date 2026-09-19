@@ -12,6 +12,25 @@ Usage:
 
 Output: automation/config/unsloth-contexts.tsv
   model_id  server_observed  card_native  card_max_extended  source_url  checked_at
+
+Per-row source semantics (hngh-npi; card_native vs card_max_extended):
+  server_observed: opportunistically captured limit of the RUNNING model only
+    (observe(): /api/inference/status > journal n_ctx line > 400 probe).
+    Empty for every non-loaded model — never guessed, never copied from cards.
+  card_native: base context length parsed from the model's HF card
+    (extract_contexts NATIVE_PATTERNS); empty when the card states none.
+  card_max_extended: extended limit via YaRN/RoPE phrasing (EXTEND_PATTERNS);
+    empty when the card claims no extension. Dropped when < card_native.
+  source_url: HF repo the numbers were read from; for GGUF repos with no ctx
+    claim this is the base_model parent repo (card_for fallback), else "".
+  Empty-field policy for non-context models (image/ASR, e.g. Z-Image-Turbo,
+    qwen3-asr): all three numeric fields stay empty rather than guessed
+    (extract_contexts returns (None, None); see test_non_context_model_unresolved).
+Guard coordination (single source of truth: automation/lib/vip-gate.sh,
+hngh-vip): heavy refresh/update runs (--update, --observe against a live
+server) defer while an interactive session holds the resource (beat-skip
+defer guard) and are gated to the midnight window (default 00:00-05:00
+local). No guard logic is duplicated here; callers source vip-gate.sh.
 """
 import argparse
 import datetime
