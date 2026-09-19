@@ -49,3 +49,17 @@ STATE.md
 .scratch/
 .pi/
 STATE.md
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+
+# test-run litter (2026-09-19 hngh-5uz)
+tmp*.tmp
+tmp*.tmp/
+hngh-fasttest-*.ok
+gn-profile-*.txt
+tmp*-tmp.txt
