@@ -203,6 +203,7 @@ beat_run() { # [K=V ...] -> runs one full beat against the sandbox
  (
   cd "$sb"
   rm -f "$sb/beat-stamp" # each invocation is a fresh gate pass
+  cp -r "$root/cadence/." "$sb/cadence/" # re-copy: the beat under test evolves; stale sandbox copies mask it
   env -i PATH="$PATH" HOME="$sb" HNGH_HOME_DIR="$sb/home" \
    AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh \
    HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root" \
@@ -247,7 +248,11 @@ reset_beat 8
 # interleave off: this section isolates the QUOTA rotation; the shared
 # counter would otherwise review the crystallized line-1 on run 4
 # (4%research-review-interleave) and pin kimi there instead.
-ROTA=("RESEARCH_REVIEW_INTERLEAVE=0")
+# LOCAL-RESERVE (hngh-wc4): pin the midnight window so the reserve shift
+# stays out of the way -- these runs assert the raw rotation (local on
+# non-share runs). VIP_NOW_HHMM is the vip-gate seam; VIP_BEATSKIP_FILE
+# points at a missing file so the defer guard cannot fire.
+ROTA=("RESEARCH_REVIEW_INTERLEAVE=0" "VIP_NOW_HHMM=0200" "VIP_BEATSKIP_FILE=$sb/no-skip-here")
 beat_run "${kimi_env[@]}" "${ROTA[@]}"
 ck "rotation run1 (1%%3): local answers" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "rotation run1: kimi stub never hit" "0" "$(hits stubK)"
@@ -278,15 +283,41 @@ grep -q $'line-1\tcrystallized\t' "$sb/research-lines.tsv" &&
 }
 
 # --- 7. share=0 (env KIMI_RESEARCH_SHARE) -> never pin.
+# LOCAL-RESERVE (hngh-wc4): inside the midnight window the residual local
+# pin is kept, so share=0 still means no quota stub is ever hit.
 reset_beat 8
 reset_hits
-beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
-beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
-beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0
+beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
+beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
+beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
 ck "share=0: kimi stub never hit in 3 runs" "0" "$(hits stubK)"
-beat_run "${zai_env[@]}" "ZAI_MODEL_DESIGN=glm-design-model" KIMI_RESEARCH_SHARE=0
+beat_run "${zai_env[@]}" "ZAI_MODEL_DESIGN=glm-design-model" KIMI_RESEARCH_SHARE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
 ck "share=0: zai stub never hit in 3 runs" "0" "$(hits stubZ)"
 ck "share=0: telemetry has no kimi rows" "0" "$(kimi_rows)"
+
+# --- 7b. LOCAL-RESERVE (hngh-wc4): residual local pin shifts to the zai
+# quota leg outside the midnight window, stays local inside it.
+reset_beat 8
+reset_hits
+beat_run "${zai_env[@]}" "ZAI_MODEL=glm-design-model" KIMI_RESEARCH_SHARE=0 OCGO_RESEARCH_SHARE=0 RESEARCH_REVIEW_INTERLEAVE=0 VIP_NOW_HHMM=1206 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
+ck "local-reserve daytime: residual local shifts to zai" "zai:glm-design-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "local-reserve daytime: zai stub hit" "1" "$(hits stubZ)"
+ck "local-reserve daytime: unsloth stub never hit" "0" "$(hits stubU)"
+reset_beat 8
+reset_hits
+beat_run "${zai_env[@]}" "ZAI_MODEL=glm-design-model" KIMI_RESEARCH_SHARE=0 OCGO_RESEARCH_SHARE=0 RESEARCH_REVIEW_INTERLEAVE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
+ck "local-reserve midnight: local kept" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "local-reserve midnight: zai stub never hit" "0" "$(hits stubZ)"
+reset_beat 8
+reset_hits
+printf 'skip' >"$sb/beatskip-skip"
+beat_run "${kimi_env[@]}" KIMI_RESEARCH_SHARE=0 OCGO_RESEARCH_SHARE=0 RESEARCH_REVIEW_INTERLEAVE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/beatskip-skip"
+ck "local-reserve operator-active: skip verdict shifts to kimi (beats-hold guard)" "kimi:kimi-test-model" "$(cat "$sb/tmp-modelused.txt")"
+# overflow-pin behavior kept: OVERFLOW_PIN still wins and never touches local.
+reset_beat 8
+reset_hits
+beat_run "${zai_env[@]}" "ZAI_MODEL=glm-design-model" OVERFLOW_PIN=zai KIMI_RESEARCH_SHARE=0 RESEARCH_REVIEW_INTERLEAVE=0 VIP_NOW_HHMM=0200 "VIP_BEATSKIP_FILE=$sb/no-skip-here"
+ck "local-reserve overflow: OVERFLOW_PIN=zai wins" "zai:glm-design-model" "$(cat "$sb/tmp-modelused.txt")"
 
 # --- 8. REVIEW transition: always pins kimi (counter at 1, share would
 #        not fire; the crystallized line has a doc so REVIEW=1).

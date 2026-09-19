@@ -414,7 +414,17 @@ line, shaped:
 synth-$day-<n><TAB><one-line question>
 with n = 1, 2, 3 and a literal TAB between id and question. No other
 output."
- MODEL_PIN=local
+ # LOCAL-RESERVE (hngh-wc4): the demand synthesizer rides the same
+ # reserve rule as the main transition -- local only inside the midnight
+ # window with the operator idle, else the zai quota leg (falls through
+ # to local inside model_call if unarmed; the synthesis is capped and
+ # daily-stamped, so a quota miss costs one empty day at most).
+ if vip_in_window && ! vip_skip_verdict; then
+  MODEL_PIN=local
+ else
+  MODEL_PIN=zai
+  ZAI_MODEL="${ZAI_MODEL_DESIGN:-${ZAI_MODEL:-$(get_param zai-model-design '')}}"
+ fi
  resp="$(printf '%s' "$prompt" | model_call 1024)"
  printf '%s\n' "$day" >"$synth_stamp" 2>/dev/null
  accepted=0
@@ -746,7 +756,7 @@ if [ "$_pin_preset" = 0 ] && [ -z "$OVERFLOW_PIN" ] && [ -z "$ROUTE_PIN" ] &&
    "midnight window open, operator idle -- local Unsloth leg kept"
  else
   MODEL_PIN=zai
-  ZAI_MODEL="${ZAI_MODEL_DESIGN:-$(get_param zai-model-design '')}"
+  ZAI_MODEL="${ZAI_MODEL_DESIGN:-${ZAI_MODEL:-$(get_param zai-model-design '')}}"
   breadcrumb "$JOB_NAME" "research-local-reserve" \
    "daytime/operator-active -- residual local pin shifted to zai quota leg, local reserved for midnight"
  fi
