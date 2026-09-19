@@ -946,14 +946,25 @@ _model_call_impl() {
  _beatskip_now="$(date +%s)"
  _beatskip_age=9999
  [ -f "$_beatskip_file" ] && _beatskip_age=$((_beatskip_now - $(stat -c %Y "$_beatskip_file" 2>/dev/null || echo 0)))
- if [ "$_beatskip_age" -gt 30 ]; then
+ # studio-aware verdict (hngh-f7j): consult loaded model + queue depth,
+ # refuse verdicts older than 120s (force refresh). Studio has no queue
+ # endpoint: total_slots vs active work is the proxy — a non-beat model
+ # loaded means the operator is using the box (queue_depth=1).
+ _studio_models="$(curl -s -m 3 http://127.0.0.1:8888/v1/models 2>/dev/null)"
+ _studio_loaded="$(printf '%s' "$_studio_models" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(m.get('id','') for m in d.get('data',[]) if m.get('loaded')))" 2>/dev/null)"
+ _studio_queue=0
+ { for _lm in $_studio_loaded; do
+   [ "$_lm" = "$MODEL" ] || { _studio_queue=1; break; }
+ done; } 2>/dev/null
+ [ -z "${_studio_loaded// }" ] && _studio_queue=0
+ if [ "$_beatskip_age" -gt 120 ]; then
   _session_recent="no"
   _last_run="$(grep ' | session-run' "$AUTOMATION_ROOT/logs/budget.md" 2>/dev/null | tail -n1 | cut -d' ' -f1)"
   if [ -n "$_last_run" ]; then
    _run_ts="$(date -d "$_last_run" +%s 2>/dev/null || echo 0)"
    [ $((_beatskip_now - _run_ts)) -lt 1800 ] && _session_recent="yes"
   fi
-  if _skip_verdict="$(printf '%s' '' | TYPESAFE_STATE="session_recent=$_session_recent" python3 -c "
+  if _skip_verdict="$(printf '%s' '' | TYPESAFE_STATE="session_recent=$_session_recent studio_user_model=$_studio_loaded studio_queue_depth=$_studio_queue beat_model=$MODEL verdict_age_s=$_beatskip_age verdict_max_age_s=120" python3 -c "
 import os, sys
 sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
 from typesafe import beat_skip_gate
@@ -964,7 +975,7 @@ print('skip' if beat_skip_gate(sig) else 'keep')
   fi
  fi
  [ "$(cat "$_beatskip_file" 2>/dev/null)" = "skip" ] && SKIP_LOCAL=1
- breadcrumb model "beatskip" "verdict=$(cat "$_beatskip_file" 2>/dev/null) age=${_beatskip_age}s session_recent=${_session_recent:-?} SKIP_LOCAL=$SKIP_LOCAL"
+ breadcrumb model "beatskip" "verdict=$(cat "$_beatskip_file" 2>/dev/null) age=${_beatskip_age}s session_recent=${_session_recent:-?} studio_loaded=${_studio_loaded:-?} studio_queue=${_studio_queue:-?} SKIP_LOCAL=$SKIP_LOCAL"
  # schedule dataset (one line per beat for away-hours learning):
  # recency + studio + load + hour. Ground truth accrues in breadcrumbs.
  _sched_studio="$(curl -s -m 3 http://127.0.0.1:8888/v1/models 2>/dev/null | head -c 40 || echo down)"

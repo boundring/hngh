@@ -174,8 +174,44 @@ def beat_skip_gate(operator_active_signals):
     """First wired decision: True iff the beat should SKIP (operator busy).
 
     operator_active_signals: dict e.g. {"session_recent": "yes"/"no",
-    "studio_user_model": "name or empty"}.
+    "studio_user_model": "name or empty", "studio_queue_depth": "int str",
+    "verdict_age_s": "int str", "verdict_max_age_s": "int str"}.
+
+    Studio-aware rule (hngh-f7j): verdict-age enforced FIRST and
+    deterministically, before any inference call:
+    - a verdict older than verdict_max_age_s (default 120s) is stale:
+      return False (force refresh) regardless of the cached verdict.
+    - a studio queue depth > 0 means the operator (or another lane)
+      is using the box: return True (skip) without inference.
+    - a loaded studio model different from the beat model means the
+      operator loaded their own weights: return True (skip) without
+      inference.
+    Otherwise fall through to the operator_busy Noul; fail-open
+    (False) when the key/SDK is missing or the call errors.
     """
+    try:
+        max_age = int(operator_active_signals.get("verdict_max_age_s",
+                                                  "120"))
+    except (TypeError, ValueError):
+        max_age = 120
+    try:
+        age = int(operator_active_signals.get("verdict_age_s", "0"))
+    except (TypeError, ValueError):
+        age = 0
+    if age > max_age:
+        return False  # stale verdict: force refresh, never trust it
+    try:
+        qdepth = int(operator_active_signals.get("studio_queue_depth",
+                                                 "0"))
+    except (TypeError, ValueError):
+        qdepth = 0
+    if qdepth > 0:
+        return True  # box busy: skip without spending inference
+    beat_model = (operator_active_signals.get("beat_model") or "").strip()
+    studio_model = (operator_active_signals.get("studio_user_model")
+                      or "").strip()
+    if studio_model and beat_model and studio_model != beat_model:
+        return True  # operator's own weights loaded: skip
     v = ask_noul(
         state=operator_active_signals,
         name="operator_busy",
