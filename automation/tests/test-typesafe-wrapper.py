@@ -84,7 +84,8 @@ class FanoutSingleCall(unittest.TestCase):
                 calls.append(set(questions))
                 r = R()
                 r.nouls = {"collapse_ready": V(noul),
-                           "close_evidence": V(noul)}
+                           "close_evidence": V(noul),
+                           "operator_busy": V(noul)}
                 r.choices = {"hottest": C(choice)}
                 r.scores = {"urgency": S(list(scores))}
                 return r
@@ -132,6 +133,58 @@ class FanoutSingleCall(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
         with unittest.mock.patch.dict(os.environ, env, clear=True):
             self.assertFalse(typesafe.beat_skip_gate({"session_recent": "yes"}))
+
+    def test_beat_skip_stale_verdict_forces_refresh(self):
+        # verdict older than max age: False without any inference call.
+        with unittest.mock.patch.dict(
+                os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "ask_noul",
+                    side_effect=AssertionError("must not infer")):
+                self.assertFalse(typesafe.beat_skip_gate({
+                    "session_recent": "yes",
+                    "verdict_age_s": "999",
+                    "verdict_max_age_s": "120"}))
+
+    def test_beat_skip_fresh_verdict_asks_noul(self):
+        fake, _ = self._fake_client(noul=0.9)
+        with unittest.mock.patch.dict(
+                os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                self.assertTrue(typesafe.beat_skip_gate({
+                    "session_recent": "no",
+                    "verdict_age_s": "10",
+                    "verdict_max_age_s": "120",
+                    "studio_queue_depth": "0",
+                    "beat_model": "m",
+                    "studio_user_model": "m"}))
+
+    def test_beat_skip_queue_depth_skips_without_inference(self):
+        with unittest.mock.patch.dict(
+                os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "ask_noul",
+                    side_effect=AssertionError("must not infer")):
+                self.assertTrue(typesafe.beat_skip_gate({
+                    "session_recent": "no",
+                    "verdict_age_s": "5",
+                    "studio_queue_depth": "1",
+                    "beat_model": "m",
+                    "studio_user_model": "m"}))
+
+    def test_beat_skip_foreign_model_skips_without_inference(self):
+        with unittest.mock.patch.dict(
+                os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "ask_noul",
+                    side_effect=AssertionError("must not infer")):
+                self.assertTrue(typesafe.beat_skip_gate({
+                    "session_recent": "no",
+                    "verdict_age_s": "5",
+                    "studio_queue_depth": "0",
+                    "beat_model": "beat-weights",
+                    "studio_user_model": "operator-weights"}))
 
 
 class LiveCall(unittest.TestCase):

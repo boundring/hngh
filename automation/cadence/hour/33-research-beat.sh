@@ -54,6 +54,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/failfirst.sh"
 . "$AUTOMATION_ROOT/lib/beat-blockers.sh"
 . "$AUTOMATION_ROOT/lib/redact.sh"
+. "$AUTOMATION_ROOT/lib/vip-gate.sh"
 
 # one research transition at a time: the hour beat and the 15-minute
 # overflow beat share this body and research-lines.tsv. A beat arriving
@@ -63,6 +64,29 @@ set -u
 # lock is the race prevention.)
 exec 9>"${RESEARCH_LOCK_FILE:-/tmp/.hngh-research-beat-lock}"
 flock -w "${RESEARCH_LOCK_WAIT:-300}" 9 || exit 0
+
+# --- 0. Jev per-beat triage (hngh-sy4): one fan-out over live
+# city-state (30s verdict cache = safe 2/min lane). Fail-open: without
+# key or on any error the beat proceeds untriaged. Verdict recorded
+# for the schedule dataset; hot lane logged for worker routing.
+if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; then
+ _tb_beats="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('beats ' + d['timers']['beats'])" 2>/dev/null)"
+ _tb_beads="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(str(d['beads']['closed']) + ' closed ' + str(d['beads']['open']) + ' open')" 2>/dev/null)"
+ if _triage="$(TYPESAFE_BEATS="$_tb_beats" TYPESAFE_BEADS="$_tb_beads" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import triage_fanout
+lanes = ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles']
+st = {'beats': os.environ.get('TYPESAFE_BEATS', '?'), 'beads': os.environ.get('TYPESAFE_BEADS', '?')}
+hot, col, scores = triage_fanout(st, lanes)
+parts = []
+parts.append('hottest=' + str(hot) if hot else 'hottest=?')
+parts.append('collapse=' + str(col) if col is not None else 'collapse=?')
+print(' '.join(parts))
+" 2>/dev/null)"; then
+  breadcrumb "$JOB_NAME" "triage" "jev per-beat fan-out: $_triage"
+ fi
+fi
 
 # fail-first gate: the beat fires every hour tick; the gate decides GO
 # vs THROTTLE. Full speed (fresh state or after promotions) always runs;
@@ -666,7 +690,12 @@ line="$(printf '%s' "$row" | cut -f4)"
 # Precedence (fail-first routing): an overflow caller's OVERFLOW_PIN
 # (quota/deck legs only -- the overflow beat never touches the local
 # server) wins, then the busy ROUTE_PIN (capacity signal), then the
-# rotation below for an otherwise-unpinned (local) run.
+# rotation below for an otherwise-unpinned run.
+# LOCAL-RESERVE (hngh-wc4, 2026-09-19): an explicitly preset MODEL_PIN
+# always wins; note it here so the reserve shift below never overrides
+# an operator override.
+_pin_preset=0
+[ -n "${MODEL_PIN:-}" ] && _pin_preset=1
 MODEL_PIN="${MODEL_PIN:-local}"
 # Operator-active guard (2026-09-18 beats hold): when the Jev beat-skip
 # verdict says the operator is using the machine, a local pin would hit
@@ -699,6 +728,27 @@ elif [ "$MODEL_PIN" = "local" ]; then
   if [ "$ocgo_share" -gt 0 ] && [ $((run_n % ocgo_share)) -eq 0 ]; then
    MODEL_PIN=ocgo
   fi
+ fi
+fi
+# LOCAL-RESERVE (hngh-wc4, 2026-09-19): reserve local Unsloth for the
+# midnight window -- the vip-gate pattern from model-bench/night-research.
+# Fires only when the rotation above left the pin at local residual (no
+# overflow pin, no busy route, no preset, no kimi/zai/ocgo rotation hit,
+# no review pin): outside the window, or while the beat-skip verdict says
+# the operator is active, shift that residual local pin to the
+# design-class zai quota leg (falls through to the local chain inside
+# model_call if unarmed, so research never blocks). Overflow-pin behavior
+# untouched: OVERFLOW_PIN still wins above and never touches local.
+if [ "$_pin_preset" = 0 ] && [ -z "$OVERFLOW_PIN" ] && [ -z "$ROUTE_PIN" ] &&
+ [ "$REVIEW" != "1" ] && [ "$MODEL_PIN" = "local" ]; then
+ if vip_in_window && ! vip_skip_verdict; then
+  breadcrumb "$JOB_NAME" "research-local-reserve" \
+   "midnight window open, operator idle -- local Unsloth leg kept"
+ else
+  MODEL_PIN=zai
+  ZAI_MODEL="${ZAI_MODEL_DESIGN:-$(get_param zai-model-design '')}"
+  breadcrumb "$JOB_NAME" "research-local-reserve" \
+   "daytime/operator-active -- residual local pin shifted to zai quota leg, local reserved for midnight"
  fi
 fi
 
