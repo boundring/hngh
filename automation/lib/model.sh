@@ -950,7 +950,13 @@ _model_call_impl() {
  # refuse verdicts older than 120s (force refresh). Studio has no queue
  # endpoint: total_slots vs active work is the proxy — a non-beat model
  # loaded means the operator is using the box (queue_depth=1).
- _studio_models="$(curl -s -m 3 http://127.0.0.1:8888/v1/models 2>/dev/null)"
+ # bearer via the stdin curl config (`-K -`), never argv — the studio
+ # gate is the same key-gated endpoint credential-health probes; no
+ # token file means an empty config (keyless GET, fail-open as before).
+ _studio_cfg=""
+ [ -s "$TOKEN_FILE" ] && _studio_cfg="$(printf 'header = "Authorization: Bearer %s"\n' "$(cat "$TOKEN_FILE" 2>/dev/null)")"
+ _studio_models="$(printf '%s' "$_studio_cfg" |
+  curl -s -m 3 -K - "$UNSLOTH_URL/v1/models" 2>/dev/null)"
  _studio_loaded="$(printf '%s' "$_studio_models" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(m.get('id','') for m in d.get('data',[]) if m.get('loaded')))" 2>/dev/null)"
  _studio_queue=0
  { for _lm in $_studio_loaded; do
@@ -978,7 +984,8 @@ print('skip' if beat_skip_gate(sig) else 'keep')
  breadcrumb model "beatskip" "verdict=$(cat "$_beatskip_file" 2>/dev/null) age=${_beatskip_age}s session_recent=${_session_recent:-?} studio_loaded=${_studio_loaded:-?} studio_queue=${_studio_queue:-?} SKIP_LOCAL=$SKIP_LOCAL"
  # schedule dataset (one line per beat for away-hours learning):
  # recency + studio + load + hour. Ground truth accrues in breadcrumbs.
- _sched_studio="$(curl -s -m 3 http://127.0.0.1:8888/v1/models 2>/dev/null | head -c 40 || echo down)"
+ _sched_studio="$(printf '%s' "$_studio_models" | head -c 40)"
+ [ -z "$_sched_studio" ] && _sched_studio="down"
  _sched_load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo ?)"
  breadcrumb model "schedule" "recent=${_session_recent:-?} studio=${_sched_studio:-?} load=${_sched_load} hour=$(date +%H)"
  if [ "$SKIP_LOCAL" = 0 ] && unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
