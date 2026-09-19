@@ -4,18 +4,16 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line for standardizing CI gate verification by introducing a lightweight shell-based validation harness that ensures all job definitions and automation scripts pass syntax checks before merging.
+This plan implements the adopted cadence-observability research line by adding small, testable status helpers for hngh-automation.
+All changes stay in automation paths and are gated by make test.
 
 ## Steps
 
-- [ ] Create `scripts/validate_jobs.sh` to iterate through `jobs/*.yaml` files and verify required fields exist using grep
-  Verification: bash -n scripts/validate_jobs.sh
-- [ ] Add a test fixture in `tests/fixtures/sample_job.yaml` with valid structure for the validator to consume
-  Verification: git ls-files tests/fixtures/sample_job.yaml | grep -q "sample_job.yaml"
-- [ ] Implement `lib/job_lint.py` using only stdlib to parse YAML-like structures and return exit codes for validation logic
-  Verification: python3 lib/job_lint.py --help
-- [ ] Update `cadence/ci_gate.sh` to invoke the new validator script before proceeding with deployment steps
-  Verification: bash -n cadence/ci_gate.sh
-- [ ] Add a regression test in `tests/test_validation.sh` that asserts the validator fails on malformed input
-  Verification: bash tests/test_validation.sh
+- [ ] Add scripts/cadence_list_jobs.sh to list local job directories without executing jobs.
+  Verification: bash -n scripts/cadence_list_jobs.sh
+- [ ] Add lib/cadence_status.py as a stdlib-only helper with a self-test main that normalizes cadence status names into stable tokens.
+  Verification: python3 lib/cadence_status.py
+- [ ] Add dashboard/render_cadence.sh to render normalized status tokens as plain text for local review.
+  Verification: bash -n dashboard/render_cadence.sh
+- [ ] Add tests/cadence_status_test.sh that runs the list and status helpers against a fixture and checks expected output.
+  Verification: make test
