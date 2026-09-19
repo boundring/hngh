@@ -41,7 +41,7 @@ demoted-model evidence re-check). The nightly timer and the
       Verification: week tick breadcrumb shows 02-bench-trigger
       mounted and both verbs evaluated (dry breadcrumb); params row
       read via get_param; `make test` green.
-- [ ] 3. Retire the nightly schedule. Route for the director: disable
+- [x] 3. Retire the nightly schedule. Route for the director: disable
       `hngh-model-bench.timer` (operator-authorized systemd lifecycle
       change - operator directive 2026-09-10 names this exact unit)
       and remove the full-fleet catch-up from
@@ -117,3 +117,19 @@ demoted-model evidence re-check). The nightly timer and the
   row in reports.md. Blocker blk-20260916-2026-09-10-bench-trigger-lane
   stands active (cause=unknown); counter-lesson held: live-state
   evidence outranked the 09-14 notes.
+- 2026-09-19T17:15Z wake: step 3 COMPLETE, ticked. Live systemctl
+  --user: hngh-model-bench.timer disabled+inactive (observed 17:06Z;
+  journal has no disable-event entries, so observation-time state).
+  Sweep landed in one pass (dream 2026-09-19T17:03Z guided): evidence
+  row reports.md 90b82f24 (scripts/report-queue --add progress, not a
+  hand edit); PENDING notes retired in cadence/day/10-bench-fresh.sh
+  and cadence-params.tsv row 51 (stale 4e63a558/enabled+active claims
+  dropped — 4e63a558 was already absent from reports.md, the 09-14
+  notes were stale carriers); blocker blk-20260917-bench-trigger-lane
+  cleared via lib/beat-blockers.sh blocker_clear; routed disable plan
+  2026-09-14-routed-bench-lane-timer-disable (accepted
+  2026-09-18T01:41:57Z) never re-filed. Verification: no cadence
+  drop-in invokes the full fleet on a schedule (10-bench-fresh.sh is
+  note-only, verified live 2026-09-19T14:24:49Z STATE.md row);
+  automation make test green this wake. LANE COMPLETE — week-tier
+  verbs are the only bench path.
