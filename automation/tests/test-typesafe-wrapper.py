@@ -68,7 +68,7 @@ class FanoutSingleCall(unittest.TestCase):
 
         class S:
             def __init__(self, v):
-                self.scores = v
+                self.score = v
 
         class R:
             pass
@@ -87,7 +87,7 @@ class FanoutSingleCall(unittest.TestCase):
                            "close_evidence": V(noul),
                            "operator_busy": V(noul)}
                 r.choices = {"hottest": C(choice)}
-                r.scores = {"urgency": S(list(scores))}
+                r.scores = {"urgency": S(scores[0])}
                 return r
 
         return FakeClient(), calls
@@ -101,7 +101,7 @@ class FanoutSingleCall(unittest.TestCase):
                     {"s": "t"}, ["a", "b"])
         self.assertEqual(hot, "b")
         self.assertTrue(col)
-        self.assertEqual(scores, [0.2, 0.9])
+        self.assertEqual(scores, 0.2)
         self.assertEqual(len(calls), 1)  # one round trip
         self.assertEqual(calls[0], {"hottest", "collapse_ready", "urgency"})
 

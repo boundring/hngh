@@ -82,7 +82,7 @@ def ask_choice(state, name, instructions, criteria):
 
 
 def ask_score(state, name, instructions, criteria):
-    """Score question -> list of floats, or None fail-closed."""
+    """Score question -> float position, or None fail-closed."""
     c = _client()
     if c is None:
         _crumb(name)
@@ -100,7 +100,7 @@ def ask_score(state, name, instructions, criteria):
                     )
                 },
             )
-        return r.scores[name].scores
+        return r.scores[name].score
     except Exception:
         _crumb(name)
         return None
@@ -142,7 +142,7 @@ def triage_fanout(state, lanes):
             )
         hot = r.choices["hottest"].choice
         col = r.nouls["collapse_ready"].noul
-        scores = r.scores["urgency"].scores
+        scores = r.scores["urgency"].score
         return (hot, (col is not None and col >= 0.5), scores)
     except Exception:
         _crumb("triage_fanout")
