@@ -40,9 +40,13 @@ cred_get REF   # -> secret on stdout; "" (nonzero) on any failure
 - **Never echo**: values go to stdout for command substitution only;
   the library itself never logs, never `set -x`s, never writes values
   to temp files with broad modes (mktemp 600 or a pipe).
-- **Session auth check**: before first use, `op whoami` (fallback
-  `op account list`) — cheap, non-mutating. A locked or signed-out
-  1Password must be detectable BEFORE a caller commits to a path.
+- **Session auth check**: before first use, `op account list` — cheap,
+  non-mutating. Never probe with `op whoami`: it misreports "account is
+  not signed in" under desktop-app integration even when a valid
+  service-account token is set (2026-09-09 service-account record).
+  With `OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORD_SERVICE_KEY"` set, `op`
+  needs no desktop app at all. A locked or signed-out 1Password must be
+  detectable BEFORE a caller commits to a path.
 - **Fail-closed to file fallback with a breadcrumb**: if `op` is
   unavailable, locked, or the item is missing, `cred_get` falls back
   to the existing file path (e.g. `~/.hngh-automation/unsloth.token`)
@@ -100,13 +104,16 @@ whole posture, and it happens last per item).
 
 Everything after this step is procedural: **the 1Password desktop app
 signed in and unlockable (biometric or passphrase), and the `op` CLI
-signed in to the same account.** `op --version` already succeeds
-(2.32.1); whether the CLI session is live is checked at execution
-time via `op whoami` — locked-vault behavior is exactly what §2's
-fail-closed path absorbs. When the plan's migration step cannot
-proceed because the CLI is signed out, it parks with the exact
-operator step quoted ("run `op signin` / unlock the desktop app"),
-never retries in a loop.
+signed in to the same account** — or, headless, the service-account
+token exported as `OP_SERVICE_ACCOUNT_TOKEN`
+([../records/2026-09-09-1password-service-account-interface.md](../records/2026-09-09-1password-service-account-interface.md)).
+`op --version` already succeeds (2.32.1); whether the CLI session is
+live is checked at execution time via `op account list` (never
+`op whoami`, which misreports under app integration) — locked-vault
+behavior is exactly what §2's fail-closed path absorbs. When the plan's
+migration step cannot proceed because the CLI is signed out, it parks
+with the exact operator step quoted ("run `op signin` / unlock the
+desktop app"), never retries in a loop.
 
 1Password the SOFTWARE joins the service-management posture like any
 other installed software: kept updated, its availability recognized —

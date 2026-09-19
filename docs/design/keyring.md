@@ -23,7 +23,10 @@ socket, so an SDK inherits the CLI's failure mode and bypasses nothing;
 the documented bypasses are CLI-only `op account add` or a Service
 Account. The standing leads there (a stale `op-daemon.sock`; restart after
 the operator's reboot window as the cheap first test) are the integration
-prerequisite — until `op whoami` succeeds at execution time, the harness
+prerequisite — until `op account list` succeeds at execution time (never
+`op whoami`, which misreports "account is not signed in" under app
+integration even with a valid service-account token, per the
+2026-09-09 service-account record), the harness
 parks with the exact operator step quoted, per credentials-posture §5. It
 never retries in a loop.
 

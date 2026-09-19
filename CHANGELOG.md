@@ -4,6 +4,25 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-19
+
+#### Fixed
+
+- **Doc-secrets gate was blind to docs/; committed OpenCode key redacted**
+  (docs/records/2026-09-19-secret-hygiene-opencode-key-gate.md, bead
+  hngh-dzf): `automation/tests/test-doc-secrets.py` computed its scan root
+  as `automation/` instead of the repo root, so `docs/` — the tree that
+  leaked in 2026-09-11 — was never scanned; and a raw key sharing a line
+  with a `<redacted` note was blanket-allowed. Fixed: repo-root scan,
+  placeholder masking instead of line skips, generic `sk-` prefix with
+  value-suffix requirements, 8 red-first tests. Redacted the dead
+  `sk-7ZXC…` OPENCODE_API_KEY from the lobehub research doc (probed live:
+  upstream 401 Invalid credential = rotated; current env key answers 429
+  weekly-limit = live) and a raw retired-system `ghp_…` fixture token from
+  the secret-scan report. Stale `op whoami` prescriptions in
+  credentials-posture.md and keyring.md replaced with the
+  `op account list` / service-account seam per the 2026-09-09 record.
+
 ### 2026-09-17
 
 #### Changed

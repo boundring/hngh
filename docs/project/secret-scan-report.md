@@ -58,7 +58,7 @@ These live in `tests/`/session notes only, contain zero real values, and were al
 |---|---|---|---|
 | `0030153c9f29` | `src/plugins/sentry.lisp:23` (retired) | `("github-oauth" . "gho_[A-Za-z0-9]{36}")` | regex **pattern** for the retired sentry detector — the rule, not a token. Retired with the daemon. |
 | `0030153c9f29` | `tests/unit/test-sentry.lisp:28` | `-----BEGIN RSA PRIVATE KEY----- and more` | self-test string proving the detector fires on the literal |
-| `0030153c9f29` | `tests/unit/test-sentry.lisp:34` | `token git-history-redacted-2026-09-20 here` | the harness's own credential-mask placeholder format; the value is a placeholder token, not a real masked secret |
+| `0030153c9f29` | `tests/unit/test-sentry.lisp:34` | `token <redacted 2026-09-19; retired-system fixture token, shape only> here` | the harness's own credential-mask placeholder format; the value is a placeholder token, not a real masked secret |
 
 ### DOCUMENTATION / FALSE POSITIVES — keyword adjacency in prose and code
 

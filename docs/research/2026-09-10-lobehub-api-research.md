@@ -8,7 +8,7 @@ Config files examined: ~/.config/pi*, ~/.pi/, ~/.config/billion-context/*, ~/.co
 
 | File | Lobehub reference? | What exists instead |
 |------|-------------------|---------------------|
-| env_vars.sh | No LOBEHUB base_url or endpoint | OPENCODE_API_KEY=git-history-redacted-2026-09-20 (separate from OPENROUTER_API_KEY=<redacted 2026-09-11; value lives in env_vars.sh / 1Password>) |
+| env_vars.sh | No LOBEHUB base_url or endpoint | OPENCODE_API_KEY=<redacted 2026-09-19; upstream rejects it (401 Invalid credential) - rotated; current value lives in env_vars.sh / 1Password> (separate from OPENROUTER_API_KEY=<redacted 2026-09-11; value lives in env_vars.sh / 1Password>) |
 | models-store.json | No lobehub provider entry | Pi connects to OpenCode Go for GLM-5.x via opencode.ai/zen/go/v1/chat/completions |
 | billion-context.json | providers={} (empty) | Only compress settings present; no provider mappings |
 | pi.fish | "command bili pi -- $argv" | Shell wrapper around bili proxy |
@@ -77,7 +77,7 @@ Two barriers prevent productive use of the verified API:
 ### What the connection actually looks like
 
 Both keys in env_vars.sh feed different inference surfaces:
-- OPENCODE_API_KEY=git-history-redacted-2026-09-20 feeds Pi --> OpenCode Go for GLM subscription path
+- OPENCODE_API_KEY=<redacted 2026-09-19; upstream rejects it (401 Invalid credential) - rotated; current value lives in env_vars.sh / 1Password> feeds Pi --> OpenCode Go for GLM subscription path
 - OPENROUTER_API_KEY=<redacted 2026-09-11; value lives in env_vars.sh / 1Password> feeds hngh lobehub_chat to app.lobehub.com/api/v1/responses with auth
 
 Pi consumes OpenCode Go credits. Hngh's lobehub_chat path consumes LobeHub credits (via OpenRouter proxy). They are separate billing surfaces that both serve GLM models but through distinct provider stacks.
