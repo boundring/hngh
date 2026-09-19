@@ -151,7 +151,13 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
  body="$(cat "$prompt_file")
 
 Read the pre-digested repo context at $ctx (regenerated fresh at this
-launch) before re-deriving any repo fact from scratch."
+launch) before re-deriving any repo fact from scratch.
+
+Bead circulation (bloodstream): if your assignment names a bead id
+(hngh-XXX), claim it first with \`bd update <id> --status in_progress\`,
+and close it with \`bd update <id> --status closed\` plus a \`bd comment\`
+carrying commit hashes, files, and validation. Evidence on the bead,
+not just in your report."
  # executor selection (design docs/research/2026-09-10-opencode-agentic-
  # surface.md s5): one cadence-params row; empty/absent = omp fail-closed;
  # env HNGH_SESSION_EXECUTOR overrides the row (per-caller precedence).

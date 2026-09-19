@@ -964,6 +964,12 @@ print('skip' if beat_skip_gate(sig) else 'keep')
   fi
  fi
  [ "$(cat "$_beatskip_file" 2>/dev/null)" = "skip" ] && SKIP_LOCAL=1
+ breadcrumb model "beatskip" "verdict=$(cat "$_beatskip_file" 2>/dev/null) age=${_beatskip_age}s session_recent=${_session_recent:-?} SKIP_LOCAL=$SKIP_LOCAL"
+ # schedule dataset (one line per beat for away-hours learning):
+ # recency + studio + load + hour. Ground truth accrues in breadcrumbs.
+ _sched_studio="$(curl -s -m 3 http://127.0.0.1:8888/v1/models 2>/dev/null | head -c 40 || echo down)"
+ _sched_load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo ?)"
+ breadcrumb model "schedule" "recent=${_session_recent:-?} studio=${_sched_studio:-?} load=${_sched_load} hour=$(date +%H)"
  if [ "$SKIP_LOCAL" = 0 ] && unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
   MODEL_USED="unsloth:$MODEL"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
