@@ -4,15 +4,14 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the adopted research line on local digest-cadence observability for hngh-automation by adding small stdlib and shell checks that stay inside automation paths.
+Implements the cadence-preflight research line: an additive, stdlib-only validator so malformed job cadence specs fail before scheduling rather than at runtime. This keeps every change plain-commit landable in hngh-automation and gated by its make test.
 
 ## Steps
 
-- [ ] Add scripts/hngh_digest_status.py that prints a stable one-line digest status using only Python stdlib and exits 0.
-  Verification: python3 scripts/hngh_digest_status.py
-- [ ] Add jobs/hngh-digest-status.sh that invokes the status script with set -euo pipefail and propagates its exit code.
-  Verification: bash -n jobs/hngh-digest-status.sh
-- [ ] Add cadence/hngh-digest-check.md describing the local digest status check as a normal-risk cadence item.
-  Verification: grep -q "hngh-digest-status" cadence/hngh-digest-check.md
-- [ ] Add tests/hngh_digest_status_test.py that runs the status script via subprocess and asserts exit code 0 plus a digest-bearing output line.
-  Verification: python3 tests/hngh_digest_status_test.py
+- [ ] Add `lib/cadence_spec.py`, a stdlib-only module exposing `validate(spec)` that checks schedule/window/retry fields and returns error strings, with a `__main__` self-test that exits 0 on the bundled fixtures.
+  Verification: python3 lib/cadence_spec.py
+
+- [ ] Add `scripts/cadence_preflight.sh` that iterates `jobs/*.yaml`, feeds each `cadence:` block to the validator, and exits non-zero on any error.
+  Verification: bash -n scripts/cadence_preflight.sh
+
+- [ ] Add a valid sample spec at `jobs/cadence_sample.yaml` with a `cadence:` block (schedule, window, retry) that
