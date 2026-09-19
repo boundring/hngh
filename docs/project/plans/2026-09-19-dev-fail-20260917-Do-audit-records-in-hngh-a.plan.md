@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-19T19:04:00Z -->
 # 2026-09-19 - dev-fail-20260917-Do-audit-records-in-hngh-a (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

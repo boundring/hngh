@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-19T19:04:00Z -->
 # 2026-09-18 - backlog P2/P3 coverage bundle (maintenance/cadence-grade, read-only probes)
 
 Synthesized from `~/.jcode/scratch/BACKLOG.md` TIER 3 (P2 coverage

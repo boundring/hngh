@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:manga -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-19T19:04:00Z routed-from=patrol:manga -->
 # 2026-09-19 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:manga`

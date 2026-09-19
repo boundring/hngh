@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:manga -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:manga  cause=obsolete disposed=2026-09-19T19:00:28Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-18 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:manga`
@@ -13,3 +13,4 @@ at 2026-09-18T15:00:14Z. Alert text: patrol manga: manga-stale on manga -- newes
 
 - 2026-09-19T17:00:14Z re-occurred (dedup window expired)
 - 2026-09-19T18:00:14Z re-occurred (dedup window expired)
+- 2026-09-19T19:00:28Z re-occurred (dedup window expired)

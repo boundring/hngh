@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=imap-conf-keys -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-19T19:04:00Z routed-from=imap-conf-keys -->
 # 2026-09-18 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `imap-conf-keys`
