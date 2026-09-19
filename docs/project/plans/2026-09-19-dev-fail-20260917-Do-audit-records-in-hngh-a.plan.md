@@ -5,17 +5,17 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for **hngh-automation** by establishing a deterministic, scriptable development cadence that enforces strict verification gates through `make test` and shell syntax validation.
+This plan implements the research line for standardizing CI gate verification by introducing a lightweight shell-based validation harness that ensures all job definitions and automation scripts pass syntax checks before merging.
 
 ## Steps
 
-- [ ] Create `lib/validate.sh` to encapsulate common pre-commit checks and ensure it passes bash syntax validation
-  Verification: `bash -n lib/validate.sh`
-- [ ] Add a new job definition in `jobs/hngh-dev-plan.yml` that triggers the cadence pipeline on branch updates
-  Verification: `grep -q "hngh-dev-plan" jobs/hngh-dev-plan.yml`
-- [ ] Implement `scripts/run-cadence.sh` to orchestrate the development plan execution with explicit error handling
-  Verification: `bash -n scripts/run-cadence.sh`
-- [ ] Update `cadence/plan.md` to document the new normal-risk workflow and verification requirements
-  Verification: `grep -q "normal-risk" cadence/plan.md`
-- [ ] Execute the full test suite to ensure no regressions in the hngh-automation repository
-  Verification: `make test`
+- [ ] Create `scripts/validate_jobs.sh` to iterate through `jobs/*.yaml` files and verify required fields exist using grep
+  Verification: bash -n scripts/validate_jobs.sh
+- [ ] Add a test fixture in `tests/fixtures/sample_job.yaml` with valid structure for the validator to consume
+  Verification: git ls-files tests/fixtures/sample_job.yaml | grep -q "sample_job.yaml"
+- [ ] Implement `lib/job_lint.py` using only stdlib to parse YAML-like structures and return exit codes for validation logic
+  Verification: python3 lib/job_lint.py --help
+- [ ] Update `cadence/ci_gate.sh` to invoke the new validator script before proceeding with deployment steps
+  Verification: bash -n cadence/ci_gate.sh
+- [ ] Add a regression test in `tests/test_validation.sh` that asserts the validator fails on malformed input
+  Verification: bash tests/test_validation.sh
