@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-19
+
+- automation gate unblock: the Jev beat-skip gate (d740d967, 2026-09-18)
+  and its schedule-dataset follow-up added two bare curls to
+  `http://127.0.0.1:8888/v1/models` — the same key-gated unsloth studio
+  gate credential-health probes with the stdin curl config — putting
+  `make test` red at tests/test-probe-hygiene.sh (rc2) and blocking all
+  plan acceptance on automation-gate-red-rc2. Fix: the two fetches
+  consolidate into one studio probe routed through `printf 'header =
+  "Authorization: Bearer %s"' | curl -K -` off `$UNSLOTH_URL` (empty
+  config when TOKEN_FILE is absent = keyless GET, fail-open as before;
+  directive on its own line so the argv guard record stays clean), and
+  the hygiene contract's pinned directive count moves 3 -> 4 with the
+  beatskip studio probe named. Live fetch verified against the running
+  studio; full `make test` green.
+
 ## 2026-09-18
 
 - rehearsal-lane step-2 verification unblock: the automation gate was

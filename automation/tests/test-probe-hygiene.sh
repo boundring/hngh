@@ -120,8 +120,9 @@ ck "suite found curl records at all (file not drifted)" "yes" "$([ "${#curls[@]}
 # (notify-seam pattern; credential-health probes of the SAME endpoints
 # were converted first in ccf8d7b5), no curl record may carry the
 # Authorization header on argv, every non-exempt curl must use the stdin
-# config, and three Bearer directives must exist (_post_chat cfg,
-# unsloth_attempt, _unsloth_ctx_limit). The single -K exemption is the
+# config, and four Bearer directives must exist (_post_chat cfg,
+# unsloth_attempt, _unsloth_ctx_limit, beatskip studio /v1/models). The
+# single -K exemption is the
 # refresh-path curl ($UNSLOTH_URL/api/auth/refresh): it carries no
 # Bearer header — but its single-use refresh token is still credential
 # material, so (2026-09-17 refresh-hygiene closure) the value rides a
@@ -164,7 +165,7 @@ for c in "${mcurls[@]}"; do
 done
 mck "model.sh: non-exempt curls without -K - == 0 (refresh path exempt)" "0" "$m_nonk"
 n_mdir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file2" || true)"
-mck "model.sh: three stdin Bearer directives" "3" "$n_mdir"
+mck "model.sh: four stdin Bearer directives" "4" "$n_mdir"
 mck "model.sh: suite found curl records at all (file not drifted)" "yes" \
   "$([ "${#mcurls[@]}" -ge 4 ] && echo yes || echo no)"
 
