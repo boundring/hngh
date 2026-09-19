@@ -176,6 +176,7 @@ test:
 	python3 -B tests/test-plan-templates.py
 	python3 -B tests/test-mcp-server.py
 	bash tests/test-model-demote.sh
+	python3 -B tests/test-lib-dependencies.py
 	bash tests/test-quota-routing.sh
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
