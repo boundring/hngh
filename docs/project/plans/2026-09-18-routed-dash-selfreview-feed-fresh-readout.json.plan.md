@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:readout.json -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:readout.json -->
 # 2026-09-18 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:feed-fresh:readout.json`
@@ -8,3 +8,7 @@ at 2026-09-18T12:31:29Z. Alert text: [dash-selfreview] feed-fresh:readout.json: 
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-19T14:16:33Z re-occurred (dedup window expired)
