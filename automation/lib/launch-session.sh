@@ -157,7 +157,11 @@ Bead circulation (bloodstream): if your assignment names a bead id
 (hngh-XXX), claim it first with \`bd update <id> --status in_progress\`,
 and close it with \`bd update <id> --status closed\` plus a \`bd comment\`
 carrying commit hashes, files, and validation. Evidence on the bead,
-not just in your report."
+not just in your report. DONE rule (browser-use steal, hngh-ddc): a
+close claim requires independent verification -- run the evidence
+Noul first (lib/typesafe.py: closeout_evidence_noul over the claimed
+summary); a False verdict means the evidence does not support closing,
+so do not close. None (no key/offline) keeps the existing human gate."
  # executor selection (design docs/research/2026-09-10-opencode-agentic-
  # surface.md s5): one cadence-params row; empty/absent = omp fail-closed;
  # env HNGH_SESSION_EXECUTOR overrides the row (per-caller precedence).

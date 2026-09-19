@@ -106,6 +106,70 @@ def ask_score(state, name, instructions, criteria):
         return None
 
 
+def triage_fanout(state, lanes):
+    """Speculative lane fan-out (browser-use steal, hngh-ddc): ONE system_one
+    round trip carrying every lane variant -- a Choice over lanes plus a
+    Noul collapse check plus a Score over lane urgency. Only the matching
+    branch executes: the caller runs the winning lane and acts on collapse
+    iff its Noul fires. Fail-open: without key/SDK returns
+    (None, None, None) and the caller proceeds untriaged.
+
+    Returns (hottest_lane_or_None, collapse_bool_or_None, scores_or_None).
+    """
+    c = _client()
+    if c is None:
+        _crumb("triage_fanout")
+        return (None, None, None)
+    try:
+        from typesafe_sdk import Choice, Noul, Score
+
+        with c:
+            r = c.system_one(
+                state=state,
+                questions={
+                    "hottest": Choice(
+                        instructions="Which work lane most needs attention next?",
+                        criteria={k: None for k in lanes},
+                    ),
+                    "collapse_ready": Noul(
+                        instructions="Is there absorbable completed work that should collapse now?"
+                    ),
+                    "urgency": Score(
+                        instructions="Rate each lane's urgency.",
+                        criteria=list(lanes),
+                    ),
+                },
+            )
+        hot = r.choices["hottest"].choice
+        col = r.nouls["collapse_ready"].noul
+        scores = r.scores["urgency"].scores
+        return (hot, (col is not None and col >= 0.5), scores)
+    except Exception:
+        _crumb("triage_fanout")
+        return (None, None, None)
+
+
+def closeout_evidence_noul(state, summary):
+    """Evidence Noul at bead close-out (browser-use DONE rule, hngh-ddc):
+    a DONE claim requires independent verification -- this Noul answers
+    whether the claimed evidence actually supports closing. Returns True
+    (evidence supports close), False (gap -- do not close), or None
+    fail-closed (no key/SDK/error: caller keeps its existing gate).
+    """
+    v = ask_noul(
+        state=dict(state, close_claim=summary),
+        name="close_evidence",
+        instructions=(
+            "Does the stated close-out evidence actually verify the work "
+            "claimed (named commits exist, tests cited green, artifacts "
+            "present)? Answer no when evidence is missing or vague."
+        ),
+    )
+    if v is None:
+        return None
+    return v >= 0.5
+
+
 def beat_skip_gate(operator_active_signals):
     """First wired decision: True iff the beat should SKIP (operator busy).
 

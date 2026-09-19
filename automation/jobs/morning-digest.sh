@@ -14,9 +14,11 @@ DATE="$(date +%F)"
 TS="$(date +%H%M)"
 MORNING_FILE="$DIGEST_DIR/MORNING-$DATE.md"
 
-# --- 0. Jev triage fan-out (hngh-1de): one call, hottest lane + heat +
-# collapse Noul over live city-state. Fail-open: without key or on any
-# error the digest proceeds untriaged; verdicts land as a header block.
+# --- 0. Jev triage fan-out (hngh-1de, speculative hngh-ddc): ONE system_one
+# round trip carrying every lane variant (Choice hottest + Noul collapse +
+# Score urgency); only the matching branch executes below. Fail-open:
+# without key or on any error the digest proceeds untriaged; verdicts
+# land as a header block.
 TRIAGE_BLOCK=""
 if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; then
  _beats_state="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('beats ' + d['timers']['beats'])" 2>/dev/null)"
@@ -24,11 +26,17 @@ if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; th
  if _triage="$(TYPESAFE_BEATS="$_beats_state" TYPESAFE_BEADS="$_beads_state" python3 -c "
 import os, sys
 sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
-from typesafe import ask_choice, ask_noul
+from typesafe import triage_fanout
+lanes = ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles']
 st = {'beats': os.environ.get('TYPESAFE_BEATS', '?'), 'beads': os.environ.get('TYPESAFE_BEADS', '?')}
-hot = ask_choice(st, 'hottest', 'Which work lane most needs attention next?', ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles'])
-col = ask_noul(st, 'collapse_ready', 'Is there absorbable completed work that should collapse now?')
-print(('hottest=' + str(hot)) if hot else 'hottest=?', ('collapse=' + str(col)) if col is not None else 'collapse=?')
+hot, col, scores = triage_fanout(st, lanes)
+parts = []
+parts.append('hottest=' + str(hot) if hot else 'hottest=?')
+parts.append('collapse=' + str(col) if col is not None else 'collapse=?')
+if scores:
+    top = sorted(zip(lanes, scores), key=lambda kv: kv[1], reverse=True)[:2]
+    parts.append('urgency=' + ','.join('%s:%.2f' % kv for kv in top))
+print(' '.join(parts))
 " 2>/dev/null)"; then
   TRIAGE_BLOCK="_Jev triage (one call): $_triage _"
   breadcrumb "$JOB_NAME" "triage" "jev fan-out: $_triage"
