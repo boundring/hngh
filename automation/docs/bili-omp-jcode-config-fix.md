@@ -100,6 +100,28 @@ But neither `NODE_EXTRA_CA_CERTS` nor `SSL_CERT_FILE` is set in the environment.
 
    Portability notes: `NODE_EXTRA_CA_CERTS` is Node.js-only (ignored by curl, Python, Go, Java). `SSL_CERT_FILE` covers OpenSSL-based clients (Python, codex/trae) but not Node. curl honours `CURL_CA_BUNDLE`/`--cacert`; Python `requests` honours `REQUESTS_CA_BUNDLE`. System-store install covers curl/Python/Go but Node may still need `NODE_EXTRA_CA_CERTS`, so set both on Linux/macOS/Windows. Never hardcode `~/...`; use `$HOME`/`~` (`%USERPROFILE%` on Windows). Filename: the bili bundle is `combined-ca.pem` (system roots + bili root); `root-ca.pem` is the bili root alone — `launch-session.sh` exports the latter, `model.sh`/curl paths use the former; prefer `combined-ca.pem` so non-MITM blind-tunnel hosts still validate.
 
+   **sudo env stripping gap** (uncovered elsewhere as of 2026-09-19): sudo's
+   default `env_reset` (plus `secure_path`) strips `NODE_EXTRA_CA_CERTS`,
+   `SSL_CERT_FILE`, `HTTPS_PROXY`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE`
+   and similar from the environment of commands run as root — so
+   `sudo npm ...`, `sudo node ...`, `sudo pip ...` etc. silently lose CA
+   trust and proxy settings and fail against bili-MITM endpoints. Options,
+   in preference order:
+   1. **System trust store** (above) — the sudo-proof fix: trust lives in
+      `/etc`, not the environment, so nothing is stripped. Do this first.
+   2. **`sudo -E`** (preserve environment) — per-invocation; only works if
+      sudoers permits the invoking user `SETENV`/`!env_reset`, and still
+      subject to `env_delete`/`secure_path` nuances.
+   3. **`Defaults env_keep += "NODE_EXTRA_CA_CERTS SSL_CERT_FILE HTTPS_PROXY ..."`
+      in sudoers** — persistent; `/etc/sudoers.d` is operator/cert surface
+      in hngh (see docs/records/2026-09-12-privilege-model.md §4), so this
+      is an operator action, never an automation one. The shipped template
+      (`automation/config/hngh-automation.sudoers.example`) grants no env
+      retention and needs none: its granted commands (paccache, paru -Sc,
+      ethtool wol, btrfs snapshot/list) consume none of these variables.
+   Never use `Defaults !env_reset` or `NOPASSWD:ALL` to work around this —
+   both violate the template law (test-permissions.sh).
+
 3. **Per-client config**: Configure OMP and jcode to use the proxy URL directly (more complex, not recommended).
 
 ## Verification Steps
@@ -163,7 +185,7 @@ When troubleshooting OMP + billion-context failures:
 
 1. **Check provider API format**: Verify the `api` field in `~/.omp/agent/models.yml` matches the upstream's actual API format.
 2. **Check MITM whitelist**: Verify `mitm.domains` in `~/.config/billion-context/billion-context.json` includes all upstream hosts.
-3. **Check CA trust**: Verify `NODE_EXTRA_CA_CERTS` or system trust includes bili's CA.
+3. **Check CA trust**: Verify `NODE_EXTRA_CA_CERTS` or system trust includes bili's CA. If the failing command runs under `sudo`, remember env_reset strips these vars (see the sudo env stripping gap above) — prefer the system trust store.
 4. **Check proxy routing**: Verify clients are not bypassing bili by connecting directly to upstream.
 5. **Check bili logs**: Look for `BLIND TUNNEL WARNING` (missing whitelist) or `TLS terminated locally` (working MITM).
 
