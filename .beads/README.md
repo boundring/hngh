@@ -38,6 +38,30 @@ Issues in Beads are:
 - **Branch-aware**: Issues can follow your branch workflow
 - **Sync-ready**: Uses Dolt remotes for backup and team sharing
 
+## Close-with-Evidence Convention (project rule)
+
+Every close must carry verifiable evidence. Never close with an empty
+or vague reason.
+
+1. **Close reason with hashes/files/validation** (required):
+   ```bash
+   bd close <id> --reason "Fixed <what>. Commit abc1234. Files: path/to/file.py:42. Validation: make test passed."
+   ```
+   The reason must name: what changed, the commit hash, touched
+   files (with line refs where useful), and the validation run
+   (test/lint command plus result).
+2. **Comment linkage**: for non-trivial work, add a `bd comment <id>`
+   linking the evidence (commit hash, PR, test output) so the audit
+   trail survives even if the close reason is terse.
+3. **Acceptance criteria on open beads**: when creating or updating an
+   open bead, record acceptance criteria explicitly
+   (`bd create --acceptance "..."` / `bd update <id> --acceptance "..."`),
+   so the close reason can be checked against them.
+
+Rationale: closes without evidence are unauditable. Hashes let anyone
+re-verify the change, file refs locate it, validation proves it works,
+and AC on open beads defines "done" before work starts.
+
 ## Why Beads?
 
 ✨ **AI-Native Design**

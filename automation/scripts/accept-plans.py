@@ -24,6 +24,7 @@ REHEARSE_LOG (gate runs rehearsal inside scripts/rehearse-gate.sh on a
 git-archive copy of each repo instead of a direct run).
 """
 import fcntl
+import hashlib
 import importlib.util
 import os
 import re
@@ -81,10 +82,16 @@ REHEARSE_GATE_SH = Path(__file__).resolve().parent / "rehearse-gate.sh"
 # ACCEPT_GATE_LOCK overrides it (test seam).
 # The lock is separate from the beat's overnight flock: a child within
 # the beat opens its own fd, and flock denies a second description even
-# inside the same process tree.
+# inside the same process tree. The default is keyed by the automation
+# root so test-fixture trees (HNGH_AUTOMATION_ROOT sandboxes) never
+# contend with a REAL gate evaluation's lock -- a direct accept-plans
+# run holds its lock across run_gate(make test), and the suite children
+# sharing that lock saw gate-lock-busy and failed the gate from inside
+# itself (the 2026-09-08+ load-correlated automation-gate-red-rc2).
 GATE_LOCK = Path(os.environ.get(
     "ACCEPT_GATE_LOCK", os.path.join(
-        os.environ.get("TMPDIR", "/tmp"), "hngh-gate.lock")))
+        os.environ.get("TMPDIR", "/tmp"), "hngh-gate-%s.lock" %
+        hashlib.sha1(str(AUTOMATION).encode()).hexdigest()[:12])))
 
 now_utc = lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 

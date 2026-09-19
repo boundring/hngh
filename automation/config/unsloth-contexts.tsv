@@ -13,10 +13,10 @@ openbmb/MiniCPM5-2B-GGUF				https://huggingface.co/openbmb/MiniCPM5-2B-GGUF	2026
 ornith-ai/Ornith-1.5-9B-GGUF		262144		https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF	2026-09-13
 peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF		262144	1000000	https://huggingface.co/Qwen/Qwen3.8-27B	2026-09-13
 qwen3-asr-0.6b					2026-09-13
-unsloth/Ornith-1.0-35B-GGUF				https://huggingface.co/unsloth/Ornith-1.0-35B-GGUF	2026-09-13
+unsloth/Ornith-1.0-35B-GGUF	262144			https://huggingface.co/unsloth/Ornith-1.0-35B-GGUF	2026-09-18
 unsloth/Ornith-1.0-9B-GGUF	37376			https://huggingface.co/unsloth/Ornith-1.0-9B-GGUF	2026-09-13
 unsloth/Qwen-AgentWorld-35B-A3B-GGUF		262144		https://huggingface.co/unsloth/Qwen-AgentWorld-35B-A3B-GGUF	2026-09-13
-unsloth/Qwen3.8-27B-GGUF	81408	262144	1000000	https://huggingface.co/unsloth/Qwen3.8-27B-GGUF	2026-09-17
+unsloth/Qwen3.8-27B-GGUF	127488	262144	1000000	https://huggingface.co/unsloth/Qwen3.8-27B-GGUF	2026-09-19
 unsloth/Z-Image-Turbo-unsloth-bnb-4bit				https://huggingface.co/unsloth/Z-Image-Turbo-unsloth-bnb-4bit	2026-09-13
 unsloth/gemma-4-12b-it-qat-GGUF				https://huggingface.co/unsloth/gemma-4-12b-it-qat-GGUF	2026-09-13
 yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF		131072		https://huggingface.co/yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF	2026-09-13
