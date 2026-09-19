@@ -38,6 +38,42 @@ ledger/card; 3 telemetry or commit fault.
 0 */3 * * * cd ~/Projects/etc/hngh && python3 scripts/schedule-heartbeat --route=auto >> /tmp/hngh-heartbeat.log 2>&1
 ```
 
+Cron runs the entry with a minimal environment: `SHELL=/bin/sh`, a
+bare `PATH` (Debian default `/usr/bin:/bin`), and no login-shell rc
+files. The one-liner above survives that default only because
+`python3` and `git` live in `/usr/bin`; if your toolchain lives
+elsewhere (e.g. `/usr/local/bin`, a version manager, or a non-default
+`sbcl` for `scripts/rotate-queue`), add explicit env lines at the top
+of the crontab instead of relying on the login environment:
+
+```
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+```
+
+`HOME` is set by cron, so `~/.hngh-automation` reviewer configs and
+the repo path resolve normally. The systemd user timer has the same
+constraint in a different form: the service unit inherits systemd's
+default user environment, not your login shell's — add
+`Environment=PATH=...` to the unit if the default `PATH` misses your
+toolchain.
+
+### Already-running tmux/screen sessions do not pick up env or rc changes
+
+If you test or run a tick from inside tmux or screen, know that
+already-running multiplexer sessions keep what they were started
+with: a tmux server holds the environment captured at server start
+(inspect with `tmux show-environment -g`) and keeps its config until
+re-sourced; running panes keep the env they were launched with. After
+changing your rc files or `~/.tmux.conf`, re-source per session
+(`tmux source-file ~/.tmux.conf`; inside screen, `source ~/.screenrc`),
+respawn the pane you will run the tick from
+(`tmux respawn-pane -k -t <session>:<window>.<pane>`), or restart the
+multiplexer server when convenient. "Works in a fresh terminal, fails
+in the operator's long-lived tmux pane" is this gap, not a heartbeat
+bug — the same stale-startup-runtime class documented for the jcode
+server in docs/records/2026-09-14-visible-spawn-flash-die.md.
+
 ## systemd user timer unit (systemd ≥ 252)
 
 User timer units pair a `*.timer` unit (the schedule) with a

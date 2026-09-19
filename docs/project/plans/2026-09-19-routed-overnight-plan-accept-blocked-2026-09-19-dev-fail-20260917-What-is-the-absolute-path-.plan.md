@@ -8,3 +8,7 @@ at 2026-09-19T22:00:12Z. Alert text: plan 2026-09-19-dev-fail-20260917-What-is-t
 
 - [ ] Delve: open research subject fail-20260919-overnight-plan-accept-blocked-2026-09-19-dev-fail-20260917-what-is-the-absolute-path for overnight:plan-accept-blocked:2026-09-19-dev-fail-20260917-What-is-the-absolute-path-; record disposition; then fix or park
       Verification: research subject fail-20260919-overnight-plan-accept-blocked-2026-09-19-dev-fail-20260917-what-is-the-absolute-path present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-19T23:00:13Z re-occurred (dedup window expired)

@@ -5,15 +5,21 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for **standardizing job execution and verification** by consolidating ad-hoc shell logic into reusable, testable components within `hngh-automation`.
+This plan implements the research line for standardizing job execution telemetry by introducing a lightweight, stdlib-only Python logging utility and integrating it into the existing cadence workflow to ensure consistent audit trails without altering core kernel or security boundaries.
 
 ## Steps
 
-- [ ] Create a new bash script at `scripts/run_job.sh` that accepts a job ID argument and executes the corresponding job definition.
-  Verification: `bash -n scripts/run_job.sh`
-- [ ] Add a unit test file at `tests/test_run_job.sh` that sources the library functions and asserts the exit code of a mock job execution.
-  Verification: `make test`
-- [ ] Update the `lib/helpers.sh` file to include a new function `log_status` that appends timestamped status messages to a standard log path.
-  Verification: `bash -n lib/helpers.sh`
-- [ ] Create a dashboard configuration snippet at `dashboard/config.yaml` defining the default display parameters for job history.
-  Verification: `grep -q "job_history" dashboard/config.yaml`
+- [ ] Create `lib/telemetry.py` implementing a `LogEntry` dataclass and a `write_log` function that appends JSON lines to a file using only Python standard library modules.
+  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); from telemetry import LogEntry, write_log; print('ok')"
+
+- [ ] Add a unit test in `tests/test_telemetry.py` that verifies `write_log` correctly appends valid JSON lines to a temporary file and handles serialization errors gracefully.
+  Verification: make test
+
+- [ ] Update `cadence/run_job.sh` to source the telemetry module path and invoke a Python one-liner that logs job start events using the new `lib/telemetry.py`.
+  Verification: bash -n cadence/run_job.sh
+
+- [ ] Modify `scripts/digest.py` to import and use the `LogEntry` class from `lib/telemetry.py` for structuring digest output records.
+  Verification: python3 scripts/digest.py --help
+
+- [ ] Add a regression test in `tests/test_digest_integration.py` that mocks a job execution and asserts that telemetry logs are generated in the expected directory structure.
+  Verification: make test
