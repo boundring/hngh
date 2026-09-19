@@ -35,6 +35,99 @@ class FailClosed(unittest.TestCase):
             self.assertIsNone(
                 typesafe.ask_score({"s": "t"}, "q", "Rate it.", ["clarity"]))
 
+    def test_no_key_fanout_triple_none(self):
+        env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            self.assertEqual(
+                typesafe.triage_fanout({"s": "t"}, ["a", "b"]),
+                (None, None, None))
+
+    def test_no_key_closeout_none(self):
+        env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            self.assertIsNone(
+                typesafe.closeout_evidence_noul({"s": "t"}, "did the thing"))
+
+
+class FanoutSingleCall(unittest.TestCase):
+    """Speculative fan-out: one system_one round trip, branch on result."""
+
+    def _fake_client(self, noul=0.8, choice="b", scores=(0.2, 0.9)):
+        calls = []
+
+        class FakeNouls(dict):
+            pass
+
+        class V:
+            def __init__(self, v):
+                self.noul = v
+
+        class C:
+            def __init__(self, v):
+                self.choice = v
+
+        class S:
+            def __init__(self, v):
+                self.scores = v
+
+        class R:
+            pass
+
+        class FakeClient:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def system_one(self, state, questions):
+                calls.append(set(questions))
+                r = R()
+                r.nouls = {"collapse_ready": V(noul),
+                           "close_evidence": V(noul)}
+                r.choices = {"hottest": C(choice)}
+                r.scores = {"urgency": S(list(scores))}
+                return r
+
+        return FakeClient(), calls
+
+    def test_fanout_one_call_all_variants(self):
+        fake, calls = self._fake_client()
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                hot, col, scores = typesafe.triage_fanout(
+                    {"s": "t"}, ["a", "b"])
+        self.assertEqual(hot, "b")
+        self.assertTrue(col)
+        self.assertEqual(scores, [0.2, 0.9])
+        self.assertEqual(len(calls), 1)  # one round trip
+        self.assertEqual(calls[0], {"hottest", "collapse_ready", "urgency"})
+
+    def test_fanout_collapse_false_below_half(self):
+        fake, _ = self._fake_client(noul=0.3)
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                _, col, _ = typesafe.triage_fanout({"s": "t"}, ["a", "b"])
+        self.assertFalse(col)
+
+    def test_closeout_true_above_half(self):
+        fake, _ = self._fake_client(noul=0.9)
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                self.assertTrue(typesafe.closeout_evidence_noul(
+                    {"s": "t"}, "landed commit abc, tests green"))
+
+    def test_closeout_false_below_half(self):
+        fake, _ = self._fake_client(noul=0.1)
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                self.assertFalse(typesafe.closeout_evidence_noul(
+                    {"s": "t"}, "vague claim, no cites"))
+
     def test_beat_skip_gate_fallback_false(self):
         env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
         with unittest.mock.patch.dict(os.environ, env, clear=True):
