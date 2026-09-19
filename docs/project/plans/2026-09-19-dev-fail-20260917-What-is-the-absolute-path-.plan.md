@@ -4,14 +4,22 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the cadence-preflight research line: an additive, stdlib-only validator so malformed job cadence specs fail before scheduling rather than at runtime. This keeps every change plain-commit landable in hngh-automation and gated by its make test.
+## Rationale
+This plan implements the research line for standardizing job execution by introducing a shared validation library and updating the CI entrypoint to enforce script syntax checks before execution.
 
 ## Steps
 
-- [ ] Add `lib/cadence_spec.py`, a stdlib-only module exposing `validate(spec)` that checks schedule/window/retry fields and returns error strings, with a `__main__` self-test that exits 0 on the bundled fixtures.
-  Verification: python3 lib/cadence_spec.py
+- [ ] Create `lib/validate.sh` containing a `check_syntax` function that runs `bash -n` on a provided file path and exits non-zero on failure.
+  Verification: `bash -n lib/validate.sh`
 
-- [ ] Add `scripts/cadence_preflight.sh` that iterates `jobs/*.yaml`, feeds each `cadence:` block to the validator, and exits non-zero on any error.
-  Verification: bash -n scripts/cadence_preflight.sh
+- [ ] Add a test script at `tests/test_validate.sh` that sources `lib/validate.sh`, creates a temporary syntactically invalid bash file, asserts `check_syntax` returns non-zero, then creates a valid file and asserts success.
+  Verification: `bash tests/test_validate.sh`
 
-- [ ] Add a valid sample spec at `jobs/cadence_sample.yaml` with a `cadence:` block (schedule, window, retry) that
+- [ ] Update `jobs/run_job.sh` to source `lib/validate.sh` at the top and call `check_syntax` on the target script path before executing it.
+  Verification: `bash -n jobs/run_job.sh`
+
+- [ ] Modify `scripts/ci_entrypoint.sh` to iterate through scripts in `jobs/`, invoking `bash -n` on each file and failing the build if any syntax error is detected.
+  Verification: `bash -n scripts/ci_entrypoint.sh`
+
+- [ ] Execute the repository test suite to ensure the new library integration does not break existing job execution flows or CI logic.
+  Verification: `make test`
