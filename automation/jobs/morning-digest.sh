@@ -14,6 +14,27 @@ DATE="$(date +%F)"
 TS="$(date +%H%M)"
 MORNING_FILE="$DIGEST_DIR/MORNING-$DATE.md"
 
+# --- 0. Jev triage fan-out (hngh-1de): one call, hottest lane + heat +
+# collapse Noul over live city-state. Fail-open: without key or on any
+# error the digest proceeds untriaged; verdicts land as a header block.
+TRIAGE_BLOCK=""
+if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; then
+ _beats_state="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('beats ' + d['timers']['beats'])" 2>/dev/null)"
+ _beads_state="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(str(d['beads']['closed']) + ' closed ' + str(d['beads']['open']) + ' open')" 2>/dev/null)"
+ if _triage="$(TYPESAFE_BEATS="$_beats_state" TYPESAFE_BEADS="$_beads_state" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import ask_choice, ask_noul
+st = {'beats': os.environ.get('TYPESAFE_BEATS', '?'), 'beads': os.environ.get('TYPESAFE_BEADS', '?')}
+hot = ask_choice(st, 'hottest', 'Which work lane most needs attention next?', ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles'])
+col = ask_noul(st, 'collapse_ready', 'Is there absorbable completed work that should collapse now?')
+print(('hottest=' + str(hot)) if hot else 'hottest=?', ('collapse=' + str(col)) if col is not None else 'collapse=?')
+" 2>/dev/null)"; then
+  TRIAGE_BLOCK="_Jev triage (one call): $_triage _"
+  breadcrumb "$JOB_NAME" "triage" "jev fan-out: $_triage"
+ fi
+fi
+
 # --- 1. fresh fetch (also lands in today's snapshots) ---
 body="$(fetch_sources)"
 breadcrumb "$JOB_NAME" "fetch" "morning sources fetched"
@@ -43,6 +64,7 @@ if [ -n "$summary" ]; then
   {
     printf '# Morning digest %s\n' "$DATE"
     printf '_compiled %s | model: %s_\n' "$TS" "$used"
+    [ -n "$TRIAGE_BLOCK" ] && printf '\n%s\n' "$TRIAGE_BLOCK"
     printf '\n%s\n' "$summary"
   } >"$MORNING_FILE"
   breadcrumb "$JOB_NAME" "morning" "MORNING-$DATE.md written via $used"
