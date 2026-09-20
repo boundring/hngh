@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-20T01:03:56Z -->
 # 2026-09-20 - dev-fail-20260917-What-is-the-absolute-path- (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research
