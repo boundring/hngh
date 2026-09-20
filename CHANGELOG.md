@@ -4,6 +4,27 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-20
+
+#### Added
+
+- **Strict-reader contract for the MCP research TSV feed**
+  (docs/design/strict-reader-spec.md,
+  docs/records/2026-09-20-mcp-research-feed-strict-reader-spec.md):
+  skip-and-count contract for `automation/mcp/hngh_mcp_server.py::
+  read_tsv` — malformed rows (wrong field count, embedded raw
+  tab/newline, CR, NUL, undecodable bytes) are skipped, counted per
+  category, logged to stderr, and surfaced as stable counters; cap
+  operates on usable rows only; pinned-header/all-malformed feeds are
+  fatal (`isError`); CLI wrappers embedding the reader exit 0/1/2; no
+  silent repair. Failing test sketch landed
+  (`automation/tests/test-mcp-read-tsv-strict.py`: 7 passing
+  characterizations of today's fail-open/fail-locked seams, 14
+  contract tests skipped until the reader implements the spec).
+  Live census 2026-09-20: the contract changes no live row (lines
+  file uniformly 4-field; the 72 legacy-width disposition rows pad,
+  none skip).
+
 ### 2026-09-19
 
 #### Fixed
