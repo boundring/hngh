@@ -5,15 +5,15 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for standardizing job execution wrappers by introducing a reusable shell library to enforce consistent logging and error handling across the automation suite.
+This plan implements the research line for standardizing job execution telemetry by adding a lightweight logging wrapper to the existing automation framework.
 
 ## Steps
 
-- [ ] Create `lib/common.sh` containing helper functions for timestamped logging and exit code propagation.
-  Verification: bash -n lib/common.sh
-- [ ] Add `tests/test_common.sh` to verify that the logging function outputs the expected format and propagates non-zero exit codes correctly.
+- [ ] Create `lib/telemetry.sh` containing a `log_event` function that appends timestamped JSON lines to `[redacted path]
+  Verification: bash -n lib/telemetry.sh
+- [ ] Add a test case in `tests/test_telemetry.sh` that sources the library and asserts the log file is created with valid structure.
   Verification: make test
-- [ ] Update `jobs/build.sh` to source `lib/common.sh` and replace manual echo statements with the new logging helper.
-  Verification: bash -n jobs/build.sh
-- [ ] Add a regression check in `tests/test_build.sh` that asserts `jobs/build.sh` sources the common library before execution.
+- [ ] Update `jobs/run_pipeline.sh` to source `lib/telemetry.sh` and call `log_event` at start and end of execution.
+  Verification: bash -n jobs/run_pipeline.sh
+- [ ] Add a grep check in `tests/test_telemetry.sh` to verify that `run_pipeline.sh` contains the string "source lib/telemetry.sh".
   Verification: make test
