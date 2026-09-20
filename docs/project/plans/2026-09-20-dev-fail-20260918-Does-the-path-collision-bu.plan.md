@@ -5,21 +5,21 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for robustifying the hngh-automation pipeline by introducing a standardized pre-flight validation layer that ensures job definitions and cadence scripts are syntactically sound before execution.
+This plan implements the research line for automating the HN post ingestion pipeline by introducing a robust Python-based parser and a bash validation script to ensure data integrity before processing.
 
 ## Steps
 
-- [ ] Create `lib/validate.sh` containing a function to check if a given file path exists and is non-empty.
-  Verification: bash -n lib/validate.sh
+- [ ] Create `lib/parse_hn.py` to implement a standard library-only parser for Hacker News JSON feeds, extracting title, URL, and score fields.
+  Verification: python3 lib/parse_hn.py --help
 
-- [ ] Add a test case in `tests/test_validate.sh` that sources `lib/validate.sh` and asserts the function returns zero for an existing file.
-  Verification: make test
+- [ ] Add `scripts/validate_feed.sh` to execute the Python parser against a sample fixture and assert that no exceptions are raised during execution.
+  Verification: bash scripts/validate_feed.sh
 
-- [ ] Create `cadence/preflight.sh` that iterates through job definitions in `jobs/` and invokes the validation logic from `lib/validate.sh`.
-  Verification: bash -n cadence/preflight.sh
+- [ ] Introduce `tests/test_parse_hn.py` containing three unit tests using `unittest` to verify correct extraction of title, URL, and score from mock JSON structures.
+  Verification: python3 -m unittest tests.test_parse_hn
 
-- [ ] Update `scripts/run_pipeline.sh` to source `cadence/preflight.sh` before executing any job commands.
-  Verification: bash -n scripts/run_pipeline.sh
+- [ ] Update `jobs/ingest.sh` to invoke the new validation script before proceeding with database insertion logic.
+  Verification: bash -n jobs/ingest.sh
 
-- [ ] Add a dummy job definition file at `jobs/example_job.json` to serve as a fixture for the preflight validation tests.
-  Verification: grep -q "example_job" jobs/example_job.json
+- [ ] Add a `tests/fixtures/sample_feed.json` file containing three valid and two malformed Hacker News entries for regression testing.
+  Verification: python3 -c "import json; json.load(open('tests/fixtures/sample_feed.json'))"
