@@ -130,6 +130,7 @@ existing content is never reordered).
 """
 import importlib.util
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -458,9 +459,55 @@ def telemetry_24h():
     return payload
 
 
+def client_allowed(remote_ip, allowlist_env=None):
+    """Source-IP allowlist (2026-09-20 operator mitigation: dashboard LAN
+    exposure). Returns True only for loopback plus DASHBOARD_ALLOWLIST
+    entries (comma-separated IPs or CIDRs). Default allowlist covers the
+    tailnet CGNAT range (100.64.0.0/10), which is unreachable off-tailnet.
+    Everything else - LAN, public, unparseable - is DENIED (fail closed).
+    Malformed env entries are ignored. An explicitly set env overrides the
+    default entirely: DASHBOARD_ALLOWLIST="" is a deny-all kill switch
+    (even loopback).
+    """
+    if allowlist_env is None:
+        allowlist_env = os.environ.get(
+            "DASHBOARD_ALLOWLIST", "127.0.0.1,::1,100.64.0.0/10")
+        default = True
+    else:
+        default = False
+    try:
+        addr = ipaddress.ip_address(str(remote_ip))
+    except ValueError:
+        return False  # unparseable client -> deny
+    if default and addr.is_loopback:
+        return True  # unset env: loopback always allowed
+    allowed = False
+    for entry in str(allowlist_env).split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        try:
+            if "/" in entry:
+                net = ipaddress.ip_network(entry, strict=False)
+            else:
+                net = ipaddress.ip_network(entry + "/128" if ":" in entry
+                                           else entry + "/32",
+                                           strict=False)
+        except ValueError:
+            continue  # malformed entry ignored, others still apply
+        if addr.version == net.version and addr in net:
+            allowed = True
+            break
+    return allowed
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DASHBOARD, **kwargs)
+
+    def _deny_source(self):
+        """403 for any source outside the allowlist (fail closed)."""
+        self._json(403, {"ok": False, "error": "source not allowed"})
 
     # GET /hngh-docs/research/<name>.md and GET /digest/<name>.md —
     # read-only serve of ONE markdown document from a jailed directory
@@ -469,6 +516,9 @@ class Handler(SimpleHTTPRequestHandler):
     # client probes first and renders the state chip without a link on
     # 404 — fail closed, no dead links. Display-only.
     def do_GET(self):
+        if not client_allowed(self.client_address[0]):
+            self._deny_source()
+            return
         route = self.path.split("?")[0]
         if route in ("/", "/index.html"):
             self._serve_index()
@@ -729,6 +779,9 @@ class Handler(SimpleHTTPRequestHandler):
         return hmac.compare_digest(str(supplied or ""), tok)
 
     def do_POST(self):
+        if not client_allowed(self.client_address[0]):
+            self._deny_source()
+            return
         try:
             self._raw_form = None  # per-request: Handler serves keep-alive
             p = self.path.lstrip("/")
