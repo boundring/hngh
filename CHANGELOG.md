@@ -25,6 +25,27 @@ lives under Pre-release / early development until the first release.
   file uniformly 4-field; the 72 legacy-width disposition rows pad,
   none skip).
 
+#### Fixed
+
+- **publication-review findings digest scrubbed through the
+  single-source path redaction**
+  (docs/records/2026-09-20-publication-review-findings-digest-scrub.md):
+  `automation/jobs/publication-review.py` wrote the
+  `PUBLICATION-REVIEW-<date>.md` digest with raw machine-local paths —
+  the header embeds the manga/dispatch source paths and adversarial
+  FAIL lines embed artifact paths. Run-proven first in a sandboxed
+  `HNGH_REPORT_ROOT`/`HNGH_HOME_DIR` invocation (exit 0, no ambient
+  writes outside the sandbox, `scrub_grep` census 3 leak lines), then
+  fixed: `findings_md()` routes its whole output through
+  `automation/lib/scrub.py` `scrub_paths()` at the emission point (the
+  patrol.py pattern) — marker convention, URLs survive as wire data.
+  stdout `FAIL <artifact> <cause>` keeps the raw path by machine
+  contract (day-wrapper basename mapping plus the report-queue
+  sink-side guard are the persistence scrub). Red-first tests in
+  `automation/tests/test-publication-review.sh` section (e) (header +
+  FAIL-line leak assertions via `scrub_grep`); 11/11 green,
+  `test-scrub-module.py`/`test-patrol.py` unchanged green.
+
 ### 2026-09-19
 
 #### Fixed

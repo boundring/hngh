@@ -35,6 +35,13 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 DRAMA_LABEL = "[DRAMATIZATION - procedural gag, not a real quote]"
 QUIP_BUDGET = 96  # mirror of jobs/manga-draft.py QUIP_BUDGET
 
+# single-source scrub seam (2026-09-20, gate wr-pub-paths-archive-
+# scrub-debt): the findings digest embeds source/artifact paths, so the
+# whole doc dies to the lib/scrub.py marker convention -- patrol.py
+# pattern (import from automation/lib, apply at emission).
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "lib"))
+from scrub import scrub_paths
+
 
 def latest(pattern):
     """Newest path matching glob (mtime), or None."""
@@ -198,7 +205,10 @@ def findings_md(day, manga_c, dispatch_c, manga_src, dispatch_src):
             out.append("- FAIL %s: %s -- %s" % item)
         else:
             out.append("- ok %s -- %s" % (item[0][5:], item[2]))
-    return "\n".join(out) + "\n"
+    # scrub at the single emission point: header source paths, artifact
+    # paths in FAIL lines, and path-bearing detail text all die to the
+    # shared marker; URLs survive (wire data) per the token family.
+    return scrub_paths("\n".join(out) + "\n")
 
 
 def report(kind, text, report_root=None):

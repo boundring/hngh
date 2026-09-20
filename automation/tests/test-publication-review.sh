@@ -130,6 +130,41 @@ wrapper >/dev/null
  } ||
  echo "ok: green review clears the blocker row"
 
+# --- e) findings digest scrubs machine-local paths (2026-09-20 gate
+# gap wr-pub-paths-archive-scrub-debt): the digest header embeds the
+# manga/dispatch source paths and adversarial FAIL lines embed artifact
+# paths -- every machine-local token must land through the single-
+# source scrub (lib/scrub.py, the patrol.py pattern), never raw.
+good_draft
+good_dispatch
+out="$(run_check)"
+ck "scrub fixtures: exit 0" "0" "$?"
+digest="$sb/home/archive/digest/PUBLICATION-REVIEW-2026-09-12.md"
+digest_scrub_clean() { # -> python scrub_grep census over the digest
+ python3 - "$root" "$digest" "$1" <<'EOF'
+import sys
+sys.path.insert(0, sys.argv[1] + "/lib")
+from scrub import scrub_grep
+text = open(sys.argv[2], encoding="utf-8").read()
+leaks = scrub_grep(text)
+if leaks:
+    print("FAIL: findings digest carries raw machine-local path tokens:")
+    for line in leaks[:4]:
+        print("  ", line[:120])
+    sys.exit(1)
+if sys.argv[3] == "clean" and text.count("[redacted path]") < 2:
+    print("FAIL: digest header does not scrub the manga/dispatch "
+          "source paths (want [redacted path] markers)")
+    sys.exit(1)
+EOF
+}
+digest_scrub_clean clean && echo "ok: findings digest scrubs source paths" ||
+ { echo "FAIL: digest header leaks source paths"; fails=$((fails + 1)); }
+rm -f "$sb/docs/media/manga/sample-draft.svg"
+out="$(run_check)"
+digest_scrub_clean red && echo "ok: red findings digest scrubs artifact paths" ||
+ { echo "FAIL: digest FAIL lines leak artifact paths"; fails=$((fails + 1)); }
+
 echo
 if [ "$fails" -eq 0 ]; then echo "ALL OK"; else
  echo "FAILED: $fails check(s)"
