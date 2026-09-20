@@ -136,6 +136,15 @@ GIT_AUTHOR_*/GIT_COMMITTER_* defaults (2026-09-16 identity-seam
 reconciliation); automation/tests/test-identity-seam.py keeps
 enforcing per-invocation pinning; kernel .git/config identity.
 
+Amendment (2026-09-20, gap-loose-5 ambient-git-redirects): the
+"Already clean" note above covers IDENTITY pins only; production
+ceremony legs (scripts/omp-bridge --ceremony, automation/jobs/
+patrol.py _drive_ceremony, scripts/run-autonomous drive_ceremony)
+inherit the ambient repo-selection env (GIT_DIR, GIT_WORK_TREE,
+GIT_COMMON_DIR, plus unmapped GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM,
+GIT_SSH_COMMAND) with zero production scrubbing; this closure is
+therefore test-fixture-scoped.
+
 ## Acceptance (2026-09-17)
 
 Canary acceptance: fresh throwaway repo with an explicit protected
