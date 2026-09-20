@@ -4,16 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line for standardizing job execution wrappers by introducing a reusable bash helper library and updating existing automation jobs to utilize it, ensuring consistent error handling and logging across the hngh-automation repository.
+This plan implements the adopted research line on adding a normal-risk cadence planning surface for hngh-automation. It keeps all changes in automation-owned paths and relies on plain, script-verifiable artifacts rather than provider, credential, systemd, or kernel build changes.
 
 ## Steps
 
-- [ ] Create `lib/common.sh` containing shared utility functions for logging and exit code management
-  Verification: bash -n lib/common.sh
-- [ ] Update `jobs/build.sh` to source `lib/common.sh` and replace manual error handling with the new helper functions
-  Verification: make test
-- [ ] Update `jobs/test.sh` to source `lib/common.sh` and ensure all failure paths invoke the standard exit handler
-  Verification: make test
-- [ ] Add a smoke test script `tests/lib_smoke.sh` that sources `lib/common.sh` and asserts the presence of required functions
-  Verification: bash tests/lib_smoke.sh
+- [ ] Add cadence/hngh-normal-risk.txt with the required sections `scope`, `verification`, and `exit criteria`.
+  Verification: grep -q "exit criteria" cadence/hngh-normal-risk.txt
+- [ ] Add scripts/hngh_cadence_check.py using only Python stdlib to fail unless the cadence file contains all three required section names.
+  Verification: python3 scripts/hngh_cadence_check.py
+- [ ] Add tests/test_hngh_cadence_check.sh that invokes the cadence check script and propagates its exit status.
+  Verification: bash -n tests/test_hngh_cadence_check.sh
+- [ ] Add dashboard/cadence-status.md with a plain-text operator summary of the cadence check state.
+  Verification: grep -q "cadence" dashboard/cadence-status.md
