@@ -160,6 +160,7 @@ def breadcrumb(job, event, detail):
         print("[dry-run] crumb %s|%s|%s" % (job, event, detail))
         return
     detail = detail.replace("|", "¦")
+    detail = " ".join(detail.split())  # one line per event (see lib/breadcrumbs.sh)
     line = "%s | %s | %s | %s\n" % (now_utc(), job, event, detail)
     os.makedirs(os.path.dirname(STATE_FILE) or ".", exist_ok=True)
     with open(STATE_FILE, "a", encoding="utf-8") as fh:

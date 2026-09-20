@@ -65,35 +65,31 @@ class BreadcrumbSingleLine(unittest.TestCase):
 # one line, four ` | `-separated fields, detail with no literal newline
 # and no unescaped pipe (the 2026-09-19 gate-red spill class).
 PY_WRITERS = [
-    (ROOT / "scripts" / "router-tick.py", "breadcrumb"),
-    (ROOT / "jobs" / "service-state.py", "breadcrumb"),
+    # (path, breadcrumb args with {d} marking the detail slot)
+    (ROOT / "scripts" / "router-tick.py", ("test-job", "test-event", "{d}")),
+    (ROOT / "jobs" / "service-state.py", ("test-event", "{d}")),
 ]
 
 
-def write_via_python(path: Path, func_src: str, state: Path, detail: str) -> None:
+def write_via_python(path: Path, args: tuple, state: Path, detail: str) -> None:
     """Exec the module's breadcrumb() against a temp STATE_FILE."""
     import types
     mod = types.ModuleType("writer_under_test")
     mod.__file__ = str(path)
-    env = {
-        "STATE_FILE": str(state),
-        "DRY_RUN": "",
-        "__name__": "writer_under_test",
-    }
     src = path.read_text(encoding="utf-8")
     exec(compile(src, str(path), "exec"), mod.__dict__)  # noqa: S102 - test harness
     mod.STATE_FILE = str(state)
-    mod.breadcrumb("test-job", "test-event", detail)
+    mod.breadcrumb(*[detail if a == "{d}" else a for a in args])
 
 
 class PythonWriterSingleLine(unittest.TestCase):
     def test_each_python_writer_folds_newlines(self):
-        for path, _fn in PY_WRITERS:
+        for path, args in PY_WRITERS:
             with self.subTest(writer=str(path)):
                 with tempfile.TemporaryDirectory() as td:
                     state = Path(td) / "STATE.md"
                     write_via_python(
-                        path, "", state,
+                        path, args, state,
                         "gate: FAILED (rc=2)\nRan 34 tests\nmake: *** Error 1")
                     lines = state.read_text().splitlines()
                     self.assertEqual(len(lines), 1)

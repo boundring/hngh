@@ -151,6 +151,7 @@ def breadcrumb(event, detail):
     lib/breadcrumbs.sh)."""
     try:
         ts = now_utc()
+        detail = " ".join(detail.split())  # one line per event
         with open(STATE_FILE, "a", encoding="utf-8") as fh:
             fh.write("%s | service-state | %s | %s\n" % (ts, event,
                                                          detail.replace("|", "¦")))
