@@ -39,6 +39,16 @@ the key was already rotated and authorized immediate history cleanup.
   and `git gc --prune=now` removed all pre-rewrite objects
   (`cat-file bd5f1d61` now fails). raw.githubusercontent serves the
   rewritten main.
+- CORRECTION (same day, peacock gate critique): the initial purge
+  missed 4 scratch worktree detached HEADs (ciwt, g3-overlay.nwNP,
+  g3-overlay2.TkZY, g3-purehead.OvyW) that kept pre-rewrite lineages
+  reachable in the shared object store (`rev-list --all` does not
+  cover worktree HEADs). Remediated 15:32 UTC: worktrees removed,
+  reflogs expired, gc re-run; all 4 heads now `cat-file`-fail. Also
+  noted: codeload.github.com can serve tar.gz/zip for pre-rewrite
+  SHAs (GitHub-side retention, not client-fixable; moot while the
+  value stays rotated). Remaining unexplored surfaces tracked in the
+  restart handoff (.agent-scratch/swarm-resume/RESTART-HANDOFF.md).
 
 ## Caveats for other hngh stations
 
