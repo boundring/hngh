@@ -4,15 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the adopted research line on adding a normal-risk cadence planning surface for hngh-automation. It keeps all changes in automation-owned paths and relies on plain, script-verifiable artifacts rather than provider, credential, systemd, or kernel build changes.
+Implements the cadence-retry-consistency research line by giving every cadence job script one shared stdlib backoff helper instead of per-script inline delay math, then pinning that helper's behavior with tests so retry delays stop drifting between jobs. The work stays normal-risk: it only adds a small library plus a shell wrapper and refactors one job script to call them, all gated by the repo's existing test gate.
 
 ## Steps
 
-- [ ] Add cadence/hngh-normal-risk.txt with the required sections `scope`, `verification`, and `exit criteria`.
-  Verification: grep -q "exit criteria" cadence/hngh-normal-risk.txt
-- [ ] Add scripts/hngh_cadence_check.py using only Python stdlib to fail unless the cadence file contains all three required section names.
-  Verification: python3 scripts/hngh_cadence_check.py
-- [ ] Add tests/test_hngh_cadence_check.sh that invokes the cadence check script and propagates its exit status.
-  Verification: bash -n tests/test_hngh_cadence_check.sh
-- [ ] Add dashboard/cadence-status.md with a plain-text operator summary of the cadence check state.
-  Verification: grep -q "cadence" dashboard/cadence-status.md
+- [ ] Add lib/cadence_retry.py exposing next_delay(attempt, base=2, cap=60) that returns capped exponential backoff in seconds (stdlib only), with an `if __name__ == "__main__":` self-check block that asserts a few known values.
+  Verification: python3 lib/cadence_retry.py
+- [ ] Add tests/test_cadence_retry.py using unittest to assert next_delay grows per attempt and never exceeds cap for attempts 0..10, so the helper is covered by the suite.
+  Verification: make test
+- [ ] Add scripts/cadence_backoff.sh that reads an optional attempt argument (defaulting to a sample value) and prints the delay from the helper, giving shell callers one source of truth.
+  Verification: bash scripts/cadence_backoff.sh
+- [ ] Update jobs/cadence_run.sh to compute its retry delay by calling scripts/cadence_backoff.sh instead of inline arithmetic, keeping observed delays identical for attempts 0..5.
+  Verification: bash -n jobs/cadence_run.sh
