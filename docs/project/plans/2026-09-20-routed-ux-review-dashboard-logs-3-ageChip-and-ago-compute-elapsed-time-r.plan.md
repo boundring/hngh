@@ -8,3 +8,7 @@ at 2026-09-20T10:00:28Z. Alert text: 3. `ageChip` and `ago` compute elapsed time
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-20T11:00:26Z re-occurred (dedup window expired)
