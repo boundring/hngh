@@ -12,6 +12,12 @@
 #   pin=feedback -> remote stub answers with the design-feedback model
 #                (REMOTE_MODEL_FEEDBACK, contributor Muse Spark legs);
 #                same budget gate as pin=remote.
+#   pin=remote + gemini burst window full -> gemini leg pace-blocked,
+#                local unsloth answers; window not full -> gemini
+#                answers; window expiry releases the cap (rolling
+#                window, not a day); caps resolve from cadence-params
+#                gemini-burst-max-calls/gemini-burst-window-s when env
+#                is unset (env override wins).
 #   pin=bogus -> ignored: full chain, unsloth answers.
 #   33-research-beat rotation: runs 1,2 local / runs 3,6 zai design-class
 #   glm-5.3 non-flash (share=3); share=0 never pins; REVIEW transition
@@ -55,6 +61,17 @@ for _ in range(int(sys.argv[2])):
 db.commit()
 PY
 }
+burst_seed() { # n [age-s] -> n remote model events age-s old (default 2s)
+ python3 - "$1" "${2:-2}" <<PY
+import sqlite3, datetime, sys
+db = sqlite3.connect("$sb/home/db/telemetry.db")
+db.execute("CREATE TABLE IF NOT EXISTS events(ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT, model TEXT, tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL, wall_s REAL, subject TEXT, refs TEXT, body TEXT)")
+ts = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=int(sys.argv[2]))).strftime("%Y-%m-%dT%H:%M:%SZ")
+for _ in range(int(sys.argv[1])):
+    db.execute("INSERT INTO events(ts, source, kind) VALUES (?, 'remote', 'model')", (ts,))
+db.commit()
+PY
+}
 pace_seed_count() { # cap -> used count just above the pace line for right now
  local elapsed=$((10#$(date -u +%H) * 3600 + 10#$(date -u +%M) * 60 + 10#$(date -u +%S)))
  awk -v c="$1" -v e="$elapsed" 'BEGIN{printf "%d", int(c*e/86400) + 2}'
@@ -78,6 +95,7 @@ call() { # prompt [K=V ...] -> stdout
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
   unset Z_AI_API_KEY ZAI_MODEL ZAI_URL ZAI_MODEL_DESIGN ZAI_KEY_FILE
   unset REMOTE_MODEL_CODING
+  unset GEMINI_BURST_MAX_CALLS GEMINI_BURST_WINDOW_S
   unset KIMI_DAILY_CAP_CALLS
   unset DECK_URL DECK_MODEL MODEL_PIN
   for kv in "$@"; do export "$kv"; done
@@ -194,6 +212,58 @@ out="$(call "hello-5e" "MODEL_PIN=feedback" "REMOTE_TOKEN_FILE=$sb/openrouter-to
  "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_FEEDBACK=meta/muse-spark-1.2-contributor")"
 ck "pin=feedback alt: alt model used" "openrouter:meta/muse-spark-1.2-contributor" "$(cat "$sb/tmp-modelused.txt")"
 
+reset_hits
+
+# --- 5f. pin=remote + burst window full (20 events inside the rolling
+#        gemini-burst-window-s) -> gemini leg blocked, local answers.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+burst_seed 20
+out="$(call "hello-5f" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=3600")"
+ck "pin=remote burst-full: local answers" "stub-says-hi" "$out"
+ck "pin=remote burst-full: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-full: remote stub never hit" "0" "$(hits stubZ)"
+
+# --- 5g. pin=remote, burst window NOT full (19 events) -> gemini answers.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+burst_seed 19
+out="$(call "hello-5g" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=3600")"
+ck "pin=remote burst-below-cap: gemini answers" "stub-says-hi" "$out"
+ck "pin=remote burst-below-cap: gemini used" "openrouter:google/gemini-3.8-flash" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-below-cap: remote stub hit" "1" "$(hits stubZ)"
+
+# --- 5h. burst gate honors gemini-burst-window-s: 20 events sit OUTSIDE
+#        a 10s rolling window -> gemini answers (window expiry releases
+#        the cap; proves a rolling window, not a day).
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+burst_seed 20 12
+out="$(call "hello-5h" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=10")"
+ck "pin=remote burst-window-expiry: gemini answers" "stub-says-hi" "$out"
+ck "pin=remote burst-window-expiry: gemini used" "openrouter:google/gemini-3.8-flash" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-window-expiry: remote stub hit" "1" "$(hits stubZ)"
+
+# --- 5i. burst gate resolves caps from cadence-params rows when env is
+#        unset: sandbox params file rows 20/3600 + 20 burst events ->
+#        gemini leg blocked, local answers.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+printf 'gemini-burst-max-calls\t20\tlib/model.sh MODEL_PIN=remote gemini leg\ttest row\n' >"$sb/cadence-params.tsv"
+printf 'gemini-burst-window-s\t3600\tlib/model.sh MODEL_PIN=remote gemini leg\ttest row\n' >>"$sb/cadence-params.tsv"
+burst_seed 20
+out="$(call "hello-5i" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash")"
+ck "pin=remote burst-params: local answers" "stub-says-hi" "$out"
+ck "pin=remote burst-params: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-params: remote stub never hit" "0" "$(hits stubZ)"
+: >"$sb/cadence-params.tsv"
 reset_hits
 
 # --- 6. research-beat rotation: runs 1,2 local; run 3 zai design-class;

@@ -37,9 +37,12 @@
 #          REMOTE_MODEL_CODING / cadence-params `remote-model-coding`
 #          (task-class route: coding completions that generate whole
 #          files or patches, per the operator's 2026-09-13 benchmark
-#          priorities), then unsloth -> ollama -> deck -> archive;
-#          kimi/ocgo skipped. A miss (no key file, cap, 429) falls
-#          through to the local chain.
+#          priorities; burst-only 2026-09-19 -- the leg additionally
+#          rides the gemini-burst-max-calls/gemini-burst-window-s
+#          rolling-window cap via gemini_burst_blocked), then
+#          unsloth -> ollama -> deck -> archive;
+#          kimi/ocgo skipped. A miss (no key file, burst, cap, 429)
+#          falls through to the local chain.
 #   feedback remote first (openrouter, budget-gated) with the model from
 #          REMOTE_MODEL_FEEDBACK / cadence-params `remote-model-feedback`
 #          (design-feedback/coverage second opinions on design docs and
@@ -406,7 +409,7 @@ ollama_chat() {
 # leg: absent -> dormant. Spend guard: remote calls are counted per UTC
 # day in telemetry (kind=model, source=remote) against REMOTE_DAILY_CAP_CALLS.
 remote_chat() {
- local prompt="$1" max_tokens="$2" key content count
+ local prompt="$1" max_tokens="$2" key content count pace
  # the key file gates the leg on its mode too: absent -> dormant,
  # too open -> skip fail-closed before the value is read or sent (same
  # posture as the kimi/ocgo/zai key-file readers in this file).
@@ -420,6 +423,16 @@ remote_chat() {
  fi
  key="$(cat "$REMOTE_TOKEN_FILE" 2>/dev/null)" || {
   breadcrumb model "remote" "no key file -> next backend"
+  return 1
+ }
+ # gemini burst gate (burst-only 2026-09-19): the coding pin rides a
+ # ROLLING-window burst cap, not just the daily one. Counting the shared
+ # source=remote rows under-counts pure muse/feedback-only windows, but
+ # that is the safe direction for the spend-shape gate (it can only
+ # block EARLY, never admit past the cap). Blocks fall through inside
+ # model_call: the pin never blocks its caller (research never blocks).
+ pace="$(gemini_burst_blocked)" && {
+  breadcrumb model "remote" "gemini burst: used ${pace% *}/cap ${pace#* } in window -- deferring to next leg"
   return 1
  }
  count="$(sqlite3 "$HNGH_TELEMETRY_DB" \
@@ -527,6 +540,32 @@ quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used ca
 # product's three windows (5h/$12, 7d/$30, monthly/$60 per model ->
 # 60/150/300 calls at the row-26 per-call basis) and is the ONE entry
 # every opencode-go consumer must route through.
+# Gemini burst pacer (burst-only 2026-09-19): the coding pin (pin=remote,
+# gemini-3.8-flash) is the one paid-burst class in the routing policy
+# (docs/design/value-add-routing.md), capped at gemini-burst-max-calls
+# calls per gemini-burst-window-s ROLLING window. Same shape as the
+# quota_pace_* family: 0 = blocked (prints "used cap", hard cap only --
+# no soft pace, a burst lane has no even-spend contract to keep), 1 = go.
+# Counting the shared 'remote' telemetry source is what makes the gate
+# hit the gemini coding leg: only that pin and the muse/feedback pins
+# write source=remote, and the burst rows are consumed nowhere else.
+gemini_burst_blocked() { # -> 0 blocked (prints "used cap"), 1 go
+ local cap win used
+ cap="${GEMINI_BURST_MAX_CALLS:-$(get_param gemini-burst-max-calls 20)}"
+ win="${GEMINI_BURST_WINDOW_S:-$(get_param gemini-burst-window-s 3600)}"
+ case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
+ case "$win" in '' | 0 | *[!0-9]*) return 1 ;; esac # bad window: fail open
+ used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
+  "select count(*) from events where kind='model' and source='remote' \
+     and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-$win seconds')" 2>/dev/null)"
+ case "$used" in '' | *[!0-9]*) used=0 ;; esac
+ [ "$used" -ge "$cap" ] && {
+  printf '%s %s\n' "$used" "$cap"
+  return 0
+ }
+ return 1
+}
+
 quota_pace_blocked_window() { # source cap win-modifier soft-seconds -> 0 blocked (prints "used cap"), 1 go
  local src="$1" cap="$2" win="$3" soft="$4" used elapsed allowed
  case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open

@@ -2,6 +2,20 @@
 
 ## 2026-09-20
 
+- gemini burst cap enforcement (burst-only 2026-09-19, now live): the
+  `gemini-burst-max-calls`/`gemini-burst-window-s` cadence-params rows
+  (20 calls / rolling 3600s) had no consuming code — the pin=remote
+  gemini leg fired with no window cap despite config claiming
+  burst-only-with-caps. New `gemini_burst_blocked` pacer in
+  `lib/model.sh` (env override > cadence-params row > default 20/3600;
+  rolling strftime window over source=remote telemetry; hard cap only;
+  malformed values fail open) called in `remote_chat` before the daily
+  cap; a block falls through inside model_call per the pin-miss
+  contract, so research never blocks. Fixture-backed tests 5f-5i in
+  tests/test-model-pin-routing.sh (window full, below cap, window
+  expiry, params-file resolution); run red before the model.sh change.
+  Record: docs/records/2026-09-20-gemini-burst-cap-enforcement.md.
+
 - STATE.md writer/reader compat sweep (writers-reader-compat): every
   4-field crumb reader (operator-items-feed.py:87 `split(' | ', 3)`,
   patrol.py:150, beat-watchdog.py, common.sh data.json parser) silently
