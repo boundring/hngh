@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ux-review:dashboard-logs:3-ageChip-and-ago-compute-elapsed-time-r -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=ux-review:dashboard-logs:3-ageChip-and-ago-compute-elapsed-time-r  cause=obsolete disposed=2026-09-20T13:00:20Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-20 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:dashboard-logs:3-ageChip-and-ago-compute-elapsed-time-r`
@@ -13,3 +13,4 @@ at 2026-09-20T10:00:28Z. Alert text: 3. `ageChip` and `ago` compute elapsed time
 
 - 2026-09-20T11:00:26Z re-occurred (dedup window expired)
 - 2026-09-20T12:00:13Z re-occurred (dedup window expired)
+- 2026-09-20T13:00:20Z re-occurred (dedup window expired)
