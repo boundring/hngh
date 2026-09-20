@@ -126,3 +126,15 @@ by this plan.
 3. Plan acceptance; port the four weeded T1 beads through the new loop.
 4. Jcode guard rails: node cap per graph, staged dispatch, spend
    ceilings. Hngh supervises Jcode, never the reverse.
+
+## Ledger convergence (amendment, 2026-09-20)
+
+Beads are the ledger of record for work state: durable (Dolt), keyed,
+status-tracked, synced through git refs. The ng events stream is not a
+competitor — it records the one class beads cannot: machine judgments
+(Jev verdicts with state_version bindings, escalations, budget spend,
+gate results). Convergence: cadence observes bd directly (poll
+`bd list --json`, diff against the last snapshot) instead of consuming
+emitted bead.ready/bead.changed copies; state_emitter.py shrinks to the
+append/version API for judgment events only. One source of truth for
+work, one append-only audit stream for verdicts — no duplicated deltas.

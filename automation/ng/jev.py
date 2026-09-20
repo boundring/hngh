@@ -16,6 +16,7 @@ import contract
 _LOG = Path(__file__).resolve().parent / "ledger" / "jev.log"
 _TIMEOUT_S = 10
 _MAX_BATCH = 64
+_ROTATE_BYTES = 5 * 1024 * 1024  # ponytail: single .1 generation, stdlib only
 
 _LOOPBACK = ("127.0.0.1", "localhost", "::1")
 
@@ -58,14 +59,37 @@ def _match(text: str, labels: tuple[str, ...]) -> str | None:
     return None
 
 
+def _rotate(log: Path = _LOG) -> None:
+    """Single-generation rotation: an oversized log moves to .1 (overwrite)."""
+    try:
+        if log.exists() and log.stat().st_size > _ROTATE_BYTES:
+            log.replace(log.with_name(log.name + ".1"))
+    except OSError as e:
+        print(f"jev._rotate failed: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+def _usage_tokens(payload, prompt: str) -> int:
+    """Input-token spend: server usage when present, else len(prompt)//4."""
+    try:
+        use = payload.get("usage", {}) if isinstance(payload, dict) else {}
+        for key in ("prompt_tokens", "promptTokens"):
+            val = use.get(key) if isinstance(use, dict) else None
+            if type(val) in (int, float) and val >= 0:
+                return int(val)
+    except Exception:
+        pass
+    return len(prompt.encode("utf-8")) // 4
+
+
 def _log(q: contract.Question, a: contract.Answer, ms: float,
          model: str = "unknown", url: str = "unknown") -> None:
     try:
+        _rotate()
         _LOG.parent.mkdir(parents=True, exist_ok=True)
         row = {"ts": time.time(), "head": q.head, "slots": dict(q.slots),
                "labels": list(q.labels), "verdict": a.verdict.value, "label": a.label,
                "latency_ms": ms, "state_version": a.state_version,
-               "model": model, "url": url}
+               "model": model, "url": url, "input_tokens": a.input_tokens}
         with open(_LOG, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, default=str) + "\n")
     except Exception as e:
@@ -78,6 +102,7 @@ def ask(question: contract.Question, base_url: str | None = None) -> contract.An
     elapsed = lambda: (time.monotonic() - start) * 1000.0
     base = (base_url or os.environ.get("HNGH_JEV_URL", "http://127.0.0.1:8888")).rstrip("/")
     model = os.environ.get("HNGH_JEV_MODEL", "unknown")
+    prompt = _prompt(question)
 
     def fail() -> contract.Answer:
         a = contract.Answer(contract.Verdict.ESCALATE, None, (), question.state_version)
@@ -92,7 +117,7 @@ def ask(question: contract.Question, base_url: str | None = None) -> contract.An
         return fail()  # fail closed: non-https / non-loopback URL refused
     try:
         path = os.environ.get("HNGH_JEV_PATH", "/v1/chat/completions")
-        body: dict = {"messages": [{"role": "user", "content": _prompt(question)}]}
+        body: dict = {"messages": [{"role": "user", "content": prompt}]}
         if os.environ.get("HNGH_JEV_MODEL"):
             body["model"] = model
         headers = {"Content-Type": "application/json"}
@@ -107,12 +132,13 @@ def ask(question: contract.Question, base_url: str | None = None) -> contract.An
         model = seen if isinstance(seen, str) and seen else model
         text = payload["choices"][0]["message"]["content"]
         assert isinstance(text, str)
+        tok = _usage_tokens(payload, prompt)
         label = _match(text, tuple(question.labels))
         if label is None:
-            return done(contract.Answer(contract.Verdict.UNCERTAIN, None, (), question.state_version))
+            return done(contract.Answer(contract.Verdict.UNCERTAIN, None, (), question.state_version, tok))
         if label.lower() == "escalate":
-            return done(contract.Answer(contract.Verdict.ESCALATE, label, (), question.state_version))
-        return done(contract.Answer(contract.Verdict.DONE, label, (), question.state_version))
+            return done(contract.Answer(contract.Verdict.ESCALATE, label, (), question.state_version, tok))
+        return done(contract.Answer(contract.Verdict.DONE, label, (), question.state_version, tok))
     except Exception:
         return fail()
 
@@ -138,7 +164,10 @@ if __name__ == "__main__":
         def do_POST(self):
             self.rfile.read(int(self.headers.get("Content-Length", 0)))
             seen["auth"] = self.headers.get("Authorization")
-            raw = json.dumps({"choices": [{"message": {"content": replies.pop(0)}}]}).encode()
+            reply = replies.pop(0)
+            if isinstance(reply, str):
+                reply = {"choices": [{"message": {"content": reply}}]}
+            raw = json.dumps(reply).encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
@@ -182,6 +211,32 @@ if __name__ == "__main__":
     d = ask(q())
     assert d.verdict is contract.Verdict.ESCALATE and d.label is None, d
     assert [x.verdict for x in ask_batch([q()])] == [contract.Verdict.ESCALATE]
+    # Token accounting: server usage wins (both spellings), else len(prompt)//4.
+    os.environ["HNGH_JEV_URL"] = f"http://127.0.0.1:{srv.server_port}"
+    replies.append({"choices": [{"message": {"content": "Label: yes"}}],
+                    "usage": {"prompt_tokens": 123}})
+    g = ask(q())
+    assert (g.verdict, g.label, g.input_tokens) == (contract.Verdict.DONE, "yes", 123), g
+    replies.append({"choices": [{"message": {"content": "Label: yes"}}],
+                    "usage": {"promptTokens": 77}})
+    assert ask(q()).input_tokens == 77
+    replies.append("Label: yes")
+    est = ask(q())
+    assert est.input_tokens == len(_prompt(q()).encode("utf-8")) // 4, est
+    # Rotation: an oversized log moves to .1 (single generation, overwrite).
+    import tempfile as _tf
+    _old_rot, _ROTATE_BYTES = _ROTATE_BYTES, 64
+    try:
+        with _tf.TemporaryDirectory(prefix="jev-rot-") as _td:
+            _tmp = Path(_td) / "jev.log"
+            _tmp.write_text("x" * 65)
+            _rotate(_tmp)
+            assert _tmp.with_name("jev.log.1").exists() and not _tmp.exists()
+            _tmp.write_text("y" * 10)
+            _rotate(_tmp)  # under threshold: untouched, no .2 generation
+            assert _tmp.exists() and not _tmp.with_name("jev.log.2").exists()
+    finally:
+        _ROTATE_BYTES = _old_rot
     srv.shutdown()
     if _old_url is None:
         os.environ.pop("HNGH_JEV_URL", None)

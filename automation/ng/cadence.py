@@ -23,9 +23,70 @@ STATE = LEDGER / "cadence.state.json"
 
 LABELS = ("file", "retry", "escalate", "close")
 
+# $5/day at ~$0.04 per 1M Jev input tokens -> 125M input tokens/day.
+_TOKEN_CAP_DEFAULT = 125_000_000
+# Collapse-first degrade: past this fraction of the cap only T1 asks proceed.
+_DEGRADE_FRAC = 0.8
+
 
 def _dir(ledger_dir=None) -> Path:
     return Path(ledger_dir) if ledger_dir else LEDGER
+
+
+def _token_cap() -> int:
+    try:
+        return max(1, int(os.environ.get("HNGH_JEV_DAILY_INPUT_TOKEN_CAP",
+                                        str(_TOKEN_CAP_DEFAULT))))
+    except ValueError:
+        return _TOKEN_CAP_DEFAULT
+
+
+def _today() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime())
+
+
+def _state(d: Path) -> dict:
+    try:
+        raw = json.loads((d / STATE.name).read_text())
+        return raw if isinstance(raw, dict) else {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def _write_state(d: Path, st: dict) -> None:
+    d.mkdir(parents=True, exist_ok=True)
+    (d / STATE.name).write_text(json.dumps(st, default=str))
+
+
+def _budget(d: Path) -> tuple[str, int]:
+    """Daily Jev input-token spend: (UTC date, tokens). Resets each day."""
+    today = _today()
+    b = _state(d).get("budget", {})
+    if isinstance(b, dict) and b.get("date") == today:
+        try:
+            return today, max(0, int(b.get("input_tokens", 0)))
+        except (ValueError, TypeError):
+            return today, 0
+    return today, 0
+
+
+def _save_budget(d: Path, date: str, tokens: int) -> None:
+    st = _state(d)
+    st["budget"] = {"date": date, "input_tokens": tokens}
+    _write_state(d, st)
+
+
+def _project(ev: dict) -> int:
+    """Conservative pre-ask token estimate for one event (len//4)."""
+    try:
+        return max(1, len(json.dumps(ev, default=str).encode("utf-8")) // 4)
+    except Exception:
+        return 1
+
+
+def _tier(ev: dict) -> str:
+    pay = ev.get("payload", {})
+    return str(pay.get("tier_hint", pay.get("tier", "")) or "")
 
 
 def _attempt_cap() -> int:
@@ -80,15 +141,14 @@ def _save_cursor(d: Path, ver: int) -> None:
 
 def _deferred(d: Path) -> list[dict]:
     """Parked triage entries still due: [{event, attempts}]."""
-    try:
-        raw = json.loads((d / STATE.name).read_text())
-        return raw.get("deferred", []) if isinstance(raw, dict) else []
-    except (OSError, ValueError, AttributeError):
-        return []
+    got = _state(d).get("deferred", [])
+    return got if isinstance(got, list) else []
 
 
 def _save_deferred(d: Path, entries: list[dict]) -> None:
-    (d / STATE.name).write_text(json.dumps({"deferred": entries}, default=str))
+    st = _state(d)  # preserve the budget record sharing this file
+    st["deferred"] = entries
+    _write_state(d, st)
 
 def _question(ev: dict) -> "contract.Question":
     pay = ev.get("payload", {})
@@ -109,8 +169,8 @@ def _verdict_of(ans) -> str:
 
 def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]:
     """Ask Jev for one event, emit the mapped action.
-    Returns (attempts used, park-for-revisit). NEVER raises — any failure
-    files an escalation (fail closed)."""
+    Returns (attempts used, park-for-revisit, input tokens spent).
+    NEVER raises — any failure files an escalation (fail closed)."""
     bid = ev.get("payload", {}).get("id", "")
     ev_sv = ev.get("state_version", 0)
     cap = _attempt_cap()
@@ -122,38 +182,42 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]
     except Exception:
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-error"}))
-        return attempts + 1, False
+        return attempts + 1, False, 0
+    try:
+        tok = max(0, int(getattr(ans, "input_tokens", 0) or 0))
+    except (ValueError, TypeError):
+        tok = 0
     if getattr(ans, "state_version", ev_sv) != ev_sv:
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "stale-version"}))
-        return attempts + 1, False
+        return attempts + 1, False, tok
     v = _verdict_of(ans)
     label = str(getattr(ans, "label", "") or "").lower()
     done = getattr(contract.Verdict.DONE, "value", "done")
     if v == done and label == "file":
         emitted.append(_emit(d, "slice.proposed", {"bead": bid, "action": ans.label}))
-        return attempts + 1, False
+        return attempts + 1, False, tok
     elif v == done and label == "close":
         emitted.append(_emit(d, "bead.close", {"bead": bid}))
-        return attempts + 1, False
+        return attempts + 1, False, tok
     elif v == done and label == "retry":
         if attempts + 1 >= cap:  # ponytail: flat cap, per-bead budgets if beads starve
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
-            return attempts + 1, False
+            return attempts + 1, False, tok
         else:
             emitted.append(_emit(d, "slice.retry", {"bead": bid, "attempts": attempts + 1}))
-            return attempts + 1, True
+            return attempts + 1, True, tok
     elif "escalate" in (v, label):
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-escalate"}))
-        return attempts + 1, False
+        return attempts + 1, False, tok
     else:  # uncertain / unknown label: park for revisit until the cap, then escalate
         if attempts + 1 >= cap:
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
-            return attempts + 1, False
-        return attempts + 1, True
+            return attempts + 1, False, tok
+        return attempts + 1, True, tok
 
 
 def beat(ledger_dir=None, base_url=None, max_events: int = 16) -> list:
@@ -176,6 +240,8 @@ def beat(ledger_dir=None, base_url=None, max_events: int = 16) -> list:
 def _beat(d: Path, max_events: int) -> list:
     emitted: list = []
     cur = _cursor(d)
+    date, spent = _budget(d)
+    cap = _token_cap()
     deferred = _deferred(d)
     fresh = sorted((e for e in _events(d)
                     if e.get("kind") == "bead.ready"
@@ -186,9 +252,29 @@ def _beat(d: Path, max_events: int) -> list:
     # Deferred entries past the cap stay parked; fresh past the cap stay
     # due via the cursor and are picked up next beat.
     still: list[dict] = [entry for entry, is_def in queue[max_events:] if is_def]
-    for entry, is_deferred in queue[:max_events]:
+    rest = queue[:max_events]
+    for i, (entry, is_deferred) in enumerate(rest):
         ev, attempts = entry["event"], entry["attempts"]
-        used, park = _handle(d, ev, attempts, emitted)
+        bid = ev.get("payload", {}).get("id", "")
+        if spent >= cap or spent + _project(ev) > cap:
+            emitted.append(_emit(d, "escalation.filed",
+                                {"bead": bid, "question_head": "triage",
+                                 "reason": "budget-exhausted",
+                                 "input_tokens": spent, "cap": cap}))
+            for e2, is_def2 in rest[i:]:
+                if is_def2:
+                    still.append(e2)
+                else:
+                    still.append({"event": e2["event"], "attempts": e2["attempts"]})
+            break  # stop asking for the rest of the beat
+        if spent >= cap * _DEGRADE_FRAC and _tier(ev) != "T1":
+            # collapse-first degrade: non-T1 parks in STATE (the cursor may
+            # advance past it on a later T1, so fresh cannot stay cursor-due)
+            still.append(entry if is_deferred else {"event": ev, "attempts": attempts})
+            continue
+        used, park, tok = _handle(d, ev, attempts, emitted)
+        spent += tok
+        _save_budget(d, date, spent)
         if not is_deferred:
             _save_cursor(d, max(ev.get("state_version", cur) or cur, _cursor(d)))
         if park:  # triage.deferred lives in STATE now, not as a ledger kind
@@ -282,6 +368,43 @@ def _dry_run() -> None:
     assert [e.kind for e in out] == ["bead.close", "escalation.filed"], out
     assert _cursor(d2) == v1 + 1, (_cursor(d2), v1)  # cursor rests on last bead.ready
     tmp2.cleanup()
+
+    # Budget: tiny cap refuses before asking (no ask calls), one escalation.
+    os.environ["HNGH_JEV_DAILY_INPUT_TOKEN_CAP"] = "1"
+    try:
+        tmp3 = tempfile.TemporaryDirectory(prefix="cadence-case-")
+        d3 = Path(tmp3.name)
+        _emit(d3, "bead.ready", {"id": "b-cap"})
+        with mock.patch.object(jev, "ask",
+                               side_effect=AssertionError("ask must not run")):
+            out = beat(ledger_dir=d3)
+        assert [e.kind for e in out] == ["escalation.filed"], out
+        assert out[0].payload["reason"] == "budget-exhausted", out[0].payload
+        assert len(_deferred(d3)) == 1 and _deferred(d3)[0]["attempts"] == 0, _deferred(d3)
+        tmp3.cleanup()
+    finally:
+        os.environ.pop("HNGH_JEV_DAILY_INPUT_TOKEN_CAP", None)
+
+    # Degrade: at >=80% only T1 asks; spend persists in STATE.
+    os.environ["HNGH_JEV_DAILY_INPUT_TOKEN_CAP"] = "1000"
+    try:
+        tmp4 = tempfile.TemporaryDirectory(prefix="cadence-case-")
+        d4 = Path(tmp4.name)
+        _save_budget(d4, _today(), 800)
+        _emit(d4, "bead.ready", {"id": "b-t2", "tier_hint": "T2"})
+        _emit(d4, "bead.ready", {"id": "b-t1", "tier_hint": "T1"})
+        seq = [contract.Answer(contract.Verdict.DONE, "file", (), 2, 10)]
+        with mock.patch.object(jev, "ask", side_effect=lambda q: seq.pop(0)):
+            out = beat(ledger_dir=d4)
+        assert [e.kind for e in out] == ["slice.proposed"], out
+        assert out[0].payload["bead"] == "b-t1", out[0].payload
+        _, spent = _budget(d4)
+        assert spent == 810, spent  # 800 + the one T1 ask's 10 tokens
+        assert len(_deferred(d4)) == 1 and _deferred(d4)[0]["event"]["payload"]["id"] == "b-t2", _deferred(d4)
+        assert _cursor(d4) == 2, _cursor(d4)  # T1 at sv2 done; skipped T2 (sv1) re-read next beat
+        tmp4.cleanup()
+    finally:
+        os.environ.pop("HNGH_JEV_DAILY_INPUT_TOKEN_CAP", None)
     print("cadence self-check ok")
 
 

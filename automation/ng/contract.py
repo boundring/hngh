@@ -66,6 +66,7 @@ class Answer:
     label: str | None            # which closed label, if any
     evidence: tuple[str, ...]    # hashes cited; verified downstream
     state_version: int
+    input_tokens: int = 0        # per-call Jev input-token spend (0 = unknown/none)
 
 
 class Kernel:
