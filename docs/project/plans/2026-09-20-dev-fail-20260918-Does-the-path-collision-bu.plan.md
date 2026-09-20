@@ -4,17 +4,16 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the adopted cadence observability research line by adding small, locally testable hngh-automation artifacts for status normalization, summary rendering, and digest documentation.
+## Rationale
+This plan implements the research line for standardizing job execution wrappers by introducing a reusable shell library to enforce consistent logging and error handling across the automation suite.
 
 ## Steps
 
-- [ ] Add a stdlib-only Python helper at lib/hngh_automation/cadence_status.py that normalizes cadence state names and exits 0 when run directly.
-  Verification: python3 lib/hngh_automation/cadence_status.py
-- [ ] Add scripts/render_cadence_summary.sh that prints a plain-text cadence summary and exits 0 without touching deployment configuration.
-  Verification: bash scripts/render_cadence_summary.sh
-- [ ] Add dashboard/cadence_summary.js exporting a pure function that formats cadence records as text for local review.
-  Verification: node --check dashboard/cadence_summary.js
-- [ ] Add tests/cadence_status_test.py using unittest to assert the helper's normalization behavior for normal cadence states.
+- [ ] Create `lib/common.sh` containing helper functions for timestamped logging and exit code propagation.
+  Verification: bash -n lib/common.sh
+- [ ] Add `tests/test_common.sh` to verify that the logging function outputs the expected format and propagates non-zero exit codes correctly.
   Verification: make test
-- [ ] Add digest/cadence_observability.md documenting the new status fields and the verification commands used by this plan.
-  Verification: grep -q "cadence" digest/cadence_observability.md
+- [ ] Update `jobs/build.sh` to source `lib/common.sh` and replace manual echo statements with the new logging helper.
+  Verification: bash -n jobs/build.sh
+- [ ] Add a regression check in `tests/test_build.sh` that asserts `jobs/build.sh` sources the common library before execution.
+  Verification: make test

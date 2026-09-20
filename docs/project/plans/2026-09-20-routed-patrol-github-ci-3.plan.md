@@ -8,3 +8,7 @@ at 2026-09-20T02:00:13Z. Alert text: patrol github-ci: bad-execution on github-a
 
 - [ ] Delve: open research subject fail-20260920-patrol-github-ci for patrol:github-ci; record disposition; then fix or park
       Verification: research subject fail-20260920-patrol-github-ci present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-20T03:00:13Z re-occurred (dedup window expired)
