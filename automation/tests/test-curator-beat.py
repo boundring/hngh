@@ -14,6 +14,7 @@ untouched, repeat rows deduped.
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -253,6 +254,45 @@ class CuratorBeat(unittest.TestCase):
             after = {p.name: p.read_bytes() for p in plans_dir.iterdir()}
             self.assertEqual(before, after)
             n = len(rows)
+            r = subprocess.run(["bash", str(WRAPPER)], env=env,
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(len(state.read_text().splitlines()), n)
+
+    def test_day_wrapper_dedup_ignores_disposed_timestamp(self):
+        """Same proposal re-emitted by a later daily beat must dedup
+        against yesterday's row even though the embedded disposed=
+        timestamp differs (the 2026-09-20 daily re-filing defect)."""
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td) / "kernel"
+            plans_dir = home / "docs" / "project" / "plans"
+            plans_dir.mkdir(parents=True)
+            (plans_dir / "2026-09-03-dup-old.plan.md").write_text(
+                plan(routed="tree-skew:hngh", accepted="2026-09-03T00:00:00Z"))
+            (plans_dir / "2026-09-04-dup-new.plan.md").write_text(
+                plan(routed="tree-skew:hngh", accepted="2026-09-04T00:00:00Z"))
+            state = Path(td) / "STATE.md"
+            state.write_text("# inventory\n")
+            out = Path(td) / "plans.json"
+            env = {**os.environ, "HNGH_HOME": str(home),
+                   "HNGH_PLANS_FEED_OUT": str(out), "STATE_FILE": str(state),
+                   "HNGH_CEREMONY_LOG": ""}
+            r = subprocess.run([sys.executable, str(PLAN_FEED)], env=env,
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            r = subprocess.run(["bash", str(WRAPPER)], env=env,
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(any("| needs |" in x
+                                for x in state.read_text().splitlines()))
+            self.assertTrue(any("cause=duplicate" in x and "disposed=" in x
+                                for x in state.read_text().splitlines()))
+            # Restamp every filed row to yesterday: identical proposal
+            # text, different disposed= timestamp.
+            state.write_text(re.sub(r" disposed=[^ ]*Z ",
+                                    " disposed=2026-09-19T00:00:00Z ",
+                                    state.read_text()))
+            n = len(state.read_text().splitlines())
             r = subprocess.run(["bash", str(WRAPPER)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)

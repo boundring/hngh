@@ -24,9 +24,13 @@ out="$(python3 "$AUTOMATION_ROOT/jobs/curator-beat.py" 2>/dev/null)" || {
   breadcrumb "$JOB_NAME" curator "refused: curator-beat.py failed (rc=$?)"
   exit 0
 }
+norm='s/ disposed=[^ ]* / disposed=X /'
+norm_state=""
+[ -s "$STATE_FILE" ] && norm_state="$(sed "$norm" "$STATE_FILE")"
 while IFS=$'\t' read -r verb detail; do
   [ -n "$verb" ] && [ -n "$detail" ] || continue
-  if [ -s "$STATE_FILE" ] && grep -Fq "$detail" "$STATE_FILE"; then
+  probe="$(printf '%s' "$detail" | sed "$norm")"
+  if [ -n "$norm_state" ] && grep -Fq "$probe" <<< "$norm_state"; then
     continue
   fi
   breadcrumb "$JOB_NAME" "$verb" "$detail"
