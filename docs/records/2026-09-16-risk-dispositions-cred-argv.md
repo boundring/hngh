@@ -83,6 +83,46 @@ belt-and-suspenders follow-up could strip `://user:pass@` shapes from
 `$out` before the alert; rejected for now to keep the fail path
 byte-faithful for debugging.
 
+Residual amendment (2026-09-20, graph node gap-loose-6-credential-helper,
+read-only adjudication): the verification above predates a runtime fact
+the sweep did not inspect — ~/.gitconfig defines
+credential.https://github.com.helper= (empty reset) followed by
+helper=!/home/linuxbrew/.linuxbrew/bin/gh auth git-credential (same pair
+for https://gist.github.com; gh 2.86.0, only config layer — no
+/etc/gitconfig, no url.*.insteadOf rewrites). Today the helper is inert
+for this repo: origin is SSH-form (git@github.com:boundring/hngh.git)
+and credential.<url>.helper only fires on matching https URLs, so push
+and fetch never consult it. IF origin ever flips to https://github.com,
+the helper supplies credentials out-of-band: token attributes ride the
+credential-helper stdout protocol into git's memory and never appear in
+URLs, argv, or push stderr — the token-embedded-URL exposure class
+verified above is structurally absent on that path, not merely redacted
+at transport-error time. New failure shapes would reach sink A's
+full-stderr alert (git-push.sh :17 -> :23-26 -> notify-email.sh :56-69
+report-queue row + immediate-class email) and sink B's 200-char crumb
+(16-remote-push.sh :109-113): gh helper nonzero exit (not logged in /
+revoked token) with diagnostics on stderr, git's post-helper no-TTY
+prompt fallback (`fatal: could not read Username for 'https://…'`), and
+auth-rejected-token 401s already covered by class (c) above. Reasoned
+from the documented protocol split (gitcredentials(7): helpers print
+credential attributes on stdout; stderr is free-form diagnostics; gh
+auth git-credential emits the token only in the stdout response) — no
+auth flow re-run, per this record's scratch-repo boundary. None of these
+shapes carry the token; the only credential-bearing channel they add is
+opt-in: GIT_TRACE_CURL/GIT_TRACE curl tracing prints the Authorization
+header (Basic base64 of login:token) into push stderr. Ops rule recorded
+here: never enable git trace env in alert-producing paths (nothing in
+automation/, scripts/, or Makefile sets it today, verified 2026-09-20).
+Identity (not credential) residue: GitHub remote refusal text can name
+the gh login. Sink C (16-remote-push.sh :99-104 gate tail) is a
+make-test output window, not a git-credential path — no helper shape.
+No test pins origin URL form, helper presence, or insteadOf rewrites
+(automation/tests + kernel tests grepped 2026-09-20; sink-side
+redaction family at scripts/test-report-queue.py:317-349 unaffected).
+Disposition unchanged: ACCEPTED, no code change; this amendment exists
+so the helper fact and the https-flip conditional are on record and the
+next sweep does not re-litigate them.
+
 ## 3. Notification/event TEXT on argv — ACCEPTED (no credential channel)
 
 Sites: notify.sh `--data-urlencode "text=…"` and the webhook JSON
