@@ -54,7 +54,10 @@ def main():
     for hostile in ("GIT_DIR", "GIT_WORK_TREE"):
         env.pop(hostile, None)
     dangling = subprocess.run(
-        ["git", "commit-tree", "ef803bd16e170d18c3b1a644a8b958c117b963a4",
+        # pre-rewrite tree ef803bd1... (root tree of the 2026-08-25
+        # restatement commit) re-keyed by the 2026-09-20 filter-repo
+        # secret scrub; identity = new restatement commit's root tree
+        ["git", "commit-tree", "358ff62c4fac4ff08705a80cb3a50e680cba3d68",
          "-m", "fixture: dangling exemption probe"],
         capture_output=True, text=True, env=env, check=True).stdout.strip()
 
