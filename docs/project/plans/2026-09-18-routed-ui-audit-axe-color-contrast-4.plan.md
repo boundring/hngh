@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=ui-audit:axe:color-contrast  cause=obsolete disposed=2026-09-18T21:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=ui-audit:axe:color-contrast  cause=obsolete disposed=2026-09-18T21:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-20T05:00:13Z reason=identity re-occurred 5 times without landing; operator escalation stands -->
 # 2026-09-18 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ui-audit:axe:color-contrast`
@@ -15,3 +15,4 @@ at 2026-09-18T18:00:13Z. Alert text: ui-audit axe:color-contrast: 1 violation(s)
 - 2026-09-18T20:00:13Z re-occurred (dedup window expired)
 - 2026-09-18T21:00:13Z re-occurred (dedup window expired)
 - 2026-09-18T22:00:14Z re-occurred (dedup window expired)
+- 2026-09-20T05:00:13Z re-occurred (dedup window expired)
