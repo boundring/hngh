@@ -8,3 +8,8 @@ at 2026-09-20T05:00:13Z. Alert text: ui-audit axe:color-contrast: 1 violation(s)
 
 - [ ] Delve: open research subject fail-20260920-ui-audit-axe-color-contrast for ui-audit:axe:color-contrast; record disposition; then fix or park
       Verification: research subject fail-20260920-ui-audit-axe-color-contrast present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-20T06:00:13Z re-occurred (dedup window expired)
+- 2026-09-20T07:00:23Z re-occurred (dedup window expired)

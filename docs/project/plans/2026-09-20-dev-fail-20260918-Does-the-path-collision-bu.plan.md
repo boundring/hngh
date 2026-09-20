@@ -5,21 +5,18 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line on **standardizing job execution and verification workflows** by introducing a reusable shell library for common task operations and ensuring all new scripts pass strict syntax validation before integration.
+This plan implements the research line for standardizing job execution telemetry by adding a lightweight logging wrapper to the existing automation shell scripts and validating its integration with the current test suite.
 
 ## Steps
 
-- [ ] Create `lib/common.sh` containing helper functions for logging and error handling used by automation jobs.
-  Verification: bash -n lib/common.sh
+- [ ] Create `lib/telemetry.sh` containing a `log_event` function that appends timestamped JSON lines to `[redacted path]
+  Verification: bash -n lib/telemetry.sh
 
-- [ ] Add a new job script `jobs/cleanup_artifacts.sh` that sources `lib/common.sh` to remove temporary build files.
-  Verification: bash -n jobs/cleanup_artifacts.sh
+- [ ] Add a unit test in `tests/test_telemetry.sh` that sources the library and asserts a log entry is created after calling `log_event`.
+  Verification: bash tests/test_telemetry.sh
 
-- [ ] Implement `scripts/validate_config.py` using only the Python standard library to check for required keys in job configuration files.
-  Verification: python3 scripts/validate_config.py
+- [ ] Modify `jobs/run_pipeline.sh` to source `lib/telemetry.sh` and call `log_event` before executing the main pipeline logic.
+  Verification: make test
 
-- [ ] Update `cadence/schedule.yaml` to include a new entry for the cleanup job with standard execution parameters.
-  Verification: grep -q "cleanup_artifacts" cadence/schedule.yaml
-
-- [ ] Add a test script `tests/test_common.sh` that sources `lib/common.sh` and asserts the presence of the logging function.
-  Verification: bash tests/test_common.sh
+- [ ] Add a regression check in `tests/test_integration.sh` that verifies the telemetry log file exists after a simulated pipeline run.
+  Verification: make test
