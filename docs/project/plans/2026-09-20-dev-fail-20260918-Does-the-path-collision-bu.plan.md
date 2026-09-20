@@ -5,18 +5,15 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for standardizing job execution telemetry by adding a lightweight logging wrapper to the existing automation shell scripts and validating its integration with the current test suite.
+This plan implements the research line for standardizing job execution wrappers by introducing a reusable bash helper library and updating existing automation jobs to utilize it, ensuring consistent error handling and logging across the hngh-automation repository.
 
 ## Steps
 
-- [ ] Create `lib/telemetry.sh` containing a `log_event` function that appends timestamped JSON lines to `[redacted path]
-  Verification: bash -n lib/telemetry.sh
-
-- [ ] Add a unit test in `tests/test_telemetry.sh` that sources the library and asserts a log entry is created after calling `log_event`.
-  Verification: bash tests/test_telemetry.sh
-
-- [ ] Modify `jobs/run_pipeline.sh` to source `lib/telemetry.sh` and call `log_event` before executing the main pipeline logic.
+- [ ] Create `lib/common.sh` containing shared utility functions for logging and exit code management
+  Verification: bash -n lib/common.sh
+- [ ] Update `jobs/build.sh` to source `lib/common.sh` and replace manual error handling with the new helper functions
   Verification: make test
-
-- [ ] Add a regression check in `tests/test_integration.sh` that verifies the telemetry log file exists after a simulated pipeline run.
+- [ ] Update `jobs/test.sh` to source `lib/common.sh` and ensure all failure paths invoke the standard exit handler
   Verification: make test
+- [ ] Add a smoke test script `tests/lib_smoke.sh` that sources `lib/common.sh` and asserts the presence of required functions
+  Verification: bash tests/lib_smoke.sh
