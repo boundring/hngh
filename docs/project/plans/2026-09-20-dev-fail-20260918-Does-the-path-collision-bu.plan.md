@@ -5,21 +5,21 @@ Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
 ## Rationale
-This plan implements the research line for automating the HN post ingestion pipeline by introducing a robust Python-based parser and a bash validation script to ensure data integrity before processing.
+This plan implements the research line for standardizing job execution and log parsing by introducing a robust shell wrapper and Python-based validation script to ensure consistent output handling across the automation suite.
 
 ## Steps
 
-- [ ] Create `lib/parse_hn.py` to implement a standard library-only parser for Hacker News JSON feeds, extracting title, URL, and score fields.
-  Verification: python3 lib/parse_hn.py --help
+- [ ] Create `scripts/run_job.sh` with basic argument parsing and error trapping
+  Verification: bash -n scripts/run_job.sh
 
-- [ ] Add `scripts/validate_feed.sh` to execute the Python parser against a sample fixture and assert that no exceptions are raised during execution.
-  Verification: bash scripts/validate_feed.sh
+- [ ] Add `lib/parse_log.py` using stdlib re module to extract status codes from job logs
+  Verification: python3 lib/parse_log.py --help
 
-- [ ] Introduce `tests/test_parse_hn.py` containing three unit tests using `unittest` to verify correct extraction of title, URL, and score from mock JSON structures.
-  Verification: python3 -m unittest tests.test_parse_hn
+- [ ] Implement `tests/test_parse_log.py` with three test cases covering success, failure, and timeout scenarios
+  Verification: make test
 
-- [ ] Update `jobs/ingest.sh` to invoke the new validation script before proceeding with database insertion logic.
-  Verification: bash -n jobs/ingest.sh
+- [ ] Update `jobs/standard_job.sh` to invoke the new wrapper script instead of inline logic
+  Verification: bash -n jobs/standard_job.sh
 
-- [ ] Add a `tests/fixtures/sample_feed.json` file containing three valid and two malformed Hacker News entries for regression testing.
-  Verification: python3 -c "import json; json.load(open('tests/fixtures/sample_feed.json'))"
+- [ ] Add `cadence/cleanup_old_logs.sh` to prune logs older than 7 days using find and rm
+  Verification: bash -n cadence/cleanup_old_logs.sh
