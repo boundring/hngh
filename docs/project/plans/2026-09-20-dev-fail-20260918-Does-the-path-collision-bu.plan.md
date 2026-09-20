@@ -4,15 +4,17 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the 'cadence retry-visibility' research line by surfacing attempt counts and last-failure timestamps in the operator digest. It stays inside lib/, tests/, digest/, and scripts/ and is gated by make test, avoiding credentials, systemd units, and kernel sources.
+Implements the adopted cadence observability research line by adding small, locally testable hngh-automation artifacts for status normalization, summary rendering, and digest documentation.
 
 ## Steps
 
-- [ ] Add lib/cadence_record.py exposing normalize(record) that maps a cadence workflow execution record to {status, attempt_count, last_failure_ts} using only stdlib (json, datetime), with an __main__ block that asserts a sample record round-trips and exits 0.
-  Verification: python3 lib/cadence_record.py
-- [ ] Add tests/test_cadence_record.py covering normalize() for succeeded, failed-once, and retried records, and register it so the existing suite picks it up under make test.
+- [ ] Add a stdlib-only Python helper at lib/hngh_automation/cadence_status.py that normalizes cadence state names and exits 0 when run directly.
+  Verification: python3 lib/hngh_automation/cadence_status.py
+- [ ] Add scripts/render_cadence_summary.sh that prints a plain-text cadence summary and exits 0 without touching deployment configuration.
+  Verification: bash scripts/render_cadence_summary.sh
+- [ ] Add dashboard/cadence_summary.js exporting a pure function that formats cadence records as text for local review.
+  Verification: node --check dashboard/cadence_summary.js
+- [ ] Add tests/cadence_status_test.py using unittest to assert the helper's normalization behavior for normal cadence states.
   Verification: make test
-- [ ] Extend digest/render.py to pull attempt_count and last_failure_ts from lib.cadence_record and append them to each job line, with an __main__ block that renders one sample record to stdout and exits 0.
-  Verification: python3 digest/render.py
-- [ ] Add scripts/refresh_digest.sh that invokes the digest renderer and writes dashboard/digest.json, guarded by set -euo pipefail so a bad render fails loudly.
-  Verification: bash -n scripts/refresh_digest.sh
+- [ ] Add digest/cadence_observability.md documenting the new status fields and the verification commands used by this plan.
+  Verification: grep -q "cadence" digest/cadence_observability.md
