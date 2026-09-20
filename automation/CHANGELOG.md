@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-20
+
+- STATE.md writer/reader compat sweep (writers-reader-compat): every
+  4-field crumb reader (operator-items-feed.py:87 `split(' | ', 3)`,
+  patrol.py:150, beat-watchdog.py, common.sh data.json parser) silently
+  skips non-4-field lines, and the 2026-09-19 gate-red spill proved the
+  writers were the weak side — 85 raw traceback lines landed in the live
+  STATE.md after `03-gate-check.sh` alert text passed a multiline
+  report-queue text into a crumb. The lib fold
+  (`lib/breadcrumbs.sh` newline folding + tests/test-breadcrumb-single-line.py,
+  hermetic) now extends to the two Python writers that roll their own
+  crumb line: `scripts/router-tick.py` breadcrumb() and
+  `jobs/service-state.py` breadcrumb() fold newlines before the append;
+  the guard test grows Python-writer coverage (per-writer arity) and a
+  reader-contract assertion. Full `make test` green. Historical spill
+  lines stay (append-only); all current readers tolerate them.
+
 ## 2026-09-19
 
 - automation gate unblock: the Jev beat-skip gate (d740d967, 2026-09-18)
