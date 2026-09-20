@@ -47,7 +47,7 @@ day's records slice.
       Verification: suite test proves archived-tree isolation and
       opt-in default; an isolated rehearsal on this repo exits 0
       matching a green gate; `make test` green in both repos.
-- [ ] 3. Curator beat skeleton (test-first). Add a cadence drop-in
+- [x] 3. Curator beat skeleton (test-first). Add a cadence drop-in
       (automation/cadence/day/) that reads the work graph inputs
       (accepted plan front matter, queue.md, automation/dashboard/
       plans.json) and emits exactly two machine actions and two
@@ -170,3 +170,23 @@ day's records slice.
   suite 28/28, automation `make test` green rc=0, kernel `make test`
   green rc=0 in the working tree. Blocker
   blk-20260916-2026-09-09-rehearsal-lane resolved this session.
+- 2026-09-20T08:23Z step-3 verified and ticked (rehearsal-lane wake):
+  the curator trio was already built and committed 2026-09-17
+  (44605b9b, 3a95f213, 50a579c9) — this session verified rather than
+  rebuilt: suite tests/test-curator-beat.py 13/13 rc=0, dry beat rc=0
+  against the live tree with plan files byte-identical (md5
+  before/after), beat live on the day cadence (91 STATE.md rows). One
+  in-lane defect found and fixed (automation commit 5bdb568c): the
+  wrapper dedup grepped STATE.md for the full detail string including
+  the embedded disposed=<now()> timestamp, so identical daily
+  proposals re-filed (36 rows at 2026-09-18T13:03:42Z and 36 at
+  2026-09-19T14:24:50Z, same texts) — the fix normalizes disposed= via
+  sed on both the dedup probe and the STATE.md stream; red-first test
+  test_day_wrapper_dedup_ignores_disposed_timestamp added (4!=3 red,
+  then green; suite 14/14); live proof: second consecutive beat
+  delta=0 rows. Automation `make test` red rc=2 with all 3 failures
+  confined to tests/test-manga-draft.py — a sibling-modified file
+  mid-repair by another lane (the 7 sibling paths untouched this
+  session); that make-test clause parks on the sibling lanes per the
+  2026-09-14 staged-index-sweep lesson (never touch another lane's
+  in-flight repair). Step 4 (records) remains.
