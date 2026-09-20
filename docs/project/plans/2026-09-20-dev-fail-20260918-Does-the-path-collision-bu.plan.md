@@ -4,22 +4,15 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-This plan implements the research line for standardizing job execution and log parsing by introducing a robust shell wrapper and Python-based validation script to ensure consistent output handling across the automation suite.
+This plan implements the cadence-driven digest automation research line by wiring a nightly digest job through the existing schedule and test harness in hngh-automation. It adds no provider, credential, or kernel surface—only plain job, cadence, library, and test files gated by `make test`.
 
 ## Steps
 
-- [ ] Create `scripts/run_job.sh` with basic argument parsing and error trapping
-  Verification: bash -n scripts/run_job.sh
-
-- [ ] Add `lib/parse_log.py` using stdlib re module to extract status codes from job logs
-  Verification: python3 lib/parse_log.py --help
-
-- [ ] Implement `tests/test_parse_log.py` with three test cases covering success, failure, and timeout scenarios
-  Verification: make test
-
-- [ ] Update `jobs/standard_job.sh` to invoke the new wrapper script instead of inline logic
-  Verification: bash -n jobs/standard_job.sh
-
-- [ ] Add `cadence/cleanup_old_logs.sh` to prune logs older than 7 days using find and rm
-  Verification: bash -n cadence/cleanup_old_logs.sh
+- [ ] Create `jobs/nightly_digest.sh` that assembles a daily digest payload from recent run logs and exits 0 on success.
+  Verification: bash -n jobs/nightly_digest.sh
+- [ ] Register the nightly digest job in `cadence/schedule.yaml` with a 02:00 UTC entry pointing to `jobs/nightly_digest.sh`.
+  Verification: grep -q "nightly_digest" cadence/schedule.yaml
+- [ ] Add `lib/digest_format.py` containing stdlib-only helper functions (`format_record`, `summarize`) used by the digest job.
+  Verification: python3 lib/digest_format.py
+- [ ] Add `tests/test_digest_job.sh` that invokes `jobs/nightly_digest.sh` in dry-run mode and asserts exit code 0.
+  Verification: bash tests/test_digest_job.sh
