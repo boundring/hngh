@@ -16,6 +16,19 @@ lives under Pre-release / early development until the first release.
   time. Failing test first (`tests/adapter/test-filesystem.lisp`
   read-eval check); `make test` green at 2,932 checks.
 
+- **Plaintext credential cutover to 1Password + vault freshness rung**
+  (docs/records/2026-09-21-vault-cutover-freshness.md): the 26 API keys
+  remaining in plaintext (`env_vars.sh`, `unsloth.env`, systemd user
+  environment, 14 vestigial `EnvironmentFile` drop-ins) were purged in
+  favor of the 1Password vault `Hngh Secrets`, read on demand through
+  `automation/lib/opv`/`automation/lib/secrets.py` (27/27 reads
+  verified). An 11-char ZHIPU_API_KEY prefix embedded in
+  `docs/project/reports.md` (journal-harvest leak, alert 7796e3e3) was
+  redacted. Key rotation freshness rung added:
+  `automation/lib/vault-freshness.py` treats the vault item
+  `updated_at` as the rotate date and `credential-health.sh` files
+  `vault-freshness` alerts past the OLA (default 180d), fail-closed.
+
 ### 2026-09-20
 
 #### Added

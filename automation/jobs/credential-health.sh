@@ -21,7 +21,7 @@ set -u
 freshness_ledger="${CREDENTIAL_FRESHNESS_LEDGER:-$HOME/.hngh-automation/credential-freshness.tsv}"
 freshness_ola="${CREDENTIAL_FRESHNESS_OLA:-$(get_param credential-fresh-ola 604800)}"
 case "$freshness_ola" in
-  ''|*[!0-9]*) freshness_ola=604800 ;; # fail-open to the designed bound: a malformed OLA must not turn every future run into a freshness alert storm
+'' | *[!0-9]*) freshness_ola=604800 ;; # fail-open to the designed bound: a malformed OLA must not turn every future run into a freshness alert storm
 esac
 report_root="${HNGH_REPORT_ROOT:-$HNGH_HOME}" # hngh repo by default; overridable for tests
 report_queue="python3 $HNGH_HOME/scripts/report-queue"
@@ -46,8 +46,8 @@ alert() { # name failure -> 0
   failure="$(redact_home "$failure")"
   ident="credential:${name}:$(printf '%s' "$failure" | sed -E 's/[0-9]{4,}/N/g')"
   case "$failure" in
-    *"http="*) ev="$(printf '%s' "$failure" | sed -n 's/.*http=\([0-9]*\).*/http=\1/p')" ;;
-    *) ev="$(printf '%s' "$failure" | cksum | cut -d' ' -f1)" ;;
+  *"http="*) ev="$(printf '%s' "$failure" | sed -n 's/.*http=\([0-9]*\).*/http=\1/p')" ;;
+  *) ev="$(printf '%s' "$failure" | cksum | cut -d' ' -f1)" ;;
   esac
   HNGH_REPORT_ROOT="$report_root" $report_queue --add alert "credential $name: $failure" \
     --identity "$ident" --evidence "$ev" --window 0 &&
@@ -173,7 +173,7 @@ if [ -n "$kimi_key_src" ]; then
   kimi_models_url="${kimi_url%/chat/completions}/models"
   code="$(printf 'header = "Authorization: Bearer %s"\n' "$kimi_key" |
     curl -s --max-time 10 -K - -o /dev/null -w '%{http_code}' \
-    "$kimi_models_url" 2>/dev/null)" || code=000
+      "$kimi_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "kimi ($kimi_key_src) endpoint not answering (http=$code)"
   elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
@@ -206,7 +206,7 @@ if [ -n "$ocgo_key_src" ]; then
   ocgo_models_url="${ocgo_url%/chat/completions}/models"
   code="$(printf 'header = "Authorization: Bearer %s"\n' "$ocgo_key" |
     curl -s --max-time 10 -K - -o /dev/null -w '%{http_code}' \
-    "$ocgo_models_url" 2>/dev/null)" || code=000
+      "$ocgo_models_url" 2>/dev/null)" || code=000
   if [ "$code" = "000" ]; then
     breadcrumb "$JOB_NAME" "credential-health" "ocgo ($ocgo_key_src) endpoint not answering (http=$code)"
   elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
@@ -254,4 +254,14 @@ if [ ! -s "$freshness_ledger" ]; then
 fi
 python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$freshness_ola" |
   grep -Ev '^(ok:|$)' | head -n 5 | while IFS= read -r finding; do alert "credential-freshness" "$finding"; done
+
+# --- 8. vault freshness (1Password 'Hngh Secrets' as the rotation ledger) ---
+# The vault item's updated_at IS the rotate date: the operator rotates at
+# the provider, then updates the item. lib/vault-freshness.py reads titles
+# + timestamps only (never values) and prints stale:/error: findings;
+# each becomes an alert row (identity dedup folds repeats). Unverifiable
+# = alert, never a silent pass.
+vault_ola="${CREDENTIAL_VAULT_OLA_DAYS:-180}"
+python3 "$AUTOMATION_ROOT/lib/vault-freshness.py" "$vault_ola" |
+  head -n 5 | while IFS= read -r finding; do alert "vault-freshness" "$finding"; done
 exit 0
