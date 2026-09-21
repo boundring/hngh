@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# opv <ITEM_TITLE> [FIELD] — print one field of a 1Password item in the
+# Hngh Secrets vault, via cred_get (the single `op` CLI seam: token
+# mapping, 45s timeout, fail-soft with daily breadcrumbs). For systemd
+# ExecStartPre / shell scripts; Python consumers use lib/secrets.py.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/common.sh
+source "$here/common.sh"
+source "$here/breadcrumbs.sh"
+source "$here/credentials.sh"
+[ $# -ge 1 ] && [ -n "$1" ] || { echo "usage: opv <ITEM_TITLE> [FIELD]" >&2; exit 2; }
+cred_get "op://Hngh Secrets/$1/${2:-password}"

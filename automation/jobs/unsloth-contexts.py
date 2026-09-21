@@ -41,6 +41,11 @@ import sys
 import time
 import urllib.request
 
+_sys_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "automation", "lib")
+sys.path.insert(0, _sys_path)
+from secrets import secret  # noqa: E402 — sole 1Password seam
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TSV = os.path.join(ROOT, "config", "unsloth-contexts.tsv")
 HF = "https://huggingface.co"
@@ -103,7 +108,7 @@ def extract_contexts(card_text):
 
 
 def server_models():
-    key = os.environ.get("UNSLOTH_API_KEY", "")
+    key = secret("UNSLOTH_API_KEY")
     req = urllib.request.Request("http://127.0.0.1:8888/v1/models",
                                  headers={"Authorization": "Bearer " + key})
     with urllib.request.urlopen(req, timeout=10) as r:
@@ -188,7 +193,7 @@ def main():
 
 
 def _local_api(path):
-    key = os.environ.get("UNSLOTH_API_KEY", "")
+    key = secret("UNSLOTH_API_KEY")
     req = urllib.request.Request("http://127.0.0.1:8888" + path,
                                  headers={"Authorization": "Bearer " + key})
     with urllib.request.urlopen(req, timeout=10) as r:
@@ -224,7 +229,7 @@ def probe_400():
         data=json.dumps({"model": "any", "messages": [
             {"role": "user", "content": "a " * 150000}]}).encode(),
         headers={"Content-Type": "application/json",
-                 "Authorization": "Bearer " + os.environ.get("UNSLOTH_API_KEY", "")})
+                 "Authorization": "Bearer " + secret("UNSLOTH_API_KEY")})
     try:
         urllib.request.urlopen(req, timeout=30)
         return None
