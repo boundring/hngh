@@ -80,8 +80,10 @@ differing only in scope or payload collide."
 
 (defun read-line-form (stream)
   "Read one record from STREAM; a read error is a transport fault.
-Returns NIL at end of file."
-  (let ((eof (gensym "EOF")))
+Returns NIL at end of file. The #. reader macro is refused: stored
+lines are data, never code, so read-eval poisoning fails closed."
+  (let ((eof (gensym "EOF"))
+        (*read-eval* nil))
     (handler-case
         (let ((form (read stream nil eof)))
           (unless (eq form eof) form))

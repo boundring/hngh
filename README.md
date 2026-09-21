@@ -63,7 +63,7 @@ per-domain heads.
 ## Current state (2026-09-20)
 
 The kernel suite is machine-counted: `make test` reports
-"past 2,931 checks", and the doc-numbers guard fails when this line
+"past 2,932 checks", and the doc-numbers guard fails when this line
 drifts from the live suite.
 Full halt maintained after the 2026-09-20 halt review; federal charter
 proposed; automation-ng skeleton landing under `automation/ng/`.

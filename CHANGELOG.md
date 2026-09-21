@@ -4,6 +4,18 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-21
+
+#### Fixed
+
+- **Filesystem record transport refuses read-eval syntax**
+  (docs/records/2026-09-21-filesystem-read-eval-hardening.md):
+  `src/adapter/filesystem.lisp` `read-line-form` now binds
+  `*read-eval*` to NIL, so a store line carrying `#.` reader syntax is
+  refused as a TRANSPORT-FAULT instead of executing code at replay
+  time. Failing test first (`tests/adapter/test-filesystem.lisp`
+  read-eval check); `make test` green at 2,932 checks.
+
 ### 2026-09-20
 
 #### Added

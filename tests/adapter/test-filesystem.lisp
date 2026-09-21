@@ -172,6 +172,19 @@
 
 ;;; Purity --------------------------------------------------------------------
 
+(let* ((root (fresh-fs-root))
+       (store (hngh.adapters.filesystem:make-filesystem-store :root root)))
+  (hngh.adapters.filesystem:store-record-run store (fs-record-line "run-1" :creation))
+  (let ((file (first (directory (merge-pathnames "*.*" root)))))
+    (with-open-file (stream file :direction :output :if-exists :append
+                            :if-does-not-exist :create)
+      (write-string "#.42" stream)
+      (terpri stream))
+    (check (signals-transport-fault-p
+            (lambda () (hngh.adapters.filesystem:store-entries store)))
+           "a read-eval #. line is a transport fault, never evaluated")
+    (uiop:delete-directory-tree root :validate t)))
+
 (check (equal (list (package-name (find-package :cl)))
               (mapcar #'package-name
                       (package-use-list
