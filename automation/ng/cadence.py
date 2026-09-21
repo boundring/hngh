@@ -1,13 +1,16 @@
-"""Executive cadence driver: one beat classifies bead.ready, emits decisions."""
+"""Executive cadence driver: one beat polls bd for open beads, classifies, emits judgments."""
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import contract
+import state_emitter
 
 try:
     import jev
@@ -16,10 +19,8 @@ except ImportError:  # sibling lands in parallel; fail closed per-event
 
 BASE = Path(__file__).resolve().parent
 LEDGER = BASE / "ledger"
-EVENTS = LEDGER / "events.jsonl"
-VERSION = LEDGER / "version"
-CURSOR = LEDGER / "cadence.cursor.json"
 STATE = LEDGER / "cadence.state.json"
+REPO_ROOT = BASE.parents[1]  # bd runs only from a .beads-bearing git root
 
 LABELS = ("file", "retry", "escalate", "close")
 
@@ -96,47 +97,43 @@ def _attempt_cap() -> int:
         return 3
 
 
-def _version(d: Path) -> int:
+def _open_beads(repo_root: str) -> tuple[list[dict] | None, str]:
+    """Poll bd directly — beads are the ledger of record for work."""
     try:
-        return int((d / "version").read_text().strip())
-    except (OSError, ValueError):
-        return 0
+        p = subprocess.run(["bd", "list", "--json", "-n", "0"], cwd=repo_root,
+                           capture_output=True, text=True, timeout=60)
+        if p.returncode != 0:
+            return None, (p.stderr or p.stdout).strip() or f"exit {p.returncode}"
+        rows = json.loads(p.stdout)
+        if not isinstance(rows, list):
+            return None, "not a list"
+        return rows, ""
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+def _age_days(created_at: str) -> float:
+    try:
+        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        return round((datetime.now(timezone.utc) - dt).total_seconds() / 86400, 2)
+    except ValueError:
+        return 0.0
+
+
+def _bead_event(row: dict) -> dict:
+    """One bd row as a triage event. state_version 0: bd rows carry no
+    snapshot version; the stale-version check still guards future
+    event-sourced heads."""
+    return {"kind": "bead.ready", "state_version": 0,
+            "payload": {"id": row.get("id", ""), "title": row.get("title", ""),
+                        "status": row.get("status", ""),
+                        "age_days": _age_days(row.get("created_at", "")),
+                        "tier_hint": row.get("tier_hint", "")}}
 
 
 def _emit(d: Path, kind: str, payload: dict) -> contract.Event:
-    d.mkdir(parents=True, exist_ok=True)
-    ver = _version(d) + 1
-    (d / "version").write_text(str(ver))
-    evt = {"kind": kind, "state_version": ver, "payload": payload,
-           "created_at": time.time(), "refs": []}
-    with open(d / "events.jsonl", "a") as f:
-        f.write(json.dumps(evt) + "\n")
-    return contract.Event(kind=kind, state_version=ver, payload=payload)
-
-
-def _events(d: Path) -> list[dict]:
-    try:
-        lines = open(d / "events.jsonl").read().splitlines()
-    except OSError:
-        return []
-    out = []
-    for ln in lines:
-        try:
-            out.append(json.loads(ln))
-        except ValueError:
-            continue
-    return out
-
-
-def _cursor(d: Path) -> int:
-    try:
-        return int(json.loads((d / CURSOR.name).read_text()).get("last_version", 0))
-    except (OSError, ValueError, AttributeError):
-        return 0
-
-
-def _save_cursor(d: Path, ver: int) -> None:
-    (d / CURSOR.name).write_text(json.dumps({"last_version": ver}))
+    """Single writer: every judgment event goes through state_emitter."""
+    return state_emitter.append(kind, payload, ledger_dir=str(d))
 
 
 def _deferred(d: Path) -> list[dict]:
@@ -221,8 +218,9 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]
 
 
 def beat(ledger_dir=None, base_url=None, max_events: int = 16) -> list:
-    """One beat: re-ask deferred beads, then classify new bead.ready events.
-    Cursor advances per event; deferred beads stay eligible via STATE."""
+    """One beat: re-ask deferred beads, then classify open beads fresh
+    from the bd poll. Un-asked fresh beads stay due — the next beat's
+    poll redisCOVERS them; deferred beads stay eligible via STATE."""
     d = _dir(ledger_dir)
     old_url = os.environ.get("HNGH_JEV_URL")
     if base_url is not None:
@@ -237,21 +235,24 @@ def beat(ledger_dir=None, base_url=None, max_events: int = 16) -> list:
                 os.environ["HNGH_JEV_URL"] = old_url
 
 
-def _beat(d: Path, max_events: int) -> list:
+def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
     emitted: list = []
-    cur = _cursor(d)
     date, spent = _budget(d)
     cap = _token_cap()
     deferred = _deferred(d)
-    fresh = sorted((e for e in _events(d)
-                    if e.get("kind") == "bead.ready"
-                    and (e.get("state_version", 0) or 0) > cur),
-                   key=lambda e: e.get("state_version", 0))
+    rows, err = _open_beads(repo_root or str(REPO_ROOT))
+    if rows is None:
+        emitted.append(_emit(d, "state.error", {"error": err}))
+        rows = []
+    open_ids = {e["event"]["payload"].get("id", "") for e in deferred}
+    fresh = [{"event": _bead_event(r), "attempts": 0}
+             for r in rows if r.get("id") and r.get("status", "") == "open"
+             and r.get("id") not in open_ids]
     queue = [(en, True) for en in deferred] + \
-        [({"event": e, "attempts": 0}, False) for e in fresh]
-    # Deferred entries past the cap stay parked; fresh past the cap stay
-    # due via the cursor and are picked up next beat.
-    still: list[dict] = [entry for entry, is_def in queue[max_events:] if is_def]
+        [(en, False) for en in fresh]
+    # Deferred entries beyond the per-bead cap stay parked; fresh beyond
+    # it are re-discovered next beat.
+    still: list[dict] = [en for en, is_def in queue[max_events:] if is_def]
     rest = queue[:max_events]
     for i, (entry, is_deferred) in enumerate(rest):
         ev, attempts = entry["event"], entry["attempts"]
@@ -264,19 +265,16 @@ def _beat(d: Path, max_events: int) -> list:
             for e2, is_def2 in rest[i:]:
                 if is_def2:
                     still.append(e2)
-                else:
-                    still.append({"event": e2["event"], "attempts": e2["attempts"]})
             break  # stop asking for the rest of the beat
         if spent >= cap * _DEGRADE_FRAC and _tier(ev) != "T1":
-            # collapse-first degrade: non-T1 parks in STATE (the cursor may
-            # advance past it on a later T1, so fresh cannot stay cursor-due)
-            still.append(entry if is_deferred else {"event": ev, "attempts": attempts})
+            # collapse-first degrade: non-T1 stays un-asked; the next
+            # beat's bd poll or its deferred entry carries it forward
+            if is_deferred:
+                still.append(entry)
             continue
         used, park, tok = _handle(d, ev, attempts, emitted)
         spent += tok
         _save_budget(d, date, spent)
-        if not is_deferred:
-            _save_cursor(d, max(ev.get("state_version", cur) or cur, _cursor(d)))
         if park:  # triage.deferred lives in STATE now, not as a ledger kind
             still.append({"event": {k: v for k, v in ev.items() if k != "_attempts"},
                           "attempts": used})
@@ -287,52 +285,58 @@ def _dry_run() -> None:
     import tempfile
     from unittest import mock
 
+    def _row(bid, **kw):
+        r = {"id": bid, "title": bid, "status": "open", "created_at": ""}
+        r.update(kw)
+        return r
+
     def run_case(beads, answers, **kw):
         tmp = tempfile.TemporaryDirectory(prefix="cadence-case-")
         d = Path(tmp.name)
-        for b in beads:
-            _emit(d, "bead.ready", b)
-        sv = _version(d)
+        jev_fx = kw.get("jev_side_effect")
+        if "budget" in kw:
+            _save_budget(d, _today(), kw["budget"])
         seq = list(answers)
         fake = lambda q: seq.pop(0) if seq else contract.Answer(
             contract.Verdict.ESCALATE, "escalate", (), q.state_version)
-        with mock.patch.object(jev, "ask", side_effect=fake) if jev else _null_ctx():
+        with mock.patch.object(sys.modules[__name__], "_open_beads",
+                               return_value=(list(beads), "")), \
+                mock.patch.object(jev, "ask", side_effect=jev_fx or fake):
             out = beat(ledger_dir=d, max_events=kw.get("max_events", 16))
-        return tmp, d, out, sv
+        return tmp, d, out
 
     with tempfile.TemporaryDirectory(prefix="cadence-dry-") as tmp:
         d = Path(tmp)
-        _emit(d, "bead.ready", {"id": "b-1", "title": "demo", "age_days": 3})
         q0 = _question({"kind": "bead.ready", "state_version": 1,
                         "payload": {"id": "b-1", "title": "demo", "age_days": 3}})
         assert q0.head == "triage", q0
         assert set(q0.slots) == {"id", "title", "tier_hint", "age_days", "attempts"}, q0.slots
         assert tuple(q0.labels) == LABELS, q0.labels
-        stub = contract.Answer(contract.Verdict.DONE, "file", (), 1)
-        with mock.patch.object(jev, "ask", return_value=stub) if jev else _null_ctx():
-            out = beat(ledger_dir=d)
+        tmp, d, out = run_case([_row("b-1", title="demo")],
+                               [contract.Answer(contract.Verdict.DONE, "file", (), 0)])
         kinds = [e.kind for e in out]
         assert kinds == ["slice.proposed"], kinds
-        assert _cursor(d) == 1, _cursor(d)
         print(json.dumps([{"kind": e.kind, "state_version": e.state_version,
                            "payload": dict(e.payload)} for e in out]))
 
     # Stale verdict (answer bound to a different snapshot) escalates, never acts.
-    tmp, d, out, _ = run_case(
-        [{"id": "b-stale"}], [contract.Answer(contract.Verdict.DONE, "file", (), 999)])
+    tmp, d, out = run_case(
+        [_row("b-stale")], [contract.Answer(contract.Verdict.DONE, "file", (), 999)])
     assert [e.kind for e in out] == ["escalation.filed"], out
     assert out[0].payload["reason"] == "stale-version", out[0].payload
     tmp.cleanup()
 
     # Uncertain parks the bead in STATE (no triage.deferred ledger kind);
     # the second beat re-asks with attempts=1 and files on success.
-    tmp, d, out, _ = run_case(
-        [{"id": "b-u"}], [contract.Answer(contract.Verdict.UNCERTAIN, None, (), 1)])
+    tmp, d, out = run_case(
+        [_row("b-u")], [contract.Answer(contract.Verdict.UNCERTAIN, None, (), 0)])
     assert out == [], out
     assert len(_deferred(d)) == 1 and _deferred(d)[0]["attempts"] == 1, _deferred(d)
-    assert _cursor(d) == 1, _cursor(d)  # per-event cursor advanced past b-u
+    # Second beat: bd poll returns nothing new; b-u comes back via deferred.
     with mock.patch.object(jev, "ask",
-                            return_value=contract.Answer(contract.Verdict.DONE, "file", (), 1)):
+                           return_value=contract.Answer(contract.Verdict.DONE, "file", (), 0)), \
+            mock.patch.object(sys.modules[__name__], "_open_beads",
+                              return_value=([], "")):
         out2 = beat(ledger_dir=d)
     assert [e.kind for e in out2] == ["slice.proposed"], out2
     assert _deferred(d) == [], _deferred(d)
@@ -341,12 +345,14 @@ def _dry_run() -> None:
     # Attempt cap: retry parks until HNGH_ATTEMPT_CAP, then escalates.
     os.environ["HNGH_ATTEMPT_CAP"] = "2"
     try:
-        tmp, d, out, _ = run_case(
-            [{"id": "b-r"}], [contract.Answer(contract.Verdict.DONE, "retry", (), 1)])
+        tmp, d, out = run_case(
+            [_row("b-r")], [contract.Answer(contract.Verdict.DONE, "retry", (), 0)])
         assert [e.kind for e in out] == ["slice.retry"], out
         with mock.patch.object(
                 jev, "ask",
-                return_value=contract.Answer(contract.Verdict.DONE, "retry", (), 1)):
+                return_value=contract.Answer(contract.Verdict.DONE, "retry", (), 0)), \
+                mock.patch.object(sys.modules[__name__], "_open_beads",
+                                  return_value=([], "")):
             out2 = beat(ledger_dir=d)
         assert [e.kind for e in out2] == ["escalation.filed"], out2
         assert out2[0].payload["reason"] == "attempts-exhausted", out2[0].payload
@@ -356,61 +362,45 @@ def _dry_run() -> None:
     tmp.cleanup()
 
     # Label map: close -> bead.close; escalate -> escalation.filed.
-    tmp2 = tempfile.TemporaryDirectory(prefix="cadence-case-")
-    d2 = Path(tmp2.name)
-    _emit(d2, "bead.ready", {"id": "b-c"})
-    _emit(d2, "bead.ready", {"id": "b-e"})
-    v1 = _version(d2) - 1  # b-c's snapshot; b-e is at _version(d2)
-    seq = [contract.Answer(contract.Verdict.DONE, "close", (), v1),
-           contract.Answer(contract.Verdict.ESCALATE, "escalate", (), _version(d2))]
-    with mock.patch.object(jev, "ask", side_effect=lambda q: seq.pop(0)):
-        out = beat(ledger_dir=d2)
+    tmp, d, out = run_case(
+        [_row("b-c"), _row("b-e")],
+        [contract.Answer(contract.Verdict.DONE, "close", (), 0),
+         contract.Answer(contract.Verdict.ESCALATE, "escalate", (), 0)])
     assert [e.kind for e in out] == ["bead.close", "escalation.filed"], out
-    assert _cursor(d2) == v1 + 1, (_cursor(d2), v1)  # cursor rests on last bead.ready
-    tmp2.cleanup()
+    tmp.cleanup()
 
     # Budget: tiny cap refuses before asking (no ask calls), one escalation.
     os.environ["HNGH_JEV_DAILY_INPUT_TOKEN_CAP"] = "1"
     try:
-        tmp3 = tempfile.TemporaryDirectory(prefix="cadence-case-")
-        d3 = Path(tmp3.name)
-        _emit(d3, "bead.ready", {"id": "b-cap"})
-        with mock.patch.object(jev, "ask",
-                               side_effect=AssertionError("ask must not run")):
-            out = beat(ledger_dir=d3)
+        tmp, d, out = run_case(
+            [_row("b-cap")],
+            [contract.Answer(contract.Verdict.ESCALATE, "escalate", (), 0)],
+            jev_side_effect=AssertionError("ask must not run"))
         assert [e.kind for e in out] == ["escalation.filed"], out
         assert out[0].payload["reason"] == "budget-exhausted", out[0].payload
-        assert len(_deferred(d3)) == 1 and _deferred(d3)[0]["attempts"] == 0, _deferred(d3)
-        tmp3.cleanup()
+        # The skipped fresh bead is not parked; the next beat's poll re-finds it.
+        assert _deferred(d) == [], _deferred(d)
+        tmp.cleanup()
     finally:
         os.environ.pop("HNGH_JEV_DAILY_INPUT_TOKEN_CAP", None)
 
     # Degrade: at >=80% only T1 asks; spend persists in STATE.
     os.environ["HNGH_JEV_DAILY_INPUT_TOKEN_CAP"] = "1000"
     try:
-        tmp4 = tempfile.TemporaryDirectory(prefix="cadence-case-")
-        d4 = Path(tmp4.name)
-        _save_budget(d4, _today(), 800)
-        _emit(d4, "bead.ready", {"id": "b-t2", "tier_hint": "T2"})
-        _emit(d4, "bead.ready", {"id": "b-t1", "tier_hint": "T1"})
-        seq = [contract.Answer(contract.Verdict.DONE, "file", (), 2, 10)]
-        with mock.patch.object(jev, "ask", side_effect=lambda q: seq.pop(0)):
-            out = beat(ledger_dir=d4)
+        tmp, d, out = run_case(
+            [_row("b-t2", tier_hint="T2"), _row("b-t1", tier_hint="T1")],
+            [contract.Answer(contract.Verdict.DONE, "file", (), 0, 10)],
+            budget=800)
         assert [e.kind for e in out] == ["slice.proposed"], out
         assert out[0].payload["bead"] == "b-t1", out[0].payload
-        _, spent = _budget(d4)
+        _, spent = _budget(d)
         assert spent == 810, spent  # 800 + the one T1 ask's 10 tokens
-        assert len(_deferred(d4)) == 1 and _deferred(d4)[0]["event"]["payload"]["id"] == "b-t2", _deferred(d4)
-        assert _cursor(d4) == 2, _cursor(d4)  # T1 at sv2 done; skipped T2 (sv1) re-read next beat
-        tmp4.cleanup()
+        # The degraded T2 stays un-asked, not parked; next beat re-polls it.
+        assert _deferred(d) == [], _deferred(d)
+        tmp.cleanup()
     finally:
         os.environ.pop("HNGH_JEV_DAILY_INPUT_TOKEN_CAP", None)
     print("cadence self-check ok")
-
-
-class _null_ctx:
-    def __enter__(self): return None
-    def __exit__(self, *a): return False
 
 
 if __name__ == "__main__":
