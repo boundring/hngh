@@ -30,7 +30,7 @@ PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
        "params.sh", "context-pack.sh", "launch-session.sh",
-       "model.sh", "failfirst.sh")
+       "model.sh", "failfirst.sh", "memory-gate.sh")
 
 OMP_STUB = ('#!/usr/bin/env bash\n'
             'printf "%s\\n" "$*" >> "$MARKER"\n'
@@ -102,6 +102,7 @@ class BctxLaunch(unittest.TestCase):
                     HNGH_HOME=str(self.kernel),
                     OVERNIGHT_LOCK=str(self.td / "cycle.lock"),
                     OVERNIGHT_TIMEOUT="5",
+                    HNGH_RAM_FLOOR_MB="1",
                     FAILFIRST_STATE_DIR=str(self.td / "ff"))
         full.update(env)
         return subprocess.run(
