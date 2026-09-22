@@ -8,3 +8,7 @@ at 2026-09-22T10:00:22Z. Alert text: 2. "Quiet, evidence-first" in Display regis
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-22T11:00:22Z re-occurred (dedup window expired)
