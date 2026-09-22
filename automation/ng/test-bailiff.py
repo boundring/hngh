@@ -75,8 +75,8 @@ ck("clean ledger stdout", "bailiff: clean", r.stdout.strip())
 
 # 2) stale verdicts 100 versions apart -> halt, rc 1
 stale = ledger_with(
-    event("bead.ready", "v00000001", "b1"),
-    event("bead.ready", "v00000100", "b2"),
+    event("triage.verdict", "v00000001", "b1"),
+    event("triage.verdict", "v00000100", "b2"),
 )
 r = watch({"HNGH_LEDGER_DIR": stale}, "--bailiff")
 ck("stale ledger rc 1", 1, r.returncode)

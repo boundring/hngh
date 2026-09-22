@@ -87,6 +87,8 @@ def observe(ledger_path: object = EVENTS, n: int = 200) -> list[contract.Event]:
 
 def stale_verdict(ev: contract.Event, current: int = 0, threshold: int = STALE_THRESHOLD,
                   ) -> contract.Event | None:
+    if ev.kind not in PENDING_STALE_KINDS:
+        return None
     if current - _vnum(ev.state_version) > threshold:
         return contract.Event("audit.finding", f"v{current:08d}",
                               {"check": "stale_verdict", "kind": ev.kind,
@@ -107,6 +109,12 @@ def unread_burst(counts: Counter, limit: int = BURST_LIMIT,
 
 
 CHECKS = ("stale_verdict", "unread_burst")
+
+# ponytail: stale means "an open judgment was never consumed". Judgment
+# records (escalations, slices, closes) are history — deferred work lives
+# in cadence STATE, not the ledger — so only pending-judgment kinds may
+# age out. Hook for the charter's triage.verdict kind (not yet emitted).
+PENDING_STALE_KINDS = ("triage.verdict",)
 
 
 def audit(events: list[contract.Event] | None = None, threshold: int = STALE_THRESHOLD,
@@ -142,13 +150,13 @@ if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--bailiff":
     sys.exit(1 if fs else 0)
 
 if __name__ == "__main__":
-    evs = [contract.Event("bead.ready", "v00000001", {"id": "b1"}, 1.0, ("b1",)),
-           contract.Event("bead.ready", "v00000100", {"id": "b2"}, 2.0, ("b2",)),
+    evs = [contract.Event("triage.verdict", "v00000001", {"id": "b1"}, 1.0, ("b1",)),
+           contract.Event("triage.verdict", "v00000100", {"id": "b2"}, 2.0, ("b2",)),
            contract.Event("bead.changed", "v00000100", {"id": "b2"}, 3.0, ("b2",))]
     # current=100, threshold=50: only the v1 event is stale; per-kind counts < burst limit.
     found = audit(evs, threshold=50, limit=100)
     assert len(found) == 1 and found[0].kind == "audit.finding", found
-    assert found[0].payload == {"check": "stale_verdict", "kind": "bead.ready",
+    assert found[0].payload == {"check": "stale_verdict", "kind": "triage.verdict",
                                 "event_version": "v00000001",
                                 "current_version": "v00000100"}, found[0].payload
     print("watch self-check: 1 finding as expected")

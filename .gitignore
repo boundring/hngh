@@ -16,6 +16,7 @@ docs/project/report-bodies/
 # repo-merge-consideration); mirrors hngh-automation .gitignore
 automation/STATE.md
 automation/agent-handoffs.md
+automation/ng/ledger/
 automation/dashboard/
 automation/logs/
 automation/archive/

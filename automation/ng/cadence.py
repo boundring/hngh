@@ -218,6 +218,13 @@ def _save_deferred(d: Path, entries: list[dict]) -> None:
     st["deferred"] = entries
     _write_state(d, st)
 
+
+def _exhausted(d: Path) -> list[str]:
+    """Beads that hit the attempt cap: dropped from the loop until they
+    leave bd's open set (halt condition for the escalation lanes)."""
+    got = _state(d).get("exhausted", [])
+    return got if isinstance(got, list) else []
+
 def _question(ev: dict) -> "contract.Question":
     pay = ev.get("payload", {})
     attempts = ev.get("_attempts", pay.get("attempts", 0))
@@ -236,7 +243,8 @@ def _verdict_of(ans) -> str:
 
 
 def _handle(d: Path, ev: dict, attempts: int, emitted: list,
-            base_url: str | None = None, is_def: bool = False
+            base_url: str | None = None, is_def: bool = False,
+            exhausted: set | None = None
             ) -> tuple[int, bool, int, bool]:
     """Ask Jev for one event, emit the mapped action.
     Returns (attempts used, park-for-revisit, input tokens, stop-beat).
@@ -260,7 +268,13 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list,
     if getattr(ans, "state_version", ev_sv) != ev_sv:
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "stale-version"}))
-        return attempts + 1, False, tok, False
+        if attempts + 1 >= cap:  # cap persistent misbinding before it loops spend
+            emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
+                                                        "reason": "attempts-exhausted"}))
+            if exhausted is not None:
+                exhausted.add(bid)
+            return attempts + 1, False, tok, False
+        return attempts + 1, True, tok, False
     v = _verdict_of(ans)
     label = str(getattr(ans, "label", "") or "").lower()
     done = getattr(contract.Verdict.DONE, "value", "done")
@@ -279,18 +293,30 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list,
         if attempts + 1 >= cap:  # ponytail: flat cap, per-bead budgets if beads starve
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
+            if exhausted is not None:
+                exhausted.add(bid)
             return attempts + 1, False, tok, False
         else:
             emitted.append(_emit(d, "slice.retry", {"bead": bid, "attempts": attempts + 1}))
             return attempts + 1, True, tok, False
     elif "escalate" in (v, label):
+        if attempts + 1 >= cap:
+            emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
+                                                        "reason": "attempts-exhausted"}))
+            if exhausted is not None:
+                exhausted.add(bid)
+            return attempts + 1, False, tok, False
+        # Park: attempts must accumulate through STATE, or a Jev "escalate"
+        # re-fires fresh every beat forever (no halt condition).
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-escalate"}))
-        return attempts + 1, False, tok, False
+        return attempts + 1, True, tok, False
     else:  # uncertain / unknown label: park for revisit until the cap, then escalate
         if attempts + 1 >= cap:
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
+            if exhausted is not None:
+                exhausted.add(bid)
             return attempts + 1, False, tok, False
         return attempts + 1, True, tok, False
 
@@ -322,11 +348,16 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
     if rows is None:
         emitted.append(_emit(d, "state.error", {"error": err}))
         rows = []
+    exhausted = set(_exhausted(d))
+    if rows is not None:  # purge only on a healthy poll — never wipe on bd fault
+        exhausted &= {r.get("id", "") for r in rows}
     open_ids = {e["event"]["payload"].get("id", "") for e in deferred}
+    open_ids |= exhausted
     fresh = [{"event": _bead_event(r), "attempts": 0}
              for r in rows if r.get("id") and r.get("status", "") == "open"
              and r.get("id") not in open_ids]
-    queue = [(en, True) for en in deferred] + \
+    queue = [(en, True) for en in deferred
+             if en["event"]["payload"].get("id", "") not in exhausted] + \
         [(en, False) for en in fresh]
     # Deferred entries beyond the per-bead cap stay parked; fresh beyond
     # it are re-discovered next beat.
@@ -358,7 +389,8 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
                 still.append(entry)
             continue
         used, park, tok, stop = _handle(d, ev, attempts, emitted,
-                                        base_url=leg_url, is_def=is_deferred)
+                                        base_url=leg_url, is_def=is_deferred,
+                                        exhausted=exhausted)
         spent += tok
         _save_budget(d, date, spent)
         if park:  # triage.deferred lives in STATE now, not as a ledger kind
@@ -370,6 +402,9 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
                     still.append(e2)
             break
     _save_deferred(d, still)
+    st = _state(d)
+    st["exhausted"] = sorted(exhausted)
+    _write_state(d, st)
     return emitted
 
 def _dry_run() -> None:
@@ -458,6 +493,48 @@ def _dry_run() -> None:
         [contract.Answer(contract.Verdict.DONE, "close", (), 0),
          contract.Answer(contract.Verdict.ESCALATE, "escalate", (), 0)])
     assert [e.kind for e in out] == ["bead.close", "escalation.filed"], out
+    tmp.cleanup()
+
+    # Escalate parks with accumulating attempts; at the cap one final
+    # attempts-exhausted escalation, then the bead leaves the loop
+    # (halt condition) until the bead closes and the exhausted set purges.
+    os.environ["HNGH_ATTEMPT_CAP"] = "2"
+    try:
+        tmp, d, out = run_case(
+            [_row("b-x")],
+            [contract.Answer(contract.Verdict.ESCALATE, "escalate", (), 0)])
+        assert [e.kind for e in out] == ["escalation.filed"], out
+        assert out[0].payload["reason"] == "jev-escalate", out[0].payload
+        assert len(_deferred(d)) == 1 and _deferred(d)[0]["attempts"] == 1, _deferred(d)
+        with mock.patch.object(
+                jev, "ask",
+                return_value=contract.Answer(contract.Verdict.ESCALATE, "escalate", (), 0)), \
+                mock.patch.object(sys.modules[__name__], "_open_beads",
+                                  return_value=([_row("b-x")], "")):
+            out2 = beat(ledger_dir=d)
+        assert [e.kind for e in out2] == ["escalation.filed"], out2
+        assert out2[0].payload["reason"] == "attempts-exhausted", out2[0].payload
+        assert _deferred(d) == [], _deferred(d)
+        assert _state(d).get("exhausted") == ["b-x"], _state(d).get("exhausted")
+        # Third beat: the exhausted bead is skipped — no ask, no events.
+        with mock.patch.object(
+                jev, "ask",
+                side_effect=AssertionError("exhausted bead must not be asked")), \
+                mock.patch.object(sys.modules[__name__], "_open_beads",
+                                  return_value=([_row("b-x")], "")):
+            out3 = beat(ledger_dir=d)
+        assert out3 == [], out3
+        assert _state(d).get("exhausted") == ["b-x"], _state(d).get("exhausted")
+        # Purge: once the bead leaves bd's open set the halt unblocks.
+        with mock.patch.object(jev, "ask",
+                               side_effect=AssertionError("no beads, no ask")), \
+                mock.patch.object(sys.modules[__name__], "_open_beads",
+                                  return_value=([], "")):
+            out4 = beat(ledger_dir=d)
+        assert out4 == [], out4
+        assert _state(d).get("exhausted") == [], _state(d).get("exhausted")
+    finally:
+        os.environ.pop("HNGH_ATTEMPT_CAP", None)
     tmp.cleanup()
 
     # Budget: tiny cap refuses before asking (no ask calls), one escalation.

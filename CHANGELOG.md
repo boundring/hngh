@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **Federal-branches occupancy, slice 1: bailiff wire + executive guard +
+  bead intake** (docs/records/2026-09-22-federal-branches-landing.md):
+  the charter's missing bailiff is wired — `ng/watch.py --bailiff` audits
+  the ng judgment ledger, `bailiff.sh` halts all cadence tiers on
+  findings (fail-open on fault, belt-not-system-of-record), and the hour
+  tier polls beads directly (`25-bead-beat.sh` → `ng/cadence.py` beat)
+  with Jev triage, dispatch ceilings, attempt caps with
+  `STATE.exhausted` halt, and escalations surfaced to the operator
+  ledger in the same beat (`ng/surface_escalations.py`). Jcode spawns
+  now pass a node/depth cap guard (`jcode_guard.py`, spawn refused rc
+  75). Stale-verdict scope narrowed to pending-judgment kinds so the
+  hourly beat cannot trip the bailiff on its own history.
+
 - Router alert class channel landed: `report-queue --class critical`
   (durable `class:` meta + visible `class-upgrade:` re-fire rows,
   ceremony commit), router feed excludes critical-class/first-line
