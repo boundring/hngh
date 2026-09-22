@@ -35,6 +35,9 @@ sudo systemctl daemon-reload
 ```
 Kills the worst cgroup at 60% PSI sustained ~1min. Fallback: earlyoom if oomd too
 passive. Likely prevents both past crashes alone.
+- LANDED 2026-09-22 (operator-landed): `sudo systemctl enable --now
+  systemd-oomd` done, `oomctl` verified active, systemd defaults kept
+  (no oomd.conf drop-in added).
 
 ### P2 — cap unsloth-studio (user unit, NO sudo, machine-lane OK)
 1. Measure first: `systemd-cgtop -1`, `journalctl -u unsloth-studio` over a normal day.

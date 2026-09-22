@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-09-22
+
+- RAM gate trip alert telemetry (7fd8e543): a `memory_gate` trip below
+  the RAM floor files one deduped report-queue alert row (identity
+  `ram-gate:trip`, window 86400) through notify-email's `alert_row` —
+  previously silent gate trips become visible operator telemetry; the
+  cadence/overnight halt itself remains STOP=1. Record:
+  docs/records/2026-09-22-oom-p3-ram-gate-alert.md.
+
+- Research sweep self-heal (d1a134c3): the research-tsv-path-sweep's
+  orphaned `--apply` mode is wired into the hour cadence
+  (`research-sweep-selfheal.sh` called by `33-research-beat.sh`), so
+  committed rows with raw home tokens back-redact within the hour
+  instead of red-gating `make test`; dirty working-tree leaks and
+  operator-staged work refuse the heal commit. Record:
+  docs/records/2026-09-22-research-sweep-selfheal.md.
+
+- Research TSV schema contracts at gate time (b6c4b1da): new
+  `tests/test-research-schema.py` feeds hermetic tmpdir TSVs through
+  the real research-routes parser plus live contracts on the real
+  research TSVs — schema drift now reds `make test` instead of
+  surfacing as a quietly-wrong routes payload. Record:
+  docs/records/2026-09-22-crumbs-db-schema-contracts.md.
+
+- STATE.md crumbs sqlite mirror + 1m sync drop-in (8b0a4cac):
+  `lib/crumbs-db.py` imports complete `ts | job | event | detail` lines
+  past a byte-offset watermark into `state/crumbs.db` (WAL, additive
+  only, fail-open) — a derived index only; `automation/cadence/1m/
+  15-crumbs-sync.sh` keeps it warm; the orphaned
+  test-breadcrumb-single-line.py is now gate-registered. Record:
+  docs/records/2026-09-22-crumbs-db-schema-contracts.md.
+
 ## 2026-09-20
 
 - gemini burst cap enforcement (burst-only 2026-09-19, now live): the

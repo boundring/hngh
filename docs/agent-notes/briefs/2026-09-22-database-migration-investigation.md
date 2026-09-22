@@ -1,6 +1,16 @@
 # Database migration investigation — hngh plaintext journals (2026-09-22)
 
-Status: investigation complete; advisory pending operator review.
+Status: landed-in-part (2026-09-22) — slice A (research TSV schema
+contracts at gate time, b6c4b1da) and slice B (STATE.md crumbs sqlite
+mirror, 8b0a4cac) landed and pushed. Remaining recommendations await
+consumption evidence: the DB-as-source writer-flip (rec 2) waits for a
+consumer to prove the store; Tier 0/3 stay plaintext (rec 3).
+
+- LANDED 2026-09-22: slices A+B landed and pushed — schema contracts at
+  gate time (b6c4b1da, tests/test-research-schema.py) and the STATE.md
+  crumbs sqlite mirror (8b0a4cac, lib/crumbs-db.py + 1m sync drop-in);
+  record docs/records/2026-09-22-crumbs-db-schema-contracts.md.
+
 Method: three read-only scouts over the live repo (SurfaceInventory hi-effort,
 ConsumerCoupling, PrecedentScan; 8–18 min each). Raw payloads:
 `agent://SurfaceInventory`, `agent://ConsumerCoupling`, `agent://PrecedentScan`
