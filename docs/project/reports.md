@@ -4163,16 +4163,16 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-22T01:23:24Z | progress | d4c9685e | hygiene: 25 zombie Active session file(s) >24h old (oldest 152h); report-only v1; e.g. session_deer_1789709938507_8eebfffc0824ad02.json ×2 | 2026-09-22T01:23:24Z-progress-d4c9685e.md |
 | 2026-09-22T01:23:24Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 ×2 | 2026-09-22T01:23:24Z-progress-adcaae87.md |
 | 2026-09-22T01:23:24Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md ×2 | 2026-09-22T01:23:24Z-progress-0e221d65.md |
-| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×12 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
-| 2026-09-22T01:31:21Z | alert | 500a0802 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=522845s > 28800s ×23 | 2026-09-22T01:31:21Z-alert-500a0802.md |
+| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×13 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
+| 2026-09-22T01:31:21Z | alert | 500a0802 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=522845s > 28800s ×24 | 2026-09-22T01:31:21Z-alert-500a0802.md |
 | 2026-09-22T01:31:21Z | alert | 0e6a28bc | patrol handoffs: bad-execution on agent-handoffs.md -- 7 dead/cancelled in last 10 rows ×2 | 2026-09-22T01:31:21Z-alert-0e6a28bc.md |
 | 2026-09-22T01:31:21Z | alert | c16c59bf | patrol automation-gate: gate-red on hngh-automation -- hngh-automation: make test rc=2 | 2026-09-22T01:31:21Z-alert-c16c59bf.md |
-| 2026-09-22T01:31:21Z | alert | 9ec63586 | patrol manga: manga-stale on manga -- newest draft 203h old > 48h ×12 | 2026-09-22T01:31:21Z-alert-9ec63586.md |
+| 2026-09-22T01:31:21Z | alert | 9ec63586 | patrol manga: manga-stale on manga -- newest draft 203h old > 48h ×13 | 2026-09-22T01:31:21Z-alert-9ec63586.md |
 | 2026-09-22T01:31:21Z | alert | 4192a5f9 | patrol research-ledger: harvest-stale on research-lessons.tsv -- 1 adopted disposition(s) in the last 6h without a fresh lesson row: synth-2026-09-20-1 | 2026-09-22T01:31:21Z-alert-4192a5f9.md |
 | 2026-09-22T01:31:21Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-22T01:31:21Z-alert-c4a1f47d.md |
 | 2026-09-22T01:31:21Z | alert | 275d5702 | patrol github-ci: bad-execution on github-actions-latest -- latest run 1cd8e15 concluded failure -- https://github.com/boundring/hngh/actions/runs/35675512546 ×15 | 2026-09-22T01:31:21Z-alert-275d5702.md |
 | 2026-09-22T01:31:21Z | alert | 7ca0bfb1 | patrol journal-error: unclaimed-err on unknown-journal-error -- 97 err+ line(s) no signature claims; latest: Bluetooth: hci0: ACL packet for unknown connection handle 3837 | 2026-09-22T01:31:21Z-alert-7ca0bfb1.md |
-| 2026-09-22T01:31:21Z | alert | 80488d9c | patrol pending-checks: check-pending on correction-f6 -- check:correction-f6 awaiting promotion (tier 30m): something looks off ×138 | 2026-09-22T01:31:21Z-alert-80488d9c.md |
+| 2026-09-22T01:31:21Z | alert | 80488d9c | patrol pending-checks: check-pending on correction-f6 -- check:correction-f6 awaiting promotion (tier 30m): something looks off ×144 | 2026-09-22T01:31:21Z-alert-80488d9c.md |
 | 2026-09-22T01:31:24Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-22T01:31:24Z-progress-ebb46dea.md |
 | 2026-09-22T01:35:02Z | alert | 8678e737 | agent-stall omp-2026-09-20T16-52-08-505Z_01a-5a215b: stalled, last tool-call 18m ago (awaiting-operator: transcript ends asking the operator) ×32 | 2026-09-22T01:35:02Z-alert-8678e737.md |
 | 2026-09-22T02:00:21Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-22T02:00:21Z-progress-ebb46dea.md |
@@ -4288,3 +4288,5 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-22T12:00:22Z | progress | a034a03d | router routed beat-parked:2026-09-09-rehearsal-lane -> plan candidate 2026-09-22-routed-beat-parked-2026-09-09-rehearsal-lane (routed-at 2026-09-22T12:00:22Z) | 2026-09-22T12:00:22Z-progress-a034a03d.md |
 | 2026-09-22T12:00:22Z | progress | 32cee74d | router routed overnight:dev-synth-bad:2026-09-22 -> plan candidate 2026-09-22-routed-overnight-dev-synth-bad-2026-09-22 (routed-at 2026-09-22T12:00:22Z) | 2026-09-22T12:00:22Z-progress-32cee74d.md |
 | 2026-09-22T12:30:23Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-22T12:30:23Z-progress-ebb46dea.md |
+| 2026-09-22T12:40:00Z | alert | a4af7e9f | [oversight] slow-unit: hngh-cadence-1m.service wall=25.7s median=12.0s | 2026-09-22T12:40:00Z-alert-a4af7e9f.md |
+| 2026-09-22T12:40:00Z | alert | b9e1f8b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=25.5s median=11.9s | 2026-09-22T12:40:00Z-alert-b9e1f8b4.md |
