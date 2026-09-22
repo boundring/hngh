@@ -1,18 +1,18 @@
 {
   "preset": "hngh",
-  "gen": 1,
+  "gen": 3,
   "grade": "10/10",
-  "seed": 2983423,
+  "seed": 2983429,
   "fields": {
     "primary": "#5af78e",
-    "secondary": "#3d9c80",
+    "secondary": "#3d9c78",
     "accent": "#5af78e",
     "foreground": "#c8d0d8",
-    "background": "#0b0e11",
+    "background": "#0b1611",
     "surface": "#11151a",
     "panel": "#14181e",
     "warning": "#e6b450",
-    "error": "#d86c6c",
+    "error": "#e0746c",
     "success": "#5af78e",
     "dark": true
   }
