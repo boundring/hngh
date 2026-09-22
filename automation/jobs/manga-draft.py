@@ -39,10 +39,23 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 from xml.sax.saxutils import escape
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SUBMITTER = os.path.join(ROOT, "jobs", "imagegen-submit.sh")
+
+
+def _shellout(argv):
+    """Run argv directly (no shell); exec failure is a leg-down 127."""
+    try:
+        return subprocess.run(argv, check=False,
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode
+    except OSError as exc:
+        print("manga-draft: %s: %s" % (argv[0], exc), file=sys.stderr)
+        return 127
 STYLES_TSV = os.path.join(ROOT, "config", "imagegen-styles.tsv")
 PANEL_SVG = os.path.join(ROOT, "config", "manga-panel.svg")
 DRAMA_LABEL = "[DRAMATIZATION - procedural gag, not a real quote]"
@@ -841,11 +854,8 @@ def main(argv):
         print("manga-draft: rendered %s" % args.render, file=sys.stderr)
 
     if args.image and plan["image_prompt"]:
-        os.system(  # ponytail: one bounded shell-out; subprocess if this grows
-            "%s --style manga-panel --subject %s"
-            % (os.path.join(ROOT, "jobs", "imagegen-submit.sh"),
-               json.dumps(plan["scene"]))
-        )
+        _shellout([SUBMITTER, "--style", "manga-panel",
+                   "--subject", plan["scene"]])
 
     script = script_for(plan)
     wf = wireframe_svg(plan, script)
@@ -880,14 +890,12 @@ def main(argv):
                 out_png = os.path.join(
                     comp_dir, "%s.png" % p["region"].replace(":", "-"))
                 before = set(os.listdir(comp_dir))
-                rc = os.system(  # ponytail: bounded shell-out per region
-                    "%s --style manga-panel --subject %s --out-dir %s "
-                    "--timeout 180"
-                    % (os.path.join(ROOT, "jobs", "imagegen-submit.sh"),
-                       json.dumps(p["prompt"]), json.dumps(comp_dir))
-                    # imagegen names files <style>-<ts>.png; keep the
-                    # region name as the contract for assembly.
-                )
+                # imagegen names files <style>-<ts>.png; keep the
+                # region name as the contract for assembly.
+                rc = _shellout([SUBMITTER, "--style", "manga-panel",
+                                "--subject", p["prompt"],
+                                "--out-dir", comp_dir,
+                                "--timeout", "180"])
                 for fn in sorted(set(os.listdir(comp_dir)) - before):
                     if fn.endswith(".png"):
                         os.replace(os.path.join(comp_dir, fn), out_png)
@@ -908,8 +916,7 @@ def main(argv):
             fh.write(final)
         print("manga-draft: assembled %s" % args.assemble, file=sys.stderr)
         if panel:
-            os.system("rsvg-convert -o %s %s 2>/dev/null || true"
-                      % (png_out, args.assemble))  # ponytail: best-effort raster
+            _shellout(["rsvg-convert", "-o", png_out, args.assemble])
             # publish the review pair the standing review + dispatch
             # read: stages are the work, the pair is the publication.
             # Under the hngh home the pair stays in the working dir as

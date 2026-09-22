@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 import re
+import stat
 import sys
 import tempfile
 import unittest
@@ -587,6 +588,156 @@ class TestHnghHome(unittest.TestCase):
         pair = os.path.join(self.home, "manga", "latest-draft")
         self.assertTrue(os.path.isfile(pair + ".json"))
         self.assertTrue(os.path.isfile(pair + ".svg"))
+
+
+MARK1 = "shellout-canary-command-substitution"
+MARK2 = "shellout-canary-backtick"
+MARK3 = "shellout-canary-word-split"
+
+
+def _shellout_mod(name):
+    return _load(name, "jobs/manga-draft.py")
+
+
+class TestShelloutContract(unittest.TestCase):
+    """Shell-outs take argv lists, never '%s'-formatted shell strings.
+
+    Submitter text is model-adjacent (cast-sheet appearance feeds the
+    component prompts; banks and cast.json are editable content), so
+    os.system("... %s" % json.dumps(text)) is a command-injection hole:
+    json.dumps only double-quote-wraps, leaving $( ), backticks, and
+    $VAR live under /bin/sh. Contract: exec the submitter directly with
+    an argument list so adversarial text arrives as ONE literal argument
+    and is never interpreted by a shell."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="manga-shellout-")
+        self.home = os.path.join(self.tmp, "home")
+        self.out_dir = os.path.join(self.home, "manga")
+        self.bin_dir = os.path.join(self.tmp, "bin")
+        os.makedirs(self.bin_dir)
+        os.makedirs(self.out_dir)
+        os.environ["HNGH_HOME_DIR"] = self.home
+        self.addCleanup(os.environ.pop, "HNGH_HOME_DIR", None)
+        self.mark1 = os.path.join(self.tmp, MARK1)
+        self.mark2 = os.path.join(self.tmp, MARK2)
+        self.mark3 = os.path.join(self.tmp, MARK3)
+        # EVIL exercises command substitution AND backticks against the
+        # real /bin/sh path; if either executes, the canary files exist.
+        self.evil = "$(touch %s) `touch %s`" % (self.mark1, self.mark2)
+        # Stub submitter (patched in as SUBMITTER) + raster stub (found
+        # on PATH): both append their joined argv to a log. Under
+        # os.system the adversarial text is shell-expanded before any
+        # process sees it; under an argv list it arrives verbatim and
+        # no canary file is ever created.
+        self.stub = os.path.join(self.bin_dir, "imagegen-submit.sh")
+        self.rsvg = os.path.join(self.bin_dir, "rsvg-convert")
+        body = ("#!/bin/sh\n"
+                "printf '%s\\n' \"$*\" >> \"$MANGA_STUB_LOG\"\n")
+        for exe in (self.stub, self.rsvg):
+            with open(exe, "w", encoding="utf-8") as fh:
+                fh.write(body)
+            os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+        self.log = os.path.join(self.tmp, "stub.log")
+        open(self.log, "w").close()
+
+    def _run(self, extra, mod):
+        argv = ["manga-draft.py",
+                "--item", ITEM_TEXT,
+                "--panel-dir", self.out_dir] + extra
+        old_path = os.environ["PATH"]
+        os.environ["PATH"] = self.bin_dir + os.pathsep + old_path
+        os.environ["MANGA_STUB_LOG"] = self.log
+        try:
+            rc = mod.main(argv)
+        finally:
+            os.environ["PATH"] = old_path
+            os.environ.pop("MANGA_STUB_LOG", None)
+        return rc
+
+    def _lines(self):
+        with open(self.log, encoding="utf-8") as fh:
+            return [ln.rstrip("\n") for ln in fh if ln.strip()]
+
+    def assert_no_canary(self):
+        self.assertFalse(os.path.exists(self.mark1),
+                         "command substitution executed: $( ) ran")
+        self.assertFalse(os.path.exists(self.mark2),
+                         "backtick command executed")
+
+    def restore_scene(self, mod):
+        self.addCleanup(mod.SCENES.__setitem__, "engineer",
+                        ["an engineer tightening one bolt as the whole "
+                         "gantry groans"])
+
+    def test_adversarial_scene_text_is_not_shell_expanded(self):
+        """Site 1 (--image): scene text with $( ) and backticks must
+        reach the submitter verbatim; the canaries must never exist."""
+        mod = _shellout_mod("manga_draft_shellout_scene")
+        mod.SUBMITTER = self.stub
+        mod.SCENES["engineer"][0] = self.evil
+        self.restore_scene(mod)
+        rc = self._run(["--image"], mod)
+        self.assertEqual(rc, 0)
+        lines = self._lines()
+        self.assertTrue(lines, "submitter never invoked")
+        self.assert_no_canary()
+        self.assertIn(self.evil, lines[0])
+        self.assertIn("--subject", lines[0])
+        self.assertIn("--style manga-panel", lines[0])
+
+    def test_adversarial_cast_text_component_passes_verbatim(self):
+        """Site 2 (--image over --panel-dir components): the cast-sheet
+        appearance is the model-derived channel into component prompts;
+        poisoned text must transit verbatim, executing nothing."""
+        mod = _shellout_mod("manga_draft_shellout_cast")
+        mod.SUBMITTER = self.stub
+        mod.load_cast = lambda path=None: {
+            "engineer": {"appearance": self.evil, "seed": 771}}
+        rc = self._run(["--image"], mod)
+        self.assertEqual(rc, 0)
+        lines = self._lines()
+        self.assertTrue(lines)
+        self.assert_no_canary()
+        self.assertIn(self.evil, "\n".join(lines))
+
+    def test_assemble_raster_takes_plain_argv(self):
+        """Site 3 (--assemble via --panel-dir): rsvg-convert gets the
+        output and input paths as argv. A panel dir carrying shell
+        metacharacters (and a space) must be used literally: no
+        command substitution, no word splitting."""
+        mod = _shellout_mod("manga_draft_shellout_raster")
+        evil_dir = os.path.join(self.home,
+                                "po $(touch %s) ce" % self.mark3)
+        os.makedirs(evil_dir)
+        argv = ["manga-draft.py", "--item", ITEM_TEXT,
+                "--panel-dir", evil_dir]
+        old_path = os.environ["PATH"]
+        os.environ["PATH"] = self.bin_dir + os.pathsep + old_path
+        os.environ["MANGA_STUB_LOG"] = self.log
+        try:
+            rc = mod.main(argv)
+        finally:
+            os.environ["PATH"] = old_path
+            os.environ.pop("MANGA_STUB_LOG", None)
+        self.assertEqual(rc, 0)
+        raster = [ln for ln in self._lines() if ln.endswith("panel.svg")]
+        self.assertTrue(raster, "raster not invoked with literal paths")
+        self.assertFalse(os.path.exists(self.mark3),
+                         "panel dir path was shell-interpolated")
+        self.assertIn("po $(touch %s) ce" % self.mark3, raster[0])
+
+    def test_missing_submitter_is_best_effort_not_fatal(self):
+        """Leg down: exec failure of the submitter stays non-fatal
+        (rc != 0 -> 'component renders skipped' path); the run still
+        publishes its review pair and nothing executes."""
+        mod = _shellout_mod("manga_draft_shellout_down")
+        mod.SUBMITTER = os.path.join(self.bin_dir, "no-such-submitter.sh")
+        rc = self._run(["--image"], mod)
+        self.assertEqual(rc, 0)
+        self.assertTrue(os.path.isfile(
+            os.path.join(self.out_dir, "latest-draft.svg")))
+        self.assert_no_canary()
 
 
 if __name__ == "__main__":
