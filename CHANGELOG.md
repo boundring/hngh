@@ -6,6 +6,14 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **STATE.md crumbs sqlite mirror** (docs/records/2026-09-22-crumbs-db-schema-contracts.md):
+  `lib/crumbs-db.py` imports complete `ts | job | event | detail` lines
+  past a byte-offset watermark into `state/crumbs.db` (WAL, additive-only
+  DDL, legacy spill lines counted as skipped, fail-open exit 0) — a
+  derived index only, writers and grep-readers untouched; a 1m cadence
+  drop-in keeps it warm and the orphaned breadcrumb-single-line test is
+  now gate-registered (db-migration slice B).
+
 - **Research TSV schema contracts at gate time** (docs/records/2026-09-22-crumbs-db-schema-contracts.md):
   new `tests/test-research-schema.py` feeds hermetic tmpdir TSVs
   through the real research-routes parser (header drift, rows below

@@ -195,6 +195,8 @@ test:
 	bash tests/test-dispatch.sh
 	python3 -B tests/test-digest-local.py
 	bash tests/test-deck-availability.sh
+	python3 -B tests/test-breadcrumb-single-line.py
+	python3 -B tests/test-crumbs-db.py
 	bash scripts/lint-identifiers.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 

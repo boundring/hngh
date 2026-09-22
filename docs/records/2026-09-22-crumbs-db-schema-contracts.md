@@ -90,9 +90,13 @@ it.
   automation/; live shape at gate time 245 line rows / 273 dispositions
   / 105 active lessons (baselines, not assertions); full `make test`
   green.
-- Slice B: `python3 -B tests/test-crumbs-db.py` OK; real backfill of the
-  ~141k-line STATE.md ran twice, second run imported 0 (idempotent);
-  row count within a few hundred of 141,002 (spill lines land in
-  skipped_total); `bash cadence/1m/15-crumbs-sync.sh` exit 0 with
-  counts unchanged; full `make test` green. (Finalized at the slice B
-  commit.)
+- Slice B: `python3 -B tests/test-crumbs-db.py` OK (6 tests); real
+  backfill imported 141,074 rows (STATE.md at 141,169 lines; the 95
+  legacy spill lines land in skipped_total — 141,074 + 95 = 141,169,
+  every line accounted). Second run imported only the 3 lines the 1m
+  cadence appended in between; third run imported 0 — idempotent on the
+  live journal. `bash cadence/1m/15-crumbs-sync.sh` exit 0 with counts
+  unchanged, and the 1m runner picked up the drop-in within a tick
+  (tier-launch rows visible in the mirror itself). Full `make test`
+  green (slice B rides the same gate as the LAYERS registration for
+  `crumbs-db.py` in tests/test-lib-dependencies.py).
