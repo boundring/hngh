@@ -44,6 +44,7 @@ SECRET_ITEMS = {
     'LOBEHUB_API_KEY': 'LobeHub',
     'TOKENROUTER_API_KEY': 'TokenRouter',
     'TYPESAFE_API_KEY': 'Typesafe',
+    'XIAOMI_AI_API_KEY': 'Xiaomi AI',
 }
 
 _cache: dict = {}

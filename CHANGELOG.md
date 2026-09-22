@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **Xiaomi AI quota source admitted** (docs/records/2026-09-22-xiaomi-quota-source.md):
+  operator-directed addition of `XIAOMI_AI_API_KEY` (1Password item
+  `Xiaomi AI`) to `SECRET_ITEMS` in `automation/lib/secrets.py` — a
+  further source of quota work, registration-only (no model.sh gate, no
+  provider calls). Note: the vault item exposes its key under the
+  `credential` field, not the `password` default the export path uses,
+  so the login `--exports` flow skips it until the item gains a
+  `password` field (operator vault action).
+
 - **STATE.md crumbs sqlite mirror** (docs/records/2026-09-22-crumbs-db-schema-contracts.md):
   `lib/crumbs-db.py` imports complete `ts | job | event | detail` lines
   past a byte-offset watermark into `state/crumbs.db` (WAL, additive-only
