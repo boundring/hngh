@@ -147,6 +147,7 @@ test:
 	bash tests/test-model-bearer-argv.sh
 	bash tests/test-model-refresh-hygiene.sh
 	bash tests/test-model-reply-scrub.sh
+	python3 -B ng/test-dispatch-gate.py
 
 	bash tests/test-overnight-shutdown.sh
 	bash tests/test-overnight-forethought.sh

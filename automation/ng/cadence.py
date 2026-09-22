@@ -11,6 +11,7 @@ from pathlib import Path
 
 import contract
 import state_emitter
+import tiering
 
 try:
     import jev
@@ -97,6 +98,76 @@ def _attempt_cap() -> int:
         return 3
 
 
+# Dispatch ceiling (charter step 4): max dispatch-classified actions
+# (slice.proposed, the work-dispatch verb) per UTC day from this beat.
+_DISPATCH_CAP_DEFAULT = 4  # mirrors the legacy agent-respawn default
+_PARAMS = BASE.parent / "cadence-params.tsv"
+
+
+def _param(key: str) -> str | None:
+    """Value for `key` in the Inventory tsv, or None (4 cols, tab-separated)."""
+    try:
+        for line in _PARAMS.read_text().splitlines():
+            cols = line.split("\t")
+            if len(cols) >= 2 and cols[0].strip() == key:
+                return cols[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def _dispatch_cap() -> int:
+    raw = os.environ.get("HNGH_DISPATCH_DAY_CAP") or _param("dispatch-day-max")
+    try:
+        return max(0, int(str(raw)))
+    except (TypeError, ValueError):
+        return _DISPATCH_CAP_DEFAULT
+
+
+def _dispatch_admit(d: Path) -> bool:
+    """One UTC-day counter in STATE. True + increments when under cap."""
+    today = _today()
+    st = _state(d)
+    row = st.get("dispatch", {})
+    count = 0
+    if isinstance(row, dict) and row.get("date") == today:
+        try:
+            count = max(0, int(row.get("count", 0)))
+        except (ValueError, TypeError):
+            count = 0
+    if count >= _dispatch_cap():
+        return False
+    st["dispatch"] = {"date": today, "count": count + 1}
+    _write_state(d, st)
+    return True
+
+
+def _legs() -> list[dict] | None:
+    """Jev legs from HNGH_JEV_LEGS ("kind=url,kind=url"); None = unconfigured."""
+    raw = os.environ.get("HNGH_JEV_LEGS", "")
+    if not raw:
+        return None
+    legs: list[dict] = []
+    for part in raw.split(","):
+        kind, _, url = part.partition("=")
+        kind = kind.strip().lower() or "cash"
+        url = url.strip()
+        legs.append({"kind": kind, "prepaid": kind == "prepaid",
+                     "url": url, "blocked": not url})
+    return legs
+
+
+def _leg_url() -> tuple[str | None, bool]:
+    """(base_url, legs_configured). url None + configured = all legs blocked."""
+    legs = _legs()
+    if legs is None:
+        return None, False
+    for leg in tiering.leg_order(legs):
+        if not leg.get("blocked"):
+            return leg["url"] or None, True
+    return None, True
+
+
 def _open_beads(repo_root: str) -> tuple[list[dict] | None, str]:
     """Poll bd directly — beads are the ledger of record for work."""
     try:
@@ -164,9 +235,11 @@ def _verdict_of(ans) -> str:
     return str(getattr(v, "value", v))
 
 
-def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]:
+def _handle(d: Path, ev: dict, attempts: int, emitted: list,
+            base_url: str | None = None, is_def: bool = False
+            ) -> tuple[int, bool, int, bool]:
     """Ask Jev for one event, emit the mapped action.
-    Returns (attempts used, park-for-revisit, input tokens spent).
+    Returns (attempts used, park-for-revisit, input tokens, stop-beat).
     NEVER raises — any failure files an escalation (fail closed)."""
     bid = ev.get("payload", {}).get("id", "")
     ev_sv = ev.get("state_version", 0)
@@ -175,11 +248,11 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]
         if jev is None:
             raise RuntimeError("jev unavailable")
         ev["_attempts"] = attempts
-        ans = jev.ask(_question(ev))
+        ans = jev.ask(_question(ev), base_url=base_url)
     except Exception:
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-error"}))
-        return attempts + 1, False, 0
+        return attempts + 1, False, 0, False
     try:
         tok = max(0, int(getattr(ans, "input_tokens", 0) or 0))
     except (ValueError, TypeError):
@@ -187,34 +260,39 @@ def _handle(d: Path, ev: dict, attempts: int, emitted: list) -> tuple[int, bool]
     if getattr(ans, "state_version", ev_sv) != ev_sv:
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "stale-version"}))
-        return attempts + 1, False, tok
+        return attempts + 1, False, tok, False
     v = _verdict_of(ans)
     label = str(getattr(ans, "label", "") or "").lower()
     done = getattr(contract.Verdict.DONE, "value", "done")
     if v == done and label == "file":
+        if not _dispatch_admit(d):
+            # Dispatch ceiling: refuse + defer to the next beat (charter step 4).
+            emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
+                                                        "reason": "dispatch-capped"}))
+            return attempts + 1, is_def, tok, True
         emitted.append(_emit(d, "slice.proposed", {"bead": bid, "action": ans.label}))
-        return attempts + 1, False, tok
+        return attempts + 1, False, tok, False
     elif v == done and label == "close":
         emitted.append(_emit(d, "bead.close", {"bead": bid}))
-        return attempts + 1, False, tok
+        return attempts + 1, False, tok, False
     elif v == done and label == "retry":
         if attempts + 1 >= cap:  # ponytail: flat cap, per-bead budgets if beads starve
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
-            return attempts + 1, False, tok
+            return attempts + 1, False, tok, False
         else:
             emitted.append(_emit(d, "slice.retry", {"bead": bid, "attempts": attempts + 1}))
-            return attempts + 1, True, tok
+            return attempts + 1, True, tok, False
     elif "escalate" in (v, label):
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-escalate"}))
-        return attempts + 1, False, tok
+        return attempts + 1, False, tok, False
     else:  # uncertain / unknown label: park for revisit until the cap, then escalate
         if attempts + 1 >= cap:
             emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                         "reason": "attempts-exhausted"}))
-            return attempts + 1, False, tok
-        return attempts + 1, True, tok
+            return attempts + 1, False, tok, False
+        return attempts + 1, True, tok, False
 
 
 def beat(ledger_dir=None, base_url=None, max_events: int = 16) -> list:
@@ -254,6 +332,13 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
     # it are re-discovered next beat.
     still: list[dict] = [en for en, is_def in queue[max_events:] if is_def]
     rest = queue[:max_events]
+    leg_url, legs_on = _leg_url()
+    if legs_on and leg_url is None:
+        # All configured legs blocked: re-route to the next window, never stall.
+        emitted.append(_emit(d, "escalation.filed", {"bead": "", "question_head": "triage",
+                                                    "reason": "legs-exhausted"}))
+        _save_deferred(d, [en for en, is_def in queue if is_def])
+        return emitted
     for i, (entry, is_deferred) in enumerate(rest):
         ev, attempts = entry["event"], entry["attempts"]
         bid = ev.get("payload", {}).get("id", "")
@@ -272,12 +357,18 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
             if is_deferred:
                 still.append(entry)
             continue
-        used, park, tok = _handle(d, ev, attempts, emitted)
+        used, park, tok, stop = _handle(d, ev, attempts, emitted,
+                                        base_url=leg_url, is_def=is_deferred)
         spent += tok
         _save_budget(d, date, spent)
         if park:  # triage.deferred lives in STATE now, not as a ledger kind
             still.append({"event": {k: v for k, v in ev.items() if k != "_attempts"},
                           "attempts": used})
+        if stop:  # dispatch cap: no further dispatch-classified asks this beat
+            for e2, is_def2 in rest[i + 1:]:
+                if is_def2:
+                    still.append(e2)
+            break
     _save_deferred(d, still)
     return emitted
 
@@ -297,7 +388,7 @@ def _dry_run() -> None:
         if "budget" in kw:
             _save_budget(d, _today(), kw["budget"])
         seq = list(answers)
-        fake = lambda q: seq.pop(0) if seq else contract.Answer(
+        fake = lambda q, **kw: seq.pop(0) if seq else contract.Answer(
             contract.Verdict.ESCALATE, "escalate", (), q.state_version)
         with mock.patch.object(sys.modules[__name__], "_open_beads",
                                return_value=(list(beads), "")), \

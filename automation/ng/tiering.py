@@ -40,6 +40,13 @@ def order(beads: Sequence[Mapping]) -> list[Mapping]:
     return sorted(beads, key=lambda b: (_RANK[tier_for(b)], -_num(b.get("age_days"))))
 
 
+def leg_order(legs: Sequence[Mapping]) -> list[Mapping]:
+    """Pre-paid quota legs before paid-cash; blocked legs last — a cap
+    block re-routes to the next usable leg or the next window."""
+    return sorted(legs, key=lambda l: (1 if l.get("blocked") else 0,
+                                       0 if l.get("prepaid") else 1))
+
+
 if __name__ == "__main__":
     _gate = {"title": "gate review", "age_days": 0, "attempts": 0}
     _stale = {"title": "docs tidy", "age_days": 9, "attempts": 3}
@@ -49,4 +56,7 @@ if __name__ == "__main__":
     assert tier_for(_plain) is contract.Tier.T2
     assert tier_for({"tier": "T3", "title": "gate review"}) is contract.Tier.T3
     assert order([_plain, _gate, _stale]) == [_stale, _gate, _plain]
+    _legs_ = [{"kind": "cash", "url": "u-c"}, {"kind": "prepaid", "url": "u-p"},
+              {"kind": "prepaid", "url": ""}]
+    assert [l["url"] for l in leg_order(_legs_)] == ["u-p", "u-c", ""]
     print("tiering self-check ok")
