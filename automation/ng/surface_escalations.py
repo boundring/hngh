@@ -31,7 +31,10 @@ def main() -> None:
         reason = p.get("reason", "unknown")
         subprocess.run(
             ["python3", queue, "--add", "alert",
-             "escalation %s: %s" % (bead, reason),
+             "escalation %s: %s (SLA: re-fires bump this row for 7d, then it "
+             "expires on silence; halt: bead attempt cap files one final "
+             "attempts-exhausted escalation and the bead leaves the retry "
+             "loop)" % (bead, reason),
              "--identity", "escalation:%s:%s" % (bead, reason),
              "--window", "604800"],
             check=False)
