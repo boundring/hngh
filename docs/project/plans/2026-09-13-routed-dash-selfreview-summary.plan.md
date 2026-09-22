@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-18T01:41:57Z routed-from=dash-selfreview:summary  cause=obsolete disposed=2026-09-20T13:15:51Z reason=fix already landed via executed siblings 2026-09-12-routed-dash-selfreview-ledger-sanity and 2026-09-12-routed-dash-selfreview-ledger-sync-skew (66b67cf4, 5f876e0a, c0c0bd55); own check verified silent 2026-09-20T13:10Z (drift 44<=50) -->
+<!-- plan: status=expired risk=normal accepted=2026-09-18T01:41:57Z routed-from=dash-selfreview:summary  cause=obsolete disposed=2026-09-20T13:15:51Z reason=fix already landed via executed siblings 2026-09-12-routed-dash-selfreview-ledger-sanity and 2026-09-12-routed-dash-selfreview-ledger-sync-skew (66b67cf4, 5f876e0a, c0c0bd55); own check verified silent 2026-09-20T13:10Z (drift 44<=50) -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:summary`
