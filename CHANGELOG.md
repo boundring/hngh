@@ -6,6 +6,14 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- Router alert class channel landed: `report-queue --class critical`
+  (durable `class:` meta + visible `class-upgrade:` re-fire rows,
+  ceremony commit), router feed excludes critical-class/first-line
+  critical-word/`class-upgrade:` rows from routing, and
+  `operator_item`/`alert_row` carry an optional class arg through.
+  Routed mem-caps candidate parked (`plan-dispose --cause obsolete`).
+  Record: `docs/records/2026-09-22-router-alert-class-channel.md`.
+
 #### Added
 
 - **RAM guardrails + dashboard automation controls**

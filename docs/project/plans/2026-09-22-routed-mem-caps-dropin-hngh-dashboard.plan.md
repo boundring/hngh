@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-22T16:03:32Z routed-from=mem-caps-dropin:hngh-dashboard -->
+<!-- plan: status=parked risk=normal accepted=2026-09-22T16:03:32Z routed-from=mem-caps-dropin:hngh-dashboard  cause=obsolete disposed=2026-09-22T16:19:35Z reason=mem-caps drop-in applied directly by operator action 2026-09-22 (docs/records/2026-09-22-ram-guardrails-landing.md); routed candidate superseded by that record -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `mem-caps-dropin:hngh-dashboard`
