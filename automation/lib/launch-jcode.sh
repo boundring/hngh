@@ -75,6 +75,15 @@ except Exception as exc:
     sys.exit(1)
 PYEOF
  fi
+ # pre-spawn graph guard (plan 2026-09-22-federal-branches-occupancy
+ # step 2): when the caller hands us a plan/session graph, node/depth
+ # caps are enforced BEFORE any child spawns (no spend on a runaway
+ # graph). Guard fail-closed is rc != 0 -> wrapper rc 75 (refused).
+ # Unset JCODE_PLAN_JSON keeps the additive contract: nothing to check.
+ if [ -n "${JCODE_PLAN_JSON:-}" ]; then
+  python3 "$(dirname "${BASH_SOURCE[0]}")/../ng/jcode_guard.py" \
+   "$JCODE_PLAN_JSON" || return 75
+ fi
  # node --input-type keeps argv as the single prompt source; the prompt
  # is passed as one argv blob (no shell interpolation of file content).
  local prompt_blob
@@ -104,7 +113,7 @@ PYEOF
   rc=$?
  fi
  # errors go to a side log so the classifier reads only model text
- [ "$rc" -ne 0 ] && printf 'stderr:\n' >>"$JCODE_LOG" && \
+ [ "$rc" -ne 0 ] && printf 'stderr:\n' >>"$JCODE_LOG" &&
   tail -c 2000 "$JCODE_LOG.err" >>"$JCODE_LOG"
  rm -f "$JCODE_LOG.err"
  return "$rc"
