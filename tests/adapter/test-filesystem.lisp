@@ -185,6 +185,35 @@
            "a read-eval #. line is a transport fault, never evaluated")
     (uiop:delete-directory-tree root :validate t)))
 
+;;; TOCTOU: a record file that passes probe-file but fails open (the
+;;; probe-then-read race, e.g. replaced by a directory in the window)
+;;; is a transport fault, never a raw error.
+
+(let* ((root (fresh-fs-root))
+       (store (hngh.adapters.filesystem:make-filesystem-store :root root)))
+  (hngh.adapters.filesystem:store-record-run store (fs-record-line "run-1" :creation))
+  (let ((file (first (directory (merge-pathnames "*.*" root)))))
+    (delete-file file)
+    ;; ensure-directories-exist on a file pathname creates the parent,
+    ;; not a directory at the file's own path: build the same path with
+    ;; the name as its final directory component.
+    ;; file-namestring keeps the full "record.lisp" spelling (pathname
+    ;; name alone would be "record"): the directory sits at the exact
+    ;; record path, so probe-file passes and open fails with EISDIR.
+    (ensure-directories-exist
+     (make-pathname :name nil :type nil
+                    :directory (append (pathname-directory file)
+                                       (list (file-namestring file)))))
+    (check (signals-transport-fault-p
+            (lambda () (hngh.adapters.filesystem:store-entries store)))
+           "a record file gone unreadable between probe and read is a transport fault")
+    (check (signals-transport-fault-p
+            (lambda ()
+              (hngh.adapters.filesystem:store-record-run
+               store (fs-record-line "run-2" :creation))))
+           "recording when the record file turned unreadable is a transport fault")
+    (uiop:delete-directory-tree root :validate t)))
+
 (check (equal (list (package-name (find-package :cl)))
               (mapcar #'package-name
                       (package-use-list

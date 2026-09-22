@@ -90,10 +90,15 @@ lines are data, never code, so read-eval poisoning fails closed."
       (error () (error 'transport-fault)))))
 
 (defun read-lines (file)
-  (with-open-file (stream file :direction :input)
-    (loop for form = (read-line-form stream)
-          while form
-          collect form)))
+  ;; The probe-then-read pattern above races: a record file that passes
+  ;; probe-file can fail open (vanished, replaced by a directory). That
+  ;; window must fail closed as a transport fault, never a raw error.
+  (handler-case
+      (with-open-file (stream file :direction :input)
+        (loop for form = (read-line-form stream)
+              while form
+              collect form))
+    (error () (error 'transport-fault))))
 
 (defun existing-keys (file)
   (if (probe-file file)

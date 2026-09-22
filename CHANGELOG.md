@@ -8,6 +8,15 @@ lives under Pre-release / early development until the first release.
 
 #### Fixed
 
+- **Filesystem record transport probe/read race fails closed**
+  (docs/records/2026-09-21-filesystem-toctou-fault.md):
+  `src/adapter/filesystem.lisp` `read-lines` converts record-file open
+  failures to TRANSPORT-FAULT, so a file passing `probe-file` but
+  failing open (the TOCTOU window in `existing-keys`/`store-entries`)
+  can no longer surface a raw error. Failing test first
+  (`tests/adapter/test-filesystem.lisp` probe/read-race checks); full
+  gate green.
+
 - **Filesystem record transport refuses read-eval syntax**
   (docs/records/2026-09-21-filesystem-read-eval-hardening.md):
   `src/adapter/filesystem.lisp` `read-line-form` now binds
