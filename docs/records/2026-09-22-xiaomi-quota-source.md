@@ -57,11 +57,18 @@ grep -n "secrets.py --exports" ~/.config/plasma-workspace/env/env_vars.sh
 - Which Xiaomi endpoint/model id (`Xiaomi MiMo-2.6-pro`) will serve
   oh-my-pi, and whether the quota is per-day/per-window — no consumer
   exists yet, so no quota gate numbers.
-- RESOLVED 2026-09-22 (operator-directed): the vault item 'Xiaomi AI'
-  got the missing `password` field, byte-identical to `credential`
-  (sha256-verified, values never printed). Evidence: `op item edit
-  'Xiaomi AI' --vault 'Hngh Secrets'` + sha256 equality of both
-  fields; `secret('XIAOMI_AI_API_KEY')` resolves (65 chars). The
-  login-env exports flow no longer skips the var. Field-name
-  alignment (option A) landed; per-item field overrides in
-  `secrets.py` not needed.
+- RESOLVED 2026-09-22 (operator-directed, two steps): the vault item
+  'Xiaomi AI' got the missing `password` field. Step 1 (machine):
+  `op item edit` copied the `credential` value into `password` — but
+  the CLI readback of a concealed field rendered a masked bracket
+  placeholder, so the copy stored garbage (the operator caught it:
+  "square-bracket contained text from 1password"). Step 2 (operator,
+  22:16Z): replaced `password` with the real API key and emptied the
+  stale `credential` field. Verified consumer-side:
+  `secret('XIAOMI_AI_API_KEY')` resolves a clean 51-char value; the
+  login-env exports flow reads `password` and no longer skips the
+  var. Field-name alignment (option A) landed; per-item field
+  overrides in `secrets.py` not needed.
+  LESSON: never re-write a secret from a CLI readback — sha-equality
+  of two readbacks can compare two renderings of the same mask.
+  Write from the source of truth, verify through the consumer seam.
