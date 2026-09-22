@@ -2,7 +2,7 @@
   "preset": "hngh",
   "gen": 1,
   "grade": "10/10",
-  "seed": 2983447,
+  "seed": 2983453,
   "fields": {
     "primary": "#5af78e",
     "secondary": "#3d9c78",
@@ -12,7 +12,7 @@
     "surface": "#11151a",
     "panel": "#14181e",
     "warning": "#e6b450",
-    "error": "#e0646c",
+    "error": "#e06c74",
     "success": "#5af78e",
     "dark": true
   }
