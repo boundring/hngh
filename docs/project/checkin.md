@@ -382,3 +382,9 @@ next rotation or tomorrow, whichever comes first.
 - **State:** clean; queue 16 queued / 10 done; next=key-rotation-freshness.
 - **Probes:** model=local; network=reachable; audio=0/10.
 - **Action:** none — no action card mounted for key-rotation-freshness
+
+## 2026-09-22 — heartbeat #21 (schedule-heartbeat)
+
+- **State:** clean; queue 16 queued / 10 done; next=key-rotation-freshness.
+- **Probes:** model=local; network=reachable; audio=1/10.
+- **Action:** none — no action card mounted for key-rotation-freshness
