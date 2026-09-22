@@ -8,6 +8,7 @@ No plaintext-env fallback: an op failure raises.
 
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -69,3 +70,34 @@ def secret(key: str, field: str = 'password') -> str:
     value = proc.stdout.removesuffix('\n')
     _cache[ck] = (now, value)
     return value
+
+
+def _exports() -> None:
+    """Print `export VAR=<value>` lines for login-shell rearm.
+
+    env_vars.sh evals this at plasma login so agents (omp, jcode) inherit
+    vault-backed keys without any plaintext store on disk. Parallel reads
+    (0.9s each sequential would mean ~22s of login delay). Fail-soft per
+    item: a failed read warns and skips; consumers still fail closed at
+    first use via secret().
+    """
+    import shlex
+    from concurrent.futures import ThreadPoolExecutor
+
+    def fetch(item):
+        key, _title = item
+        try:
+            return key, secret(key)
+        except Exception as exc:  # noqa: BLE001 — one bad item must not kill login
+            print(f"secrets: vault read failed for {key}: {exc}", file=sys.stderr)
+            return key, None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for key, value in pool.map(fetch, SECRET_ITEMS.items()):
+            if value:
+                print(f"export {key}={shlex.quote(value)}")
+
+
+if __name__ == '__main__':
+    if '--exports' in sys.argv:
+        _exports()
