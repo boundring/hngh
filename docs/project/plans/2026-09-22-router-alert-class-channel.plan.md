@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T18:04:15Z -->
 # 2026-09-22 — router alert class channel (Full revised A)
 
 Stop the incident class where a parked critical-class operator alert

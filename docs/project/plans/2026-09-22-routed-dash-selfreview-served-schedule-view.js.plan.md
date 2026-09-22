@@ -8,3 +8,8 @@ at 2026-09-22T14:00:13Z. Alert text: [dash-selfreview] served:schedule-view.js: 
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-22T16:43:29Z re-occurred (dedup window expired)
+- 2026-09-22T16:48:11Z re-occurred (dedup window expired)
