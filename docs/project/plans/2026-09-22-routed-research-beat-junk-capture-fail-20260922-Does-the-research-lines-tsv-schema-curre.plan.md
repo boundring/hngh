@@ -8,3 +8,7 @@ at 2026-09-22T04:00:22Z. Alert text: research beat capture for fail-20260922-Doe
 
 - [ ] Delve: open research subject fail-20260922-research-beat-junk-capture-fail-20260922-does-the-research-lines-tsv-schema-curre for research-beat:junk-capture:fail-20260922-Does-the-research-lines-tsv-schema-curre; record disposition; then fix or park
       Verification: research subject fail-20260922-research-beat-junk-capture-fail-20260922-does-the-research-lines-tsv-schema-curre present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-22T05:00:22Z re-occurred (dedup window expired)
