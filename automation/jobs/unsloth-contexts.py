@@ -212,6 +212,18 @@ def match_row(rows, active_model):
     return best
 
 
+def match_path(rows, model_path):
+    """Journal -m path (a filesystem path, not an HF id) -> row idx:
+    case-insensitive substring of the row id's leaf segment."""
+    best = None
+    for i, r in enumerate(rows):
+        leaf = r[0].split("/")[-1].lower()
+        if leaf and leaf in model_path.lower():
+            if best is None or len(r[0]) > len(rows[best][0]):
+                best = i
+    return best
+
+
 def journal_n_ctx():
     """Fallback #2: llama-server startup log line (model path + n_ctx)."""
     import subprocess
@@ -222,16 +234,24 @@ def journal_n_ctx():
     return (path[-1] if path else None, int(ctx[-1]) if ctx else None)
 
 
+def probe_payload():
+    """Request body for probe_400: 'a ' pairs are ~1 token each, so this
+    exceeds the largest registry context (card_max_extended 1048576)
+    and is guaranteed a 400 -- hngh-bud: the old 150k-pair body FIT the
+    studio's 262144 context and got processed (~4.4 min GPU)."""
+    return {"model": "any", "max_tokens": 1, "messages": [
+        {"role": "user", "content": "a " * 1_200_000}]}
+
+
 def probe_400():
     """Last resort: one oversized-prompt request; the 400 message states n_ctx."""
     req = urllib.request.Request(
         "http://127.0.0.1:8888/v1/chat/completions",
-        data=json.dumps({"model": "any", "messages": [
-            {"role": "user", "content": "a " * 150000}]}).encode(),
+        data=json.dumps(probe_payload()).encode(),
         headers={"Content-Type": "application/json",
                  "Authorization": "Bearer " + secret("UNSLOTH_API_KEY")})
     try:
-        urllib.request.urlopen(req, timeout=30)
+        urllib.request.urlopen(req, timeout=10)
         return None
     except urllib.error.HTTPError as e:
         m = re.search(r"n_ctx\D{0,8}(\d{3,9})", e.read().decode("utf-8", "replace"))
@@ -260,7 +280,15 @@ def observe(out=TSV):
         if nctx:
             value, model_id = nctx, path
             src = "journal:n_ctx"
+        elif path:
+            model_id = path
     if value is None:
+        if model_id:
+            idx = match_path(rows, str(model_id))
+            if idx is not None and rows[idx][1].strip():
+                print(f"observe: {rows[idx][0]} already server_observed="
+                      f"{rows[idx][1]}; probe skipped", file=sys.stderr)
+                return 0
         value = probe_400()
         src = "probe:400" if value else None
     if value is None or not model_id:

@@ -7,6 +7,7 @@ columns, and non-context models (image/ASR repos) resolve to empty fields
 rather than guesses."""
 
 import importlib.util
+import io
 import os
 import subprocess
 import sys
@@ -91,7 +92,7 @@ class ObserveTest(unittest.TestCase):
         open(p, "w").write(
             "model_id\tserver_observed\tcard_native\tcard_max_extended\t"
             "source_url\tchecked_at\n"
-            "unsloth/Qwen3.8-27B-GGUF\t\t262144\t1000000\thttps://x\t2026-09-13\n"
+            "unsloth/Qwen3.8-27B-GGUF\t262144\t262144\t1000000\thttps://x\t2026-09-13\n"
             "unsloth/Z-Image-Turbo-unsloth-bnb-4bit\t\t\t\thttps://y\t2026-09-13\n")
         return p
 
@@ -122,6 +123,50 @@ class ObserveTest(unittest.TestCase):
                 "max_context_length": None, "context_length": None}
             self.assertEqual(uc.observe(p), 0)
             self.assertEqual(open(p).read(), before)
+
+    def test_observe_skips_probe_when_registry_known(self):
+        # hngh-bud: journal gives the model path but no n_ctx line; the
+        # registry row already holds a server_observed value -> no 400
+        # probe (the probe processed ~4.4 min of GPU instead of failing).
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            before = open(p).read()
+            uc._local_api = lambda path: (_ for _ in ()).throw(
+                OSError("down"))
+            uc.journal_n_ctx = lambda: (
+                "/models/unsloth_Qwen3.8-27B-GGUF-Q4.gguf", None)
+            uc.probe_400 = lambda: (_ for _ in ()).throw(
+                AssertionError("probe_400 must not run"))
+            self.assertEqual(uc.observe(p), 0)
+            self.assertEqual(open(p).read(), before)
+
+
+class ProbePayloadTest(unittest.TestCase):
+    def test_probe_guaranteed_oversized_and_bounded(self):
+        # hngh-bud: "a " * 150000 (~147k tokens) FITS the studio's
+        # 262144 context, so the server processed it (4.4 min GPU)
+        # instead of returning 400. The payload must exceed the largest
+        # registry context (card_max_extended 1048576) and bound cost.
+        payload = uc.probe_payload()
+        self.assertGreaterEqual(
+            payload["messages"][0]["content"].count("a"), 1_200_000)
+        self.assertEqual(payload["max_tokens"], 1)
+
+    def test_probe_short_timeout(self):
+        captured = {}
+        def fake_urlopen(req, timeout=None):
+            captured["timeout"] = timeout
+            raise uc.urllib.error.HTTPError(
+                req.full_url, 400, "ctx",
+                hdrs=None, fp=io.BytesIO(b"n_ctx = 262144"))
+        orig = uc.urllib.request.urlopen
+        uc.urllib.request.urlopen = fake_urlopen
+        try:
+            self.assertEqual(uc.probe_400(), 262144)
+        finally:
+            uc.urllib.request.urlopen = orig
+        self.assertIsNotNone(captured["timeout"])
+        self.assertLessEqual(captured["timeout"], 10)
 
 
 if __name__ == "__main__":
