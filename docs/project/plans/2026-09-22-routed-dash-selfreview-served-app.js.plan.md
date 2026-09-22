@@ -8,3 +8,7 @@ at 2026-09-22T14:00:12Z. Alert text: [dash-selfreview] served:app.js: unacceptab
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-22T15:01:03Z re-occurred (dedup window expired)

@@ -4,6 +4,23 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-22
+
+#### Added
+
+- **RAM guardrails + dashboard automation controls**
+  (docs/records/2026-09-22-ram-guardrails-landing.md): after two
+  amdgpu-memory-exhaustion Plasma crashes, the automation surface now
+  (1) recovers unsloth-studio AND the dashboard from dead units once
+  per UTC day with an operator-stop guard, (2) gates heavy cadence
+  tiers and overnight spawns on a MemAvailable floor
+  (`memory-gate.sh`, fail-closed), (3) adds a token-gated dashboard
+  `system/service-act` route (start|stop|restart, allowlisted units,
+  pre-written audit row) executing only `service-ctl.sh`, and (4)
+  shows a UTC-day memory peak on the System page. Systemd MemoryHigh/
+  MemoryMax caps remain parked on the operator with SLA + halt
+  conditions (report alert afd8588b).
+
 ### 2026-09-21
 
 #### Fixed
