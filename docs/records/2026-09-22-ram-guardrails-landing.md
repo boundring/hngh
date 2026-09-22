@@ -94,3 +94,21 @@ dashboard restart through the gated path, real feed run showing peak.
   under full-gate parallel load, 12/12 OK in clean-room isolation
   (12-iteration flake hunt, no repro). Watch for recurrence; suspect
   fresh-stamp timing race.
+- Gate-sweep follow-up (commits 665b0a0b, 3ccbb620): the step-2 RAM
+  gate broke four overnight-cycle sandbox tests
+  (test-beat-blockers, test-overnight-forethought, test-overnight-
+  shutdown, test-lifecycle-traps) plus test-plan-priority-selector —
+  their fixed lib copy lists lacked memory-gate.sh, so in-sandbox
+  sourcing failed and `memory_gate` command-not-found (rc 127) tripped
+  STOP=1, silently stopping every sandbox batch. Red was pre-existing
+  at the step-2 commit era (first full gate since then had stopped at
+  the first FAIL). Fix: copy list carries memory-gate.sh + sandbox env
+  HNGH_RAM_FLOOR_MB=1 (hermetic, not memory-dependent).
+- Governance smell for the operator: the step-5 parked critical-class
+  item (mem-caps-dropin:hngh-dashboard) was re-routed by
+  scripts/router-tick.py as a normal-risk plan candidate
+  (2026-09-22-routed-mem-caps-dropin-hngh-dashboard.plan.md). It cannot
+  self-accept (its step needs passwordless sudo systemctl edit → fails
+  closed), but a critical-class parked item surfacing as
+  normal-risk-routable is a router policy gap, parked here for the
+  operator's disposition.
