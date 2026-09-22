@@ -53,12 +53,15 @@ email_sidechannel() { # subject body -> 0 always
   return 0
 }
 
-alert_row() { # identity window subject text — row first (the contract),
-  # then the importance classification; only immediate-class alerts
-  # trigger the email side-channel. A mail failure never fails the row.
+alert_row() { # identity window subject text [class] — row first (the
+  # contract), then the importance classification; only immediate-class
+  # alerts trigger the email side-channel. A mail failure never fails
+  # the row. An optional 5th arg passes a durable alert class through
+  # to report-queue --class (2026-09-22-router-alert-class-channel).
   HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$KERNEL}" python3 \
     "$KERNEL/scripts/report-queue" --add alert "$4" \
-    --identity "$1" --window "$2" >/dev/null 2>&1 || true
+    --identity "$1" --window "$2" \
+    ${5:+--class "$5"} >/dev/null 2>&1 || true
   if [ ! -f "$(email_conf_path)" ]; then
     email_dormant_crumb
     return 0

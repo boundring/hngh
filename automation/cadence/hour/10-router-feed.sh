@@ -32,8 +32,12 @@ MAX="${ROUTER_FEED_MAX:-3}"
 case "$MAX" in '' | *[!0-9]*) MAX=3 ;; esac
 
 tmp="$(mktemp 2>/dev/null)" || exit 0
-"$RQ" --json >"$tmp" 2>/dev/null || { rm -f "$tmp"; exit 0; }
-feed="$(python3 - "$tmp" <<'PY'
+"$RQ" --json >"$tmp" 2>/dev/null || {
+ rm -f "$tmp"
+ exit 0
+}
+feed="$(
+ python3 - "$tmp" <<'PY'
 import json, os, re, sys
 try:
     with open(sys.argv[1]) as fh:
@@ -56,26 +60,37 @@ for r in rows:  # newest-first
         continue
     if only and not re.search(only, ident):
         continue
-    if ident.startswith(("router:", "overnight:critical-touch")):
+    if ident.startswith(("router:", "overnight:critical-touch",
+                         "class-upgrade:")):
+        continue
+    # durable class channel (2026-09-22-router-alert-class-channel):
+    # an operator-critical row never routes into auto-shaped candidates;
+    # belt: identity-free word scan on the first line too
+    first = (r.get("first") or "").replace("\t", " ")
+    if critical.search(first):
+        continue
+    if re.search(r"\*\*class:\*\* critical", r.get("body") or ""):
         continue
     if critical.search(ident) or not charset.match(ident):
         continue
     seen.add(ident)
-    first = (r.get("first") or "").replace("\t", " ")
     print("%s\t%s" % (ident, first))
 PY
-)" && rm -f "$tmp" || { rm -f "$tmp"; exit 0; }
+)" && rm -f "$tmp" || {
+ rm -f "$tmp"
+ exit 0
+}
 
 n=0
 while IFS=$'\t' read -r ident first; do
-  [ -n "$ident" ] || continue
-  [ "$n" -lt "$MAX" ] || break
-  python3 "$ROOT/scripts/router-tick.py" --identity "$ident" \
-    --text "$first" >/dev/null 2>&1 || true
-  n=$((n + 1))
+ [ -n "$ident" ] || continue
+ [ "$n" -lt "$MAX" ] || break
+ python3 "$ROOT/scripts/router-tick.py" --identity "$ident" \
+  --text "$first" >/dev/null 2>&1 || true
+ n=$((n + 1))
 done <<<"$feed"
 if [ "$n" -gt 0 ]; then
-  breadcrumb "router-feed" "fed" \
-    "$n identity(ies): $(printf '%s\n' "$feed" | cut -f1 | head -n "$MAX" | tr '\n' ' ')"
+ breadcrumb "router-feed" "fed" \
+  "$n identity(ies): $(printf '%s\n' "$feed" | cut -f1 | head -n "$MAX" | tr '\n' ' ')"
 fi
 exit 0

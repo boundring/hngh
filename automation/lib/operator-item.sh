@@ -7,7 +7,7 @@
 # contract; the alert crumb is what jobs/operator-items-feed.py reads.
 # Requires lib/breadcrumbs.sh + lib/notify-email.sh sourced first.
 # Deduped by identity within 7 days (refiles bump the xN marker).
-operator_item() { # identity text
-  alert_row "$1" 604800 "[hngh] $1" "$2"
+operator_item() { # identity text [class]
+  alert_row "$1" 604800 "[hngh] $1" "$2" "${3:-}"
   breadcrumb "${JOB_NAME:-operator-item}" "alert" "$2"
 }
