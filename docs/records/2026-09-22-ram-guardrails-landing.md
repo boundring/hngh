@@ -77,6 +77,26 @@ signature.
 
 ## Verification
 
+### 2026-09-22 operator-directed application of step 5a
+
+Operator instruction "A's good, do it" (chat 2026-09-22, names exact
+action and target). Applied without sudo: `hngh-dashboard.service` is a
+user unit and the memory controller is delegated to `user@1000.service`,
+so the alert body's `sudo systemctl edit` was incorrect —
+`~/.config/systemd/user/hngh-dashboard.service.d/mem-caps.conf`
+([Service] MemoryHigh=400M / MemoryMax=1G) + `systemctl --user
+daemon-reload` + restart. Verified live: MemoryMax=1073741824,
+MemoryHigh=419430400 in `systemctl --user show`, cgroup
+`memory.max`/`memory.high` match, dashboard serves 200 on :8890.
+Disposition: parked alert `mem-caps-dropin:hngh-dashboard` resolved; the
+routed candidate
+`docs/project/plans/2026-09-22-routed-mem-caps-dropin-hngh-dashboard.plan.md`
+is superseded by this record (its delve step would have failed closed on
+sudo it never needed). Chrome-restart cadence (5b) and the router
+risk-class downgrade smell remain parked with the operator; items C
+(plaintext systemd user env secrets) and D (router fix) explicitly
+deferred until after step 5a by operator.
+
 Automation gate ALL PASS + lint clean (test-service-ctl 36/36,
 test-dashboard-p1 27/27, test-system-feed 12/12,
 test-memory-gate.sh green). Kernel gate green (2,934 checks).
