@@ -34,7 +34,7 @@ rows() {
 }
 run() {
   BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
-    HNGH_HOME="$(cd "$root/.." && pwd)" \
+    HNGH_HOME="$(cd "$root/.." && pwd)" STATE_FILE="$sb/STATE.md" \
     bash "$root/cadence/day/23-bctx-canary.sh"
 }
 reset() {
@@ -62,6 +62,7 @@ ok "canary: budget drift -> alert with expected vs found"
 reset
 BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
   BCTX_MAX_CONTEXT=40% HNGH_HOME="$(cd "$root/.." && pwd)" \
+  STATE_FILE="$sb/STATE.md" \
   bash "$root/cadence/day/23-bctx-canary.sh"
 need grep -q "expected 40% found 40%" < <(rows)
 ok "canary: env BCTX_MAX_CONTEXT overrides the row"
