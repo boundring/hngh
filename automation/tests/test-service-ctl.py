@@ -305,6 +305,10 @@ class ServiceRecovery(unittest.TestCase):
         self.stub_log = self.tmp / "systemctl.log"
         self.rq_log = self.tmp / "report-queue.log"
         self.stamp = self.tmp / "recovery-stamp"
+        self.dash_stamp = self.tmp / "dash-recovery-stamp"
+        self.dash_stamp.touch()  # pre-spent: legacy unsloth cases only
+        self.marker_dir = self.tmp / "markers"
+        self.marker_dir.mkdir()
         self._install("systemctl", SHOW_STUB)
         scripts = self.tmp / "scripts"
         scripts.mkdir()
@@ -319,6 +323,8 @@ class ServiceRecovery(unittest.TestCase):
             HNGH_SERVICE_PROBE_PORT="0",      # placeholder; set per-test
             HNGH_SERVICE_RECOVERY_SLEEP="1",
             HNGH_SERVICE_RECOVERY_STAMP=str(self.stamp),
+            HNGH_SERVICE_RECOVERY_DASH_STAMP=str(self.dash_stamp),
+            HNGH_STOP_MARKER_DIR=str(self.marker_dir),
             STATE_FILE=str(self.tmp / "STATE.md"),
             STUB_LOG=str(self.stub_log),
             RQ_LOG=str(self.rq_log),
@@ -346,6 +352,18 @@ class ServiceRecovery(unittest.TestCase):
 
     def stub_calls(self):
         return self.stub_log.read_text() if self.stub_log.exists() else ""
+
+    def run_dash(self, port, active="inactive", unitfile="enabled",
+                 extra=None):
+        fresh = self.tmp / "dash-stamp-fresh"  # clean per test via setUp
+        return self.run_recovery(port, active=active, unitfile=unitfile,
+                                 extra=dict(
+                                     extra or {},
+                                     HNGH_SERVICE_RECOVERY_DASH_STAMP=str(fresh),
+                                     HNGH_SERVICE_PROBE_DASH_PORT=str(port)))
+
+    def dash_marker(self):
+        return self.marker_dir / ".operator-stop-hngh-dashboard.service"
 
     def test_retarget_to_8888_and_no_llama_server_branch(self):
         src = RECOVERY.read_text()
@@ -414,6 +432,61 @@ class ServiceRecovery(unittest.TestCase):
         self.assertNotIn("--user start", self.stub_calls())
         self.assertFalse(self.stamp.exists())  # attempt not spent
         self.assertFalse(self.rq_log.exists())
+
+
+class DashboardRecovery(ServiceRecovery):
+    """2026-09-22 widening: hngh-dashboard.service:8890 as a second
+    recovery branch with its own per-UTC-day stamp and the
+    operator-stop expected-state guard."""
+
+    def test_dashboard_down_starts_once_per_day(self):
+        down = free_port()
+        p = self.run_dash(down)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("--user start hngh-dashboard.service", self.stub_calls())
+        self.assertIn("still down", self.rq_log.read_text())
+        fresh = self.tmp / "dash-stamp-fresh"
+        self.assertTrue(fresh.exists())  # dashboard attempt spent
+        # second run the same UTC day: no second start
+        before = self.stub_calls()
+        self.run_dash(down)
+        self.assertEqual(
+            self.stub_calls().count("start hngh-dashboard.service"),
+            before.count("start hngh-dashboard.service"))
+
+    def test_dashboard_stamp_independent_of_unsloth_stamp(self):
+        down = free_port()
+        self.stamp.touch()  # unsloth attempt already spent today
+        p = self.run_dash(down)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("--user start hngh-dashboard.service", self.stub_calls())
+
+    def test_operator_stop_marker_blocks_recovery(self):
+        down = free_port()
+        self.dash_marker().touch()  # deliberate stop through service-ctl
+        p = self.run_dash(down)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertNotIn("start hngh-dashboard.service", self.stub_calls())
+        self.assertIn("expected-state", self.rq_log.read_text())
+        self.assertIn("recovery skipped", self.rq_log.read_text())
+
+    def test_dashboard_still_down_alerts_with_journal_hint(self):
+        down = free_port()
+        p = self.run_dash(down)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("--user start hngh-dashboard.service", self.stub_calls())
+        rq = self.rq_log.read_text()
+        self.assertIn("still down", rq)
+        self.assertIn("journal", rq)
+
+    def test_dashboard_never_starts_active_or_missing_unit(self):
+        down = free_port()
+        p = self.run_dash(down, active="active")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertNotIn("start", self.stub_calls())
+        p = self.run_dash(down, unitfile="not-found")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertNotIn("start", self.stub_calls())
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 11-service-recovery — allowlisted self-heal for the unsloth serving port.
+# 11-service-recovery — allowlisted self-heal for the serving front doors.
 #
 # CORRECTIVE SLICE (2026-09-04): the fleet's front door is :8888, served
 # by unsloth-studio.service — the model chain speaks
@@ -41,8 +41,21 @@ SLEEP="${HNGH_SERVICE_RECOVERY_SLEEP:-30}" # env seam for hermetic tests
 STAMP="${HNGH_SERVICE_RECOVERY_STAMP:-$HOME/.hngh-automation/.service-recovery-$(date -u +%F)}"
 SYSTEMCTL="${HNGH_SERVICE_SYSTEMCTL:-systemctl}" # env seam for tests
 
+# 2026-09-22 widening (operator directive, plan
+# 2026-09-22-ram-guardrails-dashboard-controls): the dashboard died in
+# the session crash and stayed down (disabled unit, no auto-start).
+# Recovery now covers BOTH front doors; each has its OWN per-UTC-day
+# stamp so one branch's attempt never consumes the other's. A
+# deliberate stop through service-ctl.sh writes an expected-state
+# marker (~/.hngh-automation/.operator-stop-<unit>) that recovery
+# respects — it never undoes an operator stop; the marker clears on
+# the next start through service-ctl.sh.
+DASH_UNIT="hngh-dashboard.service"
+DASH_PORT="${HNGH_SERVICE_PROBE_DASH_PORT:-8890}" # env seam for tests
+DASH_STAMP="${HNGH_SERVICE_RECOVERY_DASH_STAMP:-$HOME/.hngh-automation/.service-recovery-hngh-dashboard.service-$(date -u +%F)}"
+
 port_up() { # short-timeout TCP connect, no curl dependency
- PORT="$PORT" python3 - <<'PY'
+ PORT="$1" python3 - <<'PY'
 import os, socket
 s = socket.socket(); s.settimeout(2)
 try:
@@ -60,47 +73,60 @@ report() { # kind text identity
   --identity "$3" --window 86400 >/dev/null 2>&1 || true
 }
 
-port_up && exit 0         # serving is fine (even out-of-unit): do nothing
-[ -e "$STAMP" ] && exit 0 # today's attempt was already spent
+attempt() { # $1=unit $2=port $3=stamp — one recovery attempt per UTC day
+ local unit="$1" port="$2" stamp="$3"
+ port_up "$port" && return 0 # serving is fine (even out-of-unit): noop
+ [ -e "$stamp" ] && return 0 # today's attempt was already spent
+ if [ -e "${HNGH_STOP_MARKER_DIR:-$HOME/.hngh-automation}/.operator-stop-$unit" ]; then
+  # expected-state: deliberate operator stop — never undo it; spend the
+  # attempt so this breadcrumb stays once per day (marker clears on the
+  # next service-ctl start, which re-arms recovery).
+  mkdir -p "$(dirname "$stamp")"
+  : >"$stamp" 2>/dev/null || true
+  report progress "expected-state: operator-stop marker present for $unit — recovery skipped (not an alert)" \
+   "service-recovery:expected-state:$unit"
+  breadcrumb "$JOB_NAME" "service-recovery" \
+   "$unit: operator-stop marker present — skipped"
+  return 0
+ fi
+ state="$("$SYSTEMCTL" --user show -p ActiveState,UnitFileState "$unit" 2>/dev/null)"
+ case "$state" in
+ *ActiveState=active*) return 0 ;;           # never restart an active unit
+ *UnitFileState=not-found* | "") return 0 ;; # not an installed user unit —
+  # the chain already falls back
+ *ActiveState=inactive* | *ActiveState=failed*) ;; # recoverable
+ *) return 0 ;;
+ esac
+ mkdir -p "$(dirname "$stamp")"
+ : >"$stamp" 2>/dev/null || true # spend today's single attempt
+ if [ "${DRY_RUN:-0}" = "1" ]; then
+  rm -f "$stamp" # a dry run does not spend the attempt
+  DRY_RUN=1 bash "$AUTOMATION_ROOT/scripts/service-ctl.sh" "$unit" start
+  echo "dry-run: recovery would wait ${SLEEP}s, re-probe :$port, then file" \
+   "a progress row (recovered) or an alert row (still down)"
+  return 0
+ fi
+ breadcrumb "$JOB_NAME" "service-recovery" \
+  ":$port down, $unit installed-but-inactive — starting via service-ctl.sh"
+ bash "$AUTOMATION_ROOT/scripts/service-ctl.sh" "$unit" start || true
+ sleep "$SLEEP"
+ if port_up "$port"; then
+  report progress "$unit serving recovered" "service-recovery:recovered:$unit"
+  breadcrumb "$JOB_NAME" "service-recovery" ":$port up after start — recovered"
+ else
+  state2="$("$SYSTEMCTL" --user show -p ActiveState,SubState "$unit" 2>/dev/null |
+   tr '\n' ' ')"
+  hint="$("$SYSTEMCTL" --user status "$unit" --no-pager -n 3 2>&1 | head -n 3 |
+   tr '\n' ' ' | cut -c1-400)"
+  report alert "$unit serving still down after starting (state: ${state2:-unknown}) — journal hint: $hint" \
+   "service-recovery:still-down:$unit"
+  breadcrumb "$JOB_NAME" "service-recovery" ":$port still down after start — alert filed ($state2)"
+ fi
+ return 0
+}
 
-state="$("$SYSTEMCTL" --user show -p ActiveState,UnitFileState "$UNIT" 2>/dev/null)"
-case "$state" in
-*ActiveState=active*) exit 0 ;;           # never restart an active unit
-*UnitFileState=not-found* | "") exit 0 ;; # not an installed user unit —
- # the chain already falls back
-*ActiveState=inactive* | *ActiveState=failed*) ;; # recoverable
-*) exit 0 ;;
-esac
-
-mkdir -p "$(dirname "$STAMP")"
-: >"$STAMP" 2>/dev/null || true # spend today's single attempt
-
-if [ "${DRY_RUN:-0}" = "1" ]; then
- rm -f "$STAMP" # a dry run does not spend the attempt
- DRY_RUN=1 bash "$AUTOMATION_ROOT/scripts/service-ctl.sh" \
-  "$UNIT" start
- echo "dry-run: recovery would wait 30s, re-probe :$PORT, then file a" \
-  "progress row (recovered) or an alert row (still down)"
- exit 0
-fi
-
-breadcrumb "$JOB_NAME" "service-recovery" \
- ":$PORT down, $UNIT installed-but-inactive — starting via service-ctl.sh"
-bash "$AUTOMATION_ROOT/scripts/service-ctl.sh" \
- "$UNIT" start || true
-
-sleep "$SLEEP"
-if port_up; then
- report progress "unsloth serving recovered ($UNIT started)" \
-  "service-recovery:recovered"
- breadcrumb "$JOB_NAME" "service-recovery" ":$PORT up after start — recovered"
-else
- state2="$("$SYSTEMCTL" --user show -p ActiveState,SubState "$UNIT" 2>/dev/null |
-  tr '\n' ' ')"
- hint="$("$SYSTEMCTL" --user status "$UNIT" --no-pager -n 3 2>&1 | head -n 3 |
-  tr '\n' ' ' | cut -c1-400)"
- report alert "unsloth serving still down after starting $UNIT (state: ${state2:-unknown}) — journal hint: $hint" \
-  "service-recovery:still-down"
- breadcrumb "$JOB_NAME" "service-recovery" ":$PORT still down after start — alert filed ($state2)"
-fi
+# primary branch: the model chain front door (seam variables above)
+attempt "$UNIT" "$PORT" "$STAMP"
+# dashboard branch (2026-09-22 widening), own port + own stamp
+attempt "$DASH_UNIT" "$DASH_PORT" "$DASH_STAMP"
 exit 0

@@ -11,7 +11,8 @@
 #   hngh docs/design/service-management.md  (landing in parallel)
 #
 # usage: scripts/service-ctl.sh [--json] <unit> <verb>
-#   unit:  llama-server.service | unsloth-warm.service | unsloth-studio.service
+#   unit:  llama-server.service | unsloth-warm.service |
+#          unsloth-studio.service | hngh-dashboard.service
 #   verb:  start | stop | restart | status   (status is read-only)
 #
 # Fail-closed order: (1) allowlist, (2) verb grant, (3) installed check —
@@ -32,7 +33,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$ROOT/lib/common.sh"
 . "$ROOT/lib/breadcrumbs.sh"
 
-ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service"
+ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service hngh-dashboard.service"
 SYSTEMCTL="${HNGH_SERVICE_SYSTEMCTL:-systemctl}" # env seam for tests
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 VERBS="start stop restart status"
@@ -105,6 +106,19 @@ rc=$?
 state="$(unit_state)"
 when="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 who="$(id -un 2>/dev/null || echo unknown)@$(hostname 2>/dev/null || echo unknown)"
+
+# expected-state marker: a deliberate stop through this gated path is
+# remembered so the day-tier service recovery does not undo it (the
+# marker clears on the next start). A BARE `systemctl --user stop` by
+# the operator bypasses this and is invisible to recovery — touch the
+# marker yourself in that case (~/.hngh-automation/.operator-stop-<unit>).
+STOP_MARKER="${HNGH_STOP_MARKER_DIR:-$HOME/.hngh-automation}/.operator-stop-$UNIT"
+if [ "$VERB" = "stop" ]; then
+  mkdir -p "$(dirname "$STOP_MARKER")"
+  : >"$STOP_MARKER" 2>/dev/null || true
+elif [ "$VERB" = "start" ]; then
+  rm -f "$STOP_MARKER" 2>/dev/null || true
+fi
 
 breadcrumb "service-ctl" "$VERB" "$UNIT rc=$rc state=$state by=$who"
 

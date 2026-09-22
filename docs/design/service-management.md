@@ -51,8 +51,13 @@ verify-on-arrival caveat). Two closed lists define the entire
 authority:
 
 - **Units (closed allowlist)**: exactly `llama-server`,
-  `unsloth-warm`, `unsloth-studio`. Nothing else is ever addressable;
-  a request outside the list is refused by name, not guessed at.
+  `unsloth-warm`, `unsloth-studio`, `hngh-dashboard`. Nothing else is
+  ever addressable; a request outside the list is refused by name, not
+  guessed at. The 2026-09-22 operator directive (RAM-guardrails plan
+  `2026-09-22-ram-guardrails-dashboard-controls`, post-OOM-crash
+  hardening) adds `hngh-dashboard.service` (:8890) so the day-tier
+  service recovery can restore the dashboard after a session crash;
+  this document is extended first, the script second.
 - **Verbs (closed)**: `start`, `stop`, `restart`, `status`.
   `status` is read-only and always available. `enable`, `disable`,
   `mask`, and any unit-file edit are REFUSED by the script itself —
