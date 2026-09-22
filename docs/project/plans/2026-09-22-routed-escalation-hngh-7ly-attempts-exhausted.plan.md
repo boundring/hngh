@@ -8,3 +8,7 @@ at 2026-09-22T22:00:13Z. Alert text: escalation hngh-7ly: attempts-exhausted (SL
 
 - [ ] Delve: open research subject fail-20260922-escalation-hngh-7ly-attempts-exhausted for escalation:hngh-7ly:attempts-exhausted; record disposition; then fix or park
       Verification: research subject fail-20260922-escalation-hngh-7ly-attempts-exhausted present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-22T23:00:14Z re-occurred (dedup window expired)
