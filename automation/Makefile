@@ -118,6 +118,7 @@ test:
 	bash tests/test-research-beat-ingest-redact.sh
 	bash tests/test-research-dispositions-redact.sh
 	bash tests/test-research-tsv-path-sweep.sh
+	bash tests/test-research-sweep-selfheal.sh
 	# default scope = the four research data files + docs/research/*.md
 	# (2026-09-17 writer-gap follow-through: the crystallized-doc title
 	# emitter is gate-covered too)

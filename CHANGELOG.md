@@ -6,6 +6,18 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **Research sweep self-heal (gate-flap cure)** (docs/records/2026-09-22-research-sweep-selfheal.md):
+  the research-tsv-path-sweep's orphaned `--apply` mode is wired into
+  the hour cadence (`research-sweep-selfheal.sh` called by
+  `33-research-beat.sh`), so committed rows with raw home tokens —
+  leaked by overnight agent sessions past the sealed writer seams —
+  back-redact within the hour instead of red-gating `make test` and
+  blocking plan acceptance until a manual cure (fc74aa3b precedent;
+  today's alert 81bccb06 fired x14 over 12h). Fail-closed where it
+  must be: dirty working-tree leaks and operator-staged work refuse
+  the heal commit (staged-index guard, the `research_commit`
+  convention); the gate alert remains the backstop.
+
 - **RAM gate trip telemetry** (docs/records/2026-09-22-oom-p3-ram-gate-alert.md):
   a `memory_gate` trip below the RAM floor now files one deduped
   report-queue alert row (identity `ram-gate:trip`, window 86400 —

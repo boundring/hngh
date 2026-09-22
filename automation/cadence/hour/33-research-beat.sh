@@ -183,6 +183,16 @@ DISPOSITIONS="$AUTOMATION_ROOT/research-dispositions.tsv"
 WIKI_PROJECT_IDX="${HNGH_WIKI_PROJECT_INDEX:-$HOME/Projects/etc/llm-wiki/.llm-wiki/meta/index.md}"
 WIKI_PERSONAL_IDX="${HNGH_WIKI_PERSONAL_INDEX:-$HOME/.llm-wiki/meta/index.md}"
 
+# sweep self-heal (2026-09-22 gate-flap cure): the research-tsv
+# sweep's orphaned --apply mode wired into the cadence, so committed
+# raw-home-token rows back-redact within the hour instead of blocking
+# plan acceptance until a manual cure (fc74aa3b precedent, alert
+# 81bccb06 x14). Fail-soft: the gate alert remains the backstop for
+# anything this leaves behind (dirty churn, staged-index refusals).
+[ -x "$AUTOMATION_ROOT/scripts/research-sweep-selfheal.sh" ] &&
+ KERNEL="$KERNEL" JOB_NAME="$JOB_NAME" \
+  "$AUTOMATION_ROOT/scripts/research-sweep-selfheal.sh" || :
+
 # commit-per-op (2026-09-12 yield audit): commit exactly the artifacts a
 # value-carrying transition just wrote, in the same beat. Free-commit
 # lane (machine-managed research surfaces, per the plans/README autonomy
@@ -252,7 +262,8 @@ ensure_lines() {
   *)
    line="$(scrub_truncate "$line")"
    [ -n "$line" ] || continue # dash-form pathy whole-input -> discard
-   id="$(printf '%s' "$line" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-*$//')" ;;
+   id="$(printf '%s' "$line" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-*$//')"
+   ;;
   esac
   awk -F'\t' -v id="$id" -v desc="$desc" \
    '$1==id || $4==desc{found=1} END{exit !found}' "$LINES" && continue
