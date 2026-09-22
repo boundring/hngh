@@ -72,6 +72,19 @@ class CapBlockOperatorItem(unittest.TestCase):
         return subprocess.run(["bash", "-c", script], env=self.env,
                               capture_output=True, text=True, timeout=60)
 
+    def file_item_class(self, cls):
+        """operator_item's 3rd arg passes the alert class through to
+        report-queue (2026-09-22-router-alert-class-channel step 3)."""
+        script = (
+            '. "%s/lib/breadcrumbs.sh"\n'
+            '. "%s/lib/notify-email.sh"\n'
+            '. "%s/lib/operator-item.sh"\n'
+            'operator_item "$ITEM_IDENTITY" "$ITEM_TEXT" %s\n'
+            % (ROOT, ROOT, ROOT, cls)
+        )
+        return subprocess.run(["bash", "-c", script], env=self.env,
+                              capture_output=True, text=True, timeout=60)
+
     def report_rows(self):
         md = (self.tmp / "docs" / "project" / "reports.md").read_text()
         rows = []
@@ -133,6 +146,15 @@ class CapBlockOperatorItem(unittest.TestCase):
         self.assertTrue(rows[0][3].endswith("\u00d72"), rows[0])
         body = self.tmp / "docs" / "project" / "report-bodies" / rows[0][4]
         self.assertEqual(body.read_text().count("occurrence"), 1)
+
+    def test_critical_class_reaches_report_queue_argv(self):
+        proc = self.file_item_class("critical")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        rows = self.report_rows()
+        self.assertEqual(len(rows), 1, rows)
+        body = (self.tmp / "docs" / "project" / "report-bodies"
+                / rows[0][4]).read_text()
+        self.assertIn("- **class:** critical", body)
 
 
 if __name__ == "__main__":

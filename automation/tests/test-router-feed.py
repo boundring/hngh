@@ -66,16 +66,18 @@ class RouterFeed(unittest.TestCase):
             env={**os.environ, "HNGH_REPORT_ROOT": str(self.kernel)},
             capture_output=True, text=True)
 
-    def seed(self, identity, text="wired alert"):
+    def seed(self, identity, text="wired alert", cls=None):
         # distinct text per row: report-queue ids are sha8(TEXT) and body
         # files share {ts}-{kind}-{rid}.md, so same-second same-text seeds
         # would overwrite one body file (one identity for all rows)
         if text == "wired alert":
             text = "wired alert %s" % identity
-        out = self.rq("--add", "alert", text,
-                      "--identity", identity, "--window", "86400")
+        args = ["--add", "alert", text,
+                      "--identity", identity, "--window", "86400"]
+        if cls is not None:
+            args += ["--class", cls]
+        out = self.rq(*args)
         self.assertEqual(out.returncode, 0, out.stderr)
-
     def run_feed(self, **extra):
         env = {**self.env, **{k: str(v) for k, v in extra.items()}}
         return subprocess.run(["bash", str(FEED)], env=env,
@@ -169,6 +171,39 @@ class RouterFeed(unittest.TestCase):
         self.seed("review:hngh:P1-finding")
         self.seed("tree-skew:hngh")
         out = self.run_feed(ROUTER_FEED_ONLY="^review:")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 1, cands)
+        self.assertIn("review-hngh-P1-finding", cands[0])
+
+    def test_class_critical_rows_never_route(self):
+        # 2026-09-22-router-alert-class-channel: the durable class meta
+        # excludes the row before identity heuristics matter at all
+        self.seed("mem-caps:hngh-dashboard",
+                  text="parked critical-class item", cls="critical")
+        self.seed("review:hngh:P1-finding")  # control still routes
+        out = self.run_feed()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 1, cands)
+        self.assertIn("review-hngh-P1-finding", cands[0])
+
+    def test_first_line_critical_word_excluded(self):
+        # identity-free exclusion: the exact first line the tick receives
+        self.seed("ops:caps",
+                  text="systemd resource caps for the dashboard unit")
+        self.seed("review:hngh:P1-finding")  # control still routes
+        out = self.run_feed()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 1, cands)
+        self.assertIn("review-hngh-P1-finding", cands[0])
+
+    def test_class_upgrade_identity_excluded(self):
+        self.seed("class-upgrade:cap-block:d1",
+                  text="critical re-fire on live normal row")
+        self.seed("review:hngh:P1-finding")  # control still routes
+        out = self.run_feed()
         self.assertEqual(out.returncode, 0, out.stderr)
         cands = self.candidates()
         self.assertEqual(len(cands), 1, cands)
