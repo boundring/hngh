@@ -2934,6 +2934,12 @@ item. Example (every 6 hours, in the repo):
 0 */6 * * * cd ~/Projects/etc/hngh && STORE=$(mktemp -d -u /tmp/hngh-rotation-XXXX) && mkdir -p "$STORE" && sbcl --script scripts/rotate-queue --store="$STORE" --item=NEXT_ITEM --reviewer=~/.hngh-automation/reviewer-local.conf "Objective for NEXT_ITEM" <files> >> /tmp/hngh-rotation.log 2>&1
 ```
 
+Cron runs with a minimal environment (`SHELL=/bin/sh`, bare `PATH`,
+no login rc); if `sbcl` or `python3` live outside `/usr/bin:/bin`,
+add explicit `SHELL=`/`PATH=` lines at the top of the crontab — see
+[docs/project/heartbeat-service.md](../project/heartbeat-service.md)
+for the full note.
+
 Each rotated item commits its own candidate through the full governance
 loop (real evidence → real model review → ten-principle verdict →
 certificate → mutation). The ledger flip rides in the same commit.
