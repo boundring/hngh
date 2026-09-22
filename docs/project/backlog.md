@@ -1767,3 +1767,26 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Dependencies:** worker lane first (or independently via the operator's
   `jcode api-bridge`).
 - **Review trigger:** worker lane's first witnessed cycle.
+
+## Crumbs writer-flip — brief recommendation 2
+
+- **Problem:** `crumbs.db` (`automation/state/crumbs.db`, built by hngh
+  commit `8b0a4cac`) is a derived mirror of the STATE.md crumbs journal;
+  no consumer reads it yet, so the DB-as-source flip (database-migration
+  investigation brief, recommendation 2) has no consumption evidence.
+- **Smallest useful outcome:** one existing STATE.md reader migrated to
+  crumbs.db, with a parity check against STATE.md running clean for
+  >= 1 full day before the reader cuts over.
+- **Evidence:** [../agent-notes/briefs/2026-09-22-database-migration-investigation.md](../agent-notes/briefs/2026-09-22-database-migration-investigation.md)
+  recommendation 2; [../records/2026-09-22-crumbs-db-schema-contracts.md](../records/2026-09-22-crumbs-db-schema-contracts.md)
+  (mirror + schema contracts landed; ~10 grep consumers on the STATE.md
+  crumbs journal per the brief's tier table).
+- **Risk:** crumb writers diverge from the lib seam — several python
+  writers roll their own STATE.md appends — so a DB-as-source flip needs
+  the writers to converge on `lib/crumbs-db.py`'s writer path first;
+  fail-open mirror discipline keeps STATE.md readable either way.
+- **Dependencies:** mirror soak time since `8b0a4cac` (rows advancing
+  on the 1m sync; `skipped_total=95` legacy spill lines documented in
+  the schema-contracts record).
+- **Review trigger:** first consumer request, or >= 1 clean parity day,
+  or the next db-migration slice — whichever comes first.

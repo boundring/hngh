@@ -27,6 +27,7 @@ agent-live-view	done		session observatory live on nerve center 2026-08-27 — Au
 surface-evolution-loop	queued	Evolutionary design/development loop for all operator surfaces	operator directive 2026-08-26; extends dancing-ui + grade-interface
 machine-steered-backlog	done		select-course pure use case + cadence wiring landed 2026-08-27 — Machine-gated governance: Hngh picks its own next-best-course continually	operator directive 2026-08-26; extends run-autonomous + rotate-queue
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
+crumbs-writer-flip	queued	Crumbs writer-flip (crumbs.db becomes source)	backlog entry; brief rec 2
 dashboard-readouts	done	Dashboard readouts (spiral + circular + dance styles live)	rotated 2026-08-25
 timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired
 queue-eta	done	Planned-window (ETA) column on queue rows	implemented by check-in #5 2026-08-25
