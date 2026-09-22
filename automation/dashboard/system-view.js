@@ -197,9 +197,11 @@
     var m = d.memory;
     if (!m) return '';
     var t = tone(Math.round(m.used_pct));
+    var pk = m.peak ? ' · peak ' + m.peak.used_gb + ' GB' : '';
     return '<div class="sys-card c2">' + head('Memory') +
       '<div class="sys-big ' + t + '">' + m.used_pct + '%</div>' +
-      '<div class="sys-sub">' + m.available_gb + ' GB available</div>' +
+      '<div class="sys-sub">' + m.available_gb + ' GB available' + pk +
+      '</div>' +
       '<div class="sys-bar"><div class="sys-fill ' + t +
       '" style="width:' + Math.min(100, m.used_pct) + '%"></div></div></div>';
   }

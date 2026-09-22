@@ -8,9 +8,12 @@ human/last_boot when the uptime binary is missing (seconds survive).
 Hermetic: tmp fixture files + stubbed run(); no host state, no network.
 """
 import importlib.util
+import json
 import os
+import shutil
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -25,6 +28,10 @@ def _load(name, rel):
 
 
 sf = _load("system_feed", "jobs/system-feed.py")
+
+
+def _today():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def _proc_file(testcase, text):
@@ -100,6 +107,57 @@ class RepoRootResolution(unittest.TestCase):
         reports = sf.report_ledger_path("/srv/other-checkout")
         self.assertEqual(reports, "/srv/other-checkout/docs/project/"
                                   "reports.md")
+
+
+MEMINFO = ("MemTotal: 31457280 kB\nMemAvailable: 3145728 kB\n"
+           "SwapTotal: 15728640 kB\n")
+
+
+class MemoryPeak(unittest.TestCase):
+    """probe_memory peak: running max used_gb since UTC midnight, state
+    carried in system-ops.json itself; garbage/no prior = first wins."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.path = _proc_file(self, MEMINFO)
+
+    def probe(self, prior=None, garbage=False):
+        out = os.path.join(self.tmp, "system-ops.json")
+        if prior is not None:
+            with open(out, "w") as fh:
+                json.dump({"memory": {"peak": prior}}, fh)
+        elif garbage:
+            with open(out, "w") as fh:
+                fh.write("{bad")
+        with mock.patch.object(sf, "OUT", out):
+            val, note = sf.probe_memory(self.path)
+        self.assertIsNone(note)
+        self.assertEqual(val["used_gb"], 27.0)
+        self.assertEqual(val["available_gb"], 3.0)
+        return val["peak"]
+
+    def test_first_snapshot_becomes_peak(self):
+        self.assertEqual(self.probe(),
+                         {"date": self.probe()["date"], "used_gb": 27.0})
+
+    def test_prior_peak_retained_when_higher(self):
+        self.assertEqual(
+            self.probe(prior={"date": _today(), "used_gb": 29.5})
+            ["used_gb"], 29.5)
+
+    def test_current_higher_raises_peak(self):
+        self.assertEqual(
+            self.probe(prior={"date": _today(), "used_gb": 12.0})
+            ["used_gb"], 27.0)
+
+    def test_new_day_resets_peak(self):
+        self.assertEqual(
+            self.probe(prior={"date": "2000-01-01", "used_gb": 29.9})
+            ["used_gb"], 27.0)
+
+    def test_garbage_prior_is_first_snapshot(self):
+        self.assertEqual(self.probe(garbage=True)["used_gb"], 27.0)
 
 
 if __name__ == "__main__":

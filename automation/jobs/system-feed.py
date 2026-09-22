@@ -141,17 +141,36 @@ def probe_disk():
     return val or None, (None if val else "df parsed empty — disk omitted")
 
 
-def probe_memory():
-    """memory: {used_pct, available_gb} — /proc/meminfo."""
+def probe_memory(path="/proc/meminfo"):
+    """memory: {used_pct, available_gb, used_gb, peak} — /proc/meminfo.
+    peak is the running maximum used_gb since UTC midnight, carried in
+    system-ops.json itself (this feed is its only writer) — shows how
+    close the day got to the memory-exhaustion crash class."""
     try:
         info = {}
-        with open("/proc/meminfo") as fh:
+        with open(path) as fh:
             for ln in fh:
                 k, _, v = ln.partition(":")
                 info[k] = int(v.strip().split()[0])  # kB
         total, avail = info["MemTotal"], info["MemAvailable"]
-        return {"used_pct": round(100 * (total - avail) / total, 1),
-                "available_gb": round(avail / 1048576, 2)}, None
+        used_gb = round((total - avail) / 1048576, 2)
+        val = {"used_pct": round(100 * (total - avail) / total, 1),
+               "available_gb": round(avail / 1048576, 2),
+               "used_gb": used_gb}
+        peak = None
+        try:
+            with open(OUT, encoding="utf-8") as fh:
+                prev = (json.load(fh).get("memory") or {}).get("peak") or {}
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if prev.get("date") == today and prev.get("used_gb") is not None:
+                peak = prev["used_gb"]
+        except (OSError, ValueError):
+            pass  # no prior feed — first snapshot of the day wins
+        if peak is None or used_gb >= peak:
+            peak = used_gb
+        val["peak"] = {"date": datetime.now(timezone.utc)
+                       .strftime("%Y-%m-%d"), "used_gb": peak}
+        return val, None
     except (OSError, KeyError, ValueError, IndexError):
         return None, "/proc/meminfo unreadable — memory omitted"
 
