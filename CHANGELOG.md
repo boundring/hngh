@@ -80,6 +80,16 @@ lives under Pre-release / early development until the first release.
   MemoryMax caps remain parked on the operator with SLA + halt
   conditions (report alert afd8588b).
 
+- **Wiki-boundary verdict** (docs/records/2026-09-22-wiki-boundary-verdict.md):
+  architecture-relevant boundary decision recorded — no in-repo
+  llm-wiki vault; `docs/records/` + `docs/research/` stay canon; the
+  `prior_art` word-overlap recall in `33-research-beat.sh` stays
+  unchanged and embeddings stay deferred until measured degradation;
+  the missing `hngh-ceremony-loop-mechanics` vault page (21 referencing
+  files) and the db-migration roadmap adjacency (waits at the
+  third-evening intake fold, roadmap r221-228) are noted with operator
+  gates.
+
 ### 2026-09-21
 
 #### Fixed

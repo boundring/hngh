@@ -184,10 +184,71 @@ authorize a future action.
   and all four contents landed via reachable twins. Corrects the
   census wording that framed the external cert id as a git object.
 
-The harvest from 2026-09-01 onward is thin here on purpose: recent
-work-slice facts live closer to their surfaces (plan files, reports.md,
-the changelog). The four 2026-09-09 rows above are the anchor records
-the documentation spine ties itself to.
+## 2026-09-22 batch backfill
+
+The index resumed 2026-09-22 with a one-pass batch backfill of the
+records below (filesystem-derived: every record not yet listed above,
+within the covered dates), oldest to newest.
+
+- [2026-09-13-governed-fleet-consolidation.md](2026-09-13-governed-fleet-consolidation.md)
+  — the operator ratifies the governed-fleet stages 3+4 merge; roadmap,
+  backlog triage, and slices A-G become the landing contract.
+- [2026-09-13-newspaper-paid-cost-conversion.md](2026-09-13-newspaper-paid-cost-conversion.md)
+  — the daily newspaper pipeline stops spending paid model calls after
+  the $5.55/24h metered-ledger trigger; the pipeline is reclassified.
+- [2026-09-13-presentation-pass-1-adoption.md](2026-09-13-presentation-pass-1-adoption.md)
+  — close-out of presentation pass 1: the classy/dry/witty public-face
+  direction (docs/design/presentation-direction.md) is adopted; what
+  landed and what stays on the horizon.
+- [2026-09-13-wake-mutation-lane-landing.md](2026-09-13-wake-mutation-lane-landing.md)
+  — the :wake-mutation src mutation lands through the ceremony; the
+  operator-stall gate class is retired.
+- [2026-09-20-gemini-burst-cap-enforcement.md](2026-09-20-gemini-burst-cap-enforcement.md)
+  — gemini burst-cap enforcement landed (burst-remediation).
+- [2026-09-20-git-history-secret-scrub.md](2026-09-20-git-history-secret-scrub.md)
+  — git history secret scrub plus dashboard allowlist.
+- [2026-09-20-mcp-research-feed-strict-reader-spec.md](2026-09-20-mcp-research-feed-strict-reader-spec.md)
+  — strict-reader contract for the MCP research TSV feed.
+- [2026-09-20-publication-review-findings-digest-scrub.md](2026-09-20-publication-review-findings-digest-scrub.md)
+  — publication-review findings digest scrubbed through lib/scrub.py.
+- [2026-09-20-secret-scrub-round2.md](2026-09-20-secret-scrub-round2.md)
+  — secret scrub round 2: journal env leak plus OPENCODE history purge.
+- [2026-09-20-state-md-writer-reader-compat.md](2026-09-20-state-md-writer-reader-compat.md)
+  — STATE.md writer/reader 4-field compatibility audit
+  (writers-reader-compat).
+- [2026-09-20-value-add-routing-policy.md](2026-09-20-value-add-routing-policy.md)
+  — value-add routing policy landed.
+- [2026-09-21-filesystem-read-eval-hardening.md](2026-09-21-filesystem-read-eval-hardening.md)
+  — filesystem read-eval hardening.
+- [2026-09-21-filesystem-toctou-fault.md](2026-09-21-filesystem-toctou-fault.md)
+  — filesystem record transport: probe/read race fails closed.
+- [2026-09-21-vault-cutover-freshness.md](2026-09-21-vault-cutover-freshness.md)
+  — vault cutover plus key-freshness rung.
+- [2026-09-22-crumbs-db-schema-contracts.md](2026-09-22-crumbs-db-schema-contracts.md)
+  — crumbs DB schema contracts (db-migration slices A + B).
+- [2026-09-22-federal-branches-landing.md](2026-09-22-federal-branches-landing.md)
+  — federal-branches occupancy slice 1: bailiff wire, executive guard,
+  bead intake.
+- [2026-09-22-oom-p3-ram-gate-alert.md](2026-09-22-oom-p3-ram-gate-alert.md)
+  — RAM gate trip telemetry (OOM-prevention handoff P3).
+- [2026-09-22-ram-guardrails-landing.md](2026-09-22-ram-guardrails-landing.md)
+  — RAM guardrails plus dashboard automation controls landing.
+- [2026-09-22-research-sweep-selfheal.md](2026-09-22-research-sweep-selfheal.md)
+  — research sweep self-heal (gate-flap cure).
+- [2026-09-22-router-alert-class-channel.md](2026-09-22-router-alert-class-channel.md)
+  — router alert class channel.
+- [2026-09-22-wiki-boundary-verdict.md](2026-09-22-wiki-boundary-verdict.md)
+  — wiki boundary decided: no in-repo vault, docs/ records + research
+  stay canon, prior_art word-overlap recall unchanged, embeddings
+  deferred until measured degradation.
+
+The harvest from 2026-09-01 onward was thin here on purpose: recent
+work-slice facts lived closer to their surfaces (plan files, reports.md,
+the changelog). That thin-index convention ended 2026-09-22, when the
+index resumed with a dated batch backfill (the 2026-09-22 batch section
+above); new records are indexed at birth from here on. The four
+2026-09-09 rows above are the anchor records the documentation spine
+ties itself to.
 
 - Future records name their scope, evidence command, observed result, and
   remaining unknowns.
