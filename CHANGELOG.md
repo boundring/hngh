@@ -6,6 +6,16 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **Research TSV schema contracts at gate time** (docs/records/2026-09-22-crumbs-db-schema-contracts.md):
+  new `tests/test-research-schema.py` feeds hermetic tmpdir TSVs
+  through the real research-routes parser (header drift, rows below
+  min_fields, and over-wide rows all raise; legacy disposition rows
+  pad to the 9-col writer schema; missing file reads soft) plus live
+  contracts on the real research TSVs (status vocabulary, header
+  acceptance, active lesson ids) — TSV schema drift now reds
+  `make test` instead of surfacing as a quietly-wrong routes payload
+  (db-migration slice A).
+
 - **Research sweep self-heal (gate-flap cure)** (docs/records/2026-09-22-research-sweep-selfheal.md):
   the research-tsv-path-sweep's orphaned `--apply` mode is wired into
   the hour cadence (`research-sweep-selfheal.sh` called by

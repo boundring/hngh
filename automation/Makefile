@@ -123,6 +123,7 @@ test:
 	# (2026-09-17 writer-gap follow-through: the crystallized-doc title
 	# emitter is gate-covered too)
 	python3 -B scripts/research-tsv-path-sweep.py --check
+	python3 -B tests/test-research-schema.py
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
