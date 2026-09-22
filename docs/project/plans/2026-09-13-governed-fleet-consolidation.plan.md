@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
 # The Governed Fleet -- ratify and land the stages 3+4 consolidation
 
 Proposed via `omp-bridge --propose` (omp session propose surface;

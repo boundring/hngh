@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
 # 2026-09-20 - dev-fail-20260918-Does-the-path-collision-bu (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

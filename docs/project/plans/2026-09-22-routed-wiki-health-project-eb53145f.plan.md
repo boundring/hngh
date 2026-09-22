@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=wiki-health:project:eb53145f -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z routed-from=wiki-health:project:eb53145f -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `wiki-health:project:eb53145f`

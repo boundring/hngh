@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
 # launch-item trio: fleet-plan unblock, dispatch ceilings, T1 evidence passes
 
 Operator-approved launch order 3 -> 2 -> 1 (review 2026-09-22): unblock

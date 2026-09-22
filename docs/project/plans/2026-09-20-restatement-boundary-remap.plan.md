@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
 # Remap loop-history guard RESTATEMENT boundary across 2026-09-20 filter-repo rewrite
 
 Proposed via `omp-bridge --propose` (omp session propose surface;

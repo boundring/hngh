@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ux-review:kernel-docs:2-Quiet-evidence-first-in-Display-regist -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z routed-from=ux-review:kernel-docs:2-Quiet-evidence-first-in-Display-regist -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `ux-review:kernel-docs:2-Quiet-evidence-first-in-Display-regist`

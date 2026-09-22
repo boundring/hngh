@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
 # 2026-09-22 - dev-patrol-20260916-automation-gate-gate-sta (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research
