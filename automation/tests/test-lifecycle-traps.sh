@@ -32,7 +32,7 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs" "$td/tmp" "$td/stubs" "$td/home"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh credentials.sh \
   params.sh context-pack.sh launch-session.sh model.sh model-demote.sh \
-  failfirst.sh beat-blockers.sh; do
+  failfirst.sh memory-gate.sh beat-blockers.sh; do
   cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
@@ -70,6 +70,7 @@ cat >"$td/cycle.sh" <<EOF
 #!/usr/bin/env bash
 exec env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
   OVERNIGHT_TIMEOUT="30" FAILFIRST_STATE_DIR="$td/ff" TMPDIR="$td/tmp" \
+  HNGH_RAM_FLOOR_MB=1 \
   HOME="$td/home" BEAT_BLOCKERS_FILE="$td/blockers.tsv" \
   OMP_STUB="$td/stubs/omp" MARKER="$MARKER" FORETHOUGHT_DEPTH="1" \
   OMP_BRIDGE_BIN="$td/stubs/bridge" KERNEL_ALERTS="$KERNEL_ALERTS" \
@@ -88,7 +89,8 @@ setsid bash "$td/cycle.sh" >/dev/null 2>&1 &
 cyc=$!
 n=0
 while [ "$n" -lt 75 ] && [ "$(wc -l <"$MARKER" 2>/dev/null)" -lt 2 ]; do
-  n=$((n + 1)); sleep 0.2
+  n=$((n + 1))
+  sleep 0.2
 done
 [ "$(wc -l <"$MARKER")" -ge 2 ] ||
   bad "both sessions in flight before TERM (marker=$(cat "$MARKER" 2>/dev/null))"
@@ -96,7 +98,8 @@ inflight="$(grep -l 'trap-fast' "$td/tmp"/hngh-overnight-inflight.* 2>/dev/null 
 ffdone="trap-fast$(printf '\t')cancelled"
 n=0
 while [ "$n" -lt 50 ] && ! grep -q "$ffdone" "$inflight" 2>/dev/null; do
-  n=$((n + 1)); sleep 0.2
+  n=$((n + 1))
+  sleep 0.2
 done
 grep -q "$ffdone" "$inflight" 2>/dev/null ||
   bad "fast sibling final disposition not recorded before TERM"
@@ -128,7 +131,8 @@ n=0
 beat_pids() { grep -l "$td/tmp" /proc/[0-9]*/environ 2>/dev/null | cut -d/ -f3; }
 while [ "$n" -lt 75 ] && [ -n "$(beat_pids)" ]; do
   for p in $(beat_pids); do kill -TERM "$p" 2>/dev/null; done
-  n=$((n + 1)); sleep 0.2
+  n=$((n + 1))
+  sleep 0.2
 done
 [ -z "$(beat_pids)" ] || bad "beat processes survived the sweep: $(beat_pids | tr '\n' ' ')"
 flock -n "$td/cycle.lock" /bin/true 2>/dev/null ||

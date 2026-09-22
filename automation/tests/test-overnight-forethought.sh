@@ -21,7 +21,8 @@ fail() {
 auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
- context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh; do
+ context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
+ memory-gate.sh; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
@@ -62,6 +63,7 @@ plan_with_step() { # step -> writes accepted seed plan
 
 run_cycle() {
  env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
+  HNGH_RAM_FLOOR_MB=1 \
   OVERNIGHT_TIMEOUT="5" FAILFIRST_STATE_DIR="$td/ff" \
   OMP_STUB="$stubdir/omp" MARKER="$MARKER" DREAM_OUT="${DREAM_OUT:-}" \
   DREAM_FAIL="${DREAM_FAIL:-0}" FORETHOUGHT_DEPTH="${FORETHOUGHT_DEPTH:-}" \

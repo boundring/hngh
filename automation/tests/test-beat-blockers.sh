@@ -22,7 +22,7 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
  context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
- beat-blockers.sh; do
+ memory-gate.sh beat-blockers.sh; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
@@ -72,6 +72,7 @@ plan_with_step() { # file step -> writes an accepted plan
 
 run_cycle() {
  env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
+  HNGH_RAM_FLOOR_MB=1 \
   OVERNIGHT_TIMEOUT="5" FAILFIRST_STATE_DIR="$td/ff" \
   BEAT_BLOCKERS_FILE="$BLOCKERS" \
   OMP_STUB="$stubdir/omp" MARKER="$MARKER" \
