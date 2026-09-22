@@ -13,6 +13,13 @@ set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
+# Bailiff (plan 2026-09-22-federal-branches-occupancy step 1): every tier
+# halts while the watch audit has findings. Fail closed on findings, fail
+# open on fault (inside bailiff_check). Tick stays exit 0 — the halt is a
+# skip-with-crumb, same contract as tick-skip.
+. "$AUTOMATION_ROOT/lib/bailiff.sh"
+bailiff_check || exit 0
+
 TIER="${TIER:-}"
 case "$TIER" in
 month | week | day | hour | 30m | 10m | 5m | 1m) ;;

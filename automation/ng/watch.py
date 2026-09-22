@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -9,7 +11,9 @@ from pathlib import Path
 import contract
 
 HERE = Path(__file__).resolve().parent
-LEDGER = HERE / "ledger"
+# Hermetic seam (bailiff contract, 2026-09-22): HNGH_LEDGER_DIR redirects
+# the whole ledger surface; unset keeps the in-repo default.
+LEDGER = Path(os.environ.get("HNGH_LEDGER_DIR") or HERE / "ledger")
 EVENTS = LEDGER / "events.jsonl"
 VERSION = LEDGER / "version"
 CURSOR = LEDGER / "watch_cursor.json"
@@ -126,6 +130,16 @@ def audit(events: list[contract.Event] | None = None, threshold: int = STALE_THR
                                   "version": f"v{current:08d}"}))
     return findings
 
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--bailiff":
+    # Bailiff CLI (read-only audit; never writes). stdout carries the
+    # verdict line the bash gate greps; stderr carries finding detail.
+    fs = audit()
+    for f in fs:
+        print(f"finding {f.payload.get('check')} {f.state_version}",
+              file=sys.stderr)
+    print("bailiff: halt" if fs else "bailiff: clean")
+    sys.exit(1 if fs else 0)
 
 if __name__ == "__main__":
     evs = [contract.Event("bead.ready", "v00000001", {"id": "b1"}, 1.0, ("b1",)),
