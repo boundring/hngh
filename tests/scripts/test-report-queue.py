@@ -559,5 +559,102 @@ class ReportQueueCLI(unittest.TestCase):
         return p.read_text() if p.exists() else ""
 
 
+class ReportQueueClassMeta(unittest.TestCase):
+    """2026-09-22-router-alert-class-channel step 1: `--class critical`
+    carries a `- **class:** critical` body meta line, normal/legacy rows
+    carry no class line, a bad class value exits 2, and a critical re-fire
+    on a live non-critical row never silently bumps — it files a distinct
+    class-upgrade escalation row instead (no silent class escalation)."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.root = Path(self._td.name)
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def add(self, kind, text, identity=None, window=None, evidence=None,
+            cls=None):
+        args = ["--add", kind, text]
+        if identity is not None:
+            args += ["--identity", identity]
+        if window is not None:
+            args += ["--window", str(window)]
+        if evidence is not None:
+            args += ["--evidence", evidence]
+        if cls is not None:
+            args += ["--class", cls]
+        return run(self.root, *args)
+
+    def rows(self):
+        out = []
+        p = self.root / "docs" / "project" / "reports.md"
+        if not p.exists():
+            return out
+        for line in p.read_text().splitlines():
+            s = line.strip()
+            cells = ([c.strip() for c in s.strip("|").split("|")]
+                     if s.startswith("|") and s.endswith("|") else None)
+            if cells and len(cells) == 5 and cells[0] != "timestamp":
+                out.append(cells)
+        return out
+
+    def body_of(self, row):
+        return (self.root / "docs" / "project" / "report-bodies"
+                / row[4]).read_text()
+
+    def test_critical_class_meta_line_written(self):
+        r = self.add("alert", "mem caps for dashboard",
+                     identity="mem-caps:x", cls="critical")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("- **class:** critical",
+                      self.body_of(self.rows()[-1]))
+
+    def test_normal_and_legacy_rows_carry_no_class_line(self):
+        r = self.add("alert", "explicit normal", identity="plain:x",
+                     cls="normal")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("class:", self.body_of(self.rows()[-1]))
+        r = self.add("alert", "legacy alert", identity="legacy:x")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("class:", self.body_of(self.rows()[-1]))
+
+    def test_bad_class_value_refused(self):
+        r = self.add("alert", "x", cls="urgent")
+        self.assertEqual(r.returncode, 2)
+
+    def test_critical_refire_never_silently_bumps_normal_row(self):
+        self.assertEqual(self.add("alert", "first sighting",
+                                  identity="cap-block:d1").returncode, 0)
+        r = self.add("alert", "second sighting",
+                     identity="cap-block:d1", cls="critical")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        original = [row for row in self.rows()
+                    if "first sighting" in row[3]][0]
+        body = self.body_of(original)
+        self.assertNotIn("class:", body)
+        self.assertNotIn("occurrence", body)  # not bumped
+        upgraded = [row for row in self.rows()
+                    if "class-upgrade" in self.body_of(row)]
+        self.assertEqual(len(upgraded), 1, self.rows())
+        up_body = self.body_of(upgraded[0])
+        self.assertIn("- **class:** critical", up_body)
+        self.assertIn("- **identity:** class-upgrade:cap-block:d1",
+                      up_body)
+
+    def test_critical_refire_on_critical_row_bumps_normally(self):
+        self.assertEqual(self.add("alert", "first critical",
+                                  identity="sec:d1",
+                                  cls="critical").returncode, 0)
+        r = self.add("alert", "second critical",
+                     identity="sec:d1", cls="critical")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        original = [row for row in self.rows()
+                    if "first critical" in row[3]][0]
+        self.assertIn("occurrence", self.body_of(original))
+        self.assertEqual([row for row in self.rows()
+                          if "class-upgrade" in row[3]], [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

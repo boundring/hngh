@@ -234,7 +234,7 @@ def body_name(ts, kind, rid):
 
 
 def write_body(ts, kind, rid, first, full, identity=None, evidence=None,
-               redact_text=True):
+               redact_text=True, cls=None):
     """Write one body sidecar. The boundary rewrite applies to the
     identity/evidence metas unconditionally and to FIRST/FULL unless
     REDACT_TEXT is False -- the argv pass in add() sets that only for
@@ -248,10 +248,11 @@ def write_body(ts, kind, rid, first, full, identity=None, evidence=None,
              if identity else "")
     ev = (f"- **last-evidence:** {redact_boundary(evidence)}\n"
           if evidence else "")
+    cl = (f"- **class:** {cls}\n" if cls else "")
     body_path(ts, kind, rid).write_text(
         f"# {kind} — {rid}\n\n- **timestamp:** {ts}\n"
         f"- **kind:** {kind}\n- **first line:** {first}\n"
-        f"{ident}{ev}\n{full}\n")
+        f"{ident}{ev}{cl}\n{full}\n")
 
 
 def parse_ts(s):
@@ -288,6 +289,14 @@ def body_evidence(ts, kind, rid):
         if line.startswith("- **last-evidence:** "):
             return normalize_boundary(
                 line[len("- **last-evidence:** "):].strip())
+    return None
+
+
+def body_class(ts, kind, rid):
+    """The class meta stored in a row's body ('critical'), or None."""
+    for line in body_text(ts, kind, rid).splitlines():
+        if line.startswith("- **class:** "):
+            return line[len("- **class:** "):].strip()
     return None
 
 
@@ -341,7 +350,7 @@ def bump_row(row, ts):
         fh.write(redact_boundary(f"- {ts} occurrence\n"))
 
 
-def add(kind, text, identity=None, window=86400, evidence=None):
+def add(kind, text, identity=None, window=86400, evidence=None, cls=None):
     if kind not in KINDS:
         print(f"report-queue: bad kind {kind!r} (expected "
               f"{'/'.join(sorted(KINDS))})", file=sys.stderr)
@@ -350,6 +359,10 @@ def add(kind, text, identity=None, window=86400, evidence=None):
         print("report-queue: empty TEXT refused", file=sys.stderr)
         return 2
     text = text.strip()
+    # durable alert class (2026-09-22-router-alert-class-channel):
+    # only `critical` stores a class meta; `normal` and legacy filings
+    # store none, so absence stays the default.
+    cls = "critical" if cls == "critical" else None
     if kind in PUBLIC_KINDS:
         # boundary redaction before anything is derived from TEXT (id,
         # first line, body) — the public ledger never stores the raw
@@ -385,6 +398,14 @@ def add(kind, text, identity=None, window=86400, evidence=None):
                     print(f"report-queue: suppressed duplicate alert "
                           f"{r[2]} (no new evidence since {r[0]})")
                     return 0
+                if (cls == "critical"
+                        and body_class(*r[:3]) != "critical"):
+                    # a critical re-fire never silently bumps a live
+                    # non-critical row: file a distinct class-upgrade
+                    # row so escalation is visible, not folded in
+                    # (2026-09-22-router-alert-class-channel)
+                    identity = f"class-upgrade:{identity}"
+                    break
                 try:
                     bump_row(r, ts)
                     if evidence is not None:
@@ -395,7 +416,7 @@ def add(kind, text, identity=None, window=86400, evidence=None):
                     return 2
     ensure_header()
     write_body(ts, kind, rid, first, text, identity, evidence,
-               redact_text=(kind in PUBLIC_KINDS))
+               redact_text=(kind in PUBLIC_KINDS), cls=cls)
     with REPORTS.open("a") as fh:
         fh.write(f"| {ts} | {kind} | {rid} | {first} | {body_name(ts, kind, rid)} |\n")
     return 0
@@ -548,6 +569,8 @@ def main(argv=None):
     p.add_argument("--identity", metavar="KEY")
     p.add_argument("--evidence", metavar="TOKEN")
     p.add_argument("--window", type=int, metavar="SECONDS")
+    p.add_argument("--class", dest="alert_class",
+                   choices=("critical", "normal"), metavar="CLASS")
     p.add_argument("--prune", action="store_true")
     p.add_argument("--before", metavar="TS")
     p.add_argument("--kinds", metavar="KIND[,KIND...]")
@@ -561,7 +584,7 @@ def main(argv=None):
     if args.add:
         return add(args.add[0], args.add[1], args.identity,
                    86400 if args.window is None else args.window,
-                   args.evidence)
+                   args.evidence, args.alert_class)
     if args.list is not None:
         return list_cmd(args.list or None)
     if args.unread is not None:
@@ -576,7 +599,8 @@ def main(argv=None):
     if args.json:
         return json_cmd()
     print("usage: report-queue --add KIND TEXT [--identity KEY] "
-          "[--evidence TOKEN] [--window SECONDS] | --list[=KIND] | "
+          "[--evidence TOKEN] [--window SECONDS] "
+          "[--class critical|normal] | --list[=KIND] | "
           "--unread[=KIND] | --json | "
           "--mark-read ID | --prune --before TS --kinds KIND[,KIND...] "
           "[--archive PATH] | --help",
