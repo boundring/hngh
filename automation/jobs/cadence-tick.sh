@@ -22,6 +22,17 @@ month | week | day | hour | 30m | 10m | 5m | 1m) ;;
   ;;
 esac
 
+# RAM belt (plan 2026-09-22-ram-guardrails-dashboard-controls step 2):
+# rapid tiers only — month/week/day/hour drop-ins are cheap reporting
+# that never spawn sessions, so gating them would be pure overhead.
+# Below the floor the tick is skipped whole: fail-closed, exit 0.
+case "$TIER" in
+30m | 10m | 5m | 1m)
+  . "$AUTOMATION_ROOT/lib/memory-gate.sh"
+  memory_gate || exit 0
+  ;;
+esac
+
 # per-tier serialization: one tick at a time, drop the run if one is live
 LOCK="/tmp/hngh-cadence-${TIER}.lock"
 exec 9>"$LOCK"

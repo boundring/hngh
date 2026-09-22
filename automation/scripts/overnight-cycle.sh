@@ -347,7 +347,7 @@ author_draft_plan() { # day -> drafts one normal-risk plan proposal
   breadcrumb "$JOB_NAME" "plan-draft-skip" "no source material for a draft"
   return 0
  fi
-prompt="You are the hngh night-agent plan author. Draft ONE normal-risk plan the operator will review and accept (or reject) in the morning. Output ONLY the plan body: a '# <date> - <slug>' title line, a 1-2 sentence rationale naming the source row it serves, then a '## Steps' section with 3-6 unchecked steps, one per line, formatted '- [ ] <action> -- verify: <how completion is proven: a runnable command or observable state>'. Tag each step's execution cost class in its text: class=T1|T2|T3 (mechanical / bounded intelligence / deep intelligence) so the selector can route cost tiers; untagged means T2. Steps must be small, concrete, and land as plain commits in hngh-automation (gated by its make test). Normal-risk ONLY. FORBIDDEN, critical class, never include: provider or credential configuration, systemd unit lifecycle, hngh kernel src/tests/Makefile/hngh.asd changes, non-prune deletions, secrets or security posture.
+ prompt="You are the hngh night-agent plan author. Draft ONE normal-risk plan the operator will review and accept (or reject) in the morning. Output ONLY the plan body: a '# <date> - <slug>' title line, a 1-2 sentence rationale naming the source row it serves, then a '## Steps' section with 3-6 unchecked steps, one per line, formatted '- [ ] <action> -- verify: <how completion is proven: a runnable command or observable state>'. Tag each step's execution cost class in its text: class=T1|T2|T3 (mechanical / bounded intelligence / deep intelligence) so the selector can route cost tiers; untagged means T2. Steps must be small, concrete, and land as plain commits in hngh-automation (gated by its make test). Normal-risk ONLY. FORBIDDEN, critical class, never include: provider or credential configuration, systemd unit lifecycle, hngh kernel src/tests/Makefile/hngh.asd changes, non-prune deletions, secrets or security posture.
 
 Grounded constraints (binding):
 1. Every 'verify:' command MUST exist in this repository. Allowed verifications ONLY: 'make test' (the repo's ONLY gate), 'bash -n <file>', 'bash <script>', 'python3 <script>' (stdlib only), 'node --check <file>', 'git log'/'git status'/'grep' checks. NEVER pytest, jsonschema, npm, curl-based test suites, or make targets other than the existing ones (test, smoke, sweep, adhoc, enable, disable, status).
@@ -460,20 +460,29 @@ $(marked_cut 2000 "$path")
  # append_research_subject. Fail-closed: broken guard or empty output
  # skips the synthesis (dev-synth-skip), never a leaked slug.
  [ -f "$ROOT/lib/redact.sh" ] && . "$ROOT/lib/redact.sh" || :
- if ! type redact_home >/dev/null 2>&1 \
-  || ! type scrub_truncate >/dev/null 2>&1; then
+ if ! type redact_home >/dev/null 2>&1 ||
+  ! type scrub_truncate >/dev/null 2>&1; then
   breadcrumb "$JOB_NAME" "dev-synth-skip" "slug-mint guard unavailable"
   return 0
  fi
  first="$(redact_home "$first")"
- [ -n "$first" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input redacted empty"; return 0; }
+ [ -n "$first" ] || {
+  breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input redacted empty"
+  return 0
+ }
  first="$(scrub_truncate "$first")"
- [ -n "$first" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input pathy, refused"; return 0; }
+ [ -n "$first" ] || {
+  breadcrumb "$JOB_NAME" "dev-synth-skip" "mint input pathy, refused"
+  return 0
+ }
  slug="$(printf '%s' "$first" | tr -cs 'a-zA-Z0-9._-' '-' |
   sed 's/^-*//; s/-$//' | cut -c1-40)"
  slug="dev-$slug"
  slug="${slug#dev-dev-}" # guard already prefixed one 'dev-'
- [ "$slug" != "dev-" ] || { breadcrumb "$JOB_NAME" "dev-synth-skip" "slug empty after scrub"; return 0; }
+ [ "$slug" != "dev-" ] || {
+  breadcrumb "$JOB_NAME" "dev-synth-skip" "slug empty after scrub"
+  return 0
+ }
  prompt="You are the hngh development-plan synthesizer. The research
 machine has adopted the findings below.
 Turn the ADOPTED findings into ONE normal-risk development plan for
@@ -554,12 +563,15 @@ synthesize_dev_plan
 # Untagged, malformed, or absent plan -> T2 (fail-closed default).
 step_class() { # plan_file -> T1|T2|T3
  local pf="$1" block tag
- [ -f "$pf" ] || { printf 'T2'; return 0; }
+ [ -f "$pf" ] || {
+  printf 'T2'
+  return 0
+ }
  block="$(awk '/^- \[ \]/{if(f){exit} f=1} /^- \[x\]/{if(f)exit} f&&/^## /{exit} f{print}' "$pf" 2>/dev/null)"
  tag="$(printf '%s\n' "$block" | grep -m1 -o 'class=T[0-9]' || true)"
  case "$tag" in
-  class=T1 | class=T2 | class=T3) printf '%s' "${tag#class=}" ;;
-  *) printf 'T2' ;;
+ class=T1 | class=T2 | class=T3) printf '%s' "${tag#class=}" ;;
+ *) printf 'T2' ;;
  esac
 }
 
@@ -770,6 +782,12 @@ else
 fi
 
 # --- fail-first development gate + batch size -----------------------------
+# RAM belt (plan 2026-09-22-ram-guardrails-dashboard-controls step 2):
+# below-floor memory reuses the crash-net STOP=1 flag — the trap honors
+# it and run_one early-returns (:824), so the beat records nothing and
+# no session spawns. memory_gate already breadcrumbs the skip.
+. "$ROOT/lib/memory-gate.sh"
+if ! memory_gate; then STOP=1; fi
 # development tunes CONCURRENCY within the hard sessions-day-max ceiling
 # (the ceiling itself never moves): full=3 / standard=2 / cautious=1
 # concurrent sessions per beat (Inventory rows failfirst-dev-concurrent-*).
@@ -815,11 +833,11 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  # for unplanned lanes.
  local mspec msrc
  if [ "${SESSION_CLASS:-T2}" != "T2" ]; then
- 	mspec="$(select_model "$SESSION_CLASS")"
- 	SESSION_MODEL="${mspec%%|*}"
- 	msrc="${mspec##*|}"
+  mspec="$(select_model "$SESSION_CLASS")"
+  SESSION_MODEL="${mspec%%|*}"
+  msrc="${mspec##*|}"
  else
- 	msrc="$MODEL_SOURCE"
+  msrc="$MODEL_SOURCE"
  fi
  [ "$STOP" -eq 1 ] && return 0
  printf '%s\trunning\n' "$slug" >>"$INFLIGHT" # disposition appended post-completion

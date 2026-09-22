@@ -129,6 +129,7 @@ test:
 	bash tests/test-session-class.sh
 	bash tests/test-launch-jcode.sh
 	bash tests/test-worker-render.sh
+	bash tests/test-memory-gate.sh
 	python3 -B tests/test-session-launch.py
 	python3 -B tests/test-bctx-launch.py
 	python3 -B tests/test-ocgo-attribution.py
