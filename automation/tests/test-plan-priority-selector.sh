@@ -22,7 +22,7 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
  context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
- beat-blockers.sh; do
+ beat-blockers.sh memory-gate.sh; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
@@ -65,7 +65,7 @@ chmod +x "$kernel/scripts/report-queue"
 plan_with_step() { # file slug flagged step -> writes an accepted plan
  local front="<!-- plan: status=accepted risk=normal author=operator -->"
  local flagged="${2:-plain}" step="touch the sandbox marker"
- [ "$flagged" = "flagged" ] && \
+ [ "$flagged" = "flagged" ] &&
   front="<!-- plan: status=accepted risk=normal priority=high author=operator -->"
  printf '%s\n# plan\n\n## Steps\n\n- [ ] %s -- verify: marker exists\n' \
   "$front" "$step" >"$kernel/docs/project/plans/$1.plan.md"
@@ -75,7 +75,7 @@ run_cycle() {
  env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
   OVERNIGHT_TIMEOUT="5" FAILFIRST_STATE_DIR="$td/ff" \
   FORETHOUGHT_DEPTH="0" OVERNIGHT_MAX_SESSIONS_DAY="1" \
-  OVERNIGHT_MODEL="stub-model" \
+  OVERNIGHT_MODEL="stub-model" HNGH_RAM_FLOOR_MB="1" \
   OMP_BIN_CMD="$stubdir/omp" MARKER="$MARKER" \
   OMP_BRIDGE_BIN="$stubdir/bridge-stub.sh" \
   PATH="$stubdir:/usr/bin:/bin" \
@@ -89,11 +89,11 @@ reset_runs() {
  rm -rf "$td/ff"
  rm -f "$kernel"/docs/project/plans/*.plan.md
 }
- : >"$auto/logs/budget.md"
- : >"$MARKER"
- rm -f "$STATE"
- rm -rf "$td/ff"
- rm -f "$kernel"/docs/project/plans/*.plan.md
+: >"$auto/logs/budget.md"
+: >"$MARKER"
+rm -f "$STATE"
+rm -rf "$td/ff"
+rm -f "$kernel"/docs/project/plans/*.plan.md
 
 slot0() { # -> the plan slug launched as slot 0 (bridge stub records it)
  head -n1 "$MARKER"
@@ -129,7 +129,6 @@ run_cycle >/dev/null 2>&1
 [ "$(slot0)" = "a-plain" ] ||
  fail "unflagged order changed (slot0=$(slot0))"
 ok "no flag preserves the current filename order"
-
 
 echo "plan-priority-selector contract: all cases passed"
 echo "plan-priority-selector contract: all cases passed"
