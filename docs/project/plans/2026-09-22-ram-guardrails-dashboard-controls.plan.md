@@ -141,6 +141,8 @@ second (docs/design/service-management.md:103-105 doc-first rule).
       (crash brief prevention item 1) — operator-side, same SLA/halt
       carrier. Neither parked item is ever reported resolved without an
       operator disposition.
+      Verification: operator-item row exists naming the exact drop-in
+      lines; no code change; kernel `make test` green.
 
 ## Notes
 
