@@ -6,6 +6,14 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-22
 
+- **RAM gate trip telemetry** (docs/records/2026-09-22-oom-p3-ram-gate-alert.md):
+  a `memory_gate` trip below the RAM floor now files one deduped
+  report-queue alert row (identity `ram-gate:trip`, window 86400 —
+  re-fires per trip day) through notify-email's `alert_row`, so
+  previously silent gate trips become visible operator telemetry.
+  Pure telemetry, no retry loop: the cadence/overnight halt itself
+  remains STOP=1 (oom-prevention handoff P3).
+
 - **Federal-branches occupancy, slice 1: bailiff wire + executive guard +
   bead intake** (docs/records/2026-09-22-federal-branches-landing.md):
   the charter's missing bailiff is wired — `ng/watch.py --bailiff` audits

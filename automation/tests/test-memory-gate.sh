@@ -34,7 +34,22 @@ ck "precondition: MemAvailable readable" "yes" "$([ -n "$avail" ] && echo yes ||
 fake="$tmp/auto"
 mkdir -p "$fake/lib"
 cp "$root/lib/memory-gate.sh" "$root/lib/params.sh" "$fake/lib/"
-cp "$root/lib/breadcrumbs.sh" "$fake/lib/"
+cp "$root/lib/breadcrumbs.sh" "$root/lib/notify-email.sh" \
+  "$root/lib/credentials.sh" "$fake/lib/"
+HNGH_HOME="$fake/hngh" # fake kernel root: report-queue is faked below
+export HNGH_HOME
+mkdir -p "$HNGH_HOME/scripts"
+export FAKE_QUEUE_LOG="$tmp/queue-calls.log"
+cat >"$HNGH_HOME/scripts/report-queue" <<'EOF'
+#!/usr/bin/env python3
+import os
+import sys
+
+with open(os.environ["FAKE_QUEUE_LOG"], "a") as f:
+    f.write(" ".join(sys.argv[1:]) + "\n")
+EOF
+chmod +x "$HNGH_HOME/scripts/report-queue"
+export HNGH_NOTIFY_EMAIL_CONF="$tmp/no-conf" # email channel dormant
 printf 'ram-gate-floor-mb\t%s\ttest\ttest row\n' "$((avail / 2))" >"$fake/cadence-params.tsv"
 
 run_gate() { # extra env via caller; prints rc
@@ -87,6 +102,26 @@ oc="$root/scripts/overnight-cycle.sh"
 ck "overnight sources memory-gate.sh" "1" "$(grep -c 'lib/memory-gate.sh' "$oc")"
 ck "overnight gate sets STOP=1 on refusal" "1" \
   "$(grep -c 'memory_gate; then STOP=1' "$oc")"
+
+# 6) trip telemetry (oom-prevention handoff P3): a below-floor trip files
+#    one deduped alert row (identity ram-gate:trip, window 86400) through
+#    notify-email's alert_row; a healthy pass files nothing.
+: >"$FAKE_QUEUE_LOG"
+: >"$STATE_FILE"
+ck "trip rc 1 with alert seam live" "1" \
+  "$(HNGH_RAM_FLOOR_MB=$((avail + 500)) run_gate)"
+ck "trip files ram-gate:trip alert" "1" \
+  "$(grep -c -- '--identity ram-gate:trip' "$FAKE_QUEUE_LOG")"
+ck "trip window is 86400" "1" \
+  "$(grep -c -- '--window 86400' "$FAKE_QUEUE_LOG")"
+ck "trip row states the SLA" "1" \
+  "$(grep -c 'SLA: re-fires per trip day' "$FAKE_QUEUE_LOG")"
+ck "trip row states the halt" "1" \
+  "$(grep -c 'Halt: none' "$FAKE_QUEUE_LOG")"
+: >"$FAKE_QUEUE_LOG"
+_="$(HNGH_RAM_FLOOR_MB=1 run_gate)"
+ck "healthy pass files no alert" "0" \
+  "$(grep -c 'ram-gate:trip' "$FAKE_QUEUE_LOG")"
 
 if [ "$fails" -gt 0 ]; then
   echo "memory-gate contract: $fails FAILURES"
