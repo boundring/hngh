@@ -149,6 +149,7 @@ DISMISSED = os.path.join(DASHBOARD, "operator-dismissed.json")
 HNGH = os.environ.get("HNGH_REPO", "~/Projects/etc/hngh")
 BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
+SERVICE_CTL = os.path.join(ROOT, "scripts", "service-ctl.sh")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 PLANS_DOCS = os.path.join(HNGH, "docs", "project", "plans")
 DOC_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,120}\.md$")
@@ -799,6 +800,7 @@ class Handler(SimpleHTTPRequestHandler):
              "research-note": self._research_note,
              "system/refresh": self._system_refresh,
              "system/reset-failed": self._system_reset_failed,
+             "system/service-act": self._system_service_act,
              "system/backup-now": self._system_backup_now,
              "report-queue/mark-read": self._mark_read,
              "feedback": self._feedback}[p]()
@@ -873,6 +875,42 @@ class Handler(SimpleHTTPRequestHandler):
         self._handoff("reset-failed %s rc=%d" % (unit, p.returncode))
         self._json(201 if p.returncode == 0 else 500,
                    {"ok": p.returncode == 0, "rc": p.returncode})
+
+    def _system_service_act(self):
+        """start|stop|restart a control-surface unit via service-ctl.sh
+        (plan 2026-09-22 step 3): single gated path — the script owns the
+        unit allowlist and the operator-stop markers; this handler owns
+        only shape (UNIT_RE + verb) and audit. Handoff row is written
+        BEFORE the exec: restarting hngh-dashboard.service kills this
+        server mid-response, so the audit row must already be on disk."""
+        try:
+            b = self._body()
+            unit = str(b.get("unit", "")).strip()
+            verb = str(b.get("verb", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        if verb not in ("start", "stop", "restart"):
+            self._json(400, {"ok": False, "error": "invalid verb"})
+            return
+        if not UNIT_RE.fullmatch(unit):
+            self._json(400, {"ok": False, "error": "invalid unit name"})
+            return
+        self._handoff("service-act %s %s (pre-write)" % (verb, unit))
+        try:
+            p = subprocess.run(
+                ["bash", SERVICE_CTL, "--json", unit, verb],
+                capture_output=True, text=True, timeout=120)
+        except Exception:
+            self._json(500, {"ok": False, "error": "service-ctl exec failed"})
+            return
+        self._handoff("service-act %s %s rc=%d" % (verb, unit, p.returncode))
+        try:
+            out = json.loads(p.stdout.strip().splitlines()[-1]) if p.stdout.strip() else {}
+        except Exception:
+            out = {}
+        self._json(201 if p.returncode == 0 else 500,
+                   {"ok": p.returncode == 0, "rc": p.returncode, "state": out})
 
     def _system_backup_now(self):
         started = time.monotonic()

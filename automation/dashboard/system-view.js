@@ -85,6 +85,9 @@
     '.sys-btn{font-size:10px;padding:1px 8px;white-space:nowrap;cursor:pointer;',
     '  text-transform:none;letter-spacing:0}',
     '.sys-btn:disabled{opacity:.5;cursor:default}',
+    '.sys-unit-input{width:100%;box-sizing:border-box;background:transparent;',
+    '  color:var(--ink);border:1px solid var(--line);border-radius:0;padding:4px 8px;',
+    '  font:inherit;font-size:11.5px;margin-bottom:6px}',
     '.sys-big{font-size:22px;line-height:1.2;color:var(--ink)}',
     '.sys-big.ok{color:var(--ok)}',
     '.sys-big.warn{color:var(--warn)}',
@@ -162,6 +165,17 @@
       ? '<ul class="sys-list"><li><code>' + sys.map(esc).join('</code> <code>') +
         '</code><span class="sys-hint">system scope — no reset here</span></li></ul>' : '';
     body += failed.length ? '' : '<div class="sys-sub">no failed units</div>';
+    body += '<div class="sys-row"><input type="text" class="sys-unit-input" ' +
+      'id="sys-unit-input" placeholder="unit (e.g. hngh-cadence-day.timer)" ' +
+      'autocomplete="off" spellcheck="false"></div>' +
+      '<div class="sys-row"><button type="button" class="ghost sys-btn" ' +
+      'data-act="svc" data-verb="start">start</button> ' +
+      '<button type="button" class="ghost sys-btn" data-act="svc" ' +
+      'data-verb="stop">stop</button> ' +
+      '<button type="button" class="ghost sys-btn" data-act="svc" ' +
+      'data-verb="restart">restart</button></div>' +
+      '<div class="sys-hint">allowlisted units only — timer stop pauses ' +
+      'cadence; service-ctl.sh is the single gated path</div>';
     return '<div class="sys-card c4">' + head('Failed units') +
       '<div class="sys-big ' + cls + '">' + failed.length + '</div>' + body +
       '<div class="sys-sub">' + (un.user_running != null ? un.user_running + ' user services running' : '') +
@@ -266,7 +280,8 @@
       (statusMsg ? ' · <span class="sys-status">' + esc(statusMsg) + '</span>' : '') + '</p>' +
       '<div class="sys-cards">' + CARDS.map(function (c) { return c(data); }).join('') + '</div>' +
       '<p class="sys-foot">safe ops only — feed re-probe, failed-state reset (user scope), ' +
-      'and the config-backup lane; every action is handoffs-logged. package upgrades ' +
+      'allowlisted unit start/stop/restart (timer stop pauses cadence), and the ' +
+      'config-backup lane; every action is handoffs-logged. package upgrades ' +
       '(pacman -Syu) and other mutations are a future governed rung.' +
       ((data.notes && data.notes.length)
         ? ' feed notes: ' + data.notes.map(esc).join(' · ') : '') + '</p>';
@@ -339,6 +354,26 @@
     });
   }
 
+  function onService(btn) {
+    var input = document.getElementById('sys-unit-input');
+    var unit = input ? input.value.trim() : '';
+    var verb = btn.getAttribute('data-verb');
+    if (!unit) { setStatus('service act: enter a unit name first'); return; }
+    if (!window.confirm(verb + ' ' + unit + '?')) return;
+    btn.disabled = true;
+    setStatus('service-act ' + verb + ' ' + unit + ' — running…');
+    post('system/service-act', { unit: unit, verb: verb }, 130000).then(function (r) {
+      var j = r.json || {};
+      if (j.ok) setStatus('service-act ' + verb + ' ' + unit + ' — ok');
+      else setStatus('service-act ' + verb + ' ' + unit + ' failed: ' +
+        (j.error || ('rc ' + j.rc)));
+      return probe();
+    }).catch(function (e) {
+      setStatus('service-act ' + verb + ' ' + unit + ' failed: ' + e.message);
+      btn.disabled = false;
+    });
+  }
+
   /* delegated clicks survive every re-render */
   function onClick(e) {
     var btn = e.target.closest ? e.target.closest('[data-act]') : null;
@@ -346,6 +381,7 @@
     var act = btn.getAttribute('data-act');
     if (act === 'refresh') onRefresh(btn);
     else if (act === 'reset') onReset(btn);
+    else if (act === 'svc') onService(btn);
     else if (act === 'backup') onBackup(btn);
   }
 

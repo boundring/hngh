@@ -412,5 +412,76 @@ class JailEscapes(ServerTest):
         finally:
             del ds.PLANS_DOCS
 
+
+class ServiceAct(ServerTest):
+    """system/service-act: shape-gated, single exec path, pre-write audit
+    (plan 2026-09-22 step 3). The kernel script is seamed to a stub that
+    echoes a --json line; no real systemctl is ever touched."""
+
+    STUB_CTL = (
+        "#!/usr/bin/env bash\n"
+        "echo 'STUB ' \"$@\" >> \"$HNGH_CTL_LOG\"\n"
+        "if [ \"$1\" = \"--json\" ]; then\n"
+        "  echo '{\"unit\":\"'\"$2\"'\",\"verb\":\"'\"$3\"'\",\"rc\":0}'\n"
+        "fi\n"
+        "exit 0\n")
+
+    def setUp(self):
+        super().setUp()
+        self.ctl = self.tmp / "stub-service-ctl.sh"
+        self.ctl.write_text(self.STUB_CTL)
+        self.ctl.chmod(0o755)
+        self.ctl_log = self.tmp / "ctl-log.txt"
+        ds.SERVICE_CTL = str(self.ctl)
+        os.environ["HNGH_CTL_LOG"] = str(self.ctl_log)
+
+    def tearDown(self):
+        os.environ.pop("HNGH_CTL_LOG", None)
+        del ds.SERVICE_CTL
+        super().tearDown()
+
+    def ctl_calls(self):
+        return self.ctl_log.read_text() if self.ctl_log.exists() else ""
+
+    def test_shape_refusals_never_exec(self):
+        for payload in ({"unit": "x", "verb": "enable"},
+                        {"unit": "x", "verb": ""},
+                        {"unit": "bad;unit", "verb": "start"},
+                        {"verb": "start"}):
+            st, body = self.post("/system/service-act", payload)
+            self.assertEqual(st, 400, payload)
+        self.assertEqual(self.ctl_calls(), "")
+
+    def test_start_runs_gated_script_and_audits(self):
+        st, body = self.post("/system/service-act",
+                             {"unit": "hngh-cadence-day.timer", "verb": "start"})
+        self.assertEqual(st, 201)
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["state"]["verb"], "start")
+        calls = self.ctl_calls()
+        self.assertIn("--json hngh-cadence-day.timer start", calls)
+        handoffs = open(ds.HANDOFFS).read()
+        self.assertIn("service-act start hngh-cadence-day.timer (pre-write)",
+                      handoffs)
+        self.assertIn("service-act start hngh-cadence-day.timer rc=0", handoffs)
+
+    def test_refused_by_script_maps_to_500(self):
+        ds.SERVICE_CTL = "/bin/false"
+        st, body = self.post("/system/service-act",
+                             {"unit": "hngh-cadence-day.timer", "verb": "stop"})
+        self.assertEqual(st, 500)
+        self.assertFalse(body["ok"])
+
+    def test_invalid_json_400(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        c.request("POST", "/system/service-act", "{bad",
+                  {"Content-Type": "application/json",
+                   "X-Hngh-Token": self.token, "Connection": "close"})
+        r = c.getresponse()
+        body = json.loads(r.read())
+        c.close()
+        self.assertEqual(r.status, 400)
+        self.assertEqual(body["error"], "invalid JSON")
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

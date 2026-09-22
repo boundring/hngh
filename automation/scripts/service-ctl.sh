@@ -33,7 +33,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$ROOT/lib/common.sh"
 . "$ROOT/lib/breadcrumbs.sh"
 
-ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service hngh-dashboard.service"
+ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service hngh-dashboard.service hngh-cadence-1m.timer hngh-cadence-5m.timer hngh-cadence-10m.timer hngh-cadence-30m.timer hngh-cadence-hour.timer hngh-cadence-day.timer hngh-cadence-week.timer hngh-cadence-month.timer hngh-automation.timer hngh-night-agent.service hngh-night-research.service hngh-morning-report.service"
 SYSTEMCTL="${HNGH_SERVICE_SYSTEMCTL:-systemctl}" # env seam for tests
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 VERBS="start stop restart status"
