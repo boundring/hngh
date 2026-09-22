@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=mem-caps-dropin:hngh-dashboard -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T16:03:32Z routed-from=mem-caps-dropin:hngh-dashboard -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `mem-caps-dropin:hngh-dashboard`
@@ -8,3 +8,7 @@ at 2026-09-22T15:01:03Z. Alert text: [PARKED plan step 5a] systemd resource caps
 
 - [ ] Delve: open research subject fail-20260922-mem-caps-dropin-hngh-dashboard for mem-caps-dropin:hngh-dashboard; record disposition; then fix or park
       Verification: research subject fail-20260922-mem-caps-dropin-hngh-dashboard present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-22T16:00:13Z re-occurred (dedup window expired)

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-22T16:03:32Z -->
 
 Slug: 2026-09-22-ram-guardrails-dashboard-controls (repo plan
 docs/project/plans/2026-09-22-ram-guardrails-dashboard-controls.plan.md,
