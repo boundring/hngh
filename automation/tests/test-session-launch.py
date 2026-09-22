@@ -29,7 +29,7 @@ PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
        "params.sh", "context-pack.sh", "launch-session.sh",
-       "model.sh", "failfirst.sh")
+       "model.sh", "failfirst.sh", "memory-gate.sh")
 
 
 class SessionLaunch(unittest.TestCase):
@@ -89,6 +89,7 @@ class SessionLaunch(unittest.TestCase):
                    OVERNIGHT_LOCK=str(self.td / "cycle.lock"),
                    OVERNIGHT_TIMEOUT="5",
                    FAILFIRST_STATE_DIR=str(self.td / "ff"),
+                   HNGH_RAM_FLOOR_MB="1",
                    MARKER=str(self.marker),
                    OMP_BRIDGE_BIN=str(self.bridge),
                    OMP_BIN_CMD=str(self.omp))
