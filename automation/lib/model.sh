@@ -49,6 +49,10 @@
 #          plans; the contributor-priced Muse Spark legs, per the
 #          operator's 2026-09-13 addendum -- $0.10/$0.20 per 1M in/out),
 #          then unsloth -> ollama -> deck -> archive; kimi/ocgo skipped.
+#          The gemini burst cap (gemini-burst-max-calls rolling window)
+#          does NOT apply to this lane -- it gates the pin=remote
+#          branch only (narrowed 2026-09-20 blast-radius fix); feedback
+#          shares only the 200/day REMOTE_DAILY_CAP_CALLS with remote.
 #   other  ignored: the full chain runs.
 # A pinned quota leg that misses (pace-block, 429, endpoint down) falls
 # through to the local chain inside model_call -- research/reviews never
@@ -409,7 +413,7 @@ ollama_chat() {
 # leg: absent -> dormant. Spend guard: remote calls are counted per UTC
 # day in telemetry (kind=model, source=remote) against REMOTE_DAILY_CAP_CALLS.
 remote_chat() {
- local prompt="$1" max_tokens="$2" key content count pace
+ local prompt="$1" max_tokens="$2" key content count
  # the key file gates the leg on its mode too: absent -> dormant,
  # too open -> skip fail-closed before the value is read or sent (same
  # posture as the kimi/ocgo/zai key-file readers in this file).
@@ -425,16 +429,13 @@ remote_chat() {
   breadcrumb model "remote" "no key file -> next backend"
   return 1
  }
- # gemini burst gate (burst-only 2026-09-19): the coding pin rides a
- # ROLLING-window burst cap, not just the daily one. Counting the shared
- # source=remote rows under-counts pure muse/feedback-only windows, but
- # that is the safe direction for the spend-shape gate (it can only
- # block EARLY, never admit past the cap). Blocks fall through inside
- # model_call: the pin never blocks its caller (research never blocks).
- pace="$(gemini_burst_blocked)" && {
-  breadcrumb model "remote" "gemini burst: used ${pace% *}/cap ${pace#* } in window -- deferring to next leg"
-  return 1
- }
+ # gemini burst gate (burst-only 2026-09-19): enforced by the
+ # pin=remote branch of _model_call_impl, NOT here -- this helper
+ # serves the coding pin, the feedback pin, and the unpinned chain,
+ # and those lanes have no 20/hour cap (routing policy 2026-09-20:
+ # feedback rides the shared 200/day remote cap only). The key-file
+ # gates above stay here (all lanes skip fail-closed without a key);
+ # the daily cap below stays here (shared by all remote lanes).
  count="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source='remote' and ts like '$(date -u +%Y-%m-%d)%'" 2>/dev/null)"
  case "$count" in '' | *[!0-9]*) count=0 ;; esac
@@ -548,7 +549,15 @@ quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used ca
 # no soft pace, a burst lane has no even-spend contract to keep), 1 = go.
 # Counting the shared 'remote' telemetry source is what makes the gate
 # hit the gemini coding leg: only that pin and the muse/feedback pins
-# write source=remote, and the burst rows are consumed nowhere else.
+# write source=remote. SCOPE (narrowed 2026-09-20, blast-radius fix):
+# the gate is called ONLY from the pin=remote branch of
+# _model_call_impl -- never from remote_chat, which also serves the
+# feedback pin and the unpinned chain (those lanes have no 20/hour
+# cap; they share only the 200/day REMOTE_DAILY_CAP_CALLS). So
+# muse/feedback traffic inside the window does NOT throttle
+# muse/feedback calls; it can only block the gemini coding leg early
+# (the safe direction for a spend-shape gate). The burst rows are
+# consumed nowhere else.
 gemini_burst_blocked() { # -> 0 blocked (prints "used cap"), 1 go
  local cap win used
  cap="${GEMINI_BURST_MAX_CALLS:-$(get_param gemini-burst-max-calls 20)}"
@@ -909,7 +918,7 @@ _deck_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
 _model_call_impl() {
  local max_tokens="${1:-$MODEL_MAX_TOKENS}"
  local prompt pin_local=0 pin_kimi=0 pin_deck=0 pin_ocgo=0 pin_zai=0 pin_remote=0 \
-  pin_feedback=0 pin_review=0
+  pin_feedback=0 pin_review=0 pace
  case "${MODEL_PIN:-}" in
  local) pin_local=1 ;;
  kimi) pin_kimi=1 ;;
@@ -938,7 +947,17 @@ _model_call_impl() {
  if [ "$pin_remote" = 1 ]; then
   local rmodel="${REMOTE_MODEL_CODING:-$(get_param remote-model-coding '')}"
   [ -n "$rmodel" ] || rmodel="${REMOTE_MODEL:-}"
-  if (
+  # gemini burst gate (burst-only 2026-09-19, narrowed 2026-09-20):
+  # ONLY this branch rides the gemini-burst-max-calls rolling cap.
+  # The feedback pin and the unpinned chain call remote_chat
+  # directly and must never see this gate (routing policy: those
+  # lanes have no 20/hour cap, only the shared 200/day remote cap).
+  # Block -> breadcrumb -> fall through to the local chain inside
+  # model_call (the standing pin-miss contract: research never blocks).
+  pace="$(gemini_burst_blocked)" || pace=""
+  if [ -n "$pace" ]; then
+   breadcrumb model "remote" "gemini burst: used ${pace% *}/cap ${pace#* } in window -- deferring to next leg"
+  elif (
    REMOTE_MODEL="$rmodel"
    remote_chat "$prompt" "$max_tokens"
   ); then

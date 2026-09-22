@@ -18,6 +18,13 @@
 #                window, not a day); caps resolve from cadence-params
 #                gemini-burst-max-calls/gemini-burst-window-s when env
 #                is unset (env override wins).
+#   pin=feedback + burst window full -> feedback STILL answers (the
+#                burst gate is pin=remote-only, narrowed 2026-09-20
+#                blast-radius fix; feedback shares only the 200/day
+#                remote cap).
+#   unpinned chain + burst window full -> remote fallback STILL
+#                answers (same scoping: the unpinned remote leg never
+#                sees the gemini burst gate).
 #   pin=bogus -> ignored: full chain, unsloth answers.
 #   33-research-beat rotation: runs 1,2 local / runs 3,6 zai design-class
 #   glm-5.3 non-flash (share=3); share=0 never pins; REVIEW transition
@@ -264,6 +271,72 @@ ck "pin=remote burst-params: local answers" "stub-says-hi" "$out"
 ck "pin=remote burst-params: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
 ck "pin=remote burst-params: remote stub never hit" "0" "$(hits stubZ)"
 : >"$sb/cadence-params.tsv"
+reset_hits
+
+# --- 5j. burst rows stay authoritative with the real config.env present
+#        (burst-params-shadowing 2026-09-20: config.env must NOT pre-set
+#        GEMINI_BURST_* or the rows become dead config). Sandbox copies
+#        the repo config.env; tightened rows 5/60 + 5 fresh burst events
+#        -> gemini leg blocked, local answers. Verifies the fix at the
+#        production layering (common.sh -> config.env -> params rows).
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+cp "$root/config.env" "$sb/config.env"
+printf 'gemini-burst-max-calls\t5\tlib/model.sh MODEL_PIN=remote gemini leg\ttest row\n' >"$sb/cadence-params.tsv"
+printf 'gemini-burst-window-s\t60\tlib/model.sh MODEL_PIN=remote gemini leg\ttest row\n' >>"$sb/cadence-params.tsv"
+burst_seed 5
+out="$(call "hello-5j" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash")"
+ck "pin=remote burst-config.env-present: local answers" "stub-says-hi" "$out"
+ck "pin=remote burst-config.env-present: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-config.env-present: remote stub never hit" "0" "$(hits stubZ)"
+# ...and a matching env override still wins over the row (env > row).
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+out="$(call "hello-5j-env" "MODEL_PIN=remote" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_CODING=google/gemini-3.8-flash" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=3600")"
+ck "pin=remote burst-env-wins: gemini answers (5 < 20)" "stub-says-hi" "$out"
+ck "pin=remote burst-env-wins: gemini used" "openrouter:google/gemini-3.8-flash" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=remote burst-env-wins: remote stub hit" "1" "$(hits stubZ)"
+: >"$sb/cadence-params.tsv"
+rm -f "$sb/config.env"
+reset_hits
+
+# --- 5k. pin=feedback + burst window full -> feedback STILL answers
+#        (blast-radius fix 2026-09-20: the burst gate is pin=remote-only;
+#        remote_chat no longer calls it, so the feedback lane ignores a
+#        full shared-remote window and rides the 200/day cap only).
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+burst_seed 20
+out="$(call "hello-5k" "MODEL_PIN=feedback" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL_FEEDBACK=meta/muse-spark-1.3-contributor" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=3600")"
+ck "pin=feedback burst-full: feedback answers" "stub-says-hi" "$out"
+ck "pin=feedback burst-full: feedback used" "openrouter:meta/muse-spark-1.3-contributor" "$(cat "$sb/tmp-modelused.txt")"
+ck "pin=feedback burst-full: remote stub hit" "1" "$(hits stubZ)"
+reset_hits
+
+# --- 5l. unpinned chain + burst window full -> remote fallback STILL
+#        answers (same scoping: the unpinned remote_chat leg never sees
+#        the gemini burst gate). The unpinned chain reaches remote only
+#        when every earlier leg misses: unsloth is disarmed by pointing
+#        TOKEN_FILE at a missing file AND REFRESH_FILE at a missing file
+#        (no refresh -> no token -> miss), and the zai leg is disarmed
+#        by leaving Z_AI_API_KEY unset with no key file (fail-closed
+#        skip). Remote then answers with REMOTE_MODEL.
+rm -f "$sb/home/db/telemetry.db"
+reset_hits
+burst_seed 20
+out="$(call "hello-5l" "REMOTE_TOKEN_FILE=$sb/openrouter-token" \
+ "REMOTE_URL=http://127.0.0.1:$stubZ_port" "REMOTE_MODEL=meta/muse-spark-1.3-contributor" \
+ "TOKEN_FILE=$sb/no-unsloth-token" "REFRESH_FILE=$sb/no-refresh" \
+ "GEMINI_BURST_MAX_CALLS=20" "GEMINI_BURST_WINDOW_S=3600")"
+ck "unpinned burst-full: remote answers" "stub-says-hi" "$out"
+ck "unpinned burst-full: remote used" "openrouter:meta/muse-spark-1.3-contributor" "$(cat "$sb/tmp-modelused.txt")"
+ck "unpinned burst-full: remote stub hit" "1" "$(hits stubZ)"
+ck "unpinned burst-full: unsloth stub never hit" "0" "$(hits stubU)"
 reset_hits
 
 # --- 6. research-beat rotation: runs 1,2 local; run 3 zai design-class;
