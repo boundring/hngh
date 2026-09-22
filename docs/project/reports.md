@@ -4137,7 +4137,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-22T01:14:10Z | alert | 56fff22c | plan 2026-09-13-governed-fleet-consolidation not auto-accepted: step 1 has no Verification line ×12 | 2026-09-22T01:14:10Z-alert-56fff22c.md |
 | 2026-09-22T01:15:00Z | progress | 505dc530 | gate: hngh make test green (2934 checks passed) | 2026-09-22T01:15:00Z-progress-505dc530.md |
 | 2026-09-22T01:16:11Z | alert | 73cd857c | gate: hngh-automation make test FAILED (rc=2) ×2 | 2026-09-22T01:16:11Z-alert-73cd857c.md |
-| 2026-09-22T01:16:11Z | alert | 81bccb06 | plan acceptance blocked: hngh-automation make test FAILED (rc=2) ×12 | 2026-09-22T01:16:11Z-alert-81bccb06.md |
+| 2026-09-22T01:16:11Z | alert | 81bccb06 | plan acceptance blocked: hngh-automation make test FAILED (rc=2) ×13 | 2026-09-22T01:16:11Z-alert-81bccb06.md |
 | 2026-09-22T01:21:47Z | alert | a153f1bd | review P0/P1 (hngh): P1: `src/adapter/filesystem.lisp` `read-lines` handler-case catches all `error` conditions and re-signals `transport-fault`, masking genuine programming errors (e.g., wrong argument types, unbound variables) as transport faults; should catch only file-open/read-specific conditions (e.g., `file-error`) to preserve debuggability of real bugs. | 2026-09-22T01:21:47Z-alert-a153f1bd.md |
 | 2026-09-22T01:21:47Z | progress | 0cc557fe | review: hngh 3 findings (1 P0/P1) -> digest/REVIEW-2026-09-22.md | 2026-09-22T01:21:47Z-progress-0cc557fe.md |
 | 2026-09-22T01:21:47Z | progress | 005ec342 | review: automation 0 findings (0 P0/P1) -> digest/REVIEW-2026-09-22.md | 2026-09-22T01:21:47Z-progress-005ec342.md |
