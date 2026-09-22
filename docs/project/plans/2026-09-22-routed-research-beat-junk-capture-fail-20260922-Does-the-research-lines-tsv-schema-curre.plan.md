@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:junk-capture:fail-20260922-Does-the-research-lines-tsv-schema-curre -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=research-beat:junk-capture:fail-20260922-Does-the-research-lines-tsv-schema-curre  cause=obsolete disposed=2026-09-22T07:00:22Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `research-beat:junk-capture:fail-20260922-Does-the-research-lines-tsv-schema-curre`
@@ -13,3 +13,4 @@ at 2026-09-22T04:00:22Z. Alert text: research beat capture for fail-20260922-Doe
 
 - 2026-09-22T05:00:22Z re-occurred (dedup window expired)
 - 2026-09-22T06:00:22Z re-occurred (dedup window expired)
+- 2026-09-22T07:00:22Z re-occurred (dedup window expired)
