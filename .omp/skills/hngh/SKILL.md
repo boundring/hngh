@@ -5,7 +5,7 @@ description: Governs any omp session working in the hngh repo — ceremony loop 
 
 # hngh project orientation
 
-You are working in the hngh repo (Common Lisp kernel + hngh-automation). Read `docs/README.md` for the canonical read-order; do not re-walk it.
+You are working in the hngh repo (Common Lisp kernel + the in-repo `automation/` tier). Read `docs/README.md` for the canonical read-order; do not re-walk it.
 
 ## Orientation entry
 
@@ -26,7 +26,7 @@ Kernel/doc changes land ONLY through the certificate ceremony: propose → issue
 
 ## Commit-per-green rule
 
-- hngh-automation commits are free once automation `make test` exits 0.
+- `automation/` commits are free once automation `make test` exits 0.
 - Kernel `src/`, `tests/`, `Makefile`, and `hngh.asd` are FORBIDDEN to machine sessions — park them with an operator alert instead.
 - Autonomy reference: `docs/project/plans/README.md` ("Autonomy reference").
 
@@ -63,7 +63,7 @@ to `~/.hngh`, and `src/` knows nothing of either home.
 
 ## MCP + plugin surface
 
-Read-only state tools: `mcp__hngh_present`, `mcp__hngh_status`, `mcp__hngh_queue_report`, `mcp__hngh_dashboard_readout`. Propose new plans via the `hngh_propose` plugin tool (wraps `--propose`).
+Read-only state tools: `mcp__hngh_present`, `mcp__hngh_status`, `mcp__hngh_queue_report`, `mcp__hngh_dashboard_readout`, `mcp__hngh_research_lines`. Propose new plans via the `hngh_propose` plugin tool (wraps `--propose`).
 
 ## 1Password
 

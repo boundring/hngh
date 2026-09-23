@@ -57,7 +57,8 @@ per-domain heads.
 - Start: `docs/README.md`
 - Roadmap: `docs/project/roadmap.md`
 - Charter: `docs/project/plans/2026-09-20-federal-charter.plan.md`
-- Ceremony: `python3 scripts/omp-bridge --orient`
+- Orientation brief: `python3 scripts/omp-bridge --orient`
+- Ceremony: `python3 scripts/omp-bridge --ceremony OBJECTIVE FILE...`
 - Dashboard: `http://127.0.0.1:8890/`
 
 ## Current state (2026-09-20)

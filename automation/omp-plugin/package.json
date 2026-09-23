@@ -1,0 +1,18 @@
+{
+  "name": "hngh-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "hngh surfaces for omp sessions — hngh_propose/hngh_opencode/hngh_jcode/hngh_brief tools wrapping omp-bridge (plan, delegation, orientation seeding).",
+  "pi": {
+    "tools": ["./src/index.ts", "./src/opencode.ts", "./src/jcode.ts", "./src/brief.ts"],
+    "extensions": ["./src/orient.ts"]
+  },
+  "omp": {
+    "tools": ["./src/index.ts", "./src/opencode.ts", "./src/jcode.ts", "./src/brief.ts"],
+    "extensions": ["./src/orient.ts"]
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "latest"
+  }
+}

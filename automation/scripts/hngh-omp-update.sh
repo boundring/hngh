@@ -7,6 +7,7 @@ set -u
 . "$(cd "$(dirname "$0")/../lib" && pwd)/prereqs.sh"
 require_bins python3 npm || exit 1
 OMP="$HOME/.bun/bin/omp"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)" # resolve before any cd
 
 echo "=== omp self-update ==="
 before="$($OMP --version 2>/dev/null)"
@@ -21,6 +22,8 @@ python3 - <<'PY' >/tmp/omp-deps.txt
 import json
 deps = json.load(open("package.json")).get("dependencies", {})
 for name, spec in deps.items():
+    if name == "hngh-bridge":
+        continue               # installed from the in-repo source below
     if spec.startswith(("http", "file")):
         print(spec)          # re-pull source deps verbatim
     else:
@@ -31,6 +34,26 @@ while IFS= read -r spec; do
   echo "-- $spec"
   "$OMP" plugin install "$spec" 2>&1 | tail -1
 done </tmp/omp-deps.txt
+
+echo "=== hngh-bridge (in-repo plugin source) ==="
+# Canonical source: automation/omp-plugin (versioned). Install is a COPY
+# into node_modules (the plugin load path) — `omp plugin install` cannot
+# do local sources: file: specs are rejected outright and bare local
+# paths only symlink at the plugin-set root. Must run AFTER the extension
+# installs above: they re-materialize the file:./hngh-bridge dep (hardlink
+# copy of ~/.omp/plugins/hngh-bridge), which would shadow this copy.
+# rm+cp is idempotent and drops stale files (2026-09-23: 3 of 5 modules
+# missing from the installed copy made hngh_opencode/hngh_jcode/
+# hngh_brief vanish on a fresh omp start).
+SRC="$REPO_ROOT/automation/omp-plugin"
+DST="$HOME/.omp/plugins/node_modules/hngh-bridge"
+mkdir -p "$(dirname "$DST")"
+rm -rf "$DST"
+cp -R "$SRC" "$DST" || {
+  echo "hngh-bridge: install FAILED" >&2
+  exit 1
+}
+echo "hngh-bridge: $DST <- automation/omp-plugin"
 
 echo "=== billion-context (npm global; the proxy) ==="
 # billion-context-omp / billion-context-pi are deprecated (removed from

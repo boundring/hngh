@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""hngh-bridge plugin pure helpers (plan step 8, context-seeding).
+"""hngh-bridge plugin: pure helpers and install-drift gate.
 
-The plugin lives outside the repo (~/.omp/plugins/hngh-bridge); only its
-pure helpers are testable without omp. src/orient.ts exports repoRoot
-(cwd gate) and hasOriented (dedup state check); both run under bun, which
-strips the type-only import. The full session_start behavior is verified
-by the omp print-mode probe recorded in the integration plan.
+Canonical plugin source is versioned in-repo at automation/omp-plugin
+(package.json + src/ five modules), kept install-ready. The live install
+is the copy at ~/.omp/plugins/node_modules/hngh-bridge, refreshed by
+automation/scripts/hngh-omp-update.sh. src/orient.ts exports repoRoot
+(cwd gate) and hasOriented (dedup state check); the helpers run under
+bun, which strips the type-only imports. HnghPluginSourceDrift
+byte-compares the installed copy against the repo source (5 modules +
+package.json) so drift fails the gate. The full session_start behavior
+is verified by the omp print-mode probe recorded in the integration
+plan.
 """
 
 import json
@@ -16,8 +21,16 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ORIENT_TS = Path.home() / ".omp" / "plugins" / "hngh-bridge" / "src" / "orient.ts"
-OCODE_TS = Path.home() / ".omp" / "plugins" / "hngh-bridge" / "src" / "opencode.ts"
+PLUGIN_SRC = ROOT / "omp-plugin"                        # canonical source
+PLUGIN_INSTALLED = (Path.home() / ".omp" / "plugins"
+                    / "node_modules" / "hngh-bridge")   # live install copy
+PLUGIN_FILES = ("package.json", "src/index.ts", "src/brief.ts",
+                "src/opencode.ts", "src/jcode.ts", "src/orient.ts")
+SKIP_REASON = ("hngh-bridge checks run on the operator host only "
+               "(bun + the ~/.omp plugin install)")
+
+ORIENT_TS = PLUGIN_SRC / "src" / "orient.ts"
+OCODE_TS = PLUGIN_SRC / "src" / "opencode.ts"
 
 RUNNER = """
 const m = await import(FILE);
@@ -28,10 +41,7 @@ console.log(JSON.stringify([
 """
 
 
-@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
-                 "hngh-bridge plugin lives outside the repo "
-                 "(~/.omp/plugins/hngh-bridge); CI has no install step "
-                 "-- pure-helper coverage runs on the operator host only")
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1", SKIP_REASON)
 class HnghBridgePlugin(unittest.TestCase):
     def run_helpers(self, cwd, entries):
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
@@ -77,10 +87,7 @@ console.log(JSON.stringify({
 """
 
 
-@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
-                 "hngh-bridge plugin lives outside the repo "
-                 "(~/.omp/plugins/hngh-bridge); CI has no install step "
-                 "-- pure-helper coverage runs on the operator host only")
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1", SKIP_REASON)
 class HnghOpencodeTool(unittest.TestCase):
     """The hngh_opencode tool file: registered in the plugin manifest,
     parses under bun, and its pure helpers behave (bounded timeout clamp,
@@ -125,7 +132,7 @@ class HnghOpencodeTool(unittest.TestCase):
                           "disposition": "dead", "log": "logs/x.log"})
 
 
-JCODE_TS = Path.home() / ".omp" / "plugins" / "hngh-bridge" / "src" / "jcode.ts"
+JCODE_TS = PLUGIN_SRC / "src" / "jcode.ts"
 
 JCODE_RUNNER = """
 const m = await import(FILE);
@@ -135,10 +142,7 @@ console.log(JSON.stringify({
 """
 
 
-@unittest.skipIf(os.environ.get("HNGH_CI") == "1",
-                 "hngh-bridge plugin lives outside the repo "
-                 "(~/.omp/plugins/hngh-bridge) "
-                 "-- pure-helper coverage runs on the operator host only")
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1", SKIP_REASON)
 class HnghJcodeTool(unittest.TestCase):
     """The hngh_jcode tool file (2026-09-14 swarm-lane delegation):
     registered in the plugin manifest, parses under bun, and its pure
@@ -174,6 +178,27 @@ class HnghJcodeTool(unittest.TestCase):
         out = self.run_helpers(td)
         self.assertEqual(out["candidates"][0],
                          str(Path(td) / "automation/lib/jcode-delegate.sh"))
+
+
+@unittest.skipIf(os.environ.get("HNGH_CI") == "1", SKIP_REASON)
+class HnghPluginSourceDrift(unittest.TestCase):
+    """The live install must byte-equal the in-repo source.
+
+    hngh-omp-update.sh copies automation/omp-plugin ->
+    ~/.omp/plugins/node_modules/hngh-bridge; a stale copy silently drops
+    tools at the next omp start (2026-09-23: hngh_brief/hngh_opencode/
+    hngh_jcode were missing from the installed copy)."""
+
+    def test_installed_copy_matches_repo_source(self):
+        for rel in PLUGIN_FILES:
+            src, dst = PLUGIN_SRC / rel, PLUGIN_INSTALLED / rel
+            self.assertTrue(dst.is_file(),
+                            f"missing installed {rel}; "
+                            "run automation/scripts/hngh-omp-update.sh")
+            self.assertEqual(src.read_bytes(), dst.read_bytes(),
+                             f"installed {rel} drifted from "
+                             "automation/omp-plugin; run "
+                             "automation/scripts/hngh-omp-update.sh")
 
 
 if __name__ == "__main__":
