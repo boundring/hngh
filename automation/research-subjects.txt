@@ -297,3 +297,5 @@ patrol-20260923-systemd-units-timer-dead	patrol: surface systemd-units filed tim
 patrol-20260923-rotation-due-rotation-due	patrol: surface rotation-due filed rotation-due on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260923-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260923-journal-error-unit-not-practiced	patrol: surface journal-error filed unit-not-practiced on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-gate-cure-gate-cure-refused	patrol: surface gate-cure filed gate-cure-refused on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?

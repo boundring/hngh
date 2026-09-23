@@ -4108,7 +4108,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-22T01:23:24Z | progress | d4c9685e | hygiene: 25 zombie Active session file(s) >24h old (oldest 152h); report-only v1; e.g. session_deer_1789709938507_8eebfffc0824ad02.json ×2 | 2026-09-22T01:23:24Z-progress-d4c9685e.md |
 | 2026-09-22T01:23:24Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 ×2 | 2026-09-22T01:23:24Z-progress-adcaae87.md |
 | 2026-09-22T01:23:24Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md ×2 | 2026-09-22T01:23:24Z-progress-0e221d65.md |
-| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×47 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
+| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×48 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
 | 2026-09-22T01:31:21Z | alert | 500a0802 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=522845s > 28800s ×48 | 2026-09-22T01:31:21Z-alert-500a0802.md |
 | 2026-09-22T01:31:21Z | alert | 0e6a28bc | patrol handoffs: bad-execution on agent-handoffs.md -- 7 dead/cancelled in last 10 rows ×4 | 2026-09-22T01:31:21Z-alert-0e6a28bc.md |
 | 2026-09-22T01:31:21Z | alert | c16c59bf | patrol automation-gate: gate-red on hngh-automation -- hngh-automation: make test rc=2 | 2026-09-22T01:31:21Z-alert-c16c59bf.md |
@@ -4444,11 +4444,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-23T01:40:06Z | progress | e07de7f6 | agent-supervision: evicted-stale omp-PrecedentScan-970bc2 (idle 361m) | 2026-09-23T01:40:06Z-progress-e07de7f6.md |
 | 2026-09-23T01:45:06Z | progress | e01e7825 | agent-supervision: evicted-stale omp-ConsumerCoupling-4ef00e (idle 362m) | 2026-09-23T01:45:06Z-progress-e01e7825.md |
 | 2026-09-23T01:47:48Z | progress | 8d7c6cc5 | research line synth-2026-09-23-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-23-synth-2026-09-23-3.md | 2026-09-23T01:47:48Z-progress-8d7c6cc5.md |
-| 2026-09-23T01:48:01Z | alert | 9e3bfcf0 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=610237s > 28800s ×33 | 2026-09-23T01:48:01Z-alert-9e3bfcf0.md |
+| 2026-09-23T01:48:01Z | alert | 9e3bfcf0 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=610237s > 28800s ×34 | 2026-09-23T01:48:01Z-alert-9e3bfcf0.md |
 | 2026-09-23T01:48:01Z | alert | 50346b24 | patrol handoffs: bad-execution on agent-handoffs.md -- 8 dead/cancelled in last 10 rows ×2 | 2026-09-23T01:48:01Z-alert-50346b24.md |
 | 2026-09-23T01:48:02Z | alert | 1806a0ff | patrol manga: manga-stale on manga -- newest draft 228h old > 48h ×17 | 2026-09-23T01:48:02Z-alert-1806a0ff.md |
 | 2026-09-23T01:48:02Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-23T01:48:02Z-alert-c4a1f47d.md |
-| 2026-09-23T01:48:02Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×198 | 2026-09-23T01:48:02Z-alert-91c8ed89.md |
+| 2026-09-23T01:48:02Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×204 | 2026-09-23T01:48:02Z-alert-91c8ed89.md |
 | 2026-09-23T01:50:04Z | progress | f95ba5d2 | agent-supervision: evicted-stale omp-SurfaceInventory-f75cd1 (idle 360m) | 2026-09-23T01:50:04Z-progress-f95ba5d2.md |
 | 2026-09-23T02:00:04Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-23T02:00:04Z-progress-3dd20cc1.md |
 | 2026-09-23T02:00:13Z | progress | 0ea2fd3f | router routed patrol:pending-checks -> plan candidate 2026-09-23-routed-patrol-pending-checks (routed-at 2026-09-23T02:00:13Z) | 2026-09-23T02:00:13Z-progress-0ea2fd3f.md |
