@@ -13,6 +13,20 @@ lives under Pre-release / early development until the first release.
   green. A git-history scrub follows (`git filter-repo`; hashes change,
   see the record).
 
+- **Home-path guard landed** (docs/records/2026-09-23-home-path-scrub.md):
+  automatic defense against re-introducing the real local home path —
+  `lint-home-paths.py` wired into the automation gate, `pre-commit`
+  (staged) and `pre-push` (full pushed-rev tree) hooks; fake-login
+  fixtures and URL wire data stay legal by design.
+
+- **Loop-history guard re-keyed across the scrub rewrite** (docs/project/decisions.md):
+  the purge-proof exemption declarations named pre-scrub hashes and
+  went unreachable when the path-scrub rewrote `refs/heads/main`;
+  re-declared by ceremony (candidate `248e882f…`), with exactly two
+  real patch-id drifts re-registered (rebuilt epub binary section;
+  one scrubbed ledger diff). Guard green: 148 code-surface commits
+  checked, 0 violations.
+
 ### 2026-09-22
 
 - **Xiaomi AI quota source admitted** (docs/records/2026-09-22-xiaomi-quota-source.md):

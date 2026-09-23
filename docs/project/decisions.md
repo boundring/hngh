@@ -651,3 +651,31 @@ applies: absorb-and-record rather than keep-open. Tracked remainder is
 exactly one bead: `hngh-ypb` (ts-integration-assessment synthesis doc,
 `docs/design/ts-integration-assessment.md` not yet written). No other
 2a remainder. Closing `hngh-4m1` unblocks `hngh-ypb`.
+
+## 2026-09-23 — Loop-history guard declarations re-keyed across the authorized path-scrub rewrite
+
+The operator-mandated home-path scrub
+(docs/records/2026-09-23-home-path-scrub.md) rewrote `refs/heads/main`
+through two `git filter-repo` passes, re-keying every commit hash. The
+loop-history guard's purge-proof declarations — the `RESTATEMENT`
+anchor and the `KNOWN_EXEMPTIONS` keys — named pre-scrub hashes and
+went unreachable, red-ing the kernel gate (post-rewrite
+`c257bf6e..HEAD` spanned the whole re-created history). Cure per the
+guard's own `UNREACHABLE_NOTE`: re-declared by ceremony, not by a hand
+commit. Candidate `248e882fba750203b23ea41b0cd8a85793743c5025566f75dafc0db491a07234`
+(commit `deaf3e4c`) re-keyed `RESTATEMENT` `c257bf6e` → `26b98590`
+and all 28 exemption keys; pre-rewrite keys survive in the guard's
+comments and the pre-path-scrub bundle
+(`~/.hngh-automation/scrub/pre-path-scrub-20260923.bundle`).
+
+Exactly two patch-ids drifted and were re-registered: `25c77422`
+(portfolio ebook commit — its diff's binary memoir-epub section was
+rebuilt by the scrub's zip-callback pass) and `e8525546` (ledger
+repair — its diff carried scrubbed home-path bytes). The other 26
+matched the guard's own hermetic recipe byte-for-byte — itself the
+evidence that the scrub changed only path bytes. The safeguards
+fixture tree `358ff62c…` is unchanged (the restatement tree carried
+no scrubbed bytes). Post-state: 148 code-surface commits checked, 27
+named exemptions, 0 violations; `make test` 2934 checks green at
+commit time. Declared, not rewritten — the 2026-09-11 and 2026-09-20
+re-key precedent.
