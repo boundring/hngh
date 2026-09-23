@@ -2,6 +2,13 @@
 
 ## 2026-09-23
 
+- guard: `scripts/lint-home-paths.py` fails any tracked content
+  carrying the real local home (`/home/<actual login>`) — worktree,
+  `--staged`, and REV modes with a zip-member deep scan (fail-closed
+  on unparseable zips); wired into the `make test` gate plus the
+  `.beads/hooks/pre-commit`/`pre-push` guards. Fixture logins
+  (`/home/aubergine`, …) and URL wire data stay legal by design.
+
 - scrub: local home paths de-identified across the tier (2026-09-23
   operator directive): code/test defaults resolve through
   `$HOME`/`os.path.expanduser` (existing `HNGH_HOME`/`HNGH_REPO`/

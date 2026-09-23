@@ -1,4 +1,20 @@
 #!/usr/bin/env sh
+# home-path guard (2026-09-23 defense slice): the full tree of every
+# pushed rev must not carry the real local home path; a violation
+# aborts the push. The push lines are buffered first so the beads
+# block below still receives stdin unchanged.
+_hgp_lines="$(cat)"
+while read -r _hgp_lref _hgp_lsha _hgp_rref _hgp_rsha; do
+  case "$_hgp_lsha" in
+    *[!0]*) python3 automation/scripts/lint-home-paths.py "$_hgp_lsha" || exit 1 ;;
+  esac
+done <<EOF
+$_hgp_lines
+EOF
+exec 0<<EOF
+$_hgp_lines
+EOF
+unset _hgp_lines _hgp_lref _hgp_lsha _hgp_rref _hgp_rsha
 # --- BEGIN BEADS INTEGRATION v1.3.0 ---
 # This section is managed by beads. Do not remove these markers.
 if command -v bd >/dev/null 2>&1; then

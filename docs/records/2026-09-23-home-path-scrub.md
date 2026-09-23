@@ -104,3 +104,38 @@ files.
   `refs/omp-undo-redo/*` (omp edit snapshots), `refs/dolt/*` (beads
   Dolt namespace), local tag `pre-scrub-backup-20260920` — none are
   pushed to origin.
+
+## Automatic defense (landed same day)
+
+Operator directive after the scrub: this must never be re-added to the
+remote — by anyone, including agents. Invariant enforced: **the real
+local home (`/home/<actual login>`) never enters tracked content.**
+Deliberately legal: fake-login fixtures (`/home/aubergine`,
+`/home/testuser`, `/home/bri`, … — the scrubber's test vocabulary) and
+URL/UNC wire data (`https://x.io/home/u/f`) that must survive
+scrubbing. The rule is therefore login-derived at runtime, not a
+blanket `/home/...` ban (a blanket rule flags 194 legitimate fixture
+and wire-data locations in this tree).
+
+Enforcement at three points, one checker
+(`automation/scripts/lint-home-paths.py`, stdlib):
+
+- `automation/Makefile` test gate — every gated push (the machine's
+  push path gates on `make test`) and every agent verification loop;
+- `.beads/hooks/pre-commit` — `--staged` mode; a violation aborts the
+  commit where the action happens;
+- `.beads/hooks/pre-push` — full tree of every pushed rev; a violation
+  aborts the push. This is the client-side remote boundary. Ceiling:
+  `git push --no-verify` bypasses client hooks (a git limitation) —
+  the machine's own push path gates on `make test` and never passes
+  `--no-verify`; a server-side content rule would need CI, deferred.
+
+The checker scans bytes and zip members (the memoir-epub class above;
+an unparseable `PK` payload fails closed). Pattern boundary:
+`/home/` + `pathlib.Path.home().name`, not followed by
+`[A-Za-z0-9._-]`. Ceiling (`# ponytail:` in the script): the running
+account's home basename only — widen to `pwd.getpwall()` if
+multi-account leaks ever appear. Red-first test:
+`automation/tests/test-lint-home-paths.py`, which constructs its
+violation string at runtime (a hardcoded login in the test would trip
+the rule itself).
