@@ -15,3 +15,4 @@ at 2026-09-23T10:00:13Z. Alert text: publication-review 2026-09-23: 2 red check(
 - 2026-09-23T12:00:13Z re-occurred (dedup window expired)
 - 2026-09-23T13:00:13Z re-occurred (dedup window expired)
 - 2026-09-23T14:00:13Z re-occurred (dedup window expired)
+- 2026-09-23T15:00:13Z re-occurred (dedup window expired)
