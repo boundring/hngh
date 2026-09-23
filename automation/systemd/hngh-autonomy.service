@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 ~/Projects/etc/hngh/scripts/run-autonomous
-WorkingDirectory=~/Projects/etc/hngh
+ExecStart=/usr/bin/python3 %h/Projects/etc/hngh/scripts/run-autonomous
+WorkingDirectory=%h/Projects/etc/hngh
 # exit 0 on nothing-due; nonzero = malformed card (2) or refusing sub-step (3)
 Restart=no
 

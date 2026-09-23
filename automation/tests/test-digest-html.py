@@ -34,6 +34,7 @@ dh = _load("digest_html", "jobs/digest-html.py")
 dl = _load("digest_ledger", "jobs/digest-ledger.py")
 
 DAY = "2026-09-11"
+HOME = os.path.expanduser("~")
 FIXTURE_DIGEST = """\
 ## 0300 {day}
 _sources: hn-topstories,phoronix | model: fixture-model_
@@ -62,12 +63,12 @@ PATHY_LINES = (
     "### NEWS FROM THE MEGASTRUCTURE {day}\n"
     "\n"
     "- credential credential-freshness: hash-mismatch: unsloth-session "
-    "(evidence ~/.hngh-automation/unsloth.token)\n"
+    "(evidence {home}/.hngh-automation/unsloth.token)\n"
     "## The rounds 2026-09-11\n"
     "rounds: 4 ok, 1 fail — probe wrote /tmp/hngh-probe/store.db then "
     "recovered, config at ~/Projects/etc/hngh/config\n"
     "https://example.test/runs/42 stays a URL\n"
-).format(day=DAY)
+).format(day=DAY, home=HOME)
 
 
 def _pathy_digest(base_text):
@@ -374,7 +375,7 @@ class BuilderTest(unittest.TestCase):
         with Fixture() as fx:
             (fx.tmp / "STATE.md").write_text(
                 "%sT00:30:00Z | 23-bctx-canary.sh | alert | drift in "
-                "~/Projects/etc/hngh/STATE.md line 9\n" % DAY)
+                "%s/Projects/etc/hngh/STATE.md line 9\n" % (DAY, HOME))
             (fx.tmp / "dashboard" / "operator-items.json").write_text(
                 json.dumps({"generated_at": "", "items": [
                     {"id": "bb",
@@ -407,7 +408,7 @@ class BuilderTest(unittest.TestCase):
         # untouched (no marker sprayed into them)
         self.assertNotIn("/home", dl.scrub_paths("cd /home alone"))
         self.assertNotIn("/tmp", dl.scrub_paths("wrote /tmp then left"))
-        url_text = ("fetched https://example.com/x~/s and "
+        url_text = (f"fetched https://example.com/x{HOME}/s and "
                     "https://example.com/~user/p today")
         self.assertEqual(dl.scrub_paths(url_text), url_text)
 

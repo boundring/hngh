@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "dashboard", "research.json")
-HNGH_REPO = os.environ.get("HNGH_REPO", "~/Projects/etc/hngh")
+HNGH_REPO = os.environ.get("HNGH_REPO", os.path.expanduser("~/Projects/etc/hngh"))
 WIKI_SOURCES = os.path.join(
     os.path.expanduser("~"), ".llm-wiki", "wiki", "sources")
 

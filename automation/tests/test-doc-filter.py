@@ -18,7 +18,8 @@ sys.path.insert(0, str(ROOT / "lib"))
 import docfilter
 
 # Real corrupted-capture shape (RESEARCH-BEAT-2026-09-08-cistern-test-coverage.md),
-# built from char codes so the fixture is byte-identical to the incident.
+# built from char codes so the capture shape is byte-identical to the
+# incident (host path derived, never literal).
 OPEN = chr(60) + "tool_call" + chr(62)
 FCLOSE = chr(60) + "/function" + chr(62)
 CLOSE = chr(60) + "/tool_call" + chr(62)
@@ -26,7 +27,7 @@ JUNK_BLOCK = "\n".join([
     OPEN,
     "<function=list_files>",
     "<parameter=path>",
-    "~/Projects/etc/hngh",
+    str(Path.home() / "Projects/etc/hngh"),
     "</parameter>",
     FCLOSE,
     CLOSE,

@@ -6,11 +6,11 @@
 set -u
 . "$(cd "$(dirname "$0")/../lib" && pwd)/prereqs.sh"
 require_bins python3 npm || exit 1
-OMP=~/.bun/bin/omp
+OMP="$HOME/.bun/bin/omp"
 
 echo "=== omp self-update ==="
 before="$($OMP --version 2>/dev/null)"
-cd ~ && npm install @oh-my-pi/pi-coding-agent@latest 2>&1 | tail -1
+cd "$HOME" && npm install @oh-my-pi/pi-coding-agent@latest 2>&1 | tail -1
 # NOTE: never run bare `omp update` here — it installed a stale 17.3.3 over 18.x
 after="$($OMP --version 2>/dev/null)"
 echo "omp: ${before:-?} -> ${after:-?}"

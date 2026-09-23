@@ -23,7 +23,7 @@ STATE_FILE="${STATE_FILE:-$ROOT/STATE.md}"
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
 # shellcheck disable=SC1091
 . "$ROOT/lib/redact.sh" 2>/dev/null || true
-HNGH_REPO="${HNGH_REPO:-~/Projects/etc/hngh}"
+HNGH_REPO="${HNGH_REPO:-$HOME/Projects/etc/hngh}"
 REPORT_QUEUE="$HNGH_REPO/scripts/report-queue"
 LOCK="${LOCK:-/tmp/hngh-overseer.lock}"
 LAST_BEAT="${LAST_BEAT:-/tmp/hngh-overseer-steer-beat}"

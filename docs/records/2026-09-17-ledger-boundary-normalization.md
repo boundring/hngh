@@ -3,7 +3,7 @@
 ## Trigger
 
 Census found 319 committed `docs/project/reports.md` table rows (all
-kind=progress) still carrying raw `~/...` paths, newest
+kind=progress) still carrying raw `/home/$USER/...` paths, newest
 2026-09-17T02:21:39Z, plus 327 body files under
 `docs/project/report-bodies/` with raw path text (324 progress,
 3 alert). The certified sink guard widening 79eb4733 (`hngh: candidate

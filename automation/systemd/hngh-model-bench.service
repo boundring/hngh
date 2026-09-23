@@ -3,6 +3,6 @@ Description=hngh-automation model bench (daily 01:10 overnight, local models onl
 
 [Service]
 Type=oneshot
-ExecStart=~/Projects/etc/hngh/automation/jobs/model-bench.sh
-WorkingDirectory=~/Projects/etc/hngh/automation
+ExecStart=%h/Projects/etc/hngh/automation/jobs/model-bench.sh
+WorkingDirectory=%h/Projects/etc/hngh/automation
 Restart=no

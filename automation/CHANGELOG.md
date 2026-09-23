@@ -2,6 +2,14 @@
 
 ## 2026-09-23
 
+- scrub: local home paths de-identified across the tier (2026-09-23
+  operator directive): code/test defaults resolve through
+  `$HOME`/`os.path.expanduser` (existing `HNGH_HOME`/`HNGH_REPO`/
+  `HNGH_HOME_DIR` overrides preserved), systemd units through `%h`, MCP
+  command arrays through `sh -c` + `$HOME`, `config.env` and
+  `hngh-packages.tsv` install-paths through `~`, docs through `~/...`.
+  Record: docs/records/2026-09-23-home-path-scrub.md.
+
 - fix: unsloth-observe row-key resolution (2026-09-23 defect cleanup):
   `jobs/unsloth-contexts.py` `--observe` matched the loaded model's GGUF
   snapshot FILE PATH against id-keyed registry rows, so since the
@@ -678,7 +686,7 @@
   and intersects with the patrol registry before any node id exists —
   validated read-only against the live ledger (110 alert rows/24h, 9/9
   tokens registry ids, zero foreign). system-feed.py dropped the
-  hardcoded `~/...` root (README sweep item): env
+  hardcoded `/home/$USER/...` root (README sweep item): env
   HNGH_HOME/HNGH_REPO still wins, else the repo that ships the script.
   Both suites (previously unregistered) registered in `make test`;
   guard-node/patrol/surface behavior unchanged. Neighbor-lane WIP was

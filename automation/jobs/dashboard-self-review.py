@@ -42,7 +42,7 @@ BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8890")
 DASH_DIR = os.environ.get(
     "DASH_DIR", str(Path(__file__).resolve().parent.parent / "dashboard")
 )
-HNGH_REPO = os.environ.get("HNGH_REPO", "~/Projects/etc/hngh")
+HNGH_REPO = os.environ.get("HNGH_REPO", os.path.expanduser("~/Projects/etc/hngh"))
 STALE_MULT = 3          # feed is stale when older than N x its tier
 LEDGER_DRIFT_MAX = 50   # |ledger rows - body files| tolerated
 LEDGER_SKEW_MAX_AGE = int(

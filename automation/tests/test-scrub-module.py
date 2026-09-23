@@ -72,7 +72,7 @@ class UrlFamily(unittest.TestCase):
         self.assertEqual(scrub_paths(text), text)
 
     def test_url_with_home_like_path_component_preserved(self):
-        text = "see https://example.com~/page"
+        text = f"see https://example.com{os.path.expanduser("~")}/page"
         self.assertEqual(scrub_paths(text), text)
 
     def test_userinfo_credentials_die(self):

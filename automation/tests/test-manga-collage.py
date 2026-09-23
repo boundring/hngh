@@ -131,7 +131,7 @@ class TestCommittedSample(unittest.TestCase):
         self.assertIn("collection study", text)
         self.assertIn("manga-collection-policy", text)
         for leak in (".cbz", ".rar", ".zip", "~/Documents",
-                     "~/Documents"):
+                     str(Path.home() / "Documents")):
             self.assertNotIn(leak, text)
         self.assertIn("recolor", text)  # transformed, not verbatim
 

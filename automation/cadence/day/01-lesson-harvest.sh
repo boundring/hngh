@@ -24,7 +24,7 @@ export AUTOMATION_ROOT="$ROOT"
 # shellcheck disable=SC1091
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
 
-HNGH_REPO="${HNGH_REPO:-~/Projects/etc/hngh}"
+HNGH_REPO="${HNGH_REPO:-$HOME/Projects/etc/hngh}"
 RECORDS="$HNGH_REPO/docs/records"
 LESSONS_DIR="$HNGH_REPO/docs/project"
 MARKER="${LESSON_HARVEST_MARKER:-$ROOT/.lesson-harvest-last}"
@@ -40,12 +40,12 @@ last=0
 new_records=""
 new_count=0
 for r in "$RECORDS"/*.md; do
-  [ -f "$r" ] || continue
-  mt=$(stat -c %Y "$r" 2>/dev/null || echo 0)
-  if [ "$mt" -gt "$last" ]; then
-    new_records="$new_records $r"
-    new_count=$((new_count + 1))
-  fi
+ [ -f "$r" ] || continue
+ mt=$(stat -c %Y "$r" 2>/dev/null || echo 0)
+ if [ "$mt" -gt "$last" ]; then
+  new_records="$new_records $r"
+  new_count=$((new_count + 1))
+ fi
 done
 
 # --- new handoff lines since last run-complete -----------------------------
@@ -58,107 +58,107 @@ handoff_new=$((handoff_seen - handoff_last))
 
 found=""
 if [ "$new_count" -gt 0 ]; then
-  # shellcheck disable=SC2086
-  found=$(grep -lEi "lesson|provenance|failure class|class:|guardrail|roguelike" $new_records 2>/dev/null | head -20)
+ # shellcheck disable=SC2086
+ found=$(grep -lEi "lesson|provenance|failure class|class:|guardrail|roguelike" $new_records 2>/dev/null | head -20)
 fi
 
 advance_markers() {
-  echo "$handoff_seen" >"$ROOT/.lesson-harvest-handoffs" 2>/dev/null || true
-  newest=0
-  for r in "$RECORDS"/*.md; do
-    [ -f "$r" ] || continue
-    mt=$(stat -c %Y "$r" 2>/dev/null || echo 0)
-    [ "$mt" -gt "$newest" ] && newest=$mt
-  done
-  echo "$newest" >"$MARKER" 2>/dev/null || true
+ echo "$handoff_seen" >"$ROOT/.lesson-harvest-handoffs" 2>/dev/null || true
+ newest=0
+ for r in "$RECORDS"/*.md; do
+  [ -f "$r" ] || continue
+  mt=$(stat -c %Y "$r" 2>/dev/null || echo 0)
+  [ "$mt" -gt "$newest" ] && newest=$mt
+ done
+ echo "$newest" >"$MARKER" 2>/dev/null || true
 }
-  # Landing the counter: it lives inside the hngh kernel-repo tree and is
-  # pure machine state, but the tree-skew whitelist does not carry it, so
-  # any advance leaves the kernel dirty >4h and the oversight tree-skew
-  # alert re-fires every cycle (2026-09-11 run). Same posture as
-  # cadence/hour/30-kernel-ledger-sync.sh: explicit single path, refuse
-  # when anything is staged (never entangle operator work), never touch
-  # kernel code surfaces, no push. Fail-open: a failed commit is a crumb.
-  if git -C "$HNGH_REPO" diff --cached --quiet 2>/dev/null; then
-    if ! git -C "$HNGH_REPO" diff --quiet -- automation/.lesson-harvest-handoffs 2>/dev/null; then
-      cmsg="chore: lesson-harvest handoff counter tick ($(date -u +%F))"
-      if git -C "$HNGH_REPO" add -- automation/.lesson-harvest-handoffs && \
-         git -C "$HNGH_REPO" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
-           commit -q -m "$cmsg"; then
-        breadcrumb "lesson-harvest" "counter-commit" "committed: $cmsg"
-      else
-        breadcrumb "lesson-harvest" "counter-commit" "commit failed (tree changed mid-sync)"
-      fi
-    fi
+# Landing the counter: it lives inside the hngh kernel-repo tree and is
+# pure machine state, but the tree-skew whitelist does not carry it, so
+# any advance leaves the kernel dirty >4h and the oversight tree-skew
+# alert re-fires every cycle (2026-09-11 run). Same posture as
+# cadence/hour/30-kernel-ledger-sync.sh: explicit single path, refuse
+# when anything is staged (never entangle operator work), never touch
+# kernel code surfaces, no push. Fail-open: a failed commit is a crumb.
+if git -C "$HNGH_REPO" diff --cached --quiet 2>/dev/null; then
+ if ! git -C "$HNGH_REPO" diff --quiet -- automation/.lesson-harvest-handoffs 2>/dev/null; then
+  cmsg="chore: lesson-harvest handoff counter tick ($(date -u +%F))"
+  if git -C "$HNGH_REPO" add -- automation/.lesson-harvest-handoffs &&
+   git -C "$HNGH_REPO" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+    commit -q -m "$cmsg"; then
+   breadcrumb "lesson-harvest" "counter-commit" "committed: $cmsg"
+  else
+   breadcrumb "lesson-harvest" "counter-commit" "commit failed (tree changed mid-sync)"
   fi
+ fi
+fi
 
 case "$MODE" in
 run)
-  # run-completion: surface the freshest death-lessons immediately
-  if [ "$handoff_new" -gt 0 ]; then
-    tail -n "$handoff_new" "$HANDOFFS" 2>/dev/null | while IFS= read -r line; do
-      breadcrumb "lesson-harvest" "run-lesson" "$line"
-    done
-  fi
-  advance_markers
-  ;;
+ # run-completion: surface the freshest death-lessons immediately
+ if [ "$handoff_new" -gt 0 ]; then
+  tail -n "$handoff_new" "$HANDOFFS" 2>/dev/null | while IFS= read -r line; do
+   breadcrumb "lesson-harvest" "run-lesson" "$line"
+  done
+ fi
+ advance_markers
+ ;;
 periodic)
-  # mid-run cheap: new handoff or new record = candidate, crumb only
-  if [ "$handoff_new" -gt 0 ]; then
-    breadcrumb "lesson-harvest" "candidate" "$handoff_new new handoff line(s)"
-  fi
-  if [ "$new_count" -gt 0 ]; then
-    breadcrumb "lesson-harvest" "candidate" "$new_count new record(s)"
-  fi
-  advance_markers
-  ;;
+ # mid-run cheap: new handoff or new record = candidate, crumb only
+ if [ "$handoff_new" -gt 0 ]; then
+  breadcrumb "lesson-harvest" "candidate" "$handoff_new new handoff line(s)"
+ fi
+ if [ "$new_count" -gt 0 ]; then
+  breadcrumb "lesson-harvest" "candidate" "$new_count new record(s)"
+ fi
+ advance_markers
+ ;;
 daily)
-  digest="$LESSONS_DIR/lessons-$today.md"
-  if [ -n "$found" ] || [ "$handoff_new" -gt 0 ]; then
-    # MERGE semantics, never clobber (2026-08-27: overwrote the curated
-    # lessons-2026-08-26.md with a stub): rewrite only our own harvest
-    # files (they carry the harvest marker); a day-file with any other
-    # content is refused, the operator owns it.
-    if [ -f "$digest" ] && ! grep -q "Harvested by lesson-harvest.sh" "$digest"; then
-      breadcrumb "lesson-harvest" "refuse" \
-        "$digest has non-harvest content; not overwritten"
-    elif [ ! -f "$digest" ] || [ "$new_count" -gt 0 ] || [ "$handoff_new" -gt 0 ]; then
-      {
-        echo "# Lessons — $today (automatic harvest)"
-        echo
-        echo "Harvested by lesson-harvest.sh (observe→reflect→improve) at $(date -u +%H:%MZ)."
-        echo
-        echo "## Sources scanned"
-        echo "- Records newer than last harvest: $new_count"
-        echo "- Watchdog handoff ledger: $handoff_seen lines ($handoff_new new)"
-        echo "- Guardrails: $GUARDRAILS"
-        echo
-        if [ -n "$found" ]; then
-          echo "## New lesson-bearing records"
-          for f in $found; do echo "- $(basename "$f")"; done
-        fi
-        if [ "$handoff_new" -gt 0 ]; then
-          echo
-          echo "## New watchdog session-drops"
-          tail -n "$handoff_new" "$HANDOFFS" 2>/dev/null | sed 's/^/- /'
-        fi
-        echo
-        echo "## Guardrail cross-check"
-        echo "Does any new record extend a guardrail class or add a new one?"
-        echo "Fold it into agent-guardrails.md — that is the improvement leg."
-      } >"$digest"
-      breadcrumb "lesson-harvest" "digest" "wrote $digest ($new_count records, $handoff_new new handoffs)"
-    else
-      breadcrumb "lesson-harvest" "skip" "digest exists, nothing newer"
+ digest="$LESSONS_DIR/lessons-$today.md"
+ if [ -n "$found" ] || [ "$handoff_new" -gt 0 ]; then
+  # MERGE semantics, never clobber (2026-08-27: overwrote the curated
+  # lessons-2026-08-26.md with a stub): rewrite only our own harvest
+  # files (they carry the harvest marker); a day-file with any other
+  # content is refused, the operator owns it.
+  if [ -f "$digest" ] && ! grep -q "Harvested by lesson-harvest.sh" "$digest"; then
+   breadcrumb "lesson-harvest" "refuse" \
+    "$digest has non-harvest content; not overwritten"
+  elif [ ! -f "$digest" ] || [ "$new_count" -gt 0 ] || [ "$handoff_new" -gt 0 ]; then
+   {
+    echo "# Lessons — $today (automatic harvest)"
+    echo
+    echo "Harvested by lesson-harvest.sh (observe→reflect→improve) at $(date -u +%H:%MZ)."
+    echo
+    echo "## Sources scanned"
+    echo "- Records newer than last harvest: $new_count"
+    echo "- Watchdog handoff ledger: $handoff_seen lines ($handoff_new new)"
+    echo "- Guardrails: $GUARDRAILS"
+    echo
+    if [ -n "$found" ]; then
+     echo "## New lesson-bearing records"
+     for f in $found; do echo "- $(basename "$f")"; done
     fi
+    if [ "$handoff_new" -gt 0 ]; then
+     echo
+     echo "## New watchdog session-drops"
+     tail -n "$handoff_new" "$HANDOFFS" 2>/dev/null | sed 's/^/- /'
+    fi
+    echo
+    echo "## Guardrail cross-check"
+    echo "Does any new record extend a guardrail class or add a new one?"
+    echo "Fold it into agent-guardrails.md — that is the improvement leg."
+   } >"$digest"
+   breadcrumb "lesson-harvest" "digest" "wrote $digest ($new_count records, $handoff_new new handoffs)"
   else
-    breadcrumb "lesson-harvest" "nothing-new" "no new lessons since last harvest"
+   breadcrumb "lesson-harvest" "skip" "digest exists, nothing newer"
   fi
-  advance_markers
-  ;;
+ else
+  breadcrumb "lesson-harvest" "nothing-new" "no new lessons since last harvest"
+ fi
+ advance_markers
+ ;;
 *)
-  echo "usage: lesson-harvest [daily|run|periodic]" >&2
-  exit 2
-  ;;
+ echo "usage: lesson-harvest [daily|run|periodic]" >&2
+ exit 2
+ ;;
 esac
 exit 0

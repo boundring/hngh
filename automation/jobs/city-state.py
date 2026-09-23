@@ -5,10 +5,11 @@
 # Usage: city-state.py [--svg PATH]  (read-only; never mutates state).
 """Static export: beads + queue + timers -> JSON city-state + SVG map."""
 import json
+import os
 import subprocess
 import sys
 
-REPO = "~/Projects/etc/hngh"
+REPO = os.path.expanduser("~/Projects/etc/hngh")
 
 
 def sh(*argv):

@@ -15,6 +15,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # automation/
+HOME = os.path.expanduser("~")
 
 
 def _load(name, rel):
@@ -60,12 +61,12 @@ class PlanSeamScrub(unittest.TestCase):
         # with caller-supplied LABEL in the lane field, and build() prints
         # that field as 'newest:'.
         self.budget.write_text(
-            "2026-09-16T10:00Z | fix ~/secret leak"
+            f"2026-09-16T10:00Z | fix {HOME}/secret leak"
             " | session-run\n",
             encoding="utf-8")
         out = self.build()
         self.assertIn("- sessions:", out)
-        self.assertNotIn("~", out)
+        self.assertNotIn(HOME, out)
         self.assertIn("[redacted path]", out)
 
     def test_last_plan_carries_no_tmp_or_tilde_path(self):
@@ -80,11 +81,11 @@ class PlanSeamScrub(unittest.TestCase):
     def test_queue_next_carries_no_home_path(self):
         self.plans.write_text(
             '{"plans": [], "queue_next": '
-            '"land ~/Projects/etc/hngh fix", '
+            f'"land {HOME}/Projects/etc/hngh fix", '
             '"accepted": [], "executed": []}', encoding="utf-8")
         out = self.build()
         self.assertIn("- plans:", out)
-        self.assertNotIn("~", out)
+        self.assertNotIn(HOME, out)
         self.assertIn("[redacted path]", out)
 
     def test_queue_next_carries_no_root_or_users_path(self):

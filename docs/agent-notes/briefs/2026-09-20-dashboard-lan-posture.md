@@ -14,7 +14,7 @@ this session; corrections to the task brief are flagged inline.
 | Default ufw input policy is DROP | `/etc/default/ufw:11` `DEFAULT_INPUT_POLICY="DROP"` |
 | **No tailscale0 allow rule exists in ufw** | `grep tailscale /etc/ufw/user.rules` → no matches; the only 6 input ACCEPTs are LAN/port-22/loopback-dst rules. With `DEFAULT_INPUT_POLICY="DROP"`, plain rule deletion in Option B would sever tailnet access too, so Option B adds an explicit `allow in on tailscale0`. Whether tailnet→8890 works today under DROP-without-allow was not separately re-tested end-to-end; see Open questions. |
 | Anonymous LAN GET surface (curl from localhost, no token) | `/sessions.json` 200, ~881 KB this probe (brief said 2+ MB — size varies with feed contents; the 2 MB+ figure matches heavier feed states), `/data.json` 200 (~11 KB), `/research-routes.json` 200 (~40 KB), `/kb/` 200, `/feedback/` 200. `/hngh-docs/` returned **404** at probe time (see Open questions) |
-| `~` literal paths leak in the transcript feed | 265 occurrences in one `/sessions.json` fetch |
+| `/home/$USER` literal paths leak in the transcript feed | 265 occurrences in one `/sessions.json` fetch |
 | GET `/` embeds the live dashboard token | served HTML head contains `<meta name="hngh-token" content="eda73ba6...">`; injection at `automation/dashboard-server.py:606-619`, guard at `:710-726`; design record `docs/records/2026-09-11-dashboard-p1-server.md:15-16` documents the meta-tag tradeoff, and `:716` documents the same token also riding in digest email |
 | Token-gated POSTs exist incl. backup | `automation/dashboard-server.py:105` `POST /system/backup-now {}`; dispatch table `:749` |
 | Tailscale remote channel is real and manual-run | `automation/deck/tailscale-serve.sh` (ssh-triggers `sudo tailscale serve --bg 8890` on the desktop; idempotent; "manual-run only" per `automation/REMOTE-ACCESS.md:142`); documented tailnet URL `http://100.83.36.27:8890` (`automation/REMOTE-ACCESS.md:29`) |
@@ -42,7 +42,7 @@ follow-ups.
   > GETs are anonymous and GET `/` embeds the POST token as a meta tag, so
   > a LAN client can read the feeds and mint token-gated POSTs — accepted
   > LAN-trust tradeoff (2026-09-20 posture review). Follow-ups: stop
-  > serving the token to anonymous GETs, and scrub `~` paths
+  > serving the token to anonymous GETs, and scrub `/home/$USER` paths
   > from `/sessions.json` (265 hits per fetch). Remote-over-WAN path is
   > unchanged: tailnet via `http://100.83.36.27:8890` or
   > `tailscale serve`.
@@ -113,7 +113,7 @@ couch path (the deck shortcut works unchanged from anywhere).
 - **Residual risk:** any tailnet-enrolled device (deck, phone with the
   connector installed, anything that later joins `boundring@`) still gets
   anonymous GET + token meta. The token-via-`GET /` leak and
-  `~` path leakage persist over the tailnet path — the same two
+  `/home/$USER` path leakage persist over the tailnet path — the same two
   follow-ups as Option A apply, with lower urgency. sshd password auth
   being still enabled on the desktop (REMOTE-ACCESS.md:42-44) remains a
   separate open LAN exposure either way.

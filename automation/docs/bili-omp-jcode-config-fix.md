@@ -98,7 +98,7 @@ But neither `NODE_EXTRA_CA_CERTS` nor `SSL_CERT_FILE` is set in the environment.
    # or: certutil -addstore root combined-ca.pem
    ```
 
-   Portability notes: `NODE_EXTRA_CA_CERTS` is Node.js-only (ignored by curl, Python, Go, Java). `SSL_CERT_FILE` covers OpenSSL-based clients (Python, codex/trae) but not Node. curl honours `CURL_CA_BUNDLE`/`--cacert`; Python `requests` honours `REQUESTS_CA_BUNDLE`. System-store install covers curl/Python/Go but Node may still need `NODE_EXTRA_CA_CERTS`, so set both on Linux/macOS/Windows. Never hardcode `~/...`; use `$HOME`/`~` (`%USERPROFILE%` on Windows). Filename: the bili bundle is `combined-ca.pem` (system roots + bili root); `root-ca.pem` is the bili root alone — `launch-session.sh` exports the latter, `model.sh`/curl paths use the former; prefer `combined-ca.pem` so non-MITM blind-tunnel hosts still validate.
+   Portability notes: `NODE_EXTRA_CA_CERTS` is Node.js-only (ignored by curl, Python, Go, Java). `SSL_CERT_FILE` covers OpenSSL-based clients (Python, codex/trae) but not Node. curl honours `CURL_CA_BUNDLE`/`--cacert`; Python `requests` honours `REQUESTS_CA_BUNDLE`. System-store install covers curl/Python/Go but Node may still need `NODE_EXTRA_CA_CERTS`, so set both on Linux/macOS/Windows. Never hardcode `/home/$USER/...`; use `$HOME`/`~` (`%USERPROFILE%` on Windows). Filename: the bili bundle is `combined-ca.pem` (system roots + bili root); `root-ca.pem` is the bili root alone — `launch-session.sh` exports the latter, `model.sh`/curl paths use the former; prefer `combined-ca.pem` so non-MITM blind-tunnel hosts still validate.
 
    **sudo env stripping gap** (uncovered elsewhere as of 2026-09-19): sudo's
    default `env_reset` (plus `secure_path`) strips `NODE_EXTRA_CA_CERTS`,

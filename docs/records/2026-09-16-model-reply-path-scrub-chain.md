@@ -8,7 +8,7 @@ the reply-side no-echo seam ONLY inside jobs/news-articles.py, while
 lib/model.sh is sourced by 20+ lanes (research beat, review prep, ux
 review, night research, ping, morning digest, overnight cycle, model
 bench, the delegation libs). Every one of those lanes feeds
-hngh-internal text (research lines with live ~ tokens,
+hngh-internal text (research lines with live /home/$USER tokens,
 alert identities, lessons tails) into model_call and persists replies
 verbatim — the research beat writes $supportive/$response into
 digest/RESEARCH-REVIEW-*.md and $body into RESEARCH-BEAT/crystallized
@@ -63,7 +63,7 @@ attribution so the history is honest.
     (empty stdout) passes through unchanged; scrub failure yields
     empty with MODEL_USED still naming the leg that answered.
 - automation/tests/test-model-reply-scrub.sh (red-first): stub deck leg
-  AND stub ollama leg each echo ~, /tmp, ~/.hngh, bare
+  AND stub ollama leg each echo /home/$USER, /tmp, ~/.hngh, bare
   /home //tmp, and a URL through model_call — both must come back
   exactly scrubbed (markers in, URL verbatim, prose kept, truncation
   flag preserved); archive-only contract intact (empty stdout, raw

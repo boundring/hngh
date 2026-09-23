@@ -23,8 +23,8 @@ cp "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/" # single-source scrub
 : >"$sb/STATE.md"
 
 . "$root/tests/stub-lib.sh"
-PATHY='Checked ~/secret.txt and /tmp/cache then ~/.hngh/db/telemetry.db plus a bare /home and /tmp, a url https://example.com/doc and www.example.com/home/x; kept prose.
-second /home line stays prose.'
+PATHY="Checked $HOME/secret.txt and /tmp/cache then ~/.hngh/db/telemetry.db plus a bare /home and /tmp, a url https://example.com/doc and www.example.com/home/x; kept prose.
+second /home line stays prose."
 SCRUBBED='Checked [redacted path] and [redacted path] then [redacted path] plus a bare [redacted path] and [redacted path], a url https://example.com/doc and www.example.com/home/x; kept prose.
 second [redacted path] line stays prose.'
 STUB_CONTENT="$PATHY"
@@ -79,11 +79,11 @@ ck "ollama leg: ollama used" "ollama:stub-ollama" "$(cat "$sb/tmp-modelused.txt"
 # 3. archive-only contract intact: unset row, dead ollama -> empty
 # stdout, none:archive-only used, and the ARCHIVED RAW PROMPT is NOT
 # mutated by the output-side law (input hygiene stays with the caller).
-out="$(call "archive me ~/x")"
+out="$(call "archive me $HOME/x")"
 ck "archive-only: empty stdout" "" "$out"
 ck "archive-only: used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
 arch="$(ls "$sb"/archive/skipped-*.txt 2>/dev/null | head -1)"
-[ -n "$arch" ] && grep -qF "~/x" "$arch" &&
+[ -n "$arch" ] && grep -qF "$HOME/x" "$arch" &&
   echo "ok: archive-only: raw prompt unmutated" || {
   echo "FAIL: archive-only: raw prompt missing/mutated"
   fails=$((fails + 1))

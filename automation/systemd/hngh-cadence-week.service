@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=TIER=week
-ExecStart=~/Projects/etc/hngh/automation/jobs/cadence-tick.sh
-WorkingDirectory=~/Projects/etc/hngh/automation
+ExecStart=%h/Projects/etc/hngh/automation/jobs/cadence-tick.sh
+WorkingDirectory=%h/Projects/etc/hngh/automation
 Restart=no
 
 [Install]

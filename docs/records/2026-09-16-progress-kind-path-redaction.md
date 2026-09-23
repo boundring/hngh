@@ -99,7 +99,7 @@ both 2026-09-16 records.
 Residual exposure, stated plainly: 319 progress rows, 9 research-lines
 rows, 197 research-dispositions rows, 2 research-lessons rows, and 144
 of 262 tracked `docs/research/*.md` crystallization docs still carry
-`~` machine paths in the public history. The username
+`/home/$USER` machine paths in the public history. The username
 leaks; no credential does (the credential-evidence work of the same
 day keeps tokens out of ledgers entirely). New rows stop carrying
 machine-local prefixes from these slices onward; old rows remain

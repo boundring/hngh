@@ -131,7 +131,7 @@ rest, for a later slice (env twins already exist where noted):
   `jobs/agent-watchdog.sh:27`, `jobs/oversight-tick.sh:24`,
   `jobs/system-awareness.sh:22`, `cadence/day/01-lesson-harvest.sh:27` —
   `HNGH_REPO`/kernel default `~/Projects/etc/hngh`.
-- `scripts/hngh-omp-update.sh:7,11` — `OMP` binary and `cd ~`.
+- `scripts/hngh-omp-update.sh:7,11` — `OMP` binary and `cd /home/$USER`.
 - `scripts/night-session.sh:40` — `OMP_BIN` default `~/.bun/bin/omp`.
 - `systemd/*.service` — absolute `ExecStart`/`WorkingDirectory` paths.
 - `cadence-params.tsv` `deck-model-endpoint` row — the deck IP again (env

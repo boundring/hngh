@@ -3,6 +3,6 @@ Description=hngh-automation night research brief (23:40, local models only)
 
 [Service]
 Type=oneshot
-ExecStart=~/Projects/etc/hngh/automation/jobs/night-research.sh
-WorkingDirectory=~/Projects/etc/hngh/automation
+ExecStart=%h/Projects/etc/hngh/automation/jobs/night-research.sh
+WorkingDirectory=%h/Projects/etc/hngh/automation
 Restart=no

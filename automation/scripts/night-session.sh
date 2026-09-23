@@ -37,7 +37,7 @@ if [ "$count" -ge "$MAX_SESSIONS" ]; then
 fi
 
 OMP_BIN="$(command -v omp || true)"
-[ -z "$OMP_BIN" ] && OMP_BIN="~/.bun/bin/omp"
+[ -z "$OMP_BIN" ] && OMP_BIN="$HOME/.bun/bin/omp"
 
 TS="$(date +%Y%m%dT%H%M%S)"
 LOG="$LOGS/night-$LABEL-$TS.log"

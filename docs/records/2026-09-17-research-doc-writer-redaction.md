@@ -11,8 +11,8 @@ model body into `$KERNEL/docs/research/<day>-<id>.md`, then
 `research_commit` shipped it. docfilter.py covers injection + char cap
 only. Proof it leaked: HEAD:docs/research/2026-09-17-fail-20260916-
 If-the-probe-returns-a-clean-negative-fo.md line 1 carried a literal
-`~/Projects/etc/hngh`; 144 tracked docs/research files
-contained `bricker`; `git grep -o '~' HEAD` counted 729
+`/home/$USER/Projects/etc/hngh`; 144 tracked docs/research files
+contained the username; `git grep -o '/home/$USER' HEAD` counted 729
 hits repo-wide. The TSV sweep node (research-tsv-raw-columns-fix)
 explicitly scoped only the four data files and deferred these docs;
 its gate (`--check`) covered only the TSVs.

@@ -36,8 +36,8 @@ CARDS = {
 # Real 30m-tick failure shape: HF hub-cache snapshot path, filename carries
 # variant+quant suffix (2026-09-23 defect cleanup).
 ORNITH_SNAPSHOT = (
-    "~/.cache/huggingface/hub/models--unsloth--"
-    "Ornith-1.0-9B-GGUF/snapshots/a674c5a128bb74049b1bb3619f1355073db5b48c"
+    os.path.expanduser("~/.cache/huggingface/hub/models--unsloth--")
+    + "Ornith-1.0-9B-GGUF/snapshots/a674c5a128bb74049b1bb3619f1355073db5b48c"
     "/Ornith-1.0-9B-UD-Q4_K_XL.gguf")
 
 
@@ -151,8 +151,9 @@ class ObserveTest(unittest.TestCase):
             err = io.StringIO()
             uc._local_api = lambda path: {
                 "loaded": True, "active_model": (
-                    "~/.cache/huggingface/hub/models--unsloth--"
-                    "Mystery-3B-GGUF/snapshots/deadbeef"
+                    os.path.expanduser(
+                        "~/.cache/huggingface/hub/models--unsloth--")
+                    + "Mystery-3B-GGUF/snapshots/deadbeef"
                     "/Mystery-3B-UD-Q4_K_XL.gguf"),
                 "max_context_length": 8192, "context_length": 8192}
             with contextlib.redirect_stderr(err):

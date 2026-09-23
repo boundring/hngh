@@ -1118,7 +1118,7 @@ def check_package_ghosts(ctx):
             continue
         target = f[3].split("(", 1)[0].strip()
         n += 1
-        ok = (os.path.exists(target) if "/" in target
+        ok = (os.path.exists(os.path.expanduser(target)) if "/" in target
               else shutil.which(target) is not None)
         if not ok:
             out["fails"].append((f[0], "ghost-row",

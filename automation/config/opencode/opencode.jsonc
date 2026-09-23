@@ -138,18 +138,12 @@
   "mcp": {
     "hngh": {
       "type": "local",
-      "command": [
-        "python3",
-        "~/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py"
-      ],
+      "command": ["sh", "-c", "exec python3 \"$HOME/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py\""],
       "enabled": true
     },
     "misakanet": {
       "type": "local",
-      "command": [
-        "~/.local/share/misakanet/.venv/bin/python",
-        "~/.local/share/misakanet/scripts/mcp_server.py"
-      ],
+      "command": ["sh", "-c", "exec \"$HOME/.local/share/misakanet/.venv/bin/python\" \"$HOME/.local/share/misakanet/scripts/mcp_server.py\""],
       "enabled": true
     },
     "codegraph": {

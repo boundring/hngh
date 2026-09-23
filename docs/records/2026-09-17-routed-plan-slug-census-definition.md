@@ -21,7 +21,7 @@ Identity decomposition: `review` (class) : `hngh-automation` (sibling
 repo name) : `P1-STATE-md-contains-absolute-` (alert subject prose,
 dash-mangled from "P1: `STATE.md` contains absolute ..."). No OS path
 fragment anywhere: no home-/Users-stemmed token, no username, no
-machine-local dot-dir. The only `~/...` text in the file is
+machine-local dot-dir. The only `/home/$USER/...` text in the file is
 the plan's quoted alert evidence — the finding it was routed to fix
 (STATE.md absolute paths), fixed forward on 2026-09-08 (automation
 commit e18630e) with the recorded precedent "historical rows left

@@ -4,6 +4,15 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-23
+
+- **Home-path scrub (tree + history)** (docs/records/2026-09-23-home-path-scrub.md):
+  every `/home/<user>/...` literal in code, test fixtures, systemd units
+  (`%h`), MCP/agent configs (`sh -c` + `$HOME`), TSV registries and docs
+  (79 files, 129 lines) now resolves portably; kernel gate 2934 checks
+  green. A git-history scrub follows (`git filter-repo`; hashes change,
+  see the record).
+
 ### 2026-09-22
 
 - **Xiaomi AI quota source admitted** (docs/records/2026-09-22-xiaomi-quota-source.md):

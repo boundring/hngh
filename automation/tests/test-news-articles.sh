@@ -190,7 +190,7 @@ PY
 setup 6
 PATHY_DIGEST="## 0400 $DATE
 _sources: gdelt | model: procedural ranking_
-CRITICAL: PATHLEAK TESTLAND: ~ vault breach noted in /tmp/vr-test-42 (https://127.0.0.1:1/leak)
+CRITICAL: PATHLEAK TESTLAND: $HOME vault breach noted in /tmp/vr-test-42 (https://127.0.0.1:1/leak)
 "
 printf '%s' "$PATHY_DIGEST" >"$sb/digest/$DATE.md"
 printf '%s' "$PATHY_DIGEST" >"$sb/home/archive/digest/$DATE.md"
@@ -198,6 +198,7 @@ printf '%s' "$PATHY_DIGEST" >"$sb/repo/automation/digest/$DATE.md"
 HNGH_AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" \
  python3 - "$sb" <<'PY' || fails=$((fails + 1))
 import importlib.machinery, importlib.util, os, sys
+H = os.path.expanduser("~")
 sb = sys.argv[1]
 loader = importlib.machinery.SourceFileLoader(
     "na", os.path.join(sb, "jobs", "news-articles.py"))
@@ -209,7 +210,7 @@ def ck(desc, ok):
     global bad
     print(("ok: " if ok else "FAIL: ") + desc); bad += 0 if ok else 1
 if hasattr(na, "scrub_paths"):
-    sample = ("filed from ~/Projects/etc/hngh, notes at "
+    sample = (f"filed from {H}/Projects/etc/hngh, notes at "
               "~/.hngh/newspaper/x.md, dump at /tmp/vr-test-42")
     scrubbed = na.scrub_paths(sample)
     ck("scrub_paths removes /home/... tokens", "/home/" not in scrubbed)
@@ -232,7 +233,7 @@ if hasattr(na, "scrub_paths"):
     scrubbed3 = na.scrub_paths(bare)
     ck("bare /home token redacted", "/home" not in scrubbed3)
     ck("bare /tmp token redacted", "/tmp" not in scrubbed3)
-    url_text = ("fetched https://example.com/x~/secret and "
+    url_text = (f"fetched https://example.com/x{H}/secret and "
                 "https://example.com/tmpdir/page and "
                 "https://example.com/~user/paper today")
     ck("URLs keep their paths untouched",
@@ -249,13 +250,13 @@ prompt2 = na.build_prompt(
 ck("build_prompt scrubs tilde ledger lines", "~/.gnupg" not in prompt2)
 ck("build_prompt keeps the article URL", "https://127.0.0.1:1/leak"
    in prompt2)
-item = {"title": "PATHLEAK TESTLAND: ~ vault breach",
+item = {"title": f"PATHLEAK TESTLAND: {H} vault breach",
         "tag": "CRITICAL", "place": "", "url": "https://127.0.0.1:1/leak"}
 prompt = na.build_prompt(item, "extract cites /tmp/vr-test-42 dumps",
-                         "spend: models 4; notes ~/h.txt")
-ck("build_prompt scrubs titles", "~" not in prompt)
+                         f"spend: models 4; notes {H}/h.txt")
+ck("build_prompt scrubs titles", H not in prompt)
 ck("build_prompt scrubs source text", "/tmp/vr-test-42" not in prompt)
-ck("build_prompt scrubs ledger lines", "~/h.txt" not in prompt)
+ck("build_prompt scrubs ledger lines", f"{H}/h.txt" not in prompt)
 ck("build_prompt carries the redaction marker", "redacted path" in prompt)
 ck("clean prose passes through", "Fixture breach escalate"
    in na.build_prompt({"title": "Fixture breach escalate",
@@ -267,10 +268,10 @@ ck("clean prose passes through", "Fixture breach escalate"
 # the reply before it becomes an article body. Stub the model seam with
 # a pathy draft; the reply must come back redacted, prose kept.
 os.environ["NEWS_ARTICLES_MODEL_CMD"] = (
-    "printf 'audit notes at ~/h.txt and /tmp/vr-test-42;"
+    f"printf 'audit notes at {H}/h.txt and /tmp/vr-test-42;"
     " tilde ~/.hngh/newspaper/x.md. kept prose.'")
 reply = na.model_reply("prompt", "local")
-ck("model_reply scrubs echoed /home/... tokens", "~" not in reply)
+ck("model_reply scrubs echoed /home/... tokens", H not in reply)
 ck("model_reply scrubs echoed /tmp/... tokens", "/tmp/vr-test" not in reply)
 ck("model_reply scrubs echoed ~/.hngh tokens", "~/.hngh" not in reply)
 ck("model_reply carries the identity-seam markers",
@@ -282,7 +283,7 @@ PY
 out="$(run_gen "MODEL_PIN=local" | wc -l)"
 ck "pathy edition still files its article" "1" "$out"
 ck "model never receives host paths (captured stub bodies)" "0" \
- "$(grep -c -e '~' -e '/tmp/vr-test' -e '~/.hngh' \
+ "$(grep -c -e "$HOME" -e '/tmp/vr-test' -e '~/.hngh' \
   "$stubdir/stubU-bodies" 2>/dev/null || true)"
 ck "model request carries the redaction marker" "1" \
  "$(grep -c 'redacted path' "$stubdir/stubU-bodies" 2>/dev/null || true)"

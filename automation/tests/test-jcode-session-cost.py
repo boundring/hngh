@@ -18,11 +18,12 @@ TELEMETRY = ROOT / "jobs" / "telemetry.py"
 SID_A = "session_alpha_1789000000001_aaa111"
 SID_B = "session_beta_1789000000002_bbb222"
 SID_C = "session_gamma_1789000000003_ccc333"
+HOME = os.path.expanduser("~")
 
 OLD_LOG = "\n".join([
     f"[2026-09-13 10:00:00.100] [INFO] ENV_SNAPSHOT "
     f'{{"captured_at":"2026-09-13T10:00:00Z","reason":"create",'
-    f'"session_id":"{SID_A}","working_dir":"~/Projects/proj-alpha",'
+    f'"session_id":"{SID_A}","working_dir":"{HOME}/Projects/proj-alpha",'
     f'"provider":"zai","model":"glm-5.3-flash","jcode_version":"v0.84.0"}}',
     f"[2026-09-13 10:00:01.000] [INFO] [ses:{SID_A}|prv:zai|mod:glm-5.3-flash] "
     f"API call complete in 3.20s (input=1000 output=50 cache_read=0 cache_write=0)",
@@ -96,7 +97,7 @@ class JcodeSessionCostTest(unittest.TestCase):
         self.assertEqual(sessions[SID_A]["tokens_out"], 109)
         self.assertEqual(sessions[SID_A]["models"], {"glm-5.3-flash": 2})
         self.assertEqual(sessions[SID_A]["working_dir"],
-                         "~/Projects/proj-alpha")
+                         f"{HOME}/Projects/proj-alpha")
         self.assertAlmostEqual(sessions[SID_A]["last"] - sessions[SID_A]["first"],
                                329.0, places=1)
         # zero-token calls still create the session but add nothing

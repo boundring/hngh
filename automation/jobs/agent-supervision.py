@@ -50,7 +50,7 @@ BRIDGE_STORE = os.environ.get(
 REPORT_QUEUE = os.environ.get(
     "SUPERVISION_REPORT_QUEUE",
     os.path.join(os.environ.get("HNGH_REPO",
-                                "~/Projects/etc/hngh"),
+                                os.path.expanduser("~/Projects/etc/hngh")),
                  "scripts", "report-queue"))
 HNGH_BIN = os.environ.get(
     "HNGH_BIN",
