@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""omp-bridge roguelike-delegation smoke: run-start/run-end + register,
-hermetic.
+"""omp-bridge roguelike-delegation smoke: run-start/run-end, hermetic.
 
 The real script resolves scripts/hngh from its own package location, so we
 stub it via the HNGH_BIN env override (which defaults to that real path): a
 recording stub echoes argv per invocation to a log and exits a configurable
-code. The handoff ledger is redirected via OMP_HANDOFF_LEDGER into the temp
-root. No sbcl, no network, no real hngh is touched.
+code. No sbcl, no network, no real hngh is touched.
 
 Contract: run-start happy path creates run+admit argv in order and prints
 the run line; a create-run refusal (exit 1/2) maps straight through before
 any admit fires; run-end validates dispositions client-side (bogus -> exit
 2 with no subprocess fired); run-end valid path relays hngh's rendered
-close-run and exit code; register still appends a compatible ledger line.
+close-run and exit code; AUTOMATION_ROOT defaults to ROOT/automation and
+HNGH_AUTOMATION_ROOT still wins.
 """
 
 import os
@@ -38,7 +37,6 @@ class OmpBridgeDelegation(unittest.TestCase):
         self._td = tempfile.TemporaryDirectory()
         self.root = Path(self._td.name)
         self.argv_log = self.root / "hngh-argv.txt"
-        self.ledger = self.root / "handoffs.md"
         hngh = self.root / "hngh-stub"
         hngh.write_text(HNGH_STUB.replace("{python}", sys.executable))
         os.chmod(hngh, 0o755)
@@ -47,15 +45,20 @@ class OmpBridgeDelegation(unittest.TestCase):
     def tearDown(self):
         self._td.cleanup()
 
-    def bridge(self, *args, exit_code=0):
-        env = dict(os.environ)
-        env["HNGH_BIN"] = str(self.hngh)
-        env["OMP_BRIDGE_STORE"] = str(self.root / "bridge-store")
-        env["OMP_HANDOFF_LEDGER"] = str(self.ledger)
-        env["STUB_ARGV_LOG"] = str(self.argv_log)
-        env["STUB_EXIT"] = str(exit_code)
+    def bridge(self, *args, exit_code=0, env=None):
+        overrides = dict(env or {})
+        e = dict(os.environ)
+        e["HNGH_BIN"] = str(self.hngh)
+        e["OMP_BRIDGE_STORE"] = str(self.root / "bridge-store")
+        e["STUB_ARGV_LOG"] = str(self.argv_log)
+        e["STUB_EXIT"] = str(exit_code)
+        for key, value in overrides.items():
+            if value is None:
+                e.pop(key, None)
+            else:
+                e[key] = value
         return subprocess.run([sys.executable, str(SCRIPT), *args],
-                              capture_output=True, text=True, env=env)
+                              capture_output=True, text=True, env=e)
 
     def argv_lines(self):
         return (self.argv_log.read_text().splitlines()
@@ -130,17 +133,24 @@ class OmpBridgeDelegation(unittest.TestCase):
         self.assertEqual(out.returncode, 1)
         self.assertIn("close-run refused", out.stderr)
 
-    # --- register ----------------------------------------------------------
+    # --- automation root ----------------------------------------------------
 
-    def test_register_still_appends_compatible_line(self):
-        self.ledger.write_text(
-            "bridge-register | 2026-08-26T00:00:00Z | old|s | session-start: x\n")
-        out = self.bridge("--register", "sx", "--note", "go")
+    def test_automation_root_default_and_override(self):
+        fake_root = self.root / "repo"
+        (fake_root / "automation").mkdir(parents=True)
+        out = self.bridge("--run-start", "sx", "obj",
+                          env={"HNGH_BRIDGE_ROOT": str(fake_root),
+                               "OMP_BRIDGE_STORE": None})
         self.assertEqual(out.returncode, 0, out.stderr)
-        text = self.ledger.read_text()
-        self.assertIn("bridge-register |", text)
-        self.assertIn("| hngh|sx | session-start: go", text)
-        self.assertEqual(text.count("bridge-register |"), 2)  # appended
+        self.assertIn(f"--store={fake_root / 'automation' / 'bridge'}",
+                      self.argv_lines()[0])
+        alt = self.root / "alt-automation"
+        out = self.bridge("--run-start", "sy", "obj",
+                          env={"HNGH_BRIDGE_ROOT": str(fake_root),
+                               "OMP_BRIDGE_STORE": None,
+                               "HNGH_AUTOMATION_ROOT": str(alt)})
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn(f"--store={alt / 'bridge'}", self.argv_lines()[2])
 
 
 if __name__ == "__main__":
