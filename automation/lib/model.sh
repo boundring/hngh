@@ -4,11 +4,13 @@
 #   (EMPTY output only in archive-only mode);
 #   writes $MODEL_USED to $AUTOMATION_ROOT/tmp-modelused.txt so callers can
 #   read it from OUTSIDE the command-substitution subshell.
-# Chain: unsloth (401 auto-refresh + empty-content retry) -> zai (Z.AI
-# subscription quota leg, 5h + weekly paced, see zai_chat) -> remote
-# (budget-gated, see remote_chat) -> ollama -> deck (param-gated, see
-# deck_chat) -> kimi (quota leg, see kimi_chat) -> ocgo (quota leg,
-# OpenCode Go, every-window paced, see ocgo_chat) -> archive-only.
+# Chain: unsloth (401 auto-refresh + empty-content retry; per-load
+# context pin via unsloth_load_ctx, 2026-09-22 context lane) -> zai
+# (Z.AI subscription quota leg, 5h + weekly paced, see zai_chat) ->
+# xiaomi (Xiaomi MiMo token-plan quota leg, see xiaomi_chat) -> ocgo
+# (quota leg, OpenCode Go, every-window paced, see ocgo_chat) -> kimi
+# (quota leg, see kimi_chat) -> remote (budget-gated, see remote_chat)
+# -> ollama -> deck (param-gated, see deck_chat) -> archive-only.
 # MODEL_PIN routes a call:
 #   local  unsloth -> ollama only (remote, deck, and the quota legs kimi/
 #          ocgo are skipped): news/ux-review/bench pin local
@@ -98,9 +100,9 @@ MODEL_TRUNC_FILE="$AUTOMATION_ROOT/tmp-modeltrunc.txt"
 # broken guard can never leak pathy text through. Input hygiene stays
 # with the caller (archive_only persists raw prompts unmutated).
 _scrub_paths() { # text -> scrubbed text on stdout; the ONE
-# single-source definition (lib/scrub.py via scrub.sh,
-# llc-gate-scrub-site-divergence 2026-09-16 consolidation; the previous
-# inline jq regex copy is retired)
+ # single-source definition (lib/scrub.py via scrub.sh,
+ # llc-gate-scrub-site-divergence 2026-09-16 consolidation; the previous
+ # inline jq regex copy is retired)
  scrub_paths "$1"
 }
 
@@ -130,14 +132,14 @@ _mark_trunc() { # tmp
 # code (000 on transport failure) goes to $POST_CODE_FILE — a file, not a
 # variable, because the helper runs inside the caller's command-substitution
 # subshell (same reason MODEL_USED goes through tmp-modelused.txt).
- # Argv hygiene: the bearer rides the stdin curl config (`-K -`,
- # `header = "Authorization: Bearer %s"` directive), never the argv —
- # a Bearer header on argv sits world-readable in /proc/<pid>/cmdline
- # for the whole call (notify-seam argv-hygiene pattern, 2026-09-16;
- # credential-health probes converted the same way, ccf8d7b5). The
- # caller pipes the JSON body into this function's stdin; it is staged
- # to $btmp so stdin is free for the curl config, and the body rides
- # -d @"$btmp". No auth header is fed when bearer is empty (deck leg).
+# Argv hygiene: the bearer rides the stdin curl config (`-K -`,
+# `header = "Authorization: Bearer %s"` directive), never the argv —
+# a Bearer header on argv sits world-readable in /proc/<pid>/cmdline
+# for the whole call (notify-seam argv-hygiene pattern, 2026-09-16;
+# credential-health probes converted the same way, ccf8d7b5). The
+# caller pipes the JSON body into this function's stdin; it is staged
+# to $btmp so stdin is free for the curl config, and the body rides
+# -d @"$btmp". No auth header is fed when bearer is empty (deck leg).
 _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> content on stdout; code in $POST_CODE_FILE,
  # wall seconds in $WALL_S_FILE, usage tokens (chat-completions
  # .usage.prompt_tokens/completion_tokens or Responses
@@ -153,10 +155,10 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
  [ -n "$auth" ] && cfg="$(printf 'header = "Authorization: Bearer %s"\n' "$auth")"
  raw="$(printf '%s' "$cfg" |
   curl -s --max-time "$MODEL_TIMEOUT" ${noproxy:+--noproxy "$noproxy"} \
-  ${cacert:+--cacert "$cacert"} -X POST \
-  -H "Content-Type: application/json" \
-  ${session:+-H "x-opencode-session: $session"} \
-  -K - -d @"$btmp" -w '%{http_code} %{time_total}' -o "$tmp" "$url" 2>/dev/null)" || raw="000 0"
+   ${cacert:+--cacert "$cacert"} -X POST \
+   -H "Content-Type: application/json" \
+   ${session:+-H "x-opencode-session: $session"} \
+   -K - -d @"$btmp" -w '%{http_code} %{time_total}' -o "$tmp" "$url" 2>/dev/null)" || raw="000 0"
  case "$raw" in
  *' '*)
   code="${raw%% *}"
@@ -256,8 +258,42 @@ refresh_unsloth_token() {
  return 1
 }
 
+# unsloth_load_ctx — pin the model load's context window before the chat
+# post (2026-09-22 context lane): POST /api/inference/load with an
+# explicit max_seq_length so the fitter sizes the window to the beat's
+# budget instead of filling free VRAM (the 2026-09-22 09:04 crash load
+# auto-fit 8.4 GB of KV at context 127488). Bearer rides the stdin curl
+# config (`-K -`), never argv (probe-hygiene law). Fail-open: any pin
+# miss (timeout, 4xx/5xx, transport error) breadcrumbs and continues
+# unpinned — a pin failure must never block a beat.
+unsloth_load_ctx() { # model ctx -> 0 = pinned (or nothing to pin)
+ local model="$1" ctx="$2" tok btmp code
+ case "$ctx" in '' | *[!0-9]*) return 0 ;; esac # nothing to pin
+ tok="$(cat "${TOKEN_FILE:-}" 2>/dev/null)"
+ btmp="$(mktemp)"
+ python3 - "$model" "$ctx" <<'PY' >"$btmp"
+import json, sys
+print(json.dumps({"model_path": sys.argv[1], "max_seq_length": int(sys.argv[2])}))
+PY
+ code="$(printf 'header = "Authorization: Bearer %s"\n' "$tok" |
+  curl -s --max-time "$MODEL_TIMEOUT" -K - \
+   -H "Content-Type: application/json" \
+   -d @"$btmp" -w '%{http_code}' -o /dev/null \
+   "$UNSLOTH_URL/api/inference/load" 2>/dev/null)" || code=000
+ rm -f "$btmp"
+ case "$code" in
+ 2*) return 0 ;; # pinned
+ esac
+ breadcrumb model "load-ctx" "model=$model ctx=$ctx http=$code — continuing unpinned"
+ return 0
+}
+
 # one raw Unsloth attempt writing the response into $tmp; echoes the http code.
 unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
+ # pin the load window before every post (2026-09-22 context lane);
+ # HNGH_LOADCTX_PIN=0 is the hermetic-test seam (no /load POST at all)
+ [ "${HNGH_LOADCTX_PIN:-1}" = 1 ] &&
+  unsloth_load_ctx "$2" "${MODEL_CTX:-$(get_param ctx-standard 16384)}"
  local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code raw t tin tout btmp
  btmp="$(mktemp)"
  printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" >"$btmp"
@@ -300,7 +336,7 @@ _unsloth_ctx_limit() { # token -> context_length or empty
  # exposure; notify-seam argv-hygiene pattern, 2026-09-16).
  v="$(printf 'header = "Authorization: Bearer %s"\n' "$1" |
   curl -s --max-time 5 -K - \
-  "$UNSLOTH_URL/api/inference/status" 2>/dev/null |
+   "$UNSLOTH_URL/api/inference/status" 2>/dev/null |
   jq -r '.context_length // empty' 2>/dev/null)"
  case "$v" in '' | *[!0-9]*) return 0 ;; esac
  printf '%s' "$v" >"$cache"
@@ -562,7 +598,7 @@ gemini_burst_blocked() { # -> 0 blocked (prints "used cap"), 1 go
  local cap win used
  cap="${GEMINI_BURST_MAX_CALLS:-$(get_param gemini-burst-max-calls 20)}"
  win="${GEMINI_BURST_WINDOW_S:-$(get_param gemini-burst-window-s 3600)}"
- case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
+ case "$cap" in '' | *[!0-9]*) return 1 ;; esac     # bad cap: fail open
  case "$win" in '' | 0 | *[!0-9]*) return 1 ;; esac # bad window: fail open
  used="$(sqlite3 "$HNGH_TELEMETRY_DB" \
   "select count(*) from events where kind='model' and source='remote' \
@@ -892,6 +928,43 @@ zai_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
  printf '%s\n' "$content"
 }
 
+# Xiaomi MiMo token-plan quota leg (2026-09-22 quota-tier lane;
+# OpenAI-compatible chat completions). Key resolution mirrors kimi_chat:
+# env XIAOMI_AI_API_KEY -> key file ${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}
+# (mode 600 required; the key VALUE is never logged or echoed). Model
+# gate: XIAOMI_MODEL env -> `xiaomi-model` row; endpoint: XIAOMI_URL env
+# -> `xiaomi-endpoint` row (either empty/absent -> skipped fail-closed).
+xiaomi_chat() { # prompt max_tokens -> 0 = answered
+ local prompt="$1" max_tokens="$2" url model key kfile content
+ url="${XIAOMI_URL:-$(get_param xiaomi-endpoint '')}"
+ [ -n "$url" ] || return 1 # empty/absent endpoint: leg skipped fail-closed
+ model="${XIAOMI_MODEL:-$(get_param xiaomi-model '')}"
+ [ -n "$model" ] || return 1 # operator has not named the quota model yet
+ key="${XIAOMI_AI_API_KEY:-}"
+ if [ -z "$key" ]; then
+  kfile="${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}"
+  if [ -f "$kfile" ]; then
+   if [ "$(stat -c %a "$kfile" 2>/dev/null)" != "600" ]; then
+    breadcrumb model "xiaomi" "key file too open (chmod 600 required) -> next backend"
+    return 1
+   fi
+   key="$(cat "$kfile" 2>/dev/null)"
+  fi
+ fi
+ [ -n "$key" ] || {
+  breadcrumb model "xiaomi" "no key (env XIAOMI_AI_API_KEY / key file) -> next backend"
+  return 1
+ }
+ content="$(
+  printf '%s' "$(_json_body "$model" "$prompt" "$max_tokens" 0 1)" |
+   _post_chat "$url" '.choices[0].message.content // ""' "$key"
+ )" || {
+  breadcrumb model "xiaomi" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
+  return 1
+ }
+ printf '%s\n' "$content"
+}
+
 # zai quota leg: call, tag MODEL_USED, persist tmp-modelused.txt, emit
 # one telemetry row (source=zai -- the shared Z.AI bucket pair). Shared
 # by the unpinned chain and MODEL_PIN=zai.
@@ -902,6 +975,19 @@ _zai_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  MODEL_USED="zai:$zm"
  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
  _model_emit zai "$zm"
+ return 0
+}
+
+# xiaomi quota leg: call, tag MODEL_USED, persist tmp-modelused.txt,
+# emit one telemetry row (2026-09-22 quota-tier lane). Unpinned-tier
+# position only -- no MODEL_PIN value exists for it.
+_xiaomi_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
+ local xm
+ xiaomi_chat "$1" "$2" || return 1
+ xm="${XIAOMI_MODEL:-$(get_param xiaomi-model '')}"
+ MODEL_USED="xiaomi:$xm"
+ printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+ _model_emit xiaomi "$xm"
  return 0
 }
 
@@ -1018,9 +1104,12 @@ _model_call_impl() {
  _studio_loaded="$(printf '%s' "$_studio_models" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(m.get('id','') for m in d.get('data',[]) if m.get('loaded')))" 2>/dev/null)"
  _studio_queue=0
  { for _lm in $_studio_loaded; do
-   [ "$_lm" = "$MODEL" ] || { _studio_queue=1; break; }
+  [ "$_lm" = "$MODEL" ] || {
+   _studio_queue=1
+   break
+  }
  done; } 2>/dev/null
- [ -z "${_studio_loaded// }" ] && _studio_queue=0
+ [ -z "${_studio_loaded// /}" ] && _studio_queue=0
  if [ "$_beatskip_age" -gt 120 ]; then
   _session_recent="no"
   _last_run="$(grep ' | session-run' "$AUTOMATION_ROOT/logs/budget.md" 2>/dev/null | tail -n1 | cut -d' ' -f1)"
@@ -1073,6 +1162,24 @@ print('skip' if beat_skip_gate(sig) else 'keep')
   # direct leg first (bucket-gated), openrouter stays the fallback
   return 0
  fi
+ # xiaomi MiMo token-plan quota leg (2026-09-22 quota-tier lane): same
+ # guard shape as the zai tail block; unpinned-tier position only
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] &&
+  [ "$pin_zai" = 0 ] &&
+  _xiaomi_leg "$prompt" "$max_tokens"; then
+  return 0
+ fi
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] && [ "$pin_zai" = 0 ] &&
+  _ocgo_leg "$prompt" "$max_tokens"; then
+  return 0
+ fi
+ if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
+  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
+  _kimi_leg "$prompt" "$max_tokens"; then
+  return 0
+ fi
  if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
   [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
   remote_chat "$prompt" "$max_tokens"; then
@@ -1089,16 +1196,6 @@ print('skip' if beat_skip_gate(sig) else 'keep')
  fi
  if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_deck" = 0 ] &&
   _deck_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
-  _kimi_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] && [ "$pin_zai" = 0 ] &&
-  _ocgo_leg "$prompt" "$max_tokens"; then
   return 0
  fi
  archive_only "$prompt"

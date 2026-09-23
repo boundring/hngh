@@ -51,6 +51,7 @@ call() { # prompt [K=V ...] -> stdout
   export OLLAMA_MODEL=stub-ollama
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
   export MODEL_MAX_TOKENS=3072
+  export HNGH_LOADCTX_PIN=0 # no /load POST or crumb: this suite counts stub hits and crumbs (2026-09-22 context lane)
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
   # the operator's session may arm real keys/models — hermetic tests start bare
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
@@ -112,17 +113,16 @@ grep -q "key file too open" "$sb/STATE.md" &&
 chmod 600 "$sb/.config/hngh/kimi-key"
 
 # --- 5. pace-blocked (above the pace line, below the cap) -> breadcrumb,
-#        next quota leg (ocgo) answers.
+#        a later leg answers (ocgo precedes kimi in the 2026-09-22
+#        quota-first tail, so the deck stub is the answerer here).
 rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
-set_ocgo_rows "http://127.0.0.1:$stubB_port"
 seed_events kimi "$(pace_seed_count 100)"
 out="$(call "hello-5" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=100" \
- "OCGO_URL=http://127.0.0.1:$stubB_port" "OPENCODE_API_KEY=stub-key-never-real" \
- "OCGO_MODEL=glm-test-model" "OCGO_CAP_5H_CALLS=100000")"
-ck "pace-blocked: kimi skipped, ocgo answers" "stub-says-hi" "$out"
-ck "pace-blocked: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
+ "DECK_URL=http://127.0.0.1:$stubB_port" "DECK_MODEL=deck-test")"
+ck "pace-blocked: kimi skipped, deck answers" "stub-says-hi" "$out"
+ck "pace-blocked: deck used" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
 grep -q "quota pace: kimi used " "$sb/STATE.md" &&
  echo "ok: pace-blocked: breadcrumb written" || {
  echo "FAIL: pace-blocked: no breadcrumb"
@@ -135,9 +135,8 @@ rm -f "$sb/home/db/telemetry.db"
 seed_events kimi 2
 out="$(call "hello-6" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=2" \
- "OCGO_URL=http://127.0.0.1:$stubB_port" "OPENCODE_API_KEY=stub-key-never-real" \
- "OCGO_MODEL=glm-test-model" "OCGO_CAP_5H_CALLS=100000")"
-ck "hard cap: kimi skipped, ocgo answers" "stub-says-hi" "$out"
+ "DECK_URL=http://127.0.0.1:$stubB_port" "DECK_MODEL=deck-test")"
+ck "hard cap: kimi skipped, deck answers" "stub-says-hi" "$out"
 grep -q "quota pace: kimi used 2/cap 2" "$sb/STATE.md" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: hard cap: no breadcrumb"
@@ -177,15 +176,15 @@ ck "MODEL_PIN=local: unsloth used" "unsloth:stub-model" "$(cat "$sb/tmp-modeluse
 ck "MODEL_PIN=local: kimi/ocgo/deck stub never hit" "0" "$(hits stubB)"
 ck "MODEL_PIN=local: unsloth stub hit" "1" "$(hits stubA)"
 
-# --- 9. dead kimi endpoint -> HTTP 000 breadcrumb + fall-through.
+# --- 9. dead kimi endpoint -> HTTP 000 breadcrumb + fall-through (deck
+#        answers: ocgo precedes kimi since the 2026-09-22 reorder).
 rm -f "$sb/home/db/telemetry.db"
 : >"$sb/STATE.md"
 out="$(call "hello-9" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
- "KIMI_URL=http://127.0.0.1:1" "OCGO_URL=http://127.0.0.1:$stubB_port" \
- "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
- "OCGO_CAP_5H_CALLS=100000")"
-ck "dead kimi endpoint: fall-through to ocgo" "stub-says-hi" "$out"
-ck "dead kimi endpoint: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
+ "KIMI_URL=http://127.0.0.1:1" "DECK_URL=http://127.0.0.1:$stubB_port" \
+ "DECK_MODEL=deck-test")"
+ck "dead kimi endpoint: fall-through to deck" "stub-says-hi" "$out"
+ck "dead kimi endpoint: deck used" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
 grep -q "| model | kimi | HTTP 000 -> next backend" "$sb/STATE.md" &&
  echo "ok: dead kimi endpoint: breadcrumb written" || {
  echo "FAIL: dead kimi endpoint: no breadcrumb"

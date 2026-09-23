@@ -64,6 +64,7 @@ call_model() { # fn [args...] -> stdout of model.sh function $fn
     export UNSLOTH_URL="$sb/no-such-endpoint" OLLAMA_URL="http://127.0.0.1:1"
     export OLLAMA_MODEL=stub-ollama MODEL=stub-model
     export UNSLOTH_FALLBACK_MODELS="" MODEL_MAX_TOKENS=512
+    export HNGH_LOADCTX_PIN=0 # no /load curl: this suite counts exactly one call per leg (2026-09-22 context lane)
     export OPENCODE_API_KEY=stub-ocgo-key-value-3
     export OCGO_URL="$sb/no-such-endpoint" OCGO_MODEL=stub-ocgo
     export DECK_URL="$sb/no-such-endpoint" DECK_MODEL=stub-deck
@@ -74,7 +75,8 @@ call_model() { # fn [args...] -> stdout of model.sh function $fn
 }
 no_argv_secret() { # desc value — value must not appear outside STDIN lines
   if grep -v '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
-    echo "FAIL: $1: secret on curl argv"; fails=$((fails + 1))
+    echo "FAIL: $1: secret on curl argv"
+    fails=$((fails + 1))
   else
     echo "ok: $1: value absent from curl argv"
   fi
@@ -83,14 +85,16 @@ in_stdin() { # desc value — value must appear on a STDIN line
   if grep '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
     echo "ok: $1: value carried in stdin curl config"
   else
-    echo "FAIL: $1: stdin curl config missing value"; fails=$((fails + 1))
+    echo "FAIL: $1: stdin curl config missing value"
+    fails=$((fails + 1))
   fi
 }
 uses_kdash() { # desc — the single curl record must use ` -K `
   if grep '^ARGV:' "$sb/curl.log" 2>/dev/null | grep -q ' -K '; then
     echo "ok: $1: curl invoked with the stdin config (-K -)"
   else
-    echo "FAIL: $1: curl not using -K -"; fails=$((fails + 1))
+    echo "FAIL: $1: curl not using -K -"
+    fails=$((fails + 1))
   fi
 }
 one_call() { # desc — exactly one curl record in the log
@@ -132,7 +136,8 @@ in_stdin "ctx-limit" "Authorization: Bearer unsloth-key-value-4"
 out="$(call_model deck_chat hi 16)"
 one_call "deck: exactly one curl call"
 if grep -q 'Authorization' "$sb/curl.log" 2>/dev/null; then
-  echo "FAIL: deck: Authorization appeared without a key"; fails=$((fails + 1))
+  echo "FAIL: deck: Authorization appeared without a key"
+  fails=$((fails + 1))
 else
   echo "ok: deck: no Authorization header on the keyless leg"
 fi

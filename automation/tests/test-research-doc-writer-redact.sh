@@ -35,13 +35,19 @@ mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" \
  "$sb/digest" "$sb/kernel/docs/research" "$sb/kernel/scripts" "$sb/kernel/docs/project" \
  "$sb/.config/hngh" "$sb/report-root" "$sb/.hngh/archive/digest"
 cp -r "$root/lib/." "$sb/lib/"
-[ -f "$sb/lib/scrub.py" ] || { echo "FAIL: sandbox lib/scrub.py missing"; exit 1; }
+[ -f "$sb/lib/scrub.py" ] || {
+ echo "FAIL: sandbox lib/scrub.py missing"
+ exit 1
+}
 # scrub.sh resolves lib/scrub.py from $AUTOMATION_ROOT; a broken copy
 # must fail this suite loudly, never fake a pass through redact_home's
 # fail-closed empty output.
 SCRUB_PROBE="$(AUTOMATION_ROOT="$sb" bash -c \
  '. "'"$sb"'/lib/scrub.sh"; redact_home_impl "/home/probe/x"')"
-[ "$SCRUB_PROBE" = "~/x" ] || { echo "FAIL: sandbox redact_home broken: $SCRUB_PROBE"; exit 1; }
+[ "$SCRUB_PROBE" = "~/x" ] || {
+ echo "FAIL: sandbox redact_home broken: $SCRUB_PROBE"
+ exit 1
+}
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
@@ -75,7 +81,7 @@ BEAT_ENV=(
  TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
  REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
  UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
- OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS=""
+ OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" HNGH_LOADCTX_PIN=0
  MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096 KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
 )
 beat_run() { # [K=V ...] -> one hour-beat run; caller args win
@@ -124,7 +130,10 @@ beat_run
 beat_run
 
 # (1) the crystallized doc exists and was committed
-[ -f "$doc" ] || { echo "FAIL: crystallized doc missing: $doc"; fails=$((fails + 1)); }
+[ -f "$doc" ] || {
+ echo "FAIL: crystallized doc missing: $doc"
+ fails=$((fails + 1))
+}
 msg="$(git -C "$sb/kernel" log -1 --format=%s)"
 ck "crystallize commit message" "research: $PATHY_ID crystallized" "$msg"
 
@@ -146,30 +155,48 @@ rm -f "$blob"
 # family) and left the pre-existing tilde token untouched (fixpoint)
 title_head="$(head -1 "$doc")"
 case "$title_head" in
- *'~/Projects/etc/hngh/tests'*) echo "ok: title raw path tilde-rendered" ;;
- *) echo "FAIL: title raw path not tilde-rendered: $title_head"; fails=$((fails + 1)) ;;
+*'~/Projects/etc/hngh/tests'*) echo "ok: title raw path tilde-rendered" ;;
+*)
+ echo "FAIL: title raw path not tilde-rendered: $title_head"
+ fails=$((fails + 1))
+ ;;
 esac
 case "$title_head" in
- *'~/Projects/notes.md'*) echo "ok: title pre-existing tilde preserved (fixpoint)" ;;
- *) echo "FAIL: title pre-existing tilde clobbered: $title_head"; fails=$((fails + 1)) ;;
+*'~/Projects/notes.md'*) echo "ok: title pre-existing tilde preserved (fixpoint)" ;;
+*)
+ echo "FAIL: title pre-existing tilde clobbered: $title_head"
+ fails=$((fails + 1))
+ ;;
 esac
 
 # (4) body lane: arrives marker-scrubbed from the model chokepoint; the
 # URL home component must survive verbatim (wire data, not filesystem)
 grep -qF 'https://x.io/home/u/f' "$doc" ||
- { echo "FAIL: URL home component clobbered"; fails=$((fails + 1)); }
+ {
+  echo "FAIL: URL home component clobbered"
+  fails=$((fails + 1))
+ }
 grep -qF '[redacted path]' "$doc" ||
- { echo "FAIL: body marker lane missing"; fails=$((fails + 1)); }
+ {
+  echo "FAIL: body marker lane missing"
+  fails=$((fails + 1))
+ }
 echo "ok: body marker lane + URL preservation in crystallized doc"
 
 # (5) digest beat copy (symmetry): pathy FILENAME and CONTENT both clean
 if [ -f "$digest" ]; then
  no_raw "digest copy: no raw /home token" "$digest"
  grep -qF '[redacted path]' "$digest" ||
-  { echo "FAIL: digest body marker lane missing"; fails=$((fails + 1)); }
+  {
+   echo "FAIL: digest body marker lane missing"
+   fails=$((fails + 1))
+  }
  case "$(head -2 "$digest" | tail -1)" in
-  *'/home/testuser'*) echo "FAIL: digest header line leaked"; fails=$((fails + 1)) ;;
-  *) echo "ok: digest header line clean" ;;
+ *'/home/testuser'*)
+  echo "FAIL: digest header line leaked"
+  fails=$((fails + 1))
+  ;;
+ *) echo "ok: digest header line clean" ;;
  esac
 else
  echo "FAIL: digest copy missing: $digest"

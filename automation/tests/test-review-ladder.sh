@@ -57,6 +57,7 @@ call() { # prompt -> stdout (MODEL_PIN=review; every leg dead unless armed)
       OLLAMA_URL=http://127.0.0.1:1
     export OLLAMA_MODEL=stub-ollama
     export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
+    export HNGH_LOADCTX_PIN=0 # no /load POST: pre-pin contracts only (2026-09-22 context lane)
     export MODEL_MAX_TOKENS=3072 MODEL_PIN=review
     export HNGH_TELEMETRY_DB="$sb/telemetry.db"
     printf '%s' "$1" | bash -c '. "'"$root"'/lib/model.sh"; model_call'
@@ -119,7 +120,10 @@ ck "all dead: empty stdout" "" "$out"
 ck "all dead: archive-only used" "none:archive-only" "$(used)"
 ls "$sb"/archive/skipped-*.txt >/dev/null 2>&1 &&
   echo "ok: all dead: prompt archived" ||
-  { echo "FAIL: all dead: prompt not archived"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: all dead: prompt not archived"
+    fails=$((fails + 1))
+  }
 
 # --- review beat sandbox: unparseable -> bad-execution demotion ----------
 git -C "$sb/kernel" init -q
@@ -161,10 +165,16 @@ ck "unparseable x2: counter deck:deck x2" \
   "$(awk -F'\t' '$1=="deck:deck"{print $1"\t"$2}' "$sb/state/model-demote.tsv")"
 grep -q 'model deck:deck demoted' "$sb/kernel/queue.log" &&
   echo "ok: unparseable x2: demotion alert filed" ||
-  { echo "FAIL: unparseable x2: no demotion alert"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: unparseable x2: no demotion alert"
+    fails=$((fails + 1))
+  }
 grep -q 'unparseable' "$sb/kernel/queue.log" &&
   echo "ok: unparseable: alert filed" ||
-  { echo "FAIL: unparseable: no alert row"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: unparseable: no alert row"
+    fails=$((fails + 1))
+  }
 
 # --- parseable review -> no demotion, review-done ------------------------
 STUB_CONTENT="$(printf '## hngh\n- nit: stub finding\n## hngh-automation\nno findings')" \
@@ -174,17 +184,29 @@ rm -f "$sb/state/model-demote.tsv"
 run_beat
 ck "parseable beat: exits 0" "0" "$?"
 [ -s "$sb/state/model-demote.tsv" ] &&
-  { echo "FAIL: parseable beat: model demoted"; fails=$((fails + 1)); } ||
+  {
+    echo "FAIL: parseable beat: model demoted"
+    fails=$((fails + 1))
+  } ||
   echo "ok: parseable beat: no demotion"
 grep -q 'via deck:deck' "$sb/STATE.md" &&
   echo "ok: parseable beat: review-done breadcrumb" ||
-  { echo "FAIL: parseable beat: no review-done"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: parseable beat: no review-done"
+    fails=$((fails + 1))
+  }
 [ -f "$sb/digest/REVIEW-$(date -u +%Y-%m-%d).md" ] &&
   echo "ok: parseable beat: REVIEW digest written" ||
-  { echo "FAIL: parseable beat: no REVIEW digest"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: parseable beat: no REVIEW digest"
+    fails=$((fails + 1))
+  }
 grep -q 'terse markdown list' "$stubdir/deck3-bodies" &&
   echo "ok: parseable beat: review packet sent to model" ||
-  { echo "FAIL: parseable beat: empty prompt — packet never reached the model"; fails=$((fails + 1)); }
+  {
+    echo "FAIL: parseable beat: empty prompt — packet never reached the model"
+    fails=$((fails + 1))
+  }
 
 [ "$fails" = 0 ] && echo "test-review-ladder: all pass" || {
   echo "test-review-ladder: $fails failure(s)"

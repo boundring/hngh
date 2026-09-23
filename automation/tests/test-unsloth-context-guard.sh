@@ -68,6 +68,7 @@ call() { # prompt [unsloth_url] -> stdout
     export OLLAMA_MODEL=stub-ollama
     export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
     export MODEL_MAX_TOKENS=3072
+    export HNGH_LOADCTX_PIN=0 # no /load POST: the stub logs every POST as a chat hit (2026-09-22 context lane)
     printf '%s' "$1" | bash -c '. "'"$root"'/lib/model.sh"; model_call'
   )
 }

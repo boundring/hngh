@@ -57,7 +57,7 @@ stubD_port="$(cat "$stubdir/stubD-port")"
 stubZ_port="$(cat "$stubdir/stubZ-port")"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
 chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
-seed_events() { # source n -> n telemetry model/<source> events stamped today
+seed_events() {               # source n -> n telemetry model/<source> events stamped today
  python3 - "$1" "$2" <<PY
 import sqlite3, datetime, sys
 db = sqlite3.connect("$sb/home/db/telemetry.db")
@@ -98,6 +98,7 @@ call() { # prompt [K=V ...] -> stdout
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
   export MODEL_MAX_TOKENS=3072
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
+  export HNGH_LOADCTX_PIN=0 # the load-ctx pin adds a /load stub hit per attempt (covered by test-model-loadctx.sh)
   # hermetic: start bare of the operator's session env
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
   unset Z_AI_API_KEY ZAI_MODEL ZAI_URL ZAI_MODEL_DESIGN ZAI_KEY_FILE
@@ -345,7 +346,7 @@ reset_hits
 beat_run() { # [K=V ...] -> runs one full beat against the sandbox
  (
   cd "$sb"
-  rm -f "$sb/beat-stamp" # each invocation is a fresh gate pass
+  rm -f "$sb/beat-stamp"                 # each invocation is a fresh gate pass
   cp -r "$root/cadence/." "$sb/cadence/" # re-copy: the beat under test evolves; stale sandbox copies mask it
   env -i PATH="$PATH" HOME="$sb" HNGH_HOME_DIR="$sb/home" \
    AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh \

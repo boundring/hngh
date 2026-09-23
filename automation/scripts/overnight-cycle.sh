@@ -362,6 +362,8 @@ $backlog
 $alerts
 --- crystallized research lines ---
 $lines"
+ # overnight drafts are commit-range sized: deep tier (2026-09-22 context lane)
+ export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
  response="$(printf '%s' "$prompt" | model_call 4096)"
  used="$(last_model_used)"
  if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
@@ -514,6 +516,8 @@ Grounded constraints (binding):
 3. 3-6 steps, each independently verifiable.
 
 $docs"
+ # overnight drafts are commit-range sized: deep tier (2026-09-22 context lane)
+ export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
  response="$(printf '%s' "$prompt" | MODEL_PIN=local model_call 4096)"
  used="$(last_model_used)"
  if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then

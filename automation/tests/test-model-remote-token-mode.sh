@@ -68,7 +68,8 @@ ck "0600 dead URL: got past the gate (HTTP breadcrumb)" "1" \
   "$(grep -c '| model | remote | HTTP' "$sb/STATE.md")"
 ck "0600 dead URL: no too-open breadcrumb" "0" \
   "$(grep -c 'too open' "$sb/STATE.md")"
-rm -f "$stubdir/remote-hits"; : >"$stubdir/remote-hits"
+rm -f "$stubdir/remote-hits"
+: >"$stubdir/remote-hits"
 out="$(call "$tok" "http://127.0.0.1:$port")"
 ck "0600 vs live stub: stub answered" "stub-says-hi" "$out"
 ck "0600 vs live stub: exactly one POST" "1" \
@@ -97,6 +98,7 @@ ucall() { # tokenfile url -> unsloth_chat stdout
     export OLLAMA_MODEL=stub-ollama
     export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
     export MODEL_MAX_TOKENS=512 REMOTE_MODEL=stub-remote
+    export HNGH_LOADCTX_PIN=0 # no /load POST: this suite counts exactly one (2026-09-22 context lane)
     bash -c '. "'"$root"'/lib/model.sh"; unsloth_chat hi 16 stub-model'
   )
 }

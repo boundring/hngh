@@ -47,6 +47,7 @@ call() { # prompt [K=V ...] -> stdout
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama DECK_URL=http://127.0.0.1:1
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
+  export HNGH_LOADCTX_PIN=0 # no /load POST: pre-pin contracts only (2026-09-22 context lane)
   export MODEL_MAX_TOKENS=3072
   unset OPENCODE_API_KEY KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY \
    OCGO_URL OCGO_MODEL OCGO_CAP_5H_CALLS MODEL_PIN

@@ -12,6 +12,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/model.sh"
+. "$AUTOMATION_ROOT/lib/params.sh"
 
 KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
 REPORT="python3 $KERNEL/scripts/report-queue"
@@ -77,6 +78,8 @@ $packet"
 # pace-blocked legs skip fail-closed inside model_call; remote (paid
 # openrouter) is never in this lane.
 MODEL_PIN="${MODEL_PIN:-review}"
+# review prompts are commit-range sized: deep tier (2026-09-22 context lane)
+export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
 
 t0=$(date +%s)
 response="$(printf '%s' "$prompt" | model_call 4096)"

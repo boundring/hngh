@@ -19,7 +19,7 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 cp "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/" # single-source scrub
-: >"$sb/cadence-params.tsv" # Inventory: no deck row unless a case sets one
+: >"$sb/cadence-params.tsv"                             # Inventory: no deck row unless a case sets one
 : >"$sb/STATE.md"
 
 . "$root/tests/stub-lib.sh"
@@ -38,6 +38,7 @@ call() { # prompt [pin] -> stdout
     export OLLAMA_URL="${SANDBOX_OLLAMA_URL:-http://127.0.0.1:1}"
     export OLLAMA_MODEL=stub-ollama
     export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT="${MT:-5}"
+    export HNGH_LOADCTX_PIN=0 # no /load POST: pre-pin contracts only (2026-09-22 context lane)
     export MODEL_MAX_TOKENS="${MT:-3072}"
     export MODEL_PIN="${2:-}"
     printf '%s' "$1" | bash -c '. "'"$root"'/lib/model.sh"; model_call'

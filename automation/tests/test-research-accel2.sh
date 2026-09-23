@@ -57,7 +57,7 @@ BEAT_ENV=(
  TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
  REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
  UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
- OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS=""
+ OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" HNGH_LOADCTX_PIN=0
  MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096 KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
 )
 beat_run() { # [K=V ...] -> one hour-beat run; caller args win

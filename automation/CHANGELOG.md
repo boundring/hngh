@@ -2,6 +2,28 @@
 
 ## 2026-09-22
 
+- VRAM/RAM guardrails lane (plan 2026-09-22-vram-small-model-guardrails):
+  the 2026-09-22 09:04 Plasma session loss (20.5 GB Qwen3.8-27B auto-load
+  at context 127488 filling 20420 MiB free VRAM -> Mesa aborted Xorg) is
+  bounded on the hngh side: every local load now pins an explicit context
+  (`lib/model.sh` `unsloth_load_ctx` posts `/api/inference/load`
+  `max_seq_length` on the `unsloth_attempt` funnel; rows `ctx-standard`
+  16384 / `ctx-deep` 32768, `MODEL_CTX` env, deep tier exported at
+  review-prep / research plan-synth / overnight drafts), beat traffic runs
+  small models (`MODEL` unsloth/Ornith-1.0-9B-GGUF,
+  `UNSLOTH_FALLBACK_MODELS` unsloth/gemma-4-12b-it-qat-GGUF,
+  `BENCH_MODELS` small-first), and the unpinned chain tail is quota-first
+  (zai -> xiaomi -> ocgo -> kimi -> remote -> ollama -> deck ->
+  archive-only) with `xiaomi_chat`/`_xiaomi_leg` added (rows
+  `xiaomi-endpoint`/`xiaomi-model`, 0600 key-file gate, fail-closed) and
+  the OpenCode leg re-armed to its documented pre-disable values (url,
+  glm-5.3-flash, caps 60/150/300). The 10 cadence/automation units carry
+  anti-runaway `mem-caps.conf` drop-ins (MemoryHigh 1.5x / MemoryMax 4x
+  observed MemoryPeak). New hermetic suite `tests/test-model-loadctx.sh`
+  (pin body carries the row's ctx, fail-open unpinned breadcrumb, kill
+  switch, env-beats-row, xiaomi skip/serve, argv hygiene). Record:
+  docs/records/2026-09-22-vram-small-model-guardrails.md.
+
 - RAM gate trip alert telemetry (7fd8e543): a `memory_gate` trip below
   the RAM floor files one deduped report-queue alert row (identity
   `ram-gate:trip`, window 86400) through notify-email's `alert_row` —

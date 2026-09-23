@@ -64,7 +64,11 @@ done
 # after the join, the only legitimate "Authorization: Bearer" lines are
 # the printf stdin-config directives, which are not curl records.
 for c in "${curls[@]}"; do
-  case "$c" in *'Authorization:'*) echo "FAIL: header on curl argv: $c"; fails=$((fails + 1)) ;; esac
+  case "$c" in *'Authorization:'*)
+    echo "FAIL: header on curl argv: $c"
+    fails=$((fails + 1))
+    ;;
+  esac
 done
 
 # credential-value-on-argv guard (the -d blind spot, closed 2026-09-17
@@ -153,7 +157,10 @@ mck() { # desc expected actual
 }
 for c in "${mcurls[@]}"; do
   case "$c" in *'Authorization:'*)
-    echo "FAIL: model.sh header on curl argv: $c"; m_fails=$((m_fails + 1)) ;; esac
+    echo "FAIL: model.sh header on curl argv: $c"
+    m_fails=$((m_fails + 1))
+    ;;
+  esac
 done
 mck "model.sh: no Authorization header on any curl argv" "0" "$m_fails"
 m_nonk=0
@@ -165,7 +172,9 @@ for c in "${mcurls[@]}"; do
 done
 mck "model.sh: non-exempt curls without -K - == 0 (refresh path exempt)" "0" "$m_nonk"
 n_mdir="$(grep -c "printf 'header = \"Authorization: Bearer %s\"" "$file2" || true)"
-mck "model.sh: four stdin Bearer directives" "4" "$n_mdir"
+# five sites: the four probed gates plus unsloth_load_ctx's /load pin
+# (2026-09-22 context lane; same stdin-config shape, asserted above).
+mck "model.sh: five stdin Bearer directives" "5" "$n_mdir"
 mck "model.sh: suite found curl records at all (file not drifted)" "yes" \
   "$([ "${#mcurls[@]}" -ge 4 ] && echo yes || echo no)"
 

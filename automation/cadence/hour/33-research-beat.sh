@@ -436,7 +436,10 @@ output."
   MODEL_PIN=zai
   ZAI_MODEL="${ZAI_MODEL_DESIGN:-${ZAI_MODEL:-$(get_param zai-model-design '')}}"
  fi
- resp="$(printf '%s' "$prompt" | model_call 1024)"
+ # plan synthesis is commit-range sized: deep tier (2026-09-22 context
+ # lane), scoped to this call so the beat's later model_call sites stay
+ # on ctx-standard
+ resp="$(printf '%s' "$prompt" | MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}" model_call 1024)"
  printf '%s\n' "$day" >"$synth_stamp" 2>/dev/null
  accepted=0
  while IFS= read -r ln; do

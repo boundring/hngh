@@ -17,17 +17,21 @@ all summarization runs on local models (Unsloth → Ollama → archive-only).
 
 ## Model chain (`lib/model.sh`)
 
-1. **Unsloth** `MODEL` (default `unsloth/Qwen3.8-27B-GGUF`) — auto-refreshes the
+1. **Unsloth** `MODEL` (default `unsloth/Ornith-1.0-9B-GGUF`) — auto-refreshes the
    single-use token pair on HTTP 401 via `POST /api/auth/refresh`. When the model
    answers HTTP 200 but returns empty `content` (the reasoning stage ate the budget),
    `model.sh` retries once with `max_tokens*8` and `enable_thinking:false`, then falls
    back to `reasoning_content` extraction. Verified 2026-08-24: the retry path lands a
    real tiered summary on the full multi-source prompt in ~45s.
-2. **Unsloth fallback** `UNSLOTH_FALLBACK_MODEL` (default `unsloth/Qwen-AgentWorld-35B-A3B-GGUF`).
-3. **Ollama** `OLLAMA_MODEL` (default `hf.co/unsloth/gemma-4-12B-it-QAT-GGUF:UD-Q4_K_XL`) —
-   `stream:false`, `$MODEL_TIMEOUT` for cold 12B load.
+2. **Unsloth fallback** `UNSLOTH_FALLBACK_MODELS` (default `unsloth/gemma-4-12b-it-qat-GGUF`).
+3. **Ollama** `OLLAMA_MODEL` (default `hf.co/unsloth/Ornith-1.0-9B-GGUF:latest`) —
+   `stream:false`, `$MODEL_TIMEOUT` for a cold model load.
 4. **Archive-only**: no model reachable → raw prompt saved to `archive/`, job still
    exits 0 and breadcrumbs. Fail-closed.
+
+Context tiers (`cadence-params.tsv`, `MODEL_CTX` env override): `ctx-standard`
+16384 for news/digest/research/feedback beats; `ctx-deep` 32768 for review-prep,
+plan synth, overnight drafts.
 
 `MODEL_MAX_TOKENS` default 1024; the empty-content retry multiplies by 8 (floor 512).
 

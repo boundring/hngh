@@ -60,6 +60,7 @@ call() { # prompt [K=V ...] -> stdout
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
   export OLLAMA_MODEL=stub-ollama
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
+  export HNGH_LOADCTX_PIN=0 # no /load POST: pre-pin contracts only (2026-09-22 context lane)
   export MODEL_MAX_TOKENS=3072
   export KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
   unset KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY KIMI_MODEL KIMI_URL
@@ -78,10 +79,16 @@ ck() { # desc expected actual
 
 stub_403 stub403
 port403="$(cat "$stubdir/stub403-port")"
-[ -n "$port403" ] || { echo "FAIL: 403 stub did not start"; exit 1; }
+[ -n "$port403" ] || {
+ echo "FAIL: 403 stub did not start"
+ exit 1
+}
 stub_start stubB
 portB="$(cat "$stubdir/stubB-port")"
-[ -n "$portB" ] || { echo "FAIL: stubB did not start"; exit 1; }
+[ -n "$portB" ] || {
+ echo "FAIL: stubB did not start"
+ exit 1
+}
 
 # kimi 403s, ocgo answers: failover, not success.
 printf 'opencode-url\thttp://127.0.0.1:%s\ttest\ttest\nopencode-model\tglm-test-model\ttest\ttest\n' "$portB" >"$sb/cadence-params.tsv"

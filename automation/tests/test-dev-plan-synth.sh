@@ -92,7 +92,7 @@ run_cycle() { # [extra K=V...] -> runs one overnight beat in the sandbox
   TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope" \
   REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL="http://127.0.0.1:1" \
   OLLAMA_URL="http://127.0.0.1:1" OLLAMA_MODEL=stub-ollama \
-  MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5 \
+  MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5 HNGH_LOADCTX_PIN=0 \
   KIMI_KEY_FILE="$sb/.config/hngh/kimi-key" \
   OMP_BIN_CMD="$stubdir/bin/omp" OMP_BRIDGE_BIN="$stubdir/bin/bridge" \
   MARKER="$sb/launched.marker" FORETHOUGHT_DEPTH="0" \

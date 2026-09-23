@@ -27,6 +27,7 @@ call() { # prompt -> stdout
     export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
     export OLLAMA_MODEL=stub-ollama
     export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT="${MT:-5}"
+    export HNGH_LOADCTX_PIN=0 # no /load POST: pre-pin contracts only (2026-09-22 context lane)
     export MODEL_MAX_TOKENS="${MT:-3072}"
     printf '%s' "$1" | bash -c '. "'"$root"'/lib/model.sh"; model_call'
   )

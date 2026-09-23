@@ -49,6 +49,7 @@ run_gen() { # [NEWS_ARTICLES_FETCH=v] -> stdout (article paths)
   export UNSLOTH_URL="${UNSLOTH_URL:-http://127.0.0.1:$stubU_port}"
   export OLLAMA_URL=http://127.0.0.1:1 OLLAMA_MODEL=stub-ollama
   export MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" MODEL_TIMEOUT=5
+  export HNGH_LOADCTX_PIN=0 # no /load POST: the stub counts one hit per article (2026-09-22 context lane)
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export DECK_URL="" MODEL_MAX_TOKENS=1024
   export NEWS_ARTICLES_MODEL_CMD='. "'"$sb"'/lib/model.sh"; model_call 1024'
@@ -195,7 +196,7 @@ printf '%s' "$PATHY_DIGEST" >"$sb/digest/$DATE.md"
 printf '%s' "$PATHY_DIGEST" >"$sb/home/archive/digest/$DATE.md"
 printf '%s' "$PATHY_DIGEST" >"$sb/repo/automation/digest/$DATE.md"
 HNGH_AUTOMATION_ROOT="$sb" HNGH_HOME_DIR="$sb/home" \
-python3 - "$sb" <<'PY' || fails=$((fails + 1))
+ python3 - "$sb" <<'PY' || fails=$((fails + 1))
 import importlib.machinery, importlib.util, os, sys
 sb = sys.argv[1]
 loader = importlib.machinery.SourceFileLoader(
@@ -282,7 +283,7 @@ out="$(run_gen "MODEL_PIN=local" | wc -l)"
 ck "pathy edition still files its article" "1" "$out"
 ck "model never receives host paths (captured stub bodies)" "0" \
  "$(grep -c -e '~' -e '/tmp/vr-test' -e '~/.hngh' \
-    "$stubdir/stubU-bodies" 2>/dev/null || true)"
+  "$stubdir/stubU-bodies" 2>/dev/null || true)"
 ck "model request carries the redaction marker" "1" \
  "$(grep -c 'redacted path' "$stubdir/stubU-bodies" 2>/dev/null || true)"
 
