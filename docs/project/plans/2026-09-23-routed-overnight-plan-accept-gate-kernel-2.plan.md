@@ -2,7 +2,7 @@
 # 2026-09-23 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`
-at 2026-09-23T18:00:13Z. Alert text: plan acceptance blocked: kernel make test FAILED (rc=2)
+at 2026-09-23T19:00:38Z. Alert text: plan acceptance blocked: kernel make test FAILED (rc=2) ×2
 
 ## Steps
 
