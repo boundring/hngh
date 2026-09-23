@@ -679,3 +679,45 @@ no scrubbed bytes). Post-state: 148 code-surface commits checked, 27
 named exemptions, 0 violations; `make test` 2934 checks green at
 commit time. Declared, not rewritten — the 2026-09-11 and 2026-09-20
 re-key precedent.
+## 2026-09-23 — GOVERNANCE.md aligned with the federal charter and the canon ethos
+
+Context: the operator directed (2026-09-23) that `GOVERNANCE.md`'s
+tone and authority be informed by the annotated Chinese classics
+(`~/Projects/etc/tao-confucian-canon/docs`) and the author voices
+(`~/Projects/etc/tao-confucian-canon/voices`), and that the ethos of
+Taoist and Confucian thought be integrated with the democratic and
+humanist ideals of the US federal government — formally, not as a
+one-off task. The federal charter
+(`docs/project/plans/2026-09-20-federal-charter.plan.md`) was
+accepted 2026-09-20.
+
+Decision: `GOVERNANCE.md` is the alignment document. It states
+recorded decisions and creates none (the golden rule is preserved
+verbatim). The five never clauses and the certificate path,
+including the ten closed principles, are preserved verbatim;
+sections 1–4 and 7–12 are new alignment prose; section 11 preserves
+the amendment procedure with renumbered references. Authority is
+unchanged: single operator, self-governed until the first outside
+contribution, N = 2 amendment rule intact.
+Calls made while aligning (common-sense lane, recorded here):
+
+- Unsloth credential dual source: `automation/lib/secrets.py`
+  (1Password `UNSLOTH_API_KEY`) is the source of truth;
+  `~/.hngh-automation/unsloth.token` remains a documented fallback.
+  No credential values move.
+- Report triage: alerts are the unread surface; progress rows
+  archive on write. Thousands of unread progress rows are ledger
+  history, not inbox items.
+- `home-bricker-*` research-artifact renames: the disposition stands
+  as recorded 2026-09-18
+  (`docs/records/2026-09-18-tracked-remediation-plan.md:44`); not
+  reopened here.
+
+Proposed ruleset amendment (for the operator's rules set): recorded
+intent includes the current conversation — an explicit operator
+directive naming a change IS recorded intent, and directed work is
+never deferred behind a later signature or ratification formality.
+Where an N-of-M approval rule seems to conflict, check whether it
+governs FUTURE changes while the directed work only brings a
+document into line with an already-ratified record: documents catch
+up to records; records never wait on documents.

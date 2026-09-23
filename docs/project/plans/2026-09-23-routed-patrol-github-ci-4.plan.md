@@ -2,7 +2,7 @@
 # 2026-09-23 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:github-ci`
-at 2026-09-23T20:00:13Z. Alert text: patrol github-ci: bad-execution on github-actions-latest -- latest run fc98da8 concluded failure -- https://github.com/boundring/hngh/actions/runs/35893459243
+at 2026-09-23T21:00:37Z. Alert text: patrol github-ci: bad-execution on github-actions-latest -- latest run fc98da8 concluded failure -- https://github.com/boundring/hngh/actions/runs/35893459243
 
 ## Steps
 

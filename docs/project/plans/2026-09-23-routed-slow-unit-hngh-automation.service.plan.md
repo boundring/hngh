@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:hngh-automation.service -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-23T21:04:42Z routed-from=slow-unit:hngh-automation.service -->
 # 2026-09-23 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:hngh-automation.service`
@@ -8,3 +8,7 @@ at 2026-09-23T20:00:13Z. Alert text: [oversight] slow-unit: hngh-automation.serv
 
 - [ ] Delve: open research subject fail-20260923-slow-unit-hngh-automation.service for slow-unit:hngh-automation.service; record disposition; then fix or park
       Verification: research subject fail-20260923-slow-unit-hngh-automation.service present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-23T21:00:37Z re-occurred (dedup window expired)
