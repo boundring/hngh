@@ -38,11 +38,11 @@ Regenerated weekly from live ledgers by
 hngh-automation `cadence/day/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 242 reviewed (hngh-automation/research-lines.tsv).
-- Queue Next: key-rotation-freshness, set 2026-09-16 (6 days old) (hngh docs/project/queue.md).
-- Plan ledger: 508 plan files, 407 routed candidates (hngh docs/project/plans/).
+- Research lines: 249 reviewed (hngh-automation/research-lines.tsv).
+- Queue Next: key-rotation-freshness, set 2026-09-16 (7 days old) (hngh docs/project/queue.md).
+- Plan ledger: 553 plan files, 446 routed candidates (hngh docs/project/plans/).
 - Operator items: 27 open (hngh-automation/dashboard/operator-items.json; display cap 40).
-- Gates: 03-gate-check.sh — gate-red — hngh-automation: make test rc=2 (hngh-automation/STATE.md crumb tail).
+- Gates: 04-review-prep.sh — alert — review P0/P1 (hngh-automation): P1: reports.md shows "patrol automation-gate: gate-red on hngh-automation — make test rc=2" with no routed fix landing in this repo's own history — the actual failing repo has no remediation commits while its ledger fills with hngh's noise (hngh-automation/STATE.md crumb tail).
 <!-- torch:end -->
 
 ## What is broken and being fixed
