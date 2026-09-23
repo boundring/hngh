@@ -281,3 +281,19 @@ fail-20260922-Does-the-hngh-automation-repository-cont	Does the `hngh-automation
 fail-20260922-Is-there-a-migration-log-or-changelog-en	Is there a migration log or changelog entry in the `hngh` repository that documents when version-pinning fields (e.g., `commit_hash`) were added to or removed from the `research-lines.tsv` schema?
 fail-20260922-Does-the-hngh-kernel-repository-contain-	Does the `hngh` kernel repository contain any code or configuration that explicitly parses or validates the `research-lines.tsv` format, and if so, what error messages are generated for schema violations?
 fail-20260922-Are-there-any-recent-commits-within-the-	Are there any recent commits (within the last 30 days) in `hngh-automation` that modify `research-lines.tsv` without corresponding changes to CI or pre-commit configurations, indicating ongoing reliance on manual discipline?
+patrol-20260922-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260922-journal-error-unit-not-practiced	patrol: surface journal-error filed unit-not-practiced on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260922-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+fail-20260922-What-is-the-exact-staleness-predicate-in	What is the exact staleness predicate in the untruncated Anomalies.scala  threshold value, timestamp source, and reset condition  and does it resolve hypothesis (a) vs (b)?
+fail-20260922-Is-outcome-demotion-at-two-consecutive-f	Is outcome-demotion-at-two-consecutive-failures implemented anywhere in the hngh kernel or scripts/, and if not, what is the minimal resolver that closes the check-pending-stale lifecycle?
+synth-2026-09-23-1	Does the `patrol-20260922-research-ledger-harvest-stale` guardrail wiring require a new state transition in the ledger schema to close the loop on the steer-vs-die threshold?
+synth-2026-09-23-2	Can the `fail-20260922-Does-the-research-lines-tsv-schema-curre` header row inspection be automated into a pre-commit hook to enforce TSV integrity before the next harvest?
+synth-2026-09-23-3	What is the exact staleness predicate in `fail-20260922-What-is-the-exact-staleness-predicate-in` that distinguishes a stale research line from a parked one under the current kernel ground-truth pass?
+patrol-20260923-feeds-feed-stale	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-systemd-units-timer-dead	patrol: surface systemd-units filed timer-dead on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-rotation-due-rotation-due	patrol: surface rotation-due filed rotation-due on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260923-journal-error-unit-not-practiced	patrol: surface journal-error filed unit-not-practiced on two consecutive runs -- why does it keep failing and which guardrail closes it?
