@@ -14,7 +14,7 @@ wake-mutation-lane	done	Certificate-bound wake mutation lane	landed 2026-09-13 t
 node-lattice-admission	done	Node-lattice admission rung	rotated 2026-09-15
 bridge-operator-host	done	Bridge-as-operator-host (run → worker → review → certify)	rotated 2026-09-16: certificate-gated session commits live through scripts/omp-bridge --ceremony (candidates 054f08f0, 9e0779b0, cf36b6f2 this week, ceremony-drive auto-push); bridge surface + worker-driver refusal + r13 reviewer + :model loadout all present; session watchdog visibility via --register handoff ledger; docs/agent-notes/jcode-orientation.md
 doc-sync-loop	done	Documentation-sync loop (make numbers guard)	rotated 2026-08-25 by rotate-queue
-key-rotation-freshness	queued	Evidence-freshness + key-rotation rung	backlog entry; node-lattice risk
+key-rotation-freshness	done	Evidence-freshness + key-rotation rung	landed 2026-09-23 (row flipped on verified evidence): lib/credential-evidence.py fail-closed (ledger-missing/stale/hash-mismatch/evidence-missing/malformed) + 28 hermetic tests green, wired jobs/credential-health.sh section 7 with OLA cadence-params credential-fresh-ola=604800 (env CREDENTIAL_FRESHNESS_OLA); records docs/records/2026-09-16-credential-evidence-hardening.md + 2026-09-16-credential-freshness-rung-dead-legs.md; vault-cutover follow-through remains (env_vars.sh stub, docs/records/2026-09-21-vault-cutover-freshness.md)
 credential-rotation-auto	done		folded into key-rotation-freshness (retirement lane) 2026-08-27 — Full no-operator credential/token rotation + health alerts	2026-08-26 STATE 401; folds into key-rotation-freshness
 pooled-hardware	queued	Pooled hardware / priced routes rung	README Where this is going
 tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
@@ -45,9 +45,10 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
 ```
 ## Next
 
-- **key-rotation-freshness** — next queued (deps open: resource pool
-  view, key-pin registry rung 12); bridge-operator-host rotated
-  2026-09-16 through the ceremony, candidate see git log.
+- **pooled-hardware** — next queued (deps open: resource pool view,
+  key-pin registry rung 12 — carried from 2026-09-16, unverified);
+  key-rotation-freshness rotated 2026-09-23 with the
+  evidence-freshness rung landed (vault-cutover stub remains).
 
 ## Scheduling
 
