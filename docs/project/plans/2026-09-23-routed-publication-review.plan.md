@@ -8,3 +8,7 @@ at 2026-09-23T10:00:13Z. Alert text: publication-review 2026-09-23: 2 red check(
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-23T11:00:13Z re-occurred (dedup window expired)

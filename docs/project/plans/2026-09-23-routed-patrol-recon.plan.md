@@ -8,3 +8,7 @@ at 2026-09-23T10:00:13Z. Alert text: patrol recon: label-content-divergence on k
 
 - [ ] Delve: open research subject fail-20260923-patrol-recon for patrol:recon; record disposition; then fix or park
       Verification: research subject fail-20260923-patrol-recon present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-23T11:00:13Z re-occurred (dedup window expired)
