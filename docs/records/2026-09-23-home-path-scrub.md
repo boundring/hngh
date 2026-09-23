@@ -81,4 +81,26 @@ files.
 
 ## Post-scrub verification
 
-(see appendix added after the rewrite)
+- Two passes over `refs/heads/main` (2,134 commits parsed):
+  1. `--replace-text` + `--replace-message` with the rules file;
+  2. `--blob-callback` zip-member rebuild (fail-closed: only blobs
+     that parse as zip are rewritten) — one binary carrier found: the
+     first `docs/publication/hngh-memoir.epub` blob (added by the
+     portfolio-surface commit; the tip epub had already been
+     regenerated clean, so the tree needed no change).
+- Verified empty: `git log -S'/home/bricker'` (pickaxe), commit-message
+  bodies, and a byte-level scan of every tracked file at tip (raw
+  bytes + every zip member). The rebuilt historical epub is a valid
+  5-member zip with zero residual.
+- Rewritten head at push time: `2b7c95e0` (`docs: machine ledger sync`)
+  over `97e0f7fe` (this slice's sweep commit). Every earlier hash also
+  changed (two rewrite passes): hash citations in records and ledgers
+  name pre-scrub history, recoverable from the backup bundle
+  `~/.hngh-automation/scrub/pre-path-scrub-20260923.bundle` (36M, all
+  refs).
+- Force-pushed to `git@github.com:boundring/hngh.git` (forced update
+  `92893e2c...2b7c95e0`).
+- Local-only refs deliberately out of the rewrite (`--refs`-scoped):
+  `refs/omp-undo-redo/*` (omp edit snapshots), `refs/dolt/*` (beads
+  Dolt namespace), local tag `pre-scrub-backup-20260920` — none are
+  pushed to origin.
