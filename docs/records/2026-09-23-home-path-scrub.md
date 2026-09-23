@@ -88,7 +88,7 @@ files.
      first `docs/publication/hngh-memoir.epub` blob (added by the
      portfolio-surface commit; the tip epub had already been
      regenerated clean, so the tree needed no change).
-- Verified empty: `git log -S'/home/bricker'` (pickaxe), commit-message
+- Verified empty: `git log -S'/home/<user>'` (pickaxe), commit-message
   bodies, and a byte-level scan of every tracked file at tip (raw
   bytes + every zip member). The rebuilt historical epub is a valid
   5-member zip with zero residual.
