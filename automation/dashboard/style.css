@@ -464,7 +464,8 @@ nav[aria-label="dashboard sections"] { display: flex; align-items: flex-end; }
   border-bottom: 1px solid var(--line); }
 /* No overflow scroll on the strip: a scroll container would clip the active
    tab's 1px overlap onto the line (found by pixel probe). Tabs shrink with
-   ellipsis instead, so the strip stays one row at every width. */
+   ellipsis instead, so the strip stays one row at desktop widths; below 760px
+   it wraps (the 48px min-width floor stops fitting one row on a phone). */
 #tabs [role="tab"] { flex: 0 1 auto; min-width: 48px; overflow: hidden;
   text-overflow: ellipsis; background: var(--bg); border: 1px solid var(--line);
   border-bottom: none; border-radius: 6px 6px 0 0; padding: 4px 14px 5px;
@@ -509,12 +510,13 @@ nav[aria-label="dashboard sections"] { display: flex; align-items: flex-end; }
 #grid .panel { grid-column: 1 / -1; } /* one panel per tab — full-width nerve center */
 /* mobile stack: below 760px (the old 480 treated half-tablet widths as mobile) */
 @media (max-width: 760px) {
-  #tabs { padding: 0 10px; margin-top: 4px; }
+  #tabs { padding: 0 10px; margin-top: 4px; flex-wrap: wrap; }
   #grid { padding: 0 10px 24px; }
   .orient { padding: 6px 10px 0; }
-  header { padding: 4px 6px; gap: 6px; }
+  header { padding: 4px 6px; gap: 6px; flex-wrap: wrap; }
   .sub, .clab { display: none; }
   .strip-counts { gap: 8px; }
+  .crumb, .opitem { flex-wrap: wrap; }
 }
 
 /* ---- winamp: the classic base-2.91 skin, as a near cousin ----

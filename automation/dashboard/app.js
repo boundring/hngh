@@ -120,16 +120,26 @@
   // server-side dismissal ledger dashboard/operator-dismissed.json. Display
   // only; a dismissal never feeds governance. Falls back to the legacy plain
   // digest bullets when the feed is unavailable.
-  var opState = { items: null, dismissed: {} };
+  var opState = { items: null, dismissed: {}, approved: {} };
   var lastRender = {};
   function fetchOpState() {
     return Promise.all([
       fetchJson('operator-items.json').catch(function () { return null; }),
-      fetchJson('operator-dismissed.json').catch(function () { return null; })
+      fetchJson('operator-dismissed.json').catch(function () { return null; }),
+      fetchJson('operator-approved.json').catch(function () { return null; })
     ]).then(function (r) {
       if (r[0] && Array.isArray(r[0].items)) opState.items = r[0].items;
       if (r[1] && r[1].dismissed) {
         opState.dismissed = r[1].dismissed;
+      }
+      if (r[2] && r[2].approved) {
+        opState.approved = r[2].approved;
+        // approved == handled even before the feed rebuilds (the feed
+        // reads the same ledger): Camp's open/handled split and the
+        // per-item controls both read it.status directly.
+        (opState.items || []).forEach(function (it) {
+          if (it && opState.approved[it.id]) it.status = 'handled';
+        });
       }
       // stale-arm revalidation (ux-review dashboard-logs:2): an arm only
       // survives a fetch while its item is still live — the same live
@@ -140,6 +150,12 @@
             return it && it.id === armedId && !opState.dismissed[it.id];
           })) {
         armedId = null;
+      }
+      if (armedHandle && opState.items &&
+          !opState.items.some(function (it) {
+            return it && it.id === armedHandle && it.status !== 'handled';
+          })) {
+        armedHandle = null;
       }
       return opState;
     });
@@ -173,6 +189,7 @@
     renderLogs(lastRender.d, lastRender.spine, lastRender.res); // notifies opRerenders
   }
   var armedId = null; // item whose dismiss is armed, awaiting the inline confirm
+  var armedHandle = null; // item whose handle is armed, awaiting the inline confirm
   function operatorItemsHtml(filter) {
     // filter: optional predicate over live items — Camp shows open/handled
     // separately; null (Logs) renders the full live list + counters.
@@ -196,7 +213,19 @@
       // honest dismiss: arm first ("dismiss? yes/no" inline), confirm second —
       // the old hover-title-only "removes for good" warning is gone, because
       // it was false: recurring items are re-emitted by their source.
-      var ctl = armedId === it.id
+      // handle is offered only while open (the two-click arm mirrors
+      // dismiss); dismiss stays available on the handled side so
+      // open -> handled -> dismissed works per item too.
+      var ctl = '';
+      if (!handled) {
+        ctl += armedHandle === it.id
+          ? '<span class="oparm">handle? ' +
+            '<button class="ghost" data-handle-yes="' + esc(it.id) + '">yes</button>' +
+            '<button class="ghost" data-handle-no="' + esc(it.id) + '">no</button></span>'
+          : '<button class="ghost" data-handle="' + esc(it.id) + '" ' +
+            'title="mark handled - done with this item; it leaves the open list">handle</button>';
+      }
+      ctl += armedId === it.id
         ? '<span class="oparm">dismiss? ' +
           '<button class="ghost" data-dismiss-yes="' + esc(it.id) + '">yes</button>' +
           '<button class="ghost" data-dismiss-no="' + esc(it.id) + '">no</button></span>'
@@ -243,6 +272,21 @@
     armedId = null;
     postDismissRaw(id).then(rerenderOp).catch(rerenderOp);
   }
+  function postHandleRaw(id) {
+    return postJson('/operator-item/handle', { id: id }).then(function () {
+      opState.approved[id] = new Date().toISOString();
+      // normalize the cached feed row: Camp splits open/handled on
+      // it.status, and the feed only reflects the approval ledger on
+      // its next rebuild.
+      (opState.items || []).forEach(function (it) {
+        if (it && it.id === id) it.status = 'handled';
+      });
+    });
+  }
+  function confirmHandle(id) {
+    armedHandle = null;
+    postHandleRaw(id).then(rerenderOp).catch(rerenderOp);
+  }
   function dismissAllHandled() {
     var targets = (opState.items || []).filter(function (it) {
       return it && it.id && it.status === 'handled' && !opState.dismissed[it.id];
@@ -260,12 +304,22 @@
     var b;
     if ((b = e.target.closest('[data-dismiss]'))) {
       armedId = b.getAttribute('data-dismiss');
+      armedHandle = null;
       rerenderOp();
     } else if ((b = e.target.closest('[data-dismiss-no]'))) {
       armedId = null;
       rerenderOp();
     } else if ((b = e.target.closest('[data-dismiss-yes]'))) {
       confirmDismiss(b.getAttribute('data-dismiss-yes'));
+    } else if ((b = e.target.closest('[data-handle]'))) {
+      armedHandle = b.getAttribute('data-handle');
+      armedId = null;
+      rerenderOp();
+    } else if ((b = e.target.closest('[data-handle-no]'))) {
+      armedHandle = null;
+      rerenderOp();
+    } else if ((b = e.target.closest('[data-handle-yes]'))) {
+      confirmHandle(b.getAttribute('data-handle-yes'));
     } else if (e.target.closest('[data-dismiss-all]')) {
       dismissAllHandled();
     } else if ((b = e.target.closest('[data-markread]'))) {

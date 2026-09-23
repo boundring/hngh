@@ -30,7 +30,21 @@ POST /operator-item/dismiss  {"id": str}
         operator-dismiss | <UTC ts> | automation|<id> | item dismissed as viewed
     and records the id in dashboard/operator-dismissed.json
     ({"dismissed": {"<id>": "<UTC ts>"}}) so the UI survives reloads.
+    A first-time dismissal also files ONE report-queue progress row
+    (identity operator-item:<id>:dismissed), fail closed BEFORE the
+    ledger write; repeat posts are idempotent (no second row).
     201 {"ok": true}
+
+POST /operator-item/handle  {"id": str}
+    The open -> handled side of the same lifecycle (handled and
+    dismissed are the two distinct terminal states): appends ONE line
+        operator-handle | <UTC ts> | automation|<id> | item marked handled
+    and records the id in dashboard/operator-approved.json
+    ({"approved": {"<id>": "<UTC ts>"}}) -- the same ledger
+    scripts/imap-poll.py approve: directives write, so every feed
+    rebuild keeps the status. First-time handling files ONE
+    report-queue progress row (identity operator-item:<id>:handled),
+    same fail-closed order. 201 {"ok": true}
 
 POST /spawn  {"session": str, "launcher": str}
     Spawns a launcher COMMAND TEMPLATE on the operator desktop to tail
@@ -146,6 +160,7 @@ DASHBOARD = os.path.join(ROOT, "dashboard")
 HANDOFFS = os.path.join(ROOT, "agent-handoffs.md")
 UI_CONFIG = os.path.join(os.path.expanduser("~"), ".config", "hngh", "ui-config.json")
 DISMISSED = os.path.join(DASHBOARD, "operator-dismissed.json")
+APPROVED = os.path.join(DASHBOARD, "operator-approved.json")
 HNGH = os.environ.get("HNGH_REPO", os.path.expanduser("~/Projects/etc/hngh"))
 BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
@@ -210,7 +225,7 @@ TELEMETRY_DB = os.path.join(
     or os.path.join(os.path.expanduser("~"), ".hngh"),
     "db", "telemetry.db")
 EVENT_WATCH = (os.path.join(DASHBOARD, "operator-items.json"),
-               DISMISSED, os.path.join(DASHBOARD, "readout.json"))
+               DISMISSED, APPROVED, os.path.join(DASHBOARD, "readout.json"))
 SSE_POLL_S = 0.5
 SSE_HEARTBEAT_S = 15.0
 TELEMETRY_TTL_S = 30.0
@@ -793,6 +808,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             {"flag": self._flag,
              "operator-item/dismiss": self._dismiss,
+             "operator-item/handle": self._handle,
              "spawn": self._spawn,
              "delegate": self._delegate,
              "tile": self._tile,
@@ -1010,20 +1026,70 @@ class Handler(SimpleHTTPRequestHandler):
         if not SESSION_RE.fullmatch(item_id):
             self._json(400, {"ok": False, "error": "invalid id"})
             return
-        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with open(HANDOFFS, "a", encoding="utf-8") as f:
-            f.write(f"operator-dismiss | {ts} | automation|{item_id} | item dismissed as viewed\n")
         try:
             with open(DISMISSED, encoding="utf-8") as f:
                 dismissed = json.load(f).get("dismissed") or {}
         except Exception:
             dismissed = {}
+        if item_id not in dismissed and not self._report_row(item_id, "dismissed"):
+            return  # fail closed: the owed row is filed BEFORE the ledger write
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write(f"operator-dismiss | {ts} | automation|{item_id} | item dismissed as viewed\n")
         dismissed[item_id] = ts
         tmp = DISMISSED + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"dismissed": dismissed}, f, indent=2)
         os.replace(tmp, DISMISSED)
         self._json(201, {"ok": True})
+
+    def _handle(self):
+        try:
+            item_id = str(self._body().get("id", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        if not SESSION_RE.fullmatch(item_id):
+            self._json(400, {"ok": False, "error": "invalid id"})
+            return
+        try:
+            with open(APPROVED, encoding="utf-8") as f:
+                approved = json.load(f).get("approved") or {}
+        except Exception:
+            approved = {}
+        if item_id not in approved and not self._report_row(item_id, "handled"):
+            return  # fail closed: the owed row is filed BEFORE the ledger write
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write(f"operator-handle | {ts} | automation|{item_id} | item marked handled\n")
+        approved[item_id] = ts
+        tmp = APPROVED + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"approved": approved}, f, indent=2)
+        os.replace(tmp, APPROVED)
+        self._json(201, {"ok": True})
+
+    def _report_row(self, item_id, state):
+        """File the ONE report-queue progress row a lifecycle transition
+        owes (identity operator-item:<id>:<state>), fail closed like
+        _mark_read: on failure the caller 500s with its ledger untouched
+        so no transition lands silently without its row. The stable
+        identity makes a retry safe (report-queue dedups within its
+        window)."""
+        try:
+            p = subprocess.run(
+                ["python3", REPORT_QUEUE, "--add", "progress",
+                 "operator item %s %s" % (item_id, state),
+                 "--identity", "operator-item:%s:%s" % (item_id, state)],
+                capture_output=True, text=True, timeout=15)
+        except Exception:
+            self._json(500, {"ok": False, "error": "report-queue exec failed"})
+            return False
+        if p.returncode != 0:
+            self._json(500, {"ok": False, "error": "report-queue refused"
+                             " (rc=%d)" % p.returncode})
+            return False
+        return True
 
     def _spawn(self):
         try:
