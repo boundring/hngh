@@ -12,3 +12,4 @@ at 2026-09-23T03:01:02Z. Alert text: synthesized plan referenced tooling absent 
 ## Occurrences
 
 - 2026-09-23T04:00:13Z re-occurred (dedup window expired)
+- 2026-09-23T05:01:03Z re-occurred (dedup window expired)

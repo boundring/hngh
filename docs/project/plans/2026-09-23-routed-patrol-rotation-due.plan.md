@@ -12,3 +12,4 @@ at 2026-09-23T03:01:02Z. Alert text: patrol rotation-due: rotation-due on key-ro
 ## Occurrences
 
 - 2026-09-23T04:00:13Z re-occurred (dedup window expired)
+- 2026-09-23T05:01:02Z re-occurred (dedup window expired)
