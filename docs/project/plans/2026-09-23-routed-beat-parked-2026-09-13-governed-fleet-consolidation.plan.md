@@ -8,3 +8,7 @@ at 2026-09-23T07:00:13Z. Alert text: orchestrator blocker parked '2026-09-13-gov
 
 - [ ] Delve: open research subject fail-20260923-beat-parked-2026-09-13-governed-fleet-consolidation for beat-parked:2026-09-13-governed-fleet-consolidation; record disposition; then fix or park
       Verification: research subject fail-20260923-beat-parked-2026-09-13-governed-fleet-consolidation present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-23T08:00:13Z re-occurred (dedup window expired)
