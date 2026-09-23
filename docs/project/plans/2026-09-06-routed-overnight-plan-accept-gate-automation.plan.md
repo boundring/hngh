@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same resolved premise; no automation-gate acceptance block after 2026-09-08T04:01Z in acceptance.log"-->
+<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z routed-from=overnight:plan-accept-gate:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same resolved premise; no automation-gate acceptance block after 2026-09-08T04:01Z in acceptance.log" cause=obsolete disposed=2026-09-23T06:01:03Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:automation`
@@ -13,3 +13,4 @@ at 2026-09-06T01:00:45Z. Alert text: plan acceptance blocked: hngh-automation ma
 
 - 2026-09-23T04:00:13Z re-occurred (dedup window expired)
 - 2026-09-23T05:01:03Z re-occurred (dedup window expired)
+- 2026-09-23T06:01:03Z re-occurred (dedup window expired)

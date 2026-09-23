@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-23T03:04:16Z routed-from=patrol:rotation-due -->
+<!-- plan: status=parked risk=normal accepted=2026-09-23T03:04:16Z routed-from=patrol:rotation-due  cause=obsolete disposed=2026-09-23T06:01:02Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-23 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:rotation-due`
@@ -13,3 +13,4 @@ at 2026-09-23T03:01:02Z. Alert text: patrol rotation-due: rotation-due on key-ro
 
 - 2026-09-23T04:00:13Z re-occurred (dedup window expired)
 - 2026-09-23T05:01:02Z re-occurred (dedup window expired)
+- 2026-09-23T06:01:02Z re-occurred (dedup window expired)
