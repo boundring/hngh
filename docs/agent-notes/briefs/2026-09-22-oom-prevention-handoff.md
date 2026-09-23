@@ -17,12 +17,12 @@ live red gate / alert the operator names).
 - Landed guards: RAM gate `automation/lib/memory-gate.sh` (floor env
   HNGH_RAM_FLOOR_MB > cadence-params row ram-gate-floor-mb > 2048 MB),
   MemoryPeak in system-feed, dashboard mem-caps (user unit drop-in, MemoryHigh=400M/MemoryMax=1G).
-- KEY GAP: nothing on the box kills hogs under memory pressure — the GPU driver
+- KEY GAP: nothing on the box kills hogs under memory pressure -- the GPU driver
   aborts before the OOM-killer fires, so the session dies with no rescue.
 
 ## Work queue (priority order)
 
-### P1 — systemd-oomd (NEEDS OPERATOR SUDO; hand the exact commands)
+### P1 -- systemd-oomd (NEEDS OPERATOR SUDO; hand the exact commands)
 ```bash
 sudo systemctl enable --now systemd-oomd.service
 sudo mkdir -p /etc/systemd/system/user@.service.d
@@ -39,21 +39,28 @@ passive. Likely prevents both past crashes alone.
   systemd-oomd` done, `oomctl` verified active, systemd defaults kept
   (no oomd.conf drop-in added).
 
-### P2 — cap unsloth-studio (user unit, NO sudo, machine-lane OK)
+### P2 -- cap unsloth-studio (user unit, NO sudo, machine-lane OK)
 1. Measure first: `systemd-cgtop -1`, `journalctl -u unsloth-studio` over a normal day.
 2. Then `~/.config/systemd/user/unsloth-studio.service.d/mem-caps.conf` ->
    `[Service] MemoryMax=<measured+headroom>G`; `systemctl --user daemon-reload && systemctl --user restart unsloth-studio`.
 3. VRAM half of item 5b: if vLLM/llama.cpp server, cap `gpu-memory-utilization` /
    `--n-gpu-layers` to leave desktop headroom (7900 XTX).
-- Caution: unsloth is the Jev seam (http://127.0.0.1:8888) — a MemoryMax kill takes
+   - LANDED 2026-09-22 evening: bounded contexts via POST /api/inference/load
+     `max_seq_length` (ctx-standard 16384 / ctx-deep 32768), small-model
+     default (unsloth/Ornith-1.0-9B-GGUF; fallback
+     unsloth/gemma-4-12b-it-qat-GGUF then the quota tier zai/xiaomi/ocgo/kimi),
+     bench small-first. Supersedes the `gpu-memory-utilization` /
+     `--n-gpu-layers` idea above: the KV term was the fillable one (8.4 GB of
+     the 20.5 GB crash load), so pinning the load's context bounds it directly.
+- Caution: unsloth is the Jev seam (http://127.0.0.1:8888) -- a MemoryMax kill takes
   cadence's Jev triage down with it (cheap fail, jev-error re-ask hourly); pick the cap generously.
 
-### P3 — RAM gate -> operator surface (automation lane, small, DO THIS SESSION)
+### P3 -- RAM gate -> operator surface (automation lane, small, DO THIS SESSION)
 - `automation/lib/memory-gate.sh` trips silently today. Wire a report-queue alert on
   trip: identity `ram-gate:trip`, window 86400, so trips become visible telemetry.
   Row text must state SLA + halt (escalation-sla rule): SLA = signal re-fires per trip
   day and expires 24h after the last trip; halt = none needed (pure telemetry, no retry
-  loop behind it — the overnight/cadence halt itself is STOP=1).
+  loop behind it -- the overnight/cadence halt itself is STOP=1).
 - Bead `hngh-bmb` carries the crash-class patrol signature.
 - LANDED 2026-09-22 (later session): alert wired via notify-email's alert_row, test
   case 6 in test-memory-gate.sh, full automation gate green. Record:
@@ -61,22 +68,26 @@ passive. Likely prevents both past crashes alone.
   user-unit drop-in mem-caps.conf (MemoryHigh=16G/MemoryMax=20G, unit MemoryPeak
   observed 15.5GiB); VRAM half of 5b still open.
 
-### P4 — Chrome hygiene (parked 5b, operator habit)
+### P4 -- Chrome hygiene (parked 5b, operator habit)
 - chrome://discards tab discard works; or periodic chrome restart cadence. Only if
   crashes recur after P1-P2.
 
-### P5 — recurrence evidence (ONLY if crash recurs)
+### P5 -- recurrence evidence (ONLY if crash recurs)
 - `journalctl -b -1 -k | grep -i amdgpu`; with oomd live, `journalctl | grep oomd`
-  names the killed cgroup directly — turns recurrence into one-line diagnosis.
+  names the killed cgroup directly -- turns recurrence into one-line diagnosis.
 
 ## Skipped (deliberate, revisit only if P1+P2 insufficient)
-zram/swap tuning, `amdgpu.gttsize` kernel param, atop accounting — complex knobs, side effects.
+zram/swap tuning, `amdgpu.gttsize` kernel param, atop accounting -- complex knobs, side effects.
+- Ternary Bonsai (prism-ml/Ternary-Bonsai-2-27B-gguf): named as a small-model
+  candidate but its HF cache holds repo metadata only (no blobs). Activation
+  path: `hf download prism-ml/Ternary-Bonsai-2-27B-gguf`, confirm the served
+  id on GET /v1/models, then prepend it to UNSLOTH_FALLBACK_MODELS.
 
 ## SLA + halt for this queue (escalation-sla rule)
-- SLA: actionable at the next repo-touching session — P3 is machine-lane and lands
+- SLA: actionable at the next repo-touching session -- P3 is machine-lane and lands
   that session; P1/P2 are operator-gated, and their deadline signal is a third
   crash-class recurrence bumping parked alert `afd8588b` (same row, never silent).
-- Halt: lane ends after P1+P2 land and one clean day passes — nothing more queues.
+- Halt: lane ends after P1+P2 land and one clean day passes -- nothing more queues.
   If crashes recur AFTER oomd is live, one escalation to the kernel-parameter lane
   (P5 evidence gathered first), then stop.
 - Routed != resolved: P3's `ram-gate:trip` alert is early-warning telemetry only; no
@@ -91,6 +102,8 @@ zram/swap tuning, `amdgpu.gttsize` kernel param, atop accounting — complex kno
   `docs/design/ui-evolve/current-overlay.json`, `docs/project/ui-grades.md`,
   timer-owned routed plan files.
 - Live operator surface: 11 escalation alerts (17:03:15Z, one per open bead,
-  jev-escalate) — ROUTED NOT RESOLVED. Lane SLA: 7-day bump window then expire on
+  jev-escalate) -- ROUTED NOT RESOLVED. Lane SLA: 7-day bump window then expire on
   silence. Halt: per-bead attempt cap -> attempts-exhausted -> bead leaves the loop
   (STATE.exhausted in automation/ng/cadence.py).
+- 2026-09-22 evening: the crash class is now bounded on the hngh side
+  (small-model lane + per-load context pin + unit RAM caps; see P2 item 3).
