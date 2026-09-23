@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-22T21:04:10Z routed-from=escalation:hngh-eo0:attempts-exhausted -->
+<!-- plan: status=parked risk=normal accepted=2026-09-22T21:04:10Z routed-from=escalation:hngh-eo0:attempts-exhausted  cause=obsolete disposed=2026-09-23T00:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-22 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `escalation:hngh-eo0:attempts-exhausted`
@@ -13,3 +13,4 @@ at 2026-09-22T21:00:41Z. Alert text: escalation hngh-eo0: attempts-exhausted (SL
 
 - 2026-09-22T22:00:13Z re-occurred (dedup window expired)
 - 2026-09-22T23:00:14Z re-occurred (dedup window expired)
+- 2026-09-23T00:00:13Z re-occurred (dedup window expired)
