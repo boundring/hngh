@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:journal-error  cause=obsolete disposed=2026-09-16T14:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-18T17:00:13Z reason=identity re-occurred 4 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-22T03:00:23Z reason=identity re-occurred 5 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:journal-error  cause=obsolete disposed=2026-09-16T14:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-18T17:00:13Z reason=identity re-occurred 4 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-22T03:00:23Z reason=identity re-occurred 5 times without landing; operator escalation stands -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:journal-error`
