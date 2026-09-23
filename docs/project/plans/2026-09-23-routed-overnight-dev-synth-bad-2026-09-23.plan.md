@@ -8,3 +8,7 @@ at 2026-09-23T03:01:02Z. Alert text: synthesized plan referenced tooling absent 
 
 - [ ] Delve: open research subject fail-20260923-overnight-dev-synth-bad-2026-09-23 for overnight:dev-synth-bad:2026-09-23; record disposition; then fix or park
       Verification: research subject fail-20260923-overnight-dev-synth-bad-2026-09-23 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-23T04:00:13Z re-occurred (dedup window expired)

@@ -8,3 +8,7 @@ at 2026-09-23T03:01:02Z. Alert text: patrol rotation-due: rotation-due on key-ro
 
 - [ ] Delve: open research subject fail-20260923-patrol-rotation-due for patrol:rotation-due; record disposition; then fix or park
       Verification: research subject fail-20260923-patrol-rotation-due present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-23T04:00:13Z re-occurred (dedup window expired)
