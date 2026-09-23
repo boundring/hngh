@@ -12,3 +12,4 @@ at 2026-09-03T01:00:45Z. Alert text: plan acceptance blocked: kernel make test F
 ## Occurrences
 
 - 2026-09-16T23:00:13Z re-occurred (dedup window expired)
+- 2026-09-23T18:00:13Z re-occurred (dedup window expired)

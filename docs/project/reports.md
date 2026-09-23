@@ -4108,7 +4108,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-22T01:23:24Z | progress | d4c9685e | hygiene: 25 zombie Active session file(s) >24h old (oldest 152h); report-only v1; e.g. session_deer_1789709938507_8eebfffc0824ad02.json ×2 | 2026-09-22T01:23:24Z-progress-d4c9685e.md |
 | 2026-09-22T01:23:24Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 ×2 | 2026-09-22T01:23:24Z-progress-adcaae87.md |
 | 2026-09-22T01:23:24Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md ×2 | 2026-09-22T01:23:24Z-progress-0e221d65.md |
-| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×46 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
+| 2026-09-22T01:31:16Z | alert | a8c12813 | [feedback:idea] from email ×47 | 2026-09-22T01:31:16Z-alert-a8c12813.md |
 | 2026-09-22T01:31:21Z | alert | 500a0802 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=522845s > 28800s ×48 | 2026-09-22T01:31:21Z-alert-500a0802.md |
 | 2026-09-22T01:31:21Z | alert | 0e6a28bc | patrol handoffs: bad-execution on agent-handoffs.md -- 7 dead/cancelled in last 10 rows ×4 | 2026-09-22T01:31:21Z-alert-0e6a28bc.md |
 | 2026-09-22T01:31:21Z | alert | c16c59bf | patrol automation-gate: gate-red on hngh-automation -- hngh-automation: make test rc=2 | 2026-09-22T01:31:21Z-alert-c16c59bf.md |
@@ -4420,7 +4420,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-23T00:00:03Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T00:00:03Z-progress-ebb46dea.md |
 | 2026-09-23T00:00:13Z | alert | 39f0fde7 | router escalated: agent-stall:omp-2026-09-22T17-17-10-719Z_01a-127d89 re-occurred 3 times without landing — plan 2026-09-22-routed-agent-stall-omp-2026-09-22T17-17-10-719Z_01a-127d89 parked (cause=obsolete); operator disposition stands | 2026-09-23T00:00:13Z-alert-39f0fde7.md |
 | 2026-09-23T00:00:13Z | alert | b129418f | router escalated: escalation:hngh-eo0:attempts-exhausted re-occurred 3 times without landing — plan 2026-09-22-routed-escalation-hngh-eo0-attempts-exhausted parked (cause=obsolete); operator disposition stands | 2026-09-23T00:00:13Z-alert-b129418f.md |
-| 2026-09-23T00:00:52Z | alert | e1468c4f | plan 2026-09-22-dev-synth-2026-09-20-1 not auto-accepted: step 5 has no Verification line ×18 | 2026-09-23T00:00:52Z-alert-e1468c4f.md |
+| 2026-09-23T00:00:52Z | alert | e1468c4f | plan 2026-09-22-dev-synth-2026-09-20-1 not auto-accepted: step 5 has no Verification line ×19 | 2026-09-23T00:00:52Z-alert-e1468c4f.md |
 | 2026-09-23T00:03:25Z | progress | 7d39a122 | research line synth-2026-09-23-1: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-23-synth-2026-09-23-1.md | 2026-09-23T00:03:25Z-progress-7d39a122.md |
 | 2026-09-23T00:04:17Z | progress | 86bb1878 | plan 2026-09-22-vram-small-model-guardrails auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-23T00:04:17Z | 2026-09-23T00:04:17Z-progress-86bb1878.md |
 | 2026-09-23T00:07:16Z | progress | a6c12257 | research line synth-2026-09-23-1: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-23-synth-2026-09-23-1.md | 2026-09-23T00:07:16Z-progress-a6c12257.md |
@@ -4444,11 +4444,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-23T01:40:06Z | progress | e07de7f6 | agent-supervision: evicted-stale omp-PrecedentScan-970bc2 (idle 361m) | 2026-09-23T01:40:06Z-progress-e07de7f6.md |
 | 2026-09-23T01:45:06Z | progress | e01e7825 | agent-supervision: evicted-stale omp-ConsumerCoupling-4ef00e (idle 362m) | 2026-09-23T01:45:06Z-progress-e01e7825.md |
 | 2026-09-23T01:47:48Z | progress | 8d7c6cc5 | research line synth-2026-09-23-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-23-synth-2026-09-23-3.md | 2026-09-23T01:47:48Z-progress-8d7c6cc5.md |
-| 2026-09-23T01:48:01Z | alert | 9e3bfcf0 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=610237s > 28800s ×31 | 2026-09-23T01:48:01Z-alert-9e3bfcf0.md |
+| 2026-09-23T01:48:01Z | alert | 9e3bfcf0 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=610237s > 28800s ×33 | 2026-09-23T01:48:01Z-alert-9e3bfcf0.md |
 | 2026-09-23T01:48:01Z | alert | 50346b24 | patrol handoffs: bad-execution on agent-handoffs.md -- 8 dead/cancelled in last 10 rows ×2 | 2026-09-23T01:48:01Z-alert-50346b24.md |
-| 2026-09-23T01:48:02Z | alert | 1806a0ff | patrol manga: manga-stale on manga -- newest draft 228h old > 48h ×16 | 2026-09-23T01:48:02Z-alert-1806a0ff.md |
+| 2026-09-23T01:48:02Z | alert | 1806a0ff | patrol manga: manga-stale on manga -- newest draft 228h old > 48h ×17 | 2026-09-23T01:48:02Z-alert-1806a0ff.md |
 | 2026-09-23T01:48:02Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-23T01:48:02Z-alert-c4a1f47d.md |
-| 2026-09-23T01:48:02Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×186 | 2026-09-23T01:48:02Z-alert-91c8ed89.md |
+| 2026-09-23T01:48:02Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×198 | 2026-09-23T01:48:02Z-alert-91c8ed89.md |
 | 2026-09-23T01:50:04Z | progress | f95ba5d2 | agent-supervision: evicted-stale omp-SurfaceInventory-f75cd1 (idle 360m) | 2026-09-23T01:50:04Z-progress-f95ba5d2.md |
 | 2026-09-23T02:00:04Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-23T02:00:04Z-progress-3dd20cc1.md |
 | 2026-09-23T02:00:13Z | progress | 0ea2fd3f | router routed patrol:pending-checks -> plan candidate 2026-09-23-routed-patrol-pending-checks (routed-at 2026-09-23T02:00:13Z) | 2026-09-23T02:00:13Z-progress-0ea2fd3f.md |
@@ -4461,7 +4461,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-23T02:03:19Z | alert | dd897171 | plan acceptance blocked: hngh-automation make test FAILED (rc=2) | 2026-09-23T02:03:19Z-alert-dd897171.md |
 | 2026-09-23T02:03:35Z | alert | e4701503 | synthesized plan referenced tooling absent from this repo; discarded ×2 | 2026-09-23T02:03:35Z-alert-e4701503.md |
 | 2026-09-23T02:04:53Z | progress | a755baf0 | research line synth-2026-09-23-3: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-23-synth-2026-09-23-3.md | 2026-09-23T02:04:53Z-progress-a755baf0.md |
-| 2026-09-23T02:22:45Z | alert | d90b6a22 | patrol rotation-due: rotation-due on key-rotation-freshness -- key-rotation-freshness named Next for 7.0d (>= 7d): rotate it or re-rank it ×7 | 2026-09-23T02:22:45Z-alert-d90b6a22.md |
+| 2026-09-23T02:22:45Z | alert | d90b6a22 | patrol rotation-due: rotation-due on key-rotation-freshness -- key-rotation-freshness named Next for 7.0d (>= 7d): rotate it or re-rank it ×8 | 2026-09-23T02:22:45Z-alert-d90b6a22.md |
 | 2026-09-23T02:30:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T02:30:02Z-progress-ebb46dea.md |
 | 2026-09-23T03:01:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T03:01:02Z-progress-ebb46dea.md |
 | 2026-09-23T03:01:02Z | progress | 5caeaf54 | agent-supervision: evicted-stale omp-CrumbsExec-9e67b1 (idle 361m) | 2026-09-23T03:01:02Z-progress-5caeaf54.md |
@@ -4605,9 +4605,21 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-23T15:00:03Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-23T15:00:03Z-progress-3dd20cc1.md |
 | 2026-09-23T15:30:03Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T15:30:03Z-progress-ebb46dea.md |
 | 2026-09-23T16:00:46Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T16:00:46Z-progress-ebb46dea.md |
-| 2026-09-23T16:17:04Z | alert | f63ea95b | patrol journal-error: unit-not-practiced on unit-failed -- 1.2-org.kde.KSplash@0.service failed; not in the restart allowlist, no auto-action: dbus-:1.2-org.kde.KSplash@0.service: Failed with result 'exit-code'. ×4 | 2026-09-23T16:17:04Z-alert-f63ea95b.md |
+| 2026-09-23T16:17:04Z | alert | f63ea95b | patrol journal-error: unit-not-practiced on unit-failed -- 1.2-org.kde.KSplash@0.service failed; not in the restart allowlist, no auto-action: dbus-:1.2-org.kde.KSplash@0.service: Failed with result 'exit-code'. ×7 | 2026-09-23T16:17:04Z-alert-f63ea95b.md |
 | 2026-09-23T16:30:10Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T16:30:10Z-progress-ebb46dea.md |
 | 2026-09-23T17:00:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T17:00:02Z-progress-ebb46dea.md |
 | 2026-09-23T17:00:13Z | alert | 0afa9e4c | router expired candidate 2026-09-16-routed-patrol-journal-error-2 (unaccepted 24h past routing; identity patrol:journal-error) | 2026-09-23T17:00:13Z-alert-0afa9e4c.md |
 | 2026-09-23T17:00:13Z | progress | c6a9c898 | router routed patrol:journal-error -> plan candidate 2026-09-23-routed-patrol-journal-error (routed-at 2026-09-23T17:00:13Z) | 2026-09-23T17:00:13Z-progress-c6a9c898.md |
-| 2026-09-23T17:03:01Z | alert | 734cede6 | plan acceptance blocked: kernel make test FAILED (rc=2) | 2026-09-23T17:03:01Z-alert-734cede6.md |
+| 2026-09-23T17:03:01Z | alert | 734cede6 | plan acceptance blocked: kernel make test FAILED (rc=2) ×2 | 2026-09-23T17:03:01Z-alert-734cede6.md |
+| 2026-09-23T17:15:24Z | alert | e2e9114b | patrol gate-cure: gate-cure-refused on kernel -- LARGE-surface pre-check: gut-shape diff 1+/42- Makefile (bb493841) -- park for the operator | 2026-09-23T17:15:24Z-alert-e2e9114b.md |
+| 2026-09-23T17:15:24Z | alert | ce0a4415 | patrol github-ci: bad-execution on github-actions-latest -- latest run fc98da8 concluded failure -- https://github.com/boundring/hngh/actions/runs/35893459243 | 2026-09-23T17:15:24Z-alert-ce0a4415.md |
+| 2026-09-23T17:30:46Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T17:30:46Z-progress-ebb46dea.md |
+| 2026-09-23T18:00:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-23T18:00:02Z-progress-ebb46dea.md |
+| 2026-09-23T18:00:13Z | alert | f0b21f75 | router expired candidate 2026-09-16-routed-patrol-github-ci (unaccepted 24h past routing; identity patrol:github-ci) | 2026-09-23T18:00:13Z-alert-f0b21f75.md |
+| 2026-09-23T18:00:13Z | alert | 8c0d740c | router escalation: patrol:github-ci re-fired 3x with no landing (oldest occurrence 2026-09-17T15:00:13Z; candidate 2026-09-16-routed-patrol-github-ci expired after 24h unaccepted) | 2026-09-23T18:00:13Z-alert-8c0d740c.md |
+| 2026-09-23T18:00:13Z | alert | 075d613f | router escalated: patrol:github-ci re-occurred 4 times without landing — plan 2026-09-16-routed-patrol-github-ci parked (cause=obsolete); operator disposition stands | 2026-09-23T18:00:13Z-alert-075d613f.md |
+| 2026-09-23T18:00:13Z | progress | 9759af82 | router routed patrol:github-ci -> plan candidate 2026-09-23-routed-patrol-github-ci (routed-at 2026-09-23T18:00:13Z) | 2026-09-23T18:00:13Z-progress-9759af82.md |
+| 2026-09-23T18:00:13Z | progress | 06e96419 | router routed patrol:gate-cure -> plan candidate 2026-09-23-routed-patrol-gate-cure (routed-at 2026-09-23T18:00:13Z) | 2026-09-23T18:00:13Z-progress-06e96419.md |
+| 2026-09-23T18:00:13Z | alert | bfed8489 | router expired candidate 2026-09-03-routed-overnight-plan-accept-gate-kernel (unaccepted 24h past routing; identity overnight:plan-accept-gate:kernel) | 2026-09-23T18:00:13Z-alert-bfed8489.md |
+| 2026-09-23T18:00:13Z | alert | ec80fb1d | router escalation: overnight:plan-accept-gate:kernel re-fired 1x with no landing (oldest occurrence 2026-09-16T23:00:13Z; candidate 2026-09-03-routed-overnight-plan-accept-gate-kernel expired after 24h unaccepted) | 2026-09-23T18:00:13Z-alert-ec80fb1d.md |
+| 2026-09-23T18:00:13Z | progress | 82dd011a | router routed overnight:plan-accept-gate:kernel -> plan candidate 2026-09-23-routed-overnight-plan-accept-gate-kernel (routed-at 2026-09-23T18:00:13Z) | 2026-09-23T18:00:13Z-progress-82dd011a.md |

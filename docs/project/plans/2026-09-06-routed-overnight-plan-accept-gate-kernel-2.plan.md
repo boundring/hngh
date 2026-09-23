@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=overnight:plan-accept-gate:kernel  cause=obsolete disposed=2026-09-07T01:00:36Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-16T21:00:15Z reason=identity re-occurred 6 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=overnight:plan-accept-gate:kernel  cause=obsolete disposed=2026-09-07T01:00:36Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-09-16T21:00:15Z reason=identity re-occurred 6 times without landing; operator escalation stands -->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:kernel`
