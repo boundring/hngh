@@ -93,3 +93,26 @@ PY
 
 (Substitute any message id; `git log`/`docs/project/reports.md` cover
 whatever the transcript cannot.)
+
+## Late-evening additions (after handoff)
+
+- `af29fa98` — this handoff and the forensics brief landed.
+- `9b3f72be` — fix: project-relative checkout paths (58 files). MCP
+  configs run `["python3", "automation/mcp/hngh_mcp_server.py"]`
+  relative to the project root; `automation/config.env` and every
+  cadence/jobs/scripts/lib shell default self-locate via
+  `$(cd "$(dirname "$0")/<ups>" && pwd)` (env overrides still win);
+  `.beads/hooks/post-commit` runs the repo-relative push script.
+  Forward rule for new scripts/configs: self-locate or use
+  project-relative paths — never a checkout-shape path. (The home-path
+  lint guards the real `/home/<login>` literal; the checkout-shape
+  `$HOME/...` form is a separate class the operator also bans.)
+- billion-context note (from BiliFormatProbe): the installed
+  `dist/index.js` carries a local patch for two input defects
+  (stringified-JSON compress items dropped; JSON-escape-contaminated
+  summaries stored verbatim), but live processes still run the
+  unpatched build in memory — restart/new sessions activate it, and
+  `automation/scripts/hngh-omp-update.sh` (npm update) will clobber
+  it. The patch source copy lives in `/tmp` (ephemeral — treat as
+  gone after reboot; re-derive from the forensics brief's evidence
+  if needed).
