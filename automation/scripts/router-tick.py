@@ -43,6 +43,10 @@ import tempfile
 import time
 from datetime import datetime, timezone
 
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
+
 KERNEL = os.environ.get(
     "HNGH_HOME", os.path.expanduser("~/Projects/etc/hngh"))
 AUTOMATION = os.environ.get(
@@ -155,16 +159,12 @@ def now_utc():
 
 
 def breadcrumb(job, event, detail):
-    """STATE.md row in the lib/breadcrumbs.sh 4-field format."""
+    """STATE.md row via the single writer (lib/crumbs.py), 4-field
+    format identical to lib/breadcrumbs.sh."""
     if os.environ.get("DRY_RUN") == "1":
         print("[dry-run] crumb %s|%s|%s" % (job, event, detail))
         return
-    detail = detail.replace("|", "¦")
-    detail = " ".join(detail.split())  # one line per event (see lib/breadcrumbs.sh)
-    line = "%s | %s | %s | %s\n" % (now_utc(), job, event, detail)
-    os.makedirs(os.path.dirname(STATE_FILE) or ".", exist_ok=True)
-    with open(STATE_FILE, "a", encoding="utf-8") as fh:
-        fh.write(line)
+    crumbs.crumb(job, event, crumbs.scrub(detail), state_file=STATE_FILE)
 
 
 def report(kind, text, ident, window):

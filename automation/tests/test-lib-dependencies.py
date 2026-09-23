@@ -22,7 +22,7 @@ LIB = Path(__file__).resolve().parent.parent / "lib"
 # Layer rank: lower = deeper foundation (may only source same-or-lower).
 LAYERS = {
     # layer 0: pure foundation, sources nothing in lib
-    "common.sh": 0, "breadcrumbs.sh": 0, "params.sh": 0,
+    "common.sh": 0, "breadcrumbs.sh": 0, "crumbs.py": 0, "params.sh": 0,
     "scrub.sh": 0, "scrub.py": 0, "prereqs.sh": 0,
     # layer 1: shims / single-purpose leaves over foundation
     "redact.sh": 1, "causes.sh": 1, "platform.sh": 1,

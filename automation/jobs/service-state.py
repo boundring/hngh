@@ -52,8 +52,13 @@ import json
 import os
 import socket
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, os.path.join(
+    Path(__file__).resolve().parent.parent, "lib"))
+import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
 
 AUTOMATION = Path(os.environ.get(
     "HNGH_AUTOMATION_ROOT",
@@ -147,16 +152,13 @@ def classify(up, serving):
 
 
 def breadcrumb(event, detail):
-    """Append a STATE.md breadcrumb line (best-effort, same format as
-    lib/breadcrumbs.sh)."""
+    """Append a STATE.md breadcrumb line (best-effort; single writer:
+    lib/crumbs.py, same format as lib/breadcrumbs.sh)."""
     try:
-        ts = now_utc()
-        detail = " ".join(detail.split())  # one line per event
-        with open(STATE_FILE, "a", encoding="utf-8") as fh:
-            fh.write("%s | service-state | %s | %s\n" % (ts, event,
-                                                         detail.replace("|", "¦")))
-    except OSError:
-        pass
+        crumbs.crumb("service-state", event, crumbs.scrub(detail),
+                     state_file=STATE_FILE)
+    except (OSError, ValueError):
+        pass  # a lost crumb never crashes the probe
 
 
 def file_report(kind, text, identity, stamp):

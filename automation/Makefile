@@ -197,6 +197,7 @@ test:
 	bash tests/test-deck-availability.sh
 	python3 -B tests/test-breadcrumb-single-line.py
 	python3 -B tests/test-crumbs-db.py
+	python3 -B tests/test-crumbs-writer.py
 	python3 -B tests/test-lint-home-paths.py
 	bash scripts/lint-identifiers.sh
 	python3 -B scripts/lint-home-paths.py

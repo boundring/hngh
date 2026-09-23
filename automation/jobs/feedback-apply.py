@@ -31,6 +31,10 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTOMATION_ROOT = os.environ.get("AUTOMATION_ROOT", ROOT)
 STYLE = os.path.join(AUTOMATION_ROOT, "dashboard", "style.css")
@@ -466,10 +470,8 @@ def state_ids():
 
 def crumb(event, detail):
     if STATE_MD:
-        os.makedirs(os.path.dirname(STATE_MD), exist_ok=True)
-        with open(STATE_MD, "a", encoding="utf-8") as f:
-            f.write("%s | feedback-apply | %s | %s\n"
-                    % (now(), event, detail.replace("|", "¦")))
+        crumbs.crumb("feedback-apply", event, crumbs.scrub(detail),
+                     state_file=STATE_MD)
 
 
 if __name__ == "__main__":
