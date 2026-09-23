@@ -138,7 +138,7 @@
   "mcp": {
     "hngh": {
       "type": "local",
-      "command": ["sh", "-c", "exec python3 \"$HOME/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py\""],
+      "command": ["python3", "automation/mcp/hngh_mcp_server.py"],
       "enabled": true
     },
     "misakanet": {

@@ -8,7 +8,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
 # kernel root: config.env HNGH_HOME (defaults to the hngh kernel checkout)
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 GEN="$KERNEL/scripts/generate-publication"
 
 [ -x "$GEN" ] || {

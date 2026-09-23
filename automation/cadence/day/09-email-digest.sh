@@ -13,7 +13,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/notify-email.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 day="$(printf '%s' "${HNGH_TICK_TS:-$(date -u +%Y-%m-%d)}")"
 out="$AUTOMATION_ROOT/logs/email-digest-$day.md"
 mkdir -p "$AUTOMATION_ROOT/logs"

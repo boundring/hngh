@@ -35,7 +35,7 @@ set -u
 AUTOMATION_ROOT="${RESUME_ROOT:-$AUTOMATION_ROOT}"
 STATE_FILE="$AUTOMATION_ROOT/STATE.md" # breadcrumbs.sh pinned it at source
 
-KERNEL="${HNGH_KERNEL:-${HNGH_HOME:-$HOME/Projects/etc/hngh}}"
+KERNEL="${HNGH_KERNEL:-${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}}"
 MODE="${1:---sweep}"
 case "$MODE" in
 --boot | --sweep) ;;

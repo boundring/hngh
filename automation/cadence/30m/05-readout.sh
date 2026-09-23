@@ -3,7 +3,7 @@
 # queue/timeline/roster fresh for the dashboards (dashboard-self-review
 # flags readout.json stale beyond 3x this tier otherwise). Pure reader,
 # fails closed; the digest itself stays morning-gated by design.
-HNGH="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+HNGH="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 if [ -x "$HNGH/scripts/dashboard-readout" ]; then
   # per-PID tmp: the 30m tier and refresh-dashboard.sh (morning-report

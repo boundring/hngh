@@ -15,7 +15,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 out="$(HNGH_REPORT_ROOT="$report_root" python3 \

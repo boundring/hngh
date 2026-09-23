@@ -17,7 +17,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/beat-blockers.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 out="$(python3 "$AUTOMATION_ROOT/jobs/publication-review.py" --repo "$KERNEL" \

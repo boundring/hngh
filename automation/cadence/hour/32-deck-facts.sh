@@ -45,7 +45,7 @@ DECK_KEY="${DECK_KEY:-$HOME/.ssh/id_ed25519_hngh}"
 DECK_DIR="${DECK_DIR:-hngh-deck}"
 PRODUCER="$AUTOMATION_ROOT/jobs/deck-producer.sh"
 FACTS_DIR="$AUTOMATION_ROOT/deck-facts"
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="$KERNEL/scripts/report-queue"
 # DECK_NOW overrides the clock (test seam; set by tests, not operators).
 deck_now="${DECK_NOW:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"

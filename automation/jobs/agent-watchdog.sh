@@ -24,7 +24,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/causes.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
 
-HNGH_REPO="${HNGH_REPO:-$HOME/Projects/etc/hngh}"
+HNGH_REPO="${HNGH_REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 REPORT_QUEUE="${REPORT_QUEUE:-$HNGH_REPO/scripts/report-queue}"
 ATTENTION_FLAG="${ATTENTION_FLAG:-/tmp/hngh-overseer-attention}"
 

@@ -11,7 +11,7 @@
 # silently dormant (one breadcrumb per UTC day max — missing creds are
 # an operator setup item, never an alert).
 # Requires lib/common.sh + lib/breadcrumbs.sh sourced first.
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 . "${AUTOMATION_ROOT:-$KERNEL}/lib/credentials.sh" # map ONEPASSWORD_SERVICE_KEY -> OP_SERVICE_ACCOUNT_TOKEN for `op`
 EMAIL_NOTIFY="$AUTOMATION_ROOT/scripts/notify-email.py"
 EMAIL_LOG="${HNGH_NOTIFY_EMAIL_LOG:-$AUTOMATION_ROOT/logs/notify-email.log}"

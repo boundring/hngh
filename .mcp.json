@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "hngh": {
-      "command": "sh",
-      "args": ["-c", "exec python3 \"$HOME/Projects/etc/hngh/automation/mcp/hngh_mcp_server.py\""]
+      "command": "python3",
+      "args": ["automation/mcp/hngh_mcp_server.py"]
     }
   }
 }

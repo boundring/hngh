@@ -16,7 +16,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
 STATE_FILE="${STATE_FILE:-$AUTOMATION_ROOT/STATE.md}"
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 [ -d "$KERNEL/docs/project/plans" ] || exit 0
 [ -f "${HNGH_PLANS_FEED_OUT:-$AUTOMATION_ROOT/dashboard/plans.json}" ] || exit 0
 

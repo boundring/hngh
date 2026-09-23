@@ -26,7 +26,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/params.sh"
 . "$AUTOMATION_ROOT/lib/failfirst.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 JOB_NAME="${JOB_NAME:-20-model-saturation}"

@@ -173,7 +173,7 @@ if [ -z "$OVERFLOW_PIN" ] && busy="$(load_busy)"; then
 fi
 [ "${RESEARCH_BEAT_GATE_ONLY:-0}" = "1" ] && exit 0
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 TELEMETRY="$AUTOMATION_ROOT/jobs/telemetry.py"

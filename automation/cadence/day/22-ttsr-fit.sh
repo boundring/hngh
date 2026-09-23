@@ -25,7 +25,7 @@ set -u
 TTSR_RE1="queued for (the )?morning|first thing (tomorrow|in the morning)|tonight'?s? (overnight|workbeat|digest|report|wave|run|pull)|lands? tonight|executes? (them|it) tonight|this evening"
 TTSR_RE2='\b(one|\d+)\s+transitions?\s*(per|/)\s*(a\s+)?(beat|day)\b|\b\d+\s*days?\s+to\s+(crystalli[sz]e|drain|clear)\b|\b\d+\s*days?\s+instead\s+of\b|\breviewed one per day\b|\bscheduled once (a|per) day\b|\b\d+\s*days?\b[^.\n]{0,50}\b(crystalli[sz]e|crystallized|research (queue|lines?|beat)|reviewed)\b|\b(crystalli[sz]e|crystallized|research (queue|lines?|beat)|reviewed)[^.\n]{0,50}\b\d+\s*(more\s+)?days?\b'
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 RULES="${TTSR_RULES_DIR:-$HOME/.omp/agent/rules}"        # read-only probe

@@ -66,7 +66,7 @@ context_project_block() { # role
 context_pack() { # role slug -> pack path on stdout
   local role="$1" slug="$2"
   local root="${ROOT:-${AUTOMATION_ROOT:?AUTOMATION_ROOT unset}}"
-  local krepo="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+  local krepo="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
   local dir out
   dir="$root/prompts/overnight"
   out="$dir/$slug.context.txt"

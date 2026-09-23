@@ -94,7 +94,7 @@ EOF
 # breadcrumb, never a job failure.
 screen_file_alert() {
   local class="$1" file="$2" ctx="$3" kernel text
-  kernel="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+  kernel="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
   text="news-quarantine $class $file: $(printf '%s' "$ctx" | tr '|' ';')"
   HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$kernel}" python3 \
     "$kernel/scripts/report-queue" --add alert "$text" \

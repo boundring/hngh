@@ -38,7 +38,7 @@ AROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$AROOT/lib/launch-session.sh"
 . "$AROOT/lib/model.sh" # ocgo_pace_blocked
 
-ROOT="${ROOT:-${HNGH_HOME:-$HOME/Projects/etc/hngh}}"
+ROOT="${ROOT:-${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}}"
 STORE="${STORE:-$AUTOMATION_ROOT/store/ocgo-delegate}"
 mkdir -p "$STORE" "$ROOT/prompts/overnight" "$ROOT/logs"
 

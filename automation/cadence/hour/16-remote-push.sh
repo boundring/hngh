@@ -23,7 +23,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 JOB_NAME="${JOB_NAME:-16-remote-push}"
 
 # serialize concurrent invocations (rapid commits): the first run in

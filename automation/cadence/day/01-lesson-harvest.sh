@@ -24,7 +24,7 @@ export AUTOMATION_ROOT="$ROOT"
 # shellcheck disable=SC1091
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
 
-HNGH_REPO="${HNGH_REPO:-$HOME/Projects/etc/hngh}"
+HNGH_REPO="${HNGH_REPO:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 RECORDS="$HNGH_REPO/docs/records"
 LESSONS_DIR="$HNGH_REPO/docs/project"
 MARKER="${LESSON_HARVEST_MARKER:-$ROOT/.lesson-harvest-last}"

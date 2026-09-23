@@ -17,7 +17,7 @@ case "$out" in
 *verdict=mismatch:*)
   kind="$(printf '%s\n' "$out" | sed -n 's/^verdict=mismatch:\([a-z]*\).*/\1/p')"
   evidence="$(printf '%s\n' "$out" | sed -n 's/^.*evidence=//p')"
-  KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+  KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
   HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$KERNEL}" \
     python3 "$KERNEL/scripts/report-queue" --add alert \
     "crumbs mirror mismatch: ${out//$'\n'/; }" \

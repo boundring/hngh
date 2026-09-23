@@ -26,7 +26,7 @@
 # usage: scripts/overnight-cycle.sh   (via hngh-overnight.timer)
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 HNGH_BIN="${HNGH_CLI:-$KERNEL/scripts/hngh}"
 BRIDGE="$KERNEL/scripts/omp-bridge"
 STORE="$HOME/.hngh-automation/store/overnight-$(date +%Y%m%dT%H%M%S)-$$/"

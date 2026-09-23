@@ -15,7 +15,7 @@ set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
 
 SUITE="${DOC_SUITE_DIR:-$HOME/Projects/etc/20260830}"
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 AUTO_GIT="$AUTOMATION_ROOT"
 FIX_COMMITS="be84690 760adb5 5b79b86 1113810 dcb6221"
 GATE_MAX_AGE=$((36 * 3600))

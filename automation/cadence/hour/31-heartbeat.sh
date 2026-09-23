@@ -19,7 +19,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 [ -x "$KERNEL/scripts/schedule-heartbeat" ] || exit 0
 
 STAMP="/tmp/.hngh-heartbeat-last"

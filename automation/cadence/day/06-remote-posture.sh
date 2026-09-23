@@ -25,7 +25,7 @@ if [ "${DECK_NODE_ENABLED:-$(get_param deck-node-enabled 0)}" != "1" ]; then
   exit 0
 fi
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 # machine profile: host identity (deck IP, tailnet, dashboard bind) lives in

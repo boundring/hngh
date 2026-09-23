@@ -24,8 +24,8 @@ work or generating packs:
 
 ```tsv
 # project<TAB>repo<TAB>test-command<TAB>context-pack-role<TAB>key-files
-hngh	$HOME/Projects/etc/hngh	make -C automation test	hngh	automation/lib/, docs/
-cistern	$HOME/Projects/etc/20260830/cistern	emacs -Q --batch -l tests/run.el -f cistern-run-all-tests	cistern	src/cistern-domain.el src/cistern-game.el src/cistern-view.el
+hngh	~/Projects/etc/hngh	make -C automation test	hngh	automation/lib/, docs/
+cistern	~/Projects/etc/20260830/cistern	emacs -Q --batch -l tests/run.el -f cistern-run-all-tests	cistern	src/cistern-domain.el src/cistern-game.el src/cistern-view.el
 ```
 
 Today the cistern row lives inline in `automation/lib/context-pack.sh`

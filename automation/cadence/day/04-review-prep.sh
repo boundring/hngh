@@ -14,7 +14,7 @@ set -u
 . "$AUTOMATION_ROOT/lib/model.sh"
 . "$AUTOMATION_ROOT/lib/params.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 TELEMETRY="$AUTOMATION_ROOT/jobs/telemetry.py"

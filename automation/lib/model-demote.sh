@@ -24,7 +24,7 @@
 set -u
 DEMOTE_STATE="${DEMOTE_STATE:-$AUTOMATION_ROOT/state/model-demote.tsv}"
 DEMOTE_THRESHOLD="${DEMOTE_THRESHOLD:-2}"
-REPORT="${REPORT:-python3 ${HNGH_HOME:-$HOME/Projects/etc/hngh}/scripts/report-queue}"
+REPORT="${REPORT:-python3 ${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}/scripts/report-queue}"
 
 _demote_load() { # -> sets D_BAD D_DEM for $1 (model)
  local m="$1" line

@@ -61,7 +61,7 @@ append_ocgo_lesson() { # cause-class
 
 # default bridge path (overnight-cycle sets BRIDGE itself; respawn and
 # standalone callers get the kernel default)
-BRIDGE="${BRIDGE:-${HNGH_HOME:-$HOME/Projects/etc/hngh}/scripts/omp-bridge}"
+BRIDGE="${BRIDGE:-${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}/scripts/omp-bridge}"
 
 # bridge store per launch: hngh records run-1 per store, so two
 # --run-start calls against one store record-conflict. A beat used to

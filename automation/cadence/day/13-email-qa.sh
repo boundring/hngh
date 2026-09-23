@@ -15,7 +15,7 @@ set -u
 . "$(cd "$(dirname "$0")/../.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
 
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 day="$(printf '%s' "${HNGH_TICK_TS:-$(date -u +%Y-%m-%d)}" | cut -c1-10)"
 yesterday="$(date -u -d "$day - 1 day" +%F 2>/dev/null || true)"
 [ -n "$yesterday" ] || yesterday="$(date -u -d '1 day ago' +%F)"

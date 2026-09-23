@@ -22,7 +22,7 @@
 # path exits 0; all-clear ticks are silent (fed-only breadcrumb).
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-KERNEL="${HNGH_HOME:-$HOME/Projects/etc/hngh}"
+KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 RQ="${HNGH_REPORT_QUEUE:-$KERNEL/scripts/report-queue}"
 export HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$KERNEL}"
 STATE_FILE="${STATE_FILE:-$ROOT/STATE.md}"
