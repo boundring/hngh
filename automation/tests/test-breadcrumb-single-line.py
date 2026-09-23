@@ -9,6 +9,7 @@ real lib/breadcrumbs.sh against a temp STATE_FILE and asserts the
 4-field, single-line structure survives any detail."""
 
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -59,6 +60,26 @@ class BreadcrumbSingleLine(unittest.TestCase):
             line = state.read_text().splitlines()[0]
             self.assertEqual(len(line.split(" | ")), 4)
             self.assertIn("a ¦ b ¦ c", line)
+
+
+class SelfLocatingRoot(unittest.TestCase):
+    def test_sourcing_without_common_sh_writes_crumb(self):
+        """2026-09-23 defect cleanup: an order-dependent caller sourced
+        breadcrumbs.sh without lib/common.sh and died on set -u at the
+        STATE_FILE default. The lib self-locates AUTOMATION_ROOT."""
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td) / "automation"
+            (fake / "lib").mkdir(parents=True)
+            shutil.copy(LIB, fake / "lib" / "breadcrumbs.sh")
+            env = {k: v for k, v in os.environ.items()
+                   if k not in ("AUTOMATION_ROOT", "STATE_FILE")}
+            script = ('. "%s"\nbreadcrumb "test-job" "test-event" "detail"\n'
+                      % (fake / "lib" / "breadcrumbs.sh"))
+            r = subprocess.run(["bash", "-c", script], env=env,
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            lines = (fake / "STATE.md").read_text().splitlines()
+            self.assertEqual(len(lines[0].split(" | ")), 4)
 
 
 # every non-lib STATE.md writer must uphold the same invariant itself:

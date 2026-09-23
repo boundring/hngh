@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-09-23
+
+- fix: unsloth-observe row-key resolution (2026-09-23 defect cleanup):
+  `jobs/unsloth-contexts.py` `--observe` matched the loaded model's GGUF
+  snapshot FILE PATH against id-keyed registry rows, so since the
+  small-model lane made Ornith-1.0-9B the default every 30m tick logged
+  `no registry row matches '<snapshot path>'` while the
+  `unsloth/Ornith-1.0-9B-GGUF` row sat in the registry (the pre-switch
+  Qwen default matched only because its `active_model` came back
+  id-form). New `hf_cache_id` (`models--ORG--NAME` -> `ORG/NAME`, variant
+  filename suffixes ignored) + `resolve_row` (served id first, cache
+  path second, fail-open breadcrumb unchanged). Three fixture cases in
+  `tests/test-unsloth-contexts.py` (red-first on a pristine copy).
+
+- fix: breadcrumbs.sh self-locates its root (2026-09-23 defect cleanup):
+  one order-dependent caller chain (30m `50-research-overflow` ->
+  `cadence/hour/33-research-beat.sh` -> `scripts/research-sweep-selfheal.sh`,
+  which sources breadcrumbs.sh without common.sh and STATE_FILE unset)
+  died on `line 6: AUTOMATION_ROOT: unbound variable` — the journal hit
+  at 2026-09-23T13:15:12Z. The lib now derives AUTOMATION_ROOT from its
+  own location when unset (common.sh-first callers unchanged); the
+  pre-fix repro dies rc=127, post-fix writes the crumb. New
+  SelfLocatingRoot case in `tests/test-breadcrumb-single-line.py`.
+
 ## 2026-09-22
 
 - VRAM/RAM guardrails lane (plan 2026-09-22-vram-small-model-guardrails):

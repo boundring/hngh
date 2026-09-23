@@ -224,6 +224,36 @@ def match_path(rows, model_path):
     return best
 
 
+def hf_cache_id(model_ref):
+    """HF hub-cache path -> "ORG/NAME" from its models--ORG--NAME dir
+    component (models--unsloth--Ornith-1.0-9B-GGUF -> unsloth/Ornith-1.0-9B-GGUF),
+    independent of the snapshot filename's variant+quant suffix; None when
+    the ref carries no such component. (2026-09-23 defect cleanup)"""
+    m = re.search(r"(?:^|/)models--([^/]+)", str(model_ref or ""))
+    if not m:
+        return None
+    org, sep, name = m.group(1).partition("--")
+    return f"{org}/{name}" if sep and name else None
+
+
+def resolve_row(rows, *refs):
+    """Row idx for the loaded model's references, preference order: (1) the
+    served model id (match_row), (2) HF-cache path mapping (hf_cache_id).
+    Fail-open None: unknown models get the breadcrumb, never a guessed row.
+    (2026-09-23 defect cleanup)"""
+    refs = [str(r) for r in refs if r]
+    for ref in refs:  # (1) served model id
+        idx = match_row(rows, ref)
+        if idx is not None:
+            return idx
+    for ref in refs:  # (2) HF-cache path -> ORG/NAME
+        hid = hf_cache_id(ref)
+        idx = match_row(rows, hid) if hid else None
+        if idx is not None:
+            return idx
+    return None
+
+
 def journal_n_ctx():
     """Fallback #2: llama-server startup log line (model path + n_ctx)."""
     import subprocess
@@ -266,9 +296,10 @@ def observe(out=TSV):
     header, rows = lines[0], [l.split("\t") for l in lines[1:]]
     today = datetime.date.today().isoformat()
 
-    value = model_id = None
+    value = model_id = served_id = None
     try:
         st = _local_api("/api/inference/status")
+        served_id = st.get("model_identifier")
         model_id = st.get("active_model")
         if st.get("loaded") and not st.get("loading"):
             value = st.get("max_context_length") or st.get("context_length")
@@ -291,14 +322,15 @@ def observe(out=TSV):
                 return 0
         value = probe_400()
         src = "probe:400" if value else None
-    if value is None or not model_id:
+    if value is None or not (served_id or model_id):
         print("observe: no loaded model / no signal; registry unchanged",
               file=sys.stderr)
         return 0
 
-    idx = match_row(rows, str(model_id))
+    idx = resolve_row(rows, served_id, model_id)
     if idx is None:
-        print(f"observe: no registry row matches {model_id!r}", file=sys.stderr)
+        print(f"observe: no registry row matches {(model_id or served_id)!r}",
+              file=sys.stderr)
         return 0
     rows[idx][1] = str(value)
     rows[idx][5] = today

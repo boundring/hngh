@@ -6,6 +6,7 @@ phrasing, the fixture emit path writes a well-formed TSV with per-row
 columns, and non-context models (image/ASR repos) resolve to empty fields
 rather than guesses."""
 
+import contextlib
 import importlib.util
 import io
 import os
@@ -31,6 +32,13 @@ CARDS = {
     "unsloth/Z-Image-Turbo-unsloth-bnb-4bit.txt":
         "A 6B step-distilled diffusion model for image generation.",
 }
+
+# Real 30m-tick failure shape: HF hub-cache snapshot path, filename carries
+# variant+quant suffix (2026-09-23 defect cleanup).
+ORNITH_SNAPSHOT = (
+    "~/.cache/huggingface/hub/models--unsloth--"
+    "Ornith-1.0-9B-GGUF/snapshots/a674c5a128bb74049b1bb3619f1355073db5b48c"
+    "/Ornith-1.0-9B-UD-Q4_K_XL.gguf")
 
 
 class ExtractTest(unittest.TestCase):
@@ -93,6 +101,7 @@ class ObserveTest(unittest.TestCase):
             "model_id\tserver_observed\tcard_native\tcard_max_extended\t"
             "source_url\tchecked_at\n"
             "unsloth/Qwen3.8-27B-GGUF\t262144\t262144\t1000000\thttps://x\t2026-09-13\n"
+            "unsloth/Ornith-1.0-9B-GGUF\t\t131072\t\thttps://z\t2026-09-22\n"
             "unsloth/Z-Image-Turbo-unsloth-bnb-4bit\t\t\t\thttps://y\t2026-09-13\n")
         return p
 
@@ -113,6 +122,62 @@ class ObserveTest(unittest.TestCase):
             row = [l.split("\t") for l in open(p).read().splitlines()][1]
             self.assertEqual(row[1], "102400")
             self.assertEqual(row[5], uc.datetime.date.today().isoformat())
+
+    def test_observe_hf_cache_path_resolves_row(self):
+        # active_model is a GGUF snapshot FILE path (variant+quant suffix);
+        # the row lookup must map models--ORG--NAME -> ORG/NAME instead of
+        # matching a file path against id-keyed rows (2026-09-23 defect
+        # cleanup: 30m ticks logged "no registry row matches" every beat).
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            err = io.StringIO()
+            uc._local_api = lambda path: {
+                "loaded": True, "active_model": ORNITH_SNAPSHOT,
+                "max_context_length": 131072, "context_length": 131072}
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(uc.observe(p), 0)
+            rows = [l.split("\t") for l in open(p).read().splitlines()]
+            self.assertEqual(rows[2][0], "unsloth/Ornith-1.0-9B-GGUF")
+            self.assertEqual(rows[2][1], "131072")
+            self.assertEqual(rows[2][5], uc.datetime.date.today().isoformat())
+            self.assertNotIn("no registry row matches", err.getvalue())
+
+    def test_observe_unknown_path_breadcrumbs_once(self):
+        # fail-open intact: an unresolvable ref is reported exactly once and
+        # never guessed into a row (2026-09-23 defect cleanup).
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            before = open(p).read()
+            err = io.StringIO()
+            uc._local_api = lambda path: {
+                "loaded": True, "active_model": (
+                    "~/.cache/huggingface/hub/models--unsloth--"
+                    "Mystery-3B-GGUF/snapshots/deadbeef"
+                    "/Mystery-3B-UD-Q4_K_XL.gguf"),
+                "max_context_length": 8192, "context_length": 8192}
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(uc.observe(p), 0)
+            self.assertEqual(open(p).read(), before)
+            self.assertEqual(
+                err.getvalue().count("no registry row matches"), 1)
+
+    def test_observe_api_id_preferred_over_path(self):
+        # served id from /api/inference/status wins over the path mapping
+        # (2026-09-23 defect cleanup).
+        with tempfile.TemporaryDirectory() as d:
+            p = self._tsv(d)
+            err = io.StringIO()
+            uc._local_api = lambda path: {
+                "loaded": True,
+                "model_identifier": "unsloth/Qwen3.8-27B-GGUF:UD-Q2_K_XL",
+                "active_model": ORNITH_SNAPSHOT,
+                "max_context_length": 102400, "context_length": 102400}
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(uc.observe(p), 0)
+            rows = [l.split("\t") for l in open(p).read().splitlines()]
+            self.assertEqual(rows[1][1], "102400")  # id match -> Qwen row
+            self.assertEqual(rows[2][1], "")        # path mapping not used
+            self.assertNotIn("no registry row matches", err.getvalue())
 
     def test_observe_unloaded_noop(self):
         with tempfile.TemporaryDirectory() as d:
