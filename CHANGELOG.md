@@ -6,6 +6,9 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-23
 
+- **Queue: key-rotation-freshness landed** (docs/project/queue.md): row flipped on verified evidence (credential-evidence 28 tests green, OLA `credential-fresh-ola=604800` in the cadence-params rung); Next advances to pooled-hardware.
+- **GOVERNANCE.md aligned to the federal charter and canon ethos** (docs/project/decisions.md): the governance document now states the three-branch model (charter accepted 2026-09-20), with the five never clauses and the certificate path preserved verbatim; Taoist and Confucian principles inform tone, the care duty, dissent channels, and dissolution; no authority change — the single-operator model and the N=2 amendment rule are preserved as recorded.
+- **Interface and truth-layer consolidation** (automation/CHANGELOG.md): crumb writing converged on one fail-closed writer with a mirror-mismatch alert; hngh-bridge plugin source moved into the repo behind a drift gate; omp-bridge's default automation-root fixed by ceremony (candidate `cc0a1eff`); stage-2 exits landed — all dashboard tabs clean at 1280/390px and the item lifecycle open→handled→dismissed.
 - **Home-path scrub (tree + history)** (docs/records/2026-09-23-home-path-scrub.md):
   every `/home/<user>/...` literal in code, test fixtures, systemd units
   (`%h`), MCP/agent configs (`sh -c` + `$HOME`), TSV registries and docs

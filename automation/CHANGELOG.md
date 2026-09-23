@@ -2,6 +2,10 @@
 
 ## 2026-09-23
 
+- crumbs: single-writer convergence — `lib/crumbs.py` (fail-closed on separator/newline in any field) with `lib/breadcrumbs.sh` as a stable-API shim; `scripts/router-tick.py`, `jobs/feedback-apply.py`, `jobs/service-state.py` route through it; `lib/crumbs-db.py` `verify` wired into `cadence/1m/15-crumbs-sync.sh` with one evidence-gated report-queue alert (identity `crumbs-mirror:<kind>`). Tests `tests/test-crumbs-writer.py` 8 green.
+- plugin: hngh-bridge source lives in-repo at `automation/omp-plugin/`; `scripts/hngh-omp-update.sh` installs the repo copy (after the deps loop, de-aliased inodes); a byte-drift gate in `tests/test-hngh-bridge-plugin.py` fails on installed-vs-repo divergence with the remedy; the stale `hngh-omp` lock entry is removed.
+- ui: stage-2 exits — all six dashboard tabs clean at 1280/390px (mobile tab-strip wrap, real content every tab) and the item lifecycle open→handled→dismissed with report rows `operator-item:<id>:<state>` filed fail-closed before any ledger write. Tests `tests/test-dashboard-lifecycle.py` 7 green.
+- bridge: `scripts/omp-bridge` `AUTOMATION_ROOT` defaults to `ROOT/automation` (`HNGH_AUTOMATION_ROOT` override wins); `--register`/`--note` removed (ghost-ledger paths). Kernel candidate `cc0a1eff`.
 - guard: `scripts/lint-home-paths.py` fails any tracked content
   carrying the real local home (`/home/<actual login>`) — worktree,
   `--staged`, and REV modes with a zip-member deep scan (fail-closed
