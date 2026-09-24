@@ -6,17 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper that validates job schedule syntax before execution
-  Verification: bash -n cadence/schedule-validator.sh
+- [ ] Add a new job script that validates automation config syntax before execution
+  Verification: `bash -n jobs/validate-config.sh`
 
-- [ ] Create a test fixture that exercises the cadence helper with valid and invalid inputs
-  Verification: make test
+- [ ] Create a test suite entry point for the new validation job
+  Verification: `bash <script>`
 
-- [ ] Wire the cadence helper into the existing job pipeline via a small lib integration
-  Verification: bash -n lib/cadence-integration.sh
+- [ ] Update the cadence runner to invoke the new validation step before job dispatch
+  Verification: `grep -q "validate-config" cadence/runner.sh`
 
-- [ ] Add a dashboard snippet that reports cadence validation results
-  Verification: bash -n dashboard/cadence-report.sh
+- [ ] Add a dashboard summary line that reports validation pass/fail status
+  Verification: `grep -q "validation" dashboard/summary.sh`
 
-- [ ] Run full test suite to confirm no regressions from cadence additions
-  Verification: make test
+- [ ] Run the full test suite to confirm no regressions
+  Verification: `make test`
