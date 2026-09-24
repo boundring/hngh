@@ -8,3 +8,7 @@ at 2026-09-24T06:00:37Z. Alert text: orchestrator blocker parked '2026-09-13-rou
 
 - [ ] Delve: open research subject fail-20260924-beat-parked-2026-09-13-routed-gate-check-hngh for beat-parked:2026-09-13-routed-gate-check-hngh; record disposition; then fix or park
       Verification: research subject fail-20260924-beat-parked-2026-09-13-routed-gate-check-hngh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-24T07:00:37Z re-occurred (dedup window expired)
