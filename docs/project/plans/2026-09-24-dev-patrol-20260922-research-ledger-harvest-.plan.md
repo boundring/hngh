@@ -6,17 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script that validates automation config syntax before execution
-  Verification: `bash -n jobs/validate-config.sh`
+- [ ] Add a new job template for structured finding ingestion under `jobs/`
+  Verification: `bash -n jobs/finding-ingest.sh`
 
-- [ ] Create a test suite entry point for the new validation job
-  Verification: `bash <script>`
+- [ ] Create a verification script that confirms the new job template parses correctly
+  Verification: `bash jobs/finding-ingest.sh --dry-run`
 
-- [ ] Update the cadence runner to invoke the new validation step before job dispatch
-  Verification: `grep -q "validate-config" cadence/runner.sh`
-
-- [ ] Add a dashboard summary line that reports validation pass/fail status
-  Verification: `grep -q "validation" dashboard/summary.sh`
-
-- [ ] Run the full test suite to confirm no regressions
+- [ ] Add a unit test for the finding ingestion parser under `tests/`
   Verification: `make test`
+
+- [ ] Create a cadence entry that triggers the new ingestion job on schedule
+  Verification: `bash -n cadence/finding-cadence.sh`
+
+- [ ] Add a dashboard snippet that displays ingestion job status
+  Verification: `bash -n dashboard/ingest-status.sh`
