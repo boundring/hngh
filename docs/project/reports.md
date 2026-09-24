@@ -4869,3 +4869,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T19:00:17Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T19:00:17Z-progress-ebb46dea.md |
 | 2026-09-24T19:00:17Z | progress | c188739d | router routed patrol:journal-error -> plan candidate 2026-09-24-routed-patrol-journal-error-2 (routed-at 2026-09-24T19:00:17Z) | 2026-09-24T19:00:17Z-progress-c188739d.md |
 | 2026-09-24T19:00:18Z | progress | 893ba546 | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh-7 (routed-at 2026-09-24T19:00:18Z) | 2026-09-24T19:00:18Z-progress-893ba546.md |
+| 2026-09-24T19:05:03Z | progress | b604e44b | agent-supervision: evicted-stale omp-PartBTypedLane-c7c4ca (idle 361m) | 2026-09-24T19:05:03Z-progress-b604e44b.md |
