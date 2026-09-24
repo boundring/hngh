@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-24T08:04:02Z -->
 # 2026-09-24 - dev-patrol-20260922-research-ledger-harvest- (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research
