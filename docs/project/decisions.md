@@ -721,3 +721,23 @@ Where an N-of-M approval rule seems to conflict, check whether it
 governs FUTURE changes while the directed work only brings a
 document into line with an already-ratified record: documents catch
 up to records; records never wait on documents.
+
+## 2026-09-23 — History attribution folded to the operator identity
+
+The operator directed that every commit attribute to their GitHub
+profile: "There's no co-author. It's just me. boundring@gmail.com."
+The 2026-09-23 attribution rewrite folded all four historical identities
+(1,059 `boundring`, 566 `Fixture <fixture@example.invalid>`, 530
+`hngh-machine <automation@hngh.local>`, 1 `Cibo <cibo@localhost>`) to
+`boundring <boundring@gmail.com>` across 2,156 commits with
+`git filter-repo` name/email callbacks. Content and dates are unchanged;
+no signatures existed to drop. The loop-history guard's declarations were
+re-keyed across this rewrite through the certificate ceremony (candidate
+`0576d68352e0f62dea3a82427992178a956ea56cd0203cb61bf085f4e1339b9c`);
+every registered patch-id survived unchanged. The machine lane keeps its
+recorded identity seam: auto-committers pin `-c user.name=hngh-machine
+-c user.email=automation@hngh.local` per invocation
+(`automation/tests/test-identity-seam.py`), so machine ledger syncs stay
+attributable to the machine, not the operator. Backup bundle:
+`~/.hngh-automation/scrub/pre-attribution-20260923.bundle`.
+Full record: `docs/records/2026-09-23-attribution-rewrite.md`.

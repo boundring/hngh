@@ -22,6 +22,14 @@ lives under Pre-release / early development until the first release.
   (staged) and `pre-push` (full pushed-rev tree) hooks; fake-login
   fixtures and URL wire data stay legal by design.
 
+- **Attribution rewrite: all history authored to the operator identity**
+  (docs/records/2026-09-23-attribution-rewrite.md): 2,156 commits folded
+  to `boundring <boundring@gmail.com>` (verified address; GitHub links
+  profiles by author-email match) via `git filter-repo` name/email
+  callbacks — messages, trees, and dates unchanged, no signatures existed
+  to drop. Loop-history guard declarations re-keyed by ceremony
+  (candidate `0576d683…`); pre-rewrite bundle retained outside the repo.
+
 - **Loop-history guard re-keyed across the scrub rewrite** (docs/project/decisions.md):
   the purge-proof exemption declarations named pre-scrub hashes and
   went unreachable when the path-scrub rewrote `refs/heads/main`;
