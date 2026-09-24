@@ -4647,11 +4647,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T01:50:03Z | alert | ed2d89b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=44.3s median=21.1s ×14 | 2026-09-24T01:50:03Z-alert-ed2d89b4.md |
 | 2026-09-24T01:50:07Z | progress | c362b4a8 | agent-supervision: evicted-stale omp-CanonEthosBrief-84c73e (idle 364m) | 2026-09-24T01:50:07Z-progress-c362b4a8.md |
 | 2026-09-24T01:52:35Z | progress | 5b23ce51 | research line synth-2026-09-24-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T01:52:35Z-progress-5b23ce51.md |
-| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×29 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
+| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×30 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
 | 2026-09-24T01:52:47Z | alert | 50346b24 | patrol handoffs: bad-execution on agent-handoffs.md -- 8 dead/cancelled in last 10 rows ×2 | 2026-09-24T01:52:47Z-alert-50346b24.md |
 | 2026-09-24T01:52:48Z | alert | 1b07f997 | patrol manga: manga-stale on manga -- newest draft 252h old > 48h ×15 | 2026-09-24T01:52:48Z-alert-1b07f997.md |
 | 2026-09-24T01:52:48Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-24T01:52:48Z-alert-c4a1f47d.md |
-| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×174 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
+| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×180 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
 | 2026-09-24T01:55:04Z | alert | f0b090b7 | [oversight] slow-unit: dropin:58-patrol.sh wall=13.6s median=5.7s ×11 | 2026-09-24T01:55:04Z-alert-f0b090b7.md |
 | 2026-09-24T01:55:09Z | progress | 545201b0 | agent-supervision: evicted-stale omp-OmpBridgeDefault-3bd71b (idle 361m) | 2026-09-24T01:55:09Z-progress-545201b0.md |
 | 2026-09-24T02:00:05Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-24T02:00:05Z-progress-3dd20cc1.md |
@@ -4792,7 +4792,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T09:08:04Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 | 2026-09-24T09:08:04Z-progress-adcaae87.md |
 | 2026-09-24T09:08:04Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md | 2026-09-24T09:08:04Z-progress-0e221d65.md |
 | 2026-09-24T09:17:04Z | progress | c92546cf | research line fail-20260924-Do-any-of-the-five-related-findings-docu: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-fail-20260924-Do-any-of-the-five-related-findings-docu.md | 2026-09-24T09:17:04Z-progress-c92546cf.md |
-| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×7 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
+| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×8 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
 | 2026-09-24T09:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T09:30:36Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T10:00:02Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:13Z | progress | bad01eca | router routed feedback-a8c12813 -> plan candidate 2026-09-24-routed-feedback-a8c12813 (routed-at 2026-09-24T10:00:13Z) | 2026-09-24T10:00:13Z-progress-bad01eca.md |
@@ -4836,3 +4836,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T16:00:37Z | alert | 86dbbc10 | router expired candidate 2026-09-05-routed-tree-skew-hngh (unaccepted 24h past routing; identity tree-skew:hngh) | 2026-09-24T16:00:37Z-alert-86dbbc10.md |
 | 2026-09-24T16:00:37Z | progress | 0fc1e98e | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh-4 (routed-at 2026-09-24T16:00:37Z) | 2026-09-24T16:00:37Z-progress-0fc1e98e.md |
 | 2026-09-24T16:05:04Z | alert | ca7a0932 | agent-stall omp-2026-09-24T00-32-15-248Z_01a-2070c5: stalled, last tool-call 93m ago | 2026-09-24T16:05:04Z-alert-ca7a0932.md |
+| 2026-09-24T16:10:03Z | progress | 7eabcd5b | agent-stall omp-2026-09-24T00-32-15-248Z_01a-2070c5: recovered | 2026-09-24T16:10:03Z-progress-7eabcd5b.md |
