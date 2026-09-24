@@ -6,17 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script that validates hngh-automation test output format
-  Verification: bash -n scripts/test-output-validator.sh
+- [ ] Add a helper script that validates job file syntax before execution
+  Verification: bash -n scripts/job-syntax-validator.sh
 
-- [ ] Create a cadence job that runs the test-output-validator on each commit
-  Verification: bash -n cadence/run-validator-job.sh
-
-- [ ] Update the main test runner to include the new validator step
+- [ ] Create a test fixture that generates a minimal valid job file for regression testing
   Verification: make test
 
-- [ ] Add a dashboard script that reports validator pass/fail status
-  Verification: bash -n dashboard/report-validator-status.sh
+- [ ] Add a grep-based check in cadence/ that confirms no job files reference forbidden paths
+  Verification: grep -r "hngh/kernel" jobs/ && echo "FAIL" || echo "PASS"
 
-- [ ] Verify all new scripts pass syntax checks
-  Verification: bash -n scripts/test-output-validator.sh && bash -n cadence/run-validator-job.sh && bash -n dashboard/report-validator-status.sh
+- [ ] Update the dashboard/README to document the new validation step in the pipeline
+  Verification: git diff --cached dashboard/README
+
+- [ ] Add a python3 script that parses job metadata and prints a summary for CI logging
+  Verification: python3 scripts/job-metadata-summary.py
+
+- [ ] Commit all changes and run the full test suite to confirm no regressions
+  Verification: make test
