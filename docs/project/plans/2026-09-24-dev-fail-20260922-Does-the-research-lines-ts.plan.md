@@ -6,20 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script under jobs/ that implements a basic data validation task
-  Verification: bash -n jobs/data-validation.sh
+- [ ] Add a cadence helper script that validates job output structure
+  Verification: bash -n cadence/validate-job-output.sh
 
-- [ ] Create a corresponding test script under tests/ that exercises the new job
-  Verification: bash -n tests/test-data-validation.sh
-
-- [ ] Update the cadence configuration to register the new job for scheduled execution
-  Verification: grep -q 'data-validation' cadence/schedule.yaml
-
-- [ ] Add a verification script under scripts/ that confirms the new job integrates with existing make test
+- [ ] Create a test that exercises the cadence helper against a sample job
   Verification: make test
 
-- [ ] Create a dashboard snippet under dashboard/ that displays job execution status
-  Verification: bash -n dashboard/job-status.sh
+- [ ] Add a dashboard digest template for automation status reporting
+  Verification: bash -n dashboard/digest-template.sh
 
-- [ ] Add a digest rule under digest/ that logs new job completions
-  Verification: bash -n digest/job-digest.sh
+- [ ] Update lib/automation-core to import the new cadence helper
+  Verification: bash -n lib/automation-core/
+
+- [ ] Run the full test suite to confirm no regressions
+  Verification: make test
