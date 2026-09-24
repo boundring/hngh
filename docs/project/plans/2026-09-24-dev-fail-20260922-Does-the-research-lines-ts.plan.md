@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a helper script that validates job file syntax before execution
-  Verification: bash -n scripts/job-syntax-validator.sh
+- [ ] Add a syntax-validation script for new job files under jobs/
+  Verification: bash -n scripts/validate-job.sh
 
-- [ ] Create a test fixture that generates a minimal valid job file for regression testing
+- [ ] Register the validation script in the cadence test runner
   Verification: make test
 
-- [ ] Add a grep-based check in cadence/ that confirms no job files reference forbidden paths
-  Verification: grep -r "hngh/kernel" jobs/ && echo "FAIL" || echo "PASS"
+- [ ] Add a grep-based check that new commits touch only allowed paths
+  Verification: git grep --cached -l 'jobs/' | head -5
 
-- [ ] Update the dashboard/README to document the new validation step in the pipeline
-  Verification: git diff --cached dashboard/README
+- [ ] Create a README note documenting the verification cadence
+  Verification: bash scripts/check-readme.sh
 
-- [ ] Add a python3 script that parses job metadata and prints a summary for CI logging
-  Verification: python3 scripts/job-metadata-summary.py
+- [ ] Add a python3 stdlib script to list recent cadence runs
+  Verification: python3 scripts/list-cadence-runs.py
 
-- [ ] Commit all changes and run the full test suite to confirm no regressions
-  Verification: make test
+- [ ] Commit all changes and verify no forbidden paths are modified
+  Verification: git diff --name-only | grep -vE 'jobs/|scripts/|cadence/|lib/|tests/|dashboard/|digest/'
