@@ -6,20 +6,22 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-hngh.sh` that checks hngh-automation directory structure and runs `make test`
-  Verification: bash scripts/validate-hngh.sh
+- [ ] Add a cadence job that runs a daily health-check summary
+  Verification: `bash -n cadence/health-check.sh`
 
-- [ ] Add a `tests/test-hngh-structure.sh` that verifies required directories exist under jobs/, scripts/, cadence/, lib/, tests/, dashboard/, digest/
-  Verification: bash tests/test-hngh-structure.sh
+- [ ] Create a verification script that confirms the cadence job output
+  Verification: `python3 scripts/verify_cadence_output.py`
 
-- [ ] Add a `cadence/cadence-check.sh` that validates cadence file syntax with `bash -n`
-  Verification: bash -n cadence/cadence-check.sh
+- [ ] Add a test for the health-check cadence job
+  Verification: `make test`
 
-- [ ] Update `Makefile` to include `validate-hngh` target that runs `bash scripts/validate-hngh.sh`
-  Verification: make validate-hngh
+- [ ] Update dashboard to display cadence health-check results
+  Verification: `bash -n dashboard/cadence-view.sh`
 
-- [ ] Add a `lib/hngh-utils.sh` helper library with `git grep` to confirm no secrets or credentials are embedded
-  Verification: git grep -i 'password\|secret\|credential' lib/hngh-utils.sh
+- [ ] Add a digest entry for cadence health-check completion
+  Verification: `grep -q "cadence" digest/cadence.log`
 
-- [ ] Run full test suite to confirm all changes pass `make test`
-  Verification: make test
+- [ ] Verify all new scripts pass syntax checks
+  Verification: `bash -n jobs/cadence/health-check.sh && bash -n scripts/verify_cadence_output.py`
+
+This plan implements the cadence-automation research line by introducing a daily health-check job with verification, dashboard integration, and digest logging — all as normal-risk, independently verifiable steps gated by `make test`.

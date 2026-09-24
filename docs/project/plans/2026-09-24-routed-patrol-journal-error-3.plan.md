@@ -2,7 +2,7 @@
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:journal-error`
-at 2026-09-24T19:00:17Z. Alert text: patrol journal-error: unclaimed-err on unknown-journal-error -- 1 err+ line(s) no signature claims; latest: Bluetooth: hci0: ACL packet for unknown connection handle 3837
+at 2026-09-24T20:00:37Z. Alert text: patrol journal-error: unclaimed-err on unknown-journal-error -- 1 err+ line(s) no signature claims; latest: Bluetooth: hci0: ACL packet for unknown connection handle 3837 ×3
 
 ## Steps
 
