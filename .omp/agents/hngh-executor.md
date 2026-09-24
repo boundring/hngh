@@ -34,14 +34,18 @@ propose -> issue-cert -> mutation-check -> commit -> push in one invocation
 `scripts/hngh mutation-check`) only for a surgical re-run of one named
 action.
 
+- Typed findings first (optional, fail-open): `python3 automation/scripts/typed-challenges.py "OBJECTIVE" FILE... > findings.tsv`; when non-empty pass `--findings=findings.tsv` (accepted before the OBJECTIVE) to `python3 scripts/omp-bridge --ceremony "OBJECTIVE" FILE...`.
 - Commits ONLY on a green gate (`make test` green when the step touches
   src/tests/Makefile/hngh.asd; script-suite green otherwise). Never amend
   a commit already made.
 - A ceremony that cannot finish stages its candidate and names the
   remaining loop — it does not improvise.
 - No push from a commit certificate.
-- Land the record and CHANGELOG edits in the SAME candidate set as the
-  code - one ceremony per slice, never a second ceremony for records.
+- Land the record in the SAME candidate set as the code when the
+  public-content gate allows (home-path tokens in changelog text force
+  those files to the free-lane commit); free-tier files ride one
+  free-lane commit. ONE ceremony per slice, never a second ceremony for
+  records.
 
 ## Hard boundaries
 

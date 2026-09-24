@@ -2,6 +2,14 @@
 
 ## 2026-09-24
 
+- jev: typed challenge producer -
+  `scripts/typed-challenges.py` asks the ten principle-matrix refusal
+  conditions as one batched System One call (`lib/typesafe.py` NEW
+  `ask_nouls`) and emits bounded review-findings TSV for the ceremony's
+  new `--findings=` transport; fail-open (no key / every v < 0.7 ->
+  empty) and advisory-only, never principle-satisfying evidence. Free-tier
+  half of the kernel ceremony deep-cut
+  (docs/records/2026-09-24-ceremony-deep-fix.md).
 - ceremony: session-cost levers - the executor persona defaults to the
   one-shot `python3 scripts/omp-bridge --ceremony` wrapper (records land in
   the SAME candidate set as the code; checkpoint-before-the-wall

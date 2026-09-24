@@ -56,6 +56,38 @@ def ask_noul(state, name, instructions):
         return None
 
 
+def ask_nouls(state, questions) -> dict[str, float | None]:
+    """Batched Noul questions -> {name: value in [0,1] or None}; every
+    value None fail-closed. ONE system_one call for every question (the
+    shared state is paid once). questions maps name -> instructions.
+    """
+    if not questions:
+        return {}
+    c = _client()
+    if c is None:
+        _crumb(",".join(questions))
+        return {name: None for name in questions}
+    try:
+        from typesafe_sdk import Noul
+
+        with c:
+            r = c.system_one(
+                state=state,
+                questions={
+                    name: Noul(instructions=instructions)
+                    for name, instructions in questions.items()
+                },
+                model="jev-1.13.0",
+            )
+        return {
+            name: getattr(r.nouls.get(name), "noul", None)
+            for name in questions
+        }
+    except Exception:
+        _crumb(",".join(questions))
+        return {name: None for name in questions}
+
+
 def ask_choice(state, name, instructions, criteria):
     """Choice question -> (winning key, confidence), (None, None) fail-closed."""
     return ask_choices(state, {name: (instructions, criteria)}).get(

@@ -6,6 +6,17 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-24
 
+- **Ceremony deep-cut: real per-principle evidence and findings plumbing**
+  (docs/records/2026-09-24-ceremony-deep-fix.md): the ten-principle verdict
+  now means ten distinct evidence sets (21 matrix-named requirements
+  matched exactly-once against independently gathered facts;
+  cross-principle supply refuses), the drive drops from six kernel
+  commands to three with the verdict struct passed in-process and a 2-line
+  report, typed Jev challenges ride the certificate as bounded review
+  findings via the new `--findings=` transport and the fail-open producer,
+  and timing lines name the startup and bridge legs. Hard constraints
+  preserved: fixed candidate message, content-hash contract,
+  prepare/commit and commit/push cert separation.
 - **Typed Jev decision seams (typed-first, batched, confidence-gated)**
   (docs/records/2026-09-24-ceremony-optimization-and-jev-integration.md):
   research review verdicts, review-finding severities, and the oversight
