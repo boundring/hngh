@@ -6,11 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a configuration validation script under scripts/ that checks YAML files for syntax errors
-  Verification: bash -n scripts/validate_config.sh
-- [ ] Create a test helper under tests/ that runs the validation script and reports pass/fail
-  Verification: bash tests/test_validate.sh
-- [ ] Update the main Makefile to include the new validation step in the test target
+- [ ] Add a job script that validates configuration syntax
+  Verification: bash -n jobs/validate-config.sh
+
+- [ ] Create a test that exercises the validation script
   Verification: make test
-- [ ] Add a README note under cadence/ documenting the new validation workflow
-  Verification: grep -q "validation" cadence/README.md
+
+- [ ] Add a cadence helper that checks job dependencies
+  Verification: bash -n cadence/check-deps.sh
+
+- [ ] Update the main test suite to include new validation tests
+  Verification: make test
+
+- [ ] Add documentation for the new validation workflow
+  Verification: bash -n jobs/validate-config.sh
+
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n jobs/validate-config.sh && bash -n cadence/check-deps.sh
