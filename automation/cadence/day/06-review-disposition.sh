@@ -40,10 +40,6 @@ fi
 digest_date="$(basename "$file" .md)"
 digest_date="${digest_date#REVIEW-}"
 
-nits="$(grep -c '^- nit:' "$file" 2>/dev/null || true)"
-printf '%s [%s] %s nit finding(s) skipped\n' "$(date -u +%H:%M:%S)" \
-  "$JOB_NAME" "${nits:-0}" >&2
-
 # slug-mint guard (2026-09-18, plan 2026-09-18-backlog-p0-security-fixes
 # step 4, gap-slug-residual-mints): the finding text becomes an
 # alert-identity slug, not a filename — still scrubbed at the source
@@ -67,14 +63,83 @@ scr_slugify() {
     sed 's/^-*//; s/-*$//'
 }
 
-# finding lines are markdown list items: "- P1: text" / "- P2: text"
-grep '^- P[12]:' "$file" 2>/dev/null | while IFS= read -r finding; do
-  text="${finding#- P[12]: }"
-  slug="$(scr_slugify "$text")"
-  [ -n "$slug" ] || slug="finding"
-  file_report alert "$text fix or park with cause" \
-    "review-finding:$digest_date:$slug"
-done
+# severity policy (llm_guardrails trick): the model assesses, code owns the
+# policy. severity_of is the one precedence rule -- the final severity is
+# the STRICTER of the typed judgment and the parsed legacy prefix (P1 >
+# P2 > nit), so a typed answer can RAISE a finding (serious work buried
+# under "- nit:") but can never silently LOWER a P1 the model flagged.
+severity_of() {
+  local typed="$1" legacy="$2" r
+  for r in P1 P2 nit; do
+    if [ "$typed" = "$r" ] || [ "$legacy" = "$r" ]; then
+      printf '%s\n' "$r"
+      return 0
+    fi
+  done
+  printf '\n'
+}
+
+# one typed batched request per digest (fan-out): stdin = finding lines,
+# stdout = one arbiter label per line (empty = typed unavailable). Typed
+# unavailable (no key / no arbiter yet / any error) -> empty output and
+# the legacy prefixes alone route, identical to the pre-typed behavior.
+typed_severities() {
+  TYPESAFE_DIGEST="$(head -c 8000 "$1")" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import ask_choices, arbiter
+lines = [l.rstrip('\n') for l in sys.stdin if l.strip()]
+state = {'digest': os.environ.get('TYPESAFE_DIGEST', '')}
+questions = {}
+for i, line in enumerate(lines, 1):
+    qid = 'finding_%d' % i
+    state[qid] = line
+    questions[qid] = (
+        'Severity of the finding in \`%s\`: P1 = serious (broken behavior, data loss, security), P2 = nice to have, nit = style/minor.' % qid,
+        ['P1', 'P2', 'nit'])
+typed = ask_choices(state, questions)
+labels = ['P1', 'P2', 'nit']
+for i, line in enumerate(lines, 1):
+    legacy = line[2:].split(':', 1)[0].strip()
+    t, _c = typed.get('finding_%d' % i, (None, None))
+    print(arbiter((t, _c), legacy if legacy in labels else None, labels, 0.5) or '')
+" 2>/dev/null
+}
+
+# finding lines are markdown list items: "- P1: text" / "- P2: text" /
+# "- nit: text"; the scan now sees all three so nits stop being silently
+# dropped by accident -- skipping them is the named policy constant here.
+route_findings() {
+  local f="$1" finding text legacy slug final nits=0 i=0
+  local -a findings typed
+  mapfile -t findings < <(grep -E '^- (P1|P2|nit):' "$f" 2>/dev/null)
+  mapfile -t typed < <(printf '%s\n' "${findings[@]}" | typed_severities "$f")
+  for finding in "${findings[@]}"; do
+    legacy="${finding#- }"
+    legacy="${legacy%%:*}"
+    final="$(severity_of "${typed[i]:-}" "$legacy")"
+    i=$((i + 1))
+    case "$final" in
+    nit)
+      nits=$((nits + 1))
+      ;;
+    P1 | P2)
+      text="${finding#- ${legacy}: }"
+      slug="$(scr_slugify "$text")"
+      [ -n "$slug" ] || slug="finding"
+      file_report alert "$text fix or park with cause" \
+        "review-finding:$digest_date:$slug"
+      ;;
+    *)
+      nits=$((nits + 1))
+      ;;
+    esac
+  done
+  printf '%s [%s] %s nit finding(s) skipped\n' "$(date -u +%H:%M:%S)" \
+    "$JOB_NAME" "$nits" >&2
+}
+
+route_findings "$file"
 
 breadcrumb "$JOB_NAME" "review-dispose-done" "$file sunk to report queue"
 exit 0

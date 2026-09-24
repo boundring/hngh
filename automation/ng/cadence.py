@@ -242,22 +242,17 @@ def _verdict_of(ans) -> str:
     return str(getattr(v, "value", v))
 
 
-def _handle(d: Path, ev: dict, attempts: int, emitted: list,
-            base_url: str | None = None, is_def: bool = False,
-            exhausted: set | None = None
+def _handle(d: Path, ev: dict, attempts: int, emitted: list, ans,
+            is_def: bool = False, exhausted: set | None = None
             ) -> tuple[int, bool, int, bool]:
-    """Ask Jev for one event, emit the mapped action.
+    """Consume one injected Jev answer, emit the mapped action.
     Returns (attempts used, park-for-revisit, input tokens, stop-beat).
     NEVER raises — any failure files an escalation (fail closed)."""
     bid = ev.get("payload", {}).get("id", "")
     ev_sv = ev.get("state_version", 0)
     cap = _attempt_cap()
-    try:
-        if jev is None:
-            raise RuntimeError("jev unavailable")
-        ev["_attempts"] = attempts
-        ans = jev.ask(_question(ev), base_url=base_url)
-    except Exception:
+    if ans is None:  # ask plumbing failed (jev missing or raised); a soft
+        # jev failure arrives as its ESCALATE-on-failure Answer shape below
         emitted.append(_emit(d, "escalation.filed", {"bead": bid, "question_head": "triage",
                                                     "reason": "jev-error"}))
         return attempts + 1, False, 0, False
@@ -370,6 +365,7 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
                                                     "reason": "legs-exhausted"}))
         _save_deferred(d, [en for en, is_def in queue if is_def])
         return emitted
+    askable: list[tuple[dict, bool, "contract.Question"]] = []
     for i, (entry, is_deferred) in enumerate(rest):
         ev, attempts = entry["event"], entry["attempts"]
         bid = ev.get("payload", {}).get("id", "")
@@ -388,16 +384,42 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
             if is_deferred:
                 still.append(entry)
             continue
-        used, park, tok, stop = _handle(d, ev, attempts, emitted,
-                                        base_url=leg_url, is_def=is_deferred,
-                                        exhausted=exhausted)
+        ev["_attempts"] = attempts
+        askable.append((entry, is_deferred, _question(ev)))
+    # Fan-out ask: ONE batched call for 2+ questions, one ask for a single.
+    # A whole-call failure leaves every slot None -> "jev-error" per event
+    # (fail closed, no park).
+    answers: list = [None] * len(askable)
+    if askable and jev is not None:
+        qlist = [q for _, _, q in askable]
+        try:
+            if len(qlist) >= 2:
+                old_url = os.environ.get("HNGH_JEV_URL")
+                if leg_url:  # legs route the local lane; ask_batch takes no base_url
+                    os.environ["HNGH_JEV_URL"] = leg_url
+                try:
+                    got = jev.ask_batch(qlist)
+                finally:
+                    if old_url is None:
+                        os.environ.pop("HNGH_JEV_URL", None)
+                    else:
+                        os.environ["HNGH_JEV_URL"] = old_url
+            else:
+                got = [jev.ask(qlist[0], base_url=leg_url)]
+            answers = (list(got) + answers)[:len(askable)]
+        except Exception:
+            pass
+    for j, ((entry, is_deferred, _q), ans) in enumerate(zip(askable, answers)):
+        ev, attempts = entry["event"], entry["attempts"]
+        used, park, tok, stop = _handle(d, ev, attempts, emitted, ans,
+                                        is_def=is_deferred, exhausted=exhausted)
         spent += tok
         _save_budget(d, date, spent)
         if park:  # triage.deferred lives in STATE now, not as a ledger kind
             still.append({"event": {k: v for k, v in ev.items() if k != "_attempts"},
                           "attempts": used})
         if stop:  # dispatch cap: no further dispatch-classified asks this beat
-            for e2, is_def2 in rest[i + 1:]:
+            for e2, is_def2, _q2 in askable[j + 1:]:
                 if is_def2:
                     still.append(e2)
             break
@@ -427,7 +449,9 @@ def _dry_run() -> None:
             contract.Verdict.ESCALATE, "escalate", (), q.state_version)
         with mock.patch.object(sys.modules[__name__], "_open_beads",
                                return_value=(list(beads), "")), \
-                mock.patch.object(jev, "ask", side_effect=jev_fx or fake):
+                mock.patch.object(jev, "ask", side_effect=jev_fx or fake), \
+                mock.patch.object(jev, "ask_batch",
+                                  side_effect=lambda qs: [(jev_fx or fake)(q) for q in qs]):
             out = beat(ledger_dir=d, max_events=kw.get("max_events", 16))
         return tmp, d, out
 

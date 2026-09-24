@@ -387,12 +387,36 @@ steer_leg() {
  }
  touch "$LAST_BEAT"
  recent=$(grep -E "steer|alert|optimize" "$STATE_FILE" | tail -5)
- out=$(printf '%s\n%s\n' \
-  "Review the STATE tail for active-work hazards and loop-recognition: if the recent tail shows repeated identical job/step execution with no distinct progress, recommend steering: interrupt-and-redirect with the specific next action (prevent the repeat as it starts); otherwise steer: none. Reply exactly one line: steer: <action> or steer: none" \
-  "$recent" | timeout 60 curl -s -m 55 "$STEER_MODEL" -d @- 2>/dev/null | head -c 400)
- case "$out" in
- *steer:* | *STEER*) breadcrumb "oversight-tick" "steer" "${out%%$'\n'*}" ;;
- *) breadcrumb "oversight-tick" "steer" "none (model had no actionable reply)" ;;
+ # typed hazard gate (sde_cascade FIRE_T): one Noul over the tail decides
+ # whether the steer-model call is worth firing at all. >= 0.7 fires the
+ # model for the action; < 0.7 annotates only; unavailable keeps the
+ # legacy prompt+parse path untouched (fail-open).
+ hazard=$(TYPESAFE_TAIL="$recent" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import ask_noul
+v = ask_noul({'tail': os.environ.get('TYPESAFE_TAIL', '')}, 'steer_hazard',
+ 'Does this execution tail show repeated identical execution with no distinct progress? true: consecutive steps repeat the same action against the same state with no new artifacts, conclusions, files, or state changes. false: each step produces an observable change or advances the goal.')
+print('unavailable' if v is None else ('steer' if v >= 0.7 else 'none'))
+" 2>/dev/null)
+ case "${hazard:-unavailable}" in
+ steer)
+  # action-only prompt: the hazard gate already made the decision
+  out=$(printf '%s\n%s\n' \
+   "Active-work hazard confirmed: the tail shows repeated identical execution with no distinct progress. Reply with only the interrupt-and-redirect action: the specific next action that prevents the repeat as it starts." \
+   "$recent" | timeout 60 curl -s -m 55 "$STEER_MODEL" -d @- 2>/dev/null | head -c 400)
+  breadcrumb "oversight-tick" "steer" "${out%%$'\n'*}"
+  ;;
+ none) breadcrumb "oversight-tick" "steer" "none (typed: no active-work hazard)" ;;
+ *)
+  out=$(printf '%s\n%s\n' \
+   "Review the STATE tail for active-work hazards and loop-recognition: if the recent tail shows repeated identical job/step execution with no distinct progress, recommend steering: interrupt-and-redirect with the specific next action (prevent the repeat as it starts); otherwise steer: none. Reply exactly one line: steer: <action> or steer: none" \
+   "$recent" | timeout 60 curl -s -m 55 "$STEER_MODEL" -d @- 2>/dev/null | head -c 400)
+  case "$out" in
+  *steer:* | *STEER*) breadcrumb "oversight-tick" "steer" "${out%%$'\n'*}" ;;
+  *) breadcrumb "oversight-tick" "steer" "none (model had no actionable reply)" ;;
+  esac
+  ;;
  esac
 }
 

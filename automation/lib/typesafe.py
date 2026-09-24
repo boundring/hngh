@@ -57,11 +57,21 @@ def ask_noul(state, name, instructions):
 
 
 def ask_choice(state, name, instructions, criteria):
-    """Choice question -> winning key, or None fail-closed."""
+    """Choice question -> (winning key, confidence), (None, None) fail-closed."""
+    return ask_choices(state, {name: (instructions, criteria)}).get(
+        name, (None, None))
+
+
+def ask_choices(state, questions):
+    """Batched Choice questions -> {name: (winning key, confidence)},
+    {} fail-closed. ONE system_one call for every question (parallel_questions
+    fan-out: the shared state is paid once). questions maps name ->
+    (instructions, criteria list).
+    """
     c = _client()
     if c is None:
-        _crumb(name)
-        return None
+        _crumb(",".join(questions))
+        return {}
     try:
         from typesafe_sdk import Choice
 
@@ -73,12 +83,33 @@ def ask_choice(state, name, instructions, criteria):
                         instructions=instructions,
                         criteria={k: None for k in criteria},
                     )
+                    for name, (instructions, criteria) in questions.items()
                 },
+                model="jev-1.13.0",
             )
-        return r.choices[name].choice
+        return {
+            name: (
+                getattr(r.choices[name], "choice", None),
+                getattr(r.choices[name], "confidence", None),
+            )
+            for name in questions
+        }
     except Exception:
-        _crumb(name)
-        return None
+        _crumb(",".join(questions))
+        return {}
+
+
+def arbiter(typed, legacy, labels, min_conf=0.5):
+    """Pure precedence, the whole policy surface: typed wins when it is in
+    labels with confidence >= min_conf; else legacy wins when it is in
+    labels; else None. Per-site tuning is min_conf only.
+    """
+    t_label, t_conf = typed if typed else (None, None)
+    if t_label in labels and t_conf is not None and t_conf >= min_conf:
+        return t_label
+    if legacy in labels:
+        return legacy
+    return None
 
 
 def ask_score(state, name, instructions, criteria):

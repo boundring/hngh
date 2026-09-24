@@ -26,8 +26,17 @@ class FailClosed(unittest.TestCase):
     def test_no_key_choice_none(self):
         env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
         with unittest.mock.patch.dict(os.environ, env, clear=True):
-            self.assertIsNone(
-                typesafe.ask_choice({"s": "t"}, "q", "Pick one.", ["a", "b"]))
+            self.assertEqual(
+                typesafe.ask_choice({"s": "t"}, "q", "Pick one.", ["a", "b"]),
+                (None, None))
+
+    def test_no_key_ask_choices_empty(self):
+        env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            self.assertEqual(
+                typesafe.ask_choices(
+                    {"s": "t"}, {"q": ("Pick one.", ["a", "b"])}),
+                {})
 
     def test_no_key_score_none(self):
         env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}
@@ -47,6 +56,80 @@ class FailClosed(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, env, clear=True):
             self.assertIsNone(
                 typesafe.closeout_evidence_noul({"s": "t"}, "did the thing"))
+
+
+class ChoiceBatch(unittest.TestCase):
+    """ask_choices fan-out: one system_one round trip, one entry per
+    question, pinned model id."""
+
+    def _fake(self, answers, calls):
+        class A:
+            def __init__(self, choice, confidence):
+                self.choice = choice
+                self.confidence = confidence
+
+        class R:
+            pass
+
+        class FakeClient:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def system_one(self, state, questions, model=None):
+                calls.append((set(questions), model))
+                r = R()
+                r.choices = {k: A(*v) for k, v in answers.items()}
+                return r
+
+        return FakeClient()
+
+    def test_ask_choice_returns_label_and_confidence(self):
+        calls = []
+        fake = self._fake({"q": ("b", 0.87)}, calls)
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                got = typesafe.ask_choice(
+                    {"s": "t"}, "q", "Pick one.", ["a", "b"])
+        self.assertEqual(got, ("b", 0.87))
+        self.assertEqual(calls[0][1], "jev-1.13.0")
+
+    def test_ask_choices_one_call_many(self):
+        calls = []
+        fake = self._fake(
+            {"verdict": ("adopted", 0.9), "severity": ("P1", 0.7)}, calls)
+        with unittest.mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "x"}):
+            with unittest.mock.patch.object(
+                    typesafe, "_client", return_value=fake):
+                got = typesafe.ask_choices({"s": "t"}, {
+                    "verdict": ("Verdict?", ["adopted", "parked"]),
+                    "severity": ("Severity?", ["P1", "nit"]),
+                })
+        self.assertEqual(got, {"verdict": ("adopted", 0.9),
+                               "severity": ("P1", 0.7)})
+        self.assertEqual(len(calls), 1)  # one round trip
+        self.assertEqual(calls[0][0], {"verdict", "severity"})
+
+
+class Arbiter(unittest.TestCase):
+    LABELS = ["adopted", "parked", "killed"]
+
+    def test_typed_wins_over_legacy(self):
+        self.assertEqual(
+            typesafe.arbiter(("adopted", 0.9), "parked", self.LABELS),
+            "adopted")
+
+    def test_low_confidence_defers_to_legacy(self):
+        self.assertEqual(
+            typesafe.arbiter(("adopted", 0.2), "parked", self.LABELS),
+            "parked")
+
+    def test_both_invalid_none(self):
+        self.assertIsNone(
+            typesafe.arbiter(("weird", 0.9), "bogus", self.LABELS))
 
 
 class FanoutSingleCall(unittest.TestCase):
