@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Ceremony-drive commit identity contract: the certificate-bound git
-commit that the drive executes is attributed to the machine identity,
-never to ambient git config.
+commit that the drive executes is attributed to the pinned default
+operator identity, never to ambient git config.
 
 The 2026-09-13 Fixture leak (docs/records/2026-09-16-identity-seam-
 reconciliation.md) showed 42 ceremony candidates riding whatever
@@ -15,7 +15,8 @@ Contract (hermetic: disposable fixture repo, no network, no push):
 - a real (non-dream) drive over a leaky-ambient fixture repo (repo-local
   user.name/user.email set to a distracting identity, no GIT_*_NAME /
   GIT_*_EMAIL in the inherited environment) commits with author AND
-  committer exactly hngh-machine <automation@hngh.local>;
+  committer exactly boundring <boundring@gmail.com> (2026-09-24 operator
+  attribution decision);
 - an operator who explicitly exports GIT_AUTHOR_* / GIT_COMMITTER_*
   keeps precedence over the defaults (the pin is a default, not a
   hijack).
@@ -42,8 +43,8 @@ for _HOSTILE_VAR in ("GIT_DIR", "GIT_WORK_TREE"):
 for _CONFIG_VAR in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"):
   os.environ.setdefault(_CONFIG_VAR, "/dev/null")
 
-MACHINE_NAME = "hngh-machine"
-MACHINE_EMAIL = "automation@hngh.local"
+OPERATOR_NAME = "boundring"
+OPERATOR_EMAIL = "boundring@gmail.com"
 LEAKY_NAME = "Leaky Ambient"
 LEAKY_EMAIL = "leaky@example.invalid"
 IDENTITY_ENV_PREFIXES = ("GIT_AUTHOR_", "GIT_COMMITTER_")
@@ -124,16 +125,16 @@ class DriveCommitIdentity(unittest.TestCase):
     self.assertEqual(4, len(lines), out)
     return lines
 
-  def test_ambient_leak_is_pinned_to_machine_identity(self):
+  def test_ambient_leak_is_pinned_to_operator_identity(self):
     out = self.run_drive()
     self.assertEqual(0, out.returncode, out.stdout + out.stderr)
     self.assertIn("committed", out.stdout)
     author_name, author_email, committer_name, committer_email = \
       self.head_identity()
-    self.assertEqual(MACHINE_NAME, author_name, out.stdout)
-    self.assertEqual(MACHINE_EMAIL, author_email, out.stdout)
-    self.assertEqual(MACHINE_NAME, committer_name, out.stdout)
-    self.assertEqual(MACHINE_EMAIL, committer_email, out.stdout)
+    self.assertEqual(OPERATOR_NAME, author_name, out.stdout)
+    self.assertEqual(OPERATOR_EMAIL, author_email, out.stdout)
+    self.assertEqual(OPERATOR_NAME, committer_name, out.stdout)
+    self.assertEqual(OPERATOR_EMAIL, committer_email, out.stdout)
 
   def test_explicit_operator_env_wins_over_defaults(self):
     out = self.run_drive(env_overrides={

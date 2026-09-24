@@ -50,10 +50,10 @@
 (flet ((pin-identity-default (name value)
          (unless (plusp (length (or (uiop:getenv name) "")))
            (setf (uiop:getenv name) value))))
-  (pin-identity-default "GIT_AUTHOR_NAME" "hngh-machine")
-  (pin-identity-default "GIT_AUTHOR_EMAIL" "automation@hngh.local")
-  (pin-identity-default "GIT_COMMITTER_NAME" "hngh-machine")
-  (pin-identity-default "GIT_COMMITTER_EMAIL" "automation@hngh.local"))
+  (pin-identity-default "GIT_AUTHOR_NAME" "boundring")
+  (pin-identity-default "GIT_AUTHOR_EMAIL" "boundring@gmail.com")
+  (pin-identity-default "GIT_COMMITTER_NAME" "boundring")
+  (pin-identity-default "GIT_COMMITTER_EMAIL" "boundring@gmail.com"))
 
 (let* ((script-path (or *load-truename* *compile-file-truename*
                         (truename (first sb-ext:*posix-argv*))))
