@@ -4633,7 +4633,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T00:48:28Z | progress | 1b6752bf | research line synth-2026-09-24-1 reviewed: parked (parked — keep the record, no action now) | 2026-09-24T00:48:28Z-progress-1b6752bf.md |
 | 2026-09-24T01:00:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T01:00:36Z-progress-ebb46dea.md |
 | 2026-09-24T01:00:37Z | progress | 418a92cc | router routed crumbs-mirror:rows -> plan candidate 2026-09-24-routed-crumbs-mirror-rows (routed-at 2026-09-24T01:00:37Z) | 2026-09-24T01:00:37Z-progress-418a92cc.md |
-| 2026-09-24T01:01:16Z | alert | e1468c4f | plan 2026-09-22-dev-synth-2026-09-20-1 not auto-accepted: step 5 has no Verification line ×17 | 2026-09-24T01:01:16Z-alert-e1468c4f.md |
+| 2026-09-24T01:01:16Z | alert | e1468c4f | plan 2026-09-22-dev-synth-2026-09-20-1 not auto-accepted: step 5 has no Verification line ×18 | 2026-09-24T01:01:16Z-alert-e1468c4f.md |
 | 2026-09-24T01:01:19Z | progress | 274469cc | research line synth-2026-09-24-2: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-2.md | 2026-09-24T01:01:19Z-progress-274469cc.md |
 | 2026-09-24T01:04:35Z | progress | 22c25062 | plan 2026-09-24-dev-synth-2026-09-20-1 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T01:04:35Z ×2 | 2026-09-24T01:04:35Z-progress-22c25062.md |
 | 2026-09-24T01:04:35Z | progress | f6b93e2d | plan 2026-09-24-routed-crumbs-mirror-rows auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T01:04:35Z | 2026-09-24T01:04:35Z-progress-f6b93e2d.md |
@@ -4647,11 +4647,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T01:50:03Z | alert | ed2d89b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=44.3s median=21.1s ×14 | 2026-09-24T01:50:03Z-alert-ed2d89b4.md |
 | 2026-09-24T01:50:07Z | progress | c362b4a8 | agent-supervision: evicted-stale omp-CanonEthosBrief-84c73e (idle 364m) | 2026-09-24T01:50:07Z-progress-c362b4a8.md |
 | 2026-09-24T01:52:35Z | progress | 5b23ce51 | research line synth-2026-09-24-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T01:52:35Z-progress-5b23ce51.md |
-| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×33 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
+| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×35 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
 | 2026-09-24T01:52:47Z | alert | 50346b24 | patrol handoffs: bad-execution on agent-handoffs.md -- 8 dead/cancelled in last 10 rows ×2 | 2026-09-24T01:52:47Z-alert-50346b24.md |
-| 2026-09-24T01:52:48Z | alert | 1b07f997 | patrol manga: manga-stale on manga -- newest draft 252h old > 48h ×17 | 2026-09-24T01:52:48Z-alert-1b07f997.md |
+| 2026-09-24T01:52:48Z | alert | 1b07f997 | patrol manga: manga-stale on manga -- newest draft 252h old > 48h ×18 | 2026-09-24T01:52:48Z-alert-1b07f997.md |
 | 2026-09-24T01:52:48Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-24T01:52:48Z-alert-c4a1f47d.md |
-| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×198 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
+| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×210 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
 | 2026-09-24T01:55:04Z | alert | f0b090b7 | [oversight] slow-unit: dropin:58-patrol.sh wall=13.6s median=5.7s ×11 | 2026-09-24T01:55:04Z-alert-f0b090b7.md |
 | 2026-09-24T01:55:09Z | progress | 545201b0 | agent-supervision: evicted-stale omp-OmpBridgeDefault-3bd71b (idle 361m) | 2026-09-24T01:55:09Z-progress-545201b0.md |
 | 2026-09-24T02:00:05Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-24T02:00:05Z-progress-3dd20cc1.md |
@@ -4661,7 +4661,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T02:00:18Z | alert | 24125f31 | router expired candidate 2026-09-18-routed-patrol-manga (unaccepted 24h past routing; identity patrol:manga) | 2026-09-24T02:00:18Z-alert-24125f31.md |
 | 2026-09-24T02:00:18Z | progress | 4f16d8ce | router routed patrol:manga -> plan candidate 2026-09-24-routed-patrol-manga (routed-at 2026-09-24T02:00:18Z) | 2026-09-24T02:00:18Z-progress-4f16d8ce.md |
 | 2026-09-24T02:01:14Z | progress | eb3bb83a | research line synth-2026-09-24-3: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T02:01:14Z-progress-eb3bb83a.md |
-| 2026-09-24T02:07:54Z | alert | d00adb9c | plan acceptance blocked: hngh-automation make test FAILED (rc=127) ×4 | 2026-09-24T02:07:54Z-alert-d00adb9c.md |
+| 2026-09-24T02:07:54Z | alert | d00adb9c | plan acceptance blocked: hngh-automation make test FAILED (rc=127) ×5 | 2026-09-24T02:07:54Z-alert-d00adb9c.md |
 | 2026-09-24T02:10:06Z | progress | 5e712744 | agent-supervision: evicted-stale omp-PluginInRepo-93e1fb (idle 362m) | 2026-09-24T02:10:06Z-progress-5e712744.md |
 | 2026-09-24T02:11:19Z | progress | fa526cbe | research line synth-2026-09-24-2 reviewed: killed (killed -- close the line (misattributed patrol observation, hypothetical guardrail premise, core distinctions already resolved by current architecture)) | 2026-09-24T02:11:19Z-progress-fa526cbe.md |
 | 2026-09-24T02:15:03Z | alert | 31524b8c | [oversight] slow-unit: hngh-cadence-hour.service wall=669.5s median=266.3s ×11 | 2026-09-24T02:15:03Z-alert-31524b8c.md |
@@ -4792,7 +4792,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T09:08:04Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 | 2026-09-24T09:08:04Z-progress-adcaae87.md |
 | 2026-09-24T09:08:04Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md | 2026-09-24T09:08:04Z-progress-0e221d65.md |
 | 2026-09-24T09:17:04Z | progress | c92546cf | research line fail-20260924-Do-any-of-the-five-related-findings-docu: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-fail-20260924-Do-any-of-the-five-related-findings-docu.md | 2026-09-24T09:17:04Z-progress-c92546cf.md |
-| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×8 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
+| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×10 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
 | 2026-09-24T09:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T09:30:36Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T10:00:02Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:13Z | progress | bad01eca | router routed feedback-a8c12813 -> plan candidate 2026-09-24-routed-feedback-a8c12813 (routed-at 2026-09-24T10:00:13Z) | 2026-09-24T10:00:13Z-progress-bad01eca.md |
@@ -4809,7 +4809,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T12:35:00Z | alert | 96bd99de | [oversight] tree-skew: Projects/etc/hngh dirty and uncommitted >4h ×3 | 2026-09-24T12:35:00Z-alert-96bd99de.md |
 | 2026-09-24T13:00:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T13:00:36Z-progress-ebb46dea.md |
 | 2026-09-24T13:00:37Z | alert | 4626b1d4 | router expired candidate 2026-09-03-routed-tree-skew-hngh (unaccepted 24h past routing; identity tree-skew:hngh) ×3 | 2026-09-24T13:00:37Z-alert-4626b1d4.md |
-| 2026-09-24T13:00:37Z | alert | 24f76a83 | router escalation: tree-skew:hngh re-fired 1x with no landing (oldest occurrence 2026-09-24T13:00:37Z; candidate 2026-09-03-routed-tree-skew-hngh expired after 24h unaccepted) ×6 | 2026-09-24T13:00:37Z-alert-24f76a83.md |
+| 2026-09-24T13:00:37Z | alert | 24f76a83 | router escalation: tree-skew:hngh re-fired 1x with no landing (oldest occurrence 2026-09-24T13:00:37Z; candidate 2026-09-03-routed-tree-skew-hngh expired after 24h unaccepted) ×7 | 2026-09-24T13:00:37Z-alert-24f76a83.md |
 | 2026-09-24T13:00:37Z | progress | 4bb9702b | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh (routed-at 2026-09-24T13:00:37Z) | 2026-09-24T13:00:37Z-progress-4bb9702b.md |
 | 2026-09-24T13:00:37Z | alert | c9cba3fd | router dedup escalation: feedback-a8c12813 recurring — suppressed 3 times today — escalated to operator visibility ×5 | 2026-09-24T13:00:37Z-alert-c9cba3fd.md |
 | 2026-09-24T13:00:37Z | alert | debf0277 | router escalated: feedback-a8c12813 re-occurred 3 times without landing — plan 2026-09-24-routed-feedback-a8c12813 parked (cause=obsolete); operator disposition stands | 2026-09-24T13:00:37Z-alert-debf0277.md |
@@ -4849,14 +4849,23 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T18:00:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T18:00:36Z-progress-ebb46dea.md |
 | 2026-09-24T18:00:37Z | progress | 3f601442 | agent-supervision: evicted-stale omp-SessionCeremonyCost-c25537 (idle 361m) | 2026-09-24T18:00:37Z-progress-3f601442.md |
 | 2026-09-24T18:00:37Z | alert | 1afa1f55 | router expired candidate 2026-09-15-routed-patrol-journal-error (unaccepted 24h past routing; identity patrol:journal-error) | 2026-09-24T18:00:37Z-alert-1afa1f55.md |
-| 2026-09-24T18:00:37Z | alert | f94e6a36 | router escalation: patrol:journal-error re-fired 6x with no landing (oldest occurrence 2026-09-15T06:00:39Z; candidate 2026-09-15-routed-patrol-journal-error expired after 24h unaccepted) | 2026-09-24T18:00:37Z-alert-f94e6a36.md |
-| 2026-09-24T18:00:37Z | alert | f2fca21c | router escalated: patrol:journal-error re-occurred 7 times without landing — plan 2026-09-15-routed-patrol-journal-error parked (cause=obsolete); operator disposition stands | 2026-09-24T18:00:37Z-alert-f2fca21c.md |
+| 2026-09-24T18:00:37Z | alert | f94e6a36 | router escalation: patrol:journal-error re-fired 6x with no landing (oldest occurrence 2026-09-15T06:00:39Z; candidate 2026-09-15-routed-patrol-journal-error expired after 24h unaccepted) ×2 | 2026-09-24T18:00:37Z-alert-f94e6a36.md |
+| 2026-09-24T18:00:37Z | alert | f2fca21c | router escalated: patrol:journal-error re-occurred 7 times without landing — plan 2026-09-15-routed-patrol-journal-error parked (cause=obsolete); operator disposition stands ×2 | 2026-09-24T18:00:37Z-alert-f2fca21c.md |
 | 2026-09-24T18:00:37Z | progress | 56b9eab4 | router routed patrol:journal-error -> plan candidate 2026-09-24-routed-patrol-journal-error (routed-at 2026-09-24T18:00:37Z) | 2026-09-24T18:00:37Z-progress-56b9eab4.md |
-| 2026-09-24T18:00:37Z | alert | b48a31ef | router dedup: agent-stall:omp-2026-09-24T00-32-15-248Z_01a-2070c5 suppressed (routed candidate 2026-09-24-routed-agent-stall-omp-2026-09-24T00-32-15-248Z_01a-2070c5 still live, 1h old; day count 1) | 2026-09-24T18:00:37Z-alert-b48a31ef.md |
-| 2026-09-24T18:00:38Z | alert | db91be10 | router expired candidate 2026-09-04-routed-tree-skew-hngh (unaccepted 24h past routing; identity tree-skew:hngh) | 2026-09-24T18:00:38Z-alert-db91be10.md |
+| 2026-09-24T18:00:37Z | alert | b48a31ef | router dedup: agent-stall:omp-2026-09-24T00-32-15-248Z_01a-2070c5 suppressed (routed candidate 2026-09-24-routed-agent-stall-omp-2026-09-24T00-32-15-248Z_01a-2070c5 still live, 1h old; day count 1) ×2 | 2026-09-24T18:00:37Z-alert-b48a31ef.md |
+| 2026-09-24T18:00:38Z | alert | db91be10 | router expired candidate 2026-09-04-routed-tree-skew-hngh (unaccepted 24h past routing; identity tree-skew:hngh) ×2 | 2026-09-24T18:00:38Z-alert-db91be10.md |
 | 2026-09-24T18:00:38Z | progress | fe436047 | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh-6 (routed-at 2026-09-24T18:00:38Z) | 2026-09-24T18:00:38Z-progress-fe436047.md |
 | 2026-09-24T18:04:45Z | progress | d09b09c3 | plan 2026-09-24-routed-agent-stall-omp-2026-09-24T00-32-15-248Z_01a-2070c5 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T18:04:45Z | 2026-09-24T18:04:45Z-progress-d09b09c3.md |
 | 2026-09-24T18:04:45Z | progress | b91b7d2a | plan 2026-09-24-routed-patrol-journal-error auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T18:04:45Z | 2026-09-24T18:04:45Z-progress-b91b7d2a.md |
 | 2026-09-24T18:04:45Z | progress | aa1fa913 | plan 2026-09-24-routed-tree-skew-hngh-4 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T18:04:45Z | 2026-09-24T18:04:45Z-progress-aa1fa913.md |
 | 2026-09-24T18:04:46Z | progress | 6c22f627 | plan 2026-09-24-routed-tree-skew-hngh-5 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T18:04:45Z | 2026-09-24T18:04:46Z-progress-6c22f627.md |
 | 2026-09-24T18:04:46Z | progress | 57ec8ddb | plan 2026-09-24-routed-tree-skew-hngh-6 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T18:04:45Z | 2026-09-24T18:04:46Z-progress-57ec8ddb.md |
+| 2026-09-24T18:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T18:30:36Z-progress-ebb46dea.md |
+| 2026-09-24T18:35:03Z | progress | 003d9703 | agent-supervision: evicted-stale omp-TypeSafeCookbooks-286475 (idle 361m) | 2026-09-24T18:35:03Z-progress-003d9703.md |
+| 2026-09-24T18:55:37Z | progress | db4650b8 | agent-supervision: evicted-stale omp-PartBVerdictGlue-8b6188 (idle 360m) | 2026-09-24T18:55:37Z-progress-db4650b8.md |
+| 2026-09-24T18:55:37Z | progress | bd0cc614 | agent-supervision: evicted-stale omp-PartBSeveritySteer-172c91 (idle 362m) | 2026-09-24T18:55:37Z-progress-bd0cc614.md |
+| 2026-09-24T18:55:37Z | progress | e8a1bdf4 | agent-supervision: evicted-stale omp-PartBSkillCatalogue-5f041a (idle 365m) | 2026-09-24T18:55:37Z-progress-e8a1bdf4.md |
+| 2026-09-24T19:00:17Z | alert | 37e8083f | router expired candidate 2026-09-16-routed-patrol-journal-error (unaccepted 24h past routing; identity patrol:journal-error) | 2026-09-24T19:00:17Z-alert-37e8083f.md |
+| 2026-09-24T19:00:17Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T19:00:17Z-progress-ebb46dea.md |
+| 2026-09-24T19:00:17Z | progress | c188739d | router routed patrol:journal-error -> plan candidate 2026-09-24-routed-patrol-journal-error-2 (routed-at 2026-09-24T19:00:17Z) | 2026-09-24T19:00:17Z-progress-c188739d.md |
+| 2026-09-24T19:00:18Z | progress | 893ba546 | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh-7 (routed-at 2026-09-24T19:00:18Z) | 2026-09-24T19:00:18Z-progress-893ba546.md |
