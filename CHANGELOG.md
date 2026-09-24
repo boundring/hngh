@@ -6,6 +6,23 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-24
 
+- **Typed Jev decision seams (typed-first, batched, confidence-gated)**
+  (docs/records/2026-09-24-ceremony-optimization-and-jev-integration.md):
+  research review verdicts, review-finding severities, and the oversight
+  steer gate route through typed TypeSafe System One judgments (one batched
+  request per beat/digest) with per-site confidence thresholds and a
+  fail-closed legacy fallback; the local Jev lane gains the typed
+  `/v1/systemone` path beside the existing chat lane; the typesafe-ai skill
+  installs to both skill homes and a catalogue of 18 TypeSafe cookbook
+  recipes lands in docs/design/ts-integration-assessment.md.
+- **Session-ceremony cost levers**: measured evidence first (the
+  certificate ceremony is seconds-scale: 3.68s of instrumented drive steps
+  inside an 88.67s job wall; the 20-minute cost is session-level model
+  turns) - the executor persona defaults to the one-shot
+  `scripts/omp-bridge --ceremony` wrapper with records in the same candidate
+  set and checkpoint-before-the-wall discipline, context packs carry a
+  pre-digested state digest, respawn briefs carry landed/uncommitted git
+  evidence, and dream briefs are cached per exact step text.
 - **Machine identity flip: machine commits attribute the operator**
   (docs/records/2026-09-24-machine-identity-operator-attribution.md):
   per the 2026-09-24 operator attribution decision every machine
