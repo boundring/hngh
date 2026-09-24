@@ -6,17 +6,11 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper script that validates job output structure
-  Verification: bash -n cadence/validate-job-output.sh
-
-- [ ] Create a test that exercises the cadence helper against a sample job
+- [ ] Add a configuration validation script under scripts/ that checks YAML files for syntax errors
+  Verification: bash -n scripts/validate_config.sh
+- [ ] Create a test helper under tests/ that runs the validation script and reports pass/fail
+  Verification: bash tests/test_validate.sh
+- [ ] Update the main Makefile to include the new validation step in the test target
   Verification: make test
-
-- [ ] Add a dashboard digest template for automation status reporting
-  Verification: bash -n dashboard/digest-template.sh
-
-- [ ] Update lib/automation-core to import the new cadence helper
-  Verification: bash -n lib/automation-core/
-
-- [ ] Run the full test suite to confirm no regressions
-  Verification: make test
+- [ ] Add a README note under cadence/ documenting the new validation workflow
+  Verification: grep -q "validation" cadence/README.md

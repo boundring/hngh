@@ -12,3 +12,4 @@ at 2026-09-05T04:00:45Z. Alert text: [oversight] tree-skew: Projects/etc/hngh di
 ## Occurrences
 
 - 2026-09-19T14:16:32Z re-occurred (dedup window expired)
+- 2026-09-24T16:00:37Z re-occurred (dedup window expired)
