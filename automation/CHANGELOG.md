@@ -2,6 +2,12 @@
 
 ## 2026-09-24
 
+- dream: typed-first dream briefs - a clearly-green typed judgment over
+  the five dream fields (requirements/surfaces/split Choices at
+  confidence >= 0.5, failure-modes/sanity-checks risk Nouls below 0.5)
+  renders the brief without a dream session; anything else escalates to
+  the existing session dream, and typed briefs are cached per exact step
+  text.
 - ops: streamlining cuts - the unpinned-tail model ladder folds to one
   ordered leg list (byte-identical across 130 pre/post scenarios), the
   beat-skip studio probe runs once per verdict window instead of per

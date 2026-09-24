@@ -792,6 +792,57 @@ dream_cache_path() {
 }
 # ponytail: dream cache lives forever, keyed by exact step text; add a TTL if a stale brief ever bites.
 
+# typed-first dream brief (2026-09-24 streamlining): one typed judgment
+# over the five dream fields, gating hard - only a clearly-green typed
+# brief (every Choice green with confidence >= 0.5, both risk Nouls
+# below 0.5) replaces the dream session; anything else (low confidence,
+# any None, no TYPESAFE_API_KEY) prints nothing and escalates to the
+# session dream unchanged.
+dream_typed_brief() { # dprompt pfile step -> five-line brief on stdout, empty = escalate
+ local dprompt="$1" pfile="$2" step="$3"
+ env DREAM_PACK="$dprompt" DREAM_PLAN="$pfile" DREAM_STEP="$step" python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$ROOT', 'lib'))
+from typesafe import ask_nouls, ask_choices
+try:
+    pack = open(os.environ['DREAM_PACK']).read()
+    plan = open(os.environ['DREAM_PLAN']).read()
+except Exception:
+    raise SystemExit(0)
+st = {'pack': pack, 'plan': plan, 'step': os.environ.get('DREAM_STEP', '')}
+ch = ask_choices(st, {
+    'requirements': ('Are the step requirements fully specified in the step text and plan?', ['clear', 'vague', 'missing']),
+    'surfaces': ('Does the step name every file and symbol it touches?', ['named', 'partial', 'unnamed']),
+    'split': ('Is the step one commit-sized unit?', ['single', 'multi']),
+})
+nu = ask_nouls(st, {
+    'failure-modes': 'Is there a plausible failure mode the step text does not address?',
+    'sanity-checks': 'Is the step verification too weak to catch a wrong implementation?',
+})
+def okc(name, want):
+    v, c = ch.get(name, (None, None))
+    return v == want and isinstance(c, (int, float)) and c >= 0.5
+def okn(name):
+    v = nu.get(name)
+    return isinstance(v, (int, float)) and v < 0.5
+if not (okc('requirements', 'clear') and okc('surfaces', 'named')
+        and okc('split', 'single') and okn('failure-modes')
+        and okn('sanity-checks')):
+    raise SystemExit(0)
+gloss = {
+    'failure-modes': 'of an unaddressed failure mode',
+    'sanity-checks': 'of verification too weak to catch a bad implementation',
+}
+out = []
+for name in ('requirements', 'failure-modes', 'surfaces', 'split', 'sanity-checks'):
+    if name in ch:
+        out.append('%s: typed %s (p=%.2f)' % (name, ch[name][0], ch[name][1]))
+    else:
+        out.append('%s: typed risk p=%.2f %s' % (name, nu[name], gloss[name]))
+sys.stdout.write('\n'.join(out) + '\n')
+" 2>/dev/null || true
+}
+
 if [ -n "$plan_file" ]; then
  slug="$plan_slug"
  objective="Execute the next step of plan $slug: $plan_step"
@@ -921,6 +972,8 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
   dream_out="$ROOT/prompts/overnight/$slug.dream.md"
   dream_cached="$(dream_cache_path "$slug:$dream_step")"
   rm -f "$dream_out"
+  local dprompt typed_brief=""
+  dprompt="$(build_dream_prompt "$slug" "$pfile" "$dream_step" "$dream_out")"
   if [ -s "$dream_cached" ]; then
    # cached brief: a prior attempt of this exact step already paid the
    # dream pass (see the cache helpers) - reuse it, never re-dream.
@@ -932,9 +985,21 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
    dream_informed=1
    breadcrumb "$JOB_NAME" "forethought-dream-cache" \
     "$slug reused cached dream brief"
+  elif typed_brief="$(dream_typed_brief "$dprompt" "$pfile" "$dream_step")" &&
+   [ -n "$typed_brief" ]; then
+   # typed-first dream brief: a clearly-green typed judgment renders the
+   # five fields without a dream session (the helper's gate escalates
+   # everything else to the session path below).
+   printf '%s\n' "$typed_brief" >"$dream_out"
+   mkdir -p "$ROOT/state/dream-briefs" && cp "$dream_out" "$dream_cached"
+   {
+    printf '\n## Dream sanity-checks (verify these assertions FIRST, before your first edit)\n\n'
+    cat "$dream_out"
+   } >>"$prompt_file"
+   dream_informed=1
+   breadcrumb "$JOB_NAME" "forethought-dream-typed" \
+    "$slug typed dream brief (no session)"
   else
-   local dprompt
-   dprompt="$(build_dream_prompt "$slug" "$pfile" "$dream_step" "$dream_out")"
    local save_ts="$TIMEOUT_S"
    TIMEOUT_S="${OVERNIGHT_DREAM_TIMEOUT:-600}" # bounded dream, never 2x the beat
    launch_session "$slug-dream" \
