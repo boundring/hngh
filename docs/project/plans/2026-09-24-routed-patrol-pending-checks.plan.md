@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=patrol:pending-checks -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-24T03:06:31Z routed-from=patrol:pending-checks -->
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:pending-checks`
