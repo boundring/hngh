@@ -56,12 +56,14 @@ inside the sentinels.
   spine — router escalation with bump-in-place landed 2026-09-06. The
   historical x10 tree-skew burst stands on record
   ([bestiary.md](../design/bestiary.md), class: obsolete).
-- 3 of 16 artifact classes are write-only per the torch ledger
-  (hngh-automation `torch-ledger.tsv`): digest-BENCH, digest-RESEARCH,
-  email-qa.log — wire-or-delete pending. digest-REVIEW flipped live
-  the same day via the review-findings sink. The artifact-consumer
-  invariant runs daily under [the Descent](../design/descent.md)'s
-  Audit station (`hngh-automation/cadence/day/17-torch-audit.sh`).
+- 0 of 18 artifact classes are write-only per the torch ledger
+  (hngh-automation `torch-ledger.tsv`) as of 2026-09-24: digest-BENCH,
+  digest-RESEARCH, and email-qa.log all gained readers in the
+  unresolved-matters pass (email-digest bench/qa lines; the research
+  beat's REVIEW evidence). digest-REVIEW flipped live 2026-09-06 via
+  the review-findings sink. The artifact-consumer invariant runs daily
+  under [the Descent](../design/descent.md)'s Audit station
+  (`hngh-automation/cadence/day/17-torch-audit.sh`).
 
 ## Where it goes
 

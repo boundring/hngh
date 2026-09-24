@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script under jobs/ that validates automation output format
-  Verification: bash -n jobs/validate-output-format.sh
+- [ ] Add a new job template for batch data processing under jobs/
+  Verification: bash -n jobs/batch-data-template.sh && make test
 
-- [ ] Add a corresponding test case under tests/ that exercises the new job
+- [ ] Create a verification script to validate job template syntax
+  Verification: python3 scripts/validate-job-template.py
+
+- [ ] Add unit tests for the new job template logic
   Verification: make test
 
-- [ ] Add a cadence entry under cadence/ to schedule the new job
-  Verification: bash -n cadence/schedule-validate-output-format.sh
+- [ ] Update cadence configuration to register the new job template
+  Verification: grep -q batch-data cadence/config.yaml && make test
 
-- [ ] Add a dashboard snippet under dashboard/ to display job status
-  Verification: bash -n dashboard/status-display.sh
+- [ ] Add a dashboard snippet to display batch job status
+  Verification: bash -n dashboard/batch-status-snippet.sh && make test
 
-- [ ] Add a lib helper under lib/ for shared output parsing logic
-  Verification: bash -n lib/output-parser.sh
-
-- [ ] Add a digest entry under digest/ to summarize job results
-  Verification: bash -n digest/summarize-validate-output-format.sh
+- [ ] Create a digest rule to summarize batch job outcomes
+  Verification: python3 digest/batch-summary.py && make test
