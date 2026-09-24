@@ -4,18 +4,22 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: Implements the output-verification research line by adding a script that validates job output format before dashboard ingestion, ensuring consistent data flow.
-
 ## Steps
 
-- [ ] Add a validation script that checks job output format compliance
-  Verification: bash -n scripts/validate-output.sh
+- [ ] Add a new job script under jobs/ that validates automation output format
+  Verification: bash -n jobs/validate-output-format.sh
 
-- [ ] Create a test that exercises the validation script against sample output
+- [ ] Add a corresponding test case under tests/ that exercises the new job
   Verification: make test
 
-- [ ] Add a cadence job that runs the validation script before dashboard update
-  Verification: bash -n cadence/run-validation.sh
+- [ ] Add a cadence entry under cadence/ to schedule the new job
+  Verification: bash -n cadence/schedule-validate-output-format.sh
 
-- [ ] Verify the new cadence job integrates with existing test suite
-  Verification: make test
+- [ ] Add a dashboard snippet under dashboard/ to display job status
+  Verification: bash -n dashboard/status-display.sh
+
+- [ ] Add a lib helper under lib/ for shared output parsing logic
+  Verification: bash -n lib/output-parser.sh
+
+- [ ] Add a digest entry under digest/ to summarize job results
+  Verification: bash -n digest/summarize-validate-output-format.sh

@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-24T04:03:57Z routed-from=overnight:plan-accept-gate:automation -->
+<!-- plan: status=parked risk=normal accepted=2026-09-24T04:03:57Z routed-from=overnight:plan-accept-gate:automation  cause=obsolete disposed=2026-09-24T21:48:36Z reason=superseded by 2026-09-24-routed-overnight-plan-accept-gate-automation-4; residue sweep 2026-09-24 (unresolved-matters pass) -->
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-gate:automation`

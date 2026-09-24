@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-24T20:04:01Z routed-from=patrol:journal-error -->
+<!-- plan: status=parked risk=normal accepted=2026-09-24T20:04:01Z routed-from=patrol:journal-error  cause=obsolete disposed=2026-09-24T21:48:36Z reason=superseded by 2026-09-24-routed-patrol-journal-error-4; residue sweep 2026-09-24 (unresolved-matters pass) -->
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:journal-error`
