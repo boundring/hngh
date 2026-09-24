@@ -8,7 +8,7 @@ commit that changes no behavior), the exception is by rule, not by
 mood."
 
 This guard makes that sentence falsifiable: every commit after the
-restatement (26b98590) (pre-rewrite c257bf6e) that touches the code surface (src/, tests/,
+restatement (8cf1e640) (pre-rewrite c257bf6e; 26b98590 before the 2026-09-23 attribution rewrite) that touches the code surface (src/, tests/,
 scripts/, Makefile, hngh.asd) must either be a certificate-bound
 candidate commit or carry the rule-based exemption label. Anything else
 is a violation and fails the gate.
@@ -42,14 +42,16 @@ import subprocess
 import sys
 
 # pre-rewrite c257bf6e; re-keyed across the 2026-09-23 path-scrub
-# filter-repo rewrite
-RESTATEMENT = "26b98590"
+# filter-repo rewrite, then re-keyed across the 2026-09-23 attribution
+# rewrite (all authors folded to the operator identity)
+RESTATEMENT = "8cf1e640"
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 SUBTREE_SQUASH = re.compile(r"^Squashed '.*' content from commit [0-9a-f]+$")
 KNOWN_EXEMPTIONS = {
     # keys re-keyed by ceremony across the 2026-09-23 path-scrub filter-repo rewrite
+    # keys re-keyed by ceremony across the 2026-09-23 attribution rewrite (all authors folded to the operator identity)
     # comment-only alignment of composition-root references; predates the guard
-    "e2a23b22": {
+    "03923ff7": {
         "reason": "comment-only docs alignment (pre-guard)",
         "patch-id": "09b439c8625b0c12d3bf402a5cf696af0157d6c2",
     },
@@ -59,7 +61,7 @@ KNOWN_EXEMPTIONS = {
     # patch-id corrected by the 2026-09-14 gate-cure (declared separately as
     # under the same commit's full prefix the same day; the two declarations
     # are merged here into one entry -- one commit, one exemption)
-    "25c77422": {
+    "a7bc7039": {
         "reason": "portfolio ebook/journal commit touching a kernel script "
                   "(declared miss 2026-09-06, gate-cure 2026-09-14)",
         # re-registered under the hermetic full-index recipe
@@ -75,7 +77,7 @@ KNOWN_EXEMPTIONS = {
     # the guard-cure content itself was separately certified by candidate
     # 2f9e618f (cd106b9d) in the same hour. Declared post-hoc per the
     # 44afc663 precedent; cured by this declaration -- not rewritten.
-    "e8525546": {
+    "4dee589b": {
         "reason": "docs ledger repair that swept a staged tests/ edit "
                   "(repair content certified separately by cd106b9d)",
         "patch-id": "752265b35015dbb50a0ac2714f2bcdc83eec9fe5",
@@ -83,7 +85,7 @@ KNOWN_EXEMPTIONS = {
     # 2026-09-16 declared miss: queue Next-pointer advance swept the
     # staged packages.lisp export edit (docs: message touching src/);
     # the swept export content is inert (exports for landed kernel work).
-    "01aeddfc": {
+    "90b36b53": {
         "reason": "queue Next advance that swept a staged packages.lisp "
                   "export edit (swept content inert exports)",
         "patch-id": "9a0ba9df24112623d54e1b60cffdfd54f5f11d62",
@@ -92,7 +94,7 @@ KNOWN_EXEMPTIONS = {
     # 2026-09-16 declared miss: the fbe55f82-cure commit swept an
     # automation tests/ edit into a kernel-tests/ declaration (mixed-lane
     # message); automation content separately gated by the automation tier.
-    "1fa33ed3": {
+    "77179bd1": {
         "reason": "mixed-lane cure commit (kernel declaration + automation "
                   "test tracking); automation content separately gated",
         "patch-id": "6c7f8cbd145ef255cf2d575704b7e2a50567e70d",
@@ -103,11 +105,11 @@ KNOWN_EXEMPTIONS = {
     # cured by post-hoc certification (2026-09-11) -- not rewritten.
     # hash post-purge (2026-09-11 secret-scrub filter-branch), same patch-id
     # as the declared original (a2f4d0e / 31768d2); re-keyed by ceremony
-    "e4fba4e5": {
+    "3e3c66ab": {
         "reason": "omp-bridge --propose/--plan-status (declared miss)",
         "patch-id": "558c84f7a35794b3368334fe3b1e0f1b15e8ac7e",
     },
-    "1020b310": {
+    "971bdde8": {
         "reason": "omp-bridge --plan-status bare-slug fix (declared miss)",
         "patch-id": "697027ae813c96d0bc7638841aa542fe833972a6",
     },
@@ -115,7 +117,7 @@ KNOWN_EXEMPTIONS = {
     # scripts/ under the automation free-commit rule without the candidate
     # label; change operator-approved (dispatch frame + blocker auto-unpark),
     # full automation suite green at commit time
-    "02797f58": {
+    "ee98bf5c": {
         "reason": "auto-unpark blocker cooldown + README daily dispatch frame (declared miss)",
         "patch-id": "d72c1f2c8248d8f23944898278398f5ed0c38c40",
     },
@@ -125,7 +127,7 @@ KNOWN_EXEMPTIONS = {
     # (scripts/generate-publication) carries the narrative layer and the
     # public dispatch edition; the miss is the same class as 214b8c2c --
     # declared, not rewritten.
-    "07fbd0fc": {
+    "601bfc7a": {
         "reason": "narrative daily ledger + public dispatch edition (declared miss)",
         "patch-id": "38ad9a7cc2679d4dad027bb8fe3f6a4e277e198f",
     },
@@ -133,20 +135,20 @@ KNOWN_EXEMPTIONS = {
     # mission) touched tests/scripts/test-dashboard-live.py without a
     # candidate label; TERM=dumb graceful skip, automation suite green at
     # commit time; declared per the 214b8c2c precedent, not rewritten
-    "ff8311d4": {
+    "d121ef76": {
         "reason": "CI push-trigger + dashboard-live TERM robustness (declared miss)",
         "patch-id": "ae8b9f0569e6ea0c8a14ca66445d664069e99529",
     },
     # declared post-hoc 2026-09-12: CI-green chase (operator-directed
     # mission) touched tests/scripts/test-dashboard-tui.py; textual-missing
     # skip for the help banner, automation suite green at commit time
-    "c558f19e": {
+    "2831009e": {
         "reason": "tui help textual-missing skip + CI sbcl prereq (declared miss)",
         "patch-id": "92bdff695bb02f8d57d3eb3e3a9f50e5744d9907",
     },
     # same CI-green chase, 2026-09-12: hngh-services machine-path
     # resolution skips foreign hosts; automation suite green at commit
-    "d2ec9ec8": {
+    "08d1f327": {
         "reason": "hngh-services foreign-host path skip (declared miss)",
         "patch-id": "a1b23363e5daa52760432e9bae9b52f8c3322794",
     },
@@ -159,47 +161,47 @@ KNOWN_EXEMPTIONS = {
     # 1898ad49) -- a synthetic pair appearing in kernel history. Declared
     # per the standing post-hoc policy, not rewritten; see the
     # 2026-09-13 decisions.md batch entry and the gate-cure patrol.
-        "23f7ea93": {
+        "fee46a32": {
         "reason": "UnicodeDecodeError fix: errors=replace on guard subprocess calls (Typesafe docs introduced 0xa9 bytes)",
         "patch-id": "c6a44ec855481f15508119b99b001f06748a64eb",
     },
-                    "392f9673": {
+                    "31dffba0": {
         "reason": "adds ae485100 exemption (terminal: next commit is docs-only)",
         "patch-id": "ad1abbc8ccf86b6a3f3738c48c599773397eeb19",
     },
-        "e7ae857d": {
+        "b0c525f6": {
         "reason": "terminal exemption commit: breaks the exemption regress (docs-only after this)",
         "patch-id": "5121b2b688200e341aef8d7da8e7e27786325dda",
     },
-    "0a1b825a": {
+    "a3cd2e99": {
         "reason": "cleanup of unreachable exemptions + da694e36 exemption (post-force-push table correction)",
         "patch-id": "83d7a2febe8d0ddb72d69b0028e371dc561d0dd1",
     },
-    "6a9bba56": {
+    "5a1d67f5": {
         "reason": "UnicodeDecodeError fix: errors=replace on guard subprocess calls (Typesafe docs 0xa9 bytes); exemptions for the unreachable force-push entries removed",
         "patch-id": "db1c70bf87d094696746f78a4bf25cb33f8d2b05",
     },
-    "2bb4f416": {
+    "c76be3c8": {
         "reason": "fixture pair head: Makefile+README gut (declared miss)",
         "patch-id": "a46ed8ae5a64949d7e5dbe8917902e125586d5d3",
     },
-    "cd93bf6b": {
+    "3f089351": {
         "reason": "fixture pair revert: restores Makefile+README (declared miss)",
         "patch-id": "cef31fa5a3ea871522e0a3ea3e537088c9a8952b",
     },
-                                "92cd2bd1": {
+                                "fda0f00a": {
         "reason": "add 722d8d48 exemption (STATE.md restore + guard meta-exemption chain)",
         "patch-id": "f7a4a35c5c650b153c8b4e2509b1b8f0e16f089c",
     },
-    "227431ae": {
+    "5ae03dc8": {
         "reason": "STATE.md restore + guard meta-exemption for 6a26962a (STATE.md is runtime state tests expect tracked)",
         "patch-id": "0f86cac917280d7f2f29bfe34ded86c31ea0c672",
     },
-    "60573ecf": {
+    "77ec1727": {
         "reason": "loop-history guard test fix: errors='replace' + 365d368a exemption (meta-exemption: modifies the guard itself)",
         "patch-id": "7e04be069396144922c56a0b7518629df280ea8d",
     },
-    "5c235a97": {
+    "4ed7c6b8": {
         "reason": "batch stable-point snapshot before restart: worker-modified test files committed together (gate 2931 green, declared miss)",
         # pre-rewrite registered id a9cdae6a... already matched the
         # guard's text-mode recipe on the post-rewrite commit (binary
@@ -209,12 +211,12 @@ KNOWN_EXEMPTIONS = {
     },
 
     # fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed -- kernel-gate red cure 2026-09-13, declared not rewritten
-    "1af92a45": {
+    "49bf7fed": {
         "reason": "fix: report-queue evidence-gated dedup — stale condition re-alerts suppressed (declared miss, gate-cure patrol)",
         "patch-id": "891d22e68a3121dfabdf780bb4c685772c4eac60",
     },
     # fix: omp-bridge --ceremony cleans its ephemeral store on every exit path -- kernel-gate red cure 2026-09-13, declared not rewritten
-    "8261c54c": {
+    "9600bcc4": {
         "reason": "fix: omp-bridge --ceremony cleans its ephemeral store on every exit path (declared miss, gate-cure patrol)",
         "patch-id": "dff584c160b3d902f8cf36ad977f11a7386b7730",
     },
@@ -223,7 +225,7 @@ KNOWN_EXEMPTIONS = {
     # without a candidate label: the capitalized Peer map acceptance that
     # test-system-awareness.sh case C exercises. Automation suite green at
     # commit time; declared per the 214b8c2c precedent, not rewritten.
-    "b22ad44a": {
+    "45511bf8": {
         "reason": "fleet-manager capitalized Peer map acceptance (declared miss, CI-green chase)",
         "patch-id": "643d451075296e2dca554060f86d0d13a27607d2",
     },
@@ -234,13 +236,13 @@ KNOWN_EXEMPTIONS = {
     # without a candidate label; pre-existing origin history, gate-cured
     # per the standing post-hoc policy (docs/records/
     # 2026-09-18-loop-history-gate-cure-10cbb5eb.md), not rewritten.
-    "3771ed1a": {
+    "fa60bf0a": {
         "reason": "tests: pin probe-model-route HTTPError-is-live branch "
                   "(declared miss, gate-cure patrol 2026-09-18)",
         "patch-id": "9fd6d94e9972ae4bc7e7dbb8adc5fc1a488d126a",
     },
     # tests: break exemption infinite regress (terminal commit) -- kernel-gate red cure 2026-09-17, declared not rewritten
-    "96eafe71": {
+    "05483171": {
         "reason": "tests: break exemption infinite regress (terminal commit) (declared miss, gate-cure patrol)",
         "patch-id": "a214f7b06e3d11e4014b9d403210ab4065c5e686",
     },
