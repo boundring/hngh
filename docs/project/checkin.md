@@ -1,5 +1,7 @@
 # Check-ins — gentle periodic look at the project
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 A light heartbeat on Hngh itself. Purpose: catch drift, note health,
 and occasionally inject a small steering correction — never to create
 busywork. Cadence is operator-set (here: ~per session or on the

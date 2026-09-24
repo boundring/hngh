@@ -407,6 +407,7 @@ named, not hidden:
    node-lattice amendments roll into stage 3 and stage 7") goes
    stale: the admission amendment lands in stage 3 entirely. The line
    is already marked as history; the section 7 footnote supersedes it.
+   superseded 2026-09-24 - see roadmap.md:25-33
 6. master-plan.md section 5 P-phases are not renumbered. The merge
    pulls P5-adjacent lattice work (admission, key rotation) earlier;
    master-plan is a dated planning artifact (2026-08-26) and needs a

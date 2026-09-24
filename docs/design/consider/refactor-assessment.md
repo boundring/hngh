@@ -1,5 +1,7 @@
 # Tech-debt vs refactor assessment: hngh -> Hnnghh (2026-09-15)
 
+superseded 2026-09-24 - superseded by research-lifecycle-audit.md, 2026-09-24 (2026-09-16 audit numbers)
+
 ## Size
 
 - Kernel src/ 8.5k LOC Lisp, tests/ 9.0k LOC (2,931+ checks). Well-tested, pure charter.

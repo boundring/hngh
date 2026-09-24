@@ -1,5 +1,7 @@
 # Repo topology — merging hngh-automation into hngh
 
+superseded 2026-09-24 - the P0 merge is recorded done at decisions.md:420 (2026-09-07, git subtree --squash, 222 files)
+
 Status: CONSIDERATION — 2026-09-07. No decision made. Written for the
 operator's question: if the automation is part of Hngh, why is it a
 separate repo? All counts were measured (`git grep`, `git log`), not

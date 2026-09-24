@@ -1,5 +1,7 @@
 # 2026-09-15 - Consideration: research lifecycle, memory, game-feel, and the pivot question
 
+superseded 2026-09-24 - superseded by research-lifecycle-audit.md, 2026-09-24 (2026-09-16 audit numbers)
+
 Status: CONSIDERATION ONLY. Nothing here is folded into hngh's plans,
 roadmap, or code. This document exists so the operator can decide
 where/how/when (and whether) any of it proceeds. Inputs: four read-only

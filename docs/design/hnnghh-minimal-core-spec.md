@@ -332,6 +332,7 @@ honest loss it names.
   (absent evidence fails closed) instead of letting them decide. The
   earlier claim that gate crumbs run "newest-crumbs-wins, no TTL" was
   a superseded-state description and is false of the current tree.
+  struck 2026-09-24 - claim superseded, false of the current tree.
   Still real: suppression-as-fix routing (router-tick.py:20-22 and
   :442-468, dedup suppresses candidates within the day, routed !=
   resolved, escalation only at >=3 dedups) and meta-loop weight

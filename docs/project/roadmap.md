@@ -74,10 +74,11 @@ as the operator-mirror and keyring admissions — the distro ambition is
 explicitly back-burnered behind named triggers, and the near-term ladder
 (installer skeleton -> environment contract -> package registry ->
 cross-platform abstraction) routes through existing backlog rows and the
-stage 5 research alternation. Companion policies the same turn: social
-surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md))
-and OSS contribution
-([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)).
+stage 5 research alternation. Companion policies the same turn (both
+struck 2026-09-24):
+
+- social surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md)) - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
+- OSS contribution ([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)) - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
 
 Governed Fleet consolidation (2026-09-13): stages 3+4 are merged into
 one stage ("The Governed Fleet",

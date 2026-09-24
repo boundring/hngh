@@ -1,5 +1,7 @@
 # Fail-First
 
+superseded 2026-09-24 - implemented (lib/failfirst.sh), 2026-09-24
+
 Status: DESIGN — 2026-09-07, implemented (hngh-automation lib/failfirst.sh).
 Self-tuning replaces pre-set throttles for cycled operations.
 

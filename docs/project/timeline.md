@@ -1,5 +1,7 @@
 # Timeline — the queue that runs itself
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 How the rotation cadence turns into a visible, traceable schedule:
 heartbeat artifacts, zoom-out passes, and the entities a future
 dashboard could draw.

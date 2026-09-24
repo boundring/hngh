@@ -1,5 +1,7 @@
 # Session notes — operator session, 2026-08-27
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 Dated: 2026-08-27. Status: draft harvested from the day's operator session for
 Main's ceremony; nothing here authorizes a future action (records rule).
 

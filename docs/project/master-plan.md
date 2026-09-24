@@ -133,8 +133,9 @@ with research/design production.
 
 ## 8. Immediate next actions (this plan's own first slices)
 
-1. Fold this master plan into `docs/project/` (ceremony), link it from
-   `architecture-index.md` — the plan is now the prerequisite gate.
+1. ~~Fold this master plan into `docs/project/` (ceremony), link it from
+   `architecture-index.md` — the plan is now the prerequisite gate.~~
+   landed 2026-09-24 - linked from docs/architecture-index.md and the docs/README.md map (foundation-consolidation slice)
 2. Close **P1 #1.5**: machine-steered course-selection as a written
    policy in a pure `select-course` use case (the ArchPlan R2 gap: it
    lives in a service tick today, not clean governance).

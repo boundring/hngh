@@ -6,6 +6,18 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-24
 
+- **Foundation consolidation: doctrine layer, constitutional preamble,
+  planned-work trim** (docs/records/2026-09-24-foundation-consolidation.md):
+  the canon and the seventeen-voice pantheon become the interpretive
+  register at named seams (findings reading, office vocabulary, structural
+  mapping) via the new docs/design/interpretation-doctrine.md; GOVERNANCE.md
+  gains a constitutional preamble (sections 1-13 verbatim; ordinary
+  section-11 change with DCO sign-off); the front door (intent,
+  architecture, the map, architecture-index) threads the federal structure,
+  the canon ethos, and the master plan; stale/duplicated docs carry dated
+  causes; planned-work surfaces are folded and the misaligned content and
+  commercial lane is struck with one-line causes, named follow-up rows land
+  in the backlog.
 - **Ops streamlining (behavior-identical cuts + typed levers)**
   (docs/records/2026-09-24-ceremony-deep-fix.md): the unpinned-tail
   model ladder folds to one ordered leg list (byte-identical across 130

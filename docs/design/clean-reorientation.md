@@ -1,5 +1,7 @@
 # Clean reorientation — the automation tier
 
+superseded 2026-09-24 - the P0 merge is recorded done at decisions.md:420 (2026-09-07, git subtree --squash, 222 files)
+
 Status: PLAN — 2026-09-07. Track B is pending the operator's P0 merge
 decision ([repo-merge-consideration.md](repo-merge-consideration.md));
 Track A starts immediately. Every finding re-verified live on

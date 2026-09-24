@@ -1,5 +1,7 @@
 # Interface plan — the needs-first contract for Hngh's command center
 
+superseded 2026-09-24 - superseded by command-center.md (M1-M7/S1-S7 duplicated), 2026-09-24
+
 Status: planning artifact (ceremony-ready). Source: operator directive 2026-08-26
 (`backlog.md` rungs `Command center — CLI + GUI operator surfaces`, `Machine-steered
 backlog`, `Webapp dashboard`, `Hosted agentic interface`, `System awareness rung`,

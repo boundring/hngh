@@ -1,5 +1,7 @@
 # Market scope for Hngh — 2026-08-25 zoom-out pass
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 Read-only recon (4 searches + 8 primary fetches; see the scout
 transcript for full citations). Framing, not commitments: opportunity
 signals that can shape queue candidates.

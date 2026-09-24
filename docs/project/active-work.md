@@ -1,5 +1,7 @@
 # Active work
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 The day's lanes, in the machine's own hand — started, verified, handed
 on.
 

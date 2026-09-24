@@ -1,5 +1,7 @@
 # Self-funding resource scan (2026-08-25)
 
+superseded 2026-09-24 - point-in-time record; the live streams are reports.md + docs/records/
+
 Read-only web scan (all 20 listed URLs verified reachable; 0 404s) for
 bootstrap income + Hngh full-time sustainment. Sources: nothumansearch.ai
 index + site pages; aidevboard.com job postings.

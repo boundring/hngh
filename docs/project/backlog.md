@@ -31,212 +31,35 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Node lattice rung (megastructure mesh)
 
-- **Problem:** a single Hngh node can only learn from its own wall. The
-  operator's planned fleet — an old Android phone, a Steam Deck, a slow
-  laptop with a tired NIC — has no admission path today, and the two
-  capabilities that make a fleet useful (waking a machine on demand,
-  keeping tunnels open without a watching daemon) both touch the outside
-  world in ways the current boundary explicitly does not admit: ambient
-  execution and network side effects.
-- **Smallest useful outcome:** one operator command that admits a second
-  node as a pinned federation peer, exchanges bounded learned facts in
-  both directions (each fact a citable `:remote-attestation` claim), and
-  issues a single wake-on-demand request through the same one-action
-  certificate machinery — still no daemon, no scheduler, no ambient
-  execution; every request is an explicit, recorded, human-closable step.
-- **Source or evidence:** the root README `Where this is going` section
-  (node-lattice vision, 2026-08-25); the federation port, pinned-key
-  registry, and signature-verification transport (promotion rungs
-  11–12) as the admitted substrate; this entry.
-- **Risk:** the network surface grows again — federation fetch is the
-  watch-item the 2026-08-25 external sanity check named for exactly this
-  moment; wake-on-LAN is an external side effect that must ride the
-  mutation lane with real evidence (MAC, current lease, last-seen fact);
-  low-powered peers are unattended, so key rotation and evidence
-  freshness need closed handling before any ambient trust; and the
-  no-daemon boundary is a kernel invariant — any future "keep the tunnels
-  open" mechanism must first amend that boundary through its own policy
-  proposal, not smuggle a watcher in through an adapter.
-- **Dependencies:** the federation surface (rungs 11–15) and policy
-  profiles (rung 16) are in place; the pending pieces are the
-  certificate-bound wake chain and a boundary-amendment proposal that
-  names exactly which ambient operation (if any) is admitted and under
-  what evidence.
-- **Review trigger:** an independent reviewer accepts the admission and
-  wake flows against fixtures (pinned peer identity, stale or missing
-  last-seen refuses, one-request-one-certificate, no ambient process
-  after the request completes) and sees no watcher, scheduler, or
-  background process in the diff.
+- **Struck 2026-09-24:** absorbed by queue row node-lattice-admission, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Certificate-bound wake mutation lane (boundary amendment)
 
-- **Problem:** rung 17's `wake-peer` issues an explicit request through
-  an injected transport, but the request itself is not certificate-
-  bound — a wake is an external side effect and ought to ride the same
-  one-action certificate machinery as a commit, with real evidence
-  (MAC, current lease, last-seen fact) rechecked immediately before the
-  action, exactly as the node-lattice entry's risk section demands.
-- **Smallest useful outcome:** a `:wake-mutation` action in the
-  mutation vocabulary: one certificate for one wake of one pinned
-  peer, rechecked against fresh evidence, executed behind the mutation
-  executor port, refused on stale or missing facts.
-- **Source or evidence:** `docs/records/2026-08-25-r17-wake-peer.md`;
-  the mutation executor (rung 5) and the candidate certificate.
-- **Risk:** a wake must never be a blanket "wake anything" — the
-  certificate binds peer, method, and evidence; the evidence-first and
-  atomic-mutation principles apply unchanged.
-- **Dependencies:** the rung-17 wake surface and the mutation vocabulary
-  (the policy-profile rung is complete and available for the new
-  action's requirement map).
-- **Review trigger:** an independent reviewer accepts that a stale,
-  missing, or extra-evidence wake certificate refuses; only the
-  certificate-bound single wake executes.
+- **Struck 2026-09-24:** absorbed by queue row wake-mutation-lane, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Ambient-free tunnel keepalive (boundary amendment)
 
-- **Problem:** "keeping the tunnels open without a watching daemon"
-  touches ambient execution, which the no-daemon boundary does not
-  admit; the node-lattice vision needs a mechanism that keeps a
-  persistent tunnel (Tailscale) alive without a watcher, scheduler, or
-  background process.
-- **Smallest useful outcome:** a bounded, explicit, operator-invoked
-  keepalive policy file that names which tunnel endpoints may be
-  refreshed, and a single `keepalive` command that checks the tunnel
-  state, refreshes only if the certificate binds the exact endpoint,
-  and records the receipt — no process runs after the command exits
-  (the operator's own scheduler/tee runs the periodic invocation).
-- **Evidence:** the intent doc's "keep the corridors open without a
-  watching process"; the wake-on-demand precedent (rung 17).
-- **Risk:** any ambient process would violate the boundary; the command
-  stays explicit and process-local, the periodic invocation lives
-  outside Hngh (the operator's scheduler), never inside it.
-- **Dependencies:** the tunnel tooling (Tailscale), the mutation lane
-  once it exists, the network admission surface.
-- **Review trigger:** an independent reviewer accepts that no daemon,
-  watcher, or scheduler is installed by Hngh; keepalive is a plain
-  one-shot invocation with a receipt, and the policy names endpoints
-  exactly.
+- **Struck 2026-09-24:** absorbed by queue row tunnel-automation, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Governance property tests — COMPLETED (2026-08-24)
 
-- **Problem:** the principle matrix must be total over the closed kinds and
-  monotone with respect to evidence, but neither property is explicitly
-  tested today.
-- **Smallest useful outcome:** property tests asserting (a) every closed
-  proposal class and principle kind yields a verdict (totality over closed
-  kinds) and (b) dropping evidence can never flip a verdict DENY to ALLOW
-  (monotonicity: ignoring evidence never flips DENY -> ALLOW).
-- **Evidence:** `docs/records/2026-08-24-prior-art-landscape.md` — the
-  in-toto monotonic principle adopted as an invariant.
-- **Risk:** property tests are only as good as their generators; the closed
-  vocabularies must stay in sync with the domain definitions.
-- **Dependencies:** the deterministic principle evaluator and its closed
-  vocabularies (already in place).
-- **Review trigger:** an independent reviewer accepts the property suite and
-  sees it fail on a deliberately introduced totality or monotonicity break.
+completed; history in git + records (folded 2026-09-24)
 
 ## DSSE envelope export serializer
 
-- **Problem:** Hngh certificates are structurally in-toto-like today, but
-  nothing exports them in an interoperable grammar, so external tooling
-  cannot consume them.
-- **Smallest useful outcome:** a serializer that renders certificates and
-  their evidence into a DSSE (or in-toto) envelope for external consumption.
-- **Evidence:** `docs/records/2026-08-24-prior-art-landscape.md` — DSSE
-  named as the future export grammar.
-- **Risk:** none while gated; building the wrong envelope shape before an
-  interop partner exists would be speculative.
-- **Dependencies:** YAGNI-gated: only admitted once an interop consumer (or
-  a partner requirement) exists.
-- **Review trigger:** an interop need is named; an independent reviewer
-  accepts the envelope against the DSSE/in-toto spec.
+- **Struck 2026-09-24:** absorbed by queue row dss-e-export, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Governance-benchmark research lane
 
-- **Definition:** a public, runnable benchmark that scores governance
-  properties (tamper-evidence, approved=executed,
-  reconstruction-from-record, refusal-accounting) of any change-governance
-  system — Hngh, CI pipelines, agent-harness guardrails, voting
-  procedures — so governance claims become comparable evidence, not
-  marketing.
-- **Spec-first order:** the artifact is built only after a reviewer
-  accepts the metric definitions and scenario corpus; the review trigger
-  below stays.
-- **Subjects, near-term (S1–S6):**
-  - **S1** — what GitHub CI/CD actually proves, including the
-    unattested-runner gap (a green check from a runner nobody attested).
-  - **S2** — a Copilot-class weak-validation baseline scored on the same
-    scenarios: the floor every governance system must beat.
-  - **S3** — quorum, BFT, and approval-voting literature as approved=executed
-    prior art.
-  - **S4** — metric definitions v1, with refusal-accounting as the fourth
-    property beside tamper-evidence, approved=executed, and
-    reconstruction-from-record.
-  - **S5** — the scenario corpus: the ten attacks every governance system
-    must survive — tampered record, unapproved execution, record deletion,
-    replay, stale evidence, verifier collusion, and their variants.
-  - **S6** — the conformance-harness adapter contract over the four
-    integration shapes from
-    [integrations-marketplace.md](integrations-marketplace.md).
-- **Subjects, parked (S7–S8):**
-  - **S7** — cross-instance reconstruction under federation, including
-    Sybil resistance and ActivityPub as a transport.
-  - **S8** — signed scorecard publication and a leaderboard.
-- **Dogfood order:** the first scored system is hngh-automation itself.
-  Its plan ledger is currently unversioned and invisible to its own
-  tree-skew monitor — `hngh-automation/jobs/oversight-tick.sh`
-  whitelists `docs/project/plans/` out of the skew check, and
-  `hngh-automation/jobs/sweep-artifacts.sh` stages only STATE.md,
-  dashboard, digest, logs, stats, systemd, and Makefile, never the plan
-  ledger. No external system is scored before the loop scores itself.
-- **Evidence:** `docs/records/2026-08-24-prior-art-landscape.md` — the
-  governance-benchmark gap; AgentDojo/InjecAgent/R-Judge named as prior
-  art.
-- **Review trigger:** an independent reviewer accepts the metric
-  definitions (S4) and the scenario corpus (S5) as a sound basis for the
-  benchmark artifact.
+- **Struck 2026-09-24:** absorbed by queue row governance-benchmark, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Dogfood loop — COMPLETED (promotion rung 9, 2026-08-24; hardened by the loop-history guard 2026-08-25)
 
-- **Problem:** Hngh has never governed a real change to its own repository
-  end to end, so the evidence -> review -> certification -> mutation cycle
-  is untested against itself.
-- **Smallest useful outcome:** Hngh proposes, evaluates, and commits changes
-  to itself via its own harness ("the phoenix's egg"; zero new machinery;
-  exercises evidence, review, certification, and mutation against its own
-  repo).
-- **Evidence:** `docs/records/2026-08-24-prior-art-landscape.md` —
-  strategy sequencing step two, after the operator-facing command surface.
-- **Risk:** the dogfood loop must remain optional; it cannot become the
-  mechanism by which Hngh approves its own roadmap.
-- **Dependencies:** the operator-facing command surface (roadmap Next) and
-  real transport admission come first.
-- **Review trigger:** an independent reviewer accepts the self-committed
-  change and its certificate chain.
+completed; history in git + records (folded 2026-09-24)
 
 ## Operator policy profiles — COMPLETED (promotion rung 16, 2026-08-25)
 
-- **Problem:** rungs 6/11/12/13 added verified, real transports (model
-  review, attestation envelopes, pinned keys, operator reviewer files)
-  but no shipped policy profile *consumes* their fingerprints. The
-  dogfood proposal profile is still the fixture-grade "one requirement
-  per matrix principle"; review facts and `:remote-attestation` facts are
-  recorded evidence with no requirement kind that can demand them.
-- **Smallest useful outcome:** an operator-tunable policy profile — a
-  named, parsable, fail-closed spec that maps requirement kinds
-  (`:claim-proof`, `:review`, `:remote-attestation`, `:purpose`,
-  `:caller`) to matrix principles, admitted via the existing `propose`
-  surface (profile=FILE, mirroring the verdict/pins/reviewer file
-  precedents), with the closed evaluator unchanged.
-- **Evidence:** `docs/records/2026-08-25-r13-operator-reviewer-transport.md`
-  (reviewer transport live); `docs/records/2026-08-24-design-distributed-attestation.md`.
-- **Risk:** a profile must never *broaden* admission beyond the matrix;
-  it only *narrows* which requirement kinds a proposal must satisfy.
-- **Dependencies:** the deterministic principle evaluator and its closed
-  vocabularies (present); rung-13 reviewer transport (present).
-- **Review trigger:** an independent reviewer accepts (a) a profile
-  file that demands `:review` evidence fails a proposal lacking review
-  facts, and (b) the same profile admits a proposal carrying them.
+completed; history in git + records (folded 2026-09-24)
 
 ## Bridge-backed continual worker (worker-rung candidate)
 
@@ -262,60 +85,11 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Node-lattice admission rung (implementation) — queued 2026-08-25
 
-- **Problem:** a single Hngh node learns only from its own wall; the
-  operator's planned fleet (an old Android phone, a Steam Deck, a
-  tired-NIC laptop) has no admission path, and the two capabilities
-  that make a fleet useful (waking a peer, keeping tunnels open
-  without a watcher) both touch the outside world in ways the current
-  boundary does not admit.
-- **Smallest useful outcome:** one operator command admits a second
-  node as a pinned federation peer with an offline fingerprint;
-  bounded remote-attestation facts flow both ways (each a citable
-  claim); the first wake-on-demand rides the certificate machinery; no
-  daemon, no scheduler — every request is a single explicit, recorded,
-  human-closable step.
-- **Evidence:** README `Where this is going` node-lattice vision
-  (2026-08-25); intent.md; the federation port, pinned-key registry,
-  and signature-verification transport (rungs 11–12); http-claim
-  (r15); wake-peer (r17).
-- **Risk:** the network surface grows again — federation fetch is the
-  watch-item the 2026-08-25 external re-review named; low-powered
-  peers are unattended, so key rotation and evidence freshness need
-  closed handling; the no-daemon boundary stays a kernel invariant.
-- **Dependencies:** the certificate-bound wake lane (so a wake rides
-  the certificate); a boundary amendment naming exactly which ambient
-  operation (if any) is admitted; the policy-profile map for admission
-  requirement kinds.
-- **Review trigger:** an independent reviewer accepts the two-node
-  admission and wake flow against fixtures (pinned identity,
-  stale/missing last-seen refuses, one-request-one-certificate) and
-  sees no watcher, scheduler, or background process in the diff.
+- **Struck 2026-09-24:** absorbed by queue row node-lattice-admission, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Documentation-sync loop — queued 2026-08-25
 
-- **Problem:** the check count and command/rung lists in README and
-  the roadmap drifted three separate times across 2026-08-25 and were
-  hand-corrected; the loop-history guard watches commits, not the
-  docs' numbers.
-- **Smallest useful outcome:** a `make numbers` target that recomputes
-  the live check count, rung prose, and CLI command list from the
-  committed suite and surface, plus a small guard test asserting the
-  README/roadmap numbers match ground truth — drift is caught by
-  `make test` instead of by a human.
-- **Evidence:** the 2026-08-25 consistency pass (README count and
-  command surface hand-corrected across the day); the records-index
-  gap fixed the same day.
-  2026-08-30 update: the README-count half landed
-  (`tests/scripts/test-doc-numbers.py`, wired in `make test`); the
-  roadmap rung prose drifted again (the Now paragraph stopped at
-  promotion rung 13) and was corrected by the 2026-08-30 fold-back —
-  the row stays open for rung-prose and CLI-verb-list coverage.
-- **Risk:** the guard must only verify, never auto-rewrite; docs stay
-  human-folded, the guard fails loudly on divergence.
-- **Dependencies:** the existing `make test` suite (whose count is an
-  input) and the surface the numbers describe.
-- **Review trigger:** an independent reviewer sees a deliberately
-  desynced README number fail the guard, and a synced one pass.
+- **Struck 2026-09-24:** absorbed by queue row doc-sync-loop, 2026-09-24 (stale "queued 2026-08-25" state folded: the queue row went done 2026-08-25; proposal prose removed as a duplicate; last commit containing the removed content: bd2c1cee).
 
 ## Night-agent plan authoring (plan-supply) — queued 2026-08-30
 
@@ -346,87 +120,15 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Alert → plan-candidate routing — done 2026-09-01
 
-- **Problem:** honest alerts route nowhere (suite doc 08 R6): every
-  repair that landed in the 2026-08-28→30 window (stale-store,
-  unparsable readout.json, tree-skew, agent-stall eviction, doc-suite
-  checker bug) originated in a plan step or an operator session, never
-  from the alert row itself; the observation loop is open-ended.
-- **Smallest useful outcome:** a routing step that converts a
-  deduplicated alert row into a draft plan step (problem, evidence
-  link, smallest fix) appended to the next drafted plan — never
-  auto-executed, dedup/escalation caps unchanged.
-- **Evidence:** reports.md alert rows 2026-08-28T20:10Z–2026-08-30T12:03Z;
-  docs/records/2026-08-30-lessons-and-foldback.md §1, lesson 2.
-- **Risk:** low — produces draft text only; the existing hourly
-  escalation caps bound volume.
-- **Dependencies:** the night-agent plan-authoring row above.
-- **Review trigger:** one real alert converts to a drafted step the
-  operator accepts unchanged.
-- **Status (2026-09-01):** delivered, loop closed end-to-end. The
-  routing tick (hngh-automation scripts/router-tick.py, commit
-  87e6bc3) plus its production caller (cadence/hour/10-router-feed.sh,
-  commit 7992f78: hourly, unread-alert-only, capped 3/tick,
-  self/critical/charset classes never fed) converted the first real
-  alerts to plan candidates unattended: slow-unit:dropin:20-workbeat.sh
-  → 2026-09-01-routed-slow-unit-dropin-20-workbeat.sh (reports.md
-  bffc89a6) and ui-audit:name-completeness →
-  2026-09-01-routed-ui-audit-name-completeness (reports.md ffa1d58e),
-  both auto-accepted by the accept-plans gate (f4c7e12e, 9993c29d);
-  the next hourly feed re-observed both as already-routed and skipped
-  them (STATE.md 02:00:45Z). Review trigger satisfied in its machine
-  form: a real alert converted to a drafted plan candidate accepted
-  unchanged by the operator's standing accept-plans rule; the
-  personal-operator form remains open until the operator accepts one
-  routed candidate by hand. No auto-execution — routed candidates
-  are plans the cycle schedules, never steps the router runs.
+- **Struck 2026-09-24:** absorbed by queue row alert-plan-routing, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Bridge-as-operator-host — queued 2026-08-25
 
-- **Problem:** the bridge has the full 10-tool surface (including
-  `hngh_run_worker`) and its own repo, but no thread drives the whole
-  governance loop from it — the disposable lane named in the session record
-  (run → worker → review → certify) is still unlaunched on the bridge.
-- **Smallest useful outcome:** an operator in the bridge drives the
-  full step-set — open a run, admit the worker, run the worker, bind
-  the review, certify one mutation — with the ledger as the sole
-  receipt; the session stays disposable (nothing persists beyond the
-  ledger).
-- **Evidence:** the hngh-omp bridge README; the 2026-08-25 live
-  worker lifecycle; r13 operator reviewer file.
-- **Risk:** a host surface is not free flexibility — the bridge is a
-  trusted operator seat; each certificate still binds one action, and
-  no daemon or ambient automation sits behind the tools.
-- **Dependencies:** the bridge (present); the worker-driver
-  no-transport refusal (present); the r13 reviewer file (present); a
-  loadout admitting `:model` for the review step.
-- **Review trigger:** an independent reviewer accepts a run receipt
-  that flowed run → worker → review → certify, and a repeat step
-  refuses minimally when an admission is missing.
+- **Struck 2026-09-24:** absorbed by queue row bridge-operator-host, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Evidence-freshness + key-rotation rung — queued 2026-08-25
 
-- **Problem:** the lattice peers are unattended, and the node-lattice
-  risk names key rotation and evidence freshness as closed concerns —
-  today the pinned registry supports changing keys but nothing rotates
-  them atomically or marks a peer stale by last-seen age.
-- **Smallest useful outcome:** closed key rotation on the pinned
-  registry (one key per peer replaced, never reduced to zero, refused
-  if the resulting set is unrecognizable) plus a stale-evidence rule
-  on remote-attestation facts — a peer whose last-seen fact is older
-  than an operator-set bound flips `:stale` and refuses wake,
-  fail-closed.
-- **Evidence:** the node-lattice and the two boundary proposals (key
-  rotation, evidence freshness); `parse-pinned-keys` (r12) as the
-  rotation substrate.
-- **Risk:** rotation is a state-mutating operator action — ride the
-  mutation lane, one certificate per rotation; a stale peer must not
-  cascade into refusing healthy-peer wake.
-- **Dependencies:** the mutation lane (or the existing candidate
-  certificate for a pure registry rotation); the pinned registry and
-  remote-attestation values.
-- **Review trigger:** a test suite proves an old peer refuses wake,
-  a rotation that would empty the registry refuses, and a healthy,
-  fresh, rotated peer passes.
+- **Struck 2026-09-24:** absorbed by queue row key-rotation-freshness, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Gantt ports (gantt-ports) — interface-expansion rung
 
@@ -476,36 +178,11 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Project journal + daily narrative (journal-daily)
 
-- **Problem:** the project should be publicly observable day by day, but
-  the raw record (records, check-ins, timeline) is not consumable prose.
-- **Smallest useful outcome:** one automation renders each day's
-  committed record/check-in/timeline into a dated narrative post
-  (`docs/journal/YYYY-MM-DD.md`), the "accompanying the project"
-  long-form description that a blog can publish.
-- **Evidence:** `docs/records/2026-08-25-session.md`, checkin.md,
-  timeline.md — the raw spine that becomes the story.
-- **Risk:** narration must stay honest to the ledger — the automation
-  only re-orders verified facts, never invents.
-- **Dependencies:** the timeline events stream; a template over it.
-- **Review trigger:** an independent read of a rendered journal entry
-  matches the underlying record with no added claims.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Long-form ebook: the megastructure memoir (ebook longform)
 
-- **Problem:** the operator wants one long-form ebook documenting
-  Hngh's development, self-bootstrapping, and the expansion into a
-  megastructure, produced reproducibly.
-- **Smallest useful outcome:** a `make journal` pipeline that
-  assembles the day-by-day journal + the key records + the vision into
-  one long-form document (Markdown → epub/mobi via pandoc or a script),
-  versioned like any candidate.
-- **Evidence:** the journal-daily piece; the session record; the
-  intent/vision docs; `docs/records/*` as chapter seams.
-- **Risk:** scope creep — the memoir must auto-assemble from existing
-  prose, not demand new writing each run.
-- **Dependencies:** journal-daily; a pandoc/asciidoc step.
-- **Review acceptance:** `make journal-ebook` produces a deterministic
-  document whose TOC maps the records.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Self-hosted public surface (public-surface rung)
 
@@ -546,52 +223,15 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Self-publishing / royalties pipeline (royalty-pipeline)
 
-- **Problem:** income is a prerogative; automation should produce
-  marketable fiction and nonfiction ebooks for royalties.
-- **Smallest useful outcome:** a repeatable "book machine": prose
-  pipelines (outline → draft → edit → cover → metadata) driving
-  PDF/epub builds for Amazon KDP + direct sale, run the same way we
-  run rotation slices.
-- **Evidence:** the journal + the science-fiction worldbuilding for
-  Hngh's megastructure; the world the operator wants to see built.
-- **Risk:** royalties are speculative — the pipeline must produce
-  *good* books, not just books; writer-reviewer separation applies.
-- **Dependency:** the longform assembler; a build toolchain.
-- **Review acceptance:** a produced book passes an independent read;
-  the build reproduces from committed sources.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Funding rails (funding-rails) — bootstrap income
 
-- **Problem:** income is the prerogative; the scan names the cheapest
-  immediate rails.
-- **Smallest useful outcome:** stand up Shieldz (zero-fee crypto
-  intake) + asterpay (x402→EUR/SEPA) for donations/royalty routes;
-  a `pricing` page stub; the rails documented in the site.
-- **Evidence:** self-funding-scan-2026-08-25.md.
-- **Risk:** compliance — use the free complia screening before
-  accepting counterparties; keep rails non-custodial until volume.
-- **Dependency:** the public-site rung; an x402 receiving wallet.
-- **Review trigger:** an independent reviewer accepts a test x402/
-  crypto payment flows to the operator wallet end to end.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Royalty catalog APIs (royalty-apis)
 
-- **Problem:** the scan's abundance/listing pattern shows cheap
-  pay-per-query AP
-  easily monetized; a Hngh-derived small catalog can bring recurring
-  royalties.
-- **Smallest useful outcome:** 2-4 tiny, boring utility APIs (e.g.
-  a policy-gate checker demo, a check-count, a timeline rendering)
-  published as pay-per-query x402 on abundance / RapidAPI-style, each
-  smoke-tested and priced.
-- **Evidence:** self-funding-scan; the dashboard-readout / timeline
-  functions are ready leaf-APIs.
-- **Risk:** keep the public catalog read-only and sandboxed — the real
-  ledger never leaves Hngh; the catalog is a *surface*, not an
-  export.
-- **Dependency:** funding-rail receipts; a stateless micro-API.
-- **Review trigger:** an independent consumer calls the catalog API,
-  pays, and gets a correct public result.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Interface mocks (interface-mocks) — the mock matrix lane
 
@@ -635,18 +275,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Pixel-agent assets (pixel-agent-assets) — the sprite sheet lane
 
-- **Problem:** the operative's block-char figure is Atari-adjacent; the
-  goal is a stick-figure-plus humanoid (head, neck, torso, arms, legs)
-  with subtle motion — idle breathe, blink, coat sway — past that floor
-  toward sprite animations.
-- **Smallest useful outcome:** frame art for the operative's animation
-  set, consumable by both the TUI and the overlay
-  (`AnimatedSprite`); a comfyui image-gen practice lane refines the
-  look.
-- **Dependencies:** the family matrix; `interface-mocks` for where the
-  frames render first.
-- **Review trigger:** an independent reviewer accepts an animated
-  frame sequence (idle/breathe/blink/sway) graded by the loop.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## CI governance gate (ci-governance-gate)
 
@@ -748,149 +377,35 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Push self-sufficiency (autonomy continuum 2026-08-26)
 
-- **Problem:** verified commits stop at the local repo — pushing is an
-  operator step, so origin lags the governance loop.
-- **Smallest useful outcome:** hngh-automation's sweep pushes its own
-  artifact commits once an origin remote exists; hngh's verified
-  candidate commits push on governance completion (post-validation step,
-  never a hook that could push a half-validated commit).
-- **Evidence:** operator directive 2026-08-26; sweep governance record
-  (`sweep: 2026-08-26 0946` commits in hngh-automation).
-- **Risk:** pushing unpublished or credential-bearing material; the
-  sweep surface already excludes code dirs, and hngh pushes only
-  certificate-bound commits.
-- **Dependencies:** an origin remote for hngh-automation (operator
-  account action once); nothing new in hngh.
-- **Review trigger:** a push receipt in the sweep breadcrumb and a
-  governance record whose commit is visible on origin without operator
-  action.
+- **Struck 2026-09-24:** absorbed by queue row push-self-sufficiency, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Credential rotation automation (autonomy continuum 2026-08-26)
 
-- **Problem:** single-use refresh tokens and pinned keys decay; today a
-  decayed token surfaces as a 401 in STATE.md that only an operator
-  resolves (2026-08-26 13:00Z token-refresh FAILED).
-- **Smallest useful outcome:** a rotation/health job probes every
-  credential the jobs use, refreshes or re-derives what it can
-  unattended, files an `alert` report via report-queue for what it
-  cannot, and never widens a trust boundary to work around a failure.
-- **Evidence:** operator directive 2026-08-26; STATE.md 401 entry;
-  existing `key-rotation-freshness` backlog entry (this folds into it).
-- **Risk:** automated rotation failing open (new credential accepted
-  without verification) — must fail closed and alert instead.
-- **Dependencies:** key-rotation-freshness rung; the reviewer-transport
-  file format (strict five-key parsing).
-- **Review trigger:** a decayed-token fixture rotates unattended and a
-  second fixture (unverifiable refresh) produces an alert report with
-  no trust-boundary change.
+- **Struck 2026-09-24:** absorbed by queue row credential-rotation-auto, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Cadence continuum (autonomy continuum 2026-08-26)
 
-- **Problem:** periodicity exists only at the hourly/daily/night tiers;
-  the continuum (month/week/day/hour/10m/5m/1m + ad-hoc) has no
-  mounted surface.
-- **Smallest useful outcome:** a tier router script + systemd units for
-  each tier, each invocation exactly one tick, `make adhoc TIER=...`
-  for manual firing; tiers with no mounted work exit 0 immediately.
-- **Evidence:** operator directive 2026-08-26; existing unit pattern
-  (hngh-automation/systemd).
-- **Risk:** timer sprawl and overlapping ticks; single-tick + flock
-  keeps each tier serial.
-- **Dependencies:** hngh-automation job conventions; flock or
-  equivalent single-instance guard.
-- **Review trigger:** each tier fires its tick exactly once per period
-  in a fixture, and an empty tier exits 0 with a breadcrumb only.
+- **Struck 2026-09-24:** absorbed by queue row cadence-continuum, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Activity cadence (autonomy continuum 2026-08-26)
 
-- **Problem:** routine project activities (roadmap review, planning,
-  design, expansion, implementation, review, refactor, cleanup,
-  inward/outward communication) run only when remembered, not on a
-  continual schedule.
-- **Smallest useful outcome:** an activity matrix mapping each activity
-  to a cadence-continuum tier and an existing artifact
-  (roadmap.md, queue.md, active-work.md, reports.md), with a
-  single-tick runner that performs or files the next increment of each
-  due activity; fleet-aware (fleet-manager peers can adopt rows).
-- **Evidence:** operator directive 2026-08-26; queue.md Scheduling
-  section; fleet-manager.
-- **Risk:** busywork generation — each activity's smallest increment
-  must be defined or the tick files a report instead of acting.
-- **Dependencies:** cadence-continuum; report-queue; rotate-queue.
-- **Review trigger:** one full week of the matrix running produces at
-  least one real increment per activity and zero empty governance
-  writes.
+- **Struck 2026-09-24:** absorbed by queue row activity-cadence, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Governance vocabulary (autonomy continuum 2026-08-26)
 
-- **Problem:** "ritual"/"ceremony" are fussy and over-fixed for a
-  governance vocabulary that should be flexible about governance,
-  validation, and acceptance terms.
-- **Smallest useful outcome:** docs use the flexible vocabulary
-  (governance, validation, acceptance, admission) in prose; code
-  symbols and CLI verbs stay stable until a check-in-scale candidate
-  renames one surface deliberately.
-- **Evidence:** operator directive 2026-08-26.
-- **Risk:** symbol renames breaking scripts/tests — prose-only first.
-- **Dependencies:** none.
-- **Review trigger:** a terminology inventory shows no prose-only uses
-  of the fixed terms without a deliberate governance meaning.
+- **Struck 2026-09-24:** absorbed by queue row governance-vocabulary, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Agent live view (autonomy continuum 2026-08-26)
 
-- **Problem:** subagent work is visible only through the disjoint `hub`
-  surface, not the dashboard, and the dashboard itself is insufficient
-  for continual oversight.
-- **Smallest useful outcome:** the dashboard reads a live agent/session
-  roster (from the hngh store sessions plus any mounted agent
-  transcripts) and renders working/idle/parked agents alongside the
-  existing lanes; the roster refresh rides the existing watch/live
-  loop.
-- **Evidence:** operator directive 2026-08-26; dashboard-readout
-  --live/--watch; `scripts/hngh present` store rendering.
-- **Risk:** reading live transcripts as authoritative — display only,
-  never governance input.
-- **Dependencies:** ux-hardening; dashboard-readout spine.
-- **Review trigger:** a running worker session appears in the live
-  dashboard within one refresh period and disappears on close.
+- **Struck 2026-09-24:** absorbed by queue row agent-live-view, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Surface evolution loop (autonomy continuum 2026-08-26)
 
-- **Problem:** operator-facing surfaces and megastructure parts evolve
-  only by hand; there is no evolutionary design/development pressure.
-- **Smallest useful outcome:** one evolution loop for one surface
-  (dashboard style): candidate variants are generated, graded by the
-  existing grade machinery, the fittest is promoted through a
-  check-in-scale candidate; loop parameters live in a heartbeat card so
-  the cadence drives generations.
-- **Evidence:** operator directive 2026-08-26; dancing-ui probe,
-  grade-interface, evolve-operative, ui-grades.md.
-- **Risk:** runaway generation cost — bounded generations per tick via
-  the card.
-- **Dependencies:** cadence-continuum; grade-interface.
-- **Review trigger:** N generations produce a measurably higher-graded
-  variant promoted through the normal gates.
+- **Struck 2026-09-24:** absorbed by queue row surface-evolution-loop, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Machine-steered backlog (autonomy continuum 2026-08-26)
 
-- **Problem:** the next course is picked by fixed rules (queue Next +
-  lane counts); Hngh does not determine its own best course on a
-  continual basis.
-- **Smallest useful outcome:** a course-selection step in the
-  autonomous tick that reads the queue, lanes, reports, and roadmap as
-  evidence, ranks next actions by a written policy, and mounts the
-  chosen card — still behind the existing certificate gates for any
-  mutation; its choice and reasons land in a report row.
-- **Evidence:** operator directive 2026-08-26; run-autonomous tick;
-  rotate-queue; backlog-lanes.
-- **Risk:** self-steering circumventing policy — the selector may only
-  mount work, never bypass a gate; every mutation still needs its own
-  certificate.
-- **Dependencies:** run-autonomous; report-queue; the activity cadence
-  matrix as its input.
-- **Review trigger:** a fixture where the selector's ranking differs
-  from the static queue Next produces a justified choice report, and
-  the mounted slice still passes the full certificate gate.
+- **Struck 2026-09-24:** absorbed by queue row machine-steered-backlog, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Webapp dashboard (operator directive 2026-08-26)
 
@@ -1326,14 +841,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 - **Review trigger:** the panel renders the real vault index and every
   displayed lesson links to its source record.
 
-- **Progress (2026-09-07):** vaults mapped -- two of them; the project
-  vault (`~/Projects/etc/llm-wiki/.llm-wiki`) is stale, 92 pages on
-  disk against 26 in the registry, with all the Cistern lessons
-  unindexed since the 2026-08-19 meta freeze. Health probe
-  (`hngh-automation/cadence/week/04-wiki-health.sh`), research-beat
-  consumption, and the lessons production seed landed; the one
-  rebuild action is documented in
-  [../design/wiki-surface.md](../design/wiki-surface.md).
+- **State (2026-09-07; folded to one line 2026-09-24):** vaults mapped (two); the project vault (`~/Projects/etc/llm-wiki/.llm-wiki`) is stale - 92 pages on disk against 26 in the registry, all Cistern lessons unindexed since the 2026-08-19 meta freeze; health probe (`hngh-automation/cadence/week/04-wiki-health.sh`), research-beat consumption, and the lessons production seed landed; the one rebuild action is documented in [../design/wiki-surface.md](../design/wiki-surface.md).
 
 ## Startup launch flow
 
@@ -1435,85 +943,15 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Router-side re-arm pre-check (router-rearm-precheck) — done 2026-09-01
 
-- **Problem:** the alert→plan-candidate routing resolutions
-  ("Open-thread resolutions (2026-08-31)" in
-  docs/research/2026-08-30-alert-to-work-routing-patterns-closing-the-self-observation-loop.md)
-  park re-arm after step close: dedup is wall-clock only, so an alert
-  re-added right after its named plan step closes can route a
-  duplicate candidate.
-- **Smallest useful outcome:** a pre-check before `report-queue
-  --add` that consults plan state (step open/closed) and skips the
-  add when the named step is already closed — the router-side
-  pre-check the resolutions recommend; no router-internal state.
-- **Evidence:** the resolved doc, thread 2 (dedup window is
-  wall-clock only; identity = plan step, `--window 0`);
-  overnight-cycle.sh:186-199 (the docs/project/plans/*.plan.md
-  selector surface).
-- **Risk:** low — a read-only plan-state consult before an existing
-  add; dedup/escalation caps unchanged.
-- **Dependencies:** scripts/report-queue; docs/project/plans/ status
-  conventions.
-- **Review trigger:** one closed-step re-fire is demonstrably skipped
-  in a fixture run.
-- **Status (2026-09-01):** delivered. The pre-check is implemented in
-  hngh-automation scripts/router-tick.py (automation commit 87e6bc3):
-  before any report-queue --add it consults the plan file named in the
-  identity with the selector's own two greps (status=accepted
-  front-matter, unchecked `- [ ]` step) and skips the add when the
-  named step is closed, filing the observable pair instead (STATE.md
-  `router | duplicate-skip` breadcrumb + deduped alert row
-  router:dup-skip:identity, window 86400). Review trigger satisfied
-  both ways: hermetic fixture run
-  (hngh-automation tests/test-router-tick.py,
-  test_closed_step_refire_files_duplicate_skip_pair) and a live
-  closed-step re-fire against the executed 2026-08-30 overnight plan
-  (reports.md alert row f9360a6e). No router-internal state — the
-  skip decision is re-derived from the plan file each run. Queue row
-  flipped queued → done.
+- **Struck 2026-09-24:** absorbed by queue row router-rearm-precheck, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Publication pipeline: research-lines wiring vs the fixed 7-file contract (publication-lines-contract) — queued 2026-08-31
 
-- **Problem:** the publication-pipeline grounding pass proved
-  scripts/generate-publication consumes no docs/research/ lines and no
-  research-lines manifest: `--ebook` reads a hard-coded 7-file list
-  (script lines 235-247) and `--site` is a shell over
-  scripts/dashboard-readout. Research output therefore never reaches
-  the publication surface, and the 7-file list is an undocumented
-  contract.
-- **Smallest useful outcome:** one decision landed either way — wire
-  research-lines into generate-publication's `--ebook` inputs, or
-  document the fixed 7-file list as the contract (README/usage note).
-- **Evidence:** docs/research/2026-08-30-publication-pipeline-grounding.md
-  (15/15 grounding paths verified); scripts/generate-publication
-  lines 235-247; scripts/dashboard-readout.
-- **Risk:** low — documentation-only if the contract path is chosen;
-  wiring adds a manifest read, no new daemons.
-- **Dependencies:** scripts/generate-publication; the research-lines
-  surface (research controls row).
-- **Review trigger:** the decision is recorded and its chosen side is
-  verifiable (a doc note, or a manifest-driven `--ebook` run).
+- **Struck 2026-09-24:** absorbed by queue row publication-lines-contract, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Ebook book-machine inputs (ebook-book-inputs) — queued 2026-08-31
 
-- **Problem:** the royalty-pipeline is blocked on missing book-machine
-  inputs per its own dependency line; the publication grounding pass
-  confirmed the blocker is upstream inputs, not the generation script.
-- **Smallest useful outcome:** the book-machine inputs exist (the
-  manuscript/outline/metadata set the royalty pipeline expects) so its
-  dependency line is satisfiable.
-- **Evidence:** docs/research/2026-08-30-publication-pipeline-grounding.md;
-  the royalty-pipeline row's dependency line; the ebook longform row.
-- **Risk:** none — authoring inputs only; no runtime surface changes.
-- **Dependencies:** ebook longform row; royalty-pipeline row.
-- **Review acceptance:** `generate-publication --ebook` completes on
-  the real inputs without placeholder files.
-- **2026-09-08:** research crystallized —
-  `docs/research/2026-09-08-ebook-book-inputs.md` (ceremony da3d441).
-  Delta found: the `--chapters` selection input already landed in
-  `scripts/generate-publication`. Priced decision: the per-book
-  metadata input is the next grow beat (smallest fully-missing
-  input); selection persistence and cover follow.
-
+- **Struck 2026-09-24:** absorbed by queue row ebook-book-inputs, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 - Language discipline (2026-08-27): operator-facing output is English-only, enforced via AGENTS.md layers (global ~, repo). Long-run alternative: an automatic detect-and-translate layer over any non-English model output.
 
@@ -1540,26 +978,7 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Credential-rotation harness (the Keyring) — operator directive 2026-09-07
 
-- **Problem:** rotating hundreds to thousands of account passwords,
-  paired with password-manager entry updates, is long manual work; doing
-  it with models risks exposing secrets and PII. Extends the
-  "Credential rotation automation" row (autonomy continuum
-  2026-08-26); designed in [design/keyring.md](../design/keyring.md)
-  on the browser-relay transport and the 1Password seam
-  ([design/credentials-posture.md](../design/credentials-posture.md)).
-- **Smallest useful outcome:** a dry-run over the account inventory that
-  emits classed, ordered per-account proposals (handles only) and one
-  unattended-class account rotated end to end — proposal, browser-relay
-  execution, manager update in the same atomic step, login-check
-  evidence, certificate.
-- **How we'd know it works:** the dry run's ordering respects the
-  break-glass recovery edges; no secret value appears in any log,
-  digest, or evidence row (redaction audit clean); a killed half-run
-  leaves the manager and the site consistent (rollback or no-op).
-- **Review trigger:** the 1Password CLI integration prerequisite
-  (`op whoami` succeeding at execution time; leads recorded in
-  research/2026-09-04-operator-interface-landscape.md §3) is cleared,
-  or the first attended-class batch is operator-approved for a wet run.
+- **Struck 2026-09-24:** absorbed by queue row credential-rotation-auto, 2026-09-24 (proposal prose removed as a duplicate; the queue row is the live handle; last commit containing the removed content: bd2c1cee).
 
 ## Takeout ingest pipeline (the Portage P1) — operator directive 2026-09-07
 
@@ -1696,46 +1115,15 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Social read layer — operator directive 2026-09-11
 
-- **Problem:** the social-surfaces policy
-  ([2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md))
-  authorizes feed reading (LinkedIn, Facebook, Twitter/X, Bluesky,
-  Mastodon, others) but no read capability exists.
-- **Smallest useful outcome:** browser-relay/API read of one operator
-  feed surface, surfaced to the operator (brief or dashboard row).
-- **Evidence:** policy record 2026-09-11.
-- **Risk:** medium — credentials must ride the 1Password/env pattern;
-  read-only, no mutation path.
-- **Dependencies:** browser-relay transport; secrets seam.
-- **Review trigger:** operator asks for feed visibility in a brief.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## Social post layer (gated) — operator directive 2026-09-11
 
-- **Problem:** the social-surfaces policy authorizes posting in principle
-  behind the caveat chain (writing-register review, staged trust path,
-  handoffs-logged emission) but no post capability exists.
-- **Smallest useful outcome:** drafted posts surfaced to the operator for
-  approve/edit — no autonomous cadence until an explicit later grant.
-- **Evidence:** policy record 2026-09-11; writing-register
-  (docs/design/writing-register.md).
-- **Risk:** high — public voice on the operator's behalf; the full caveat
-  chain is the admission gate.
-- **Dependencies:** social read layer; writing-register check wiring;
-  handoffs logging.
-- **Review trigger:** read layer landed and operator requests a draft.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale row prose removed; last commit containing the removed content: bd2c1cee.
 
 ## OSS contribution candidates — operator directive 2026-09-11
 
-- **Problem:** the OSS contribution policy
-  ([2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md))
-  authorizes upstream bug reports/issues/PRs with verified diagnosis only;
-  no candidate queue exists.
-- **Smallest useful outcome:** a running list of verified diagnoses from
-  real runs suitable for upstream filing, with attribution debts named.
-- **Evidence:** policy record 2026-09-11; no speculation filings.
-- **Risk:** low — deferred until a real diagnosis exists.
-- **Dependencies:** writing-register check; Hngh run evidence.
-- **Review trigger:** first verified upstream-able diagnosis from a real
-  run.
+- **Struck 2026-09-24:** no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane) - stale "Risk: low - deferred until a real diagnosis exists" prose folded away with the row; last commit containing the removed content: bd2c1cee.
 
 ## Jcode primary-harness worker lane — operator directive 2026-09-14
 
@@ -1770,23 +1158,53 @@ useful outcome, source or evidence, risk note, dependency, and review trigger.
 
 ## Crumbs writer-flip — brief recommendation 2
 
-- **Problem:** `crumbs.db` (`automation/state/crumbs.db`, built by hngh
-  commit `8b0a4cac`) is a derived mirror of the STATE.md crumbs journal;
-  no consumer reads it yet, so the DB-as-source flip (database-migration
-  investigation brief, recommendation 2) has no consumption evidence.
-- **Smallest useful outcome:** one existing STATE.md reader migrated to
-  crumbs.db, with a parity check against STATE.md running clean for
-  >= 1 full day before the reader cuts over.
-- **Evidence:** [../agent-notes/briefs/2026-09-22-database-migration-investigation.md](../agent-notes/briefs/2026-09-22-database-migration-investigation.md)
-  recommendation 2; [../records/2026-09-22-crumbs-db-schema-contracts.md](../records/2026-09-22-crumbs-db-schema-contracts.md)
-  (mirror + schema contracts landed; ~10 grep consumers on the STATE.md
-  crumbs journal per the brief's tier table).
-- **Risk:** crumb writers diverge from the lib seam — several python
-  writers roll their own STATE.md appends — so a DB-as-source flip needs
-  the writers to converge on `lib/crumbs-db.py`'s writer path first;
-  fail-open mirror discipline keeps STATE.md readable either way.
-- **Dependencies:** mirror soak time since `8b0a4cac` (rows advancing
-  on the 1m sync; `skipped_total=95` legacy spill lines documented in
-  the schema-contracts record).
-- **Review trigger:** first consumer request, or >= 1 clean parity day,
-  or the next db-migration slice — whichever comes first.
+- **Struck 2026-09-24:** absorbed by queue row crumbs-writer-flip, 2026-09-24 (stale review-trigger prose folded: first consumer request, >= 1 clean parity day, or the next db-migration slice, whichever comes first; proposal prose removed as a duplicate; last commit containing the removed content: bd2c1cee).
+## Router re-route policy - follow-up 2026-09-24 (automation tier)
+
+- **Follow-up (2026-09-24):** bound re-routes per alert identity or park after expiry (the router re-routes the same identity indefinitely, e.g. tree-skew:hngh -> routed-tree-skew-hngh-7).
+- **Problem:** same-identity re-routes generate an unbounded chain of routed plan candidates (routed-tree-skew-hngh-7 is the seventh re-route), inflating the plan ledger and the planned-work surface.
+- **Smallest useful outcome:** a bound (or expiry) per alert identity past which the router parks the identity instead of re-routing it.
+- **Evidence:** reports.md tail 2026-09-24 (routed-tree-skew-hngh-7; patrol:journal-error re-routed x2); the router-churn finding of the 2026-09-24 foundation consolidation.
+- **Risk:** a still-live alert could be parked silently; parking must leave an observable parked row.
+- **Dependencies:** scripts/router-tick.py (hngh-automation); report-queue dedup/escalation caps.
+- **Review trigger:** one alert identity reaches its bound (or expiry) and parks instead of re-routing, with an observable row.
+
+## Adopted-disposition adoption wire - follow-up 2026-09-24 (automation tier)
+
+- **Follow-up (2026-09-24):** research-lifecycle-audit.md:4-7: 0 of 73 adopted dispositions feed any runtime decision; wire adopted verdicts into at least one runtime decision surface.
+- **Problem:** adopted verdicts (support/oppose/followons) sit in research-dispositions.tsv columns that nothing consumes; the research pipeline is circular, never cumulative.
+- **Smallest useful outcome:** at least one runtime decision surface reads adopted verdicts as input evidence.
+- **Evidence:** [../design/consider/research-lifecycle-audit.md](../design/consider/research-lifecycle-audit.md):4-7.
+- **Risk:** adopted verdicts are advisory evidence, never proof; a wired surface must not let a disposition decide alone.
+- **Dependencies:** research-dispositions.tsv; one runtime decision surface (the research-beat guidance path is the nearest).
+- **Review trigger:** one runtime decision demonstrably reads an adopted verdict and records it as input evidence.
+
+## Cadence-tier collapse - follow-up 2026-09-24 (automation tier)
+
+- **Follow-up (2026-09-24):** pivot-synthesis.md:57-59: 9 cadence tiers collapsible to 2-3, behavior-preserving.
+- **Problem:** 9 cadence tiers (month/week/day/hour/10m/5m/1m + ad-hoc and mounted jobs) are named accretion to retire.
+- **Smallest useful outcome:** the cadence runs on 2-3 tiers with identical firing behavior.
+- **Evidence:** [../design/consider/pivot-synthesis.md](../design/consider/pivot-synthesis.md):57-59.
+- **Risk:** collapsing tiers must not change when work fires; behavior-preserving is the acceptance bar.
+- **Dependencies:** hngh-automation cadence tier layout; the tier router and timer units.
+- **Review trigger:** a fixture shows each collapsed tier fires the same work at the same effective cadence as before.
+
+## Write-only artifact classes - follow-up 2026-09-24 (automation tier)
+
+- **Follow-up (2026-09-24):** STATE-OF-PROJECT.md:57-61: 3 of 16 artifact classes are write-only; wire-or-delete.
+- **Problem:** digest-BENCH, digest-RESEARCH, and email-qa.log are produced but never read (torch ledger).
+- **Smallest useful outcome:** each write-only class is wired to a named reader or deleted.
+- **Evidence:** [STATE-OF-PROJECT.md](STATE-OF-PROJECT.md):57-61 (hngh-automation torch-ledger.tsv).
+- **Risk:** deleting an unwired class could drop a future consumer's input; delete only with the decision recorded.
+- **Dependencies:** the torch ledger audit (hngh-automation cadence/day/17-torch-audit.sh).
+- **Review trigger:** each of the three classes is either consumed by a named reader or removed, with the decision recorded.
+
+## Interpretation seam for findings - follow-up 2026-09-24 (automation tier)
+
+- **Follow-up (2026-09-24):** typed-challenges / research review gain canon-informed supportive/adversarial commentary as advisory output rows (docs/design/interpretation-doctrine.md).
+- **Problem:** typed-challenges and research review report mechanical verdicts only; findings gain no canon-informed reading.
+- **Smallest useful outcome:** advisory supportive/adversarial commentary rows accompany the mechanical verdicts, following the doctrine's named seams.
+- **Evidence:** docs/design/interpretation-doctrine.md (2026-09-24 foundation consolidation).
+- **Risk:** interpretation must stay advisory - it never admits or refuses a mutation and never enters the evidence ledger as proof.
+- **Dependencies:** the interpretation doctrine's named seams; the typed-challenge / research review output rows.
+- **Review trigger:** one typed-challenge or research review carries supportive/adversarial advisory rows while its mechanical verdict is unchanged.

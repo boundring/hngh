@@ -43,6 +43,36 @@ publication-lines-contract	done	Publication pipeline: wire research-lines into g
 ebook-book-inputs	queued	Ebook book-machine inputs to unblock the royalty-pipeline	research crystallized 2026-09-08: docs/research/2026-09-08-ebook-book-inputs.md (ceremony da3d441) — priced decision: per-book metadata input first (--chapters selection already landed); grow beat queued
 alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production caller)	closed 2026-09-01: router-tick 87e6bc3 + router-feed caller 7992f78 (hngh-automation); first live routings reports.md bffc89a6 + ffa1d58e, auto-accepted f4c7e12e/9993c29d; already-routed skips observed 02:00:45Z
 ```
+## Struck rows (2026-09-24)
+
+TSV rows stay unchanged for the rotation parser; the strike is recorded
+here, adjacent to the rows.
+
+- self-funding-plan - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
+- ebook-book-inputs - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
+
+## Completed rotations (folded 2026-09-24)
+
+One dated line per done row. Prose that lived below the TSV for done
+rows is folded here; the TSV rows keep the rotation state unchanged.
+
+- 2026-08-25 doc-sync-loop - documentation-sync loop (make numbers guard), rotated by rotate-queue.
+- 2026-08-25 dashboard-readouts - dashboard readouts (spiral + circular + dance styles live), rotated.
+- 2026-08-25 timeline-events - machine-readable timeline events per rotation (Makefile + test wired), rotated by check-in #4.
+- 2026-08-25 queue-eta - planned-window (ETA) column on queue rows (this widget is the item), implemented by check-in #5.
+- 2026-08-27 push-self-sufficiency - repos push their own verified commits (sweep + post-validation); ceremony-drive auto-push proven both repos.
+- 2026-08-27 governance-vocabulary - ritual/ceremony terms relaxed to a flexible governance vocabulary; records use governance terms.
+- 2026-08-27 agent-live-view - automatic subagent work view integrated into the dashboard (session observatory on the nerve center).
+- 2026-08-27 machine-steered-backlog - select-course pure use case + cadence wiring; Hngh picks its own next-best-course continually.
+- 2026-08-27 credential-rotation-auto - folded into key-rotation-freshness (retirement lane); full no-operator credential/token rotation + health alerts.
+- 2026-08-31 publication-lines-contract - publication pipeline: research-lines wired into generate-publication or the 7-file contract fixed.
+- 2026-09-01 router-rearm-precheck - router-side re-arm pre-check before report-queue --add (hngh-automation scripts/router-tick.py, commit 87e6bc3).
+- 2026-09-01 alert-plan-routing - alert -> plan-candidate routing loop closed (router-tick 87e6bc3 + router-feed 7992f78; first live routings reports.md bffc89a6 + ffa1d58e).
+- 2026-09-13 wake-mutation-lane - certificate-bound wake mutation lane landed through the certificate ceremony (:wake-mutation in the closed mutation vocabulary); docs/records/2026-09-13-wake-mutation-lane-landing.md.
+- 2026-09-15 node-lattice-admission - node-lattice admission rung rotated.
+- 2026-09-16 bridge-operator-host - bridge-as-operator-host (run -> worker -> review -> certify) rotated; certificate-gated session commits live through scripts/omp-bridge --ceremony.
+- 2026-09-23 key-rotation-freshness - evidence-freshness + key-rotation rung landed (lib/credential-evidence.py fail-closed + 28 hermetic tests); vault-cutover stub remains.
+
 ## Next
 
 - **pooled-hardware** — next queued (dep open: resource pool view);
@@ -50,15 +80,16 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
   rung 12 entry, "verified live ... three self-governed validation
   commits";
   docs/records/2026-08-25-r14-ed25519-signature-transport.md extends
-  it) — dep closed 2026-09-24. key-rotation-freshness rotated
-  2026-09-23 with the evidence-freshness rung landed (vault-cutover
-  stub remains).
+  it) — dep closed 2026-09-24. (key-rotation-freshness rotation folded
+  into Completed rotations, 2026-09-24.)
 
 ## Scheduling
 
-The rotation runner is operator-owned (the no-daemon boundary): install
-a crontab entry that invokes `scripts/rotate-queue` for the next queued
-item. Example (every 6 hours, in the repo):
+The cadence owns the clock (the "operator-owned" note is obsolete; the
+no-daemon boundary still holds: a cron or systemd timer invokes the
+tick, the tick never backgrounds itself). Install a crontab entry that
+invokes `scripts/rotate-queue` for the next queued item. Example (every
+6 hours, in the repo):
 
 ```
 0 */6 * * * cd ~/Projects/etc/hngh && STORE=$(mktemp -d -u /tmp/hngh-rotation-XXXX) && mkdir -p "$STORE" && sbcl --script scripts/rotate-queue --store="$STORE" --item=NEXT_ITEM --reviewer=~/.hngh-automation/reviewer-local.conf "Objective for NEXT_ITEM" <files> >> /tmp/hngh-rotation.log 2>&1
@@ -107,25 +138,23 @@ Which items are check-in-scale (small, one-session fix, could ride a
 check-in) vs rotation-scale (a full rotate-queue session with model
 review). Helps the cadence pick the right instrument.
 
-- **check-in-scale:** timeline-events (machine-readable rotation
-  events), queue-eta (ETA column), doc-number refreshes.
-- **rotation-scale:** wake-mutation-lane, node-lattice-admission,
-  bridge-operator-host, key-rotation-freshness, pooled-hardware,
-  tunnel-automation, dashboard-readouts, ux-hardening,
+- **check-in-scale:** doc-number refreshes.
+- **rotation-scale:** pooled-hardware, tunnel-automation, ux-hardening,
   ecosystem-integrations, governance-benchmark, dss-e-export,
   marketplace-governance, compliance-dashboard,
-  ledger-format-standard, self-funding-plan.
+  ledger-format-standard.
+- Done and struck rows' scale notes folded 2026-09-24 (check-in-scale:
+  timeline-events, queue-eta; rotation-scale: wake-mutation-lane,
+  node-lattice-admission, bridge-operator-host, key-rotation-freshness,
+  dashboard-readouts, self-funding-plan).
 
 ## ETA
 
 Planned windows (operator-set; the TSV stays 4-field — ETAs live here).
 Gives "future" a date so a gantt can place bars.
 
-- node-lattice-admission — DONE (rotated 2026-09-15)
-- queue-eta — DONE today (this widget is the item)
-- bridge-operator-host — DONE (rotated 2026-09-16)
-- timeline-events — DONE (2026-08-25)
 - others — on rotation, roughly one per cadence
+- DONE windows folded into Completed rotations (folded 2026-09-24)
 
 ## Interface-spec candidates (operator-requested "practical nonsense")
 
