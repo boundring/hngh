@@ -12,6 +12,23 @@ registers only, never endorsements. Under the golden rule below, the
 record wins: where the 2026-08-24 BDFL draft disagreed with the
 accepted charter, this text follows the record.
 
+Preamble - interpretation clauses (status: added 2026-09-24). These
+interpretation clauses are part of this constitution and are
+amendable under section 11. The canon (the six annotated classics)
+and the author-voice pantheon are the interpretive register at the
+named seams only: findings reading, office and role-contract
+vocabulary, and the structural mapping
+(`docs/design/interpretation-doctrine.md`). The external corpus
+remains "provenance of voice and principle only", never law (section
+13): this preamble is law, and the external texts are its cited
+provenance. The closed principle matrix and the certificate path
+remain mechanical and are preserved verbatim: a mutation is admitted
+or refused by the deterministic evaluator; interpretation shapes how
+findings and offices are read, never whether a mutation is admitted.
+Voice registers remain non-endorsed pastiche: the method binds, no
+voice does. Decision record: `docs/project/decisions.md` (2026-09-24,
+foundation consolidation).
+
 ## 1. Whence authority
 
 Authority is delegated and conditional. The people the software

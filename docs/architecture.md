@@ -88,6 +88,11 @@ terminal transports are admitted only under a separately approved run
 loadout (rung 10), and the operator reviewer transport (rung 13) is
 admitted by an explicit operator reviewer file.
 
+The governance frame around these boundaries is federal
+([federal charter](project/plans/2026-09-20-federal-charter.plan.md));
+how findings and offices are read through the canon and the pantheon
+is the [interpretation doctrine](design/interpretation-doctrine.md).
+
 
 Beyond these in-repo kernel boundaries, the live machine runs from
 `automation/` (cadence tiers, watchdog, fail-first spend governor, model

@@ -18,6 +18,13 @@ Reading rule: **a queue.tsv id is the rotation handle; its proposal prose
 lives under the matching heading in backlog.md; the "Record" column names the
 dated record that preserves the verified outcome.**
 
+## Foundation frame
+
+| Frame | Where it lives | Carries |
+|---|---|---|
+| Megastructure staging | [master plan](project/master-plan.md) | P1-P6 staging from sidecar to harness-harness, and the plan-as-prerequisite gates |
+| Interpretation | [interpretation doctrine](design/interpretation-doctrine.md) | canon and pantheon readings of findings and offices at the named seams; machinery stays mechanical |
+
 ## System-harness rungs A–F
 
 The harness vision (a fleet of nodes under one governance) climbs rungs A–F

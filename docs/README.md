@@ -59,6 +59,9 @@ The contracts and the loop that keeps mutation honest.
   source-grounded principle, review, and mutation-certificate policy.
 - [Presentation boundary](design/presentation-boundary.md) - factual
   renderer and reference-lexicon limits.
+- [Interpretation doctrine](design/interpretation-doctrine.md) - how
+  findings and offices are read through the annotated classics and
+  the pantheon; the mechanical core is untouched.
 - [The Descent](design/descent.md) - the six-station cyclical
   self-improvement loop: stations, invariants, falsifiable weekly
   checks, and the flavor-name lexicon.
@@ -147,8 +150,9 @@ kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
   wiki topology and its continual-optimization cycle.
 - [Repo topology](design/repo-merge-consideration.md) - the
   automation-into-hngh merge consideration: both cases steelmanned,
-  middle paths, migration mechanics, decision factors. No decision
-  made. Companion: [clean reorientation](design/clean-reorientation.md) -
+  middle paths, migration mechanics, decision factors. The decision
+  landed: the P0 merge is recorded done at decisions.md:420 (2026-09-07,
+  git subtree --squash, 222 files). Companion: [clean reorientation](design/clean-reorientation.md) -
   the automation-tier cleanup plan: Track A (decision-independent
   cleanup, verified findings) and Track B (merge-gated topology),
   with the leave-alone doctrine.
@@ -171,6 +175,10 @@ Evidence, decisions, and the long-form record. Point-in-time only:
 
 - [Records](records/README.md) - evidence, decisions, and cutover
   records; the prior state's retirement archive is covered there.
+- Historical point-in-time streams - [timeline](project/timeline.md),
+  [checkin](project/checkin.md), and [active work](project/active-work.md)
+  are point-in-time records; the live streams are
+  [reports](project/reports.md) and [records](records/).
 - [Journal](journal/) - dated working entries.
 - [Research](research/) - research-line findings and reviews.
 - [The book](publication/book.md) - the long-form record, generated

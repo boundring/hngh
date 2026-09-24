@@ -743,3 +743,38 @@ attribute the operator like the rest of history
 Backup bundle:
 `~/.hngh-automation/scrub/pre-attribution-20260923.bundle`.
 Full record: `docs/records/2026-09-23-attribution-rewrite.md`.
+
+## 2026-09-24 — Foundation consolidation: doctrine layer and constitutional preamble
+
+Context: the operator directed (2026-09-24) further consolidation and
+streamlining of the documentation, roadmap, designs, research, and all
+planned work — trim what is not aligned with (a) clean architecture,
+(b) the US federal government structure, (c) the annotated Chinese
+classics (`~/Projects/etc/tao-confucian-canon/docs`) and the pantheon
+of English authors' Taoism and Confucian commentary
+(`~/Projects/etc/tao-confucian-canon/voices`). Purpose: settle the
+foundation before the megastructure it supports.
+
+Decisions recorded from the directive:
+
+- Scope: the docs and planning layer now. Kernel self-governance
+  machinery changes become named follow-up certified slices, not
+  edits in this pass.
+- Disposition: archive + strike. Misaligned current-surface docs fold
+  into an archived section; planned-work rows are struck with a
+  one-line dated cause. Nothing is deleted from history.
+- Classics influence: doctrine layer + structural mapping
+  (`docs/design/interpretation-doctrine.md`). The canon and the
+  seventeen-voice pantheon govern how findings and offices are READ;
+  the mechanical core is untouched.
+- Authority: toward a constitutional preamble. The canon ethos gains
+  preamble-level normative weight at the named interpretive seams —
+  findings reading, office and role-contract vocabulary, and the
+  structural mapping. Placement: `GOVERNANCE.md` sections 1 and 5
+  stay verbatim, so the preamble is an ordinary section-11
+  governance change, not an N = 2 amendment.
+
+Execution follows the pattern recorded here on 2026-09-23:
+`GOVERNANCE.md` states recorded decisions and creates none; documents
+catch up to records; records never wait on documents. This entry is
+the record; the `GOVERNANCE.md` preamble cites it.

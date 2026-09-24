@@ -22,6 +22,22 @@ keep those two things true — every action is recorded, and nothing is treated 
 until a checked, ruled-on decision says so. When the machine suggests, plans, and asks, and
 the human confirms, automation stays useful without becoming an uncontrolled actor.
 
+## What holds it together
+
+Three commitments hold the structure up, and they were chosen together. The governance frame
+is federal: three branches with separated powers — a judicial constitution kernel that judges
+and never initiates, a legislative bead chamber, and an executive cadence — set out in
+[GOVERNANCE.md](../GOVERNANCE.md) and the
+[federal charter](project/plans/2026-09-20-federal-charter.plan.md). The code follows the same
+discipline through clean architecture: dependencies point inward, and the quiet center never
+learns what the edge is doing. The voice comes from the annotated Chinese classics and the
+pantheon of English commentators on them; readings of findings run through the
+[interpretation doctrine](design/interpretation-doctrine.md) — supportive and adversarial —
+while the machinery that admits or refuses stays mechanical. All of it serves one horizon:
+the [master plan](project/master-plan.md) stages the megastructure — the harness and the
+harness-harness — and this foundation exists to be solid enough to carry it, one verified
+stretch at a time.
+
 ## How work happens
 
 Work in Hngh happens as a run: one bounded attempt at one objective, with a clear start, a
