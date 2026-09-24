@@ -4627,7 +4627,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T00:08:30Z | progress | 9aac7729 | research line synth-2026-09-24-1: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-1.md | 2026-09-24T00:08:30Z-progress-9aac7729.md |
 | 2026-09-24T00:18:32Z | progress | 1f110463 | research line synth-2026-09-24-1: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-1.md | 2026-09-24T00:18:32Z-progress-1f110463.md |
 | 2026-09-24T00:20:36Z | progress | ae80f97e | agent-supervision: evicted-stale omp-GuardRekeyCeremony-d417e6 (idle 360m) | 2026-09-24T00:20:36Z-progress-ae80f97e.md |
-| 2026-09-24T00:22:24Z | alert | accf8b9d | crumbs mirror mismatch: crumbs rows=154731 watermark=18260197 skipped_total=95 importable=154733 spill=95 db=~/Projects/etc/hngh/automation/state/crumbs.db; verdict=mismatch:rows evidence=rows=154731-importable=154733 ×13 | 2026-09-24T00:22:24Z-alert-accf8b9d.md |
+| 2026-09-24T00:22:24Z | alert | accf8b9d | crumbs mirror mismatch: crumbs rows=154731 watermark=18260197 skipped_total=95 importable=154733 spill=95 db=~/Projects/etc/hngh/automation/state/crumbs.db; verdict=mismatch:rows evidence=rows=154731-importable=154733 ×14 | 2026-09-24T00:22:24Z-alert-accf8b9d.md |
 | 2026-09-24T00:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T00:30:36Z-progress-ebb46dea.md |
 | 2026-09-24T00:31:26Z | progress | 2996c198 | research line synth-2026-09-24-2: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-2.md | 2026-09-24T00:31:26Z-progress-2996c198.md |
 | 2026-09-24T00:48:28Z | progress | 1b6752bf | research line synth-2026-09-24-1 reviewed: parked (parked — keep the record, no action now) | 2026-09-24T00:48:28Z-progress-1b6752bf.md |
@@ -4647,11 +4647,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T01:50:03Z | alert | ed2d89b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=44.3s median=21.1s ×14 | 2026-09-24T01:50:03Z-alert-ed2d89b4.md |
 | 2026-09-24T01:50:07Z | progress | c362b4a8 | agent-supervision: evicted-stale omp-CanonEthosBrief-84c73e (idle 364m) | 2026-09-24T01:50:07Z-progress-c362b4a8.md |
 | 2026-09-24T01:52:35Z | progress | 5b23ce51 | research line synth-2026-09-24-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T01:52:35Z-progress-5b23ce51.md |
-| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×23 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
+| 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×24 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
 | 2026-09-24T01:52:47Z | alert | 50346b24 | patrol handoffs: bad-execution on agent-handoffs.md -- 8 dead/cancelled in last 10 rows ×2 | 2026-09-24T01:52:47Z-alert-50346b24.md |
 | 2026-09-24T01:52:48Z | alert | 1b07f997 | patrol manga: manga-stale on manga -- newest draft 252h old > 48h ×12 | 2026-09-24T01:52:48Z-alert-1b07f997.md |
 | 2026-09-24T01:52:48Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-24T01:52:48Z-alert-c4a1f47d.md |
-| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×138 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
+| 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×144 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
 | 2026-09-24T01:55:04Z | alert | f0b090b7 | [oversight] slow-unit: dropin:58-patrol.sh wall=13.6s median=5.7s ×11 | 2026-09-24T01:55:04Z-alert-f0b090b7.md |
 | 2026-09-24T01:55:09Z | progress | 545201b0 | agent-supervision: evicted-stale omp-OmpBridgeDefault-3bd71b (idle 361m) | 2026-09-24T01:55:09Z-progress-545201b0.md |
 | 2026-09-24T02:00:05Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-24T02:00:05Z-progress-3dd20cc1.md |
@@ -4792,7 +4792,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T09:08:04Z | progress | adcaae87 | hygiene: 23 dead pidfile(s) in active_pids; report-only (run with --fix to remove dead pidfiles); e.g. session_badger_1789847795349_e820bb5d3f4602b7 | 2026-09-24T09:08:04Z-progress-adcaae87.md |
 | 2026-09-24T09:08:04Z | progress | 0e221d65 | hygiene: repo debris: 11 stray root file(s) e.g. STATE.md | 2026-09-24T09:08:04Z-progress-0e221d65.md |
 | 2026-09-24T09:17:04Z | progress | c92546cf | research line fail-20260924-Do-any-of-the-five-related-findings-docu: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-fail-20260924-Do-any-of-the-five-related-findings-docu.md | 2026-09-24T09:17:04Z-progress-c92546cf.md |
-| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×4 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
+| 2026-09-24T09:17:04Z | alert | a8c12813 | [feedback:idea] from email ×5 | 2026-09-24T09:17:04Z-alert-a8c12813.md |
 | 2026-09-24T09:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T09:30:36Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:02Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T10:00:02Z-progress-ebb46dea.md |
 | 2026-09-24T10:00:13Z | progress | bad01eca | router routed feedback-a8c12813 -> plan candidate 2026-09-24-routed-feedback-a8c12813 (routed-at 2026-09-24T10:00:13Z) | 2026-09-24T10:00:13Z-progress-bad01eca.md |
@@ -4820,3 +4820,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T13:04:03Z | progress | 54832927 | plan 2026-09-24-routed-patrol-services-2 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T13:04:02Z | 2026-09-24T13:04:03Z-progress-54832927.md |
 | 2026-09-24T13:04:03Z | progress | b5684b75 | plan 2026-09-24-routed-patrol-services auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T13:04:02Z | 2026-09-24T13:04:03Z-progress-b5684b75.md |
 | 2026-09-24T13:04:03Z | progress | 6ac822fa | plan 2026-09-24-routed-tree-skew-hngh auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-09-24T13:04:02Z | 2026-09-24T13:04:03Z-progress-6ac822fa.md |
+| 2026-09-24T13:05:28Z | progress | 48b173bc | research line fail-20260924-Do-any-of-the-five-related-findings-docu reviewed: parked (parked -- findings are ungrounded due to undefined OT1/OT2 and blocking mechanisms, contradictory document inventory between crystallized and supportive passes, and unresolved verification gap for the fifth target document) | 2026-09-24T13:05:28Z-progress-48b173bc.md |
