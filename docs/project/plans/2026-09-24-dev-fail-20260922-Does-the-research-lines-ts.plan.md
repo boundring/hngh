@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a syntax-validation script for new job files under jobs/
-  Verification: bash -n scripts/validate-job.sh
+- [ ] Add a new job script under jobs/ that implements a basic data validation task
+  Verification: bash -n jobs/data-validation.sh
 
-- [ ] Register the validation script in the cadence test runner
+- [ ] Create a corresponding test script under tests/ that exercises the new job
+  Verification: bash -n tests/test-data-validation.sh
+
+- [ ] Update the cadence configuration to register the new job for scheduled execution
+  Verification: grep -q 'data-validation' cadence/schedule.yaml
+
+- [ ] Add a verification script under scripts/ that confirms the new job integrates with existing make test
   Verification: make test
 
-- [ ] Add a grep-based check that new commits touch only allowed paths
-  Verification: git grep --cached -l 'jobs/' | head -5
+- [ ] Create a dashboard snippet under dashboard/ that displays job execution status
+  Verification: bash -n dashboard/job-status.sh
 
-- [ ] Create a README note documenting the verification cadence
-  Verification: bash scripts/check-readme.sh
-
-- [ ] Add a python3 stdlib script to list recent cadence runs
-  Verification: python3 scripts/list-cadence-runs.py
-
-- [ ] Commit all changes and verify no forbidden paths are modified
-  Verification: git diff --name-only | grep -vE 'jobs/|scripts/|cadence/|lib/|tests/|dashboard/|digest/'
+- [ ] Add a digest rule under digest/ that logs new job completions
+  Verification: bash -n digest/job-digest.sh
