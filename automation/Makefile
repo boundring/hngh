@@ -73,6 +73,7 @@ test:
 	python3 -B tests/test-alert-lifecycle.py
 	python3 -B tests/test-router-feed.py
 	python3 -B tests/test-slow-units.py
+	python3 -B tests/test-slow-units-e2e.py
 	python3 -B tests/test-readout-writers.py
 	python3 -B tests/test-story-view.py
 	python3 -B tests/test-dashboard-feedback.py

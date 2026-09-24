@@ -2,6 +2,12 @@
 
 ## 2026-09-24
 
+- time-ledger: residual e2e coverage - the backlog row's named review
+  trigger lands as tests/test-slow-units-e2e.py (slow-unit rows with the
+  report-queue ` xN` bump args, the flap-suppressed alert seam under
+  SUPPRESS_MIN, and time-ledger.sh's journal/`[ceremony-timing]`/drop-in
+  parse round-trip); model wall times were already emitted (`--wall-s`)
+  and stay single-sourced.
 - dream: typed-first dream briefs - a clearly-green typed judgment over
   the five dream fields (requirements/surfaces/split Choices at
   confidence >= 0.5, failure-modes/sanity-checks risk Nouls below 0.5)
