@@ -116,3 +116,52 @@ whatever the transcript cannot.)
   it. The patch source copy lives in `/tmp` (ephemeral — treat as
   gone after reboot; re-derive from the forensics brief's evidence
   if needed).
+
+## Open items for the next session (operator-directed, 2026-09-23 night)
+
+End-state note: the night ended with the attribution rewrite — all 2,156
+commits folded to `boundring <boundring@gmail.com>` and force-pushed
+(records: `docs/records/2026-09-23-attribution-rewrite.md`). Every hash
+in the repo was re-keyed three times today (path-scrub passes 1–2, then
+attribution), so hash citations in docs name pre-scrub history. The
+loop-history guard was re-keyed twice through the ceremony (latest
+candidate `0576d683…`, commit `5e778946`) and is green.
+
+1. **Machine auto-commits → operator attribution.** Operator decision:
+   machine commits should attribute `boundring <boundring@gmail.com>`
+   like the rest of history. Flip the seven per-invocation identity pins
+   from `-c user.name="hngh-machine" -c user.email="automation@hngh.local"`
+   to the operator identity at `automation/cadence/day/01-lesson-harvest.sh:86`,
+   `automation/cadence/day/14-plan-ledger-sync.sh:39`,
+   `automation/cadence/day/17-torch-audit.sh:202`,
+   `automation/cadence/hour/30-kernel-ledger-sync.sh:45`,
+   `automation/cadence/hour/33-research-beat.sh:218`,
+   `automation/jobs/config-backup.sh:242`,
+   `automation/scripts/research-sweep-selfheal.sh:49`. Keep the pinning
+   itself — the seam is per-invocation pinning so attribution never
+   depends on ambient config (`automation/tests/test-identity-seam.py:9-11`);
+   only the pinned identity changes. Update both identity tests to the
+   new expectation: `automation/tests/test-identity-seam.py` (free lane)
+   and `tests/scripts/test-ceremony-drive-commit-identity.py`
+   (`test_ambient_leak_is_pinned_to_machine_identity`) — the latter is
+   kernel `tests/`, so it rides the certificate ceremony.
+
+2. **Simplify Hngh's ceremony (refactor lane).** Operator standing note:
+   the ceremony works but is heavy and should be considered for
+   simplification/refactor, like most else in Hngh. Today's shape per
+   kernel-surface change: a 10-principle verdict plus two certify/mutate
+   action pairs (four `scripts/hngh` round-trips) and a fresh dogfood
+   store; `scripts/ceremony-drive` (`scripts/ceremony-drive:178-179`) is
+   the existing wrapper. Candidate cuts: collapse the
+   prepare-candidate/commit action pairs, shrink verdict boilerplate,
+   drop the per-change store. Hard constraints to keep: fail-closed
+   refusals, the fixed `hngh: candidate <hash>` commit message, and the
+   cert content-hash contract that `tests/scripts/test-loop-history-guard.py`
+   verifies. Design task first, then a certified kernel slice.
+
+3. Loose ends besides the above: the server-side home-path rule is
+   deferred to CI (client hooks are bypassable via `git push --no-verify`
+   — a git limitation, recorded in the scrub record); `gh api user/emails`
+   needs the `user` OAuth scope refreshed if email-visibility checks are
+   wanted. Everything else from this session is landed, pushed, and
+   recorded.
