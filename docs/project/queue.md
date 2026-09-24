@@ -45,10 +45,14 @@ alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production c
 ```
 ## Next
 
-- **pooled-hardware** — next queued (deps open: resource pool view,
-  key-pin registry rung 12 — carried from 2026-09-16, unverified);
-  key-rotation-freshness rotated 2026-09-23 with the
-  evidence-freshness rung landed (vault-cutover stub remains).
+- **pooled-hardware** — next queued (dep open: resource pool view);
+  key-pin registry rung 12 VERIFIED landed (kernel evidence: roadmap.md
+  rung 12 entry, "verified live ... three self-governed validation
+  commits";
+  docs/records/2026-08-25-r14-ed25519-signature-transport.md extends
+  it) — dep closed 2026-09-24. key-rotation-freshness rotated
+  2026-09-23 with the evidence-freshness rung landed (vault-cutover
+  stub remains).
 
 ## Scheduling
 
