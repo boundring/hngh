@@ -4835,3 +4835,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T16:00:36Z | progress | 80a3a51f | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=0s | 2026-09-24T16:00:36Z-progress-80a3a51f.md |
 | 2026-09-24T16:00:37Z | alert | 86dbbc10 | router expired candidate 2026-09-05-routed-tree-skew-hngh (unaccepted 24h past routing; identity tree-skew:hngh) | 2026-09-24T16:00:37Z-alert-86dbbc10.md |
 | 2026-09-24T16:00:37Z | progress | 0fc1e98e | router routed tree-skew:hngh -> plan candidate 2026-09-24-routed-tree-skew-hngh-4 (routed-at 2026-09-24T16:00:37Z) | 2026-09-24T16:00:37Z-progress-0fc1e98e.md |
+| 2026-09-24T16:05:04Z | alert | ca7a0932 | agent-stall omp-2026-09-24T00-32-15-248Z_01a-2070c5: stalled, last tool-call 93m ago | 2026-09-24T16:05:04Z-alert-ca7a0932.md |
