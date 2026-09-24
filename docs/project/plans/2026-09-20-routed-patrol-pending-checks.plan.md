@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=patrol:pending-checks  cause=obsolete disposed=2026-09-23T02:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=patrol:pending-checks  cause=obsolete disposed=2026-09-23T02:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-20 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `patrol:pending-checks`
