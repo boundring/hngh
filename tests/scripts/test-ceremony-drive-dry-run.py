@@ -2,12 +2,13 @@
 """ceremony-drive --dry-run: the rehearsal lane, test-backed.
 
 A dream drive runs the closed loop -- create-run + admit-transport +
-propose + issue-cert prepare-candidate -- against a fresh
-/tmp/hngh-dream-<ts> store, then stops: no mutation-check at all (the
-mutation executor would run the certificate-bound Git command on the
-real repository), no commit certificate, no push leg. It prints a
-report: per-step exit codes, the rendered verdict text, candidate
-paths, content hash, and the exact commands the real drive would run.
+propose -- against a fresh /tmp/hngh-dream-<ts> store, then stops: no
+mutation-check at all (the merged verb mints the certificate and runs
+the certificate-bound Git command on the real repository), no commit
+certificate, no push leg. It prints a report: per-step exit codes, the
+rendered two-line verdict text, candidate paths, content hash, and the
+exact commands the real drive would run. --findings=PATH feeds bounded
+review findings rows into the proposal (they ride the verdict report).
 
 Contract (hermetic: a disposable fixture repo, no network):
 - exit 0 on a clean candidate, and the refusal exit path on a broken
@@ -43,10 +44,13 @@ class DreamDrive(unittest.TestCase):
   def setUp(self):
     self._td = tempfile.TemporaryDirectory()
     self.fixture = Path(self._td.name)
+    self._art = tempfile.TemporaryDirectory()
+    self.artifacts = Path(self._art.name)
     self._init_fixture_repo()
 
   def tearDown(self):
     self._td.cleanup()
+    self._art.cleanup()
 
   def _init_fixture_repo(self):
     """A fixture repo that can host a real candidate: a trivial gate
@@ -58,6 +62,7 @@ class DreamDrive(unittest.TestCase):
     src = self.fixture / "docs" / "fixture.txt"
     src.parent.mkdir(parents=True)
     src.write_text("fixture candidate\n")
+    (self.fixture / "docs" / "fixture.md").write_text("# doc candidate\n")
     makefile = self.fixture / "Makefile"
     makefile.write_text("test:\n\t@echo fixture mock gate green\n")
     scripts_dir = self.fixture / "scripts"
@@ -73,17 +78,26 @@ class DreamDrive(unittest.TestCase):
                     "-c", "user.email=test@example.com",
                     "-c", "user.name=test@example.com",
                     "commit", "-qm", "fixture base"], check=True)
-    self.candidate = "docs/fixture.txt"
+    self.candidate = "docs/fixture.md"
 
-  def run_dream(self, candidate=None, pre_save=None):
+  def run_dream(self, candidate=None, pre_save=None, findings=None):
     """Run sbcl --script scripts/ceremony-drive --dry-run in the fixture
-    repo. PRE_SAVE is called with the fixture Path before the run."""
+    repo. PRE_SAVE is called with the fixture Path before the run; a
+    fixture loadout supplies the cost-and-route facts (absent keys
+    refuse cost-and-route-discipline by design)."""
     if pre_save:
       pre_save(self.fixture)
+    env = dict(os.environ)
+    env.setdefault("HNGH_LOADOUT",
+                   "loadout-route-label=ceremony loadout-cost-limit=2000 "
+                   "loadout-token-limit=50000 loadout-time-limit=2000")
+    argv = ["sbcl", "--script", str(SCRIPT), "--dry-run"]
+    if findings:
+      argv.append("--findings=" + str(findings))
+    argv += ["pre-validate dream step", candidate or self.candidate]
     out = subprocess.run(
-      ["sbcl", "--script", str(SCRIPT), "--dry-run",
-       "pre-validate dream step", candidate or self.candidate],
-      capture_output=True, text=True, cwd=self.fixture, timeout=900)
+      argv, capture_output=True, text=True, cwd=self.fixture, env=env,
+      timeout=900)
     return out
 
   def head(self):
@@ -103,12 +117,15 @@ class DreamDrive(unittest.TestCase):
     self.assertIn("[dream] create-run exit=0", out.stdout)
     self.assertIn("[dream] admit-transport exit=0", out.stdout)
     self.assertIn("[dream] propose exit=0", out.stdout)
-    self.assertIn("[dream] issue-cert-prepare-candidate exit=0", out.stdout)
-    self.assertIn("verdict state=admitted principles=10", out.stdout)
+    self.assertIn("verdict state=admitted principles=", out.stdout)
+    self.assertIn("closed-authority:passed", out.stdout)
+    self.assertIn("source-grounding:passed", out.stdout)
+    self.assertIn("evidence=21 findings=0 hash=", out.stdout)
     self.assertIn(self.candidate, out.stdout)
     self.assertIn("mutation-check prepare-candidate run-1", out.stdout)
-    self.assertIn("issue-cert commit run-1", out.stdout)
     self.assertIn("mutation-check commit run-1", out.stdout)
+    self.assertIn("mutation-check push run-1", out.stdout)
+    self.assertNotIn("issue-cert", out.stdout)
     # no real mutation: HEAD unchanged, nothing staged
     self.assertEqual(before, self.head())
     self.assertEqual(self.status(), "")
@@ -137,6 +154,44 @@ class DreamDrive(unittest.TestCase):
     self.assertNotEqual(out.returncode, 0)
     self.assertIn("refus", (out.stdout + out.stderr).lower())
     self.assertEqual(self.status(), bait_status)
+
+  def _write_findings(self, name, rows):
+    path = self.artifacts / name
+    path.write_text("".join(rows))
+    return path
+
+  def test_findings_ride_the_verdict(self):
+    rows = self._write_findings("findings.tsv", [
+        "closed-authority\trisk p=0.80: caller scope unclear\tdocs/fixture.md\n",
+        "fail-closed\trisk p=0.75: refusal path unproven\tdocs/fixture.md\n",
+    ])
+    before = self.head()
+    out = self.run_dream(findings=rows)
+    self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+    self.assertIn("evidence=21 findings=2 hash=", out.stdout)
+    self.assertEqual(before, self.head())
+    self.assertEqual(self.status(), "")
+
+  def test_findings_over_bound_refuse(self):
+    rows = self._write_findings("many.tsv", [
+        "fail-closed\trisk p=0.80 row %d\tdocs/fixture.md\n" % n
+        for n in range(33)])
+    before = self.head()
+    out = self.run_dream(findings=rows)
+    self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+    self.assertIn("malformed findings", out.stdout + out.stderr)
+    self.assertEqual(before, self.head())
+    self.assertEqual(self.status(), "")
+
+  def test_findings_long_cite_refuse(self):
+    rows = self._write_findings("long.tsv", [
+        "fail-closed\trisk p=0.80\tdocs/" + "x" * 201 + "\n"])
+    before = self.head()
+    out = self.run_dream(findings=rows)
+    self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+    self.assertIn("malformed findings", out.stdout + out.stderr)
+    self.assertEqual(before, self.head())
+    self.assertEqual(self.status(), "")
 
   def test_usage_without_dry_run_or_store(self):
     out = subprocess.run(

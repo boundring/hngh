@@ -466,7 +466,7 @@ here; any other -- argument is returned as BAD-OPTION. Command
 key=value options pass through as positionals for the command parser."
   (let ((positionals '()) (store nil) (bad nil))
     (dolist (arg args)
-      (if (eql 0 (search "--" arg))
+      (if (and (stringp arg) (eql 0 (search "--" arg)))
           (multiple-value-bind (key value) (parse-option arg)
             (if (eq key :store)
                 (setf store value)
@@ -589,10 +589,11 @@ line for the same run."
 
 (defun collect-options (args)
   "ARGS after the command's positionals: (values positionals options-alist).
-A key=value argument is an option; anything else is a positional."
+A key=value string is an option; anything else (including a non-string
+such as an in-process verdict struct) is a positional."
   (let ((positionals '()) (options '()))
     (dolist (arg args)
-      (if (find #\= arg)
+      (if (and (stringp arg) (find #\= arg))
           (multiple-value-bind (key value) (parse-option arg)
             (push (cons key value) options))
           (push arg positionals)))
@@ -1106,7 +1107,24 @@ refused, 3 transport fault."
     :input-contract :output-contract :failure-contract
     :declared-capabilities :capability-diff :source-manifest
         :risk-note :dependency :evidence-trigger :evidence-requirements
-        :profile))
+        :evidence-fact :review-findings :content-hash :reversion :profile))
+
+(defparameter +principle-names+
+  '("closed-authority" "least-authority" "dependency-direction" "fail-closed"
+    "evidence-before-claim" "atomic-mutation" "reversibility"
+    "no-hidden-execution" "cost-and-route-discipline" "source-grounding"))
+
+(defun sha256-hex-p (value)
+  "True when VALUE has the closed fingerprint shape: 64 lowercase hex
+characters. Malformed fingerprints refuse."
+  (and (stringp value)
+       (= 64 (length value))
+       (every (lambda (char) (find char "0123456789abcdef")) value)))
+
+(defun option-values (options key)
+  "Every value bound to KEY in the OPTIONS alist, in order."
+  (mapcar #'cdr
+          (remove-if-not (lambda (pair) (eq key (car pair))) options)))
 
 (defun parse-comma-labels (value)
   (let ((parts (uiop:split-string value :separator ",")))
@@ -1128,25 +1146,56 @@ refused, 3 transport fault."
              :source-role (subseq hash-role (1+ colon)))))))
 
 (defun parse-evidence-requirement (value)
-  "PRINCIPLE:KIND:FINGERPRINTS"
+  "PRINCIPLE:KIND:FINGERPRINT - one requirement, no self-echoed facts."
   (let ((parts (uiop:split-string value :separator ":")))
     (unless (= 3 (length parts))
-      (error "evidence-requirements must be PRINCIPLE:KIND:FINGERPRINTS"))
-    (destructuring-bind (principle kind fingerprints) parts
-      (let ((fingerprints (remove-if #'uiop:emptyp
-                                     (uiop:split-string fingerprints
-                                                       :separator ","))))
-        (unless fingerprints
-          (error "evidence-requirements must name a fingerprint"))
-        (hngh.domain:make-evidence-requirement
+      (error "evidence-requirements must be PRINCIPLE:KIND:FINGERPRINT"))
+    (destructuring-bind (principle kind fingerprint) parts
+      (unless (and (member principle +principle-names+ :test #'string=)
+                   (sha256-hex-p fingerprint))
+        (error "malformed evidence requirement: ~S" value))
+      (hngh.domain:make-evidence-requirement
+       :principle (intern (string-upcase principle) :keyword)
+       :kind (intern (string-upcase kind) :keyword)
+       :required-fingerprints (list fingerprint)
+       :evidence-facts '()))))
+
+(defun parse-evidence-fact (value)
+  "PRINCIPLE:KIND:FINGERPRINT - one supplied :current fact."
+  (let ((parts (uiop:split-string value :separator ":")))
+    (unless (= 3 (length parts))
+      (error "evidence-fact must be PRINCIPLE:KIND:FINGERPRINT"))
+    (destructuring-bind (principle kind fingerprint) parts
+      (unless (and (member principle +principle-names+ :test #'string=)
+                   (sha256-hex-p fingerprint))
+        (error "malformed evidence fact: ~S" value))
+      (hngh.domain:make-evidence-fact
          :principle (intern (string-upcase principle) :keyword)
-         :kind (intern (string-upcase kind) :keyword)
-         :required-fingerprints fingerprints
-         :evidence-facts
-         (mapcar (lambda (fingerprint)
-                   (hngh.domain:make-evidence-fact
-                    :kind :fixture :fingerprint fingerprint :state :current))
-                 fingerprints))))))
+       :kind (hngh.domain::validate-evidence-requirement-kind
+              (intern (string-upcase kind) :keyword))
+       :fingerprint fingerprint
+       :state :current))))
+
+(defun parse-review-finding (row)
+  "One bounded review finding row: PRINCIPLE<TAB>TEXT<TAB>CITE.
+Bounds mirror the review adapter: text and cite are 1..200 printable
+ASCII characters and the principle is a matrix name. Returns the
+canonical row; findings are advisory data, never evidence."
+  (let ((fields (uiop:split-string row :separator '(#\Tab))))
+    (unless (= 3 (length fields))
+      (error "review-findings must be PRINCIPLE<TAB>TEXT<TAB>CITE"))
+    (destructuring-bind (principle text cite) fields
+      (unless (and (member principle +principle-names+ :test #'string=)
+                   (every (lambda (field)
+                            (and (plusp (length field))
+                                 (<= (length field) 200)
+                                 (every (lambda (char)
+                                          (<= 32 (char-code char) 126))
+                                        field)))
+                         (list text cite)))
+       (error "unsafe review finding"))
+      ;; ~C with #\Tab: a Lisp "\t" is just the character t.
+      (format nil "~A~C~A~C~A" principle #\Tab text #\Tab cite))))
 
 (defun parse-evidence-profile (data)
   "Strict-parse operator policy-profile text into an EVIDENCE-PROFILE.
@@ -1183,72 +1232,6 @@ or (values nil \"malformed profile file\")."
     (error ()
       (values nil "malformed profile file"))))
 
-(defun dogfood-verdict ()
-  "The deterministic admitted verdict behind the certificate surface: every
-matrix principle carries one current fixture-tagged evidence requirement,
-so the verdict is :admitted."
-  (hngh.domain:evaluate-policy-proposal
-   (hngh.domain:make-policy-proposal
-    :class :feature
-    :problem "operator dogfood" :outcome "governed mutation"
-    :purpose "exercise the surface" :caller "operator"
-    :input-contract "run" :output-contract "certificate"
-    :failure-contract "refusal" :declared-capabilities '("mutation")
-    :capability-diff "none"
-    :source-manifest (list (hngh.domain:make-source-manifest-entry
-                            :relative-path "operator.md"
-                            :content-hash "operator"
-                            :source-role "surface"))
-    :risk-note "none" :dependency "domain" :evidence-trigger "operator"
-    :evidence-requirements
-    (mapcar (lambda (principle)
-              (hngh.domain:make-evidence-requirement
-               :principle principle
-               :kind (if (member principle '(:purpose :caller))
-                         :purpose :claim-proof)
-               :required-fingerprints '("operator")
-               :evidence-facts
-               (list (hngh.domain:make-evidence-fact
-                      :kind :fixture :fingerprint "operator"
-                      :state :current))))
-            hngh.domain::+matrix-principles+))))
-
-(defun dogfood-payload (identifier action)
-  "Shared fresh facts for the certificate and its fresh evidence."
-  (declare (ignore identifier))
-  (let ((content-hash (format nil "dogfood-~(~A~)" action)))
-    (values content-hash
-            (list content-hash)
-            (list (hngh.domain:make-source-manifest-entry
-                   :relative-path "operator.md"
-                   :content-hash content-hash
-                   :source-role "surface")))))
-
-(defun dogfood-certificate (store identifier action paths)
-  "Mint the candidate certificate for the dogfood loop: repository
-identity comes from STORE's root name, the base revision from the
-IDENTIFIER, candidate paths from PATHS."
-  (let ((root-directory
-          (hngh.adapters.filesystem::filesystem-store-root-directory store))
-        (content-hash (format nil "dogfood-~(~A~)" action)))
-    (hngh.domain:issue-candidate-certificate
-     (dogfood-verdict)
-     :action action
-     :repository-identity
-     (car (last (pathname-directory
-                 (uiop:ensure-directory-pathname root-directory))))
-     :base-revision identifier
-     :candidate-paths paths
-     :content-hash content-hash
-     :evidence-hashes (list content-hash)
-     :review-findings '()
-     :source-manifest (list (hngh.domain:make-source-manifest-entry
-                             :relative-path "operator.md"
-                             :content-hash content-hash
-                             :source-role "surface"))
-     :policy-profile "dogfood"
-     :expiry "2026-08-25T00:00:00Z")))
-
 (defun dispatch-propose (args store clock)
   (declare (ignore store clock))
   (multiple-value-bind (positionals options) (collect-options args)
@@ -1269,43 +1252,53 @@ IDENTIFIER, candidate paths from PATHS."
         (let* ((plist (options-plist options))
                (requirements
                  (mapcar #'parse-evidence-requirement
-                         (mapcar #'cdr
-                                 (remove-if-not
-                                  (lambda (pair)
-                                    (eq :evidence-requirements (car pair)))
-                                  options))))
-               (proposal (hngh.domain:make-policy-proposal
-                          :class (intern (string-upcase (getf plist :class))
-                                         :keyword)
-                          :problem (getf plist :problem)
-                          :outcome (getf plist :outcome)
-                          :purpose (getf plist :purpose)
-                          :caller (getf plist :caller)
-                          :input-contract (getf plist :input-contract)
-                          :output-contract (getf plist :output-contract)
-                          :failure-contract (getf plist :failure-contract)
-                          :declared-capabilities
-                          (parse-comma-labels (getf plist :declared-capabilities))
-                          :capability-diff (getf plist :capability-diff)
-                          :source-manifest
-                          (parse-dogfood-manifest (getf plist :source-manifest))
-                          :risk-note (getf plist :risk-note)
-                          :dependency (getf plist :dependency)
-                          :evidence-trigger (getf plist :evidence-trigger)
-                          :evidence-requirements requirements))
-               (verdict
-                 (if (getf plist :profile)
-                     (multiple-value-bind (profile label)
-                         (read-profile-file (getf plist :profile))
-                       (unless profile
-                         (return-from dispatch-propose
-                           (values (format nil "propose refused: ~A" label) 2)))
-                       (hngh.domain:evaluate-policy-proposal-under-profile
-                        proposal profile))
-                     (hngh.domain:evaluate-policy-proposal proposal))))
-          (if (eq :admitted (hngh.domain:policy-verdict-state verdict))
-              (values (hngh.presentation:render verdict) 0)
-              (values (hngh.presentation:render verdict) 1)))
+                         (option-values options :evidence-requirements)))
+               (facts
+                 (mapcar #'parse-evidence-fact
+                         (option-values options :evidence-fact)))
+               (findings
+                 (mapcar #'parse-review-finding
+                         (option-values options :review-findings)))
+               (content-hash (getf plist :content-hash)))
+          (when (> (length findings) 32)
+            (error "review findings exceed the 32 bound"))
+          (unless (sha256-hex-p content-hash)
+            (error "propose requires content-hash=<sha256-hex>"))
+          (let* ((proposal (hngh.domain:make-policy-proposal
+                            :class (intern (string-upcase (getf plist :class))
+                                           :keyword)
+                            :problem (getf plist :problem)
+                            :outcome (getf plist :outcome)
+                            :purpose (getf plist :purpose)
+                            :caller (getf plist :caller)
+                            :input-contract (getf plist :input-contract)
+                            :output-contract (getf plist :output-contract)
+                            :failure-contract (getf plist :failure-contract)
+                            :declared-capabilities
+                            (parse-comma-labels (getf plist :declared-capabilities))
+                            :capability-diff (getf plist :capability-diff)
+                            :source-manifest
+                            (parse-dogfood-manifest (getf plist :source-manifest))
+                            :risk-note (getf plist :risk-note)
+                            :dependency (getf plist :dependency)
+                            :evidence-trigger (getf plist :evidence-trigger)
+                            :evidence-requirements requirements
+                            :evidence-facts facts
+                            :review-findings findings
+                            :content-hash content-hash))
+                 (verdict
+                   (if (getf plist :profile)
+                       (multiple-value-bind (profile label)
+                           (read-profile-file (getf plist :profile))
+                         (unless profile
+                           (return-from dispatch-propose
+                             (values (format nil "propose refused: ~A" label) 2)))
+                         (hngh.domain:evaluate-policy-proposal-under-profile
+                          proposal profile))
+                       (hngh.domain:evaluate-policy-proposal proposal))))
+            (if (eq :admitted (hngh.domain:policy-verdict-state verdict))
+                (values (hngh.presentation:render verdict) 0 verdict)
+                (values (hngh.presentation:render verdict) 1 verdict))))
       (error (condition)
         (values (format nil "malformed propose: ~A~%~A" condition (command-usage))
                 2)))))
@@ -1319,86 +1312,91 @@ evidence nil) or (values nil refusal-label); fails closed."
    candidate-paths cwd gather-ports))
 
 (defun parse-verdict-report (text)
-  "Strict closed parser for a rendered policy verdict (as emitted by
-hngh.presentation:render): a verdict header, one line per principle
-result, then a reasons line. Any deviation yields (values nil
-\"malformed-verdict-evidence\")."
+  "Strict closed parser for a rendered policy verdict: the two-line
+report emitted by hngh.presentation:render:
+  verdict state=<state> principles=<name:result,...>
+  evidence=<count> findings=<count> hash=<content-hash>
+All ten principle names appear exactly once with a closed result state;
+evidence=<count> is the number of supplied facts and hash= a 64-hex
+content hash. A parsed verdict keeps no reason labels or review finding
+text (the report carries only their count). Any deviation yields
+(values nil \"malformed-verdict-evidence\")."
   (handler-case
-      (let* ((lines (remove-if (lambda (line)
-                                 (uiop:emptyp (string-trim
-                                               '(#\Space #\Tab) line)))
+      (let ((lines (remove-if (lambda (line)
+                                (uiop:emptyp (string-trim '(#\Space #\Tab) line)))
                                (uiop:split-string (or text "")
-                                                  :separator '(#\Newline))))
-             (head (first lines)))
-        (unless (and lines head)
+                                                 :separator '(#\Newline)))))
+        (unless (= 2 (length lines))
           (return-from parse-verdict-report
             (values nil "malformed-verdict-evidence")))
-        (let* ((tokens (uiop:split-string (string-trim '(#\Space #\Tab) head)
+        (let* ((head (uiop:split-string
+                      (string-trim '(#\Space #\Tab) (first lines))
                                           :separator '(#\Space)))
-               (state (and (= 3 (length tokens))
-                           (string= "verdict" (first tokens))
-                           (string= "state=" (second tokens) :end2 6)
-                           (intern (string-upcase (subseq (second tokens) 6))
-                                   :keyword)))
-               (count-text (and (= 3 (length tokens))
-                                (string= "principles=" (third tokens) :end2 11)
-                                (subseq (third tokens) 11)))
-               (count (and count-text
-                           (every #'digit-char-p count-text)
-                           (parse-integer count-text))))
-          (unless (and state
-                       (member state '(:admitted :refused :needs-escalation))
-                       count (plusp count))
+               (tail (uiop:split-string
+                      (string-trim '(#\Space #\Tab) (second lines))
+                                          :separator '(#\Space)))
+               (state (and (= 3 (length head))
+                           (string= "verdict" (first head))
+                           (string= "state=" (second head) :end2 6)
+                           (member (intern (string-upcase (subseq (second head) 6))
+                                           :keyword)
+                                   '(:admitted :refused :needs-escalation))))
+               (pairs-text (and (= 3 (length head))
+                                (string= "principles=" (third head) :end2 11)
+                                (subseq (third head) 11)))
+               (evidence-text (and (= 3 (length tail))
+                                   (string= "evidence=" (first tail) :end2 9)
+                                   (subseq (first tail) 9)))
+               (findings-text (and (= 3 (length tail))
+                                   (string= "findings=" (second tail) :end2 9)
+                                   (subseq (second tail) 9)))
+               (hash (and (= 3 (length tail))
+                          (string= "hash=" (third tail) :end2 5)
+                          (subseq (third tail) 5))))
+          (unless (and state pairs-text
+                       evidence-text (every #'digit-char-p evidence-text)
+                       findings-text (every #'digit-char-p findings-text)
+                       (sha256-hex-p hash))
             (return-from parse-verdict-report
               (values nil "malformed-verdict-evidence")))
-          (let ((principle-lines (butlast (rest lines)))
-                (reasons-line (car (last lines))))
-            (unless (and (string= "reasons=" reasons-line :end2 8)
-                         (= (length principle-lines) count))
-              (return-from parse-verdict-report
-                (values nil "malformed-verdict-evidence")))
             (let ((results '()))
-              (dolist (line principle-lines)
-                (let* ((trimmed (string-trim '(#\Space #\Tab) line))
-                       (state-at (search " state=" trimmed))
-                       (name (and state-at
-                                  (subseq trimmed (length "principle ") state-at)))
-                       (suffix (and state-at
-                                    (subseq trimmed (+ state-at (length " state="))))))
-                  (unless (and state-at
-                               (string= trimmed "principle "
-                                        :end1 (length "principle ")
-                                        :end2 (length "principle "))
-                               name (plusp (length name))
-                               suffix (plusp (length suffix))
-                               (not (position #\Space suffix)))
-                    (return-from parse-verdict-report
-                      (values nil "malformed-verdict-evidence")))
+            (dolist (pair (uiop:split-string pairs-text :separator ","))
+              (let* ((colon (position #\: pair))
+                     (name (and colon (subseq pair 0 colon)))
+                     (result-text (and colon (subseq pair (1+ colon))))
+                     (keyword (and name
+                                   (member name +principle-names+ :test #'string=)
+                                   (intern (string-upcase name) :keyword))))
+                (unless (and keyword result-text
+                             (not (position #\: result-text))
+                             (member (intern (string-upcase result-text) :keyword)
+                                    '(:passed :refused :needs-escalation))
+                             (not (find keyword results
+                                        :key #'hngh.domain:principle-result-principle)))
+          (return-from parse-verdict-report
+            (values nil "malformed-verdict-evidence")))
                   (push (hngh.domain:make-principle-result
-                         :principle (intern (string-upcase name) :keyword)
-                         :state (intern (string-upcase suffix) :keyword)
+                       :principle keyword
+                       :state (intern (string-upcase result-text) :keyword)
                          :evidence-fingerprints '())
                         results)))
-              (let* ((reasons-text (subseq reasons-line (length "reasons=")))
-                     (reason-labels
-                       (if (or (zerop (length (string-trim '(#\Space #\Tab)
-                                                            reasons-text)))
-                               (string-equal (string-trim '(#\Space #\Tab)
-                                                          reasons-text)
-                                             "none"))
-                           '()
-                           (mapcar (lambda (label)
-                                     (string-trim '(#\Space #\Tab) label))
-                                   (uiop:split-string reasons-text
-                                                      :separator '(#\;))))))
+            (unless (= 10 (length results))
+              (return-from parse-verdict-report
+                (values nil "malformed-verdict-evidence")))
                 (values (hngh.domain:make-policy-verdict
-                         :state state
-                         :principle-results (nreverse results)
-                         :reason-labels reason-labels)
-                        nil))))))
+                     :state (first state)
+                     :principle-results
+                     (mapcar (lambda (name)
+                               (find (intern (string-upcase name) :keyword) results
+                                     :key #'hngh.domain:principle-result-principle))
+                             +principle-names+)
+                     :reason-labels '()
+                     :review-findings '()
+                     :content-hash hash
+                     :evidence-count (parse-integer evidence-text))
+                    nil))))
     (error ()
       (values nil "malformed-verdict-evidence"))))
-
 (defun read-verdict-report (path)
   "Read and parse the operator-produced verdict report at PATH.
 Returns (values verdict nil), (values nil \"missing-verdict-file\"),
@@ -1424,7 +1422,7 @@ certificate."
    :candidate-paths (sort (copy-list paths) #'string<)
    :content-hash (getf evidence :content-hash)
    :evidence-hashes (getf evidence :evidence-hashes)
-   :review-findings '()
+   :review-findings (hngh.domain::policy-verdict-review-findings verdict)
    :source-manifest (getf evidence :source-manifest)
    :policy-profile "real"
    :expiry (format-utc-timestamp (+ (get-universal-time) 86400))))
@@ -1438,108 +1436,18 @@ certificate."
     (:transport-fault (values (hngh.presentation:render result) 3))
     (:command-failed (values (hngh.presentation:render result) 1))))
 
-(defun real-issue-cert (action verdict-file paths gather-ports)
-  "Issue a genuine certificate: only an operator-produced verdict
-report (READ-VERDICT-REPORT) and real candidate evidence
-(REAL-RUN-EVIDENCE) may mint one. Anything missing, unadmitted, or
-malformed is refused."
-  (multiple-value-bind (verdict verdict-label)
-      (read-verdict-report verdict-file)
-    (unless verdict
-      (return-from real-issue-cert
-        (values (format nil "certificate refused: ~A" verdict-label) 1)))
-    (unless (eq :admitted (hngh.domain:policy-verdict-state verdict))
-      (return-from real-issue-cert
-        (values "certificate refused: unadmitted-verdict" 1)))
-    (multiple-value-bind (evidence evidence-label)
-        (real-run-evidence paths (uiop:getcwd) gather-ports)
-      (unless evidence
-        (return-from real-issue-cert
-          (values (format nil "certificate refused: ~A" evidence-label) 1)))
-      (values (hngh.presentation:render
-               (real-certificate verdict action paths evidence))
-              0))))
-
-(defun dispatch-issue-cert (args store clock gather-ports)
-  (declare (ignore clock))
-  (multiple-value-bind (positionals options) (collect-options args)
-    (when (or options (< (length positionals) 2))
-      (return-from dispatch-issue-cert (values (command-usage) 2)))
-    (let ((action (intern (string-upcase (first positionals)) :keyword))
-          (identifier (second positionals)))
-      (unless (member action hngh.adapters.mutation::+mutation-actions+)
-        (return-from dispatch-issue-cert
-          (values (format nil "issue-cert action: ~{~A~^|~}~%~A"
-                          (mapcar (lambda (a)
-                                    (string-downcase (symbol-name a)))
-                                  hngh.adapters.mutation::+mutation-actions+)
-                          (command-usage))
-                  2)))
-      (let ((run (run-from-store store identifier)))
-        (unless run
-          (return-from dispatch-issue-cert (missing-run-output identifier)))
-        (unless (store-has-admission-receipt-p store identifier)
-          (return-from dispatch-issue-cert
-            (values (format nil "certificate refused: run ~A not admitted"
-                            identifier)
-                    1)))
-        (handler-case
-            (if (third positionals)
-                (real-issue-cert action (third positionals)
-                                 (or (cdddr positionals) '("candidate.lisp"))
-                                 gather-ports)
-                (values "certificate refused: missing-verdict-evidence" 1))
-          (error (condition)
-            (values (format nil "malformed issue-cert: ~A" condition) 2)))))))
-
-
-(defun fixture-mutation-check (store identifier action positionals mutation-ports clock)
-  "Fixture-grade mutation check kept for the pre-verdict-report
-workflow; superseded by REAL-MUTATION-CHECK once a verdict file is
-passed."
-  (multiple-value-bind (content-hash evidence-hashes manifest)
-      (dogfood-payload identifier action)
-    (let* ((certificate
-             (dogfood-certificate store identifier action
-                                  '("candidate.lisp")))
-           (evidence
-             (hngh.adapters.mutation:make-mutation-evidence
-              :repository-identity
-              (car (last (pathname-directory
-                          (uiop:ensure-directory-pathname
-                           (hngh.adapters.filesystem::
-                            filesystem-store-root-directory store)))))
-              :base-revision identifier
-              :candidate-paths '("candidate.lisp")
-              :content-hash content-hash
-              :evidence-hashes (append evidence-hashes
-                                       (cddr positionals))
-              :principle-verdicts (list (dogfood-verdict))
-              :review-findings '()
-              :source-manifest manifest
-              :policy-profile "dogfood"
-              :now (funcall clock)))
-           (result
-             (hngh.main:execute-run-mutation
-              certificate evidence
-              (or mutation-ports (default-mutation-ports))
-              :action action)))
-      (case (hngh.adapters.mutation:mutation-result-status result)
-        (:executed (values (hngh.presentation:render result) 0))
-        (:mismatch (values (hngh.presentation:render result) 1))
-        (:refused (values (hngh.presentation:render result) 1))
-        (:transport-fault (values (hngh.presentation:render result) 3))
-        (:command-failed (values (hngh.presentation:render result) 1))))))
-
-
-(defun real-mutation-check (store identifier action verdict-file
+(defun real-mutation-check (store identifier action verdict-source
                             positionals mutation-ports gather-ports clock)
-  "Mutation-check backed by the operator-verified verdict report and
-the real runner evidence. Anything missing, unadmitted, or malformed
-is refused."
+  "Single mint+execute verb: mints the candidate certificate and
+executes the bound mutation against the operator-verified verdict (an
+in-process policy verdict or a verdict report path) and the real
+runner evidence. Anything missing, unadmitted, or malformed is
+refused."
   (declare (ignore store identifier))
   (multiple-value-bind (verdict verdict-label)
-      (read-verdict-report verdict-file)
+      (if (hngh.domain:policy-verdict-p verdict-source)
+          (values verdict-source nil)
+          (read-verdict-report verdict-source))
     (unless verdict
       (return-from real-mutation-check
         (values (format nil "mutation-check refused: ~A" verdict-label) 1)))
@@ -1564,7 +1472,8 @@ is refused."
                 :content-hash (getf evidence :content-hash)
                 :evidence-hashes (getf evidence :evidence-hashes)
                 :principle-verdicts (list verdict)
-                :review-findings '()
+                :review-findings
+                (hngh.domain::policy-verdict-review-findings verdict)
                 :source-manifest (getf evidence :source-manifest)
                 :policy-profile "real"
                 :now (funcall clock)))
@@ -1607,8 +1516,7 @@ is refused."
                 (real-mutation-check store identifier action
                                      (third positionals) positionals
                                      mutation-ports gather-ports clock)
-                (fixture-mutation-check store identifier action positionals
-                                        mutation-ports clock))
+                (values "mutation-check refused: missing-verdict-evidence" 1))
           (error (condition)
             (values (format nil "malformed mutation-check: ~A" condition) 2)))))))
 
@@ -2457,8 +2365,6 @@ besides a bare `status` is malformed (exit 2). Pure read: no mutation."
     ((string= command "checkpoint") (dispatch-checkpoint args store clock))
     ((string= command "close-run") (dispatch-close-run args store clock))
     ((string= command "propose") (dispatch-propose args store clock))
-    ((string= command "issue-cert")
-     (dispatch-issue-cert args store clock gather-ports))
     ((string= command "mutation-check")
      (dispatch-mutation-check args store clock mutation-ports gather-ports))
     ((string= command "review") (dispatch-review args store clock review-ports))
@@ -2487,13 +2393,15 @@ besides a bare `status` is malformed (exit 2). Pure read: no mutation."
                               federation-ports attestation-ports wake-ports
                               worker-ports)
   "Parse the operator ARGV list, execute the named command, and return
-(values output-string exit-code). Exit codes: 0 accepted; 1 refused or
+(values output-string exit-code); propose additionally returns the
+policy verdict struct as a third value for in-process callers such as
+scripts/ceremony-drive. Exit codes: 0 accepted; 1 refused or
 conflict; 2 malformed invocation (unknown command, wrong arity, unknown
 option, transport, or verb); 3 transport fault. CLOCK-NOW may inject a
 timestamp callback for deterministic tests. MUTATION-PORTS injects the
 mutation adapter ports for mutation-check, so the command never spawns
 a subprocess when fakes are supplied. GATHER-PORTS injects the
-candidate-evidence process transport for issue-cert and mutation-check,
+candidate-evidence process transport for mutation-check,
 so real evidence gathering also never spawns a subprocess when fakes are
 supplied. REVIEW-PORTS injects the model-review adapter ports for the
 review command (no default provider exists; without injection the command

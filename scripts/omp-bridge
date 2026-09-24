@@ -325,7 +325,14 @@ def sweep_stale_stores(stale_hours=STALE_STORE_HOURS):
             pass
 
 
-def ceremony_cmd(objective, files):
+def _timing(label, started):
+    """One [ceremony-timing] bridge-<label> line; the time-ledger's
+    parser (automation/jobs/time-ledger.sh) picks these up unchanged."""
+    print(f"[ceremony-timing] bridge-{label} "
+          f"{int((time.monotonic() - started) * 1000)} ms")
+
+
+def ceremony_cmd(objective, files, findings=None):
     """Run scripts/ceremony-drive over FILES from a fresh store, serialized.
 
     Global flock (default /tmp/hngh-ceremony.lock, non-blocking) keeps
@@ -344,17 +351,22 @@ def ceremony_cmd(objective, files):
     if not files:
         print("omp-bridge: no FILES given to commit", file=sys.stderr)
         return 2
+    t_total = time.monotonic()
+    t_leg = time.monotonic()
     sweep_stale_stores()
+    _timing("sweep", t_leg)
     now = now_ts().replace(":", "").replace("-", "").replace("T", "-")[:-1]
     env_store = os.environ.get("OMP_CEREMONY_STORE")
     store = Path(env_store or f"/tmp/hngh-cer-{now}")
     generated = env_store is None  # our own ephemeral dir: we clean it
+    t_leg = time.monotonic()
     try:
         store.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         print(f"omp-bridge: cannot create store {store}: {exc}",
               file=sys.stderr)
         return 3
+    _timing("mkdir", t_leg)
     lockfd = None
     try:
         lockfd = open(str(LOCK), "w")
@@ -362,6 +374,7 @@ def ceremony_cmd(objective, files):
         print(f"omp-bridge: cannot open lock {LOCK}: {exc}", file=sys.stderr)
         return 3
     try:
+        t_leg = time.monotonic()
         try:
             flock(lockfd.fileno(), LOCK_EX | LOCK_NB)
         except BlockingIOError:
@@ -369,10 +382,21 @@ def ceremony_cmd(objective, files):
                   f"(lock {LOCK} held); try again when it lands",
                   file=sys.stderr)
             return 1
-        cmd = [str(CEREMONY_DRIVE), f"--store={store}", objective, *files]
+        _timing("lock", t_leg)
+        cmd = [str(CEREMONY_DRIVE), f"--store={store}"]
+        if findings:
+            cmd.append(f"--findings={findings}")
+        cmd += [objective, *files]
+        env = dict(os.environ)
+        # cost-and-route facts need a loadout; derive the ceremony default
+        # when the caller supplies none (an explicit HNGH_LOADOUT wins).
+        env.setdefault("HNGH_LOADOUT",
+                       f"loadout-route-label=ceremony loadout-cost-limit=2000"
+                       f" loadout-token-limit=50000"
+                       f" loadout-time-limit={CEREMONY_TIMEOUT}")
         try:
             proc = subprocess.run(cmd, cwd=ROOT, timeout=CEREMONY_TIMEOUT,
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, env=env)
         except subprocess.TimeoutExpired:
             print(f"omp-bridge: ceremony exceeded {CEREMONY_TIMEOUT}s; "
                   "no commit landed; store removed", file=sys.stderr)
@@ -391,7 +415,10 @@ def ceremony_cmd(objective, files):
             pass
         lockfd.close()
         if generated:
+            t_leg = time.monotonic()
             shutil.rmtree(store, ignore_errors=True)
+            _timing("rmtree", t_leg)
+        _timing("total", t_total)
 
 
 # --- run lifecycle (delegation loop) -------------------------------------
@@ -487,6 +514,8 @@ def main(argv=None):
                    help="close RUN with DISPOSITION (cancelled|evacuated|dead)")
     p.add_argument("--ceremony", action="store_true",
                    help="ceremony-commit the following OBJECTIVE and FILES")
+    p.add_argument("--findings", metavar="PATH", default=None,
+                   help="bounded review-findings TSV for --ceremony")
     p.add_argument("--propose", metavar="SLUG",
                    help="write a new docs/project/plans/<date>-<slug>.plan.md "
                         "(status=proposed); never overwrites")
@@ -511,15 +540,17 @@ def main(argv=None):
         return run_end_cmd(args.run_end[0], args.run_end[1])
     if args.ceremony:
         if not args.rest:
-            print("usage: omp-bridge --ceremony OBJECTIVE FILE...",
+            print("usage: omp-bridge --ceremony [--findings=PATH] "
+                  "OBJECTIVE FILE...",
                   file=sys.stderr)
             return 2
-        return ceremony_cmd(args.rest[0], args.rest[1:])
+        return ceremony_cmd(args.rest[0], args.rest[1:], args.findings)
     if args.propose:
         return propose_cmd(args.propose, args.title, args.risk)
     if args.plan_status is not None:
         return plan_status_cmd(args.plan_status)
-    print("usage: omp-bridge --orient | --ceremony OBJECTIVE FILE... | "
+    print("usage: omp-bridge --orient | --ceremony [--findings=PATH] "
+          "OBJECTIVE FILE... | "
           "--run-start SESSION OBJECTIVE "
           "[--task LABEL] | --run-end RUN DISPOSITION | --propose SLUG "
           "--title TEXT [--risk normal|critical] | --plan-status [SLUG] "

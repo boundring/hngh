@@ -98,13 +98,14 @@
 
 (let ((admitted (make-fixture-admitted-verdict)))
   (check (rendered-p (hngh.presentation:render-policy-verdict admitted)
-                     "verdict state=admitted" "principle closed-authority"
-                     "reasons=none")
+                     "verdict state=admitted"
+                     "principles=closed-authority:passed"
+                     "evidence=" "findings=0" "hash=")
          "admitted verdict rendering is literal and complete"))
 
 (let ((refused (hngh.domain:evaluate-policy-proposal (refused-close-proposal))))
   (check (rendered-p (hngh.presentation:render-policy-verdict refused)
-                     "verdict state=refused" "missing-principle-result")
+                     "verdict state=refused" "source-grounding:refused")
          "refused verdict rendering keeps its literal refusals"))
 
 (let ((certificate

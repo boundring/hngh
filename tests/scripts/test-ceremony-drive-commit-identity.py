@@ -49,6 +49,8 @@ LEAKY_NAME = "Leaky Ambient"
 LEAKY_EMAIL = "leaky@example.invalid"
 IDENTITY_ENV_PREFIXES = ("GIT_AUTHOR_", "GIT_COMMITTER_")
 IDENTITY_ENV_KEYS = set(IDENTITY_ENV_PREFIXES) | {"EMAIL"}
+FIXTURE_LOADOUT = ("loadout-route-label=test loadout-cost-limit=2000 "
+                   "loadout-token-limit=50000 loadout-time-limit=60")
 
 
 def scrubbed_env(overrides=None):
@@ -61,6 +63,11 @@ def scrubbed_env(overrides=None):
          and key not in IDENTITY_ENV_KEYS
          and key not in ("GIT_DIR", "GIT_WORK_TREE",
                          "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM")}
+  # The drive's cost-and-route-discipline facts need a loadout: an
+  # unknown allowance refuses (fail-closed). Pin a fixture allowance so
+  # the run can reach the commit this test exists to inspect; overrides
+  # may still replace it.
+  env["HNGH_LOADOUT"] = FIXTURE_LOADOUT
   env.update(overrides or {})
   return env
 
@@ -90,7 +97,10 @@ class DriveCommitIdentity(unittest.TestCase):
       "-c", "user.email=" + LEAKY_EMAIL,
       "-c", "commit.gpgsign=false",
     )
-    src = self.fixture / "docs" / "fixture.txt"
+    # The candidate is a citable source document: source-grounding
+    # refuses a candidate with no .md conclusion link (2026-09-24
+    # evidence semantics - "refuse when a claim has no citable source").
+    src = self.fixture / "docs" / "fixture-note.md"
     src.parent.mkdir(parents=True)
     src.write_text("fixture candidate\n")
     makefile = self.fixture / "Makefile"
@@ -112,7 +122,7 @@ class DriveCommitIdentity(unittest.TestCase):
     return subprocess.run(
       ["sbcl", "--script", str(SCRIPT),
        "--store=" + str(self.store),
-       "drive commit identity proof", "docs/fixture.txt"],
+       "drive commit identity proof", "docs/fixture-note.md"],
       capture_output=True, text=True, cwd=self.fixture, timeout=900,
       env=scrubbed_env(env_overrides))
 

@@ -117,22 +117,25 @@ default in this pure policy."
    (ensure-nonempty-string source-role "source role")))
 
 (defstruct (evidence-fact
-            (:constructor %make-evidence-fact (kind fingerprint state))
+            (:constructor %make-evidence-fact (kind fingerprint state principle))
             (:conc-name %evidence-fact-))
   (kind nil :read-only t)
   (fingerprint nil :read-only t)
-  (state nil :read-only t))
+  (state nil :read-only t)
+  (principle nil :read-only t))
 
 (defun evidence-fact-kind (fact) (%evidence-fact-kind fact))
 (defun evidence-fact-fingerprint (fact)
   (copy-seq (%evidence-fact-fingerprint fact)))
 (defun evidence-fact-state (fact) (%evidence-fact-state fact))
+(defun evidence-fact-principle (fact) (%evidence-fact-principle fact))
 
-(defun make-evidence-fact (&key kind fingerprint state)
+(defun make-evidence-fact (&key kind fingerprint state principle)
   (%make-evidence-fact
    (ensure-keyword kind "evidence kind")
    (ensure-nonempty-string fingerprint "evidence fingerprint")
-   (validate-evidence-state state)))
+   (validate-evidence-state state)
+   (when principle (validate-principle-identifier principle))))
 
 (defun ensure-evidence-facts (value)
   (unless (and (listp value) (every #'evidence-fact-p value)
@@ -199,7 +202,8 @@ default in this pure policy."
             (:constructor %make-policy-proposal
                 (class problem outcome purpose caller input-contract output-contract
                  failure-contract declared-capabilities capability-diff source-manifest
-                 risk-note dependency evidence-trigger evidence-requirements))
+                 risk-note dependency evidence-trigger evidence-requirements
+                 evidence-facts review-findings content-hash))
             (:conc-name %policy-proposal-))
   (class nil :read-only t)
   (problem nil :read-only t)
@@ -215,7 +219,10 @@ default in this pure policy."
   (risk-note nil :read-only t)
   (dependency nil :read-only t)
   (evidence-trigger nil :read-only t)
-  (evidence-requirements nil :read-only t))
+  (evidence-requirements nil :read-only t)
+  (evidence-facts nil :read-only t)
+  (review-findings nil :read-only t)
+  (content-hash nil :read-only t))
 
 (defun policy-proposal-class (proposal) (%policy-proposal-class proposal))
 (defun policy-proposal-problem (proposal) (copy-seq (%policy-proposal-problem proposal)))
@@ -240,6 +247,12 @@ default in this pure policy."
   (copy-seq (%policy-proposal-evidence-trigger proposal)))
 (defun policy-proposal-evidence-requirements (proposal)
   (copy-list (%policy-proposal-evidence-requirements proposal)))
+(defun policy-proposal-evidence-facts (proposal)
+  (copy-list (%policy-proposal-evidence-facts proposal)))
+(defun policy-proposal-review-findings (proposal)
+  (mapcar #'copy-seq (%policy-proposal-review-findings proposal)))
+(defun policy-proposal-content-hash (proposal)
+  (copy-seq (%policy-proposal-content-hash proposal)))
 
 (defun make-policy-proposal
     (&key (class nil class-p) (problem nil problem-p) (outcome nil outcome-p)
@@ -250,7 +263,8 @@ default in this pure policy."
        (capability-diff nil capability-diff-p) (source-manifest nil source-manifest-p)
        (risk-note nil risk-note-p) (dependency nil dependency-p)
        (evidence-trigger nil evidence-trigger-p)
-       (evidence-requirements nil evidence-requirements-p))
+       (evidence-requirements nil evidence-requirements-p)
+       (evidence-facts nil) (review-findings nil) (content-hash ""))
   (unless (and class-p problem-p outcome-p purpose-p caller-p input-contract-p
                output-contract-p failure-contract-p declared-capabilities-p
                capability-diff-p source-manifest-p risk-note-p dependency-p
@@ -271,7 +285,12 @@ default in this pure policy."
    (ensure-nonempty-string risk-note "risk note")
    (ensure-nonempty-string dependency "dependency")
    (ensure-nonempty-string evidence-trigger "evidence trigger")
-   (ensure-evidence-requirements evidence-requirements)))
+   (ensure-evidence-requirements evidence-requirements)
+   (ensure-evidence-facts evidence-facts)
+   (ensure-label-list review-findings "review findings")
+   (if (stringp content-hash)
+       (copy-seq content-hash)
+       (error "Content hash must be a string"))))
 
 (defstruct (principle-result
             (:constructor %make-principle-result (principle state evidence-fingerprints))
@@ -292,17 +311,28 @@ default in this pure policy."
    (ensure-label-list evidence-fingerprints "evidence fingerprints")))
 
 (defstruct (policy-verdict
-            (:constructor %make-policy-verdict (state principle-results reason-labels))
+            (:constructor %make-policy-verdict
+                (state principle-results reason-labels
+                 review-findings content-hash evidence-count))
             (:conc-name %policy-verdict-))
   (state nil :read-only t)
   (principle-results nil :read-only t)
-  (reason-labels nil :read-only t))
+  (reason-labels nil :read-only t)
+  (review-findings nil :read-only t)
+  (content-hash nil :read-only t)
+  (evidence-count nil :read-only t))
 
 (defun policy-verdict-state (verdict) (%policy-verdict-state verdict))
 (defun policy-verdict-principle-results (verdict)
   (copy-list (%policy-verdict-principle-results verdict)))
 (defun policy-verdict-reason-labels (verdict)
   (mapcar #'copy-seq (%policy-verdict-reason-labels verdict)))
+(defun policy-verdict-review-findings (verdict)
+  (mapcar #'copy-seq (%policy-verdict-review-findings verdict)))
+(defun policy-verdict-content-hash (verdict)
+  (copy-seq (%policy-verdict-content-hash verdict)))
+(defun policy-verdict-evidence-count (verdict)
+  (%policy-verdict-evidence-count verdict))
 
 (defun ensure-principle-results (value)
   (unless (and (listp value)
@@ -314,18 +344,41 @@ default in this pure policy."
     (error "Principle results must be a duplicate-free list of principle results"))
   (copy-list value))
 
-(defun make-policy-verdict (&key state principle-results reason-labels)
+(defun make-policy-verdict (&key state principle-results reason-labels
+                              (review-findings nil) (content-hash "")
+                              (evidence-count 0))
   (%make-policy-verdict
    (validate-policy-verdict-state state)
    (ensure-principle-results principle-results)
-   (ensure-label-list reason-labels "reason labels")))
+   (ensure-label-list reason-labels "reason labels")
+   (ensure-label-list review-findings "review findings")
+   (if (stringp content-hash)
+       (copy-seq content-hash)
+       (error "Content hash must be a string"))
+   (if (typep evidence-count '(integer 0))
+       evidence-count
+       (error "Evidence count must be a nonnegative integer"))))
 
 
-(defun evidence-requirement-passed-p (requirement)
-  "Return (values passed-p refusal-labels) for one evidence requirement."
-  (let ((facts (evidence-requirement-evidence-facts requirement))
+(defun evidence-requirement-passed-p (requirement &optional fact-pool)
+  "Return (values passed-p refusal-labels) for one evidence requirement.
+The supply is the requirement's own nested facts plus every FACT-POOL
+fact of the same principle and kind (cross-principle supply is
+structurally impossible). A required fingerprint must be supplied
+exactly once: zero supplies refuses as missing-evidence, duplicates as
+conflicting-evidence."
+  (let ((facts (append
+                (evidence-requirement-evidence-facts requirement)
+                (remove-if-not
+                 (lambda (fact)
+                   (and (eql (evidence-requirement-principle requirement)
+                             (evidence-fact-principle fact))
+                        (eql (evidence-requirement-kind requirement)
+                             (evidence-fact-kind fact))))
+                 fact-pool)))
         (fingerprints (evidence-requirement-required-fingerprints requirement))
         (labels '()))
+    (let ((supplied (mapcar #'evidence-fact-fingerprint facts)))
     (dolist (fact facts)
       (case (evidence-fact-state fact)
         (:current nil)
@@ -335,20 +388,20 @@ default in this pure policy."
         (:conflicting (pushnew "conflicting-evidence" labels :test #'string=))
         (:unverifiable (pushnew "unverifiable-evidence" labels :test #'string=))))
     (dolist (required fingerprints)
-      (unless (member required (mapcar #'evidence-fact-fingerprint facts)
-                      :test #'string=)
-        (pushnew "missing-evidence" labels :test #'string=)))
+      (let ((count (count required supplied :test #'string=)))
+        (cond ((< count 1)
+               (pushnew "missing-evidence" labels :test #'string=))
+              ((> count 1)
+               (pushnew "conflicting-evidence" labels :test #'string=)))))
     (values (and (every (lambda (fact)
                           (eql :current (evidence-fact-state fact)))
                         facts)
                  (every (lambda (required)
-                          (member required
-                                  (mapcar #'evidence-fact-fingerprint facts)
-                                  :test #'string=))
+                          (= 1 (count required supplied :test #'string=)))
                         fingerprints))
-            (nreverse labels))))
+            (nreverse labels)))))
 
-(defun %evaluate-matrix (requirements)
+(defun %evaluate-matrix (requirements &optional fact-pool)
   "The shared evaluator body: per-principle results and reason labels
 over REQUIREMENTS (the principle grouping works on any closed subset)."
   (let ((principle-results '())
@@ -371,7 +424,7 @@ over REQUIREMENTS (the principle grouping works on any closed subset)."
                   (all-passed t))
               (dolist (requirement for-principle)
                 (multiple-value-bind (passed-p refusal-labels)
-                    (evidence-requirement-passed-p requirement)
+                    (evidence-requirement-passed-p requirement fact-pool)
                   (unless passed-p
                     (setf all-passed nil))
                   (dolist (label refusal-labels)
@@ -389,21 +442,42 @@ over REQUIREMENTS (the principle grouping works on any closed subset)."
                 (pushnew label reason-labels :test #'string=))))))
     (values (nreverse principle-results) (nreverse reason-labels))))
 
-(defun make-verdict-from-results (principle-results reason-labels)
+(defun make-verdict-from-results (principle-results reason-labels
+                                  &key (review-findings nil) (content-hash "")
+                                    (evidence-count 0))
     (make-policy-verdict
      :state (if (every (lambda (result)
                          (eql :passed (principle-result-state result)))
                        principle-results)
                 :admitted :refused)
    :principle-results principle-results
-   :reason-labels reason-labels))
+   :reason-labels reason-labels
+   :review-findings review-findings
+   :content-hash content-hash
+   :evidence-count evidence-count))
+
+(defun %verdict-from-proposal (proposal requirements)
+  "Evaluate PROPOSAL's REQUIREMENTS against its supplied fact pool and
+carry the proposal's review findings and content hash into the verdict."
+  (let ((pool (policy-proposal-evidence-facts proposal)))
+    (multiple-value-bind (results labels)
+        (%evaluate-matrix requirements pool)
+      (make-verdict-from-results
+       results labels
+       :review-findings (policy-proposal-review-findings proposal)
+       :content-hash (policy-proposal-content-hash proposal)
+       :evidence-count
+       (+ (length pool)
+          (reduce #'+ requirements
+                  :key (lambda (requirement)
+                         (length
+                          (evidence-requirement-evidence-facts requirement)))))))))
 
 (defun evaluate-policy-proposal (proposal)
   (unless (policy-proposal-p proposal)
     (error "Policy proposal must be a policy proposal: ~S" proposal))
-  (multiple-value-bind (results labels)
-      (%evaluate-matrix (policy-proposal-evidence-requirements proposal))
-    (make-verdict-from-results results labels)))
+  (%verdict-from-proposal proposal
+                          (policy-proposal-evidence-requirements proposal)))
 
 ;;; Operator policy profiles ------------------------------------------------
 ;;; A profile narrows which requirement kinds a proposal must satisfy for a
@@ -480,9 +554,7 @@ the evaluator refuses it as missing."
 permitted requirement kinds. The profile only narrows."
   (unless (evidence-profile-p profile)
     (error "Policy proposal profile must be a policy profile: ~S" profile))
-  (multiple-value-bind (results labels)
-      (%evaluate-matrix (%filtered-requirements proposal profile))
-    (make-verdict-from-results results labels)))
+  (%verdict-from-proposal proposal (%filtered-requirements proposal profile)))
 
 (defun ensure-nonempty-label-list (value name)
   (unless value

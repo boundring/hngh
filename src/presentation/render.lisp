@@ -86,13 +86,16 @@ changes."
           (hngh.domain:principle-result-state result)))
 
 (defun render-policy-verdict (verdict)
-  (format nil "verdict state=~(~A~) principles=~D~%~{~A~%~}reasons=~@[~{~A~^; ~}~]"
+  (format nil "verdict state=~(~A~) principles=~{~A~^,~}~%evidence=~D findings=~D hash=~A"
           (hngh.domain:policy-verdict-state verdict)
-          (length (hngh.domain:policy-verdict-principle-results verdict))
-          (mapcar #'render-principle-result
+          (mapcar (lambda (result)
+                    (format nil "~(~A~):~(~A~)"
+                            (hngh.domain:principle-result-principle result)
+                            (hngh.domain:principle-result-state result)))
                   (hngh.domain:policy-verdict-principle-results verdict))
-          (let ((reasons (hngh.domain:policy-verdict-reason-labels verdict)))
-            (if reasons reasons (list "none")))))
+          (hngh.domain::policy-verdict-evidence-count verdict)
+          (length (hngh.domain::policy-verdict-review-findings verdict))
+          (hngh.domain::policy-verdict-content-hash verdict)))
 
 (defun render-candidate-certificate (certificate)
   (format nil "certificate action=~(~A~) repository=~A base=~A paths=~{~A~^,~} ~

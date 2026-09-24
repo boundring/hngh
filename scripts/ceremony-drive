@@ -3,13 +3,14 @@
 ;;; closed governance loop and commit it, without a queue flip.
 ;;;
 ;;; The loop: create-run (model loadout) -> admit-transport model ->
-;;; propose (deterministic ten-principle verdict; the verdict text is
-;;; captured into a file) -> issue-cert + mutation-check
-;;; prepare-candidate -> issue-cert + mutation-check commit. The
-;;; certificate binds the real manifest at both gates; the commit
-;;; message is the certificate's content hash. After a successful
-;;; commit, a deliberate certificate-gated push step re-proposes under
-;;; class=push-request into a fresh verdict and drives issue-cert +
+;;; propose (deterministic ten-principle verdict over real per-principle
+;;; evidence facts; the verdict struct is passed in-process and its
+;;; rendered two-line report kept in the store as the audit artifact) ->
+;;; mutation-check prepare-candidate -> mutation-check commit. The
+;;; merged verb mints the certificate and executes the bound mutation;
+;;; the commit message is the certificate's content hash. After a
+;;; successful commit, a deliberate certificate-gated push step
+;;; re-proposes under class=push-request into a fresh verdict and drives
 ;;; mutation-check push (git push origin HEAD). The push is skipped
 ;;; cleanly (exit 0) when the repository has no origin remote; it never
 ;;; runs as a git hook, so half-ceremonies are never pushed.
@@ -19,21 +20,31 @@
 ;;; review separately (scripts/hngh review ... reviewer=...).
 ;;;
 ;;; Usage:
-;;;   sbcl --script scripts/ceremony-drive --store=PATH OBJECTIVE FILE...
-;;;   sbcl --script scripts/ceremony-drive --dry-run OBJECTIVE FILE...
+;;;   sbcl --script scripts/ceremony-drive [--findings=PATH] --store=PATH OBJECTIVE FILE...
+;;;   sbcl --script scripts/ceremony-drive [--findings=PATH] --dry-run OBJECTIVE FILE...
 ;;; Exit: 0 committed, 1 refused/unadmitted, 2 malformed, 3 fault.
 ;;;
+;;; --findings=PATH carries bounded review findings (one
+;;; PRINCIPLE<TAB>TEXT<TAB>CITE row per line, at most 32 rows, text and
+;;; cite at most 200 printable ASCII characters). They ride the
+;;; certificate as advisory data and never satisfy an evidence
+;;; requirement. Malformed findings refuse with exit 2 before anything
+;;; is staged; absent --findings behaves exactly like an empty set.
+;;;
 ;;; --dry-run is the rehearsal lane (dream-store discipline): it runs
-;;; the full loop -- create-run + admit-transport + propose + issue-cert
-;;; prepare-candidate -- against a fresh /tmp/hngh-dream-<ts> store, then
-;;; stops before the executor: no mutation-check at all (that step runs
-;;; the certificate-bound Git command on the real repository), no commit
-;;; certificate, no push leg. It prints a report: per-step exit codes,
+;;; create-run + admit-transport + propose against a fresh
+;;; /tmp/hngh-dream-<ts> store, then stops before the executor: no
+;;; mutation-check at all (that verb runs the certificate-bound Git
+;;; command on the real repository), no commit certificate, no push
+;;; leg. It prints a report: per-step exit codes,
 ;;; the rendered verdict text, candidate paths, content hash, and the
 ;;; exact commands the real drive would run.
 
 (require :asdf)
 (require :uiop)
+
+(defparameter *startup-real* (get-internal-real-time)
+  "Marks argv parse + system load for one [ceremony-timing] startup-load line.")
 
 ;; --- commit identity seam --------------------------------------------
 ;;
@@ -65,16 +76,57 @@
 ;; --- argv -----------------------------------------------------------
 
 (defun split-argv (argv)
-  "Pull --dry-run and --store=PATH out; the rest is OBJECTIVE then
-candidate files. Returns (values dry-run store positionals)."
+  "Pull --dry-run, --store=PATH and --findings=PATH out; the rest is
+OBJECTIVE then candidate files. Returns (values dry-run store findings
+positionals)."
   (let ((dry-run nil))
     (loop for arg in argv
           if (string= arg "--dry-run")
             do (setf dry-run t)
           else if (and (> (length arg) 8) (string= arg "--store=" :end1 8))
             collect (subseq arg 8) into store
+          else if (and (> (length arg) 11)
+                       (string= arg "--findings=" :end1 11))
+            collect (subseq arg 11) into findings
           else collect arg into positionals
-          finally (return (values dry-run (first store) positionals)))))
+          finally (return (values dry-run (first store)
+                                  (first findings) positionals)))))
+
+(defparameter +principle-names+
+  '("closed-authority" "least-authority" "dependency-direction" "fail-closed"
+    "evidence-before-claim" "atomic-mutation" "reversibility"
+    "no-hidden-execution" "cost-and-route-discipline" "source-grounding"))
+
+(defun read-findings-file (path)
+  "One bounded findings row per line: PRINCIPLE<TAB>TEXT<TAB>CITE.
+Fails closed (exit 2) on an unreadable file, more than 32 rows, or any
+malformed row: empty fields, text or cite over 200 printable ASCII
+characters, or a principle outside the matrix. Returns the raw rows."
+  (flet ((malformed (why)
+           (format *error-output* "ceremony-drive: malformed findings: ~A~%" why)
+           (uiop:quit 2)))
+    (unless (probe-file path)
+      (malformed (format nil "cannot read ~A" path)))
+    (let* ((raw (uiop:split-string (uiop:read-file-string path)
+                                   :separator '(#\Newline)))
+           (rows (if (and raw (uiop:emptyp (car (last raw))))
+                     (butlast raw)
+                     raw)))
+      (when (> (length rows) 32)
+        (malformed "more than 32 findings"))
+      (dolist (row rows)
+        (let ((fields (uiop:split-string row :separator '(#\Tab))))
+          (unless (and (= 3 (length fields))
+                       (member (first fields) +principle-names+ :test #'string=)
+                       (every (lambda (field)
+                                (and (plusp (length field))
+                                     (<= (length field) 200)
+                                     (every (lambda (char)
+                                              (<= 32 (char-code char) 126))
+                                            field)))
+                              (list (second fields) (third fields))))
+            (malformed (format nil "~S" row)))))
+      rows)))
 
 ;; --- real evidence -----------------------------------------------------
 
@@ -95,44 +147,130 @@ candidate files. Returns (values dry-run store positionals)."
                             (hngh.domain:source-manifest-entry-source-role entry)))
                   (getf evidence :source-manifest))))
 
+(defun loadout-fact-values ()
+  "The cost-and-route fact values from HNGH_LOADOUT (space-separated
+key=value tokens): (values route budget token-limit expiry). A missing
+key means no fact and cost-and-route-discipline refuses (fail-closed),
+so sloppy tokens can never pass."
+  (let ((route nil) (budget nil) (token-limit nil) (expiry nil))
+    (dolist (token (uiop:split-string (or (uiop:getenv "HNGH_LOADOUT") "")
+                                      :separator '(#\Space #\Tab)))
+      (let ((eq (position #\= token)))
+        (when (and eq (> (length token) (1+ eq)))
+          (let ((key (subseq token 0 eq))
+                (value (subseq token (1+ eq))))
+            (cond ((string= key "loadout-route-label") (setf route value))
+                  ((string= key "loadout-cost-limit") (setf budget value))
+                  ((string= key "loadout-token-limit") (setf token-limit value))
+                  ((string= key "loadout-time-limit") (setf expiry value)))))))
+    (list route budget token-limit expiry)))
+
+(defun sha256-hex-values (values)
+  "One subprocess: the sha256 hex digest of each VALUE, in order.
+Fingerprints bind principle:kind:value so requirements sharing a value
+never collide (facts dedupe by fingerprint)."
+  (let ((out (uiop:run-program
+              (append
+               '("python3" "-c"
+                 "import hashlib,sys; [print(hashlib.sha256(a.encode()).hexdigest()) for a in sys.argv[1:]]")
+               values)
+              :output :string :error-output :string)))
+    (uiop:split-string (string-right-trim '(#\Newline) out)
+                       :separator '(#\Newline))))
+
 ;;; the closed steps -------------------------------------------------------
 
-(defun propose-argv (class objective content-hash manifest-text)
-  (let ((pushp (string= class "push-request")))
+(defun evidence-triples (class evidence manifest-text files)
+  "The matrix evidence triples (principle kind value): each value is
+the declared, gathered, or loadout string the fact attests. Missing
+loadout keys or a missing .md conclusion link leave their fact
+unsupplied (the matching requirement then refuses, fail-closed)."
+  (let* ((pushp (string= class "push-request"))
+         (content-hash (getf evidence :content-hash))
+         (base-revision (getf evidence :base-revision))
+         (failure-contract "refusal halts the drive")
+         (reversion (format nil "reversion=revert:~A;containment=local-commit"
+                            base-revision))
+         (conclusion
+           (find-if (lambda (path)
+                      (and (>= (length path) 3)
+                           (string= ".md" path :start2 (- (length path) 3))))
+                    files)))
+    (destructuring-bind (route budget token-limit expiry) (loadout-fact-values)
+      (append
+       `(("closed-authority" "purpose"
+          ,(if pushp "post-commit certificate-gated push"
+               "ceremony-glued candidate"))
+         ("closed-authority" "caller" "ceremony-drive")
+         ("closed-authority" "input-contract" "explicit file candidate")
+         ("closed-authority" "output-contract"
+          ,(if pushp "certificate-bound push" "certificate-bound commit"))
+         ("closed-authority" "failure-contract" ,failure-contract)
+         ("least-authority" "capability-set"
+          ,(if pushp "ceremony-push" "ceremony"))
+         ("least-authority" "capability-diff"
+          ,(if pushp "+push" "+one candidate"))
+         ("dependency-direction" "static-source" ,manifest-text)
+         ("fail-closed" "closed-failure-disposition" ,failure-contract)
+         ("evidence-before-claim" "claim-proof" ,content-hash)
+         ("atomic-mutation" "base-revision" ,base-revision)
+         ("atomic-mutation" "candidate-manifest" ,manifest-text)
+         ("atomic-mutation" "content-hash" ,content-hash)
+         ("reversibility" "reversion-or-containment" ,reversion)
+         ("no-hidden-execution" "component-import" ,manifest-text))
+       `(("cost-and-route-discipline" "route" ,route)
+         ("cost-and-route-discipline" "budget" ,budget)
+         ("cost-and-route-discipline" "token-limit" ,token-limit)
+         ("cost-and-route-discipline" "expiry" ,expiry)
+         ("source-grounding" "source-manifest" ,manifest-text)
+         ("source-grounding" "conclusion-link" ,conclusion))))))
+
+(defun propose-argv (class objective evidence manifest-text files findings)
+  "The propose argv: declarations, the matrix requirements with their
+supplied facts (fingerprint = sha256 of principle:kind:value), the
+content hash, the reversion declaration, and any review findings."
+  (let* ((pushp (string= class "push-request"))
+         (triples (evidence-triples class evidence manifest-text files))
+         (digests (sha256-hex-values
+                   (mapcar (lambda (triple)
+                             (format nil "~A:~A:~A" (first triple)
+                                     (second triple) (or (third triple) "")))
+                           triples))))
     (append
-      (list "propose" (format nil "class=~A" class)
-            (format nil "problem=~A" objective)
-            (if pushp
-                "outcome=ceremony-driven self-sufficient push"
-                "outcome=ceremony-driven candidate")
-            (if pushp
-                "purpose=post-commit certificate-gated push"
-                "purpose=ceremony-glued candidate")
-            "caller=ceremony-drive"
-            "input-contract=explicit file candidate"
-            (if pushp
-                "output-contract=certificate-bound push"
-                "output-contract=certificate-bound commit")
-            "failure-contract=refusal halts the drive"
-            (if pushp
-                "declared-capabilities=ceremony-push"
-                "declared-capabilities=ceremony")
-            (if pushp
-                "capability-diff=+push"
-                "capability-diff=+one candidate")
-            (format nil "source-manifest=~A" manifest-text)
-            "risk-note=reviewer is advisory; the verdict is the gate"
-            "dependency=working tree"
-            "evidence-trigger=planned phase completion")
-     (loop for principle in
-             '("closed-authority" "least-authority"
-               "dependency-direction" "fail-closed"
-               "evidence-before-claim" "atomic-mutation"
-               "reversibility" "no-hidden-execution"
-               "cost-and-route-discipline" "source-grounding")
-           collect
-           (format nil "evidence-requirements=~A:claim-proof:~A"
-                   principle content-hash)))))
+     (list "propose"
+           (format nil "class=~A" class)
+           (format nil "problem=~A" objective)
+           (format nil "outcome=~A"
+                   (if pushp "ceremony-driven self-sufficient push"
+                       "ceremony-driven candidate"))
+           (format nil "purpose=~A"
+                   (if pushp "post-commit certificate-gated push"
+                       "ceremony-glued candidate"))
+           "caller=ceremony-drive"
+           "input-contract=explicit file candidate"
+           (format nil "output-contract=~A"
+                   (if pushp "certificate-bound push" "certificate-bound commit"))
+           "failure-contract=refusal halts the drive"
+           (format nil "declared-capabilities=~A"
+                   (if pushp "ceremony-push" "ceremony"))
+           (format nil "capability-diff=~A"
+                   (if pushp "+push" "+one candidate"))
+           (format nil "source-manifest=~A" manifest-text)
+           "risk-note=reviewer is advisory; the verdict is the gate"
+           "dependency=working tree"
+           "evidence-trigger=planned phase completion"
+           (format nil "content-hash=~A" (getf evidence :content-hash))
+           (format nil "reversion=revert:~A;containment=local-commit"
+                   (getf evidence :base-revision)))
+     (mapcan (lambda (triple fingerprint)
+               (cons (format nil "evidence-requirements=~A:~A:~A"
+                             (first triple) (second triple) fingerprint)
+                     (when (third triple)
+                       (list (format nil "evidence-fact=~A:~A:~A"
+                                     (first triple) (second triple)
+                                     fingerprint)))))
+             triples digests)
+     (mapcar (lambda (row) (format nil "review-findings=~A" row)) findings))))
 
 (defun origin-present-p ()
   "True when the repository declares an origin remote (git push target)."
@@ -157,16 +295,11 @@ operator must create first (fail-closed)."
     (ensure-directories-exist (concatenate 'string path "/"))
     path))
 
-(defun drive-loop (dry-run store objective files)
+(defun drive-loop (dry-run store objective files findings)
   (let* ((evidence (gather-evidence files))
-         (content-hash (getf evidence :content-hash)))
-    (labels ((now-ms ()
-               (multiple-value-bind (sec usec)
-                   (get-internal-real-time)
-                 (declare (ignore sec usec))
-                 (round (* (get-internal-real-time)
-                           (/ 1000.0 internal-time-units-per-second)))))
-             (timed (label thunk)
+         (content-hash (getf evidence :content-hash))
+         (manifest-text (manifest-pieces evidence)))
+    (labels ((timed (label thunk)
                (let ((t0 (get-internal-real-time)))
                  (multiple-value-prog1 (funcall thunk)
                    (format t "~&[ceremony-timing] ~A ~A ms~%"
@@ -174,13 +307,52 @@ operator must create first (fail-closed)."
                            (round (* (- (get-internal-real-time) t0)
                                      (/ 1000.0 internal-time-units-per-second)))))))
              (cmd (argv)
-               (multiple-value-bind (out code)
+               (multiple-value-bind (out code verdict)
                    (hngh.main:dispatch-command
                     (cons (format nil "--store=~A" store) argv))
                  (format t "~A~%" out)
-                 code))
+                 (values code verdict out)))
              (cmd-timed (label argv)
-               (timed label (lambda () (cmd argv)))))
+               (timed label (lambda () (cmd argv))))
+             (keep-report (name verdict-text)
+               ;; audit artifact: the rendered two-line verdict report
+               (with-open-file
+                   (stream (merge-pathnames
+                            name (uiop:ensure-directory-pathname store))
+                           :direction :output
+                           :if-exists :supersede
+                           :if-does-not-exist :create)
+                 (write-string verdict-text stream)))
+             (push-leg ()
+               ;; deliberate post-commit push (never a git hook): its own
+               ;; proposal and its own push certificate (a commit
+               ;; certificate never authorizes a push).
+               (if (origin-present-p)
+                   (multiple-value-bind (push-code push-verdict push-text)
+                       (cmd-timed "propose-push"
+                                  (propose-argv "push-request" objective
+                                                evidence manifest-text
+                                                files findings))
+                     (when (plusp push-code)
+                       (return-from drive-loop push-code))
+                     (keep-report "verdict-report-push.txt" push-text)
+                     (execute "push" push-verdict)
+                     (format t
+                             "ceremony drive complete: ~A committed and pushed~%"
+                             content-hash)
+                     (return-from drive-loop 0))
+                   (progn
+                     (format t "ceremony drive complete: ~A committed (no origin; push skipped)~%"
+                             content-hash)
+                     (return-from drive-loop 0))))
+             (execute (action verdict)
+               (let ((code
+                       (cmd-timed
+                        (format nil "mutation-check-~A" action)
+                        (append (list "mutation-check" action "run-1" verdict)
+                                files))))
+                 (when (plusp code)
+                   (return-from drive-loop code)))))
       ;; 1 -- run + model admission
       (let ((code
               (cmd-timed "create-run"
@@ -198,136 +370,44 @@ operator must create first (fail-closed)."
                                (list "admit-transport" "run-1" "model"
                                      "repository"))))
           (when (plusp code) (return-from drive-loop code))
-          ;; 2 -- deterministic verdict; capture its rendered text
-          (let* ((verdict-text "verdict pending")
-                (verdict-file
-                  (uiop:with-temporary-file
-                      (:pathname path :keep t :type "txt")
-                    (with-open-file (stream path :direction :output
-                                              :if-exists :supersede)
-                      (multiple-value-bind (out code)
-                          (timed "propose-feature"
-                                 (lambda ()
-                                   (hngh.main:dispatch-command
-                                    (cons (format nil "--store=~A" store)
-                                          (propose-argv "feature" objective
-                                                        content-hash
-                                                        (manifest-pieces evidence))))))
-                        (format t "~A~%" out)
-                        (setf verdict-text out)
-                        (when (plusp code)
-                          (return-from drive-loop code))
-                        (write-string out stream)))
-                    (namestring path))))
-            ;; 3 -- bind + execute: prepare then commit, each re-gathered
-            (labels ((execute (action)
-                       (let ((code
-                               (cmd-timed
-                                (format nil "issue-cert-~A" action)
-                                (append
-                                 (list "issue-cert" action
-                                       "run-1" verdict-file)
-                                 files))))
-                         (when (plusp code)
-                           (return-from drive-loop code))
-                         (let ((code
-                                 (cmd-timed
-                                  (format nil "mutation-check-~A" action)
-                                  (append
-                                   (list "mutation-check" action
-                                         "run-1" verdict-file)
-                                   files))))
-                           (when (plusp code)
-                             (return-from drive-loop code))))))
-              (execute "prepare-candidate")
-              (when dry-run
-                ;; Dream stop: bind, never mutate. Report and return.
-                (let ((dream-code
-                        (cmd-timed "issue-cert-prepare-candidate"
-                                   (append
-                                    (list "issue-cert" "prepare-candidate"
-                                          "run-1" verdict-file)
-                                    files))))
-                  (format t "[dream] create-run exit=0~%")
-                  (format t "[dream] admit-transport exit=0~%")
-                  (format t "[dream] propose exit=0~%")
-                  (format t "[dream] issue-cert-prepare-candidate exit=~A~%"
-                          dream-code)
-                  (format t "[dream] store=~A~%" store)
-                  (format t "[dream] candidates=~{~A~^ ~}~%" files)
-                  (format t "[dream] content-hash=~A~%" content-hash)
-                  (format t "[dream] verdict:~%~A~%" verdict-text)
-                  (format t "[dream] real drive would run:~%")
-                  (dolist (argv (list
-                                 (append
-                                  (list "mutation-check" "prepare-candidate"
-                                        "run-1" verdict-file)
-                                  files)
-                                 (append
-                                  (list "issue-cert" "commit"
-                                        "run-1" verdict-file)
-                                  files)
-                                 (append
-                                  (list "mutation-check" "commit"
-                                        "run-1" verdict-file)
-                                  files)))
-                    (format t "[dream]   ~{~A~^ ~}~%" argv))
-                  (format t
-                          "[dream]   (then the push leg when an origin exists)~%")
-                  (return-from drive-loop dream-code)))
-              (execute "commit")
-              (ignore-errors (delete-file verdict-file))
-              ;; 4 -- deliberate post-commit push (never a git hook):
-              ;; only after the commit succeeded, re-propose under
-              ;; class=push-request into a fresh verdict and drive the
-              ;; push certificate. Skip cleanly when no origin exists.
-              (if (origin-present-p)
-                  (let ((push-verdict-file
-                          (uiop:with-temporary-file
-                              (:pathname path :keep t :type "txt")
-                            (with-open-file (stream path :direction :output
-                                                      :if-exists :supersede)
-                              (multiple-value-bind (out code)
-                                  (timed "propose-push"
-                                         (lambda ()
-                                           (hngh.main:dispatch-command
-                                            (cons (format nil "--store=~A" store)
-                                                  (propose-argv
-                                                   "push-request" objective
-                                                   content-hash
-                                                   (manifest-pieces evidence))))))
-                                (format t "~A~%" out)
-                                (when (plusp code)
-                                  (return-from drive-loop code))
-                                (write-string out stream)))
-                            (namestring path))))
-                    (let ((code
-                            (cmd-timed
-                             "issue-cert-push"
-                             (append
-                              (list "issue-cert" "push" "run-1"
-                                    push-verdict-file)
-                              files))))
-                      (when (plusp code)
-                        (return-from drive-loop code))
-                      (let ((code
-                              (cmd-timed
-                               "mutation-check-push"
-                               (append
-                                (list "mutation-check" "push" "run-1"
-                                      push-verdict-file)
-                                files))))
-                        (when (plusp code)
-                          (return-from drive-loop code))))
-                    (ignore-errors (delete-file push-verdict-file))
-                    (format t "ceremony drive complete: ~A committed and pushed~%"
-                            content-hash)
-                    (return-from drive-loop 0))
-                  (progn
-                    (format t
-                            "ceremony drive complete: ~A committed (no origin; push skipped)~%"
-                            content-hash)
-                    (return-from drive-loop 0))))))))))
+          ;; 2 -- deterministic verdict over real per-principle facts;
+          ;; the verdict struct passes in-process and its rendered
+          ;; two-line report stays in the store as the audit artifact.
+          (multiple-value-bind (code verdict verdict-text)
+              (cmd-timed "propose-feature"
+                         (propose-argv "feature" objective evidence
+                                       manifest-text files findings))
+            (when (plusp code) (return-from drive-loop code))
+            (keep-report "verdict-report.txt" verdict-text)
+            (when dry-run
+              ;; Dream stop: propose is the gate; nothing is bound or
+              ;; mutated here. Report the verdict and return.
+              (format t "[dream] create-run exit=0~%")
+              (format t "[dream] admit-transport exit=0~%")
+              (format t "[dream] propose exit=0~%")
+              (format t "[dream] store=~A~%" store)
+              (format t "[dream] candidates=~{~A~^ ~}~%" files)
+              (format t "[dream] content-hash=~A~%" content-hash)
+              (format t "[dream] verdict:~%~A~%" verdict-text)
+              (format t "[dream] real drive would run:~%")
+              (dolist (argv (list
+                             (append '("mutation-check" "prepare-candidate"
+                                       "run-1") files)
+                             (append '("mutation-check" "commit"
+                                       "run-1") files)
+                             (append '("mutation-check" "push"
+                                       "run-1") files)))
+                (format t "[dream]   ~{~A~^ ~}~%" argv))
+              (format t
+                      "[dream]   (then the push leg when an origin exists)~%")
+              (return-from drive-loop 0))
+            ;; 3 -- the merged verb executes the prepare-candidate and
+            ;; commit mutation pairs (each re-gathered); the push leg
+            ;; then runs under its own push certificate when an origin
+            ;; exists (a commit certificate never authorizes a push).
+            (execute "prepare-candidate" verdict)
+            (execute "commit" verdict)
+            (push-leg)))))))
 
 ;;; entry ----------------------------------------------------------------
 
@@ -335,14 +415,19 @@ operator must create first (fail-closed)."
     (format *standard-output* "--help: drive a closed certificate commit for explicit files.~%")
     (uiop:quit 0))
 
-(multiple-value-bind (dry-run store positionals)
+(multiple-value-bind (dry-run store findings positionals)
     (split-argv (rest (uiop:raw-command-line-arguments)))
+  (format t "~&[ceremony-timing] startup-load ~A ms~%"
+          (round (* (- (get-internal-real-time) *startup-real*)
+                    (/ 1000.0 internal-time-units-per-second))))
   (unless (and (or store dry-run) (>= (length positionals) 2))
     (format *standard-output*
-            "usage: sbcl --script scripts/ceremony-drive --store=PATH OBJECTIVE FILES...~%"
-            "       sbcl --script scripts/ceremony-drive --dry-run OBJECTIVE FILES...~%")
+            "usage: sbcl --script scripts/ceremony-drive [--findings=PATH] --store=PATH OBJECTIVE FILE...~%"
+            "       sbcl --script scripts/ceremony-drive [--findings=PATH] --dry-run OBJECTIVE FILE...~%")
     (uiop:quit 2))
+  (when findings
+    (setf findings (read-findings-file findings)))
   (when dry-run
     (setf store (dream-store-path)))
-  (uiop:quit (drive-loop dry-run store
-                         (first positionals) (rest positionals))))
+  (uiop:quit (drive-loop dry-run store (first positionals) (rest positionals)
+                         findings)))

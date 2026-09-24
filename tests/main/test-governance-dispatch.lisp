@@ -39,14 +39,34 @@ optional injected mutation, candidate-evidence, review, and terminal ports."
     ports))
 
 (defun gn-verdict (kind)
-  "A temporary verdict report path: \"admitted\", \"refused\", or
-anything else for a malformed file."
+  "A temporary verdict report path in the two-line form: \"admitted\",
+\"refused\", or anything else for a malformed file."
   (uiop:with-temporary-file (:pathname path :keep t)
     (with-open-file (stream path :direction :output :if-exists :supersede)
       (cond ((string= kind "admitted")
-             (format stream "verdict state=admitted principles=1~%principle fail-closed state=passed~%reasons=none~%"))
+             (format stream
+                     (concatenate
+                      'string
+                      "verdict state=admitted principles="
+                      "closed-authority:passed,least-authority:passed,"
+                      "dependency-direction:passed,fail-closed:passed,"
+                      "evidence-before-claim:passed,atomic-mutation:passed,"
+                      "reversibility:passed,no-hidden-execution:passed,"
+                      "cost-and-route-discipline:passed,source-grounding:passed"
+                      "~%evidence=2 findings=0 hash=~A~%")
+                     (make-string 64 :initial-element #\b)))
             ((string= kind "refused")
-             (format stream "verdict state=refused principles=1~%principle fail-closed state=passed~%reasons=missing evidence~%"))
+             (format stream
+                     (concatenate
+                      'string
+                      "verdict state=refused principles="
+                      "closed-authority:passed,least-authority:passed,"
+                      "dependency-direction:passed,fail-closed:refused,"
+                      "evidence-before-claim:passed,atomic-mutation:passed,"
+                      "reversibility:passed,no-hidden-execution:passed,"
+                      "cost-and-route-discipline:passed,source-grounding:passed"
+                      "~%evidence=2 findings=0 hash=~A~%")
+                     (make-string 64 :initial-element #\b)))
             (t (format stream "not a verdict report~%"))))
     (namestring path)))
 
@@ -74,8 +94,55 @@ subprocesses, and the verify-candidate closed report."
 (defun gn-has (needle result)
   (search needle (first result)))
 
-(defparameter +gn-propose-pieces+
-  '("class=feature"
+(defparameter +gn-principle-names+
+  '("closed-authority" "least-authority" "dependency-direction" "fail-closed"
+    "evidence-before-claim" "atomic-mutation" "reversibility"
+    "no-hidden-execution" "cost-and-route-discipline" "source-grounding"))
+
+(defparameter +gn-matrix+
+  '(("closed-authority" "purpose") ("closed-authority" "caller")
+    ("closed-authority" "input-contract") ("closed-authority" "output-contract")
+    ("closed-authority" "failure-contract") ("least-authority" "capability-set")
+    ("least-authority" "capability-diff") ("dependency-direction" "static-source")
+    ("fail-closed" "closed-failure-disposition")
+    ("evidence-before-claim" "claim-proof") ("atomic-mutation" "base-revision")
+    ("atomic-mutation" "candidate-manifest") ("atomic-mutation" "content-hash")
+    ("reversibility" "reversion-or-containment")
+    ("no-hidden-execution" "component-import")
+    ("cost-and-route-discipline" "route") ("cost-and-route-discipline" "budget")
+    ("cost-and-route-discipline" "token-limit")
+    ("cost-and-route-discipline" "expiry") ("source-grounding" "source-manifest")
+    ("source-grounding" "conclusion-link"))
+  "The closed evidence matrix: twenty-one requirement kinds over the
+ten principles.")
+
+(defun gn-fp (index)
+  "A deterministic 64-hex-lowercase fingerprint."
+  (format nil "~(~64,'0X~)" index))
+
+(defun gn-matrix-pieces (&key drop swap)
+  "The twenty-one requirement+fact argv pieces. DROP names a P:K pair
+whose fact is left unsupplied; SWAP names a P:K pair whose fact is
+supplied under \"fail-closed\" instead (cross-principle supply)."
+  (loop for (principle kind) in +gn-matrix+
+        for index from 1
+        for fp = (gn-fp index)
+        for pair = (format nil "~A:~A" principle kind)
+        append (list (format nil "evidence-requirements=~A:~A:~A"
+                             principle kind fp))
+        unless (equal pair drop)
+          append (list (format nil "evidence-fact=~A:~A:~A"
+                               (if (equal pair swap) "fail-closed" principle)
+                               kind fp))))
+
+(defun gn-finding (principle text cite)
+  "One findings argv piece: <principle><TAB><text><TAB><cite>."
+  (format nil "review-findings=~A~A~A~A~A" principle (string #\Tab) text
+          (string #\Tab) cite))
+
+(defparameter +gn-propose-base+
+  (append
+   '("class=feature"
     "problem=the operator surface is unreachable"
     "outcome=governance commands land"
     "purpose=dogfood the governance loop"
@@ -88,34 +155,36 @@ subprocesses, and the verify-candidate closed report."
     "source-manifest=policy.md=hash-0:source"
     "risk-note=none"
     "dependency=domain"
-    "evidence-trigger=operator"
-    "evidence-requirements=closed-authority:claim-proof:fp-1"
-    "evidence-requirements=least-authority:claim-proof:fp-2"
-    "evidence-requirements=dependency-direction:claim-proof:fp-3"
-    "evidence-requirements=fail-closed:claim-proof:fp-4"
-    "evidence-requirements=evidence-before-claim:claim-proof:fp-5"
-    "evidence-requirements=atomic-mutation:claim-proof:fp-6"
-    "evidence-requirements=reversibility:claim-proof:fp-7"
-    "evidence-requirements=no-hidden-execution:claim-proof:fp-8"
-    "evidence-requirements=cost-and-route-discipline:claim-proof:fp-9"
-    "evidence-requirements=source-grounding:claim-proof:fp-10"))
+    "evidence-trigger=operator")
+   (list (format nil "content-hash=~A" (gn-fp 255))))
+  "The proposal declarations plus content-hash; each case supplies its
+own facts.")
+
+(defparameter +gn-propose-pieces+
+  (append +gn-propose-base+ (gn-matrix-pieces))
+  "The twenty-one real facts fixture: every closed-matrix requirement
+carries exactly one supplied fact.")
 
 (defparameter +dogfood-refused-pieces+
-  '("class=feature"
-    "problem=operator close"
-    "outcome=terminal state"
-    "purpose=close the run"
-    "caller=operator"
-    "input-contract=run"
-    "output-contract=state"
-    "failure-contract=refusal"
-    "declared-capabilities=close-run"
-    "capability-diff=none"
-    "source-manifest=operator-close.md=operator-close:surface"
-    "risk-note=none"
-    "dependency=domain"
-    "evidence-trigger=operator"
-    "evidence-requirements=closed-authority:claim-proof:operator-close"))
+  (append
+   '("class=feature"
+     "problem=operator close"
+     "outcome=terminal state"
+     "purpose=close the run"
+     "caller=operator"
+     "input-contract=run"
+     "output-contract=state"
+     "failure-contract=refusal"
+     "declared-capabilities=close-run"
+     "capability-diff=none"
+     "source-manifest=operator-close.md=operator-close:surface"
+     "risk-note=none"
+     "dependency=domain"
+     "evidence-trigger=operator")
+   (list (format nil "content-hash=~A" (gn-fp 254))
+         (format nil "evidence-requirements=closed-authority:claim-proof:~A"
+                 (gn-fp 253))))
+  "A proposal whose one requirement is never supplied a fact: it refuses.")
 
 (defparameter +model-create-args+
   '("create-run" "Create a valid run" "builder"
@@ -160,22 +229,95 @@ subprocesses, and the verify-candidate closed report."
 ;;; propose ---------------------------------------------------------------
 
 (let ((root (gn-dispatch-root)))
+  ;; (i) propose with twenty-one real facts -> all ten principles pass
   (let ((result (gn-dispatch (append '("propose") +gn-propose-pieces+)
                              :root root)))
     (check (= 0 (gn-exit result))
-           "propose with closed fixture evidence is admitted")
+           "(i) propose with twenty-one real facts is admitted")
     (check (gn-has "verdict state=admitted" result)
            "admitted verdict renders")
-    (check (gn-has "reasons=none" result)
+    (check (gn-has "closed-authority:passed" result)
+           "the closed-authority pair renders passed")
+    (check (gn-has "source-grounding:passed" result)
+           "the source-grounding pair renders passed")
+    (check (null (hngh.domain:policy-verdict-reason-labels (third result)))
            "admitted verdict carries no refusal reasons"))
+  ;; (ii) one requirement's fact missing -> that principle refuses
+  (let ((result (gn-dispatch
+                 (append '("propose") +gn-propose-base+
+                         (gn-matrix-pieces :drop "least-authority:capability-set"))
+                 :root root)))
+    (check (= 1 (gn-exit result))
+           "(ii) a missing fact refuses its principle")
+    (check (gn-has "verdict state=refused" result)
+           "refused verdict renders")
+    (check (gn-has "least-authority:refused" result)
+           "the least-authority pair renders refused")
+    (check (member "missing-evidence"
+                   (hngh.domain:policy-verdict-reason-labels (third result))
+                   :test #'string=)
+           "the refusal labels the missing evidence"))
+  ;; (iii) a fact under the wrong principle cannot satisfy a requirement
+  (let ((result (gn-dispatch
+                 (append '("propose") +gn-propose-base+
+                         (gn-matrix-pieces :swap "least-authority:capability-set"))
+                 :root root)))
+    (check (= 1 (gn-exit result))
+           "(iii) a fact under the wrong principle refuses")
+    (check (gn-has "least-authority:refused" result)
+           "the cross-supplied principle renders refused"))
   (let ((result (gn-dispatch (append '("propose") +dogfood-refused-pieces+)
                              :root root)))
     (check (= 1 (gn-exit result))
            "propose with partial evidence is refused")
     (check (gn-has "verdict state=refused" result)
            "refused verdict renders")
-    (check (gn-has "missing-principle-result" result)
+    (check (member "missing-principle-result"
+                   (hngh.domain:policy-verdict-reason-labels (third result))
+                   :test #'string=)
            "refusal labels surface"))
+  ;; (iv) an unknown kind or a non-sha256 fingerprint refuses
+  (dolist (piece (list (format nil "evidence-fact=closed-authority:bogus:~A"
+                               (gn-fp 1))
+                       "evidence-fact=closed-authority:claim-proof:not-a-sha256"
+                       "evidence-requirements=closed-authority:claim-proof:short"))
+    (let ((result (gn-dispatch (append '("propose") +gn-propose-pieces+
+                                       (list piece))
+                               :root root)))
+      (check (= 2 (gn-exit result))
+             "(iv) an unknown kind or bad fingerprint exits 2")))
+  ;; review findings ride the proposal as bounded data
+  (let ((result (gn-dispatch
+                 (append '("propose") +gn-propose-pieces+
+                         (list (gn-finding "closed-authority"
+                                           "risk p=0.80: scope unclear"
+                                           "candidate.lisp")
+                               (gn-finding "fail-closed"
+                                           "risk p=0.75: refusal unproven"
+                                           "candidate.lisp")))
+                 :root root)))
+    (check (= 0 (gn-exit result)) "review findings ride the proposal")
+    (check (gn-has "findings=2" result) "the verdict counts the findings")
+    (check (= 2 (length (hngh.domain::policy-verdict-review-findings
+                         (third result))))
+           "the verdict carries the findings rows"))
+  ;; more than 32 findings refuse; duplicate rows refuse
+  (let ((result (gn-dispatch
+                 (append '("propose") +gn-propose-pieces+
+                         (loop for n from 1 to 33
+                               collect (gn-finding "fail-closed"
+                                                   (format nil "risk row ~D" n)
+                                                   "candidate.lisp")))
+                 :root root)))
+    (check (= 2 (gn-exit result)) "more than 32 findings exit 2"))
+  (let ((result (gn-dispatch
+                 (append '("propose") +gn-propose-pieces+
+                         (list (gn-finding "fail-closed" "same row"
+                                           "candidate.lisp")
+                               (gn-finding "fail-closed" "same row"
+                                           "candidate.lisp")))
+                 :root root)))
+    (check (= 2 (gn-exit result)) "duplicate findings exit 2"))
   (dolist (args '(("propose")
                   ("propose" "class=feature")))
     (let ((result (gn-dispatch args :root root)))
@@ -189,26 +331,28 @@ subprocesses, and the verify-candidate closed report."
   (uiop:delete-directory-tree root :validate t))
 
 
-;;; issue-cert ------------------------------------------------------------
+;;; mutation-check: the single mint+execute verb --------------------------
 
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
-  (let ((result (gn-dispatch '("issue-cert" "stage" "run-1") :root root)))
+  (let ((result (gn-dispatch '("mutation-check" "stage" "run-1")
+                             :root root :mutation-ports (gn-ports))))
     (check (= 1 (gn-exit result))
-           "issue-cert refuses without an operator verdict file")
+           "mutation-check refuses without an operator verdict")
     (check (gn-has "missing-verdict-evidence" result)
            "refusal names the missing verdict evidence"))
-  (let ((result (gn-dispatch '("issue-cert" "bogus" "run-1") :root root)))
-    (check (= 2 (gn-exit result)) "issue-cert rejects an unknown action"))
+  (let ((result (gn-dispatch '("mutation-check" "bogus" "run-1") :root root)))
+    (check (= 2 (gn-exit result)) "mutation-check rejects an unknown action"))
   (uiop:delete-directory-tree root :validate t))
 
-;;; issue-cert refuses without admission
+;;; mutation-check refuses without admission
 
 (let ((root (gn-dispatch-root)))
   (gn-dispatch (append +create-args+ nil) :root root)
-  (let ((result (gn-dispatch '("issue-cert" "stage" "run-1") :root root)))
+  (let ((result (gn-dispatch '("mutation-check" "stage" "run-1")
+                             :root root :mutation-ports (gn-ports))))
     (check (= 1 (gn-exit result))
-           "issue-cert refuses a run without admission")
+           "mutation-check refuses a run without admission")
     (check (gn-has "not admitted" result)
            "refusal names the missing admission"))
   (uiop:delete-directory-tree root :validate t))
@@ -217,12 +361,6 @@ subprocesses, and the verify-candidate closed report."
 
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
-  (let ((result (gn-dispatch '("mutation-check" "stage" "run-1")
-                             :root root :mutation-ports (gn-ports))))
-    (check (= 0 (gn-exit result))
-           "mutation-check executes against fixture evidence")
-    (check (gn-has "mutation status=executed" result)
-           "executed mutation renders"))
   (let ((result (gn-dispatch '("mutation-check" "stage" "run-1" "stale-a")
                              :root root :mutation-ports (gn-ports))))
     (check (= 1 (gn-exit result))
@@ -242,8 +380,11 @@ subprocesses, and the verify-candidate closed report."
             (declare (ignore args))
             (incf spawns)))
     (unwind-protect
-         (let ((result (gn-dispatch '("mutation-check" "stage" "run-1")
-                                    :root root :mutation-ports (gn-ports))))
+         (let ((result (gn-dispatch
+                        (list "mutation-check" "stage" "run-1"
+                              (gn-verdict "admitted"))
+                        :root root :mutation-ports (gn-ports)
+                        :gather-ports (gn-gather))))
            (check (= 0 (gn-exit result))
                   "mutation-check with injected ports executes")
            (check (zerop spawns)
@@ -255,8 +396,11 @@ subprocesses, and the verify-candidate closed report."
 
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
-  (let ((result (gn-dispatch '("issue-cert" "stage" "ghost-9") :root root)))
-    (check (= 1 (gn-exit result)) "issue-cert reports a missing run"))
+  (let ((result (gn-dispatch (list "mutation-check" "stage" "ghost-9"
+                                   (gn-verdict "admitted"))
+                             :root root :mutation-ports (gn-ports))))
+    (check (= 1 (gn-exit result))
+           "mutation-check reports a missing run with a verdict"))
   (let ((result (gn-dispatch '("mutation-check" "stage" "ghost-9")
                              :root root :mutation-ports (gn-ports))))
     (check (= 1 (gn-exit result)) "mutation-check reports a missing run"))
@@ -264,29 +408,32 @@ subprocesses, and the verify-candidate closed report."
 
 
 
-;;; issue-cert real evidence chain: mint only from an operator verdict
-;;; file and a genuine gather ------------------------------------------
+;;; mutation-check real evidence chain: mint+execute only from an
+;;; operator verdict file and a genuine gather ---------------------
 
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
   (let* ((verdict-file (gn-verdict "admitted"))
-         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
-                              :root root :gather-ports (gn-gather))))
+         (result (gn-dispatch
+                  (list "mutation-check" "prepare-candidate" "run-1"
+                        verdict-file)
+                  :root root :mutation-ports (gn-ports)
+                  :gather-ports (gn-gather))))
     (check (= 0 (gn-exit result))
-           "issue-cert mints from an operator verdict file")
-    (check (gn-has "certificate action=stage" result)
-           "certificate renders")
-    (check (gn-has "policy-profile=real" result)
-           "certificate carries the real policy profile"))
+           "mutation-check mints and executes from an operator verdict file")
+    (check (gn-has "mutation status=executed" result)
+           "the merged verb renders the executed mutation"))
   (uiop:delete-directory-tree root :validate t))
 
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
   (let* ((verdict-file (gn-verdict "refused"))
-         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
-                              :root root :gather-ports (gn-gather))))
+         (result (gn-dispatch (list "mutation-check" "stage" "run-1"
+                                    verdict-file)
+                              :root root :mutation-ports (gn-ports)
+                              :gather-ports (gn-gather))))
     (check (= 1 (gn-exit result))
-           "issue-cert refuses an unadmitted verdict file")
+           "mutation-check refuses an unadmitted verdict file")
     (check (gn-has "unadmitted-verdict" result)
            "refusal names the unadmitted verdict"))
   (uiop:delete-directory-tree root :validate t))
@@ -294,10 +441,12 @@ subprocesses, and the verify-candidate closed report."
 (let ((root (gn-dispatch-root)))
   (gn-admitted-run root)
   (let* ((verdict-file (gn-verdict "malformed"))
-         (result (gn-dispatch (list "issue-cert" "stage" "run-1" verdict-file)
-                              :root root :gather-ports (gn-gather))))
+         (result (gn-dispatch (list "mutation-check" "stage" "run-1"
+                                    verdict-file)
+                              :root root :mutation-ports (gn-ports)
+                              :gather-ports (gn-gather))))
     (check (= 1 (gn-exit result))
-           "issue-cert refuses a malformed verdict file")
+           "mutation-check refuses a malformed verdict file")
     (check (gn-has "malformed-verdict-evidence" result)
            "refusal names the malformed verdict evidence"))
   (uiop:delete-directory-tree root :validate t))
@@ -311,6 +460,35 @@ subprocesses, and the verify-candidate closed report."
            "mutation-check executes on real evidence")
     (check (gn-has "mutation status=executed" result)
            "real-path mutation renders"))
+  (uiop:delete-directory-tree root :validate t))
+
+;;; review findings ride the verdict into the certificate ----------------
+
+(let ((root (gn-dispatch-root)))
+  (gn-admitted-run root)
+  (let* ((proposed (gn-dispatch
+                    (append '("propose") +gn-propose-pieces+
+                            (list (gn-finding "closed-authority"
+                                              "risk p=0.80: scope unclear"
+                                              "candidate.lisp")
+                                  (gn-finding "fail-closed"
+                                              "risk p=0.75: refusal unproven"
+                                              "candidate.lisp")))
+                    :root root))
+         (verdict (third proposed))
+         (result (gn-dispatch
+                  (list "mutation-check" "prepare-candidate" "run-1" verdict)
+                  :root root :mutation-ports (gn-ports)
+                  :gather-ports (gn-gather))))
+    (check (= 0 (gn-exit proposed)) "the proposal carries bounded findings")
+    (check (gn-has "findings=2" proposed)
+           "the proposed verdict counts the findings")
+    (check (= 2 (length (hngh.domain::policy-verdict-review-findings verdict)))
+           "the proposed verdict carries the findings rows")
+    (check (= 0 (gn-exit result))
+           "mutation-check executes over the findings-carrying verdict")
+    (check (gn-has "mutation status=executed" result)
+           "the findings-carrying mutation renders"))
   (uiop:delete-directory-tree root :validate t))
 
 ;;; review and terminal: bounded worker transports -----------------------
@@ -549,15 +727,21 @@ subprocesses, and the verify-candidate closed report."
 
 (defun gn-propose-with-profile (root profile-path review-p)
   "The ten-principle fixture proposal; source-grounding uses :review
-when REVIEW-P and :claim-proof otherwise."
+when REVIEW-P and :claim-proof otherwise, each with its matching fact."
   (let ((pieces
-          (append '("propose")
-                  (substitute
-                   (format nil "evidence-requirements=source-grounding:~A:fp-r"
-                           (if review-p "review" "claim-proof"))
-                   "evidence-requirements=source-grounding:claim-proof:fp-10"
-                   +gn-propose-pieces+
-                   :test #'string=)
+          (append (list "propose")
+                  +gn-propose-base+
+                  (loop for principle in +gn-principle-names+
+                        for index from 401
+                        for fp = (gn-fp index)
+                        for use-kind = (if (string= principle
+                                                     "source-grounding")
+                                           (if review-p "review" "claim-proof")
+                                           "claim-proof")
+                        append (list (format nil "evidence-requirements=~A:~A:~A"
+                                             principle use-kind fp)
+                                     (format nil "evidence-fact=~A:~A:~A"
+                                             principle use-kind fp)))
                   (list (format nil "profile=~A" profile-path)))))
     (gn-dispatch pieces :root root)))
 
@@ -568,7 +752,9 @@ when REVIEW-P and :claim-proof otherwise."
   (let ((result (gn-propose-with-profile root profile nil)))
     (check (= 1 (gn-exit result))
            "a review-only profile refuses a claim-proof proposal")
-    (check (gn-has "missing-principle-result" result)
+    (check (member "missing-principle-result"
+                   (hngh.domain:policy-verdict-reason-labels (third result))
+                   :test #'string=)
            "the refusal names the missing principle result"))
   (let ((result (gn-propose-with-profile root profile t)))
     (check (= 0 (gn-exit result))
