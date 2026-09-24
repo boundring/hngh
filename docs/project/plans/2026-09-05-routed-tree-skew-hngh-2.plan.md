@@ -8,3 +8,7 @@ at 2026-09-05T16:00:45Z. Alert text: [oversight] tree-skew: Projects/etc/hngh di
 
 - [ ] Whitelist check + handoff/commit of the stalled edit
       Verification: dirty-tree whitelist clean; stalled edit committed or handed off
+
+## Occurrences
+
+- 2026-09-24T21:00:13Z re-occurred (dedup window expired)

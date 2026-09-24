@@ -4,24 +4,18 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Rationale: Implements the output-verification research line by adding a script that validates job output format before dashboard ingestion, ensuring consistent data flow.
+
 ## Steps
 
-- [ ] Add a cadence job that runs a daily health-check summary
-  Verification: `bash -n cadence/health-check.sh`
+- [ ] Add a validation script that checks job output format compliance
+  Verification: bash -n scripts/validate-output.sh
 
-- [ ] Create a verification script that confirms the cadence job output
-  Verification: `python3 scripts/verify_cadence_output.py`
+- [ ] Create a test that exercises the validation script against sample output
+  Verification: make test
 
-- [ ] Add a test for the health-check cadence job
-  Verification: `make test`
+- [ ] Add a cadence job that runs the validation script before dashboard update
+  Verification: bash -n cadence/run-validation.sh
 
-- [ ] Update dashboard to display cadence health-check results
-  Verification: `bash -n dashboard/cadence-view.sh`
-
-- [ ] Add a digest entry for cadence health-check completion
-  Verification: `grep -q "cadence" digest/cadence.log`
-
-- [ ] Verify all new scripts pass syntax checks
-  Verification: `bash -n jobs/cadence/health-check.sh && bash -n scripts/verify_cadence_output.py`
-
-This plan implements the cadence-automation research line by introducing a daily health-check job with verification, dashboard integration, and digest logging — all as normal-risk, independently verifiable steps gated by `make test`.
+- [ ] Verify the new cadence job integrates with existing test suite
+  Verification: make test
