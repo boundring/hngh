@@ -4687,7 +4687,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T00:08:30Z | progress | 9aac7729 | research line synth-2026-09-24-1: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-1.md | 2026-09-24T00:08:30Z-progress-9aac7729.md |
 | 2026-09-24T00:18:32Z | progress | 1f110463 | research line synth-2026-09-24-1: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-1.md | 2026-09-24T00:18:32Z-progress-1f110463.md |
 | 2026-09-24T00:20:36Z | progress | ae80f97e | agent-supervision: evicted-stale omp-GuardRekeyCeremony-d417e6 (idle 360m) | 2026-09-24T00:20:36Z-progress-ae80f97e.md |
-| 2026-09-24T00:22:24Z | alert | accf8b9d | crumbs mirror mismatch: crumbs rows=154731 watermark=18260197 skipped_total=95 importable=154733 spill=95 db=~/Projects/etc/hngh/automation/state/crumbs.db; verdict=mismatch:rows evidence=rows=154731-importable=154733 ×5 | 2026-09-24T00:22:24Z-alert-accf8b9d.md |
+| 2026-09-24T00:22:24Z | alert | accf8b9d | crumbs mirror mismatch: crumbs rows=154731 watermark=18260197 skipped_total=95 importable=154733 spill=95 db=~/Projects/etc/hngh/automation/state/crumbs.db; verdict=mismatch:rows evidence=rows=154731-importable=154733 ×6 | 2026-09-24T00:22:24Z-alert-accf8b9d.md |
 | 2026-09-24T00:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T00:30:36Z-progress-ebb46dea.md |
 | 2026-09-24T00:31:26Z | progress | 2996c198 | research line synth-2026-09-24-2: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-2.md | 2026-09-24T00:31:26Z-progress-2996c198.md |
 | 2026-09-24T00:48:28Z | progress | 1b6752bf | research line synth-2026-09-24-1 reviewed: parked (parked — keep the record, no action now) | 2026-09-24T00:48:28Z-progress-1b6752bf.md |
@@ -4702,9 +4702,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T01:05:40Z | progress | 5f259263 | research line synth-2026-09-24-2: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-2.md | 2026-09-24T01:05:40Z-progress-5f259263.md |
 | 2026-09-24T01:16:31Z | progress | fc440bf5 | research line synth-2026-09-24-3: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T01:16:31Z-progress-fc440bf5.md |
 | 2026-09-24T01:30:36Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T01:30:36Z-progress-ebb46dea.md |
-| 2026-09-24T01:31:34Z | alert | 059b9d42 | research review verdict unparseable for synth-2026-09-24-2 (model unsloth:unsloth/Ornith-1.0-9B-GGUF) ×2 | 2026-09-24T01:31:34Z-alert-059b9d42.md |
-| 2026-09-24T01:50:03Z | alert | 80fd3e02 | [oversight] slow-unit: hngh-cadence-1m.service wall=45.5s median=21.5s ×5 | 2026-09-24T01:50:03Z-alert-80fd3e02.md |
-| 2026-09-24T01:50:03Z | alert | ed2d89b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=44.3s median=21.1s ×5 | 2026-09-24T01:50:03Z-alert-ed2d89b4.md |
+| 2026-09-24T01:31:34Z | alert | 059b9d42 | research review verdict unparseable for synth-2026-09-24-2 (model unsloth:unsloth/Ornith-1.0-9B-GGUF) ×3 | 2026-09-24T01:31:34Z-alert-059b9d42.md |
+| 2026-09-24T01:50:03Z | alert | 80fd3e02 | [oversight] slow-unit: hngh-cadence-1m.service wall=45.5s median=21.5s ×9 | 2026-09-24T01:50:03Z-alert-80fd3e02.md |
+| 2026-09-24T01:50:03Z | alert | ed2d89b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=44.3s median=21.1s ×9 | 2026-09-24T01:50:03Z-alert-ed2d89b4.md |
 | 2026-09-24T01:50:07Z | progress | c362b4a8 | agent-supervision: evicted-stale omp-CanonEthosBrief-84c73e (idle 364m) | 2026-09-24T01:50:07Z-progress-c362b4a8.md |
 | 2026-09-24T01:52:35Z | progress | 5b23ce51 | research line synth-2026-09-24-3: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-24-synth-2026-09-24-3.md | 2026-09-24T01:52:35Z-progress-5b23ce51.md |
 | 2026-09-24T01:52:47Z | alert | 947c3cf3 | patrol feeds: feed-stale on dashboard/research-routes.json -- age=696925s > 28800s ×2 | 2026-09-24T01:52:47Z-alert-947c3cf3.md |
@@ -4712,7 +4712,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T01:52:48Z | alert | 1b07f997 | patrol manga: manga-stale on manga -- newest draft 252h old > 48h | 2026-09-24T01:52:48Z-alert-1b07f997.md |
 | 2026-09-24T01:52:48Z | alert | c4a1f47d | patrol systemd-units: timer-dead on hngh-overnight.timer -- enabled=disabled active=inactive | 2026-09-24T01:52:48Z-alert-c4a1f47d.md |
 | 2026-09-24T01:52:48Z | alert | 91c8ed89 | patrol pending-checks: check-pending-stale on correction-f6 -- check:correction-f6 (correction-f6) pending since 2026-09-15T17:57:10Z: something looks off (promote into config/patrol-routes.tsv or park it) ×12 | 2026-09-24T01:52:48Z-alert-91c8ed89.md |
-| 2026-09-24T01:55:04Z | alert | f0b090b7 | [oversight] slow-unit: dropin:58-patrol.sh wall=13.6s median=5.7s ×5 | 2026-09-24T01:55:04Z-alert-f0b090b7.md |
+| 2026-09-24T01:55:04Z | alert | f0b090b7 | [oversight] slow-unit: dropin:58-patrol.sh wall=13.6s median=5.7s ×9 | 2026-09-24T01:55:04Z-alert-f0b090b7.md |
 | 2026-09-24T01:55:09Z | progress | 545201b0 | agent-supervision: evicted-stale omp-OmpBridgeDefault-3bd71b (idle 361m) | 2026-09-24T01:55:09Z-progress-545201b0.md |
 | 2026-09-24T02:00:05Z | progress | 3dd20cc1 | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=2s | 2026-09-24T02:00:05Z-progress-3dd20cc1.md |
 | 2026-09-24T02:00:16Z | progress | 8d91d596 | router routed slow-unit:dropin:58-patrol.sh -> plan candidate 2026-09-24-routed-slow-unit-dropin-58-patrol.sh (routed-at 2026-09-24T02:00:16Z) | 2026-09-24T02:00:16Z-progress-8d91d596.md |
@@ -4724,4 +4724,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-24T02:07:54Z | alert | d00adb9c | plan acceptance blocked: hngh-automation make test FAILED (rc=127) | 2026-09-24T02:07:54Z-alert-d00adb9c.md |
 | 2026-09-24T02:10:06Z | progress | 5e712744 | agent-supervision: evicted-stale omp-PluginInRepo-93e1fb (idle 362m) | 2026-09-24T02:10:06Z-progress-5e712744.md |
 | 2026-09-24T02:11:19Z | progress | fa526cbe | research line synth-2026-09-24-2 reviewed: killed (killed -- close the line (misattributed patrol observation, hypothetical guardrail premise, core distinctions already resolved by current architecture)) | 2026-09-24T02:11:19Z-progress-fa526cbe.md |
-| 2026-09-24T02:15:03Z | alert | 31524b8c | [oversight] slow-unit: hngh-cadence-hour.service wall=669.5s median=266.3s | 2026-09-24T02:15:03Z-alert-31524b8c.md |
+| 2026-09-24T02:15:03Z | alert | 31524b8c | [oversight] slow-unit: hngh-cadence-hour.service wall=669.5s median=266.3s ×5 | 2026-09-24T02:15:03Z-alert-31524b8c.md |
+| 2026-09-24T02:25:40Z | progress | 23af8bdc | agent-supervision: evicted-stale omp-CrumbsWriter-35dbc0 (idle 365m) | 2026-09-24T02:25:40Z-progress-23af8bdc.md |
+| 2026-09-24T02:30:05Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-24T02:30:05Z-progress-ebb46dea.md |
+| 2026-09-24T02:30:07Z | progress | a8178222 | agent-supervision: evicted-stale omp-StageTwoExits-5aac8b (idle 363m) | 2026-09-24T02:30:07Z-progress-a8178222.md |
