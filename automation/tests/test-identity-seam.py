@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Identity-seam contract guard: every auto-committer in the automation
-writer surfaces pins the machine identity per invocation.
+writer surfaces pins the operator identity boundring per invocation
+(2026-09-24 operator attribution decision; the guard checks the pinned
+identity, not just pin presence).
 
 The 2026-09-13 Fixture leak (docs/records/2026-09-16-identity-seam-
 reconciliation.md) showed auto-committers taking author identity from
@@ -43,7 +45,9 @@ JS_SURFACES = ("dashboard", "jcode")
 
 # `git ... commit` as the git subcommand (not prose like `{commit}` revs).
 GIT_COMMIT_RE = re.compile(r"\bgit\b[^\n]*?\scommit\b")
-PIN_RE = re.compile(r"user\.name=")
+# pin = per-invocation user.name=boundring (operator identity);
+# a pin to any other identity flags (fail-closed)
+PIN_RE = re.compile(r"""user\.name=["']?boundring(?![\w-])""")
 # Array/argv forms: spawn("git", ["commit"...]), ["git", "commit"...],
 # and "git", "-c", ..., "commit" adjacency in any language.
 # (triple-single-quoted: a """-quoted literal would end early on the
@@ -61,6 +65,10 @@ def continuation_joined(text):
 def strip_quoted(line):
     """Drop double-quoted substrings so prose like "git commit failed"
     inside breadcrumb messages cannot masquerade as an invocation."""
+    # inline pin values first (real shell pins quote the value:
+    # user.name="boundring"); only then strip the remaining quoted
+    # strings, so `-m "pinned user.name=boundring"` still strips wholesale
+    line = re.sub(r'(user\.name=)"([^"]*)"', r'\1\2', line)
     return re.sub(r'"[^"]*"', "", line)
 
 
@@ -143,13 +151,13 @@ def self_test_failures():
                "execSync(`git commit -m \"probe\"`);\n",
                scan_js_file, True)
         expect("dash/ok.mjs",
-               "execSync('git -c user.name=hngh-machine commit -m \"x\"');\n",
+               "execSync('git -c user.name=boundring commit -m \"x\"');\n",
                scan_js_file, False)
         expect("dash/spawn.js",
                "spawn(\"git\", [\"commit\", \"-m\", msg]);\n",
                scan_js_file, True)
         expect("dash/spawn-pinned.js",
-               "execFile('git', ['-c', 'user.name=hngh-machine', 'commit', '-m', msg]);\n",
+               "execFile('git', ['-c', 'user.name=boundring', 'commit', '-m', msg]);\n",
                scan_js_file, False)
         expect("dash/comments.js",
                "// a comment may say git commit freely\n"
@@ -160,13 +168,16 @@ def self_test_failures():
                "subprocess.run([\"git\", \"commit\", \"-m\", m])\n",
                scan_file, True)
         expect("jobs/ok.py",
-               "subprocess.run([\"git\", \"-c\", \"user.name=hngh-machine\", \"commit\"])\n",
+               "subprocess.run([\"git\", \"-c\", \"user.name=boundring\", \"commit\"])\n",
                scan_file, False)
         expect("jobs/pinned.sh",
-               "git -c user.name=hngh-machine commit -q -m \"tick\"\n",
+               "git -c user.name=\"boundring\" -c user.email=\"boundring@gmail.com\" commit -q -m \"tick\"\n",
                scan_file, False)
         expect("jobs/leak.sh",
                "git commit -q -m \"tick\"\n",
+               scan_file, True)
+        expect("jobs/wrong-identity.sh",
+               "git -c user.name=\"hngh-machine\" commit -q -m \"tick\"\n",
                scan_file, True)
     return failures
 
@@ -190,9 +201,9 @@ def main():
             if path.parent.name == "tests":
                 continue  # test fixtures legitimately use throwaway identities
             if path.suffix in (".sh", ".py"):
-                scanner, kind = scan_file, "unpinned git commit"
+                scanner, kind = scan_file, "non-operator-pinned git commit"
             elif path.suffix in JS_SUFFIXES:
-                scanner, kind = scan_js_file, "unpinned js git commit"
+                scanner, kind = scan_js_file, "non-operator-pinned js git commit"
             else:
                 continue
             for no, line in scanner(path):
@@ -210,14 +221,14 @@ def main():
                 continue
             for no, line in scan_js_file(path):
                 violations.append(
-                    "%s/%s:%d: unpinned js git commit: %s" % (surface, path.name, no, line[:120])
+                    "%s/%s:%d: non-operator-pinned js git commit: %s" % (surface, path.name, no, line[:120])
                 )
 
     # Positive control: the reference seam must still be pinned.
     reference = ROOT / "jobs" / "config-backup.sh"
     if reference.exists() and not PIN_RE.search(continuation_joined(reference.read_text())):
         violations.append(
-            "jobs/config-backup.sh: reference identity seam lost its pin"
+            "jobs/config-backup.sh: reference identity seam lost its operator pin"
         )
 
     if violations:
@@ -226,7 +237,7 @@ def main():
             print("  " + v)
         return 1
     print("identity-seam guard: every automation auto-committer pins "
-          "user.name per invocation (sh/py/js/mjs, array forms, self-tested)")
+          "user.name=boundring per invocation (sh/py/js/mjs, array forms, self-tested)")
     return 0
 
 

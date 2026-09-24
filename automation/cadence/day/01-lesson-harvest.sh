@@ -83,7 +83,7 @@ if git -C "$HNGH_REPO" diff --cached --quiet 2>/dev/null; then
  if ! git -C "$HNGH_REPO" diff --quiet -- automation/.lesson-harvest-handoffs 2>/dev/null; then
   cmsg="chore: lesson-harvest handoff counter tick ($(date -u +%F))"
   if git -C "$HNGH_REPO" add -- automation/.lesson-harvest-handoffs &&
-   git -C "$HNGH_REPO" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+   git -C "$HNGH_REPO" -c user.name="boundring" -c user.email="boundring@gmail.com" \
     commit -q -m "$cmsg"; then
    breadcrumb "lesson-harvest" "counter-commit" "committed: $cmsg"
   else

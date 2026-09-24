@@ -42,7 +42,7 @@ done
 [ "$count" -gt 0 ] || exit 0
 
 msg="docs: machine ledger sync — $count changed file(s) ($(date -u +%F))"
-if git -C "$KERNEL" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+if git -C "$KERNEL" -c user.name="boundring" -c user.email="boundring@gmail.com" \
   commit -q -m "$msg"; then
   breadcrumb "$JOB_NAME" "kernel-ledger-sync" "committed: $msg"
 else

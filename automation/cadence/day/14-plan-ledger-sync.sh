@@ -36,7 +36,7 @@ git -C "$KERNEL" add -- docs/project/plans/ || {
   exit 0
 }
 msg="automation: plan-ledger sync — $count changed file(s) ($(date -u +%F))"
-if git -C "$KERNEL" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+if git -C "$KERNEL" -c user.name="boundring" -c user.email="boundring@gmail.com" \
   commit -q -m "$msg"; then
   breadcrumb "$JOB_NAME" "plan-ledger-sync" "committed: $msg"
 else

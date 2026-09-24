@@ -199,7 +199,7 @@ if mv "$SPLICED" "$STATE_PROJECT" 2>/dev/null; then
   if git -C "$KERNEL" diff --cached --quiet; then
    breadcrumb "$JOB_NAME" "state-clean" "numbers unchanged; nothing to commit"
   else
-   if git -C "$KERNEL" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+   if git -C "$KERNEL" -c user.name="boundring" -c user.email="boundring@gmail.com" \
     commit -m "automation: torch numbers refresh ($day)" \
     -- docs/project/STATE-OF-PROJECT.md >/dev/null 2>&1; then
     breadcrumb "$JOB_NAME" "state-commit" "torch numbers refresh committed"

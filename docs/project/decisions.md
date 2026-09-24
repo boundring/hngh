@@ -735,9 +735,11 @@ no signatures existed to drop. The loop-history guard's declarations were
 re-keyed across this rewrite through the certificate ceremony (candidate
 `0576d68352e0f62dea3a82427992178a956ea56cd0203cb61bf085f4e1339b9c`);
 every registered patch-id survived unchanged. The machine lane keeps its
-recorded identity seam: auto-committers pin `-c user.name=hngh-machine
--c user.email=automation@hngh.local` per invocation
-(`automation/tests/test-identity-seam.py`), so machine ledger syncs stay
-attributable to the machine, not the operator. Backup bundle:
+per-invocation identity seam (`automation/tests/test-identity-seam.py`);
+per the 2026-09-24 operator decision the pinned identity is now the
+operator's, `boundring <boundring@gmail.com>`, so machine commits
+attribute the operator like the rest of history
+(`docs/records/2026-09-24-machine-identity-operator-attribution.md`).
+Backup bundle:
 `~/.hngh-automation/scrub/pre-attribution-20260923.bundle`.
 Full record: `docs/records/2026-09-23-attribution-rewrite.md`.

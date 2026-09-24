@@ -233,14 +233,15 @@ fi
 
 # 4. commit only if dirty
 # Identity contract (2026-09-16, decisions: identity-seam): machine-written
-# commits carry hngh-machine <automation@hngh.local> explicitly, set per
-# invocation so attribution never depends on ambient .git/config state
+# commits carry the operator identity boundring <boundring@gmail.com> explicitly
+# (2026-09-24 operator attribution decision), set per invocation so attribution
+# never depends on ambient .git/config state
 # (the 2026-09-13 Fixture-leak class: 564 misattributed commits).
 committed=0
 if ! git -C "$repo" diff --cached --quiet; then
  ts="$(date '+%Y-%m-%d %H:%M:%S')"
- git -C "$repo" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
-   commit -q -m "config-backup: $lane $ts" || fail "$lane" "git commit failed"
+ git -C "$repo" -c user.name="boundring" -c user.email="boundring@gmail.com" \
+  commit -q -m "config-backup: $lane $ts" || fail "$lane" "git commit failed"
  committed=1
 fi
 

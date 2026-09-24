@@ -4,6 +4,17 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-24
+
+- **Machine identity flip: machine commits attribute the operator**
+  (docs/records/2026-09-24-machine-identity-operator-attribution.md):
+  per the 2026-09-24 operator attribution decision every machine
+  auto-committer (seven automation pin sites plus the ceremony-drive
+  defaults) pins `boundring <boundring@gmail.com>` per invocation
+  instead of `hngh-machine <automation@hngh.local>`; the identity-seam
+  guard now asserts the pinned identity VALUE (a reverted or foreign pin
+  flags fail-closed) and both identity tests carry the new expectation.
+
 ### 2026-09-23
 
 - **Queue: key-rotation-freshness landed** (docs/project/queue.md): row flipped on verified evidence (credential-evidence 28 tests green, OLA `credential-fresh-ola=604800` in the cadence-params rung); Next advances to pooled-hardware.

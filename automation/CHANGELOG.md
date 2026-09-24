@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-24
+
+- identity: machine-commit attribution flip (2026-09-24 operator
+  decision) - all seven auto-committer pin sites
+  (`cadence/day/01-lesson-harvest.sh`, `cadence/day/14-plan-ledger-sync.sh`,
+  `cadence/day/17-torch-audit.sh`, `cadence/hour/30-kernel-ledger-sync.sh`,
+  `cadence/hour/33-research-beat.sh`, `jobs/config-backup.sh`,
+  `scripts/research-sweep-selfheal.sh`) pin `user.name=boundring` /
+  `user.email=boundring@gmail.com` per invocation;
+  `tests/test-identity-seam.py` enforces the pinned identity VALUE
+  (foreign or reverted pins flag fail-closed; new wrong-identity
+  fixture). Kernel-surface half: `scripts/ceremony-drive` defaults land
+  via a `hngh: candidate` commit. Record:
+  `docs/records/2026-09-24-machine-identity-operator-attribution.md`.
+
 ## 2026-09-23
 
 - crumbs: single-writer convergence — `lib/crumbs.py` (fail-closed on separator/newline in any field) with `lib/breadcrumbs.sh` as a stable-API shim; `scripts/router-tick.py`, `jobs/feedback-apply.py`, `jobs/service-state.py` route through it; `lib/crumbs-db.py` `verify` wired into `cadence/1m/15-crumbs-sync.sh` with one evidence-gated report-queue alert (identity `crumbs-mirror:<kind>`). Tests `tests/test-crumbs-writer.py` 8 green.

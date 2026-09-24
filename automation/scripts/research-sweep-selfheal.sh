@@ -46,7 +46,7 @@ done < <(printf '%s\n' "$out")
 # when operator or another writer already staged work.
 git -C "$kernel" diff --cached --quiet 2>/dev/null || exit 0
 git -C "$kernel" add -- "${paths[@]}" 2>/dev/null || exit 0
-git -C "$kernel" -c user.name="hngh-machine" -c user.email="automation@hngh.local" \
+git -C "$kernel" -c user.name="boundring" -c user.email="boundring@gmail.com" \
   commit -q -m "automation: sweep self-heal back-redacts raw home tokens (research-tsv-path-sweep --apply)" \
   -- "${paths[@]}" 2>/dev/null &&
   breadcrumb "$job" "sweep-selfheal" "back-redacted: ${paths[*]}"
