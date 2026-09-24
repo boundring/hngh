@@ -203,3 +203,106 @@ semantics, not a description of a self-echo:
   as the identity-flip slice (one ceremony + free commits). "One
   ceremony per slice" holds; no second ceremony; no historical changelog
   text was rewritten to satisfy a gate.
+
+## Phase 2 - ops streamlining (2026-09-24)
+
+Behavior-identical cuts plus the typed levers; free-tier commit
+`automation: ops streamlining (guard-ladder, probe gate, emit_plan,
+triage hoist, report shim)` (13 files, 352+/216-).
+
+- O1 guard-ladder fold (automation/lib/model.sh:1161-1206): the five
+  copy-pasted guard blocks collapse to one ordered leg loop with per-leg
+  skip sets; proven byte-identical across 130 pre/post scenarios
+  (rc/MODEL_USED/reply/leg-attempt order).
+- O2 probe gate: the studio probe (models + queue) moved inside the
+  beatskip verdict refresh window (automation/lib/model.sh:1094-1129):
+  3 requests per window became 1. Comment drift fixed; the schedule row
+  now precedes the beatskip row (byte-identical payloads).
+- O3 emit_plan (automation/scripts/overnight-cycle.sh:331-381): the
+  twin plan producers share one model lane and three fail-closed gates;
+  plan bytes unchanged (md5 efae894eb612c893363d977019174a9f
+  before/after). Declined its deeper write-fold: the byte-critical
+  per-kind write sets stay in the callers verbatim.
+- O4 triage hoist: automation/lib/typesafe.py NEW triage_glue + a
+  `__main__` dispatch; jobs/morning-digest.sh:22-30 and
+  cadence/hour/33-research-beat.sh:72-78 shrink to the one-call glue
+  (16/16 old-vs-new byte-equivalence).
+- O5 report shims: the four private report paths move behind NEW
+  automation/lib/report_queue.py report() (evidence-token policy
+  single-sourced); 125 scoped tests green.
+- O6 typed levers: raise_step_classes (raise-only, arbiter min_conf
+  0.5; T3 voted t1 stays T3) and the ux-review typed-first register
+  pass (fire bar 0.7; rows `ux: <register> risk p=N.NN`; nothing fired
+  -> one `ux: no findings (typed)` row and no chat call; any None ->
+  the legacy chat path byte-identical). O6b's question set = the two
+  house registers named in the header and prompt (writing-register,
+  display-register): the prompt has no clean dimension list; reading
+  approved via operator IRC during the slice.
+- R2 closed by observation (no edit): automation/lib/model.sh:798-819
+  _model_emit already emits `${wall:+--wall-s "$wall"}` from curl
+  time_total - kind=model rows carry wall times; one path kept, not
+  two.
+
+## Phase 3 - typed-first dream briefs (2026-09-24)
+
+- automation/scripts/overnight-cycle.sh: dream_typed_brief :795-844
+  renders the five dream fields from ONE typed judgment (three Choice
+  questions + two risk-framed Nouls over state {pack, plan, step} = the
+  dream prompt text, the plan text, the step text); the run block
+  :988-1001 tries the typed brief BEFORE the dream session (elif
+  ordering): all-green -> the five `field: value` lines replace the
+  session, flow into the EXISTING `## Dream sanity-checks` append +
+  dream_informed=1, and cache at the same dream_cache_key path.
+- Escalation gate (hard, fail-closed): requirements=clear,
+  surfaces=named, split=single with every Choice confidence >= 0.5,
+  failure-modes Noul < 0.5, sanity-checks Noul < 0.5. Anything else
+  (low confidence, any None, no TYPESAFE_API_KEY) prints nothing and
+  the existing session dream runs unchanged.
+- Coherence fix over the plan text: the sanity-checks question is
+  risk-phrased ("Is the step verification too weak to catch a wrong
+  implementation?") so BOTH Nouls share the plan's "both Nouls < 0.5"
+  green rule; field NAMES kept verbatim per the dream-brief contract.
+- Verification (fake loopback /v1/systemone, TYPESAFE_API_KEY=x): no
+  key -> launches=1 (session path byte-identical); all-green typed ->
+  launches=0, dream_out = 5 lines exactly, sanity-heads=1, breadcrumb
+  `forethought-dream-typed`, cache stored.
+  tests/test-overnight-forethought.sh, tests/test-beat-blockers.sh,
+  tests/test-session-class.sh green with zero test edits.
+- Gate-caught: automation/scripts/lint-identifiers.sh flagged `defined
+  but never referenced: DREAM_PACK` - the env prefix sat at line start
+  (line-start NAME= is a definition there; only $NAME counts as a
+  reference). Fixed with the POSIX `env` prefix (names move mid-line,
+  invisible to the lint); the house inline-glue pattern avoids this by
+  living inside `$(...)`. Lint clean and proof re-run green after.
+- Known seam: build_dream_prompt now runs before the cache check (both
+  typed and session paths share the prompt file), so the prompt
+  artifact is written on cache hits too. Harmless; noted for honesty.
+
+## Phase 4 - residuals (2026-09-24)
+
+- R1 (the backlog row's named review trigger):
+  NEW automation/tests/test-slow-units-e2e.py (3 hermetic cases):
+  (i) fixture time-ledger.json -> slow-units.py one row plus the
+  report-queue identity+window ` xN` bump args through the real
+  probe_time_ledger seam; (ii) oversight-tick.sh's alert() with mocked
+  filing: the same slow-unit row twice within SUPPRESS_MIN -> one call,
+  and a second call after the window with the same identity (the
+  flap-suppressed alert feeding the steer path); (iii)
+  jobs/time-ledger.sh's journal / `[ceremony-timing]` / drop-in parse
+  round-trips into a temp time-ledger.json (unit, last_wall_s, runs_24h,
+  p50_s, max_s, step/ms/ts). Wired into automation/Makefile after
+  test-slow-units.py. The seeded-delay rule stays covered by
+  tests/test-slow-units.py - not duplicated.
+- R2: closed by observation (see Phase 2) - no second wall-s path.
+- R3: docs/project/queue.md's key-pin registry rung 12 dep is VERIFIED
+  struck (roadmap.md rung-12 entry + the r14 ed25519 record as
+  evidence); `pooled-hardware` keeps its one open dep (resource pool
+  view). The strike rode the machine ledger-sync commit 4f268513
+  mid-session (cadence sweep) - recorded here so the landing shape is
+  honest.
+- Placement: this slice rides handoff open item 2's attention; Queue
+  Next `pooled-hardware` and roadmap "Land stage 2" untouched; the
+  backlog.md:1073-1096 time-ledger row remains the measurement slice -
+  its named review trigger now exists, and the ~84s ceremony gap stays
+  an open measurement question for that row (this plan instrumented
+  the attribution, not the answer).

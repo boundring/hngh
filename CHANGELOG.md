@@ -6,6 +6,31 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-24
 
+- **Ops streamlining (behavior-identical cuts + typed levers)**
+  (docs/records/2026-09-24-ceremony-deep-fix.md): the unpinned-tail
+  model ladder folds to one ordered leg list (byte-identical across 130
+  pre/post scenarios), the studio probe runs once per verdict window
+  instead of per call, the twin overnight plan producers share one
+  `emit_plan` pipeline (plan bytes md5-identical), the four private
+  report shims move behind `automation/lib/report_queue.py`, the typed
+  triage glue hoists to `automation/lib/typesafe.py`, and the typed
+  levers land: raise-only plan-step cost classes and a typed-first
+  ux-review register pass (fire bar 0.7; legacy chat byte-identical
+  without a key).
+- **Typed-first dream briefs** (docs/records/2026-09-24-ceremony-deep-fix.md):
+  one typed judgment over the five dream fields (requirements, failure
+  modes, surfaces, split, sanity checks) replaces the dream session when
+  every answer is clearly green (Choice confidence >= 0.5, both risk
+  Nouls < 0.5); anything else escalates to the existing session dream
+  unchanged, and typed briefs cache per exact step text.
+- **Time-ledger residuals and the stale key-pin dep closed**
+  (docs/records/2026-09-24-ceremony-deep-fix.md): the backlog row's
+  named review trigger lands as `automation/tests/test-slow-units-e2e.py`
+  (slow-unit rows with ` xN` bump args, the flap-suppressed alert seam,
+  and the time-ledger parse round-trip); model wall times were already
+  emitted and stay single-sourced; the key-pin registry rung 12 dep is
+  verified struck from the queue (`pooled-hardware` keeps its one open
+  dep).
 - **Ceremony deep-cut: real per-principle evidence and findings plumbing**
   (docs/records/2026-09-24-ceremony-deep-fix.md): the ten-principle verdict
   now means ten distinct evidence sets (21 matrix-named requirements
