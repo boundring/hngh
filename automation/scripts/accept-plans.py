@@ -34,6 +34,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
+import report_queue  # the shared report-queue row shim (lib/report_queue.py)
+
 FRONT = re.compile(
     r"<!--\s*plan:\s*status=(\w+)\s+risk=(\w+)\s+accepted=([^\s>]+)[^>]*-->")
 VERIFICATION = re.compile(r"(?m)^[ \t]+Verification[ \t]*:")
@@ -273,14 +276,8 @@ def write_atomic(path, text):
 def report(kind, text, ident, window):
     if DRY_RUN:
         return
-    try:
-        subprocess.run(
-            [REPORT_QUEUE, "--add", kind, text,
-             "--identity", ident, "--window", str(window)],
-            env={**os.environ, "HNGH_REPORT_ROOT": REPORT_ROOT},
-            capture_output=True, timeout=30)
-    except Exception:
-        pass  # a lost report row must not block the cycle
+    report_queue.report(kind, text, ident, window,
+                        binary=REPORT_QUEUE, root=REPORT_ROOT)
     if kind == "alert":
         email_sidechannel("hngh alert: %s" % ident, text)
 

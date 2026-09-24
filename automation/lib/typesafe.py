@@ -212,6 +212,37 @@ def triage_fanout(state, lanes):
         return (None, None, None)
 
 
+def triage_glue(city_json, urgency=False):
+    """Whole per-beat triage glue, hoisted from the byte-identical inline
+    python3 -c blocks in jobs/morning-digest.sh and
+    cadence/hour/33-research-beat.sh: city-state JSON -> beats/beads
+    state -> ONE triage_fanout -> the exact line each site consumed
+    ('hottest=.. collapse=..' plus the top-2 'urgency=..' tail when
+    urgency=True). Prints the line. Fail-open: no key -> the
+    'hottest=? collapse=?' line as before; a broken payload raises -> no
+    line and the caller proceeds untriaged (the sites' documented
+    contract).
+    """
+    import json
+
+    d = json.loads(city_json)
+    st = {
+        "beats": "beats " + d["timers"]["beats"],
+        "beads": (str(d["beads"]["closed"]) + " closed "
+                  + str(d["beads"]["open"]) + " open"),
+    }
+    lanes = ["reviewer-gates", "acp-probes", "contexts-redesign",
+             "tiger-specs", "triage-wiring", "roles"]
+    hot, col, scores = triage_fanout(st, lanes)
+    parts = []
+    parts.append("hottest=" + str(hot) if hot else "hottest=?")
+    parts.append("collapse=" + str(col) if col is not None else "collapse=?")
+    if urgency and scores:
+        top = sorted(zip(lanes, scores), key=lambda kv: kv[1], reverse=True)[:2]
+        parts.append("urgency=" + ",".join("%s:%.2f" % kv for kv in top))
+    print(" ".join(parts))
+
+
 def closeout_evidence_noul(state, summary):
     """Evidence Noul at bead close-out (browser-use DONE rule, hngh-ddc):
     a DONE claim requires independent verification -- this Noul answers
@@ -286,6 +317,9 @@ def beat_skip_gate(operator_active_signals):
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["triage"]:
+        triage_glue(sys.stdin.read(), "urgency" in sys.argv[2:])
+        sys.exit(0)
     v = ask_noul(
         state={"subject": "wrapper self-test"},
         name="working",

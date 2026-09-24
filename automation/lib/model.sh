@@ -1081,36 +1081,39 @@ _model_call_impl() {
  # Jev beat-skip gate (2026-09-18, hngh-4eh): before touching local
  # Unsloth at all, ask Typesafe whether the operator is actively using
  # the machine. SKIP_LOCAL=1 bypasses both Unsloth sites below (primary
- # :937 and the ranked-fallback loop). Verdict cached 30s in
- # $AUTOMATION_ROOT/tmp-beatskip (safe 2/min lane: at most ~2 inference
- # calls per minute even under beat bursts). Fail-open: without key or
- # on any error the existing quiet guards decide, never this gate.
+ # :937 and the ranked-fallback loop). Verdict refreshed at most once
+ # per 120s window (the age gate below) into $AUTOMATION_ROOT/
+ # tmp-beatskip.txt: safe ~1 inference call per 2 min even under beat
+ # bursts. Fail-open: without key or on any error the existing quiet
+ # guards decide, never this gate.
  SKIP_LOCAL=0
  _beatskip_file="$AUTOMATION_ROOT/tmp-beatskip.txt"
  _beatskip_now="$(date +%s)"
  _beatskip_age=9999
  [ -f "$_beatskip_file" ] && _beatskip_age=$((_beatskip_now - $(stat -c %Y "$_beatskip_file" 2>/dev/null || echo 0)))
- # studio-aware verdict (hngh-f7j): consult loaded model + queue depth,
- # refuse verdicts older than 120s (force refresh). Studio has no queue
- # endpoint: total_slots vs active work is the proxy — a non-beat model
- # loaded means the operator is using the box (queue_depth=1).
- # bearer via the stdin curl config (`-K -`), never argv — the studio
- # gate is the same key-gated endpoint credential-health probes; no
- # token file means an empty config (keyless GET, fail-open as before).
- _studio_cfg=""
- [ -s "$TOKEN_FILE" ] && _studio_cfg="$(printf 'header = "Authorization: Bearer %s"\n' "$(cat "$TOKEN_FILE" 2>/dev/null)")"
- _studio_models="$(printf '%s' "$_studio_cfg" |
-  curl -s -m 3 -K - "$UNSLOTH_URL/v1/models" 2>/dev/null)"
- _studio_loaded="$(printf '%s' "$_studio_models" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(m.get('id','') for m in d.get('data',[]) if m.get('loaded')))" 2>/dev/null)"
- _studio_queue=0
- { for _lm in $_studio_loaded; do
-  [ "$_lm" = "$MODEL" ] || {
-   _studio_queue=1
-   break
-  }
- done; } 2>/dev/null
- [ -z "${_studio_loaded// /}" ] && _studio_queue=0
  if [ "$_beatskip_age" -gt 120 ]; then
+  # studio-aware verdict (hngh-f7j): consult loaded model + queue depth,
+  # refuse verdicts older than 120s (force refresh). Studio has no queue
+  # endpoint: total_slots vs active work is the proxy — a non-beat model
+  # loaded means the operator is using the box (queue_depth=1).
+  # bearer via the stdin curl config (`-K -`), never argv — the studio
+  # gate is the same key-gated endpoint credential-health probes; no
+  # token file means an empty config (keyless GET, fail-open as before).
+  # the probe runs INSIDE this refresh branch (2026-09-24 ops cut):
+  # one /v1/models request per verdict window, never per call.
+  _studio_cfg=""
+  [ -s "$TOKEN_FILE" ] && _studio_cfg="$(printf 'header = "Authorization: Bearer %s"\n' "$(cat "$TOKEN_FILE" 2>/dev/null)")"
+  _studio_models="$(printf '%s' "$_studio_cfg" |
+   curl -s -m 3 -K - "$UNSLOTH_URL/v1/models" 2>/dev/null)"
+  _studio_loaded="$(printf '%s' "$_studio_models" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(m.get('id','') for m in d.get('data',[]) if m.get('loaded')))" 2>/dev/null)"
+  _studio_queue=0
+  { for _lm in $_studio_loaded; do
+   [ "$_lm" = "$MODEL" ] || {
+    _studio_queue=1
+    break
+   }
+  done; } 2>/dev/null
+  [ -z "${_studio_loaded// /}" ] && _studio_queue=0
   _session_recent="no"
   _last_run="$(grep ' | session-run' "$AUTOMATION_ROOT/logs/budget.md" 2>/dev/null | tail -n1 | cut -d' ' -f1)"
   if [ -n "$_last_run" ]; then
@@ -1126,15 +1129,16 @@ print('skip' if beat_skip_gate(sig) else 'keep')
 " 2>/dev/null)"; then
    printf '%s' "$_skip_verdict" >"$_beatskip_file" 2>/dev/null || true
   fi
+  # schedule dataset (one line per verdict window for away-hours
+  # learning): recency + studio + load + hour. Ground truth accrues in
+  # breadcrumbs.
+  _sched_studio="$(printf '%s' "$_studio_models" | head -c 40)"
+  [ -z "$_sched_studio" ] && _sched_studio="down"
+  _sched_load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo ?)"
+  breadcrumb model "schedule" "recent=${_session_recent:-?} studio=${_sched_studio:-?} load=${_sched_load} hour=$(date +%H)"
  fi
  [ "$(cat "$_beatskip_file" 2>/dev/null)" = "skip" ] && SKIP_LOCAL=1
  breadcrumb model "beatskip" "verdict=$(cat "$_beatskip_file" 2>/dev/null) age=${_beatskip_age}s session_recent=${_session_recent:-?} studio_loaded=${_studio_loaded:-?} studio_queue=${_studio_queue:-?} SKIP_LOCAL=$SKIP_LOCAL"
- # schedule dataset (one line per beat for away-hours learning):
- # recency + studio + load + hour. Ground truth accrues in breadcrumbs.
- _sched_studio="$(printf '%s' "$_studio_models" | head -c 40)"
- [ -z "$_sched_studio" ] && _sched_studio="down"
- _sched_load="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo ?)"
- breadcrumb model "schedule" "recent=${_session_recent:-?} studio=${_sched_studio:-?} load=${_sched_load} hour=$(date +%H)"
  if [ "$SKIP_LOCAL" = 0 ] && unsloth_chat "$prompt" "$max_tokens" "$MODEL"; then
   MODEL_USED="unsloth:$MODEL"
   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
@@ -1154,50 +1158,52 @@ print('skip' if beat_skip_gate(sig) else 'keep')
    return 0
   fi
  done
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] &&
-  [ "$pin_zai" = 0 ] &&
-  _zai_leg "$prompt" "$max_tokens"; then
-  # the Z.AI subscription replaces openrouter for z-ai-model calls:
-  # direct leg first (bucket-gated), openrouter stays the fallback
-  return 0
- fi
- # xiaomi MiMo token-plan quota leg (2026-09-22 quota-tier lane): same
- # guard shape as the zai tail block; unpinned-tier position only
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] &&
-  [ "$pin_zai" = 0 ] &&
-  _xiaomi_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_deck" = 0 ] && [ "$pin_zai" = 0 ] &&
-  _ocgo_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
-  _kimi_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_kimi" = 0 ] && [ "$pin_deck" = 0 ] &&
-  [ "$pin_ocgo" = 0 ] && [ "$pin_zai" = 0 ] &&
-  remote_chat "$prompt" "$max_tokens"; then
-  MODEL_USED="openrouter:$REMOTE_MODEL"
-  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
-  _model_emit remote "$REMOTE_MODEL"
-  return 0
- fi
- if ollama_chat "$prompt" "$max_tokens"; then
-  MODEL_USED="ollama:$OLLAMA_MODEL"
-  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
-  _model_emit ollama "$OLLAMA_MODEL"
-  return 0
- fi
- if [ "$pin_review" = 0 ] && [ "$pin_local" = 0 ] && [ "$pin_deck" = 0 ] &&
-  _deck_leg "$prompt" "$max_tokens"; then
-  return 0
- fi
+ # unpinned-tail ladder (2026-09-24 ops fold): ONE ordered leg list
+ # (zai -> xiaomi -> ocgo -> kimi -> remote -> ollama -> deck) plus a
+ # lane-membership check per leg. Each leg's skip-set names the pins
+ # that exclude it from this lane -- the exact guard sets of the five
+ # folded blocks (kimi keeps running under pin_deck).
+ # archive_only below is the always-on fall-through; a leg miss falls
+ # through to the next leg.
+ local _leg _skips _p _pv _skip
+ for _leg in zai xiaomi ocgo kimi remote ollama deck; do
+  case "$_leg" in
+  kimi) _skips="review local kimi ocgo zai" ;;
+  deck) _skips="review local deck" ;;
+  ollama) _skips="" ;;
+  *) _skips="review local kimi deck ocgo zai" ;;
+  esac
+  _skip=0
+  for _p in $_skips; do
+   _pv="pin_$_p"
+   [ "${!_pv}" = 1 ] && {
+    _skip=1
+    break
+   }
+  done
+  [ "$_skip" = 1 ] && continue
+  case "$_leg" in
+  zai) _zai_leg "$prompt" "$max_tokens" && return 0 ;;
+  xiaomi) _xiaomi_leg "$prompt" "$max_tokens" && return 0 ;;
+  ocgo) _ocgo_leg "$prompt" "$max_tokens" && return 0 ;;
+  kimi) _kimi_leg "$prompt" "$max_tokens" && return 0 ;;
+  remote)
+   remote_chat "$prompt" "$max_tokens" || continue
+   MODEL_USED="openrouter:$REMOTE_MODEL"
+   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+   _model_emit remote "$REMOTE_MODEL"
+   return 0
+   ;;
+  ollama)
+   ollama_chat "$prompt" "$max_tokens" || continue
+   MODEL_USED="ollama:$OLLAMA_MODEL"
+   printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
+   _model_emit ollama "$OLLAMA_MODEL"
+   return 0
+   ;;
+  deck) _deck_leg "$prompt" "$max_tokens" && return 0 ;;
+  esac
+ done
  archive_only "$prompt"
  MODEL_USED="none:archive-only"
  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"

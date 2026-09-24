@@ -58,6 +58,7 @@ REPO = os.path.dirname(ROOT)  # the hngh repo (kernel home)
 # block cannot drift from the mega-line guard
 sys.path.insert(0, os.path.join(ROOT, "lib"))
 from scrub import scrub_paths, scrub_truncate_pathy, redact_home
+import report_queue  # the shared report-queue row shim (lib/report_queue.py)
 
 FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
          ("sessions.json", 600),  # tier-scaled: 30m feed vs 1m feeds
@@ -1944,26 +1945,17 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
 
 
 def report_alert(text, identity, evidence=None):
-    """report-queue alert; best-effort (a lost queue write is a stderr
-    line, never a crash). EVIDENCE: a token derived from the current
-    failing state (e.g. the failing detail line). With evidence, the
-    dedup only re-fires when the CONDITION recurred (new failing log
-    line / new count); an unchanged stale condition is suppressed."""
-    bin_path = os.environ.get(
-        "REPORT_QUEUE_BIN", os.path.join(REPO, "scripts", "report-queue"))
-    env = dict(os.environ,
-               HNGH_REPORT_ROOT=os.environ.get("PATROL_REPORT_ROOT", REPO))
-    try:
-        argv = [bin_path, "--add", "alert", text,
-                "--identity", identity, "--window", "86400"]
-        if evidence:
-            argv += ["--evidence", evidence]
-        r = subprocess.run(argv,
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, env=env, timeout=30)
-        return r.returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
+    """report-queue alert (lib/report_queue.py); best-effort (a lost
+    queue write is swallowed, never a crash). EVIDENCE: a token
+    derived from the current failing state (e.g. the failing detail
+    line). With evidence, the dedup only re-fires when the CONDITION
+    recurred (new failing log line / new count); an unchanged stale
+    condition is suppressed."""
+    return report_queue.report(
+        "alert", text, identity, 86400, evidence=evidence,
+        binary=os.environ.get(
+            "REPORT_QUEUE_BIN", os.path.join(REPO, "scripts", "report-queue")),
+        root=os.environ.get("PATROL_REPORT_ROOT", REPO))
 
 
 def run(tier=None, patrol_id=None, now_s=None):

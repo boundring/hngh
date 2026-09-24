@@ -70,20 +70,9 @@ flock -w "${RESEARCH_LOCK_WAIT:-300}" 9 || exit 0
 # key or on any error the beat proceeds untriaged. Verdict recorded
 # for the schedule dataset; hot lane logged for worker routing.
 if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; then
- _tb_beats="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('beats ' + d['timers']['beats'])" 2>/dev/null)"
- _tb_beads="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(str(d['beads']['closed']) + ' closed ' + str(d['beads']['open']) + ' open')" 2>/dev/null)"
- if _triage="$(TYPESAFE_BEATS="$_tb_beats" TYPESAFE_BEADS="$_tb_beads" python3 -c "
-import os, sys
-sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
-from typesafe import triage_fanout
-lanes = ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles']
-st = {'beats': os.environ.get('TYPESAFE_BEATS', '?'), 'beads': os.environ.get('TYPESAFE_BEADS', '?')}
-hot, col, scores = triage_fanout(st, lanes)
-parts = []
-parts.append('hottest=' + str(hot) if hot else 'hottest=?')
-parts.append('collapse=' + str(col) if col is not None else 'collapse=?')
-print(' '.join(parts))
-" 2>/dev/null)"; then
+ # typed triage glue hoisted to lib/typesafe.py triage_glue (no
+ # urgency tail here -- this site never had one)
+ if _triage="$(printf '%s' "$_city_json" | python3 "$AUTOMATION_ROOT/lib/typesafe.py" triage 2>/dev/null)"; then
   breadcrumb "$JOB_NAME" "triage" "jev per-beat fan-out: $_triage"
  fi
 fi

@@ -21,23 +21,9 @@ MORNING_FILE="$DIGEST_DIR/MORNING-$DATE.md"
 # land as a header block.
 TRIAGE_BLOCK=""
 if _city_json="$(python3 "$AUTOMATION_ROOT/jobs/city-state.py" 2>/dev/null)"; then
- _beats_state="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('beats ' + d['timers']['beats'])" 2>/dev/null)"
- _beads_state="$(printf '%s' "$_city_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(str(d['beads']['closed']) + ' closed ' + str(d['beads']['open']) + ' open')" 2>/dev/null)"
- if _triage="$(TYPESAFE_BEATS="$_beats_state" TYPESAFE_BEADS="$_beads_state" python3 -c "
-import os, sys
-sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
-from typesafe import triage_fanout
-lanes = ['reviewer-gates', 'acp-probes', 'contexts-redesign', 'tiger-specs', 'triage-wiring', 'roles']
-st = {'beats': os.environ.get('TYPESAFE_BEATS', '?'), 'beads': os.environ.get('TYPESAFE_BEADS', '?')}
-hot, col, scores = triage_fanout(st, lanes)
-parts = []
-parts.append('hottest=' + str(hot) if hot else 'hottest=?')
-parts.append('collapse=' + str(col) if col is not None else 'collapse=?')
-if scores:
-    top = sorted(zip(lanes, scores), key=lambda kv: kv[1], reverse=True)[:2]
-    parts.append('urgency=' + ','.join('%s:%.2f' % kv for kv in top))
-print(' '.join(parts))
-" 2>/dev/null)"; then
+ # typed triage glue hoisted to lib/typesafe.py triage_glue (the
+ # `urgency` arg keeps this site's historical top-2 tail)
+ if _triage="$(printf '%s' "$_city_json" | python3 "$AUTOMATION_ROOT/lib/typesafe.py" triage urgency 2>/dev/null)"; then
   TRIAGE_BLOCK="_Jev triage (one call): $_triage _"
   breadcrumb "$JOB_NAME" "triage" "jev fan-out: $_triage"
  fi
@@ -54,9 +40,9 @@ names="$(printf '%s\n' "$SOURCES" | cut -d: -f1 | tr '\n' ' ' | sed 's/ $//')"
 names="$(screen_day_names "$DATE" $names)"
 n="$(printf '%s\n' "$names" | grep -c . || true)"
 if [ "${n:-0}" -le 0 ] 2>/dev/null; then
-  breadcrumb "$JOB_NAME" "morning" "no sources configured; nothing to summarize"
-  update_dashboard "$JOB_NAME" "$DATE" "$TS"
-  exit 0
+ breadcrumb "$JOB_NAME" "morning" "no sources configured; nothing to summarize"
+ update_dashboard "$JOB_NAME" "$DATE" "$TS"
+ exit 0
 fi
 
 prompt="$(build_prompt "$DATE" "$names" "$MAX_MORNING_WORDS" "morning")"
@@ -69,15 +55,15 @@ summary="$(printf '%s' "$summary" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
 used="$(last_model_used)"
 
 if [ -n "$summary" ]; then
-  {
-    printf '# Morning digest %s\n' "$DATE"
-    printf '_compiled %s | model: %s_\n' "$TS" "$used"
-    [ -n "$TRIAGE_BLOCK" ] && printf '\n%s\n' "$TRIAGE_BLOCK"
-    printf '\n%s\n' "$summary"
-  } >"$MORNING_FILE"
-  breadcrumb "$JOB_NAME" "morning" "MORNING-$DATE.md written via $used"
+ {
+  printf '# Morning digest %s\n' "$DATE"
+  printf '_compiled %s | model: %s_\n' "$TS" "$used"
+  [ -n "$TRIAGE_BLOCK" ] && printf '\n%s\n' "$TRIAGE_BLOCK"
+  printf '\n%s\n' "$summary"
+ } >"$MORNING_FILE"
+ breadcrumb "$JOB_NAME" "morning" "MORNING-$DATE.md written via $used"
 else
-  breadcrumb "$JOB_NAME" "morning" "no model output; MORNING-$DATE.md not updated"
+ breadcrumb "$JOB_NAME" "morning" "no model output; MORNING-$DATE.md not updated"
 fi
 
 # --- 3. dashboard + dogfood ---
@@ -85,7 +71,7 @@ update_dashboard "$JOB_NAME" "$DATE" "$TS"
 record_hngh_run "morning digest $DATE $TS"
 # --- 4. best-effort daily write-ups (kernel generators; never fatal) ---
 if [ -x "$AUTOMATION_ROOT/jobs/daily-writeups.sh" ]; then
-  "$AUTOMATION_ROOT/jobs/daily-writeups.sh" ||
-    breadcrumb "$JOB_NAME" "writeups" "daily-writeups exited nonzero (data)"
+ "$AUTOMATION_ROOT/jobs/daily-writeups.sh" ||
+  breadcrumb "$JOB_NAME" "writeups" "daily-writeups exited nonzero (data)"
 fi
 exit 0

@@ -42,6 +42,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "lib"))
+import report_queue  # the shared report-queue row shim (lib/report_queue.py)
+
 STATE_FILE = os.environ.get(
     "SUPERVISION_STATE", os.path.join(ROOT, "dashboard", "agent-supervision-state.json"))
 BRIDGE_STORE = os.environ.get(
@@ -245,14 +248,10 @@ def omp_sessions(now):
     return out
 
 
-def report(args):
-    """report-queue add; any fault is silent (advisory, fail-closed)."""
-    try:
-        subprocess.run([REPORT_QUEUE] + args, timeout=30,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       check=False)
-    except Exception:
-        pass
+def report(kind, text, ident, window):
+    """report-queue add (lib/report_queue.py); any fault is silent
+    (advisory, fail-closed)."""
+    report_queue.report(kind, text, ident, window, binary=REPORT_QUEUE)
 
 
 def fmt_age(minutes):
@@ -352,11 +351,10 @@ def tick():
                 # eviction, then silence — no stall/recover flap noise. Bridge
                 # runs keep their stall->replace path regardless of age.
                 if prev.get("last_phase") != "evicted":
-                    report(["--add", "progress",
-                            "agent-supervision: evicted-stale %s (idle %s)"
-                            % (s["id"], fmt_age(tool_age_min)),
-                            "--identity", "supervision-evicted:%s" % s["id"],
-                            "--window", "604800"])
+                    report("progress",
+                           "agent-supervision: evicted-stale %s (idle %s)"
+                           % (s["id"], fmt_age(tool_age_min)),
+                       "supervision-evicted:%s" % s["id"], "604800")
                 state[s["id"]] = {
                     "last_size": s["size"],
                     "last_toolcalls": s["toolcalls"],
@@ -384,15 +382,13 @@ def tick():
                     # transcript-derived stall flags stay advisory
                     body += " [" + " | ".join(
                         replace_stalled_bridge_run(s)) + "]"
-                report(["--add", "alert", body,
-                        "--identity", "agent-stall:%s" % s["id"],
-                        "--window", "86400"])
+                report("alert", body,
+                       "agent-stall:%s" % s["id"], "86400")
             elif (prev.get("last_phase") == "stalled"
                     and not s.get("exited")):
                 # recovery: progress resumed — one flap row (identity-deduped)
-                report(["--add", "progress", "agent-stall %s: recovered" % s["id"],
-                        "--identity", "agent-stall-recovered:%s" % s["id"],
-                        "--window", "86400"])
+                report("progress", "agent-stall %s: recovered" % s["id"],
+                       "agent-stall-recovered:%s" % s["id"], "86400")
             state[s["id"]] = {
                 "last_size": s["size"],
                 "last_toolcalls": s["toolcalls"],

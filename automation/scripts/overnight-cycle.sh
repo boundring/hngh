@@ -323,6 +323,100 @@ pick_lane() { # top queued lane via the kernel selector -> "id|title"
  printf '%s|%s\n' "$chosen" "$title"
 }
 
+# emit_plan <prompt> <kind> -> validated model response on stdout; exit 0 ok,
+# 1 gate-fail (its breadcrumb/alert already emitted). Shared pipeline for the
+# two draft producers (O3 fold): the model_call lane + the three fail-closed
+# gates. kind=draft|synth selects the pin and the per-kind gate messages; the
+# synth lane adds the 'Verification:' requirement. Plan bytes unchanged.
+emit_plan() {
+ local prompt="$1" kind="$2"
+ local crumb_tag alert_id mal_crumb mal_alert tool_crumb tool_alert used response
+ case "$kind" in
+ draft)
+  crumb_tag="plan-draft-fail"
+  alert_id="overnight:plan-draft-bad:$day"
+  mal_crumb="model output had no checklist steps"
+  mal_alert="drafted plan output malformed (no '- [ ]' steps); discarded"
+  tool_crumb="draft invented absent tooling (pytest/jsonschema/npm)"
+  tool_alert="drafted plan referenced tooling absent from this repo (pytest/jsonschema/npm); discarded"
+  ;;
+ synth)
+  crumb_tag="dev-synth-fail"
+  alert_id="overnight:dev-synth-bad:$day"
+  mal_crumb="synthesized plan malformed (no '- [ ]'/'Verification:' steps); discarded"
+  mal_alert="synthesized development plan malformed (no verifiable steps); discarded"
+  tool_crumb="synthesized plan invented absent tooling (pytest/jsonschema/npm)"
+  tool_alert="synthesized plan referenced tooling absent from this repo; discarded"
+  ;;
+ esac
+ # overnight drafts are commit-range sized: deep tier (2026-09-22 context lane)
+ export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
+ if [ "$kind" = synth ]; then
+  response="$(printf '%s' "$prompt" | MODEL_PIN=local model_call 4096)"
+ else
+  response="$(printf '%s' "$prompt" | model_call 4096)"
+ fi
+ used="$(last_model_used)"
+ if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
+  breadcrumb "$JOB_NAME" "$crumb_tag" "model chain down ($used)"
+  return 1
+ fi
+ if ! printf '%s' "$response" | grep -q '^- \[ \]' ||
+  { [ "$kind" = synth ] && ! printf '%s' "$response" | grep -q 'Verification:'; }; then
+  breadcrumb "$JOB_NAME" "$crumb_tag" "$mal_crumb"
+  file_alert "$alert_id" "$mal_alert"
+  return 1
+ fi
+ if printf '%s' "$response" | grep -qE 'pytest|jsonschema|npm '; then
+  breadcrumb "$JOB_NAME" "$crumb_tag" "$tool_crumb"
+  file_alert "$alert_id" "$tool_alert"
+  return 1
+ fi
+ printf '%s' "$response"
+ return 0
+}
+
+# O6a typed step-class arbitration (RAISE-ONLY), one call per draft. Each
+# `class=T1|T2|T3` step tag is one Choice question (t1 mechanical / t2 normal /
+# t3 deep); arbiter (min_conf 0.5) may RAISE a step's class at >= 0.5 (a deep
+# step mislabeled cheap), never lower it. No key / all-None -> the draft's
+# classes stand unchanged (byte-identical legacy). Only the class= tag of a
+# raised step changes; every other byte is preserved.
+raise_step_classes() {
+ local r="$1" out
+ out="$(printf '%s' "$r" | python3 -c "
+import os, re, sys
+sys.path.insert(0, os.path.join('$ROOT', 'lib'))
+s = sys.stdin.read()
+lines = s.split('\n')
+step = re.compile(r'^- \[ \]')
+cls = re.compile(r'class=(T[123])\b')
+tagged = [(i, cls.search(l).group(1)) for i, l in enumerate(lines)
+          if step.match(l) and cls.search(l)]
+if not tagged:
+    sys.stdout.write(s); raise SystemExit(0)
+try:
+    from typesafe import ask_choices, arbiter
+except Exception:
+    sys.stdout.write(s); raise SystemExit(0)
+st = {'step_%d' % k: lines[i] for k, (i, _) in enumerate(tagged)}
+q = {'step_%d' % k: ('Execution cost class of this plan step: t1 = mechanical/small, t2 = normal multi-file, t3 = deep or risky', ['t1', 't2', 't3']) for k in range(len(tagged))}
+typed = ask_choices(st, q)
+L = ['t1', 't2', 't3']
+for k, (i, cur) in enumerate(tagged):
+    t = typed.get('step_%d' % k, (None, None))
+    a = arbiter(t, cur.lower(), L, 0.5)
+    if a is None:
+        continue
+    new = cur if L.index(cur.lower()) >= L.index(a.lower()) else 'T' + a[-1]
+    if new != cur:
+        lines[i] = cls.sub('class=' + new, lines[i], count=1)
+sys.stdout.write('\n'.join(lines))
+" 2>/dev/null)"
+ [ -n "$out" ] || out="$r"
+ printf '%s' "$out"
+}
+
 author_draft_plan() { # day -> drafts one normal-risk plan proposal
  local day="$1"
  local out="$ROOT/digest/DRAFT-PLAN-$day.md"
@@ -362,26 +456,9 @@ $backlog
 $alerts
 --- crystallized research lines ---
 $lines"
- # overnight drafts are commit-range sized: deep tier (2026-09-22 context lane)
- export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
- response="$(printf '%s' "$prompt" | model_call 4096)"
+ response="$(emit_plan "$prompt" draft)" || return 0
  used="$(last_model_used)"
- if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
-  breadcrumb "$JOB_NAME" "plan-draft-fail" "model chain down ($used)"
-  return 0
- fi
- if ! printf '%s' "$response" | grep -q '^- \[ \]'; then
-  breadcrumb "$JOB_NAME" "plan-draft-fail" "model output had no checklist steps"
-  file_alert "overnight:plan-draft-bad:$day" \
-   "drafted plan output malformed (no '- [ ]' steps); discarded"
-  return 0
- fi
- if printf '%s' "$response" | grep -qE 'pytest|jsonschema|npm '; then
-  breadcrumb "$JOB_NAME" "plan-draft-fail" "draft invented absent tooling (pytest/jsonschema/npm)"
-  file_alert "overnight:plan-draft-bad:$day" \
-   "drafted plan referenced tooling absent from this repo (pytest/jsonschema/npm); discarded"
-  return 0
- fi
+ response="$(raise_step_classes "$response")"
  draft="<!-- plan: status=drafted risk=normal author=machine accepted=never -->
 # DRAFT plan — $day (machine-night-agent)
 
@@ -516,29 +593,9 @@ Grounded constraints (binding):
 3. 3-6 steps, each independently verifiable.
 
 $docs"
- # overnight drafts are commit-range sized: deep tier (2026-09-22 context lane)
- export MODEL_CTX="${MODEL_CTX:-$(get_param ctx-deep 32768)}"
- response="$(printf '%s' "$prompt" | MODEL_PIN=local model_call 4096)"
+ response="$(emit_plan "$prompt" synth)" || return 0
  used="$(last_model_used)"
- if [ "$used" = "none:archive-only" ] || [ -z "$response" ]; then
-  breadcrumb "$JOB_NAME" "dev-synth-fail" "model chain down ($used)"
-  return 0
- fi
- if ! printf '%s' "$response" | grep -q '^- \[ \]' ||
-  ! printf '%s' "$response" | grep -q 'Verification:'; then
-  breadcrumb "$JOB_NAME" "dev-synth-fail" \
-   "synthesized plan malformed (no '- [ ]'/'Verification:' steps); discarded"
-  file_alert "overnight:dev-synth-bad:$day" \
-   "synthesized development plan malformed (no verifiable steps); discarded"
-  return 0
- fi
- if printf '%s' "$response" | grep -qE 'pytest|jsonschema|npm '; then
-  breadcrumb "$JOB_NAME" "dev-synth-fail" \
-   "synthesized plan invented absent tooling (pytest/jsonschema/npm)"
-  file_alert "overnight:dev-synth-bad:$day" \
-   "synthesized plan referenced tooling absent from this repo; discarded"
-  return 0
- fi
+ response="$(raise_step_classes "$response")"
  local body="<!-- plan: status=proposed risk=normal accepted=- -->
 # $day - $slug (synthesized from adopted research)
 

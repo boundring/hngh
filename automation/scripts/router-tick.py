@@ -46,6 +46,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
 import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
+import report_queue  # the shared report-queue row shim (lib/report_queue.py)
 
 KERNEL = os.environ.get(
     "HNGH_HOME", os.path.expanduser("~/Projects/etc/hngh"))
@@ -168,18 +169,13 @@ def breadcrumb(job, event, detail):
 
 
 def report(kind, text, ident, window):
-    """File one report-queue row; a lost row must not block the tick."""
+    """File one report-queue row (lib/report_queue.py); a lost row must
+    not block the tick."""
     if os.environ.get("DRY_RUN") == "1":
         print("[dry-run] row %s|%s|%s|%s" % (kind, text, ident, window))
         return
-    try:
-        subprocess.run(
-            [REPORT_QUEUE, "--add", kind, text,
-             "--identity", ident, "--window", str(window)],
-            env={**os.environ, "HNGH_REPORT_ROOT": REPORT_ROOT},
-            capture_output=True, timeout=30)
-    except Exception:
-        pass
+    report_queue.report(kind, text, ident, window,
+                        binary=REPORT_QUEUE, root=REPORT_ROOT)
 
 
 def ttl_s():

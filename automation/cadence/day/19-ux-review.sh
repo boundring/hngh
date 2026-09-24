@@ -126,6 +126,36 @@ Evidence:
 $evidence
 List up to 3 CONCRETE defects a reader would hit, each one line: defect -> why it fails the register or the task -> the file that would change. If none: exactly NONE"
 
+# --- typed-first register pass (O6b typed lever): ONE ask_nouls call
+# over the two registers the brief names (writing-register,
+# display-register) -- the review's judgment targets. Fire bar 0.7 (the
+# steer precedent): one report row per fired register, text
+# `ux: <register> risk p=N.NN`, and no chat call. Every answer None (no
+# key/offline), or an unjudged register with nothing fired -> fall
+# through to the existing chat call byte-identical (fail-open legacy);
+# every register answered below 0.7 -> one `ux: no findings (typed)`
+# row, no chat call.
+typed_rows="$(printf '%s' "$prompt" | python3 -c "
+import os, sys
+sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
+from typesafe import ask_nouls
+dims = ['writing-register', 'display-register']
+ans = ask_nouls({'surface': '$surface', 'review_brief': sys.stdin.read()},
+                {d: 'Is there a real UX problem in ' + d + '?' for d in dims})
+fired = [d for d in dims if ans.get(d) is not None and ans[d] >= 0.7]
+if fired:
+    for d in fired:
+        print('%s\tux: %s risk p=%.2f' % (d, d, ans[d]))
+elif not any(v is None for v in ans.values()):
+    print('clean\tux: no findings (typed)')
+" 2>/dev/null)"
+if [ -n "$typed_rows" ]; then
+  printf '%s\n' "$typed_rows" | while IFS=$'\t' read -r did dtext; do
+    file_report alert "$dtext" "ux-review:$surface:$did"
+  done
+  exit 0
+fi
+
 response="$(printf '%s' "$prompt" | model_call 1024)" || {
   breadcrumb "$JOB_NAME" "ux-review-model-down" "$surface"
   exit 0

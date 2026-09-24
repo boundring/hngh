@@ -2,6 +2,17 @@
 
 ## 2026-09-24
 
+- ops: streamlining cuts - the unpinned-tail model ladder folds to one
+  ordered leg list (byte-identical across 130 pre/post scenarios), the
+  beat-skip studio probe runs once per verdict window instead of per
+  call, the twin overnight plan producers share one `emit_plan`
+  pipeline (plan bytes unchanged, md5-verified), the four private
+  report shims move behind `lib/report_queue.py` (one row, ` xN` bump,
+  evidence policy single-sourced), the typed triage glue hoists to
+  `lib/typesafe.py triage_glue`, and the typed levers land: raise-only
+  step classes (arbiter min_conf 0.5, never lowers a draft class) and
+  a typed-first ux-review register pass (fire bar 0.7; without a key
+  the legacy chat path is byte-identical).
 - jev: typed challenge producer -
   `scripts/typed-challenges.py` asks the ten principle-matrix refusal
   conditions as one batched System One call (`lib/typesafe.py` NEW
