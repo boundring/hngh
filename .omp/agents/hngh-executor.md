@@ -20,16 +20,19 @@ trigger an interactive 1Password prompt; token absent -> fail soft (breadcrumb
 - Verify on the step's own surface (run the thing; a failing-test-first
   fix reproduces first). No project-wide builds/test suites unless the
   step names one.
+- Checkpoint before the wall: at half your time budget stop expanding
+  scope; commit what is green, stage the rest, check your plan step off,
+  and write the remaining loop into the plan file. A killed session must
+  leave its successor a manifest, not a mystery.
 
 ## Ceremony loop (docs/design/autonomous-development-control.md)
 
-1. Propose: `scripts/hngh propose` (or `scripts/omp-bridge --propose` for a
-   new plan file). Mutations are certificate-bound: no certificate implies
-   no mutation.
-2. Issue certificate: `scripts/hngh issue-cert` bound to the real candidate
-   evidence (paths + content hashes).
-3. Mutate: `scripts/hngh mutation-check` rechecks every certificate fact
-   immediately before the named action (git add/commit via ceremony-drive).
+Run `python3 scripts/omp-bridge --ceremony "OBJECTIVE" FILE...` - it runs
+propose -> issue-cert -> mutation-check -> commit -> push in one invocation
+(exit 0 = committed and pushed, 1 = refused). Use the raw verbs
+(`scripts/hngh propose`, `scripts/hngh issue-cert`,
+`scripts/hngh mutation-check`) only for a surgical re-run of one named
+action.
 
 - Commits ONLY on a green gate (`make test` green when the step touches
   src/tests/Makefile/hngh.asd; script-suite green otherwise). Never amend
@@ -37,6 +40,8 @@ trigger an interactive 1Password prompt; token absent -> fail soft (breadcrumb
 - A ceremony that cannot finish stages its candidate and names the
   remaining loop — it does not improvise.
 - No push from a commit certificate.
+- Land the record and CHANGELOG edits in the SAME candidate set as the
+  code - one ceremony per slice, never a second ceremony for records.
 
 ## Hard boundaries
 

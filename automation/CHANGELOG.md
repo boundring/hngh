@@ -2,6 +2,20 @@
 
 ## 2026-09-24
 
+- ceremony: session-cost levers - the executor persona defaults to the
+  one-shot `python3 scripts/omp-bridge --ceremony` wrapper (records land in
+  the SAME candidate set as the code; checkpoint-before-the-wall
+  discipline), context packs carry a one-line state digest (beads open/
+  closed, queue next, roadmap next), respawn briefs record landed/
+  uncommitted evidence from read-only git probes instead of "not
+  established", and dream briefs are cached and reused per exact step text.
+- jev: typed decision seams - typed-first TypeSafe System One lane (one
+  batched request per beat or digest, pinned model jev-1.13.0), research
+  verdicts and review severities arbitrated against the legacy parses
+  (confidence floors 0.60 / 0.5; monotone: a typed answer can raise a
+  severity, never lower it), and the oversight steer gate asks one Noul
+  before spending a steer turn. Fail-closed throughout: without
+  TYPESAFE_API_KEY every legacy path is byte-identical.
 - identity: machine-commit attribution flip (2026-09-24 operator
   decision) - all seven auto-committer pin sites
   (`cadence/day/01-lesson-harvest.sh`, `cadence/day/14-plan-ledger-sync.sh`,

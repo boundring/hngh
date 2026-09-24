@@ -727,6 +727,14 @@ RULE
  printf '%s\n' "$ROOT/prompts/overnight/$slug.dream-prompt.md"
 }
 
+# dream brief cache: keyed by the exact "$slug:$dream_step" text: the
+# same step text under another plan re-dreams.
+dream_cache_key() { printf '%s' "$1" | sha256sum | cut -c1-16; }
+dream_cache_path() {
+ printf '%s/state/dream-briefs/%s.md' "$ROOT" "$(dream_cache_key "$1")"
+}
+# ponytail: dream cache lives forever, keyed by exact step text; add a TTL if a stale brief ever bites.
+
 if [ -n "$plan_file" ]; then
  slug="$plan_slug"
  objective="Execute the next step of plan $slug: $plan_step"
@@ -825,6 +833,7 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  local slug="$1" objective="$2" prompt_file="$3" pfile="$4" dream_step="$5"
  local start rc run_id log disposition cause result
  local dream_informed=0
+ local dream_out="" dream_cached=""
  # cost tier of this step (plan 2026-09-10-cost-tiering step 1): the
  # selector knows which step it launches; the launcher reads the
  # SESSION_CLASS global for the budget row (dream pass included — one
@@ -852,25 +861,39 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  # runs inside this slot synchronously and adds one budget row via
  # launch_session (counted in the sessions-day ceiling).
  if [ -n "$dream_step" ]; then
-  local dream_out="$ROOT/prompts/overnight/$slug.dream.md"
+  dream_out="$ROOT/prompts/overnight/$slug.dream.md"
+  dream_cached="$(dream_cache_path "$slug:$dream_step")"
   rm -f "$dream_out"
-  local dprompt
-  dprompt="$(build_dream_prompt "$slug" "$pfile" "$dream_step" "$dream_out")"
-  local save_ts="$TIMEOUT_S"
-  TIMEOUT_S="${OVERNIGHT_DREAM_TIMEOUT:-600}" # bounded dream, never 2x the beat
-  launch_session "$slug-dream" \
-   "DREAM pass: read-only simulation of plan $slug step before execution" \
-   "$dprompt" dream
-  TIMEOUT_S="$save_ts"
-  if [ "$LAUNCH_RC" -ne 0 ] || [ ! -s "$dream_out" ]; then
-   breadcrumb "$JOB_NAME" "forethought-dream-skip" \
-    "$slug dream dead/empty (rc=$LAUNCH_RC) — step proceeds undreamed"
-  else
+  if [ -s "$dream_cached" ]; then
+   # cached brief: a prior attempt of this exact step already paid the
+   # dream pass (see the cache helpers) - reuse it, never re-dream.
+   cp "$dream_cached" "$dream_out"
    {
     printf '\n## Dream sanity-checks (verify these assertions FIRST, before your first edit)\n\n'
     cat "$dream_out"
    } >>"$prompt_file"
    dream_informed=1
+   breadcrumb "$JOB_NAME" "forethought-dream-cache" \
+    "$slug reused cached dream brief"
+  else
+   local dprompt
+   dprompt="$(build_dream_prompt "$slug" "$pfile" "$dream_step" "$dream_out")"
+   local save_ts="$TIMEOUT_S"
+   TIMEOUT_S="${OVERNIGHT_DREAM_TIMEOUT:-600}" # bounded dream, never 2x the beat
+   launch_session "$slug-dream" \
+    "DREAM pass: read-only simulation of plan $slug step before execution" \
+    "$dprompt" dream
+   TIMEOUT_S="$save_ts"
+   if [ "$LAUNCH_RC" -ne 0 ] || [ ! -s "$dream_out" ]; then
+    breadcrumb "$JOB_NAME" "forethought-dream-skip" \
+     "$slug dream dead/empty (rc=$LAUNCH_RC) — step proceeds undreamed"
+   else
+    {
+     printf '\n## Dream sanity-checks (verify these assertions FIRST, before your first edit)\n\n'
+     cat "$dream_out"
+    } >>"$prompt_file"
+    dream_informed=1
+   fi
   fi
  fi
  launch_session "$slug" "$objective" "$prompt_file"
@@ -879,6 +902,16 @@ run_one() { # slug objective prompt_file plan_file [dream_step]
  log="$LAUNCH_LOG"
  disposition="$LAUNCH_DISPOSITION"
  cause="$LAUNCH_CAUSE"
+ # cache the fresh dream brief only when this attempt died (rc != 0:
+ # timeout kill, refused bridge, non-zero exit): the step gets re-queued
+ # and the re-queue reuses the brief instead of paying another dream
+ # pass. A completed step is checked off - caching it would only grow the
+ # cache.
+ if [ -n "$dream_cached" ] && [ ! -s "$dream_cached" ] && [ -s "$dream_out" ] &&
+  [ "$rc" -ne 0 ]; then
+  mkdir -p "$ROOT/state/dream-briefs" &&
+   cp "$dream_out" "$dream_cached" 2>/dev/null || true
+ fi
  # final disposition for the shutdown breadcrumb (step 7): over_shutdown
  # reports the last entry per slug; the pre-launch entry says "running".
  printf '%s\t%s\n' "$slug" "${disposition:-unknown}" >>"$INFLIGHT"

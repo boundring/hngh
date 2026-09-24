@@ -108,13 +108,25 @@ write_brief() { # slug sessid cause evidence corrective outfile
   # brief cap: the whole brief stays under ~1.5KB — it is one bounded
   # prompt, not a dossier. The context pack is pointed at, never inlined;
   # lib/launch-session.sh regenerates it fresh at launch (same path).
+  # landed/uncommitted evidence: read-only git probes over the kernel
+  # repo (HNGH_HOME seam; never a literal home path). Empty uncommitted
+  # status is an OBSERVED "clean"; a failed probe is "not established"
+  # (never guess). The git work-tree discovery falls back to the caller's
+  # cwd so the brief survives being sourced outside this script.
+  local krepo="${HNGH_HOME:-$(git -C "$(dirname "$0")/../.." rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)}"
+  local landed="not established" uncommitted="not established"
+  if git -C "$krepo" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    landed="$(git -C "$krepo" log --oneline -3 2>/dev/null | tr '\n' ';' | head -c 160)"
+    uncommitted="$(git -C "$krepo" status --short 2>/dev/null | head -20 | tr '\n' ';' | head -c 200)"
+    [ -n "$uncommitted" ] || uncommitted="clean"
+  fi
   {
     printf '# failure-informed respawn brief — %s\n\n' "$slug"
     printf 'objective: %s\n' "$(objective_for "$slug" "$cause" "$fix")"
     printf 'lane: %s\n' "$slug"
     printf 'budget-spent: not established\n'
-    printf 'landed: not established\n'
-    printf 'uncommitted: not established\n'
+    printf 'landed: %s\n' "$landed"
+    printf 'uncommitted: %s\n' "$uncommitted"
     printf 'failure-mode: %s (%.140s)\n' "$cause" "$ev"
     printf 'correction: %s\n' "$fix"
     # reorientation block (hngh docs/design/context-manager.md): the
