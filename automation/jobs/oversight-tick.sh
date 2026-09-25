@@ -332,17 +332,6 @@ probe_credentials() {
 probe_credentials() { :; } # replaced by probe_agent_health below (kept name for clarity)
 probe_agent_health() { probe_credentials; }
 
-probe_agent_watchdog() {
- # roguelike death watchdog: reads the omp session surface, logs handoffs
- # (agent-handoffs.md) + arms attention. Log-only; never kills/launches.
- local wd="$ROOT/jobs/agent-watchdog.sh"
- [ -x "$wd" ] || {
-  breadcrumb "oversight-tick" "watchdog" "missing $wd"
-  return 0
- }
- bash "$wd" || breadcrumb "oversight-tick" "watchdog-fail" "rc=$?"
-}
-
 probe_rendered_dashboard() {
  # rendered-but-inert surface check (guardrails class 9): a page that
  # returns 200 but whose interactions are dead (panels never open,
@@ -479,7 +468,6 @@ self_review() {
  probe_system_awareness
  probe_time_ledger
  [ "$EVENT_MODE" -eq 0 ] && probe_agent_health
- [ "$EVENT_MODE" -eq 0 ] && probe_agent_watchdog
  [ "$EVENT_MODE" -eq 0 ] && probe_rendered_dashboard
  [ "$EVENT_MODE" -eq 0 ] && steer_leg
  [ "$SELFREVIEW_MODE" -eq 1 ] && self_review

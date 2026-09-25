@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: smoke enable disable status test sweep adhoc
+.PHONY: smoke enable disable status test adhoc
 
 # smoke: end-to-end proof — real fetches + real model call + dashboard HTTP check.
 # Runs jobs against the real repo; snapshots/digests/STATE are append-only so a
@@ -37,10 +37,6 @@ status:
 	systemctl --user status hngh-dashboard.service --no-pager | head -n 12
 	@echo "--- latest breadcrumbs ---"
 	@tail -n 5 STATE.md
-
-# sweep: commit job-produced artifacts (append-only data, logs, units)
-sweep:
-	bash jobs/sweep-artifacts.sh
 
 test:
 	find cadence jobs lib scripts -name '*.sh' -print0 | xargs -0 -n8 bash -n
@@ -98,7 +94,6 @@ test:
 	python3 -B tests/test-email-qa.py
 	python3 -B tests/test-agent-supervision.py
 	python3 -B tests/test-agent-respawn.py
-	python3 -B tests/test-beat-watchdog.py
 	python3 -B tests/test-patrol.py
 	python3 -B tests/test-candidate-hash-reconciliation.py
 	python3 -B tests/test-viz-schema-patrol.py

@@ -141,7 +141,7 @@ NORMAL_SHAPES = [
               "both `make test` gates green; failing check captured")),
     ("tree-skew", ("Whitelist check + handoff/commit of the stalled edit",
                    "dirty-tree whitelist clean; stalled edit committed or handed off")),
-    (("agent-stall", "loop-signal"),
+    (("agent-stall", "loop-signal", ":stalled"),
      ("Stop the stalled session, write a handoff brief (last state + next "
       "action), start the replacement",
       "old session id gone from supervision state; handoff brief file "

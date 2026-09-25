@@ -1,35 +1,54 @@
 #!/usr/bin/env python3
-"""agent-supervision — Hngh-native subagent supervision tick (Self-supervision
-rung, smallest slice). Hngh itself checks delegated agent sessions and flags
-stalls — no harness agent required.
+"""agent-supervision — the ONE Hngh subagent supervision plane (P4
+refoundation, 2026-09-25; supersedes and retires jobs/agent-watchdog.sh
+and jobs/beat-watchdog.py, deleted this day).
 
 Sources (same specimen dirs as sessions-feed.py):
   - bridge store record.lisp runs whose newest :STATE is non-terminal;
   - omp transcripts (~/.omp/agent/sessions/**.jsonl) modified in the last
-    MAX_TRACKED_AGE_S eviction horizon (main sessions + per-agent jsonl).
+    MAX_TRACKED_AGE_S eviction horizon (main sessions + per-agent jsonl);
+  - the crumbs journal (lib/crumbs-db.py export) and agent-handoffs.md,
+    for the virtual orchestrator session `overnight-lead` (the folded
+    beat-watchdog rules).
 
-Per session: entry count, tool-call count, last tool-call age, last entry
-age, transcript size delta vs the prior tick. Phase from the tool-call/size
-pattern: no entries = discovering; toolCalls rising + size growing = writing;
-toolCalls flat + size creeping = verifying; size/toolCalls unchanged >15m
-while non-terminal = STALLED. Transcript phase rule: a quiet session whose
-final assistant turn asks the operator something (confirm/shall i/...) is
-STALLED (awaiting-operator), never terminal.
+Per session per tick (300s cadence pacing) one supervision state:
+  active      evidence (transcript growth) aged <= 2 ticks (ACTIVE_S)
+              and no watchdog detection fired;
+  slow-valid  evidence fresh but tool-call count flat >
+              STALL_TOOLCALL_MIN (20m) — ONE progress row suggesting a
+              cheaper-tier re-queue; never kill/replace/steer;
+  stalled     no evidence for 2 consecutive ticks, or a ported watchdog
+              detection fired (trailing identical-tool-loop, or a final
+              errish toolResult with no corrective step for
+              watchdog-error-grace-min). Steer-once-then-die: first
+              miss appends ONE `session-drop ... stalled: steer:` row
+              plus a report row; the second consecutive miss dies the
+              session. Bridge runs keep the roguelike replace path
+              (hngh close-run dead + rotate + omp-bridge --run-start)
+              now with cause= from lib/causes.sh classify_cause on the
+              record; omp transcripts stay advisory (handoff + report
+              rows, never a kill). cause=unknown is banned on
+              transitions: unclassifiable deaths read
+              cause=unclassified.
 
-Findings are report-queue rows (alert kind, deduped via --identity so
-repeats collapse to xN; recovery emits one "recovered" progress row — the
-flap pattern). omp-transcript stalls stay advisory: this tick never kills,
-restarts, or mutates a live session. Bridge-store runs are the roguelike
-exception: a stalled run (its id came from the bridge record, not a
-transcript) is replaced in-tick — hngh close-run dead, the closed record
-rotates into a timestamped bridge subdir, and omp-bridge --run-start
-re-provisions the same mission (2026-08-27, stage-3 criterion 2).
+The overnight-lead virtual session folds the beat-watchdog rules over
+crumbs export + handoff rows (legacy `overnight-lead ... dead` rows and
+this die path's rows): launch-plane stall (>= beat-stall-n consecutive
+failed results), trailing same-cause deaths (>= blocker-escalate-n, one
+beat-blockers.tsv row, parked), and beat silence (newest overnight-done
+older than beat-stall-silence-hours while cadence ticks kept arriving).
+
+Findings are report-queue rows with identity supervision:<session>:<state>
+(window 604800): alert kind for stalled/die and the overnight-lead rules,
+progress for slow-valid and the recovered flap (identity-deduped xN).
 
 Fail-closed: every source error degrades to skip; the tick always exits 0.
 Healthy ticks are silent. State: dashboard/agent-supervision-state.json
 (rolling, cap 100 ids). Env overrides for tests: SUPERVISION_STATE,
 SUPERVISION_SOURCES (comma-separated dirs/files for omp transcripts),
-OMP_BRIDGE_STORE (same var sessions-feed honors), SUPERVISION_REPORT_QUEUE.
+OMP_BRIDGE_STORE (same var sessions-feed honors), SUPERVISION_REPORT_QUEUE,
+SUPERVISION_HANDOFFS, SUPERVISION_BLOCKERS, SUPERVISION_PARAMS,
+HNGH_CRUMBS_DB, SUPERVISION_CAUSES_SH.
 """
 import calendar
 import glob
@@ -61,12 +80,25 @@ HNGH_BIN = os.environ.get(
 OMP_BRIDGE_BIN = os.environ.get(
     "OMP_BRIDGE_BIN",
     os.path.join(ROOT, "..", "scripts", "omp-bridge"))
+HANDOFFS = os.environ.get(
+    "SUPERVISION_HANDOFFS", os.path.join(ROOT, "agent-handoffs.md"))
+BLOCKERS = os.environ.get(
+    "SUPERVISION_BLOCKERS",
+    os.path.join(ROOT, "state", "beat-blockers.tsv"))
+CRUMBS_DB = os.environ.get("HNGH_CRUMBS_DB",
+                           os.path.join(ROOT, "state", "crumbs.db"))
+CRUMBS_DB_PY = os.path.join(ROOT, "lib", "crumbs-db.py")
+PARAMS = os.environ.get("SUPERVISION_PARAMS",
+                        os.path.join(ROOT, "cadence-params.tsv"))
+CAUSES_SH = os.environ.get("SUPERVISION_CAUSES_SH",
+                           os.path.join(ROOT, "lib", "causes.sh"))
 
 STALL_TOOLCALL_MIN = 20   # last tool-call older than this => stalled
 STALL_MINUTES = 15        # size+toolcalls unchanged this long => stalled
 STALL_TICKS = 2           # ...or size unchanged across >2 ticks
 MAX_TRACKED_AGE_S = 21600  # transcript session idle this long => evicted, not flagged
 LIVE_S = 300              # mtime younger => omp session "live" (sessions-feed rule)
+ACTIVE_S = 600            # evidence age <= 2 ticks (300s pacing) => active
 STATE_CAP = 100           # rolling state file, ids kept
 OMP_MAX = 32              # transcript cap per tick
 
@@ -109,14 +141,46 @@ def classify(entries, tools, prior_tools, size, prior_size,
     return "verifying"      # tools flat, size creeping
 
 
+def errish(t):
+    """Failure-shaped result text (verbatim keyword set ported from the
+    retired agent-watchdog.sh)."""
+    t = (t or "").lower()
+    return any(k in t for k in (
+        "traceback", "fatal", "exception", "does not exist", "not found",
+        "error:", "failed", "permission denied", "exit status",
+        "assertionerror", "fail:"))
+
+
+def get_param(key, default):
+    """cadence-params.tsv row value (tab-split, first-column match);
+    fail-open to the default."""
+    try:
+        with open(PARAMS, encoding="utf-8", errors="replace") as fh:
+            for ln in fh:
+                f = ln.rstrip("\n").split("\t")
+                if len(f) > 1 and f[0] == key and f[1]:
+                    return f[1]
+    except OSError:
+        pass
+    return str(default)
+
+
 def scan_transcript(path):
-    """(entries, toolcalls, last_tool_ts, asks) for an omp jsonl — asks is
-    True when the LAST assistant text turn contains an ask-the-operator
-    phrase (the session paused for a human). Fail-closed: returns None
-    on any read/parse fault."""
+    """Activity stats for an omp jsonl. Asks is True when the LAST
+    assistant text turn contains an ask-the-operator phrase (the session
+    paused for a human). loop_sig/err_sig are the two detections ported
+    from the retired agent-watchdog.sh (2026-09-25): a trailing
+    watchdog-loop-n run of identical tool calls (name + canonical
+    arguments), and a final errish toolResult left uncorrected for
+    watchdog-error-grace-min. Fail-closed: returns None on any
+    read/parse fault."""
     entries, toolcalls, last_tool_ts = 0, 0, None
     last_asst_line = None
     exited = False
+    calls = []  # (name, canonical args) — trailing-loop check
+    last_role, last_text, last_ts = None, "", None
+    loop_n = max(2, int(get_param("watchdog-loop-n", 3)))
+    grace_s = float(get_param("watchdog-error-grace-min", 2)) * 60.0
     try:
         with open(path, "rb") as f:
             for raw in f:
@@ -134,13 +198,50 @@ def scan_transcript(path):
                 # ends; marker in the FINAL line means the session is
                 # dead, never coming back — terminal, never a stall
                 exited = '"customType":"session_exit"' in line
+                if '"role":"' not in line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                msg = rec.get("message")
+                if not isinstance(msg, dict):
+                    continue
+                m = TS_RE.search(line)
+                last_ts = _iso_ts(m.group(1)) if m else None
+                last_role = msg.get("role")
+                if last_role == "assistant":
+                    for c in (msg.get("parts") or msg.get("content") or []):
+                        if isinstance(c, dict) and c.get("type") == "toolCall":
+                            try:
+                                args = json.dumps(c.get("arguments"),
+                                                  sort_keys=True)
+                            except (TypeError, ValueError):
+                                args = str(c.get("arguments"))
+                            calls.append((c.get("name"), args))
+                elif last_role == "toolResult":
+                    last_text = "".join(
+                        c.get("text", "") for c in
+                        (msg.get("parts") or msg.get("content") or [])
+                        if isinstance(c, dict))
     except OSError:
         return None
     if entries == 0:
         return None
     asks = bool(last_asst_line and ASK_RE.search(last_asst_line))
+    tail = calls[-loop_n:]
+    loop_sig = None
+    if len(tail) == loop_n and all(x == tail[0] for x in tail):
+        loop_sig = "identical tool call x%d: %s" % (loop_n, tail[0][0])
+    err_sig = None
+    if (last_role == "toolResult" and errish(last_text)
+            and last_ts is not None
+            and time.time() - last_ts > grace_s):
+        err_sig = ("hard error result, no corrective step: %s"
+                   % last_text.strip().replace("\n", " ")[:160])
     return {"entries": entries, "toolcalls": toolcalls,
-            "last_tool_ts": last_tool_ts, "asks": asks, "exited": exited}
+            "last_tool_ts": last_tool_ts, "asks": asks, "exited": exited,
+            "loop_sig": loop_sig, "err_sig": err_sig}
 
 
 def awaiting_stall(asks, quiet_min, live):
@@ -151,6 +252,86 @@ def awaiting_stall(asks, quiet_min, live):
     question the standing authorization had already answered."""
     return bool(asks) and not live and quiet_min is not None \
         and quiet_min > STALL_MINUTES
+
+
+def ts_utc(epoch=None):
+    """UTC wall-clock stamp for handoff/blocker rows (ledger format)."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch))
+
+
+def append_handoff(line):
+    """One agent-handoffs.md row — the ledger agent-respawn.sh and the
+    overnight-lead same-cause rule read. Any fault is silent."""
+    try:
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def classify_cause_py(log):
+    """lib/causes.sh classify_cause over the session record/log.
+    'unknown' is banned on transitions — unclassifiable reads
+    cause=unclassified (the shim's own contract)."""
+    if log and os.path.isfile(log):
+        try:
+            p = subprocess.run(
+                ["bash", "-c", '. "$1" >/dev/null 2>&1; classify_cause "$2"',
+                 "causes", CAUSES_SH, log],
+                capture_output=True, text=True, timeout=30)
+            out = (p.stdout or "").strip().splitlines()
+            if out and out[-1] and out[-1] != "unknown":
+                return out[-1]
+        except Exception:
+            pass
+    return "unclassified"
+
+
+def steer_reason(s):
+    """Why this session missed its tick: the ported watchdog detections
+    when they fired, else plain transcript silence."""
+    return (s.get("loop_sig") or s.get("err_sig")
+            or "no transcript evidence this tick")
+
+
+def steer_stalled(s, now):
+    """First missed tick (steer-once-then-die): ONE handoff steer row +
+    ONE report row. Never kills — die_session owns the second miss."""
+    reason = steer_reason(s)
+    append_handoff("session-drop | %s | supervision|%s | stalled: steer: %s"
+                   % (ts_utc(now), s["id"], reason))
+    report("alert",
+           "agent-supervision: %s stalled (missed tick 1) — steer: %s"
+           % (s["id"], reason),
+           "supervision:%s:stalled" % s["id"], "604800")
+
+
+def die_session(s, now):
+    """Second consecutive missed tick. Bridge runs keep the roguelike
+    replace path (close-run dead + rotate + re-provision); omp
+    transcripts are advisory — handoff + report rows, never a kill.
+    cause= comes from lib/causes.sh classify_cause on the record."""
+    cause = classify_cause_py(s.get("path") or "")
+    if s.get("source") == "bridge":
+        text = ("agent-supervision: %s died after 2 missed ticks "
+                "(stalled) cause=%s [%s]"
+                % (s["id"], cause,
+                   " | ".join(replace_stalled_bridge_run(s))))
+    else:
+        text = ("agent-supervision: %s died after 2 missed ticks (stalled; "
+                "advisory — omp transcripts are never killed) cause=%s"
+                % (s["id"], cause))
+    if "overnight-lead" in s["id"]:
+        # overnight-lead-scope deaths join the legacy row shape the
+        # same-cause rule and agent-respawn.sh dead_rows read
+        append_handoff("overnight-lead | %s | overnight-lead|%s | dead: "
+                       "stalled past 2 ticks cause=%s"
+                       % (ts_utc(now), s["id"], cause))
+    else:
+        append_handoff("session-drop | %s | supervision|%s | dead: stalled "
+                       "past 2 ticks cause=%s"
+                       % (ts_utc(now), s["id"], cause))
+    report("alert", text, "supervision:%s:stalled" % s["id"], "604800")
 
 
 def bridge_sessions():
@@ -248,10 +429,161 @@ def omp_sessions(now):
     return out
 
 
-def report(kind, text, ident, window):
+def parse_results_crumbs(text):
+    """overnight-done rows → [['ok'], ['failed', ...]] results lists
+    (rule ported verbatim from the retired beat-watchdog.py)."""
+    rows = []
+    for ln in text.splitlines():
+        m = re.search(r"results=([\w,]*)", ln)
+        if m:
+            rows.append(m.group(1).split(",") if m.group(1) else [])
+    return rows
+
+
+def trailing_failures(crumbs):
+    """Consecutive 'failed' results from the end, across rows."""
+    n = 0
+    for row in reversed(crumbs):
+        for r in reversed(row):
+            if r == "failed":
+                n += 1
+            else:
+                return n
+    return n
+
+
+def parse_dead_rows(text):
+    """overnight-lead death rows → [(slug, cause)] — the legacy shape
+    scripts/overnight-cycle.sh writes; run-N and this tick's omp sids
+    both parse (relaxed fourth-field regex)."""
+    rows = []
+    for ln in text.splitlines():
+        if not ln.startswith("overnight-lead | ") or " dead" not in ln:
+            continue
+        m = re.search(
+            r"overnight-lead \| \S+ \| ([^|]+)\|([^|]+) \|", ln)
+        c = re.search(r"cause=([\w-]+)", ln)
+        if m and c:
+            rows.append((m.group(1).strip(), c.group(1)))
+    return rows
+
+
+def trailing_same_cause(rows):
+    """(slug, cause, n) for the trailing run of identical-cause deaths
+    of one slug (rule ported verbatim)."""
+    for i in range(len(rows)):
+        slug, cause = rows[i]
+        if all(s == slug and c == cause for s, c in rows[i + 1:]):
+            return slug, cause, len(rows) - i
+    return None
+
+
+def beat_silence(text, now, hours):
+    """True when the newest overnight-done crumb is >= `hours` old AND
+    a later cadence tick exists (the beat is silent, not just idle).
+    Timestamps parse from the row's first field via _iso_ts (UTC) —
+    TZ-proof."""
+    done, ticked_after = [], []
+    for ln in text.splitlines():
+        t = _iso_ts(ln.split(" | ", 1)[0].strip())
+        if t is None:
+            continue
+        if "overnight-done" in ln:
+            done.append(t)
+        else:
+            ticked_after.append(t)
+    if not done:
+        return False
+    newest = max(done)
+    return (now - newest >= hours * 3600
+            and any(t > newest for t in ticked_after))
+
+
+def blocker_row(scope):
+    """Existing beat-blockers.tsv row for scope (second-field match:
+    col0 is the blk- id, col1 the scope)."""
+    try:
+        with open(BLOCKERS, encoding="utf-8", errors="replace") as fh:
+            for ln in fh:
+                f = ln.rstrip("\n").split("\t")
+                if len(f) > 1 and f[1].strip() == scope:
+                    return f
+    except OSError:
+        pass
+    return None
+
+
+def append_blocker(scope, cause, active):
+    """One beat-blockers.tsv row: id,scope,cause,first-seen,attempts,state."""
+    try:
+        with open(BLOCKERS, "a", encoding="utf-8") as f:
+            f.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                "blk-%s-%s" % (time.strftime("%Y%m%d", time.gmtime()),
+                               re.sub(r"[^\w-]+", "-", scope)),
+                scope, cause, ts_utc(), 1,
+                "active" if active else "parked"))
+    except OSError:
+        pass
+
+
+def crumbs_state_text():
+    """Crumbs journal as text via lib/crumbs-db.py export — the
+    overnight-lead silence rule's source. Fail-closed: '' on any fault."""
+    try:
+        p = subprocess.run(
+            [sys.executable, CRUMBS_DB_PY, "export", "--db", CRUMBS_DB],
+            capture_output=True, text=True, timeout=60)
+        if p.returncode != 0:
+            return ""
+        return p.stdout or ""
+    except Exception:
+        return ""
+
+
+def overnight_lead_checks(now):
+    """The virtual `overnight-lead` session: beat-watchdog.py rules
+    folded in (file retired 2026-09-25). (a) launch-plane stall —
+    trailing failed overnight results >= beat-stall-n; (b) trailing
+    same-cause deaths >= blocker-escalate-n — one beat-blockers.tsv
+    row, parked; (c) beat silence — newest overnight-done older than
+    beat-stall-silence-hours while cadence ticks kept arriving.
+    Existing blocker rows silence their rule until cleared by hand."""
+    try:
+        with open(HANDOFFS, encoding="utf-8", errors="replace") as fh:
+            handoffs = fh.read()
+    except OSError:
+        handoffs = ""
+    state_text = crumbs_state_text()
+    dets = []
+    if trailing_failures(parse_results_crumbs(state_text)) \
+            >= int(get_param("beat-stall-n", 4)):
+        dets.append(("overnight", "bad-execution", 1, False,
+                     "supervision:overnight-lead:launch-stall"))
+    sc = trailing_same_cause(parse_dead_rows(handoffs))
+    if sc:
+        slug, cause, n = sc
+        if n >= int(get_param("blocker-escalate-n", 3)):
+            dets.append((slug, cause, n, True,
+                         "supervision:overnight-lead:same-cause:%s" % cause))
+    if beat_silence(state_text, now,
+                    float(get_param("beat-stall-silence-hours", 12))):
+        dets.append(("overnight-silence", "bad-execution", 1, False,
+                     "supervision:overnight-lead:silence"))
+    for scope, cause, attempts, active, ident in dets:
+        if blocker_row(scope):
+            continue
+        append_blocker(scope, cause, active)
+        report("alert",
+               "overnight-lead orchestrator stall: scope=%s cause=%s "
+               "attempts=%s%s" % (scope, cause, attempts,
+                                  "" if active else " — parked"),
+               ident, "604800")
+
+
+def report(kind, text, identity, window):
     """report-queue add (lib/report_queue.py); any fault is silent
     (advisory, fail-closed)."""
-    report_queue.report(kind, text, ident, window, binary=REPORT_QUEUE)
+    report_queue.report(kind, text, identity, window, binary=REPORT_QUEUE)
 
 
 def fmt_age(minutes):
@@ -360,10 +692,24 @@ def tick():
                     "last_toolcalls": s["toolcalls"],
                     "first_seen": prev.get("first_seen", int(now)),
                     "last_phase": "evicted",
+                    "misses": 0,
+                    "sup_state": "evicted",
+                }
+                continue
+            if s.get("exited"):
+                # terminal before the evidence machine: exited sessions are
+                # dead, never stalled/slow-valid, never flagged again
+                state[s["id"]] = {
+                    "last_size": s["size"],
+                    "last_toolcalls": s["toolcalls"],
+                    "first_seen": prev.get("first_seen", int(now)),
+                    "last_phase": "terminal",
+                    "misses": 0,
+                    "sup_state": "terminal",
                 }
                 continue
             quiet_min = max(0, (now - s["last_entry_ts"]) / 60.0)
-            if (s.get("source") != "bridge" and not s.get("exited")
+            if (s.get("source") != "bridge"
                     and awaiting_stall(s.get("asks"), quiet_min,
                                        s["nonterminal"])):
                 phase = "stalled"
@@ -371,32 +717,51 @@ def tick():
                 phase = classify(s["entries"], s["toolcalls"], prior_tools,
                                  s["size"], prior_size, unchanged_min,
                                  tool_age_min, s["nonterminal"])
-            if phase == "stalled":
-                body = ("agent-stall %s: %s, last tool-call %s ago"
-                        % (s["id"], phase, fmt_age(tool_age_min)))
-                if s.get("asks") and s.get("source") != "bridge":
-                    body += " (awaiting-operator: transcript ends asking" \
-                            " the operator)"
-                if s.get("source") == "bridge":
-                    # roguelike replacement fires ONLY for bridge-run ids;
-                    # transcript-derived stall flags stay advisory
-                    body += " [" + " | ".join(
-                        replace_stalled_bridge_run(s)) + "]"
-                report("alert", body,
-                       "agent-stall:%s" % s["id"], "86400")
-            elif (prev.get("last_phase") == "stalled"
-                    and not s.get("exited")):
-                # recovery: progress resumed — one flap row (identity-deduped)
-                report("progress", "agent-stall %s: recovered" % s["id"],
-                       "agent-stall-recovered:%s" % s["id"], "86400")
+            # evidence machine (P4): steer-once-then-die on missed ticks,
+            # slow-valid one-row advisory on flat tool-calls, else active
+            ev_age_s = max(0, now - s["last_entry_ts"])
+            stuck = bool(s.get("loop_sig") or s.get("err_sig"))
+            miss = ev_age_s > ACTIVE_S and not stuck
+            tool_flat = (s["last_tool_ts"] is not None
+                         and tool_age_min is not None
+                         and tool_age_min > STALL_TOOLCALL_MIN)
+            if miss:
+                misses = int(prev.get("misses", 0)) + 1
+                if misses == 1:
+                    steer_stalled(s, now)
+                else:
+                    die_session(s, now)
+                sup = "stalled"
+            elif tool_flat:
+                misses = 0
+                sup = "slow-valid"
+                if prev.get("sup_state") != "slow-valid":
+                    # one flap row: a long stretch with no NEW tool calls is
+                    # legitimate (long-running command), never killed
+                    report("progress",
+                           "agent-supervision: %s slow-valid (last tool-call "
+                           "%s ago) — re-queue at a cheaper tier if it "
+                           "persists" % (s["id"], fmt_age(tool_age_min)),
+                           "supervision:%s:slow-valid" % s["id"], "604800")
+            else:
+                misses = 0
+                sup = "active"
+                if prev.get("sup_state") in ("stalled", "slow-valid"):
+                    # recovery: progress resumed — one flap row
+                    report("progress", "agent-supervision: %s recovered"
+                           % s["id"],
+                           "supervision:%s:recovered" % s["id"], "604800")
             state[s["id"]] = {
                 "last_size": s["size"],
                 "last_toolcalls": s["toolcalls"],
                 "first_seen": prev.get("first_seen", int(now)),
                 "last_phase": phase,
+                "misses": misses,
+                "sup_state": sup,
             }
         except Exception:
             continue  # one bad session never takes the tick down
+    overnight_lead_checks(now)
     save_state(state)
 
 
@@ -442,7 +807,30 @@ def selfcheck():
     assert awaiting_stall(True, 3.0, False) is False    # still fresh
     assert awaiting_stall(True, 1.0, True) is False     # still live
     assert awaiting_stall(False, 90.0, False) is False  # report, not an ask
-    print("selfcheck ok: 7 fixtures, phases %s" % sorted(set(phases)))
+    # ported watchdog rules (folded 2026-09-25)
+    assert errish("boom\nTraceback (most recent call last)") is True
+    assert errish("all green, 3 files changed") is False
+    assert trailing_failures([["ok"], ["failed", "failed"], ["failed"]]) == 3
+    assert trailing_failures([["ok"], ["failed"], ["ok"]]) == 0
+    assert trailing_same_cause([("s", "x"), ("s", "x")]) == ("s", "x", 2)
+    assert trailing_same_cause([("s", "x"), ("s", "y")]) == ("s", "y", 1)
+    assert trailing_same_cause([]) is None
+    assert parse_dead_rows(
+        "overnight-lead | 2026-09-25T00:00:00Z | slug-a|run-1 | "
+        "rc=1 dead cause=bad-execution\n"
+        "overnight-lead | 2026-09-25T01:00:00Z | slug-a|omp-abc-1f2e3d | "
+        "dead: stalled past 2 ticks cause=bad-execution") == [
+        ("slug-a", "bad-execution"), ("slug-a", "bad-execution")]
+    now = time.time()
+    old = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now - 13 * 3600))
+    fresh = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now - 120))
+    assert beat_silence("%s | overnight-cycle.sh | overnight-done | "
+                        "results=ok\n" % old, now, 12.0) is False
+    assert beat_silence("%s | overnight-cycle.sh | overnight-done | "
+                        "results=ok\n%s | cadence-10m | mounted | tier beat\n"
+                        % (old, fresh), now, 12.0) is True
+    print("selfcheck ok: 7 fixtures + folded-rule asserts, phases %s"
+          % sorted(set(phases)))
 
 
 def selfcheck_replace():
@@ -485,8 +873,16 @@ def selfcheck_replace():
             "HNGH_BIN": stubs["hngh-stub"],
             "OMP_BRIDGE_BIN": stubs["bridge-stub"],
             "RQ_LOG": argv_log,
+            # P4 seams: hermetic ledger/blockers/params/crumbs (params file
+            # absent -> code defaults); record receipt doubles as the log
+            # classify_cause reads
+            "SUPERVISION_HANDOFFS": os.path.join(td, "agent-handoffs.md"),
+            "SUPERVISION_BLOCKERS": os.path.join(td, "beat-blockers.tsv"),
+            "SUPERVISION_PARAMS": os.path.join(td, "cadence-params.tsv"),
+            "HNGH_CRUMBS_DB": os.path.join(td, "crumbs.db"),
+            "SUPERVISION_CAUSES_SH": os.path.join(td, "no-causes.sh"),
         })
-        for _ in range(2):  # tick 1 records prior state; tick 2 stalls
+        for _ in range(2):  # tick 1 steers; tick 2 dies
             subprocess.run([sys.executable, os.path.abspath(__file__)],
                            env=env, capture_output=True, text=True,
                            timeout=120)
@@ -494,6 +890,7 @@ def selfcheck_replace():
         assert "close-run run-1 dead" in log, log
         assert log.count("--run-start") == 1, log
         assert "auto-replace" in log, log
+        assert "supervision:run-1:stalled" in log, log
         assert not os.path.isfile(os.path.join(store, "record.lisp"))
         assert os.path.isdir(store) and os.listdir(store), "rotated record"
     print("selfcheck-replace ok: flag + close-run dead + 1 re-provision")

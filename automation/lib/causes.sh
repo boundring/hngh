@@ -20,16 +20,18 @@
 #                     park for the operator; never retry
 #   obsolete           superseded/duplicate/stale -- close the alert or plan
 #                     as superseded; no fix
-#   unknown            no keyword matched -- generic investigate, fix or park
+#   unclassified       no keyword matched -- generic investigate, fix or park
+#                      (P4: bare cause=unknown is banned on disposition
+#                      transitions; unclassifiable is named as such)
 
-classify_cause() { # logfile [rc] -> one cause class on stdout (unknown if no log)
+classify_cause() { # logfile [rc] -> one cause class on stdout (unclassified if no log)
  local log="$1" rc="${2:-}" text=""
  if [ -n "$log" ] && [ -f "$log" ]; then
   # two-stage classification (2026-09-11 404-in-success false positive):
   # first keep only failure-shaped lines, then run the class table on
   # those alone. Incidental keyword mentions in success prose (research
   # docs citing 404s, budget chatter) never classify; no failure-shaped
-  # line in the tail means unknown regardless of keywords.
+  # line in the tail means unclassified regardless of keywords.
   text="$(tail -n 200 "$log" 2>/dev/null |
    grep -iE 'error|fatal|fail|refus|traceback|exit code [1-9]|rc=[1-9]|exit [1-9]|budget excee|budget exhaust|cost limit|cap reach|cap excee|cap hit|exhausted|timeout' |
    tr '[:upper:]' '[:lower:]')"
@@ -44,7 +46,7 @@ classify_cause() { # logfile [rc] -> one cause class on stdout (unknown if no lo
    printf 'bad-execution'
    return 0
   }
-  printf 'unknown'
+  printf 'unclassified'
   return 0
  }
  case "$text" in
@@ -57,7 +59,7 @@ classify_cause() { # logfile [rc] -> one cause class on stdout (unknown if no lo
   ;;
  *"budget exceed"* | *"over budget"* | *"budget limit"* | *"budget cap"* | *"budget exhausted"* | *"cost limit"* | *"cap reached"* | *"cap exceeded"* | *"cap hit"* | *"exhausted"* | *"timeout"*) printf 'bad-execution' ;;
  *"superseded"* | *"duplicate"* | *"stale"*) printf 'obsolete' ;;
- *) printf 'unknown' ;;
+ *) printf 'unclassified' ;;
  esac
 }
 

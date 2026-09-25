@@ -679,7 +679,7 @@ class OcgoDelegateTool(OcgoLaunch):
         self.assertIn("config=" + str(self.auto / "config" / "opencode"
                                       / "opencode.jsonc"), marker)
         self.assertIn("rc=0", r.stdout)
-        self.assertIn("disposition=cancelled", r.stdout)
+        self.assertIn("disposition=complete", r.stdout)
         # the emitted row: one seeded ocgo + one attributed ocgo-agent
         conn = sqlite3.connect(self.telem)
         rows = conn.execute("select source, kind from events").fetchall()

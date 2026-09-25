@@ -40,7 +40,7 @@ set_old 1m 05-operator-items 10-sessions-feed 15-crumbs-sync
 set_old 5m 00-time-ledger 01-oversight 01-system 02-agent-supervision
 set_old 10m 01-evolve-ui
 set_old 30m 05-readout 10-system-feed 15-schedule-feed 20-config-backup \
-  25-research-feed 35-plan-feed 45-agent-respawn 46-beat-watchdog \
+  25-research-feed 35-plan-feed 45-agent-respawn \
   50-research-overflow 54-feedback-ingest 55-feedback-apply \
   56-imap-poll 58-patrol 59-unsloth-observe
 set_old hour 00-dashboard-self-review 05-ui-audit 10-router-feed 16-remote-push \

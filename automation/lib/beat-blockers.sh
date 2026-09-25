@@ -3,8 +3,8 @@
 # bestiary; this gives the orchestrator itself the same treatment at its own
 # level: a stalled plan is one durable row in state/beat-blockers.tsv
 #   id<TAB>scope<TAB>cause<TAB>first-seen<TAB>attempts<TAB>state<TAB>last-update
-# written by the beat watchdog (jobs/beat-watchdog.py, detector) and the
-# overnight beat (scripts/overnight-cycle.sh, remediation loop). One row per
+# written by the supervision plane (jobs/agent-supervision.py, detector) and
+# the overnight beat (scripts/overnight-cycle.sh, remediation loop). One row per
 # plan/lane scope: success clears it, a same-cause failure bumps attempts, a
 # different cause restarts the diagnosis (new class = new problem), and
 # attempts >= blocker-escalate-n parks it (state=parked) — bounded retries,

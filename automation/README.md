@@ -128,7 +128,7 @@ rest, for a later slice (env twins already exist where noted):
 
 - `jobs/agent-supervision.py:53`, `jobs/dashboard-self-review.py:44`,
   `jobs/research-feed.py:34`,
-  `jobs/agent-watchdog.sh:27`, `jobs/oversight-tick.sh:24`,
+  `jobs/oversight-tick.sh:24`,
   `jobs/system-awareness.sh:22`, `cadence/day/01-lesson-harvest.sh:27` —
   `HNGH_REPO`/kernel defaults self-locate from the script path (env overrides win).
 - `scripts/hngh-omp-update.sh:7,11` — `OMP` binary and `cd /home/$USER`.

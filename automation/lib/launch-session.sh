@@ -11,8 +11,10 @@
 #                        spend — caller files the alert)
 #   LAUNCH_RUN_ID        bridge run id
 #   LAUNCH_LOG           log path relative to ROOT
-#   LAUNCH_DISPOSITION   cancelled (rc=0) | dead (rc!=0) — existing ledger
-#                        vocabulary, unchanged
+#   LAUNCH_DISPOSITION   complete (rc=0) | dead (rc!=0) — P4 root-cause
+#                        fix: a clean rc=0 run is complete; the old
+#                        "cancelled" label mislabeled every healthy
+#                        session as a cause=unknown cancellation
 #   LAUNCH_CAUSE         lib/causes.sh classification of the log tail
 #   LAUNCH_BRIDGE_MSG    last bridge output line (for the refusal alert)
 # Appends the shared delegated-session ledger row to logs/budget.md and
@@ -83,8 +85,8 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
  # an exact T1/T2/T3 fails closed to the T2 default.
  local sclass="${SESSION_CLASS:-T2}"
  case "$sclass" in
-  T1 | T2 | T3) ;;
-  *) sclass="T2" ;;
+ T1 | T2 | T3) ;;
+ *) sclass="T2" ;;
  esac
  local role="${4:-overnight-lead}"
  local outcome_model="$SESSION_MODEL" oc_ran=0 oc_rc=0
@@ -430,8 +432,8 @@ so do not close. None (no key/offline) keeps the existing human gate."
   fi
   jc_model_flag="$(get_param jcode-model '')"
   [ -n "$jc_model_flag" ] && jc_model=(-m "$jc_model_flag")
-  if [ -z "$jc_pace" ] && [ -r "$ROOT/jcode/worker.mjs" ] && command -v node >/dev/null 2>&1 \
-   && declare -F launch_jcode_worker >/dev/null; then
+  if [ -z "$jc_pace" ] && [ -r "$ROOT/jcode/worker.mjs" ] && command -v node >/dev/null 2>&1 &&
+   declare -F launch_jcode_worker >/dev/null; then
    local jc_prompt_file
    jc_prompt_file="$(mktemp "${TMPDIR:-/tmp}/hngh-jc-prompt.XXXXXX")"
    printf '%s' "$body" >"$jc_prompt_file"
@@ -485,15 +487,25 @@ so do not close. None (no key/offline) keeps the existing human gate."
  [ "$oc_ran" = 1 ] && LAUNCH_RC="$oc_rc"
 
  case "$LAUNCH_RC" in
- 0) LAUNCH_DISPOSITION="cancelled" ;;
+ 0) LAUNCH_DISPOSITION="complete" ;;
  *) LAUNCH_DISPOSITION="dead" ;;
  esac
  # cause classification for the disposition spine (lib/causes.sh bestiary);
- # a missing/unreadable log classifies as unknown
+ # a missing/unreadable log classifies as unclassified
  LAUNCH_CAUSE="$(classify_cause "$ROOT/$log" "$LAUNCH_RC")"
+ # P4: cause=unknown is banned on transitions — a dying session whose
+ # log matches no class is named unclassified and rides the spine as
+ # one deduped report row (window 7d) so watchers see the gap.
+ if [ "$LAUNCH_RC" -ne 0 ] && [ "$LAUNCH_CAUSE" = unclassified ]; then
+  rq="${HNGH_REPORT_QUEUE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/report-queue}"
+  [ -x "$rq" ] && "$rq" --add alert \
+   --identity "cause-unclassified:$slug" --window 604800 \
+   "session $slug died rc=$LAUNCH_RC with no matching failure class; log tail matched nothing in the bestiary" \
+   >/dev/null 2>&1 || true
+ fi
  # self-steering loop: one lesson line per opencode OR jcode session
  # (after classification — the lesson cites the cause class). Happy-path
- # skip: a clean exit (rc=0) classified unknown matched no failure
+ # skip: a clean exit (rc=0) classified unclassified matched no failure
  # keyword — recording it would pollute the file with "you failed" noise
  # on every success (first-session finding 2026-09-11). jcode parity
  # (coexistence review gap #3, 2026-09-14): the executor column already
@@ -502,7 +514,7 @@ so do not close. None (no key/offline) keeps the existing human gate."
  if { [ "$oc_ran" = 1 ] ||
   [ "${outcome_model:-}" = "jcode/${jc_provider:-}/${jc_model_flag:-}/sdk" ] ||
   [ "${outcome_model:-}" = "jcode/${jc_provider:-}${jc_model_flag:+/${jc_model_flag:-}}" ]; } &&
-  { [ "$LAUNCH_RC" -ne 0 ] || [ "$LAUNCH_CAUSE" != unknown ]; }; then
+  { [ "$LAUNCH_RC" -ne 0 ] || [ "$LAUNCH_CAUSE" != unclassified ]; }; then
   append_ocgo_lesson "$LAUNCH_CAUSE"
  fi
  # budget row carries the cost class (plan 2026-09-10-cost-tiering

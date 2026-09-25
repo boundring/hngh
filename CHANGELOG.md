@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P4: single supervision plane** (docs/records/
+  2026-09-25-p4-supervision-fold.md): launch-session no longer records
+  every clean rc=0 run as "cancelled" (now complete, and the no-match
+  cause class is renamed unclassified with a spine row — cause=unknown
+  is banned on transitions); agent-supervision.py is the sole
+  supervision machine: a three-state tick model (active / slow-valid —
+  re-queue, never kill / stalled — steer once, then die with cause)
+  over bridge runs and omp transcripts, with the agent-watchdog
+  loop/error detections and the beat-watchdog overnight-lead checks
+  folded in. agent-watchdog.sh, beat-watchdog.py, their mount and
+  tests, and the Makefile sweep target are retired; alerts ride one
+  identity shape supervision:<session>:<state> (7d window).
+  tests/test-agent-supervision.py grows to a 9-case transition matrix.
 - **Refoundation P3c: gate refusals ride the spine** (docs/records/
   2026-09-25-p3c-gate-refusals.md): every unobserved gate refusal —
   model-quota pacers (all nine blocked branches in automation/lib/

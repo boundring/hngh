@@ -70,19 +70,19 @@ class ClassifyCause(unittest.TestCase):
         tail = ("One prior opencode session log exists (23:32 UTC Sep 10 — "
                 "before the loop landed 2026-09-11). Let me confirm the "
                 "timeline via git, and check the budget/breadcrumbs.")
-        self.assertEqual(self.classify(tail)[0], "unknown")
+        self.assertEqual(self.classify(tail)[0], "unclassified")
 
     def test_loadout_budget_passing_mention_is_unknown(self):
         self.assertEqual(self.classify("context pack cites the "
                                        "loadout-budget 2000 row")[0],
-                         "unknown")
+                         "unclassified")
 
     def test_success_prose_404_mention_is_unknown(self):
         # the exact 13:45:25Z session-2 misfire: rc=0 success whose log
-        # prose innocuously cites 404s (research docs) -> stays unknown
+        # prose innocuously cites 404s (research docs) -> stays unclassified
         tail = ("Checked the research docs (they mention 404 handling) and "
                 "the draft landed cleanly. Session complete.")
-        self.assertEqual(self.classify(tail)[0], "unknown")
+        self.assertEqual(self.classify(tail)[0], "unclassified")
 
     def test_failure_line_with_404_is_missing_knowledge(self):
         self.assertEqual(self.classify("error: 404 not found while fetching "
@@ -92,7 +92,7 @@ class ClassifyCause(unittest.TestCase):
         # failure-shaped lines exist but none carries a class keyword
         tail = ("the build failed on a flaky step\n"
                 "the research docs mention 404s in passing")
-        self.assertEqual(self.classify(tail)[0], "unknown")
+        self.assertEqual(self.classify(tail)[0], "unclassified")
 
     def test_real_cost_failure_is_bad_execution(self):
         self.assertEqual(self.classify("error: cost limit exceeded while "
@@ -112,7 +112,7 @@ class ClassifyCause(unittest.TestCase):
 
     def test_rc124_timeout_is_bad_execution_even_with_clean_tail(self):
         # the worker-transport-wiring stall (2026-09-11): a timeout kill
-        # (rc=124) left a clean "Working..." tail, classified unknown,
+        # (rc=124) left a clean "Working..." tail, classified unclassified,
         # and the respawn guard refused it as non-transient. A timeout
         # IS a transient death by definition (steer-vs-die doctrine).
         self.assertEqual(self.classify("Working...\n", "bad-execution",
@@ -125,12 +125,12 @@ class ClassifyCause(unittest.TestCase):
 
     def test_rc0_clean_tail_stays_unknown(self):
         self.assertEqual(self.classify("Working...\n", "unknown", "0")[0],
-                         "unknown")
+                         "unclassified")
 
     def test_lesson_for_cause_maps_sensibly(self):
         _, lesson = self.classify("x", "bad-execution")
         self.assertIn("step was too big", lesson)
-        _, lesson = self.classify("x", "unknown")
+        _, lesson = self.classify("x", "unclassified")
         self.assertIn("no known failure class", lesson)
 
 
