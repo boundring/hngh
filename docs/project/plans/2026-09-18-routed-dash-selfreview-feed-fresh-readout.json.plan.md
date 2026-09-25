@@ -14,3 +14,4 @@ at 2026-09-18T12:31:29Z. Alert text: [dash-selfreview] feed-fresh:readout.json: 
 - 2026-09-19T14:16:33Z re-occurred (dedup window expired)
 - 2026-09-22T01:14:09Z re-occurred (dedup window expired)
 - 2026-09-25T00:00:37Z re-occurred (dedup window expired)
+- 2026-09-25T01:00:13Z re-occurred (dedup window expired)

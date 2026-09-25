@@ -2,7 +2,7 @@
 
 *Prose sections are hand-maintained. The "Verified numbers" block below
 regenerates daily from the live ledgers by the Audit station
-(`hngh-automation/cadence/day/17-torch-audit.sh`, part of
+(`hngh-automation/cadence/calendar/daily/17-torch-audit.sh`, part of
 [the Descent](../design/descent.md)): only content between the
 `torch:begin` / `torch:end` sentinels is rewritten, the rest stays
 hand-edited.*
@@ -63,7 +63,7 @@ inside the sentinels.
   beat's REVIEW evidence). digest-REVIEW flipped live 2026-09-06 via
   the review-findings sink. The artifact-consumer invariant runs daily
   under [the Descent](../design/descent.md)'s Audit station
-  (`hngh-automation/cadence/day/17-torch-audit.sh`).
+  (`hngh-automation/cadence/calendar/daily/17-torch-audit.sh`).
 
 ## Where it goes
 

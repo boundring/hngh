@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job template under `jobs/` for batch digest generation
-  Verification: `bash -n jobs/batch-digest.sh`
+- [ ] Add a new job script that validates hngh-automation test suite integrity
+  Verification: bash scripts/validate-test-suite.sh
 
-- [ ] Create a verification script in `scripts/` to validate digest output format
-  Verification: `python3 scripts/validate-digest.py`
+- [ ] Create a cadence tracking script to log daily build status
+  Verification: bash cadence/log-builds.sh
 
-- [ ] Add a test case in `tests/` that exercises the new job template
-  Verification: `make test`
+- [ ] Update lib/utils.sh with a new helper function for test result parsing
+  Verification: bash -n lib/utils.sh
 
-- [ ] Update `cadence/` to register the new job in the run schedule
-  Verification: `bash -n cadence/schedule.yaml`
+- [ ] Add a dashboard digest script that summarizes recent test outcomes
+  Verification: bash dashboard/digest-recent-tests.sh
 
-- [ ] Add a dashboard snippet in `dashboard/` to surface digest metrics
-  Verification: `bash -n dashboard/metrics-view.sh`
+- [ ] Extend tests/ directory with a regression test for the new job script
+  Verification: make test
 
-- [ ] Run full test suite to confirm no regressions
-  Verification: `make test`
+- [ ] Add a verification script that confirms all new paths are under allowed directories
+  Verification: bash scripts/check-path-constraints.sh
