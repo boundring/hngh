@@ -92,6 +92,15 @@ the design; slice G (operations knowledge-graph surface, 3D in the
 dashboard, 2D fallback) is the operator-directed visibility
 replacement and is never exit-bearing.
 
+Refoundation pass landed (2026-09-25, records
+[2026-09-25-p10-refoundation-close.md](../records/2026-09-25-p10-refoundation-close.md)):
+P1–P10 all committed — STATE readers on one crumbs-db seam, queue
+pointer + pickers, gate-refusal records, single supervision plane,
+ceremony receipts + fast lane with decay review, research at the gewu
+boundary, initiative budget, typed-everything strict, canon method at
+every decision seam. The admission rule is active: plan acceptance
+fails closed without a `principle:` line (GOVERNANCE §6).
+
 ### Completed
 
 - Sealed the retirement boundary: the archived prior system is external and

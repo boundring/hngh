@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P10: pass closed + first ceremony decay review**
+  (docs/records/2026-09-25-p10-refoundation-close.md): P1–P10 all
+  committed; receipts ledger measured (103 rows, 1 real certificate
+  triple, 100 documented fixture-noise rows, 0 fast-lane rides —
+  80% decay rule armed, ruling deferred to a real sample); quarterly
+  GOVERNANCE §12 tensions recorded with clause + decision;
+  GOVERNANCE.md:111-207 hash re-verified byte-unchanged; roadmap
+  gains the refoundation-landed line with the plan-acceptance
+  admission rule active.
 - **Refoundation P8: typed-everything strict** (docs/records/
   2026-09-25-p8-typed-strict.md): automation/ng/jev.py sources
   automation/lib/typesafe.py as the one typed seam (its own
