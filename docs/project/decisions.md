@@ -3,6 +3,25 @@
 Each entry is a promise the machine made in public, kept where the
 operator can check it.
 
+## Entry template
+
+Each entry is one `## YYYY-MM-DD — Title` section of decision prose
+(newest first). Every architecture decision also records two
+mandatory fields, verbatim lines in the entry body — every
+architecture decision records both (decision recording is bound by
+GOVERNANCE.md §6, How decisions are made):
+
+- `principle: <one closed principle + doc anchor>` — the closed
+  principle (GOVERNANCE.md §6 matrix) the decision upholds, with the
+  anchor of the record or earlier decision entry that closed it.
+- `adversarial: <one-line disconfirming note>` — the strongest
+  one-line case against the decision, recorded at entry time, so the
+  record carries its own best objection.
+
+Tensions adjudicated each quarter are recorded in the ceremony
+decay-review record with their clause + decision (GOVERNANCE.md §12,
+Tensions held openly).
+
 ## 2026-08-24 — Bounded model & terminal transports are loadout-admitted advisors only
 
 `hngh.adapters.model` and `hngh.adapters.terminal` are input/advisor

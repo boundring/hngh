@@ -41,6 +41,10 @@ is reserved for critical-class work.
 - Acceptance: a `proposed` normal-risk plan is auto-accepted when its
   Verification steps are runnable and both repos' gates are green;
   the accepted timestamp is written into the front-matter.
+- Principle line (2026-09-25, refoundation P9): every plan carries a
+  `principle:` line before its first `## ` heading citing one closed
+  principle + doc anchor; acceptance blocks a plan without it
+  (`blocked <slug> missing-principle`).
 - Body hold (2026-09-18): a proposed plan may park itself from
   auto-acceptance with a line before `## Steps` matching
   `**HOLD — do not accept/execute without promotion.**` (the marker is

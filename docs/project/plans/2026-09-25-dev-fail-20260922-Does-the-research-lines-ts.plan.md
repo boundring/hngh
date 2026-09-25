@@ -6,17 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `cadence/monitoring.sh` script that logs a timestamped heartbeat to `digest/heartbeat.log`
-  Verification: `bash -n cadence/monitoring.sh`
+- [ ] Add a new test script for cadence job validation
+  Verification: bash -n cadence/test-job-validation.sh && make test
 
-- [ ] Create `jobs/heartbeat.yml` job definition that invokes `cadence/monitoring.sh` every 5 minutes
-  Verification: `bash -n jobs/heartbeat.yml`
+- [ ] Create a dashboard digest template for automation status
+  Verification: bash -n dashboard/digest-automation-status.sh && make test
 
-- [ ] Add `tests/test_heartbeat.sh` that runs `cadence/monitoring.sh` and checks `digest/heartbeat.log` has a new entry
-  Verification: `bash tests/test_heartbeat.sh`
+- [ ] Update lib/automation-runner to support new test integration
+  Verification: bash -n lib/automation-runner.sh && make test
 
-- [ ] Register the new job in `cadence/schedule.yml` under the `monitoring` group
-  Verification: `grep -q heartbeat cadence/schedule.yml`
+- [ ] Add verification script for jobs directory structure
+  Verification: bash jobs/verify-structure.sh && make test
 
-- [ ] Run `make test` to confirm all existing and new tests pass
-  Verification: `make test`
+- [ ] Create cadence step for automated plan synthesis
+  Verification: bash -n cadence/plan-synthesis-step.sh && make test
+
+- [ ] Add tests/ directory entry for new automation tests
+  Verification: bash tests/run-automation-tests.sh && make test
