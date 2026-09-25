@@ -11,3 +11,7 @@ at 2026-09-25T21:00:13Z. Alert text: plan 2026-09-25-dev-fail-20260922-Does-the-
 
 - [ ] Delve: open research subject fail-20260925-overnight-plan-accept-blocked-2026-09-25-dev-fail-20260922-does-the-research-lines-ts for overnight:plan-accept-blocked:2026-09-25-dev-fail-20260922-Does-the-research-lines-ts; record disposition; then fix or park
       Verification: research subject fail-20260925-overnight-plan-accept-blocked-2026-09-25-dev-fail-20260922-does-the-research-lines-ts present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-25T22:00:12Z re-occurred (dedup window expired)
