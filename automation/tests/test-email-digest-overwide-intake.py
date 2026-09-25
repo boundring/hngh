@@ -13,6 +13,8 @@ import os
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,8 +47,18 @@ class OverwideAlertIntake(unittest.TestCase):
         os.makedirs(os.path.join(self.root, "docs", "project"))
         self.reports = os.path.join(self.root, "docs", "project", "reports.md")
         os.environ["HNGH_HOME"] = self.root
+        # freeze the clock at the pinned NOW (2026-09-18): the fixture
+        # rows carry that date, and _overwide_alert_rows compares
+        # against the real wall clock (7d window) -- without this the
+        # "fresh" row ages out of the window as the calendar advances
+        # (rotted 2026-09-25).
+        epoch = datetime.strptime(NOW, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc).timestamp()
+        self._clock = mock.patch.object(ed.time, "time", return_value=epoch)
+        self._clock.start()
 
     def tearDown(self):
+        self._clock.stop()
         os.environ.pop("HNGH_HOME", None)
 
     def write(self, text):
