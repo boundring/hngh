@@ -79,6 +79,28 @@ class ResidualSlugMints(unittest.TestCase):
             "surface-x-check-y", "%s-%s" % (p2, c2)),
             "patrol-20260918-surface-x-check-y")
 
+    def test_patrol_rid_mint_collapses_repeated_tokens(self):
+        # 2026-09-25 probe (research line synth-2026-09-25-1): a route
+        # whose patrol-id equals its cause ("rotation-due" filed
+        # "rotation-due") minted the token twice
+        # (patrol-20260923-rotation-due-rotation-due). The mint must
+        # collapse equal patrol+cause to one token.
+        import calendar as _cal
+        import tempfile
+        spec_p = importlib.util.spec_from_file_location(
+            "patrol_mod", ROOT / "jobs" / "patrol.py")
+        patrol_mod = importlib.util.module_from_spec(spec_p)
+        spec_p.loader.exec_module(patrol_mod)
+        with tempfile.TemporaryDirectory() as td:
+            subjects = Path(td) / "research-subjects.txt"
+            subjects.write_text("", encoding="utf-8")
+            ctx = {"now": _cal.timegm((2026, 9, 25, 0, 0, 0)),
+                   "subjects": str(subjects)}
+            queued = patrol_mod.queue_repeat_subjects(
+                ctx, [("rotation-due", "rotation-due")],
+                [("rotation-due", "rotation-due")])
+        self.assertEqual(queued, ["patrol-20260925-rotation-due"])
+
     def _shell_slug(self, script, func_name):
         """Extract the named slugify function from the script text and
         run it with the guard armed (sourcing the whole script would

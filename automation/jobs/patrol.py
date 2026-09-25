@@ -1928,7 +1928,12 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
                 continue  # pre-mangled pathy fragment: refuse the mint
         except Exception:
             continue
-        rid = "patrol-%s-%s-%s" % (rid_day, patrol, cause)
+        # collapse equal patrol+cause to one token (2026-09-25,
+        # research line synth-2026-09-25-1): a route whose id equals
+        # its check cause (rotation-due/rotation-due) minted the token
+        # twice (patrol-20260923-rotation-due-rotation-due).
+        rid = (("patrol-%s-%s" % (rid_day, patrol)) if patrol == cause
+               else ("patrol-%s-%s-%s" % (rid_day, patrol, cause)))
         q = ("patrol: surface %s filed %s on two consecutive runs -- "
              "why does it keep failing and which guardrail closes it?"
              % (patrol, cause))[:240]
