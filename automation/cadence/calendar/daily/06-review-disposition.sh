@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # 06-review-disposition — REVIEW sink: the fresh-eyes review digests
 # (digest/REVIEW-<date>.md, written by 04-review-prep.sh ~09:00) have no
-# consumer; this drop-in turns their P1/P2 findings into report-queue
-# rows (identity review-finding:<digest-date>:<slug>, text + "fix or
-# park with cause") so each finding gets a routing-loop disposition.
-# nits are skipped (counted in one log line). Idempotent: report-queue
-# dedups by identity+window (7d covers digest reuse across days).
+# consumer; this drop-in turns their typed-decided P1/P2 findings into
+# report-queue rows (identity review-finding:<digest-date>:<slug>, text
+# + "fix or park with cause") so each finding gets a routing-loop
+# disposition. nits are skipped (counted in one log line). Strict
+# sufficiency (refoundation P8): a finding with no typed record at/above
+# the floor PARKS -- it is never routed on the legacy prefix alone; all
+# parked findings surface as ONE typed-gap:review-disposition row (7d).
+# Idempotent: report-queue dedups by identity+window (7d covers digest
+# reuse across days).
 # Fail-closed: missing digest -> breadcrumb + exit 0.
 #
 # usage: cadence/calendar/daily/06-review-disposition.sh   (via cadence-tick.sh TIER=calendar)
@@ -63,11 +67,14 @@ scr_slugify() {
     sed 's/^-*//; s/-*$//'
 }
 
-# severity policy (llm_guardrails trick): the model assesses, code owns the
-# policy. severity_of is the one precedence rule -- the final severity is
-# the STRICTER of the typed judgment and the parsed legacy prefix (P1 >
-# P2 > nit), so a typed answer can RAISE a finding (serious work buried
-# under "- nit:") but can never silently LOWER a P1 the model flagged.
+# severity policy (llm_guardrails trick): the model assesses, code owns
+# the policy. severity_of is the one precedence rule -- for a
+# TYPED-DECIDED finding the final severity is the STRICTER of the typed
+# judgment and the parsed legacy prefix (P1 > P2 > nit), so a typed
+# answer can RAISE a finding (serious work buried under "- nit:") but
+# can never silently LOWER a P1 the model flagged. Parked (untyped)
+# findings never reach severity_of at all. Floor: 0.5 -- confidence-floor
+# table and park rule live in the lib/typesafe.py module docstring.
 severity_of() {
   local typed="$1" legacy="$2" r
   for r in P1 P2 nit; do
@@ -80,14 +87,15 @@ severity_of() {
 }
 
 # one typed batched request per digest (fan-out): stdin = finding lines,
-# stdout = one arbiter label per line (empty = typed unavailable). Typed
-# unavailable (no key / no arbiter yet / any error) -> empty output and
-# the legacy prefixes alone route, identical to the pre-typed behavior.
+# stdout = one verdict per line: 'P1'|'P2'|'nit' when the typed lane
+# decided at conf >= 0.5, else 'park' (typed missing or low-confidence;
+# a dead python also parks every line via route_findings' default). The
+# legacy prefix is advisory context only -- it can never decide routing.
 typed_severities() {
   TYPESAFE_DIGEST="$(head -c 8000 "$1")" python3 -c "
 import os, sys
 sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
-from typesafe import ask_choices, arbiter
+from typesafe import ask_choices
 lines = [l.rstrip('\n') for l in sys.stdin if l.strip()]
 state = {'digest': os.environ.get('TYPESAFE_DIGEST', '')}
 questions = {}
@@ -98,11 +106,12 @@ for i, line in enumerate(lines, 1):
         'Severity of the finding in \`%s\`: P1 = serious (broken behavior, data loss, security), P2 = nice to have, nit = style/minor.' % qid,
         ['P1', 'P2', 'nit'])
 typed = ask_choices(state, questions)
-labels = ['P1', 'P2', 'nit']
 for i, line in enumerate(lines, 1):
-    legacy = line[2:].split(':', 1)[0].strip()
-    t, _c = typed.get('finding_%d' % i, (None, None))
-    print(arbiter((t, _c), legacy if legacy in labels else None, labels, 0.5) or '')
+    t, c = typed.get('finding_%d' % i, (None, None))
+    if t in ('P1', 'P2', 'nit') and isinstance(c, (int, float)) and c >= 0.5:
+        print(t)
+    else:
+        print('park')
 " 2>/dev/null
 }
 
@@ -110,20 +119,26 @@ for i, line in enumerate(lines, 1):
 # "- nit: text"; the scan now sees all three so nits stop being silently
 # dropped by accident -- skipping them is the named policy constant here.
 route_findings() {
-  local f="$1" finding text legacy slug final nits=0 i=0
+  local f="$1" finding text legacy slug final nits=0 parked=0 i=0
   local -a findings typed
   mapfile -t findings < <(grep -E '^- (P1|P2|nit):' "$f" 2>/dev/null)
+  local -a legacies=()
   mapfile -t typed < <(printf '%s\n' "${findings[@]}" | typed_severities "$f")
   for finding in "${findings[@]}"; do
     legacy="${finding#- }"
     legacy="${legacy%%:*}"
-    final="$(severity_of "${typed[i]:-}" "$legacy")"
+    final="${typed[i]:-park}"
     i=$((i + 1))
     case "$final" in
+    park)
+      parked=$((parked + 1))
+      legacies+=("$legacy")
+      ;;
     nit)
       nits=$((nits + 1))
       ;;
     P1 | P2)
+      final="$(severity_of "$final" "$legacy")"
       text="${finding#- ${legacy}: }"
       slug="$(scr_slugify "$text")"
       [ -n "$slug" ] || slug="finding"
@@ -131,10 +146,21 @@ route_findings() {
         "review-finding:$digest_date:$slug"
       ;;
     *)
-      nits=$((nits + 1))
+      parked=$((parked + 1))
+      legacies+=("$legacy")
       ;;
     esac
   done
+  if [ "$parked" -gt 0 ]; then
+    local joined
+    joined="$(
+      IFS=,
+      echo "${legacies[*]:-}"
+    )"
+    file_report alert \
+      "review disposition parked $parked finding(s) untyped; legacy prefixes: $joined (advisory only)" \
+      "typed-gap:review-disposition"
+  fi
   printf '%s [%s] %s nit finding(s) skipped\n' "$(date -u +%H:%M:%S)" \
     "$JOB_NAME" "$nits" >&2
 }

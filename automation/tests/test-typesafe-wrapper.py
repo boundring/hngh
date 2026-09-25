@@ -7,13 +7,19 @@ self-skips. With key + SDK the live Noul call must return a float in
 [0,1]. No kernel src/ touched.
 """
 import os
+import json
+import threading
 import sys
 import unittest
 import unittest.mock
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "ng"))
 
 import typesafe
+import contract
+import jev
 
 
 class FailClosed(unittest.TestCase):
@@ -268,6 +274,114 @@ class FanoutSingleCall(unittest.TestCase):
                     "studio_queue_depth": "0",
                     "beat_model": "beat-weights",
                     "studio_user_model": "operator-weights"}))
+
+
+class JevTypedMapping(unittest.TestCase):
+    """P8a: jev's typed lane rides the one lib/typesafe.py seam
+    (ask_choices stubbed at the module attribute -- no env knob). Pins
+    the CONF_MIN mapping, escalate, fail-open-to-None on seam failure,
+    one-call ask_batch fan-out, and ask()'s fail-open to the local chat
+    lane when the typed seam returns {}.
+    """
+
+    def setUp(self):
+        self._saved_tkey = os.environ.pop("TYPESAFE_API_KEY", None)
+
+    def tearDown(self):
+        if self._saved_tkey is not None:
+            os.environ["TYPESAFE_API_KEY"] = self._saved_tkey
+        else:
+            os.environ.pop("TYPESAFE_API_KEY", None)
+
+    @staticmethod
+    def _q(labels=("yes", "no", "escalate")):
+        return contract.Question("triage", {"k": "v"}, tuple(labels), 7)
+
+    def _typed(self, res, items=None):
+        fake = unittest.mock.Mock(return_value=res)
+        with unittest.mock.patch.object(jev.typesafe, "ask_choices", fake):
+            out = jev._typed_batch(items or [("q", self._q())])
+        return out, fake
+
+    def test_done_maps_winner(self):
+        out, fake = self._typed({"q": ("yes", 0.9)})
+        self.assertEqual(out[0].verdict, contract.Verdict.DONE)
+        self.assertEqual(out[0].label, "yes")
+        self.assertEqual(out[0].state_version, 7)
+        fake.assert_called_once()
+        state, questions = fake.call_args[0]
+        self.assertEqual(state, {"event_q": {"k": "v"}})
+        self.assertEqual(questions["q"][1], ["yes", "no", "escalate"])
+        self.assertIn("event_q", questions["q"][0])
+
+    def test_below_floor_maps_uncertain(self):
+        out, _ = self._typed({"q": ("yes", jev.CONF_MIN - 0.01)})
+        self.assertEqual(out[0].verdict, contract.Verdict.UNCERTAIN)
+        self.assertIsNone(out[0].label)
+
+    def test_escalate_maps_escalate(self):
+        out, _ = self._typed({"q": ("escalate", 0.9)})
+        self.assertEqual(out[0].verdict, contract.Verdict.ESCALATE)
+        self.assertEqual(out[0].label, "escalate")
+
+    def test_none_conf_and_none_winner_map_uncertain(self):
+        out, _ = self._typed({"q": ("yes", None)})
+        self.assertEqual(out[0].verdict, contract.Verdict.UNCERTAIN)
+        out, _ = self._typed({"q": (None, None)})
+        self.assertEqual(out[0].verdict, contract.Verdict.UNCERTAIN)
+
+    def test_empty_result_maps_none(self):
+        out, _ = self._typed({})
+        self.assertIsNone(out)
+
+    def test_missing_qid_maps_none(self):
+        out, _ = self._typed({"other": ("yes", 0.9)})
+        self.assertIsNone(out)
+
+    def test_ask_batch_one_call(self):
+        os.environ["TYPESAFE_API_KEY"] = "stub-key-never-real"  # tkey gate
+        qs = [self._q(), self._q(labels=("retry", "done")), self._q()]
+        res = {f"q{i}": (qs[i].labels[1], 0.8) for i in range(3)}
+        fake = unittest.mock.Mock(return_value=res)
+        with unittest.mock.patch.object(jev.typesafe, "ask_choices", fake):
+            out = jev.ask_batch(qs)
+        self.assertEqual([a.verdict for a in out],
+                         [contract.Verdict.DONE] * 3)
+        self.assertEqual(fake.call_count, 1)
+        state, _ = fake.call_args[0]
+        self.assertEqual(sorted(state), ["event_q0", "event_q1", "event_q2"])
+
+    def test_ask_empty_typed_falls_open_to_chat_lane(self):
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                raw = json.dumps(
+                    {"choices": [{"message": {"content": "Label: yes"}}]}
+                ).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+            def log_message(self, *args):
+                pass
+
+        srv = HTTPServer(("127.0.0.1", 0), Handler)
+        th = threading.Thread(target=srv.serve_forever, daemon=True)
+        th.start()
+        try:
+            os.environ["TYPESAFE_API_KEY"] = "stub-key-never-real"
+            fake = unittest.mock.Mock(return_value={})
+            with unittest.mock.patch.object(jev.typesafe, "ask_choices", fake):
+                a = jev.ask(self._q(labels=("yes", "no")),
+                            base_url=f"http://127.0.0.1:{srv.server_port}")
+            self.assertEqual(a.verdict, contract.Verdict.DONE)
+            self.assertEqual(a.label, "yes")
+            fake.assert_called_once()
+        finally:
+            srv.shutdown()
+            srv.server_close()
 
 
 class LiveCall(unittest.TestCase):

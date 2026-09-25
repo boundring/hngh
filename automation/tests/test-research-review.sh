@@ -19,6 +19,35 @@ mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence" "$sb/archive" "$sb/dashboard" \
  "$sb/digest" "$sb/kernel/docs/research" "$sb/kernel/scripts" "$sb/kernel/docs/project" \
  "$sb/.config/hngh" "$sb/report-root"
 cp -r "$root/lib/." "$sb/lib/"
+# typesafe stub (park-on-untyped harness): module mode answers ask_choices
+# from TYPESAFE_STUB_VERDICT or the VERDICT line in state['adversarial']
+# (conf TYPESAFE_STUB_CONF, default 0.90); no TYPESAFE_API_KEY -> {}
+# fail-closed. CLI mode (beat triage glue) prints nothing -> legacy
+# fallback, byte-equivalent to the real module's no-key behavior.
+cat >"$sb/lib/typesafe.py" <<'PYEOF'
+import os
+import re
+import sys
+
+
+def ask_choices(state, questions):
+    if not os.environ.get("TYPESAFE_API_KEY"):
+        return {}
+    verdict = os.environ.get("TYPESAFE_STUB_VERDICT", "")
+    if not verdict:
+        m = re.search(r"VERDICT:\s*(adopted|parked|killed)",
+                      str(state.get("adversarial", "")))
+        verdict = m.group(1) if m else "parked"
+    try:
+        conf = float(os.environ.get("TYPESAFE_STUB_CONF", "0.90"))
+    except ValueError:
+        conf = 0.90
+    return {name: (verdict, conf) for name in questions}
+
+
+if __name__ == "__main__":
+    sys.exit(0)
+PYEOF
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
@@ -49,6 +78,7 @@ BEAT_ENV=(
  UNSLOTH_URL=http://127.0.0.1:$stubU_port OLLAMA_URL=http://127.0.0.1:1
  OLLAMA_MODEL=stub-ollama MODEL=stub-model UNSLOTH_FALLBACK_MODELS="" HNGH_LOADCTX_PIN=0
  MODEL_TIMEOUT=5 MODEL_MAX_TOKENS=4096 KIMI_KEY_FILE="$sb/.config/hngh/kimi-key"
+ TYPESAFE_API_KEY=stub-key-never-real
 )
 beat_run() { # [K=V ...] -> one hour-beat run; caller args win
  (
@@ -212,6 +242,91 @@ grep -qxF $'old-line\tadopted\ta\tm\tdocs/old.md\t2026-09-01' \
   echo "FAIL: pre-existing row lost during header upgrade"
   fails=$((fails + 1))
  }
+
+# P8b helpers -------------------------------------------------------------
+bodies() { # <report-root> <identity-substring> -> body sidecar count
+ grep -rl "$2" "$1/docs/project/report-bodies" 2>/dev/null | wc -l | tr -d ' '
+}
+disp_run() { # <report-root> [K=V ...] -> one review-disposition run
+ local rroot="$1"
+ shift
+ (
+  cd "$sb"
+  env -i PATH="$PATH" HOME="$sb" AUTOMATION_ROOT="$sb" \
+   JOB_NAME=06-review-disposition.sh DIGEST_DIR="$sb/digest" \
+   HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$rroot" "$@" \
+   bash "$sb/cadence/calendar/daily/06-review-disposition.sh" >/dev/null 2>&1
+ )
+}
+
+# --- e) review-disposition: typed-decided routes, untyped parks -----------
+printf -- '- P1: auth bypass in webhook handler\n- nit: rename variable\n' \
+ >"$sb/digest/REVIEW-$(date -u +%Y-%m-%d).md"
+# positive control: typed decides both (P1 wins; severity_of RAISES the
+# nit to P1) -> both findings route as review-finding rows, no gap row
+disp_run "$sb/report-root" TYPESAFE_API_KEY=stub-key-never-real \
+ TYPESAFE_STUB_VERDICT=P1 TYPESAFE_STUB_CONF=0.90
+ck "review-disposition: typed-decided routes 2 findings" "2" \
+ "$(bodies "$sb/report-root" review-finding:)"
+ck "review-disposition: typed-decided files no gap row" "0" \
+ "$(bodies "$sb/report-root" typed-gap:review-disposition)"
+# no key -> every finding parks; legacy prefixes advisory in ONE gap row
+disp_run "$sb/report-root2" TYPESAFE_API_KEY=
+ck "review-disposition: untyped routes nothing" "0" \
+ "$(bodies "$sb/report-root2" review-finding:)"
+ck "review-disposition: untyped parks with ONE gap row" "1" \
+ "$(bodies "$sb/report-root2" typed-gap:review-disposition)"
+grep -rl "typed-gap:review-disposition" "$sb/report-root2/docs/project/report-bodies" |
+ xargs grep -q "legacy prefixes: P1,nit (advisory only)" &&
+ echo "ok: gap row lists legacy prefixes as advisory" ||
+ {
+  echo "FAIL: gap row lists legacy prefixes as advisory"
+  fails=$((fails + 1))
+ }
+# typed but below the 0.5 floor -> parks too
+disp_run "$sb/report-root3" TYPESAFE_API_KEY=stub-key-never-real \
+ TYPESAFE_STUB_VERDICT=P1 TYPESAFE_STUB_CONF=0.30
+ck "review-disposition: below-floor parks" "1" \
+ "$(bodies "$sb/report-root3" typed-gap:review-disposition)"
+
+# --- f) research beat: untyped verdict parks, legacy stays advisory -------
+rm -f "$sb/research-dispositions.tsv" "$sb/research-subjects.txt"
+seed_review
+printf 'VERDICT: adopted -- stub adopt\n' >"$stubdir/verdict-reply"
+# typed decides but conf 0.30 < 0.60 floor -> park
+beat_run "${kimi_env[@]}" TYPESAFE_STUB_CONF=0.30
+# no key -> seam fail-closed {} -> park; same gap identity dedups (7d)
+beat_run "${kimi_env[@]}" TYPESAFE_API_KEY=
+row="$(grep $'^line-old\t' "$sb/research-dispositions.tsv" | tail -n 1)"
+[ "$(printf '%s' "$row" | awk -F'\t' '{print $2}')" = "parked" ] &&
+ echo "ok: beat untyped verdict parks" ||
+ {
+  echo "FAIL: beat untyped verdict parks"
+  fails=$((fails + 1))
+ }
+printf '%s' "$row" | awk -F'\t' '$3 ~ /^parked untyped: typed verdict unavailable/' |
+ grep -q . &&
+ echo "ok: parked reason cites untyped typed lane" ||
+ {
+  echo "FAIL: parked reason cites untyped typed lane"
+  fails=$((fails + 1))
+ }
+ck "beat: ONE deduped typed-gap row across both parks" "1" \
+ "$(bodies "$sb/report-root" typed-gap:research-beat)"
+grep -rl "typed-gap:research-beat" "$sb/report-root/docs/project/report-bodies" |
+ xargs grep -q "legacy VERDICT: adopted (advisory only)" &&
+ echo "ok: beat gap row keeps legacy verdict advisory" ||
+ {
+  echo "FAIL: beat gap row keeps legacy verdict advisory"
+  fails=$((fails + 1))
+ }
+[ ! -f "$sb/research-subjects.txt" ] &&
+ echo "ok: parked verdict queues no follow-on subjects" ||
+ {
+  echo "FAIL: parked verdict queued follow-on subjects"
+  fails=$((fails + 1))
+ }
+rm -f "$stubdir/verdict-reply"
 
 echo
 if [ "$fails" -eq 0 ]; then echo "ALL OK"; else

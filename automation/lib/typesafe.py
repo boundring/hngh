@@ -5,7 +5,19 @@
 # agent-grade inference. Fail-closed: without TYPESAFE_API_KEY every
 # helper returns None and the caller falls back to its existing path.
 # Values are never logged. One breadcrumb per UTC day max on fallback.
-"""Thin Typesafe wrapper: Noul/Choice/Score helpers, fail-closed."""
+"""Thin Typesafe wrapper: Noul/Choice/Score helpers, fail-closed.
+
+Confidence floors by decision site (refoundation P8, strict
+sufficiency): a decision counts only with a typed record at/above its
+floor. Typed missing or below floor -> the decision PARKS and files one
+typed-gap:<site> report-queue row (window 604800); the legacy output
+stays advisory context, never the deciding input.
+
+    ng/jev.py lane (CONF_MIN)                              0.5
+    cadence/calendar/daily/06-review-disposition.sh (severity) 0.5
+    cadence/hour/33-research-beat.sh (research verdict)    0.60
+    scripts/overnight-cycle.sh (step-raise)                0.5
+"""
 import os
 import sys
 

@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P8: typed-everything strict** (docs/records/
+  2026-09-25-p8-typed-strict.md): automation/ng/jev.py sources
+  automation/lib/typesafe.py as the one typed seam (its own
+  systemone POST retires); gate-grade decisions now park on untyped
+  or below-floor answers — 06-review-disposition (0.5) and
+  33-research-beat review verdicts (0.60) file one typed-gap:<site>
+   row (7d) with the legacy output as advisory context only; the
+  confidence-floor table lives in the typesafe.py docstring.
+  New: 8 jev mapping tests + review/disposition park pins.
 - **Refoundation P9: canon method at every decision seam** (docs/
   records/2026-09-25-p9-canon-method.md): decisions.md gains an entry
   template with two mandatory fields — principle (one closed principle +

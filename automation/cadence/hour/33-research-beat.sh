@@ -995,23 +995,25 @@ $night_brief}"
  action=""
  [ -n "$verdict_line" ] &&
   action="$(printf '%s' "$verdict_line" | cut -d: -f2 | awk '{print $1}')"
- # typed verdict glue (typed-first, fail-closed): ONE Choice over
- # adopted|parked|killed with confidence, arbitrated (min_conf 0.60)
- # against the legacy VERDICT parse above as fallback. Without
- # TYPESAFE_API_KEY, or on any failure, the arbiter keeps the legacy
- # action and nothing changes. Prints "<action> <confidence>", confidence
- # present only when the typed answer won, so the reason can cite it.
+ legacy_action="$action"
+ # typed verdict glue (strict sufficiency, refoundation P8): ONE Choice
+ # over adopted|parked|killed with confidence; floor 0.60 (confidence-
+ # floor table + park rule: lib/typesafe.py module docstring). Prints
+ # "<action> <conf>" when the typed lane decided at conf >= 0.60, else
+ # "park" (empty output parks too). The legacy VERDICT parse above is
+ # advisory context only -- it can never decide the action; a parked
+ # verdict files ONE typed-gap:research-beat alert (7d window).
  sup_line="$(pass_line "$supportive")"
  doc_cut="$(marked_cut 8000 "$doc")"
- typed_out="$(LEGACY_ACTION="$action" \
+ typed_out="$(
   TYPESAFE_LINE="$id $line" \
-  TYPESAFE_SUP="$sup_line" \
-  TYPESAFE_OPP="$response" \
-  TYPESAFE_DOC="$doc_cut" \
-  python3 -c "
+   TYPESAFE_SUP="$sup_line" \
+   TYPESAFE_OPP="$response" \
+   TYPESAFE_DOC="$doc_cut" \
+   python3 -c "
 import os, sys
 sys.path.insert(0, os.path.join('$AUTOMATION_ROOT', 'lib'))
-from typesafe import ask_choices, arbiter
+from typesafe import ask_choices
 st = {'line': os.environ.get('TYPESAFE_LINE', ''),
       'supportive': os.environ.get('TYPESAFE_SUP', ''),
       'adversarial': os.environ.get('TYPESAFE_OPP', ''),
@@ -1019,23 +1021,33 @@ st = {'line': os.environ.get('TYPESAFE_LINE', ''),
 res = ask_choices(st, {'research_verdict': (
     'Classify the review outcome of this research line after a supportive and an adversarial pass. adopted: the evidence supports adopting it (no fatal flaw, no decisively better alternative). parked: uncertain or dependent (missing evidence, unresolved tension, or an operator call). killed: a fatal flaw or a decisively better existing alternative.',
     ['adopted', 'parked', 'killed'])}).get('research_verdict', (None, None))
-out = arbiter(res, os.environ.get('LEGACY_ACTION'),
-              ['adopted', 'parked', 'killed'], 0.60) or ''
-won = res[0] == out and res[1] is not None
-print(out + (' %.2f' % res[1] if won else ''))
-" 2>/dev/null || true)"
- action="${typed_out%% *}"
- tconf="${typed_out#* }"
- [ "$tconf" = "$typed_out" ] && tconf=""
- if [ -z "$action" ]; then
-  file_report alert "research review verdict unparseable for $id (model $used)" \
-   "research-beat:review-unparseable" 86400
-  exit 0
- fi
- if [ -n "$verdict_line" ]; then
-  reason="$(printf '%s' "$verdict_line" | sed 's/^VERDICT:[[:space:]]*//')"
+if res[0] in ('adopted', 'parked', 'killed') and \
+        isinstance(res[1], (int, float)) and res[1] >= 0.60:
+    print(res[0], '%.2f' % res[1])
+else:
+    print('park')
+" 2>/dev/null || true
+ )"
+ if [ -z "$typed_out" ] || [ "$typed_out" = "park" ]; then
+  action="parked"
+  file_report alert \
+   "research verdict parked untyped for $id (model $used); legacy VERDICT: ${legacy_action:-none} (advisory only)" \
+   "typed-gap:research-beat" 604800
+  if [ -n "$verdict_line" ]; then
+   leg_reason="$(printf '%s' "$verdict_line" | sed 's/^VERDICT:[[:space:]]*//')"
+  else
+   leg_reason="no VERDICT line"
+  fi
+  reason="parked untyped: typed verdict unavailable; legacy review: $leg_reason (advisory)"
  else
-  reason="typed verdict $action (confidence ${tconf:-unknown})"
+  action="${typed_out%% *}"
+  tconf="${typed_out#* }"
+  [ "$tconf" = "$typed_out" ] && tconf=""
+  if [ -n "$verdict_line" ]; then
+   reason="$(printf '%s' "$verdict_line" | sed 's/^VERDICT:[[:space:]]*//')"
+  else
+   reason="typed verdict $action (confidence ${tconf:-unknown})"
+  fi
  fi
  opp_line="$(pass_line "$response")"
  # ground-truth gate (refoundation P6) BEFORE follow-on queueing: a

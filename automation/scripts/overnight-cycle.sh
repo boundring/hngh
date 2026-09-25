@@ -385,6 +385,7 @@ emit_plan() {
 # step mislabeled cheap), never lower it. No key / all-None -> the draft's
 # classes stand unchanged (byte-identical legacy). Only the class= tag of a
 # raised step changes; every other byte is preserved.
+# (confidence-floor table for all sites: lib/typesafe.py module docstring)
 raise_step_classes() {
  local r="$1" out
  out="$(printf '%s' "$r" | python3 -c "
