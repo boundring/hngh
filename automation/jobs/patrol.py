@@ -1900,6 +1900,45 @@ def findings_md(now_s, date, results, quip_line):
     return "\n".join(out) + "\n"
 
 
+def _norm_slug(text):
+    """Normalized slug (refoundation P6, shared definition): lowercase;
+    every run of non-[a-z0-9] -> single '-'; trim leading/trailing
+    '-'. Mirrors norm_slug in the beat and lib/causes.sh."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def _research_match_id(ctx, rid, rid_day):
+    """Existing open-line/subject id whose normalized col1 equals the
+    normalized rid token (patrol-<day>- prefix stripped) or the raw
+    normalized rid. Open lines: planned|contracting|crystallized.
+    None when no ledger matches (the rid mints fresh)."""
+    token = _norm_slug(re.sub(r"^patrol-%s-" % re.escape(rid_day), "", rid))
+    raw = _norm_slug(rid)
+    paths = []
+    if ctx.get("research_lines"):
+        paths.append(("lines", ctx["research_lines"]))
+    paths.append(("subjects", ctx["subjects"]))
+    for kind, path in paths:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for ln in fh:
+                    row = ln.rstrip("\n")
+                    cid = row.split("\t", 1)[0]
+                    if not cid:
+                        continue
+                    if kind == "lines":
+                        parts = row.split("\t")
+                        if len(parts) < 2 or parts[1] not in (
+                                "planned", "contracting", "crystallized"):
+                            continue
+                    norm = _norm_slug(cid)
+                    if norm and norm in (token, raw):
+                        return cid
+        except OSError:
+            continue
+    return None
+
+
 def queue_repeat_subjects(ctx, prev_fails, cur_fails):
     """A patrol+cause on two consecutive runs auto-queues a
     research-subjects entry (house convention): the patrol found the
@@ -1940,7 +1979,13 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
         q = ("patrol: surface %s filed %s on two consecutive runs -- "
              "why does it keep failing and which guardrail closes it?"
              % (patrol, cause))[:240]
-        line = "%s\t%s" % (rid, q)
+        # question-not-beat (refoundation P6): when an OPEN research
+        # line (planned|contracting|crystallized) or an existing
+        # subject entry already carries the normalized rid token, the
+        # question lands under THAT literal id (full-line dedup key)
+        # instead of minting a parallel patrol-<day> entry.
+        existing = _research_match_id(ctx, rid, rid_day)
+        line = "%s\t%s" % (existing or rid, q)
         if line in seen:
             continue
         try:

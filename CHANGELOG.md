@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P6: research at the gewu boundary** (docs/records/
+  2026-09-25-p6-research-gewu.md): the research beat's orientation
+  inputs are built once per UTC day into a cached pack
+  (automation/scripts/context-pack.sh -> logs/context-pack-<date>.txt)
+  that the overflow beat reuses; every subject mint
+  (causes.sh append_research_subject, patrol.py auto-queue, the beat
+  synthesizer) first slug-matches open research lines — an existing
+  line gains the question under its own id instead of a new beat, and
+  unsourced synthesizer lines are recorded as question- rows that
+  never seed lines; an adopted review verdict whose supportive pass
+  names no evidence item (file:line, fenced block, or command output)
+  is recorded as withheld and never adopted. New
+  tests/test-research-gewu.sh (37 assertions).
 - **Refoundation P4: single supervision plane** (docs/records/
   2026-09-25-p4-supervision-fold.md): launch-session no longer records
   every clean rc=0 run as "cancelled" (now complete, and the no-match

@@ -38,7 +38,9 @@ class H(http.server.BaseHTTPRequestHandler):
             content = (open(p).read() if os.path.exists(p)
                        else "VERDICT: parked -- stub reason")
         else:
-            content = default_content
+            p = os.path.join(d, "default-reply")
+            content = (open(p).read() if os.path.exists(p)
+                       else default_content)
         out = json.dumps({"choices": [{"message": {"content": content}}],
                           "message": {"content": content},
                           "usage": {"prompt_tokens": 11, "completion_tokens": 7},

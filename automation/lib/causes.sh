@@ -118,7 +118,7 @@ lesson_for_cause() { # cause-class -> one sentence on stdout
 [ -n "${SCRUB_PY:-}" ] || . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/redact.sh"
 
 append_research_subject() { # slug question -> appends to research-subjects.txt
- local slug redacted q root file id
+ local slug redacted q root file id norm match_id rid rnorm
  slug="$1" q="$2"
  [ -n "$slug" ] && [ -n "$q" ] || return 1
  redacted="$(redact_home "$q")"
@@ -133,10 +133,47 @@ append_research_subject() { # slug question -> appends to research-subjects.txt
  [ -n "$slug" ] || return 1
  root="${AUTOMATION_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
  file="$root/research-subjects.txt"
- id="fail-$(date -u +%Y%m%d)-$slug"
+ # question-not-beat (refoundation P6): when an OPEN research line
+ # (planned|contracting|crystallized) or an existing subject entry
+ # already carries this normalized slug, the question lands under
+ # THAT literal id (full-line dedup) instead of minting a parallel
+ # fail-<date> entry. norm = lowercase; every run of non-[a-z0-9] ->
+ # single '-'; trim leading/trailing '-'.
+ norm="$(printf '%s' "$slug" | tr '[:upper:]' '[:lower:]' |
+  tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-$//')"
+ match_id=""
+ if [ -n "$norm" ]; then
+  match_id="$(
+   {
+    [ -f "$root/research-lines.tsv" ] &&
+     awk -F'\t' \
+      '$2=="planned"||$2=="contracting"||$2=="crystallized"{print $1}' \
+      "$root/research-lines.tsv"
+    [ -f "$file" ] && cut -f1 "$file"
+   } 2>/dev/null |
+    while IFS= read -r rid; do
+     [ -n "$rid" ] || continue
+     rnorm="$(printf '%s' "$rid" | tr '[:upper:]' '[:lower:]' |
+      tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-$//')"
+     if [ "$rnorm" = "$norm" ]; then
+      printf '%s' "$rid"
+      break
+     fi
+    done
+  )"
+ fi
+ if [ -n "$match_id" ]; then
+  id="$match_id"
+  # full-line dedup: the question is already recorded under this id
+  awk -F'\t' -v id="$id" -v q="$q" \
+   '$1==id && $2==q {found=1} END{exit !found}' "$file" 2>/dev/null &&
+   return 0
+ else
+  id="fail-$(date -u +%Y%m%d)-$slug"
+  # refuse duplicates by id prefix match: the subject is already queued
+  awk -F'\t' -v id="$id" 'index($1, id) == 1 {found=1} END{exit !found}' \
+   "$file" 2>/dev/null && return 0
+ fi
  touch "$file" 2>/dev/null || return 1
- # refuse duplicates by id prefix match: the subject is already queued
- awk -F'\t' -v id="$id" 'index($1, id) == 1 {found=1} END{exit !found}' \
-  "$file" 2>/dev/null && return 0
  printf '%s\t%s\n' "$id" "$q" >>"$file"
 }

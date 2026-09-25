@@ -39,6 +39,10 @@ cp -r "$root/lib/." "$sb/lib/"
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
+# the synthesizer reads the cached per-day context pack (P6): the
+# sandbox needs the pack writer where AUTOMATION_ROOT points
+mkdir -p "$sb/scripts"
+cp "$root/scripts/context-pack.sh" "$sb/scripts/"
 : >"$sb/cadence-params.tsv"
 : >"$sb/STATE.md"
 

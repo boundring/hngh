@@ -148,7 +148,13 @@ printf 'VERDICT: adopted -- stub adopt\nFOLLOWON: why does compaction drift unde
 printf 'line-old\tcrystallized\t2026-09-05T00:00:00Z\tcompaction patterns\n' \
  >"$sb/research-lines.tsv"
 rm -f "$sb/research-dispositions.tsv"
+# ground-truth gate (P6): an adopted verdict needs a named evidence
+# item in the SUPPORTIVE pass text -- the stub's default leg reply
+# carries one for this case (default-reply hook, removed after)
+printf '%s\n' 'corroborated by docs/research/2026-09-06-line-old.md:12 (stub evidence)' \
+ >"$stubdir/default-reply"
 beat_run "${kimi_env[@]}"
+rm -f "$stubdir/default-reply"
 n="$(grep -c "^fail-$today8-" "$sb/research-subjects.txt" 2>/dev/null || true)"
 ck "adopted: follow-on subjects queued (2 per pass cap)" "2" "$n"
 row="$(grep $'^line-old\t' "$sb/research-dispositions.tsv" | tail -n 1)"

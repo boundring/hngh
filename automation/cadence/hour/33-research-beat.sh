@@ -254,6 +254,9 @@ ensure_lines() {
    id="$(printf '%s' "$line" | tr -cs 'a-zA-Z0-9' '-' | sed 's/^-*//; s/-*$//')"
    ;;
   esac
+  case "$id" in
+  question-*) continue ;; # recorded questions never seed lines (P6)
+  esac
   awk -F'\t' -v id="$id" -v desc="$desc" \
    '$1==id || $4==desc{found=1} END{exit !found}' "$LINES" && continue
   printf '%s\tplanned\t%s\t%s\n' \
@@ -339,6 +342,51 @@ pick_line() { # finish lines before starting them: contracting first, then
  }
 }
 
+# cached orientation pack seam (refoundation P6): one build per UTC day
+# by scripts/context-pack.sh; the synthesizer reads sections back.
+pack_sec() { # name -> section body of the day's context pack
+ [ -n "${pack_file:-}" ] && [ -s "$pack_file" ] || return 0
+ awk -v sec="$1" '
+  $0 == "== " sec " ==" {on = 1; next}
+  on && /^== [a-z]+ ==$/ {on = 0}
+  on {print}
+ ' "$pack_file"
+}
+
+norm_slug() { # text -> normalized slug: lowercase; every run of
+ # non-[a-z0-9] -> single '-'; trim leading/trailing '-'
+ printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' |
+  sed 's/^-*//; s/-$//'
+}
+
+research_open_ids() { # literal col1 ids that may absorb a question:
+ # open lines (planned|contracting|crystallized) then subject ids
+ {
+  [ -f "$LINES" ] &&
+   awk -F'\t' '$2=="planned"||$2=="contracting"||$2=="crystallized"{print $1}' \
+    "$LINES"
+  [ -f "$SUBJECTS" ] && cut -f1 "$SUBJECTS"
+ } 2>/dev/null
+}
+
+question_existing_id() { # sid -> existing id whose normalized col1
+ # equals the normalized sid (day-stripped token or raw); "" = none
+ local tok raw rid rnorm
+ tok="$(norm_slug "$(printf '%s' "$1" | sed "s/^synth-$day-//")")"
+ raw="$(norm_slug "$1")"
+ while IFS= read -r rid; do
+  [ -n "$rid" ] || continue
+  rnorm="$(norm_slug "$rid")"
+  [ -n "$rnorm" ] || continue
+  if [ "$rnorm" = "$tok" ] || [ "$rnorm" = "$raw" ]; then
+   printf '%s' "$rid"
+   return 0
+  fi
+ done <<EOF_IDS
+$(research_open_ids)
+EOF_IDS
+}
+
 demand_synthesize() { # -> replacement pick row after one bounded synthesis
  # Demand synthesizer (acceleration wave 2, the starvation fix): when
  # pick_line returns empty (every line crystallized/reviewed) and the
@@ -352,7 +400,7 @@ demand_synthesize() { # -> replacement pick row after one bounded synthesis
  # sourced parse -> return empty: the caller falls through to the
  # existing skip path.
  local synth_stamp planned floor disp les backlog alerts prompt resp
- local srcs src sid sq n accepted ok ln
+ local srcs src sid sq n accepted ok ln pack_file exist_id
  synth_stamp="${RESEARCH_SYNTH_STAMP_FILE:-/tmp/.hngh-research-synth-last}"
  [ "$(cat "$synth_stamp" 2>/dev/null || true)" = "$day" ] && return 0
  planned="$(awk -F'\t' '$2=="planned"' "$LINES" 2>/dev/null | wc -l | tr -d ' ')"
@@ -361,35 +409,20 @@ demand_synthesize() { # -> replacement pick row after one bounded synthesis
  floor="${RESEARCH_DEMAND_FLOOR:-3}"
  case "$floor" in '' | *[!0-9]*) floor=0 ;; esac
  [ "$planned" -lt "$floor" ] || return 0
- disp="$(tail -n 20 "$DISPOSITIONS" 2>/dev/null || true)"
- les="$(tail -n 20 "$KERNEL/docs/project/lessons-index.md" 2>/dev/null || true)"
- backlog="$(tac "$AUTOMATION_ROOT/docs/BACKLOG.md" 2>/dev/null |
-  awk '/^## /{c++} c<=3' | tac || true)"
- alerts="$(HNGH_REPORT_ROOT="$report_root" $REPORT --json 2>/dev/null | python3 -c '
-import json, sys
-try:
-    rows = json.load(sys.stdin).get("reports", [])
-except Exception:
-    rows = []
-out = []
-for r in [x for x in rows if x.get("kind") == "alert"][:5]:
-    ident = ""
-    for ln in (r.get("body") or "").splitlines():
-        if ln.startswith("identity:"):
-            ident = ln.split(":", 1)[1].strip()
-            break
-    out.append(ident or r.get("id", ""))
-print("\n".join(x for x in out if x))' || true)"
- # source tokens: disposition line ids, lesson ids, backlog section
- # titles, alert identities. A question citing none is discarded.
- srcs="$(
-  { [ -f "$DISPOSITIONS" ] && cut -f1 "$DISPOSITIONS" | grep -vx 'line'; } 2>/dev/null
-  awk -F'|' '/^\|[^-]/ && $2 !~ /^ *Lesson *$/ {gsub(/^ +| +$/, "", $2); print $2}' \
-   "$KERNEL/docs/project/lessons-index.md" 2>/dev/null
-  grep '^## ' "$AUTOMATION_ROOT/docs/BACKLOG.md" 2>/dev/null |
-   sed 's/^## //; s/ *([0-9][^)]*) *$//'
-  printf '%s\n' "$alerts"
- )"
+ # orientation inputs come from the cached per-UTC-day context pack
+ # (refoundation P6): ONE writer (scripts/context-pack.sh) running the
+ # exact gathers this body used to inline. A missing or empty pack
+ # after the call means no orientation -> skip synthesis, no crash.
+ pack_file="$AUTOMATION_ROOT/logs/context-pack-$day.txt"
+ bash "$AUTOMATION_ROOT/scripts/context-pack.sh" || true
+ if [ ! -s "$pack_file" ]; then
+  return 0
+ fi
+ disp="$(pack_sec dispositions)"
+ les="$(pack_sec lessons)"
+ backlog="$(pack_sec backlog)"
+ alerts="$(pack_sec alerts)"
+ srcs="$(pack_sec srcs)"
  wiki_prior="$(prior_art "$les $backlog $alerts")"
  prompt="Read these recent machine outputs:
 $disp
@@ -455,8 +488,24 @@ output."
   done <<EOF_SRC
 $srcs
 EOF_SRC
-  [ "$ok" = 1 ] || continue # unsourced synthesis discarded
-  printf '%s\t%s\n' "$sid" "$sq" >>"$SUBJECTS"
+  if [ "$ok" != 1 ]; then
+   # unsourced synthesis (refoundation P6): still recorded, as a
+   # question -- question-<sid> rows never beat (ensure_lines skips
+   # them) but the ask is not lost.
+   grep -qxF "question-$sid" "$SUBJECTS" 2>/dev/null && continue
+   printf 'question-%s\t%s\n' "$sid" "$sq" >>"$SUBJECTS"
+   continue
+  fi
+  # sourced: when an OPEN line or existing subject already carries the
+  # normalized slug, the question lands under THAT literal id instead
+  # of minting a parallel entry (double-mint guard)
+  exist_id="$(question_existing_id "$sid")"
+  if [ -n "$exist_id" ]; then
+   grep -qxF "$exist_id	$sq" "$SUBJECTS" 2>/dev/null && continue
+   printf '%s\t%s\n' "$exist_id" "$sq" >>"$SUBJECTS"
+  else
+   printf '%s\t%s\n' "$sid" "$sq" >>"$SUBJECTS"
+  fi
   accepted=$((accepted + 1))
   [ "$accepted" -ge 3 ] && break
  done <<EOF_SYN
@@ -660,6 +709,32 @@ followon_queue() { # response -> queues up to 2 follow-on subjects from
   [ "$n" -ge 2 ] && break
  done
  printf '%s' "$out"
+}
+
+# ground-truth gate (refoundation P6): an ADOPTED verdict must name a
+# SPECIFIC evidence item in the full SUPPORTIVE pass text -- (i) a file
+# path token containing '/' and ending in an extension [a-z]{1,6}
+# optionally followed by :<digits>, (ii) a bare filename-with-extension
+# followed by :<digits> (file:line), or (iii) a fenced ``` block or a
+# line starting '$ ' (verbatim command output). None found -> the row
+# records withheld (reason prefixed, followons cleared) through the
+# same append seam; parked/killed paths never gated.
+named_evidence() { # text -> exit 0 when a named evidence item is present
+ printf '%s' "$1" | grep -Eq \
+  '[^[:space:]]*/[^[:space:]]*\.[a-z]{1,6}(:[0-9]+)?' && return 0
+ printf '%s' "$1" | grep -Eq \
+  '[A-Za-z0-9._-]+\.[a-z]{1,6}:[0-9]+' && return 0
+ printf '%s' "$1" | grep -q '```' && return 0
+ printf '%s' "$1" | grep -q '^\$ '
+}
+
+ground_truth_gate() { # action reason followons supportive -> gt_* globals
+ gt_action="$1" gt_reason="$2" gt_followons="$3"
+ if [ "$gt_action" = "adopted" ] && ! named_evidence "$4"; then
+  gt_action="withheld"
+  gt_reason="withheld -- no named evidence item: $gt_reason"
+  gt_followons=""
+ fi
 }
 
 day="$(date -u +%Y-%m-%d)"
@@ -911,6 +986,11 @@ print(out + (' %.2f' % res[1] if won else ''))
   reason="typed verdict $action (confidence ${tconf:-unknown})"
  fi
  opp_line="$(pass_line "$response")"
+ # ground-truth gate (refoundation P6) BEFORE follow-on queueing: a
+ # withheld adoption queues nothing.
+ ground_truth_gate "$action" "$reason" "${followons:-}" "$supportive"
+ action="$gt_action"
+ reason="$gt_reason"
  followons=""
  if [ "$action" = "adopted" ]; then
   followons="$({

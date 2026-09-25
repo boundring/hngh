@@ -158,6 +158,7 @@ test:
 	bash tests/test-bctx-canary.sh
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
+	bash tests/test-research-gewu.sh
 	bash tests/test-research-review.sh
 	python3 -B tests/test-research-harvest.py
 	bash tests/test-publication-review.sh

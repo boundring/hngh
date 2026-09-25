@@ -11,7 +11,8 @@
 #      oldest crystallized line even with planned lines present; 0 or a
 #      non-aligned counter advances the planned line.
 #   d) demand synthesizer: empty pool + fixture sources -> sourced
-#      synth-<date>-<n> subjects appended (unsourced ones discarded),
+#      synth-<date>-<n> subjects appended (unsourced ones recorded as
+#      question-<sid>: never beat),
 #      daily-capped second run skips synthesis and falls to the review
 #      path.
 # Hermetic: stub endpoints only, sandbox repo copy, no real model, no
@@ -29,6 +30,10 @@ cp -r "$root/lib/." "$sb/lib/"
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
+# the synthesizer reads the cached per-day context pack (P6): the
+# sandbox needs the pack writer where AUTOMATION_ROOT points
+mkdir -p "$sb/scripts"
+cp "$root/scripts/context-pack.sh" "$sb/scripts/"
 : >"$sb/cadence-params.tsv"
 export HNGH_CRUMBS_DB="$sb/crumbs.db"
 crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
@@ -319,10 +324,13 @@ grep -q "synth-$day-1" "$sb/research-subjects.txt" &&
  echo "FAIL: synth: sourced subjects not appended"
  fails=$((fails + 1))
 }
-grep -q "synth-$day-3" "$sb/research-subjects.txt" && {
- echo "FAIL: synth: unsourced subject appended"
+if grep -q "question-synth-$day-3" "$sb/research-subjects.txt" &&
+ ! grep -q "^synth-$day-3" "$sb/research-subjects.txt"; then
+ echo "ok: synth: unsourced subject recorded as question-synth"
+else
+ echo "FAIL: synth: unsourced subject not recorded as question-synth"
  fails=$((fails + 1))
-} || echo "ok: synth: unsourced subject discarded"
+fi
 ck "synth: daily stamp written" "$day" "$(cat "$sb/synth-stamp")"
 grep -q "synth-$day-1	expanding" "$sb/research-lines.tsv" &&
  echo "ok: synth: synthesized line picked up and advanced" || {
@@ -351,14 +359,14 @@ grep -q $'line-old\treviewed\t' "$sb/research-lines.tsv" &&
  fails=$((fails + 1))
 }
 
-# d3: unsourced-only reply -> nothing appended, skip path
+# d3: unsourced-only reply -> only the question row, skip path
 reset_beat 0
 synth_fixtures
 empty_pool
 printf 'synth-%s-1\tWholly unrelated musing about the weather.\n' "$day" \
  >"$stubdir/synth-reply"
 beat_run "${kimi_env[@]}"
-ck "synth unsourced: subjects unchanged" "0" "$(wc -l <"$sb/research-subjects.txt" | tr -d ' ')"
+ck "synth unsourced: only the question row" "1" "$(wc -l <"$sb/research-subjects.txt" | tr -d ' ')"
 crumbs | grep -q 'research-synth-empty' &&
  echo "ok: synth unsourced: empty-parse breadcrumb" || {
  echo "FAIL: synth unsourced: no empty-parse breadcrumb"
