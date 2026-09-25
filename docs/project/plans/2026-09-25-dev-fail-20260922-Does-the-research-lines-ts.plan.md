@@ -6,20 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a validation script in scripts/ that checks hngh-automation structure integrity
-  Verification: bash -n scripts/validate_structure.sh
+- [ ] Add a test script that validates the cadence job runner exits cleanly on a minimal input
+  Verification: bash tests/cadence_runner_smoke.sh
 
-- [ ] Add a test case in tests/ that exercises the validation script
+- [ ] Create a helper script that parses a job manifest and reports its status
+  Verification: bash -n scripts/manifest_parser.sh
+
+- [ ] Add a dashboard snippet that logs cadence job completion timestamps
+  Verification: grep -q "timestamp" dashboard/cadence_log.sh
+
+- [ ] Write a test that confirms the digest generator produces output for a sample job
+  Verification: python3 tests/digest_generator_test.py
+
+- [ ] Commit all changes and run the full test suite to confirm no regressions
   Verification: make test
-
-- [ ] Add a cadence entry in cadence/ that references the validation script
-  Verification: grep -r "validate_structure" cadence/
-
-- [ ] Add a dashboard snippet in dashboard/ that displays validation status
-  Verification: bash -n dashboard/validation_status.sh
-
-- [ ] Add a lib utility in lib/ that provides the core validation logic
-  Verification: node --check lib/validation_utils.js
-
-- [ ] Add a digest entry in digest/ that captures validation results
-  Verification: grep -r "validation" digest/
