@@ -6,20 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a script to validate hngh-automation job definitions before execution
-  Verification: bash -n jobs/validate-job.sh
+- [ ] Add a new job script that generates a weekly automation status report from existing job outputs
+  Verification: bash -n jobs/weekly-status-report.sh
 
-- [ ] Create a test suite for the new job validation script
-  Verification: make test
+- [ ] Create a verification script that confirms the report script runs without errors
+  Verification: bash jobs/weekly-status-report.sh && echo "SUCCESS"
 
-- [ ] Add a cadence entry to run validation on job commits
-  Verification: bash cadence/run-validation.sh
+- [ ] Add a test case that validates the report output contains expected job identifiers
+  Verification: bash tests/test-weekly-report.sh
 
-- [ ] Verify all new scripts pass syntax checks
-  Verification: bash -n scripts/validate-job.sh && bash -n cadence/run-validation.sh
+- [ ] Update the cadence configuration to include the new weekly report job
+  Verification: grep -q "weekly-status-report" cadence/jobs.yaml
 
-- [ ] Ensure no secrets or credentials are introduced
-  Verification: grep -r "password\|secret\|token" jobs/ scripts/ cadence/ --include="*.sh" | grep -v "^Binary"
-
-- [ ] Run full test suite to confirm no regressions
+- [ ] Run the full test suite to confirm no regressions from the new job additions
   Verification: make test
