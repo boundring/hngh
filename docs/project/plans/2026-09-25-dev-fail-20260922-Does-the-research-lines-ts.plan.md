@@ -4,21 +4,22 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: Implements the hngh-automation research line for cadence-driven job scheduling verification, adding a lightweight script to validate job definitions before execution.
-
 ## Steps
 
-- [ ] Add a validation script for job definition syntax
-  Verification: bash -n scripts/validate-job-def.sh
+- [ ] Add a new automation job under jobs/ that runs a simple health check script
+  Verification: bash -n jobs/health-check.sh
 
-- [ ] Create a test for the validation script
+- [ ] Create a verification script under scripts/ that validates the health check output
+  Verification: bash scripts/validate-health.sh
+
+- [ ] Add a test case under tests/ that exercises the new automation job
   Verification: make test
 
-- [ ] Add a job definition example to jobs/
-  Verification: grep -q "example" jobs/example-job.yaml
+- [ ] Update the cadence configuration under cadence/ to include the new job
+  Verification: grep -q "health-check" cadence/schedule.yaml
 
-- [ ] Update cadence configuration to reference new validation
-  Verification: grep -q "validate" cadence/cadence.yaml
+- [ ] Add a dashboard snippet under dashboard/ that displays health check status
+  Verification: bash -n dashboard/health-widget.js
 
-- [ ] Add integration test for the full validation flow
+- [ ] Run the full test suite to confirm no regressions
   Verification: make test
