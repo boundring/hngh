@@ -8,3 +8,7 @@ at 2026-09-18T12:31:28Z. Alert text: [dash-selfreview] summary: 4 findings (4 un
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-25T00:00:37Z re-occurred (dedup window expired)

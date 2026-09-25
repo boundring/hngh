@@ -1,4 +1,4 @@
-<!-- plan: status=expired risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:readout.json -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:readout.json  cause=obsolete disposed=2026-09-25T00:00:37Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-18 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:feed-fresh:readout.json`
@@ -13,3 +13,4 @@ at 2026-09-18T12:31:29Z. Alert text: [dash-selfreview] feed-fresh:readout.json: 
 
 - 2026-09-19T14:16:33Z re-occurred (dedup window expired)
 - 2026-09-22T01:14:09Z re-occurred (dedup window expired)
+- 2026-09-25T00:00:37Z re-occurred (dedup window expired)

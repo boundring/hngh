@@ -8,3 +8,7 @@ at 2026-09-24T23:00:37Z. Alert text: [dash-selfreview] feed-fresh:time-ledger.js
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-25T00:00:38Z re-occurred (dedup window expired)
