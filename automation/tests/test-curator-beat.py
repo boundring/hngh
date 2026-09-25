@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CURATOR = ROOT / "jobs" / "curator-beat.py"
 PLAN_FEED = ROOT / "jobs" / "plan-feed.py"
-WRAPPER = ROOT / "cadence" / "day" / "16-curator-beat.sh"
+WRAPPER = ROOT / "cadence" / "calendar" / "daily" / "16-curator-beat.sh"
 
 
 def plan(status="accepted", risk="normal", accepted="2026-09-01T00:00:00Z",

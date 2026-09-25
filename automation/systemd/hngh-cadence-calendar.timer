@@ -1,0 +1,11 @@
+[Unit]
+Description=hngh cadence tick: calendar tier (daily / weekly / monthly)
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+OnCalendar=Mon *-*-* 06:00:00
+OnCalendar=*-*-01 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

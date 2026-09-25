@@ -1,0 +1,14 @@
+[Unit]
+Description=hngh cadence tick: subhour tier (every minute)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=TIER=subhour
+ExecStart=%h/Projects/etc/hngh/automation/jobs/cadence-tick.sh
+WorkingDirectory=%h/Projects/etc/hngh/automation
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

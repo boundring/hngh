@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-bctx-canary.sh -- contract proofs for the billion-context
-# config-drift canary (cadence/day/23-bctx-canary.sh) and the stale
+# config-drift canary (cadence/calendar/daily/23-bctx-canary.sh) and the stale
 # updater fix (scripts/hngh-omp-update.sh):
 #   canary: live config matching the Inventory row -> silent ok row;
 #     drift (expected vs found) -> ONE identity-deduped alert row;
@@ -35,7 +35,7 @@ rows() {
 run() {
   BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
     HNGH_HOME="$(cd "$root/.." && pwd)" STATE_FILE="$sb/STATE.md" \
-    bash "$root/cadence/day/23-bctx-canary.sh"
+    bash "$root/cadence/calendar/daily/23-bctx-canary.sh"
 }
 reset() {
   rm -rf "$sb/root"
@@ -63,7 +63,7 @@ reset
 BCTX_CONFIG="$sb/cfg.json" HNGH_REPORT_ROOT="$sb/root" \
   BCTX_MAX_CONTEXT=40% HNGH_HOME="$(cd "$root/.." && pwd)" \
   STATE_FILE="$sb/STATE.md" \
-  bash "$root/cadence/day/23-bctx-canary.sh"
+  bash "$root/cadence/calendar/daily/23-bctx-canary.sh"
 need grep -q "expected 40% found 40%" < <(rows)
 ok "canary: env BCTX_MAX_CONTEXT overrides the row"
 

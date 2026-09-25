@@ -11,11 +11,11 @@ set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 trap 'rm -rf "$sb"' EXIT
-mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence/day" "$sb/docs/media/manga" \
+mkdir -p "$sb/lib" "$sb/jobs" "$sb/cadence/calendar/daily" "$sb/docs/media/manga" \
  "$sb/home/dispatch" "$sb/home/archive/digest" "$sb/scripts"
 cp -r "$root/lib/." "$sb/lib/"
 cp "$root/jobs/publication-review.py" "$sb/jobs/"
-cp "$root/cadence/day/26-publication-review.sh" "$sb/cadence/day/"
+cp "$root/cadence/calendar/daily/26-publication-review.sh" "$sb/cadence/calendar/daily/"
 cp "$root/../scripts/report-queue" "$sb/scripts/"
 
 good_draft() { # -> writes a compliant draft + rendered panel svg
@@ -105,7 +105,7 @@ export BEAT_BLOCKERS_FILE
 wrapper() {
  (cd "$sb" && HNGH_HOME="$sb" HNGH_REPORT_ROOT="$sb" \
   HNGH_HOME_DIR="$sb/home" \
-  bash "$sb/cadence/day/26-publication-review.sh" 2>&1)
+  bash "$sb/cadence/calendar/daily/26-publication-review.sh" 2>&1)
 }
 rm -f "$sb/docs/media/manga/sample-draft.svg"
 good_draft # single red cause only: panel-art-missing (no quip overage)
@@ -159,11 +159,17 @@ if sys.argv[3] == "clean" and text.count("[redacted path]") < 2:
 EOF
 }
 digest_scrub_clean clean && echo "ok: findings digest scrubs source paths" ||
- { echo "FAIL: digest header leaks source paths"; fails=$((fails + 1)); }
+ {
+  echo "FAIL: digest header leaks source paths"
+  fails=$((fails + 1))
+ }
 rm -f "$sb/docs/media/manga/sample-draft.svg"
 out="$(run_check)"
 digest_scrub_clean red && echo "ok: red findings digest scrubs artifact paths" ||
- { echo "FAIL: digest FAIL lines leak artifact paths"; fails=$((fails + 1)); }
+ {
+  echo "FAIL: digest FAIL lines leak artifact paths"
+  fails=$((fails + 1))
+ }
 
 echo
 if [ "$fails" -eq 0 ]; then echo "ALL OK"; else

@@ -4,7 +4,7 @@
 #   a) deck-pin-on-busy in 33-research-beat: busy load + armed deck leg
 #      -> the run is PINNED to the deck (no defer, stamp consumed); busy
 #      load + unarmed deck -> defers exactly as before, no stamp.
-#   b) 30m/50-research-overflow: own-stamp fresh -> skip; stale own-stamp
+#   b) subhour/50-research-overflow: own-stamp fresh -> skip; stale own-stamp
 #      + hour stamp <30min -> silent defer; stale + hour stamp >=30min ->
 #      runs pinned kimi without consuming the hour stamp.
 #   c) review interleave: counter %research-review-interleave reviews the
@@ -71,15 +71,19 @@ beat_run() { # [K=V ...] -> one hour-beat run; caller args win
    bash "$sb/cadence/hour/33-research-beat.sh" >/dev/null 2>&1
  )
 }
-overflow_run() { # [K=V ...] -> one 30m-tier overflow run
+overflow_run() { # [K=V ...] -> one subhour-tier overflow run
  (
   cd "$sb"
+  # the collapse's 1800s pacing stamp (fixed /tmp path in the drop-in)
+  # would gate every run after the first; clear it like beat_run clears
+  # its own stamp so each call is a real run under test
+  rm -f /tmp/.hngh-cadence-50-research-overflow-last
   env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
    RESEARCH_OVERFLOW_STAMP_FILE="$sb/of-stamp" \
    RESEARCH_OVERFLOW_COUNT_FILE="$sb/of-count" \
    OVERFLOW_SLEEP_S=0 \
    "$@" \
-   bash "$sb/cadence/30m/50-research-overflow.sh" >/dev/null 2>&1
+   bash "$sb/cadence/subhour/50-research-overflow.sh" >/dev/null 2>&1
  )
 }
 reset_beat() { # n-planned-lines -> fresh pool, counters, telemetry, hits

@@ -555,6 +555,7 @@ def gather():
         "have_prev": os.path.isfile(prev_digest_path()),
         "lessons": lessons(), "night": night_brief_line(),
         "bench": model_bench_line(),
+        "qa": email_qa_trend(),
     }
 
 
@@ -645,6 +646,9 @@ def compose(g=None):
     bench = g["bench"]
     if bench:
         out.append(bench)
+    qa = g["qa"]
+    if qa:
+        out.append(qa)
     out.append(budget_lines())
     out.append("")
     # (8) FOOTER
@@ -846,6 +850,23 @@ def model_bench_line():
             return next((l.strip() for l in fh if l.startswith("Best: ")), "")
     except OSError:
         return ""
+
+
+def email_qa_trend():
+    """Email-QA trend (logs/email-qa.log) — the QA log's consumer.
+    Last 7 verdicts as 'email-qa: N/M PASS'; empty when no verdicts yet."""
+    env = os.environ.get("HNGH_EMAIL_QA_TREND")
+    if env is not None:
+        return env.strip()
+    try:
+        with open(os.path.join(AUTOMATION, "logs", "email-qa.log")) as fh:
+            rows = [l.strip() for l in fh if l.strip()][-7:]
+    except OSError:
+        return ""
+    if not rows:
+        return ""
+    passed = sum(1 for r in rows if ": PASS" in r)
+    return "email-qa: %d/%d PASS" % (passed, len(rows))
 
 
 def night_brief_line():

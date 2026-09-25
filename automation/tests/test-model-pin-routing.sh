@@ -483,14 +483,27 @@ grep -q $'line-old\tparked\t' "$sb/research-dispositions.tsv" 2>/dev/null &&
  fails=$((fails + 1))
 }
 
+# --- 8b. prior adopted dispositions ride BOTH review prompts (advisory
+#          evidence, never the verdict itself).
+reset_beat 0
+reset_hits
+printf 'line-old\tcrystallized\t2026-09-06T00:00:00Z\tdesc-old\n' >"$sb/research-lines.tsv"
+printf 'doc-old\n' >"$sb/kernel/docs/research/2026-09-06-line-old.md"
+printf 'line-old\tadopted\tadopted -- prior crystallization note rides the prompt\tmodel:test\t~/x\t2026-09-01T00:00:00Z\t\t\t\n' >"$sb/research-dispositions.tsv"
+beat_run "${kimi_env[@]}"
+ck "prior dispositions: block marker in both captured prompts" "2" \
+ "$(grep -c 'prior adopted dispositions (advisory evidence, never the verdict itself)' "$stubdir/stubK-bodies")"
+ck "prior dispositions: seeded verdict text rides both prompts" "2" \
+ "$(grep -c 'prior crystallization note rides the prompt' "$stubdir/stubK-bodies")"
+
 # --- 9. review-prep pins kimi + chain-accurate alert text (static asserts).
-grep -q 'MODEL_PIN="${MODEL_PIN:-review}"' "$root/cadence/day/04-review-prep.sh" &&
+grep -q 'MODEL_PIN="${MODEL_PIN:-review}"' "$root/cadence/calendar/daily/04-review-prep.sh" &&
  echo "ok: review-prep: review-lane pin present" || {
  echo "FAIL: review-prep: review-lane pin missing"
  fails=$((fails + 1))
 }
 grep -q 'model chain down (pin=review quota ladder exhausted through local)' \
- "$root/cadence/day/04-review-prep.sh" &&
+ "$root/cadence/calendar/daily/04-review-prep.sh" &&
  echo "ok: review-prep: chain-accurate alert text" || {
  echo "FAIL: review-prep: alert text not chain-accurate"
  fails=$((fails + 1))

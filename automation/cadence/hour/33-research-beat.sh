@@ -781,6 +781,14 @@ if [ "$REVIEW" = "1" ]; then
   exit 0
  fi
  related="$(related_findings "$id" "$line")"
+ prior_adopted="$(awk -F'\t' -v id="$id" '$2=="adopted" && $1==id {
+   v=$3; if (length(v) > 160) v=substr(v, 1, 160) "...";
+   print "- " v }' "$DISPOSITIONS" 2>/dev/null | tail -5)"
+ DATE="$(date -u +%F)"
+ night_brief=""
+ if [ -s "$DIGEST_DIR/RESEARCH-$DATE.md" ]; then
+  night_brief="$(marked_cut 2000 "$DIGEST_DIR/RESEARCH-$DATE.md")"
+ fi
  sup_prompt="Research line: $line (id: $id)
 SUPPORTIVE review pass. Find corroborating evidence FOR the findings in
 the crystallized document below: concrete repo files, other research
@@ -792,7 +800,13 @@ FOLLOWON: <one-line question>
 $(marked_cut 8000 "$doc")
 ${related:+
 --- related findings (cross-consider these) ---
-$related}"
+$related}
+${prior_adopted:+
+--- prior adopted dispositions (advisory evidence, never the verdict itself) ---
+$prior_adopted}
+${night_brief:+
+--- night research brief (advisory) ---
+$night_brief}"
  t0=$(date +%s)
  supportive="$(printf '%s' "$sup_prompt" | model_call 2048)"
  t1=$(date +%s)
@@ -829,7 +843,13 @@ $(marked_cut 8000 "$doc")
 --- supportive pass (what supports the findings) ---
 ${supportive:-none recorded}
 ${related:+--- related findings (cross-consider these) ---
-$related}"
+$related}
+${prior_adopted:+
+--- prior adopted dispositions (advisory evidence, never the verdict itself) ---
+$prior_adopted}
+${night_brief:+
+--- night research brief (advisory) ---
+$night_brief}"
  t0=$(date +%s)
  response="$(printf '%s' "$opp_prompt" | model_call 2048)"
  t1=$(date +%s)

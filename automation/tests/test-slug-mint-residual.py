@@ -3,8 +3,8 @@
 (2026-09-18, plan 2026-09-18-backlog-p0-security-fixes step 4, backlog
 item gap-slug-residual-mints). Three surfaces:
   - patrol.py queue_repeat_subjects (rid mint, python)
-  - cadence/day/06-review-disposition.sh scr_slugify (identity slug)
-  - cadence/day/19-ux-review.sh slugify (identity slug)
+  - cadence/calendar/daily/06-review-disposition.sh scr_slugify (identity slug)
+  - cadence/calendar/daily/19-ux-review.sh slugify (identity slug)
 Checks each site's mint path, driven through the real lib/scrub.py
 guard, over the real corpus shapes: a pathy/credential-shaped input
 mints no '/home', username, or '~' fragment. Hermetic."""
@@ -102,7 +102,7 @@ class ResidualSlugMints(unittest.TestCase):
         return p.stdout.strip()
 
     def test_review_disposition_slug_no_credential_fragment(self):
-        out = self._shell_slug("cadence/day/06-review-disposition.sh",
+        out = self._shell_slug("cadence/calendar/daily/06-review-disposition.sh",
                                "scr_slugify")
         self.assertTrue(out, "scr_slugify produced no output")
         self.assertNotIn("bricker", out.lower())
@@ -111,16 +111,16 @@ class ResidualSlugMints(unittest.TestCase):
         self.assertLessEqual(len(out), 40)
 
     def test_ux_review_slug_no_credential_fragment(self):
-        out = self._shell_slug("cadence/day/19-ux-review.sh", "slugify")
+        out = self._shell_slug("cadence/calendar/daily/19-ux-review.sh", "slugify")
         self.assertTrue(out)
         self.assertNotIn("bricker", out.lower())
 
     def test_sources_carry_the_guard(self):
         shells = (
-            ("cadence/day/06-review-disposition.sh",
-             (ROOT / "cadence/day/06-review-disposition.sh").read_text()),
-            ("cadence/day/19-ux-review.sh",
-             (ROOT / "cadence/day/19-ux-review.sh").read_text()),
+            ("cadence/calendar/daily/06-review-disposition.sh",
+             (ROOT / "cadence/calendar/daily/06-review-disposition.sh").read_text()),
+            ("cadence/calendar/daily/19-ux-review.sh",
+             (ROOT / "cadence/calendar/daily/19-ux-review.sh").read_text()),
         )
         for script, text in shells:
             self.assertIn("redact.sh", text,

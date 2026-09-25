@@ -608,6 +608,7 @@ def _fixture_g():
         "klines": [], "alines": [], "fresh": [], "untracked": [],
         "have_prev": False, "lessons": "none", "night": "",
         "bench": "",
+        "qa": "",
     }
 
 

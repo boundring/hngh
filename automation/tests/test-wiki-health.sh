@@ -113,7 +113,7 @@ probe_run() { # one health-probe pass in the sandbox
    WIKI_REBUILD_TIMEOUT="${WIKI_REBUILD_TIMEOUT:-240}" \
    WIKI_REBUILD_STAMP_DIR="$sb/stamps" FAKE_DOW="${FAKE_DOW:-1}" \
    PATH="$sb/stubbin:$PATH" \
-   bash "$sb/cadence/day/25-wiki-health.sh" >/dev/null 2>&1
+   bash "$sb/cadence/calendar/daily/25-wiki-health.sh" >/dev/null 2>&1
  )
 }
 
@@ -129,7 +129,7 @@ probe_extra() { # PERS PROJ -> one pass with arbitrary vault pair
    WIKI_REBUILD_TIMEOUT="${WIKI_REBUILD_TIMEOUT:-240}" \
    WIKI_REBUILD_STAMP_DIR="$sb/stamps" FAKE_DOW="${FAKE_DOW:-1}" \
    PATH="$sb/stubbin:$PATH" \
-   bash "$sb/cadence/day/25-wiki-health.sh" >/dev/null 2>&1
+   bash "$sb/cadence/calendar/daily/25-wiki-health.sh" >/dev/null 2>&1
  )
 }
 
@@ -169,8 +169,8 @@ assert "split vault -> alert with fix" "$out" "alert wiki-health:project"
 # username into every public ledger row and identity); the override
 # knobs keep explicit names possible
 case "$out" in
- *":vhealthy"*|*":vsplit"*) bad "path-derived label leaked: $out" ;;
- *) ok "labels are role names, not path-derived" ;;
+*":vhealthy"* | *":vsplit"*) bad "path-derived label leaked: $out" ;;
+*) ok "labels are role names, not path-derived" ;;
 esac
 assert "personal slot label is personal" "$out" "wiki-health personal:"
 assert "project slot label is project" "$out" "wiki-health project:"
@@ -178,9 +178,9 @@ assert "project slot label is project" "$out" "wiki-health project:"
 # fix path carries the tilde marker — ~ for paths under HOME, ~tmp for
 # /tmp (mktemp honors TMPDIR, so compute the expected form)
 case "$sb" in
- "$HOME"/*) fix="~/${sb#"$HOME"/}" ;;
- /tmp/*) fix="~tmp/${sb#/tmp/}" ;;
- *) fix="$sb" ;;
+"$HOME"/*) fix="~/${sb#"$HOME"/}" ;;
+/tmp/*) fix="~tmp/${sb#/tmp/}" ;;
+*) fix="$sb" ;;
 esac
 assert "alert carries redacted fix path" "$out" "omp session with cwd $fix"
 assert "alert names wiki_rebuild_meta" "$out" "wiki_rebuild_meta"
@@ -319,8 +319,8 @@ grep -q "ctx-wiki-rebuild-project-${vuid}" "$sb/research-subjects.txt" &&
 # identities, subjects, and stamp names carry role labels + digests only
 leak_probe="$(cat "$sb/research-subjects.txt") $(rows_json) $(ls "$sb/stamps")"
 case "$leak_probe" in
- *"$(id -un)"*) bad "machine username leaked into subjects/rows/stamps" ;;
- *) ok "no username leak in subjects, stamps, or rows" ;;
+*"$(id -un)"*) bad "machine username leaked into subjects/rows/stamps" ;;
+*) ok "no username leak in subjects, stamps, or rows" ;;
 esac
 
 # timeout knob bounds the attempt

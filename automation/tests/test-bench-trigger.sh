@@ -83,9 +83,9 @@ ck "recalibrate days row" "30" \
 
 # 2. week drop-in mounts both verbs
 ck "drop-in runs new-model-check" "1" \
-  "$(grep -c 'bench-trigger.sh" new-model-check' "$root/cadence/week/02-bench-trigger.sh")"
+  "$(grep -c 'bench-trigger.sh" new-model-check' "$root/cadence/calendar/weekly/02-bench-trigger.sh")"
 ck "drop-in runs recalibrate-check" "1" \
-  "$(grep -c 'bench-trigger.sh" recalibrate-check' "$root/cadence/week/02-bench-trigger.sh")"
+  "$(grep -c 'bench-trigger.sh" recalibrate-check' "$root/cadence/calendar/weekly/02-bench-trigger.sh")"
 
 # 3. unbenched name fires ONE scoped bench + operator-item with the delta
 BM="m/alpha m/new" FM="m/beta" run_verb new-model-check
@@ -145,12 +145,12 @@ STUB_SCORES="m/alpha=4 m/demoted=0" BM="m/alpha" run_verb recalibrate-check
 ck "zero with living top reinforces" "m/demoted	3	1" "$(tail -n1 "$sb/state/model-demote.tsv")"
 
 # 10. retired day catch-up: breadcrumb note only, never a bench
-if grep -q "jobs/model-bench.sh" "$root/cadence/day/10-bench-fresh.sh"; then
+if grep -q "jobs/model-bench.sh" "$root/cadence/calendar/daily/10-bench-fresh.sh"; then
   ck "day drop-in retired" "0" "invocation found"
 else
   ck "day drop-in retired" "0" "0"
 fi
-STATE_FILE="$sb/STATE.md" bash "$root/cadence/day/10-bench-fresh.sh"
+STATE_FILE="$sb/STATE.md" bash "$root/cadence/calendar/daily/10-bench-fresh.sh"
 ck "day drop-in note only" "1" \
   "$(grep -c 'staleness note only (nightly catch-up retired)' "$sb/STATE.md")"
 

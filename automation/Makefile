@@ -17,21 +17,17 @@ enable:
 	systemctl --user enable --now hngh-night-agent.timer hngh-morning-report.timer hngh-night-research.timer hngh-model-bench.timer
 	systemctl --user enable --now hngh-autonomy.timer
 	systemctl --user enable --now hngh-credential-health.timer
-	systemctl --user enable --now hngh-cadence-1m.timer hngh-cadence-5m.timer hngh-cadence-10m.timer
-	systemctl --user enable --now hngh-cadence-day.timer hngh-cadence-week.timer hngh-cadence-month.timer
-	systemctl --user enable --now hngh-cadence-30m.timer hngh-cadence-hour.timer
+	systemctl --user enable --now hngh-cadence-subhour.timer hngh-cadence-hour.timer hngh-cadence-calendar.timer
 	systemctl --user enable --now hngh-overnight.timer
 	systemctl --user enable --now hngh-dashboard.service
-	@echo "enabled timers (hourly / 4h / 06-09 / night-agent / report 07:30 / research 23:40 / bench 01:10 / autonomy hourly / credential-health hourly / cadence 1m-5m-10m-30m-hour-day-week-month / overnight 2h) + dashboard service :8890"
+	@echo "enabled timers (hourly / 4h / 06-09 / night-agent / report 07:30 / research 23:40 / bench 01:10 / autonomy hourly / credential-health hourly / cadence subhour-hour-calendar / overnight 2h) + dashboard service :8890"
 
 disable:
 	systemctl --user disable --now hngh-automation.timer hngh-security.timer hngh-morning.timer
 	systemctl --user disable --now hngh-night-agent.timer hngh-morning-report.timer hngh-night-research.timer hngh-model-bench.timer
 	systemctl --user disable --now hngh-autonomy.timer
 	systemctl --user disable --now hngh-credential-health.timer
-	systemctl --user disable --now hngh-cadence-1m.timer hngh-cadence-5m.timer hngh-cadence-10m.timer
-	systemctl --user disable --now hngh-cadence-day.timer hngh-cadence-week.timer hngh-cadence-month.timer
-	systemctl --user disable --now hngh-cadence-30m.timer hngh-cadence-hour.timer
+	systemctl --user disable --now hngh-cadence-subhour.timer hngh-cadence-hour.timer hngh-cadence-calendar.timer
 	systemctl --user disable --now hngh-overnight.timer
 	systemctl --user disable --now hngh-dashboard.service
 	@echo "disabled all hngh-automation units"

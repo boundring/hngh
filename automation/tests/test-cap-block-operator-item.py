@@ -12,7 +12,7 @@ STATE_FILE / AUTOMATION_ROOT pointed into a tmp dir) -- never the real
 ledger, never a real cap change, never the email channel (the conf seam
 points at a nonexistent path, so the channel is dormant by design).
 
-The consumer surface (automation/cadence/1m/05-operator-items.sh ->
+The consumer surface (automation/cadence/subhour/05-operator-items.sh ->
 jobs/operator-items-feed.py) reads STATE.md crumbs whose event matches
 ^alert or whose joined text matches papercut|flagged|needs|"operator
 decision"; those two criteria are replicated here to assert the filed

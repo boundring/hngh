@@ -97,7 +97,7 @@ ck "fail-open writes no breadcrumb" "0" "$(crumb_rows)"
 tick="$root/jobs/cadence-tick.sh"
 ck "cadence-tick sources memory-gate.sh" "1" "$(grep -c 'lib/memory-gate.sh' "$tick")"
 ck "cadence-tick gates rapid tiers only" "1" \
-  "$(grep -c '^30m | 10m | 5m | 1m)' "$tick")"
+  "$(grep -c '^subhour)' "$tick")"
 oc="$root/scripts/overnight-cycle.sh"
 ck "overnight sources memory-gate.sh" "1" "$(grep -c 'lib/memory-gate.sh' "$oc")"
 ck "overnight gate sets STOP=1 on refusal" "1" \

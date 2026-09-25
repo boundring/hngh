@@ -47,8 +47,8 @@ records into its own timestamped scratch store.
 ## One automation beat
 
 The live tier is a cadence continuum. A systemd timer per tier
-(`automation/systemd/hngh-cadence-1m.timer`; siblings run
-5m/10m/30m/hour/day/week/month) fires a oneshot service whose
+(`automation/systemd/hngh-cadence-subhour.timer`; siblings run
+hour/calendar) fires a oneshot service whose
 `ExecStart` is `automation/jobs/cadence-tick.sh` with the tier in the
 environment. One tick:
 

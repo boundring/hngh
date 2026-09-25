@@ -6,7 +6,7 @@
 #      degraded operation paces the next tick; busy local never defers --
 #      it routes (deck when responsive, quota leg when not); the shared
 #      flock skips a beat that arrives mid-run.
-#   2. cadence/day/20-model-saturation.sh: empty telemetry -> one
+#   2. cadence/calendar/daily/20-model-saturation.sh: empty telemetry -> one
 #      "no data yet" row (identity-deduped on rerun); estimated and
 #      measured busy-second fixtures produce the right peak/daily
 #      utilization and headroom verdicts; the failfirst tuning state
@@ -147,7 +147,7 @@ run_sat() { # db -> prints the reports.md rows; report root $sb/sat/root
  STATE_FILE="$sb/sat/STATE.md" HNGH_REPORT_ROOT="$sb/sat/root" \
   HNGH_TELEMETRY_DB="$1" FAILFIRST_STATE_DIR="$sb/ff-empty" \
   HNGH_HOME="$(cd "$root/.." && pwd)" \
-  bash "$root/cadence/day/20-model-saturation.sh" >/dev/null 2>&1
+  bash "$root/cadence/calendar/daily/20-model-saturation.sh" >/dev/null 2>&1
  cat "$sb/sat/root/docs/project/reports.md" 2>/dev/null
 }
 

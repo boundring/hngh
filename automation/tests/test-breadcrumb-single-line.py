@@ -2,7 +2,7 @@
 """breadcrumb single-line integrity (2026-09-20 defect fix): the STATE.md
 crumb format is exactly one line per event (timestamp | job | event |
 detail). Detail text containing literal newlines — e.g. the last-N make
-error lines passed through by cadence/day/03-gate-check.sh — must be
+error lines passed through by cadence/calendar/daily/03-gate-check.sh — must be
 folded before the append, or the file gains malformed non-crumb lines
 (2026-09-19 gate-red alert leaked 11 raw lines). Hermetic: sources the
 real lib/breadcrumbs.sh against a temp STATE_FILE and asserts the

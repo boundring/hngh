@@ -15,8 +15,11 @@ never evidence and never principle-satisfying (design doc :57, :144-145).
 One batched system_one call (lib/typesafe.py ask_nouls) over the ten
 principle-matrix refusal conditions
 (docs/design/autonomous-development-control.md :51-62); a question fires
-one finding at v >= 0.7 (the steer bar precedent). Fail-open: no key,
-any failure, or every v < 0.7 -> empty stdout and the ceremony runs
+one finding at v >= 0.7 (the steer bar precedent). A second batched call
+asks the disconfirming question per principle and emits advisory counter
+rows at the same bar (the principle column keeps the matrix name; the
+text carries "counter p="). At most 20 rows ever ride out. Fail-open: no
+key, any failure, or every v < 0.7 -> empty stdout and the ceremony runs
 exactly as before. Citation caveat (recorded): System One returns labels
 and probabilities only, so the cite names the judged source set, not
 lines; line-level cites remain the chat reviewer's job.
@@ -32,6 +35,7 @@ from typesafe import ask_nouls
 FIRE_BAR = 0.7
 DIFF_CUT = 8000
 FIELD_CUT = 200
+ROW_CAP = 20
 
 # The principle matrix (design doc :51-62): wire name -> refusal
 # condition. Order is the fixed matrix order.
@@ -87,9 +91,24 @@ def findings(objective, files):
             if v is not None and v >= FIRE_BAR:
                 text = ("risk p=%.2f: %s" % (v, cond))[:FIELD_CUT]
                 out.append("%s\t%s\t%s" % (name, text, cite))
-        return out
     except Exception:
         return []
+    counters = {
+        name: ("%s. Is there a plausible disconfirming reading of this "
+               "candidate?") % cond
+        for name, cond in PRINCIPLES.items()
+    }
+    try:
+        cvalues = ask_nouls(state, counters)
+        for name, cond in PRINCIPLES.items():
+            v = cvalues.get(name)
+            if v is not None and v >= FIRE_BAR:
+                text = ("counter p=%.2f: plausible disconfirming reading of %s"
+                        % (v, cond))[:FIELD_CUT]
+                out.append("%s\t%s\t%s" % (name, text, cite))
+    except Exception:
+        pass
+    return out[:ROW_CAP]
 
 
 if __name__ == "__main__":

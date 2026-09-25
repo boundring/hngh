@@ -55,7 +55,7 @@ run() {
   TTSR_RULES_DIR="$sb/rules" TTSR_SETTINGS="$sb/config.yml" \
     TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" HNGH_HOME="$(cd "$root/.." && pwd)" \
     STATE_FILE="$sb/STATE.md" \
-    bash "$root/cadence/day/22-ttsr-fit.sh"
+    bash "$root/cadence/calendar/daily/22-ttsr-fit.sh"
 }
 
 # case 1: present + armed + enabled -> silent
@@ -132,7 +132,7 @@ inj tight 2
 TTSR_FIT_THRESHOLD=2 TTSR_RULES_DIR="$sb/rules" TTSR_SETTINGS="$sb/config.yml" \
   TTSR_SESS_DIR="$sb/sess" HNGH_REPORT_ROOT="$sb/root" HNGH_HOME="$(cd "$root/.." && pwd)" \
   STATE_FILE="$sb/STATE.md" \
-  bash "$root/cadence/day/22-ttsr-fit.sh"
+  bash "$root/cadence/calendar/daily/22-ttsr-fit.sh"
 need grep -q 'ttsr fit: session tight — ttsr injections: 2 (>= threshold 2)' < <(rows)
 ok "TTSR_FIT_THRESHOLD env override"
 

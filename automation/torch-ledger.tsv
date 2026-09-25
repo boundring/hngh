@@ -13,14 +13,14 @@ agent-handoffs.md	agent-handoffs	overnight-cycle.sh,agent-watchdog.sh	live	reade
 digest-daily+morning	digest/\$\{?(DATE|day)\b|MORNING-	ping-hourly.sh	live	daily digest/YYYY-MM-DD.md + MORNING-*.md; readers: night-research corpus, update_dashboard, smoke-test
 digest-RESEARCH-BEAT	RESEARCH-BEAT-	-	live	self-consumer: the research beat re-reads prior beat digests as prior material for the next transition
 digest-DRAFT-PLAN	DRAFT-PLAN-	overnight-cycle.sh	live	reader: email-digest.py lists drafted plans for the operator digest
-digest-BENCH	BENCH-	model-bench.sh	write-only	"written for the morning report" claim never wired; bench consumers read stats/model-bench-*.jsonl, not this digest
+digest-BENCH	BENCH-	model-bench.sh	live	reader wired 2026-09-24: email-digest.py model_bench_line() reads digest/BENCH-<day>.md into the digest pieces
 digest-REVIEW	REVIEW-	04-review-prep.sh	live	consumer landed 2026-09-06: 06-review-disposition.sh sinks P1/P2 findings to the report queue (was write-only in the 09-06 audit)
-digest-RESEARCH	RESEARCH-\$\{?DATE	night-research.sh	write-only	night research brief; RESEARCH-REVIEW-* dispositions share the fate — no consumer
+digest-RESEARCH	RESEARCH-\$\{?DATE	night-research.sh	live	reader wired 2026-09-24: 33-research-beat.sh REVIEW evidence carries the day's night brief (email-digest.py night_brief_line() also reads it; %-format hid from the ERE)
 queue.md	queue\.md	-	live	kernel ledger; readers: email-digest queued_count, overnight pick_lane, roadmap-review, zoom-out
 plans	\.plan\.md	-	live	kernel plan ledger; readers: router-tick, accept-plans, plan-feed, overnight-cycle selector, plan-dispose
 operator-items+dismissed+approved	operator-items\.json|operator-dismissed\.json|operator-approved\.json	operator-items-feed.py,imap-poll.py	live	readers: dashboard-self-review freshness+validity, refresh-dashboard, dashboard-server; operator decisions (deny:/approve: via imap-poll) write dismissed/approved ledgers
 research-lines+subjects	research-lines\.tsv|research-subjects\.txt	-	live	readers: research-feed dashboard spine, overnight-cycle crystallized lines, research beat, generate-publication
-email-qa.log	email-qa\.log	13-email-qa.sh,email-qa.py	write-only	digest-QA trend log appended daily; nothing reads it back (the scorer's docstring self-reference is production-side)
+email-qa.log	email-qa\.log	13-email-qa.sh,email-qa.py	live	reader wired 2026-09-24: email-digest.py email_qa_trend() reads the log into the digest pieces
 reports.md+report-bodies	reports\.md|report-bodies	-	live	kernel report ledger; readers: system-feed backups probe, overnight-cycle draft source, dashboard-self-review ledger check
 active-work.md	active-work\.md	-	live	kernel artifact; readers: 01-activity-tick implementation/refactor/cleanup increments
 dashboard-json-feeds	dashboard/	-	live	readers: ui-audit, dashboard-self-review, smoke-test, refresh-dashboard; served by dashboard-server.py at repo root

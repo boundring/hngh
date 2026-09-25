@@ -19,8 +19,8 @@ done
 # the beat script recomputes AUTOMATION_ROOT from $0 (04-review-prep.sh
 # sources "$(dirname "$0")/../.."/lib/common.sh), so it must run through a
 # sandbox-tree path or it leaks the real repo's config.env and params.
-mkdir -p "$sb/cadence/day"
-ln -s "$root/cadence/day/04-review-prep.sh" "$sb/cadence/day/"
+mkdir -p "$sb/cadence/calendar/daily"
+ln -s "$root/cadence/calendar/daily/04-review-prep.sh" "$sb/cadence/calendar/daily/"
 : >"$sb/cadence-params.tsv" # no rows unless a case arms one
 : >"$sb/STATE.md"
 # stubs the model_call emit path and the review beat call into
@@ -131,7 +131,7 @@ git -C "$sb" init -q
 gitc() { git -C "$1" -c user.email=t@t -c user.name=t commit -q --allow-empty -m t; }
 gitc "$sb/kernel"
 gitc "$sb"
-run_beat() { # (runs cadence/day/04-review-prep.sh; caller set the stub row)
+run_beat() { # (runs cadence/calendar/daily/04-review-prep.sh; caller set the stub row)
   (
     export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=review-test
     export HOME="$sb" DIGEST_DIR="$sb/digest" HNGH_HOME="$sb/kernel"
@@ -145,7 +145,7 @@ run_beat() { # (runs cadence/day/04-review-prep.sh; caller set the stub row)
     export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
     unset KIMI_URL KIMI_AI_KEY KIMI_MODEL ZAI_URL Z_AI_API_KEY ZAI_MODEL
     unset OCGO_URL OPENCODE_API_KEY OCGO_MODEL
-    bash "$sb/cadence/day/04-review-prep.sh" >/dev/null 2>&1
+    bash "$sb/cadence/calendar/daily/04-review-prep.sh" >/dev/null 2>&1
   )
 }
 STUB_CONTENT="print Hello world" stub_start deck2

@@ -116,7 +116,7 @@ OUT="$AUTOMATION_ROOT/$LOG"
   printf '\n## Beats that did not fire while down (day tier; no catch-up scheduler exists)\n\n'
   timing="$AUTOMATION_ROOT/logs/drop-in-timing.log"
   missed=0
-  for f in "$AUTOMATION_ROOT"/cadence/day/*.sh; do
+  for f in "$AUTOMATION_ROOT"/cadence/calendar/daily/*.sh; do
     [ -f "$f" ] || continue
     name="$(basename "$f")"
     last="$(awk -F'|' -v n="$name" '$2 == n {t = $1} END {print t}' \
@@ -128,7 +128,7 @@ OUT="$AUTOMATION_ROOT/$LOG"
     fi
   done
   if [ "$missed" -gt 0 ]; then
-    printf '\nRun these next (the existing one-line catch-up, no scheduler invented):\n\n    cd "$AUTOMATION_ROOT" && make adhoc TIER=day\n\n'
+    printf '\nRun these next (the existing one-line catch-up, no scheduler invented):\n\n    cd "$AUTOMATION_ROOT" && for f in cadence/calendar/daily/*.sh; do bash "$f"; done\n\n'
   else
     printf 'none — every day-tier beat fired within the last 24h.\n'
   fi

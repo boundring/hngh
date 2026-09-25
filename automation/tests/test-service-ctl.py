@@ -157,7 +157,7 @@ class ServiceCtl(unittest.TestCase):
 
 
 PROBE = ROOT / "jobs" / "service-state.py"
-RECOVERY = ROOT / "cadence" / "day" / "11-service-recovery.sh"
+RECOVERY = ROOT / "cadence" / "calendar" / "daily" / "11-service-recovery.sh"
 
 
 def free_port():
@@ -315,7 +315,7 @@ class ServiceStateProbe(unittest.TestCase):
 
 
 class ServiceRecovery(unittest.TestCase):
-    """cadence/day/11-service-recovery.sh retargeted to :8888 via
+    """cadence/calendar/daily/11-service-recovery.sh retargeted to :8888 via
     unsloth-studio.service (the :8080/llama-server branch is gone)."""
 
     def setUp(self):

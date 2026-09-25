@@ -3,7 +3,7 @@
 
 Red-first regression for the dismiss-clobber defect: imap-poll's deny:
 directive used to transition dashboard/operator-items.json only, so the
-next jobs/operator-items-feed.py rebuild (cadence/1m/05-operator-items.sh)
+next jobs/operator-items-feed.py rebuild (cadence/subhour/05-operator-items.sh)
 reset the item to open and the operator's emailed decision evaporated.
 
 Contract after the fix:

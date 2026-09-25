@@ -30,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 SHELL_WRITERS = {
-    "cadence/30m/05-readout.sh": ".readout.json.$$.tmp",
+    "cadence/subhour/05-readout.sh": ".readout.json.$$.tmp",
     "jobs/refresh-dashboard.sh": ".readout.json.$$.tmp",
     "jobs/time-ledger.sh": '"$LEDGER.$$.tmp"',
 }
@@ -55,7 +55,7 @@ class TmpIsolation(unittest.TestCase):
                           "the live file")
 
     def test_shell_writers_publish_by_rename(self):
-        for rel in ("cadence/30m/05-readout.sh", "jobs/refresh-dashboard.sh"):
+        for rel in ("cadence/subhour/05-readout.sh", "jobs/refresh-dashboard.sh"):
             text = (ROOT / rel).read_text()
             self.assertRegex(text, r'mv "\$tmp"')
 

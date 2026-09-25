@@ -169,7 +169,7 @@ class CrumbsMirrorAlertTest(unittest.TestCase):
 
     def run_tick(self):
         proc = subprocess.run(
-            ["bash", str(ROOT / "cadence" / "1m" / "15-crumbs-sync.sh")],
+            ["bash", str(ROOT / "cadence" / "subhour" / "15-crumbs-sync.sh")],
             env=self.env, capture_output=True, text=True)
         self.assertEqual(proc.returncode, 0, proc.stderr)
 

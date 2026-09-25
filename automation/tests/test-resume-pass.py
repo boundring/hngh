@@ -31,7 +31,7 @@ class ResumePass(unittest.TestCase):
         self._td = tempfile.TemporaryDirectory()
         self.root = Path(self._td.name)
         (self.root / "logs").mkdir()
-        (self.root / "cadence" / "day").mkdir(parents=True)
+        (self.root / "cadence" / "calendar" / "daily").mkdir(parents=True)
         (self.root / "dashboard").mkdir()
         self.kernel = self.root / "kernel"
         (self.kernel / "docs" / "project" / "plans").mkdir(parents=True)
@@ -52,7 +52,7 @@ class ResumePass(unittest.TestCase):
             (self.kernel / "docs" / "project" / "plans"
              / "2026-09-05-held-proposal.plan.md").write_text(PLAN)
         for n in ("01-a.sh", "02-b.sh"):
-            (self.root / "cadence" / "day" / n).write_text("#!/bin/sh\n")
+            (self.root / "cadence" / "calendar" / "daily" / n).write_text("#!/bin/sh\n")
         if items:
             (self.root / "dashboard" / "operator-items.json").write_text(
                 json.dumps({"generated_at": iso(), "items": [
@@ -86,7 +86,7 @@ class ResumePass(unittest.TestCase):
         self.assertIn("accept-plans", text)
         # missed day beats listed with the existing catch-up command
         self.assertIn("01-a.sh", text)
-        self.assertIn("make adhoc TIER=day", text)
+        self.assertIn('for f in cadence/calendar/daily/*.sh; do bash "$f"; done', text)
         # open operator items with stale count
         self.assertIn("2 open, 1 stale", text)
         self.assertIn("some alert", text)

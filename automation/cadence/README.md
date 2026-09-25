@@ -1,19 +1,32 @@
 # cadence — mounted work per tier
 
-Each cadence tier (1m / 5m / 10m / 30m / hour / day / week / month) runs
+Each cadence tier (subhour / hour / calendar) runs
 `jobs/cadence-tick.sh`, which executes every `*.sh` drop-in under its own
-directory here in lexical order. Drop-ins are plain bash scripts sourced
-with the standard `jobs/` environment (`lib/common.sh`). An empty or
-absent tier directory does nothing (breadcrumb only, exit 0).
+directory here in lexical order (calendar runs `calendar/daily`,
+`calendar/weekly`, and/or `calendar/monthly` per the firing instant).
+Drop-ins are plain bash scripts sourced with the standard `jobs/`
+environment (`lib/common.sh`). An empty or absent tier directory does
+nothing (breadcrumb only, exit 0).
 
-To mount work at a cadence: `mkdir -p cadence/<tier>` and drop a `*.sh`.
+To mount work at a cadence: `mkdir -p cadence/subhour` (or
+`cadence/calendar/<daily|weekly|monthly>`) and drop a `*.sh`.
 
 Tier schedules (systemd, see the unit `OnCalendar=`):
-- 1m  `*:*:00`   · 5m  `*-*-* *:0/5:00` · 10m `*-*-* *:0/10:00`
-- 30m `*-*-* *:00/30:00` · hour `*-*-* *:00:10` (10s offset dodges the :00:00
+- subhour `*:*:00` · hour `*-*-* *:00:10` (10s offset dodges the :00:00
   autonomy/ping storm; the `hngh-automation`/`hngh-autonomy` timers stay
   separate units)
-- week `Mon *-*-* 06:00:00` · month `*-*-01 06:00:00`
+- calendar `*-*-* 05:00:00` (daily) + `Mon *-*-* 06:00:00` (weekly) +
+  `*-*-01 06:00:00` (monthly)
+
+Tier collapse (2026-09-24, plan 2026-09-24-unresolved-matters-pass):
+the old 1m/5m/10m/30m timers collapsed into the one subhour tick, the old
+day/week/month timers into the one calendar timer. Former 5m/10m/30m
+drop-ins keep their beat with a 4-line `/tmp` stamp self-gate (the
+31-heartbeat pattern) at 300/600/1800s; former 1m drop-ins stay
+ungated. The calendar tick picks its subdir from the UTC firing instant:
+05:00 runs daily, 06:00 runs weekly on Mondays and monthly on the 1st
+(both when the 1st is a Monday), so every old firing instant is
+preserved. Known delta: the four per-tier flocks became one per tier.
 
 ## Mounted drop-ins (2026-09-07)
 
@@ -45,7 +58,7 @@ inside each script skips runs until the Inventory interval elapses.
   llm-wiki vault indexes (read-only pointers, 6 lines / 600 bytes,
   silent when the vaults are absent -- wiki surface, hngh
   docs/design/wiki-surface.md))
-- 30m: `50-research-overflow` (promoted to a full research beat at a
+- subhour (was 30m): `50-research-overflow` (promoted to a full research beat at a
   15-minute cadence, 2026-09-07: the drop-in runs the `33-research-beat`
   body immediately and again 15 minutes later, so research transitions
   land at :00 :15 :30 :45; always pinned non-local -- deck first when
@@ -53,14 +66,14 @@ inside each script skips runs until the Inventory interval elapses.
   failfirst tuning state (research-overflow, 15-minute
   tick); a shared flock in the beat body replaces the old 30-minute
   stagger guard; design: hngh docs/design/fail-first.md)
-- day: `17-torch-audit` (moved from week), `18-mimic-drill` (moved from
+- calendar/daily (was day): `17-torch-audit` (moved from week), `18-mimic-drill` (moved from
   week), `25-wiki-health` (moved from week; model-free two-vault probe:
   pages-on-disk vs registry count + meta staleness per llm-wiki vault,
   one identity-deduped alert per unhealthy vault), plus the pre-existing
   day drop-ins
-- week: `01-roadmap-review`
+- calendar/weekly (was week): `01-roadmap-review`, `02-bench-trigger`
 
-Day-tier drop-ins (one beat per script, lexical order):
+Daily drop-ins (calendar/daily, one beat per script, lexical order):
 `01-activity-tick` · `01-lesson-harvest` · `02-ledger-prune` ·
 `03-gate-check` · `04-review-prep` · `06-remote-posture` ·
 `06-review-disposition` (sinks digest findings to the report queue) ·
@@ -116,7 +129,7 @@ telemetry.
 
 ## 5m oversight tick — loop recognition (2026-08-26)
 
-`cadence/5m/01-oversight.sh` → `jobs/oversight-tick.sh` now watches the
+`cadence/subhour/01-oversight.sh` → `jobs/oversight-tick.sh` now watches the
 repeated-expensive-identical-work class. `probe_test_loops` alerts on 3+
 byte-identical breadcrumbs from the same oversight/credential/ceremony job
 within 30 min (consecutive for that job), and on 3+ `hngh-fasttest-*` verify
