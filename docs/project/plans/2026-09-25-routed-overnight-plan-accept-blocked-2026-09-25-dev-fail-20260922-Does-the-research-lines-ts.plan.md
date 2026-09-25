@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-09-25-dev-fail-20260922-Does-the-research-lines-ts -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-25T22:33:42Z routed-from=overnight:plan-accept-blocked:2026-09-25-dev-fail-20260922-Does-the-research-lines-ts -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-02T21:00:13Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -15,3 +15,4 @@ at 2026-09-25T21:00:13Z. Alert text: plan 2026-09-25-dev-fail-20260922-Does-the-
 ## Occurrences
 
 - 2026-09-25T22:00:12Z re-occurred (dedup window expired)
+- 2026-09-25T23:00:13Z re-occurred (dedup window expired)

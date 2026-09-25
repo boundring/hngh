@@ -7,15 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job file for daily digest generation
-  Verification: bash -n cadence/daily-digest.sh
-- [ ] Add unit test for the digest job's output format
+- [ ] Add a simple test utility script under scripts/ that validates basic repository state
+  Verification: bash -n scripts/hngh-verify-state.sh
+
+- [ ] Create a cadence job that runs the verification script on each commit
   Verification: make test
-- [ ] Add a script to validate digest output schema
-  Verification: python3 scripts/validate-digest-schema.py
-- [ ] Add integration test for the full cadence pipeline
+
+- [ ] Add a grep check to confirm no forbidden paths are modified
+  Verification: git grep -n 'systemd\|provider\|credential' -- jobs/ scripts/ cadence/ lib/ tests/ dashboard/ digest/ | head -5
+
+- [ ] Write a python3 stdlib script under scripts/ that checks for non-prune deletions
+  Verification: python3 scripts/check-deletions.py
+
+- [ ] Commit the new scripts and verify all tests pass
   Verification: make test
-- [ ] Add a dashboard job to track cadence execution history
-  Verification: bash -n dashboard/cadence-tracker.sh
-- [ ] Verify all new files pass syntax checks
-  Verification: bash -n cadence/daily-digest.sh && bash -n dashboard/cadence-tracker.sh && python3 scripts/validate-digest-schema.py
