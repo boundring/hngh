@@ -4,6 +4,20 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-25
+
+- **Unresolved matters pass: router bound, lane wiring, operator calls
+  settled** (docs/records/2026-09-24-unresolved-matters-pass.md): the
+  router's re-route policy is bound (`HNGH_ROUTER_REROUTE_MAX`, default
+  3) with the routed-residue sweep parked; the cadence collapsed to
+  subhour|hour|calendar with firing-equivalence proven before the timer
+  swap; typed challenges gained a batched counter seam pinned hermetically;
+  the last write-only torch artifacts gained readers (18 live / 0
+  write-only); the research-review apostrophe-in-`${var:+...}` regression
+  was root-caused and fixed; C2/C4 park at the operator, C3 settled
+  (no change), the crumbs reader flip stays blocked behind its recorded
+  SLA.
+
 ### 2026-09-24
 
 - **Foundation consolidation: doctrine layer, constitutional preamble,
