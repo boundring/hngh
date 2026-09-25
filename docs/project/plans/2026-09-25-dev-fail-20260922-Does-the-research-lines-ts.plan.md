@@ -6,17 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script that generates a weekly automation status report from existing job outputs
-  Verification: bash -n jobs/weekly-status-report.sh
+- [ ] Add a cadence helper that validates job output schema before dispatch
+  Verification: bash -n cadence/validate-output.sh
 
-- [ ] Create a verification script that confirms the report script runs without errors
-  Verification: bash jobs/weekly-status-report.sh && echo "SUCCESS"
+- [ ] Create a lib utility that normalizes job status strings across runners
+  Verification: python3 lib/normalize-status.py
 
-- [ ] Add a test case that validates the report output contains expected job identifiers
-  Verification: bash tests/test-weekly-report.sh
+- [ ] Update dashboard to surface normalized status in the job list view
+  Verification: bash -n dashboard/render-status.sh
 
-- [ ] Update the cadence configuration to include the new weekly report job
-  Verification: grep -q "weekly-status-report" cadence/jobs.yaml
-
-- [ ] Run the full test suite to confirm no regressions from the new job additions
+- [ ] Add a test that exercises the status normalization on sample outputs
   Verification: make test
+
+- [ ] Wire the cadence validator into the main dispatch loop
+  Verification: bash -n cadence/dispatch-loop.sh
