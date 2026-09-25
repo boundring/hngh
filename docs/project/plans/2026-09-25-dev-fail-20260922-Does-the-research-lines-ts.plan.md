@@ -4,22 +4,21 @@
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Rationale: Implements the hngh-automation research line for cadence-driven job scheduling verification, adding a lightweight script to validate job definitions before execution.
+
 ## Steps
 
-- [ ] Add a job-state reporter script that parses test output and emits completion metrics
-  Verification: bash scripts/report-job-state.sh
+- [ ] Add a validation script for job definition syntax
+  Verification: bash -n scripts/validate-job-def.sh
 
-- [ ] Add a cadence-orchestration test that validates the reporter against sample output
+- [ ] Create a test for the validation script
   Verification: make test
 
-- [ ] Add a dashboard integration that consumes the reporter metrics
-  Verification: bash -n dashboard/consume-metrics.sh
+- [ ] Add a job definition example to jobs/
+  Verification: grep -q "example" jobs/example-job.yaml
 
-- [ ] Add a digest summary that aggregates reporter output across runs
-  Verification: python3 digest/aggregate.py
+- [ ] Update cadence configuration to reference new validation
+  Verification: grep -q "validate" cadence/cadence.yaml
 
-- [ ] Add a lib helper for parsing job output into structured state
-  Verification: bash -n lib/job-state-parser.sh
-
-- [ ] Add a tests fixture for job-state reporter validation
+- [ ] Add integration test for the full validation flow
   Verification: make test

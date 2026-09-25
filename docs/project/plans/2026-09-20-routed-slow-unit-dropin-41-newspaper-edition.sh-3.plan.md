@@ -12,3 +12,4 @@ at 2026-09-20T09:00:13Z. Alert text: [oversight] slow-unit: dropin:41-newspaper-
 ## Occurrences
 
 - 2026-09-25T09:00:13Z re-occurred (dedup window expired)
+- 2026-09-25T10:00:13Z re-occurred (dedup window expired)
