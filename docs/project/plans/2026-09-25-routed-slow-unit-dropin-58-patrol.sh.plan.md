@@ -8,3 +8,7 @@ at 2026-09-25T04:00:16Z. Alert text: [oversight] slow-unit: dropin:58-patrol.sh 
 
 - [ ] Delve: open research subject fail-20260925-slow-unit-dropin-58-patrol.sh for slow-unit:dropin:58-patrol.sh; record disposition; then fix or park
       Verification: research subject fail-20260925-slow-unit-dropin-58-patrol.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-25T05:00:37Z re-occurred (dedup window expired)

@@ -6,17 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper that validates job output schema before dispatch
-  Verification: bash -n cadence/validate-output.sh
+- [ ] Add a new cadence job template for automated data validation under `cadence/jobs/data-validation.yaml`
+  Verification: `bash -n cadence/jobs/data-validation.yaml`
 
-- [ ] Create a lib utility that normalizes job status strings across runners
-  Verification: python3 lib/normalize-status.py
+- [ ] Create a verification script under `scripts/validate-data-job.sh` that checks the new job template structure
+  Verification: `bash scripts/validate-data-job.sh`
 
-- [ ] Update dashboard to surface normalized status in the job list view
-  Verification: bash -n dashboard/render-status.sh
+- [ ] Add unit tests for the data validation job under `tests/cadence/data-validation.test.sh`
+  Verification: `make test`
 
-- [ ] Add a test that exercises the status normalization on sample outputs
-  Verification: make test
+- [ ] Update the cadence runner to register the new job template under `lib/cadence-registry.py`
+  Verification: `python3 -c "import sys; sys.path.insert(0, 'lib'); from cadence_registry import registry; print(len(registry))"`
 
-- [ ] Wire the cadence validator into the main dispatch loop
-  Verification: bash -n cadence/dispatch-loop.sh
+- [ ] Add a dashboard snippet under `dashboard/data-validation.html` to display validation results
+  Verification: `bash -n dashboard/data-validation.html`
+
+- [ ] Create a digest template under `digest/data-validation.md` for automated result reporting
+  Verification: `bash -n digest/data-validation.md`
