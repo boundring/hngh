@@ -6,17 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `jobs/status-report.sh` script that lists active jobs from the repository's job registry
-  Verification: bash -n jobs/status-report.sh
+- [ ] Add a new job template for task pipeline tracking under jobs/
+  Verification: bash -n jobs/task-pipeline-template.sh
 
-- [ ] Create `tests/test-status-report.sh` to validate the script outputs expected job entries
-  Verification: bash tests/test-status-report.sh
+- [ ] Create a verification script that confirms job template syntax
+  Verification: bash scripts/verify-job-template.sh
 
-- [ ] Add `cadence/schedule-check.sh` to verify scheduled cadence entries are non-empty
-  Verification: bash cadence/schedule-check.sh
+- [ ] Add a test case for the new job template
+  Verification: make test
 
-- [ ] Update `dashboard/README.md` with documentation for the new status-report utility
-  Verification: grep -q "status-report" dashboard/README.md
+- [ ] Update cadence tracking to include new job type
+  Verification: bash -n cadence/cadence-tracker.sh
 
-- [ ] Run `make test` to confirm all existing tests still pass after additions
+- [ ] Add dashboard snippet for new job type visualization
+  Verification: bash -n dashboard/dashboard-snippet.sh
+
+- [ ] Run full test suite to confirm no regressions
   Verification: make test
