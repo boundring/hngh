@@ -68,7 +68,7 @@ run_or_filed() { # activity function -> 0
   local activity="$1" fn="$2" owner
   owner="$(adopted "$activity")"
   if [ -n "$owner" ]; then
-    file_report "scheduled" "$activity: owned-by $owner (peer adopted this row)"
+    breadcrumb "$JOB_NAME" "scheduled" "$activity: owned-by $owner (peer adopted this row)"
   else
     "$fn"
   fi
@@ -79,7 +79,7 @@ run_or_filed() { # activity function -> 0
 implementation_inc() {
   local aw="$KERNEL/docs/project/active-work.md"
   [ -f "$aw" ] || {
-    file_report "scheduled" "implementation: active-work.md absent (nothing due)"
+    breadcrumb "$JOB_NAME" "scheduled" "implementation: active-work.md absent (nothing due)"
     return 0
   }
   local lanes
@@ -87,7 +87,7 @@ implementation_inc() {
   local top
   top="$(grep -h '^[0-9]' "$aw" | head -1 | cut -c7-80)"
   if [ "${lanes:-0}" = "0" ]; then
-    file_report "scheduled" "implementation: $(day_of) no open work lane (nothing due)"
+    breadcrumb "$JOB_NAME" "scheduled" "implementation: $(day_of) no open work lane (nothing due)"
   else
     file_report "progress" "implementation: $(day_of) $lanes open lane(s); next=$top"
   fi
@@ -102,7 +102,7 @@ review_inc() {
   latest_id="$(printf '%s' "$latest" | cut -d'|' -f4 | tr -d ' ')"
   latest_first="$(printf '%s' "$latest" | cut -d'|' -f5 | tr -d ' ')"
   if [ -z "$latest_id" ]; then
-    file_report "scheduled" "review: $(day_of) nothing new to review"
+    breadcrumb "$JOB_NAME" "scheduled" "review: $(day_of) nothing new to review"
   else
     file_report "progress" "review: $(day_of) latest progress increment=$latest_id ($latest_first)"
   fi
@@ -114,7 +114,7 @@ refactor_inc() {
   if [ -f "$aw" ] && grep -qi 'refactor' "$aw"; then
     file_report "progress" "refactor: $(day_of) refactor mentioned in active-work; step due"
   else
-    file_report "scheduled" "refactor: $(day_of) no refactor step defined (none scheduled)"
+    breadcrumb "$JOB_NAME" "scheduled" "refactor: $(day_of) no refactor step defined (none scheduled)"
   fi
 }
 
@@ -124,7 +124,7 @@ cleanup_inc() {
   if [ -f "$aw" ] && grep -qiE 'done|complete|obsolete' "$aw"; then
     file_report "progress" "cleanup: $(day_of) done markers present; cleanup due"
   else
-    file_report "scheduled" "cleanup: $(day_of) nothing obsolete (nothing to clean)"
+    breadcrumb "$JOB_NAME" "scheduled" "cleanup: $(day_of) nothing obsolete (nothing to clean)"
   fi
 }
 
@@ -133,13 +133,13 @@ inward_inc() {
   local ci="$KERNEL/docs/project/checkin.md" today
   today="$(day_of)"
   if [ -f "$ci" ] && grep -q "$today" "$ci"; then
-    file_report "scheduled" "inward: $today already noted in checkin.md"
+    breadcrumb "$JOB_NAME" "scheduled" "inward: $today already noted in checkin.md"
   elif [ -f "$ci" ]; then
     local peek
     peek="$(head -1 "$ci")"
     file_report "progress" "inward: $today checkin awaits line (head: $peek)"
   else
-    file_report "scheduled" "inward: checkin.md absent; nothing to note"
+    breadcrumb "$JOB_NAME" "scheduled" "inward: checkin.md absent; nothing to note"
   fi
 }
 

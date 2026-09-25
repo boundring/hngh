@@ -11,9 +11,15 @@
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
-cleanup() { [ -n "${SRVPID:-}" ] && kill "$SRVPID" 2>/dev/null; rm -rf "$sb"; }
+cleanup() {
+  [ -n "${SRVPID:-}" ] && kill "$SRVPID" 2>/dev/null
+  rm -rf "$sb"
+}
 trap cleanup EXIT
 mkdir -p "$sb/bin" "$sb/state" "$sb/.config/hngh"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 fails=0
 ck() { # desc expected actual
   if [ "$2" = "$3" ]; then echo "ok: $1"; else
@@ -42,9 +48,11 @@ call() {
     export HNGH_REPORT_ROOT="$sb" HNGH_HOME_DIR="$sb/.hngh"
     export CREDENTIAL_FRESHNESS_LEDGER="$sb/fresh.tsv"
     export CREDENTIAL_FRESHNESS_OLA=604800
-    export CURL_LOG="$sb/curl.log" STATE_FILE="$sb/state/STATE.md"
+    export CURL_LOG="$sb/curl.log"
     export UNSLOTH_URL="$sb/no-such-endpoint" TOKEN_FILE="$sb/tok"
-    : >"$sb/curl.log"; : >"$sb/state/STATE.md"; rm -f "$sb/fresh.tsv"
+    : >"$sb/curl.log"
+    crumbs_reset
+    rm -f "$sb/fresh.tsv"
     # the operator's session may arm real channels — hermetic runs start bare
     unset TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID HNGH_WEBHOOK_URL HNGH_NOTIFY_EMAIL_CONF
     unset MOONSHOTAI_API_KEY KIMI_AI_KEY KIMI_FOR_CODING_KEY KIMI_KEY_FILE KIMI_URL
@@ -58,7 +66,8 @@ call() {
 }
 no_argv_secret() { # desc value — value must not appear outside STDIN lines
   if grep -v '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
-    echo "FAIL: $1: secret on curl argv"; fails=$((fails + 1))
+    echo "FAIL: $1: secret on curl argv"
+    fails=$((fails + 1))
   else
     echo "ok: $1: value absent from curl argv"
   fi
@@ -67,11 +76,12 @@ in_stdin() { # desc value — value must appear on a STDIN line
   if grep '^STDIN:' "$sb/curl.log" 2>/dev/null | grep -qF "$2"; then
     echo "ok: $1: value carried in stdin curl config"
   else
-    echo "FAIL: $1: stdin curl config missing value"; fails=$((fails + 1))
+    echo "FAIL: $1: stdin curl config missing value"
+    fails=$((fails + 1))
   fi
 }
-crumb() { # state-pattern -> count in the sandbox STATE.md
-  grep -c "$2" "$sb/state/STATE.md" 2>/dev/null || true
+crumb() { # state-pattern -> count in the sandbox crumbs journal
+  crumbs | grep -c "$2" 2>/dev/null || true
 }
 
 # --- 1. unsloth session probe (token file armed) ---
@@ -121,9 +131,10 @@ call_keep() { # like call(), but keeps the freshness ledger between runs
     export HNGH_REPORT_ROOT="$sb" HNGH_HOME_DIR="$sb/.hngh"
     export CREDENTIAL_FRESHNESS_LEDGER="$sb/fresh.tsv"
     export CREDENTIAL_FRESHNESS_OLA=604800
-    export CURL_LOG="$sb/curl.log" STATE_FILE="$sb/state/STATE.md"
+    export CURL_LOG="$sb/curl.log"
     export UNSLOTH_URL="$sb/no-such-endpoint" TOKEN_FILE="$sb/tok"
-    : >"$sb/curl.log"; : >"$sb/state/STATE.md"
+    : >"$sb/curl.log"
+    crumbs_reset
     # the operator's session may arm real channels — hermetic runs start bare
     unset TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID HNGH_WEBHOOK_URL HNGH_NOTIFY_EMAIL_CONF
     unset MOONSHOTAI_API_KEY KIMI_AI_KEY KIMI_FOR_CODING_KEY KIMI_KEY_FILE KIMI_URL
@@ -154,7 +165,8 @@ ck "blank-ledger: exit 0" "rc=0" "$out"
 if [ "$(grep -c 'ledger-empty' "$sb/docs/project/reports.md" 2>/dev/null || true)" -ge 1 ]; then
   echo "ok: blank-ledger: ledger-empty alert filed"
 else
-  echo "FAIL: blank-ledger: no ledger-empty alert row"; fails=$((fails + 1))
+  echo "FAIL: blank-ledger: no ledger-empty alert row"
+  fails=$((fails + 1))
 fi
 
 # 6c. absent ledger: bootstrap seeds and crumbs (the original wiring).
@@ -164,7 +176,8 @@ ck "absent-ledger: exit 0" "rc=0" "$out"
 ck "absent-ledger: bootstrap crumb" "1" \
   "$(crumb bootstrap 'freshness ledger seeded (bootstrap)')"
 [ -s "$sb/fresh.tsv" ] && echo "ok: absent-ledger: ledger seeded non-empty" || {
-  echo "FAIL: absent-ledger: ledger not seeded"; fails=$((fails + 1))
+  echo "FAIL: absent-ledger: ledger not seeded"
+  fails=$((fails + 1))
 }
 
 # --- real-curl loopback: -K - header directive + argv URL + -o/-w
@@ -182,11 +195,14 @@ open(sb + "/port.txt", "w").write(str(srv.server_port))
 srv.serve_forever()
 PY
 SRVPID=$!
-for i in 1 2 3 4 5; do [ -s "$sb/port.txt" ] && break; sleep 0.2; done
+for i in 1 2 3 4 5; do
+  [ -s "$sb/port.txt" ] && break
+  sleep 0.2
+done
 port="$(cat "$sb/port.txt")"
 code="$(printf 'header = "Authorization: Bearer loopback-key-xyz"\n' |
   curl -s --max-time 5 -K - -o /dev/null -w '%{http_code}' \
-  "http://127.0.0.1:$port/v1/models")"
+    "http://127.0.0.1:$port/v1/models")"
 ck "loopback: http 200" "200" "$code"
 # the server records the Authorization VALUE (the header line itself is
 # "Authorization: Bearer loopback-key-xyz")

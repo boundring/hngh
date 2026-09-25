@@ -19,6 +19,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JOB = ROOT / "jobs" / "agent-respawn.sh"
 
+
+def crumbs_text(db):
+    """The journal's derived 4-field lines (the read seam)."""
+    return subprocess.run(
+        ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export", "--db", str(db)],
+        capture_output=True, text=True, check=True).stdout
+
+
 DEAD = ("overnight-lead | 2026-09-06T01:00:00Z | {slug}|run-1 | "
         "rc=124 dead log=logs/overnight-{slug}-timeout.log model=zai/glm-5.3"
         "(paid-fallback) cause={cause}\n")
@@ -43,6 +51,7 @@ class RespawnGuards(unittest.TestCase):
             RESPAWN_MAX_ATTEMPTS="5",
             OVERNIGHT_MAX_SESSIONS_DAY="99",
             MARKER=str(self.marker),
+            HNGH_CRUMBS_DB=str(self.root / "state" / "crumbs.db"),
         )
 
     def run_job(self, **extra):
@@ -178,7 +187,7 @@ class RespawnGuards(unittest.TestCase):
         self.assertIn("cause=bad-execution", text)
         # shared budget ledger got the session-run row (guard 3 accounting)
         self.assertIn("session-run", (self.root / "logs" / "budget.md").read_text())
-        self.assertIn("respawn", (self.root / "STATE.md").read_text())
+        self.assertIn("respawn", crumbs_text(self.root / "state" / "crumbs.db"))
 
     def test_dead_row_without_cause_is_ignored(self):
         self.handoffs.write_text(

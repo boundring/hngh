@@ -40,10 +40,11 @@ for i in 1 2 3 4 5; do
   sleep 0.2
 done
 port="$(cat "$sb/port.txt")"
-STATE="$sb/STATE.md"
-: >"$STATE"
+# crumbs seam: credential-health breadcrumbs land in the sandbox journal db
 : >"$sb/cadence-params.tsv"
-HNGH_HOME="$root/.." AUTOMATION_ROOT="$root" STATE_FILE="$STATE" \
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+HNGH_HOME="$root/.." AUTOMATION_ROOT="$root" \
   KIMI_URL="http://127.0.0.1:$port/v1/chat/completions" \
   MOONSHOTAI_API_KEY="test.key.123" \
   OPENCODE_API_KEY= OCGO_URL= \
@@ -53,7 +54,7 @@ ck "credential-health exits 0" "0" "$rc"
 # the stub saw the resolved key as the Authorization header
 ck "probe sent Authorization header" "1" \
   "$(grep -c "test.key.123" "$sb/auth-header.txt" 2>/dev/null || true)"
-ck "crumb says http=200" "1" "$(grep -c "models endpoint http=200" "$STATE")"
+ck "crumb says http=200" "1" "$(grep -c "models endpoint http=200" <(journal))"
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || {
   echo "$fails FAILED"

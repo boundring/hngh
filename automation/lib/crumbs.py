@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""crumbs - the single STATE.md crumb-append entrypoint.
+"""crumbs - the single crumbs-journal write entrypoint.
 
 Line format (automation/lib/crumbs-db.py's importer is the format
 authority):
 
     <ISO UTC ts> | <job> | <event> | <detail>       (exactly one line)
 
-Every STATE.md crumb writer routes here - lib/breadcrumbs.sh (shim over
-this CLI), scripts/router-tick.py, jobs/feedback-apply.py,
+Every crumb writer routes here - lib/breadcrumbs.sh (shim over this
+CLI), scripts/router-tick.py, jobs/feedback-apply.py,
 jobs/service-state.py - so the format, timestamp, and append live in
-one implementation.
+one implementation. crumb() writes ONLY state/crumbs.db (the single
+write seam); STATE.md is a derived export (lib/crumbs-db.py export).
 
 Fail closed: crumb() refuses (ValueError; CLI exit 2) any field
 containing the field separator (|) or a newline - the two classes the
@@ -19,15 +20,21 @@ normalize it first with scrub() (the strictest common detail form the
 writers converged on: pipes escaped, whitespace runs folded); the shell
 shim keeps its documented bash fold for byte-identical output.
 
-Seam: STATE_FILE env selects the journal (default automation/STATE.md).
+Seam: HNGH_CRUMBS_DB env or --db selects the journal db (default
+automation/state/crumbs.db).
 
-usage: lib/crumbs.py JOB EVENT DETAIL
+usage: lib/crumbs.py [--db PATH] JOB EVENT DETAIL
 """
+import importlib.util
 import os
 import sys
 import time
 
 AUTO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_spec = importlib.util.spec_from_file_location(
+    "crumbs_db", os.path.join(AUTO_ROOT, "lib", "crumbs-db.py"))
+crumbs_db = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(crumbs_db)
 
 
 def now_utc():
@@ -40,32 +47,31 @@ def scrub(detail):
     return " ".join(detail.replace("|", "\u00a6").split())
 
 
-def crumb(job, event, detail, state_file=None):
-    """Append one 4-field crumb line to the journal and return it.
-    Raises ValueError when a field contains the separator or a newline."""
-    path = state_file or os.environ.get("STATE_FILE") \
-        or os.path.join(AUTO_ROOT, "STATE.md")
-    offset = os.path.getsize(path) if os.path.exists(path) else 0
-    # Writer provenance stamp (fail-20260924-crumbs-mirror-rows R1):
-    # process name + journal byte offset (the watermark coordinate), so
-    # a duplicated-row event class stays diagnosable: retry spacing =
-    # same content at different offsets, batch-uniform stamps = backfill.
-    stamp = " [w=%s@%d]" % (os.path.basename(sys.argv[0]) or "crumbs",
-                            offset)
-    for value in (job, event, detail, stamp):
+def crumb(job, event, detail, db_file=None):
+    """Append one crumb row to the journal db and return the rendered
+    4-field line (with writer stamp). Raises ValueError when a field
+    contains the separator or a newline."""
+    for value in (job, event, detail):
         if "|" in value or "\n" in value or "\r" in value:
             raise ValueError(
                 "crumb field contains separator/newline: %r" % (value,))
-    line = "%s | %s | %s | %s\n" % (now_utc(), job, event, detail + stamp)
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "a", encoding="utf-8") as fh:
-        fh.write(line)
-    return line
+    # Writer provenance stamp (fail-20260924-crumbs-mirror-rows R1):
+    # process name + rowid (journal coordinate), so a duplicated-row
+    # event class stays diagnosable: retry spacing = same content at
+    # different rowids, batch-uniform stamps = backfill.
+    return crumbs_db.insert_crumb(
+        db_file or crumbs_db.db_path(), now_utc(), job, event, detail,
+        os.path.basename(sys.argv[0]) or "crumbs")
 
 
 if __name__ == "__main__":
+    argv = sys.argv[1:]
+    db = None
+    if argv[:1] == ["--db"]:
+        db = argv[1]
+        argv = argv[2:]
     try:
-        crumb(sys.argv[1], sys.argv[2], sys.argv[3])
+        crumb(argv[0], argv[1], argv[2], db_file=db)
     except (IndexError, ValueError) as exc:
         print("crumbs: %s" % exc, file=sys.stderr)
         raise SystemExit(2)

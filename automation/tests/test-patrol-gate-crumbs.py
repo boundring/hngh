@@ -9,6 +9,7 @@ ledgers."""
 
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -37,6 +38,9 @@ class GateCrumbs(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()
         self.state = Path(self._td.name) / "STATE.md"
+        self.db = Path(self._td.name) / "crumbs.db"
+        os.environ["HNGH_CRUMBS_DB"] = str(self.db)
+        self.addCleanup(os.environ.pop, "HNGH_CRUMBS_DB", None)
         os.environ["PATROL_GATE_CRUMB_TTL_S"] = "86400"
         self.addCleanup(os.environ.pop, "PATROL_GATE_CRUMB_TTL_S", None)
         self._mod = load_mod()
@@ -45,13 +49,22 @@ class GateCrumbs(unittest.TestCase):
         self._td.cleanup()
 
     def ctx(self):
-        return {"gate_label": "hngh-automation",
-                "state": str(self.state), "now": NOW}
+        return {"gate_label": "hngh-automation", "now": NOW}
 
     def crumb(self, event, ago_s, detail="hngh-automation: x"):
         with open(self.state, "a") as fh:
             fh.write("%s | 03-gate-check.sh | %s | %s\n"
                      % (iso(ago_s), event, detail))
+        self._sync()
+
+    def _sync(self):
+        """fixture STATE.md -> sandbox crumbs journal (fresh db: the
+        sync watermark is a byte offset, so re-imports need a clean db)."""
+        self.db.unlink(missing_ok=True)
+        subprocess.run([sys.executable, str(ROOT / "lib" / "crumbs-db.py"),
+                        "sync", "--state", str(self.state),
+                        "--db", str(self.db)],
+                       check=True, capture_output=True)
 
     def test_stale_red_does_not_report_gate_red(self):
         self.crumb("gate-red", 86400 + 3600)
@@ -92,6 +105,8 @@ class GateCrumbs(unittest.TestCase):
         out1 = self._mod.check_gate_crumbs(self.ctx())
         self._td2 = tempfile.TemporaryDirectory()
         self.state = Path(self._td2.name) / "STATE.md"
+        self.db = Path(self._td2.name) / "crumbs.db"
+        os.environ["HNGH_CRUMBS_DB"] = str(self.db)
         self.crumb("gate-red", 86400 + 7200)
         out2 = self._mod.check_gate_crumbs(self.ctx())
         id1 = out1["fails"][0][:2]

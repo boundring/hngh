@@ -9,7 +9,7 @@
 # breadcrumbs + the four research TSVs) so the sweep's default scope
 # resolves INSIDE the temp git repo: the sweep resolves its default
 # scope against its own script dir, so the mirror carries scripts/ +
-# lib/ + the data files.
+# lib/ (incl. the crumbs writer + journal reader) + the data files.
 set -u
 # fixture containment: never inherit repo selection from the caller's shell
 unset GIT_DIR GIT_WORK_TREE
@@ -22,12 +22,15 @@ fail() {
   exit 1
 }
 pass() { echo "PASS: $*"; }
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$tmp/automation/state/crumbs.db" 2>/dev/null; }
 
 mkdir -p "$tmp/automation/scripts" "$tmp/automation/lib"
 cp "$root/scripts/research-tsv-path-sweep.py" "$tmp/automation/scripts/"
 cp "$root/scripts/research-sweep-selfheal.sh" "$tmp/automation/scripts/"
 cp "$root/lib/scrub.py" "$tmp/automation/lib/"
 cp "$root/lib/breadcrumbs.sh" "$tmp/automation/lib/"
+cp "$root/lib/crumbs.py" "$root/lib/crumbs-db.py" "$tmp/automation/lib/"
+mkdir -p "$tmp/automation/state"
 git -C "$tmp" init -q
 git -C "$tmp" config user.email t@t
 git -C "$tmp" config user.name t
@@ -35,6 +38,7 @@ git -C "$tmp" config user.name t
 heal() { # drive the self-heal script the way the hour beat does
   (cd "$tmp" && AUTOMATION_ROOT="$tmp/automation" KERNEL="$tmp" \
     JOB_NAME="test-research-beat" \
+    HNGH_CRUMBS_DB="$tmp/automation/state/crumbs.db" \
     bash "$tmp/automation/scripts/research-sweep-selfheal.sh")
 }
 count() { git -C "$tmp" rev-list --count HEAD; }
@@ -64,7 +68,7 @@ grep -q '~/x/y.md' "$tmp/automation/research-dispositions.tsv" ||
   fail "heal must commit only the swept file, got: $(git -C "$tmp" diff-tree --no-commit-id --name-only -r HEAD)"
 git -C "$tmp" log -1 --format=%s | grep -q "sweep self-heal" ||
   fail "heal commit message must carry the sweep label"
-grep -q "sweep-selfheal" "$tmp/automation/STATE.md" ||
+crumbs | grep -q "sweep-selfheal" ||
   fail "heal must leave a breadcrumb"
 (cd "$tmp" && python3 "$tmp/automation/scripts/research-tsv-path-sweep.py" \
   --check) >/dev/null 2>&1 ||

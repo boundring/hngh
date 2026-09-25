@@ -76,7 +76,9 @@ def noop(msg):
     env = dict(os.environ)
     env.setdefault("HOME", AUTOMATION)  # breadcrumbs.sh set -u needs HOME
     env.update({"AUTOMATION_ROOT": AUTOMATION,
-                "STATE_FILE": os.path.join(AUTOMATION, "STATE.md"),
+                # the shim pins its db at source: re-root it to AUTOMATION
+                "HNGH_CRUMBS_DB": os.environ.get("HNGH_CRUMBS_DB")
+                or os.path.join(AUTOMATION, "state", "crumbs.db"),
                 "JOB_NAME": "imap-poll",
                 "CRUMB": msg[:200]})
     subprocess.run(['bash', '-c',
@@ -383,7 +385,9 @@ def file_item(identity, text):
     env.setdefault("HOME", AUTOMATION)
     env.update({
         "AUTOMATION_ROOT": LIBROOT,  # lib/ lives beside scripts/, never seamed
-        "STATE_FILE": os.path.join(AUTOMATION, "STATE.md"),
+        # the crumb rides AUTOMATION's journal (re-root), not LIBROOT's
+        "HNGH_CRUMBS_DB": os.environ.get("HNGH_CRUMBS_DB")
+        or os.path.join(AUTOMATION, "state", "crumbs.db"),
         "HNGH_REPORT_ROOT": KERNEL,  # the ledger seam
         "HNGH_HOME": KERNEL,         # lib/notify-email.sh KERNEL resolution
         "HNGH_NOTIFY_EMAIL_CONF":

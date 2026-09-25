@@ -20,14 +20,17 @@ Contract after the fix:
     still outranks the ledger (handled wins).
 
 Seams: HNGH_AUTOMATION_ROOT / HNGH_HOME point imap-poll at a tmp
-sandbox; the feed module's DATA/STATE/OUT/DISMISSED constants are
-patched to the same sandbox. No network, no real mailbox, no server.
+sandbox; the feed module's DATA/OUT/DISMISSED constants are patched to
+the same sandbox and HNGH_CRUMBS_DB points the journal read there.
+No network, no real mailbox, no server.
 """
 
 import importlib.util
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -61,7 +64,6 @@ def load_feed(tmp):
     spec.loader.exec_module(mod)
     dash = tmp / "dashboard"
     mod.DATA = str(dash / "data.json")
-    mod.STATE = str(tmp / "STATE.md")
     mod.OUT = str(dash / "operator-items.json")
     mod.DISMISSED = str(dash / "operator-dismissed.json")
     mod.APPROVED = str(dash / "operator-approved.json")
@@ -77,12 +79,15 @@ class Durability(unittest.TestCase):
         self.auto = self.tmp / "automation"
         (self.auto / "dashboard").mkdir(parents=True)
         (self.auto / "logs").mkdir()
+        (self.auto / "state").mkdir()
         self.kernel = self.tmp / "kernel"
         (self.kernel / "scripts").mkdir(parents=True)
         self.old = (os.environ.get("HNGH_AUTOMATION_ROOT"),
-                    os.environ.get("HNGH_HOME"))
+                    os.environ.get("HNGH_HOME"),
+                    os.environ.get("HNGH_CRUMBS_DB"))
         os.environ["HNGH_AUTOMATION_ROOT"] = str(self.auto)
         os.environ["HNGH_HOME"] = str(self.kernel)
+        os.environ["HNGH_CRUMBS_DB"] = str(self.auto / "state" / "crumbs.db")
         self.addCleanup(self._restore)
         self.imap_poll = load_imap_poll()
         self.feed = load_feed(self.auto)
@@ -91,11 +96,22 @@ class Durability(unittest.TestCase):
         self.ledger = self.dash / "operator-dismissed.json"
 
     def _restore(self):
-        for key, val in zip(("HNGH_AUTOMATION_ROOT", "HNGH_HOME"), self.old):
+        for key, val in zip(("HNGH_AUTOMATION_ROOT", "HNGH_HOME",
+                             "HNGH_CRUMBS_DB"), self.old):
             if val is None:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = val
+
+    def sync_crumbs(self):
+        """fixture STATE.md -> sandbox crumbs journal (fresh db: the sync
+        watermark is a byte offset, so re-imports need a clean db)"""
+        db = self.auto / "state" / "crumbs.db"
+        if db.exists():
+            db.unlink()
+        subprocess.run([sys.executable, str(ROOT / "lib" / "crumbs-db.py"),
+                        "sync", "--state", str(self.auto / "STATE.md"),
+                        "--db", str(db)], check=True, capture_output=True)
 
     def seed(self, ledger=None):
         """One open operator-item whose id the feed rebuild reproduces:
@@ -109,6 +125,7 @@ class Durability(unittest.TestCase):
         with open(self.auto / "STATE.md", "a") as f:
             f.write("%s | imap-poll | alert | deck pull fails (%s)\n"
                     % (NOW, REPORT_ID))
+        self.sync_crumbs()
         (self.dash / "data.json").write_text(
             json.dumps({"generated_at": NOW, "digest": ""}))
         if ledger is not None:
@@ -254,6 +271,7 @@ class Durability(unittest.TestCase):
         with open(self.auto / "STATE.md", "a") as f:
             f.write("2026-09-14T15:00:00Z | deck-refresh | done | "
                     "deck pull fails no more — resolved and closed\n")
+        self.sync_crumbs()
         self.feed.main()
         it = self.items()
         self.assertEqual(it["status"], "handled")

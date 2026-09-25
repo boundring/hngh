@@ -32,7 +32,10 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 mkdir -p "$sb/lib" "$sb/bin"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 . "$root/tests/stub-lib.sh"
 
 VAL="refresh-secret-value-1"
@@ -109,7 +112,7 @@ arm() {
 call_refresh() { # url stubcurl(0|1) -> refresh_unsloth_token rc via $?
   local url="$1" stubcurl="$2"
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/unsloth.token" REFRESH_FILE="$sb/unsloth.refresh"
     export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
     export UNSLOTH_URL="$url" OLLAMA_URL=http://127.0.0.1:1
@@ -148,7 +151,7 @@ ck "argv: staged body content is the refresh-token JSON" \
   "{\"refresh_token\":\"$VAL\"}" \
   "$(grep '^BODY:' "$sb/curl.log" | sed 's/^BODY://' | head -1)"
 ck "argv: success breadcrumb" "1" \
-  "$(grep -c '| model | token-refresh | ok (new single-use pair written)' "$sb/STATE.md")"
+  "$(crumbs | grep -c '| model | token-refresh | ok (new single-use pair written)')"
 ck "argv: rotated refresh written" "stub-refresh-x" "$(cat "$sb/unsloth.refresh")"
 ck "argv: rotated refresh mode 600" "600" "$(stat -c %a "$sb/unsloth.refresh")"
 ck "argv: rotated access written" "stub-access-x" "$(cat "$sb/unsloth.token")"
@@ -156,13 +159,16 @@ ck "argv: rotated access mode 600" "600" "$(stat -c %a "$sb/unsloth.token")"
 
 # --- 2. real wire: body arrives intact, rotation lands ---
 arm
-: >"$sb/STATE.md"
+crumbs_reset
 rm -f "$stubdir/refresh-hits" "$stubdir/refresh-bodies"
 NEW_ACCESS="$NEW_ACCESS" NEW_REFRESH="$NEW_REFRESH" \
   python3 "$stubdir/refresh-stub.py" "$stubdir" &
 stub_pids="$stub_pids $!"
 i=0
-while [ ! -s "$stubdir/refresh-port" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+while [ ! -s "$stubdir/refresh-port" ] && [ "$i" -lt 50 ]; do
+  sleep 0.1
+  i=$((i + 1))
+done
 rport="$(cat "$stubdir/refresh-port")"
 rc=0
 out="$(call_refresh "http://127.0.0.1:$rport" 0)" || rc=$?
@@ -175,32 +181,32 @@ ck "wire: rotated refresh written" "$NEW_REFRESH" "$(cat "$sb/unsloth.refresh")"
 ck "wire: rotated refresh mode 600" "600" "$(stat -c %a "$sb/unsloth.refresh")"
 ck "wire: rotated access written" "$NEW_ACCESS" "$(cat "$sb/unsloth.token")"
 ck "wire: success breadcrumb" "1" \
-  "$(grep -c '| model | token-refresh | ok (new single-use pair written)' "$sb/STATE.md")"
+  "$(crumbs | grep -c '| model | token-refresh | ok (new single-use pair written)')"
 
 # --- 3. REFRESH_FILE mode-600 gate (sixth credential-file reader) ---
 arm
 chmod 644 "$sb/unsloth.refresh"
 rm -f "$stubdir/refresh-hits"
 : >"$stubdir/refresh-hits"
-: >"$sb/STATE.md"
+crumbs_reset
 rc=0
 out="$(call_refresh "http://127.0.0.1:$rport" 0)" || rc=$?
 ck "gate: 0644 refresh file refused (rc 1)" "1" "$rc"
 ck "gate: too-open breadcrumb" "1" \
-  "$(grep -c 'refresh key file too open (chmod 600 required)' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'refresh key file too open (chmod 600 required)')"
 ck "gate: zero POSTs (value never sent)" "0" "$(wc -l <"$stubdir/refresh-hits" | tr -d ' ')"
 
 # the 0600 control is sections 1-2 (gate passed); pin the absent-file
 # dormant contract so the new gate cannot shadow it.
 rm -f "$sb/unsloth.refresh"
-: >"$sb/STATE.md"
+crumbs_reset
 rc=0
 out="$(call_refresh http://127.0.0.1:1 0)" || rc=$?
 ck "gate: absent refresh file refused (rc 1)" "1" "$rc"
 ck "gate: absent-file breadcrumb" "1" \
-  "$(grep -c 'no refresh token file' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'no refresh token file')"
 ck "gate: no too-open crumb for the absent file" "0" \
-  "$(grep -c 'too open' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'too open')"
 
 if [ "$fails" = 0 ]; then
   echo "test-model-refresh-hygiene: all pass"

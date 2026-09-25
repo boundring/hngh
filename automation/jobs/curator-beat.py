@@ -7,7 +7,8 @@ dashboard/plans.json (built by jobs/plan-feed.py, which reads the plan
 ledger + queue.md), then RE-READS every plan it would act on from disk
 (never edits a plan whose acceptance it did not re-read). Emits TSV
 rows `verb<TAB>detail` on stdout; the cadence/day wrapper files them
-as STATE.md breadcrumbs (operator-item events: flagged/needs). Two
+as crumbs-journal breadcrumbs (STATE.md is the derived export;
+operator-item events: flagged/needs). Two
 machine actions (priority flag, duplicate-scope merge proposal) and
 two report verbs (deck handoff, enabling-work staging), all dry —
 plan-file mutations land only through scripts/ceremony-drive, never

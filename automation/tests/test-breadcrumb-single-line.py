@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""breadcrumb single-line integrity (2026-09-20 defect fix): the STATE.md
+"""breadcrumb single-line integrity (2026-09-20 defect fix): the journal
 crumb format is exactly one line per event (timestamp | job | event |
 detail). Detail text containing literal newlines — e.g. the last-N make
 error lines passed through by cadence/calendar/daily/03-gate-check.sh — must be
 folded before the append, or the file gains malformed non-crumb lines
 (2026-09-19 gate-red alert leaked 11 raw lines). Hermetic: sources the
-real lib/breadcrumbs.sh against a temp STATE_FILE and asserts the
+real lib/breadcrumbs.sh against a temp journal db (HNGH_CRUMBS_DB) and asserts the
 4-field, single-line structure survives any detail."""
 
 import os
@@ -19,10 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 LIB = ROOT / "lib" / "breadcrumbs.sh"
 
 
-def run_breadcrumb(detail: str, state: Path) -> None:
+def run_breadcrumb(detail: str, db: Path) -> None:
     env = dict(os.environ)
-    env["AUTOMATION_ROOT"] = str(ROOT)  # unused: STATE_FILE overrides
-    env["STATE_FILE"] = str(state)
+    env["HNGH_CRUMBS_DB"] = str(db)  # sandbox journal db
     script = (
         '. "%s"\nbreadcrumb "test-job" "test-event" %s\n'
         % (LIB, "'" + detail.replace("'", "'\\''") + "'")
@@ -30,34 +29,41 @@ def run_breadcrumb(detail: str, state: Path) -> None:
     subprocess.run(["bash", "-c", script], env=env, check=True)
 
 
+def read_journal(db: Path) -> str:
+    """The journal's derived 4-field lines (the read seam)."""
+    return subprocess.run(
+        ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export", "--db", str(db)],
+        capture_output=True, text=True, check=True).stdout
+
+
 class BreadcrumbSingleLine(unittest.TestCase):
     def test_plain_detail_is_four_fields(self):
         with tempfile.TemporaryDirectory() as td:
-            state = Path(td) / "STATE.md"
-            run_breadcrumb("plain detail", state)
-            line = state.read_text().splitlines()[0]
+            db = Path(td) / "crumbs.db"
+            run_breadcrumb("plain detail", db)
+            line = read_journal(db).splitlines()[0]
             self.assertEqual(len(line.split(" | ")), 4)
 
     def test_multiline_detail_is_folded_to_one_line(self):
         with tempfile.TemporaryDirectory() as td:
-            state = Path(td) / "STATE.md"
-            run_breadcrumb("gate: FAILED (rc=2)\nRan 34 tests\nmake: *** Error 1", state)
-            lines = state.read_text().splitlines()
+            db = Path(td) / "crumbs.db"
+            run_breadcrumb("gate: FAILED (rc=2)\nRan 34 tests\nmake: *** Error 1", db)
+            lines = read_journal(db).splitlines()
             self.assertEqual(len(lines), 1)
             self.assertEqual(len(lines[0].split(" | ")), 4)
             self.assertNotIn("\n", lines[0])
 
     def test_trailing_newline_detail_is_folded(self):
         with tempfile.TemporaryDirectory() as td:
-            state = Path(td) / "STATE.md"
-            run_breadcrumb("trailing newline\n", state)
-            self.assertEqual(len(state.read_text().splitlines()), 1)
+            db = Path(td) / "crumbs.db"
+            run_breadcrumb("trailing newline\n", db)
+            self.assertEqual(len(read_journal(db).splitlines()), 1)
 
     def test_pipe_escaping_still_holds(self):
         with tempfile.TemporaryDirectory() as td:
-            state = Path(td) / "STATE.md"
-            run_breadcrumb("a | b | c", state)
-            line = state.read_text().splitlines()[0]
+            db = Path(td) / "crumbs.db"
+            run_breadcrumb("a | b | c", db)
+            line = read_journal(db).splitlines()[0]
             self.assertEqual(len(line.split(" | ")), 4)
             self.assertIn("a ¦ b ¦ c", line)
 
@@ -66,19 +72,24 @@ class SelfLocatingRoot(unittest.TestCase):
     def test_sourcing_without_common_sh_writes_crumb(self):
         """2026-09-23 defect cleanup: an order-dependent caller sourced
         breadcrumbs.sh without lib/common.sh and died on set -u at the
-        STATE_FILE default. The lib self-locates AUTOMATION_ROOT."""
+        STATE_FILE default. The lib self-locates AUTOMATION_ROOT — and
+        a self-located root yields its own journal db (never the live
+        automation/state/crumbs.db)."""
         with tempfile.TemporaryDirectory() as td:
             fake = Path(td) / "automation"
             (fake / "lib").mkdir(parents=True)
             shutil.copy(LIB, fake / "lib" / "breadcrumbs.sh")
+            # the writer the shim invokes lives beside it, same as prod
+            shutil.copy(ROOT / "lib" / "crumbs.py", fake / "lib" / "crumbs.py")
+            shutil.copy(ROOT / "lib" / "crumbs-db.py", fake / "lib" / "crumbs-db.py")
             env = {k: v for k, v in os.environ.items()
-                   if k not in ("AUTOMATION_ROOT", "STATE_FILE")}
+                   if k not in ("AUTOMATION_ROOT", "STATE_FILE", "HNGH_CRUMBS_DB")}
             script = ('. "%s"\nbreadcrumb "test-job" "test-event" "detail"\n'
                       % (fake / "lib" / "breadcrumbs.sh"))
             r = subprocess.run(["bash", "-c", script], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            lines = (fake / "STATE.md").read_text().splitlines()
+            lines = read_journal(fake / "state" / "crumbs.db").splitlines()
             self.assertEqual(len(lines[0].split(" | ")), 4)
 
 
@@ -92,15 +103,22 @@ PY_WRITERS = [
 ]
 
 
-def write_via_python(path: Path, args: tuple, state: Path, detail: str) -> None:
-    """Exec the module's breadcrumb() against a temp STATE_FILE."""
+def write_via_python(path: Path, args: tuple, db: Path, detail: str) -> None:
+    """Exec the module's breadcrumb() against a temp journal db."""
     import types
     mod = types.ModuleType("writer_under_test")
     mod.__file__ = str(path)
     src = path.read_text(encoding="utf-8")
     exec(compile(src, str(path), "exec"), mod.__dict__)  # noqa: S102 - test harness
-    mod.STATE_FILE = str(state)
-    mod.breadcrumb(*[detail if a == "{d}" else a for a in args])
+    saved = os.environ.get("HNGH_CRUMBS_DB")
+    os.environ["HNGH_CRUMBS_DB"] = str(db)
+    try:
+        mod.breadcrumb(*[detail if a == "{d}" else a for a in args])
+    finally:
+        if saved is None:
+            os.environ.pop("HNGH_CRUMBS_DB", None)
+        else:
+            os.environ["HNGH_CRUMBS_DB"] = saved
 
 
 class PythonWriterSingleLine(unittest.TestCase):
@@ -108,11 +126,11 @@ class PythonWriterSingleLine(unittest.TestCase):
         for path, args in PY_WRITERS:
             with self.subTest(writer=str(path)):
                 with tempfile.TemporaryDirectory() as td:
-                    state = Path(td) / "STATE.md"
+                    db = Path(td) / "crumbs.db"
                     write_via_python(
-                        path, args, state,
+                        path, args, db,
                         "gate: FAILED (rc=2)\nRan 34 tests\nmake: *** Error 1")
-                    lines = state.read_text().splitlines()
+                    lines = read_journal(db).splitlines()
                     self.assertEqual(len(lines), 1)
                     self.assertEqual(len(lines[0].split(" | ")), 4)
 
@@ -131,9 +149,9 @@ def all_state_lines_are_four_fields(state_text: str) -> bool:
 class ReaderContract(unittest.TestCase):
     def test_lib_output_satisfies_all_reader_parsers(self):
         with tempfile.TemporaryDirectory() as td:
-            state = Path(td) / "STATE.md"
-            run_breadcrumb("gate: FAILED (rc=2)\nline two | pipe\nline three", state)
-            self.assertTrue(all_state_lines_are_four_fields(state.read_text()))
+            db = Path(td) / "crumbs.db"
+            run_breadcrumb("gate: FAILED (rc=2)\nline two | pipe\nline three", db)
+            self.assertTrue(all_state_lines_are_four_fields(read_journal(db)))
 
 
 if __name__ == "__main__":

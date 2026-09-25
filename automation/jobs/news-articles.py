@@ -299,8 +299,7 @@ def model_reply(prompt, pin, budget=MODEL_BUDGET):
     cmd = os.environ.get("NEWS_ARTICLES_MODEL_CMD") or \
         '. "%s/lib/model.sh"; model_call %s' % (ROOT, budget)
     env = dict(os.environ)
-    env.update({"AUTOMATION_ROOT": ROOT, "MODEL_PIN": pin,
-                "STATE_FILE": os.path.join(ROOT, "STATE.md")})
+    env.update({"AUTOMATION_ROOT": ROOT, "MODEL_PIN": pin})
     env.pop("MODEL_USED", None)
     try:
         r = subprocess.run(["bash", "-c", cmd], input=prompt,

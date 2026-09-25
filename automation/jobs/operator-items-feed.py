@@ -4,7 +4,7 @@ lifecycle (open -> handled -> dismissed) for "for the operator" items.
 
 Sources (the existing dashboard pattern):
   - data.json digest: the "For the operator" bullet block
-  - STATE.md breadcrumbs: lines whose detail matches papercut / flagged /
+  - crumbs journal rows: details matching papercut / flagged /
     needs / operator decision, plus alert details (first-lines)
 
 Each item: {id: 8-hex of normalized text, text, first_seen, last_seen,
@@ -27,13 +27,11 @@ import json
 import os
 import re
 import sqlite3
-import subprocess
-import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "dashboard", "data.json")
-STATE = os.path.join(ROOT, "STATE.md")
+DB = os.path.join(ROOT, "state", "crumbs.db")
 OUT = os.path.join(ROOT, "dashboard", "operator-items.json")
 DISMISSED = os.path.join(ROOT, "dashboard", "operator-dismissed.json")
 APPROVED = os.path.join(ROOT, "dashboard", "operator-approved.json")
@@ -82,43 +80,27 @@ def digest_items():
     return out, d.get("generated_at")
 
 
-def _crumbs_from_state():
-    """STATE.md lines date-ordered: (ts, 'job | event | detail', event, detail).
+def crumbs():
+    """Date-ordered journal rows: (ts, 'job | event | detail', event, detail)
+    from the crumbs journal db (HNGH_CRUMBS_DB or <ROOT>/state/crumbs.db).
 
-    Availability fallback: kept verbatim from the pre-flip reader for when
-    the derived index is unreadable."""
-    rows = []
-    with open(STATE, encoding="utf-8") as f:
-        for ln in f:
-            parts = [p.strip() for p in ln.rstrip("\n").split(" | ", 3)]
-            if len(parts) != 4 or not parts[0]:
-                continue
-            ts, job, event, detail = parts
+    detail keeps its legacy [w=...] stamp tail (item ids are content
+    hashes of that text). Raises sqlite3.Error when the journal is
+    missing or unreadable: main() keeps the prior file."""
+    db = os.environ.get("HNGH_CRUMBS_DB") or DB
+    con = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=5)
+    try:
+        rows = []
+        for ts, job, event, detail, writer in con.execute(
+                "SELECT ts, job, event, detail, writer FROM crumbs"
+                " ORDER BY ts, rowid"):
+            if writer:
+                detail += " [w=%s]" % writer
             rows.append((ts, "%s | %s | %s" % (job, event, detail),
                          event, detail))
-    rows.sort(key=lambda r: r[0])
-    return rows
-
-
-def crumbs():
-    """Same 4-tuples via the derived index (crumbs.db), refreshed first;
-    falls back to the STATE.md parse when the index is unavailable."""
-    try:
-        db = os.path.join(os.path.dirname(os.path.abspath(STATE)),
-                          "state", "crumbs.db")
-        subprocess.run([sys.executable, os.path.join(ROOT, "lib", "crumbs-db.py"),
-                        "sync", "--state", STATE, "--db", db],
-                       check=True, capture_output=True)
-        con = sqlite3.connect(db)
-        try:
-            rows = [(ts, "%s | %s | %s" % (job, event, detail), event, detail)
-                    for ts, job, event, detail in con.execute(
-                        "SELECT ts, job, event, detail FROM crumbs ORDER BY ts")]
-        finally:
-            con.close()
         return rows
-    except Exception:
-        return _crumbs_from_state()
+    finally:
+        con.close()
 
 
 def is_operator_item(event, joined):
@@ -145,11 +127,11 @@ def main():
     try:
         rows = crumbs()
     except Exception:
-        return  # unparsable STATE.md: keep prior file
+        return  # unreadable crumbs journal: keep prior file
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     fallback_seen = gen_at or now
 
-    # source items: digest bullets + matching STATE.md details
+    # source items: digest bullets + matching journal details
     for text in lines:
         items.append({"text": text, "first_seen": fallback_seen})
     for ts, joined, event, detail in rows:

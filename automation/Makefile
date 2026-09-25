@@ -18,7 +18,7 @@ enable:
 	systemctl --user enable --now hngh-autonomy.timer
 	systemctl --user enable --now hngh-credential-health.timer
 	systemctl --user enable --now hngh-cadence-subhour.timer hngh-cadence-hour.timer hngh-cadence-calendar.timer
-	systemctl --user enable --now hngh-overnight.timer
+	systemctl --user enable --now hngh-overnight-lead.timer
 	systemctl --user enable --now hngh-dashboard.service
 	@echo "enabled timers (hourly / 4h / 06-09 / night-agent / report 07:30 / research 23:40 / bench 01:10 / autonomy hourly / credential-health hourly / cadence subhour-hour-calendar / overnight 2h) + dashboard service :8890"
 
@@ -28,7 +28,7 @@ disable:
 	systemctl --user disable --now hngh-autonomy.timer
 	systemctl --user disable --now hngh-credential-health.timer
 	systemctl --user disable --now hngh-cadence-subhour.timer hngh-cadence-hour.timer hngh-cadence-calendar.timer
-	systemctl --user disable --now hngh-overnight.timer
+	systemctl --user disable --now hngh-overnight-lead.timer
 	systemctl --user disable --now hngh-dashboard.service
 	@echo "disabled all hngh-automation units"
 
@@ -124,6 +124,7 @@ test:
 	python3 -B tests/test-hngh-home-catalog.py
 	python3 -B tests/test-harness-adapters.py
 	bash tests/test-beat-blockers.sh
+	bash tests/test-gate-refusals.sh
 	bash tests/test-plan-priority-selector.sh
 	bash tests/test-session-class.sh
 	bash tests/test-launch-jcode.sh
@@ -194,6 +195,7 @@ test:
 	bash tests/test-deck-availability.sh
 	python3 -B tests/test-breadcrumb-single-line.py
 	python3 -B tests/test-crumbs-db.py
+	python3 -B tests/test-crumbs-rotate.py
 	python3 -B tests/test-crumbs-writer.py
 	python3 -B tests/test-lint-home-paths.py
 	bash scripts/lint-identifiers.sh

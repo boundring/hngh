@@ -68,7 +68,6 @@ def file_item(identity, text):
     env.setdefault("HOME", AUTOMATION_ROOT)  # notify-email.sh set -u needs HOME
     env.update({
         "AUTOMATION_ROOT": AUTOMATION_ROOT,
-        "STATE_FILE": os.path.join(AUTOMATION_ROOT, "STATE.md"),
         "HNGH_REPORT_ROOT": REPORT_ROOT,
         "HNGH_HOME": HNGH,  # lib/notify-email.sh KERNEL resolution
         "HNGH_NOTIFY_EMAIL_CONF":

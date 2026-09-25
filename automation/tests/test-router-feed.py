@@ -2,7 +2,7 @@
 """Router-feed wiring contract, hermetic (2026-09-01-overnight-continuity
 step 2): cadence/hour/10-router-feed.sh is the first production caller of
 scripts/router-tick.py. A seeded unread alert row reaching the tick THROUGH
-the drop-in files the observable pair (STATE.md breadcrumb + report-queue
+the drop-in files the observable pair (crumbs-journal breadcrumb + report-queue
 row); a closed-step re-fire dup-skips without a candidate; a re-feed of a
 still-unread row bumps the one deduped row instead of appending; excluded
 classes (critical regex, router:*, overnight:critical-touch:*, charset
@@ -48,12 +48,12 @@ class RouterFeed(unittest.TestCase):
         (self.kernel / "scripts").mkdir()
         shutil.copy(REAL_REPORT_QUEUE,
                     self.kernel / "scripts" / "report-queue")
-        self.state = self.root / "STATE.md"
+        self.db = self.root / "crumbs.db"
         self.env = {
             **os.environ,
             "HNGH_HOME": str(self.kernel),
             "HNGH_REPORT_ROOT": str(self.kernel),
-            "STATE_FILE": str(self.state),
+            "HNGH_CRUMBS_DB": str(self.db),
         }
 
     def tearDown(self):
@@ -94,8 +94,15 @@ class RouterFeed(unittest.TestCase):
         return "".join(p.read_text() for p in d.glob("*.md"))
 
     def breadcrumbs(self):
-        return (self.state.read_text().splitlines()
-                if self.state.exists() else [])
+        """Journal rows as the 4-field lines STATE.md used to carry
+        (writer stamps included)."""
+        if not self.db.exists():
+            return []
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.db)],
+            capture_output=True, text=True, check=True)
+        return out.stdout.splitlines()
 
     def candidates(self):
         return sorted(p.name for p in self.plans.glob("*routed*.plan.md"))

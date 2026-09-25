@@ -18,7 +18,9 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export AUTOMATION_ROOT="$ROOT"
-STATE_FILE="${STATE_FILE:-$ROOT/STATE.md}"
+# Reader seam: the crumbs journal is the source of record (STATE.md is a
+# derived export rendered by lib/crumbs-db.py export).
+_crumbs_db="${HNGH_CRUMBS_DB:-$ROOT/state/crumbs.db}"
 # shellcheck disable=SC1091
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
 # shellcheck disable=SC1091
@@ -116,28 +118,52 @@ probe_system_awareness() {
  [ "$crit" = "1" ] && touch "$ATTENTION_FLAG" 2>/dev/null || true
 }
 
+# P1e (2026-09-25, L3: monitoring never hides state): tree-skew carries
+# no path whitelist. A dirty file is exempt only by row evidence -- its
+# uncommitted delta is append-only AND every added line is a fresh
+# machine row (writer stamp [w=<name>@<rowid>] and row ts younger than
+# 24h). Stale stamps, deletions, and un-stamped edits (docs/project
+# /plans/ included) all count as skew.
+machine_appended() {
+ local repo="$1" file="$2" diff added now ts age
+ diff="$(git -C "$repo" diff HEAD --unified=0 -- "$file" 2>/dev/null)"
+ printf '%s\n' "$diff" | grep -qE '^-($|[^-])' && return 1
+ added="$(printf '%s\n' "$diff" | grep -E '^\+($|[^+])' || true)"
+ [ -n "$added" ] || return 1
+ now=$(date +%s)
+ while IFS= read -r ln; do
+  ln="${ln#+}"
+  case "$ln" in
+  *' [w='*']') : ;;
+  *) return 1 ;;
+  esac
+  ts="${ln%% | *}"
+  age=$((now - $(date -u -d "$ts" +%s 2>/dev/null || echo 0)))
+  [ "$age" -ge 0 ] && [ "$age" -lt 86400 ] || return 1
+ done <<EOF
+$added
+EOF
+ return 0
+}
+
 probe_working_tree_skew() {
  # dirty tree older than 4h without a commit = drift the sweep should’ve
- # caught. Machine-maintained paths (dashboards, ledgers, digests — the
- # cadence jobs rewrite them every few minutes) and untracked files (the
- # sweep job’s domain) are not skew; only modified tracked files outside
- # the per-repo whitelist count.
- local wl dirty last now
- # Whitelist filters porcelain lines BEFORE alerting: routed candidates
- # (router-tick writes them; day cadence 14-plan-ledger-sync.sh versions
- # them) stay defused, every other plans/ path counts as skew. The
- # automation subtree research tsvs are beat-written machine state (the
- # standalone-repo auto_wl always carried research-lines.tsv; the
- # subtree move into the kernel repo never gained the equivalents) --
- # they churn every research transition, so they are not skew either.
- local hngh_wl='docs/project/reports\.md|docs/project/ui-grades\.md|docs/journal/|docs/design/ui-evolve/current-overlay\.json|docs/project/plans/.*routed-.*\.plan\.md|CHANGELOG\.md|automation/research-(lines|dispositions)\.tsv'
- local auto_wl='STATE\.md|agent-handoffs\.md|dashboard/|digest/|logs/|research-lines\.tsv|prompts/'
+ # caught. Untracked files are the sweep job’s domain; modified tracked
+ # files count unless every uncommitted line is a fresh machine append.
+ local dirty pl f last now
  for repo in ${TREE_SKEW_REPOS:-$HNGH_REPO $ROOT}; do
   [ -d "$repo/.git" ] || continue
-  wl="$hngh_wl"
-  [ "${repo##*/}" = "hngh-automation" ] && wl="$auto_wl"
-  dirty="$(git -C "$repo" status --porcelain --untracked-files=no 2>/dev/null |
-   grep -vE "^...($wl)" || true)"
+  dirty=""
+  while IFS= read -r pl; do
+   [ -n "$pl" ] || continue
+   f="${pl#?? }"
+   f="${f#\"}"
+   f="${f%\"}"
+   machine_appended "$repo" "$f" && continue
+   dirty="$dirty$pl"$'\n'
+  done <<EOF
+$(git -C "$repo" status --porcelain --untracked-files=no 2>/dev/null)
+EOF
   if [ -n "$dirty" ]; then
    last=$(git -C "$repo" log -1 --format=%ct 2>/dev/null || echo 0)
    now=$(date +%s)
@@ -151,7 +177,8 @@ probe_working_tree_skew() {
 
 probe_repeated_breadcrumbs() {
  # identical last-two breadcrumbs are a stuck loop signal
- tail -2 "$STATE_FILE" 2>/dev/null | awk 'NR==1{a=$0} NR==2&&$0==a{print "REPEAT"}'
+ python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" --tail 2 2>/dev/null |
+  awk 'NR==1{a=$0} NR==2&&$0==a{print "REPEAT"}'
 }
 
 probe_gate_red() {
@@ -268,10 +295,11 @@ probe_test_loops() {
  #  2) /tmp/hngh-fasttest-* verify-cache markers (FastTestCache sibling): 3+
  #     markers for one repo within 5 min = the repeated gate the cache exists
  #     to prevent. Fail-open: absent dir -> silent no-op, never an error.
- [ -f "$STATE_FILE" ] || return 0
+ [ -f "$_crumbs_db" ] || return 0
  local cutoff loop repo hit
  cutoff=$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
- loop=$(awk -v cutoff="$cutoff" '
+ loop=$(python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" 2>/dev/null |
+  awk -v cutoff="$cutoff" '
     /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z/ {
       if ($1 < cutoff) next            # outside 30-min recent window
       body=$0; sub(/^[^|]*\|[ ]*/,"",body)   # drop "TS | " -> job|event|detail
@@ -283,7 +311,7 @@ probe_test_loops() {
         print "STATE 3x identical crumb from " job ": " body; exit
       }
     }
-  ' "$STATE_FILE" 2>/dev/null)
+  ')
  if find /tmp -maxdepth 1 -name 'hngh-fasttest-*' -print -quit 2>/dev/null | grep -q .; then
   # marker name /tmp/hngh-fasttest-<repo>-<sha256>.ok ; group by repo token
   repo=$(find /tmp -maxdepth 1 -name 'hngh-fasttest-*' -mmin -5 2>/dev/null |
@@ -386,7 +414,8 @@ steer_leg() {
   return 0
  }
  touch "$LAST_BEAT"
- recent=$(grep -E "steer|alert|optimize" "$STATE_FILE" | tail -5)
+ recent=$(python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" 2>/dev/null |
+  grep -E "steer|alert|optimize" | tail -5)
  # typed hazard gate (sde_cascade FIRE_T): one Noul over the tail decides
  # whether the steer-model call is worth firing at all. >= 0.7 fires the
  # model for the action; < 0.7 annotates only; unavailable keeps the
@@ -422,7 +451,8 @@ print('unavailable' if v is None else ('steer' if v >= 0.7 else 'none'))
 
 self_review() {
  # self-optimization leg: what fired where, event vs poll vs agent gated
- polls=$(tail -200 "$STATE_FILE" | grep -c 'oversight-tick' || true)
+ polls=$(python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" --tail 200 2>/dev/null |
+  grep -c 'oversight-tick' || true)
  breadcrumb "oversight-tick" "optimize" "poll-count=$polls; beat=${STEERING_BEAT_MIN}min; model=${STEER_MODEL:-none}"
 }
 

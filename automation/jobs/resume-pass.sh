@@ -2,7 +2,7 @@
 # resume-pass — the boot/cold-resume pass. The operator currently
 # hand-prompts session starts and restarts; this pass makes the recovery
 # moment machinery: it reads the recovery surface (agent-handoffs.md tail,
-# STATE.md crumbs, dashboard/operator-items.json, kernel plan ledger) and
+# crumbs journal, dashboard/operator-items.json, kernel plan ledger) and
 # writes logs/resume-<date>.md — dead sessions with cause, plans held
 # overnight, beats that did not fire while the box was down, open operator
 # items — and dispositions what is machine-dispositionable:
@@ -21,7 +21,7 @@
 #            bash "$AUTOMATION_ROOT"/jobs/resume-pass.sh --boot
 #            — no systemd unit; see docs/NIGHT-OPS.md resume protocol)
 #   --sweep  cadence/day/15-resume-pass.sh wrapper; runs only when the
-#            last non-tick STATE.md crumb is older than resume-gap-hours
+#            last non-tick journal crumb is older than resume-gap-hours
 #            (the machine was down)
 # Fail-closed: exits 0.
 set -u
@@ -32,8 +32,11 @@ set -u
 
 # hermetic test seam: re-root runtime artifacts without touching lib
 # resolution; the kernel ledger follows HNGH_KERNEL.
+CRUMBS_DB_PY="$AUTOMATION_ROOT/lib/crumbs-db.py"
 AUTOMATION_ROOT="${RESUME_ROOT:-$AUTOMATION_ROOT}"
-STATE_FILE="$AUTOMATION_ROOT/STATE.md" # breadcrumbs.sh pinned it at source
+# breadcrumbs.sh pinned CRUMBS_DB at source, before the re-root — re-pin
+# it so a re-rooted AUTOMATION_ROOT yields a re-rooted journal db
+CRUMBS_DB="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}"
 
 KERNEL="${HNGH_KERNEL:-${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}}"
 MODE="${1:---sweep}"
@@ -52,8 +55,8 @@ LOG="logs/resume-$(date -u +%F).md"
 # downtime; the freshest real job crumb does — healthy ceiling ~1h)
 last_crumb_age_h() {
   local ts
-  ts="$(awk -F' \\| ' '$2 != "cadence-tick" {ts = $1} END {print ts}' \
-    "$AUTOMATION_ROOT/STATE.md" 2>/dev/null)"
+  ts="$(python3 "$CRUMBS_DB_PY" export --db "$CRUMBS_DB" 2>/dev/null |
+    awk -F' \\| ' '$2 != "cadence-tick" {ts = $1} END {print ts}')"
   [ -n "$ts" ] || {
     printf 999
     return 0

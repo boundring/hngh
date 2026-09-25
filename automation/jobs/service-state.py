@@ -43,8 +43,8 @@ Seams (hermetic tests, never real units): HNGH_SERVICE_ALLOWLIST
 PATH stub), HNGH_SERVICE_DASHBOARD (output json path),
 HNGH_SERVICE_ALERT_STAMP (alert dedup stamp path),
 HNGH_SERVICE_DIVERGENCE_STAMP (divergence breadcrumb dedup stamp path),
-STATE_FILE (breadcrumb target), HNGH_REPORT_QUEUE /
-HNGH_REPORT_ROOT (report writer), HNGH_SERVICE_PORTS (comma-separated
+HNGH_REPORT_QUEUE / HNGH_REPORT_ROOT (report writer),
+HNGH_SERVICE_PORTS (comma-separated
 port list; the FIRST port is the serving port — default 8888), DRY_RUN=1
 (report what would happen, write nothing).
 """
@@ -80,7 +80,6 @@ DIVERGENCE_STAMP = os.environ.get(
     "HNGH_SERVICE_DIVERGENCE_STAMP",
     str(AUTOMATION / "logs" /
         (".service-divergence-%s" % datetime.now(timezone.utc).date())))
-STATE_FILE = os.environ.get("STATE_FILE", str(AUTOMATION / "STATE.md"))
 REPORT_QUEUE = os.environ.get(
     "HNGH_REPORT_QUEUE",
     str(Path(os.environ.get("HNGH_HOME", "~/Projects/etc/hngh"))
@@ -155,8 +154,7 @@ def breadcrumb(event, detail):
     """Append a STATE.md breadcrumb line (best-effort; single writer:
     lib/crumbs.py, same format as lib/breadcrumbs.sh)."""
     try:
-        crumbs.crumb("service-state", event, crumbs.scrub(detail),
-                     state_file=STATE_FILE)
+        crumbs.crumb("service-state", event, crumbs.scrub(detail))
     except (OSError, ValueError):
         pass  # a lost crumb never crashes the probe
 

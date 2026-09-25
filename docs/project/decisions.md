@@ -571,12 +571,10 @@ control.md). A ceremony refusal parks for the operator.
 
 ## 2026-09-14 — Kernel-gate red declared post-hoc (gate-cure)
 
-The gate-cure patrol found the loop-history guard red on 526cd3fd.
-The commits were declared post-hoc (hash + patch-id) in the
-guard's KNOWN_EXEMPTIONS table and cured through the ceremony
-loop -- declared, not rewritten; the SMALL-matter policy is the
-2026-09-13 amendment (docs/design/autonomous-development-
-control.md). A ceremony refusal parks for the operator.
+[struck 2026-09-25: verbatim duplicate of the first 2026-09-14
+gate-cure entry above (same hash 526cd3fd); audit found only this
+one true duplicate — the 2026-09-13 pair differs by commit hash
+(04f0001 vs 29d2a27) and records distinct cures, so it stands]
 
 ## 2026-09-14 — Kernel-gate red declared post-hoc (gate-cure)
 
@@ -778,3 +776,26 @@ Execution follows the pattern recorded here on 2026-09-23:
 `GOVERNANCE.md` states recorded decisions and creates none; documents
 catch up to records; records never wait on documents. This entry is
 the record; the `GOVERNANCE.md` preamble cites it.
+
+## 2026-09-25 — Frozen tokens: implementation vocabulary stays, retired stage 4 stays unrenumbered
+
+Names rectification pass (P2 of the refoundation plan) froze two
+tokens rather than renaming them:
+
+- `scripts/ceremony-drive` keeps its name: it is implementation
+  vocabulary (a script the kernel invokes), not governance vocabulary.
+  The ceremony's governance surface is `GOVERNANCE.md` + the
+  certificate records; the script name carries no constitutional
+  weight, so a rename would churn history references for zero
+  doctrinal gain.
+- Roadmap stage 4 stays retired-not-renumbered: the stage was
+  retired with its number recorded in `docs/project/roadmap.md`;
+  renumbering later stages would orphan every record that cites a
+  stage number. Frozen numbering beats contiguous numbering.
+
+Companion renames in the same pass did go through: the core spec
+(`hnnghh-` → `hngh-`, docs/design/hngh-minimal-core-spec.md) and the
+overnight lead timer (`hngh-overnight.timer` →
+`hngh-overnight-lead.timer`, now explicitly pinning
+`Unit=hngh-overnight.service`). Dated records, reports, briefs, and
+logs keep old names as history.

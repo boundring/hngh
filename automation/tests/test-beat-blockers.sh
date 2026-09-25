@@ -22,11 +22,14 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
  context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
- memory-gate.sh beat-blockers.sh; do
+ memory-gate.sh beat-blockers.sh crumbs.py crumbs-db.py; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
 cp "$root/scripts/accept-plans.py" "$auto/scripts/"
+export HNGH_CRUMBS_DB="$auto/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 printf '# Inventory\nsessions-day-max\t12\ttest\ttest row\n' \
  >"$auto/cadence-params.tsv"
 kernel="$td/kernel"
@@ -34,7 +37,6 @@ mkdir -p "$kernel/docs/project/plans" "$kernel/scripts"
 stubdir="$td/stubs"
 mkdir -p "$stubdir"
 MARKER="$td/launched.marker"
-STATE="$auto/STATE.md"
 BLOCKERS="$auto/state/beat-blockers.tsv"
 
 # omp stub: dream sessions write the brief; executors succeed or die with
@@ -113,7 +115,8 @@ awk -F'\t' -v OFS='\t' '$2=="fresh" && $6=="parked" && $5==2 {ok=1} END{exit !ok
 ok "blocker_tick: parked row within cooldown stays parked"
 
 # --- (u3) unparked plan re-enters the rotation ------------------------------
-rm -f "$MARKER" "$STATE"
+rm -f "$MARKER"
+crumbs_reset
 rm -rf "$td/ff"
 seed_parked_row old bad-execution 2 2020-01-01T00:00:00Z
 plan_with_step old 'touch the sandbox marker'
@@ -124,7 +127,8 @@ grep -q '^launch:dream$' "$MARKER" || fail "auto-unparked plan did not re-enter 
 ok "auto-unparked plan re-enters the rotation (row consumed: tick reset then success clears)"
 
 # --- (a) blocker row forces the dream on a mechanical step -----------------
-rm -f "$MARKER" "$STATE" "$BLOCKERS"
+rm -f "$MARKER" "$BLOCKERS"
+crumbs_reset
 rm -f "$kernel"/docs/project/plans/*.plan.md
 mkdir -p "$auto/state"
 seed_row seed bad-execution 1
@@ -137,7 +141,8 @@ grep -q 'cause class bad-execution' "$auto/prompts/overnight/seed.dream-prompt.m
 ok "blocker row forces dream + carries the cause-class line"
 
 # --- (b) success clears the row --------------------------------------------
-rm -f "$MARKER" "$STATE"
+rm -f "$MARKER"
+crumbs_reset
 seed_row seed bad-execution
 run_cycle >/dev/null 2>&1
 n="$(wc -l <"$MARKER")"
@@ -146,19 +151,21 @@ n="$(wc -l <"$MARKER")"
 ok "success clears the blocker row"
 
 # --- (c) second consecutive same-cause failure parks the plan --------------
-rm -f "$MARKER" "$STATE"
+rm -f "$MARKER"
+crumbs_reset
 seed_row seed bad-execution 1 # one death already recorded
 plan_with_step seed 'touch the sandbox marker'
 EXEC_FAIL=1 DREAM_OUT="$auto/prompts/overnight/seed.dream.md" run_cycle >/dev/null 2>&1
 [ "$?" -eq 0 ] || fail "escalation cycle exited non-zero"
 awk -F'\t' -v OFS='\t' '$2=="seed" && $6=="parked" {p=1} END{exit !p}' "$BLOCKERS" ||
  fail "second same-cause death did not park the blocker row"
-grep -q 'blocker-parked' "$STATE" || fail "no blocker-parked breadcrumb"
+crumbs | grep -q 'blocker-parked' || fail "no blocker-parked breadcrumb"
 grep -q 'beat-parked:seed' "$KERNEL_ALERTS" || fail "no beat-parked alert row"
 ok "second same-cause dream-informed failure parks the plan (bounded)"
 
 # --- (d) a parked plan leaves the rotation ---------------------------------
-rm -f "$MARKER" "$STATE"
+rm -f "$MARKER"
+crumbs_reset
 rm -rf "$td/ff"
 rm -f "$kernel"/docs/project/plans/*.plan.md
 plan_with_step alive 'touch the sandbox marker'

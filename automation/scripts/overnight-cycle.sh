@@ -23,7 +23,7 @@
 # are PROPOSALS: status=drafted, never accepted or executed by the
 # machine; the operator reviews and accepts (or rejects) each morning.
 #
-# usage: scripts/overnight-cycle.sh   (via hngh-overnight.timer)
+# usage: scripts/overnight-cycle.sh   (via hngh-overnight-lead.timer)
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
@@ -57,7 +57,7 @@ flock -n 9 || {
 # SIGTERM/SIGINT: stop spawning new sessions, record a dated breadcrumb
 # with the in-flight plan slugs and their dispositions (slug=disposition
 # pairs; "running" = the signal landed mid-session), exit non-zero
-# cleanly. No new state files: the record lives in STATE.md (breadcrumbs)
+# cleanly. No new state files: the record lives in the crumbs journal
 # only. INFLIGHT is a /tmp scratch list, same class as RESULTS — never
 # durable state.
 STOP=0
@@ -78,8 +78,11 @@ trap 'over_shutdown INT' INT
 # orphaned. Report the unclean exit and skip this beat's session batch
 # (one tick) instead of double-spawning the same work; this run still
 # exits cleanly with overnight-done, which restores the ordering.
-_unclean="$(awk -F'|' '/shutdown-signal/{ts=$1} /overnight-done/{ts=""} END{print ts}' \
- "$STATE_FILE" 2>/dev/null)"
+# Reader seam: the crumbs journal is the source of record (STATE.md is a
+# derived export).
+_crumbs_db="${HNGH_CRUMBS_DB:-$ROOT/state/crumbs.db}"
+_unclean="$(python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" 2>/dev/null |
+ awk -F'|' '/shutdown-signal/{ts=$1} /overnight-done/{ts=""} END{print ts}')"
 if [ -n "${_unclean// /}" ]; then
  breadcrumb "$JOB_NAME" "cold-start-unclean" \
   "previous beat ended on a shutdown signal (ts=${_unclean// /}); skipping this beat's session batch to avoid double-spawning"

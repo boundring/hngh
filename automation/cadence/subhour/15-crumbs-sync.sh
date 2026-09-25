@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# cadence/subhour — crumbs-mirror tick: byte-offset sync of the STATE.md crumb
-# journal into state/crumbs.db (lib/crumbs-db.py; read-only wrt STATE.md),
-# then --verify: on mirror mismatch file ONE report-queue alert row
+# cadence/subhour — crumbs export tick: rewrite the derived STATE.md
+# export from state/crumbs.db (the journal source of truth; writer flip
+# P1b), then --verify: on parity mismatch file ONE report-queue alert row
 # (identity crumbs-mirror:<kind>, --window 0 + evidence-gated dedup: the
 # same evidence token never re-alerts; only an evolved mismatch bumps).
 # Fail-open: exit 0 always (the lib itself is fail-open).
@@ -11,8 +11,8 @@
 set -u
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 db="${HNGH_CRUMBS_DB:-$root/state/crumbs.db}"
-"$root/lib/crumbs-db.py" sync --db "$db"
-out="$("$root/lib/crumbs-db.py" sync --verify --db "$db" 2>/dev/null)"
+"$root/lib/crumbs-db.py" export --write-state --db "$db"
+out="$("$root/lib/crumbs-db.py" verify --db "$db" 2>/dev/null)"
 case "$out" in
 *verdict=mismatch:*)
   kind="$(printf '%s\n' "$out" | sed -n 's/^verdict=mismatch:\([a-z]*\).*/\1/p')"

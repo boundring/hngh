@@ -78,13 +78,14 @@ printf 'seed draft\n' >"$sb/digest/DRAFT-PLAN-$today.md"
 . "$root/tests/stub-lib.sh"
 printf 'stub-token-never-real' >"$sb/unsloth-token"
 chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 
 run_cycle() { # [extra K=V...] -> runs one overnight beat in the sandbox
  env "$@" \
   HNGH_HOME="$sb/kernel" \
   HOME="$sb" \
-  STATE_FILE="$sb/STATE.md" \
   JOB_NAME=test \
   OVERNIGHT_LOCK="$sb/cycle.lock" \
   OVERNIGHT_TIMEOUT="5" \
@@ -122,8 +123,8 @@ clear_plans() { # -> removes every plan + synth artifact from the sandbox
  }
 }
 
-crumb() { # event -> 0 when the breadcrumb exists in the sandbox STATE.md
- grep -q " | $1 | " "$sb/STATE.md" 2>/dev/null
+crumb() { # event -> 0 when the breadcrumb exists in the crumbs journal
+ crumbs | grep -q " | $1 | "
 }
 
 # --- 1. queue dry + adopted research -> proposed plan, admitted -----------
@@ -154,7 +155,7 @@ ok "daily synthesis bound holds on the second beat"
 
 # --- 3. malformed model output is discarded, never admitted ---------------
 rm -f "$sb/kernel/docs/project/plans/"*-dev-*.plan.md "$sb/digest/"SYNTH-PLAN-*
-mv "$sb/STATE.md" "$sb/STATE.md.1"
+crumbs_reset
 kill $stub_pids 2>/dev/null
 wait $stub_pids 2>/dev/null
 stub_pids=""
@@ -166,7 +167,7 @@ ok "malformed synthesis discarded (no plan, alert trail)"
 
 # --- 4. queue NOT dry (34 accepted plans): one synth draft still lands ----
 clear_plans
-: >"$sb/STATE.md"
+crumbs_reset
 STUB_CONTENT="$PLAN_BODY" stub_start stubU3
 accepted_plans 34
 run_cycle UNSLOTH_URL="http://127.0.0.1:$(cat "$stubdir/stubU3-port")"
@@ -191,7 +192,7 @@ ok "DEV_SYNTH_DAILY env override lifts the cap to 2"
 
 # --- 6. synth-origin plans run only in a leftover slot --------------------
 clear_plans
-: >"$sb/STATE.md"
+crumbs_reset
 accepted_plans 1 # plain accepted plan: slot 0 must stay operator-origin
 front="<!-- plan: status=accepted risk=normal author=operator -->"
 printf '%s\n# %s - dev-synth-line (synthesized from adopted research)\n\n## Steps\n\n- [ ] synth step\n  Verification: bash -n lib/common.sh\n' \
@@ -216,7 +217,7 @@ ok "synth plan alone in the rotation still runs (leftover-slot fallback)"
 
 # --- 7. slug-mint guard: credential-shaped line id cannot mint (step 3) ---
 clear_plans
-: >"$sb/STATE.md"
+crumbs_reset
 # adopted line id carrying a pathy/credential-shaped token: the seam
 # (redact_home + scrub_truncate before slug derivation) must cut it at
 # the stem so no '/home/<user>' or '~' fragment reaches the minted
@@ -236,7 +237,7 @@ ok "clean adopted line mints its expected dev- slug"
 # credential-shaped id: the guard cuts the pathy dash-form before mint
 rm -f "$sb/kernel/docs/project/plans/"*-dev-*.plan.md "$sb/digest/"SYNTH-PLAN-*
 rm -rf "$sb/ff"
-: >"$sb/STATE.md"
+crumbs_reset
 dirty_doc="$sb/kernel/docs/research/2026-09-08-dirty-line.md"
 printf 'findings: dirty line\n' >"$dirty_doc"
 printf 'line\taction\tverdict\treviewer\tevidence\tdate\n' >"$sb/research-dispositions.tsv"

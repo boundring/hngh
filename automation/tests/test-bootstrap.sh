@@ -78,11 +78,13 @@ STUB
 chmod +x "$SANDBOX/bin/tailscale"
 TS_LOG="$SANDBOX/ts-hits"
 : >"$TS_LOG"
-SANDBOX_STATE="$SANDBOX/STATE.md"
-env TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" DECK_IP= DECK_NODE_ENABLED=1 \
+SANDBOX_DB="$SANDBOX/crumbs.db"
+crumbs() { python3 "$ROOT/lib/crumbs-db.py" export --db "$SANDBOX_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$SANDBOX_DB" "$SANDBOX_DB-wal" "$SANDBOX_DB-shm"; }
+env TS_LOG="$TS_LOG" HNGH_CRUMBS_DB="$SANDBOX_DB" DECK_IP= DECK_NODE_ENABLED=1 \
  PATH="$SANDBOX/bin:$PATH" HNGH_MACHINE_PROFILE="$SANDBOX/machine.env" \
  bash "$ROOT/cadence/calendar/daily/06-remote-posture.sh" >/dev/null 2>&1
-if grep -qF '203.0.113.7' "$TS_LOG" && grep -q 'remote-posture | ok' "$SANDBOX_STATE" 2>/dev/null; then
+if grep -qF '203.0.113.7' "$TS_LOG" && crumbs | grep -q 'remote-posture | ok'; then
  ok "06-remote-posture resolves DECK_IP from the sandboxed machine profile"
 else
  bad "06-remote-posture did not resolve DECK_IP from HNGH_MACHINE_PROFILE"
@@ -90,14 +92,14 @@ fi
 
 # fail-closed: no profile, no env DECK_IP -> skip probe, never the baked IP.
 : >"$TS_LOG"
-rm -f "$SANDBOX_STATE"
-env -u DECK_IP TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" DECK_NODE_ENABLED=1 \
+crumbs_reset
+env -u DECK_IP TS_LOG="$TS_LOG" HNGH_CRUMBS_DB="$SANDBOX_DB" DECK_NODE_ENABLED=1 \
  PATH="$SANDBOX/bin:$PATH" \
  HNGH_MACHINE_PROFILE="$SANDBOX/missing.env" \
  bash "$ROOT/cadence/calendar/daily/06-remote-posture.sh" >/dev/null 2>&1
 if [ -s "$TS_LOG" ]; then
  bad "06-remote-posture pinged with no machine profile (stub log nonempty)"
-elif grep -q 'no DECK_IP' "$SANDBOX_STATE" 2>/dev/null; then
+elif crumbs | grep -q 'no DECK_IP'; then
  ok "06-remote-posture skips fail-closed when no profile sets DECK_IP"
 else
  bad "06-remote-posture missing-profile path did not crumb 'no DECK_IP'"
@@ -108,14 +110,14 @@ fi
 # (2026-09-15 operator deactivation).
 printf 'deck-node-enabled\t0\ttest\ttest\n' >"$SANDBOX/cadence-params.tsv"
 : >"$TS_LOG"
-rm -f "$SANDBOX_STATE"
-env TS_LOG="$TS_LOG" STATE_FILE="$SANDBOX_STATE" \
+crumbs_reset
+env TS_LOG="$TS_LOG" HNGH_CRUMBS_DB="$SANDBOX_DB" \
  PATH="$SANDBOX/bin:$PATH" AUTOMATION_ROOT="$SANDBOX" \
  HNGH_MACHINE_PROFILE="$SANDBOX/machine.env" \
  bash "$ROOT/cadence/calendar/daily/06-remote-posture.sh" >/dev/null 2>&1
 if [ -s "$TS_LOG" ]; then
  bad "06-remote-posture pinged with deck-node-enabled=0 (deck must stay off)"
-elif grep -q 'deck-node-enabled != 1' "$SANDBOX_STATE" 2>/dev/null; then
+elif crumbs | grep -q 'deck-node-enabled != 1'; then
  ok "06-remote-posture skips the deck probe when deck-node-enabled=0"
 else
  bad "06-remote-posture deck-disabled path did not crumb the skip"

@@ -20,7 +20,10 @@ mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/job
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 cp "$root/jobs/telemetry.py" "$sb/jobs/"
 : >"$sb/cadence-params.tsv" # no ocgo rows unless a case sets one
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 
 . "$root/tests/stub-lib.sh"
 seed_events() { # source n [age_seconds] -> n model/<source> events that old
@@ -41,7 +44,7 @@ PY
 call() { # prompt [K=V ...] -> stdout
  local k
  (
-  export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+  export AUTOMATION_ROOT="$sb" JOB_NAME=test
   export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -112,7 +115,7 @@ chmod 644 "$sb/.config/hngh/opencode-key"
 out="$(call "hello-4b" "OCGO_MODEL=glm-test-model" "OCGO_URL=http://127.0.0.1:$stubB_port")"
 ck "file key 644: empty stdout" "" "$out"
 ck "file key 644: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "key file too open" "$sb/STATE.md" &&
+crumbs | grep -q "key file too open" &&
  echo "ok: file key 644: breadcrumb written" || {
  echo "FAIL: no 644 breadcrumb"
  fails=$((fails + 1))
@@ -122,13 +125,13 @@ chmod 600 "$sb/.config/hngh/opencode-key"
 # --- 5. 5h-window pace-blocked (above the pace line, below the cap) ->
 #        breadcrumb, leg skipped (nothing after ocgo: archive-only).
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 seed_events ocgo "$(pace_seed_count_5h 100)" 60 # just above the pace line
 out="$(call "hello-5" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100")"
 ck "5h pace-blocked: ocgo skipped, archive-only used" "" "$out"
 ck "5h pace-blocked: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "quota pace: ocgo+ocgo-agent 5h-window used " "$sb/STATE.md" &&
+crumbs | grep -q "quota pace: ocgo+ocgo-agent 5h-window used " &&
  echo "ok: 5h pace-blocked: breadcrumb written" || {
  echo "FAIL: no pace breadcrumb"
  fails=$((fails + 1))
@@ -136,7 +139,7 @@ grep -q "quota pace: ocgo+ocgo-agent 5h-window used " "$sb/STATE.md" &&
 
 # --- 6. events aged OUT of the 5h window (6h old) do NOT count -> leg goes.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 seed_events ocgo 95 21600 # 6h old: outside the 5h window
 out="$(call "hello-6" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=100" \
@@ -153,13 +156,13 @@ ck "outside-window events ignored: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/
 
 # --- 7. hard cap reached inside the window -> skipped the same way.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 seed_events ocgo 3 60
 out="$(call "hello-7" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:$stubB_port" "OCGO_CAP_5H_CALLS=3" \
  "OCGO_CAP_5H_CALLS=3")"
 ck "hard cap: ocgo skipped, archive-only used" "" "$out"
-grep -q "quota pace: ocgo+ocgo-agent 5h-window used 3 of cap 3" "$sb/STATE.md" &&
+crumbs | grep -q "quota pace: ocgo+ocgo-agent 5h-window used 3 of cap 3" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: no cap breadcrumb"
  fails=$((fails + 1))
@@ -178,13 +181,13 @@ ck "helper: fresh window goes" "rc=1" "$got"
 
 # --- 9. dead ocgo endpoint -> HTTP 000 breadcrumb + fall-through.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "hello-9" "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "OCGO_URL=http://127.0.0.1:1")"
 ck "dead ocgo endpoint: fall-through to archive-only" "" "$out"
 ck "dead ocgo endpoint: archive-only used" "none:archive-only" \
  "$(cat "$sb/tmp-modelused.txt")"
-grep -q "| model | ocgo | HTTP 000 -> next backend" "$sb/STATE.md" &&
+crumbs | grep -q "| model | ocgo | HTTP 000 -> next backend" &&
  echo "ok: dead ocgo endpoint: breadcrumb written" || {
  echo "FAIL: no 000 breadcrumb"
  fails=$((fails + 1))
@@ -192,7 +195,7 @@ grep -q "| model | ocgo | HTTP 000 -> next backend" "$sb/STATE.md" &&
 
 # --- 10. MODEL_PIN=ocgo routes there first; miss falls through to local.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "hello-10" "MODEL_PIN=ocgo" "OCGO_URL=http://127.0.0.1:1" \
  "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model")"
 ck "pin=ocgo, dead leg: falls through to archive" "none:archive-only" \
@@ -200,7 +203,7 @@ ck "pin=ocgo, dead leg: falls through to archive" "none:archive-only" \
 
 # --- 11. MODEL_PIN=ocgo + live leg: ocgo answers, remote/kimi skipped.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "hello-11" "MODEL_PIN=ocgo" "OCGO_URL=http://127.0.0.1:$stubB_port" \
  "OPENCODE_API_KEY=stub-key-never-real" "OCGO_MODEL=glm-test-model" \
  "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
@@ -216,7 +219,7 @@ ck "pin=ocgo, live leg: ocgo used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelus
 # --- 12. telemetry wall_s + tokens: a slow stubbed call (0.15s sleep)
 #         emits its row with wall_s > 0 and usage tokens from the reply.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 stub_start stubU 0.15
 stubU_port="$(cat "$stubdir/stubU-port")"
 [ -n "$stubU_port" ] || {
@@ -236,7 +239,7 @@ ck "wall_s case: tokens_out from usage" "7" "$(printf '%s' "$row" | cut -d'|' -f
 
 # --- 13. unsloth leg also emits wall_s (own curl path, not _post_chat).
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 stub_start stubA 0.15
 stubA_port="$(cat "$stubdir/stubA-port")"
 [ -n "$stubA_port" ] || {

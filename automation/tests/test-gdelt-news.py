@@ -126,7 +126,7 @@ class TestCli(unittest.TestCase):
             cmd += ["--export", str(export)]
         env = dict(gn.os.environ,
                    GDELT_LASTUPDATE_URL="http://127.0.0.1:1/lastupdate.txt",
-                   STATE_FILE=str(tmp / "STATE.md"),
+                   HNGH_CRUMBS_DB=str(tmp / "crumbs.db"),
                    )
         return subprocess.run(cmd, capture_output=True, text=True,
                               timeout=60, env=env)
@@ -206,6 +206,30 @@ class TestNs24Aggregation(unittest.TestCase):
         self.assertEqual(
             by_url["https://example.test/war-escalates-in-region"]
             ["num_sources"], 10)
+
+
+class CrumbSeam(unittest.TestCase):
+    """P1 seam closure: the writer's breadcrumb rides the single
+    journal seam (lib/crumbs.py) - one 4-field line, writer stamp,
+    scrub escaping (| -> \u00a6), never a rolled-own append."""
+
+    def test_breadcrumb_writes_one_stamped_line(self):
+        with tempfile.TemporaryDirectory() as td:
+            db = os.path.join(td, "crumbs.db")
+            os.environ["HNGH_CRUMBS_DB"] = db
+            try:
+                gn.breadcrumb("quiet", "pipe|here")
+            finally:
+                os.environ.pop("HNGH_CRUMBS_DB", None)
+            lines = subprocess.run(
+                ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+                 "--db", db],
+                capture_output=True, text=True, check=True,
+            ).stdout.splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertRegex(
+            lines[0],
+            r"^[\d:TZ-]+ \| gdelt-news \| quiet \| pipe\u00a6here \[w=[^@\s]+@\d+\]$")
 
 
 if __name__ == "__main__":

@@ -20,18 +20,18 @@ pooled-hardware	queued	Pooled hardware / priced routes rung	README Where this is
 tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
 push-self-sufficiency	done		ceremony-drive auto-push proven both repos 2026-08-27 — Repos push their own verified commits (sweep + post-validation)	operator directive 2026-08-26
-cadence-continuum	queued	Timing tiers: month/week/day/hour/10m/5m/1m + ad-hoc	operator directive 2026-08-26
+cadence-continuum	done	Timing tiers: month/week/day/hour/10m/5m/1m + ad-hoc	landed as the B3 cadence collapse (subhour/hour/calendar timers, 2026-09-25 flip)
 activity-cadence	queued	Routine project activities on the continuum (review→comms), fleet-scaled	operator directive 2026-08-26
 governance-vocabulary	done		vocabulary relaxed; records use governance terms 2026-08-27 — Relax ritual/ceremony terms to flexible governance vocabulary	operator directive 2026-08-26; check-in-scale
 agent-live-view	done		session observatory live on nerve center 2026-08-27 — Automatic subagent work view integrated into the dashboard	operator directive 2026-08-26; folds into ux-hardening
 surface-evolution-loop	queued	Evolutionary design/development loop for all operator surfaces	operator directive 2026-08-26; extends dancing-ui + grade-interface
 machine-steered-backlog	done		select-course pure use case + cadence wiring landed 2026-08-27 — Machine-gated governance: Hngh picks its own next-best-course continually	operator directive 2026-08-26; extends run-autonomous + rotate-queue
 dss-e-export	queued	DSSE envelope export serializer	backlog entry
-crumbs-writer-flip	queued	Crumbs writer-flip (crumbs.db becomes source)	backlog entry; brief rec 2
+crumbs-writer-flip	done	Crumbs writer-flip (crumbs.db becomes source)	writers on crumbs.db since P1 (rotate/export byte-identical), 2026-09-25 flip
 dashboard-readouts	done	Dashboard readouts (spiral + circular + dance styles live)	rotated 2026-08-25
 timeline-events	done	Machine-readable timeline events per rotation	rotated by check-in #4 2026-08-25; Makefile + test wired
 queue-eta	done	Planned-window (ETA) column on queue rows	implemented by check-in #5 2026-08-25
-ux-hardening	queued	UX/interface pass (Emacs-style extensible operator surface)	imeline.md
+ux-hardening	queued	UX/interface pass (Emacs-style extensible operator surface)	timeline.md
 ecosystem-integrations	queued	(CachyOS/Linux/dbus/system-harness/device integrations)	vision.md
 zoom-out-loop	queued	Quarterly zoom-out market/news poll + candidate intake	timeline.md
 marketplace-governance	queued	Marketplace-gov lane (audit/authorization of marketplace agents)	market-scope-2026-08-25.md
@@ -42,6 +42,67 @@ router-rearm-precheck	done	Router-side re-arm pre-check before report-queue --ad
 publication-lines-contract	done	Publication pipeline: wire research-lines into generate-publication or fix the 7-file contract	rotated 2026-08-31
 ebook-book-inputs	queued	Ebook book-machine inputs to unblock the royalty-pipeline	research crystallized 2026-09-08: docs/research/2026-09-08-ebook-book-inputs.md (ceremony da3d441) — priced decision: per-book metadata input first (--chapters selection already landed); grow beat queued
 alert-plan-routing	done	Alert→plan-candidate routing loop (tick + production caller)	closed 2026-09-01: router-tick 87e6bc3 + router-feed caller 7992f78 (hngh-automation); first live routings reports.md bffc89a6 + ffa1d58e, auto-accepted f4c7e12e/9993c29d; already-routed skips observed 02:00:45Z
+backlog-night-agent-plan-authoring	done	Night-agent plan authoring (plan-supply)	landed as failfirst-dev-synth-daily plan synthesis; backlog.md:96; flipped 2026-09-25
+backlog-cadence-tier-collapse	done	Cadence-tier collapse (9 tiers → 2-3, behavior-preserving)	landed as the B3 collapse (subhour/hour/calendar); backlog.md:1184; flipped 2026-09-25
+backlog-write-only-artifact-classes	done	Write-only artifact classes wire-or-delete	0 of 18 write-only per torch ledger 2026-09-24; backlog.md:1194; flipped 2026-09-25
+backlog-pi-read-only-delegation-spike	queued	Pi read-only delegation spike	backlog.md:13
+backlog-node-lattice-rung	queued	Node lattice rung (megastructure mesh)	backlog.md:34
+backlog-dancing-ui	queued	Dancing interfaces (the music runs the room)	backlog.md:158
+backlog-journal-daily	queued	Project journal + daily narrative	backlog.md:181
+backlog-ebook-longform	queued	Long-form ebook: the megastructure memoir	backlog.md:185
+backlog-public-surface	queued	Self-hosted public surface (public-surface rung)	backlog.md:189
+backlog-device-fleet	queued	Device fleet bring-up	backlog.md:209
+backlog-royalty-pipeline	queued	Self-publishing / royalties pipeline	backlog.md:226
+backlog-funding-rails	queued	Funding rails (bootstrap income)	backlog.md:230
+backlog-royalty-apis	queued	Royalty catalog APIs	backlog.md:234
+backlog-interface-mocks	queued	Interface mocks (the mock matrix lane)	backlog.md:238
+backlog-operative-overlay	queued	Operative overlay (qml6 floating operative)	backlog.md:252
+backlog-operative-voice	queued	Operative voice (local character voices)	backlog.md:266
+backlog-pixel-agent-assets	queued	Pixel-agent assets (the sprite sheet lane)	backlog.md:278
+backlog-ci-governance-gate	queued	CI governance gate	backlog.md:282
+backlog-resource-pool-view	queued	Resource pool view	backlog.md:304
+backlog-config-manager	queued	Config manager	backlog.md:322
+backlog-security-manager	queued	Security manager	backlog.md:341
+backlog-notify-agent	queued	Notify agent	backlog.md:360
+backlog-self-optimization-continuum	queued	Self-optimization continuum	backlog.md:431
+backlog-hosted-agentic-interface	queued	Hosted agentic interface ("Hngh as an application" + navigable/auto-tiling refinement)	backlog.md:457,:483
+backlog-omp-hngh-bridge-plugin	queued	OMP↔Hngh bridge plugin (Hngh improves Hngh)	backlog.md:508
+backlog-command-center	queued	Command center (CLI + GUI operator surfaces)	backlog.md:534
+backlog-system-awareness-rung	queued	System awareness rung	backlog.md:570
+backlog-time-ledger-delay-flagging	queued	Time ledger & delay flagging (self-optimization telemetry)	backlog.md:590
+backlog-session-observatory	queued	Session observatory (live subagent runs page)	backlog.md:615
+backlog-browser-notification-surface	queued	Browser notification surface	backlog.md:636
+backlog-model-tier-refresh-cadence	queued	Model-tier refresh cadence	backlog.md:670
+backlog-host-orientation-pass	queued	Host orientation pass (new-system situating)	backlog.md:686
+backlog-report-ledger-retention-policy	queued	Report-ledger retention policy	backlog.md:705
+backlog-widget-grid-qol	queued	Widget grid + QoL evolution cadence (dashboard surfaces)	backlog.md:725
+backlog-cascading-gantt	queued	Cascading gantt: run estimates + parallel cascade	backlog.md:746
+backlog-interface-plurality	queued	Interface plurality + session spawn affordances	backlog.md:766
+backlog-self-supervision-tick	queued	Self-supervision tick (Hngh watches its own agents)	backlog.md:784
+backlog-research-lines-user-controls	queued	Research lines: user controls	backlog.md:810
+backlog-memory-surface	queued	Memory surface (llm-wiki integration)	backlog.md:831
+backlog-startup-launch-flow	queued	Startup launch flow	backlog.md:848
+backlog-governed-package-operations	queued	System controls → governed package operations	backlog.md:865
+backlog-research-precedence	queued	Research precedence + collected material	backlog.md:883
+backlog-cadence-watch-fixes	queued	Cadence watch fixes (gated red, recorded not landed 2026-08-28)	backlog.md:899
+backlog-report-queue-escalation-caps	queued	report-queue escalation caps	backlog.md:930
+backlog-operator-coherence-layer	queued	Operator-coherence layer (the Mirror)	backlog.md:960
+backlog-credential-rotation-harness	queued	Credential-rotation harness (the Keyring)	backlog.md:981
+backlog-takeout-ingest-pipeline	queued	Takeout ingest pipeline (the Portage P1)	backlog.md:985
+backlog-syncthing-fleet-manager	queued	Syncthing fleet manager (the Portage P2)	backlog.md:1004
+backlog-repo-topology-consolidation	queued	Repo topology consolidation (single-repo candidate)	backlog.md:1024
+backlog-clean-reorientation-track-a	queued	Clean reorientation track A (automation cleanup)	backlog.md:1041
+backlog-kernel-gate-watch-test-load-flake	queued	Kernel gate watch-test load flake	backlog.md:1062
+backlog-interactive-installer-maturity	queued	Interactive installer maturity (real distro matrix)	backlog.md:1088
+backlog-os-harness-knowledge-tracks	queued	OS-harness knowledge tracks (systemd/distro packaging research)	backlog.md:1105
+backlog-social-read-layer	queued	Social read layer	backlog.md:1118
+backlog-social-post-layer	queued	Social post layer (gated)	backlog.md:1122
+backlog-oss-contribution-candidates	queued	OSS contribution candidates	backlog.md:1126
+backlog-jcode-primary-harness-worker-lane	queued	Jcode primary-harness worker lane (governed delegation cycle)	backlog.md:1130
+backlog-jcode-observatory-surface	queued	Jcode observatory surface	backlog.md:1148
+backlog-router-re-route-policy	queued	Router re-route policy: bound/expiry per alert identity, park past it (refoundation P7)	backlog.md:1164
+backlog-adopted-disposition-adoption-wire	queued	Adopted-disposition adoption wire: one runtime decision reads adopted verdicts	backlog.md:1174
+backlog-interpretation-seam-for-findings	queued	Interpretation seam for findings: advisory canon-informed commentary rows (refoundation P9-adjacent)	backlog.md:1204
 ```
 ## Struck rows (2026-09-24)
 
@@ -75,7 +136,7 @@ rows is folded here; the TSV rows keep the rotation state unchanged.
 
 ## Next
 
-- **Land stage 2** — next queued (roadmap.md:198: nerve-center
+- **Land stage 2** — next queued set=2026-09-25 ttl=7 (roadmap.md:198: nerve-center
   consolidation is in final verification; the config-backup lanes are
   scheduled on the 30m tier).
 

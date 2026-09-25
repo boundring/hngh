@@ -57,7 +57,7 @@ typed confidence. A decision must carry a typed record or park.
 
 ## The admission rule (adopted)
 
-docs/design/hnnghh-minimal-core-spec.md:118-131: every capability that
+docs/design/hngh-minimal-core-spec.md:118-131: every capability that
 survives states five answers — which registry DECLARES it, which guard FAILS
 CLOSED on it, which patrol WATCHES it, which certificate (if any) GATES it,
 which disposition ledger RECORDS it. Missing any -> not admitted -> removed

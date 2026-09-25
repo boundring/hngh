@@ -20,6 +20,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CTL = ROOT / "scripts" / "service-ctl.sh"
 
+def crumbs_text(db):
+    """The journal's derived 4-field lines (the read seam)."""
+    return subprocess.run(
+        ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export", "--db", str(db)],
+        capture_output=True, text=True, check=True).stdout
+
+
 STUB = """#!/usr/bin/env bash
 # fake systemctl: logs every call; cat succeeds for installed units only
 echo "$*" >> "$STUB_LOG"
@@ -61,7 +68,7 @@ class ServiceCtl(unittest.TestCase):
             HNGH_REPORT_ROOT=str(self.tmp),
             STUB_LOG=str(self.stub_log),
             RQ_LOG=str(self.rq_log),
-            STATE_FILE=str(self.tmp / "STATE.md"),
+            HNGH_CRUMBS_DB=str(self.tmp / "crumbs.db"),
         )
 
     def _install(self, name, body):
@@ -118,7 +125,7 @@ class ServiceCtl(unittest.TestCase):
         self.assertIn("service-ctl", self.rq_log.read_text())     # progress row
         self.assertIn("start llama-server.service", self.rq_log.read_text())
         self.assertIn("rc=0", self.rq_log.read_text())
-        state = (self.tmp / "STATE.md").read_text()
+        state = crumbs_text(self.tmp / "crumbs.db")
         self.assertIn("service-ctl | start", state)               # breadcrumb
 
     def test_status_is_read_only(self):
@@ -207,7 +214,7 @@ class ServiceStateProbe(unittest.TestCase):
             HNGH_SERVICE_DASHBOARD=str(self.tmp / "service-state.json"),
             HNGH_SERVICE_ALERT_STAMP=str(self.tmp / ".alert-stamp"),
             HNGH_SERVICE_DIVERGENCE_STAMP=str(self.tmp / ".divergence-stamp"),
-            STATE_FILE=str(self.tmp / "STATE.md"),
+            HNGH_CRUMBS_DB=str(self.tmp / "crumbs.db"),
             STUB_LOG=str(self.stub_log),
             RQ_LOG=str(self.rq_log),
         )
@@ -274,7 +281,7 @@ class ServiceStateProbe(unittest.TestCase):
         self.assertEqual(ports[up], True)
         self.assertIn("unsloth-studio.service",
                       [q["serving_unit"] for q in dash["ports"] if q["serving_unit"]])
-        state = (self.tmp / "STATE.md").read_text()
+        state = crumbs_text(self.tmp / "crumbs.db")
         self.assertEqual(state.count("service-state | service-divergence"),
                          1)                            # day-dedup: one only
 
@@ -302,7 +309,7 @@ class ServiceStateProbe(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertIsNone(self.classification(p))
         self.assertEqual(self.alerts(), [])
-        self.assertFalse((self.tmp / "STATE.md").exists())
+        self.assertEqual(crumbs_text(self.tmp / "crumbs.db"), "")  # nothing written
 
     def test_dry_run_writes_nothing(self):
         self.sock, up = listener()
@@ -310,7 +317,7 @@ class ServiceStateProbe(unittest.TestCase):
                            extra={"DRY_RUN": "1"})
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertFalse((self.tmp / "service-state.json").exists())
-        self.assertFalse((self.tmp / "STATE.md").exists())
+        self.assertEqual(crumbs_text(self.tmp / "crumbs.db"), "")  # nothing written
         self.assertEqual(self.alerts(), [])
 
 
@@ -345,7 +352,7 @@ class ServiceRecovery(unittest.TestCase):
             HNGH_SERVICE_RECOVERY_STAMP=str(self.stamp),
             HNGH_SERVICE_RECOVERY_DASH_STAMP=str(self.dash_stamp),
             HNGH_STOP_MARKER_DIR=str(self.marker_dir),
-            STATE_FILE=str(self.tmp / "STATE.md"),
+            HNGH_CRUMBS_DB=str(self.tmp / "crumbs.db"),
             STUB_LOG=str(self.stub_log),
             RQ_LOG=str(self.rq_log),
         )

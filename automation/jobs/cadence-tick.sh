@@ -19,20 +19,20 @@ set -u
 # CADENCE_PICK_ECHO=1 prints the pick for `date -u` and exits — the pin
 # seam (automation/tests/test-cadence-collapse.sh).
 calendar_pick() { # hh dow dom -> subdir names, one per line
-  if [ "$1" = "05" ]; then
-    echo daily
-    return 0
-  fi
-  if [ "$1" = "06" ]; then
-    [ "$2" = "1" ] && echo weekly
-    [ "$3" = "01" ] && echo monthly
-  fi
+ if [ "$1" = "05" ]; then
+  echo daily
   return 0
+ fi
+ if [ "$1" = "06" ]; then
+  [ "$2" = "1" ] && echo weekly
+  [ "$3" = "01" ] && echo monthly
+ fi
+ return 0
 }
 if [ "${CADENCE_PICK_ECHO:-0}" = "1" ]; then
-  read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
-  calendar_pick "$_hh" "$_dow" "$_dom"
-  exit 0
+ read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
+ calendar_pick "$_hh" "$_dow" "$_dom"
+ exit 0
 fi
 
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
@@ -43,15 +43,20 @@ fi
 # open on fault (inside bailiff_check). Tick stays exit 0 — the halt is a
 # skip-with-crumb, same contract as tick-skip.
 . "$AUTOMATION_ROOT/lib/bailiff.sh"
-bailiff_check || exit 0
+# R8 (P3c): a bailiff halt is a gate refusal — crumb (inside
+# bailiff_check) plus one deduped spine row naming the cheaper tier.
+bailiff_check || {
+ gate_refusal bailiff "executive tier halted by watch audit" "next tick"
+ exit 0
+}
 
 TIER="${TIER:-}"
 case "$TIER" in
 subhour | hour | calendar) ;;
 *)
-  echo "cadence-tick: TIER must be one of calendar|hour|subhour (got '${TIER}')" >&2
-  exit 2
-  ;;
+ echo "cadence-tick: TIER must be one of calendar|hour|subhour (got '${TIER}')" >&2
+ exit 2
+ ;;
 esac
 
 # RAM belt (plan 2026-09-22-ram-guardrails-dashboard-controls step 2):
@@ -60,17 +65,17 @@ esac
 # Below the floor the tick is skipped whole: fail-closed, exit 0.
 case "$TIER" in
 subhour)
-  . "$AUTOMATION_ROOT/lib/memory-gate.sh"
-  memory_gate || exit 0
-  ;;
+ . "$AUTOMATION_ROOT/lib/memory-gate.sh"
+ memory_gate || exit 0
+ ;;
 esac
 
 # per-tier serialization: one tick at a time, drop the run if one is live
 LOCK="/tmp/hngh-cadence-${TIER}.lock"
 exec 9>"$LOCK"
 flock -n 9 || {
-  breadcrumb "$JOB_NAME" "tick-skip" "tier $TIER already ticking (flock held)"
-  exit 0
+ breadcrumb "$JOB_NAME" "tick-skip" "tier $TIER already ticking (flock held)"
+ exit 0
 }
 
 # --- mounted work for this tier (drop-ins; absent tier does nothing) ---
@@ -80,29 +85,29 @@ TIMING_LOG="$AUTOMATION_ROOT/logs/drop-in-timing.log"
 mkdir -p "$AUTOMATION_ROOT/logs"
 DIRS="$TIER"
 if [ "$TIER" = "calendar" ]; then
-  read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
-  DIRS=""
-  for _sub in $(calendar_pick "$_hh" "$_dow" "$_dom"); do
-    DIRS="$DIRS calendar/$_sub"
-  done
+ read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
+ DIRS=""
+ for _sub in $(calendar_pick "$_hh" "$_dow" "$_dom"); do
+  DIRS="$DIRS calendar/$_sub"
+ done
 fi
 for _d in $DIRS; do
-  for f in "$AUTOMATION_ROOT/cadence/$_d"/*.sh; do
-    breadcrumb "$JOB_NAME" "mounted" "tier $TIER launching $f"
-    t0=$(date +%s.%N)
-    bash "$f" || breadcrumb "$JOB_NAME" "dropin-fail" "$f rc=$?"
-    t1=$(date +%s.%N)
-    # actual wall per drop-in run — the time ledger's dropin:<name> source
-    wall=$(awk "BEGIN{printf \"%.3f\", $t1 - $t0}")
-    printf '%s|%s|%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      "$(basename "$f")" "$wall" >>"$TIMING_LOG"
-    ran=$((ran + 1))
-  done
+ for f in "$AUTOMATION_ROOT/cadence/$_d"/*.sh; do
+  breadcrumb "$JOB_NAME" "mounted" "tier $TIER launching $f"
+  t0=$(date +%s.%N)
+  bash "$f" || breadcrumb "$JOB_NAME" "dropin-fail" "$f rc=$?"
+  t1=$(date +%s.%N)
+  # actual wall per drop-in run — the time ledger's dropin:<name> source
+  wall=$(awk "BEGIN{printf \"%.3f\", $t1 - $t0}")
+  printf '%s|%s|%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+   "$(basename "$f")" "$wall" >>"$TIMING_LOG"
+  ran=$((ran + 1))
+ done
 done
 
 if [ "$ran" = "0" ]; then
-  breadcrumb "$JOB_NAME" "nothing-mounted" "tier $TIER has no mounted work"
+ breadcrumb "$JOB_NAME" "nothing-mounted" "tier $TIER has no mounted work"
 else
-  breadcrumb "$JOB_NAME" "tick-done" "tier $TIER ran $ran drop-in(s)"
+ breadcrumb "$JOB_NAME" "tick-done" "tier $TIER ran $ran drop-in(s)"
 fi
 exit 0

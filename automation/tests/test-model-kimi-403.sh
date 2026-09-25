@@ -12,10 +12,22 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/jobs" "$sb/.config/hngh"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$root/lib/crumbs.py" "$root/lib/crumbs-db.py" "$sb/lib/"
 ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+# schema-only telemetry seed: a 403 leg emits no row, but the count check
+# needs the table to exist (previously an ocgo success created it)
+HNGH_HOME_DIR="$sb/home" python3 -c 'import sqlite3, os
+db = os.path.join(os.environ["HNGH_HOME_DIR"], "db", "telemetry.db")
+os.makedirs(os.path.dirname(db), exist_ok=True)
+c = sqlite3.connect(db)
+c.execute("create table if not exists events(ts text, source text, kind text)")
+c.commit()
+c.close()'
+# crumbs seam: the journal db is the source of record; reads go through
+# the export bridge (STATE.md is a derived export, never materialized here)
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 
 . "$root/tests/stub-lib.sh"
 
@@ -54,7 +66,7 @@ call() { # prompt [K=V ...] -> stdout
  shift
  local kv
  (
-  export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+  export AUTOMATION_ROOT="$sb" JOB_NAME=test
   export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -83,21 +95,14 @@ port403="$(cat "$stubdir/stub403-port")"
  echo "FAIL: 403 stub did not start"
  exit 1
 }
-stub_start stubB
-portB="$(cat "$stubdir/stubB-port")"
-[ -n "$portB" ] || {
- echo "FAIL: stubB did not start"
- exit 1
-}
-
-# kimi 403s, ocgo answers: failover, not success.
-printf 'opencode-url\thttp://127.0.0.1:%s\ttest\ttest\nopencode-model\tglm-test-model\ttest\ttest\n' "$portB" >"$sb/cadence-params.tsv"
-out="$(call "hello-403" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
- "KIMI_URL=http://127.0.0.1:$port403" "OPENCODE_API_KEY=stub-key-never-real" \
- "OCGO_CAP_5H_CALLS=100000")"
-ck "403: fall-through answers" "stub-says-hi" "$out"
-ck "403: kimi NOT used" "ocgo:glm-test-model" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "| model | kimi | HTTP 403 -> next backend" "$sb/STATE.md" &&
+# kimi 403s: the crumb names the code, and the miss falls through (never
+# success). MODEL_PIN=kimi because the 2026-09-24 ops-fold unpinned ladder
+# answers ocgo BEFORE kimi — the pin is the only way to reach the leg.
+out="$(call "hello-403" "MODEL_PIN=kimi" "KIMI_AI_KEY=stub-key-never-real" \
+ "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$port403")"
+ck "403: fall-through lands archive-only" "" "$out"
+ck "403: kimi NOT used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
+grep -q "| model | kimi | HTTP 403 -> next backend" <(journal) &&
  echo "ok: 403: breadcrumb names the code" || {
  echo "FAIL: 403: no 403 breadcrumb"
  fails=$((fails + 1))

@@ -23,7 +23,8 @@ cp -r "$root/lib/." "$sb/lib/"
 cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 printf 'blocker-park-cooldown-hours\t9999\thermetic test\tstay parked within sections a-c\n' \
  >"$sb/cadence-params.tsv"
 
@@ -46,7 +47,7 @@ chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unslo
 DEAD=("UNSLOTH_URL=http://127.0.0.1:1" "OLLAMA_URL=http://127.0.0.1:1")
 
 BEAT_ENV=(
- AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh
+ AUTOMATION_ROOT="$sb" HNGH_CRUMBS_DB="$HNGH_CRUMBS_DB" JOB_NAME=33-research-beat.sh
  HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root"
  RESEARCH_SYNTH_STAMP_FILE="$sb/synth-stamp"
  FAILFIRST_STATE_DIR="$sb/ff" RESEARCH_LOCK_FILE="$sb/lock"
@@ -94,7 +95,7 @@ ck "first dead run: attempt recorded" "model-lane-dead 1 active" "$(blk line-1)"
 sleep 1
 beat_run "${DEAD[@]}"
 ck "second dead run: line parked" "model-lane-dead 2 parked" "$(blk line-1)"
-grep -q 'parked after 2 consecutive model-lane-dead' "$sb/STATE.md" &&
+crumbs | grep -q 'parked after 2 consecutive model-lane-dead' &&
  echo "ok: park alert filed" ||
  {
   echo "FAIL: no park alert"
@@ -134,7 +135,7 @@ ck "first junk run: attempt recorded" "junk-capture 1 active" "$(blk line-1)"
 sleep 1
 beat_run "UNSLOTH_URL=http://127.0.0.1:$stubJ_port"
 ck "second junk run: line parked" "junk-capture 2 parked" "$(blk line-1)"
-grep -q 'parked after 2 consecutive junk-capture' "$sb/STATE.md" &&
+crumbs | grep -q 'parked after 2 consecutive junk-capture' &&
  echo "ok: junk-capture park alert filed" ||
  {
   echo "FAIL: no junk-capture park alert"

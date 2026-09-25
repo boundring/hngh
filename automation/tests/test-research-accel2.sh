@@ -30,7 +30,9 @@ cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 
 . "$root/tests/stub-lib.sh"
 stub_start stubU # unsloth (local chain)
@@ -50,7 +52,7 @@ busy="12.00 3.00 1.00 5/900 1234"
 idle="0.10 0.20 0.10 1/900 1234"
 
 BEAT_ENV=(
- AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh
+ AUTOMATION_ROOT="$sb" HNGH_CRUMBS_DB="$HNGH_CRUMBS_DB" JOB_NAME=33-research-beat.sh
  HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root"
  RESEARCH_SYNTH_STAMP_FILE="$sb/synth-stamp"
  FAILFIRST_STATE_DIR="$sb/ff" RESEARCH_LOCK_FILE="$sb/lock"
@@ -92,7 +94,7 @@ reset_beat() { # n-planned-lines -> fresh pool, counters, telemetry, hits
   "$sb/lock"
  rm -rf "$sb/ff"
  rm -f "$stubdir/synth-reply"
- : >"$sb/STATE.md"
+ crumbs_reset
  # telemetry db: userspace home layout (2026-09-13); the dashboard/ path
  # is stale — leftover rows here soft-pace-block kimi early in the UTC day.
  rm -rf "$sb/.hngh"
@@ -130,8 +132,8 @@ beat_run "${deck_env[@]}" "RESEARCH_LOADAVG_FILE=$sb/loadavg-busy"
 ck "busy+deck: deck stub answered" "1" "$(hits stubD)"
 ck "busy+deck: unsloth never hit" "0" "$(hits stubU)"
 ck "busy+deck: model used = deck" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
-grep -q 'research-route-deck' "$sb/STATE.md" &&
- grep -q 'local busy - research routed to deck (load 12.00 >= ' "$sb/STATE.md" &&
+crumbs | grep -q 'research-route-deck' &&
+ crumbs | grep -q 'local busy - research routed to deck (load 12.00 >= ' &&
  echo "ok: busy+deck: routed-to-deck breadcrumb" || {
  echo "FAIL: busy+deck: no routed-to-deck breadcrumb"
  fails=$((fails + 1))
@@ -153,13 +155,13 @@ grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
 reset_beat 2
 printf '%s\n' "$busy" >"$sb/loadavg-busy"
 beat_run "RESEARCH_LOADAVG_FILE=$sb/loadavg-busy"
-grep -q 'research-route-quota' "$sb/STATE.md" &&
- grep -q 'local busy - research routed to' "$sb/STATE.md" &&
+crumbs | grep -q 'research-route-quota' &&
+ crumbs | grep -q 'local busy - research routed to' &&
  echo "ok: busy+unarmed: quota route breadcrumb" || {
  echo "FAIL: busy+unarmed: no quota route breadcrumb"
  fails=$((fails + 1))
 }
-grep -q 'research-deferred' "$sb/STATE.md" && {
+crumbs | grep -q 'research-deferred' && {
  echo "FAIL: busy+unarmed: deferred (fail-first never defers)"
  fails=$((fails + 1))
 } || echo "ok: busy+unarmed: no defer"
@@ -211,7 +213,7 @@ reset_beat 4
 overflow_run "${kimi_env[@]}"
 ck "overflow degraded: kimi never hit" "0" "$(hits stubK)"
 ck "overflow degraded: unsloth never hit" "0" "$(hits stubU)"
-grep -q 'research-overflow-throttled' "$sb/STATE.md" &&
+crumbs | grep -q 'research-overflow-throttled' &&
  echo "ok: overflow degraded: throttled breadcrumb" || {
  echo "FAIL: overflow degraded: no throttle breadcrumb"
  fails=$((fails + 1))
@@ -327,7 +329,7 @@ grep -q "synth-$day-1	expanding" "$sb/research-lines.tsv" &&
  echo "FAIL: synth: synthesized line not advanced"
  fails=$((fails + 1))
 }
-grep -q 'research-synth ' "$sb/STATE.md" &&
+crumbs | grep -q 'research-synth ' &&
  echo "ok: synth: breadcrumb filed" || {
  echo "FAIL: synth: no breadcrumb"
  fails=$((fails + 1))
@@ -357,12 +359,12 @@ printf 'synth-%s-1\tWholly unrelated musing about the weather.\n' "$day" \
  >"$stubdir/synth-reply"
 beat_run "${kimi_env[@]}"
 ck "synth unsourced: subjects unchanged" "0" "$(wc -l <"$sb/research-subjects.txt" | tr -d ' ')"
-grep -q 'research-synth-empty' "$sb/STATE.md" &&
+crumbs | grep -q 'research-synth-empty' &&
  echo "ok: synth unsourced: empty-parse breadcrumb" || {
  echo "FAIL: synth unsourced: no empty-parse breadcrumb"
  fails=$((fails + 1))
 }
-grep -q 'research-skip' "$sb/STATE.md" &&
+crumbs | grep -q 'research-skip' &&
  echo "ok: synth unsourced: fell to skip path" || {
  echo "FAIL: synth unsourced: skip path not taken"
  fails=$((fails + 1))

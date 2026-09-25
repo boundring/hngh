@@ -19,7 +19,8 @@
 # minutes — the bench loads the host, sessions come first.
 # Test seams: BENCH_SCRIPT, BENCH_STATS_DIR, BUDGET_LOG, DEMOTE_STATE,
 # FAILFIRST_STATE_DIR, BENCH_QUIET_WINDOW_S, DIGEST_DIR/HNGH_HOME_DIR,
-# REPORT/HNGH_HOME, STATE_FILE.
+# REPORT/HNGH_HOME, HNGH_CRUMBS_DB (journal db; STATE.md is a derived
+# export, never a seam).
 set -u
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/common.sh"
 . "$AUTOMATION_ROOT/lib/breadcrumbs.sh"
@@ -170,12 +171,12 @@ recalibrate_check() {
     sc="$(latest_score "$m")"
     case "$sc" in *[!0-9]* | '') : ;; *) [ "$sc" -gt 0 ] && alive=1 ;; esac
   done
-  for m in $targets; do # ponytail: whole-run-zero reads as a down local
+  for m in $targets; do       # ponytail: whole-run-zero reads as a down local
     sc="$(latest_score "$m")" # server, not model evidence — record unknown
     case "$sc" in
-      '' | *[!0-9]*) out=unknown ;;
-      0) [ "$alive" = 0 ] && out=unknown || out=bad-execution ;;
-      *) out=ok ;;
+    '' | *[!0-9]*) out=unknown ;;
+    0) [ "$alive" = 0 ] && out=unknown || out=bad-execution ;;
+    *) out=ok ;;
     esac
     record_model_outcome "$m" "$out"
     breadcrumb "$JOB_NAME" "bench-recalibrate" "$m scored ${sc}/5 -> record_model_outcome $out"

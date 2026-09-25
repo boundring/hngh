@@ -24,7 +24,10 @@ fake="$sb/fake"
 mkdir -p "$sb/home/db" "$sb/lib" "$sb/jobs" "$sb/archive" "$sb/.config/hngh" "$fake/bin"
 cp -r "$root/lib/." "$sb/lib/"
 cp "$root/jobs/telemetry.py" "$sb/jobs/"
-: >"$sb/STATE.md"
+# crumbs seam: the journal db is the source of record; reads go through
+# the export bridge (STATE.md is a derived export, never materialized)
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 # ctx-standard row is deliberately NOT 16384: a pin body carrying 7777
 # proves the row was read (the 16384 fallback would never emit it)
 printf 'ctx-standard\t7777\ttest\ttest row\n' >"$sb/cadence-params.tsv"
@@ -105,13 +108,13 @@ reset_logs() {
  : >"$fake/curl-req.log"
  : >"$fake/curl-argv.log"
  : >"$FAKE_QUEUE_LOG"
- : >"$sb/STATE.md"
+ rm -f "$HNGH_CRUMBS_DB" # fresh journal per case: counts stay per-case
 }
 leg() { # model.sh code [K=V ...] -> stdout of one sandbox run
  (
   export PATH="$fake/bin:$PATH"
   export FAKE_CURL_ARGV_LOG="$fake/curl-argv.log" FAKE_CURL_REQ_LOG="$fake/curl-req.log"
-  export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+  export AUTOMATION_ROOT="$sb" JOB_NAME=test
   export HOME="$sb" HNGH_HOME_DIR="$sb/home"
   export TOKEN_FILE="$sb/unsloth-token" REFRESH_FILE="$sb/nope"
   export UNSLOTH_URL="http://127.0.0.1:1/studio" MODEL=stub-model MODEL_TIMEOUT=5
@@ -137,8 +140,8 @@ reset_logs
 out="$(leg 'unsloth_chat "say ok" 16 stub-model' FAKE_LOAD_STATUS=500)"
 ck "non-200 load: chat attempt still ran" "unsloth-says-hi" "$out"
 ck "non-200 load: chat POST happened" "1" "$(hits '/v1/chat/completions')"
-ck "non-200 load: one load-ctx breadcrumb" "1" "$(count 'load-ctx' "$sb/STATE.md")"
-ck "non-200 load: breadcrumb says continuing unpinned" "1" "$(count 'continuing unpinned' "$sb/STATE.md")"
+ck "non-200 load: one load-ctx breadcrumb" "1" "$(count 'load-ctx' <(journal))"
+ck "non-200 load: breadcrumb says continuing unpinned" "1" "$(count 'continuing unpinned' <(journal))"
 
 # (c) HNGH_LOADCTX_PIN=0: zero load POSTs (hermetic kill switch)
 reset_logs

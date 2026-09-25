@@ -20,10 +20,10 @@
    · lessons — llm-wiki source count plus the 3 newest source filenames.
 
    Operator controls (advisory/organizational only): an 'add research
-   line' form (POST /research-line — appends a proposal-ready lane to the
-   hngh backlog) and a per-lane 'note' button (POST /research-note —
-   backlog annotation, optionally an alert-row steer). Both are prose
-   writes for the operator to read and rotate; NEVER governance input.
+   line' form (POST /research-line) and a per-lane 'note' button (POST
+   /research-note). Both REFUSE 410 since the 2026-09-25 backlog fold
+   (the error surfaces here); lanes live in queue.md. NEVER governance
+   input.
    Fail-closed per source: a feed slot that came back as an error renders
    an inline note instead of the card body; the other cards still render.
    All styles are injected here in one owned

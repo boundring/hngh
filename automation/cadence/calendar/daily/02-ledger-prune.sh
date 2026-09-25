@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# 02-ledger-prune — day-tier self-improvement drop-in: keep the hngh report
-# ledger from re-bloating. Prunes alert rows older than 48h (archived first),
-# reports the count, and files ONE honest alert when the prune left tracked
-# body deletions (deletions cannot pass hngh verify-candidate; an operator
-# ceremony must commit them). Prune commits stay out of automation's hands.
+# 02-ledger-prune — day-tier self-improvement drop-in: keep the hngh
+# journals from re-bloating (P1c rotation + fold). Rotates crumbs.db (14d
+# of ordinary rows; alert/finding/decision rows stay forever; pruned rows
+# archive first), folds reports.md (alert/progress rows keep the 7d
+# identity re-fire window; scheduled/optimization noise rows are crumbs
+# and stop being written there — sweep whatever landed anyway), reports
+# the counts, and files ONE honest alert when the fold left tracked body
+# deletions (deletions cannot pass hngh verify-candidate; an operator
+# ceremony must commit them). Fold commits stay out of automation's hands.
 # Fail-closed: exits 0 in every expected path.
 #
 # usage: cadence/calendar/daily/02-ledger-prune.sh   (via cadence-tick.sh TIER=calendar)
@@ -27,11 +31,19 @@ file_report() {
   fi
 }
 
-before="$(date -u -d '48 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+db="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}"
+if crumb_out="$(python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" rotate \
+  --db "$db" 2>&1)"; then
+  breadcrumb "$JOB_NAME" "rotate" "$crumb_out"
+else
+  breadcrumb "$JOB_NAME" "rotate-fail" "$(printf '%s' "$crumb_out" | tail -n 1)"
+fi
+
+before="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
 archive_rel="docs/project/report-bodies/prune-archive-$(date -u +%Y-%m-%d).md"
 
 out="$(cd "$KERNEL" && HNGH_REPORT_ROOT="$KERNEL" $REPORT --prune \
-  --before "$before" --kinds alert --archive "$archive_rel" 2>&1)"
+  --before "$before" --kinds alert,progress --archive "$archive_rel" 2>&1)"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   file_report alert "ledger prune failed rc=$rc: $(printf '%s' "$out" | tail -n 1)"
@@ -40,8 +52,17 @@ fi
 
 n="$(printf '%s' "$out" | sed -n 's/^pruned \([0-9][0-9]*\) rows.*/\1/p')"
 n="${n:-0}"
-if [ "$n" -gt 0 ]; then
-  file_report progress "ledger prune: pruned $n alert rows (48h retention, archived to $archive_rel)"
+
+# noise sweep (P1c): scheduled/optimization rows are crumbs now — sweep
+# whatever landed in reports.md anyway.
+noise_out="$(cd "$KERNEL" && HNGH_REPORT_ROOT="$KERNEL" $REPORT --prune \
+  --before "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --kinds scheduled,optimization \
+  --archive "$archive_rel" 2>&1)"
+nn="$(printf '%s' "$noise_out" | sed -n 's/^pruned \([0-9][0-9]*\) rows.*/\1/p')"
+nn="${nn:-0}"
+
+if [ "$n" -gt 0 ] || [ "$nn" -gt 0 ]; then
+  file_report progress "ledger prune: folded $n + $nn rows (alert/progress 7d re-fire window, noise swept; archived to $archive_rel)"
 fi
 
 # tracked body deletions cannot ride an automation commit (verify-candidate
@@ -53,5 +74,5 @@ if git -C "$KERNEL" status --porcelain -- docs/project/report-bodies 2>/dev/null
     "ledger-prune:deletions" 604800
 fi
 
-breadcrumb "$JOB_NAME" "prune-done" "ledger prune finished (pruned $n alert rows)"
+breadcrumb "$JOB_NAME" "prune-done" "ledger fold finished (folded $n + $nn rows)"
 exit 0

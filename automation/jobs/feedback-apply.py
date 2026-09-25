@@ -470,8 +470,7 @@ def state_ids():
 
 def crumb(event, detail):
     if STATE_MD:
-        crumbs.crumb("feedback-apply", event, crumbs.scrub(detail),
-                     state_file=STATE_MD)
+        crumbs.crumb("feedback-apply", event, crumbs.scrub(detail))
 
 
 if __name__ == "__main__":

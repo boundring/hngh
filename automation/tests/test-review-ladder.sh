@@ -22,7 +22,9 @@ done
 mkdir -p "$sb/cadence/calendar/daily"
 ln -s "$root/cadence/calendar/daily/04-review-prep.sh" "$sb/cadence/calendar/daily/"
 : >"$sb/cadence-params.tsv" # no rows unless a case arms one
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 # stubs the model_call emit path and the review beat call into
 printf '%s\n' \
   'import os, sys' \
@@ -48,7 +50,7 @@ used() { cat "$sb/tmp-modelused.txt" 2>/dev/null || true; }
 set_row() { printf '%s\t%s\ttest\ttest\n' "$1" "$2" >"$sb/cadence-params.tsv"; }
 call() { # prompt -> stdout (MODEL_PIN=review; every leg dead unless armed)
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     # honor caller-armed token files (the unsloth last-resort case arms them)
     export HOME="$sb" TOKEN_FILE="${TOKEN_FILE:-$sb/nope}" \
       REFRESH_FILE="${REFRESH_FILE:-$sb/nope2}"
@@ -133,7 +135,7 @@ gitc "$sb/kernel"
 gitc "$sb"
 run_beat() { # (runs cadence/calendar/daily/04-review-prep.sh; caller set the stub row)
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=review-test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=review-test
     export HOME="$sb" DIGEST_DIR="$sb/digest" HNGH_HOME="$sb/kernel"
     # model-demote.sh's REPORT call does not set HNGH_REPORT_ROOT itself;
     # without this the report stub writes ./queue.log into the caller's cwd
@@ -189,7 +191,7 @@ ck "parseable beat: exits 0" "0" "$?"
     fails=$((fails + 1))
   } ||
   echo "ok: parseable beat: no demotion"
-grep -q 'via deck:deck' "$sb/STATE.md" &&
+crumbs | grep -q 'via deck:deck' &&
   echo "ok: parseable beat: review-done breadcrumb" ||
   {
     echo "FAIL: parseable beat: no review-done"

@@ -521,6 +521,13 @@ deck_chat() { # prompt max_tokens -> completion on stdout; 1 = skip/fail
 # call of grace). This spreads the daily cap across the UTC window instead
 # of front-loading it at midnight. Prints "<used> <cap>" when blocked (for
 # the caller's breadcrumb); exit 0 = blocked, 1 = go.
+# _pace_refused — R8: every pacer block reports to the spine (crumb +
+# gate-refusal:<gate> report row). Silent and fail-open: pacers run
+# inside command substitution, stdout is the "used cap" protocol.
+_pace_refused() { # fn used cap
+ gate_refusal "pace-$1" "pacer $1 used $2 of cap $3" "next pacer window" \
+  >/dev/null 2>&1 || true
+}
 quota_pace_blocked() { # source cap -> 0 blocked (prints "used cap"), 1 go
  local src="$1" cap="$2" used elapsed allowed
  case "$cap" in '' | *[!0-9]*) return 1 ;; esac # bad cap: fail open
@@ -528,12 +535,14 @@ quota_pace_blocked() { # source cap -> 0 blocked (prints "used cap"), 1 go
   "select count(*) from events where kind='model' and source='$src' and ts like '$(date -u +%Y-%m-%d)%'" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
+  _pace_refused quota_pace_blocked "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  }
  elapsed=$((10#$(date -u +%H) * 3600 + 10#$(date -u +%M) * 60 + 10#$(date -u +%S)))
  allowed="$(awk -v c="$cap" -v e="$elapsed" 'BEGIN{printf "%.4f", c*e/86400}')"
  if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  _pace_refused quota_pace_blocked "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  fi
@@ -557,12 +566,14 @@ quota_pace_blocked_5h() { # source[,source...] cap -> 0 blocked (prints "used ca
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-5 hours')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
+  _pace_refused quota_pace_blocked_5h "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  }
  elapsed=$(($(date -u +%s) % 18000))
  allowed="$(awk -v c="$cap" -v e="$elapsed" 'BEGIN{printf "%.4f", c*e/18000}')"
  if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  _pace_refused quota_pace_blocked_5h "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  fi
@@ -605,6 +616,7 @@ gemini_burst_blocked() { # -> 0 blocked (prints "used cap"), 1 go
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-$win seconds')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
+  _pace_refused gemini_burst_blocked "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  }
@@ -619,12 +631,14 @@ quota_pace_blocked_window() { # source cap win-modifier soft-seconds -> 0 blocke
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ','now','$win')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
+  _pace_refused quota_pace_blocked_window "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  }
  elapsed=$(($(date -u +%s) % soft))
  allowed="$(awk -v c="$cap" -v e="$elapsed" -v s="$soft" 'BEGIN{printf "%.4f", c*e/s}')"
  if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  _pace_refused quota_pace_blocked_window "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  fi
@@ -669,12 +683,14 @@ quota_pace_blocked_week() { # source cap [weekday 1=Mon..7=Sun] -> 0 blocked (pr
      and ts >= strftime('%Y-%m-%dT%H:%M:%SZ',$week_start,'unixepoch')" 2>/dev/null)"
  case "$used" in '' | *[!0-9]*) used=0 ;; esac
  [ "$used" -ge "$cap" ] && {
+  _pace_refused quota_pace_blocked_week "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  }
  elapsed=$(($(date -u +%s) - week_start))
  allowed="$(awk -v c="$cap" -v e="$elapsed" 'BEGIN{printf "%.4f", c*e/604800}')"
  if awk -v u="$used" -v a="$allowed" 'BEGIN{exit !(u > a + 1)}'; then
+  _pace_refused quota_pace_blocked_week "$used" "$cap"
   printf '%s %s\n' "$used" "$cap"
   return 0
  fi

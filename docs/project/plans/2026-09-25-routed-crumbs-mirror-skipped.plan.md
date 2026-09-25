@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=crumbs-mirror:skipped -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-25T18:03:49Z routed-from=crumbs-mirror:skipped -->
 # 2026-09-25 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `crumbs-mirror:skipped`
@@ -8,3 +8,8 @@ at 2026-09-25T16:00:37Z. Alert text: crumbs mirror mismatch: crumbs rows=180023 
 
 - [ ] Delve: open research subject fail-20260925-crumbs-mirror-skipped for crumbs-mirror:skipped; record disposition; then fix or park
       Verification: research subject fail-20260925-crumbs-mirror-skipped present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-25T17:00:37Z re-occurred (dedup window expired)
+- 2026-09-25T18:00:13Z re-occurred (dedup window expired)

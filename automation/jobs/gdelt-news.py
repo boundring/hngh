@@ -46,6 +46,8 @@ from datetime import datetime, timedelta, timezone
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(_HERE)  # automation/
 JOBS = _HERE
+sys.path.insert(0, os.path.join(ROOT, "lib"))
+import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
 
 scrub_paths = None  # injected from lib/scrub.py (one identity seam for
 # every digest writer; writer census 2026-09-16, seam consolidated into
@@ -130,14 +132,9 @@ def _ascii(text):
 
 
 def breadcrumb(event, detail):
-    state = os.environ.get("STATE_FILE", os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "STATE.md"))
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # the single STATE.md seam (lib/crumbs.py): 4-field stamped line
     try:
-        with open(state, "a") as fh:
-            fh.write("%s | gdelt-news | %s | %s\n"
-                     % (ts, event, detail.replace("|", "!")))
+        crumbs.crumb("gdelt-news", event, crumbs.scrub(detail))
     except OSError:
         pass
 

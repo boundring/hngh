@@ -170,12 +170,14 @@ SPLICED="$(mktemp)"
  printf -- '- Operator items: %s open (hngh-automation/dashboard/operator-items.json; display cap 40).\n' \
   "${oopen:-unknown}"
  # last make-test breadcrumb
- gate="$(grep 'make test' "$AUTOMATION_ROOT/STATE.md" 2>/dev/null | tail -1)"
+ db="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}"
+ gate="$(python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --db "$db" 2>/dev/null |
+  grep 'make test' | tail -1)"
  if [ -n "$gate" ]; then
-  printf -- '- Gates: %s (hngh-automation/STATE.md crumb tail).\n' \
+  printf -- '- Gates: %s (hngh-automation crumbs journal crumb tail).\n' \
    "$(printf '%s' "$gate" | sed 's/^[^|]*| //; s/ | / — /g')"
  else
-  printf -- '- Gates: no make-test breadcrumb found (hngh-automation/STATE.md).\n'
+  printf -- '- Gates: no make-test breadcrumb found (hngh-automation crumbs journal).\n'
  fi
 } >"$BLOCK"
 

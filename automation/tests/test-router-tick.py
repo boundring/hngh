@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Router-tick contract, hermetic (routing doc, "Outcome tracking
 without kernel changes (2026-08-31)"): a closed-step re-fire is skipped
-with exactly one observable pair (STATE.md breadcrumb + deduped
+with exactly one observable pair (crumbs-journal breadcrumb + deduped
 router:dup-skip alert row); an open-step re-fire marks in-flight
 without re-drafting; a first fire drafts a proposed candidate tagged
 routed-from=<identity> plus its router:routed row; critical classes
@@ -60,14 +60,14 @@ class RouterTick(unittest.TestCase):
             "#!/usr/bin/env bash\n"
             "printf '%s\\n' \"$*\" >> " + str(self.root / "queue.log") + "\n")
         self.queue.chmod(0o755)
-        self.state = self.root / "STATE.md"
+        self.db = self.root / "crumbs.db"
         self.env = {
             **os.environ,
             "HNGH_HOME": str(self.kernel),
             "HNGH_AUTOMATION_ROOT": str(self.auto),
             "HNGH_REPORT_QUEUE": str(self.queue),
             "HNGH_REPORT_ROOT": str(self.kernel),
-            "STATE_FILE": str(self.state),
+            "HNGH_CRUMBS_DB": str(self.db),
             "HNGH_PLANS_FEED_OUT": str(self.root / "plans.json"),
         }
 
@@ -99,8 +99,15 @@ class RouterTick(unittest.TestCase):
         return log.read_text().splitlines() if log.exists() else []
 
     def breadcrumbs(self):
-        return (self.state.read_text().splitlines()
-                if self.state.exists() else [])
+        """Journal rows as the 4-field lines STATE.md used to carry
+        (writer stamps included)."""
+        if not self.db.exists():
+            return []
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.db)],
+            capture_output=True, text=True, check=True)
+        return out.stdout.splitlines()
 
     def candidates(self):
         return sorted(p.name for p in self.plans.glob("*routed*.plan.md"))

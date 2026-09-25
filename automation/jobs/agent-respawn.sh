@@ -44,7 +44,7 @@ set -u
 # prompts, cadence-params.tsv) without touching lib resolution.
 AUTOMATION_ROOT="${RESPAWN_ROOT:-$AUTOMATION_ROOT}"
 ROOT="$AUTOMATION_ROOT"
-STATE_FILE="$AUTOMATION_ROOT/STATE.md" # breadcrumbs.sh pinned it at source
+CRUMBS_DB="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}" # shim pinned it at source too: re-root with RESPAWN_ROOT
 
 HANDOFFS="${RESPAWN_HANDOFFS:-$AUTOMATION_ROOT/agent-handoffs.md}"
 BUDGET_LEDGER="$AUTOMATION_ROOT/logs/budget.md"

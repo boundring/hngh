@@ -39,7 +39,7 @@ hngh-automation `cadence/calendar/daily/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
 - Research lines: 256 reviewed, 1 expanding (hngh-automation/research-lines.tsv).
-- Queue Next: pooled-hardware, set 2026-08-25 (31 days old) (hngh docs/project/queue.md).
+- Queue Next: Land stage 2, set 2026-09-25 (0 days old) (hngh docs/project/queue.md).
 - Plan ledger: 608 plan files, 497 routed candidates (hngh docs/project/plans/).
 - Operator items: 27 open (hngh-automation/dashboard/operator-items.json; display cap 40).
 - Gates: 16-remote-push.sh — gate-refresh — hngh: gate crumb was stale — make test re-run green (hngh-automation/STATE.md crumb tail).
@@ -51,11 +51,7 @@ inside the sentinels.
   (`hngh-automation/cadence/README.md`, `31-heartbeat`), with
   heartbeat #1 recorded and fifteen heartbeats on the ledger as of
   2026-09-07.
-- 63 routed candidates in the plan ledger (77 files in `plans/`).
-  Same-identity re-routing now parks at threshold via the disposition
-  spine — router escalation with bump-in-place landed 2026-09-06. The
-  historical x10 tree-skew burst stands on record
-  ([bestiary.md](../design/bestiary.md), class: obsolete).
+
 - 0 of 18 artifact classes are write-only per the torch ledger
   (hngh-automation `torch-ledger.tsv`) as of 2026-09-24: digest-BENCH,
   digest-RESEARCH, and email-qa.log all gained readers in the

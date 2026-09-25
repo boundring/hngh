@@ -39,6 +39,8 @@ from datetime import datetime, timezone
 ROOT = os.environ.get("HNGH_AUTOMATION_ROOT") or os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(ROOT)
+sys.path.insert(0, os.path.join(ROOT, "lib"))
+import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
 PAPER = (os.environ.get("HNGH_NEWSPAPER_DIR")
          or os.path.join(
              os.environ.get("HNGH_HOME_DIR")
@@ -110,12 +112,9 @@ def should_build(date, paper_dir, window_text, now_min=None):
 
 
 def breadcrumb(event, detail):
-    state = os.environ.get("STATE_FILE", os.path.join(ROOT, "STATE.md"))
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # the single STATE.md seam (lib/crumbs.py): 4-field stamped line
     try:
-        with open(state, "a") as fh:
-            fh.write("%s | newspaper-edition | %s | %s\n"
-                     % (ts, event, detail.replace("|", "!")))
+        crumbs.crumb("newspaper-edition", event, crumbs.scrub(detail))
     except OSError:
         pass
 

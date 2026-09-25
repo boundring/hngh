@@ -6,7 +6,7 @@ level, over the records it already writes (no new daemon — mounted from
 the 30m tier, cadence/30m/46-beat-watchdog.sh):
 
   (a) launch-plane stall: >= beat-stall-n consecutive `failed` tokens in
-      STATE.md overnight-done breadcrumbs (results=failed,failed,... —
+      overnight-done crumbs-journal rows (results=failed,failed,... —
       the 2026-09-11 signature looked like ordinary degradation for 12h)
   (b) same-cause deaths: a plan/lane with >= blocker-escalate-n
       consecutive `overnight-lead ... dead ... cause=<same class>` rows
@@ -23,12 +23,14 @@ Fail-first on the detector itself: any fault exits 0 and breaks nothing.
 """
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE_FILE = os.environ.get("BEAT_STATE_FILE", os.path.join(ROOT, "STATE.md"))
+CRUMBS_DB = os.environ.get(
+    "HNGH_CRUMBS_DB", os.path.join(ROOT, "state", "crumbs.db"))
 HANDOFFS = os.environ.get("BEAT_HANDOFFS", os.path.join(ROOT, "agent-handoffs.md"))
 BLOCKERS = os.environ.get("BEAT_BLOCKERS_FILE", os.path.join(ROOT, "state", "beat-blockers.tsv"))
 PARAMS = os.path.join(ROOT, "cadence-params.tsv")
@@ -188,8 +190,19 @@ def apply(detections):
 
 
 def run(now_s=None):
-    with open(STATE_FILE, encoding="utf-8", errors="replace") as fh:
-        state_text = fh.read()
+    conn = sqlite3.connect("file:%s?mode=ro" % CRUMBS_DB, uri=True, timeout=5)
+    try:
+        rows = conn.execute(
+            "SELECT ts, job, event, detail, writer FROM crumbs"
+            " ORDER BY ts, rowid").fetchall()
+    finally:
+        conn.close()
+    # the pure parsers below consume STATE.md-shaped text: reconstruct
+    # the rendered lines (stamp tails included) from the journal rows
+    state_text = "\n".join(
+        "%s | %s | %s | %s" % (ts, job, event,
+                               detail + (" [w=%s]" % writer if writer else ""))
+        for ts, job, event, detail, writer in rows)
     try:
         with open(HANDOFFS, encoding="utf-8", errors="replace") as fh:
             handoffs_text = fh.read()

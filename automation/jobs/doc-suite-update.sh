@@ -63,12 +63,14 @@ else
   fail "fact: kernel HEAD $head_hash not found in kernel git log"
 fi
 
-last_green="$(grep ' | gate-green | ' "$AUTOMATION_ROOT/STATE.md" 2>/dev/null | tail -n 1 | cut -d'|' -f1 | xargs)"
+db="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}"
+last_green="$(python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --db "$db" 2>/dev/null |
+  grep ' | gate-green | ' | tail -n 1 | cut -d'|' -f1 | xargs)"
 if [ -n "$last_green" ] &&
   [ $(($(date -u +%s) - $(date -u -d "$last_green" +%s 2>/dev/null || echo 0))) -le "$GATE_MAX_AGE" ]; then
   facts_ok=$((facts_ok + 1))
 else
-  fail "fact: no gate-green breadcrumb in STATE.md within last 36h"
+  fail "fact: no gate-green crumb in the crumbs journal within last 36h"
 fi
 
 timers="$(systemctl --user list-timers 'hngh-*' --no-pager 2>/dev/null | grep -c hngh)"

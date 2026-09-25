@@ -29,10 +29,10 @@ mkdir -p "$sb/cadence/hour" "$sb/jobs" "$sb/bin" "$sb/scripts" "$sb/remote"
 ln -s "$root/lib" "$sb/lib"
 ln -s "$PROBE" "$sb/cadence/hour/32-deck-facts.sh"
 ln -s "$root/jobs/deck-producer.sh" "$sb/jobs/deck-producer.sh"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 WINDOW='Mon-Fri 09:00-17:30 America/New_York'
 printf 'deck-availability\t%s\ttest\ttest\n' "$WINDOW" >"$sb/cadence-params.tsv"
-
-
 
 # report-queue stub (32-deck-facts runs `python3 "$REPORT" --add alert`,
 # REPORT = $HNGH_HOME/scripts/report-queue): every invocation appended
@@ -78,15 +78,16 @@ run_probe() { # DECK_NOW SSH_STUB_MODE [extra env via env]
     bash "$sb/cadence/hour/32-deck-facts.sh"
 }
 alerts_filed() { # -> count of --add alert rows in the stub log
-  if [ -f "$sb/rq.log" ]; then grep -c -- "--add alert" "$sb/rq.log" || :;
+  if [ -f "$sb/rq.log" ]; then
+    grep -c -- "--add alert" "$sb/rq.log" || :
   else printf 0; fi
 }
-crumb_kind() { # kind -> count in the sandbox STATE.md
-  if [ -f "$sb/STATE.md" ]; then grep -c " | $1 | " "$sb/STATE.md" || :;
-  else printf 0; fi
+crumb_kind() { # kind -> count in the sandbox crumbs journal
+  crumbs | grep -c " | $1 | " 2>/dev/null || :
 }
 ssh_calls() { # -> count of stub ssh invocations
-  if [ -f "$sb/ssh.log" ]; then grep -c . "$sb/ssh.log" || :;
+  if [ -f "$sb/ssh.log" ]; then
+    grep -c . "$sb/ssh.log" || :
   else printf 0; fi
 }
 
@@ -152,7 +153,7 @@ HNGH_MACHINE_PROFILE="$sb/config/absent.env" DECK_HOST= \
   run_probe "2026-09-14T23:00:00Z" up
 ck "no-DECKHOST skip exits 0" "0" "$?"
 ck "no-DECKHOST skip crumbed" "1" "$(crumb_kind deck-facts)"
-grep -q "no DECK_HOST (config/machine.env missing" "$sb/STATE.md" &&
+crumbs | grep -q "no DECK_HOST (config/machine.env missing" &&
   ck "skip breadcrumb text" "y" "y" ||
   ck "skip breadcrumb text" "y" "n"
 ck "no-DECKHOST skip makes no ssh calls" "0" "$(ssh_calls)"
@@ -160,9 +161,13 @@ ck "no-DECKHOST skip makes no ssh calls" "0" "$(ssh_calls)"
 # --- digest classifier (scripts/email-digest.py classify_alerts): an
 # outside-window deck-unreachable row renders off-duty, not down/alert.
 classify() { # NOW [env|tsv] row... -> "offduty=N critical=N info=N";
-#             env = DECK_AVAILABILITY override, tsv = sandbox TSV row
+  #             env = DECK_AVAILABILITY override, tsv = sandbox TSV row
   local tnow="$1" tmode=env
-  case "${2:-}" in tsv) tmode=tsv; shift;; esac
+  case "${2:-}" in tsv)
+    tmode=tsv
+    shift
+    ;;
+  esac
   shift
   T_SRC="$root/scripts/email-digest.py" T_ROOT="$sb" T_WINDOW="$WINDOW" \
     T_MODE="${tmode:-env}" DECK_NOW="$tnow" python3 - "$@" <<'PY'

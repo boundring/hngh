@@ -16,9 +16,8 @@ itself a secret. Missing/wrong token -> 403, before any dispatch.
 
 Endpoints — all advisory/display-only. They NEVER feed hngh governance,
 policy, certificates, or scoring; spawned processes are display surfaces.
-The research endpoints below write to the operator's backlog.md, which is
-a PROSE surface: proposals and annotations for the operator to read and
-rotate into the queue — never authority, never governance input.
+The research endpoints below REFUSE with 410 since the 2026-09-25 fold:
+backlog.md is archived (banner at its head), its lanes live in queue.md.
 
 POST /flag  {"session": str, "note": str}
     Appends ONE line to agent-handoffs.md:
@@ -83,26 +82,12 @@ POST /delegate  {"slug": str, "objective": str, "provider": str,
     unreachable-by-argv sneaks into the ledger); 500 on exec failure.
 
 POST /research-line  {"name": str, "intent": str}
-    Appends a proposal-ready lane to the operator's backlog.md
-    (docs/project/backlog.md in the hngh repo) — append-only, never
-    reorders existing content:
-      ## <name> (proposed via dashboard <UTC ts>)
-      - **Problem:** / **Smallest useful outcome:** bullets from intent
-      - **Status:** proposed via dashboard — awaiting queue rotation
-    Advisory/organizational only: backlog.md is a prose surface
-    (proposals, not authority). 201 {"ok": true, "lane": name}; 400 on
-    bad input or an existing lane with that name.
+    REFUSED 410 (P1c fold): backlog.md archived 2026-09-25 — folded
+    into queue.md, no further writes. {"ok": false, "error":
+    BACKLOG_REFUSED}.
 
 POST /research-note  {"lane": str, "note": str, "affecting": bool}
-    Appends an annotation '- note (<UTC ts>): <text>' at the end of the
-    named lane's backlog.md section (lane must exist as a '## ' heading)
-    and one agent-handoffs.md line:
-      research-note | <UTC ts> | automation|<lane> | <note>
-    affecting=true ALSO queues an advisory steer via the hngh
-    scripts/report-queue ('research-steer <lane>: <note>' alert row) for
-    the operator/agents to read — the note itself never mutates
-    anything; corrections still ride the certificate loop. 201
-    {"ok": true}; 400 unknown lane / bad input.
+    REFUSED 410 (P1c fold): same as /research-line.
 
 POST /system/refresh  {}
     Re-runs jobs/system-feed.py (read-only probes, the same script the
@@ -137,10 +122,8 @@ Contract (shared, same style as /flag):
     - session/id: non-empty, <=80 chars, [A-Za-z0-9._-]
     - note:       non-empty, <=200 chars after stripping pipes
     - 400 on bad input; 404 on any other POST
-All writes are append-only (ledger) or atomic-replace (JSON).
-Exception: /research-note splices one annotation line at the end of the
-named lane's backlog.md section (insertion is the point of the feature;
-existing content is never reordered).
+All writes are append-only (ledger) or atomic-replace (JSON). Nothing
+writes docs/project/backlog.md anymore (archived 2026-09-25).
 """
 import importlib.util
 import hmac
@@ -163,6 +146,8 @@ DISMISSED = os.path.join(DASHBOARD, "operator-dismissed.json")
 APPROVED = os.path.join(DASHBOARD, "operator-approved.json")
 HNGH = os.environ.get("HNGH_REPO", os.path.expanduser("~/Projects/etc/hngh"))
 BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
+BACKLOG_REFUSED = ("backlog.md archived 2026-09-25: folded into queue.md"
+                   " (no further writes)")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 SERVICE_CTL = os.path.join(ROOT, "scripts", "service-ctl.sh")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
@@ -1192,88 +1177,12 @@ class Handler(SimpleHTTPRequestHandler):
     LANE_NAME_RE = re.compile(r"[A-Za-z0-9 -]{3,64}")
 
     def _research_line(self):
-        try:
-            body = self._body()
-            name = str(body.get("name", "")).strip().replace("|", "")
-            intent = str(body.get("intent", "")).strip().replace("|", "")
-        except Exception:
-            self._json(400, {"ok": False, "error": "invalid JSON"})
-            return
-        if not self.LANE_NAME_RE.fullmatch(name):
-            self._json(400, {"ok": False,
-                             "error": "invalid lane name (3-64 chars: letters, digits, space, dash)"})
-            return
-        if not 3 <= len(intent) <= 500:
-            self._json(400, {"ok": False, "error": "invalid intent (3-500 chars)"})
-            return
-        try:
-            with open(BACKLOG, encoding="utf-8") as f:
-                existing = f.read()
-        except Exception:
-            self._json(500, {"ok": False, "error": "backlog unreadable"})
-            return
-        for line in existing.splitlines():
-            if line.startswith("## ") and (line[3:].strip() == name
-                                           or line[3:].strip().startswith(name + " ")):
-                self._json(400, {"ok": False, "error": "lane already exists"})
-                return
-        ts = _ts()
-        # ponytail: split intent on the first ". " into Problem /
-        # Smallest useful outcome; single-sentence intents duplicate —
-        # the operator refines both at queue rotation.
-        head, sep, tail = intent.partition(". ")
-        problem, outcome = (intent, intent) if not sep else (head + ".", tail)
-        with open(BACKLOG, "a", encoding="utf-8") as f:
-            f.write("\n## %s (proposed via dashboard %s)\n\n"
-                    "- **Problem:** %s\n"
-                    "- **Smallest useful outcome:** %s\n"
-                    "- **Status:** proposed via dashboard — awaiting queue rotation\n"
-                    % (name, ts, problem, outcome))
-        self._json(201, {"ok": True, "lane": name})
+        # P1c fold: backlog.md is archived (banner at its head); the
+        # dashboard form refuses honestly instead of writing.
+        self._json(410, {"ok": False, "error": BACKLOG_REFUSED})
 
     def _research_note(self):
-        try:
-            body = self._body()
-            lane = str(body.get("lane", "")).strip().replace("|", "")
-            text = str(body.get("note", "")).strip().replace("|", "")
-            affecting = bool(body.get("affecting", False))
-        except Exception:
-            self._json(400, {"ok": False, "error": "invalid JSON"})
-            return
-        if not lane or len(lane) > 120 or not 3 <= len(text) <= 300:
-            self._json(400, {"ok": False, "error": "invalid lane or note (note 3-300 chars)"})
-            return
-        try:
-            with open(BACKLOG, encoding="utf-8") as f:
-                lines = f.read().splitlines()
-        except Exception:
-            self._json(500, {"ok": False, "error": "backlog unreadable"})
-            return
-        idx = next((i for i, l in enumerate(lines) if l.startswith("## ")
-                    and (l[3:].strip() == lane or l[3:].strip().startswith(lane + " "))), None)
-        if idx is None:
-            self._json(400, {"ok": False, "error": "unknown lane"})
-            return
-        ts = _ts()
-        end = next((j for j in range(idx + 1, len(lines)) if lines[j].startswith("## ")),
-                   len(lines))
-        lines.insert(end, "- note (%s): %s" % (ts, text))
-        tmp = BACKLOG + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
-        os.replace(tmp, BACKLOG)
-        with open(HANDOFFS, "a", encoding="utf-8") as f:
-            f.write("research-note | %s | automation|%s | %s\n" % (ts, lane, text))
-        if affecting:
-            # advisory steer row only — never mutates anything itself
-            try:
-                subprocess.run(["python3", REPORT_QUEUE, "--add", "alert",
-                                "research-steer %s: %s" % (lane, text)],
-                               capture_output=True, timeout=10)
-            except Exception:
-                self._json(500, {"ok": False, "error": "report-queue steer failed"})
-                return
-        self._json(201, {"ok": True, "affecting": affecting})
+        self._json(410, {"ok": False, "error": BACKLOG_REFUSED})
 
     def _json(self, code, obj):
         payload = json.dumps(obj).encode()

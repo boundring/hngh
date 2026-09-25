@@ -13,10 +13,10 @@ ledger, never a real cap change, never the email channel (the conf seam
 points at a nonexistent path, so the channel is dormant by design).
 
 The consumer surface (automation/cadence/subhour/05-operator-items.sh ->
-jobs/operator-items-feed.py) reads STATE.md crumbs whose event matches
-^alert or whose joined text matches papercut|flagged|needs|"operator
-decision"; those two criteria are replicated here to assert the filed
-item would land on the dashboard feed.
+jobs/operator-items-feed.py) reads crumbs journal rows whose event
+matches ^alert or whose joined text matches papercut|flagged|needs|
+"operator decision"; those two criteria are replicated here to assert
+the filed item would land on the dashboard feed.
 """
 
 import hashlib
@@ -123,10 +123,15 @@ class CapBlockOperatorItem(unittest.TestCase):
         self.assertEqual(payload["reports"][0]["kind"], "alert")
         self.assertEqual(payload["reports"][0]["first"], TEXT)
 
-        # 4. the STATE.md crumb is what jobs/operator-items-feed.py
+        # 4. the journal crumb is what jobs/operator-items-feed.py
         #    crumbs() + is_operator_item() would surface as an item
+        exp = subprocess.run(
+            ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.tmp / "state" / "crumbs.db")],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(exp.returncode, 0, exp.stderr)
         crumbs = []
-        for line in (self.tmp / "STATE.md").read_text().splitlines():
+        for line in exp.stdout.splitlines():
             parts = [p.strip() for p in line.split(" | ", 3)]
             if len(parts) == 4:
                 crumbs.append(parts)

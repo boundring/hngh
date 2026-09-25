@@ -8,7 +8,7 @@ the two report verbs (deck handoff, enabling-work staging), the
 2026-09-09 disposition-sweep guardrails (never risk=critical, never
 already-parked, landed steps mean no park, references must exist),
 and the no-op case. The cadence wrapper is exercised end to end with
-STATE_FILE/HNGH_HOME seams: operator-item rows only, plan files
+HNGH_CRUMBS_DB/HNGH_HOME seams: operator-item rows only, plan files
 untouched, repeat rows deduped.
 """
 
@@ -25,6 +25,14 @@ ROOT = Path(__file__).resolve().parent.parent
 CURATOR = ROOT / "jobs" / "curator-beat.py"
 PLAN_FEED = ROOT / "jobs" / "plan-feed.py"
 WRAPPER = ROOT / "cadence" / "calendar" / "daily" / "16-curator-beat.sh"
+CRUMBS_DB_PY = ROOT / "lib" / "crumbs-db.py"
+
+
+def crumbs_export(db):
+    """The journal's rendered 4-field lines (the derived STATE.md shape)."""
+    r = subprocess.run([sys.executable, str(CRUMBS_DB_PY), "export",
+                        "--db", str(db)], capture_output=True, text=True)
+    return r.stdout.splitlines()
 
 
 def plan(status="accepted", risk="normal", accepted="2026-09-01T00:00:00Z",
@@ -236,11 +244,10 @@ class CuratorBeat(unittest.TestCase):
             for name, text in texts.items():
                 (plans_dir / name).write_text(text)
             before = {p.name: p.read_bytes() for p in plans_dir.iterdir()}
-            state = Path(td) / "STATE.md"
-            state.write_text("# inventory\n")
+            db = Path(td) / "crumbs.db"
             out = Path(td) / "plans.json"
             env = {**os.environ, "HNGH_HOME": str(home),
-                   "HNGH_PLANS_FEED_OUT": str(out), "STATE_FILE": str(state),
+                   "HNGH_PLANS_FEED_OUT": str(out), "HNGH_CRUMBS_DB": str(db),
                    "HNGH_CEREMONY_LOG": ""}
             r = subprocess.run([sys.executable, str(PLAN_FEED)], env=env,
                                capture_output=True, text=True)
@@ -248,7 +255,7 @@ class CuratorBeat(unittest.TestCase):
             r = subprocess.run(["bash", str(WRAPPER)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            rows = state.read_text().splitlines()
+            rows = crumbs_export(db)
             self.assertTrue(any("| flagged |" in x for x in rows), rows)
             self.assertTrue(any("| needs |" in x for x in rows), rows)
             after = {p.name: p.read_bytes() for p in plans_dir.iterdir()}
@@ -257,7 +264,7 @@ class CuratorBeat(unittest.TestCase):
             r = subprocess.run(["bash", str(WRAPPER)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(len(state.read_text().splitlines()), n)
+            self.assertEqual(len(crumbs_export(db)), n)
 
     def test_day_wrapper_dedup_ignores_disposed_timestamp(self):
         """Same proposal re-emitted by a later daily beat must dedup
@@ -271,11 +278,10 @@ class CuratorBeat(unittest.TestCase):
                 plan(routed="tree-skew:hngh", accepted="2026-09-03T00:00:00Z"))
             (plans_dir / "2026-09-04-dup-new.plan.md").write_text(
                 plan(routed="tree-skew:hngh", accepted="2026-09-04T00:00:00Z"))
-            state = Path(td) / "STATE.md"
-            state.write_text("# inventory\n")
+            db = Path(td) / "crumbs.db"
             out = Path(td) / "plans.json"
             env = {**os.environ, "HNGH_HOME": str(home),
-                   "HNGH_PLANS_FEED_OUT": str(out), "STATE_FILE": str(state),
+                   "HNGH_PLANS_FEED_OUT": str(out), "HNGH_CRUMBS_DB": str(db),
                    "HNGH_CEREMONY_LOG": ""}
             r = subprocess.run([sys.executable, str(PLAN_FEED)], env=env,
                                capture_output=True, text=True)
@@ -283,20 +289,32 @@ class CuratorBeat(unittest.TestCase):
             r = subprocess.run(["bash", str(WRAPPER)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertTrue(any("| needs |" in x
-                                for x in state.read_text().splitlines()))
+            rows = crumbs_export(db)
+            self.assertTrue(any("| needs |" in x for x in rows))
             self.assertTrue(any("cause=duplicate" in x and "disposed=" in x
-                                for x in state.read_text().splitlines()))
+                                for x in rows))
             # Restamp every filed row to yesterday: identical proposal
-            # text, different disposed= timestamp.
-            state.write_text(re.sub(r" disposed=[^ ]*Z ",
-                                    " disposed=2026-09-19T00:00:00Z ",
-                                    state.read_text()))
-            n = len(state.read_text().splitlines())
+            # text, different disposed= timestamp. The restamped lines
+            # reload through the journal importer (stamp round-trips
+            # into the writer column).
+            restamped = [re.sub(r" disposed=[^ ]*Z ",
+                                " disposed=2026-09-19T00:00:00Z ", x)
+                         for x in rows]
+            fixture = Path(td) / "restamped.md"
+            fixture.write_text("\n".join(restamped) + "\n")
+            for suffix in ("", "-wal", "-shm"):
+                p = Path(str(db) + suffix)
+                if p.exists():
+                    p.unlink()
+            r = subprocess.run([sys.executable, str(CRUMBS_DB_PY), "sync",
+                                "--state", str(fixture), "--db", str(db)],
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            n = len(crumbs_export(db))
             r = subprocess.run(["bash", str(WRAPPER)], env=env,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(len(state.read_text().splitlines()), n)
+            self.assertEqual(len(crumbs_export(db)), n)
 
 
 if __name__ == "__main__":

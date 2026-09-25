@@ -110,7 +110,9 @@ class CrumbsDbSync(unittest.TestCase):
             cols = [row[1] for row in conn.execute("PRAGMA table_info(crumbs)")]
         finally:
             conn.close()
-        self.assertEqual(cols, ["ts", "job", "event", "detail"])
+        # additive-only anchor: the legacy 4 columns stay, the writer
+        # stamp column is appended (never renamed/reordered)
+        self.assertEqual(cols, ["ts", "job", "event", "detail", "writer"])
 
 
 if __name__ == "__main__":

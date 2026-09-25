@@ -25,7 +25,6 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 RQ="${HNGH_REPORT_QUEUE:-$KERNEL/scripts/report-queue}"
 export HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$KERNEL}"
-STATE_FILE="${STATE_FILE:-$ROOT/STATE.md}"
 # shellcheck disable=SC1091
 . "$ROOT/lib/breadcrumbs.sh" 2>/dev/null || true
 MAX="${ROUTER_FEED_MAX:-3}"

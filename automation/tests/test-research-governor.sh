@@ -12,7 +12,7 @@
 #      utilization and headroom verdicts; the failfirst tuning state
 #      summary appears in the row.
 # Hermetic: sandbox dirs only, no model chain, no live telemetry, no
-# STATE.md, no report queue in any real repo.
+# STATE.md/crumbs journal, no report queue in any real repo.
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
@@ -23,6 +23,10 @@ need() { "$@" || {
  echo "FAIL: $*"
  exit 1
 }; } # every case fatal
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
+crumb_grep() { crumbs | grep -q "$1"; }
 
 # sandbox copy: the beat derives common.sh (and thus config.env, which
 # arms the live deck leg) from its own path -- run the copy from $sb so
@@ -46,11 +50,11 @@ run_beat() { # loadavg_line [extra env as KEY=VAL...]
  shift
  rm -rf "$sb/beat"
  mkdir -p "$sb/beat"
- : >"$sb/beat/STATE.md"
+ crumbs_reset
  rm -f "$sb/beat/stamp"
  printf '%s\n' "$load" >"$sb/beat/loadavg"
  env -i PATH="$PATH" HOME="$HOME" \
-  STATE_FILE="$sb/beat/STATE.md" \
+  HNGH_CRUMBS_DB="$HNGH_CRUMBS_DB" \
   RESEARCH_STAMP_FILE="$sb/beat/stamp" \
   RESEARCH_LOADAVG_FILE="$sb/beat/loadavg" \
   FAILFIRST_STATE_DIR="$sb/ff" \
@@ -73,8 +77,8 @@ ok "fresh state + idle: full speed runs, no stamp gate"
 # case 2: full speed + busy + no armed deck -> ROUTES to a quota leg,
 # never defers; the run still happens (stamp written)
 run_beat "$busy"
-need grep -q 'research-route-quota' "$sb/beat/STATE.md"
-grep -q 'research-deferred' "$sb/beat/STATE.md" && {
+need crumb_grep 'research-route-quota'
+crumb_grep 'research-deferred' && {
  echo "FAIL: busy machine deferred a beat (fail-first routes, never defers)"
  exit 1
 }
@@ -85,8 +89,8 @@ ok "fresh state + busy: routed to quota leg, no defer"
 # to the quota route (any HTTP answer counts as responsive; transport
 # failure does not)
 run_beat "$busy" DECK_URL=http://127.0.0.1:1 DECK_PROBE_TIMEOUT=1
-need grep -q 'research-route-quota' "$sb/beat/STATE.md"
-grep -q 'routed to deck' "$sb/beat/STATE.md" && {
+need crumb_grep 'research-route-quota'
+crumb_grep 'routed to deck' && {
  echo "FAIL: unreachable deck was treated as responsive"
  exit 1
 }
@@ -97,7 +101,7 @@ ok "busy + unreachable deck: quota route fall-through"
 ff_seed 2 0
 run_beat "$idle"
 need test ! -s "$sb/beat/stamp"
-need grep -q 'research-throttled' "$sb/beat/STATE.md"
+need crumb_grep 'research-throttled'
 ok "degraded state: next tick throttles"
 
 # case 5: standard speed aged past 2 ticks (FAILFIRST_TICK_S=3600) -> GO
@@ -111,7 +115,7 @@ ok "standard speed after 2 ticks: gate releases"
 rm -f "$sb/ff/failfirst-research"
 limit="$(awk -v n="$(nproc)" 'BEGIN{printf "%.2f", 0.01 * n}')"
 run_beat "0.50 0.20 0.10 1/900 1234" RESEARCH_LOAD_CEILING=0.01
-need grep -q "load 0.50 >= ceiling $limit" "$sb/beat/STATE.md"
+need crumb_grep "load 0.50 >= ceiling $limit"
 ok "RESEARCH_LOAD_CEILING env override + per-cpu math"
 
 # case 7: shared flock -- a beat arriving while another holds the lock
@@ -144,7 +148,7 @@ emit() { # db ts kind wall_s
 run_sat() { # db -> prints the reports.md rows; report root $sb/sat/root
  rm -rf "$sb/sat"
  mkdir -p "$sb/sat"
- STATE_FILE="$sb/sat/STATE.md" HNGH_REPORT_ROOT="$sb/sat/root" \
+ HNGH_REPORT_ROOT="$sb/sat/root" \
   HNGH_TELEMETRY_DB="$1" FAILFIRST_STATE_DIR="$sb/ff-empty" \
   HNGH_HOME="$(cd "$root/.." && pwd)" \
   bash "$root/cadence/calendar/daily/20-model-saturation.sh" >/dev/null 2>&1

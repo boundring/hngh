@@ -413,6 +413,24 @@ class JailEscapes(ServerTest):
             del ds.PLANS_DOCS
 
 
+class ResearchRefusal(ServerTest):
+    """P1c fold: /research-line and /research-note refuse honestly (410)
+    — backlog.md is archived, lanes live in queue.md."""
+
+    def test_research_endpoints_refused_410(self):
+        st, body = self.post("/research-line",
+                             {"name": "Probe lane", "intent": "probe refusal"})
+        self.assertEqual(st, 410)
+        self.assertFalse(body["ok"])
+        self.assertIn("archived 2026-09-25", body["error"])
+        self.assertIn("folded into queue.md", body["error"])
+        st, body = self.post("/research-note",
+                             {"lane": "Probe lane", "note": "probe refusal"})
+        self.assertEqual(st, 410)
+        self.assertFalse(body["ok"])
+        self.assertIn("archived 2026-09-25", body["error"])
+
+
 class ServiceAct(ServerTest):
     """system/service-act: shape-gated, single exec path, pre-write audit
     (plan 2026-09-22 step 3). The kernel script is seamed to a stub that

@@ -166,6 +166,7 @@ class Patrol(unittest.TestCase):
             GREEN_CRUMB +
             "%s | 03-gate-check.sh | gate-green | hngh-automation: "
             "make test green (200 checks passed)\n" % iso(3600))
+        self.sync_crumbs()
         (self.auto / "agent-handoffs.md").write_text(
             "overnight-lead | %s | plan-a|run-1 | rc=0 committed step=1 ok\n"
             % iso(60 * 60))
@@ -236,6 +237,8 @@ class Patrol(unittest.TestCase):
         os.environ["JOURNAL_FIXTURE"] = ""
         for k, v in [("PATROL_ROOT", str(self.auto)),
                      ("HNGH_HOME_DIR", str(self.sb / "home")),
+                     ("HNGH_CRUMBS_DB",
+                      str(self.auto / "state" / "crumbs.db")),
                      ("PATROL_DIGEST_DIR", str(self.auto / "digest")),
                      ("PATROL_KERNEL", str(self.kernel)),
                      ("PATROL_ROUTES", str(self.auto / "config" / "patrol-routes.tsv")),
@@ -254,6 +257,17 @@ class Patrol(unittest.TestCase):
 
     def tearDown(self):
         self._td.cleanup()
+
+    def sync_crumbs(self):
+        """fixture STATE.md -> sandbox crumbs journal (fresh db: the
+        sync watermark is a byte offset, so re-imports need a clean db)."""
+        db = self.auto / "state" / "crumbs.db"
+        db.unlink(missing_ok=True)
+        subprocess.run([sys.executable,
+                        str(ROOT / "lib" / "crumbs-db.py"),
+                        "sync", "--state", str(self.auto / "STATE.md"),
+                        "--db", str(db)],
+                       check=True, capture_output=True)
 
     def run_py(self, *argv):
         return subprocess.run([sys.executable, str(SPEC), *argv],
@@ -547,6 +561,7 @@ class Patrol(unittest.TestCase):
             "%s | overnight-cycle.sh | overnight-done | sessions=1 "
             "concurrency=1 speed=3 results=failed model=m(env)" % iso(ago)
             for ago in (50 * 60, 7 * 3600, 11 * 3600)) + "\n")
+        self.sync_crumbs()
         r, _ = self.run_walk()
         self.assertIn("FAIL stall/overnight bad-execution "
                       "trailing failed crumbs=3 >= 3", r.stdout)

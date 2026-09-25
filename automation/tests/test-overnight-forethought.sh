@@ -22,11 +22,14 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
  context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
- memory-gate.sh; do
+ memory-gate.sh crumbs.py crumbs-db.py; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
 cp "$root/scripts/accept-plans.py" "$auto/scripts/"
+export HNGH_CRUMBS_DB="$auto/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 printf '# Inventory\nsessions-day-max\t8\ttest\ttest row\n' \
  >"$auto/cadence-params.tsv"
 kernel="$td/kernel"
@@ -34,7 +37,6 @@ mkdir -p "$kernel/docs/project/plans"
 stubdir="$td/stubs"
 mkdir -p "$stubdir"
 MARKER="$td/launched.marker"
-STATE="$auto/STATE.md"
 
 # omp stub: records args; a dream session (objective contains 'DREAM pass')
 # writes its dream brief to $DREAM_OUT unless DREAM_FAIL=1 (then it dies).
@@ -73,7 +75,7 @@ run_cycle() {
 }
 reset_runs() {
  : >"$MARKER"
- rm -f "$STATE"
+ crumbs_reset
  rm -rf "$td/ff"
 }
 
@@ -127,7 +129,7 @@ DREAM_OUT="$auto/prompts/overnight/seed.dream.md" DREAM_FAIL=1 \
 [ "$?" -eq 0 ] || fail "dream-failure cycle exited non-zero"
 n="$(wc -l <"$MARKER")"
 [ "$n" -eq 2 ] || fail "dream-failure launched $n sessions, expected 2 (dead dream + executor)"
-grep -q 'forethought-dream-skip' "$STATE" ||
+crumbs | grep -q 'forethought-dream-skip' ||
  fail "no forethought-dream-skip breadcrumb on dream failure"
 grep -q 'Dream sanity-checks' "$auto/prompts/overnight/seed.md" &&
  fail "executor prompt got sanity-checks from a dead dream"

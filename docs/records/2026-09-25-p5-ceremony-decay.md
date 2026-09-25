@@ -9,7 +9,7 @@ Three pieces, one certificate lane, kernel-surface `scripts/` changes:
 1. **Certificate receipts** (`scripts/cert-receipts.lisp`, new). Every
    certificate action (prepare-candidate, commit, push) that
    ceremony-drive completes appends a receipt row
-   `timestamp|action|content-hash|commit|expiry` to
+   `timestamp|content-hash|action|expiry` to
    `cert-receipts.tsv` under the automation home
    (`automation/lib/hngh_home.py` resolution; `HNGH_RECEIPTS_PATH`
    overrides for tests). Appending is fail-open by design: a receipt
@@ -68,3 +68,9 @@ Three pieces, one certificate lane, kernel-surface `scripts/` changes:
 The closing phase (P10) re-checks receipts: if the fast lane covers
 >= 80% of ceremony actions by count after 30 days, the full lane's
 whitespace handling is retired into the fast lane entirely.
+Decay counts join DISTINCT content-hash values against `git log
+--grep='hngh: candidate'` subjects: rows whose hash has no surviving
+commit are fixture noise (19 such rows from pre-crash manual smokes
+already sit in the ledger, hash
+4ad0b80eedd8d228f906cd993626e0a5bbbf078342dfcf28435995da9d7ab863)
+and are excluded.

@@ -43,7 +43,7 @@ highest="$(printf '%s\n' "$next_candidates" | head -1)"
 if [ -n "$frontier" ] || [ -n "$highest" ]; then
   file_report "progress" "roadmap-review: $today frontier=$frontier highest-next=$highest"
 else
-  file_report "scheduled" "roadmap-review: $today no change since last review (unchanged)"
+  breadcrumb "$JOB_NAME" "scheduled" "roadmap-review: $today no change since last review (unchanged)"
 fi
 
 # planning row — queue.md Next block names the active planning candidate
@@ -53,7 +53,7 @@ if [ -f "$QUEUE" ]; then
   if [ -n "$plan_next" ]; then
     file_report "progress" "planning: $today in-flight candidate $plan_next (queue Next)"
   else
-    file_report "scheduled" "planning: $today no lane wants a new candidate (nothing to draft)"
+    breadcrumb "$JOB_NAME" "scheduled" "planning: $today no lane wants a new candidate (nothing to draft)"
   fi
 fi
 

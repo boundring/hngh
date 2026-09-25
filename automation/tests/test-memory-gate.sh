@@ -11,14 +11,16 @@
 # test_retarget source-asserts).
 #
 # Hermetic: real /proc/meminfo read (present on any Linux dev box),
-# fake AUTOMATION_ROOT for the param row, STATE_FILE in a temp dir;
+# fake AUTOMATION_ROOT for the param row, crumbs journal in a temp dir;
 # floors are built relative to live MemAvailable so the test does not
 # depend on machine RAM.
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tmp="$(mktemp -d /tmp/hngh-memory-gate-test.XXXXXX)"
 trap 'rm -rf "$tmp"' EXIT
-export STATE_FILE="$tmp/state.tsv"
+export HNGH_CRUMBS_DB="$tmp/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 fails=0
 ck() { # desc expected actual
   if [ "$2" = "$3" ]; then echo "ok: $1"; else
@@ -35,7 +37,7 @@ fake="$tmp/auto"
 mkdir -p "$fake/lib"
 cp "$root/lib/memory-gate.sh" "$root/lib/params.sh" "$fake/lib/"
 cp "$root/lib/breadcrumbs.sh" "$root/lib/notify-email.sh" \
-  "$root/lib/credentials.sh" "$fake/lib/"
+  "$root/lib/credentials.sh" "$root/lib/crumbs.py" "$root/lib/crumbs-db.py" "$fake/lib/"
 HNGH_HOME="$fake/hngh" # fake kernel root: report-queue is faked below
 export HNGH_HOME
 mkdir -p "$HNGH_HOME/scripts"
@@ -60,27 +62,27 @@ run_gate() { # extra env via caller; prints rc
   ) >/dev/null 2>&1
   echo $?
 }
-crumb_rows() { grep -c "memory-gate" "$STATE_FILE" 2>/dev/null || true; }
+crumb_rows() { crumbs | grep -c "memory-gate" 2>/dev/null || true; }
 
 # 1) above a high floor: continue, no breadcrumb
-: >"$STATE_FILE"
+crumbs_reset
 ck "above floor rc 0" "0" "$(HNGH_RAM_FLOOR_MB=1 run_gate)"
 ck "above floor writes no breadcrumb" "0" "$(crumb_rows)"
 
 # 2) below floor: rc 1 + one breadcrumb row
-: >"$STATE_FILE"
+crumbs_reset
 ck "below floor rc 1" "1" "$(HNGH_RAM_FLOOR_MB=$((avail + 500)) run_gate)"
 ck "below floor breadcrumbs once" "1" "$(crumb_rows)"
 
 # 3) param row floor (avail/2) beats the 2048 default; env beats the row
-: >"$STATE_FILE"
+crumbs_reset
 ck "param row floor accepted (rc 0)" "0" "$(run_gate)"
 ck "param-row pass writes no breadcrumb" "0" "$(crumb_rows)"
-: >"$STATE_FILE"
+crumbs_reset
 ck "env floor beats param row" "1" "$(HNGH_RAM_FLOOR_MB=$((avail + 500)) run_gate)"
 
 # 4) unreadable meminfo fails OPEN
-: >"$STATE_FILE"
+crumbs_reset
 rc="$(
   (
     export AUTOMATION_ROOT="$fake" JOB_NAME=test-job
@@ -107,7 +109,7 @@ ck "overnight gate sets STOP=1 on refusal" "1" \
 #    one deduped alert row (identity ram-gate:trip, window 86400) through
 #    notify-email's alert_row; a healthy pass files nothing.
 : >"$FAKE_QUEUE_LOG"
-: >"$STATE_FILE"
+crumbs_reset
 ck "trip rc 1 with alert seam live" "1" \
   "$(HNGH_RAM_FLOOR_MB=$((avail + 500)) run_gate)"
 ck "trip files ram-gate:trip alert" "1" \

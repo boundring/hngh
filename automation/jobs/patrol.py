@@ -41,6 +41,7 @@ import importlib.util
 import json
 import os
 import shutil
+import sqlite3
 import re
 import subprocess
 import sys
@@ -143,21 +144,28 @@ def ts_epoch(s):
         return None
 
 
-def crumbs(state_text, job=None, events=None):
-    """[(epoch, event, detail)] from STATE.md breadcrumb lines, oldest
-    first, optionally filtered to one job and a set of events."""
+def crumbs(job=None, events=None, root=None):
+    """[(epoch, event, detail)] from the crumbs journal db (HNGH_CRUMBS_DB
+    or <root>/state/crumbs.db), oldest first, optionally filtered to one
+    job and a set of events. detail keeps its legacy [w=...] stamp tail."""
+    db = (os.environ.get("HNGH_CRUMBS_DB")
+          or os.path.join(root or ROOT, "state", "crumbs.db"))
+    conn = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=5)
+    try:
+        rows = conn.execute(
+            "SELECT ts, job, event, detail, writer FROM crumbs"
+            " ORDER BY ts, rowid").fetchall()
+    finally:
+        conn.close()
     out = []
-    for ln in state_text.splitlines():
-        parts = ln.split(" | ")
-        if len(parts) != 4:
+    for ts, jb, ev, det, writer in rows:
+        if job and jb != job:
             continue
-        if job and parts[1].strip() != job:
+        if events and ev not in events:
             continue
-        if events and parts[2].strip() not in events:
-            continue
-        e = ts_epoch(parts[0].strip())
+        e = ts_epoch(ts)
         if e is not None:
-            out.append((e, parts[2].strip(), parts[3].strip()))
+            out.append((e, ev, det + (" [w=%s]" % writer if writer else "")))
     return out
 
 
@@ -217,11 +225,11 @@ def check_blocker_escalations(ctx):
     return out
 
 
-def trailing_failed_crumbs(state_text):
+def trailing_failed_crumbs(root=None):
     """Consecutive `failed` tokens counting backwards across the
     overnight-done results= breadcrumbs (beat-watchdog rule a)."""
     n = 0
-    for _, _, detail in reversed(crumbs(state_text,
+    for _, _, detail in reversed(crumbs(root=root,
                                         job="overnight-cycle.sh",
                                         events={"overnight-done"})):
         m = re.search(r"results=([\w,]*)", detail)
@@ -234,16 +242,14 @@ def trailing_failed_crumbs(state_text):
 
 def check_stall_crumbs(ctx):
     """Overnight launch-plane stall: >= beat-stall-n consecutive `failed`
-    results tokens in STATE.md (the 2026-09-11 signature)."""
+    results tokens in the crumbs journal (the 2026-09-11 signature)."""
     out = {"passes": [], "fails": []}
     stall_n = int(get_param(ctx["params"], "beat-stall-n", 3))
     try:
-        with open(ctx["state"], encoding="utf-8", errors="replace") as fh:
-            text = fh.read()
-    except OSError:
+        n = trailing_failed_crumbs(ctx.get("root"))
+    except sqlite3.Error:
         out["fails"].append(("STATE.md", "ledger-unreadable", "no STATE.md"))
         return out
-    n = trailing_failed_crumbs(text)
     if n >= stall_n:
         out["fails"].append(("overnight", "bad-execution",
                              "trailing failed crumbs=%d >= %d" % (n, stall_n)))
@@ -289,7 +295,7 @@ def check_gate_crumbs(ctx):
     single "gate-stale" fail (fail-closed: absent/unfresh evidence is
     the alert-worthy condition, and one stable identity dedups via the
     report path instead of streaming a stale red for hours). Crumb
-    timestamps come from the STATE.md ledger lines the crumbs() parser
+    timestamps come from the crumbs journal rows the crumbs() parser
     reads, so no mtime fallback is needed. check_gate_cure does NOT
     share this crumb stream (it runs the guard script directly), so it
     needs no freshness handling of its own."""
@@ -298,13 +304,12 @@ def check_gate_crumbs(ctx):
     ttl_s = float(os.environ.get("PATROL_GATE_CRUMB_TTL_S",
                                  GATE_CRUMB_TTL_S))
     try:
-        with open(ctx["state"], encoding="utf-8", errors="replace") as fh:
-            text = fh.read()
-    except OSError:
-        text = ""
-    rows = [r for r in crumbs(text, job="03-gate-check.sh",
-                              events={"gate-green", "gate-red"})
-            if r[2].startswith(label + ":")]
+        rows = [r for r in crumbs(job="03-gate-check.sh",
+                                  events={"gate-green", "gate-red"},
+                                  root=ctx.get("root"))
+                if r[2].startswith(label + ":")]
+    except sqlite3.Error:
+        rows = []
     if not rows:
         out["fails"].append((label, "gate-stale", "no gate crumb found"))
         return out
@@ -1772,8 +1777,6 @@ def build_ctx(args, now_s):
         "now": now_s,
         "now_struct": time.gmtime(now_s),
         "date": date,
-        "state": os.environ.get("PATROL_STATE_FILE",
-                                os.path.join(root, "STATE.md")),
         "handoffs": os.environ.get(
             "PATROL_HANDOFFS", os.path.join(root, "agent-handoffs.md")),
         "blockers": os.environ.get(

@@ -9,11 +9,15 @@
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
-trap 'cp -r "$sb" /tmp/opencode/tbtdump; rm -rf "$sb"' EXIT
+trap 'rm -rf "$sb"' EXIT
 mkdir -p "$sb/stats" "$sb/state/failfirst" "$sb/logs" "$sb/archive/digest" \
   "$sb/scripts"
 : >"$sb/queue.log"
 : >"$sb/bench-calls"
+# crumbs seam: writers + readers go through the journal db export bridge
+# (STATE.md is the derived export, never materialized in the sandbox)
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 fails=0
 ck() {
   if [ "$2" = "$3" ]; then echo "ok: $1"; else
@@ -69,7 +73,7 @@ budget_now() {
 calls() { wc -l <"$sb/bench-calls"; }
 
 run_verb() { # verb — env seams point everything at the sandbox
-  STATE_FILE="$sb/STATE.md" HNGH_HOME="$sb" KERNEL="$sb" \
+  HNGH_HOME="$sb" KERNEL="$sb" \
     BENCH_SCRIPT="$sb/stub-bench.sh" BENCH_STATS_DIR="$sb/stats" \
     BUDGET_LOG="$sb/logs/budget.md" DEMOTE_STATE="$sb/state/model-demote.tsv" \
     FAILFIRST_STATE_DIR="$sb/state/failfirst" DIGEST_DIR="$sb/archive/digest" \
@@ -94,19 +98,19 @@ ck "one bench call so far" "1" "$(calls)"
 ck "operator-item has delta" "1" \
   "$(grep -c 'm/new scored 2/5 vs top m/alpha 4/5' "$sb/queue.log")"
 ck "breadcrumb fired" "1" \
-  "$(grep -c '| bench-new-model | unbenched model: firing scoped bench m/new' "$sb/STATE.md")"
+  "$(grep -c '| bench-new-model | unbenched model: firing scoped bench m/new' <(journal))"
 
 # 4. no-op when the config fleet is fully benched
 BM="m/alpha m/beta" FM="m/beta" run_verb new-model-check
 ck "no-op fires nothing" "1" "$(calls)"
-ck "no-op breadcrumb" "1" "$(grep -c 'no-op: config fleet fully benched' "$sb/STATE.md")"
+ck "no-op breadcrumb" "1" "$(grep -c 'no-op: config fleet fully benched' <(journal))"
 
 # 5. quiet guard: defer when development is at full speed AND a session
 # ran within the window; fire when either condition is false
 BM="m/new2" FM="" budget_now
 run_verb new-model-check
 ck "quiet guard defers" "1" "$(calls)"
-ck "defer breadcrumb" "1" "$(grep -c '| bench-defer | quiet guard' "$sb/STATE.md")"
+ck "defer breadcrumb" "1" "$(grep -c '| bench-defer | quiet guard' <(journal))"
 ff_speed 2
 BM="m/new3" FM="m/beta" run_verb new-model-check
 ck "throttled speed: no defer" "BENCH_MODELS=m/new3" "$(tail -n1 "$sb/bench-calls")"
@@ -135,7 +139,7 @@ touch -d "40 days ago" "$sb/archive/digest/BENCH-2026-08-01.md"
 printf 'm/demoted\t2\t1\n' >"$sb/state/model-demote.tsv"
 STUB_SCORE=0 BM="m/alpha" run_verb recalibrate-check
 ck "all-zero records unknown" "1" \
-  "$(grep -c 'm/alpha scored 0/5 -> record_model_outcome unknown' "$sb/STATE.md")"
+  "$(grep -c 'm/alpha scored 0/5 -> record_model_outcome unknown' <(journal))"
 ck "unknown leaves demotion" "m/demoted	2	1" "$(tail -n1 "$sb/state/model-demote.tsv")"
 
 # 9. stale digest + top alive, demoted zero: bad-execution reinforces
@@ -150,9 +154,9 @@ if grep -q "jobs/model-bench.sh" "$root/cadence/calendar/daily/10-bench-fresh.sh
 else
   ck "day drop-in retired" "0" "0"
 fi
-STATE_FILE="$sb/STATE.md" bash "$root/cadence/calendar/daily/10-bench-fresh.sh"
+HNGH_CRUMBS_DB="$HNGH_CRUMBS_DB" bash "$root/cadence/calendar/daily/10-bench-fresh.sh"
 ck "day drop-in note only" "1" \
-  "$(grep -c 'staleness note only (nightly catch-up retired)' "$sb/STATE.md")"
+  "$(grep -c 'staleness note only (nightly catch-up retired)' <(journal))"
 
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || {

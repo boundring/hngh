@@ -25,7 +25,7 @@ BUDGET_LOG = os.path.join(ROOT, "logs", "budget.md")
 PLANS_JSON = os.path.join(ROOT, "dashboard", "plans.json")
 OPERATOR_ITEMS = os.path.join(ROOT, "dashboard", "operator-items.json")
 RESEARCH_LINES = os.path.join(ROOT, "research-lines.tsv")
-STATE_MD = os.path.join(ROOT, "STATE.md")
+CRUMBS_DB = os.path.join(ROOT, "state", "crumbs.db")
 
 
 def _ascii(text):
@@ -103,13 +103,24 @@ def research_lines(path=RESEARCH_LINES):
     return counts
 
 
-def posture(date, path=STATE_MD):
+def posture(date, db=None):
+    """[ts, job, event, detail] 4-lists for the alert crumbs of `date`
+    from the crumbs journal db (db, or HNGH_CRUMBS_DB, or
+    <ROOT>/state/crumbs.db). detail keeps its legacy [w=...] stamp
+    tail. Unreadable journal -> []."""
+    db = db or os.environ.get("HNGH_CRUMBS_DB") or CRUMBS_DB
     crumbs = []
     try:
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                if line.startswith(date) and " alert " in line:
-                    crumbs.append([p.strip() for p in line.split("|")])
+        conn = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=5)
+        try:
+            for ts, job, event, detail, writer in conn.execute(
+                    "SELECT ts, job, event, detail, writer FROM crumbs"
+                    " WHERE ts LIKE ? || '%' AND event = 'alert'"
+                    " ORDER BY ts, rowid", (date,)):
+                crumbs.append([ts, job, event,
+                               detail + (" [w=%s]" % writer if writer else "")])
+        finally:
+            conn.close()
     except Exception:
         pass
     return crumbs

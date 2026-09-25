@@ -62,7 +62,7 @@ else
   breadcrumb "$JOB_NAME" "no-queue" "queue.md missing; report only"
 fi
 
-file_report "optimization" "zoom-out-loop: $today $signal fed to queue ledger"
+breadcrumb "$JOB_NAME" "optimization" "zoom-out-loop: $today $signal fed to queue ledger"
 
 breadcrumb "$JOB_NAME" "zoom-out-done" "month $today zoom-out pass performed-or-filed"
 exit 0

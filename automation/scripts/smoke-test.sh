@@ -48,7 +48,10 @@ grep -q "CRITICAL\|NOTABLE\|CONTEXT" "digest/$TODAY.md" 2>/dev/null &&
 RUNS="$(jq -r '.hngh_runs // 0' dashboard/data.json 2>/dev/null)"
 [ "${RUNS:-0}" -ge 1 ] 2>/dev/null && ok "hngh runs recorded ($RUNS)" ||
   bad "no hngh runs recorded in data.json"
-[ -s "STATE.md" ] && ok "STATE.md has breadcrumbs" || bad "STATE.md empty"
+db="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}"
+CRUMBS_EXPORT="$(python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --db "$db" 2>/dev/null)"
+[ -n "$CRUMBS_EXPORT" ] && ok "crumbs journal has breadcrumbs" ||
+  bad "crumbs journal has no breadcrumbs"
 
 # --- 4. dashboard renders over HTTP ---
 PORT=$((20000 + RANDOM % 20000))
@@ -72,8 +75,8 @@ if [ "$FAIL" = "0" ]; then
   echo "--- digest/$TODAY.md (first 30 lines) ---"
   head -n 30 "digest/$TODAY.md"
   echo
-  echo "--- STATE.md tail ---"
-  tail -n 8 STATE.md
+  echo "--- crumbs journal tail ---"
+  python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --tail 8 --db "$db"
 else
   echo "SMOKE: FAILURES — inspect above"
   exit 1

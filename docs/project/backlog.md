@@ -1,5 +1,7 @@
 # Backlog
 
+> **archived 2026-09-25: folded into queue.md** — no further writes.
+
 No runtime feature is admitted before its policy proposal and required run-domain
 or application contracts are fixture-backed. A proposal must name its problem,
 smallest useful outcome, source manifest, principle matrix, risk note,

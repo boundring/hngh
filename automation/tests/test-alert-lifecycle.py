@@ -16,6 +16,7 @@
   plain dedup suppression.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -27,6 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TICK = ROOT / "scripts" / "router-tick.py"
+sys.path.insert(0, str(ROOT / "lib"))
+import report_queue  # the shared row shim (lib/report_queue.py)
 
 
 def routed_candidate(slug_date="2026-09-15", ident="gate-make-test",
@@ -215,6 +218,76 @@ class AlertLifecycle(unittest.TestCase):
         self.tick("gate:make-test")
         esc = [r for r in self.rows() if r.startswith("router:escalated:")]
         self.assertEqual(len(esc), 1)
+
+
+class IdentityExpiry(unittest.TestCase):
+    """Terminal silence (P1d, 2026-09-25): identity rows carry
+    expires=<ts> in their text (default first-seen + 7d). A re-fire past
+    expiry escalates ONCE (one `expired:<ident>` alert row for the
+    operator, plain filing dropped); every further re-fire is silent."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.td = Path(self._td.name)
+        self.state = self.td / "identities.json"
+        self._saved_env = os.environ.get("HNGH_REPORT_IDENTITIES")
+        os.environ["HNGH_REPORT_IDENTITIES"] = str(self.state)
+        self.calls = self.td / "calls.log"
+        self.calls.write_text("")
+        self.rq = self.td / "rq"
+        self.rq.write_text(
+            "#!/usr/bin/env bash\n"
+            "printf '%%s\\n' \"$*\" >> '%s'\n"
+            "exit 0\n" % self.calls)
+        self.rq.chmod(0o755)
+
+    def tearDown(self):
+        if self._saved_env is None:
+            del os.environ["HNGH_REPORT_IDENTITIES"]
+        else:
+            os.environ["HNGH_REPORT_IDENTITIES"] = self._saved_env
+        self._td.cleanup()
+
+    def _report(self, text="cond", identity="cron:x", **kw):
+        return report_queue.report("alert", text, identity=identity,
+                                   window=60, binary=str(self.rq), **kw)
+
+    def _calls(self):
+        return [ln for ln in self.calls.read_text().splitlines() if ln]
+
+    def _seed(self, identity="cron:x", expires="2020-01-01T00:00:00Z",
+              escalated=False):
+        self.state.write_text(json.dumps(
+            {identity: {"expires": expires, "escalated": escalated}}))
+
+    def test_first_filing_carries_expires_token(self):
+        self.assertTrue(self._report())
+        lines = self._calls()
+        self.assertEqual(len(lines), 1)
+        self.assertRegex(
+            lines[0],
+            r"^--add alert cond expires=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"
+            r" --identity cron:x --window 60$")
+
+    def test_refire_within_expiry_still_files(self):
+        self.assertTrue(self._report())
+        self.assertTrue(self._report())
+        self.assertEqual(len(self._calls()), 2)
+
+    def test_post_expiry_escalates_once_then_silent(self):
+        self._seed()
+        self.assertFalse(self._report())  # escalation replaces the filing
+        lines = self._calls()
+        self.assertEqual(len(lines), 1)
+        self.assertIn("identity expired: cron:x", lines[0])
+        self.assertIn("--identity expired:cron:x", lines[0])
+        self.assertFalse(self._report())
+        self.assertEqual(len(self._calls()), 1)  # silent
+
+    def test_non_identity_rows_untouched(self):
+        self.assertTrue(report_queue.report("alert", "plain",
+                                            binary=str(self.rq)))
+        self.assertEqual(self._calls(), ["--add alert plain"])
 
 
 if __name__ == "__main__":

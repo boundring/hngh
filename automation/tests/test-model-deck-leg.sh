@@ -13,7 +13,9 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 : >"$sb/cadence-params.tsv" # Inventory: no deck row unless a case sets one
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 
 . "$root/tests/stub-lib.sh"
 STUB_CONTENT=deck-says-hi
@@ -21,7 +23,7 @@ STUB_CONTENT=deck-says-hi
 # one model_call in the sandbox; every upstream leg dead by construction.
 call() { # prompt -> stdout
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
     export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
     export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -75,7 +77,7 @@ set_row "http://127.0.0.1:1"
 out="$(call "hello-3")"
 ck "dead row: empty stdout" "" "$out"
 ck "dead row: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "| model | deck | HTTP 000 -> next backend" "$sb/STATE.md" &&
+crumbs | grep -q "| model | deck | HTTP 000 -> next backend" &&
   echo "ok: dead row: breadcrumb written" || {
   echo "FAIL: dead row: no breadcrumb"
   fails=$((fails + 1))

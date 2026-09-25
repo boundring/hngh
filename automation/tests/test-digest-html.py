@@ -5,14 +5,16 @@ Tests the /digest-html/ GET routes over a real bound ThreadingHTTPServer
 (same pattern as test-dashboard-feedback.py) and the renderer/builder
 against fixture feeds: a fixture daily digest, a fixture telemetry.db,
 research-beat captures, budget log, plans.json, operator items,
-research-lines.tsv and STATE.md — all seamed into tmp dirs. No real
-digest or telemetry data touched, no network beyond localhost.
+research-lines.tsv and STATE.md crumbs (loaded into a sandbox crumbs
+journal) — all seamed into tmp dirs. No real digest or telemetry data
+touched, no network beyond localhost.
 """
 import http.client
 import importlib.util
 import json
 import os
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
@@ -366,6 +368,16 @@ class ServerRouteTest(unittest.TestCase):
 class BuilderTest(unittest.TestCase):
     """digest-ledger.py: grounded block cites feeds, numbers match."""
 
+    @staticmethod
+    def _journal(state_path):
+        """Fixture STATE.md -> sandbox crumbs journal db (posture() is a
+        journal reader since the writer flip; sync loads the fixture)."""
+        db = os.path.join(os.path.dirname(state_path), "crumbs.db")
+        subprocess.run([sys.executable, str(ROOT / "lib" / "crumbs-db.py"),
+                        "sync", "--state", state_path, "--db", db],
+                       check=True, capture_output=True)
+        return db
+
     def test_build_block_scrubs_path_tokens(self):
         # digest seam audit 2026-09-16: STATE.md alert crumbs and
         # operator-item text ride the mega line through _ascii() only,
@@ -393,7 +405,8 @@ class BuilderTest(unittest.TestCase):
                 "operator_items": dl.operator_items(
                     str(fx.tmp / "dashboard" / "operator-items.json")),
                 "research_lines": {"planned": 1, "reviewed": 1},
-                "posture": dl.posture(DAY, str(fx.tmp / "STATE.md")),
+                "posture": dl.posture(
+                    DAY, self._journal(str(fx.tmp / "STATE.md"))),
             })
         text = "\n".join(block)
         for token in ("/home/", "/tmp/", "~/"):
@@ -424,7 +437,8 @@ class BuilderTest(unittest.TestCase):
                     str(fx.tmp / "dashboard" / "operator-items.json")),
                 "research_lines": dl.research_lines(
                     str(fx.tmp / "research-lines.tsv")),
-                "posture": dl.posture(DAY, str(fx.tmp / "STATE.md")),
+                "posture": dl.posture(
+                    DAY, self._journal(str(fx.tmp / "STATE.md"))),
             }
             block = dl.build(DAY, feeds)
         text = "\n".join(block)

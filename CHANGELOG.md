@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P3c: gate refusals ride the spine** (docs/records/
+  2026-09-25-p3c-gate-refusals.md): every unobserved gate refusal —
+  model-quota pacers (all nine blocked branches in automation/lib/
+  model.sh), cadence legs-exhausted/budget-exhausted, and the bailiff
+  halt — now writes one spine crumb plus one deduped report row
+  (identity gate-refusal:<gate>, 7d window) naming the cheaper tier it
+  defers to. New automation/tests/test-gate-refusals.sh pins the
+  silent-stdout pacer protocol, per-gate identities, and fail-open
+  behavior.
 - **Refoundation P5: ceremony decay rungs** (docs/records/
   2026-09-25-p5-ceremony-decay.md): certificate actions mint receipts
   (`scripts/cert-receipts.lisp` appends timestamp/action/hash/commit/

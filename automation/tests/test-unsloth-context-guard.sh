@@ -12,9 +12,10 @@ stubdir="$(mktemp -d)"
 stub_pids=""
 trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/null' EXIT
 mkdir -p "$sb/lib" "$sb/archive" "$sb/dashboard"
-ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
+ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$root/lib/crumbs.py" "$root/lib/crumbs-db.py" "$sb/lib/"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+# crumbs seam: breadcrumbs land in the sandbox journal db
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
 
 # stub: GET /api/inference/status -> CONTEXT_LENGTH env; POST chat -> reply.
 # GET hits recorded so tests can prove the probe happened.
@@ -25,8 +26,11 @@ ctx = os.environ.get("STUB_CONTEXT_LENGTH", "100")
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def do_GET(self):
-        with open(os.path.join(d, "status-hits"), "a") as f:
-            f.write(self.path + "\n")
+        # count only the window probe: the beat-skip studio check GETs
+        # /v1/models and must not inflate the "status probed" assertion
+        if "/api/inference/status" in self.path:
+            with open(os.path.join(d, "status-hits"), "a") as f:
+                f.write(self.path + "\n")
         out = json.dumps({"context_length": int(ctx),
                           "active_model": "unsloth/stub-model"}).encode()
         self.send_response(200); self.send_header("Content-Type", "application/json")
@@ -59,7 +63,7 @@ port="$(cat "$stubdir/stub-port")"
 # one model_call in the sandbox; every other leg dead by construction.
 call() { # prompt [unsloth_url] -> stdout
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/tok" REFRESH_FILE="$sb/nope2"
     printf 'stub-token' >"$sb/tok"
     chmod 600 "$sb/tok" # unsloth leg mode-gates its token file (gap-unsloth-tokenfile-600-gate)

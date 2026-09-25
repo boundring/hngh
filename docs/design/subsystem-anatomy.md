@@ -19,7 +19,7 @@ on the edge learns how the center decides.
 | Limbs | mutation adapters: `omp-bridge` (delegated sessions), ceremony mutations (git add/commit/push), `jobs/ui-audit.mjs` writes | mutation ports (`+mutation-actions+`) | filesystem/git adapters | `test-omp-bridge.py`, verify-candidate, mutation-check |
 | Memory — working | telemetry store (`dashboard/telemetry.db`, WAL) | capture port (`jobs/telemetry.py emit`) | sqlite adapter | capture-first tests; retention tiers; first reader: the remote leg's daily cap |
 | Memory — curated | git ledger (docs/records, reports.md, plans/, research/) | the ledger append (report-queue, records) | files in git | report-queue suite; the commit IS the record |
-| Nervous system | cadence continuum (1m…month timers) + supervision (5m tick) + overnight loop (`hngh-overnight.timer`, 2h) | the tick: one beat per firing, fail-closed | systemd timers + `cadence-tick.sh` | drop-in syntax sweep (`bash -n`), STATE breadcrumbs |
+| Nervous system | cadence continuum (1m…month timers) + supervision (5m tick) + overnight loop (`hngh-overnight-lead.timer`, 2h) | the tick: one beat per firing, fail-closed | systemd timers + `cadence-tick.sh` | drop-in syntax sweep (`bash -n`), STATE breadcrumbs |
 | Limbic system | attention: report-queue alerts, verdict pill, agent-handoffs | alert port with dedup identities | dashboard verdict spine | report-queue tests; marker + ui-audit checks |
 | Circulatory system | model chain + credential refresh (lib/model.sh: unsloth → budgeted remote → ollama → archive) | model_call port, MODEL_USED receipt | HTTP adapters per backend | bench job; key-file-gated fail-closed legs |
 | Skin | the dashboard (classic-Winamp skin) | read-only HTTP over feeds | style.css skins (`data-theme`) | ui-audit (axe + register rules) |
@@ -32,7 +32,7 @@ lifecycles and one budget bind them.
 
 ### The overnight work loop
 
-`hngh-overnight.timer` fires `scripts/overnight-cycle.sh` every 2h.
+`hngh-overnight-lead.timer` fires `scripts/overnight-cycle.sh` every 2h.
 The selector, first match wins:
 
 | Priority | Work | Source |

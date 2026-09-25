@@ -1,0 +1,10 @@
+[Unit]
+Description=hngh overnight work cycle (lead timer): bounded delegated beats, round the clock
+
+[Timer]
+OnCalendar=*-*-* 00/2:30:00
+Persistent=true
+Unit=hngh-overnight.service
+
+[Install]
+WantedBy=timers.target

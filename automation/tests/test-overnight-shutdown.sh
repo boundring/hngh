@@ -21,11 +21,13 @@ auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs"
 for f in common.sh breadcrumbs.sh causes.sh notify-email.sh params.sh \
  context-pack.sh launch-session.sh model.sh model-demote.sh failfirst.sh \
- memory-gate.sh; do
+ memory-gate.sh crumbs.py crumbs-db.py; do
  cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
 cp "$root/scripts/accept-plans.py" "$auto/scripts/"
+export HNGH_CRUMBS_DB="$auto/crumbs.db"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 printf '# Inventory\nsessions-day-max\t8\ttest\ttest row\n' \
  >"$auto/cadence-params.tsv"
 kernel="$td/kernel"
@@ -45,7 +47,6 @@ chmod +x "$stubdir/omp"
 printf '#!/usr/bin/env bash\necho "run run-42 started $*"\n' >"$stubdir/bridge-stub.sh"
 chmod +x "$stubdir/bridge-stub.sh"
 MARKER="$td/launched.marker"
-STATE="$auto/STATE.md"
 
 run_cycle() { # -> child runs with OMP_SLEEP from env
  env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
@@ -78,15 +79,15 @@ wait "$pid"
 rc=$?
 [ "$rc" -ne 0 ] || fail "cycle exited 0 on SIGTERM (rc=$rc)"
 ok "SIGTERM exits non-zero (rc=$rc)"
-grep -q 'shutdown-signal' "$STATE" || fail "no shutdown-signal breadcrumb"
-grep -q 'in_flight=seed' "$STATE" || fail "breadcrumb missing in-flight session id"
+crumbs | grep -q 'shutdown-signal' || fail "no shutdown-signal breadcrumb"
+crumbs | grep -q 'in_flight=seed' || fail "breadcrumb missing in-flight session id"
 ok "shutdown-signal breadcrumb records in_flight=seed"
 
 # --- (b) cold start does not double-spawn ---------------------------------
 OMP_SLEEP=0 run_cycle >/dev/null 2>&1
 rc=$?
 [ "$rc" -eq 0 ] || fail "cold start exited $rc"
-grep -q 'cold-start-unclean' "$STATE" || fail "no cold-start-unclean breadcrumb"
+crumbs | grep -q 'cold-start-unclean' || fail "no cold-start-unclean breadcrumb"
 [ "$(wc -l <"$MARKER")" -eq 1 ] || fail "cold start double-spawned (marker=$(wc -l <"$MARKER"))"
 ok "cold start reports unclean exit and does not double-spawn"
 

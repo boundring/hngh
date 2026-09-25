@@ -20,6 +20,14 @@ from pathlib import Path
 
 AUTO = Path(__file__).resolve().parent.parent
 
+
+def crumbs_text(db):
+    """The journal's derived 4-field lines (the read seam)."""
+    return subprocess.run(
+        ["python3", str(AUTO / "lib" / "crumbs-db.py"), "export", "--db", str(db)],
+        capture_output=True, text=True, check=True).stdout
+
+
 PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 # seed plan
 
@@ -30,7 +38,8 @@ PLAN = """<!-- plan: status=accepted risk=normal author=operator -->
 
 LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
        "params.sh", "context-pack.sh", "launch-session.sh",
-       "model.sh", "failfirst.sh", "memory-gate.sh")
+       "model.sh", "failfirst.sh", "memory-gate.sh",
+       "crumbs.py", "crumbs-db.py")  # the shim writes through crumbs.py
 
 OMP_STUB = ('#!/usr/bin/env bash\n'
             'printf "%s\\n" "$*" >> "$MARKER"\n'
@@ -68,7 +77,7 @@ class BctxLaunch(unittest.TestCase):
          ).write_text(PLAN)
         self.marker = self.td / "launched.marker"
         self.bili_marker = self.td / "bili.marker"
-        self.state = self.auto / "STATE.md"
+        self.db = self.td / "crumbs.db"
 
     def tearDown(self):
         self._td.cleanup()
@@ -103,6 +112,7 @@ class BctxLaunch(unittest.TestCase):
                     OVERNIGHT_LOCK=str(self.td / "cycle.lock"),
                     OVERNIGHT_TIMEOUT="5",
                     HNGH_RAM_FLOOR_MB="1",
+                    HNGH_CRUMBS_DB=str(self.db),
                     FAILFIRST_STATE_DIR=str(self.td / "ff"))
         full.update(env)
         return subprocess.run(
@@ -118,15 +128,14 @@ class BctxLaunch(unittest.TestCase):
         # and the delegation delivered the real omp args to omp
         self.assertIn("-p --model", self.marker.read_text())
         # no fail-open breadcrumb when bili is present
-        if self.state.exists():
-            self.assertNotIn("bctx-absent", self.state.read_text())
+        self.assertNotIn("bctx-absent", crumbs_text(self.db))
 
     def test_bili_absent_falls_back_with_breadcrumb(self):
         env = self.stubs(with_bili=False)
         self.run_cycle(env)
         self.assertIn("-p --model", self.marker.read_text())
         self.assertFalse(self.bili_marker.exists())
-        state = self.state.read_text()
+        state = crumbs_text(self.db)
         self.assertIn("bctx-absent", state)
         self.assertIn("bctx: bili absent", state)
 
@@ -141,6 +150,7 @@ class BctxLaunch(unittest.TestCase):
             RESPAWN_MAX_ATTEMPTS="5",
             OVERNIGHT_MAX_SESSIONS_DAY="99",
             RESPAWN_HANDOFFS=str(root / "agent-handoffs.md"),
+            HNGH_CRUMBS_DB=str(self.db),
         )
         (root / "agent-handoffs.md").write_text(
             "overnight-lead | 2026-09-06T01:00:00Z | seed|run-1 | "

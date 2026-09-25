@@ -6,20 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job template for task pipeline tracking under jobs/
-  Verification: bash -n jobs/task-pipeline-template.sh
+- [ ] Add a job status summary script that aggregates completion signals from recent cadence runs
+  Verification: bash scripts/summarize-status.sh && grep -q "status" scripts/summarize-status.sh
 
-- [ ] Create a verification script that confirms job template syntax
-  Verification: bash scripts/verify-job-template.sh
+- [ ] Create a cadence lib module that exposes a single function for fetching the last run's outcome
+  Verification: bash -n cadence/lib/run-outcome.sh && grep -q "fetch" cadence/lib/run-outcome.sh
 
-- [ ] Add a test case for the new job template
-  Verification: make test
+- [ ] Wire the summary script to consume the cadence lib function and write output to dashboard/
+  Verification: bash scripts/summarize-status.sh && ls dashboard/ && grep -q "outcome" dashboard/
 
-- [ ] Update cadence tracking to include new job type
-  Verification: bash -n cadence/cadence-tracker.sh
+- [ ] Add a test that validates the summary script produces non-empty output when cadence data exists
+  Verification: bash tests/test-summary.sh && grep -q "PASS" tests/test-summary.sh
 
-- [ ] Add dashboard snippet for new job type visualization
-  Verification: bash -n dashboard/dashboard-snippet.sh
-
-- [ ] Run full test suite to confirm no regressions
-  Verification: make test
+- [ ] Commit all changes as a single unit that passes the existing make test gate
+  Verification: make test && git diff --cached --stat | wc -l

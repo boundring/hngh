@@ -33,7 +33,7 @@ exit 1
 class CredGet(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
-        self.state = self.tmp / "STATE.md"
+        self.db = self.tmp / "crumbs.db"
         self.logs = self.tmp / "logs"
         self.logs.mkdir()
 
@@ -46,14 +46,17 @@ class CredGet(unittest.TestCase):
             '. "%s/lib/credentials.sh"; cred_get "%s"'
         ) % (ROOT, ROOT, ROOT, ref)
         env = dict(os.environ, HNGH_OP_BIN=str(stub),
-                   STATE_FILE=str(self.state),
+                   HNGH_CRUMBS_DB=str(self.db),
                    CRED_STATE_DIR=str(self.logs),
                    ONEPASSWORD_SERVICE_KEY="sk-test-session")
         return subprocess.run(["bash", "-c", script], env=env,
                               capture_output=True, text=True, timeout=60)
 
     def crumbs(self):
-        return self.state.read_text().strip().splitlines() if self.state.exists() else []
+        return subprocess.run(
+            ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.db)],
+            capture_output=True, text=True, check=True).stdout.strip().splitlines()
 
     def test_success_prints_secret_and_nothing_else(self):
         p = self.run_cred(STUB)
@@ -84,7 +87,7 @@ class CredGet(unittest.TestCase):
         stub_ok.write_text("#!/usr/bin/env bash\nexit 0\n")
         stub_ok.chmod(0o755)
         env = dict(os.environ, HNGH_OP_BIN=str(stub_ok),
-                   STATE_FILE=str(self.state), CRED_STATE_DIR=str(self.logs),
+                   HNGH_CRUMBS_DB=str(self.db), CRED_STATE_DIR=str(self.logs),
                    ONEPASSWORD_SERVICE_KEY="sk-test-session")
         p = subprocess.run(
             ["bash", "-c",
@@ -106,7 +109,7 @@ class CredGet(unittest.TestCase):
             '. "%s/lib/credentials.sh"; printf "%%s" "$OP_SERVICE_ACCOUNT_TOKEN"'
         ) % (ROOT, ROOT, ROOT)
         env = dict(os.environ, HNGH_OP_BIN=str(stub_env),
-                   STATE_FILE=str(self.state), CRED_STATE_DIR=str(self.logs),
+                   HNGH_CRUMBS_DB=str(self.db), CRED_STATE_DIR=str(self.logs),
                    ONEPASSWORD_SERVICE_KEY="sk-test-mapping")
         env.pop("OP_SERVICE_ACCOUNT_TOKEN", None)
         p = subprocess.run(["bash", "-c", script], env=env,

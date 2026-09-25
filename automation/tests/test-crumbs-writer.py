@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""test-crumbs-writer — single STATE.md crumb writer (lib/crumbs.py)
-convergence + the mirror silent-failure hole closure.
+"""test-crumbs-writer — single journal crumb writer (lib/crumbs.py)
+convergence + the mirror silent-failure hole closure. The sqlite
+journal is the write seam (HNGH_CRUMBS_DB); STATE.md is a derived
+export and only read through lib/crumbs-db.py export.
 
-Hermetic: temp journals + a stub report-queue behind a fake kernel root;
+Hermetic: tmp journal dbs + a stub report-queue behind a fake kernel root;
 no imports of the routes under test (exec/subprocess, the
 tests/test-breadcrumb-single-line.py pattern).
 
@@ -63,12 +65,26 @@ class CrumbsWriterTest(unittest.TestCase):
         self.td = tempfile.TemporaryDirectory()
         self.home = Path(self.td.name)
         self.journal = self.home / "STATE.md"
-        self.env = dict(os.environ, STATE_FILE=str(self.journal),
+        self.db = self.home / "crumbs.db"
+        self._saved_db = os.environ.get("HNGH_CRUMBS_DB")
+        os.environ["HNGH_CRUMBS_DB"] = str(self.db)  # sandbox: never the live db
+        self.env = dict(os.environ, HNGH_CRUMBS_DB=str(self.db),
                         HNGH_HOME_DIR=str(self.home), HOME=str(self.home))
         self.crumbs = load_crumbs()
 
     def tearDown(self):
+        if self._saved_db is None:
+            os.environ.pop("HNGH_CRUMBS_DB", None)
+        else:
+            os.environ["HNGH_CRUMBS_DB"] = self._saved_db
         self.td.cleanup()
+
+    def export(self):
+        """The journal's derived 4-field lines (the read seam)."""
+        return subprocess.run(
+            ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.db)],
+            capture_output=True, text=True, check=True).stdout
 
     def shape(self, data, job, detail):
         """Exactly one 4-field line, job/detail as expected."""
@@ -82,10 +98,9 @@ class CrumbsWriterTest(unittest.TestCase):
         self.assertRegex(fields[3], r" \[w=[^@\s]+@\d+\]$")
 
     def test_writer_emits_single_four_field_line(self):
-        line = self.crumbs.crumb("job-x", "event-y", "detail z",
-                                 state_file=str(self.journal))
+        line = self.crumbs.crumb("job-x", "event-y", "detail z")
         self.shape(line, "job-x", "detail z")
-        self.assertEqual(self.journal.read_text(), line)
+        self.assertEqual(self.export(), line)
 
     def test_writer_rejects_separator_or_newline_in_any_field(self):
         for field in ("job", "event", "detail"):
@@ -93,22 +108,19 @@ class CrumbsWriterTest(unittest.TestCase):
                 args = ["job-x", "event-y", "detail z"]
                 args[("job", "event", "detail").index(field)] = dirty
                 with self.assertRaises(ValueError, msg=(field, dirty)):
-                    self.crumbs.crumb(*args, state_file=str(self.journal))
-        self.assertFalse(self.journal.exists())  # fail closed: nothing half-written
+                    self.crumbs.crumb(*args)
+        self.assertFalse(self.db.exists())  # fail closed: nothing half-written
 
     def test_crumb_carries_writer_provenance_stamp(self):
         # R1 (fail-20260924-crumbs-mirror-rows): every appended line
-        # carries an append-time writer stamp -- process name + journal
-        # byte offset (the watermark coordinate). Retry spacing shows
-        # as same content at different offsets; batch-uniform stamps
-        # are a backfill. Hermetic tmp journal: offsets deterministic
-        # (0, then the first line's byte length).
-        first = self.crumbs.crumb("job-x", "event-y", "detail z",
-                                  state_file=str(self.journal))
-        self.assertRegex(first, r" \[w=[^@\s]+@0\]\n$")
-        second = self.crumbs.crumb("job-x", "event-y", "detail z",
-                                   state_file=str(self.journal))
-        self.assertRegex(second, r" \[w=[^@\s]+@%d\]\n$" % len(first))
+        # carries an append-time writer stamp -- process name + rowid
+        # (the journal coordinate). Retry spacing shows as same content
+        # at new rowids; batch-uniform stamps are a backfill. Hermetic
+        # tmp journal db: rowids deterministic (1, then 2).
+        first = self.crumbs.crumb("job-x", "event-y", "detail z")
+        self.assertRegex(first, r" \[w=[^@\s]+@1\]\n$")
+        second = self.crumbs.crumb("job-x", "event-y", "detail z")
+        self.assertRegex(second, r" \[w=[^@\s]+@2\]\n$")
         self.assertIn(" [w=%s@" % os.path.basename(sys.argv[0]), second)
 
     def test_shim_route_converges_and_refuses_dirty(self):
@@ -116,43 +128,42 @@ class CrumbsWriterTest(unittest.TestCase):
                         "gate: FAILED (rc=2)\nRan 34 tests")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         run_shim(self.env, "test-job", "test-event", "a | b | c")
-        self.shape(self.journal.read_text().splitlines(keepends=True)[0],
+        lines = self.export().splitlines(keepends=True)
+        self.shape(lines[0],
                    "test-job", "gate: FAILED (rc=2) Ran 34 tests")
-        self.shape(self.journal.read_text().splitlines(keepends=True)[1],
+        self.shape(lines[1],
                    "test-job", "a \u00a6 b \u00a6 c")
         proc = run_shim(self.env, "test-job", "e | vil", "detail")
         self.assertEqual(proc.returncode, 2)  # writer fail-closed, visible
-        self.assertEqual(len(self.journal.read_text().splitlines()), 2)
+        self.assertEqual(len(self.export().splitlines()), 2)
 
     def test_router_route_converges_and_refuses_dirty(self):
         mod = load_route("scripts/router-tick.py")
-        mod.STATE_FILE = str(self.journal)
         mod.breadcrumb("test-job", "test-event",
                        "gate: FAILED (rc=2)\nRan 34 tests")
-        self.shape(self.journal.read_text(), "test-job",
+        self.shape(self.export(), "test-job",
                    "gate: FAILED (rc=2) Ran 34 tests")
         with self.assertRaises(ValueError):  # routed through the writer
             mod.breadcrumb("test-job", "e | vil", "detail")
-        self.assertEqual(len(self.journal.read_text().splitlines()), 1)
+        self.assertEqual(len(self.export().splitlines()), 1)
 
     def test_feedback_route_converges_and_refuses_dirty(self):
         mod = load_route("jobs/feedback-apply.py")
         mod.STATE_MD = str(self.journal)
         mod.crumb("test-event", "gate: FAILED (rc=2)\nRan 34 tests")
-        self.shape(self.journal.read_text(), "feedback-apply",
+        self.shape(self.export(), "feedback-apply",
                    "gate: FAILED (rc=2) Ran 34 tests")
         with self.assertRaises(ValueError):  # routed through the writer
             mod.crumb("e | vil", "detail")
-        self.assertEqual(len(self.journal.read_text().splitlines()), 1)
+        self.assertEqual(len(self.export().splitlines()), 1)
 
     def test_service_route_converges_and_refuses_dirty(self):
         mod = load_route("jobs/service-state.py")
-        mod.STATE_FILE = str(self.journal)
         mod.breadcrumb("test-event", "gate: FAILED (rc=2)\nRan 34 tests")
-        self.shape(self.journal.read_text(), "service-state",
+        self.shape(self.export(), "service-state",
                    "gate: FAILED (rc=2) Ran 34 tests")
         mod.breadcrumb("e | vil", "detail")  # swallowed: best-effort probe
-        self.assertEqual(len(self.journal.read_text().splitlines()), 1)
+        self.assertEqual(len(self.export().splitlines()), 1)
 
 
 class CrumbsMirrorAlertTest(unittest.TestCase):
@@ -180,7 +191,7 @@ class CrumbsMirrorAlertTest(unittest.TestCase):
         crumbs = load_crumbs()
         for i in range(2):
             crumbs.crumb("job-x", "event-%d" % i, "detail %d" % i,
-                         state_file=str(self.journal))
+                         db_file=str(self.db))
 
     def tearDown(self):
         self.td.cleanup()
@@ -202,6 +213,11 @@ class CrumbsMirrorAlertTest(unittest.TestCase):
         conn.execute("DELETE FROM crumbs WHERE event='event-0'")
         conn.commit()
         conn.close()
+        # the tick rewrites STATE.md from the rows first (export
+        # --write-state), so a lost row alone self-heals: block the
+        # rewrite (a directory where the tmp file goes) to keep the
+        # mirror tampered and surface the mismatch.
+        (Path(str(self.journal) + ".tmp")).mkdir()
         self.run_tick()
         first = self.log.read_text().splitlines()
         self.run_tick()  # same evidence: the real report-queue suppresses

@@ -133,7 +133,7 @@ class InWindowBuild(unittest.TestCase):
                    HNGH_AUTOMATION_ROOT=str(sb),
                    HNGH_NEWSPAPER_DIR=str(paper),
                    HNGH_DIGESTS_DIR=str(digests),
-                   STATE_FILE=str(sb / "STATE.md"),
+                   HNGH_CRUMBS_DB=str(sb / "crumbs.db"),
                    HNGH_NEWSPAPER_WINDOW="01:30-06:30",
                    HNGH_NEWSPAPER_NOW="120",
                    NEWS_ARTICLES_MODEL_CMD='bash "%s"' % model_stub,
@@ -156,6 +156,29 @@ class InWindowBuild(unittest.TestCase):
         self.assertTrue((edition / "digest.md").is_file())
         self.assertTrue((edition / "index.html").is_file())
         self.assertTrue(list(edition.glob("*.md")))
+
+
+class CrumbSeam(unittest.TestCase):
+    """P1 seam closure: the writer's breadcrumb rides the single
+    journal seam (lib/crumbs.py) - one 4-field stamped line."""
+
+    def test_breadcrumb_writes_one_stamped_line(self):
+        with tempfile.TemporaryDirectory() as td:
+            db = os.path.join(td, "crumbs.db")
+            os.environ["HNGH_CRUMBS_DB"] = db
+            try:
+                ne.breadcrumb("edition", "pipe|here")
+            finally:
+                os.environ.pop("HNGH_CRUMBS_DB", None)
+            lines = subprocess.run(
+                ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+                 "--db", db],
+                capture_output=True, text=True, check=True,
+            ).stdout.splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertRegex(
+            lines[0],
+            r"^[\d:TZ-]+ \| newspaper-edition \| edition \| pipe\u00a6here \[w=[^@\s]+@\d+\]$")
 
 
 if __name__ == "__main__":

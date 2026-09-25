@@ -29,7 +29,10 @@ cp -r "$root/jobs/telemetry.py" "$sb/jobs/"
 cp -r "$root/cadence/." "$sb/cadence/"
 cp "$root/../scripts/report-queue" "$sb/kernel/scripts/"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+# crumbs seam: the journal db is the source of record; reads go through
+# the export bridge (STATE.md is a derived export, never materialized)
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 
 # kernel IS a git repo here: the free-commit lane must engage
 git -C "$sb/kernel" init -q
@@ -47,7 +50,7 @@ chmod 600 "$sb/unsloth-token" # unsloth leg mode-gates its token file (gap-unslo
 kimi_env=("KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubK_port")
 
 BEAT_ENV=(
- AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=33-research-beat.sh
+ AUTOMATION_ROOT="$sb" HNGH_CRUMBS_DB="$sb/crumbs.db" JOB_NAME=33-research-beat.sh
  HNGH_HOME="$sb/kernel" HNGH_REPORT_ROOT="$sb/report-root"
  RESEARCH_SYNTH_STAMP_FILE="$sb/synth-stamp"
  FAILFIRST_STATE_DIR="$sb/ff" RESEARCH_LOCK_FILE="$sb/lock"
@@ -72,7 +75,7 @@ reset_beat() { # n-planned-lines -> fresh pool
  rm -f "$sb/beat-stamp" "$sb/beat-count" "$sb/tmp-modelused.txt" \
   "$sb/research-dispositions.tsv" "$sb/lock"
  rm -rf "$sb/ff"
- : >"$sb/STATE.md"
+ rm -f "$HNGH_CRUMBS_DB" # fresh journal per case
  rm -f "$stubdir/stubU-hits" "$stubdir/stubK-hits"
  local i
  {
@@ -170,8 +173,10 @@ grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
  echo "FAIL: non-repo kernel: beat broke"
  fails=$((fails + 1))
 }
-n="$(grep -c 'research-commit' "$sb/STATE.md" || true)"
+n="$(grep -c 'research-commit' <(journal) || true)"
 ck "non-repo kernel: no research-commit breadcrumb" "0" "$n"
+ck "non-repo kernel: beat still journaled" "yes" \
+ "$([ -n "$(journal)" ] && echo yes || echo no)"
 
 echo
 if [ "$fails" -eq 0 ]; then echo "ALL OK"; else

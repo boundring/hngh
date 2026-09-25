@@ -2,11 +2,12 @@
 """resume-pass, hermetic: the cold-resume log is honest about the recovery
 surface (dead sessions with cause, held plans, missed day beats, open
 operator items) and the sweep gate fires only when the last non-tick
-STATE crumb is older than resume-gap-hours."""
+journal crumb is older than resume-gap-hours."""
 
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -35,9 +36,11 @@ class ResumePass(unittest.TestCase):
         (self.root / "dashboard").mkdir()
         self.kernel = self.root / "kernel"
         (self.kernel / "docs" / "project" / "plans").mkdir(parents=True)
+        self.db = self.root / "state" / "crumbs.db"
         self.base_env = dict(
             os.environ, RESUME_ROOT=str(self.root),
-            HNGH_KERNEL=str(self.kernel), RESUME_GAP_HOURS="6")
+            HNGH_KERNEL=str(self.kernel), RESUME_GAP_HOURS="6",
+            HNGH_CRUMBS_DB=str(self.db))
 
     def run_job(self, mode, **extra):
         env = dict(self.base_env, **extra)
@@ -45,8 +48,14 @@ class ResumePass(unittest.TestCase):
                               capture_output=True, text=True)
 
     def seed(self, *, crumb_ago=10 * 3600, dead=True, plan=True, items=True):
-        state = self.root / "STATE.md"
-        state.write_text(f"{iso(crumb_ago)} | credential-health.sh | x | y\n")
+        # fixture crumb lines load through the journal importer
+        fixture = self.root / "seed-crumbs.md"
+        fixture.write_text(f"{iso(crumb_ago)} | credential-health.sh | x | y\n")
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "lib" / "crumbs-db.py"), "sync",
+             "--state", str(fixture), "--db", str(self.db)],
+            capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
         (self.root / "agent-handoffs.md").write_text(DEAD_ROW if dead else "")
         if plan:
             (self.kernel / "docs" / "project" / "plans"
@@ -64,12 +73,19 @@ class ResumePass(unittest.TestCase):
     def logs(self):
         return sorted((self.root / "logs").glob("resume-*.md"))
 
+    def export(self):
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.db)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
     def test_sweep_skips_when_machine_was_up(self):
         self.seed(crumb_ago=600)
         r = self.run_job("--sweep")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.logs(), [])
-        self.assertIn("sweep-skip", (self.root / "STATE.md").read_text())
+        self.assertIn("sweep-skip", self.export())
 
     def test_sweep_fires_after_downtime_and_log_is_honest(self):
         self.seed(crumb_ago=10 * 3600)

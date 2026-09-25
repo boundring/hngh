@@ -18,7 +18,10 @@ mkdir -p "$sb/home/db" "$sb/lib" "$sb/archive" "$sb/dashboard" "$sb/db" "$sb/job
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$root/lib/scrub.sh" "$root/lib/scrub.py" "$sb/lib/"
 ln -s "$root/jobs/telemetry.py" "$sb/jobs/telemetry.py"
 : >"$sb/cadence-params.tsv" # Inventory: no kimi/ocgo rows unless a case sets one
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 
 . "$root/tests/stub-lib.sh"
 seed_events() { # source n -> n telemetry model/<source> events stamped today
@@ -44,7 +47,7 @@ call() { # prompt [K=V ...] -> stdout
  shift
  local kv
  (
-  export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+  export AUTOMATION_ROOT="$sb" JOB_NAME=test
   export HOME="$sb" HNGH_HOME_DIR="$sb/home" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
   export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
   export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -105,7 +108,7 @@ chmod 644 "$sb/.config/hngh/kimi-key"
 out="$(call "hello-4b" "KIMI_MODEL=kimi-test-model" "KIMI_URL=http://127.0.0.1:$stubB_port")"
 ck "file key 644: empty stdout" "" "$out"
 ck "file key 644: archive-only used" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "key file too open" "$sb/STATE.md" &&
+crumbs | grep -q "key file too open" &&
  echo "ok: file key 644: breadcrumb written" || {
  echo "FAIL: file key 644: no breadcrumb"
  fails=$((fails + 1))
@@ -116,14 +119,14 @@ chmod 600 "$sb/.config/hngh/kimi-key"
 #        a later leg answers (ocgo precedes kimi in the 2026-09-22
 #        quota-first tail, so the deck stub is the answerer here).
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 seed_events kimi "$(pace_seed_count 100)"
 out="$(call "hello-5" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=100" \
  "DECK_URL=http://127.0.0.1:$stubB_port" "DECK_MODEL=deck-test")"
 ck "pace-blocked: kimi skipped, deck answers" "stub-says-hi" "$out"
 ck "pace-blocked: deck used" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "quota pace: kimi used " "$sb/STATE.md" &&
+crumbs | grep -q "quota pace: kimi used " &&
  echo "ok: pace-blocked: breadcrumb written" || {
  echo "FAIL: pace-blocked: no breadcrumb"
  fails=$((fails + 1))
@@ -131,13 +134,13 @@ grep -q "quota pace: kimi used " "$sb/STATE.md" &&
 
 # --- 6. hard cap reached -> skipped the same way.
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 seed_events kimi 2
 out="$(call "hello-6" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:$stubB_port" "KIMI_DAILY_CAP_CALLS=2" \
  "DECK_URL=http://127.0.0.1:$stubB_port" "DECK_MODEL=deck-test")"
 ck "hard cap: kimi skipped, deck answers" "stub-says-hi" "$out"
-grep -q "quota pace: kimi used 2/cap 2" "$sb/STATE.md" &&
+crumbs | grep -q "quota pace: kimi used 2/cap 2" &&
  echo "ok: hard cap: breadcrumb written" || {
  echo "FAIL: hard cap: no breadcrumb"
  fails=$((fails + 1))
@@ -179,13 +182,13 @@ ck "MODEL_PIN=local: unsloth stub hit" "1" "$(hits stubA)"
 # --- 9. dead kimi endpoint -> HTTP 000 breadcrumb + fall-through (deck
 #        answers: ocgo precedes kimi since the 2026-09-22 reorder).
 rm -f "$sb/home/db/telemetry.db"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "hello-9" "KIMI_AI_KEY=stub-key-never-real" "KIMI_MODEL=kimi-test-model" \
  "KIMI_URL=http://127.0.0.1:1" "DECK_URL=http://127.0.0.1:$stubB_port" \
  "DECK_MODEL=deck-test")"
 ck "dead kimi endpoint: fall-through to deck" "stub-says-hi" "$out"
 ck "dead kimi endpoint: deck used" "deck:deck-test" "$(cat "$sb/tmp-modelused.txt")"
-grep -q "| model | kimi | HTTP 000 -> next backend" "$sb/STATE.md" &&
+crumbs | grep -q "| model | kimi | HTTP 000 -> next backend" &&
  echo "ok: dead kimi endpoint: breadcrumb written" || {
  echo "FAIL: dead kimi endpoint: no breadcrumb"
  fails=$((fails + 1))

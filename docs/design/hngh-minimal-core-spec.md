@@ -4,7 +4,7 @@ Date: 2026-09-15
 Status: DESIGN DOC ONLY. No repository forked, no hngh plan, roadmap row,
 or code changed. Authored in .agent-scratch/consider/ per
 synthesis decision D4 and promoted 2026-09-15 into the committed
-evidence ledger at docs/design/hnnghh-minimal-core-spec.md. It doubles
+evidence ledger at docs/design/hngh-minimal-core-spec.md. It doubles
 as the strangler retirement plan (D5)
 and as the fallback blueprint should the pivot decision hooks (section 5)
 ever fire.

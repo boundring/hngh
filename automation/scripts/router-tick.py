@@ -8,7 +8,7 @@ closing-the-self-observation-loop.md, fields 1/2/6):
 - pre-check before any report-queue --add: the same two greps the
   overnight selector uses (status=accepted front-matter, an unchecked
   `- [ ]` step); when the identity's named step is closed, skip the
-  candidate add and file exactly one observable pair — a STATE.md
+  candidate add and file exactly one observable pair — a crumbs-journal
   breadcrumb `router | duplicate-skip | <identity> step already closed`
   plus a deduped alert row --identity router:dup-skip:<identity>
   --window 86400 (this is router-rearm-precheck's parked "one
@@ -19,7 +19,7 @@ closing-the-self-observation-loop.md, fields 1/2/6):
   dedup window (HNGH_ROUTER_DEDUP_HOURS, default 12h). A live
   duplicate suppresses the candidate — the plan queue stays clean
   while the alert row still lands in reports.md — and counts the
-  suppression in a STATE.md `router | plan-dedup` crumb; >=3 dedups
+  suppression in a crumbs-journal `router | plan-dedup` crumb; >=3 dedups
   in one day escalate a row to operator visibility once/day
   (loop-recognition lesson: a stuck loop must be visible, not
   silently swallowed). Terminal or window-aged candidates route
@@ -37,6 +37,7 @@ state: the skip decision is re-derived from the plan file each run.
 """
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -54,7 +55,8 @@ AUTOMATION = os.environ.get(
     "HNGH_AUTOMATION_ROOT",
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PLANS = os.path.join(KERNEL, "docs", "project", "plans")
-STATE_FILE = os.environ.get("STATE_FILE", os.path.join(AUTOMATION, "STATE.md"))
+CRUMBS_DB = os.environ.get(
+    "HNGH_CRUMBS_DB", os.path.join(AUTOMATION, "state", "crumbs.db"))
 REPORT_QUEUE = os.environ.get(
     "HNGH_REPORT_QUEUE", os.path.join(KERNEL, "scripts", "report-queue"))
 REPORT_ROOT = os.environ.get("HNGH_REPORT_ROOT", KERNEL)
@@ -160,12 +162,12 @@ def now_utc():
 
 
 def breadcrumb(job, event, detail):
-    """STATE.md row via the single writer (lib/crumbs.py), 4-field
+    """Crumbs journal row via the single writer (lib/crumbs.py), 4-field
     format identical to lib/breadcrumbs.sh."""
     if os.environ.get("DRY_RUN") == "1":
         print("[dry-run] crumb %s|%s|%s" % (job, event, detail))
         return
-    crumbs.crumb(job, event, crumbs.scrub(detail), state_file=STATE_FILE)
+    crumbs.crumb(job, event, crumbs.scrub(detail))
 
 
 def report(kind, text, ident, window):
@@ -312,17 +314,25 @@ def live_duplicate(identity, window_s):
 
 def dedup_count_today(identity):
     """Dedup occurrences for this identity today, including the one being
-    decided — STATE.md crumbs are the only counter (no router-internal
+    decided — crumbs journal rows are the only counter (no router-internal
     state; the skip decision re-derives from files each run)."""
     today = now_utc()[:10]
     n = 1
     try:
-        with open(STATE_FILE, encoding="utf-8") as fh:
-            for line in fh:
-                if (line.startswith(today) and "plan-dedup" in line
-                        and identity in line):
+        conn = sqlite3.connect("file:%s?mode=ro" % CRUMBS_DB, uri=True,
+                               timeout=5)
+        try:
+            for ts, job, event, detail, writer in conn.execute(
+                    "SELECT ts, job, event, detail, writer FROM crumbs"
+                    " WHERE ts LIKE ? || '%'", (today,)):
+                line = "%s | %s | %s | %s" % (
+                    ts, job, event,
+                    detail + (" [w=%s]" % writer if writer else ""))
+                if "plan-dedup" in line and identity in line:
                     n += 1
-    except OSError:
+        finally:
+            conn.close()
+    except sqlite3.Error:
         pass
     return n
 

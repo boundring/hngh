@@ -35,7 +35,7 @@ research cycles own the design and landing through the normal gates.*
   when the accepted-plans queue runs dry, at most one dev plan per day
   is synthesized from adopted research. Raising session ceilings
   without raising plan supply moves the bottleneck downstream.
-- **Duty cycle has dead time.** `hngh-overnight.timer` fires hourly;
+- **Duty cycle has dead time.** `hngh-overnight-lead.timer` fires hourly;
   a full beat (3 concurrent sessions × ≤30 min timeout) runs ~30 min,
   leaving up to ~29 min idle between beats. The flock makes overlap
   safe; the contract already says "continuous operation (24/7), the

@@ -56,6 +56,7 @@ class BeatWatchdog(unittest.TestCase):
         self._td = tempfile.TemporaryDirectory()
         self.root = Path(self._td.name)
         self.state = self.root / "STATE.md"
+        self.db = self.root / "crumbs.db"
         self.handoffs = self.root / "agent-handoffs.md"
         self.blockers = self.root / "state" / "beat-blockers.tsv"
         self.alerts = self.root / "alerts.tsv"
@@ -63,7 +64,7 @@ class BeatWatchdog(unittest.TestCase):
             "#!/usr/bin/env bash\n"
             'printf "%s\\n" "$5" >>"$BEAT_ALERTS"\n')
         os.chmod(self.root / "rq.sh", 0o755)
-        for k, v in [("BEAT_STATE_FILE", str(self.state)),
+        for k, v in [("HNGH_CRUMBS_DB", str(self.db)),
                      ("BEAT_HANDOFFS", str(self.handoffs)),
                      ("BEAT_BLOCKERS_FILE", str(self.blockers)),
                      ("REPORT_QUEUE_BIN", str(self.root / "rq.sh")),
@@ -83,9 +84,19 @@ class BeatWatchdog(unittest.TestCase):
         return rows, alerts
 
     def write_inputs(self, state, handoffs=""):
-        self.state.write_text(state)
+        # trailing newline required: sync imports complete lines only
+        self.state.write_text(state if state.endswith("\n") else state + "\n")
+        self.sync()
         if handoffs:
             self.handoffs.write_text(handoffs)
+
+    def sync(self):
+        """fixture STATE.md -> sandbox crumbs journal (fresh db per sync:
+        the sync watermark is a byte offset)."""
+        self.db.unlink(missing_ok=True)
+        subprocess.run([sys.executable, str(ROOT / "lib" / "crumbs-db.py"),
+                        "sync", "--state", str(self.state),
+                        "--db", str(self.db)], check=True, capture_output=True)
 
     # --- (a) the incident shape: consecutive launch-plane failures ---
     def test_three_launch_failures_file_blocker_and_alert(self):
@@ -162,7 +173,7 @@ class BeatWatchdog(unittest.TestCase):
 
     # --- (f) fail-first: a detector crash never breaks the tick ---
     def test_crash_suppressed_exit_zero(self):
-        os.environ["BEAT_STATE_FILE"] = str(self.root / "no-such-dir" / "STATE.md")
+        os.environ["HNGH_CRUMBS_DB"] = str(self.root / "no-such-dir" / "crumbs.db")
         r = subprocess.run([sys.executable, str(SPEC)], capture_output=True)
         self.assertEqual(r.returncode, 0)
 

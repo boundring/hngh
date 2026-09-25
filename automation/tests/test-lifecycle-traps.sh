@@ -30,9 +30,10 @@ bad() {
 
 auto="$td/automation"
 mkdir -p "$auto/lib" "$auto/scripts" "$auto/logs" "$td/tmp" "$td/stubs" "$td/home"
-for f in common.sh breadcrumbs.sh causes.sh notify-email.sh credentials.sh \
-  params.sh context-pack.sh launch-session.sh model.sh model-demote.sh \
-  failfirst.sh memory-gate.sh beat-blockers.sh; do
+for f in common.sh breadcrumbs.sh causes.sh redact.sh notify-email.sh \
+  credentials.sh params.sh context-pack.sh launch-session.sh \
+  launch-jcode.sh model.sh model-demote.sh failfirst.sh memory-gate.sh \
+  beat-blockers.sh crumbs.py crumbs-db.py; do
   cp "$root/lib/$f" "$auto/lib/"
 done
 cp "$root/scripts/overnight-cycle.sh" "$auto/scripts/"
@@ -47,7 +48,10 @@ chmod +x "$kernel/scripts/report-queue"
 KERNEL_ALERTS="$td/alerts.tsv"
 : >"$KERNEL_ALERTS"
 MARKER="$td/launched.marker"
-STATE="$auto/STATE.md"
+# crumbs seam: breadcrumbs land in the journal db; assertions read it via
+# the export bridge (STATE.md is a derived export, never materialized)
+HNGH_CRUMBS_DB="$td/crumbs.db"
+journal() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
 
 # omp stub: trap-fast's session completes immediately (cancelled);
 # trap-slow's session blocks mid-flight until the test TERM's the tree
@@ -70,7 +74,7 @@ cat >"$td/cycle.sh" <<EOF
 #!/usr/bin/env bash
 exec env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
   OVERNIGHT_TIMEOUT="30" FAILFIRST_STATE_DIR="$td/ff" TMPDIR="$td/tmp" \
-  HNGH_RAM_FLOOR_MB=1 \
+  HNGH_RAM_FLOOR_MB=1 HNGH_CRUMBS_DB="$HNGH_CRUMBS_DB" \
   HOME="$td/home" BEAT_BLOCKERS_FILE="$td/blockers.tsv" \
   OMP_STUB="$td/stubs/omp" MARKER="$MARKER" FORETHOUGHT_DEPTH="1" \
   OMP_BRIDGE_BIN="$td/stubs/bridge" KERNEL_ALERTS="$KERNEL_ALERTS" \
@@ -111,8 +115,8 @@ else
 fi
 wait "$cyc"
 ck "SIGTERM mid-beat: trap exit 1 (clean, not signal-killed)" "1" "$?"
-line="$(grep 'shutdown-signal' "$STATE" 2>/dev/null | tail -n 1)"
-[ -n "$line" ] || bad "no shutdown-signal breadcrumb in STATE.md"
+line="$(journal | grep 'shutdown-signal' | tail -n 1)"
+[ -n "$line" ] || bad "no shutdown-signal breadcrumb in the journal"
 printf '%s' "$line" | grep -q 'signal=TERM' ||
   bad "breadcrumb missing signal=TERM: $line"
 printf '%s' "$line" | grep -q 'trap-slow=running' ||
@@ -140,11 +144,11 @@ flock -n "$td/cycle.lock" /bin/true 2>/dev/null ||
 : >"$MARKER"
 run_cycle >"$td/run2.log" 2>&1
 ck "next beat after unclean stop exits 0" "0" "$?"
-grep -q 'cold-start-unclean' "$STATE" ||
-  bad "no cold-start-unclean breadcrumb on the next beat (log=$(cat "$td/run2.log"); state=$(tail -n 3 "$STATE"))"
+grep -q 'cold-start-unclean' <(journal) ||
+  bad "no cold-start-unclean breadcrumb on the next beat (log=$(cat "$td/run2.log"); journal=$(journal | tail -n 3))"
 [ -s "$MARKER" ] &&
   bad "cold-start guard did not skip the batch (double-spawn: $(cat "$MARKER"))"
-grep -q 'overnight-done' "$STATE" ||
+grep -q 'overnight-done' <(journal) ||
   bad "ordering not restored (no overnight-done after the skip)"
 echo "ok: cold-start guard skips one batch after an unclean stop"
 

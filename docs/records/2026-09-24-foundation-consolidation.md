@@ -99,7 +99,7 @@ mutation is admitted.
   (clean-reorientation.md, repo-merge-consideration.md superseded by
   decisions.md:420); gate-inventory.md rows 23-25 struck with their exact
   causes (the row-24 note also fixes queue.md's scheduling note to "the
-  cadence owns the clock"); hnnghh-minimal-core-spec.md's self-declared
+  cadence owns the clock"); hngh-minimal-core-spec.md's self-declared
   false claim struck; governed-fleet.md's stale stage-7 line superseded by
   roadmap.md:25-33; fail-first.md "implemented (lib/failfirst.sh)";
   interface-plan.md "superseded by command-center.md (M1-M7/S1-S7

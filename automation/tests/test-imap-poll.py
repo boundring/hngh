@@ -5,7 +5,7 @@
     [smtp]|[imap] keys / unresolvable password -> exit 0 no-op with an
     imap-dormant breadcrumb, mailbox client never constructed;
 (b) reply -> operator-item conversion through the real bash contract
-    (lib/operator-item.sh -> alert_row -> stub report-queue + STATE.md
+    (lib/operator-item.sh -> alert_row -> stub report-queue + journal
     crumb), email channel dormant by design;
 (c) processed-marking: \\Seen set for every processed message, nothing
     deleted or expunged, per-tick cap respected;
@@ -59,6 +59,13 @@ def load_module():
     spec.loader.exec_module(mod)
     sys.modules["imap_poll"] = mod
     return mod
+
+
+def crumbs_text(db):
+    """The journal's derived 4-field lines (the read seam)."""
+    return subprocess.run(
+        ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export", "--db", str(db)],
+        capture_output=True, text=True, check=True).stdout
 
 
 class StubClient:
@@ -128,7 +135,7 @@ def make_message(subject, body, from_="Operator <op@example.com>",
 
 class Seamed(unittest.TestCase):
     """Reload the module with HNGH_AUTOMATION_ROOT / HNGH_HOME pointed
-    into a tmp sandbox (inbox/, digest/, STATE.md live there; the stub
+    into a tmp sandbox (inbox/, digest/, the crumbs journal live there; the stub
     kernel provides scripts/report-queue)."""
 
     def setUp(self):
@@ -150,14 +157,17 @@ class Seamed(unittest.TestCase):
         rq.chmod(rq.stat().st_mode | stat.S_IEXEC)
         self.rq_log = self.tmp / "report-queue.log"
         self.old = (os.environ.get("HNGH_AUTOMATION_ROOT"),
-                    os.environ.get("HNGH_HOME"))
+                    os.environ.get("HNGH_HOME"),
+                    os.environ.get("HNGH_CRUMBS_DB"))
         os.environ["HNGH_AUTOMATION_ROOT"] = str(self.auto)
         os.environ["HNGH_HOME"] = str(self.kernel)
+        os.environ["HNGH_CRUMBS_DB"] = str(self.auto / "state" / "crumbs.db")
         self.addCleanup(self._restore)
         globals()["imap_poll"] = load_module()
 
     def _restore(self):
-        for key, val in zip(("HNGH_AUTOMATION_ROOT", "HNGH_HOME"), self.old):
+        for key, val in zip(("HNGH_AUTOMATION_ROOT", "HNGH_HOME",
+                             "HNGH_CRUMBS_DB"), self.old):
             if val is None:
                 os.environ.pop(key, None)
             else:
@@ -188,9 +198,9 @@ class ConfFailClosed(Seamed):
         self.assertEqual(rc, 0)
         self.assertIn("no-op", err)
         self.assertIn(why, err)
-        state = self.auto / "STATE.md"
-        self.assertTrue(state.exists())
-        self.assertIn("imap-dormant", state.read_text())
+        state = crumbs_text(self.auto / "state" / "crumbs.db")
+        self.assertTrue(state)                       # a crumb was written
+        self.assertIn("imap-dormant", state)
 
     def test_missing_conf(self):
         os.environ["HNGH_NOTIFY_EMAIL_CONF"] = str(self.tmp / "absent.conf")
@@ -234,7 +244,7 @@ class ConfFailClosed(Seamed):
 class ReplyConversion(Seamed):
     """(b) UNSEEN reply -> operator-item through the REAL bash contract
     (lib/operator-item.sh), ledger seamed to the stub report-queue and
-    a sandbox STATE.md; email channel dormant by design."""
+    a sandbox journal; email channel dormant by design."""
 
     def poll_conf(self):
         conf = make_conf(self.tmp, smtp_pass="pw")
@@ -249,7 +259,7 @@ class ReplyConversion(Seamed):
             "Yes, go ahead with the slower cadence.\nThanks.")
         client = StubClient([raw])
         imap_poll.poll(client)
-        state = (self.auto / "STATE.md").read_text()
+        state = crumbs_text(self.auto / "state" / "crumbs.db")
         self.assertIn("| imap-poll | alert | ", state)
         text = "[imap-reply] Re: [hngh] parked plan question"
         self.assertIn(text, state)
@@ -287,6 +297,8 @@ class ReplyConversion(Seamed):
         env = captured["env"]
         self.assertEqual(env["HNGH_NOTIFY_EMAIL_CONF"],
                          "/dev/null/notify-email.conf")  # dormant by design
+        self.assertEqual(env["HNGH_CRUMBS_DB"],
+                         str(self.auto / "state" / "crumbs.db"))
         self.assertEqual(env["JOB_NAME"], "imap-poll")
         self.assertRegex(env["ITEM_IDENTITY"], r"^imap-reply-[0-9a-f]{8}$")
         self.assertIn("[imap-reply] Re: subject line", env["ITEM_TEXT"])
@@ -297,7 +309,7 @@ class ReplyConversion(Seamed):
         self.poll_conf()
         client = StubClient([make_message("Re: hi", "hello")])
         imap_poll.poll(client, dry=True)
-        self.assertFalse((self.auto / "STATE.md").exists())
+        self.assertEqual(crumbs_text(self.auto / "state" / "crumbs.db"), "")
         self.assertFalse(self.rq_log.exists())
         self.assertEqual(client.seen, [])  # nothing marked in a dry run
 
@@ -490,7 +502,7 @@ class ReportLinks(ReplyConversion):
         return body
 
     def seed_item(self, iid, status="open", ref=True):
-        """One item in the operator-items feed + a matching STATE alert
+        """One item in the operator-items feed + a matching journal alert
         crumb (the item's provenance, as the feed itself builds it).
         ref=True: the item text references the linked report id, which
         is what makes directive transitions apply to it."""
@@ -504,11 +516,17 @@ class ReportLinks(ReplyConversion):
                          % (REPORT_ID if ref else iid),
                  "first_seen": now, "last_seen": now, "status": status,
                  "evidence": ""}]}, f)
-        state = self.auto / "STATE.md"
-        state.touch()
-        with open(state, "a") as f:
+        # the provenance crumb rides the journal: load the fixture STATE
+        # line through the import seam (fixture-format coverage kept)
+        fixture = self.tmp / "seeded-STATE.md"
+        with open(fixture, "a") as f:
             f.write("%s | imap-poll | alert | deck pull fails (%s)\n"
                     % (now, iid))
+        subprocess.run(
+            ["python3", str(ROOT / "lib" / "crumbs-db.py"), "sync",
+             "--state", str(fixture),
+             "--db", str(self.auto / "state" / "crumbs.db")],
+            check=True, capture_output=True)
         return dash / "operator-items.json"
 
     def poll_one(self, subject, body_txt):

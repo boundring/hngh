@@ -15,7 +15,10 @@ trap 'rm -rf "$sb" "$stubdir"; [ -z "$stub_pids" ] || kill $stub_pids 2>/dev/nul
 mkdir -p "$sb/lib"
 ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$root/lib/model.sh" "$sb/lib/"
 : >"$sb/cadence-params.tsv"
-: >"$sb/STATE.md"
+export HNGH_CRUMBS_DB="$sb/crumbs.db"
+export CRUMBS_WRITER="$root/lib/crumbs.py"
+crumbs() { python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null; }
+crumbs_reset() { rm -f "$HNGH_CRUMBS_DB" "$HNGH_CRUMBS_DB-wal" "$HNGH_CRUMBS_DB-shm"; }
 
 . "$root/tests/stub-lib.sh"
 
@@ -23,7 +26,7 @@ ln -s "$root/lib/common.sh" "$root/lib/breadcrumbs.sh" "$root/lib/params.sh" "$r
 call() { # keyfile [url] -> stdout
   local url="${2:-http://127.0.0.1:1}"
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/nope" REFRESH_FILE="$sb/nope2"
     export REMOTE_TOKEN_FILE="$1" REMOTE_URL="$url"
     export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -45,11 +48,11 @@ printf 'remote-key-value-1\n' >"$tok"
 
 # 1. too-open key file (0644): leg refuses fail-closed, nothing sent.
 chmod 644 "$tok"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "$tok")"
 ck "0644: empty stdout" "" "$out"
 ck "0644: too-open breadcrumb" "1" \
-  "$(grep -c 'key file too open (chmod 600 required) -> next backend' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'key file too open (chmod 600 required) -> next backend')"
 stub_start remote
 port="$(cat "$stubdir/remote-port")"
 out="$(call "$tok" "http://127.0.0.1:$port")"
@@ -61,13 +64,13 @@ ck "0644 vs live stub: zero POSTs (value never sent)" "0" \
 #    (dead URL -> the HTTP breadcrumb shape proves the flow got past
 #    the gate; a live stub would see exactly one POST).
 chmod 600 "$tok"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "$tok")"
 ck "0600 dead URL: empty stdout" "" "$out"
 ck "0600 dead URL: got past the gate (HTTP breadcrumb)" "1" \
-  "$(grep -c '| model | remote | HTTP' "$sb/STATE.md")"
+  "$(crumbs | grep -c '| model | remote | HTTP')"
 ck "0600 dead URL: no too-open breadcrumb" "0" \
-  "$(grep -c 'too open' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'too open')"
 rm -f "$stubdir/remote-hits"
 : >"$stubdir/remote-hits"
 out="$(call "$tok" "http://127.0.0.1:$port")"
@@ -77,11 +80,11 @@ ck "0600 vs live stub: exactly one POST" "1" \
 
 # 3. absent key file stays the dormant leg (existing contract, pinned
 #    so the new gate cannot regress it).
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(call "$sb/definitely-absent.key")"
 ck "absent: empty stdout" "" "$out"
 ck "absent: no-key-file breadcrumb" "1" \
-  "$(grep -c 'no key file -> next backend' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'no key file -> next backend')"
 
 # 4. unsloth_chat — the FIFTH token-file reader (gap-unsloth-tokenfile-
 #    600-gate): TOKEN_FILE needs the identical gate. Exposure: the token
@@ -91,7 +94,7 @@ ck "absent: no-key-file breadcrumb" "1" \
 #    the kimi/remote legs, above the cat.
 ucall() { # tokenfile url -> unsloth_chat stdout
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$1" REFRESH_FILE="$sb/nope2"
     export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
     export UNSLOTH_URL="$2" OLLAMA_URL=http://127.0.0.1:1
@@ -108,11 +111,11 @@ printf 'unsloth-key-value-1\n' >"$utok"
 # 4a. too-open token file (0644): the leg refuses fail-closed BEFORE the
 #     value is read or sent; zero POSTs even against the live stub.
 chmod 644 "$utok"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(ucall "$utok" http://127.0.0.1:1)"
 ck "unsloth 0644: empty stdout" "" "$out"
 ck "unsloth 0644: too-open breadcrumb" "1" \
-  "$(grep -c 'key file too open (chmod 600 required) -> next backend' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'key file too open (chmod 600 required) -> next backend')"
 stub_start unsloth
 uport="$(cat "$stubdir/unsloth-port")"
 out="$(ucall "$utok" "http://127.0.0.1:$uport")"
@@ -124,24 +127,24 @@ ck "unsloth 0644 vs live stub: zero POSTs (value never sent)" "0" \
 #     HTTP breadcrumb shape proves the flow got past the gate; the live
 #     stub sees the POST and answers).
 chmod 600 "$utok"
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(ucall "$utok" http://127.0.0.1:1)"
 ck "unsloth 0600 dead URL: empty stdout" "" "$out"
 ck "unsloth 0600 dead URL: got past the gate (HTTP breadcrumb)" "1" \
-  "$(grep -c '| model | unsloth | HTTP' "$sb/STATE.md")"
+  "$(crumbs | grep -c '| model | unsloth | HTTP')"
 ck "unsloth 0600 dead URL: no too-open breadcrumb" "0" \
-  "$(grep -c 'too open' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'too open')"
 out="$(ucall "$utok" "http://127.0.0.1:$uport")"
 ck "unsloth 0600 vs live stub: stub answered" "stub-says-hi" "$out"
 ck "unsloth 0600 vs live stub: exactly one POST" "1" \
   "$(wc -l <"$stubdir/unsloth-hits" | tr -d ' ')"
 
 # 4c. absent token file stays the dormant leg (existing contract).
-: >"$sb/STATE.md"
+crumbs_reset
 out="$(ucall "$sb/definitely-absent.token" http://127.0.0.1:1)"
 ck "unsloth absent: empty stdout" "" "$out"
 ck "unsloth absent: no-token-file breadcrumb" "1" \
-  "$(grep -c 'no token file -> next backend' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'no token file -> next backend')"
 
 # 5. refresh_unsloth_token — the SIXTH credential-file reader
 #    (gap-refresh-argv-body-and-refreshfile-gate): REFRESH_FILE is
@@ -155,7 +158,7 @@ ck "unsloth absent: no-token-file breadcrumb" "1" \
 #    the gate, not at curl).
 rcall() { # refreshfile -> refresh_unsloth_token rc
   (
-    export AUTOMATION_ROOT="$sb" STATE_FILE="$sb/STATE.md" JOB_NAME=test
+    export AUTOMATION_ROOT="$sb" JOB_NAME=test
     export HOME="$sb" TOKEN_FILE="$sb/nope4" REFRESH_FILE="$1"
     export REMOTE_TOKEN_FILE="$sb/nope3" REMOTE_URL=http://127.0.0.1:1
     export UNSLOTH_URL=http://127.0.0.1:1 OLLAMA_URL=http://127.0.0.1:1
@@ -171,37 +174,37 @@ printf 'refresh-key-value-1\n' >"$rtok"
 # 5a. too-open refresh file (0644): the gate refuses fail-closed BEFORE
 #     the value is read or sent; no credential POST leaves the box.
 chmod 644 "$rtok"
-: >"$sb/STATE.md"
+crumbs_reset
 rc=0
 out="$(rcall "$rtok")" || rc=$?
 ck "refresh 0644: refused (rc 1)" "1" "$rc"
 ck "refresh 0644: empty stdout" "" "$out"
 ck "refresh 0644: too-open breadcrumb" "1" \
-  "$(grep -c 'refresh key file too open (chmod 600 required)' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'refresh key file too open (chmod 600 required)')"
 
 # 5b. the 0600 control: gate passes; the flow proceeds past the gate to
 #     the POST (dead URL -> the FAILED token-refresh breadcrumb shape,
 #     and NO too-open crumb, prove the gate did not fire).
 chmod 600 "$rtok"
-: >"$sb/STATE.md"
+crumbs_reset
 rc=0
 out="$(rcall "$rtok")" || rc=$?
 ck "refresh 0600: refused only at HTTP (rc 1)" "1" "$rc"
 ck "refresh 0600: got past the gate (FAILED token-refresh breadcrumb)" "1" \
-  "$(grep -c '| model | token-refresh | FAILED' "$sb/STATE.md")"
+  "$(crumbs | grep -c '| model | token-refresh | FAILED')"
 ck "refresh 0600: no too-open breadcrumb" "0" \
-  "$(grep -c 'too open' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'too open')"
 
 # 5c. absent refresh file keeps its own dormant breadcrumb (existing
 #     contract, pinned so the new gate cannot shadow it).
-: >"$sb/STATE.md"
+crumbs_reset
 rc=0
 out="$(rcall "$sb/definitely-absent.refresh")" || rc=$?
 ck "refresh absent: refused (rc 1)" "1" "$rc"
 ck "refresh absent: no-refresh-token-file breadcrumb" "1" \
-  "$(grep -c 'no refresh token file' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'no refresh token file')"
 ck "refresh absent: no too-open breadcrumb" "0" \
-  "$(grep -c 'too open' "$sb/STATE.md")"
+  "$(crumbs | grep -c 'too open')"
 
 [ "$fails" = 0 ] && echo "test-model-remote-token-mode: all pass" || {
   echo "test-model-remote-token-mode: $fails failure(s)"

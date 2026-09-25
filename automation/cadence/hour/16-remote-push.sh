@@ -35,8 +35,9 @@ flock -n 9 || exit 0
 # last_gate <label> — echoes "<state> <crumb-iso-ts>" from the latest
 # gate-check crumb for that repo (green/red/none + its timestamp).
 last_gate() {
- local label="$1" line
- line="$(grep -E "\| [^|]+ \| gate-(green|red) \| $label: " "$STATE_FILE" 2>/dev/null |
+ local label="$1" db="${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}" line
+ line="$(python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --db "$db" 2>/dev/null |
+  grep -E "\| [^|]+ \| gate-(green|red) \| $label: " |
   tail -n 1)"
  case "$line" in
  *"| gate-green |"*) echo "green ${line%% | *}" ;;

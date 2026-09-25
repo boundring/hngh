@@ -207,6 +207,32 @@ def _emit(d: Path, kind: str, payload: dict) -> contract.Event:
     return state_emitter.append(kind, payload, ledger_dir=str(d))
 
 
+def _gate_refusal(gate: str, detail: str, tier: str) -> None:
+    """R8 (refoundation P3c): a gate refusal is a state change — ride the
+    spine (crumb + gate-refusal:<gate> report row, 7d dedup) naming the
+    cheaper tier it defers to. Fail-open: reporting never blocks the gate.
+    Mirrors automation/lib/breadcrumbs.sh gate_refusal()."""
+    try:
+        auto = Path(__file__).resolve().parents[1]  # automation/
+        root = auto.parent                      # repo root
+        env = dict(os.environ)
+        subprocess.run(
+            ["python3", str(auto / "lib" / "crumbs.py"), "--db",
+             env.get("HNGH_CRUMBS_DB", str(auto / "state" / "crumbs.db")),
+             "gate", "gate-refusal", f"{gate}: {detail} -- defers to {tier}"],
+            cwd=auto, env=env, timeout=10,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        rq = env.get("HNGH_REPORT_QUEUE", str(root / "scripts" / "report-queue"))
+        subprocess.run(
+            [rq, "--add", "alert", "--identity", f"gate-refusal:{gate}",
+             "--window", "604800",
+             f"gate refusal: {gate}: {detail}; defers to {tier}"],
+            cwd=root, env=env, timeout=10,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    except Exception:
+        pass
+
+
 def _deferred(d: Path) -> list[dict]:
     """Parked triage entries still due: [{event, attempts}]."""
     got = _state(d).get("deferred", [])
@@ -361,6 +387,8 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
     leg_url, legs_on = _leg_url()
     if legs_on and leg_url is None:
         # All configured legs blocked: re-route to the next window, never stall.
+        _gate_refusal("cadence-legs", "all model legs blocked for triage",
+                      "next beat window")
         emitted.append(_emit(d, "escalation.filed", {"bead": "", "question_head": "triage",
                                                     "reason": "legs-exhausted"}))
         _save_deferred(d, [en for en, is_def in queue if is_def])
@@ -370,6 +398,8 @@ def _beat(d: Path, max_events: int, repo_root: str | None = None) -> list:
         ev, attempts = entry["event"], entry["attempts"]
         bid = ev.get("payload", {}).get("id", "")
         if spent >= cap or spent + _project(ev) > cap:
+            _gate_refusal("cadence-budget", f"triage budget spent {spent} of cap {cap}",
+                          "next beat window")
             emitted.append(_emit(d, "escalation.filed",
                                 {"bead": bid, "question_head": "triage",
                                  "reason": "budget-exhausted",

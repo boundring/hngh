@@ -114,10 +114,11 @@ update_dashboard() {
  python3 - "$job" "$day" "$t" "$runs" \
   "$AUTOMATION_ROOT/digest/MORNING-$day.md" \
   "$AUTOMATION_ROOT/digest/$day.md" \
-  "$AUTOMATION_ROOT/STATE.md" \
+  "$AUTOMATION_ROOT/lib/crumbs-db.py" \
+  "${HNGH_CRUMBS_DB:-$AUTOMATION_ROOT/state/crumbs.db}" \
   "$AUTOMATION_ROOT/dashboard/data.json" <<'PY'
-import datetime, json, os, sys
-job, day, t, runs, morning, ping, state, outpath = sys.argv[1:9]
+import datetime, json, os, subprocess, sys
+job, day, t, runs, morning, ping, crumbsdb, db, outpath = sys.argv[1:10]
 out = {
     "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "job": job, "date": day, "time": t,
@@ -136,11 +137,11 @@ if len(digest) > 20000:  # never cut mid-token: break on a whitespace boundary
     digest += "\n\u2026"
 out["digest"] = digest
 crumbs = []
-if os.path.exists(state):
-    for ln in open(state, errors="replace"):
-        p = [x.strip() for x in ln.rstrip("\n").split("|", 3)]
-        if len(p) == 4:
-            crumbs.append({"ts": p[0], "job": p[1], "event": p[2], "detail": p[3]})
+for ln in subprocess.run([sys.executable, crumbsdb, "export", "--db", db],
+                         capture_output=True, text=True).stdout.splitlines():
+    p = [x.strip() for x in ln.rstrip("\n").split("|", 3)]
+    if len(p) == 4:
+        crumbs.append({"ts": p[0], "job": p[1], "event": p[2], "detail": p[3]})
 out["breadcrumbs"] = crumbs[-60:]
 tmp = "%s.%d.tmp" % (outpath, os.getpid())
 with open(tmp, "w") as fh:

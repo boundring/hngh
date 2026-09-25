@@ -9,9 +9,9 @@ lands on the dashboard operator-items feed.
 
 Everything runs against seamed paths: the server test binds a
 ThreadingHTTPServer on port 0 with dashboard-server.FEEDBACK pointed
-into a tmp dir; the ingest test seams AUTOMATION_ROOT/STATE_FILE/
-HNGH_REPORT_ROOT and the email channel (dormant by design) exactly like
-test-cap-block-operator-item.py. No real ledger, no real dashboard
+into a tmp dir; the ingest test seams AUTOMATION_ROOT (re-rooting the
+crumbs journal)/HNGH_REPORT_ROOT and the email channel (dormant by
+design) exactly like test-cap-block-operator-item.py. No real ledger, no real dashboard
 files, no network beyond localhost.
 """
 import importlib.util
@@ -168,6 +168,14 @@ class IngestTest(unittest.TestCase):
     def run_ingest(self):
         return fi.main([])
 
+    def crumbs(self):
+        """The journal's derived 4-field lines (the read seam); the
+        bash contract re-roots the db with AUTOMATION_ROOT=self.tmp."""
+        return subprocess.run(
+            ["python3", str(ROOT / "lib" / "crumbs-db.py"), "export",
+             "--db", str(self.tmp / "state" / "crumbs.db")],
+            capture_output=True, text=True, check=True).stdout
+
     def report_rows(self):
         md = (self.tmp / "docs" / "project" / "reports.md")
         if not md.exists():
@@ -187,8 +195,8 @@ class IngestTest(unittest.TestCase):
         # moved to processed/ -> the dedupe marker
         self.assertFalse((self.fb / "fb.json").exists())
         self.assertTrue((self.fb / "processed" / "fb.json").exists())
-        # landed on the feed the dashboard consumes (STATE.md alert crumb)
-        state = (self.tmp / "STATE.md").read_text()
+        # landed on the feed the dashboard consumes (journal alert crumb)
+        state = self.crumbs()
         self.assertRegex(state, r"\| alert \| ")
 
     def test_double_ingest_noops(self):
@@ -230,7 +238,7 @@ class IngestTest(unittest.TestCase):
 
     def test_long_item_kept_in_full(self):
         # >=500 chars survive unchanged: the standardized row and the
-        # STATE.md crumb (what jobs/operator-items-feed.py reads) carry
+        # journal crumb (what jobs/operator-items-feed.py reads) carry
         # the full text, no truncation.
         long_text = "w" * 600  # no spaces: whitespace collapse can't mask a cut
         self.write_rec({"ts": "2026-09-12T18:00:00Z", "type": "idea",
@@ -238,7 +246,7 @@ class IngestTest(unittest.TestCase):
         self.assertEqual(self.run_ingest(), 0)
         row = self.report_rows()[0]
         self.assertIn(long_text, row)
-        state = (self.tmp / "STATE.md").read_text()
+        state = self.crumbs()
         self.assertIn(long_text, state)
 
     def test_duplicates_move_free_of_the_cap(self):
