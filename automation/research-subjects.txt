@@ -323,8 +323,10 @@ patrol-20260925-manga-manga-stale	patrol: surface manga filed manga-stale on two
 patrol-20260925-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260925-systemd-units-timer-dead	patrol: surface systemd-units filed timer-dead on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260925-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
-patrol-20260925-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260925-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on consecutive runs -- why does the check still find no gate crumb against the crumbs-db seam after the refoundation moved crumb readers off STATE.md, and which guardrail or re-baseline closes it?
 synth-2026-09-25-2	Do any of the five related findings documents document the blocking mechanism for the "suspected dedupe-key bug" reproduction in `fail-20260924-Does-the-slug-line-ID-minting-code-that-`?
 synth-2026-09-25-3	What is the exact staleness predicate in `fail-20260922-What-is-the-exact-staleness-predicate-in` that the line's own verifiability standard demands production on?
 patrol-20260925-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260925-journal-error-unit-not-practiced	patrol: surface journal-error filed unit-not-practiced on two consecutive runs -- why does it keep failing and which guardrail closes it?
+fail-20260925-supervision	What knowledge was missing for supervision?
+patrol-20260925-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?

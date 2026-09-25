@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Research/plan corpus reoriented against the live repo**
+  (docs/records/2026-09-25-research-reorientation.md): 83 stale research
+  subjects killed (1 reoriented; 9 remain open), 64 unexecuted defunct
+  `dev-*` plans discarded (34 unfaithful-steps, 26 dead-surface, 4
+  superseded); executed/landed plan records kept. Landed-work records and
+  `routed-*` procedural plans untouched; discard set mechanically confirmed
+  against the audit before deletion.
 - **Refoundation P10: pass closed + first ceremony decay review**
   (docs/records/2026-09-25-p10-refoundation-close.md): P1–P10 all
   committed; receipts ledger measured (103 rows, 1 real certificate
