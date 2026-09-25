@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-25T02:03:34Z -->
 # 2026-09-24 - dev-fail-20260922-Does-the-research-lines-ts (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

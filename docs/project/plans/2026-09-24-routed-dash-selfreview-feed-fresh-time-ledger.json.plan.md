@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:time-ledger.json -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-25T02:03:34Z routed-from=dash-selfreview:feed-fresh:time-ledger.json -->
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:feed-fresh:time-ledger.json`

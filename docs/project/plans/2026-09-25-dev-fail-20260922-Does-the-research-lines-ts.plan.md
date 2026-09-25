@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script that validates hngh-automation test suite integrity
-  Verification: bash scripts/validate-test-suite.sh
+- [ ] Add a script to validate hngh-automation job definitions before execution
+  Verification: bash -n jobs/validate-job.sh
 
-- [ ] Create a cadence tracking script to log daily build status
-  Verification: bash cadence/log-builds.sh
-
-- [ ] Update lib/utils.sh with a new helper function for test result parsing
-  Verification: bash -n lib/utils.sh
-
-- [ ] Add a dashboard digest script that summarizes recent test outcomes
-  Verification: bash dashboard/digest-recent-tests.sh
-
-- [ ] Extend tests/ directory with a regression test for the new job script
+- [ ] Create a test suite for the new job validation script
   Verification: make test
 
-- [ ] Add a verification script that confirms all new paths are under allowed directories
-  Verification: bash scripts/check-path-constraints.sh
+- [ ] Add a cadence entry to run validation on job commits
+  Verification: bash cadence/run-validation.sh
+
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n scripts/validate-job.sh && bash -n cadence/run-validation.sh
+
+- [ ] Ensure no secrets or credentials are introduced
+  Verification: grep -r "password\|secret\|token" jobs/ scripts/ cadence/ --include="*.sh" | grep -v "^Binary"
+
+- [ ] Run full test suite to confirm no regressions
+  Verification: make test
