@@ -5,7 +5,11 @@ Kernel contract (hngh docs/project/plans/README.md): a proposed
 normal-risk plan is auto-accepted when its Verification steps are
 runnable and both repos' gates are green; the accepted timestamp is
 written into the front-matter. risk=critical plans park automatically —
-alert row, never machine-touched. A blocked acceptance (red gate or
+alert row, never machine-touched. A plan whose preamble (everything
+before the first '## ' heading) carries no `principle:` line — one
+closed principle + doc anchor — is blocked `missing-principle`:
+never accepted, never parked (refoundation P9 canon seam,
+GOVERNANCE.md §6). A blocked acceptance (red gate or
 non-runnable verification) files an alert row naming the failed check:
 a blocked cycle must never be silent again (2026-08-31 lesson — two
 proposed plans sat unexecuted overnight while the machine reported
@@ -44,6 +48,10 @@ DESIGN_REF = re.compile(r"docs/design/[A-Za-z0-9._/-]+\.md")
 DESIGN_VAGUE = re.compile(
     r"(?i)\bdesign\s+(?:is\s+)?(?:pending|missing|needed|required)\b"
     r"|\bneeds?\s+a\s+design\b|\bno\s+design\b|\bawaits?\s+(?:a\s+)?design\b")
+# refoundation P9 canon seam: every plan names the closed principle it
+# upholds on a `principle:` line in its preamble; acceptance blocks
+# without one (GOVERNANCE.md §6 binds decision recording).
+PRINCIPLE = re.compile(r"(?m)^\s*principle:")
 
 KERNEL = Path(os.environ.get(
     "HNGH_HOME", os.path.expanduser("~/Projects/etc/hngh")))
@@ -202,6 +210,15 @@ def missing_designs(text, kernel=None):
     kernel = kernel or KERNEL
     return [ref for ref in sorted(set(DESIGN_REF.findall(text)))
             if not (kernel / ref).exists()]
+
+
+def has_principle(text):
+    """True when a `principle:` line appears in the plan preamble
+    (everything before the first '## ' heading, where the front
+    comment lives): a plan must name one closed principle + doc
+    anchor to be acceptable at all (refoundation P9 canon seam)."""
+    m = re.search(r"(?m)^## ", text)
+    return PRINCIPLE.search(text[:m.start()] if m else text) is not None
 
 
 def append_research_subject(slug, question):
@@ -408,6 +425,13 @@ def main():
                    "(never machine-executed)" % slug,
                    "overnight:plan-critical:" + slug, 604800)
             note("parked %s critical-class" % slug)
+            continue
+        if not has_principle(text):
+            report("alert", "plan %s not auto-accepted: no principle line "
+                   "(every plan names one closed principle + doc anchor "
+                   "before its steps)" % slug,
+                   "overnight:plan-accept-blocked:" + slug, 86400)
+            note("blocked %s missing-principle" % slug)
             continue
         missing = missing_designs(text)
         if missing:

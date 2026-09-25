@@ -69,6 +69,7 @@ class RouterTick(unittest.TestCase):
             "HNGH_REPORT_ROOT": str(self.kernel),
             "HNGH_CRUMBS_DB": str(self.db),
             "HNGH_PLANS_FEED_OUT": str(self.root / "plans.json"),
+            "HNGH_FILING_STATE": str(self.root / "filing"),
         }
 
     def tearDown(self):

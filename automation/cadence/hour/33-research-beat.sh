@@ -259,6 +259,22 @@ ensure_lines() {
   esac
   awk -F'\t' -v id="$id" -v desc="$desc" \
    '$1==id || $4==desc{found=1} END{exit !found}' "$LINES" && continue
+  # initiative budget (P7b): one new line seed per cause per UTC day
+  # on the mint path (a row already in the ledger is free). Over
+  # budget the ask degrades to a recorded question, never a line.
+  # Inlined (not the filing_budget_allow helper) because tests drive
+  # this function as an awk-extracted fragment: it must stay
+  # self-contained. rc1 = over budget; any other rc fails open.
+  brc=0
+  python3 "${AUTOMATION_ROOT:-}/lib/filing_budget.py" \
+   --family synth --cause "$id" \
+   --state-dir "${HNGH_FILING_STATE:-${SUBJECTS%/*}/state}" \
+   >/dev/null 2>&1 || brc=$?
+  if [ "$brc" -eq 1 ]; then
+   grep -qxF "question-$id" "$SUBJECTS" 2>/dev/null ||
+    printf 'question-%s\t%s\n' "$id" "$desc" >>"$SUBJECTS"
+   continue
+  fi
   printf '%s\tplanned\t%s\t%s\n' \
    "$id" \
    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$desc" >>"$LINES"
@@ -357,6 +373,24 @@ norm_slug() { # text -> normalized slug: lowercase; every run of
  # non-[a-z0-9] -> single '-'; trim leading/trailing '-'
  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' |
   sed 's/^-*//; s/-$//'
+}
+
+# initiative budget (refoundation P7b): one filing per family:token per
+# UTC day via the shared counter (lib/filing_budget.py); rc0 = allowed,
+# rc1 = over budget, anything else (missing module/interpreter) fails
+# OPEN = allowed so a budget fault never blocks the beat.
+filing_budget_allow() { # family token -> rc
+ local rc=0
+ python3 "$AUTOMATION_ROOT/lib/filing_budget.py" \
+  --family "$1" --cause "$2" \
+  --state-dir "${HNGH_FILING_STATE:-${SUBJECTS%/*}/state}" >/dev/null 2>&1 || rc=$?
+ [ "$rc" -eq 1 ] && return 1
+ return 0
+}
+
+filing_about_filing() { # text -> rc1 = disposition echo, demote
+ python3 "$AUTOMATION_ROOT/lib/filing_budget.py" --check-disposition \
+  --text "$1" >/dev/null 2>&1
 }
 
 research_open_ids() { # literal col1 ids that may absorb a question:
@@ -478,6 +512,15 @@ output."
   esac
   case "$n" in '' | *[!0-9]*) continue ;; esac
   grep -qxF "$sid" "$SUBJECTS" 2>/dev/null && continue
+  # filing-about-filing (P7b): a synthesized question whose text is
+  # (contained in) an existing disposition verdict is the machine
+  # filing about its own filings -- always a crumb, never a row,
+  # regardless of budget.
+  if ! filing_about_filing "$sq"; then
+   breadcrumb "$JOB_NAME" "filing-about-filing" \
+    "synthesis $sid demoted (echoes an existing disposition)"
+   continue
+  fi
   ok=0
   while IFS= read -r src; do
    [ -n "$src" ] || continue
@@ -504,6 +547,15 @@ EOF_SRC
    grep -qxF "$exist_id	$sq" "$SUBJECTS" 2>/dev/null && continue
    printf '%s\t%s\n' "$exist_id" "$sq" >>"$SUBJECTS"
   else
+   # initiative budget (P7b): one synth filing per cause per UTC day
+   # on the mint path (a question under an existing id is free). Over
+   # budget the ask is still recorded -- as a question row (never
+   # beats), not a line the beat would pick up.
+   if ! filing_budget_allow synth "$(norm_slug "$sq")"; then
+    grep -qxF "question-$sid" "$SUBJECTS" 2>/dev/null && continue
+    printf 'question-%s\t%s\n' "$sid" "$sq" >>"$SUBJECTS"
+    continue
+   fi
    printf '%s\t%s\n' "$sid" "$sq" >>"$SUBJECTS"
   fi
   accepted=$((accepted + 1))

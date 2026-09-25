@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ACCEPT = ROOT / "scripts" / "accept-plans.py"
 
 ACCEPTED = """<!-- plan: status=accepted risk=normal accepted=2026-09-09T15:01:13Z -->
+principle: identity of a plan file is its slug, not its bytes (docs/project/decisions.md entry template)
 # 2026-09-09 - stall recovery, operator surfaces, lifecycle accommodation
 
 ## Steps

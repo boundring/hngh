@@ -6,6 +6,33 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P9: canon method at every decision seam** (docs/
+  records/2026-09-25-p9-canon-method.md): decisions.md gains an entry
+  template with two mandatory fields — principle (one closed principle +
+  doc anchor) and adversarial (one-line disconfirming note) — bound to
+  GOVERNANCE.md §6; plan acceptance (automation/scripts/accept-plans.py)
+  fails closed without a principle: line in the plan preamble (blocked
+  missing-principle + alert row, gates never run); the plans README
+  contract carries the same requirement; quarterly tensions are recorded
+  in the ceremony decay review (GOVERNANCE §12). New
+  tests/test-accept-plans-principle.sh (10 checks); legacy acceptance
+  fixtures updated to carry principle lines.
+- **Refoundation P7: initiative budget** (docs/records/
+  2026-09-25-p7-initiative-budget.md): router re-routes carry attempt/
+  expires stamps; a chain past expiry closes with cause=route-expiry and
+  one operator row (route-expiry:<identity>) instead of parking forever —
+  while a bare TTL corpse still binds the re-route bound, so TTL expiry
+  alone can never force a fresh route every run; a shared filing budget
+  (automation/lib/filing_budget.py, state/filing-budget.tsv) allows one
+  new filing per cause class per UTC day across the four mint seams
+  (fail/patrol/synth/routed), demoting over-budget and echo filings to
+  crumbs or question rows — the signal is always recorded, never a new
+  beat; a looping agent session is re-queued with cause=repeat-loop
+  (steer once, then die) citing the loop-recognition rubric, closing the
+  gap where a live looping session was never interrupted. New
+  tests/test-initiative-budget.sh (31 checks); router-feed tests
+  sandboxed (HNGH_FILING_STATE) after the budget consumed the real
+  state file.
 - **Refoundation P6: research at the gewu boundary** (docs/records/
   2026-09-25-p6-research-gewu.md): the research beat's orientation
   inputs are built once per UTC day into a cached pack

@@ -41,6 +41,7 @@ status:
 test:
 	find cadence jobs lib scripts -name '*.sh' -print0 | xargs -0 -n8 bash -n
 	python3 -B tests/test-plan-acceptance.py
+	bash tests/test-accept-plans-principle.sh
 	python3 -B tests/test-identity-seam.py
 	python3 -B tests/test-slug-mint-residual.py
 	python3 -B tests/test-plan-feed-graph.py
@@ -159,6 +160,7 @@ test:
 	bash tests/test-research-governor.sh
 	bash tests/test-research-accel2.sh
 	bash tests/test-research-gewu.sh
+	bash tests/test-initiative-budget.sh
 	bash tests/test-research-review.sh
 	python3 -B tests/test-research-harvest.py
 	bash tests/test-publication-review.sh

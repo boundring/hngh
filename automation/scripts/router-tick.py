@@ -47,6 +47,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
 import crumbs  # the single STATE.md crumb writer (lib/crumbs.py)
+import filing_budget  # the shared one-filing-per-day counter (lib/filing_budget.py)
 import report_queue  # the shared report-queue row shim (lib/report_queue.py)
 
 KERNEL = os.environ.get(
@@ -54,7 +55,8 @@ KERNEL = os.environ.get(
 AUTOMATION = os.environ.get(
     "HNGH_AUTOMATION_ROOT",
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PLANS = os.path.join(KERNEL, "docs", "project", "plans")
+PLANS = os.environ.get(
+    "HNGH_PLANS", os.path.join(KERNEL, "docs", "project", "plans"))
 CRUMBS_DB = os.environ.get(
     "HNGH_CRUMBS_DB", os.path.join(AUTOMATION, "state", "crumbs.db"))
 REPORT_QUEUE = os.environ.get(
@@ -154,7 +156,7 @@ NORMAL_SHAPES = [
     ("readout", ("Feed-regen re-read step (fix already landed as precedent)",
                  "readout.json regenerates and parses")),
 ]
-TERMINAL_STATUS = ("executed", "rejected")
+TERMINAL_STATUS = ("executed", "rejected", "expired")
 
 
 def now_utc():
@@ -247,14 +249,11 @@ def expire_stale_candidates(identity):
         status = m.group(1) if m else "proposed"
         age = max(0.0, time.time() - os.path.getmtime(path))
         if status in TERMINAL_STATUS or status == "accepted":
-            continue  # execution supply or disposed: never expired
-        if age < ttl and status != "expired":
+            continue  # executed/rejected/expired or accepted: not re-expired
+        if age < ttl:
             continue
-        if status != "expired":
-            mark_expired(path, text)
-            expired_any = True
-        elif age < ttl:
-            continue
+        mark_expired(path, text)
+        expired_any = True
         if oldest is None or age > oldest[1]:
             oldest = (name[:-8], age)
     if expired_any or oldest:
@@ -388,9 +387,12 @@ def router_reroute_max():
 def chain_live_count(identity):
     """Unworked chain members for this identity (any date, any route
     suffix - the same dup_re shape live_duplicate/expire_stale use).
-    Everything except executed/rejected counts: parked and expired
-    corpses must be visible here, or the corpse loop walks past the
-    bound."""
+    Everything except terminal (executed/rejected) or accepted counts.
+    An expired member only frees the lane when chain_expired_close
+    stamped it cause: route-expiry; a bare TTL corpse still binds the
+    re-route bound (the park alert stays until the operator or chain
+    expiry dispositions it) - otherwise TTL-expiry alone would force a
+    fresh route every run, the exact loop this bound exists to close."""
     ident = re.sub(r"[^A-Za-z0-9._-]+", "-", identity)
     dup_re = re.compile(r"^\d{4}-\d{2}-\d{2}-routed-%s(-\d+)?\.plan\.md$"
                         % re.escape(ident))
@@ -402,10 +404,76 @@ def chain_live_count(identity):
     for name in names:
         if not dup_re.match(name):
             continue
-        status, _ = plan_status_age(os.path.join(PLANS, name))
-        if status not in TERMINAL_STATUS:
-            n += 1
+        path = os.path.join(PLANS, name)
+        status, _ = plan_status_age(path)
+        if status in ("executed", "rejected") or status == "accepted":
+            continue
+        if status == "expired":
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    head = fh.read(400)
+            except OSError:
+                head = ""
+            if "cause: route-expiry" in head:
+                continue  # closed by chain_expired_close: lane freed
+        n += 1
     return n
+
+
+def chain_expired_close(identity, now=None):
+    """Retire chain members past their `expires` header: the status
+    line is rewritten to status=expired and a cause=route-expiry header
+    line set. Only members stamped attempt >= 1 close; a member with no
+    expires stamp (legacy) is never closed. Returns the count closed."""
+    ident = re.sub(r"[^A-Za-z0-9._-]+", "-", identity)
+    dup_re = re.compile(r"^\d{4}-\d{2}-\d{2}-routed-%s(-\d+)?\.plan\.md$"
+                        % re.escape(ident))
+    now = time.time() if now is None else now
+    closed = 0
+    try:
+        names = os.listdir(PLANS)
+    except OSError:
+        return 0
+    for name in names:
+        if not dup_re.match(name):
+            continue
+        path = os.path.join(PLANS, name)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        status, _ = plan_status_age(path)
+        if status in TERMINAL_STATUS or status == "accepted":
+            continue
+        head400 = text[:400]
+        m_exp = re.search(r"expires:\s*(\S+)", head400)
+        m_att = re.search(r"attempt:\s*(\d+)", head400)
+        if not m_exp or not m_att or int(m_att.group(1)) < 1:
+            continue  # no expiry stamp (legacy) or attempt 0: skip
+        try:
+            exp = datetime.strptime(
+                m_exp.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            continue  # unparsable stamp: never close blind
+        if exp >= now:
+            continue
+        st = os.stat(path)
+        head, sep, rest = text.partition("\n")
+        head = re.sub(r"(?<![\w-])status=\w+", "status=expired", head,
+                      count=1)
+        if "route-expiry" not in head:
+            head += "\n<!-- cause: route-expiry -->"
+            sep = "\n"
+        tmp = tempfile.NamedTemporaryFile("w", delete=False, dir=PLANS,
+                                          suffix=".tmp", encoding="utf-8")
+        tmp.write(head + sep + rest)
+        tmp.close()
+        os.replace(tmp.name, path)
+        os.utime(path, (st.st_atime, st.st_mtime))
+        closed += 1
+    return closed
 
 
 def occurrence_count(text):
@@ -490,12 +558,16 @@ def research_shape(identity):
         "recorded disposition; alert fixed or parked" % sid)
 
 
-def candidate_text(identity, text, shape, date):
+def candidate_text(identity, text, shape, date, attempt, expires):
     title, verify = shape
     body = text if text else identity
     return (
         "<!-- plan: status=proposed risk=normal accepted=- "
         "routed-from=%s -->\n"
+        "<!-- attempt: %d -->\n"
+        "<!-- expires: %s -->\n"
+        "principle: routed candidates keep alert lineage machine-visible "
+        "(docs/project/plans/README.md)\n"
         "# %s — routed candidate\n"
         "\n"
         "Routed by scripts/router-tick.py from alert identity `%s`\n"
@@ -504,8 +576,9 @@ def candidate_text(identity, text, shape, date):
         "## Steps\n"
         "\n"
         "- [ ] %s\n"
-        "      Verification: %s\n" % (identity, date, identity, now_utc(), body,
-                                     title, verify))
+        "      Verification: %s\n" % (identity, attempt, expires, date,
+                                     identity, now_utc(), body, title,
+                                     verify))
 
 
 def route(identity, text):
@@ -614,9 +687,22 @@ def route(identity, text):
         else:
             return 0
     # re-route bound: an identity whose chain already holds the bound in
-    # unworked members stops minting. The row keeps the lane visible -
-    # routed/parked is never reported as resolved.
+    # unworked members stops minting. Expiry closes first: chain members
+    # past their expires header are retired here, and a chain that falls
+    # below the bound as a result ends its lane with one operator row -
+    # no further re-routes, no park alert. The row keeps the lane
+    # visible - routed/parked is never reported as resolved.
     bound = router_reroute_max()
+    closed = chain_expired_close(identity)
+    if closed and chain_live_count(identity) < bound:
+        report("alert", "router closed %s chain: %d plan(s) expired, "
+               "cause=route-expiry — the lane ends here, no further "
+               "re-routes or park alerts for this identity"
+               % (identity, closed),
+               "route-expiry:%s" % identity, 604800)
+        breadcrumb("router", "route-expiry",
+                   "%s chain closed: %d plan(s) expired" % (identity, closed))
+        return 0
     if chain_live_count(identity) >= bound:
         report("alert", "router parks %s at the re-route bound - "
                "SLA: re-fires bump this row for 7d, then it expires on "
@@ -626,6 +712,13 @@ def route(identity, text):
                "router:parked:%s" % identity, 604800)
         breadcrumb("router", "reroute-bound",
                    "%s parked at re-route bound %d" % (identity, bound))
+        return 0
+    if not filing_budget.allow("routed", identity):
+        report("progress", "route deferred: daily filing budget for %s"
+               % identity,
+               "filing-budget:routed:%s" % identity, 86400)
+        breadcrumb("router", "budget-deferred",
+                   "%s route deferred (filing budget)" % identity)
         return 0
     path = os.path.join(PLANS, slug + ".plan.md")
     if os.path.exists(path):
@@ -642,7 +735,10 @@ def route(identity, text):
         return 0
     tmp = tempfile.NamedTemporaryFile("w", delete=False, dir=PLANS,
                                        suffix=".tmp", encoding="utf-8")
-    tmp.write(candidate_text(identity, text, shape, date))
+    attempt = chain_live_count(identity) + 1
+    expires = datetime.fromtimestamp(
+        time.time() + 604800, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    tmp.write(candidate_text(identity, text, shape, date, attempt, expires))
     tmp.close()
     os.replace(tmp.name, path)
     report("progress", "router routed %s -> plan candidate %s (routed-at %s)"

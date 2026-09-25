@@ -294,24 +294,27 @@ def steer_reason(s):
             or "no transcript evidence this tick")
 
 
-def steer_stalled(s, now):
+def steer_stalled(s, now, cause=None):
     """First missed tick (steer-once-then-die): ONE handoff steer row +
     ONE report row. Never kills — die_session owns the second miss."""
     reason = steer_reason(s)
-    append_handoff("session-drop | %s | supervision|%s | stalled: steer: %s"
-                   % (ts_utc(now), s["id"], reason))
+    suffix = " cause=%s" % cause if cause else ""
+    append_handoff("session-drop | %s | supervision|%s | stalled: steer: "
+                   "%s%s" % (ts_utc(now), s["id"], reason, suffix))
     report("alert",
-           "agent-supervision: %s stalled (missed tick 1) — steer: %s"
-           % (s["id"], reason),
+           "agent-supervision: %s stalled (missed tick 1) — steer: %s%s"
+           % (s["id"], reason, suffix),
            "supervision:%s:stalled" % s["id"], "604800")
 
 
-def die_session(s, now):
+def die_session(s, now, cause=None):
     """Second consecutive missed tick. Bridge runs keep the roguelike
     replace path (close-run dead + rotate + re-provision); omp
     transcripts are advisory — handoff + report rows, never a kill.
-    cause= comes from lib/causes.sh classify_cause on the record."""
-    cause = classify_cause_py(s.get("path") or "")
+    cause= comes from lib/causes.sh classify_cause on the record, or
+    is named by the caller (repeat-loop) when a non-miss driver owns
+    the death."""
+    cause = cause or classify_cause_py(s.get("path") or "")
     if s.get("source") == "bridge":
         text = ("agent-supervision: %s died after 2 missed ticks "
                 "(stalled) cause=%s [%s]"
@@ -725,7 +728,33 @@ def tick():
             tool_flat = (s["last_tool_ts"] is not None
                          and tool_age_min is not None
                          and tool_age_min > STALL_TOOLCALL_MIN)
-            if miss:
+            if stuck:
+                # loop re-queue (refoundation P7c): a live looping
+                # session was exempt from the miss machine and minted
+                # no row — the loop path owns it now. First stuck tick
+                # steers once with cause=repeat-loop; the second
+                # consecutive stuck tick dies cause=repeat-loop (rubric:
+                # interrupt-and-redirect,
+                # docs/records/2026-08-26-loop-recognition.md).
+                stuck_misses = int(prev.get("stuck_misses", 0)) + 1
+                misses = 0
+                if stuck_misses == 1:
+                    steer_stalled(s, now, cause="repeat-loop")
+                    report("progress",
+                           "agent-supervision: re-queue %s cause=repeat-loop"
+                           "; rubric: interrupt-and-redirect (docs/records/"
+                           "2026-08-26-loop-recognition.md)" % s["id"],
+                           "loop-requeue:%s" % s["id"], "86400")
+                    try:
+                        import crumbs  # journal-only (lib/)
+                        crumbs.crumb("supervision", "loop-requeue",
+                                     "%s cause=repeat-loop" % s["id"])
+                    except Exception:
+                        pass
+                else:
+                    die_session(s, now, cause="repeat-loop")
+                sup = "loop"
+            elif miss:
                 misses = int(prev.get("misses", 0)) + 1
                 if misses == 1:
                     steer_stalled(s, now)
@@ -746,7 +775,7 @@ def tick():
             else:
                 misses = 0
                 sup = "active"
-                if prev.get("sup_state") in ("stalled", "slow-valid"):
+                if prev.get("sup_state") in ("stalled", "slow-valid", "loop"):
                     # recovery: progress resumed — one flap row
                     report("progress", "agent-supervision: %s recovered"
                            % s["id"],
@@ -757,6 +786,7 @@ def tick():
                 "first_seen": prev.get("first_seen", int(now)),
                 "last_phase": phase,
                 "misses": misses,
+                "stuck_misses": stuck_misses if stuck else 0,
                 "sup_state": sup,
             }
         except Exception:

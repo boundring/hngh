@@ -49,11 +49,14 @@ class RouterFeed(unittest.TestCase):
         shutil.copy(REAL_REPORT_QUEUE,
                     self.kernel / "scripts" / "report-queue")
         self.db = self.root / "crumbs.db"
+        self.state = self.root / "state"
+        self.state.mkdir()
         self.env = {
             **os.environ,
             "HNGH_HOME": str(self.kernel),
             "HNGH_REPORT_ROOT": str(self.kernel),
             "HNGH_CRUMBS_DB": str(self.db),
+            "HNGH_FILING_STATE": str(self.state),
         }
 
     def tearDown(self):

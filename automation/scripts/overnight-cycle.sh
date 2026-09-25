@@ -600,6 +600,7 @@ $docs"
  used="$(last_model_used)"
  response="$(raise_step_classes "$response")"
  local body="<!-- plan: status=proposed risk=normal accepted=- -->
+principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # $day - $slug (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research

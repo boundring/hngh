@@ -32,6 +32,8 @@ def plan_md(steps, status="proposed", risk="normal", accepted="-"):
     """steps: list of (box, text, verification|None)."""
     lines = ["<!-- plan: status=%s risk=%s accepted=%s -->" %
              (status, risk, accepted), "", "# fixture plan", "",
+             "principle: fixtures carry a principle line "
+             "(docs/project/decisions.md entry template)", "",
              "## Steps", ""]
     for i, (box, text, ver) in enumerate(steps, 1):
         lines.append("- [%s] step %d: %s" % (box, i, text))

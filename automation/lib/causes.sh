@@ -117,6 +117,29 @@ lesson_for_cause() { # cause-class -> one sentence on stdout
 # is lossy by design -- router-tick's documented tradeoff.
 [ -n "${SCRUB_PY:-}" ] || . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/redact.sh"
 
+# Initiative budget (refoundation P7b): shared one-filing-per-cause-per-
+# UTC-day counter plus the filing-about-filing demotion check, both via
+# the same shell->python seam pattern as redact.sh (resolved relative to
+# BASH_SOURCE; a missing module or interpreter fails OPEN = allowed, so
+# lib-less sandboxes never beat).
+_filing_budget_py="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/filing_budget.py"
+_crumbs_py="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/crumbs.py"
+_filing_budget_allow() { # family cause root -> rc0 allowed, rc1 over budget
+ local rc=0
+ python3 "$_filing_budget_py" --family "$1" --cause "$2" \
+  --state-dir "${HNGH_FILING_STATE:-$3/state}" >/dev/null 2>&1 || rc=$?
+ [ "$rc" -eq 1 ] && return 1 # rc1 = over budget; anything else fails open
+ return 0
+}
+_filing_about_filing() { # text -> rc1 = disposition echo, demote
+ python3 "$_filing_budget_py" --check-disposition --text "$1" >/dev/null 2>&1
+}
+_filing_crumb() { # event detail -> journal row, never fatal
+ local db_args=()
+ [ -n "${HNGH_CRUMBS_DB:-}" ] && db_args=(--db "$HNGH_CRUMBS_DB")
+ python3 "$_crumbs_py" "${db_args[@]}" causes "$1" "$2" >/dev/null 2>&1 || :
+}
+
 append_research_subject() { # slug question -> appends to research-subjects.txt
  local slug redacted q root file id norm match_id rid rnorm
  slug="$1" q="$2"
@@ -173,6 +196,23 @@ append_research_subject() { # slug question -> appends to research-subjects.txt
   # refuse duplicates by id prefix match: the subject is already queued
   awk -F'\t' -v id="$id" 'index($1, id) == 1 {found=1} END{exit !found}' \
    "$file" 2>/dev/null && return 0
+  # filing-about-filing (P7b): a subject whose text is (contained in)
+  # an existing disposition verdict is the machine filing about its own
+  # filings -- always a crumb, never a row, regardless of budget.
+  # _filing_about_filing rc1 = the text echoes a disposition
+  if ! _filing_about_filing "$q"; then
+   _filing_crumb filing-about-filing \
+    "$id demoted (subject echoes an existing disposition): $q"
+   return 0
+  fi
+  # initiative budget (P7b): one NEW fail-subject per cause per UTC
+  # day; over budget the id demotes to a crumb and nothing appends
+  # (callers keep working, nothing beats). rc1 = over budget.
+  if ! _filing_budget_allow fail "$slug" "$root"; then
+   _filing_crumb research-subject-demoted \
+    "$id over daily filing budget (subject not filed): $q"
+   return 0
+  fi
  fi
  touch "$file" 2>/dev/null || return 1
  printf '%s\t%s\n' "$id" "$q" >>"$file"

@@ -50,6 +50,8 @@ def git(repo, *args):
 
 def plan_md():
     return ("<!-- plan: status=proposed risk=normal accepted=- -->\n"
+            "principle: fixture plans name their principle "
+            "(docs/project/decisions.md entry template)\n"
             "\n# fixture plan\n\n## Steps\n\n"
             "- [ ] step 1: do the thing\n"
             "      Verification: python3 tests/fixture-verify.py\n\n")

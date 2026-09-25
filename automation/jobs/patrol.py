@@ -1985,6 +1985,32 @@ def queue_repeat_subjects(ctx, prev_fails, cur_fails):
         # question lands under THAT literal id (full-line dedup key)
         # instead of minting a parallel patrol-<day> entry.
         existing = _research_match_id(ctx, rid, rid_day)
+        # initiative budget (refoundation P7b): on the mint path (no
+        # existing line/subject match -- a question under an existing
+        # line is free) one patrol filing per cause per UTC day. Over
+        # budget: crumb only, no subject row, no report row; the rid
+        # still queues so the patrol's bookkeeping stays consistent.
+        # Fail-open: a budget/crumb fault never blocks the mint.
+        over_budget = False
+        if existing is None:
+            try:
+                import filing_budget  # single-source counter (lib/)
+                over_budget = not filing_budget.allow(
+                    "patrol", rid,
+                    state_dir=os.environ.get("HNGH_FILING_STATE") or
+                    os.path.join(os.path.dirname(ctx["subjects"]), "state"))
+            except Exception:
+                over_budget = False
+        if over_budget:
+            try:
+                import crumbs  # journal-only demotion (lib/)
+                crumbs.crumb("patrol", "research-subject-demoted",
+                             "%s over daily filing budget (subject not "
+                             "filed): %s" % (rid, q))
+            except Exception:
+                pass
+            queued.append(rid)
+            continue
         line = "%s\t%s" % (existing or rid, q)
         if line in seen:
             continue
