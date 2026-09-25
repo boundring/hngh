@@ -75,13 +75,13 @@ rows is folded here; the TSV rows keep the rotation state unchanged.
 
 ## Next
 
-- **pooled-hardware** — next queued (dep open: resource pool view);
-  key-pin registry rung 12 VERIFIED landed (kernel evidence: roadmap.md
-  rung 12 entry, "verified live ... three self-governed validation
-  commits";
-  docs/records/2026-08-25-r14-ed25519-signature-transport.md extends
-  it) — dep closed 2026-09-24. (key-rotation-freshness rotation folded
-  into Completed rotations, 2026-09-24.)
+- **Land stage 2** — next queued (roadmap.md:198: nerve-center
+  consolidation is in final verification; the config-backup lanes are
+  scheduled on the 30m tier).
+
+- pooled-hardware — re-queued 2026-09-25 with cause: stale Next (set
+  2026-08-25, 31 days) and dep-circular — its open dep "resource pool
+  view" is a backlog lane, not a queue item.
 
 ## Scheduling
 
