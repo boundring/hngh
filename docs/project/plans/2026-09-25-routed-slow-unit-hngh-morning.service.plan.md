@@ -12,3 +12,4 @@ at 2026-09-25T12:00:13Z. Alert text: [oversight] slow-unit: hngh-morning.service
 ## Occurrences
 
 - 2026-09-25T13:00:37Z re-occurred (dedup window expired)
+- 2026-09-25T14:00:13Z re-occurred (dedup window expired)

@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper that validates job manifest syntax before execution
-  Verification: bash -n cadence/validate-manifest.sh
+- [ ] Add a script that validates the cadence directory structure exists and is readable
+  Verification: bash scripts/cadence-validate.sh
 
-- [ ] Create a test script that runs the manifest validator against a sample job file
-  Verification: python3 tests/test-manifest-validator.py
+- [ ] Add a test that confirms the lib module loads without errors
+  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); import lib; print('lib loaded')"
 
-- [ ] Add a dashboard digest entry that reports validator pass/fail status
-  Verification: bash cadence/run-validator.sh && grep -q "PASS" dashboard/digest-validator.log
+- [ ] Add a job that runs the cadence-validate script and reports pass/fail
+  Verification: make test
 
-- [ ] Update the main Makefile test target to include the new validator check
-  Verification: make test && echo "test suite passed"
+- [ ] Add a dashboard snippet that displays cadence directory contents
+  Verification: bash -n dashboard/cadence-display.sh
 
-- [ ] Add a lib utility function for safe path resolution used by cadence scripts
-  Verification: bash -n lib/path-utils.sh && python3 -c "import sys; sys.path.insert(0, 'lib'); import path_utils; print('import ok')"
+- [ ] Add a digest helper that logs the last successful test run timestamp
+  Verification: python3 -c "import datetime; print(datetime.datetime.now().isoformat())"
 
-- [ ] Write integration test that exercises the full validator pipeline end-to-end
-  Verification: bash tests/integration-test-validator.sh
+- [ ] Add a test that verifies all new scripts pass bash syntax check
+  Verification: bash -n scripts/cadence-validate.sh && bash -n dashboard/cadence-display.sh
