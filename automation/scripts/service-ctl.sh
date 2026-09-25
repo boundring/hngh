@@ -33,7 +33,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$ROOT/lib/common.sh"
 . "$ROOT/lib/breadcrumbs.sh"
 
-ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service hngh-dashboard.service hngh-cadence-1m.timer hngh-cadence-5m.timer hngh-cadence-10m.timer hngh-cadence-30m.timer hngh-cadence-hour.timer hngh-cadence-day.timer hngh-cadence-week.timer hngh-cadence-month.timer hngh-automation.timer hngh-night-agent.service hngh-night-research.service hngh-morning-report.service"
+ALLOWLIST="llama-server.service unsloth-warm.service unsloth-studio.service hngh-dashboard.service hngh-automation.service hngh-automation.timer hngh-autonomy.service hngh-autonomy.timer hngh-cadence-calendar.service hngh-cadence-calendar.timer hngh-cadence-hour.service hngh-cadence-hour.timer hngh-cadence-subhour.service hngh-cadence-subhour.timer hngh-credential-health.service hngh-credential-health.timer hngh-model-bench.service hngh-model-bench.timer hngh-morning-report.service hngh-morning-report.timer hngh-morning.service hngh-morning.timer hngh-night-agent.service hngh-night-agent.timer hngh-night-research.service hngh-night-research.timer hngh-overnight.service hngh-overnight-lead.timer hngh-security.service hngh-security.timer"
 SYSTEMCTL="${HNGH_SERVICE_SYSTEMCTL:-systemctl}" # env seam for tests
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 VERBS="start stop restart status"

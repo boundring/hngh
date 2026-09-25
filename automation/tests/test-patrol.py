@@ -225,9 +225,9 @@ class Patrol(unittest.TestCase):
         (self.sb / "systemd-state.tsv").write_text(
             "".join("%s\t%s\tok\n" % (u, f)
                     for u in ("hngh-automation.timer",
-                              "hngh-cadence-1m.timer",
-                              "hngh-cadence-5m.timer",
-                              "hngh-overnight.timer")
+                              "hngh-cadence-subhour.timer",
+                              "hngh-cadence-hour.timer",
+                              "hngh-overnight-lead.timer")
                     for f in ("enabled", "active")))
         # hermetic journal: the same stub every test sees; without a
         # fixture it exits 0 silently -- a dormant journal channel is
@@ -1016,13 +1016,13 @@ class Patrol(unittest.TestCase):
         state.write_text(
             "".join("%s\t%s\tok\n" % (u, f)
                     for u in ("hngh-automation.timer",
-                              "hngh-cadence-1m.timer",
-                              "hngh-cadence-5m.timer")
+                              "hngh-cadence-subhour.timer",
+                              "hngh-cadence-hour.timer")
                     for f in ("enabled", "active"))
-            + "hngh-overnight.timer\tenabled\tdisabled\n"
-              "hngh-overnight.timer\tactive\tinactive\n")
+            + "hngh-overnight-lead.timer\tenabled\tdisabled\n"
+              "hngh-overnight-lead.timer\tactive\tinactive\n")
         r, alerts = self.run_walk()
-        self.assertIn("FAIL systemd-units/hngh-overnight.timer timer-dead "
+        self.assertIn("FAIL systemd-units/hngh-overnight-lead.timer timer-dead "
                       "enabled=bad active=bad", r.stdout)
         self.assertTrue(any("patrol systemd-units:" in a for a in alerts))
 
@@ -1058,12 +1058,12 @@ class Patrol(unittest.TestCase):
         state = self.sb / "systemd-state.tsv"
         state.write_text(
             "".join("%s\t%s\tok\n" % (u, f)
-                    for u in ("hngh-automation.timer", "hngh-cadence-1m.timer",
-                              "hngh-cadence-5m.timer", "hngh-overnight.timer")
+                    for u in ("hngh-automation.timer", "hngh-cadence-subhour.timer",
+                              "hngh-cadence-hour.timer", "hngh-overnight-lead.timer")
                     for f in ("enabled", "active"))
-            + "hngh-cadence-1m.timer\tactive\tinactive\n")
+            + "hngh-cadence-subhour.timer\tactive\tinactive\n")
         r = self.run_py("--patrol", "systemd-units")
-        self.assertIn("FAIL systemd-units/hngh-cadence-1m.timer timer-dead",
+        self.assertIn("FAIL systemd-units/hngh-cadence-subhour.timer timer-dead",
                       r.stdout)
 
     # --- (18) --morning: digest section with counts, causes, top-3 ---

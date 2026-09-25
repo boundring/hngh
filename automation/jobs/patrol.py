@@ -1233,8 +1233,8 @@ def check_disposition_followons(ctx):
     return out
 
 
-CRITICAL_TIMERS = ("hngh-automation.timer", "hngh-cadence-1m.timer",
-                   "hngh-cadence-5m.timer", "hngh-overnight.timer")
+CRITICAL_TIMERS = ("hngh-automation.timer", "hngh-cadence-subhour.timer",
+                   "hngh-cadence-hour.timer", "hngh-overnight-lead.timer")
 
 
 def check_systemd_units(ctx):

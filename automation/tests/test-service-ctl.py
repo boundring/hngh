@@ -32,7 +32,7 @@ STUB = """#!/usr/bin/env bash
 echo "$*" >> "$STUB_LOG"
 case "$2 $3" in
   cat\\ llama-server.service|cat\\ unsloth-studio.service) exit 0 ;;
-  cat\\ hngh-cadence-day.timer|cat\\ hngh-night-agent.service) exit 0 ;;
+  cat\\ hngh-cadence-hour.timer|cat\\ hngh-night-agent.service) exit 0 ;;
   # unsloth-warm is "not installed" in this fixture: cat fails for it
   cat\\ unsloth-warm.service) exit 1 ;;
   cat\\ *) exit 1 ;;
@@ -145,15 +145,15 @@ class ServiceCtl(unittest.TestCase):
 
     def test_timer_pause_and_resume(self):
         # timer stop = pause, start = resume (plan 2026-09-22 step 3)
-        p = self.run_ctl("hngh-cadence-day.timer", "stop")
+        p = self.run_ctl("hngh-cadence-hour.timer", "stop")
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertIn("--user stop hngh-cadence-day.timer", self.stub_calls())
-        p = self.run_ctl("hngh-cadence-day.timer", "start")
+        self.assertIn("--user stop hngh-cadence-hour.timer", self.stub_calls())
+        p = self.run_ctl("hngh-cadence-hour.timer", "start")
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertIn("--user start hngh-cadence-day.timer", self.stub_calls())
+        self.assertIn("--user start hngh-cadence-hour.timer", self.stub_calls())
 
     def test_non_allowlisted_timer_refused(self):
-        p = self.run_ctl("hngh-autonomy.timer", "stop")
+        p = self.run_ctl("hngh-not-a-unit.timer", "stop")
         self.assertEqual(p.returncode, 2)
         self.assertEqual(self.stub_calls(), "")
 
