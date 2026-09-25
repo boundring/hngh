@@ -6,6 +6,17 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Refoundation P5: ceremony decay rungs** (docs/records/
+  2026-09-25-p5-ceremony-decay.md): certificate actions mint receipts
+  (`scripts/cert-receipts.lisp` appends timestamp/action/hash/commit/
+  expiry rows, fail-open by design) so ceremony cost becomes
+  measurable; rotate-queue's doubled mutation-check is collapsed to
+  one mint-and-execute call per action; ceremony-drive gains
+  `--fast-lane` — whitespace-only candidates commit mechanically
+  (hygiene gates + one commit, no model round-trip, no push
+  certificate minted). New tests/scripts/test-ceremony-receipts.py
+  pins refuse-substantive, commit-blank-only, store-required, and
+  the receipts round-trip.
 - **Unresolved matters pass: router bound, lane wiring, operator calls
   settled** (docs/records/2026-09-24-unresolved-matters-pass.md): the
   router's re-route policy is bound (`HNGH_ROUTER_REROUTE_MAX`, default
@@ -100,7 +111,7 @@ lives under Pre-release / early development until the first release.
 - **GOVERNANCE.md aligned to the federal charter and canon ethos** (docs/project/decisions.md): the governance document now states the three-branch model (charter accepted 2026-09-20), with the five never clauses and the certificate path preserved verbatim; Taoist and Confucian principles inform tone, the care duty, dissent channels, and dissolution; no authority change — the single-operator model and the N=2 amendment rule are preserved as recorded.
 - **Interface and truth-layer consolidation** (automation/CHANGELOG.md): crumb writing converged on one fail-closed writer with a mirror-mismatch alert; hngh-bridge plugin source moved into the repo behind a drift gate; omp-bridge's default automation-root fixed by ceremony (candidate `cc0a1eff`); stage-2 exits landed — all dashboard tabs clean at 1280/390px and the item lifecycle open→handled→dismissed.
 - **Home-path scrub (tree + history)** (docs/records/2026-09-23-home-path-scrub.md):
-  every `/home/<user>/...` literal in code, test fixtures, systemd units
+  every home-directory literal in code, test fixtures, systemd units
   (`%h`), MCP/agent configs (`sh -c` + `$HOME`), TSV registries and docs
   (79 files, 129 lines) now resolves portably; kernel gate 2934 checks
   green. A git-history scrub follows (`git filter-repo`; hashes change,

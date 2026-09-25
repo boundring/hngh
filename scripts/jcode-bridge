@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# jcode-bridge — harness-neutral name for scripts/omp-bridge (2026-09-25
+# refoundation P2a: one name per role; the omp-bridge name predates the
+# Jcode admission and survives as the implementation; see
+# docs/records/2026-09-14-jcode-primary-harness-admission.md).
+exec "$(dirname "$0")/omp-bridge" "$@"

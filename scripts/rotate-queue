@@ -29,7 +29,8 @@
        (repo-root (make-pathname :directory (butlast (pathname-directory script-path))))
        (asd-file (merge-pathnames "hngh.asd" repo-root)))
   (asdf:load-asd asd-file)
-  (asdf:load-system :hngh))
+  (asdf:load-system :hngh)
+  (load (merge-pathnames "cert-receipts.lisp" script-path)))
 
 ;;; --- argv --------------------------------------------------------------
 
@@ -55,21 +56,26 @@ Returns the new queue file namestring."
                    (decode-universal-time (get-universal-time) 0)
                  (declare (ignore ss mm hh))
                  (format nil "~4,'0D-~2,'0D-~2,'0D" yy mo dd))))
-    (let ((lines (uiop:read-file-lines path))
-          (seen nil))
+    (let ((lines (uiop:read-file-lines path)))
+      ;; fail closed: validate before any write; unknown item must not
+      ;; touch the ledger (exit 3, distinct from usage errors)
+      (unless (some (lambda (line)
+                      (let ((fields (uiop:split-string line
+                                                       :separator '(#\Tab))))
+                        (and (= 4 (length fields))
+                             (string= item-id (first fields)))))
+                    lines)
+        (format *error-output*
+                "rotate-queue: queue item ~A not found~%" item-id)
+        (uiop:quit 3))
       (with-open-file (stream path :direction :output :if-exists :supersede)
         (dolist (line lines)
           (let ((fields (uiop:split-string line :separator '(#\Tab))))
-            (when (and (= 4 (length fields))
-                       (string= item-id (first fields)))
-              (setf seen t)
-              (format stream "~A~Cdone~C~A~Crotated ~A~%"
-                      (first fields) #\Tab #\Tab (third fields) #\Tab today))
-            (when (not (and (= 4 (length fields))
-                            (string= item-id (first fields))))
-              (format stream "~A~%" line)))))
-      (unless seen
-        (error "rotate-queue: queue item ~A not found" item-id))
+            (if (and (= 4 (length fields))
+                     (string= item-id (first fields)))
+                (format stream "~A~Cdone~C~A~Crotated ~A~%"
+                        (first fields) #\Tab #\Tab (third fields) #\Tab today)
+                (format stream "~A~%" line)))))
       path)))
 
 ;;; --- real evidence ------------------------------------------------------
@@ -209,18 +215,15 @@ the remote label; local and auto keep the ceremony-tested model label."
                     (labels ((execute (action)
                                (let ((code
                                        (do-step (append
-                                              (list "issue-cert" action "run-1"
+                                              (list "mutation-check" action "run-1"
                                                     verdict-file)
                                               all-files))))
-                                 (when (plusp code)
-                                   (return-from rotate code))
-                                 (let ((code
-                                         (do-step (append
-                                                (list "mutation-check" action
-                                                      "run-1" verdict-file)
-                                                all-files))))
-                                   (when (plusp code)
-                                     (return-from rotate code))))))
+                                 (if (plusp code)
+                                     (return-from rotate code)
+                                     ;; mint-time receipt (P5a); the
+                                     ;; merged verb mints and executes
+                                     ;; in one mutation-check call
+                                     (record-receipt action content-hash)))))
                       (execute "prepare-candidate")
                       (execute "commit")
                       (ignore-errors (delete-file verdict-file))

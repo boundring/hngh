@@ -40,6 +40,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import queue_pointer
+
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE = ROOT / "docs" / "project" / "queue.md"
 CHECKIN = ROOT / "docs" / "project" / "checkin.md"
@@ -105,6 +108,7 @@ def audio_level():
 
 def queue_state():
     """Return (values queued-ids, done-count, next-id-or-None)."""
+    queue_pointer.ensure_current(QUEUE)
     text = QUEUE.read_text()
     queued, done = [], 0
     for line in text.splitlines():

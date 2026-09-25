@@ -62,6 +62,9 @@ from datetime import datetime, timezone
 from fcntl import flock, LOCK_EX, LOCK_NB, LOCK_UN
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import queue_pointer
+
 ROOT = Path(os.environ.get("HNGH_BRIDGE_ROOT")
             or Path(__file__).resolve().parent.parent)
 SCRIPTS = ROOT / "scripts"
@@ -236,6 +239,7 @@ def queue_next():
     """The current queue Next item id (from the `## Next` block)."""
     if not QUEUE.exists():
         return None
+    queue_pointer.ensure_current(QUEUE)
     m = next(iter(NEXT_RE.finditer(QUEUE.read_text())), None)
     if m is None:
         return None

@@ -42,6 +42,9 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import queue_pointer
+
 ROOT = Path(os.environ.get("HNGH_RUN_ROOT")
             or Path(__file__).resolve().parent.parent)
 JOURNAL_DIR = ROOT / "docs" / "journal"
@@ -126,6 +129,7 @@ def generate_daily(day):
 def queue_next():
     if not QUEUE.exists():
         return None
+    queue_pointer.ensure_current(QUEUE)
     m = NEXT_RE.search(QUEUE.read_text())
     if m:
         return m.group("id").strip()
