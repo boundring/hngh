@@ -6,17 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a test script that validates the cadence job runner exits cleanly on a minimal input
-  Verification: bash tests/cadence_runner_smoke.sh
+- [ ] Add a job-state reporter script that parses test output and emits completion metrics
+  Verification: bash scripts/report-job-state.sh
 
-- [ ] Create a helper script that parses a job manifest and reports its status
-  Verification: bash -n scripts/manifest_parser.sh
+- [ ] Add a cadence-orchestration test that validates the reporter against sample output
+  Verification: make test
 
-- [ ] Add a dashboard snippet that logs cadence job completion timestamps
-  Verification: grep -q "timestamp" dashboard/cadence_log.sh
+- [ ] Add a dashboard integration that consumes the reporter metrics
+  Verification: bash -n dashboard/consume-metrics.sh
 
-- [ ] Write a test that confirms the digest generator produces output for a sample job
-  Verification: python3 tests/digest_generator_test.py
+- [ ] Add a digest summary that aggregates reporter output across runs
+  Verification: python3 digest/aggregate.py
 
-- [ ] Commit all changes and run the full test suite to confirm no regressions
+- [ ] Add a lib helper for parsing job output into structured state
+  Verification: bash -n lib/job-state-parser.sh
+
+- [ ] Add a tests fixture for job-state reporter validation
   Verification: make test
