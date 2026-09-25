@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `jobs/automation/README.md` documenting the adopted ADOPTED research line and its intended automation scope
-  Verification: grep -q "ADOPTED" jobs/automation/README.md
+- [ ] Add a cadence helper that validates job manifest syntax before execution
+  Verification: bash -n cadence/validate-manifest.sh
 
-- [ ] Create `scripts/adopted-scan.sh` that iterates over `jobs/` directories and prints each directory name as a plain commit-safe list
-  Verification: bash scripts/adopted-scan.sh | grep -q "jobs"
+- [ ] Create a test script that runs the manifest validator against a sample job file
+  Verification: python3 tests/test-manifest-validator.py
 
-- [ ] Add `tests/adopted-scan.test.sh` that runs `scripts/adopted-scan.sh` and asserts the output contains at least one job path
-  Verification: bash tests/adopted-scan.test.sh && echo "PASS"
+- [ ] Add a dashboard digest entry that reports validator pass/fail status
+  Verification: bash cadence/run-validator.sh && grep -q "PASS" dashboard/digest-validator.log
 
-- [ ] Create `cadence/adopted-rhythm.md` listing a weekly cadence of small hngh-automation commits derived from the ADOPTED findings
-  Verification: grep -q "weekly" cadence/adopted-rhythm.md
+- [ ] Update the main Makefile test target to include the new validator check
+  Verification: make test && echo "test suite passed"
 
-- [ ] Add `dashboard/adopted-status.md` with a single-line status row showing "active" and the current date
-  Verification: grep -q "active" dashboard/adopted-status.md && grep -q "2026-09-25" dashboard/adopted-status.md
+- [ ] Add a lib utility function for safe path resolution used by cadence scripts
+  Verification: bash -n lib/path-utils.sh && python3 -c "import sys; sys.path.insert(0, 'lib'); import path_utils; print('import ok')"
 
-- [ ] Create `digest/adopted-summary.md` containing a one-paragraph summary of the ADOPTED research line and its automation goals
-  Verification: grep -q "ADOPTED" digest/adopted-summary.md
+- [ ] Write integration test that exercises the full validator pipeline end-to-end
+  Verification: bash tests/integration-test-validator.sh

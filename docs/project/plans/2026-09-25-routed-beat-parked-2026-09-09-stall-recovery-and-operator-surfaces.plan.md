@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=beat-parked:2026-09-09-stall-recovery-and-operator-surfaces -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-25T12:33:24Z routed-from=beat-parked:2026-09-09-stall-recovery-and-operator-surfaces -->
 # 2026-09-25 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `beat-parked:2026-09-09-stall-recovery-and-operator-surfaces`
@@ -12,3 +12,4 @@ at 2026-09-25T11:00:13Z. Alert text: orchestrator blocker parked '2026-09-09-sta
 ## Occurrences
 
 - 2026-09-25T12:00:13Z re-occurred (dedup window expired)
+- 2026-09-25T13:00:37Z re-occurred (dedup window expired)
