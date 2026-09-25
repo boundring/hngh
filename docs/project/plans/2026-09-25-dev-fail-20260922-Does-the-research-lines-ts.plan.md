@@ -6,17 +6,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a job status summary script that aggregates completion signals from recent cadence runs
-  Verification: bash scripts/summarize-status.sh && grep -q "status" scripts/summarize-status.sh
+- [ ] Add a `cadence/monitoring.sh` script that logs a timestamped heartbeat to `digest/heartbeat.log`
+  Verification: `bash -n cadence/monitoring.sh`
 
-- [ ] Create a cadence lib module that exposes a single function for fetching the last run's outcome
-  Verification: bash -n cadence/lib/run-outcome.sh && grep -q "fetch" cadence/lib/run-outcome.sh
+- [ ] Create `jobs/heartbeat.yml` job definition that invokes `cadence/monitoring.sh` every 5 minutes
+  Verification: `bash -n jobs/heartbeat.yml`
 
-- [ ] Wire the summary script to consume the cadence lib function and write output to dashboard/
-  Verification: bash scripts/summarize-status.sh && ls dashboard/ && grep -q "outcome" dashboard/
+- [ ] Add `tests/test_heartbeat.sh` that runs `cadence/monitoring.sh` and checks `digest/heartbeat.log` has a new entry
+  Verification: `bash tests/test_heartbeat.sh`
 
-- [ ] Add a test that validates the summary script produces non-empty output when cadence data exists
-  Verification: bash tests/test-summary.sh && grep -q "PASS" tests/test-summary.sh
+- [ ] Register the new job in `cadence/schedule.yml` under the `monitoring` group
+  Verification: `grep -q heartbeat cadence/schedule.yml`
 
-- [ ] Commit all changes as a single unit that passes the existing make test gate
-  Verification: make test && git diff --cached --stat | wc -l
+- [ ] Run `make test` to confirm all existing and new tests pass
+  Verification: `make test`

@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-25T18:03:49Z routed-from=crumbs-mirror:skipped -->
+<!-- plan: status=parked risk=normal accepted=2026-09-25T18:03:49Z routed-from=crumbs-mirror:skipped  cause=obsolete disposed=2026-09-25T19:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-25 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `crumbs-mirror:skipped`
@@ -13,3 +13,4 @@ at 2026-09-25T16:00:37Z. Alert text: crumbs mirror mismatch: crumbs rows=180023 
 
 - 2026-09-25T17:00:37Z re-occurred (dedup window expired)
 - 2026-09-25T18:00:13Z re-occurred (dedup window expired)
+- 2026-09-25T19:00:13Z re-occurred (dedup window expired)
