@@ -6,20 +6,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new automation job under jobs/ that runs a simple health check script
-  Verification: bash -n jobs/health-check.sh
+- [ ] Add a `jobs/automation/README.md` documenting the adopted ADOPTED research line and its intended automation scope
+  Verification: grep -q "ADOPTED" jobs/automation/README.md
 
-- [ ] Create a verification script under scripts/ that validates the health check output
-  Verification: bash scripts/validate-health.sh
+- [ ] Create `scripts/adopted-scan.sh` that iterates over `jobs/` directories and prints each directory name as a plain commit-safe list
+  Verification: bash scripts/adopted-scan.sh | grep -q "jobs"
 
-- [ ] Add a test case under tests/ that exercises the new automation job
-  Verification: make test
+- [ ] Add `tests/adopted-scan.test.sh` that runs `scripts/adopted-scan.sh` and asserts the output contains at least one job path
+  Verification: bash tests/adopted-scan.test.sh && echo "PASS"
 
-- [ ] Update the cadence configuration under cadence/ to include the new job
-  Verification: grep -q "health-check" cadence/schedule.yaml
+- [ ] Create `cadence/adopted-rhythm.md` listing a weekly cadence of small hngh-automation commits derived from the ADOPTED findings
+  Verification: grep -q "weekly" cadence/adopted-rhythm.md
 
-- [ ] Add a dashboard snippet under dashboard/ that displays health check status
-  Verification: bash -n dashboard/health-widget.js
+- [ ] Add `dashboard/adopted-status.md` with a single-line status row showing "active" and the current date
+  Verification: grep -q "active" dashboard/adopted-status.md && grep -q "2026-09-25" dashboard/adopted-status.md
 
-- [ ] Run the full test suite to confirm no regressions
-  Verification: make test
+- [ ] Create `digest/adopted-summary.md` containing a one-paragraph summary of the ADOPTED research line and its automation goals
+  Verification: grep -q "ADOPTED" digest/adopted-summary.md

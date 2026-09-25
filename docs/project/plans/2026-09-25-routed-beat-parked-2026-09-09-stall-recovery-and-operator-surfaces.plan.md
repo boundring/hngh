@@ -8,3 +8,7 @@ at 2026-09-25T11:00:13Z. Alert text: orchestrator blocker parked '2026-09-09-sta
 
 - [ ] Delve: open research subject fail-20260925-beat-parked-2026-09-09-stall-recovery-and-operator-surfaces for beat-parked:2026-09-09-stall-recovery-and-operator-surfaces; record disposition; then fix or park
       Verification: research subject fail-20260925-beat-parked-2026-09-09-stall-recovery-and-operator-surfaces present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-25T12:00:13Z re-occurred (dedup window expired)
