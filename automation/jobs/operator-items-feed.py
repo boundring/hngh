@@ -26,6 +26,9 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
+import subprocess
+import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -79,8 +82,11 @@ def digest_items():
     return out, d.get("generated_at")
 
 
-def crumbs():
-    """STATE.md lines date-ordered: (ts, 'job | event | detail', event, detail)."""
+def _crumbs_from_state():
+    """STATE.md lines date-ordered: (ts, 'job | event | detail', event, detail).
+
+    Availability fallback: kept verbatim from the pre-flip reader for when
+    the derived index is unreadable."""
     rows = []
     with open(STATE, encoding="utf-8") as f:
         for ln in f:
@@ -92,6 +98,27 @@ def crumbs():
                          event, detail))
     rows.sort(key=lambda r: r[0])
     return rows
+
+
+def crumbs():
+    """Same 4-tuples via the derived index (crumbs.db), refreshed first;
+    falls back to the STATE.md parse when the index is unavailable."""
+    try:
+        db = os.path.join(os.path.dirname(os.path.abspath(STATE)),
+                          "state", "crumbs.db")
+        subprocess.run([sys.executable, os.path.join(ROOT, "lib", "crumbs-db.py"),
+                        "sync", "--state", STATE, "--db", db],
+                       check=True, capture_output=True)
+        con = sqlite3.connect(db)
+        try:
+            rows = [(ts, "%s | %s | %s" % (job, event, detail), event, detail)
+                    for ts, job, event, detail in con.execute(
+                        "SELECT ts, job, event, detail FROM crumbs ORDER BY ts")]
+        finally:
+            con.close()
+        return rows
+    except Exception:
+        return _crumbs_from_state()
 
 
 def is_operator_item(event, joined):
