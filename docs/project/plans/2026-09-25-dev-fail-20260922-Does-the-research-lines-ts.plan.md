@@ -6,20 +6,14 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job template for automated data validation under `cadence/jobs/data-validation.yaml`
-  Verification: `bash -n cadence/jobs/data-validation.yaml`
+- [ ] Add a `scripts/validate-input.sh` helper that checks required fields in a job manifest
+  Verification: `bash -n scripts/validate-input.sh`
 
-- [ ] Create a verification script under `scripts/validate-data-job.sh` that checks the new job template structure
-  Verification: `bash scripts/validate-data-job.sh`
+- [ ] Add a `tests/test_validate-input.sh` that exercises the helper with valid and invalid inputs
+  Verification: `bash tests/test_validate-input.sh`
 
-- [ ] Add unit tests for the data validation job under `tests/cadence/data-validation.test.sh`
+- [ ] Add a `cadence/run-validation.sh` entry that invokes the helper before job execution
+  Verification: `bash -n cadence/run-validation.sh`
+
+- [ ] Update `Makefile` to include the new validation script in the test suite
   Verification: `make test`
-
-- [ ] Update the cadence runner to register the new job template under `lib/cadence-registry.py`
-  Verification: `python3 -c "import sys; sys.path.insert(0, 'lib'); from cadence_registry import registry; print(len(registry))"`
-
-- [ ] Add a dashboard snippet under `dashboard/data-validation.html` to display validation results
-  Verification: `bash -n dashboard/data-validation.html`
-
-- [ ] Create a digest template under `digest/data-validation.md` for automated result reporting
-  Verification: `bash -n digest/data-validation.md`
