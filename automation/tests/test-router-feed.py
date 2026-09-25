@@ -209,6 +209,51 @@ class RouterFeed(unittest.TestCase):
         self.assertEqual(len(cands), 1, cands)
         self.assertIn("review-hngh-P1-finding", cands[0])
 
+    def test_re_route_bound_parks_past_bound(self):
+        # 2026-09-24 unresolved-matters pass: an identity whose chain
+        # already holds the bound in unworked members stops minting; the
+        # parked row carries the SLA + halt template (routed/parked is
+        # never reported as resolved). TTL=0 turns the seeded proposed
+        # files into expired corpses, which is exactly the loop that used
+        # to force a fresh route every run.
+        ident = "bound-probe"
+        for n in (1, 2, 3):
+            (self.plans / ("2026-09-20-routed-%s-%d.plan.md"
+                           % (ident, n))).write_text(
+                "<!-- plan: status=proposed risk=normal accepted=- "
+                "routed-from=%s -->\n\n# fixture\n\n## Steps\n\n"
+                "- [x] s1\n" % ident)
+        self.seed(ident)
+        out = self.run_feed(HNGH_ROUTER_TTL_HOURS=0,
+                            HNGH_ROUTER_REROUTE_MAX=3)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = self.candidates()
+        self.assertEqual(len(cands), 3, cands)  # no 4th draft
+        rows = [ln for ln in self.ledger_lines()
+                if "router parks %s at the re-route bound" % ident in ln]
+        self.assertTrue(rows, self.ledger_lines())
+        self.assertIn("SLA:", rows[0])
+        self.assertIn("halt:", rows[0])
+        self.assertIn("re-route bound reached (3)", rows[0])
+        self.assertIn("router:parked:%s" % ident, self.bodies())
+
+    def test_re_route_bound_allows_up_to_the_bound(self):
+        # the bound is not a blanket block: a chain under the bound
+        # still routes fresh
+        ident = "bound-ok"
+        for n in (1, 2):
+            (self.plans / ("2026-09-20-routed-%s-%d.plan.md"
+                           % (ident, n))).write_text(
+                "<!-- plan: status=proposed risk=normal accepted=- "
+                "routed-from=%s -->\n\n# fixture\n\n## Steps\n\n"
+                "- [x] s1\n" % ident)
+        self.seed(ident)
+        out = self.run_feed(HNGH_ROUTER_TTL_HOURS=0,
+                            HNGH_ROUTER_REROUTE_MAX=3)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        cands = [n for n in self.candidates() if ident in n]
+        self.assertEqual(len(cands), 3, cands)  # 2 seeded + 1 fresh
+
 
 if __name__ == "__main__":
     unittest.main()

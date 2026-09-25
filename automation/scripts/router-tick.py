@@ -351,6 +351,53 @@ def escalate_n():
         return 3
 
 
+def router_reroute_max():
+    """Re-route bound for one identity: env HNGH_ROUTER_REROUTE_MAX,
+    then the cadence-params.tsv row router-reroute-max, else 3 (same
+    env->tsv->default pattern as escalate_n)."""
+    v = os.environ.get("HNGH_ROUTER_REROUTE_MAX")
+    if not v:
+        try:
+            with open(os.path.join(AUTOMATION, "cadence-params.tsv"),
+                      encoding="utf-8") as fh:
+                for line in fh:
+                    if line.startswith("#"):
+                        continue
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) > 1 and parts[0] == "router-reroute-max":
+                        v = parts[1]
+                        break
+        except OSError:
+            pass
+    try:
+        return max(1, int(float(v)))
+    except (TypeError, ValueError):
+        return 3
+
+
+def chain_live_count(identity):
+    """Unworked chain members for this identity (any date, any route
+    suffix - the same dup_re shape live_duplicate/expire_stale use).
+    Everything except executed/rejected counts: parked and expired
+    corpses must be visible here, or the corpse loop walks past the
+    bound."""
+    ident = re.sub(r"[^A-Za-z0-9._-]+", "-", identity)
+    dup_re = re.compile(r"^\d{4}-\d{2}-\d{2}-routed-%s(-\d+)?\.plan\.md$"
+                        % re.escape(ident))
+    n = 0
+    try:
+        names = os.listdir(PLANS)
+    except OSError:
+        return 0
+    for name in names:
+        if not dup_re.match(name):
+            continue
+        status, _ = plan_status_age(os.path.join(PLANS, name))
+        if status not in TERMINAL_STATUS:
+            n += 1
+    return n
+
+
 def occurrence_count(text):
     """Distinct occurrence lines in the plan's `## Occurrences`
     escalation record (0 when the section is absent)."""
@@ -556,6 +603,20 @@ def route(identity, text):
             pass
         else:
             return 0
+    # re-route bound: an identity whose chain already holds the bound in
+    # unworked members stops minting. The row keeps the lane visible -
+    # routed/parked is never reported as resolved.
+    bound = router_reroute_max()
+    if chain_live_count(identity) >= bound:
+        report("alert", "router parks %s at the re-route bound - "
+               "SLA: re-fires bump this row for 7d, then it expires on "
+               "silence; halt: the lane stops until the identity is "
+               "worked or the chain is disposed; re-route bound reached "
+               "(%d) - parked, not resolved" % (identity, bound),
+               "router:parked:%s" % identity, 604800)
+        breadcrumb("router", "reroute-bound",
+                   "%s parked at re-route bound %d" % (identity, bound))
+        return 0
     path = os.path.join(PLANS, slug + ".plan.md")
     if os.path.exists(path):
         # window-aged same-day plan routes fresh: suffix, never overwrite
