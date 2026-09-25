@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-25T12:33:24Z routed-from=slow-unit:hngh-morning.service -->
+<!-- plan: status=parked risk=normal accepted=2026-09-25T12:33:24Z routed-from=slow-unit:hngh-morning.service  cause=obsolete disposed=2026-09-25T15:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-25 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:hngh-morning.service`
@@ -13,3 +13,4 @@ at 2026-09-25T12:00:13Z. Alert text: [oversight] slow-unit: hngh-morning.service
 
 - 2026-09-25T13:00:37Z re-occurred (dedup window expired)
 - 2026-09-25T14:00:13Z re-occurred (dedup window expired)
+- 2026-09-25T15:00:13Z re-occurred (dedup window expired)

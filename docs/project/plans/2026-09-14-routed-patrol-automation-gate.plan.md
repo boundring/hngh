@@ -21,3 +21,4 @@ at 2026-09-14T10:00:39Z. Alert text: patrol automation-gate: gate-red on hngh-au
 - 2026-09-25T12:00:13Z re-occurred (dedup window expired)
 - 2026-09-25T13:00:37Z re-occurred (dedup window expired)
 - 2026-09-25T14:00:13Z re-occurred (dedup window expired)
+- 2026-09-25T15:00:13Z re-occurred (dedup window expired)
