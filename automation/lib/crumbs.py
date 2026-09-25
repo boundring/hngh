@@ -43,13 +43,20 @@ def scrub(detail):
 def crumb(job, event, detail, state_file=None):
     """Append one 4-field crumb line to the journal and return it.
     Raises ValueError when a field contains the separator or a newline."""
-    for value in (job, event, detail):
+    path = state_file or os.environ.get("STATE_FILE") \
+        or os.path.join(AUTO_ROOT, "STATE.md")
+    offset = os.path.getsize(path) if os.path.exists(path) else 0
+    # Writer provenance stamp (fail-20260924-crumbs-mirror-rows R1):
+    # process name + journal byte offset (the watermark coordinate), so
+    # a duplicated-row event class stays diagnosable: retry spacing =
+    # same content at different offsets, batch-uniform stamps = backfill.
+    stamp = " [w=%s@%d]" % (os.path.basename(sys.argv[0]) or "crumbs",
+                            offset)
+    for value in (job, event, detail, stamp):
         if "|" in value or "\n" in value or "\r" in value:
             raise ValueError(
                 "crumb field contains separator/newline: %r" % (value,))
-    path = state_file or os.environ.get("STATE_FILE") \
-        or os.path.join(AUTO_ROOT, "STATE.md")
-    line = "%s | %s | %s | %s\n" % (now_utc(), job, event, detail)
+    line = "%s | %s | %s | %s\n" % (now_utc(), job, event, detail + stamp)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(line)

@@ -76,7 +76,10 @@ class CrumbsWriterTest(unittest.TestCase):
         self.assertTrue(FOUR.match(data), repr(data))
         fields = data.rstrip("\n").split(" | ")
         self.assertEqual(fields[1], job)
-        self.assertEqual(fields[3], detail)
+        # the detail field ends with the writer provenance stamp
+        # (test_crumb_carries_writer_provenance_stamp pins its shape)
+        self.assertTrue(fields[3].startswith(detail + " [w="), repr(data))
+        self.assertRegex(fields[3], r" \[w=[^@\s]+@\d+\]$")
 
     def test_writer_emits_single_four_field_line(self):
         line = self.crumbs.crumb("job-x", "event-y", "detail z",
@@ -92,6 +95,21 @@ class CrumbsWriterTest(unittest.TestCase):
                 with self.assertRaises(ValueError, msg=(field, dirty)):
                     self.crumbs.crumb(*args, state_file=str(self.journal))
         self.assertFalse(self.journal.exists())  # fail closed: nothing half-written
+
+    def test_crumb_carries_writer_provenance_stamp(self):
+        # R1 (fail-20260924-crumbs-mirror-rows): every appended line
+        # carries an append-time writer stamp -- process name + journal
+        # byte offset (the watermark coordinate). Retry spacing shows
+        # as same content at different offsets; batch-uniform stamps
+        # are a backfill. Hermetic tmp journal: offsets deterministic
+        # (0, then the first line's byte length).
+        first = self.crumbs.crumb("job-x", "event-y", "detail z",
+                                  state_file=str(self.journal))
+        self.assertRegex(first, r" \[w=[^@\s]+@0\]\n$")
+        second = self.crumbs.crumb("job-x", "event-y", "detail z",
+                                   state_file=str(self.journal))
+        self.assertRegex(second, r" \[w=[^@\s]+@%d\]\n$" % len(first))
+        self.assertIn(" [w=%s@" % os.path.basename(sys.argv[0]), second)
 
     def test_shim_route_converges_and_refuses_dirty(self):
         proc = run_shim(self.env, "test-job", "test-event",

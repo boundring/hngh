@@ -133,7 +133,9 @@ class CapBlockOperatorItem(unittest.TestCase):
         alerts = [c for c in crumbs if c[2] == "alert"]
         self.assertEqual(len(alerts), 1, crumbs)
         _ts, _job, event, detail = alerts[0]
-        self.assertEqual(detail, TEXT)
+        # the writer provenance stamp (lib/crumbs.py R1) rides the tail
+        self.assertTrue(detail.startswith(TEXT + " [w="), detail)
+        self.assertRegex(detail, r" \[w=[^@\s]+@\d+\]$")
         self.assertTrue(
             re.match(r"alert", event, re.I) or KEYWORD_RE.search(event + " " + detail),
             "filed crumb must satisfy the operator-items feed criterion")
