@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script under `jobs/` that validates input file existence before processing
-  Verification: `bash -n jobs/validate-input.sh`
+- [ ] Add a new cadence job template for daily digest generation
+  Verification: `bash -n cadence/daily-digest-job.sh`
 
-- [ ] Add a test script under `tests/` that asserts the validation job exits non-zero on missing input
-  Verification: `bash tests/test-validate-input.sh`
+- [ ] Create verification script to validate digest output format
+  Verification: `python3 scripts/validate-digest-format.py`
 
-- [ ] Add a cadence entry under `cadence/` that schedules the validation job on cron
-  Verification: `grep -q "validate-input" cadence/cron.list`
-
-- [ ] Add a helper library under `lib/` that provides a shared file-existence check function
-  Verification: `bash -n lib/file-check.sh`
-
-- [ ] Add a dashboard snippet under `dashboard/` that displays validation job status
-  Verification: `grep -q "validate-input" dashboard/status.json`
-
-- [ ] Run full test suite to confirm all new steps integrate cleanly
+- [ ] Add unit test for digest generation pipeline
   Verification: `make test`
+
+- [ ] Update cadence README with new job documentation
+  Verification: `grep -q "daily-digest" cadence/README.md`
+
+- [ ] Add integration test for end-to-end digest flow
+  Verification: `bash -n tests/integration/test-digest-flow.sh`

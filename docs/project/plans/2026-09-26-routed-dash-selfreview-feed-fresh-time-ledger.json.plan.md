@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:time-ledger.json -->
+<!-- plan: status=parked risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:time-ledger.json  cause=obsolete disposed=2026-09-26T17:00:14Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-03T14:00:13Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -16,3 +16,4 @@ at 2026-09-26T14:00:13Z. Alert text: [dash-selfreview] feed-fresh:time-ledger.js
 
 - 2026-09-26T15:00:13Z re-occurred (dedup window expired)
 - 2026-09-26T16:00:13Z re-occurred (dedup window expired)
+- 2026-09-26T17:00:14Z re-occurred (dedup window expired)
