@@ -15,3 +15,4 @@ at 2026-09-26T08:00:12Z. Alert text: synthesized development plan malformed (no 
 ## Occurrences
 
 - 2026-09-26T09:00:13Z re-occurred (dedup window expired)
+- 2026-09-26T10:00:13Z re-occurred (dedup window expired)

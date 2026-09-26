@@ -7,14 +7,13 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence job that runs a daily digest summary of hngh-automation activity
-  Verification: bash -n cadence/daily-digest.sh
-
-- [ ] Create a verification script that confirms the digest job output is non-empty
-  Verification: python3 scripts/verify_digest_nonempty.py
-
-- [ ] Add a test that validates the cadence job runs without errors
+- [ ] Add a cadence helper that validates job output schema before ingestion
+  Verification: bash -n cadence/schema-validator.sh
+- [ ] Create a lib utility for safe path resolution under jobs/
+  Verification: python3 lib/path_resolver.py
+- [ ] Add a test that exercises the schema validator end-to-end
+  Verification: bash -n tests/test_schema_validator.sh
+- [ ] Wire the validator into the existing cadence pipeline
   Verification: make test
-
-- [ ] Commit the new cadence and verification files as a plain commit
-  Verification: git diff --stat HEAD~1
+- [ ] Add a dashboard snippet that reports validation pass/fail counts
+  Verification: bash -n dashboard/validation_report.sh
