@@ -11,3 +11,7 @@ at 2026-09-26T21:00:13Z. Alert text: [oversight] slow-unit: hngh-cadence-hour.se
 
 - [ ] Delve: open research subject fail-20260926-slow-unit-hngh-cadence-hour.service for slow-unit:hngh-cadence-hour.service; record disposition; then fix or park
       Verification: research subject fail-20260926-slow-unit-hngh-cadence-hour.service present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-26T22:00:13Z re-occurred (dedup window expired)
