@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `cadence/verify-build.sh` script that runs `make test` and reports pass/fail status
-  Verification: bash -n cadence/verify-build.sh && bash cadence/verify-build.sh
+- [ ] Add a validation script that checks job file syntax before execution
+  Verification: bash -n scripts/validate-job.sh
 
-- [ ] Create `tests/test-cadence.sh` that asserts `make test` completes within a defined threshold
-  Verification: bash -n tests/test-cadence.sh && bash tests/test-cadence.sh
+- [ ] Create a test that verifies job file structure compliance
+  Verification: make test
 
-- [ ] Update `lib/cadence-report.py` to emit structured output for CI consumption
-  Verification: python3 -c "import ast; ast.parse(open('lib/cadence-report.py').read())" && python3 lib/cadence-report.py --dry-run
+- [ ] Add a cadence helper that logs job completion timestamps
+  Verification: bash scripts/cadence-helper.sh
 
-- [ ] Add `dashboard/build-status.md` with a template for tracking cadence verification results
-  Verification: grep -q "build-status" dashboard/build-status.md
+- [ ] Update the dashboard to display job status from test results
+  Verification: make test
 
-- [ ] Commit all changes and verify `make test` passes on the updated tree
+- [ ] Add a grep check to ensure no credentials leak into job files
+  Verification: grep -r "password\|secret\|token" jobs/ scripts/ cadence/ lib/ tests/
+
+- [ ] Commit all changes and run full test suite to confirm no regressions
   Verification: make test
