@@ -39,7 +39,7 @@ chmod +x "$HNGH_REPORT_QUEUE"
 # telemetry db: schema + one row so "used" parses; cap 0 forces blocked
 export HNGH_TELEMETRY_DB="$sb/telemetry.db"
 sqlite3 "$HNGH_TELEMETRY_DB" \
-  "create table events(ts text, kind text, source text); insert into events values('2026-09-25T00:00:00Z','model','kimi');"
+  "create table events(ts text, kind text, source text); insert into events values('$(date -u +%Y-%m-%d)T00:00:00Z','model','kimi');"
 
 # 1. stdout protocol intact under blockage (nothing leaks from reporting)
 out="$(quota_pace_blocked kimi 0 2>"$sb/stderr")" || true
