@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a job-definition validation script that checks syntax before execution
-  Verification: bash scripts/validate-job-def.sh
+- [ ] Add a cadence runner script that validates job definitions before execution
+  Verification: bash -n cadence/validate-jobs.sh
 
-- [ ] Add unit tests for the validation script covering valid and invalid inputs
-  Verification: python3 tests/test_validate_job_def.py
-
-- [ ] Integrate validation script into the main automation workflow
+- [ ] Create a test suite for the new cadence validation logic
   Verification: make test
 
-- [ ] Add a simple status-reporting helper that outputs job completion state
-  Verification: bash scripts/report-status.sh
+- [ ] Add a dashboard digest entry that reports validation pass/fail counts
+  Verification: bash scripts/check-digest-output.sh
 
-- [ ] Add integration test verifying end-to-end validation and reporting flow
+- [ ] Write a job template that exercises the validation pipeline end-to-end
+  Verification: bash -n jobs/template-validation-job.sh
+
+- [ ] Add a lib helper that parses job definition YAML for schema compliance
+  Verification: python3 lib/parse-job-schema.py
+
+- [ ] Commit all changes and run the full test suite to confirm no regressions
   Verification: make test
-
-- [ ] Update documentation with new validation and reporting usage
-  Verification: grep -r "validate-job-def" jobs/ scripts/ cadence/
