@@ -260,8 +260,8 @@ synth-2026-09-25-2	reviewed	2026-09-25T18:49:35Z	Do any of the five related find
 synth-2026-09-25-3	reviewed	2026-09-25T19:35:21Z	What is the exact staleness predicate in `fail-20260922-What-is-the-exact-staleness-predicate-in` that the line's own verifiability standard demands production on?
 fail-20260925-supervision	reviewed	2026-09-25T20:37:57Z	What knowledge was missing for supervision?
 patrol-20260925-automation-gate-gate-stale	reviewed	2026-09-26T01:16:39Z	patrol: surface automation-gate filed gate-stale on consecutive runs -- why does the check still find no gate crumb against the crumbs-db seam after the refoundation moved crumb readers off STATE.md, and which guardrail or re-baseline closes it?
-arc-20260925-descent-adoption-gate	crystallized	2026-09-26T03:17:19Z	descent: what enforces crystallized-line adoption-or-revoke with a named consumer and one-alternation deadline (design/descent.md), and what fixture proves it?
-arc-20260925-descent-audit-station	planned	2026-09-26T01:03:22Z	descent: what weekly beat shape runs the five falsifiable checks and the write-only artifact count (design/descent.md), and where does its row land?
+arc-20260925-descent-adoption-gate	reviewed	2026-09-26T03:52:18Z	descent: what enforces crystallized-line adoption-or-revoke with a named consumer and one-alternation deadline (design/descent.md), and what fixture proves it?
+arc-20260925-descent-audit-station	expanding	2026-09-26T03:31:20Z	descent: what weekly beat shape runs the five falsifiable checks and the write-only artifact count (design/descent.md), and where does its row land?
 arc-20260925-dream-graph	planned	2026-09-26T01:03:22Z	dream: how do dream briefs cite completion-graph nodes so proposals stay grounded and budgeted under P6/P7?
 arc-20260925-local-vllm-probe	planned	2026-09-26T01:03:22Z	local-models: what do a uv venv + python-vllm-rocm smoke on RX 7900 XT measure for billion-context compression, and under what VRAM/coordination halts?
 arc-20260925-os-adapters	planned	2026-09-26T01:03:22Z	os: what real probe capability turns the static harness adapters executable while execute() stays allowlisted fail-closed?
