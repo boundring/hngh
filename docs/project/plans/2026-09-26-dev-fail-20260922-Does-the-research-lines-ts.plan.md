@@ -7,13 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper that validates job output schema before ingestion
-  Verification: bash -n cadence/schema-validator.sh
-- [ ] Create a lib utility for safe path resolution under jobs/
-  Verification: python3 lib/path_resolver.py
-- [ ] Add a test that exercises the schema validator end-to-end
-  Verification: bash -n tests/test_schema_validator.sh
-- [ ] Wire the validator into the existing cadence pipeline
+- [ ] Add a cadence job that validates lib/hngh-automation/schemas/ on every commit
   Verification: make test
-- [ ] Add a dashboard snippet that reports validation pass/fail counts
-  Verification: bash -n dashboard/validation_report.sh
+
+- [ ] Create a scripts/validate-cadence.sh that runs cadence job outputs through bash -n syntax checks
+  Verification: bash -n scripts/validate-cadence.sh
+
+- [ ] Add a tests/ directory with a smoke test that confirms cadence job structure is parseable
+  Verification: make test
+
+- [ ] Add a dashboard/summary.md documenting the cadence validation pipeline
+  Verification: git grep -l "cadence" dashboard/summary.md
+
+- [ ] Add a digest/entry.md recording the research line adoption with date and scope
+  Verification: git grep -l "hngh-automation" digest/entry.md
+
+- [ ] Verify all new files pass bash -n and make test without errors
+  Verification: make test
