@@ -1386,3 +1386,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-09-26T00:59:59Z | progress | ebb46dea | config-backup agent-configs: ok 10 files push=git@github.com:boundring/agent-configs.git wall=1s | 2026-09-26T00:59:59Z-progress-ebb46dea.md |
 | 2026-09-26T01:00:00Z | progress | c75c4b6f | course pooled-hardware: card mounted, last increment 2026-09-26T00:00:01Z | 2026-09-26T01:00:00Z-progress-c75c4b6f.md |
 | 2026-09-26T01:00:13Z | progress | 25c2a7c8 | router routed research-beat:unavailable -> plan candidate 2026-09-26-routed-research-beat-unavailable (routed-at 2026-09-26T01:00:13Z) expires=2026-10-03T01:00:13Z | 2026-09-26T01:00:13Z-progress-25c2a7c8.md |
+| 2026-09-26T01:04:07Z | progress | f215bc3b | research line arc-20260925-debt-ledger: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-09-26-arc-20260925-debt-ledger.md | 2026-09-26T01:04:07Z-progress-f215bc3b.md |
