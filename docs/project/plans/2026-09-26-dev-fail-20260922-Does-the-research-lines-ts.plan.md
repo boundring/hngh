@@ -7,20 +7,11 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a test helper script for validating automation output format
-  Verification: bash -n jobs/test_helpers/validate_output.sh
+- [ ] Add a new job script under jobs/
+  Verification: bash -n jobs/new_job.sh && make test
 
-- [ ] Create a verification script that checks automation job completion status
-  Verification: bash jobs/scripts/check_job_status.sh
-
-- [ ] Update the test suite to include new validation checks
+- [ ] Add a test for the new job
   Verification: make test
 
-- [ ] Add a simple cadence tracking script for monitoring automation progress
-  Verification: bash cadence/track_progress.sh
-
-- [ ] Verify all new scripts pass syntax validation
-  Verification: bash -n jobs/test_helpers/validate_output.sh && bash -n jobs/scripts/check_job_status.sh && bash -n cadence/track_progress.sh
-
-- [ ] Run full test suite to confirm no regressions
-  Verification: make test
+- [ ] Add cadence tracking for the new job
+  Verification: bash scripts/cadence_check.sh && make test
