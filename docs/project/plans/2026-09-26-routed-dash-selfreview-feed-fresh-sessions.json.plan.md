@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:sessions.json -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-26T20:04:59Z routed-from=dash-selfreview:feed-fresh:sessions.json -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-03T13:00:13Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

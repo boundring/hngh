@@ -5,21 +5,15 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: Implements the "configuration validation" research line by adding a new automation job that checks pipeline configuration consistency before execution.
-
 ## Steps
 
-- [ ] Create a configuration linting script at scripts/lint-config.sh that validates YAML syntax
-  Verification: bash -n scripts/lint-config.sh
-
-- [ ] Add a test case at tests/test-lint-config.sh that exercises the linting script
-  Verification: bash tests/test-lint-config.sh
-
-- [ ] Update the test runner at cadence/run-tests.sh to include the new linting check
-  Verification: bash -n cadence/run-tests.sh
-
-- [ ] Create a helper function at lib/config-utils.sh for configuration parsing
-  Verification: bash -n lib/config-utils.sh
-
-- [ ] Add a dashboard report at dashboard/config-health.md documenting the validation coverage
-  Verification: git grep -c "config-health" dashboard/config-health.md
+- [ ] Add a new job script that validates hngh-automation commit hygiene by checking for required metadata headers
+  Verification: bash scripts/validate-commit-metadata.sh
+- [ ] Create a test case that exercises the commit metadata validation logic
+  Verification: make test
+- [ ] Add a cadence entry that triggers the validation job on every push to the automation branch
+  Verification: grep -q "validate-commit-metadata" cadence/schedule.yaml
+- [ ] Verify the new cadence entry is syntactically valid by parsing the schedule file
+  Verification: python3 cadence/parse-schedule.py
+- [ ] Run the full test suite to confirm no regressions from the new validation job
+  Verification: make test

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=typed-gap:research-beat -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-26T20:04:59Z routed-from=typed-gap:research-beat -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-03T02:00:13Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
