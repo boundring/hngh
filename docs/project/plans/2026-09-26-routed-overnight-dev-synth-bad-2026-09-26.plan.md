@@ -11,3 +11,7 @@ at 2026-09-26T08:00:12Z. Alert text: synthesized development plan malformed (no 
 
 - [ ] Delve: open research subject fail-20260926-overnight-dev-synth-bad-2026-09-26 for overnight:dev-synth-bad:2026-09-26; record disposition; then fix or park
       Verification: research subject fail-20260926-overnight-dev-synth-bad-2026-09-26 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-26T09:00:13Z re-occurred (dedup window expired)
