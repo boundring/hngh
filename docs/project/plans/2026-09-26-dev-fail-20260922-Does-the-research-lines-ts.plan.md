@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a script that validates cadence job completion markers in the jobs directory
-  Verification: bash -n scripts/cadence-check.sh
+- [ ] Add a test helper script for validating automation output format
+  Verification: bash -n jobs/test_helpers/validate_output.sh
 
-- [ ] Add a test that validates the cadence check script runs without errors
+- [ ] Create a verification script that checks automation job completion status
+  Verification: bash jobs/scripts/check_job_status.sh
+
+- [ ] Update the test suite to include new validation checks
   Verification: make test
 
-- [ ] Add a script that logs cadence state transitions to the cadence directory
-  Verification: bash -n scripts/cadence-log.sh
+- [ ] Add a simple cadence tracking script for monitoring automation progress
+  Verification: bash cadence/track_progress.sh
 
-- [ ] Add a test that validates the log script produces output
-  Verification: bash scripts/cadence-log.sh
+- [ ] Verify all new scripts pass syntax validation
+  Verification: bash -n jobs/test_helpers/validate_output.sh && bash -n jobs/scripts/check_job_status.sh && bash -n cadence/track_progress.sh
 
-- [ ] Add a verification script for dashboard state consistency in the dashboard directory
-  Verification: bash -n scripts/dashboard-verify.sh
-
-- [ ] Add a test that validates dashboard verification
+- [ ] Run full test suite to confirm no regressions
   Verification: make test
