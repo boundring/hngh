@@ -266,4 +266,4 @@ arc-20260925-dream-graph	planned	2026-09-26T01:03:22Z	dream: how do dream briefs
 arc-20260925-local-vllm-probe	planned	2026-09-26T01:03:22Z	local-models: what do a uv venv + python-vllm-rocm smoke on RX 7900 XT measure for billion-context compression, and under what VRAM/coordination halts?
 arc-20260925-os-adapters	planned	2026-09-26T01:03:22Z	os: what real probe capability turns the static harness adapters executable while execute() stays allowlisted fail-closed?
 arc-20260925-os-package-pairing	planned	2026-09-26T01:03:22Z	os: what daily check pairs hngh-packages.tsv pins with pacman reality so drift files a subject, never an auto-update?
-arc-20260925-debt-ledger	expanding	2026-09-26T01:04:07Z	debt: where do the ~19 ponytail ceiling markers index into a ledger an audit beat can consume?
+arc-20260925-debt-ledger	crystallized	2026-09-26T02:03:34Z	debt: where do the ~19 ponytail ceiling markers index into a ledger an audit beat can consume?
