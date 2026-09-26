@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a validation script that checks job file syntax before execution
-  Verification: bash -n scripts/validate-job.sh
+- [ ] Add a new job script under `jobs/` that validates input file existence before processing
+  Verification: `bash -n jobs/validate-input.sh`
 
-- [ ] Create a test that verifies job file structure compliance
-  Verification: make test
+- [ ] Add a test script under `tests/` that asserts the validation job exits non-zero on missing input
+  Verification: `bash tests/test-validate-input.sh`
 
-- [ ] Add a cadence helper that logs job completion timestamps
-  Verification: bash scripts/cadence-helper.sh
+- [ ] Add a cadence entry under `cadence/` that schedules the validation job on cron
+  Verification: `grep -q "validate-input" cadence/cron.list`
 
-- [ ] Update the dashboard to display job status from test results
-  Verification: make test
+- [ ] Add a helper library under `lib/` that provides a shared file-existence check function
+  Verification: `bash -n lib/file-check.sh`
 
-- [ ] Add a grep check to ensure no credentials leak into job files
-  Verification: grep -r "password\|secret\|token" jobs/ scripts/ cadence/ lib/ tests/
+- [ ] Add a dashboard snippet under `dashboard/` that displays validation job status
+  Verification: `grep -q "validate-input" dashboard/status.json`
 
-- [ ] Commit all changes and run full test suite to confirm no regressions
-  Verification: make test
+- [ ] Run full test suite to confirm all new steps integrate cleanly
+  Verification: `make test`
