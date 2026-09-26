@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-plan.sh` helper that checks a development plan file has required sections (rationale + Steps)
-  Verification: bash scripts/validate-plan.sh
+- [ ] Add a new cadence job that runs `make test` on a single automation module
+  Verification: `grep -q 'make test' cadence/jobs/*`
 
-- [ ] Create `tests/test-plan-validator.sh` to assert the validator script runs without errors
-  Verification: bash -n tests/test-plan-validator.sh
+- [ ] Create a verification script that confirms the job output contains "PASS"
+  Verification: `bash -n scripts/verify-cadence-output.sh`
 
-- [ ] Add `cadence/plan-check` entry to the cadence directory as a placeholder for future plan validation hooks
-  Verification: git grep -c "plan-check" cadence/
+- [ ] Add a test case that exercises the new cadence job path
+  Verification: `bash tests/test-cadence-job.sh`
 
-- [ ] Update `make test` to include the new plan validator in the test suite
-  Verification: make test
+- [ ] Update the dashboard to display the new job's status
+  Verification: `grep -q 'new-job' dashboard/*.html`
 
-- [ ] Document the new validator in `dashboard/README.md` with usage instructions
-  Verification: bash -n dashboard/README.md
+- [ ] Run the full test suite to confirm no regressions
+  Verification: `make test`
+
+- [ ] Verify all new files pass syntax checks
+  Verification: `bash -n scripts/verify-cadence-output.sh && node --check dashboard/*.js`
