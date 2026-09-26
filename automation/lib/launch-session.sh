@@ -186,7 +186,19 @@ so do not close. None (no key/offline) keeps the existing human gate."
   # opencode binary, model row, or credential absent -> omp with a
   # breadcrumb.
   local oc_bin oc_model oc_key="" bili_bin borigin="" bili_pid=""
-  oc_bin="$(command -v opencode || true)"
+  # registry-first (2026-09-26): hngh-packages.tsv col 4 names THE
+  # opencode channel; PATH shadows lose (pacman v2 removed --dir and
+  # killed machine-lane launches). No row / absent binary -> PATH.
+  oc_bin=""
+  reg_bin="$(awk -F'\t' -v h="$HOME" '$1=="opencode" {p=$4; gsub(/^~/, h, p); print p; exit}' \
+   "$AUTOMATION_ROOT/config/hngh-packages.tsv" 2>/dev/null)"
+  if [ -n "$reg_bin" ] && [ -x "$reg_bin" ]; then
+   oc_bin="$reg_bin"
+  else
+   oc_bin="$(command -v opencode || true)"
+   [ -n "$reg_bin" ] && breadcrumb launch-session "ocgo-executor" \
+    "registry opencode ($reg_bin) absent -> PATH resolution"
+  fi
   # test seam mirrors OMP_BIN_CMD; hermetic tests scope PATH instead of
   # set-but-empty (the empty value falls through to PATH discovery)
   bili_bin="${BILI_OCGO_BIN:-$(command -v bili || true)}"

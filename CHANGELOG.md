@@ -4,6 +4,19 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-26
+
+- **Overnight review fixes** (docs/records/2026-09-26-overnight-review-fixes.md):
+  the plan-admission gate froze overnight because `test-gate-refusals.sh`
+  seeded telemetry with a literal date -- the seed now derives from
+  `date -u` (commit `33567b7f`); and machine-lane opencode launches died on
+  a pacman v2 PATH shadow -- `lib/launch-session.sh` now resolves the
+  executor registry-first (`config/hngh-packages.tsv` col 4, PATH fallback
+  with breadcrumb; contract test added). Typed-park-at-1.00 confirmed
+  correct; zai demote counter reset on its own; research ruling overturns
+  the `arc-20260925-debt-ledger` kill (count verifiable at 20 markers) and
+  re-opens `arc-20260926-descent-adoption-gate` per descent.md:129-147.
+
 ### 2026-09-25
 
 - **C1 vllm-rocm probe** (docs/records/2026-09-25-c1-vllm-rocm-probe.md):

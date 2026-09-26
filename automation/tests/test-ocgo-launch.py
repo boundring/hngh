@@ -223,6 +223,31 @@ class OcgoLaunch(unittest.TestCase):
         self.assertIn("-p --model", self.omp_marker.read_text())
         self.assertFalse(self.oc_marker.exists())
 
+    def test_registry_pinned_opencode_beats_path_shadow(self):
+        # The registry channel (hngh-packages.tsv col 4) is THE opencode:
+        # a PATH shadow must lose to the registry-named binary. 2026-09-26:
+        # pacman opencode 2.0.16 shadowed the registered npm v1 on machine
+        # PATH and every machine-lane opencode leg died on v2's removed
+        # --dir flag (dream launches -> "Unrecognized flag: --dir").
+        self.oc.write_text('printf "PATH-SHADOW-RAN\\n" >> "$OC_MARKER"\nexit 1\n')
+        self.oc.chmod(0o755)
+        reg_dir = self.td / "registry-bin"
+        reg_dir.mkdir()
+        reg = reg_dir / "opencode"
+        reg.write_text('printf "registry-opencode ran\\n" >> "$OC_MARKER"\n'
+                       + OC_STUB.replace("TIMESTAMP",
+                                         str(int(self.td.stat().st_mtime)
+                                             * 1000)))
+        reg.chmod(0o755)
+        (self.auto / "config" / "hngh-packages.tsv").write_text(
+            "opencode\thttps://github.com/sst/opencode\ttest channel\t"
+            f"{reg}\ttest home\tmanual\t\tin-use\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        marker = self.oc_marker.read_text()
+        self.assertIn("registry-opencode ran", marker)
+        self.assertNotIn("PATH-SHADOW-RAN", marker)
+
     def test_kimi_provider_routes_kimi_quota(self):
         # OCGO_PROVIDER=kimi: the kimi-model row drives the model id, the
         # executor-kimi agent runs, the Kimi key rides ONLY as
