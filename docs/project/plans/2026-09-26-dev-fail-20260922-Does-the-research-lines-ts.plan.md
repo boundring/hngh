@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job template for daily digest generation
-  Verification: `bash -n cadence/daily-digest-job.sh`
+- [ ] Add a new cadence job script that validates automation pipeline integrity
+  Verification: bash -n cadence/validate-pipeline.sh
 
-- [ ] Create verification script to validate digest output format
-  Verification: `python3 scripts/validate-digest-format.py`
+- [ ] Create a verification helper script to check job completion status
+  Verification: bash -n scripts/check-job-status.sh
 
-- [ ] Add unit test for digest generation pipeline
-  Verification: `make test`
+- [ ] Update the cadence runner to invoke the new validation script
+  Verification: make test
 
-- [ ] Update cadence README with new job documentation
-  Verification: `grep -q "daily-digest" cadence/README.md`
+- [ ] Add a test case for the new validation pipeline
+  Verification: make test
 
-- [ ] Add integration test for end-to-end digest flow
-  Verification: `bash -n tests/integration/test-digest-flow.sh`
+- [ ] Document the new cadence job in the dashboard
+  Verification: grep -q "validate-pipeline" dashboard/cadence-docs.md
