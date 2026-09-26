@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence scheduler script that emits job timestamps based on a configurable interval
-  Verification: bash scripts/cadence/emit-timestamps.sh && bash -n scripts/cadence/emit-timestamps.sh
+- [ ] Add a `cadence/verify-build.sh` script that runs `make test` and reports pass/fail status
+  Verification: bash -n cadence/verify-build.sh && bash cadence/verify-build.sh
 
-- [ ] Create a test job template under jobs/ that exercises the cadence output
-  Verification: make test && grep -q 'cadence' jobs/test-cadence-template.yaml
+- [ ] Create `tests/test-cadence.sh` that asserts `make test` completes within a defined threshold
+  Verification: bash -n tests/test-cadence.sh && bash tests/test-cadence.sh
 
-- [ ] Add a lib helper that validates job template structure before execution
-  Verification: python3 lib/validate-template.py && bash -n lib/validate-template.py
+- [ ] Update `lib/cadence-report.py` to emit structured output for CI consumption
+  Verification: python3 -c "import ast; ast.parse(open('lib/cadence-report.py').read())" && python3 lib/cadence-report.py --dry-run
 
-- [ ] Write a dashboard digest that aggregates cadence job results
-  Verification: bash scripts/digest/aggregate-results.sh && grep -q 'cadence' dashboard/digest-template.md
+- [ ] Add `dashboard/build-status.md` with a template for tracking cadence verification results
+  Verification: grep -q "build-status" dashboard/build-status.md
 
-- [ ] Add a test suite entry that runs the full cadence pipeline end-to-end
-  Verification: make test && git diff --stat HEAD~1 | grep -q 'tests/'
+- [ ] Commit all changes and verify `make test` passes on the updated tree
+  Verification: make test
