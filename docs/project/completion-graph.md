@@ -95,7 +95,7 @@ Goal: measure and then wire a local long-context model lane
 (python-vllm-rocm, userspace venv) with existing supervision and
 escalation; quota rungs (GLM-5.3-flash, MiMo-2.6-Pro) unchanged.
 
-- [ ] C1 vllm-rocm-probe
+- [x] C1 vllm-rocm-probe
       depends: none | seed: arc-20260925-local-vllm-probe
       statement: uv venv at ~/.local/share/hngh-vllm-venv +
       python-vllm-rocm install + one foreground smoke (small instruct

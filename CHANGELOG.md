@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **C1 vllm-rocm probe** (docs/records/2026-09-25-c1-vllm-rocm-probe.md):
+  bounded userspace-venv probe of vllm-rocm 0.6.3 + torch 2.5.1+rocm6.2 on
+  RX 7900 XT -- chat round-trip works, 10.5k-token needle retrieved
+  exactly, ~21.4k-token prefill crashes the era-0.6.3 engine; operational
+  ceiling ~20k tokens, billion-context verdict deferred to a current
+  gfx1100 build. Node C1 ticked; C2 wiring stays gated. Environment pins
+  recorded (torch ABI, amdsmi, ROCR/HIP device vars, version fences).
 - **Completion-graph seeding** (docs/records/2026-09-25-completion-graph-seeding.md):
   new docs/project/completion-graph.md -- 16 dependency-ordered nodes
   across arcs A-F (descent completion, dream-graph loop, local
