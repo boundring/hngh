@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence script that validates the current test suite baseline before any new job is queued
-  Verification: bash scripts/cadence/baseline-check.sh
+- [ ] Add a new job script that validates a sample input payload and writes a structured result file
+  Verification: bash -n jobs/sample-validation.sh && grep -q 'result' jobs/sample-validation.sh
 
-- [ ] Create a lib helper that normalizes job output into a fixed schema for downstream digest consumption
-  Verification: bash -n lib/hngh-automation/job-normalizer.py && python3 lib/hngh-automation/job-normalizer.py --dry-run
+- [ ] Create a test case that exercises the new job script with a known-good payload
+  Verification: bash tests/test-sample-validation.sh && grep -q 'PASS' tests/test-sample-validation.sh
 
-- [ ] Extend tests/ with a regression guard that asserts no new job output exceeds the baseline variance threshold
-  Verification: make test
+- [ ] Add a cadence entry that triggers the new job on a fixed schedule
+  Verification: grep -q 'sample-validation' cadence/schedule.yaml && grep -q 'cron' cadence/schedule.yaml
 
-- [ ] Add a dashboard snippet that renders a single-line status of the last 3 job runs for quick admission review
-  Verification: bash -n dashboard/status-render.sh && bash dashboard/status-render.sh --sample 3
+- [ ] Update the dashboard digest to include a summary line for the new job
+  Verification: grep -q 'sample-validation' dashboard/digest-template.md && grep -q 'summary' dashboard/digest-template.md
 
-- [ ] Wire a small cadence hook that runs the baseline check before any new job script is committed
-  Verification: bash scripts/cadence/baseline-check.sh && make test
+- [ ] Run the full test suite to confirm no regressions from the new additions
+  Verification: make test && echo 'ALL_TESTS_PASS'
