@@ -11,3 +11,7 @@ at 2026-09-26T01:00:13Z. Alert text: research review unavailable: model chain do
 
 - [ ] Delve: open research subject fail-20260926-research-beat-unavailable for research-beat:unavailable; record disposition; then fix or park
       Verification: research subject fail-20260926-research-beat-unavailable present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-26T02:00:13Z re-occurred (dedup window expired)

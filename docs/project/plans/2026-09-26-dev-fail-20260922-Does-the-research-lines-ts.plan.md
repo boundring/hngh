@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script that validates hngh-automation test suite integrity
-  Verification: bash -n jobs/test-suite-validator.sh
+- [ ] Add a `scripts/validate-plan.sh` helper that checks a development plan file has required sections (rationale + Steps)
+  Verification: bash scripts/validate-plan.sh
 
-- [ ] Create a cadence job that runs make test and logs results to dashboard
-  Verification: bash -n cadence/test-runner.sh
+- [ ] Create `tests/test-plan-validator.sh` to assert the validator script runs without errors
+  Verification: bash -n tests/test-plan-validator.sh
 
-- [ ] Add a lib utility function for safe file diffing before commits
-  Verification: bash -n lib/safe-diff.sh
+- [ ] Add `cadence/plan-check` entry to the cadence directory as a placeholder for future plan validation hooks
+  Verification: git grep -c "plan-check" cadence/
 
-- [ ] Update tests to include verification of new job script outputs
+- [ ] Update `make test` to include the new plan validator in the test suite
   Verification: make test
 
-- [ ] Add a digest job that summarizes test pass/fail state
-  Verification: bash -n digest/test-summary.sh
-
-- [ ] Verify all new scripts pass syntax checks and integrate with existing workflow
-  Verification: bash -n jobs/test-suite-validator.sh && bash -n cadence/test-runner.sh && bash -n lib/safe-diff.sh && bash -n digest/test-summary.sh
+- [ ] Document the new validator in `dashboard/README.md` with usage instructions
+  Verification: bash -n dashboard/README.md
