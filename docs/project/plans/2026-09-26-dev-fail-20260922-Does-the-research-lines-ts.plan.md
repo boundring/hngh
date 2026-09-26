@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script that validates job output structure before dashboard ingestion
-  Verification: bash -n scripts/validate-job-output.sh
+- [ ] Add a new job script that validates hngh-automation test suite integrity
+  Verification: bash -n jobs/test-suite-validator.sh
 
-- [ ] Create a test that exercises the validation script against sample job data
-  Verification: bash scripts/validate-job-output.sh
+- [ ] Create a cadence job that runs make test and logs results to dashboard
+  Verification: bash -n cadence/test-runner.sh
 
-- [ ] Add a cadence rule that runs validation before each digest generation
-  Verification: grep -q "validate-job-output" cadence/digest-rules.yaml
+- [ ] Add a lib utility function for safe file diffing before commits
+  Verification: bash -n lib/safe-diff.sh
 
-- [ ] Update the dashboard ingestion step to fail on validation errors
-  Verification: grep -q "validate-job-output" jobs/dashboard-ingest.sh
+- [ ] Update tests to include verification of new job script outputs
+  Verification: make test
 
-- [ ] Add a git hook that runs validation on pre-commit for automation changes
-  Verification: bash -n .git/hooks/pre-commit
+- [ ] Add a digest job that summarizes test pass/fail state
+  Verification: bash -n digest/test-summary.sh
 
-- [ ] Document the validation workflow in the project README
-  Verification: grep -q "validation" README.md
+- [ ] Verify all new scripts pass syntax checks and integrate with existing workflow
+  Verification: bash -n jobs/test-suite-validator.sh && bash -n cadence/test-runner.sh && bash -n lib/safe-diff.sh && bash -n digest/test-summary.sh
