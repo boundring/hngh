@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence job that validates lib/hngh-automation/schemas/ on every commit
-  Verification: make test
+- [ ] Add a `cadence/validate_manifest.py` script that checks job manifest YAML files for required keys and structure
+  Verification: python3 cadence/validate_manifest.py --check
 
-- [ ] Create a scripts/validate-cadence.sh that runs cadence job outputs through bash -n syntax checks
-  Verification: bash -n scripts/validate-cadence.sh
+- [ ] Add a `tests/test_validate_manifest.py` test that asserts the script exits 0 on valid manifests and non-zero on malformed ones
+  Verification: python3 tests/test_validate_manifest.py
 
-- [ ] Add a tests/ directory with a smoke test that confirms cadence job structure is parseable
-  Verification: make test
+- [ ] Add a `jobs/manifest_template.yaml` example manifest that satisfies the validation script's required keys
+  Verification: python3 cadence/validate_manifest.py jobs/manifest_template.yaml
 
-- [ ] Add a dashboard/summary.md documenting the cadence validation pipeline
-  Verification: git grep -l "cadence" dashboard/summary.md
+- [ ] Add a `scripts/run_validation.sh` wrapper that invokes the Python validator and returns its exit code
+  Verification: bash -n scripts/run_validation.sh && bash scripts/run_validation.sh
 
-- [ ] Add a digest/entry.md recording the research line adoption with date and scope
-  Verification: git grep -l "hngh-automation" digest/entry.md
+- [ ] Add a `tests/test_run_validation.sh` test that confirms the wrapper script exits 0 on a valid manifest path
+  Verification: bash tests/test_run_validation.sh
 
-- [ ] Verify all new files pass bash -n and make test without errors
+- [ ] Run the full test suite to confirm no existing tests are broken by the new additions
   Verification: make test
