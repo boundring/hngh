@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-24T08:04:02Z routed-from=slow-unit:dropin:41-newspaper-edition.sh  cause=obsolete disposed=2026-09-24T21:48:36Z reason=superseded by 2026-09-24-routed-slow-unit-dropin-41-newspaper-edition.sh-3; residue sweep 2026-09-24 (unresolved-matters pass) -->
+<!-- plan: status=expired risk=normal accepted=2026-09-24T08:04:02Z routed-from=slow-unit:dropin:41-newspaper-edition.sh  cause=obsolete disposed=2026-09-24T21:48:36Z reason=superseded by 2026-09-24-routed-slow-unit-dropin-41-newspaper-edition.sh-3; residue sweep 2026-09-24 (unresolved-matters pass) -->
 # 2026-09-24 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:41-newspaper-edition.sh`

@@ -15,3 +15,4 @@ at 2026-09-26T05:00:17Z. Alert text: [oversight] slow-unit: dropin:05-operator-i
 ## Occurrences
 
 - 2026-09-26T06:00:13Z re-occurred (dedup window expired)
+- 2026-09-26T07:00:13Z re-occurred (dedup window expired)

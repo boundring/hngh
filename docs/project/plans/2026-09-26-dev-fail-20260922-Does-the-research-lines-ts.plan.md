@@ -7,11 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script under jobs/
-  Verification: bash -n jobs/new_job.sh && make test
+- [ ] Add a cadence script that validates the current test suite baseline before any new job is queued
+  Verification: bash scripts/cadence/baseline-check.sh
 
-- [ ] Add a test for the new job
+- [ ] Create a lib helper that normalizes job output into a fixed schema for downstream digest consumption
+  Verification: bash -n lib/hngh-automation/job-normalizer.py && python3 lib/hngh-automation/job-normalizer.py --dry-run
+
+- [ ] Extend tests/ with a regression guard that asserts no new job output exceeds the baseline variance threshold
   Verification: make test
 
-- [ ] Add cadence tracking for the new job
-  Verification: bash scripts/cadence_check.sh && make test
+- [ ] Add a dashboard snippet that renders a single-line status of the last 3 job runs for quick admission review
+  Verification: bash -n dashboard/status-render.sh && bash dashboard/status-render.sh --sample 3
+
+- [ ] Wire a small cadence hook that runs the baseline check before any new job script is committed
+  Verification: bash scripts/cadence/baseline-check.sh && make test
