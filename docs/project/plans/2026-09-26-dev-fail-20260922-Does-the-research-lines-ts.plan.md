@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job that runs `make test` on a single automation module
-  Verification: `grep -q 'make test' cadence/jobs/*`
+- [ ] Add a script that validates cadence job completion markers in the jobs directory
+  Verification: bash -n scripts/cadence-check.sh
 
-- [ ] Create a verification script that confirms the job output contains "PASS"
-  Verification: `bash -n scripts/verify-cadence-output.sh`
+- [ ] Add a test that validates the cadence check script runs without errors
+  Verification: make test
 
-- [ ] Add a test case that exercises the new cadence job path
-  Verification: `bash tests/test-cadence-job.sh`
+- [ ] Add a script that logs cadence state transitions to the cadence directory
+  Verification: bash -n scripts/cadence-log.sh
 
-- [ ] Update the dashboard to display the new job's status
-  Verification: `grep -q 'new-job' dashboard/*.html`
+- [ ] Add a test that validates the log script produces output
+  Verification: bash scripts/cadence-log.sh
 
-- [ ] Run the full test suite to confirm no regressions
-  Verification: `make test`
+- [ ] Add a verification script for dashboard state consistency in the dashboard directory
+  Verification: bash -n scripts/dashboard-verify.sh
 
-- [ ] Verify all new files pass syntax checks
-  Verification: `bash -n scripts/verify-cadence-output.sh && node --check dashboard/*.js`
+- [ ] Add a test that validates dashboard verification
+  Verification: make test
