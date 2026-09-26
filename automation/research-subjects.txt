@@ -330,3 +330,17 @@ patrol-20260925-journal-error-unclaimed-err	patrol: surface journal-error filed 
 patrol-20260925-journal-error-unit-not-practiced	patrol: surface journal-error filed unit-not-practiced on two consecutive runs -- why does it keep failing and which guardrail closes it?
 fail-20260925-supervision	What knowledge was missing for supervision?
 patrol-20260925-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-feeds-feed-stale	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260926-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
+arc-20260925-descent-adoption-gate	descent: what enforces crystallized-line adoption-or-revoke with a named consumer and one-alternation deadline (design/descent.md), and what fixture proves it?
+arc-20260925-descent-audit-station	descent: what weekly beat shape runs the five falsifiable checks and the write-only artifact count (design/descent.md), and where does its row land?
+arc-20260925-dream-graph	dream: how do dream briefs cite completion-graph nodes so proposals stay grounded and budgeted under P6/P7?
+arc-20260925-local-vllm-probe	local-models: what do a uv venv + python-vllm-rocm smoke on RX 7900 XT measure for billion-context compression, and under what VRAM/coordination halts?
+arc-20260925-os-adapters	os: what real probe capability turns the static harness adapters executable while execute() stays allowlisted fail-closed?
+arc-20260925-os-package-pairing	os: what daily check pairs hngh-packages.tsv pins with pacman reality so drift files a subject, never an auto-update?
+arc-20260925-debt-ledger	debt: where do the ~19 ponytail ceiling markers index into a ledger an audit beat can consume?

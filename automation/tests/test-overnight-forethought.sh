@@ -107,10 +107,28 @@ grep -q 'requirements' "$dp" && grep -q 'sanity-checks' "$dp" ||
  fail "dream prompt missing the five dream fields"
 grep -q '2026-09-10-forethought-and-decomposition.md' "$dp" ||
  fail "dream prompt does not cite the design doc field schema"
+# completion-graph grounding: absent graph -> no graph section (this run's
+# sandbox kernel has no completion-graph.md)
+grep -q 'Completion graph' "$dp" &&
+ fail "dream prompt grew a graph section without a completion-graph.md"
 # the executor prompt carries the dream's sanity-checks
 grep -q 'Dream sanity-checks' "$auto/prompts/overnight/seed.md" ||
  fail "executor prompt missing dream sanity-checks"
 ok "depth=1 kernel step: dream launched (role=dream pack, five-field prompt), executor dream-informed"
+
+# --- (b2) with completion-graph.md: prompt carries open node ids ---------
+reset_runs
+printf '# graph\n\n- [ ] A1 adoption-gate\n      statement: fixture node\n' \
+ >"$kernel/docs/project/completion-graph.md"
+DREAM_OUT="$auto/prompts/overnight/seed.dream.md" FORETHOUGHT_DEPTH=1 run_cycle >/dev/null 2>&1
+[ "$?" -eq 0 ] || fail "with-graph cycle exited non-zero"
+dp="$auto/prompts/overnight/seed.dream-prompt.md"
+grep -q 'Completion graph (cite node ids):' "$dp" ||
+ fail "with-graph dream prompt missing the graph section header"
+grep -q 'A1 adoption-gate' "$dp" ||
+ fail "with-graph dream prompt missing the open node id"
+rm -f "$kernel/docs/project/completion-graph.md"
+ok "depth=1 with completion graph: prompt grounded with node ids"
 
 # --- (c) depth=1 + mechanical step: no dream --------------------------------
 reset_runs

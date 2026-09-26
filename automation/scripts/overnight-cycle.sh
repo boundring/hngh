@@ -761,6 +761,12 @@ build_dream_prompt() { # slug plan_file step dream_out -> prompt path on stdout
   printf 'WAKE CONTEXT: %s UTC. You are a DREAM pass (forethought design:\ndocs/research/2026-09-10-forethought-and-decomposition.md section 2):\na bounded READ-ONLY simulation of one plan step before an executor\ntouches it. Advisory-only: never mutate the repo, ledgers, or plan\nstate — the ONLY write this session may make is the dream brief named\nbelow. Read the plan and the repo before answering.\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf 'Plan step to simulate (plan %s): %s\n\n' "$slug" "$step"
   cat "$pfile"
+  # completion-graph grounding (2026-09-25): open nodes, tail-limited;
+  # absent graph -> prompt unchanged
+  if [ -f "$KERNEL/docs/project/completion-graph.md" ]; then
+   printf '\nCompletion graph (cite node ids):\n'
+   grep -- '- \[ \]' "$KERNEL/docs/project/completion-graph.md" | tail -n 40
+  fi
   cat <<'RULE'
 
 ## Dream brief (binding for this session)

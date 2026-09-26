@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-25
 
+- **Completion-graph seeding** (docs/records/2026-09-25-completion-graph-seeding.md):
+  new docs/project/completion-graph.md -- 16 dependency-ordered nodes
+  across arcs A-F (descent completion, dream-graph loop, local
+  billion-context lane, OS integration, debt continuum, ledger-surface
+  standing rule); 7 operator-directed arc seed subjects filed; dream
+  prompts now carry the open-node excerpt when the graph exists
+  (overnight-forethought without/with-graph cases added).
 - **Research/plan corpus reoriented against the live repo**
   (docs/records/2026-09-25-research-reorientation.md): 83 stale research
   subjects killed (1 reoriented; 9 remain open), 64 unexecuted defunct
