@@ -10,7 +10,7 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
 
 ## Steps
 
-- [ ] Ratification record
+- [x] Ratification record
       docs/records/2026-09-13-governed-fleet-consolidation.md; edit
       roadmap.md per governed-fleet.md section 7 (kernel docs;
       ceremony commit; make test green)
