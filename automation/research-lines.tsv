@@ -264,6 +264,6 @@ arc-20260925-descent-adoption-gate	reviewed	2026-09-26T03:52:18Z	descent: what e
 arc-20260925-descent-audit-station	reviewed	2026-09-26T04:34:43Z	descent: what weekly beat shape runs the five falsifiable checks and the write-only artifact count (design/descent.md), and where does its row land?
 arc-20260925-dream-graph	reviewed	2026-09-26T05:22:19Z	dream: how do dream briefs cite completion-graph nodes so proposals stay grounded and budgeted under P6/P7?
 arc-20260925-local-vllm-probe	reviewed	2026-09-26T06:04:36Z	local-models: what do a uv venv + python-vllm-rocm smoke on RX 7900 XT measure for billion-context compression, and under what VRAM/coordination halts?
-arc-20260925-os-adapters	planned	2026-09-26T01:03:22Z	os: what real probe capability turns the static harness adapters executable while execute() stays allowlisted fail-closed?
+arc-20260925-os-adapters	crystallized	2026-09-26T06:37:10Z	os: what real probe capability turns the static harness adapters executable while execute() stays allowlisted fail-closed?
 arc-20260925-os-package-pairing	planned	2026-09-26T01:03:22Z	os: what daily check pairs hngh-packages.tsv pins with pacman reality so drift files a subject, never an auto-update?
 arc-20260925-debt-ledger	reviewed	2026-09-26T03:01:55Z	debt: where do the ~19 ponytail ceiling markers index into a ledger an audit beat can consume?
