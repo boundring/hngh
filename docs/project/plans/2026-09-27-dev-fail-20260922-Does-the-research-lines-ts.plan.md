@@ -5,15 +5,16 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: This implements the research line on "incremental test scaffolding for cadence-driven automation" by adding a reusable test helper that validates job completion states without touching provider configuration.
-
 ## Steps
 
-- [ ] Add a test helper function in lib/ that validates job completion
-  Verification: bash -n lib/test_helpers.sh
+- [ ] Add a state-validation script under scripts/ that checks automation readiness
+  Verification: bash -n scripts/state-check.sh
 
-- [ ] Create a verification script in scripts/ that checks automation output format
-  Verification: bash scripts/verify_output.sh
+- [ ] Wire the state-check script into cadence/ as a runnable job
+  Verification: bash -n cadence/state-check-job.sh
 
-- [ ] Update existing test in tests/ to use the new helper
+- [ ] Add a test for the state-check script under tests/
   Verification: make test
+
+- [ ] Verify the new script passes syntax and integration checks
+  Verification: bash scripts/state-check.sh && make test
