@@ -23,3 +23,4 @@ at 2026-09-26T14:00:13Z. Alert text: [dash-selfreview] feed-fresh:time-ledger.js
 - 2026-09-26T21:00:14Z re-occurred (dedup window expired)
 - 2026-09-26T22:00:13Z re-occurred (dedup window expired)
 - 2026-09-26T23:00:13Z re-occurred (dedup window expired)
+- 2026-09-27T00:00:13Z re-occurred (dedup window expired)

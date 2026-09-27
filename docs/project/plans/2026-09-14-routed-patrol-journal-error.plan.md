@@ -20,3 +20,4 @@ at 2026-09-14T02:00:20Z. Alert text: patrol journal-error: propose on kglobalacc
 - 2026-09-26T21:00:13Z re-occurred (dedup window expired)
 - 2026-09-26T22:00:13Z re-occurred (dedup window expired)
 - 2026-09-26T23:00:13Z re-occurred (dedup window expired)
+- 2026-09-27T00:00:13Z re-occurred (dedup window expired)
