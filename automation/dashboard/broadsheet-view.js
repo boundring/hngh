@@ -554,6 +554,10 @@
       bar.appendChild(row);
     };
     var nLabel = a.floodIds.length;
+    // perceptibility floor: a 40-step chain against a local server
+    // finishes in ~0.5s, which reads as the old flash; hold each step
+    // on screen long enough to see the count tick (review finding F1)
+    var FLOOD_STEP_MS = 130;
     mk('Dismiss all ' + nLabel,
       'Clears the sheet; nothing of value is lost — every row carries ' +
         'the same empty string.',
@@ -564,6 +568,7 @@
         bar.appendChild(progress);
         return batch.reduce(function (chain, id) {
           return chain.then(function () {
+            var t0 = Date.now();
             return postJson('/operator-item/dismiss', { id: id })
               .then(function () {
                 done += 1;
@@ -575,6 +580,12 @@
                 failed.push(id); // keep going; never fail the batch
                 progress.textContent = 'failed: ' + id + ' - ' +
                   e.message + ' - continuing…';
+              })
+              .then(function () {
+                var left = FLOOD_STEP_MS - (Date.now() - t0);
+                return left > 0
+                  ? new Promise(function (res) { setTimeout(res, left); })
+                  : null;
               });
           });
         }, Promise.resolve()).then(function () {
@@ -614,6 +625,9 @@
   }
   function floodSettled(a, bar, progress, btn, done, failed) {
     if (!failed.length) {
+      // let the final count be read before the tall card reflows
+      progress.textContent = 'dismissed ' + done + ' of ' + done +
+        ' - flood cleared.';
       // all N (or the cap batch) gone: the card becomes a short line
       // and the multicol stream reflows around it
       var card = bar.closest('article');
@@ -622,7 +636,10 @@
       note.textContent = 'flood cleared - ' + done +
         ' empty-idea rows sent to the wastebin.';
       if (card && card.parentNode)
-        card.parentNode.replaceChild(note, card);
+        setTimeout(function () {
+          if (note.parentNode || !card.parentNode) return;
+          card.parentNode.replaceChild(note, card);
+        }, 1500);
       return;
     }
     // survivors stay listed inline; the button retries only them
@@ -865,6 +882,10 @@
       sysline.textContent = [sys.hostname, sys.uptime]
         .filter(Boolean).join(' · ');
     }
+    var gq = $('mast-ghost');
+    if (gq) gq.textContent =
+      ed && typeof ed.ghost_quiet === 'string' && ed.ghost_quiet
+        ? 'ghost desk quiet — ' + ed.ghost_quiet : '';
   }
   function cToF(c) {
     return typeof c === 'number' && isFinite(c)
@@ -899,7 +920,11 @@
     var url = new URLSearchParams(location.search).get('feed')
       || 'newspaper.json';
     feed.fixture = url !== 'newspaper.json';
-    return fetchJSON(url).then(function (d) {
+    // fetchJSON already sends cache:'no-store'; the param defeats any
+    // intermediate proxy so the refresh button always re-fetches for real
+    var url2 = url + (url.indexOf('?') === -1 ? '?' : '&') +
+      't=' + Date.now();
+    return fetchJSON(url2).then(function (d) {
       if (!feedOk(d)) throw new Error(
         url + ' is empty or malformed; refusing to print a blank page');
       feed.data = d;
@@ -947,7 +972,15 @@
     colsSet(colsGet());
     $('col-minus').addEventListener('click', function () { colsShift(-1); });
     $('col-plus').addEventListener('click', function () { colsShift(1); });
-    $('paper-refresh').addEventListener('click', function () { refresh(); });
+    $('paper-refresh').addEventListener('click', function () {
+      var btn = this;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var old = btn.textContent;
+      btn.textContent = 'refreshing…';
+      Promise.resolve(refresh()).catch(function () {})
+        .then(function () { btn.disabled = false; btn.textContent = old; });
+    });
     document.addEventListener('keydown', function (ev) {
       if (ev.key === '[') colsShift(-1);
       else if (ev.key === ']') colsShift(1);

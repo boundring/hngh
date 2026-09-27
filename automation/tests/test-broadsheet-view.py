@@ -191,6 +191,17 @@ class FloodDismissImmediate(unittest.TestCase):
         self.assertIn("continuing", self.js)
         self.assertIn("failed ids: ' + failed.join(', ')", self.js)
 
+    def test_progress_is_perceptible(self):
+        # review F1: a 40-step chain at ~12ms/step reads as the old
+        # flash; every step must stay on screen long enough to tick
+        self.assertIn("FLOOD_STEP_MS", self.js)
+        self.assertIn("Date.now() - t0", self.js)
+
+    def test_completion_holds_before_reflow(self):
+        # the final count must be readable before the tall card swaps
+        self.assertIn("' - flood cleared.'", self.js)
+        self.assertIn("}, 1500);", self.js)
+
 
 class SplashMasthead(unittest.TestCase):
     """Volumetric ASCII splash + rotating H.N.G.H. expansions."""
@@ -310,6 +321,38 @@ class GhostDesk(unittest.TestCase):
         self.assertIn("the archivist", out[0])
         self.assertIn("ghost desk", out[0])
         self.assertEqual(out[1], "")
+
+    def test_edition_ghost_quiet_marker(self):
+        # edition-level "ghost_quiet": one small legible line, silent
+        # when the composer does not send it
+        self.assertIn("ghost_quiet", self.js)
+        self.assertIn("ghost desk quiet", self.js)
+        for html in ("broadsheet.html", "index.html"):
+            self.assertIn('id="mast-ghost"', read(html))
+        css = read("broadsheet.css")
+        self.assertIn(".mast-ghost", css)
+        self.assertIn(".mast-ghost:empty", css)
+
+
+class RefreshStaleness(unittest.TestCase):
+    """The refresh button must re-fetch for real and show it (review)."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def test_cache_busted_refetch(self):
+        # fetchJSON sends cache:'no-store'; the URL param defeats any
+        # intermediate proxy between page and dashboard server
+        start = self.js.index("function loadFeed")
+        end = self.js.index("function refresh", start)
+        body = self.js[start:end]
+        self.assertIn("'t=' + Date.now()", body)
+        self.assertIn("fetchJSON(url2)", body)
+
+    def test_refresh_button_shows_feedback(self):
+        self.assertIn("'refreshing…'", self.js)
+        self.assertIn("btn.disabled = false", self.js)
+        self.assertIn("btn.textContent = old", self.js)
 
 
 if __name__ == "__main__":

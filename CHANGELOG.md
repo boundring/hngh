@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Broadsheet review follow-ups**: the flood-dismiss chain now paces
+  each step (~130 ms floor) so the count ticks readably instead of
+  flashing, and the completed card holds its final count for 1.5 s
+  before the cleared note reflows the sheet (review F1). The refresh
+  button re-fetches with a cache-busting stamp, shows "refreshing…"
+  while in flight, and the fresh edition stamp re-renders. Editions
+  may carry "ghost_quiet": the masthead prints one small italic
+  "ghost desk quiet — <reason>" line so a silent ghost call is
+  legible, not invisible.
 - **Broadsheet volumetric masthead + full-page paper**: the masthead
   now opens with a procedurally rendered ASCII splash (self-contained
   5x7 block-glyph font, per-cell ink luminance, box-drawing frame,
