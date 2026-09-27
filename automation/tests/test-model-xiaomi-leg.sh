@@ -126,6 +126,7 @@ ck "helper: used=1, huge cap goes" "rc=1" "$got"
 #        exactly one xiaomi leg-emit (no double count).
 rm -f "$sb/home/db/telemetry.db"
 crumbs_reset
+printf 'xiaomi-cap-day\t2\ttest\ttest\n' >"$sb/cadence-params.tsv" # seam: case 4's cap-5 row would leak
 seed_events xiaomi 2
 out="$(
  export AUTOMATION_ROOT="$sb" JOB_NAME=test
