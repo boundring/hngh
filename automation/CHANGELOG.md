@@ -2,6 +2,13 @@
 
 ## 2026-09-27
 
+- omp-changelog-watch: daily oh-my-pi upstream watch (2026-09-27
+  operator directive: integrate new oh-my-pi changes daily) - UA-pinned
+  CHANGELOG fetch, last-seen state in the userspace home
+  (db/omp-changelog/), one identity-deduped progress row per new
+  release (omp-changelog:<ver>), arm-on-first-run flood control, and a
+  re-arm alert when last-seen goes absent upstream or the backlog
+  exceeds the per-run cap; fail-closed, exits 0 on every path.
 - newspaper: situation-specific operator actions - six operator-item
   verbs (handle/dismiss/park/expire/suppress/acknowledge; park requires
   a note), per-class primary/secondary choices from an ordered keyword
