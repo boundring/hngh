@@ -557,6 +557,24 @@ class OcgoLaunch(unittest.TestCase):
         self.assertEqual(r2.returncode, 0, r2.stderr)
         self.assertNotIn("rc=75", r2.stdout)
 
+    def test_run_end_maps_complete_to_bridge_vocabulary(self):
+        # slice C (2026-09-27): the spine says "complete" but the bridge
+        # validates cancelled|evacuated|dead — rc=2 behind || true used to
+        # skip the close, leaving the launch store an unclosed run.
+        # Hermetic proof: bridge records its argv; the run-end call
+        # carries the bridge word, not the spine word.
+        bridge_argv = self.td / "bridge.argv"
+        self.bridge.write_text(
+            '#!/usr/bin/env bash\n'
+            'echo "run run-42 started $*"\n'
+            'printf "%s\\n" "$*" >> "$BRIDGE_ARGV"\n')
+        self.bridge.chmod(0o755)
+        r = self.launch(BRIDGE_ARGV=str(bridge_argv))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        end_lines = [l for l in bridge_argv.read_text().splitlines()
+                     if l.startswith("--run-end")]
+        self.assertEqual(["--run-end run-42 cancelled"], end_lines)
+
     def test_key_file_fallback_wires_key_into_child(self):
         # no env key; the operator key file (mode 600) is wired into the
         # child env — length observable, value never printed anywhere

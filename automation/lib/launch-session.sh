@@ -537,8 +537,19 @@ so do not close. None (no key/offline) keeps the existing human gate."
  printf '%s | overnight|%s | session-run | class=%s | model=%s | source=%s\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$sclass" \
   "${outcome_model:-unknown}" "${SESSION_SOURCE:-unknown}" >>"$ROOT/logs/budget.md"
+ # bridge vocabulary: omp-bridge client-validates only
+ # cancelled|evacuated|dead (rc=2 behind || true silently skipped the
+ # close, leaving every delegated launch store an unclosed run —
+ # witnessed live by slice C 2026-09-27). Spine "complete" maps to
+ # bridge "cancelled" (the wrapped session withdrawn; legal from
+ # :created per +legal-run-successors+); "dead" passes through.
+ local bridge_close
+ case "$LAUNCH_DISPOSITION" in
+  complete) bridge_close="cancelled" ;;
+  *) bridge_close="$LAUNCH_DISPOSITION" ;;
+ esac
  OMP_BRIDGE_STORE="$bridge_store" "$bridge_bin" --run-end "$run_id" \
-  "$LAUNCH_DISPOSITION" >/dev/null 2>&1 || true
+  "$bridge_close" >/dev/null 2>&1 || true
  # model-outcome demotion counter (stall-recovery step 1): ok resets,
  # bad-execution counts toward demotion, other classes only record
  declare -F record_model_outcome >/dev/null ||
