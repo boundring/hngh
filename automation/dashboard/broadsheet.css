@@ -1,0 +1,191 @@
+/* broadsheet - the WebGL broadsheet front page (standalone, 2026-09-27).
+   Paper texture lives on #paper-canvas (WebGL2) BEHIND transparent DOM;
+   this sheet owns type, columns, ink palette, and the no-WebGL fallback. */
+
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Bold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Italic.woff2') format('woff2');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-BoldItalic.woff2') format('woff2');
+  font-weight: 700; font-style: italic; font-display: swap;
+}
+
+:root {
+  --paper: #f4f0e6;
+  --ink: #26221c;
+  --ink-soft: #4c463c;
+  --rule: #b9b09c;
+  --moss: #4a6b3a;
+  --c-hngh-activity: #7a3a2e;
+  --c-operator-blocks: #6b3a5e;
+  --c-research: #3a4a7a;
+  --c-system: #4a5568;
+  --c-technology: #2e6b6b;
+  --c-linux: #8a5a2e;
+  --c-ai: #5c4a8a;
+  --c-space: #2e5c7a;
+  --c-science: #3a5c46;
+  --c-world: #7a5c3a;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Averia Libre', Georgia, serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+/* WebGL paper canvas: fixed fullscreen behind everything. */
+#paper-canvas {
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  z-index: 0; display: block; pointer-events: none;
+}
+
+/* Fail-open paper when WebGL2 is unavailable: plain CSS newsprint. */
+body.paper-fallback {
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(60,50,30,0.10) 100%),
+    repeating-linear-gradient(0deg, rgba(120,110,90,0.035) 0 1px, rgba(0,0,0,0) 1px 3px),
+    repeating-linear-gradient(90deg, rgba(120,110,90,0.03) 0 1px, rgba(0,0,0,0) 1px 4px),
+    var(--paper);
+}
+
+.sheet { position: relative; z-index: 1; }
+
+.masthead { padding: 20px 28px 8px; text-align: center; }
+.masthead h1 {
+  font-size: clamp(44px, 8vw, 96px); font-weight: 700;
+  letter-spacing: 0.01em; margin: 0; line-height: 1.02;
+}
+.masthead h1 .sub { font-weight: 400; font-style: italic; }
+.dateline {
+  border-top: 3px double var(--rule); border-bottom: 3px double var(--rule);
+  margin: 10px auto 0; padding: 4px 0; max-width: 1100px;
+  font-size: 13px; color: var(--ink-soft);
+  display: flex; flex-wrap: wrap; gap: 4px 18px; justify-content: center;
+}
+.syn-badge {
+  display: inline-block; margin-left: 10px; padding: 1px 8px;
+  border: 1px solid var(--c-world); color: var(--c-world);
+  font-size: 11px; font-style: italic;
+}
+
+/* Megastructure map block (~33vh) */
+#map-block { margin: 6px 28px 14px; border: 1px solid var(--rule); }
+#map-head {
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-soft); padding: 5px 10px 4px;
+  border-bottom: 1px solid var(--rule);
+}
+#map3d { width: 100%; height: 33vh; min-height: 220px; display: block; }
+#map3d canvas { display: block; cursor: grab; }
+#map3d canvas:active { cursor: grabbing; }
+#map-fallback { padding: 10px 14px; min-height: 120px; }
+#map-fallback ul { list-style: none; margin: 6px 0; padding: 0;
+  columns: 3 220px; column-gap: 28px; font-size: 13px; }
+#map-fallback li { padding: 2px 0; break-inside: avoid; }
+.map-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 7px; background: #9a938a; vertical-align: baseline; }
+.map-dot.on { background: var(--moss); }
+.map-dot.off { background: #8a4a3a; opacity: 0.55; }
+
+/* Toolbar: columns + refresh */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  max-width: 1400px; margin: 0 auto; padding: 0 28px 10px;
+  font-size: 13px; color: var(--ink-soft);
+}
+.toolbar button {
+  font: inherit; background: transparent; color: var(--ink);
+  border: 1px solid var(--rule); padding: 2px 10px; cursor: pointer;
+}
+.toolbar button:hover { background: rgba(60,50,30,0.07); }
+.toolbar .hint { margin-left: auto; font-style: italic; font-size: 12px; }
+
+/* Article stream: CSS multicol newspaper flow */
+#stream {
+  column-gap: 34px; column-rule: 1px solid var(--rule);
+  max-width: 1400px; margin: 0 auto; padding: 4px 28px 60px;
+  column-count: var(--cols, 3);
+}
+.art { margin: 0 0 22px; break-inside: auto; position: relative; }
+.art .kicker {
+  font-size: 11.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--cat, var(--ink-soft)); border-top: 3px solid var(--cat, var(--rule));
+  padding-top: 5px; margin-bottom: 3px;
+}
+.art .qchip {
+  display: inline-block; margin-left: 8px; padding: 0 6px;
+  border: 1px solid var(--cat, var(--rule)); font-size: 10.5px;
+}
+.art h2 {
+  font-size: 21px; line-height: 1.16; margin: 2px 0 4px; font-weight: 700;
+  cursor: pointer; break-after: avoid-column;
+}
+.art h2:hover { text-decoration: underline; }
+.art.span2 h2 { font-size: 26px; }
+.art.span3 h2 { font-size: 32px; }
+.art .deck { font-style: italic; color: var(--ink-soft); margin: 0 0 6px; }
+.art p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.45;
+  text-align: justify; hyphens: auto; }
+.art p.rest { display: none; }
+.art.expanded, .art.span3 { column-span: all; }
+.art.expanded p.rest { display: block; }
+.art .srcline { font-size: 11.5px; color: var(--ink-soft);
+  font-style: italic; margin-top: 2px; }
+
+/* Operator decisions: moss-green buttons, outcome visible BEFORE click */
+.choices { margin-top: 8px; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 6px 10px;
+  align-items: baseline; margin-bottom: 6px; }
+button.choice {
+  font: inherit; font-weight: 700; font-size: 13px;
+  background: var(--moss); color: #f2f0e4; border: 1px solid #35502a;
+  padding: 4px 14px; cursor: pointer;
+}
+button.choice:hover { background: #557a43; }
+button.choice:disabled { opacity: 0.55; cursor: wait; }
+.choice-row .outcome { font-style: italic; font-size: 12.5px;
+  color: var(--ink-soft); flex: 1 1 200px; }
+.choice-progress { font-style: italic; font-size: 12.5px;
+  color: var(--ink-soft); min-height: 1em; }
+
+/* FRESH EDITION wrap divider */
+.fresh-edition { column-span: all; text-align: center;
+  border-top: 4px double var(--ink); border-bottom: 4px double var(--ink);
+  margin: 34px 0; padding: 18px 0 14px; }
+.fresh-edition h2 { font-size: clamp(40px, 7vw, 84px); margin: 0;
+  font-weight: 700; letter-spacing: 0.02em; }
+.fresh-edition .dl { font-size: 13px; color: var(--ink-soft);
+  border-top: 1px solid var(--rule); margin-top: 10px; padding-top: 6px; }
+.orn { font-size: 15px; letter-spacing: 0.5em; color: var(--ink-soft); }
+
+/* Error banner (#papererr, fail-closed) + trim notice */
+#papererr {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  background: #6b2735; color: #f4f0e6; padding: 8px 16px;
+  font-size: 14px; text-align: center;
+}
+.trim-note { column-span: all; text-align: center; font-style: italic;
+  color: var(--ink-soft); font-size: 13px; margin: 4px 0 18px; }
+.trim-note a { color: var(--ink); }
+
+@media (max-width: 700px) {
+  .masthead, .toolbar, #stream { padding-left: 14px; padding-right: 14px; }
+  #map-block { margin: 6px 14px 14px; }
+}

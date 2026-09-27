@@ -53,3 +53,11 @@ config/installer-choices.json
 !dashboard/history-view.js
 !dashboard/reports.md
 !dashboard/report-cursor
+!dashboard/broadsheet.html
+!dashboard/broadsheet-view.js
+!dashboard/broadsheet.css
+!dashboard/broadsheet.sample.json
+!dashboard/vendor/
+!dashboard/vendor/three.module.min.js
+!dashboard/fonts/
+!dashboard/fonts/*.woff2

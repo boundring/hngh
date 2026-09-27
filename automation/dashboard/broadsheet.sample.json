@@ -1,0 +1,293 @@
+{
+  "generated": "2026-09-27T05:30:00Z",
+  "edition": {
+    "date": "2026-09-27",
+    "number": 148,
+    "slot": 0,
+    "weather": {"temp_c": 14.2, "summary": "overcast, light westerly", "source": "open-meteo"},
+    "system": {
+      "queue_depth": 7,
+      "sessions_active": 3,
+      "fleet": [
+        {"name": "brickertop", "online": true, "os": "linux"},
+        {"name": "?", "online": false, "os": "android"},
+        {"name": "steamdeck", "online": false, "os": "linux"}
+      ]
+    }
+  },
+  "queues": {
+    "hngh-activity": 2,
+    "operator-blocks": 3,
+    "research": 5,
+    "system": 0,
+    "technology": 0,
+    "linux": 1,
+    "ai": 0,
+    "space": 0,
+    "science": 0,
+    "world": 0
+  },
+  "articles": [
+    {
+      "id": "syn-001",
+      "category": "hngh-activity",
+      "headline": "Stage 2 lands as the ceremony gate holds green across three consecutive runs",
+      "deck": "The kernel's certificate loop closed a full plan stage without a single red mutation check, the first such streak since the doctrine amendment.",
+      "body": [
+        "The hngh kernel closed out stage 2 of its current plan this morning, with the certificate ceremony recording three consecutive green mutation checks. Under the operator-flexibility doctrine, a certificate-bound mutation proceeds without an operator park, and this stage exercised that lane end to end: propose, issue-cert, mutation-check, commit.",
+        "The staging boundary held throughout. Kernel src/, tests/, Makefile and hngh.asd were touched only through the certificate path, and the userspace two-home split stayed intact: nothing under ~/.hngh leaked toward the kernel run stores.",
+        "Automation desks report the commit landed at the recovery point exactly as designed - a dead session at any earlier point would have lost nothing that was green."
+      ],
+      "span": 3,
+      "score": 0.98,
+      "ts": "2026-09-27T04:10:00Z",
+      "sources": [{"label": "ceremony ledger", "url": "/hngh-docs/docs/records/"}],
+      "choices": []
+    },
+    {
+      "id": "syn-002",
+      "category": "operator-blocks",
+      "headline": "Operator decision: retire the duplicated digest builder or keep both paths warm",
+      "deck": "Two digest pipelines now produce the same artifact; the queue asks whether consolidation is worth the cutover risk.",
+      "body": [
+        "The report queue surfaced a fork in the digest machinery: the legacy builder and the new composer both emit identical editions, and every run doubles the write traffic to the archive home.",
+        "The operator-flexibility doctrine offers no default here - this is a genuine judgment call, not a certificate-bound mutation. The item parks until the operator chooses."
+      ],
+      "span": 1,
+      "score": 0.93,
+      "ts": "2026-09-27T03:55:00Z",
+      "sources": [{"label": "report queue", "url": "/queue-report"}],
+      "choices": [
+        {"label": "Retire legacy builder", "outcome": "The legacy pipeline is archived and removed from the cadence; the composer becomes the single path.",
+         "action": {"endpoint": "/operator-item/handle", "payload": {"id": "syn-002"}}},
+        {"label": "Keep both", "outcome": "No change; both pipelines stay scheduled and the duplication persists by choice.",
+         "action": {"endpoint": "/operator-item/dismiss", "payload": {"id": "syn-002"}}}
+      ]
+    },
+    {
+      "id": "syn-003",
+      "category": "research",
+      "headline": "Research line 9 closes its final disposition; the feed goes quiet",
+      "deck": "The last open row in research-dispositions resolved this morning; every route now carries a terminus.",
+      "body": [
+        "The last open row in the research dispositions table resolved this morning, marking the first time since the line system was tabled that every route carries a terminus.",
+        "Desk note: a quiet research feed is not an empty one. The harvested material lives in the operator's knowledge base, and the rows remain the authoritative index of what was asked and what was concluded."
+      ],
+      "span": 1,
+      "score": 0.88,
+      "ts": "2026-09-27T02:30:00Z",
+      "sources": [{"label": "research lines", "url": "/research-lines"}],
+      "choices": []
+    },
+    {
+      "id": "syn-004",
+      "category": "system",
+      "headline": "Mesh audit finds one peer name unresolved; feed prints the truth, not a guess",
+      "deck": "Fleet discovery reports an offline android peer whose name field the manager cannot read.",
+      "body": [
+        "The fleet feed lists two offline peers this edition, and one of them carries the literal name \"?\". That question mark is honest: the fleet-manager cannot resolve the peer's name from its serialized form, and the display rule is to print 'unresolved' rather than invent a label.",
+        "The kernel-surface fix remains pending on its lane. Until it lands, the map and the system desk both mark the node as real but unnamed."
+      ],
+      "span": 1,
+      "score": 0.81,
+      "ts": "2026-09-27T01:45:00Z",
+      "sources": [{"label": "fleet feed", "url": "/fleet.json"}],
+      "choices": []
+    },
+    {
+      "id": "syn-005",
+      "category": "linux",
+      "headline": "Synthetic dispatch: a distro kernel bump breaks a rarely-used driver, and the fix is one line",
+      "deck": "A practice story from the fixture desk, filed to exercise the linux column.",
+      "body": [
+        "This is a synthetic item: a fictional kernel update drops a staging driver, a one-line config restore brings it back, and the changelog entry takes longer to write than the patch.",
+        "The fixture desk files it because the linux column needs realistic column inches, and because the shape - regression, bisect, one-line fix, long commit message - is the shape the page must render well."
+      ],
+      "span": 1,
+      "score": 0.72,
+      "ts": "2026-09-26T22:00:00Z",
+      "sources": [{"label": "synthetic wire", "url": ""}],
+      "choices": []
+    },
+    {
+      "id": "syn-006",
+      "category": "ai",
+      "headline": "Fixture dispatch: a small local model beats a giant one at exactly one narrow task",
+      "deck": "Synthetic technology note filed for layout balance.",
+      "body": [
+        "A synthetic benchmark rounds this out: an 82-million-parameter on-device model outperforms a frontier service at reading handwritten ledger dates, because it was trained on nothing else.",
+        "The moral the fixture desk intends: narrow beats broad when the task is truly narrow."
+      ],
+      "span": 1,
+      "score": 0.68,
+      "ts": "2026-09-26T20:15:00Z",
+      "sources": [{"label": "synthetic wire", "url": ""}],
+      "choices": []
+    },
+    {
+      "id": "syn-007",
+      "category": "technology",
+      "headline": "Vendor day: the front page adopts three.js r160 and four woff2 faces, all local",
+      "deck": "Every dependency the broadsheet loads is vendored under vendor/ and fonts/; the page runs with the network cable pulled.",
+      "body": [
+        "The broadsheet's build discipline matches the repo's: dependencies are vendored once, pinned, and never fetched at render time. This edition's additions are three.module.min.js (r160, MIT, from the jsdelivr npm mirror of the official build) and the four Averia Libre woff2 faces converted from the google/fonts OFL sources.",
+        "No CDN link appears anywhere in the shipped page. If a vendored file is missing, the page degrades to its fallback surfaces rather than reaching for the network."
+      ],
+      "span": 2,
+      "score": 0.64,
+      "ts": "2026-09-26T18:40:00Z",
+      "sources": [{"label": "vendor manifest", "url": "/broadsheet.html"}],
+      "choices": []
+    },
+    {
+      "id": "syn-008",
+      "category": "space",
+      "headline": "Fixture dispatch: a synthetic comet rounds a fictional perihelion",
+      "deck": "Practice copy for the space column; not a real sky event.",
+      "body": [
+        "The fixture desk files a synthetic comet - designation C/2026 X1 (Fixture) - rounding its perihelion at a wholly invented 0.6 astronomical units, visible (in the fixture's imagination) before dawn.",
+        "Copy like this exists to hold column shape: kicker, headline, deck, three paragraphs of body, a source line. The sky owes nobody this particular show."
+      ],
+      "span": 1,
+      "score": 0.58,
+      "ts": "2026-09-26T16:00:00Z",
+      "sources": [{"label": "synthetic wire", "url": ""}],
+      "choices": []
+    },
+    {
+      "id": "syn-009",
+      "category": "science",
+      "headline": "Fixture dispatch: a paper-thin battery is announced, works exactly in the press release",
+      "deck": "Synthetic science note; the fixture desk owns all errors.",
+      "body": [
+        "A fictional lab prints a battery one-tenth of a millimetre thick that survives a thousand cycles. In the fictional replication attempt it manages nine hundred and forty, which the fictional lab calls a success.",
+        "The fixture desk notes the pattern is the story: announcements quote the best cell, replications quote the average."
+      ],
+      "span": 1,
+      "score": 0.55,
+      "ts": "2026-09-26T14:20:00Z",
+      "sources": [{"label": "synthetic wire", "url": ""}],
+      "choices": []
+    },
+    {
+      "id": "syn-010",
+      "category": "world",
+      "headline": "Fixture dispatch: a fictional treaty, a fictional signing ceremony, real column inches",
+      "deck": "Synthetic world note filed for palette balance.",
+      "body": [
+        "Two invented delegations sign an invented accord on fictional river rights. The fixture desk confirms no real parties are involved and no real river was consulted.",
+        "The item exists so the world column renders with the same dignity as the others - because the page is judged on its worst column, not its best."
+      ],
+      "span": 1,
+      "score": 0.52,
+      "ts": "2026-09-26T12:00:00Z",
+      "sources": [{"label": "synthetic wire", "url": ""}],
+      "choices": []
+    },
+    {
+      "id": "syn-011",
+      "category": "operator-blocks",
+      "headline": "Operator decision: promote the broadsheet front page, or let the newspaper v2 keep the chair",
+      "deck": "The fixture's own meta-decision, filed to exercise a second choices card.",
+      "body": [
+        "The staging plan gives the WebGL broadsheet a standalone URL first and a cutover later. This card exists so the decision UI renders twice in one edition with different payloads.",
+        "Either choice records the operator's preference in the same ledgers every other item uses; nothing in the fixture bypasses the token gate."
+      ],
+      "span": 1,
+      "score": 0.51,
+      "ts": "2026-09-26T10:30:00Z",
+      "sources": [{"label": "report queue", "url": "/queue-report"}],
+      "choices": [
+        {"label": "Promote at cutover", "outcome": "index.html becomes the broadsheet at the orchestrator's cutover slice; the newspaper v2 retires to the archive.",
+         "action": {"endpoint": "/operator-item/handle", "payload": {"id": "syn-011"}}},
+        {"label": "Not yet", "outcome": "The broadsheet stays at /broadsheet.html; the v2 newspaper keeps the front chair this edition.",
+         "action": {"endpoint": "/operator-item/dismiss", "payload": {"id": "syn-011"}}}
+      ]
+    },
+    {
+      "id": "syn-012",
+      "category": "hngh-activity",
+      "headline": "Queue depth steadies at seven; the desk calls the week uneventful and means it as praise",
+      "deck": "The spine reports a shallow, well-drained queue with no stuck lanes.",
+      "body": [
+        "The report queue holds seven rows, all attributed, none stuck. Unremarkable numbers are the goal of the whole apparatus; the desk files them so the quiet weeks are on the record too."
+      ],
+      "span": 1,
+      "score": 0.47,
+      "ts": "2026-09-26T09:00:00Z",
+      "sources": [{"label": "queue report", "url": "/queue-report"}],
+      "choices": []
+    },
+    {
+      "id": "syn-013",
+      "category": "research",
+      "headline": "Harvest note: archive material stays evidence, wiki keeps the meaning",
+      "deck": "The retired system's archive informed three wiki pages this week; nothing was imported back.",
+      "body": [
+        "The standing rule - the retired system's archive is evidence, not an implementation source - did real work this week. Meaningful material was harvested into the operator's knowledge base; the repo received none of it."
+      ],
+      "span": 1,
+      "score": 0.44,
+      "ts": "2026-09-25T21:10:00Z",
+      "sources": [{"label": "research lines", "url": "/research-lines"}],
+      "choices": []
+    }
+  ],
+  "editions": [
+    {
+      "date": "2026-09-26",
+      "articles": [
+        {
+          "id": "syn-p26-1",
+          "category": "hngh-activity",
+          "headline": "Dashboard poll hygiene test lands; raw timer loops banned by contract",
+          "deck": "Yesterday's contract work, replayed for the loop.",
+          "body": ["The newspaper's poll-hygiene contract - refresh only through the poll mount, never a raw interval - carried into every view built since. This fixture edition exists to give the loop divider something honest to wrap on."],
+          "span": 1, "score": 0.9, "ts": "2026-09-26T08:00:00Z",
+          "sources": [{"label": "test suite", "url": ""}], "choices": []
+        },
+        {
+          "id": "syn-p26-2",
+          "category": "system",
+          "headline": "Two-home split survives its first messy week",
+          "deck": "Secrets in ~/.hngh-automation, userspace in ~/.hngh, and never the twain.",
+          "body": ["A fixture retrospective on the two-home rule: one digest run wrote a database into the userspace home, looked around, and found the layout contract already waiting for it."],
+          "span": 1, "score": 0.7, "ts": "2026-09-26T07:00:00Z",
+          "sources": [{"label": "agent notes", "url": ""}], "choices": []
+        },
+        {
+          "id": "syn-p26-3",
+          "category": "technology",
+          "headline": "The broadsheet shader desk opens: fibers, flecks, and one very lazy vignette",
+          "deck": "Yesterday the paper was CSS; today it learns to be lit.",
+          "body": ["A fixture preview of the paper renderer's approach: one fullscreen fragment shader, procedural fiber noise, thresholded flecks, a soft vignette, and shadow layers that drift on a fifty-second breath."],
+          "span": 1, "score": 0.6, "ts": "2026-09-26T06:00:00Z",
+          "sources": [{"label": "synthetic wire", "url": ""}], "choices": []
+        }
+      ]
+    },
+    {
+      "date": "2026-09-25",
+      "articles": [
+        {
+          "id": "syn-p25-1",
+          "category": "research",
+          "headline": "Route terminus format settles; every line now ends somewhere",
+          "deck": "The oldest fixture edition, kept for the loop.",
+          "body": ["The research desk's terminus convention - action plus date - means a route can no longer trail off. This row is the fixture's way of making the oldest edition non-empty."],
+          "span": 1, "score": 0.75, "ts": "2026-09-25T19:00:00Z",
+          "sources": [{"label": "synthetic wire", "url": ""}], "choices": []
+        },
+        {
+          "id": "syn-p25-2",
+          "category": "linux",
+          "headline": "Fixture desk apologizes for the pun in Tuesday's systemd headline",
+          "deck": "Corrections column, synthetic edition.",
+          "body": ["The corrections desk exists even in fixtures. Tuesday's headline about unit files was judged one pun over quota; the quota remains one."],
+          "span": 1, "score": 0.5, "ts": "2026-09-25T18:00:00Z",
+          "sources": [{"label": "synthetic wire", "url": ""}], "choices": []
+        }
+      ]
+    }
+  ]
+}
