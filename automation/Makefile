@@ -187,6 +187,7 @@ test:
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-omp-changelog-watch.sh
+	bash tests/test-arc-to-slice.sh
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-credential-health-argv.sh

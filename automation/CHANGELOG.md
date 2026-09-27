@@ -2,6 +2,23 @@
 
 ## 2026-09-27
 
+- arc-to-slice: daily research->dev converter beat - scans
+  research-dispositions.tsv for arcs whose terminal disposition
+  (parked/killed, dated today) sits on a crystallized line
+  (crystallized/reviewed; the real schema marks dispositioned lines
+  reviewed), asks the typed lane one question per arc
+  (landable-slice | needs-operator | no-slice, floor 0.60), files an
+  identity-deduped alert row with the doc as --evidence
+  (arc-to-slice:<id>, operator variant arc-to-slice-op:<id>;
+  report-queue has no plan-candidate/operator-item kinds, alert is
+  the router/operator-item channel), records the decision in
+  ~/.hngh/db/arc-to-slice/state.tsv (atomic mv append, never refires,
+  7-day residue cap), fails closed to one typed-unavailable alert
+  without TYPESAFE_API_KEY; every operator row carries its own SLA
+  (7d then expire, decision stands) and halt (one filing per arc,
+  state dedupe); all paths exit 0; hermetic sandbox suite
+  (20 checks) registered in the automation gate after
+  test-omp-changelog-watch.
 - typesafe: fallback crumbs reach the journal - _crumb routed through
   the single writer (lib/crumbs.py, in-process, scrub()) replacing a
   subprocess to a nonexistent `breadcrumb` binary; API-error crumbs
