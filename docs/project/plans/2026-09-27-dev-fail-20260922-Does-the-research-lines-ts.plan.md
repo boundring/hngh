@@ -7,15 +7,14 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a validation script that checks hngh-automation job definitions parse correctly
-  Verification: bash -n jobs/validate-hngh-jobs.sh
-- [ ] Create a test script that runs the validation against existing job files
-  Verification: bash tests/test-hngh-job-validation.sh
-- [ ] Add a grep check to confirm no provider credentials leak into job templates
-  Verification: grep -r "provider\|credential" jobs/ scripts/ --include="*.sh" --include="*.yml" | wc -l
-- [ ] Update the cadence runner to invoke the validation before job execution
-  Verification: make test
-- [ ] Add a simple dashboard snippet that reports validation pass/fail status
-  Verification: bash -n dashboard/report-validation-status.sh
-- [ ] Commit all changes and run full test suite to confirm no regressions
-  Verification: make test
+- [ ] Add a job template for automated test runs in jobs/
+  Verification: bash -n jobs/test-template.sh
+
+- [ ] Create a cadence script that triggers test runs on schedule
+  Verification: bash -n cadence/run-cadence.sh
+
+- [ ] Add a verification script for dashboard health checks
+  Verification: python3 dashboard/health-check.py
+
+- [ ] Create a digest script that summarizes test results
+  Verification: bash -n scripts/digest-results.sh
