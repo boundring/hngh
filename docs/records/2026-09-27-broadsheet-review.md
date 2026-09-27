@@ -103,3 +103,5 @@ Findings: 3 major, 5 minor, 7 notes. No blockers.
 4. **news.db pruning** (F2) — retention cap in the ingest/cadence lane.
 5. **Small-fix batch** (F4, F5, F6, F7, F8, F9) — mechanical, one commit each where sensible.
 6. **Masthead axis-1 work** (F10) — splash + procedural expansion + emboss; design-heavy, schedule last.
+
+*Addendum 2026-09-27 (post-metacycle reconciliation):* F3's fetch-staleness half is fixed by c0d6d961 (unique ?t= cache-bust per fetch, disabled+'refreshing…' button state), but the render half remains open — `loadFeed` still rebuilds only when the stream is empty (`broadsheet-view.js:938`), so refresh updates the masthead but never re-renders articles; feed-age staleness is probed by C's INT edition-fresh, the DOM-level render check is deferred to the ui-evolve machinery per docs/design/dashboard-intent.md.
