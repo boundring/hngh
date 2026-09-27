@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=gate-check:hngh -->
+<!-- plan: status=executed risk=normal accepted=2026-09-18T01:41:57Z routed-from=gate-check:hngh -->
 # 2026-09-13 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `gate-check:hngh`

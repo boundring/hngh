@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence script that validates job output format
-  Verification: bash -n cadence/validate-job-output.sh
+- [ ] Add a `cadence/` helper script that validates a job manifest schema before execution
+  Verification: bash -n cadence/validate-manifest.sh
 
-- [ ] Add a test for the new cadence validation script
+- [ ] Create a `tests/` unit test for the manifest validator that asserts valid JSON passes
   Verification: make test
 
-- [ ] Add a dashboard digest that reports cadence validation results
-  Verification: bash -n dashboard/digest-cadence-results.sh
+- [ ] Add a `jobs/` entry that invokes the validator on a sample manifest before running
+  Verification: bash -n jobs/sample-validate.sh
 
-- [ ] Add lib helper for parsing job output
-  Verification: bash -n lib/parse-job-output.py
+- [ ] Extend `lib/` with a shared `parse-manifest` function used by both validator and job runner
+  Verification: bash -n lib/parse-manifest.sh
 
-- [ ] Add tests for lib helper
+- [ ] Add a `dashboard/` summary line in the test output when validation passes
   Verification: make test
-
-- [ ] Add a script that runs cadence validation before job submission
-  Verification: bash -n scripts/pre-job-validate.sh
