@@ -272,8 +272,7 @@ patrol-20260922-feeds-feed-stale	patrol: surface feeds filed feed-stale on two c
 patrol-20260922-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260922-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260922-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
-patrol-20260922-pending-checks-check-pending	patrol: surface pending-checks filed check-pending on two consecutive runs -- why does it keep failing and which guardrail closes it?
-patrol-20260922-research-ledger-harvest-stale	patrol: surface research-ledger filed harvest-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+fail-20260913-gate-check-hngh	transient-env	disposition: 2026-09-27 gate rc=2 did not reproduce; kernel suite passes standalone (sbcl: 2954 checks) and automation script suite passes (25/25 test scripts); alert is fixed-or-parked as fixed-transient
 patrol-20260922-systemd-units-timer-dead	patrol: surface systemd-units filed timer-dead on two consecutive runs -- why does it keep failing and which guardrail closes it?
 fail-20260922-Does-the-research-lines-tsv-schema-curre	Does the `research-lines.tsv` schema currently include any fields for version pinning (e.g., commit hash, content hash) or timestamps that would allow deterministic stale detection?
 fail-20260922-Is-the-outcome-demotion-at-two-consecuti	Is the `outcome-demotion-at-two-consecutive-failures` guardrail explicitly wired to count `harvest-stale` events as "bad executions," and if so, why did it not trigger closure after two consecutive runs?
@@ -362,3 +361,4 @@ arc-20260926-tree-of-life-wiring	wire automation/research-tree.tsv hierarchy int
 arc-20260926-omp-session-meta-cycle	procedurally routed oh-my-pi sessions on billion-context-customized local models -- what supervision loop lets sessions compose and launch sessions safely?
 arc-20260926-fractal-fanout	question-matrix generation loops over the typesafe KB (question-node rows in hngh-knowledge.db) -- what fan-out shape and confidence gates survive cost review?
 fb-20260927-1-feedback-capture-integrity	where is feedback idea text lost between the digest-email form, imap capture, and feedback-ingest, and what fail-closed guard stops empty [feedback:idea] floods?
+patrol-20260927-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
