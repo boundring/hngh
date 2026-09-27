@@ -116,8 +116,12 @@ write_brief() { # slug sessid cause evidence corrective outfile
   local krepo="${HNGH_HOME:-$(git -C "$(dirname "$0")/../.." rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)}"
   local landed="not established" uncommitted="not established"
   if git -C "$krepo" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    landed="$(git -C "$krepo" log --oneline -3 2>/dev/null | tr '\n' ';' | head -c 160)"
-    uncommitted="$(git -C "$krepo" status --short 2>/dev/null | head -20 | tr '\n' ';' | head -c 200)"
+    # drop non-ASCII BEFORE the byte-truncation: head -c can cut a
+    # multibyte char (em dash in a commit subject) mid-sequence and
+    # emit invalid UTF-8 into the brief (test-agent-respawn
+    # UnicodeDecodeError, 2026-09-27).
+    landed="$(git -C "$krepo" log --oneline -3 2>/dev/null | LC_ALL=C tr -d '\200-\377' | tr '\n' ';' | head -c 160)"
+    uncommitted="$(git -C "$krepo" status --short 2>/dev/null | head -20 | LC_ALL=C tr -d '\200-\377' | tr '\n' ';' | head -c 200)"
     [ -n "$uncommitted" ] || uncommitted="clean"
   fi
   {
