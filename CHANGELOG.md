@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Broadsheet flood dismiss reflects immediately**: dismissing the
+  empty-idea flood family now removes each id from the local stream
+  the moment its POST succeeds (dismissed = gone), keeps the
+  "dismissed k of N…" progress line visibly ticking instead of
+  flashing, collapses the card to a short "flood cleared" line, and
+  persists the dismissed set in localStorage so a reload before the
+  next composer run cannot resurrect the rows (the snapshot is up to
+  30 minutes old). Individual POST failures list the failing id inline
+  and the batch continues; "Keep them" unchanged.
 - **Broadsheet WebGL front page** (docs/records/2026-09-27-broadsheet-webgl-v1.md):
   `index.html` is now a single infinitely-scrolling WebGL2 broadsheet —
   raw-fragment-shader paper (fiber noise, flecks, vignette, drifting dapple

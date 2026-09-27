@@ -410,6 +410,20 @@
   // anything else in the feed is refused (fail closed).
   var ALLOWED_ENDPOINTS = ["/operator-item/handle", "/operator-item/dismiss"];
   var feed = { data: null, seq: [], n: 0, fixture: false };
+  // dismissed ids persist across reloads (localStorage, cols pattern):
+  // the composer snapshot can still list rows this browser sent away
+  // until its next run; server ledger stays the real state and the
+  // next composer edition reconciles this set down to nothing.
+  var DISMISSED_KEY = 'broadsheet-dismissed';
+  feed.dismissed = (function () {
+    try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || '{}'); }
+    catch (e) { return {}; } // malformed storage: fail open to fresh
+  })();
+  function dismissPersist(id) {
+    feed.dismissed[id] = true;
+    try { localStorage.setItem(DISMISSED_KEY,
+      JSON.stringify(feed.dismissed)); } catch (e) { /* private mode */ }
+  }
 
   function catColor(cat) { return 'var(--c-' + esc(cat) + ', var(--rule))'; }
 
@@ -503,7 +517,7 @@
     bar.className = 'choices';
     var progress = document.createElement('div');
     progress.className = 'choice-progress';
-    var ids = a.floodIds.slice(0, FLOOD_MAX_DISMISS);
+    var pending = a.floodIds.slice(0, FLOOD_MAX_DISMISS);
     var mk = function (label, outcome, run) {
       var row = document.createElement('div');
       row.className = 'choice-row';
@@ -515,7 +529,7 @@
       out.textContent = outcome;
       b.addEventListener('click', function () {
         b.disabled = true;
-        run().catch(function (e) {
+        Promise.resolve(run(b)).catch(function (e) {
           b.disabled = false;
           progress.textContent = 'failed: ' + e.message;
           showErr('decision failed: ' + e.message);
@@ -525,26 +539,32 @@
       row.appendChild(out);
       bar.appendChild(row);
     };
-    var total = ids.length;
     var nLabel = a.floodIds.length;
     mk('Dismiss all ' + nLabel,
       'Clears the sheet; nothing of value is lost — every row carries ' +
         'the same empty string.',
-      function () {
-        var done = 0;
-        progress.textContent = 'dismissing 0 of ' + total + '…';
+      function (btn) {
+        var batch = pending; pending = [];
+        var done = 0, failed = [];
+        progress.textContent = 'dismissing 0 of ' + batch.length + '…';
         bar.appendChild(progress);
-        return ids.reduce(function (chain, id) {
+        return batch.reduce(function (chain, id) {
           return chain.then(function () {
             return postJson('/operator-item/dismiss', { id: id })
               .then(function () {
                 done += 1;
+                floodDismissOne(id, a, bar);
                 progress.textContent =
-                  'dismissed ' + done + ' of ' + total + '…';
+                  'dismissed ' + done + ' of ' + batch.length + '…';
+              })
+              .catch(function (e) {
+                failed.push(id); // keep going; never fail the batch
+                progress.textContent = 'failed: ' + id + ' - ' +
+                  e.message + ' - continuing…';
               });
           });
         }, Promise.resolve()).then(function () {
-          rebuildStream();
+          floodSettled(a, bar, progress, btn, done, failed);
         });
       });
     mk('Keep them',
@@ -555,6 +575,51 @@
         return Promise.resolve();
       });
     return bar;
+  }
+  // client-side truth: a dismissed id leaves the stream NOW. The
+  // composer snapshot can be 30 minutes old and still carry the row,
+  // so this card's count, the local feed data, and every later
+  // rebuild/refetch must honor the dismissal (loadFeed filters
+  // feed.dismissed for the same reason).
+  function floodDismissOne(id, a, bar) {
+    dismissPersist(id);
+    var arts = feed.data && feed.data.articles;
+    if (arts) for (var i = arts.length - 1; i >= 0; i--)
+      if (arts[i] && arts[i].id === id) arts.splice(i, 1);
+    var at = a.floodIds.indexOf(id);
+    if (at !== -1) a.floodIds.splice(at, 1);
+    floodCardCount(bar.closest('article'), a.floodIds.length);
+  }
+  function floodCardCount(card, n) {
+    if (!card || !n) return;
+    var h2 = card.querySelector('h2');
+    if (!h2) return;
+    var kick = h2.querySelector('.kicker');
+    h2.innerHTML = (kick ? kick.outerHTML : '') +
+      'The empty-idea flood (' + n + ' items)';
+  }
+  function floodSettled(a, bar, progress, btn, done, failed) {
+    if (!failed.length) {
+      // all N (or the cap batch) gone: the card becomes a short line
+      // and the multicol stream reflows around it
+      var card = bar.closest('article');
+      var note = document.createElement('div');
+      note.className = 'flood-cleared';
+      note.textContent = 'flood cleared - ' + done +
+        ' empty-idea rows sent to the wastebin.';
+      if (card && card.parentNode)
+        card.parentNode.replaceChild(note, card);
+      return;
+    }
+    // survivors stay listed inline; the button retries only them
+    pending = failed;
+    progress.textContent = 'dismissed ' + done + ' of ' +
+      (done + failed.length) + ' - failed ids: ' + failed.join(', ');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Dismiss all ' + failed.length;
+    }
+    floodCardCount(bar.closest('article'), a.floodIds.length);
   }
 
   // Operator decisions: moss buttons, the outcome prints BEFORE the
@@ -728,6 +793,12 @@
       if (!feedOk(d)) throw new Error(
         url + ' is empty or malformed; refusing to print a blank page');
       feed.data = d;
+      // dismissed stays dismissed: the snapshot can still list rows
+      // this page already sent away (composer excludes them only on
+      // its next run, up to 30 minutes later)
+      d.articles = d.articles.filter(function (x) {
+        return x && !feed.dismissed[x.id];
+      });
       mastheadRender(d.edition, d.generated);
       if (!$('stream').childNodes.length) rebuildStream();
     });

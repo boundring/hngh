@@ -148,5 +148,47 @@ class SampleFixture(unittest.TestCase):
         self.assertIn(data["edition"]["slot"], (0, 1, 2))
 
 
+class FloodDismissImmediate(unittest.TestCase):
+    """Dismissals reflect in the stream immediately (2026-09-27 fix).
+
+    The feed is a ~30-minute composer snapshot; POSTing dismiss moves
+    the id server-side only. The card's progress used to be wiped by a
+    full stream rebuild from that same stale snapshot (the reported
+    flash), and the rows never left the page until the next composer
+    run. Contract: dismissed = gone, client-side, per id, live.
+    """
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def test_dismissed_ids_leave_stream_data(self):
+        self.assertIn("localStorage", self.js)
+        self.assertIn("'broadsheet-dismissed'", self.js)
+        self.assertIn("dismissPersist(id)", self.js)
+        self.assertIn("feed.dismissed[id] = true", self.js)
+        # the refetch filter: the 30-min snapshot must not resurrect
+        # rows this page already dismissed
+        self.assertIn("!feed.dismissed[x.id]", self.js)
+
+    def test_progress_stays_visible_no_rebuild_flash(self):
+        self.assertIn("bar.appendChild(progress)", self.js)
+        self.assertIn("'dismissed ' + done + ' of '", self.js)
+        start = self.js.index("function floodChoicesEl")
+        end = self.js.index("  // Operator decisions", start)
+        self.assertNotIn(
+            "rebuildStream(", self.js[start:end],
+            "flood dismiss must not rebuild from the stale snapshot")
+
+    def test_family_card_clears_itself(self):
+        self.assertIn("flood-cleared", self.js)
+        self.assertIn("replaceChild(note, card)", self.js)
+        self.assertIn(".flood-cleared", read("broadsheet.css"))
+
+    def test_single_failure_never_fails_batch(self):
+        self.assertIn("failed.push(id)", self.js)
+        self.assertIn("continuing", self.js)
+        self.assertIn("failed ids: ' + failed.join(', ')", self.js)
+
+
 if __name__ == "__main__":
     unittest.main()
