@@ -348,3 +348,17 @@ question-synth-2026-09-26-1	How does the descent-audit-station's 0.99-confidence
 question-synth-2026-09-26-2	What is the operational impact of the tree-skew whitelist hiding the plan ledger from the monitor, and how can the plan ledger be versioned and made visible to the oversight-tick without reintroducing tree-skew flapping?
 synth-2026-09-26-3	What rule should govern steer-vs-kill on stalled sessions when no decided threshold exists and judgment is currently ad hoc per session, and how can this be formalized to prevent the loop-recognition pattern of ten tree-skew candidates on
 arc-20260926-descent-adoption-gate	wire the descent adoption gate per docs/design/descent.md:129-147 -- crystallized line -> backlog row with named consumer + one-alternation deadline, expired adoptions auto-revoke to a citable dead-letter (prior arc-20260925 line died in review for an empty crystallization, not a rejected thesis)
+question-synth-2026-09-27-1	grounded read of automation-gate-gate-stale: what does the first round-trip canary actually show, with F1/F5 as priors?
+question-synth-2026-09-27-2	verifiable count of ponytail markers in automation/ as of 2026-09-26 and whether the debt-ledger record's method is reproducible
+synth-2026-09-27-3	steer-vs-die threshold: what rule should gate admission of stalled sessions instead of ad hoc per-session judgment?
+patrol-20260927-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260927-feeds-feed-stale	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260927-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260927-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260927-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260927-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
+arc-20260926-newspaper-lane-2	migrate console tabs into newspaper articles, winamp-style draggable skinnable frames, landing polish -- what is the smallest cutover that keeps console parity?
+arc-20260926-tree-of-life-wiring	wire automation/research-tree.tsv hierarchy into research-routes/graph-data and a dashboard tree view -- which queries and guards does the tree contract need?
+arc-20260926-omp-session-meta-cycle	procedurally routed oh-my-pi sessions on billion-context-customized local models -- what supervision loop lets sessions compose and launch sessions safely?
+arc-20260926-fractal-fanout	question-matrix generation loops over the typesafe KB (question-node rows in hngh-knowledge.db) -- what fan-out shape and confidence gates survive cost review?
+fb-20260927-1-feedback-capture-integrity	where is feedback idea text lost between the digest-email form, imap capture, and feedback-ingest, and what fail-closed guard stops empty [feedback:idea] floods?

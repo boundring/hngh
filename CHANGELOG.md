@@ -6,6 +6,14 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Course-correction seeds** (docs/records/2026-09-26-course-correction-seeds.md):
+  tree-of-life research structure design (`docs/design/research-tree-of-life.md`)
+  + seeded `automation/research-tree.tsv` (trunk/stages/leaves, 3-col);
+  five follow-on lane seeds appended to `research-subjects.txt`
+  (newspaper lane 2, tree wiring, omp-session meta-cycle, fractal fan-out,
+  feedback-capture integrity); feedback harvest distilled — the 40 open
+  `[feedback:idea]` operator items carry zero recoverable text (payloads
+  verified empty in the crumbs db); items left for operator disposition.
 - **Newspaper front page** (docs/records/2026-09-27-newspaper-front-page.md):
   dashboard `index.html` is now a skeuomorphic newspaper front page
   (Lead, Operator Decisions, Sessions, Research, Alerts, System sheets;

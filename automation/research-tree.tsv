@@ -1,0 +1,19 @@
+# research-tree.tsv — the tree-of-life hierarchy (docs/design/research-tree-of-life.md)
+# columns: node<TAB>parent<TAB>line-id
+# trunk: tree-root; branches: active roadmap stages; leaves: lines/seeds serving a stage.
+# line-id = research-lines.tsv id when the node is/became a line, else empty.
+# Jev question matrices live in hngh-knowledge.db as question-node kind rows,
+# referenced here once promoted to a research line.
+tree-root		
+stage-0-kernel-governance	tree-root	
+stage-1-self-watch	tree-root	
+stage-2-one-interface	tree-root	
+stage-3-governed-fleet	tree-root	
+stage-5-research-alternation	tree-root	
+stage-6-qol-graphic-evolution	tree-root	
+stage-7-federation	tree-root	
+arc-20260926-tree-of-life-wiring	stage-5-research-alternation	
+arc-20260926-fractal-fanout	stage-5-research-alternation	
+arc-20260926-omp-session-meta-cycle	stage-3-governed-fleet	
+arc-20260926-newspaper-lane-2	stage-6-qol-graphic-evolution	
+fb-20260927-1-feedback-capture-integrity	stage-1-self-watch	
