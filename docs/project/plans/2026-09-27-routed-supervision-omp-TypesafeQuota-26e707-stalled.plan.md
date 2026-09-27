@@ -11,3 +11,7 @@ at 2026-09-27T01:00:13Z. Alert text: agent-supervision: omp-TypesafeQuota-26e707
 
 - [ ] Stop the stalled session, write a handoff brief (last state + next action), start the replacement
       Verification: old session id gone from supervision state; handoff brief file exists; replacement session shows fresh tool activity
+
+## Occurrences
+
+- 2026-09-27T02:00:13Z re-occurred (dedup window expired)
