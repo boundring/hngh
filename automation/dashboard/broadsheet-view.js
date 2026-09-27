@@ -411,9 +411,16 @@
   }
 
   // ================= 3. STREAM (CSS multicol feed) =================
-  // Endpoint whitelist: choice actions may only POST these two literals;
-  // anything else in the feed is refused (fail closed).
-  var ALLOWED_ENDPOINTS = ["/operator-item/handle", "/operator-item/dismiss"];
+  // Endpoint whitelist: choice actions may only POST these six literals;
+  // anything else in the feed is refused (fail closed). park requires an
+  // operator note, acknowledge takes an optional one.
+  var ALLOWED_ENDPOINTS = ["/operator-item/handle", "/operator-item/dismiss",
+    "/operator-item/park", "/operator-item/expire",
+    "/operator-item/suppress", "/operator-item/acknowledge"];
+  var NOTE_ENDPOINTS = {
+    '/operator-item/park': 'required',
+    '/operator-item/acknowledge': 'optional'
+  };
   var feed = { data: null, seq: [], n: 0, fixture: false };
   // dismissed ids persist across reloads (localStorage, cols pattern):
   // the composer snapshot can still list rows this browser sent away
@@ -446,13 +453,21 @@
     }
     kick += '</div>';
     var h = document.createElement('h2');
-    h.innerHTML = kick + esc(a.headline || 'untitled');
+    h.innerHTML = kick + esc(a.headline || 'untitled') +
+      (a.occurrences > 1
+        ? ' <span class="occ">×' + esc(a.occurrences) + '</span>'
+        : '');
     h.title = 'click to expand or collapse';
     art.appendChild(h);
     if (a.deck) {
       var d = document.createElement('p');
       d.className = 'deck'; d.textContent = a.deck;
       art.appendChild(d);
+    }
+    if (a.narrative) {
+      var nv = document.createElement('p');
+      nv.className = 'deck narrative'; nv.textContent = a.narrative;
+      art.appendChild(nv);
     }
     var body = Array.isArray(a.body) ? a.body : [];
     if (body.length) {
@@ -678,8 +693,21 @@
           progress.className = 'choice-progress';
           bar.appendChild(progress);
         }
+        var need = NOTE_ENDPOINTS[act.endpoint];
+        var payload = act.payload || { id: a.id };
+        if (need) {
+          var note = (window.prompt(need === 'required'
+            ? 'Guidance note (required to park):'
+            : 'Note (optional):', '') || '').trim().slice(0, 200);
+          if (need === 'required' && !note) {
+            b.disabled = false;
+            progress.textContent = 'park needs a guidance note - nothing sent.';
+            return;
+          }
+          if (note) payload = Object.assign({}, payload, { note: note });
+        }
         progress.textContent = 'sending ' + (ch.label || 'decision') + '…';
-        postJson(act.endpoint, act.payload || { id: a.id })
+        postJson(act.endpoint, payload)
           .then(function () { rebuildStream(); })
           .catch(function (e) {
             b.disabled = false;

@@ -212,9 +212,107 @@ def base_article(kind, category, headline, deck, body, ts, score, sources):
     }
 
 
+#
+# Operator decision cards: a judged taxonomy classes each open item by
+# keyword heuristic over its text (identity/kind/first line) and the
+# class picks the card's PRIMARY/secondary choice verbs. Handle and
+# Dismiss stay on every card. "alert" is deliberately NOT a class
+# keyword -- it is a narrative urgency signal only.
+OP_CLASSES = (
+    ("real-regression",
+     re.compile(r"regression|regressed|escalat|broke|crash|failing", re.I),
+     ("acknowledge", "park")),
+    ("operator-decision",
+     re.compile(r"operator decision|decision|decide|choose|pick", re.I),
+     ("park", "acknowledge")),
+    ("transient-heartbeat",
+     re.compile(r"heartbeat|transient|flapping|retry|timeout|pulse", re.I),
+     ("expire", "suppress")),
+    ("stale-superseded",
+     re.compile(r"stale|superseded|obsolete|outdated", re.I),
+     ("expire", "park")),
+    ("automation-debt",
+     re.compile(r"papercut|flagged|debt|cleanup|needs", re.I),
+     ("suppress", "park")),
+)
+OP_CLASS_VERBS = {name: verbs for name, _rx, verbs in OP_CLASSES}
+
+OP_CHOICE_TEXT = {
+    "handle": ("Handle", "Marks the item handled "
+               "(operator-approved.json)."),
+    "dismiss": ("Dismiss", "Moves the item to operator-dismissed.json; "
+                "it returns in the next edition if it re-fires."),
+    "park": ("Park", "Parks the item and files your guidance note "
+             "(required)."),
+    "expire": ("Expire", "Archives the item as stale; it returns only "
+               "if it re-fires."),
+    "suppress": ("Suppress", "Suppresses this identity so repeated "
+                 "copies stay collapsed."),
+    "acknowledge": ("Acknowledge", "Records the item acknowledged with "
+                    "an optional note."),
+}
+
+OP_NARRATIVE_WHY = {
+    "real-regression": "It reads as a real regression, so it needs a "
+                       "human look before it is closed.",
+    "operator-decision": "It asks for a decision only the operator can "
+                         "make.",
+    "transient-heartbeat": "It reads as a transient heartbeat that "
+                           "usually clears on its own.",
+    "stale-superseded": "It looks stale or superseded by later work.",
+    "automation-debt": "It is automation debt worth a short guidance "
+                       "note.",
+}
+OP_URGENCY_RE = re.compile(r"alert|escalat|regression|\brout", re.I)
+
+
+def _op_dedupe_key(text):
+    """Identity = the first line's PREFIX: the "job | kind" head before
+    the free-text detail. The 2026-09-27 broadsheet review observed
+    ~10 curator-beat items differing only in their detail tails render
+    as one apparent repeated headline. Fewer than two pipes -> the
+    whole line; any trailing [w=...] stamp is per-rebuild noise."""
+    line = (text or "").strip().splitlines()[0] \
+        if (text or "").strip() else ""
+    line = re.sub(r"\s*\[w=[^\]]*\]\s*$", "", line)
+    parts = line.split("|")
+    key = "|".join(parts[:2]) if len(parts) >= 2 else line
+    return re.sub(r"\s+", " ", key).strip().lower()
+
+
+def _op_class(text):
+    for name, rx, _verbs in OP_CLASSES:
+        if rx.search(text):
+            return name
+    return "automation-debt"
+
+
+def _op_narrative(text, cls, occurrences):
+    """Plain-template explanatory story: what happened / why it
+    matters / what the buttons do. No LLM call."""
+    head = text.split("|")
+    ident = head[0].strip() if head and head[0].strip() else "This item"
+    kind = (head[1].strip() if len(head) > 1 and head[1].strip()
+            else "signal")
+    if occurrences > 1:
+        first = ("%s re-fired as a %s signal on the desk, now seen %d "
+                 "times." % (ident, kind, occurrences))
+    else:
+        first = "%s fired as a %s signal on the desk." % (ident, kind)
+    return " ".join((
+        first,
+        OP_NARRATIVE_WHY[cls],
+        "The first button records that disposition; Handle and Dismiss "
+        "stay available for a plain close."))
+
+
 def operator_articles(op, queues):
     """Open operator items -> decision cards (choices carry the real
     operator-item ids; endpoint literals are view-tested, do not edit).
+    Identity duplicates (same first-line prefix, e.g. [w=N] stamp
+    resurrections or per-tail curator-beat echoes) collapse into one
+    card with an occurrences count;
+    the freshest copy speaks, so decisions land on a live feed row.
     Capped at OPERATOR_CAP freshest cards plus one overflow note --
     the 2026-09-27 broadsheet review flagged a 40-card edition as the
     amplification stage of operator-items-feed's CAP=40 flood."""
@@ -225,8 +323,14 @@ def operator_articles(op, queues):
     open_items.sort(key=lambda it: (
         it.get("last_seen") or it.get("first_seen") or "",
         str(it.get("id") or "")), reverse=True)
-    for it in open_items[:OPERATOR_CAP]:
+    groups = {}                      # dedupe key -> [items, freshest 1st]
+    for it in open_items:
+        groups.setdefault(
+            _op_dedupe_key(it.get("text")), []).append(it)
+    for members in list(groups.values())[:OPERATOR_CAP]:
+        it = members[0]
         text = (it.get("text") or "").strip()
+        cls = _op_class(text)
         art = base_article("operator-item", "operator",
                            sentences(text, 1) or "(empty item)",
                            text, paragraphs(text),
@@ -234,28 +338,27 @@ def operator_articles(op, queues):
                            0.95,
                            [{"label": "operator-items", "url": ""}])
         oid = it.get("id") or art["id"]
-        art["choices"] = [
-            {"label": "Handle",
-             "outcome": "Marks the item handled (operator-approved.json).",
-             "action": {"endpoint": "/operator-item/handle",
-                        "payload": {"id": oid}}},
-            {"label": "Dismiss",
-             "outcome": "Moves the item to operator-dismissed.json; "
-                        "it returns in the next edition if it re-fires.",
-             "action": {"endpoint": "/operator-item/dismiss",
-                        "payload": {"id": oid}}},
-        ]
+        art["choices"] = []
+        for verb in OP_CLASS_VERBS[cls] + ("handle", "dismiss"):
+            label, outcome = OP_CHOICE_TEXT[verb]
+            art["choices"].append(
+                {"label": label, "outcome": outcome,
+                 "action": {"endpoint": "/operator-item/" + verb,
+                            "payload": {"id": oid}}})
+        art["occurrences"] = len(members)
+        if len(members) > 1 or OP_URGENCY_RE.search(text):
+            art["narrative"] = _op_narrative(text, cls, len(members))
         arts.append(art)
-    if len(open_items) > OPERATOR_CAP:
+    if len(groups) > OPERATOR_CAP:
         fams = {}
-        for it in open_items[OPERATOR_CAP:]:
-            fam = (it.get("text") or "").split("|")[0].strip() \
-                or "(unlabeled)"
+        for members in list(groups.values())[OPERATOR_CAP:]:
+            fam = ((members[0].get("text") or "").split("|")[0].strip()
+                   or "(unlabeled)")
             fams[fam] = fams.get(fam, 0) + 1
         arts.append(base_article(
             "operator-desk", "operator",
             "Operator desk: %d more open items on the console"
-            % (len(open_items) - OPERATOR_CAP),
+            % (len(groups) - OPERATOR_CAP),
             "Open operator items beyond the front-page cap; handle or "
             "dismiss them on the console.",
             ["%s: %d" % (k, v) for k, v in

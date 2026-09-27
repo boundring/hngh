@@ -42,6 +42,23 @@
      "outcome": "Moves the item to operator-dismissed.json; it returns in the next edition if it re-fires.",
      "action": {"endpoint": "/operator-item/dismiss",
                 "payload": {"id": "6cb1737b"}}}
+   ,
+   {"label": "Park",
+    "outcome": "Parks the item and files your guidance note (required).",
+    "action": {"endpoint": "/operator-item/park",
+               "payload": {"id": "6cb1737b", "note": "watch after 7"}}},
+   {"label": "Expire",
+    "outcome": "Archives the item as stale; it returns only if it re-fires.",
+    "action": {"endpoint": "/operator-item/expire",
+               "payload": {"id": "6cb1737b"}}},
+   {"label": "Suppress",
+    "outcome": "Suppresses this identity so repeated copies stay collapsed.",
+    "action": {"endpoint": "/operator-item/suppress",
+               "payload": {"id": "6cb1737b"}}},
+   {"label": "Acknowledge",
+    "outcome": "Records the item acknowledged with an optional note.",
+    "action": {"endpoint": "/operator-item/acknowledge",
+               "payload": {"id": "6cb1737b"}}}
    ]
   },
   {

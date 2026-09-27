@@ -2,6 +2,15 @@
 
 ## 2026-09-27
 
+- newspaper: situation-specific operator actions - six operator-item
+  verbs (handle/dismiss/park/expire/suppress/acknowledge; park requires
+  a note), per-class primary/secondary choices from an ordered keyword
+  taxonomy, first-line-prefix dupe collapse with an xN occurrences
+  badge, template narratives on re-fire/urgency signals, and a dunder-id
+  400 guard (durable INT-28) on all six verbs; view whitelist pinned to
+  the emitted endpoints by test. expire/suppress are dismiss-variants
+  (report-queue has no such verbs). The INT-9 choice-previews probe
+  stays crowd-dependent by design (guidance row c99a7a21).
 - newspaper: front-page rebalance - hngh desks (system/session/digest/
   operator/opportunities) hold the majority while wire categories cap
   at 10 and 40% of the page; new system-ingest.py feeds a system-

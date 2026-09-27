@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Stage-2 exit gate: the operator-item lifecycle endpoints.
 
-POST /operator-item/handle and POST /operator-item/dismiss record the
-open -> handled / open -> dismissed transitions in their ledgers
+POST /operator-item/<verb> for verb in {handle, dismiss, park, expire,
+suppress, acknowledge} records the open -> handled / dismissed
+transitions in their ledgers
 (dashboard/operator-approved.json / operator-dismissed.json,
 {"approved"|"dismissed": {"<id>": "<UTC ts>"}}, atomic replace) and
 each transition files exactly ONE report-queue progress row (identity
@@ -185,6 +186,96 @@ class UiWiring(unittest.TestCase):
         self.assertIn("postJson('/operator-item/dismiss', { id: id })", a)
         self.assertIn('data-handle-yes="', a)
         self.assertIn("it.status = 'handled'", a)
+
+
+class OperatorVerbs(Lifecycle):
+    """park/expire/suppress/acknowledge ride the SAME seams as
+    handle/dismiss: one report-queue row (identity
+    operator-item:<id>:<verb>) then the matching durable ledger.
+    park requires a non-blank note (4xx otherwise, nothing written)."""
+
+    def test_park_requires_note(self):
+        code, body = self.post("operator-item/park", {"id": "deadbeef"})
+        self.assertEqual(code, 400)
+        self.assertEqual(body.get("ok"), False)
+        self.assertEqual(self.rows(), [])
+        self.assertEqual(json.loads(self.dismissed.read_text()), {})
+        code, _ = self.post("operator-item/park", {"id": "deadbeef",
+                                                   "note": "   "})
+        self.assertEqual(code, 400)
+        self.assertEqual(self.rows(), [])
+
+    def test_park_with_note_dismisses_ledger(self):
+        code, body = self.post("operator-item/park",
+                               {"id": "deadbeef", "note": "watch after 7"})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertIn("deadbeef",
+                      json.loads(self.dismissed.read_text())["dismissed"])
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertIn("'operator-item:deadbeef:parked'", rows[0])
+        self.assertIn("watch after 7", rows[0])
+        self.assertIn("operator-park | ", self.handoffs.read_text())
+
+    def test_expire_and_suppress_dismiss_ledger(self):
+        for verb in ("expire", "suppress"):
+            code, body = self.post("operator-item/" + verb,
+                                   {"id": "deadbee" + verb[0]})
+            self.assertEqual((code, body.get("ok")), (201, True))
+        led = json.loads(self.dismissed.read_text())["dismissed"]
+        self.assertIn("deadbeee", led)
+        self.assertIn("deadbees", led)
+        rows = self.rows()
+        self.assertEqual(len(rows), 2)
+        self.assertIn("'operator-item:deadbeee:expired'", rows[0])
+        self.assertIn("'operator-item:deadbees:suppressed'", rows[1])
+        self.assertIn("operator-expire | ", self.handoffs.read_text())
+        self.assertIn("operator-suppress | ", self.handoffs.read_text())
+
+    def test_acknowledge_optional_note_approved_ledger(self):
+        code, body = self.post("operator-item/acknowledge",
+                               {"id": "deadbeef"})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertIn("deadbeef",
+                      json.loads(self.approved.read_text())["approved"])
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertIn("'operator-item:deadbeef:acknowledged'", rows[0])
+        code, body = self.post("operator-item/acknowledge",
+                               {"id": "cafebabe", "note": "seen"})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertIn("seen", self.rows()[1])
+
+    def test_new_verb_fails_closed_without_row(self):
+        os.environ["HNGH_STUB_RQ_RC"] = "1"
+        code, body = self.post("operator-item/expire", {"id": "deadbeef"})
+        self.assertEqual((code, body.get("ok")), (500, False))
+        self.assertEqual(json.loads(self.dismissed.read_text()), {})
+        self.assertNotIn("operator-expire",
+                         self.handoffs.read_text()
+                         if self.handoffs.exists() else "")
+
+
+class DunderGuard(Lifecycle):
+    """Dunder ids ('__...' sentinels) are refused 400 on EVERY
+    /operator-item/* verb (INT-28) and never touch rows or ledgers."""
+
+    def test_dunder_refused_on_all_six(self):
+        verbs = ("handle", "dismiss", "park", "expire", "suppress",
+                 "acknowledge")
+        for verb in verbs:
+            payload = {"id": "__smoke__"}
+            if verb == "park":
+                payload["note"] = "x"
+            code, body = self.post("operator-item/" + verb, payload)
+            self.assertEqual((code, body.get("ok")), (400, False), verb)
+            self.assertEqual(code, 400, verb)
+        self.assertEqual(self.rows(), [])
+        self.assertEqual(json.loads(self.dismissed.read_text()), {})
+        self.assertEqual(json.loads(self.approved.read_text())
+                         if self.approved.exists() else {}, {})
+        self.assertEqual(self.handoffs.read_text()
+                         if self.handoffs.exists() else "", "")
 
 
 if __name__ == "__main__":

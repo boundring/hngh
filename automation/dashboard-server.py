@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """dashboard-server — static file server for hngh-automation/dashboard/
-PLUS exactly eleven write endpoints (any other POST path -> 404) and the
+PLUS exactly sixteen write endpoints (any other POST path -> 404) and the
 read-only GET routes below (session slice, SSE push, telemetry, jails).
 
 POST auth (plan 2026-09-09 step 6, security, fail closed): every POST
@@ -44,6 +44,23 @@ POST /operator-item/handle  {"id": str}
     rebuild keeps the status. First-time handling files ONE
     report-queue progress row (identity operator-item:<id>:handled),
     same fail-closed order. 201 {"ok": true}
+
+POST /operator-item/park  {"id": str, "note": str}
+POST /operator-item/expire  {"id": str}
+POST /operator-item/suppress  {"id": str}
+POST /operator-item/acknowledge  {"id": str, "note": str}
+    The situation-specific extensions of the SAME lifecycle seams as
+    dismiss/handle (same ledgers, same one-report-queue-row accounting,
+    same fail-closed order, same idempotency): park files the
+    operator's guidance note (REQUIRED -- 400 when missing/blank) with
+    the dismissed-side ledger (row identity operator-item:<id>:parked);
+    expire archives a stale item (dismissed side, :expired); suppress
+    collapses a duplicate identity (dismissed side, :suppressed);
+    acknowledge records a look, optional note, on the approved side so
+    it survives feed rebuilds (:acknowledged). The note rides in the
+    row text and the handoff why. Dunder ids (leading "__" -- test
+    sentinels) are refused 400 on EVERY /operator-item/* verb
+    (INT-28). 201 {"ok": true}
 
 POST /spawn  {"session": str, "launcher": str}
     Spawns a launcher COMMAND TEMPLATE on the operator desktop to tail
@@ -801,6 +818,10 @@ class Handler(SimpleHTTPRequestHandler):
             {"flag": self._flag,
              "operator-item/dismiss": self._dismiss,
              "operator-item/handle": self._handle,
+             "operator-item/park": self._park,
+             "operator-item/expire": self._expire,
+             "operator-item/suppress": self._suppress,
+             "operator-item/acknowledge": self._acknowledge,
              "spawn": self._spawn,
              "delegate": self._delegate,
              "tile": self._tile,
@@ -1010,14 +1031,10 @@ class Handler(SimpleHTTPRequestHandler):
         self._json(201, {"ok": True})
 
     def _dismiss(self):
-        try:
-            item_id = str(self._body().get("id", "")).strip()
-        except Exception:
-            self._json(400, {"ok": False, "error": "invalid JSON"})
+        parsed = self._op_body()
+        if not parsed:
             return
-        if not SESSION_RE.fullmatch(item_id):
-            self._json(400, {"ok": False, "error": "invalid id"})
-            return
+        item_id = parsed[0]
         try:
             with open(DISMISSED, encoding="utf-8") as f:
                 dismissed = json.load(f).get("dismissed") or {}
@@ -1035,15 +1052,99 @@ class Handler(SimpleHTTPRequestHandler):
         os.replace(tmp, DISMISSED)
         self._json(201, {"ok": True})
 
-    def _handle(self):
+    def _op_body(self, need_note=False):
+        """Shared /operator-item/* body shape: {"id": str, "note": str?}.
+        400 on invalid JSON, bad id, a dunder id (INT-28: '__' test
+        sentinels must never reach the durable ledgers, on EVERY
+        /operator-item/* verb), a >200-char note, or park without a
+        note. Returns (item_id, note) or None (response already sent)."""
         try:
-            item_id = str(self._body().get("id", "")).strip()
+            b = self._body()
+            item_id = str(b.get("id", "")).strip()
+            note = str(b.get("note", "")).strip().replace("|", "")
         except Exception:
             self._json(400, {"ok": False, "error": "invalid JSON"})
-            return
+            return None
         if not SESSION_RE.fullmatch(item_id):
             self._json(400, {"ok": False, "error": "invalid id"})
+            return None
+        if item_id.startswith("__"):
+            self._json(400, {"ok": False, "error": "dunder id refused"
+                             " (INT-28)"})
+            return None
+        if len(note) > 200:
+            self._json(400, {"ok": False, "error": "note too long"})
+            return None
+        if need_note and not note:
+            self._json(400, {"ok": False,
+                             "error": "park requires a guidance note"})
+            return None
+        return item_id, note
+
+    def _op_settle(self, item_id, verb, note=""):
+        """park/expire/suppress/acknowledge share dismiss/handle's
+        seams: ONE report-queue progress row (identity
+        operator-item:<id>:<state>, guidance note recorded in the row
+        text) then the matching durable ledger -- park/expire/suppress
+        the dismissed side, acknowledge the approved side so it
+        survives feed rebuilds like handled. Fail closed: the owed row
+        is filed BEFORE the ledger write; repeat posts idempotent."""
+        state = {"park": "parked", "expire": "expired",
+                 "suppress": "suppressed",
+                 "acknowledge": "acknowledged"}[verb]
+        if verb == "acknowledge":
+            path, key = APPROVED, "approved"
+            why = "acknowledged: " + note if note else "acknowledged"
+        else:
+            path, key = DISMISSED, "dismissed"
+            why = {"park": "parked with guidance: " + note,
+                   "expire": "expired as stale",
+                   "suppress": "suppressed as duplicate identity"}[verb]
+        try:
+            with open(path, encoding="utf-8") as f:
+                cur = json.load(f).get(key) or {}
+        except Exception:
+            cur = {}
+        detail = note if verb in ("park", "acknowledge") else None
+        if item_id not in cur and not self._report_row(item_id, state,
+                                                       detail):
+            return  # fail closed: the owed row is filed BEFORE the ledger write
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write("operator-%s | %s | automation|%s | %s\n"
+                    % (verb, ts, item_id, why))
+        cur[item_id] = ts
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({key: cur}, f, indent=2)
+        os.replace(tmp, path)
+        self._json(201, {"ok": True})
+
+    def _park(self):
+        parsed = self._op_body(need_note=True)
+        if parsed:
+            self._op_settle(parsed[0], "park", parsed[1])
+
+    def _expire(self):
+        parsed = self._op_body()
+        if parsed:
+            self._op_settle(parsed[0], "expire")
+
+    def _suppress(self):
+        parsed = self._op_body()
+        if parsed:
+            self._op_settle(parsed[0], "suppress")
+
+    def _acknowledge(self):
+        parsed = self._op_body()
+        if parsed:
+            self._op_settle(parsed[0], "acknowledge", parsed[1])
+
+    def _handle(self):
+        parsed = self._op_body()
+        if not parsed:
             return
+        item_id = parsed[0]
         try:
             with open(APPROVED, encoding="utf-8") as f:
                 approved = json.load(f).get("approved") or {}
@@ -1061,7 +1162,7 @@ class Handler(SimpleHTTPRequestHandler):
         os.replace(tmp, APPROVED)
         self._json(201, {"ok": True})
 
-    def _report_row(self, item_id, state):
+    def _report_row(self, item_id, state, detail=None):
         """File the ONE report-queue progress row a lifecycle transition
         owes (identity operator-item:<id>:<state>), fail closed like
         _mark_read: on failure the caller 500s with its ledger untouched
@@ -1071,7 +1172,8 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             p = subprocess.run(
                 ["python3", REPORT_QUEUE, "--add", "progress",
-                 "operator item %s %s" % (item_id, state),
+                 "operator item %s %s%s"
+                 % (item_id, state, " (%s)" % detail if detail else ""),
                  "--identity", "operator-item:%s:%s" % (item_id, state)],
                 capture_output=True, text=True, timeout=15)
         except Exception:

@@ -13,6 +13,7 @@ and <=40% of the page, sessions/opportunities capped, the system desk
 import datetime
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -29,7 +30,10 @@ SCHEMA_EDITION = {"date", "number", "slot", "weather", "system"}
 SCHEMA_ART = {"id", "category", "headline", "deck", "body", "span",
               "score", "ts", "sources", "choices"}
 SCHEMA_ART_GHOST = SCHEMA_ART | {"ghost"}
-ENDPOINTS = {"/operator-item/handle", "/operator-item/dismiss"}
+SCHEMA_ART_OP = {"narrative", "occurrences"}  # optional operator fields
+ENDPOINTS = {"/operator-item/handle", "/operator-item/dismiss",
+             "/operator-item/park", "/operator-item/expire",
+             "/operator-item/suppress", "/operator-item/acknowledge"}
 WIRE_CATS = {"world", "linux", "technology"}
 
 NOW = datetime.datetime.now(datetime.timezone.utc)
@@ -223,7 +227,8 @@ class Masthead(Base):
         arts = doc["articles"]
         self.assertTrue(arts)
         for a in arts:
-            self.assertIn(set(a), (SCHEMA_ART, SCHEMA_ART_GHOST))
+            self.assertTrue(SCHEMA_ART <= set(a) <= SCHEMA_ART_GHOST
+                            | SCHEMA_ART_OP, set(a))
             if "ghost" in a:
                 self.assertEqual(set(a["ghost"]), {"voice", "text"})
             self.assertIn(a["span"], (1, 2, 3))
@@ -246,11 +251,15 @@ class OperatorAndQueues(Base):
         self.assertEqual(len(ops), 1)  # acked item is filtered out
         ops = ops[0]
         self.assertEqual(ops["score"], 0.95)
+        # "feedback-ingest | alert | idea" carries no regression /
+        # heartbeat / stale / decision keyword -> automation-debt
+        # (default class) -> suppress primary, park (land-note) second;
+        # Handle and Dismiss always stay available
         self.assertEqual([c["label"] for c in ops["choices"]],
-                         ["Handle", "Dismiss"])
+                         ["Suppress", "Park", "Handle", "Dismiss"])
         for c in ops["choices"]:
             self.assertIn(c["action"]["endpoint"], ENDPOINTS)
-            self.assertEqual(c["action"]["payload"], {"id": "6cb1737b"})
+            self.assertEqual(c["action"]["payload"].get("id"), "6cb1737b")
 
     def test_queues_counts(self):
         r, out = self.run_compose()
@@ -417,7 +426,8 @@ class SampleFixture(Base):
         self.assertEqual(set(doc), SCHEMA_TOP)
         self.assertEqual(set(doc["edition"]), SCHEMA_EDITION)
         for a in doc["articles"]:
-            self.assertIn(set(a), (SCHEMA_ART, SCHEMA_ART_GHOST))
+            self.assertTrue(SCHEMA_ART <= set(a) <= SCHEMA_ART_GHOST
+                            | SCHEMA_ART_OP, set(a))
             if "ghost" in a:
                 self.assertEqual(set(a["ghost"]), {"voice", "text"})
         blob = json.dumps(doc)
@@ -490,8 +500,8 @@ class GhostDesk(Base):
                  "status": "acked",
                  "last_seen": z(NOW - datetime.timedelta(minutes=60))},
             ] + [
-                {"id": "op-%02d" % i, "text": "fam-%d | alert | item %02d"
-                 % (i % 3, i),
+                {"id": "op-%02d" % i, "text": "fam-%02d | alert | item %02d"
+                 % (i, i),
                  "first_seen": z(NOW - datetime.timedelta(minutes=30 + i)),
                  "status": "open",
                  "last_seen": z(NOW - datetime.timedelta(minutes=30 - i))}
@@ -516,6 +526,187 @@ class GhostDesk(Base):
         blob = json.dumps(doc)
         self.assertNotIn("op-01", blob)
         self.assertNotIn("acked", blob)  # closed items stay off the page
+
+
+class ChoiceClasses(Base):
+    """Per-class primary choice mapping (judged taxonomy, keyword
+    heuristic on the item text -- no LLM call). Handle+Dismiss stay."""
+
+    def _item(self, iid, text):
+        return {"id": iid, "text": text, "status": "open",
+                "first_seen": z(NOW), "last_seen": z(NOW)}
+
+    def _verbs(self, items):
+        self._write("operator-items.json",
+                    {"generated_at": z(NOW), "items": items})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        return {c["action"]["payload"]["id"]:
+                [x["action"]["endpoint"] for x in a["choices"]]
+                for a in doc["articles"]
+                if a["category"] == "operator" and a.get("choices")
+                for c in a["choices"]}
+
+    def test_stale_superseded_expires_parks(self):
+        verbs = self._verbs([self._item(
+            "s1", "beat.sh | stale | superseded by plan 7")])
+        self.assertEqual(verbs["s1"][:2],
+                         ["/operator-item/expire", "/operator-item/park"])
+        self.assertEqual(verbs["s1"][2:],
+                         ["/operator-item/handle", "/operator-item/dismiss"])
+
+    def test_operator_decision_parks_acknowledges(self):
+        verbs = self._verbs([self._item(
+            "d1", "pick.sh | operator decision | choose a provider")])
+        self.assertEqual(verbs["d1"][:2],
+                         ["/operator-item/park", "/operator-item/acknowledge"])
+
+    def test_transient_heartbeat_expires_suppresses(self):
+        verbs = self._verbs([self._item(
+            "t1", "pulse.sh | alert | heartbeat flapping retry timeout")])
+        self.assertEqual(verbs["t1"][:2],
+                         ["/operator-item/expire", "/operator-item/suppress"])
+
+    def test_automation_debt_suppresses(self):
+        verbs = self._verbs([self._item(
+            "a1", "16-curator-beat.sh | needs | enabling-work edge needs"
+                  " staging")])
+        self.assertEqual(verbs["a1"][:2],
+                         ["/operator-item/suppress", "/operator-item/park"])
+
+    def test_real_regression_acknowledges(self):
+        verbs = self._verbs([self._item(
+            "r1", "gate.sh | alert | regression: gate failing after"
+                  " upgrade")])
+        self.assertEqual(verbs["r1"][:2],
+                         ["/operator-item/acknowledge", "/operator-item/park"])
+
+
+class DupeCollapse(Base):
+    """Repeated headline cards ([w=N] stamp resurrections, or one job's
+    many detail tails) collapse into one card carrying an occurrences
+    count."""
+
+    def _stamp_item(self, iid, stamp, minutes_ago):
+        seen = z(NOW - datetime.timedelta(minutes=minutes_ago))
+        return {"id": iid,
+                "text": "16-curator-beat.sh | needs | enabling-work edge"
+                        " needs staging [w=%s]" % stamp,
+                "status": "open", "first_seen": seen, "last_seen": seen}
+
+    def test_stamp_dupes_collapse_to_one_card(self):
+        self._write("operator-items.json", {"generated_at": z(NOW), "items": [
+            self._stamp_item("d1", 1, 90), self._stamp_item("d2", 2, 30)]})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        cards = [a for a in doc["articles"]
+                 if a["category"] == "operator" and a.get("choices")]
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["occurrences"], 2)
+        # the freshest copy is the representative: its id carries the
+        # choices so a decision lands on a live feed row
+        ids = {c["action"]["payload"]["id"] for c in cards[0]["choices"]}
+        self.assertEqual(ids, {"d2"})
+
+    def test_distinct_items_stay_distinct(self):
+        self._write("operator-items.json", {"generated_at": z(NOW), "items": [
+            self._stamp_item("k1", 1, 90),
+            {"id": "k2", "text": "other.sh | needs | different tail",
+             "status": "open", "first_seen": z(NOW), "last_seen": z(NOW)}]})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        cards = [a for a in doc["articles"]
+                 if a["category"] == "operator" and a.get("choices")]
+        self.assertEqual(len(cards), 2)
+        self.assertEqual(sorted(a["occurrences"] for a in cards), [1, 1])
+
+    def test_same_prefix_detail_tails_collapse(self):
+        # the observed 2026-09-27 flood: one job echoing many plan-slug
+        # tails, rendered as ~8 identical-looking cards
+        tails = ["2026-09-01-overnight-continuity -> 2026-08-31-x",
+                 "2026-09-02-overnight-continuity -> 2026-09-01-x",
+                 "2026-09-03-capabilities -> 2026-09-03-staging"]
+        self._write("operator-items.json", {"generated_at": z(NOW),
+            "items": [
+                {"id": "p%d" % n,
+                 "text": "16-curator-beat.sh | needs | staging edge: "
+                         + tail,
+                 "status": "open",
+                 "first_seen": z(NOW - datetime.timedelta(minutes=30 * n)),
+                 "last_seen": z(NOW - datetime.timedelta(minutes=30 * n))}
+                for n, tail in enumerate(tails, 1)]})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        cards = [a for a in doc["articles"]
+                 if a["category"] == "operator" and a.get("choices")]
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["occurrences"], 3)
+        ids = {c["action"]["payload"]["id"] for c in cards[0]["choices"]}
+        self.assertEqual(ids, {"p1"})  # freshest tail (30 min ago) speaks
+
+
+class Narrative(Base):
+    """Urgency-signalled items carry a plain-template narrative."""
+
+    def _card(self, items):
+        self._write("operator-items.json",
+                    {"generated_at": z(NOW), "items": items})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        return [a for a in doc["articles"]
+                if a["category"] == "operator" and a.get("choices")]
+
+    def test_narrative_on_alert_item(self):
+        seen = z(NOW - datetime.timedelta(minutes=45))
+        cards = self._card([{"id": "n1",
+                             "text": "feed.sh | alert | escalation pending",
+                             "status": "open", "first_seen": seen,
+                             "last_seen": z(NOW)}])
+        self.assertEqual(len(cards), 1)
+        self.assertIn("narrative", cards[0])
+        parts = re.split(r"(?<=[.!?])\s+", cards[0]["narrative"].strip())
+        self.assertTrue(2 <= len(parts) <= 4, parts)
+        self.assertIn("feed.sh", cards[0]["narrative"])
+
+    def test_no_narrative_without_signals(self):
+        cards = self._card([{"id": "n2",
+                             "text": "plain.sh | note | ordinary update",
+                             "status": "open", "first_seen": z(NOW),
+                             "last_seen": z(NOW)}])
+        self.assertEqual(len(cards), 1)
+        self.assertNotIn("narrative", cards[0])
+
+
+class Whitelist(Base):
+    """The view whitelist allows exactly the six contract endpoints,
+    and every endpoint composition emits is whitelisted."""
+
+    def test_whitelist_covers_emitted_and_contract(self):
+        with open(os.path.join(AUTO, "dashboard",
+                               "broadsheet-view.js")) as fh:
+            js = fh.read()
+        m = re.search(r"ALLOWED_ENDPOINTS\s*=\s*\[([^\]]*)\]", js)
+        self.assertTrue(m, "ALLOWED_ENDPOINTS not found")
+        allowed = set(re.findall(r'"(/operator-item/[a-z]+)"', m.group(1)))
+        self.assertEqual(allowed, ENDPOINTS)
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as fh:
+            doc = json.load(fh)
+        emitted = {c["action"]["endpoint"] for a in doc["articles"]
+                   for c in a.get("choices") or []}
+        self.assertTrue(emitted)
+        self.assertLessEqual(emitted, allowed)
 
 
 if __name__ == "__main__":
