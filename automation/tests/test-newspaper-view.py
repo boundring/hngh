@@ -139,5 +139,50 @@ class Styles(unittest.TestCase):
         self.assertIn("scroll-snap-type", css)
 
 
+class NewspaperV2(unittest.TestCase):
+    """v2 rebuild contract (2026-09-27): the paper reads like a paper.
+
+    - articles PRINT OPEN with kicker/headline/deck/body;
+    - decisions are cards whose choices carry outcome previews shown
+      before any click;
+    - the "[feedback:idea] from email" test-artifact flood collapses
+      into ONE family card (root-caused 2026-09-27: unseamed ds
+      .FEEDBACK in test-dashboard-p1.py), never 40 identical rows.
+    """
+
+    def setUp(self):
+        self.js = read("newspaper-view.js")
+
+    def test_articles_print_open(self):
+        self.assertIn("det.open = true", self.js)
+        self.assertIn("className = 'art'", self.js)
+        self.assertIn("kicker", self.js)
+        self.assertIn("headline", self.js)
+
+    def test_decision_cards_show_outcomes_before_click(self):
+        self.assertIn("decisionCard", self.js)
+        self.assertIn("outcome", self.js)
+        self.assertIn("className = 'outcome'", self.js)
+        # endpoint contract preserved
+        self.assertIn('"/operator-item/handle"', self.js)
+        self.assertIn('"/operator-item/dismiss"', self.js)
+
+    def test_flood_is_one_card_not_forty_rows(self):
+        self.assertIn("FLOOD_NEEDLE", self.js)
+        self.assertRegex(self.js, r"floodCard")
+        # the family matcher anchors on the literal test payload
+        self.assertIn("[feedback:idea] from email", self.js)
+
+    def test_honest_system_rendering(self):
+        # "?" from the feed is not printed as a node name
+        self.assertIn("name unresolved", self.js)
+
+    def test_v2_styles_present(self):
+        css = read("style.css")
+        for needle in (".choice-row", "button.choice", ".outcome",
+                       ".kicker", ".headline"):
+            self.assertIn(needle, css, needle)
+
+
 if __name__ == "__main__":
     unittest.main()

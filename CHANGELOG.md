@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Newspaper v2** (docs/records/2026-09-27-newspaper-v2.md): the front
+  page reads like a paper — articles print open with real body text,
+  operator decisions are editorial cards whose choices show predicted
+  outcomes before committing, and the 40-test-artifact feedback flood
+  collapses into one family card with a dismiss-all choice. Root-caused
+  and fixed the blank-feedback flood itself (unseamed `ds.FEEDBACK` in
+  `test-dashboard-p1.py` writing live spool captures per `make test`
+  since 09-11). `Cache-Control: no-store` on all dashboard responses
+  (stale-front-page reports were browser cache).
 - **Course-correction seeds** (docs/records/2026-09-26-course-correction-seeds.md):
   tree-of-life research structure design (`docs/design/research-tree-of-life.md`)
   + seeded `automation/research-tree.tsv` (trunk/stages/leaves, 3-col);

@@ -1200,10 +1200,11 @@ class Handler(SimpleHTTPRequestHandler):
         pass
 
     def end_headers(self):
-        # Live assets must never be heuristically cached: the operator's
-        # browser served stale stylesheets twice on 2026-08-27.
-        if self.path.endswith((".css", ".js", ".json")):
-            self.send_header("Cache-Control", "no-cache")
+        # Live assets must never be cached, not even revalidation-only:
+        # the operator's browser served stale stylesheets twice on
+        # 2026-08-27 (fixed with no-cache) and a stale front page on
+        # 2026-09-27 (html responses carried no header at all).
+        self.send_header("Cache-Control", "no-store")
         super().end_headers()
 
     def guess_type(self, path):

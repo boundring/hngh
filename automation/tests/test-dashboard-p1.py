@@ -99,6 +99,11 @@ class ServerTest(unittest.TestCase):
         telemetry_fixture(dash / "telemetry.db", time.time())
         ds.DASHBOARD = str(dash)
         ds.TOKEN_FILE = str(dash / "token.txt")
+        fb = dash / "feedback"
+        fb.mkdir()
+        ds.FEEDBACK = str(fb)  # 2026-09-27: unseamed FEEDBACK leaked every
+        # /api/feedback test POST (text "from email") into the REAL spool,
+        # which feedback-ingest then filed as 40+ empty operator items.
         ds.SESSIONS_JSON = str(dash / "sessions.json")
         ds.TELEMETRY_DB = str(dash / "telemetry.db")
         ds.EVENT_WATCH = tuple(str(dash / n) for n in (
