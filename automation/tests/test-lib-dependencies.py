@@ -44,7 +44,7 @@ LAYERS = {
     "correction-linkage.py": 1, "credential-evidence.py": 1,
     "crumbs-db.py": 1,
     "docfilter.py": 1, "hngh_home.py": 1, "quips.py": 1,
-    "research-harvest.py": 1, "typesafe.py": 1,
+    "ghost-voices.py": 1, "research-harvest.py": 1, "typesafe.py": 1,
     "secrets.py": 1, "vault-freshness.py": 1, "report_queue.py": 1,
     "filing_budget.py": 1,
 }

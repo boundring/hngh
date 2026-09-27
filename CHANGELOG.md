@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Ghost pantheon expansion** (docs/records/2026-09-27-ghost-pantheon.md):
+  `config/ghost-voices.tsv` (17 canon-distilled + 22 authored ghosts),
+  `lib/ghost-voices.py` `ghost_counsel()` — deterministic sha1 blend of
+  3 ghosts, one Xiaomi one-shot through `xiaomi_chat`, 6 calls/24h
+  stamp cap, every failure path returns None (decoration, not data) —
+  now live behind slice 2's digest editorial seam; 6 hermetic tests
+  registered in `make test`. Xiaomi key materialized from the 1Password
+  "Xiaomi AI" item; live leg currently blocked by an unreachable SGP
+  gateway (HTTP 000, fail-closed) — heals when the network path does.
 - **Typesafe docs knowledge graph** (docs/records/2026-09-27-typesafe-knowledge-graph.md):
   `scripts/typesafe-docs-ingest.py` builds `<home>/db/hngh-knowledge.db`
   (nodes/edges/FTS5) from the full Typesafe docs llms.txt index with a
