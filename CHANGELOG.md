@@ -6,6 +6,18 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Newspaper rebalance — hngh-voice majority + system-resources
+  desk**: hngh desks (system/session/digest/operator/opportunities)
+  hold the front-page majority while wire categories cap at 10 and
+  40% of the page; new `scripts/system-ingest.py` feeds a
+  system-resources desk (load/memory/disks, fresh-check refresh) and
+  the composer carries a crumbs activity digest plus operator and
+  opportunities overflow cards
+  (docs/records/2026-09-27-dashboard-metacycle.md).
+- **Dashboard introspection beat**: the introspection job grows five
+  review probes — feedback-flood, edition-fresh, editorial-present,
+  expansion-rotation, ghost-desk — with seeded cadence params and
+  updated intent design (docs/records/2026-09-27-dashboard-metacycle.md).
 - **Broadsheet review follow-ups**: the flood-dismiss chain now paces
   each step (~130 ms floor) so the count ticks readably instead of
   flashing, and the completed card holds its final count for 1.5 s
