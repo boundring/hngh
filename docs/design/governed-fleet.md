@@ -61,8 +61,25 @@ One shape re-emerged across every domain landed 2026-09-12/13:
 | automation/config/patrol-routes.tsv | one row per patrol: surface, check, freq-tier, finding-class | automation/tests/test-patrol.py | executed by jobs/patrol.py (30m + day tiers); FAIL -> identity patrol:<id> + digest/PATROL-<date>.md |
 | automation/jobs/config-lanes.tsv | declarative config backup lanes | lane catalog checks | 30m cadence timer (hngh-cadence-30m.timer, hngh-automation 34cd275) |
 | credential seams | token-only, fail-soft (reviewer token confined to one curl Authorization header) | test-credentials.py, test-credential-kimi.sh, test-notify-seam.sh, test-doc-secrets.py | security-check.sh seam checks |
-| spawn paths | compression/telemetry matrix: which launch paths get bili MITM, which legs stay direct | test-bctx-launch.py, test-session-launch.py, test-ocgo-launch.py, test-context-pack.sh | security-check bili=$b_ok breadcrumb |
+| spawn paths | compression/telemetry matrix (below): which launch lanes get bili MITM, which legs stay direct | test-bctx-launch.py, test-session-launch.py, test-ocgo-launch.py, test-jcode-spawn-guard.py, test-launch-jcode.sh, test-context-pack.sh | security-check bili=$b_ok breadcrumb |
 
+The spawn-path matrix (promoted 2026-09-27, slice B; verified
+2026-09-27 against the cited anchors):
+
+| lane | spawned by | compression | telemetry | guarded by |
+| --- | --- | --- | --- | --- |
+| interactive omp/pi | the operator's fish wrapper (`command bili omp -- $argv`, config/fish/functions/omp.fish) | bili cert-MITM (operator's own summary) | omp transcripts -> jobs/session-cost.py (tokens_cached from usage.cacheRead, slice B) | none (operator surface; the patrol sees it via bili=$b_ok) |
+| machine-launch omp | launch_session default branch (lib/launch-session.sh:488-493): `bili omp -- -p --model` when bili is on PATH, else plain omp fail | bili cert-MITM, fail-open (bctx-absent breadcrumb) | logs/budget.md session-run row + omp transcript session-cost | test-bctx-launch.py |
+| opencode executor | launch_session executor=opencode branch (lib/launch-session.sh:174-408): `opencode run --dir --format json` under an env-only MITM redirect (HTTPS_PROXY + NODE_EXTRA_CA_CERTS exported, line 349-355; the config layer is never written — bili opencode's temp-config path would drop the secret-deny block) | env-only bili MITM, fail-open direct (uncompressed breadcrumbs at 343-347/352-355/356-359) | ocgo-attribution.py -> telemetry kind=model source=ocgo-agent (tokens_cached from the stream's cache shapes, slice B) + ocgo-attributed burn tee | test-ocgo-launch.py |
+| jcode executor stdio | launch_session executor=jcode branch (lib/launch-session.sh:409-487): SDK worker shim -> `jcode run` CLI -> omp, each leg only when the previous is unavailable; proxy envs dropped for the child (env -u HTTPS_PROXY, 474-481) | none by design — direct stdio (upstream bili gained `bili jcode` in v0.1.110; adopting it is an operator surface, not a machine lane) | jcode logs -> jobs/jcode-session-cost.py (tokens_cached from cache_read= in the API-call line, slice B) | test-launch-jcode.sh, test-jcode-spawn-guard.py, test-jcode-session-cost.py |
+| chain beats + local legs | every model.sh chat leg (kimi/ocgo/xiaomi/zai/remote/ollama/unsloth) and the cadence beats that call them | direct curl — the chain never rides the proxy (its calls are short and spike-shaped); unsloth rides the local llama-server on 127.0.0.1:8888 | _model_emit -> telemetry kind=model, one row per successful call with wall_s + tokens_in/out + tokens_cached (slice A/B) | test-slice-a-bili-surface.sh, test-model-*.py leg suites |
+
+Two invariants hold over the matrix: (1) fail-open everywhere — bili
+absent or unhealthy means an uncompressed/direct launch with a visible
+breadcrumb, never a failed launch; (2) one telemetry schema — every
+lane's spend lands in telemetry.db (jobs/telemetry.py), never a leg's
+own table, and tokens_cached is read-side-only wherever the cap
+label appears (cacheWrite is a write, not a cached hit).
 The certificate gate: scripts/omp-bridge --ceremony wraps
 scripts/ceremony-drive -- create-run, admit-transport, propose
 (ten-principle verdict), issue-cert + mutation-check prepare-candidate,

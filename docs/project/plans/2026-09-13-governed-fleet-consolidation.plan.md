@@ -50,9 +50,29 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       decision record docs/records/2026-09-13-bili-hngh-integration.md.
       Automation commit 6764d00b (pushed); the docs record rides this
       ceremony commit.
-- [ ] Slice B: spawn-path matrix promoted + tokens_cached backfill
+- [x] Slice B: spawn-path matrix promoted + tokens_cached backfill
       Verification: see plans/README verification contract; kernel
       `make test` green.
+      Executed 2026-09-27: the spawn-path matrix is promoted into
+      governed-fleet.md section 2 (five verified rows: interactive
+      omp/pi cert-MITM, machine-launch omp bctx-wrapped fail-open,
+      opencode executor env-only MITM never writing the config layer,
+      jcode stdio direct-with-envs-dropped, chain beats + local legs
+      direct curl) plus the two invariants (fail-open everywhere; one
+      telemetry schema). tokens_cached backfill landed across the
+      remaining legs: jobs/session-cost.py sums usage.cacheRead
+      (read side only) into the emitted row, jobs/jcode-session-cost.py
+      captures cache_read= in the API-call line, and
+      jobs/ocgo-attribution.py lands the opencode stream's cache
+      shapes (tokens.cache.read/cacheRead/cache_read) on the same
+      ocgo-agent row. Hermetic proof: new
+      tests/test-session-cost-cache.py (2 checks, wired into the
+      automation Makefile) plus the new cache-shape emitter test in
+      tests/test-ocgo-launch.py; both suites green (37 ocgo, 4 jcode,
+      2 session-cost-cache). Free-commit automation change; the
+      gcode-session-cost live-log format drift (today's logs lack the
+      "API call complete" lines entirely) is a separate backlog lane,
+      out of this slice.
 - [ ] Slice C: witnessed delegation cycle + seeded stall auto-replace
       (evidence: ledger/dashboard record)
       Verification: the ledger/dashboard record exists; kernel
