@@ -17,3 +17,4 @@ at 2026-09-26T21:00:13Z. Alert text: [oversight] slow-unit: hngh-cadence-hour.se
 - 2026-09-26T22:00:13Z re-occurred (dedup window expired)
 - 2026-09-26T23:00:13Z re-occurred (dedup window expired)
 - 2026-09-27T00:00:13Z re-occurred (dedup window expired)
+- 2026-09-27T07:00:44Z re-occurred (dedup window expired)

@@ -5,17 +5,17 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implement the "cadence-job-scaffold" research line by introducing a reusable shell template and a corresponding smoke test job that validates execution without touching kernel or credentials.
+
 ## Steps
 
-- [ ] Add a shell script that validates the make test target runs without errors
-  Verification: bash -n jobs/test-runner.sh
-- [ ] Create a verification script that confirms the test suite passes
+- [ ] Create a reusable shell template at `scripts/cadence-scaffold.sh` that echoes a timestamp and exits 0
+  Verification: bash -n scripts/cadence-scaffold.sh
+- [ ] Add a smoke test job definition at `jobs/cadence-scaffold.yml` that invokes the scaffold script
+  Verification: grep -q "cadence-scaffold" jobs/cadence-scaffold.yml
+- [ ] Write a test runner at `tests/cadence-scaffold.test.sh` that executes the scaffold and asserts exit code 0
+  Verification: bash -n tests/cadence-scaffold.test.sh
+- [ ] Run the full test suite to confirm the new job integrates without breaking existing checks
   Verification: make test
-- [ ] Add a cadence file documenting the test runner workflow
-  Verification: bash -n cadence/test-runner.md
-- [ ] Verify the new script is executable and has correct permissions
-  Verification: bash jobs/test-runner.sh
-- [ ] Confirm the test suite still passes after adding the new script
-  Verification: make test
-
-Rationale: This plan implements the research line "hngh-automation test infrastructure validation" by adding a simple, normal-risk test runner script that validates the existing make test target without touching forbidden areas like provider configuration, systemd units, or kernel source changes.
+- [ ] Commit the scaffold, job, and test files as a single atomic change
+  Verification: git diff --stat HEAD~1 | grep -E "scripts/|jobs/|tests/"

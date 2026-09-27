@@ -11,3 +11,7 @@ at 2026-09-26T13:00:13Z. Alert text: [dash-selfreview] feed-fresh:sessions.json:
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-27T06:00:45Z re-occurred (dedup window expired)
