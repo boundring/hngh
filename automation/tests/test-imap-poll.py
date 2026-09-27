@@ -97,6 +97,9 @@ class StubClient:
     def expunge(self):
         self.expunged += 1
 
+    def close(self):  # session teardown seam (real client calls it)
+        pass
+
 
 def make_conf(tmp, smtp=True, imap=True, mode=0o600, smtp_pass="",
               pass_cmd=""):
@@ -675,6 +678,55 @@ class ReportLinks(ReplyConversion):
             (self.kernel / "docs" / "project" / "reports.md").read_text(),
             ledger_before)
         self.assertFalse((self.auto / "digest").exists())
+
+
+class MuteList(Seamed):
+    """2026-09-27 course-correction slice 2: [mute] senders= (default
+    noreply@github.com) — matched senders are marked \\Seen with NO
+    operator-item filed; other senders file normally."""
+
+    def _conf_with_mute(self, mute_section):
+        conf = make_conf(self.tmp, smtp_pass="pw")
+        if mute_section:
+            conf.write_text(conf.read_text()
+                            + "[mute]\nsenders = ci-bot@example.com\n")
+        conf.chmod(0o600)
+        os.environ["HNGH_NOTIFY_EMAIL_CONF"] = str(conf)
+        globals()["imap_poll"] = load_module()
+
+    def _run_client(self, messages):
+        client = StubClient(messages)
+        with mock.patch.object(imap_poll, "ImapClient",
+                               return_value=client):
+            rc, err = self.run_main()
+        return rc, err, client
+
+    def test_default_github_mute_never_files(self):
+        self._conf_with_mute(mute_section=False)
+        msgs = [
+            make_message("CI failed", "build red",
+                         from_="GitHub CI <noreply@github.com>"),
+            make_message("[hngh rpt-1] approve: x", "approve: x"),
+        ]
+        rc, err, client = self._run_client(msgs)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(client.seen, [b"1", b"2"])  # both marked seen
+        log = self.rq_log.read_text() if self.rq_log.exists() else ""
+        rows = [ln for ln in log.splitlines() if "imap-reply" in ln]
+        self.assertEqual(len(rows), 1)  # only the real one
+
+    def test_conf_mute_list_extends_default(self):
+        self._conf_with_mute(mute_section=True)
+        msgs = [
+            make_message("CI failed", "build red",
+                         from_="GitHub CI <noreply@github.com>"),
+            make_message("cron noise", "daily report",
+                         from_="Cron <ci-bot@example.com>"),
+        ]
+        rc, err, client = self._run_client(msgs)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(client.seen, [b"1", b"2"])
+        self.assertFalse(self.rq_log.exists())  # nothing filed at all
 
 
 if __name__ == "__main__":

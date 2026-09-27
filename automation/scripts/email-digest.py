@@ -25,6 +25,7 @@ The secret value is never printed, logged, or echoed — only compared.
 """
 import configparser
 import glob
+import importlib.util
 import html
 import json
 import os
@@ -537,6 +538,44 @@ def operator_items():
     return "\n".join(lines) or "(nothing awaiting the operator)"
 
 
+def feedback_backlog():
+    """Open operator feedback items from the dashboard feed, oldest
+    first; silent when the feed or any match is absent (a quiet
+    backlog is data, not failure)."""
+    feed = os.path.join(AUTOMATION, "dashboard", "operator-items.json")
+    try:
+        with open(feed, encoding="utf-8") as fh:
+            items = json.load(fh).get("items", [])
+    except (OSError, ValueError):
+        return []
+    rows = [i for i in items
+            if i.get("status") == "open" and "[feedback:" in i.get("text", "")]
+    if not rows:
+        return []
+    rows.sort(key=lambda i: i.get("first_seen", ""))
+    out = ["feedback backlog: %d open item(s) — oldest %s"
+           % (len(rows), rows[0].get("first_seen", "?"))]
+    out += ["  " + (i["text"][:72] + "…" if len(i["text"]) > 72 else i["text"])
+            for i in rows[:3]]
+    return out
+
+
+def ghost_editorial():
+    """One ghost-pantheon editorial line (course-correction slice 4);
+    silent while lib/ghost-voices.py or its KB is absent — decoration,
+    not data, so fail-open here by design."""
+    mod_path = os.path.join(AUTOMATION, "lib", "ghost-voices.py")
+    if not os.path.isfile(mod_path):
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("ghost_voices", mod_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.ghost_counsel()
+    except Exception:
+        return None
+
+
 def gather():
     """Shared data pull for the plain-text and newspaper-HTML variants:
     one gather, two renderers — the two parts stay content-identical."""
@@ -593,6 +632,11 @@ def compose(g=None):
     # (2) OPERATOR ITEMS AWAITING YOU
     out.append("## Operator items awaiting you")
     out.append(items)
+    backlog = feedback_backlog()
+    out += backlog
+    editorial = ghost_editorial()
+    if editorial:
+        out.append("editorial: %s" % editorial)
     out.append("")
     # (3) PROGRESS
     out.append("## Progress (plans + queue, 24h)")
@@ -655,6 +699,7 @@ def compose(g=None):
     out += ["--",
             "full digest: logs/email-digest-%s.md | "
             "dashboard: http://127.0.0.1:8890" % day,
+            "newspaper: http://127.0.0.1:8890/newspaper.html",
             "Form not rendering? Open the dashboard and use its feedback pip.",
            ]
     return wrap78(redact("\n".join(out))) + "\n"

@@ -4,6 +4,19 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-27
+
+- **Email doctrine** (docs/records/2026-09-27-email-doctrine.md): on-event
+  operator email is off (`HNGH_NOTIFY_IMMEDIATE=0`, exported from
+  config.env); scheduled transport is the only sender — new
+  `cadence/subhour/57-digest-send.sh` composes and sends at
+  07:30/15:30/22:00 America/New_York exactly once per slot, filing a
+  digest-send-fail alert and never retrying within the slot on failure;
+  `cadence/calendar/daily/09-email-digest.sh` is compose-only; digest
+  gains a feedback-backlog line, newspaper link, and ghost-editorial
+  seam; imap-poll mutes `noreply@github.com` (extendable via
+  `[mute] senders=`) so GitHub CI mail is marked seen, never filed.
+
 ### 2026-09-26
 
 - **Overnight review fixes** (docs/records/2026-09-26-overnight-review-fixes.md):

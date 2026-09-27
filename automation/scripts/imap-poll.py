@@ -111,6 +111,20 @@ def load_conf():
     return cp, None
 
 
+MUTED_DEFAULT = ("noreply@github.com",)
+MUTED = list(MUTED_DEFAULT)
+
+
+def muted_senders(cp):
+    """[mute] senders= (comma/newline separated) extends the default
+    github mute; matched senders are marked \\Seen, never filed."""
+    out = list(MUTED_DEFAULT)
+    if cp.has_option("mute", "senders"):
+        out += [s.strip().lower() for s in
+                re.split(r"[,\n]+", cp.get("mute", "senders")) if s.strip()]
+    return out
+
+
 def op_password(item):
     """Secret from `op read`, or None on any failure. Never logged.
     Service-token-guarded: never reach the desktop-app integration
@@ -486,6 +500,10 @@ def process_one(client, num, dry=False):
     text = body_text(msg)
     if dry:
         return "DRY"
+    sender = str(msg.get("from", "")).lower()
+    if any(m in sender for m in MUTED):
+        client.mark_seen(num)  # muted: read, never filed
+        return None
     paths = save_attachments(msg, msgid)
     for p in paths:  # path only in ledgers, never content
         text += "\nattachment: %s" % p
@@ -534,6 +552,8 @@ def main(argv):
     if cp is None:
         noop(why)
         return 0  # fail closed: dormant channel is a normal state
+    global MUTED
+    MUTED = muted_senders(cp)
     pw = resolve_password(cp)
     if not pw:
         noop("no IMAP password available (1password/pass_cmd/smtp pass)")
