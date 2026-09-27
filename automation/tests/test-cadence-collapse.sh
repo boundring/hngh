@@ -47,7 +47,7 @@ set_old 30m 05-readout 10-system-feed 15-schedule-feed 20-config-backup \
 set_old hour 00-dashboard-self-review 05-ui-audit 10-router-feed 16-remote-push \
   20-workbeat 25-bead-beat 25-session-cost 30-kernel-ledger-sync \
   31-heartbeat 32-deck-facts 33-research-beat 40-gdelt-news \
-  35-news-ingest 41-newspaper-edition
+  35-news-ingest 41-newspaper-edition 42-dashboard-introspect
 set_old day 01-activity-tick 01-lesson-harvest 02-ledger-prune 03-gate-check \
   04-review-prep 06-remote-posture 06-review-disposition \
   07-budget-digest 08-doc-suite-check 09-email-digest 10-bench-fresh \

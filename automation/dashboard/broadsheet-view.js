@@ -157,11 +157,16 @@
     'attribute vec2 a_pos; void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }';
 
   var paper = { gl: null, prog: null, uRes: null, uTime: null, uScroll: null,
-                last: 0, raf: 0, dead: false };
+                last: 0, raf: 0, dead: false, still: false };
 
   function paperInit() {
     var cv = $('paper-canvas');
     if (!cv) return;
+    var rmq = matchMedia('(prefers-reduced-motion: reduce)');
+    paper.still = rmq.matches;
+    if (rmq.addEventListener) {
+      rmq.addEventListener('change', function (ev) { paper.still = ev.matches; });
+    }
     var gl = cv.getContext('webgl2', { antialias: false, alpha: false });
     if (!gl) { paperFallback('WebGL2 unavailable'); return; }
     function sh(type, src) {
@@ -228,7 +233,7 @@
     var max = document.documentElement.scrollHeight - innerHeight;
     var sc = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     gl.uniform2f(paper.uRes, gl.canvas.width, gl.canvas.height);
-    gl.uniform1f(paper.uTime, (ts % 1e7) / 1000);
+    gl.uniform1f(paper.uTime, paper.still ? 0 : (ts % 1e7) / 1000);
     gl.uniform1f(paper.uScroll, sc);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
@@ -463,6 +468,7 @@
       art.classList.toggle('expanded');
     });
     if (a.span === 3) art.classList.add('expanded');
+    art.insertAdjacentHTML('beforeend', ghostHTML(a.ghost));
     if (Array.isArray(a.sources) && a.sources.length) {
       var src = a.sources.map(function (s) { return s && s.label; })
         .filter(Boolean).join(' · ');
@@ -476,6 +482,14 @@
     else if (Array.isArray(a.choices) && a.choices.length)
       art.appendChild(choicesEl(a));
     return art;
+  }
+
+  // Ghost counsel: the composer may attach a signed summary paragraph;
+  // it prints as a distinct ghost-desk block inside expanded articles.
+  function ghostHTML(g) {
+    if (!g || !g.voice || !g.text) return '';
+    return '<div class="ghostdesk"><p>' + esc(g.text) + '</p>' +
+      '<div class="ghost-sig">— ' + esc(g.voice) + ', ghost desk</div></div>';
   }
 
   // The empty-idea flood family: every "[feedback:idea] from email"
@@ -678,7 +692,10 @@
       'no. ' + ((ed && ed.number) != null ? ed.number : '?'),
       slotName(ed && ed.slot),
       (ed && ed.generated ? ed.generated.slice(11, 16) + ' UTC' : ''),
-      w ? 'weather: ' + w.temp_c + 'C ' + (w.summary || '')
+      w && typeof w.temp_c === 'number'
+        ? 'weather: ' + w.temp_c.toFixed(1) + '°C / ' + cToF(w.temp_c) +
+          '°F ' + (w.summary || '')
+        : w ? 'weather: ' + (w.summary || 'report incomplete')
         : 'no weather report',
       'queue ' + (sys.queue_depth != null ? sys.queue_depth : '?') +
         ' - sessions ' + (sys.sessions_active != null
@@ -762,11 +779,104 @@
     }
   }
 
+  // ---- Volumetric masthead splash: self-contained 5x7 bitmap font ----
+  var GLYPHS = {
+    'H': ['10001', '10001', '11111', '10001', '10001', '10001', '10001'],
+    'N': ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
+    'G': ['01110', '10001', '10000', '10111', '10001', '10001', '01111'],
+    '.': ['00000', '00000', '00000', '00000', '00000', '00110', '00110']
+  };
+  var SPLASH_RAMP = ['█', '▓', '▒'];
+  function h32(s) {
+    var h = 2166136261;
+    s = String(s || '');
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function splashText(text, seed) {
+    var rows = ['', '', '', '', '', '', ''];
+    var x = 0;
+    for (var i = 0; i < text.length; i++) {
+      var g = GLYPHS[text.charAt(i)];
+      if (!g) { x += 2; continue; }
+      for (var y = 0; y < 7; y++) {
+        var line = '';
+        for (var cx = 0; cx < 5; cx++) {
+          if (g[y].charAt(cx) === '1') {
+            var t = h32(seed + ':' + (x + cx) + ',' + y) % 100;
+            line += t < 82 ? SPLASH_RAMP[0]
+              : t < 94 ? SPLASH_RAMP[1] : SPLASH_RAMP[2];
+          } else line += ' ';
+        }
+        rows[y] += line + ' ';
+      }
+      x += 6;
+    }
+    var w = Math.max(0, x - 1);
+    var out = ['╔' + '═'.repeat(w) + '╗'];
+    for (var r = 0; r < 7; r++) out.push('║' + rows[r].slice(0, w) + '║');
+    out.push('╚' + '═'.repeat(w) + '╝');
+    return out.join('\n');
+  }
+  // Rotating H.N.G.H. expansions; the pick is deterministic per edition
+  // (hash of the feed stamp + edition number, never the wall clock).
+  var HN_GH = [
+    "Hierarchical News Gathering House",
+    "Homunculus Newsprint & Gazette Hall",
+    "Hackers' Newsprint Gathering Hub",
+    "Honest News for Grumpy Humans",
+    "Hyperlocal News, Gazette & Handbill",
+    "Hungry Newsbots Gather Headlines",
+    "Harmonic Newsprint & Graphite House",
+    "House of Nocturnal Graphs & Heraldry",
+    "Hand-Set News & General Herald",
+    "Herald of the Nocturnal Grid & Hamlet",
+    "Hydraulic Newsprint & Gasket House",
+    "Hogshead & Needle Gazette House",
+    "Hidden Fortress News Group Headquarters",
+    "High-Frequency Newsprint & Graphite Hive",
+    "Humble Newsprint for Gentle Homesteads",
+    "Heavenstorm News & Gazette Herald",
+    "Hexadecimal News for Grid Historians",
+    "Hollow-Earth News Gathering House",
+    "Herald of Nightly Git Habits",
+    "Hearing No Good Headlines",
+    "Honorable News, Gossip & Hearsay",
+    "Haphazard Notes, Graphs & Hypotheses",
+    "Humidity Notes & General Hearsay",
+    "Heavyweight News & General Hubris",
+    "Heuristic News, Grumbles & Hearsay",
+    "Homemade Newsprint & Gutter Humor"
+  ];
+  function splashRender(ed, generated) {
+    var stamp = generated || (ed && ed.generated) || '';
+    var num = (ed && ed.number) != null ? ed.number : '';
+    var pre = $('mast-splash');
+    if (pre) pre.textContent = splashText('H.N.G.H.', stamp + '#' + num);
+    var exp = $('mast-expansion');
+    if (exp) exp.textContent = HN_GH[h32(stamp + '#' + num) % HN_GH.length];
+    var sysline = $('mast-sysline');
+    if (sysline) {
+      var sys = (ed && ed.system) || {};
+      // easter-egg honesty: only feed-carried system facts, never the clock
+      sysline.textContent = [sys.hostname, sys.uptime]
+        .filter(Boolean).join(' · ');
+    }
+  }
+  function cToF(c) {
+    return typeof c === 'number' && isFinite(c)
+      ? (c * 9 / 5 + 32).toFixed(1) : '';
+  }
+
   function mastheadRender(ed, generated) {
     var el = $('mast-line');
     if (el) el.textContent = editionLine(ed || { generated: generated });
     var badge = $('syn-badge');
     if (badge) badge.hidden = !feed.fixture;
+    splashRender(ed || {}, generated);
   }
   function rebuildStream(keepScroll) {
     var stream = $('stream');

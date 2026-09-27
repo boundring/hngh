@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Broadsheet volumetric masthead + full-page paper**: the masthead
+  now opens with a procedurally rendered ASCII splash (self-contained
+  5x7 block-glyph font, per-cell ink luminance, box-drawing frame,
+  CSS ink-emboss) over a rotating H.N.G.H. expansion — 26 nameplates,
+  picked deterministically per edition from the feed stamp + edition
+  number (never the client clock). Weather reads in both °C and °F
+  via the exact formula (14.3°C prints 57.7°F); a feed without a
+  temp field hides the conversion gracefully. The raised-ink emboss
+  extends to nameplates, banners, and article frames; the dappled
+  leaf-light now honors prefers-reduced-motion by freezing u_time.
+  Ghost counsel: composer-attached "ghost" summaries print as a
+  signed ghost-desk block inside expanded articles, silent when the
+  field is absent.
 - **Broadsheet flood dismiss reflects immediately**: dismissing the
   empty-idea flood family now removes each id from the local stream
   the moment its POST succeeds (dismissed = gone), keeps the

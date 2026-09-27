@@ -204,3 +204,40 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
   .masthead, .toolbar, #stream { padding-left: 14px; padding-right: 14px; }
   #map-block { margin: 6px 14px 14px; }
 }
+
+/* Volumetric ASCII splash: block-glyph masthead with per-cell ink
+   luminance; the text-shadow sits the ink slightly off the page. */
+#mast-splash {
+  margin: 2px auto 0; width: fit-content; max-width: 100%;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(7px, 1.35vw, 15px); line-height: 1.05;
+  color: var(--ink); text-align: left;
+  text-shadow: 1px 2px 2px rgba(38, 34, 28, 0.3);
+  user-select: none;
+}
+.mast-expansion {
+  margin-top: 6px; font-style: italic; letter-spacing: 0.06em;
+  font-size: clamp(15px, 2.4vw, 26px); color: var(--ink);
+  text-shadow: 1px 1px 1px rgba(38, 34, 28, 0.2);
+}
+.mast-sysline { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+.mast-sysline:empty { display: none; }
+
+/* Full-page ink-emboss: same raised-ink light on nameplates, banners,
+   and article frames so the sheet prints as one press run. */
+.masthead h1, .fresh-edition h2 {
+  text-shadow: 1px 2px 2px rgba(38, 34, 28, 0.22);
+}
+.dateline, #map-head, .fresh-edition .dl, .art h2 {
+  text-shadow: 0 1px 0 rgba(244, 240, 226, 0.55);
+}
+.art .kicker { box-shadow: 0 1px 0 rgba(244, 240, 226, 0.6); }
+
+/* Ghost counsel: signed ghost-desk block inside expanded articles */
+.ghostdesk { display: none; margin: 10px 0 8px; padding: 4px 0 4px 14px;
+  border-left: 2px solid var(--rule); }
+.art.expanded .ghostdesk { display: block; }
+.ghostdesk p { font-style: italic; color: var(--ink-soft); font-size: 14px;
+  text-align: left; hyphens: none; margin: 0 0 4px; }
+.ghostdesk .ghost-sig { font-size: 12px; letter-spacing: 0.05em;
+  color: var(--ink-soft); font-style: normal; }
