@@ -21,7 +21,7 @@ tunnel-automation	queued	Ambient-free tunnel keepalive	backlog boundary proposal
 governance-benchmark	queued	Governance-benchmark research lane	backlog entry
 push-self-sufficiency	done		ceremony-drive auto-push proven both repos 2026-08-27 — Repos push their own verified commits (sweep + post-validation)	operator directive 2026-08-26
 cadence-continuum	done	Timing tiers: month/week/day/hour/10m/5m/1m + ad-hoc	landed as the B3 cadence collapse (subhour/hour/calendar timers, 2026-09-25 flip)
-activity-cadence	queued	Routine project activities on the continuum (review→comms), fleet-scaled	operator directive 2026-08-26
+activity-cadence	done	Routine project activities on the continuum (review→comms), fleet-scaled	flipped 2026-09-27 per governed-fleet.md §8 DROP (ratified 2026-09-13): activity cadence landed as stage 0/1 scope; the continuum timing tiers landed as the B3 cadence collapse (cadence-continuum 2026-09-25 flip)
 governance-vocabulary	done		vocabulary relaxed; records use governance terms 2026-08-27 — Relax ritual/ceremony terms to flexible governance vocabulary	operator directive 2026-08-26; check-in-scale
 agent-live-view	done		session observatory live on nerve center 2026-08-27 — Automatic subagent work view integrated into the dashboard	operator directive 2026-08-26; folds into ux-hardening
 surface-evolution-loop	queued	Evolutionary design/development loop for all operator surfaces	operator directive 2026-08-26; extends dancing-ui + grade-interface
@@ -133,6 +133,7 @@ rows is folded here; the TSV rows keep the rotation state unchanged.
 - 2026-09-15 node-lattice-admission - node-lattice admission rung rotated.
 - 2026-09-16 bridge-operator-host - bridge-as-operator-host (run -> worker -> review -> certify) rotated; certificate-gated session commits live through scripts/omp-bridge --ceremony.
 - 2026-09-23 key-rotation-freshness - evidence-freshness + key-rotation rung landed (lib/credential-evidence.py fail-closed + 28 hermetic tests); vault-cutover stub remains.
+- 2026-09-27 activity-cadence - flipped per governed-fleet.md §8 DROP (ratified 2026-09-13): activity cadence landed as stage 0/1 scope; the cadence-continuum timing tiers landed as the B3 collapse (2026-09-25 flip).
 
 ## Next
 

@@ -17,10 +17,21 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       Verification: `ls docs/records/2026-09-13-governed-fleet-consolidation.md`
       succeeds with the roadmap.md stage-3 edit landed; kernel `make test`
       green.
-- [ ] Flip absorbed/landed backlog rows per governed-fleet.md
+- [x] Flip absorbed/landed backlog rows per governed-fleet.md
       section 8 (automation free commit)
       Verification: see plans/README verification contract; kernel
       `make test` green.
+      Executed 2026-09-27: every §8 row was already resolved by the
+      2026-09-24/25 passes (strikes + queue flips: governance-vocabulary,
+      cadence-continuum, push-self-sufficiency, credential-rotation-auto,
+      node-lattice-admission, key-rotation-freshness) except one leftover:
+      queue row activity-cadence (DROP class, ratified "landed as stage 0/1
+      scope; flip done") was still queued — flipped done 2026-09-27 with the
+      B3-collapse evidence cited. The remaining un-flipped ABSORB rows are
+      correctly pending their slices (C/D/E/F) — flipping them now would
+      falsify evidence; the gate watch-test flake stays an ordinary SMALL
+      backlog lane; the one-shot bili row has no backlog row (refused by
+      design, nothing to flip).
 - [ ] Slice A: bili S1 telemetry (telemetry.py FIRST, then model.sh),
       S2 registry row + patrol breadcrumb, S3 record
       Verification: see plans/README verification contract; kernel
