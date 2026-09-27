@@ -6,6 +6,21 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Broadsheet WebGL front page** (docs/records/2026-09-27-broadsheet-webgl-v1.md):
+  `index.html` is now a single infinitely-scrolling WebGL2 broadsheet —
+  raw-fragment-shader paper (fiber noise, flecks, vignette, drifting dapple
+  shadows, scroll-linked warm→cool tint, CSS fallback + context-loss recovery),
+  a ~33vh three.js megastructure map (static seeds + live fleet nodes, drag
+  orbit / throttled wheel zoom, 2D fallback), CSS multicol stream with columns
+  1–5 (localStorage, `[` `]` keys), moss-green operator-decision buttons with
+  outcomes visible before clicking (POST via `X-Hngh-Token`), and FRESH EDITION
+  dividers at each loop wrap of the infinite lazy feed; news ingest + composer
+  (`scripts/newspaper-compose.py`, 14 feeds) builds the 397-article live
+  edition; front-page cutover puts token injection on `broadsheet.html`, moves
+  the console intact to `console.html` (nerve-center cross-links), vendored
+  three.js r160 + four Averia Libre woff2 faces load entirely locally. New
+  `tests/test-broadsheet-view.py`; dashboard server token injection covers the
+  broadsheet route.
 - **Newspaper v2** (docs/records/2026-09-27-newspaper-v2.md): the front
   page reads like a paper — articles print open with real body text,
   operator decisions are editorial cards whose choices show predicted
