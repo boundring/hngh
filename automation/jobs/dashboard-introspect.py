@@ -86,8 +86,8 @@ INTENTS = [
      "What ink-emboss text-shadow treatment should broadsheet.css apply "
      "to the masthead rule?"),
     ("masthead-temperature", "minor",
-     "Where should weather-ingest derive temp_f alongside temp_c so the "
-     "broadsheet masthead prints both units?"),
+     "How should broadsheet-view.js emit the masthead temperature in "
+     "both degrees C and degrees F?"),
     ("paper-texture", "major",
      "How should the paper-texture canvas stay animated across the whole "
      "page without breaching the single-WebGL-context budget?"),
@@ -143,6 +143,25 @@ INTENTS += [
      "How should the broadsheet stream stay lazily rendered "
      "(IntersectionObserver sentinel) so scroll holds 60fps?"),
 ]
+INTENTS += [
+    ("feedback-flood", "major",
+     "What keeps open [feedback:idea] from email items at zero in "
+     "operator-items.json (the 2026-09-11..27 flood leak must never "
+     "recapture the operator lane)?"),
+    ("edition-fresh", "major",
+     "How does newspaper composition keep newspaper.json fresh within "
+     "its compose cadence so the front page never trails by hours?"),
+    ("editorial-present", "major",
+     "How does composition surface real hngh editorial rows (alerts, "
+     "fleet notes, real operator decisions) instead of only stub-class "
+     "internal content?"),
+    ("expansion-rotation", "major",
+     "How should broadsheet-view.js carry a rotation table of at least "
+     "N spelled H.N.G.H. expansions so the masthead varies durably?"),
+    ("ghost-desk", "major",
+     "How should each edition carry ghost-counsel summary blocks or an "
+     "explicit ghost_quiet marker, never silently neither?"),
+]
 SLUGS = [i[0] for i in INTENTS]
 SEVERITY = {i[0]: i[1] for i in INTENTS}
 QUESTION = {i[0]: i[2] for i in INTENTS}
@@ -196,11 +215,11 @@ def probe_feed(data):
     out["masthead-varies"] = (
         len(hist) >= 2, "distinct expansions=%d" % len(hist))
 
-    # masthead-temperature
-    wx = edit.get("weather") or {}
-    ok = wx.get("temp_c") is not None and wx.get("temp_f") is not None
-    out["masthead-temperature"] = (
-        ok, "temp_c=%r temp_f=%r" % (wx.get("temp_c"), wx.get("temp_f")))
+    # ghost-desk: ghost summary blocks or an explicit quiet marker
+    out["ghost-desk"] = (
+        bool(edit.get("ghost")) or bool(edit.get("ghost_quiet")),
+        "ghost=%s ghost_quiet=%s" % (
+            bool(edit.get("ghost")), bool(edit.get("ghost_quiet"))))
 
     # choice-previews: every choice of every article has an outcome
     bad = n_choice_arts = 0
@@ -256,12 +275,57 @@ def probe_feed_balance(data):
     out["evidence-sources"] = (
         wire > 0 and wire_missing_src == 0,
         "wire-articles-without-sources=%d" % wire_missing_src)
+
+    # editorial-present: real hngh editorial rows (review 2026-09-27:
+    # 100% of internal content was stub-class). File-level discriminator:
+    # alerts/fleet categories, or a real operator decision card (not
+    # feedback-flood residue). Research-route stubs carry no payload
+    # discriminator, so they do not count.
+    try:
+        edit_min = int(get_param("introspect-editorial-min", "1"))
+    except ValueError:
+        edit_min = 1
+    editorial = sum(
+        1 for a in arts
+        if (a.get("category") or "").strip().lower() in ("alerts", "fleet")
+        or ((a.get("category") or "").strip().lower() == "operator"
+            and "[feedback:idea]" not in (a.get("headline") or "")))
+    out["editorial-present"] = (
+        total > 0 and editorial >= edit_min,
+        "editorial=%d min=%d" % (editorial, edit_min))
     return out
 
 
 def probe_code(view, css, html):
     """File-level probes over the view/css/html text."""
     out = {}
+    # masthead-temperature: view emits both units (review axis-1:
+    # client-side cToF conversion, e.g. "14.3°C / 57.7°F")
+    degc = "°C" in view
+    degf = "°F" in view
+    out["masthead-temperature"] = (degc and degf, "°C=%s °F=%s" % (
+        degc, degf))
+
+    # expansion-rotation: view declares an expansion rotation table
+    # (EXPANSION marker) with >= N spelled H.N.G.H. candidates
+    try:
+        exp_min = int(get_param("introspect-expansion-min", "4"))
+    except ValueError:
+        exp_min = 4
+    pos = view.find("EXPANSION")
+    rotations = 0
+    if pos >= 0:
+        for lit in re.findall(r"['\"]([^'\"]{12,})['\"]",
+                              view[pos:pos + 800]):
+            words = [w for w in re.split(r"\W+", lit) if len(w) >= 3]
+            if len(words) == 4 and "".join(
+                    w[0] for w in words).lower() == "hngh":
+                rotations += 1
+    out["expansion-rotation"] = (
+        pos >= 0 and rotations >= exp_min,
+        "table=%s expansions=%d min=%d" % (
+            pos >= 0, rotations, exp_min))
+
     out["masthead-splash"] = (
         "splash" in view and "ascii" in view.lower(),
         "splash=%s ascii=%s" % ("splash" in view, "ascii" in view.lower()))
@@ -313,9 +377,49 @@ def probe_code(view, css, html):
     return out
 
 
-FEED_SLUGS = {"masthead-expansion", "masthead-varies", "masthead-temperature",
+FEED_SLUGS = {"masthead-expansion", "masthead-varies",
               "choice-previews", "family-card", "no-empty-feedback",
-              "voice-majority", "wire-capped", "evidence-sources"}
+              "voice-majority", "wire-capped", "evidence-sources",
+              "ghost-desk", "editorial-present", "feedback-flood",
+              "edition-fresh"}
+
+
+def probe_operator():
+    """feedback-flood: open [feedback:idea] items must be zero (the
+    2026-09-11..27 leak filled all 40 operator-items slots)."""
+    path = os.environ.get(
+        "INTROSPECT_OPERATOR_ITEMS",
+        os.path.join(DASH, "operator-items.json"))
+    try:
+        with open(path, encoding="utf-8") as f:
+            op = json.load(f)
+    except (OSError, ValueError) as exc:
+        return {"feedback-flood": (False,
+                "operator-items.json unreadable: %s" % exc)}
+    rows = op.get("items") if isinstance(op, dict) else None
+    rows = [r for r in rows or [] if isinstance(r, dict)]
+    open_flood = sum(
+        1 for r in rows
+        if r.get("status") in (None, "", "open")
+        and "[feedback:idea]" in (r.get("text") or ""))
+    return {"feedback-flood": (open_flood == 0,
+            "open-flood=%d items=%d" % (open_flood, len(rows)))}
+
+
+def probe_fresh(now):
+    """edition-fresh: newspaper.json mtime within the compose cadence
+    (hourly 41-newspaper-edition; 2h tolerates one missed compose)."""
+    path = os.path.join(DASH, "newspaper.json")
+    try:
+        age_h = (now - os.path.getmtime(path)) / 3600.0
+    except OSError as exc:
+        return {"edition-fresh": (False, "newspaper.json: %s" % exc)}
+    try:
+        max_h = float(get_param("introspect-feed-max-age-hours", "2"))
+    except ValueError:
+        max_h = 2.0
+    return {"edition-fresh": (age_h <= max_h,
+            "age=%.1fh max=%.1fh" % (age_h, max_h))}
 
 
 def run_probes():
@@ -334,6 +438,8 @@ def run_probes():
     if data is not None:
         feed_probes = probe_feed(data)
         feed_probes.update(probe_feed_balance(data))
+    feed_probes.update(probe_operator())
+    feed_probes.update(probe_fresh(now=time.time()))
     results = {}
     for slug in SLUGS:
         if slug in feed_probes:

@@ -86,3 +86,35 @@ Incident during bring-up: the job's REPORT_ROOT defaulted to
 `docs/project/reports.md`. Fixed: default is the repo root (same rule
 as scripts/report-queue); polluted rows/body reverted, verified the
 row lands in the real ledger.
+
+## Review seeds (r-broadsheet-review turn-1, 2026-09-27)
+
+The reviewer's findings table (d2c72126) is exactly the regression
+class this beat should catch automatically. Five probes seeded
+(docs/design/dashboard-intent.md Goal 7, INT-23..27):
+
+- INT-23 feedback-flood: zero open `[feedback:idea]` rows in
+  operator-items.json (F1: the leak ran 2026-09-11..27 unnoticed).
+- INT-24 edition-fresh: newspaper.json mtime within compose cadence
+  (`introspect-feed-max-age-hours`, default 2).
+- INT-25 editorial-present: >= `introspect-editorial-min` real hngh
+  editorial rows (alerts/fleet/real operator decisions); stub-class
+  internal content does not count (review axis 4: zero real rows in
+  the 429-article edition).
+- INT-26 expansion-rotation: >= `introspect-expansion-min` (4) spelled
+  H.N.G.H. expansions in the view's rotation table (operator axis [a]
+  durability).
+- INT-27 ghost-desk: edition carries ghost summary blocks or an
+  explicit `ghost_quiet` marker, never silently neither.
+
+Probe count 22 -> 27; masthead-temperature redefined to view-level
+(°C+°F emission — review verified the conversion live). Day-0 note:
+the reviewer's execution order lands the in-flight UI first, purge
+second, so the beat grades RED on INT-23 and INT-25 until those land —
+correct behavior: the beat files the arc/alert, it does not fix. As
+of the first 27-probe run (13:25Z) the residue was already handled
+(operator-items 40/40 `status: handled`, so INT-23 grades met) and
+INT-25 still grades red (arc `arc-20260927-dashboard-editorial-present`
+filed). Post-seed grade: 16/27 met, 3 new arcs (editorial-present,
+expansion-rotation, ghost-desk), grade row bumped ×3 via the
+report-queue occurrence/evidence contract.

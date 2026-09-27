@@ -35,9 +35,10 @@ feed), `broadsheet-view.js`, `broadsheet.css`, `broadsheet.html`
 - INT-4 **masthead-emboss** (minor): the masthead is ink-embossed.
   Probe: `broadsheet.css` — a `text-shadow` within the masthead rule
   block.
-- INT-5 **masthead-temperature** (minor): the dateline shows
+- INT-5 **masthead-temperature** (minor): the view emits the masthead
   temperature in BOTH °C and °F.
-  Probe: JSON — `.edition.weather.temp_c` and `.temp_f` both present.
+  Probe: `broadsheet-view.js` contains `°C` and `°F` emission
+  (client-side conversion; review 2026-09-27 axis-1 verified live).
 
 ## Goal 2 — Printed-paper realism
 
@@ -108,14 +109,45 @@ feed), `broadsheet-view.js`, `broadsheet.css`, `broadsheet.html`
   IntersectionObserver sentinel so scroll stays cheap.
   Probe: `IntersectionObserver` in `broadsheet-view.js`.
 
+## Goal 7 — Review-seeded loops (broadsheet review 2026-09-27)
+
+Seeded from `docs/records/2026-09-27-broadsheet-review.md` so every
+regression the reviewer caught by hand is caught automatically next
+time.
+
+- INT-23 **feedback-flood** (major): zero open
+  `[feedback:idea] from email` items in
+  `automation/dashboard/operator-items.json` — the 2026-09-11..27
+  flood leak (40/40 slots captured) must never recur.
+  Probe: JSON — count open rows with the needle; 0 = met.
+- INT-24 **edition-fresh** (major): `newspaper.json` mtime age stays
+  within the compose cadence.
+  Probe: age ≤ `introspect-feed-max-age-hours` (default 2; hourly
+  compose tolerates one miss).
+- INT-25 **editorial-present** (major): the edition carries real hngh
+  editorial rows (alerts, fleet notes, real operator decisions), not
+  only stub-class internal content — the review found zero real rows
+  in a 429-article edition.
+  Probe: JSON — category `alerts`/`fleet`, or a non-flood `operator`
+  card, count ≥ `introspect-editorial-min` (1). Research-route stubs
+  carry no payload discriminator, so they do not count.
+- INT-26 **expansion-rotation** (major): the view carries a rotation
+  table of ≥ `introspect-expansion-min` (4) spelled H.N.G.H.
+  expansions so the masthead varies durably (operator axis [a]).
+  Probe: `EXPANSION` marker + count of HN-G-H-initialism string
+  literals in `broadsheet-view.js`.
+- INT-27 **ghost-desk** (major): each edition carries ghost-counsel
+  summary blocks or an explicit quiet marker — never silently neither.
+  Probe: JSON — `edition.ghost` truthy or `edition.ghost_quiet` truthy.
+
 ## Loop mechanics (the metacycle)
 
 Every hour (`42-dashboard-introspect`, no stamp gate — the hour tier
 paces it):
 
-1. Run all 22 probes (fail-open per probe; a probe error counts as
+1. Run all 27 probes (fail-open per probe; a probe error counts as
    unmet with the error as detail).
-2. Grade = met/22. Written as a report-queue progress row, identity
+2. Grade = met/27. Written as a report-queue progress row, identity
    `dashboard-introspect:grade`, evidence `M/T` — re-fires only when
    the grade moves.
 3. Unmet probes → research arcs `arc-<date>-dashboard-<slug>` in

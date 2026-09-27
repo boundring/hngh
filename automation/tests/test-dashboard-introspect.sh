@@ -28,9 +28,13 @@ FX="$(mktemp -d)"
 trap 'rm -rf "$FX"' EXIT
 
 # ---- fixture dashboard surface: token-minimal, ALL probes met ----
-fixture_view() {
+fixture_view() { # $1 = with_deg_f (0/1)
  cat <<'V'
 // splash banner glyphs: ascii art masthead renderer
+var HNGH_EXPANSIONS = ["Harboring New Governance Heuristics",
+  "Hosting Nimble Governance Heuristics",
+  "Handling Nightly Governance Hoopla",
+  "Harnessing New Governance Habits"];
 var dappleLight = true;
 function paperInit() { var cv = document.getElementById("paper-canvas");
   var gl = cv.getContext('webgl2', { antialias: false }); }
@@ -44,6 +48,9 @@ if (metaToken = document.querySelector('meta[name="hngh-token"]')) {}
 if (resp.status === 401) { err.classList.add("hidden"); }
 var papererr = document.getElementById("papererr");
 V
+ if [ "${1:-1}" = "1" ]; then
+  echo "mastTemp(w) { return w.temp_c.toFixed(1) + '°C / ' + cToF(w.temp_c) + '°F'; }"
+ fi
 }
 fixture_html() {
  cat <<'H'
@@ -88,6 +95,8 @@ arts += [art(8, "politics", wire=True),            # wire, sourced
              family=True)]                         # the family card
 d = {"edition": {"date": "2026-09-27", "number": 8, "slot": 1,
                  "weather": wx,
+                 "ghost": {"summary": ["counsel: quiet hour"],
+                           "source": "ghost-counsel"},
                  "masthead": {"expansion":
                               "Harboring New Governance Heuristics"}},
      "editions": [
@@ -112,6 +121,14 @@ new_sandbox() { # name -> $SB (dash, subj, state, rq log) fresh
  fixture_css >"$SB/dash/broadsheet.css"
  : >"$SB/subj.txt"
  : >"$SB/state.json"
+ python3 - "$SB" <<'PY'
+import json, sys
+json.dump({"generated_at": "2026-09-27T12:00:00Z", "items": [
+    {"id": "i1", "text": "kernel ledger sync drifted",
+     "status": "open", "first_seen": "2026-09-27T12:00:00Z",
+     "last_seen": "2026-09-27T12:00:00Z"}]},
+          open(sys.argv[1] + "/dash/operator-items.json", "w"))
+PY
  cat >"$SB/rq" <<STUB
 #!/bin/sh
 printf '%s\n' "\$*" >>"$SB/rq.log"
@@ -120,8 +137,9 @@ STUB
  chmod +x "$SB/rq"
 }
 
-run_beat() { # $1 = with_temp_f fixture
+run_beat() { # $1 = with_deg_f fixture (view temperature probe)
  : >"$SB/rq.log"
+ fixture_view "$1" >"$SB/dash/broadsheet-view.js"
  fixture_feed "$1"
  INTROSPECT_DASH="$SB/dash" INTROSPECT_SUBJECTS="$SB/subj.txt" \
   INTROSPECT_STATE="$SB/state.json" HNGH_REPORT_QUEUE="$SB/rq" \
@@ -137,7 +155,7 @@ ck "s1 beat exits 0" "0" "$?"
 ck "s1 no arc rows filed" "0" "$(grep -c '^arc-' "$SB/subj.txt" || true)"
 ck "s1 grade row filed" "1" "$(grep -c 'dashboard-introspect:grade' \
  "$SB/rq.log" || true)"
-ck "s1 grade is 22/22" "1" "$(grep -c 'grade 22/22 met' \
+ck "s1 grade is 27/27" "1" "$(grep -c 'grade 27/27 met' \
  "$SB/rq.log" || true)"
 ck "s1 state streak bumped" "1" "$(python3 -c "
 import json;print(json.load(open('$SB/state.json'))['probes']['masthead-temperature']['streak'])")"
