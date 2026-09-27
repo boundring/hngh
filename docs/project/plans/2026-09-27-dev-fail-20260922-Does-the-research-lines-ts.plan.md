@@ -7,15 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script that validates hngh-automation test infrastructure is parseable
-  Verification: bash -n scripts/validate-infra.sh
-- [ ] Create a cadence job that runs make test after each commit to jobs/ directory
+- [ ] Add a cadence script that validates job output format
+  Verification: bash -n cadence/validate-job-output.sh
+
+- [ ] Add a test for the new cadence validation script
   Verification: make test
-- [ ] Add a grep-based check that confirms no provider credentials appear in scripts/
-  Verification: grep -r 'provider\|credential' scripts/ | grep -v '^[^:]*:#' | wc -l
-- [ ] Add a node --check validation for any new dashboard digest scripts
-  Verification: node --check dashboard/digest-validator.js
-- [ ] Create a test that verifies cadence job output is non-empty
+
+- [ ] Add a dashboard digest that reports cadence validation results
+  Verification: bash -n dashboard/digest-cadence-results.sh
+
+- [ ] Add lib helper for parsing job output
+  Verification: bash -n lib/parse-job-output.py
+
+- [ ] Add tests for lib helper
   Verification: make test
-- [ ] Add a bash script that confirms all new paths are under allowed directories
-  Verification: bash scripts/path-gate.sh
+
+- [ ] Add a script that runs cadence validation before job submission
+  Verification: bash -n scripts/pre-job-validate.sh
