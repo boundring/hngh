@@ -7,14 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a state-validation script under scripts/ that checks automation readiness
-  Verification: bash -n scripts/state-check.sh
+- [ ] Add a job-tracking script that logs completed automation runs to a timestamped file under cadence/
+  Verification: bash -n cadence/job-tracker.sh
 
-- [ ] Wire the state-check script into cadence/ as a runnable job
-  Verification: bash -n cadence/state-check-job.sh
+- [ ] Create a verification helper that confirms job-tracker.sh runs without errors
+  Verification: bash cadence/job-tracker.sh && grep -q "completed" cadence/job-tracker.log
 
-- [ ] Add a test for the state-check script under tests/
-  Verification: make test
+- [ ] Add a simple dashboard snippet that displays the last 5 job entries from the tracker
+  Verification: bash -n dashboard/job-summary.sh
 
-- [ ] Verify the new script passes syntax and integration checks
-  Verification: bash scripts/state-check.sh && make test
+- [ ] Write a test that validates the dashboard snippet produces output without errors
+  Verification: bash tests/test-dashboard.sh
+
+- [ ] Update the Makefile to include the new job-tracker verification in the test suite
+  Verification: make test && grep -q "job-tracker" Makefile
+
+- [ ] Document the new cadence/ job-tracker.sh in a README under cadence/
+  Verification: grep -q "job-tracker" cadence/README.md
