@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job pipeline definition under jobs/ for batch report generation
-  Verification: bash -n jobs/batch-report-pipeline.sh
+- [ ] Add a new job template under jobs/ that exercises a single automation primitive with no external dependencies
+  Verification: bash -n jobs/new-primitive-job.sh && make test
 
-- [ ] Create a verification script that confirms pipeline output lands in digest/
-  Verification: python3 scripts/verify_digest_path.py
+- [ ] Add a verification script under scripts/ that validates the new job template syntax and structure
+  Verification: bash scripts/verify-new-primitive-job.sh && make test
 
-- [ ] Add a cadence entry mapping the new pipeline to its expected run frequency
-  Verification: bash -n cadence/pipeline-schedule.sh
-
-- [ ] Extend lib/ to include a shared utility for normalizing pipeline output
-  Verification: bash -n lib/normalize_output.py
-
-- [ ] Add a test case covering the new pipeline end-to-end
+- [ ] Add a unit test under tests/ that asserts the new job template passes all structural checks
   Verification: make test
 
-- [ ] Update dashboard/ to reflect the new pipeline status
-  Verification: bash -n dashboard/pipeline-status.sh
+- [ ] Add a cadence entry under cadence/ that schedules the new job with a safe default interval
+  Verification: bash -n cadence/new-primitive-job.cron && make test
+
+- [ ] Add a dashboard snippet under dashboard/ that exposes the new job's status for monitoring
+  Verification: bash -n dashboard/new-primitive-job-status.md && make test
+
+- [ ] Add a digest entry under digest/ that summarizes the new job's output for periodic review
+  Verification: bash -n digest/new-primitive-job-digest.md && make test
