@@ -5,20 +5,17 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-Implements the cadence-line research for automated digest generation by adding a simple script that validates input data structure before processing.
-
 ## Steps
 
-- [ ] Add a validation script that checks input data conforms to expected schema
-  Verification: bash -n scripts/validate_input.sh
-- [ ] Create a test file that exercises the validation script with sample data
+- [ ] Add a shell script that validates hngh-automation test infrastructure is parseable
+  Verification: bash -n scripts/validate-infra.sh
+- [ ] Create a cadence job that runs make test after each commit to jobs/ directory
   Verification: make test
-- [ ] Add a grep check to confirm new script is tracked in repository
-  Verification: git ls-files scripts/validate_input.sh
-- [ ] Add a bash syntax check for the validation script
-  Verification: bash -n scripts/validate_input.sh
-- [ ] Create a sample input file under tests/ for validation testing
-  Verification: git ls-files tests/sample_input.json
-- [ ] Run make test to confirm all existing tests still pass
+- [ ] Add a grep-based check that confirms no provider credentials appear in scripts/
+  Verification: grep -r 'provider\|credential' scripts/ | grep -v '^[^:]*:#' | wc -l
+- [ ] Add a node --check validation for any new dashboard digest scripts
+  Verification: node --check dashboard/digest-validator.js
+- [ ] Create a test that verifies cadence job output is non-empty
   Verification: make test
+- [ ] Add a bash script that confirms all new paths are under allowed directories
+  Verification: bash scripts/path-gate.sh
