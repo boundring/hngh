@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Typesafe docs knowledge graph** (docs/records/2026-09-27-typesafe-knowledge-graph.md):
+  `scripts/typesafe-docs-ingest.py` builds `<home>/db/hngh-knowledge.db`
+  (nodes/edges/FTS5) from the full Typesafe docs llms.txt index with a
+  markdown cache at `<home>/db/typesafe-docs/`; `scripts/ts-kb-probe.py`
+  queries it (stats / FTS / 1-hop walk / live typed Noul probe,
+  fail-closed); weekly refresh drop-in
+  `cadence/calendar/weekly/03-typesafe-docs-refresh.sh` keeps it fresh
+  (fail-closed, previous DB survives a failed run); consumer playbook at
+  `docs/design/ts-kb-playbook.md`.
 - **Email doctrine** (docs/records/2026-09-27-email-doctrine.md): on-event
   operator email is off (`HNGH_NOTIFY_IMMEDIATE=0`, exported from
   config.env); scheduled transport is the only sender — new

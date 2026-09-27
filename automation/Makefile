@@ -190,6 +190,9 @@ test:
 	bash tests/test-imagegen-submit.sh
 	bash tests/test-dispatch.sh
 	python3 -B tests/test-digest-local.py
+	bash tests/test-digest-send-schedule.sh
+	python3 -B tests/test-digest-compose-upgrades.py
+	python3 -B tests/test-typesafe-docs-ingest.py
 	bash tests/test-deck-availability.sh
 	python3 -B tests/test-breadcrumb-single-line.py
 	python3 -B tests/test-crumbs-db.py

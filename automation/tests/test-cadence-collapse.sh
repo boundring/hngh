@@ -36,7 +36,8 @@ set_old() {
   shift
   for j in "$@"; do OLD_TIER[$j]=$t; done
 }
-set_old 1m 05-operator-items 10-sessions-feed 15-crumbs-sync
+set_old 1m 05-operator-items 10-sessions-feed 15-crumbs-sync \
+  57-digest-send
 set_old 5m 00-time-ledger 01-oversight 01-system 02-agent-supervision
 set_old 10m 01-evolve-ui
 set_old 30m 05-readout 10-system-feed 15-schedule-feed 20-config-backup \
@@ -54,7 +55,7 @@ set_old day 01-activity-tick 01-lesson-harvest 02-ledger-prune 03-gate-check \
   16-curator-beat 17-torch-audit 18-mimic-drill 19-ux-review \
   20-model-saturation 21-context-ratio 22-ttsr-fit 23-bctx-canary \
   25-wiki-health 26-publication-review 27-patrol 50-hygiene
-set_old week 01-roadmap-review 02-bench-trigger
+set_old week 01-roadmap-review 02-bench-trigger 03-typesafe-docs-refresh
 set_old month 01-zoom-out
 
 # ---- unit specs (the NEW firing set is modeled from these) ----
