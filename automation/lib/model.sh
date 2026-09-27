@@ -82,6 +82,9 @@ POST_CODE_FILE="$AUTOMATION_ROOT/tmp-postcode.txt"
 WALL_S_FILE="$AUTOMATION_ROOT/tmp-walls.txt"
 TOKIN_FILE="$AUTOMATION_ROOT/tmp-tokensin.txt"
 TOKOUT_FILE="$AUTOMATION_ROOT/tmp-tokensout.txt"
+# prompt-cache hit tokens (bili S1, governed-fleet slice A): cache-completions
+# .usage.prompt_tokens_details.cached_tokens (chat) / .usage.input_tokens_details.cached_tokens (Responses) / Kimi .usage.prompt_cache_hit_tokens ride their own tmp file; empty = no cache accounting this call.
+TOKCACHED_FILE="$AUTOMATION_ROOT/tmp-tokenscached.txt"
 # finish_reason=length flag (file, not var: same subshell-escape reason).
 # "1" = the returned completion was cut at the max_tokens cap; empty =
 # clean stop. Callers mark the doc instead of writing a silently
@@ -174,6 +177,7 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
  printf '%s' "${tin:-}" >"$TOKIN_FILE" 2>/dev/null
  tout="$(jq -r '.usage.completion_tokens // .usage.output_tokens // empty' "$tmp" 2>/dev/null)"
  printf '%s' "${tout:-}" >"$TOKOUT_FILE" 2>/dev/null
+ printf '%s' "$(jq -r '.usage.prompt_tokens_details.cached_tokens // .usage.prompt_cache_hit_tokens // .usage.input_tokens_details.cached_tokens // empty' "$tmp" 2>/dev/null)" >"$TOKCACHED_FILE" 2>/dev/null
  printf '%s' "$code" >"$POST_CODE_FILE"
  content=""
  [ "$code" = "200" ] && content="$(jq -r "$expr" "$tmp" 2>/dev/null || true)"
@@ -320,6 +324,7 @@ unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
  printf '%s' "${tin:-}" >"$TOKIN_FILE" 2>/dev/null
  tout="$(jq -r '.usage.completion_tokens // .usage.output_tokens // empty' "$tmp" 2>/dev/null)"
  printf '%s' "${tout:-}" >"$TOKOUT_FILE" 2>/dev/null
+ printf '%s' "$(jq -r '.usage.prompt_tokens_details.cached_tokens // .usage.prompt_cache_hit_tokens // .usage.input_tokens_details.cached_tokens // empty' "$tmp" 2>/dev/null)" >"$TOKCACHED_FILE" 2>/dev/null
  printf '%s' "$code"
 }
 
@@ -815,19 +820,24 @@ _model_emit() { # source model -- one kind=model row per successful call,
  # with wall_s and any usage tokens the leg measured (the
  # tmp files _post_chat/unsloth_attempt wrote; consumed and
  # cleared here so a later leg never inherits stale values)
- local wall tin tout data
+ local wall tin tout tokc data
  wall="$(cat "$WALL_S_FILE" 2>/dev/null)"
  tin="$(cat "$TOKIN_FILE" 2>/dev/null)"
  tout="$(cat "$TOKOUT_FILE" 2>/dev/null)"
- rm -f "$WALL_S_FILE" "$TOKIN_FILE" "$TOKOUT_FILE"
+ tokc="$(cat "$TOKCACHED_FILE" 2>/dev/null)"
+ rm -f "$WALL_S_FILE" "$TOKIN_FILE" "$TOKOUT_FILE" "$TOKCACHED_FILE"
  data=""
  case "$tin$tout" in *[0-9]*) : ;; *)
   tin=""
   tout=""
   ;;
  esac
- [ -n "$tin" ] || [ -n "$tout" ] &&
-  data="$(python3 -c 'import json,sys;print(json.dumps({k:int(v) for k,v in [("tokens_in",sys.argv[1]),("tokens_out",sys.argv[2])] if v}))' "${tin:-}" "${tout:-}")"
+ case "${tokc:-}" in *[!0-9]*|'') tokc="" ;; esac
+ # cache tokens can exist even when a leg reports no in/out usage (a
+ # cache-pure accounting shape); the emit contract still requires the
+ # pair gate for in/out, but a lone tokc rides too (bili S1).
+ [ -n "$tin" ] || [ -n "$tout" ] || [ -n "$tokc" ] &&
+  data="$(python3 -c 'import json,sys;print(json.dumps({k:int(v) for k,v in [("tokens_in",sys.argv[1]),("tokens_out",sys.argv[2]),("tokens_cached",sys.argv[3])] if v}))' "${tin:-}" "${tout:-}" "${tokc:-}")"
  python3 "$AUTOMATION_ROOT/jobs/telemetry.py" emit --kind model \
   --source "$1" --model "$2" --subject "${0##*/}" \
   ${wall:+--wall-s "$wall"} ${data:+--data "$data"} \

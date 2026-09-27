@@ -37,6 +37,20 @@ curl -s --max-time 10 -o /dev/null -w '%{http_code}' "$UNSLOTH_URL/v1/models" 2>
 curl -s --max-time 10 -o /dev/null "$OLLAMA_URL/api/tags" 2>/dev/null && o_ok=1
 breadcrumb "$JOB_NAME" "health" "unsloth=$u_ok ollama=$o_ok"
 
+# --- 2.1 bili context-proxy fleet state (fleet slice A S2) ---
+# The bili compression proxy is a TRANSIENT companion service: the operator's
+# omp/pi/jcode wrappers and the machine's launch-session.sh spawns keep a
+# `bili start|omp|opencode|jcode` process alive for the launch duration, so
+# there is no fixed health URL to poll (the services registry row stays
+# url-less; see automation/config/hngh-services.tsv). b_ok is the recorded
+# state, not an alert: 1 = a live proxy process is behind a present binary,
+# 0 = no live proxy (the leg goes uncompressed with a visible trail, never
+# a failed launch).
+b_ok=0
+bili_bin="$(command -v bili 2>/dev/null || true)"
+[ -n "$bili_bin" ] && pgrep -f "$bili_bin (start|omp|opencode|jcode)" >/dev/null 2>&1 && b_ok=1
+breadcrumb "$JOB_NAME" "health" "bili=$b_ok"
+
 # --- 2.5 identifier lint (fail-closed: typos stop the world before they ship) ---
 if out="$(bash "$AUTOMATION_ROOT/scripts/lint-identifiers.sh" 2>&1)"; then
   breadcrumb "$JOB_NAME" "lint" "identifier lint clean"

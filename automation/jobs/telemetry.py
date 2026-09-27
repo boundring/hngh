@@ -7,7 +7,7 @@ any fault exits 0 silently so telemetry can never fail a tick.
 
 usage: jobs/telemetry.py emit --kind K --source S [--identity I] [--model M]
          [--wall-s F] [--subject T] [--refs R] [--body B]
-         [--data '{"tokens_in":N,"tokens_out":N,"cost_usd":F,"lane":L,"unit":U}']
+         [--data '{"tokens_in":N,"tokens_out":N,"cost_usd":F,"lane":L,"unit":U,"tokens_cached":N}']
 """
 import argparse
 import json
@@ -24,11 +24,11 @@ DB = os.path.join(
 
 SCHEMA = """CREATE TABLE IF NOT EXISTS events(
   ts TEXT, source TEXT, kind TEXT, identity TEXT, lane TEXT, unit TEXT,
-  model TEXT, tokens_in INTEGER, tokens_out INTEGER, cost_usd REAL,
-  wall_s REAL, subject TEXT, refs TEXT, body TEXT)"""
+  model TEXT, tokens_in INTEGER, tokens_out INTEGER, tokens_cached INTEGER,
+  cost_usd REAL, wall_s REAL, subject TEXT, refs TEXT, body TEXT)"""
 
-DATA_FIELDS = ("lane", "unit", "tokens_in", "tokens_out", "cost_usd")
-
+DATA_FIELDS = ("lane", "unit", "tokens_in", "tokens_out", "cost_usd",
+               "tokens_cached")
 
 def emit(args):
     extra = {}
@@ -43,14 +43,20 @@ def emit(args):
     try:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(SCHEMA)
+        ALTER = "ALTER TABLE events ADD COLUMN tokens_cached INTEGER"
+        try:
+            conn.execute(ALTER)
+        except sqlite3.OperationalError:
+            pass  # column already added (idempotent migration)
         conn.execute(
             "INSERT INTO events(ts, source, kind, identity, lane, unit, model,"
-            " tokens_in, tokens_out, cost_usd, wall_s, subject, refs, body)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " tokens_in, tokens_out, tokens_cached, cost_usd, wall_s, subject, refs, body)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
              args.source, args.kind, args.identity, extra.get("lane"),
              extra.get("unit"), args.model, extra.get("tokens_in"),
-             extra.get("tokens_out"), extra.get("cost_usd"), args.wall_s,
+             extra.get("tokens_out"), extra.get("tokens_cached"),
+             extra.get("cost_usd"), args.wall_s,
              args.subject, args.refs, args.body))
         conn.commit()
     finally:
@@ -70,7 +76,8 @@ def main():
     e.add_argument("--refs")
     e.add_argument("--body")
     e.add_argument("--data", help='JSON: {"tokens_in":N,...} (lane, unit,'
-                                    " tokens_in, tokens_out, cost_usd)")
+                                    " tokens_in, tokens_out, cost_usd,"
+                                    " tokens_cached)")
     args = p.parse_args()
     try:
         emit(args)

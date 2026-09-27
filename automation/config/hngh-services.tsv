@@ -29,8 +29,16 @@
 #     /usr/local/bin/ollama verified on-host, `ollama serve` running
 #   llamacpp: /usr/bin/llama-server (llama.cpp vulkan), deck leg per
 #     automation/config.env:33; not separately installed as a service
+#   bili: ~/.npm-global (npm billion-context entry bin, guarded by
+#     test-bctx-canary.sh); disposition=operator-run — the proxy is a
+#     transient per-launch child (operator omp/pi/jcode wrappers,
+#     automation/lib/launch-session.sh spawns), so there is no fixed
+#     health URL and no start-command service-mgmt would exec; the watch
+#     is the jobs/security-check.sh bili=$b_ok breadcrumb (slice A S2,
+#     governed-fleet section 2 watch column)
 service	role	install-method	install-path	start-command	health-url	managed-by	disposition
 comfyui	imagegen server (transient lifecycle; first consumer jobs/imagegen-submit.sh)	user-space-venv	/opt/comfyui	cd /opt/comfyui && $HOME/.local/share/comfyui-venv312/bin/python main.py --listen 127.0.0.1 --port 8188	http://127.0.0.1:8188/	automation/lib/comfyui.sh	in-use
 unsloth-llamaserver	text model leg (UNSLOTH_URL; operator launches via unsloth studio UI)	unsloth-studio	none-operator-run (unsloth studio launches llama-server on 127.0.0.1:8888)		http://127.0.0.1:8888/health	operator	operator-run
 ollama	gemma fallback model server (OLLAMA_MODEL, final fallback leg)	official-install-script	/usr/local/bin/ollama	/usr/local/bin/ollama serve	http://127.0.0.1:11434/	operator	in-use
 llamacpp	llama-server binary (deck vulkan leg; operator supplies model + port)	system-package	/usr/bin/llama-server			none	available
+bili	context-compression proxy: transient cert/env MITM in front of the agent launch lanes (omp/pi cert-MITM, opencode env-only redirect, jcode via `bili jcode`; per-launch pid, never a daemon)	npm-global	~/.npm-global/lib/node_modules/billion-context	BILI_MITM_DOMAINS=<hosts> bili start --host 127.0.0.1 --port ${BILI_OCGO_PORT:-8787}		operator	operator-run
