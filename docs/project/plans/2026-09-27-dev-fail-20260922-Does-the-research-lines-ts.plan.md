@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-27T00:33:50Z -->
+<!-- plan: status=proposed risk=normal accepted=- -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-09-27 - dev-fail-20260922-Does-the-research-lines-ts (synthesized from adopted research)
 
@@ -7,20 +7,19 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence verification script that validates job output format
-  Verification: bash scripts/cadence-verify.sh
+- [ ] Add a `scripts/hngh-automation-cadence.sh` entrypoint that prints cadence metadata and exits 0
+  Verification: bash -n scripts/hngh-automation-cadence.sh && make test
 
-- [ ] Update make test to include the new verification script
-  Verification: make test
+- [ ] Add `tests/test_cadence.sh` that asserts the cadence script runs and returns 0
+  Verification: bash tests/test_cadence.sh && make test
 
-- [ ] Add a dashboard digest helper that formats run summaries
-  Verification: python3 dashboard/digest-helper.py
+- [ ] Add `cadence/hngh-automation-cadence.yaml` describing the cadence schedule and scope
+  Verification: grep -q 'hngh-automation' cadence/hngh-automation-cadence.yaml && make test
 
-- [ ] Create a lib utility for safe path resolution
-  Verification: bash -n lib/path-utils.sh
+- [ ] Add `lib/hngh-automation-cadence.py` stdlib-only helper for cadence state inspection
+  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); import hngh_automation_cadence; print('ok')" && make test
 
-- [ ] Add tests for the path utility module
-  Verification: make test
+- [ ] Add `dashboard/hngh-automation-cadence.md` documenting the cadence line and its research scope
+  Verification: grep -q 'hngh-automation' dashboard/hngh-automation-cadence.md && make test
 
-- [ ] Verify all scripts pass syntax checks
-  Verification: bash -n scripts/cadence-verify.sh && bash -n lib/path-utils.sh
+This plan implements the **hngh-automation cadence** research line by introducing a runnable cadence entrypoint, its test coverage, schedule metadata, a stdlib-only inspection helper, and a dashboard document — all as plain commits gated by `make test`.
