@@ -5,22 +5,15 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Rationale: This implements the research line on "incremental test scaffolding for cadence-driven automation" by adding a reusable test helper that validates job completion states without touching provider configuration.
+
 ## Steps
 
-- [ ] Add a cadence job that runs a basic syntax check on lib files
-  Verification: bash -n cadence/check-lib.sh
+- [ ] Add a test helper function in lib/ that validates job completion
+  Verification: bash -n lib/test_helpers.sh
 
-- [ ] Create the cadence script under cadence/check-lib.sh
-  Verification: bash cadence/check-lib.sh
+- [ ] Create a verification script in scripts/ that checks automation output format
+  Verification: bash scripts/verify_output.sh
 
-- [ ] Add a test for the cadence script in tests/
-  Verification: make test
-
-- [ ] Verify the script passes bash syntax check
-  Verification: bash -n cadence/check-lib.sh
-
-- [ ] Confirm no forbidden paths are modified
-  Verification: git grep -n "provider\|credential\|systemd\|secret" -- hngh-automation/
-
-- [ ] Run the full test suite to ensure no regressions
+- [ ] Update existing test in tests/ to use the new helper
   Verification: make test
