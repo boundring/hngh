@@ -5,16 +5,20 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+## Rationale
+Implements the cadence-line research for automated digest generation by adding a simple script that validates input data structure before processing.
+
 ## Steps
 
-- [ ] Add a `dry-run` flag to the cadence runner that parses job definitions without executing them
-  Verification: `bash -n cadence/dry-run.sh`
-
-- [ ] Create a sample job config under `jobs/sample-config.yaml` that exercises the dry-run path
-  Verification: `bash cadence/dry-run.sh --config jobs/sample-config.yaml`
-
-- [ ] Add a test script in `tests/test-dry-run.sh` that validates dry-run output against expected parse results
-  Verification: `bash tests/test-dry-run.sh`
-
-- [ ] Update `make test` to include the new dry-run test target
-  Verification: `make test`
+- [ ] Add a validation script that checks input data conforms to expected schema
+  Verification: bash -n scripts/validate_input.sh
+- [ ] Create a test file that exercises the validation script with sample data
+  Verification: make test
+- [ ] Add a grep check to confirm new script is tracked in repository
+  Verification: git ls-files scripts/validate_input.sh
+- [ ] Add a bash syntax check for the validation script
+  Verification: bash -n scripts/validate_input.sh
+- [ ] Create a sample input file under tests/ for validation testing
+  Verification: git ls-files tests/sample_input.json
+- [ ] Run make test to confirm all existing tests still pass
+  Verification: make test
