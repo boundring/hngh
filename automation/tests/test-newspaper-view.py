@@ -38,7 +38,7 @@ class NewspaperPage(unittest.TestCase):
     def test_page_wiring_and_headers(self):
         for needle in ('charset', 'viewport',
                        '<link rel="icon" href="data:,"/>',
-                       'href="style.css', 'src="newspaper-view.js"',
+                       'href="broadsheet.css', 'src="broadsheet-view.js"',
                        "<main"):
             self.assertIn(needle, self.html, needle)
         # link checker: every local href target exists on disk
@@ -47,16 +47,16 @@ class NewspaperPage(unittest.TestCase):
                 continue
             self.assertTrue((DASH / href.split("?")[0]).exists(), href)
 
-    def test_six_sections_a11y(self):
-        for sec in ("lead", "decisions", "sessions", "research",
-                    "alerts", "system"):
-            self.assertIn('id="sec-' + sec + '"', self.html, sec)
-            self.assertIn('aria-labelledby="sec-' + sec + '-lab"',
-                          self.html, sec)
-            self.assertIn('id="sec-' + sec + '-lab"', self.html)
-            self.assertRegex(
-                self.html,
-                r'<section[^>]*id="sec-%s"[^>]*\btabindex="0"' % sec)
+    def test_broadsheet_front_a11y(self):
+        # index.html is the broadsheet front: WebGL paper canvas behind
+        # the content, fail-closed error banner, masthead, orbitable map
+        # block, article stream with a lazy-render sentinel.
+        for needle in ('<canvas id="paper-canvas" aria-hidden="true">',
+                       'id="papererr"', 'header class="sheet masthead"',
+                       'id="map-block" aria-label="megastructure map"',
+                       '<main id="stream" class="sheet"',
+                       ' id="stream-sentinel"'):
+            self.assertIn(needle, self.html, needle)
 
     def test_cutover_link_contracts(self):
         # front page advertises the console; console advertises the
@@ -70,7 +70,9 @@ class NewspaperPage(unittest.TestCase):
         for needle in ('href="story.html"', 'href="history.html"',
                        'href="routes.html"'):
             self.assertIn(needle, self.console, needle)
-            self.assertIn(needle, self.html, needle)
+        # specialty pages live behind the console, not the broadsheet
+        # front (2026-09-27 cutover)
+        self.assertNotIn('href="story.html"', self.html)
 
     def test_gitignore_whitelists_new_files(self):
         gi = (ROOT / ".gitignore").read_text(encoding="utf-8")

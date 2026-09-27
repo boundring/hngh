@@ -115,6 +115,11 @@ body.paper-fallback {
   border: 1px solid var(--rule); padding: 2px 10px; cursor: pointer;
 }
 .toolbar button:hover { background: rgba(60,50,30,0.07); }
+.toolbar a {
+  font: inherit; color: var(--ink); text-decoration: none;
+  border: 1px solid var(--rule); padding: 2px 10px;
+}
+.toolbar a:hover { background: rgba(60,50,30,0.07); }
 .toolbar .hint { margin-left: auto; font-style: italic; font-size: 12px; }
 
 /* Article stream: CSS multicol newspaper flow */

@@ -3,64 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>hngh-automation · the daily press</title>
+<title>THE DAILY hngh-automation · broadsheet</title>
 <link rel="icon" href="data:,"/>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="broadsheet.css">
+<!-- token placeholder: the dashboard server injects the real token meta
+     for front pages; absent it, mutations fail closed. -->
+<meta name="hngh-token" content="">
 </head>
-<body class="paper">
-<header class="masthead">
-  <div class="h-left">
-    <h1>THE DAILY <span class="sub">hngh-automation</span></h1>
-    <div class="dateline"><span id="paper-date">…</span> · <span id="paper-verdict">…</span></div>
-  </div>
-  <div class="h-right">
-    <a class="ghost" href="console.html" title="the tabbed operations console">&larr; nerve center</a>
-    <a class="ghost" href="story.html" title="today's chapters from the work graph + report ledger">story</a>
-    <a class="ghost" href="history.html" title="merged history/1 stream">history</a>
-    <a class="ghost" href="routes.html" title="routes/1 map">routes</a>
-    <button id="paper-prev" class="ghost" title="previous page">&larr;</button>
-    <button id="paper-next" class="ghost" title="next page">&rarr;</button>
-    <button id="paper-refresh" class="ghost" title="refresh now">refresh</button>
-  </div>
-  <nav aria-label="newspaper sections" class="section-menu" id="paper-menu"></nav>
-</header>
-
+<body id="top">
+<canvas id="paper-canvas" aria-hidden="true"></canvas>
 <div id="papererr" class="error" hidden></div>
 
-<main id="paper" class="paper-pages" tabindex="0">
+<header class="sheet masthead">
+  <h1>THE DAILY <span class="sub">hngh-automation</span></h1>
+  <div class="dateline">
+    <span id="mast-line">…</span>
+    <span id="syn-badge" class="syn-badge" hidden>SYNTHETIC FIXTURE -
+      practice edition, not real reporting</span>
+  </div>
+  <div class="toolbar">
+    <button id="col-minus" title="fewer columns">-</button>
+    <span id="col-label">columns: 3</span>
+    <button id="col-plus" title="more columns">+</button>
+    <button id="paper-refresh" title="refresh now">refresh</button>
+    <a href="console.html" title="the tabbed operations console">nerve
+      center &rarr;</a>
+    <span class="hint">[ and ] change columns · click a headline to
+      expand it across the page</span>
+  </div>
+</header>
 
-  <section class="sheet" id="sec-lead" tabindex="0" aria-labelledby="sec-lead-lab">
-    <h2 id="sec-lead-lab">Lead</h2>
-    <div class="sec-body" id="sec-lead-body"><div class="placeholder">loading…</div></div>
-  </section>
+<section class="sheet" id="map-block" aria-label="megastructure map">
+  <div id="map-head">the megastructure · drag to orbit · wheel to zoom
+    · live mesh ring at ground level</div>
+  <div id="map3d"></div>
+  <div id="map-fallback" hidden></div>
+</section>
 
-  <section class="sheet" id="sec-decisions" tabindex="0" aria-labelledby="sec-decisions-lab">
-    <h2 id="sec-decisions-lab">Operator Decisions</h2>
-    <div class="sec-body" id="sec-decisions-body"><div class="placeholder">loading…</div></div>
-  </section>
+<main id="stream" class="sheet" aria-label="articles"></main>
+<div id="stream-sentinel"></div>
 
-  <section class="sheet" id="sec-sessions" tabindex="0" aria-labelledby="sec-sessions-lab">
-    <h2 id="sec-sessions-lab">Sessions</h2>
-    <div class="sec-body" id="sec-sessions-body"><div class="placeholder">loading…</div></div>
-  </section>
-
-  <section class="sheet" id="sec-research" tabindex="0" aria-labelledby="sec-research-lab">
-    <h2 id="sec-research-lab">Research</h2>
-    <div class="sec-body" id="sec-research-body"><div class="placeholder">loading…</div></div>
-  </section>
-
-  <section class="sheet" id="sec-alerts" tabindex="0" aria-labelledby="sec-alerts-lab">
-    <h2 id="sec-alerts-lab">Alerts</h2>
-    <div class="sec-body" id="sec-alerts-body"><div class="placeholder">loading…</div></div>
-  </section>
-
-  <section class="sheet" id="sec-system" tabindex="0" aria-labelledby="sec-system-lab">
-    <h2 id="sec-system-lab">System</h2>
-    <div class="sec-body" id="sec-system-body"><div class="placeholder">loading…</div></div>
-  </section>
-
-</main>
-
-<script src="newspaper-view.js"></script>
+<script src="broadsheet-view.js"></script>
 </body>
 </html>

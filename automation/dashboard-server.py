@@ -521,7 +521,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._deny_source()
             return
         route = self.path.split("?")[0]
-        if route in ("/", "/index.html", "/console.html"):
+        if route in ("/", "/index.html", "/console.html",
+                     "/broadsheet.html"):
             self._serve_index()
             return
         if route.startswith("/session/"):
@@ -654,14 +655,16 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    # GET / (and /index.html, /console.html) — static page with the POST
+    # GET / (and /index.html, /console.html, /broadsheet.html) — static
+    # page with the POST
     # token injected as <meta name="hngh-token"> so the legit UI reads it
-    # from the page it already loaded (no second secret channel). Both
-    # the newspaper front page and the tab console POST operator-item
-    # mutations, so both need the meta. Token unreadable -> empty meta,
+    # from the page it already loaded (no second secret channel). The
+    # newspaper front page(s) and the tab console POST operator-item
+    # mutations, so all need the meta. Token unreadable -> empty meta,
     # every mutation 403s: fail closed.
     def _serve_index(self):
-        name = "console.html" if self.path.split("?")[0] == "/console.html" \
+        base = os.path.basename(self.path.split("?")[0])
+        name = base if base in ("console.html", "broadsheet.html") \
             else "index.html"
         try:
             with open(os.path.join(DASHBOARD, name), "rb") as f:
