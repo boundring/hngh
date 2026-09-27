@@ -51,7 +51,12 @@ BUDGET_LEDGER="$AUTOMATION_ROOT/logs/budget.md"
 LOG="logs/respawn-$(date -u +%F).md"
 MAX_ATTEMPTS="$(get_param respawn-max-attempts 2)"
 DAILY_CAP="$(get_param respawn-daily-cap 1)"
-MAX_SESSIONS_DAY="${OVERNIGHT_MAX_SESSIONS_DAY:-4}"
+# day cap: env > Inventory row (never the stale legacy constant):
+# agent-respawn shares the session-day ledger with overnight-cycle, so the
+# chain must match its source (cadence-params.tsv row sessions-day-max,
+# live-refused slicec-stall|run-1 2026-09-27 (12>=4) — witnessed by
+# governed-fleet slice C); get_param needs lib/params.sh (sourced above).
+MAX_SESSIONS_DAY="${OVERNIGHT_MAX_SESSIONS_DAY:-$(get_param sessions-day-max 4)}"
 TIMEOUT_S="${OVERNIGHT_TIMEOUT:-1800}"
 STORE="$AUTOMATION_ROOT/snapshots/respawn-$(date +%Y%m%dT%H%M%S)-$$/"
 SESSION_MODEL="${SESSION_MODEL:-${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}}"
