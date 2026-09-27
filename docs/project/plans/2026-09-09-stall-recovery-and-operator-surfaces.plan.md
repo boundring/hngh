@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-09T15:01:13Z -->
+<!-- plan: status=parked risk=normal accepted=2026-09-09T15:01:13Z  cause=obsolete disposed=2026-09-27T01:46:59Z reason=superseded: lane work completed by later ceremony commits; vintage accepted plan kept re-firing overnight (04:02/08:02/12:03 UTC dream-skips 2026-09-27); course-correction slice 1 retirement -->
 # 2026-09-09 — stall recovery, operator surfaces, lifecycle accommodation
 
 Authorization: operator-directed 2026-09-09. The operator reviewed five

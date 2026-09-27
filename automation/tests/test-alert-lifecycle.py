@@ -77,6 +77,13 @@ class AlertLifecycle(unittest.TestCase):
             "HNGH_REPORT_QUEUE": str(self.queue),
             "HNGH_REPORT_ROOT": str(self.kernel),
             "STATE_FILE": str(self.state),
+            # the tick's crumbs-journal + identities-ledger default to
+            # the LIVE automation/state paths (HNGH_REPORT_ROOT does not
+            # cover them); without these seams every make test run wrote
+            # gate:make-test phantom crumbs into the live journal
+            "HNGH_CRUMBS_DB": str(self.root / "crumbs.db"),
+            "HNGH_REPORT_IDENTITIES": str(self.root /
+                                          "report-identities.json"),
         }
 
     def tearDown(self):

@@ -57,6 +57,7 @@ class RouterFeed(unittest.TestCase):
             "HNGH_REPORT_ROOT": str(self.kernel),
             "HNGH_CRUMBS_DB": str(self.db),
             "HNGH_FILING_STATE": str(self.state),
+            "ROUTER_FED_STATE": str(self.root / "fed.tsv"),
         }
 
     def tearDown(self):
@@ -86,6 +87,18 @@ class RouterFeed(unittest.TestCase):
         return subprocess.run(["bash", str(FEED)], env=env,
                               capture_output=True, text=True)
 
+    def fed_rows(self):
+        """(identity, epoch) pairs from the sandbox fed-state ledger."""
+        path = Path(self.env["ROUTER_FED_STATE"])
+        if not path.exists():
+            return []
+        rows = []
+        for line in path.read_text().splitlines():
+            f = line.split("\t")
+            if len(f) >= 2 and f[0]:
+                rows.append((f[0], f[1]))
+        return rows
+
     def ledger_lines(self):
         rep = self.kernel / "docs" / "project" / "reports.md"
         return rep.read_text().splitlines() if rep.exists() else []
@@ -114,6 +127,11 @@ class RouterFeed(unittest.TestCase):
         return [ln for ln in self.ledger_lines()
                 if "router duplicate-skip: %s" % ident in ln]
 
+    def dedup_rows(self, ident):
+        # live-candidate re-fire: the tick's suppression alert row
+        return [ln for ln in self.ledger_lines()
+                if "router dedup: %s suppressed" % ident in ln]
+
     def test_closed_step_refire_through_feed_files_skip_pair(self):
         ident = "gate-check:plan:2026-08-30-fixture:step-1"
         self.plans.joinpath("2026-08-30-fixture.plan.md").write_text(
@@ -136,11 +154,58 @@ class RouterFeed(unittest.TestCase):
             accepted_plan("x "))
         self.seed(ident)
         self.assertEqual(self.run_feed().returncode, 0)
-        self.assertEqual(self.run_feed().returncode, 0)
+        # 2026-09-27 feed-once cursor: the second run inside the fed
+        # window is a no-op at the feed layer (never reaches the tick);
+        # window 0 simulates expiry so the cross-window re-feed still
+        # exercises the tick's occurrence bump.
+        self.assertEqual(self.run_feed(ROUTER_FED_WINDOW=0).returncode, 0)
         rows = self.dup_skip_rows(ident)
         self.assertEqual(len(rows), 1, rows)  # one deduped row, not two
         self.assertIn("×2", rows[0], rows)    # occurrence folded in
         self.assertEqual(self.candidates(), [])
+
+    def test_fed_state_gates_refeed_within_window(self):
+        # 2026-09-27 feed-once cursor: an identity fed inside the window
+        # is not re-ticked on the next hourly run — the dup-skip row the
+        # tick would mint never happens at all
+        ident = "review:hngh:P1-finding"
+        self.seed(ident)
+        self.assertEqual(self.run_feed().returncode, 0)
+        self.assertEqual(len(self.candidates()), 1)
+        self.assertEqual([r[0] for r in self.fed_rows()], [ident])
+        self.assertEqual(self.run_feed().returncode, 0)
+        self.assertEqual(len(self.candidates()), 1, self.candidates())
+        self.assertEqual(len(self.dup_skip_rows(ident)), 0)
+
+    def test_fed_window_expiry_and_force_reallow(self):
+        ident = "review:hngh:P1-finding"
+        self.seed(ident)
+        self.assertEqual(self.run_feed().returncode, 0)
+        self.assertEqual(len(self.candidates()), 1)
+        self.assertEqual(self.dedup_rows(ident), [])
+        # window 0 = expired: the tick runs again and suppresses on the
+        # still-live candidate (its own dedup layer)
+        self.assertEqual(self.run_feed(ROUTER_FED_WINDOW=0).returncode, 0)
+        self.assertEqual(len(self.dedup_rows(ident)), 1)
+
+    def test_force_bypasses_fed_gate(self):
+        # ROUTER_FEED_FORCE=1 escapes the unexpired fed row (operator/
+        # demo escape); the re-tick folds the occurrence into the one
+        # dup-skip row (same-second rid collision makes a second row
+        # indistinguishable, the fold is the deterministic marker)
+        ident = "gate-check:plan:2026-08-30-fixture:step-1"
+        self.plans.joinpath("2026-08-30-fixture.plan.md").write_text(
+            accepted_plan("x "))
+        self.seed(ident)
+        self.assertEqual(self.run_feed().returncode, 0)
+        self.assertEqual(self.run_feed().returncode, 0)  # gated no-op
+        rows = self.dup_skip_rows(ident)
+        self.assertEqual(len(rows), 1, rows)
+        self.assertNotIn("×2", rows[0], rows)
+        self.assertEqual(self.run_feed(ROUTER_FEED_FORCE=1).returncode, 0)
+        rows = self.dup_skip_rows(ident)
+        self.assertEqual(len(rows), 1, rows)
+        self.assertIn("×2", rows[0], rows)
 
     def test_excluded_classes_never_reach_the_tick(self):
         for ident in ("budget:weekly-cap",                      # critical

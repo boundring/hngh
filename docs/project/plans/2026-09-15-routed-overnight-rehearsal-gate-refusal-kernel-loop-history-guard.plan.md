@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:rehearsal-gate-refusal:kernel-loop-history-guard -->
+<!-- plan: status=parked risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:rehearsal-gate-refusal:kernel-loop-history-guard  cause=obsolete disposed=2026-09-27T01:46:58Z reason=superseded: lane work completed by later ceremony commits; vintage accepted plan kept re-firing overnight (04:02/08:02/12:03 UTC dream-skips 2026-09-27); course-correction slice 1 retirement -->
 # 2026-09-15 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:rehearsal-gate-refusal:kernel-loop-history-guard`
