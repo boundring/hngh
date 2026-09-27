@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a job-tracking script that logs completed automation runs to a timestamped file under cadence/
-  Verification: bash -n cadence/job-tracker.sh
+- [ ] Add a new job pipeline definition under jobs/ for batch report generation
+  Verification: bash -n jobs/batch-report-pipeline.sh
 
-- [ ] Create a verification helper that confirms job-tracker.sh runs without errors
-  Verification: bash cadence/job-tracker.sh && grep -q "completed" cadence/job-tracker.log
+- [ ] Create a verification script that confirms pipeline output lands in digest/
+  Verification: python3 scripts/verify_digest_path.py
 
-- [ ] Add a simple dashboard snippet that displays the last 5 job entries from the tracker
-  Verification: bash -n dashboard/job-summary.sh
+- [ ] Add a cadence entry mapping the new pipeline to its expected run frequency
+  Verification: bash -n cadence/pipeline-schedule.sh
 
-- [ ] Write a test that validates the dashboard snippet produces output without errors
-  Verification: bash tests/test-dashboard.sh
+- [ ] Extend lib/ to include a shared utility for normalizing pipeline output
+  Verification: bash -n lib/normalize_output.py
 
-- [ ] Update the Makefile to include the new job-tracker verification in the test suite
-  Verification: make test && grep -q "job-tracker" Makefile
+- [ ] Add a test case covering the new pipeline end-to-end
+  Verification: make test
 
-- [ ] Document the new cadence/ job-tracker.sh in a README under cadence/
-  Verification: grep -q "job-tracker" cadence/README.md
+- [ ] Update dashboard/ to reflect the new pipeline status
+  Verification: bash -n dashboard/pipeline-status.sh
