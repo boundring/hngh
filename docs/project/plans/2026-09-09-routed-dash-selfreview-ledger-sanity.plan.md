@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-09T20:01:16Z routed-from=dash-selfreview:ledger-sanity  cause=superseded disposed=2026-09-09T21:01:28Z reason="same fix operation and verification as 2026-09-08-routed-dash-selfreview-summary; consolidated per queue-dependency-inventory merge candidate 2" -->
+<!-- plan: status=parked risk=normal accepted=2026-09-09T20:01:16Z routed-from=dash-selfreview:ledger-sanity  cause=superseded disposed=2026-09-09T21:01:28Z reason="same fix operation and verification as 2026-09-08-routed-dash-selfreview-summary; consolidated per queue-dependency-inventory merge candidate 2"  cause=obsolete disposed=2026-09-27T13:00:41Z reason=identity re-occurred 6 times without landing; operator escalation stands -->
 # 2026-09-09 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `dash-selfreview:ledger-sanity`
@@ -16,3 +16,4 @@ at 2026-09-09T19:00:18Z. Alert text: [dash-selfreview] ledger-sanity: unacceptab
 - 2026-09-09T22:00:19Z re-occurred (dedup window expired)
 - 2026-09-09T23:00:18Z re-occurred (dedup window expired)
 - 2026-09-10T00:00:18Z re-occurred (dedup window expired)
+- 2026-09-27T13:00:41Z re-occurred (dedup window expired)

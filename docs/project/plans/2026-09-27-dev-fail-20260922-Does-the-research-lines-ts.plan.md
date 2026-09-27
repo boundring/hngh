@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `cadence/` helper script that validates a job manifest schema before execution
-  Verification: bash -n cadence/validate-manifest.sh
+- [ ] Add a cadence job that runs a basic syntax check on lib files
+  Verification: bash -n cadence/check-lib.sh
 
-- [ ] Create a `tests/` unit test for the manifest validator that asserts valid JSON passes
+- [ ] Create the cadence script under cadence/check-lib.sh
+  Verification: bash cadence/check-lib.sh
+
+- [ ] Add a test for the cadence script in tests/
   Verification: make test
 
-- [ ] Add a `jobs/` entry that invokes the validator on a sample manifest before running
-  Verification: bash -n jobs/sample-validate.sh
+- [ ] Verify the script passes bash syntax check
+  Verification: bash -n cadence/check-lib.sh
 
-- [ ] Extend `lib/` with a shared `parse-manifest` function used by both validator and job runner
-  Verification: bash -n lib/parse-manifest.sh
+- [ ] Confirm no forbidden paths are modified
+  Verification: git grep -n "provider\|credential\|systemd\|secret" -- hngh-automation/
 
-- [ ] Add a `dashboard/` summary line in the test output when validation passes
+- [ ] Run the full test suite to ensure no regressions
   Verification: make test
