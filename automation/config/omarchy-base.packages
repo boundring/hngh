@@ -1,0 +1,39 @@
+# omarchy-base.packages — phase-1 additive session stack
+# Derived from omacom/omarchy @ quattro (4.0.x), clone commit 3faafba234e530b0986196b98dc2c38951e7dd6f
+# Plan: ~/Projects/etc/omarchy-integration-plan.md phase 1 (session-only, no boot-chain contact).
+# Note: omarchy v4 ships no hypridle/hyprlock/hyprpaper — lock screen is owe/owe-lockfeed.
+
+# Hyprland session core
+hyprland
+uwsm
+quickshell
+foot
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+hyprland-guiutils
+hyprland-preview-share-picker # aur
+hyprpicker
+hyprsunset
+
+# Session utilities (from omarchy-base.packages, session-booting subset)
+grim
+slurp
+cliphist
+wl-clipboard
+wtype
+brightnessctl
+pamixer
+wireplumber
+xdg-terminal-exec
+
+# Lock-screen / desktop-video (v4 uses OWE instead of hyprlock/hypridle)
+owe # aur
+owe-lockfeed # aur
+
+# EXCLUDED (avoid-list, conflict matrix — do NOT install):
+# linux-omarchy            — cachyos 7.2.8-1 kernel stays; DO NOT install (also -headers)
+# limine-entry-tool        — Limine 12.9 + snapper-sync already working; dropins DO NOT install
+# mkinitcpio hooks / UKI   — existing hook chain stays
+# sddm                     — already present; theme dropins skipped (keep cachyos-themes-sddm)
+# plymouth                 — cachyos bootanimation stays
+# (sudoers.d/tmpfiles.d, nsswitch.conf, faillock.conf — file writes, not packages; plan says SKIP)
