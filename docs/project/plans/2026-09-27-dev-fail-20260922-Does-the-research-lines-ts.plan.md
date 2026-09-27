@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job template under jobs/ that exercises a single automation primitive with no external dependencies
-  Verification: bash -n jobs/new-primitive-job.sh && make test
+- [ ] Add a lib/assertion helper that validates job output schemas before cadence dispatch
+  Verification: bash -n lib/assertion.py && python3 lib/assertion.py --check-schema
 
-- [ ] Add a verification script under scripts/ that validates the new job template syntax and structure
-  Verification: bash scripts/verify-new-primitive-job.sh && make test
+- [ ] Create a cadence runner script that gates job execution on assertion pass
+  Verification: bash -n cadence/runner.sh && bash cadence/runner.sh --dry-run
 
-- [ ] Add a unit test under tests/ that asserts the new job template passes all structural checks
-  Verification: make test
+- [ ] Add a tests/assertion test suite that exercises the helper against sample outputs
+  Verification: make test && grep -c "assertion" tests/assertion_test.sh
 
-- [ ] Add a cadence entry under cadence/ that schedules the new job with a safe default interval
-  Verification: bash -n cadence/new-primitive-job.cron && make test
+- [ ] Update dashboard digest to include assertion pass/fail counts per job
+  Verification: bash -n dashboard/digest.py && python3 dashboard/digest.py --sample
 
-- [ ] Add a dashboard snippet under dashboard/ that exposes the new job's status for monitoring
-  Verification: bash -n dashboard/new-primitive-job-status.md && make test
+- [ ] Add a jobs/scheduler hook that prunes failed assertion logs after 24h
+  Verification: bash -n jobs/scheduler.sh && grep -q "prune" jobs/scheduler.sh
 
-- [ ] Add a digest entry under digest/ that summarizes the new job's output for periodic review
-  Verification: bash -n digest/new-primitive-job-digest.md && make test
+- [ ] Verify all new paths pass lint and integration test before merge
+  Verification: make test && bash -n lib/assertion.py && bash -n cadence/runner.sh
