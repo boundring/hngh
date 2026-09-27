@@ -7,19 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/hngh-automation-cadence.sh` entrypoint that prints cadence metadata and exits 0
-  Verification: bash -n scripts/hngh-automation-cadence.sh && make test
+- [ ] Add a new job template for automated report generation
+  Verification: bash -n jobs/report-gen/template.sh
 
-- [ ] Add `tests/test_cadence.sh` that asserts the cadence script runs and returns 0
-  Verification: bash tests/test_cadence.sh && make test
+- [ ] Create a verification script for job completion status
+  Verification: python3 scripts/verify_job_status.py
 
-- [ ] Add `cadence/hngh-automation-cadence.yaml` describing the cadence schedule and scope
-  Verification: grep -q 'hngh-automation' cadence/hngh-automation-cadence.yaml && make test
+- [ ] Update cadence configuration to include new job
+  Verification: bash -c "grep -q 'report-gen' cadence/jobs.yaml"
 
-- [ ] Add `lib/hngh-automation-cadence.py` stdlib-only helper for cadence state inspection
-  Verification: python3 -c "import sys; sys.path.insert(0, 'lib'); import hngh_automation_cadence; print('ok')" && make test
+- [ ] Add integration test for report generation pipeline
+  Verification: make test
 
-- [ ] Add `dashboard/hngh-automation-cadence.md` documenting the cadence line and its research scope
-  Verification: grep -q 'hngh-automation' dashboard/hngh-automation-cadence.md && make test
+- [ ] Document new job in dashboard configuration
+  Verification: bash -c "grep -q 'report-gen' dashboard/jobs.json"
 
-This plan implements the **hngh-automation cadence** research line by introducing a runnable cadence entrypoint, its test coverage, schedule metadata, a stdlib-only inspection helper, and a dashboard document — all as plain commits gated by `make test`.
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n jobs/report-gen/template.sh && python3 scripts/verify_job_status.py
