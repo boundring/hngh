@@ -99,7 +99,7 @@ GOOD = ("The machine keeps a ledger of its own appetites and the "
 
 class GhostSummariesTest(unittest.TestCase):
     """ghost_summaries: batched prompt, strict parse, cache, cap, and
-    the LOUD quiet contract (breadcrumb + reason) on empty outcomes."""
+    the LOUD quiet contract (reason string) on empty outcomes."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="ghost-sum-")
@@ -119,18 +119,8 @@ class GhostSummariesTest(unittest.TestCase):
             fh.write("GHOST|id-1|George Orwell|%s\n" % GOOD)
         os.environ["HNGH_GHOST_STUB"] = self.stub
         self.gv = load_mod()
-        import report_queue
-        self._rq = report_queue
-        self._orig_report = report_queue.report
-        self.breadcrumbs = []
-        report_queue.report = self._fake_report
-
-    def _fake_report(self, *args, **kwargs):
-        self.breadcrumbs.append((args, kwargs))
-        return True
 
     def tearDown(self):
-        self._rq.report = self._orig_report
         for k in ("HNGH_GHOST_STATE", "HNGH_GHOST_STUB",
                   "HNGH_GHOST_SUMMARIES", "HNGH_GHOST_PARAMS",
                   "HNGH_REPORT_IDENTITIES", "HNGH_GHOST_TSV",
@@ -164,7 +154,6 @@ class GhostSummariesTest(unittest.TestCase):
         self.assertEqual(sorted(got), ["id-1", "id-3"])
         self.assertEqual(got["id-1"],
                          {"voice": "George Orwell", "text": GOOD})
-        self.assertEqual(self.breadcrumbs, [])
         self.assertTrue(os.path.exists(self.cache))  # cached
         self.assertEqual(self.stamp_count(), 1)      # budget stamped
 
@@ -191,10 +180,6 @@ class GhostSummariesTest(unittest.TestCase):
         got, quiet = self.gv.ghost_summaries(self.arts(), "stamp-a")
         self.assertEqual(got, {})
         self.assertEqual(quiet, "ghost cap exhausted (12 in 24h)")
-        self.assertEqual(len(self.breadcrumbs), 1)
-        _, kwargs = self.breadcrumbs[0]
-        self.assertEqual(kwargs.get("identity"), "ghost-desk-quiet")
-        self.assertEqual(kwargs.get("window"), 86400)
         self.assertEqual(self.stamp_count(), 12)  # stub not consumed
 
     def test_bridge_failure_loud(self):
@@ -203,7 +188,6 @@ class GhostSummariesTest(unittest.TestCase):
         got, quiet = self.gv.ghost_summaries(self.arts(), "stamp-a")
         self.assertEqual(got, {})
         self.assertEqual(quiet, "xiaomi bridge failed (rc 7)")
-        self.assertEqual(len(self.breadcrumbs), 1)
         self.assertFalse(os.path.exists(self.cache))
         self.assertEqual(self.stamp_count(), 0)
 
@@ -213,7 +197,6 @@ class GhostSummariesTest(unittest.TestCase):
         got, quiet = self.gv.ghost_summaries(self.arts(), "stamp-a")
         self.assertEqual(got, {})
         self.assertEqual(quiet, "all ghost summaries malformed")
-        self.assertEqual(len(self.breadcrumbs), 1)
         self.assertFalse(os.path.exists(self.cache))
         self.assertEqual(self.stamp_count(), 1)  # the call still cost
 
@@ -224,7 +207,6 @@ class GhostSummariesTest(unittest.TestCase):
         got, quiet = self.gv.ghost_summaries(self.arts(), "stamp-a")
         self.assertEqual(got, {})
         self.assertEqual(quiet, "no ghost roster")
-        self.assertEqual(len(self.breadcrumbs), 1)
         self.assertEqual(self.stamp_count(), 0)
 
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-27
+
+- newspaper: front-page rebalance - hngh desks (system/session/digest/
+  operator/opportunities) hold the majority while wire categories cap
+  at 10 and 40% of the page; new system-ingest.py feeds a system-
+  resources desk (load/memory/disks, fresh-check refresh); crumbs
+  activity digest; operator and opportunities overflow cards; ghost
+  counsel complete article summaries in the compose (batched xiaomi
+  call, per-article cache, daily cap, loud ghost_quiet marker).
+
 ## 2026-09-24
 
 - time-ledger: residual e2e coverage - the backlog row's named review

@@ -26,11 +26,13 @@ every expected path (the subhour beat wraps it).
 import argparse
 import datetime
 import hashlib
+import importlib.util
 import json
 import math
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 
 AUTOMATION_LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -47,6 +49,16 @@ def _news_db_dir():
 DASHBOARD = os.environ.get("HNGH_DASHBOARD_DIR") or \
     os.path.join(AUTOMATION_ROOT, "dashboard")
 NOW = datetime.datetime.now(datetime.timezone.utc)
+
+# page shape (hngh-internal desks lead; wire is capped; Jev-consulted
+# 2026-09-27: wire_cat cap10 @0.37, wire share <=40% @0.22, system desk
+# led by load @0.5; research/session caps resolved from the operator
+# brief's "capped hard" since Jev confidence was noise there)
+WIRE_CAT_CAP = 10
+WIRE_SHARE = 2.0 / 3.0  # wire_cap = int(2/3 * hngh) -> wire <= 40% of page
+SESSION_CAP = 8
+RESEARCH_CAP = 6
+OPERATOR_CAP = 12
 
 
 def z(d):
@@ -202,12 +214,18 @@ def base_article(kind, category, headline, deck, body, ts, score, sources):
 
 def operator_articles(op, queues):
     """Open operator items -> decision cards (choices carry the real
-    operator-item ids; endpoint literals are view-tested, do not edit)."""
+    operator-item ids; endpoint literals are view-tested, do not edit).
+    Capped at OPERATOR_CAP freshest cards plus one overflow note --
+    the 2026-09-27 broadsheet review flagged a 40-card edition as the
+    amplification stage of operator-items-feed's CAP=40 flood."""
     arts = []
-    items = op.get("items") if isinstance(op, dict) else None
-    for it in items or []:
-        if it.get("status") not in (None, "", "open"):
-            continue
+    rows = op.get("items") if isinstance(op, dict) else None
+    open_items = [it for it in rows or []
+                  if it.get("status") in (None, "", "open")]
+    open_items.sort(key=lambda it: (
+        it.get("last_seen") or it.get("first_seen") or "",
+        str(it.get("id") or "")), reverse=True)
+    for it in open_items[:OPERATOR_CAP]:
         text = (it.get("text") or "").strip()
         art = base_article("operator-item", "operator",
                            sentences(text, 1) or "(empty item)",
@@ -228,12 +246,30 @@ def operator_articles(op, queues):
                         "payload": {"id": oid}}},
         ]
         arts.append(art)
+    if len(open_items) > OPERATOR_CAP:
+        fams = {}
+        for it in open_items[OPERATOR_CAP:]:
+            fam = (it.get("text") or "").split("|")[0].strip() \
+                or "(unlabeled)"
+            fams[fam] = fams.get(fam, 0) + 1
+        arts.append(base_article(
+            "operator-desk", "operator",
+            "Operator desk: %d more open items on the console"
+            % (len(open_items) - OPERATOR_CAP),
+            "Open operator items beyond the front-page cap; handle or "
+            "dismiss them on the console.",
+            ["%s: %d" % (k, v) for k, v in
+             sorted(fams.items(), key=lambda kv: (-kv[1], kv[0]))[:5]],
+            z(NOW), 0.74, [{"label": "operator-items", "url": ""}]))
     return arts
 
 
 def session_articles(sessions):
     """sessions.json -> one hngh-activity article per active session."""
     rows = sessions.get("sessions") if isinstance(sessions, dict) else None
+    rows = sorted(rows or [], key=lambda s: (
+        s.get("age") if isinstance(s.get("age"), (int, float)) else float("inf"),
+        str(s.get("id") or "")))[:SESSION_CAP]
     arts = []
     for s in rows or []:
         mission = (s.get("mission") or "").strip() or "(no mission)"
@@ -243,13 +279,15 @@ def session_articles(sessions):
         arts.append(base_article(
             "session-%s" % s.get("id"), "system",
             sentences(mission, 1), mission, body,
-            sessions.get("generated") or "", 0.60,
+            sessions.get("generated") or "", 0.66,
             [{"label": "sessions", "url": ""}]))
     return arts
 
 
 def research_articles(routes):
-    """research-routes.json -> opportunities-category articles."""
+    """research-routes.json -> opportunities-category articles, capped
+    at RESEARCH_CAP with one honest overflow note (route stubs are the
+    lowest-value slot fill; the 2026-09-27 review counted 100)."""
     rows = routes.get("routes") if isinstance(routes, dict) else None
     arts = []
     for r in rows or []:
@@ -263,7 +301,138 @@ def research_articles(routes):
             sentences(title, 1), title, body,
             routes.get("generated") or "", 0.40,
             [{"label": "research-routes", "url": ""}]))
+    shown = arts[:RESEARCH_CAP]
+    if len(arts) > RESEARCH_CAP:
+        stats = {}
+        for r in (rows or [])[RESEARCH_CAP:]:
+            st = r.get("status") or "unknown"
+            stats[st] = stats.get(st, 0) + 1
+        shown.append(base_article(
+            "opportunities-desk", "opportunities",
+            "Opportunities desk: %d more routes on the bench"
+            % (len(arts) - RESEARCH_CAP),
+            "Research routes beyond the front-page cap.",
+            ["%s: %d" % (k, v) for k, v in
+             sorted(stats.items(), key=lambda kv: (-kv[1], kv[0]))[:5]],
+            routes.get("generated") or "", 0.39,
+            [{"label": "research-routes", "url": ""}]))
+    return shown
+
+
+def system_resources(home_db):
+    """system-resources.json from the db home, refreshed when stale
+    (>30 min) by a subprocess run of system-ingest.py; None = no data."""
+    path = os.path.join(home_db, "system-resources.json")
+    res = load_json(path, "system resources")
+    if isinstance(res, dict) and parse_z(res.get("generated") or "") \
+            and score_age(res["generated"]) <= 30.0:
+        return res
+    try:
+        subprocess.run([sys.executable, "-B",
+                        os.path.join(AUTOMATION_ROOT, "scripts",
+                                     "system-ingest.py"),
+                        "--out", path],
+                       capture_output=True, timeout=60)
+        res = load_json(path, "system resources")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return res if isinstance(res, dict) else None
+
+
+def system_articles(res, fleet):
+    """Machine resource snapshot -> 1-3 system-desk articles (fleet
+    status folds into the lead body; absent data skips silently)."""
+    if not res:
+        return []
+    src = [{"label": "system-resources", "url": ""}]
+    ts = res.get("generated") or ""
+    online = sum(1 for n in fleet if n["online"])
+    fl = "%d/%d fleet nodes online" % (online, len(fleet)) if fleet else ""
+    arts = []
+    load = res.get("load") or {}
+    if load.get("load1") is not None and res.get("cpu_threads"):
+        arts.append(base_article(
+            "system-load", "system",
+            "Load: %.2f / %.2f / %.2f on %d threads" % (
+                load["load1"], load["load5"], load["load15"],
+                res["cpu_threads"]),
+            "Load averages over 1, 5 and 15 minutes on this machine.",
+            ["load 1/5/15m: %.2f / %.2f / %.2f" % (
+                load["load1"], load["load5"], load["load15"])] +
+            (["fleet: %s" % fl] if fl else []),
+            ts, 0.80, src))
+    mem = res.get("memory") or {}
+    if mem.get("total_mb"):
+        used = mem["total_mb"] - mem.get("avail_mb", 0.0)
+        arts.append(base_article(
+            "system-memory", "system",
+            "Memory: %.1f/%.0f GB used (%.0f%%)" % (
+                used / 1024.0, mem["total_mb"] / 1024.0,
+                mem.get("used_pct", 0.0)),
+            "Memory use from /proc/meminfo.",
+            ["total: %.1f GB" % (mem["total_mb"] / 1024.0),
+             "available: %.1f GB" % (mem.get("avail_mb", 0.0) / 1024.0)],
+            ts, 0.79, src))
+    disks = res.get("disks") or []
+    if disks:
+        arts.append(base_article(
+            "system-disks", "system",
+            "Disks: %s" % ", ".join(
+                "%s %.0f%%" % (os.path.basename(d["path"].rstrip("/")) or
+                               d["path"], d["used_pct"]) for d in disks),
+            "Disk use on the repo home and the hngh db home.",
+            ["%s: %.0f%% used, %.1f GB free" % (
+                d["path"], d["used_pct"], d["free_gb"]) for d in disks],
+            ts, 0.78, src))
     return arts
+
+
+def activity_article(crumbs_path):
+    """Crumbs journal -> one honest one-hour activity digest (no crumbs
+    or no rows -> absent)."""
+    if not crumbs_path or not os.path.exists(crumbs_path):
+        return None
+    cutoff = z(NOW - datetime.timedelta(hours=1))
+    try:
+        conn = sqlite3.connect(crumbs_path)
+        rows = conn.execute(
+            "SELECT event, job FROM crumbs WHERE ts >= ?",
+            (cutoff,)).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return None
+    if not rows:
+        return None
+    events, jobs = {}, {}
+    for ev, job in rows:
+        events[ev] = events.get(ev, 0) + 1
+        jobs[job] = jobs.get(job, 0) + 1
+    n_alert = events.get("alert", 0)
+    headline = "Last hour: %d machine events%s" % (
+        len(rows), ", %d alert%s" % (n_alert, "s" if n_alert != 1 else "")
+        if n_alert else "")
+    body = ["%s: %d" % (k, v) for k, v in
+            sorted(events.items(), key=lambda kv: (-kv[1], kv[0]))[:5]]
+    body += ["busiest: %s (%d)" % (j, c) for j, c in
+             sorted(jobs.items(), key=lambda kv: (-kv[1], kv[0]))[:3]]
+    return base_article(
+        "activity-digest", "system", headline,
+        "What the machine did in the last hour, from the crumbs journal.",
+        body, z(NOW), 0.77, [{"label": "crumbs", "url": ""}])
+
+
+def cap_news(news, total_cap):
+    """Wire articles capped per category and in total (hngh-internal
+    desks keep the majority of the page)."""
+    by_cat = {}
+    for a in news:
+        by_cat.setdefault(a["category"], []).append(a)
+    wire = []
+    for cat in sorted(by_cat):
+        wire += sorted(by_cat[cat],
+                       key=lambda a: (-a["score"], a["id"]))[:WIRE_CAT_CAP]
+    wire.sort(key=lambda a: (-a["score"], a["id"]))
+    return wire[:total_cap]
 
 
 def fleet_nodes(fleet):
@@ -308,6 +477,42 @@ def apply_spans(arts):
     return arts
 
 
+def ghost_decorate(articles):
+    """Ghost-counsel complete summaries on the front slots (operator
+    directive 2026-09-27). Fail-open but LOUD: when the ghost lane
+    produces nothing, returns a short quiet reason for the edition
+    marker and files one deduped report-queue breadcrumb (script
+    layer: libs may not import sibling libs)."""
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "hngh_ghost_voices",
+            os.path.join(AUTOMATION_LIB, "ghost-voices.py"))
+        gv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gv)
+        got, quiet = gv.ghost_summaries(
+            articles[:12],
+            "%s-%d" % (NOW.strftime("%Y-%m-%d"), NOW.hour // 8))
+    except Exception as exc:
+        print("newspaper-compose: ghost summaries failed (%s)" % exc,
+              file=sys.stderr)
+        return "ghost bridge unusable (%s)" % exc
+    landed = 0
+    for a in articles[:12]:
+        g = got.get(a["id"])
+        if g:
+            a["ghost"] = {"voice": g["voice"], "text": g["text"]}
+            landed += 1
+    if quiet and landed == 0:
+        try:
+            import report_queue
+            report_queue.report(
+                "model", "ghost desk quiet: %s" % quiet,
+                identity=gv.QUIET_IDENTITY, window=gv.QUIET_WINDOW_S)
+        except Exception:
+            pass
+    return quiet if quiet and landed == 0 else None
+
+
 def compose(args):
     weights = feed_weights()
     dashboard = args.dashboard or DASHBOARD
@@ -331,28 +536,42 @@ def compose(args):
 
     news, past_editions = db_articles(args.db, weights, queues)
 
+    sess_data = load_json(dpath("sessions.json"), "sessions") or {}
     articles = operator_articles(
         load_json(dpath("operator-items.json"), "operator items") or {},
         queues)
-    sess = session_articles(
-        load_json(dpath("sessions.json"), "sessions") or {})
+    sess = session_articles(sess_data)
     articles += sess
     articles += research_articles(
         load_json(dpath("research-routes.json"), "research routes") or {})
     fleet = load_json(dpath("fleet.json"), "fleet") or {}
     fleet = fleet_nodes(fleet)
+    articles += system_articles(system_resources(args.home_db), fleet)
+    dig = activity_article(os.environ.get("HNGH_CRUMBS_DB") or
+                           os.path.join(AUTOMATION_ROOT, "state",
+                                        "crumbs.db"))
+    if dig:
+        articles.append(dig)
     td_art = thisday_article(td or {})
     if td_art:
         articles.append(td_art)
-    articles += news
-    # junk filter: empty or near-empty headlines are layout residue
-    # ("FOLLOWON:"-style stubs from research-routes rows), not news
-    articles = [a for a in articles
+
+    def keep(arts):
+        # junk filter: empty or near-empty headlines are layout residue
+        # ("FOLLOWON:"-style stubs from research-routes rows), not news
+        return [a for a in arts
                 if len("".join(a["headline"].split())) >= 8]
+
+    articles = keep(articles)
+    news = keep(news)
+    # hngh-internal desks keep the majority: wire capped per category and
+    # at <=40% of the page total
+    articles += cap_news(news, int(len(articles) * WIRE_SHARE))
     # masthead histogram: plan statuses + every category on today's page
     for art in articles:
         queues[art["category"]] = queues.get(art["category"], 0) + 1
     apply_spans(articles)
+    ghost_quiet = ghost_decorate(articles)
 
     # weather fail-open: only a well-formed cache becomes the masthead
     # value; anything else composes as null (the page renders dry).
@@ -365,7 +584,8 @@ def compose(args):
                  "slot": NOW.hour // 8,
                  "weather": weather,
                  "system": {"queue_depth": queue_depth,
-                            "sessions_active": len(sess),
+                            "sessions_active": len(
+                                sess_data.get("sessions") or []),
                             "fleet": fleet}}]
 
     out = {"generated": z(NOW),
@@ -373,6 +593,8 @@ def compose(args):
            "queues": queues,
            "articles": articles,
            "editions": past_editions}
+    if ghost_quiet:
+        out["ghost_quiet"] = ghost_quiet
     return out
 
 

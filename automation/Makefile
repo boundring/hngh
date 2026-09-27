@@ -83,8 +83,10 @@ test:
 	python3 -B tests/test-scrub-module.py
 	python3 -B tests/test-gdelt-news.py
 	python3 -B tests/test-news-desk.py
+	python3 -B tests/test-news-ingest.py
 	bash tests/test-news-articles.sh
 	bash tests/test-dashboard-introspect.sh
+	python3 -B tests/test-newspaper-compose.py
 	python3 -B tests/test-newspaper-window.py
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-manga-collage.py
@@ -106,6 +108,7 @@ test:
 	python3 -B tests/test-fleet-feed.py
 	python3 -B tests/test-graph-data.py
 	python3 -B tests/test-system-feed.py
+	python3 -B tests/test-system-ingest.py
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-report-queue-redaction.py
 	bash tests/test-config-backup-fail-redact.sh

@@ -217,17 +217,6 @@ def _save_summary_cache(cache):
         pass
 
 
-def _quiet(reason):
-    """One deduped report-queue breadcrumb; a lost row is fine."""
-    try:
-        import report_queue
-        report_queue.report(
-            "model", "ghost desk quiet: %s" % reason,
-            identity=QUIET_IDENTITY, window=QUIET_WINDOW_S)
-    except Exception:
-        pass
-
-
 def ghost_summaries(articles, edition_stamp):
     """Batched ghost summaries for front-slot articles -- ONE xiaomi
     call per compose, cache-backed so 30-min re-composes do not re-call.
@@ -247,19 +236,16 @@ def ghost_summaries(articles, edition_stamp):
     ghosts = load_ghosts()
     if not ghosts:
         reason = "no ghost roster"
-        _quiet(reason)
         return got, reason
     stamps = state_dir()
     cap = summary_cap()
     if fresh_stamp_count(stamps) >= cap:
         reason = "ghost cap exhausted (%d in 24h)" % cap
-        _quiet(reason)
         return got, reason
     picks = pick_ghosts(ghosts, "ghost-summaries-%s" % edition_stamp,
                         n=min(len(todo), len(ghosts)))
     if not picks:
         reason = "no ghosts available for blend"
-        _quiet(reason)
         return got, reason
     names = {g["name"] for g in ghosts}
     roster_txt = "\n".join(
@@ -283,7 +269,6 @@ def ghost_summaries(articles, edition_stamp):
     rc, text = _bridge_call(prompt)
     if rc != 0 or not text.strip():
         reason = "xiaomi bridge failed (rc %s)" % rc
-        _quiet(reason)
         return got, reason
     todo_ids = {a["id"] for a in todo}
     fresh = {}
@@ -311,7 +296,6 @@ def ghost_summaries(articles, edition_stamp):
         pass
     if not fresh:
         reason = "all ghost summaries malformed"
-        _quiet(reason)
         return got, reason
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     for aid, item in fresh.items():
