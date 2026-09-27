@@ -10,12 +10,14 @@ HNGH_XIAOMI_CMD (bridge command override). Cap: 6 fresh calls per 24h,
 stamp files in ~/.hngh/db/ghost-state/ (hngh_home db_dir contract)."""
 
 import hashlib
+import json
 import os
 import random
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 
 _AUTOMATION = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _AUTOMATION not in sys.path:
@@ -137,6 +139,186 @@ def ghost_counsel():
               "w", encoding="utf-8") as fh:
         fh.write(seed + "\n")
     return line
+
+
+# --- complete article summaries (2026-09-27 operator directive: "allow
+# our ghost counsel to write complete summaries for us to review on any
+# of our articles") ---
+
+GHOST_LINE_RE = re.compile(r"^GHOST\|([^|]+)\|([^|]+)\|(.+)$")
+SUMMARY_MIN_WORDS = 20  # a solid paragraph, not a one-liner
+DEFAULT_SUMMARY_CAP = 12  # ghost-cap-day; the old 6/24h CAP_CALLS
+# default stays on the one-line digest counsel lane above
+QUIET_IDENTITY = "ghost-desk-quiet"
+QUIET_WINDOW_S = 86400
+
+
+def summaries_cache_path():
+    return os.environ.get("HNGH_GHOST_SUMMARIES") or os.path.join(
+        _AUTOMATION, "state", "ghost-summaries.json")
+
+
+def params_path():
+    return os.environ.get("HNGH_GHOST_PARAMS") or os.path.join(
+        _AUTOMATION, "cadence-params.tsv")
+
+
+def param(key, default=None):
+    """cadence-params.tsv lookup: first row whose key column matches
+    (same convention as weather-ingest.py); default when absent."""
+    try:
+        with open(params_path(), encoding="utf-8") as fh:
+            for raw in fh:
+                cols = raw.rstrip("\n").split("\t")
+                if cols and cols[0] == key:
+                    return cols[1]
+    except OSError:
+        pass
+    return default
+
+
+def summary_cap():
+    """Daily call budget for the summaries lane (env override first)."""
+    env = os.environ.get("HNGH_GHOST_CAP_DAY")
+    if env and env.isdigit():
+        return int(env)
+    try:
+        return int(param("ghost-cap-day", "") or DEFAULT_SUMMARY_CAP)
+    except ValueError:
+        return DEFAULT_SUMMARY_CAP
+
+
+def _load_summary_cache():
+    try:
+        with open(summaries_cache_path(), encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _save_summary_cache(cache):
+    """Prune to a week and a 2000-entry ceiling; atomic; never raises."""
+    cutoff = (datetime.now(timezone.utc) -
+              timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    keep = {aid: c for aid, c in cache.items()
+            if isinstance(c, dict) and isinstance(c.get("ts"), str)
+            and c["ts"] >= cutoff}
+    keep = dict(sorted(keep.items(),
+                       key=lambda kv: kv[1]["ts"], reverse=True)[:2000])
+    path = summaries_cache_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(keep, fh, indent=1, sort_keys=True)
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def _quiet(reason):
+    """One deduped report-queue breadcrumb; a lost row is fine."""
+    try:
+        import report_queue
+        report_queue.report(
+            "model", "ghost desk quiet: %s" % reason,
+            identity=QUIET_IDENTITY, window=QUIET_WINDOW_S)
+    except Exception:
+        pass
+
+
+def ghost_summaries(articles, edition_stamp):
+    """Batched ghost summaries for front-slot articles -- ONE xiaomi
+    call per compose, cache-backed so 30-min re-composes do not re-call.
+
+    Returns ({article_id: {"voice", "text"}}, quiet_reason_or_None).
+    Fail-open but loud: every empty outcome carries a quiet reason (the
+    caller renders it and a deduped breadcrumb is filed); a non-empty
+    result means the page has ghosts and no marker is warranted."""
+    cache = _load_summary_cache()
+    got = {aid: {"voice": c["voice"], "text": c["text"]}
+           for aid, c in cache.items()
+           if isinstance(c, dict) and c.get("voice") and c.get("text")}
+    todo = [a for a in articles if a.get("id") and a.get("headline")
+            and a["id"] not in got]
+    if not todo:
+        return got, None
+    ghosts = load_ghosts()
+    if not ghosts:
+        reason = "no ghost roster"
+        _quiet(reason)
+        return got, reason
+    stamps = state_dir()
+    cap = summary_cap()
+    if fresh_stamp_count(stamps) >= cap:
+        reason = "ghost cap exhausted (%d in 24h)" % cap
+        _quiet(reason)
+        return got, reason
+    picks = pick_ghosts(ghosts, "ghost-summaries-%s" % edition_stamp,
+                        n=min(len(todo), len(ghosts)))
+    if not picks:
+        reason = "no ghosts available for blend"
+        _quiet(reason)
+        return got, reason
+    names = {g["name"] for g in ghosts}
+    roster_txt = "\n".join(
+        "- %s (%s): %s" % (g["name"], g["era"], g["register"])
+        for g in picks)
+    arts_txt = "\n".join(
+        "ARTICLE|%s|%s|%s: %s -- %s" % (
+            a["id"], picks[i]["name"], a.get("category") or "",
+            a["headline"], (a.get("deck") or "").strip())
+        for i, a in enumerate(todo))
+    prompt = (
+        "You write ghost summaries for an autonomous machine's "
+        "newspaper; the machine's operator reviews them. Each ARTICLE "
+        "below is assigned one ghost:\n\n%s\n\n%s\n\nFor every article "
+        "write ONE line, exactly:\n"
+        "GHOST|<article-id>|<ghost name>|<summary>\n"
+        "The summary is one complete paragraph, 60-120 words, in the "
+        "assigned ghost's voice. Use only facts stated in the article "
+        "line; never mention stale, expired or unverified machine "
+        "state. No preamble, no other lines." % (roster_txt, arts_txt))
+    rc, text = _bridge_call(prompt)
+    if rc != 0 or not text.strip():
+        reason = "xiaomi bridge failed (rc %s)" % rc
+        _quiet(reason)
+        return got, reason
+    todo_ids = {a["id"] for a in todo}
+    fresh = {}
+    for raw in text.splitlines():
+        m = GHOST_LINE_RE.match(raw.strip())
+        if not m:
+            continue
+        aid = m.group(1).strip()
+        voice = m.group(2).strip()
+        summary = " ".join(m.group(3).split())
+        if aid not in todo_ids or voice not in names or not summary:
+            continue
+        if STALE_MENTION_RE.search(summary):
+            continue  # summaries must not invent machine facts
+        if len(summary.split()) < SUMMARY_MIN_WORDS:
+            continue
+        fresh[aid] = {"voice": voice, "text": summary}
+    # one completed bridge call: stamp the budget regardless of yield
+    try:
+        with open(os.path.join(
+                stamps, "%d-%d" % (time.time_ns(), os.getpid())),
+                "w", encoding="utf-8") as fh:
+            fh.write("ghost-summaries-%s\n" % edition_stamp)
+    except OSError:
+        pass
+    if not fresh:
+        reason = "all ghost summaries malformed"
+        _quiet(reason)
+        return got, reason
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for aid, item in fresh.items():
+        cache[aid] = dict(item, ts=now)
+    _save_summary_cache(cache)
+    got.update(fresh)
+    return got, None
 
 
 if __name__ == "__main__":
