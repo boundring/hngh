@@ -11,3 +11,7 @@ at 2026-09-26T02:00:13Z. Alert text: research verdict parked untyped for patrol-
 
 - [ ] Delve: open research subject fail-20260926-typed-gap-research-beat for typed-gap:research-beat; record disposition; then fix or park
       Verification: research subject fail-20260926-typed-gap-research-beat present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-27T08:00:53Z re-occurred (dedup window expired)

@@ -5,17 +5,16 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implement the "cadence-job-scaffold" research line by introducing a reusable shell template and a corresponding smoke test job that validates execution without touching kernel or credentials.
-
 ## Steps
 
-- [ ] Create a reusable shell template at `scripts/cadence-scaffold.sh` that echoes a timestamp and exits 0
-  Verification: bash -n scripts/cadence-scaffold.sh
-- [ ] Add a smoke test job definition at `jobs/cadence-scaffold.yml` that invokes the scaffold script
-  Verification: grep -q "cadence-scaffold" jobs/cadence-scaffold.yml
-- [ ] Write a test runner at `tests/cadence-scaffold.test.sh` that executes the scaffold and asserts exit code 0
-  Verification: bash -n tests/cadence-scaffold.test.sh
-- [ ] Run the full test suite to confirm the new job integrates without breaking existing checks
-  Verification: make test
-- [ ] Commit the scaffold, job, and test files as a single atomic change
-  Verification: git diff --stat HEAD~1 | grep -E "scripts/|jobs/|tests/"
+- [ ] Add a `dry-run` flag to the cadence runner that parses job definitions without executing them
+  Verification: `bash -n cadence/dry-run.sh`
+
+- [ ] Create a sample job config under `jobs/sample-config.yaml` that exercises the dry-run path
+  Verification: `bash cadence/dry-run.sh --config jobs/sample-config.yaml`
+
+- [ ] Add a test script in `tests/test-dry-run.sh` that validates dry-run output against expected parse results
+  Verification: `bash tests/test-dry-run.sh`
+
+- [ ] Update `make test` to include the new dry-run test target
+  Verification: `make test`
