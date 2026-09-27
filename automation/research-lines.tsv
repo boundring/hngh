@@ -275,7 +275,7 @@ arc-20260926-tree-of-life-wiring	reviewed	2026-09-27T08:40:33Z	wire automation/r
 arc-20260926-omp-session-meta-cycle	reviewed	2026-09-27T07:53:37Z	procedurally routed oh-my-pi sessions on billion-context-customized local models -- what supervision loop lets sessions compose and launch sessions safely?
 arc-20260926-fractal-fanout	reviewed	2026-09-27T05:15:46Z	question-matrix generation loops over the typesafe KB (question-node rows in hngh-knowledge.db) -- what fan-out shape and confidence gates survive cost review?
 fb-20260927-1-feedback-capture-integrity	reviewed	2026-09-27T09:48:17Z	where is feedback idea text lost between the digest-email form, imap capture, and feedback-ingest, and what fail-closed guard stops empty [feedback:idea] floods?
-arc-20260927-dashboard-masthead-splash	crystallized	2026-09-27T20:08:42Z	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
+arc-20260927-dashboard-masthead-splash	reviewed	2026-09-27T20:24:33Z	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
 arc-20260927-dashboard-voice-majority	planned	2026-09-27T14:02:12Z	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
 arc-20260927-dashboard-wire-capped	planned	2026-09-27T14:02:12Z	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
 arc-20260927-dashboard-single-webgl	planned	2026-09-27T14:02:12Z	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
