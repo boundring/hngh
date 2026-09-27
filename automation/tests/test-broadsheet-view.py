@@ -354,6 +354,33 @@ class RefreshStaleness(unittest.TestCase):
         self.assertIn("btn.disabled = false", self.js)
         self.assertIn("btn.textContent = old", self.js)
 
+    def test_refresh_triggers_full_rebuild(self):
+        # the cache-busted refetch must actually re-print the sheet:
+        # the button path rebuilds the stream, the silent 30s poll
+        # deliberately does not (that rebuild-from-stale-snapshot was
+        # the original flash bug)
+        self.assertIn("refresh(true)", self.js)
+        self.assertIn("function loadFeed(rebuild)", self.js)
+        self.assertIn("if (rebuild || !$('stream').childNodes.length) "
+                      "rebuildStream(true)", self.js)
+        # poll chain keeps the no-rebuild semantics
+        self.assertIn("Promise.resolve(refresh()).then", self.js)
+
+    def test_fail_stale_keeps_current_edition(self):
+        # a rejected refetch shows the banner and must not blank the
+        # page: loadFeed throws before touching feed.data, and the
+        # refresh rejection path never rebuilds
+        start = self.js.index("function loadFeed")
+        feed_data = self.js.index("feed.data = d", start)
+        throw = self.js.index("refusing to print a blank page", start)
+        self.assertLess(throw, feed_data,
+                        "malformed feed must not replace feed.data")
+        rstart = self.js.index("function refresh")
+        rend = self.js.index("// ---------- column config", rstart)
+        rejected = self.js[rstart:rend]
+        self.assertIn("showErr(rs[0].reason.message)", rejected)
+        self.assertNotIn("rebuildStream(", rejected[rejected.index("rejected"):])
+
 
 if __name__ == "__main__":
     unittest.main()

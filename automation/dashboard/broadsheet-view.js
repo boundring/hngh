@@ -916,7 +916,7 @@
               Array.isArray(d.articles) && d.articles.length &&
               typeof d.generated === 'string');
   }
-  function loadFeed() {
+  function loadFeed(rebuild) {
     var url = new URLSearchParams(location.search).get('feed')
       || 'newspaper.json';
     feed.fixture = url !== 'newspaper.json';
@@ -935,17 +935,23 @@
         return x && !feed.dismissed[x.id];
       });
       mastheadRender(d.edition, d.generated);
-      if (!$('stream').childNodes.length) rebuildStream();
+      // initial load always builds; an explicit refresh rebuilds the
+      // whole sheet so a new snapshot is actually visible. The silent
+      // 30s poll deliberately does neither (rebuilding from a stale
+      // snapshot was the original flash bug).
+      if (rebuild || !$('stream').childNodes.length) rebuildStream(true);
     });
   }
-  function refresh() {
+  function refresh(rebuild) {
     return Promise.allSettled([
-      loadFeed(),
+      loadFeed(rebuild),
       fetchJSON('fleet.json').then(function (f) {
         var nodes = f && Array.isArray(f.nodes) ? f.nodes : [];
         if (!mapState.scene) mapInit(nodes); // live map only binds once
       })
     ]).then(function (rs) {
+      // fail-stale: a rejected refetch leaves the current edition on
+      // screen (no rebuild, feed.data untouched) and says so
       if (rs[0].status === 'rejected') showErr(rs[0].reason.message);
     });
   }
@@ -978,7 +984,7 @@
       btn.disabled = true;
       var old = btn.textContent;
       btn.textContent = 'refreshing…';
-      Promise.resolve(refresh()).catch(function () {})
+      Promise.resolve(refresh(true)).catch(function () {})
         .then(function () { btn.disabled = false; btn.textContent = old; });
     });
     document.addEventListener('keydown', function (ev) {
