@@ -161,6 +161,10 @@ INTENTS += [
     ("ghost-desk", "major",
      "How should each edition carry ghost-counsel summary blocks or an "
      "explicit ghost_quiet marker, never silently neither?"),
+    ("dismissed-clean", "major",
+     "What keeps test-artifact ids out of operator-dismissed.json so "
+     "smoke sentinels (dunder-prefixed keys) never pollute the "
+     "durable dismiss ledger?"),
 ]
 SLUGS = [i[0] for i in INTENTS]
 SEVERITY = {i[0]: i[1] for i in INTENTS}
@@ -381,7 +385,7 @@ FEED_SLUGS = {"masthead-expansion", "masthead-varies",
               "choice-previews", "family-card", "no-empty-feedback",
               "voice-majority", "wire-capped", "evidence-sources",
               "ghost-desk", "editorial-present", "feedback-flood",
-              "edition-fresh"}
+              "edition-fresh", "dismissed-clean"}
 
 
 def probe_operator():
@@ -404,6 +408,27 @@ def probe_operator():
         and "[feedback:idea]" in (r.get("text") or ""))
     return {"feedback-flood": (open_flood == 0,
             "open-flood=%d items=%d" % (open_flood, len(rows)))}
+
+
+def probe_dismissed():
+    """dismissed-clean: no test-artifact keys in operator-dismissed.json.
+    Sentinels are dunder-prefixed (observed: "__smoke_no_such_item__"
+    leaked 2026-09-27T06:21Z from an unseamed smoke test); real ids are
+    8-hex hashes or task slugs, never starting with '__'."""
+    path = os.environ.get(
+        "INTROSPECT_OPERATOR_DISMISSED",
+        os.path.join(DASH, "operator-dismissed.json"))
+    try:
+        with open(path, encoding="utf-8") as f:
+            op = json.load(f)
+    except (OSError, ValueError) as exc:
+        return {"dismissed-clean": (False,
+                "operator-dismissed.json unreadable: %s" % exc)}
+    rows = op.get("dismissed") if isinstance(op, dict) else None
+    rows = [k for k in (rows or {}) if isinstance(k, str)]
+    bad = [k for k in rows if k.startswith("__")]
+    return {"dismissed-clean": (not bad,
+            "sentinels=%s total=%d" % (",".join(bad) or "none", len(rows)))}
 
 
 def probe_fresh(now):
@@ -439,6 +464,7 @@ def run_probes():
         feed_probes = probe_feed(data)
         feed_probes.update(probe_feed_balance(data))
     feed_probes.update(probe_operator())
+    feed_probes.update(probe_dismissed())
     feed_probes.update(probe_fresh(now=time.time()))
     results = {}
     for slug in SLUGS:

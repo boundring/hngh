@@ -139,15 +139,21 @@ time.
 - INT-27 **ghost-desk** (major): each edition carries ghost-counsel
   summary blocks or an explicit quiet marker — never silently neither.
   Probe: JSON — `edition.ghost` truthy or `edition.ghost_quiet` truthy.
+- INT-28 **dismissed-clean** (major): the operator-dismissed.json
+  ledger holds no test-artifact ids — smoke sentinels are
+  dunder-prefixed (observed leak: `__smoke_no_such_item__`,
+  2026-09-27T06:21Z, from an unseamed smoke test); real ids are 8-hex
+  hashes or task slugs. Probe: JSON — no key of `dismissed` matching
+  `^__`.
 
 ## Loop mechanics (the metacycle)
 
 Every hour (`42-dashboard-introspect`, no stamp gate — the hour tier
 paces it):
 
-1. Run all 27 probes (fail-open per probe; a probe error counts as
+1. Run all 28 probes (fail-open per probe; a probe error counts as
    unmet with the error as detail).
-2. Grade = met/27. Written as a report-queue progress row, identity
+2. Grade = met/28. Written as a report-queue progress row, identity
    `dashboard-introspect:grade`, evidence `M/T` — re-fires only when
    the grade moves.
 3. Unmet probes → research arcs `arc-<date>-dashboard-<slug>` in

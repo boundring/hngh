@@ -128,6 +128,9 @@ json.dump({"generated_at": "2026-09-27T12:00:00Z", "items": [
      "status": "open", "first_seen": "2026-09-27T12:00:00Z",
      "last_seen": "2026-09-27T12:00:00Z"}]},
           open(sys.argv[1] + "/dash/operator-items.json", "w"))
+json.dump({"dismissed": {"e5-regression-probe": "2026-08-27T18:07:32Z",
+            "5145605b": "2026-08-27T19:05:37Z"}},
+          open(sys.argv[1] + "/dash/operator-dismissed.json", "w"))
 PY
  cat >"$SB/rq" <<STUB
 #!/bin/sh
@@ -155,7 +158,7 @@ ck "s1 beat exits 0" "0" "$?"
 ck "s1 no arc rows filed" "0" "$(grep -c '^arc-' "$SB/subj.txt" || true)"
 ck "s1 grade row filed" "1" "$(grep -c 'dashboard-introspect:grade' \
  "$SB/rq.log" || true)"
-ck "s1 grade is 27/27" "1" "$(grep -c 'grade 27/27 met' \
+ck "s1 grade is 28/28" "1" "$(grep -c 'grade 28/28 met' \
  "$SB/rq.log" || true)"
 ck "s1 state streak bumped" "1" "$(python3 -c "
 import json;print(json.load(open('$SB/state.json'))['probes']['masthead-temperature']['streak'])")"
@@ -222,6 +225,27 @@ MGH=24 run_beat 0 # gap pending but filing window closed for 24h
 ck "s5 window closed defers filing" "0" \
  "$(grep -c '^arc-' "$SB/subj.txt" || true)"
 ck "s5 beat still exits 0" "0" "$?"
+
+# ---- 6. dismissed-clean: dunder sentinel leaks -> one arc ----
+new_sandbox s6
+python3 - "$SB/dash/operator-dismissed.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["dismissed"]["__smoke_no_such_item__"] = "2026-09-27T06:21:57Z"
+json.dump(d, open(p, "w"))
+PY
+run_beat 1
+ck "s6 beat exits 0" "0" "$?"
+ck "s6 exactly one arc for sentinel leak" "1" \
+ "$(grep -c '^arc-[0-9]*-dashboard-dismissed-clean' "$SB/subj.txt" ||
+  true)"
+ck "s6 detail names the sentinel" "1" \
+ "$(python3 -c "
+import json
+d = json.load(open('$SB/state.json'))
+print(int('__smoke_no_such_item__' in
+          d['probes']['dismissed-clean']['detail']))")"
 
 echo
 if [ "$fails" = 0 ]; then

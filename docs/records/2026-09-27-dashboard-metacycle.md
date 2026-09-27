@@ -118,3 +118,15 @@ INT-25 still grades red (arc `arc-20260927-dashboard-editorial-present`
 filed). Post-seed grade: 16/27 met, 3 new arcs (editorial-present,
 expansion-rotation, ghost-desk), grade row bumped ×3 via the
 report-queue occurrence/evidence contract.
+
+## Addendum — dismissed-clean probe (same day)
+
+The feedback-flood MET was genuine (40 real items, all handled,
+dismissed 13:11:43Z). A sibling leak of the same class surfaced in
+`operator-dismissed.json`: smoke sentinel `__smoke_no_such_item__`
+(2026-09-27T06:21Z) from an unseamed test. New INT-28 dismissed-clean
+(major): no `dismissed` key matching `^__`. D is seaming the writer
+test in parallel, so day-0 is expected to go met quickly after the
+sentinel is purged at the source; the beat grades red until then —
+correct: it alerts (`dashboard-regression:dismissed-clean`) and files
+the arc, it does not edit the ledger.
