@@ -42,6 +42,15 @@ FILLER_RE = re.compile(r"^(otherwise|nothing)\b", re.I)
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9._/-]{4,}")
 # ponytail: cap keeps the panel sane under stale-store alert spam; raise if real items get dropped
 CAP = 40
+# Exact test-residue payload (operator-directed purge 2026-09-27): an
+# unseamed FEEDBACK dir in test-dashboard-p1.py leaked these rows into
+# the crumbs corpus; every carrier was verified non-operator content.
+# Pinned literal, NOT a pattern — the dashboard views flood-guard on
+# the same needle (dashboard/newspaper-view.js FLOOD_NEEDLE,
+# dashboard/broadsheet-view.js FLOOD_NEEDLE). The [w=...] stamp tails
+# given rows fresh ids per rebuild, which resurrected dismissed rows;
+# the only durable kill is at the filing boundary.
+FLOOD_NEEDLE = "[feedback:idea] from email"
 
 
 def norm(text):
@@ -133,8 +142,12 @@ def main():
 
     # source items: digest bullets + matching journal details
     for text in lines:
+        if FLOOD_NEEDLE in text:
+            continue
         items.append({"text": text, "first_seen": fallback_seen})
     for ts, joined, event, detail in rows:
+        if FLOOD_NEEDLE in joined:
+            continue
         if is_operator_item(event, event + " " + detail) and not RESOLVED_RE.search(detail):
             items.append({"text": joined, "first_seen": ts})
 

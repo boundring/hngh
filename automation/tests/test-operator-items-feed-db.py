@@ -5,6 +5,7 @@ parse yielded (detail keeps its [w=...] stamp tail), and a missing or
 broken journal must leave the prior operator-items.json untouched."""
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -103,6 +104,64 @@ class FeedDbFlip(unittest.TestCase):
         self.feed.main()
         with open(self.feed.OUT) as f:
             self.assertEqual(f.read(), prior)
+
+
+class ResiduePurge(unittest.TestCase):
+    """operator-directed purge 2026-09-27: the '[feedback:idea] from
+    email' test residue must never file — its [w=...] stamp tails give
+    every rebuild fresh ids, resurrecting dismissed rows; a full main()
+    run over a residue-seeded journal drops them while real rows and
+    rerun-idempotence survive."""
+
+    RESIDUE = ("2026-09-27T13:36:0%dZ | report-queue | alert | "
+               "[feedback:idea] from email [w=crumbs.py@%d]")
+    REAL = ("2026-09-27T13:37:00Z | report-queue | alert | "
+            "[feedback:idea] please make the masthead darker")
+    OTHER = ("2026-09-27T13:38:00Z | patrol.py | alert | stale store "
+             "needs operator decision")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.addCleanup(os.environ.pop, "HNGH_CRUMBS_DB", None)
+        self.state = os.path.join(self.tmp.name, "STATE.md")
+        self.db = os.path.join(self.tmp.name, "crumbs.db")
+        os.environ["HNGH_CRUMBS_DB"] = self.db
+        self.feed = _load_feed()
+        self.feed.DATA = os.path.join(self.tmp.name, "data.json")
+        with open(self.feed.DATA, "w") as f:
+            f.write("{}")
+        self.feed.OUT = os.path.join(self.tmp.name, "operator-items.json")
+        self.feed.DISMISSED = os.path.join(self.tmp.name, "dismissed.json")
+        self.feed.APPROVED = os.path.join(self.tmp.name, "approved.json")
+        self.sync(self.RESIDUE % (1, 401) + "\n" + self.REAL + "\n" +
+                  self.RESIDUE % (2, 402) + "\n" + self.OTHER + "\n")
+
+    def sync(self, state_text):
+        with open(self.state, "w") as f:
+            f.write(state_text)
+        if os.path.exists(self.db):
+            os.unlink(self.db)
+        subprocess.run([sys.executable,
+                        os.path.join(ROOT, "lib", "crumbs-db.py"),
+                        "sync", "--state", self.state, "--db", self.db],
+                       check=True, capture_output=True)
+
+    def run_feed(self):
+        self.feed.main()
+        with open(self.feed.OUT) as f:
+            items = json.load(f)["items"]
+        return {it["id"]: it["text"] for it in items}
+
+    def test_residue_never_filed_reals_survive_idempotent(self):
+        items = self.run_feed()
+        self.assertEqual(len(items), 2)  # residue rows 401/402 dropped
+        for text in items.values():
+            self.assertNotIn("[feedback:idea] from email", text)
+        self.assertIn("masthead darker", " ".join(items.values()))
+        self.assertIn("stale store", " ".join(items.values()))
+        rerun = self.run_feed()  # rewrite, not merge: same ids again
+        self.assertEqual(rerun, items)
 
 
 if __name__ == "__main__":

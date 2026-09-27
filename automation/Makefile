@@ -51,6 +51,7 @@ test:
 	python3 -B tests/test-notify-email.py
 	python3 -B tests/test-notify-send-path.py
 	python3 -B tests/test-cap-block-operator-item.py
+	python3 -B tests/test-operator-items-feed-db.py
 	python3 -B tests/test-email-dismiss-durability.py
 	python3 -B tests/test-imap-poll.py
 	python3 -B tests/test-credentials.py
