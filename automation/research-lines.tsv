@@ -283,7 +283,7 @@ arc-20260927-dashboard-masthead-expansion	planned	2026-09-27T14:02:12Z	Where sho
 arc-20260927-dashboard-masthead-temperature	planned	2026-09-27T14:02:12Z	Where should weather-ingest derive temp_f alongside temp_c so the broadsheet masthead prints both units?
 arc-20260927-dashboard-fail-closed-auth	planned	2026-09-27T14:02:12Z	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
 arc-20260927-dashboard-masthead-varies	planned	2026-09-27T14:02:12Z	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
-arc-20260927-dashboard-choice-previews	crystallized	2026-09-27T14:31:02Z	How should operator-item choices always carry outcome preview text in newspaper.json composition?
+arc-20260927-dashboard-choice-previews	reviewed	2026-09-27T15:23:45Z	How should operator-item choices always carry outcome preview text in newspaper.json composition?
 arc-20260927-dashboard-editorial-present	crystallized	2026-09-27T15:03:34Z	How does composition surface real hngh editorial rows (alerts, fleet notes, real operator decisions) instead of only stub-class internal content?
 arc-20260927-dashboard-ghost-desk	planned	2026-09-27T14:02:12Z	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
-arc-20260927-dashboard-expansion-rotation	planned	2026-09-27T14:02:12Z	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
+arc-20260927-dashboard-expansion-rotation	expanding	2026-09-27T15:07:50Z	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
