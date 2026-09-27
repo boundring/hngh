@@ -7,20 +7,15 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a lib/assertion helper that validates job output schemas before cadence dispatch
-  Verification: bash -n lib/assertion.py && python3 lib/assertion.py --check-schema
-
-- [ ] Create a cadence runner script that gates job execution on assertion pass
-  Verification: bash -n cadence/runner.sh && bash cadence/runner.sh --dry-run
-
-- [ ] Add a tests/assertion test suite that exercises the helper against sample outputs
-  Verification: make test && grep -c "assertion" tests/assertion_test.sh
-
-- [ ] Update dashboard digest to include assertion pass/fail counts per job
-  Verification: bash -n dashboard/digest.py && python3 dashboard/digest.py --sample
-
-- [ ] Add a jobs/scheduler hook that prunes failed assertion logs after 24h
-  Verification: bash -n jobs/scheduler.sh && grep -q "prune" jobs/scheduler.sh
-
-- [ ] Verify all new paths pass lint and integration test before merge
-  Verification: make test && bash -n lib/assertion.py && bash -n cadence/runner.sh
+- [ ] Add a validation script that checks hngh-automation job definitions parse correctly
+  Verification: bash -n jobs/validate-hngh-jobs.sh
+- [ ] Create a test script that runs the validation against existing job files
+  Verification: bash tests/test-hngh-job-validation.sh
+- [ ] Add a grep check to confirm no provider credentials leak into job templates
+  Verification: grep -r "provider\|credential" jobs/ scripts/ --include="*.sh" --include="*.yml" | wc -l
+- [ ] Update the cadence runner to invoke the validation before job execution
+  Verification: make test
+- [ ] Add a simple dashboard snippet that reports validation pass/fail status
+  Verification: bash -n dashboard/report-validation-status.sh
+- [ ] Commit all changes and run full test suite to confirm no regressions
+  Verification: make test
