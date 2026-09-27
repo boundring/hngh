@@ -7,20 +7,15 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job template for automated report generation
-  Verification: bash -n jobs/report-gen/template.sh
-
-- [ ] Create a verification script for job completion status
-  Verification: python3 scripts/verify_job_status.py
-
-- [ ] Update cadence configuration to include new job
-  Verification: bash -c "grep -q 'report-gen' cadence/jobs.yaml"
-
-- [ ] Add integration test for report generation pipeline
+- [ ] Add a shell script that validates the make test target runs without errors
+  Verification: bash -n jobs/test-runner.sh
+- [ ] Create a verification script that confirms the test suite passes
+  Verification: make test
+- [ ] Add a cadence file documenting the test runner workflow
+  Verification: bash -n cadence/test-runner.md
+- [ ] Verify the new script is executable and has correct permissions
+  Verification: bash jobs/test-runner.sh
+- [ ] Confirm the test suite still passes after adding the new script
   Verification: make test
 
-- [ ] Document new job in dashboard configuration
-  Verification: bash -c "grep -q 'report-gen' dashboard/jobs.json"
-
-- [ ] Verify all new scripts pass syntax checks
-  Verification: bash -n jobs/report-gen/template.sh && python3 scripts/verify_job_status.py
+Rationale: This plan implements the research line "hngh-automation test infrastructure validation" by adding a simple, normal-risk test runner script that validates the existing make test target without touching forbidden areas like provider configuration, systemd units, or kernel source changes.
