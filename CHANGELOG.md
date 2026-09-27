@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Quota rebalance** (docs/design/quota-doctrine.md): `xiaomi-cap-day`
+  40 UTC-day cap row + pacer inside `xiaomi_chat` (kimi_chat shape) —
+  and the telemetry emit moved into `xiaomi_chat` itself, so direct
+  callers (ghost counsel bridge) are pacer-visible; `_xiaomi_leg` keeps
+  only MODEL_USED bookkeeping. zai-first paid ladder was already the
+  2026-09-24 ops-fold contract (model.sh:1185) — doctrine doc now names
+  it. New `tests/test-model-xiaomi-leg.sh` (sandbox stub, seeded
+  telemetry: chat-level emit, hard/row cap refusal + breadcrumb,
+  helper boundaries, no-double-emit) registered in `make test`.
 - **Ghost pantheon expansion** (docs/records/2026-09-27-ghost-pantheon.md):
   `config/ghost-voices.tsv` (17 canon-distilled + 22 authored ghosts),
   `lib/ghost-voices.py` `ghost_counsel()` — deterministic sha1 blend of

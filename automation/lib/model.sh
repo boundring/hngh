@@ -971,6 +971,16 @@ xiaomi_chat() { # prompt max_tokens -> 0 = answered
   breadcrumb model "xiaomi" "no key (env XIAOMI_AI_API_KEY / key file) -> next backend"
   return 1
  }
+ # daily-cap pacer (course-correction slice 5, kimi_chat shape): the
+ # UTC-day pace counts kind=model/source=xiaomi telemetry -- which this
+ # function emits on success, so direct callers (ghost counsel bridge)
+ # are paced too, not just _xiaomi_leg traffic.
+ cap="${XIAOMI_DAILY_CAP_CALLS:-$(get_param xiaomi-cap-day 40)}"
+ pace="$(quota_pace_blocked xiaomi "$cap")"
+ if [ -n "$pace" ]; then
+  breadcrumb model "xiaomi" "quota pace: xiaomi used ${pace% *}/cap ${pace#* } -- deferring to next leg"
+  return 1
+ fi
  content="$(
   printf '%s' "$(_json_body "$model" "$prompt" "$max_tokens" 0 1)" |
    _post_chat "$url" '.choices[0].message.content // ""' "$key"
@@ -978,6 +988,7 @@ xiaomi_chat() { # prompt max_tokens -> 0 = answered
   breadcrumb model "xiaomi" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
   return 1
  }
+ _model_emit xiaomi "$model"
  printf '%s\n' "$content"
 }
 
@@ -1003,7 +1014,8 @@ _xiaomi_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  xm="${XIAOMI_MODEL:-$(get_param xiaomi-model '')}"
  MODEL_USED="xiaomi:$xm"
  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
- _model_emit xiaomi "$xm"
+ # telemetry emit lives inside xiaomi_chat (slice 5): direct callers
+ # are pacer-visible; the leg adds only the MODEL_USED bookkeeping.
  return 0
 }
 
