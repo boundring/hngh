@@ -54,6 +54,15 @@ cat <<'JSON'
 JSON
 """
 
+# slice B cache shape: same stream contract, tokens.cache.read present ->
+# the emitter lands tokens_cached=777 on the same ocgo-agent row.
+OC_CACHE_STUB = """#!/usr/bin/env bash
+printf 'opencode cache-stub\n' >> "$OC_MARKER"
+TS=$(date +%s)000
+printf '{"type":"step_finish","timestamp":%s,"sessionID":"ses_test1","part":{"type":"step-finish","tokens":{"input":10,"output":4,"cache":{"read":777}},"cost":0.001}}\n' "$TS"
+printf '{"type":"text","timestamp":%s,"sessionID":"ses_test1","part":{"type":"text","text":"done\\nrationale: finished"}}\n' "$TS"
+"""
+
 # bili stub: `start` serves /__bili/health 200 on BILI_STUB_PORT (the
 # launch path's health probe turns green and the wrap envs ride through)
 BILI_STUB = """#!/usr/bin/env bash
@@ -222,6 +231,22 @@ class OcgoLaunch(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("-p --model", self.omp_marker.read_text())
         self.assertFalse(self.oc_marker.exists())
+
+    def test_opencode_emitter_carries_cache_tokens(self):
+        # governed-fleet slice B: an opencode stream step_finish may carry
+        # a cache shape (tokens.cache.read / cacheRead); the R2 emitter
+        # lands it as tokens_cached on the SAME row (one schema, no new
+        # table), always on the read side (cacheWrite is no cached hit).
+        self.oc.write_text(OC_CACHE_STUB)
+        self.oc.chmod(0o755)
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        conn = sqlite3.connect(self.telem)
+        row = conn.execute(
+            "select source, identity, tokens_in, tokens_out, tokens_cached"
+            " from events").fetchall()
+        conn.close()
+        self.assertEqual(row, [("ocgo-agent", "ses_test1", 10, 4, 777)])
 
     def test_registry_pinned_opencode_beats_path_shadow(self):
         # The registry channel (hngh-packages.tsv col 4) is THE opencode:

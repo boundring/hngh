@@ -31,7 +31,8 @@ WINDOW_MS = 5 * 3600 * 1000  # the 5h pacer window
 
 
 def parse_stream(path, cutoff_ms):
-    """-> {session_id: {"tokens_in","tokens_out","cost","first_ms","last_ms"}}"""
+    """-> {session_id: {tokens_in, tokens_out, tokens_cached, cost,
+    first_ms, last_ms}}"""
     per = {}
     try:
         fh = open(path, errors="replace")
@@ -48,6 +49,7 @@ def parse_stream(path, cutoff_ms):
             if not sid or not isinstance(ts, int):
                 continue
             s = per.setdefault(sid, {"tokens_in": 0, "tokens_out": 0,
+                                     "tokens_cached": 0,
                                      "cost": 0.0, "first_ms": ts, "last_ms": ts})
             s["first_ms"] = min(s["first_ms"], ts)
             s["last_ms"] = max(s["last_ms"], ts)
@@ -55,8 +57,16 @@ def parse_stream(path, cutoff_ms):
                 continue
             part = ev.get("part") or {}
             if part.get("type") == "step-finish":
-                s["tokens_in"] += (part.get("tokens") or {}).get("input") or 0
-                s["tokens_out"] += (part.get("tokens") or {}).get("output") or 0
+                tk = part.get("tokens") or {}
+                s["tokens_in"] += tk.get("input") or 0
+                s["tokens_out"] += tk.get("output") or 0
+                # slice B cache backfill: read side only; stream shapes
+                # seen are tokens.cache.read / cacheRead / cache_read.
+                # Legs that declare no cache miss all three -> no field.
+                cache = tk.get("cache") or {}
+                s["tokens_cached"] += (cache.get("read")
+                                       or tk.get("cacheRead")
+                                       or tk.get("cache_read") or 0)
                 s["cost"] += part.get("cost") or 0.0
     return per
 
@@ -105,9 +115,11 @@ def emit_rows(per, telemetry_db, source):
         if sid in done:
             continue
         data = {}
-        if s["tokens_in"] or s["tokens_out"]:
+        if s["tokens_in"] or s["tokens_out"] or s.get("tokens_cached"):
             data["tokens_in"] = s["tokens_in"]
             data["tokens_out"] = s["tokens_out"]
+            if s.get("tokens_cached"):
+                data["tokens_cached"] = s["tokens_cached"]
         if s["cost"]:
             data["cost_usd"] = s["cost"]
         wall = s["last_ms"] - s["first_ms"]

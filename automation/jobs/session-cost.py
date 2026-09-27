@@ -6,6 +6,8 @@ Token usage, model and duration are parsed from ~/.omp/agent/sessions
 transcripts; discovery is reused from jobs/sessions-feed.py
 (omp_candidates — 24h window, newest first, capped). Per-agent transcripts
 are grouped under their parent session id, so one row carries the
+session's total spend (tokens_cached = omp usage.cacheRead, the
+cache-read prompt-hit backfill, governed-fleet slice B).
 session's total spend. Emits through jobs/telemetry.py emit
 (kind=session-cost, identity=<session uuid>): idempotent — a session
 already in the store is skipped; live sessions (any member file modified
@@ -41,9 +43,9 @@ LIVE_GRACE_S = 600
 
 def parse_transcript(path):
     """One pass: (sid, model_counts, tokens_in, tokens_out, cost_usd,
-    first_ts, last_ts, usage_msgs)."""
+    tokens_cached, first_ts, last_ts, usage_msgs)."""
     models = {}
-    tin = tout = 0
+    tin = tout = tokc = 0
     cost = 0.0
     sid = None
     first_ts = last_ts = None
@@ -68,13 +70,18 @@ def parse_transcript(path):
                     usage_msgs += 1
                     tin += u.get("input") or 0
                     tout += u.get("output") or 0
+                    # omp usage carries the Anthropic-class cache pair;
+                    # read-side only: cacheRead (= the cached_prompt shape
+                    # model.sh/telemetry.py call tokens_cached; slice B
+                    # backfill). cacheWrite is a write, not a cached hit.
+                    tokc += u.get("cacheRead") or 0
                     cost += (u.get("cost") or {}).get("total") or 0
                     mod = m.get("model")
                     if mod:
                         models[mod] = models.get(mod, 0) + 1
     except OSError:
         pass
-    return sid, models, tin, tout, cost, first_ts, last_ts, usage_msgs
+    return sid, models, tin, tout, tokc, cost, first_ts, last_ts, usage_msgs
 
 
 def captured_identities():
@@ -96,12 +103,19 @@ def main():
     now = time.time()
     groups = {}  # sid -> session aggregate
     for cand in sessions_feed.omp_candidates(now):
-        sid, models, tin, tout, cost, first_ts, last_ts, usage = \
+        sid, models, tin, tout, tokc, cost, first_ts, last_ts, usage = \
             parse_transcript(cand["path"])
         key = sid or "path:%s" % cand["path"]
         g = groups.setdefault(key, {
-            "models": {}, "tin": 0, "tout": 0, "cost": 0.0, "usage": 0,
+            "models": {}, "tin": 0, "tout": 0, "tokc": 0,
+            "cost": 0.0, "usage": 0,
             "first": None, "last": None, "mtime": 0, "subject": ""})
+        for k, v in models.items():
+            g["models"][k] = g["models"].get(k, 0) + v
+        g["tin"] += tin
+        g["tout"] += tout
+        g["tokc"] += tokc
+        g["cost"] += cost
         for k, v in models.items():
             g["models"][k] = g["models"].get(k, 0) + v
         g["tin"] += tin
@@ -141,10 +155,12 @@ def main():
             cmd += ["--model", model]
         if wall is not None:
             cmd += ["--wall-s", "%.1f" % wall]
-        if g["usage"]:
-            cmd += ["--data", json.dumps({
-                "tokens_in": g["tin"], "tokens_out": g["tout"],
-                "cost_usd": round(g["cost"], 6)})]
+        if g["usage"]:  # backfill 1 / slice B: cache-read rides with the pair
+            data = {"tokens_in": g["tin"], "tokens_out": g["tout"],
+                    "cost_usd": round(g["cost"], 6)}
+            if g["tokc"]:
+                data["tokens_cached"] = g["tokc"]
+            cmd += ["--data", json.dumps(data)]
         subprocess.run(cmd, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
         emitted += 1

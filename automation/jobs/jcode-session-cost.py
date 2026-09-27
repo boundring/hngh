@@ -31,7 +31,8 @@ API_RE = re.compile(
     r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)\] \[\w+\] "
     r"\[ses:([^\]|]+)\|prv:[^\]|]+\|mod:([^\]]+)\] "
     r"API call complete in [\d.]+s \(input=(\d+) output=(\d+)"
-)
+    r"(?: cache_read=(\d+))?"
+)  # cache_read optional: shapes without it -> None (slice B backfill)
 SNAPSHOT_RE = re.compile(r"ENV_SNAPSHOT (\{.*\})")
 
 
@@ -55,6 +56,7 @@ def parse_logs(paths):
                     sid = data.get("session_id")
                     if sid and sid not in sessions:
                         sessions[sid] = {"tokens_in": 0, "tokens_out": 0,
+                                         "tokens_cached": 0,
                                          "first": None, "last": None,
                                          "models": {}, "working_dir": None}
                     if sid and data.get("working_dir"):
@@ -65,18 +67,21 @@ def parse_logs(paths):
             m = API_RE.match(line)
             if not m:
                 continue
-            ts, sid, model, tin, tout = m.groups()
+            ts, sid, model, tin, tout, crc = m.groups()
             s = sessions.setdefault(sid, {"tokens_in": 0, "tokens_out": 0,
+                                          "tokens_cached": 0,
                                           "first": None, "last": None,
                                           "models": {}, "working_dir": None})
             n_in, n_out = int(tin), int(tout)
-            if n_in or n_out:
+            if n_in or n_out or crc:
                 s["tokens_in"] += n_in
                 s["tokens_out"] += n_out
-                s["models"][model] = s["models"].get(model, 0) + 1
-                t = _ts(ts)
-                s["first"] = t if s["first"] is None else min(s["first"], t)
-                s["last"] = t if s["last"] is None else max(s["last"], t)
+                if crc:  # slice B: read side only, never cache_write
+                    s["tokens_cached"] += int(crc)
+            s["models"][model] = s["models"].get(model, 0) + 1
+            t = _ts(ts)
+            s["first"] = t if s["first"] is None else min(s["first"], t)
+            s["last"] = t if s["last"] is None else max(s["last"], t)
     return sessions
 
 
@@ -121,8 +126,11 @@ def main(argv):
         subject = (os.path.basename(s["working_dir"].rstrip("/"))
                    if s["working_dir"] else f"jcode:{sid[:24]}")
         wall = max(s["last"] - s["first"], 0.0) if s["last"] else 0.0
-        data = json.dumps({"tokens_in": s["tokens_in"],
-                           "tokens_out": s["tokens_out"], "cost_usd": 0.0})
+        payload = {"tokens_in": s["tokens_in"],
+                   "tokens_out": s["tokens_out"], "cost_usd": 0.0}
+        if s.get("tokens_cached"):  # slice B backfill, read side only
+            payload["tokens_cached"] = s["tokens_cached"]
+        data = json.dumps(payload)
         if dry_run:
             print(json.dumps({"identity": sid, "subject": subject,
                               "model": model, "wall_s": round(wall, 1),
