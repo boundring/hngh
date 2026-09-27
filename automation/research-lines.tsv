@@ -282,7 +282,7 @@ arc-20260927-dashboard-single-webgl	planned	2026-09-27T14:02:12Z	How should the 
 arc-20260927-dashboard-masthead-expansion	reviewed	2026-09-27T19:44:05Z	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
 arc-20260927-dashboard-masthead-temperature	reviewed	2026-09-27T21:11:10Z	Where should weather-ingest derive temp_f alongside temp_c so the broadsheet masthead prints both units?
 arc-20260927-dashboard-fail-closed-auth	reviewed	2026-09-27T18:06:09Z	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
-arc-20260927-dashboard-masthead-varies	planned	2026-09-27T14:02:12Z	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
+arc-20260927-dashboard-masthead-varies	crystallized	2026-09-27T22:27:57Z	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
 arc-20260927-dashboard-choice-previews	reviewed	2026-09-27T15:23:45Z	How should operator-item choices always carry outcome preview text in newspaper.json composition?
 arc-20260927-dashboard-editorial-present	reviewed	2026-09-27T16:03:09Z	How does composition surface real hngh editorial rows (alerts, fleet notes, real operator decisions) instead of only stub-class internal content?
 arc-20260927-dashboard-ghost-desk	reviewed	2026-09-27T18:51:43Z	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
