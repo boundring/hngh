@@ -438,7 +438,7 @@ class RoutesPage(unittest.TestCase):
         self.assertIn('href="routes.html"', src("story.html"))
 
     def test_tabs_and_registry_mounting(self):
-        idx = src("index.html")
+        idx = src("console.html")
         self.assertIn('data-tab="routes"', idx)
         self.assertIn('id="p-routes"', idx)
         self.assertIn('id="routes-root"', idx)
@@ -647,7 +647,7 @@ class RoutesEndpoint(unittest.TestCase):
         dash = self.tmp / "dash"
         dash.mkdir()
         # the static-file fallback needs the real served files to exist
-        for name in ("index.html", "routes.html", "routes-view.js"):
+        for name in ("console.html", "routes.html", "routes-view.js"):
             shutil.copy(DASH / name, dash / name)
         for name in ("operator-items.json", "operator-dismissed.json",
                      "readout.json"):
@@ -695,7 +695,7 @@ class RoutesEndpoint(unittest.TestCase):
         st, body = self.get("/routes.html")
         self.assertEqual(st, 200)
         self.assertIn(b"routes-view.js", body)
-        st2, idx = self.get("/index.html")
+        st2, idx = self.get("/console.html")
         self.assertEqual(st2, 200)
         self.assertIn(b'data-tab="routes"', idx)
 

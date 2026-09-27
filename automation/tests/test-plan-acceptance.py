@@ -423,7 +423,7 @@ class PlansViewContract(unittest.TestCase):
 
     def test_view_mounted_in_page(self):
         self._skip_absent()
-        page = (ROOT / "dashboard" / "index.html").read_text()
+        page = (ROOT / "dashboard" / "console.html").read_text()
         app = (ROOT / "dashboard" / "app.js").read_text()
         self.assertIn('data-tab="plans"', page)
         self.assertIn('id="plans-root"', page)

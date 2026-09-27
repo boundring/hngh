@@ -114,7 +114,7 @@ class HistoryPage(unittest.TestCase):
         self.assertIn('href="history.html"', src("story.html"))
 
     def test_tabs_and_registry_mounting(self):
-        idx = src("index.html")
+        idx = src("console.html")
         self.assertIn('data-tab="history"', idx)
         self.assertIn('id="p-history"', idx)
         self.assertIn('id="history-root"', idx)
@@ -307,7 +307,7 @@ class HistoryEndpoint(unittest.TestCase):
         dash.mkdir()
         # the static-file fallback needs the real served files to exist
         # (index.html for the token injection, history.html + the view)
-        for name in ("index.html", "history.html", "history-view.js"):
+        for name in ("console.html", "history.html", "history-view.js"):
             shutil.copy(DASH / name, dash / name)
         for name in ("operator-items.json", "operator-dismissed.json",
                      "readout.json"):
@@ -355,7 +355,7 @@ class HistoryEndpoint(unittest.TestCase):
         st, body = self.get("/history.html")
         self.assertEqual(st, 200)
         self.assertIn(b"history-view.js", body)
-        st2, idx = self.get("/index.html")
+        st2, idx = self.get("/console.html")
         self.assertEqual(st2, 200)
         self.assertIn(b'data-tab="history"', idx)
 

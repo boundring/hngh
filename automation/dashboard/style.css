@@ -636,3 +636,38 @@ html[data-theme="winamp"] ::-webkit-scrollbar-track { background: #17191d; }
 html[data-theme="winamp"] ::-webkit-scrollbar-thumb { background: #3a3e44;
   border: 2px solid #17191d; }
 html[data-theme="winamp"] ::-webkit-scrollbar-thumb:hover { background: #4a4f56; }
+
+/* newspaper — THE DAILY front page (course-correction slice 6) */
+body.paper { margin: 0; }
+.masthead { display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 8px 16px; padding: 10px 18px 4px;
+  border-bottom: 3px double var(--line, #888); }
+.masthead h1 { margin: 0; font-size: 26px; letter-spacing: 2px;
+  font-family: Georgia, 'Times New Roman', serif; }
+.masthead .sub { font-size: 13px; letter-spacing: 1px; opacity: .7; }
+.dateline { font-size: 12px; opacity: .75;
+  font-family: Georgia, serif; }
+.section-menu { display: flex; gap: 10px; margin-left: auto; }
+.paper-pages { display: flex; overflow-x: auto; scroll-snap-type:
+  x mandatory; scroll-behavior: smooth; }
+.paper-pages > section.sheet { scroll-snap-align: start;
+  flex: 0 0 100%; min-height: calc(100vh - 92px);
+  padding: 12px 18px 24px; border-right: 1px solid
+  var(--line, #444); box-sizing: border-box; overflow-y: auto;
+  column-count: 2; column-gap: 22px; column-rule: 1px solid
+  var(--line, #333); }
+.paper-pages h2 { column-span: all; margin: 4px 0 10px;
+  font-family: Georgia, serif; font-size: 18px;
+  border-bottom: 1px solid var(--line, #555); }
+.paper-pages details { break-inside: avoid; margin: 0 0 12px;
+  padding: 8px 10px; background: var(--panel, #161616);
+  border: 1px solid var(--line, #333); }
+.paper-pages summary { cursor: pointer; font-family: Georgia, serif; }
+.paper-pages .art-meta { font-size: 11px; opacity: .65;
+  margin-left: 6px; }
+.paper-pages details > p { font-size: 12.5px; margin: 6px 0 0;
+  opacity: .85; }
+.decision-bar { margin-top: 8px; display: flex; gap: 8px; }
+@media (max-width: 900px) {
+  .paper-pages > section.sheet { column-count: 1; }
+}

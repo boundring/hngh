@@ -293,7 +293,7 @@ class ServerWiring(unittest.TestCase):
         self.assertIn("graph_data.build", self.server)
 
     def test_view_registered_in_shell(self):
-        html = (ROOT / "dashboard" / "index.html").read_text()
+        html = (ROOT / "dashboard" / "console.html").read_text()
         self.assertIn("graph-view.js", html)
         self.assertIn('data-tab="graph"', html)
 
@@ -304,7 +304,7 @@ class ServerWiring(unittest.TestCase):
         # <button id="refresh-btn">; the dup was removed, and this guards
         # the whole shell against a repeat. Single refresh button is the
         # deliberate design: one, asserted exactly here.
-        html = (ROOT / "dashboard" / "index.html").read_text()
+        html = (ROOT / "dashboard" / "console.html").read_text()
         seen = {}
         for i in re.finditer(r'\bid="([^"]+)"', html):
             seen[i.group(1)] = seen.get(i.group(1), 0) + 1

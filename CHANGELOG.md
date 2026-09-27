@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-27
 
+- **Newspaper front page** (docs/records/2026-09-27-newspaper-front-page.md):
+  dashboard `index.html` is now a skeuomorphic newspaper front page
+  (Lead, Operator Decisions, Sessions, Research, Alerts, System sheets;
+  scroll-snap page-turn with arrow keys; handle/dismiss decision buttons);
+  the operator console moved intact to `console.html` with cross-links both
+  ways. New `tests/test-newspaper-view.py`; console-only view contracts
+  repointed. Verified live in-browser at 127.0.1:8890.
 - **Quota rebalance** (docs/design/quota-doctrine.md): `xiaomi-cap-day`
   40 UTC-day cap row + pacer inside `xiaomi_chat` (kimi_chat shape) —
   and the telemetry emit moved into `xiaomi_chat` itself, so direct

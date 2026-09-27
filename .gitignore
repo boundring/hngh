@@ -17,7 +17,7 @@ docs/project/report-bodies/
 automation/STATE.md
 automation/agent-handoffs.md
 automation/ng/ledger/
-automation/dashboard/
+automation/dashboard/*
 automation/logs/
 automation/archive/
 automation/snapshots/
