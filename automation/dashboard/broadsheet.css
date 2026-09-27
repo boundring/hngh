@@ -104,6 +104,10 @@ body.paper-fallback {
 .map-dot.on { background: var(--moss); }
 .map-dot.off { background: #8a4a3a; opacity: 0.55; }
 
+/* The hidden attribute must always win over component display rules
+   (syn-badge shipped visible-on-hidden because of this) */
+[hidden] { display: none !important; }
+
 /* Toolbar: columns + refresh */
 .toolbar {
   display: flex; align-items: center; gap: 10px;

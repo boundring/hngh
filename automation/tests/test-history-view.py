@@ -108,8 +108,10 @@ class HistoryPage(unittest.TestCase):
             if href.startswith(("http", "data:")):
                 continue
             self.assertTrue((DASH / href.split("?")[0]).exists(), href)
-        # reachable from the nerve center and the standalone siblings
-        self.assertIn('href="history.html"', src("index.html"))
+        # reachable from the nerve center and the standalone siblings;
+        # since the 2026-09-27 cutover the broadsheet front keeps
+        # specialty pages behind the console
+        self.assertIn('href="history.html"', src("console.html"))
         self.assertIn('href="history.html"', src("gantt.html"))
         self.assertIn('href="history.html"', src("story.html"))
 

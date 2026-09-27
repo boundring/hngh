@@ -124,3 +124,30 @@ observer, a passive scroll listener, and the rebuild path.
   treatment.
 - Cutover and archival of `index.html`/`console.html` — orchestrator-
   directed, out of scope for v1.
+
+## Cutover (same day, orchestrator-directed)
+
+The broadsheet became THE dashboard front page:
+
+- Token injection: `dashboard-server.py` `_serve_index` now serves
+  `/broadsheet.html` alongside `/`, `/index.html`, `/console.html` (one
+  code path — the route tuple plus a basename mapping), so the real
+  `hngh-token` meta reaches the broadsheet and choice POSTs authenticate.
+  Verified live: 32-char token injected; a probe POST to
+  `/operator-item/handle` with the page token returned 201, not 403.
+- `index.html` is now the broadsheet mount (same markup/asset paths as
+  `broadsheet.html`, which remains as the standalone original), with a
+  "nerve center" link to `console.html` in the toolbar; `console.html`
+  already linked `index.html` as the front. Specialty pages
+  (story/history/routes/gantt) stay on disk, reachable from the console.
+- Default feed: the page already defaulted to `newspaper.json`; the
+  composer (`scripts/newspaper-compose.py`, cadence subhour beat) produced
+  the first live edition on 2026-09-27: 397 articles, 15 categories,
+  40 operator-decision cards, 7 archived editions, open-meteo weather.
+  The SYNTHETIC FIXTURE badge now appears only on explicit `?feed=`
+  overrides. `newspaper.json` itself stays untracked (dashboard machine
+  data, quarantined by `automation/.gitignore` like the other feeds).
+- Link-contract tests repointed: `test-newspaper-view.py` now pins the
+  broadsheet front wiring/a11y and keeps index→console / console→index;
+  `test-story-view.py` pins story reachable from the console instead of
+  the front (history/routes tests never pinned index).

@@ -53,8 +53,9 @@ class StoryPage(unittest.TestCase):
             target = href.split("?")[0]
             self.assertTrue((DASH / target).exists(), href)
             self.assertTrue((ROOT / "tests").exists())  # harness sanity
-        # the page is reachable from the nerve center and siblings
-        self.assertIn('href="story.html"', read("index.html"))
+        # reachable from the nerve center; since the 2026-09-27 cutover
+        # the broadsheet front keeps specialty pages behind the console
+        self.assertIn('href="story.html"', read("console.html"))
         self.assertIn('href="story.html"', read("gantt.html"))
 
     def test_four_sections_a11y(self):
