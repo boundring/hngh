@@ -24,6 +24,11 @@ if _AUTOMATION not in sys.path:
 CAP_CALLS = 6
 CAP_WINDOW_S = 86400
 STALE_MENTION_RE = re.compile(r"\b(stale|expired|unverified)\b", re.I)
+# Default per the two-home layout contract (AGENTS.md): userspace data
+# under ~/.hngh/db/. Literal path, not an hngh_home import — py lib
+# modules stay stdlib-only (test-lib-dependencies.py py-coupling rule).
+DEFAULT_STATE = os.path.join(os.path.expanduser("~"), ".hngh", "db",
+                             "ghost-state")
 
 
 def tsv_path():
@@ -32,10 +37,7 @@ def tsv_path():
 
 
 def state_dir():
-    p = os.environ.get("HNGH_GHOST_STATE")
-    if not p:
-        from hngh_home import db_dir
-        p = db_dir("ghost-state")
+    p = os.environ.get("HNGH_GHOST_STATE") or DEFAULT_STATE
     os.makedirs(p, exist_ok=True)
     return p
 
