@@ -21,6 +21,26 @@ import typesafe
 import contract
 import jev
 
+_crumb_db_dir = None
+
+
+def setUpModule():
+    """Hermetic crumb sink: fallback crumbs land in a tmp db, never the
+    live automation/state/crumbs.db (lib/typesafe.py writes for real)."""
+    global _crumb_db_dir
+    import tempfile
+    if "HNGH_CRUMBS_DB" not in os.environ:
+        _crumb_db_dir = tempfile.mkdtemp(prefix="typesafe-wrapper-crumbs-")
+        os.environ["HNGH_CRUMBS_DB"] = os.path.join(_crumb_db_dir, "crumbs.db")
+
+
+def tearDownModule():
+    global _crumb_db_dir
+    if _crumb_db_dir:
+        import shutil
+        shutil.rmtree(_crumb_db_dir, ignore_errors=True)
+        _crumb_db_dir = None
+
 
 class FailClosed(unittest.TestCase):
     def test_no_key_noul_none(self):
@@ -382,6 +402,59 @@ class JevTypedMapping(unittest.TestCase):
         finally:
             srv.shutdown()
             srv.server_close()
+
+
+class FallbackCrumbs(unittest.TestCase):
+    def test_no_key_writes_fallback_crumb(self):
+        import sqlite3
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            db = os.path.join(td, "crumbs.db")
+            env = {k: v for k, v in os.environ.items()
+                   if k != "TYPESAFE_API_KEY"}
+            env["HNGH_CRUMBS_DB"] = db
+            with unittest.mock.patch.dict(os.environ, env, clear=True):
+                typesafe.ask_choices(
+                    {"s": "t"}, {"q": ("Pick one.", ["a", "b"])})
+            con = sqlite3.connect(db)
+            try:
+                rows = con.execute(
+                    "SELECT job, event FROM crumbs").fetchall()
+            finally:
+                con.close()
+        self.assertIn(("typesafe", "fallback"), rows)
+
+    def test_api_error_writes_detail_crumb(self):
+        import sqlite3
+        import tempfile
+
+        class Boom:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def system_one(self, **kw):
+                raise RuntimeError("boom")
+
+        with tempfile.TemporaryDirectory() as td:
+            db = os.path.join(td, "crumbs.db")
+            env = dict(os.environ)
+            env["HNGH_CRUMBS_DB"] = db
+            with unittest.mock.patch.dict(os.environ, env, clear=True), \
+                    unittest.mock.patch.object(
+                        typesafe, "_client", return_value=Boom()):
+                typesafe.ask_choices(
+                    {"s": "t"}, {"q": ("Pick one.", ["a", "b"])})
+            con = sqlite3.connect(db)
+            try:
+                rows = con.execute(
+                    "SELECT detail FROM crumbs"
+                    " WHERE job='typesafe' AND event='fallback'").fetchall()
+            finally:
+                con.close()
+        self.assertTrue(any("boom" in r[0] for r in rows))
 
 
 class LiveCall(unittest.TestCase):

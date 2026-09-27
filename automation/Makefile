@@ -199,6 +199,7 @@ test:
 	bash tests/test-digest-send-schedule.sh
 	python3 -B tests/test-digest-compose-upgrades.py
 	python3 -B tests/test-typesafe-docs-ingest.py
+	python3 -B tests/test-typesafe-wrapper.py
 	python3 -B tests/test-ghost-voices.py
 	bash tests/test-model-xiaomi-leg.sh
 	bash tests/test-slice-a-bili-surface.sh

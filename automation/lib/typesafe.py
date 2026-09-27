@@ -38,13 +38,18 @@ def _client():
 
 def _crumb(msg):
     try:
-        import subprocess
+        import importlib.util
 
-        subprocess.run(
-            ["breadcrumb", "typesafe", "fallback", msg],
-            capture_output=True,
-            timeout=5,
-        )
+        # Single-writer seam (lib/crumbs.py); scrub to the strictest
+        # common detail form first (crumbs.py refuses | and newlines).
+        detail = " ".join(msg.replace("|", "\u00a6").split())
+        spec = importlib.util.spec_from_file_location(
+            "hngh_crumbs",
+            os.path.join(os.path.dirname(__file__), "crumbs.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.crumb("typesafe", "fallback", detail,
+                  db_file=os.environ.get("HNGH_CRUMBS_DB") or None)
     except Exception:
         pass
 
@@ -63,8 +68,8 @@ def ask_noul(state, name, instructions):
                 state=state, questions={name: Noul(instructions=instructions)}
             )
         return r.nouls[name].noul
-    except Exception:
-        _crumb(name)
+    except Exception as e:
+        _crumb(name + " " + repr(e))
         return None
 
 
@@ -95,8 +100,8 @@ def ask_nouls(state, questions) -> dict[str, float | None]:
             name: getattr(r.nouls.get(name), "noul", None)
             for name in questions
         }
-    except Exception:
-        _crumb(",".join(questions))
+    except Exception as e:
+        _crumb(",".join(questions) + " " + repr(e))
         return {name: None for name in questions}
 
 
@@ -138,8 +143,8 @@ def ask_choices(state, questions):
             )
             for name in questions
         }
-    except Exception:
-        _crumb(",".join(questions))
+    except Exception as e:
+        _crumb(",".join(questions) + " " + repr(e))
         return {}
 
 
@@ -176,8 +181,8 @@ def ask_score(state, name, instructions, criteria):
                 },
             )
         return r.scores[name].score
-    except Exception:
-        _crumb(name)
+    except Exception as e:
+        _crumb(name + " " + repr(e))
         return None
 
 
@@ -219,8 +224,8 @@ def triage_fanout(state, lanes):
         col = r.nouls["collapse_ready"].noul
         scores = r.scores["urgency"].score
         return (hot, (col is not None and col >= 0.5), scores)
-    except Exception:
-        _crumb("triage_fanout")
+    except Exception as e:
+        _crumb("triage_fanout " + repr(e))
         return (None, None, None)
 
 

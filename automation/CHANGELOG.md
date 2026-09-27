@@ -2,6 +2,13 @@
 
 ## 2026-09-27
 
+- typesafe: fallback crumbs reach the journal - _crumb routed through
+  the single writer (lib/crumbs.py, in-process, scrub()) replacing a
+  subprocess to a nonexistent `breadcrumb` binary; API-error crumbs
+  carry repr(e) so the intermittent research-beat "typed verdict
+  unavailable" class is diagnosable on next occurrence; wrapper suite
+  (31 tests, two new crumb tests, hermetic tmp-db sink) registered in
+  the automation gate.
 - omp-changelog-watch: daily oh-my-pi upstream watch (2026-09-27
   operator directive: integrate new oh-my-pi changes daily) - UA-pinned
   CHANGELOG fetch, last-seen state in the userspace home
