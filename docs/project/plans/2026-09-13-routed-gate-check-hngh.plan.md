@@ -6,5 +6,5 @@ at 2026-09-13T09:00:49Z. Alert text: gate: hngh make test FAILED (rc=2)
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260913-gate-check-hngh for gate-check:hngh; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260913-gate-check-hngh for gate-check:hngh; record disposition; then fix or park (fixed-transient 2026-09-27: did not reproduce; kernel suite sbcl 2954 checks + automation script suite 25/25 green; subject+disposition row in research-subjects.txt:275)
       Verification: research subject fail-20260913-gate-check-hngh present in research-subjects.txt with a recorded disposition; alert fixed or parked
