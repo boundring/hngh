@@ -2,7 +2,7 @@
 
 ## Assignment
 Unattended beat (2026-09-27T09:12Z wake, "executor" role): skim hngh book
-content paths on /root, read assigned lessons, skip ceremony calls, produce
+content paths on ~, read assigned lessons, skip ceremony calls, produce
 this report. Budget of at-most-20-messages per session applied.
 
 ## Wait — state honestly
