@@ -32,10 +32,24 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       falsify evidence; the gate watch-test flake stays an ordinary SMALL
       backlog lane; the one-shot bili row has no backlog row (refused by
       design, nothing to flip).
-- [ ] Slice A: bili S1 telemetry (telemetry.py FIRST, then model.sh),
+- [x] Slice A: bili S1 telemetry (telemetry.py FIRST, then model.sh),
       S2 registry row + patrol breadcrumb, S3 record
       Verification: see plans/README verification contract; kernel
       `make test` green.
+      Executed 2026-09-27: S1 tokens_cached capture landed with the
+      designed ordering (telemetry.py column + DATA_FIELDS + idempotent
+      ALTER + INSERT first; then model.sh TOKCACHED_FILE extraction in
+      _post_chat + unsloth_attempt and the _model_emit --data forward
+      with the lone-cached case and tmp clearing); S2 the bili row in
+      hngh-services.tsv (operator-run, url-less, service-mgmt-inert)
+      plus the security-check bili=$b_ok breadcrumb; new hermetic test
+      tests/test-slice-a-bili-surface.sh (9 checks) wired into the
+      automation Makefile, affected model-chain leg suites re-run green
+      (xiaomi, kimi, ocgo, pin-routing, deck, zai-proxy,
+      remote-token-mode) and test-hngh-services.py green; S3 the
+      decision record docs/records/2026-09-13-bili-hngh-integration.md.
+      Automation commit 6764d00b (pushed); the docs record rides this
+      ceremony commit.
 - [ ] Slice B: spawn-path matrix promoted + tokens_cached backfill
       Verification: see plans/README verification contract; kernel
       `make test` green.
