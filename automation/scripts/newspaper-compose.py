@@ -345,6 +345,10 @@ def compose(args):
     if td_art:
         articles.append(td_art)
     articles += news
+    # junk filter: empty or near-empty headlines are layout residue
+    # ("FOLLOWON:"-style stubs from research-routes rows), not news
+    articles = [a for a in articles
+                if len("".join(a["headline"].split())) >= 8]
     # masthead histogram: plan statuses + every category on today's page
     for art in articles:
         queues[art["category"]] = queues.get(art["category"], 0) + 1

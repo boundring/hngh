@@ -418,7 +418,8 @@
     art.className = 'art' +
       (a.span === 3 ? ' span3' : a.span === 2 ? ' span2' : '');
     art.style.setProperty('--cat', catColor(a.category));
-    var kick = '<div class="kicker">' + esc(a.category || 'bulletin');
+    var kick = '<div class="kicker">' +
+      esc(a.kicker || a.category || 'bulletin');
     if (feed.data && feed.data.queues &&
         typeof feed.data.queues[a.category] === 'number') {
       kick += '<span class="qchip">queue ' +
@@ -457,9 +458,103 @@
         art.appendChild(sl);
       }
     }
-    if (Array.isArray(a.choices) && a.choices.length)
+    if (a.floodIds) art.appendChild(floodChoicesEl(a));
+    else if (Array.isArray(a.choices) && a.choices.length)
       art.appendChild(choicesEl(a));
     return art;
+  }
+
+  // The empty-idea flood family: every "[feedback:idea] from email"
+  // row is the same test artifact (unseamed ds.FEEDBACK in
+  // test-dashboard-p1.py, one capture per make-test run since 09-11,
+  // fixed 2026-09-27). Forty rows are not forty decisions - they are
+  // one decision, printed once. Text arrives alert_row-formatted
+  // ("job | kind | payload"), so match the needle anywhere.
+  var FLOOD_NEEDLE = '[feedback:idea] from email';
+  var FLOOD_MAX_DISMISS = 80;
+  function isFlood(a) {
+    return String(a && a.headline || '').indexOf(FLOOD_NEEDLE) !== -1 ||
+      String(a && a.deck || '').indexOf(FLOOD_NEEDLE) !== -1;
+  }
+  function floodArticle(group) {
+    var n = group.length;
+    return {
+      id: 'flood-family',
+      category: 'operator',
+      kicker: 'operator decision',
+      headline: 'The empty-idea flood (' + n + ' items)',
+      deck: 'one story, ' + n + ' copies · filed by the test suite',
+      body: [
+        'All ' + n + ' rows carry the same payload: the literal test ' +
+          'string "[feedback:idea] from email", written by ' +
+          'test-dashboard-p1.py through an unseamed FEEDBACK dir, one ' +
+          'capture per make-test run since 09-11. The leak is fixed ' +
+          '(2026-09-27); these rows are its residue. Verified: zero ' +
+          'operator content in any of them.'
+      ],
+      span: 2,
+      score: group[0].score || 0,
+      sources: [{ label: 'operator items' }],
+      floodIds: group.map(function (a) { return a.id; })
+    };
+  }
+  function floodChoicesEl(a) {
+    var bar = document.createElement('div');
+    bar.className = 'choices';
+    var progress = document.createElement('div');
+    progress.className = 'choice-progress';
+    var ids = a.floodIds.slice(0, FLOOD_MAX_DISMISS);
+    var mk = function (label, outcome, run) {
+      var row = document.createElement('div');
+      row.className = 'choice-row';
+      var b = document.createElement('button');
+      b.className = 'choice';
+      b.textContent = label;
+      var out = document.createElement('span');
+      out.className = 'outcome';
+      out.textContent = outcome;
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        run().catch(function (e) {
+          b.disabled = false;
+          progress.textContent = 'failed: ' + e.message;
+          showErr('decision failed: ' + e.message);
+        });
+      });
+      row.appendChild(b);
+      row.appendChild(out);
+      bar.appendChild(row);
+    };
+    var total = ids.length;
+    var nLabel = a.floodIds.length;
+    mk('Dismiss all ' + nLabel,
+      'Clears the sheet; nothing of value is lost — every row carries ' +
+        'the same empty string.',
+      function () {
+        var done = 0;
+        progress.textContent = 'dismissing 0 of ' + total + '…';
+        bar.appendChild(progress);
+        return ids.reduce(function (chain, id) {
+          return chain.then(function () {
+            return postJson('/operator-item/dismiss', { id: id })
+              .then(function () {
+                done += 1;
+                progress.textContent =
+                  'dismissed ' + done + ' of ' + total + '…';
+              });
+          });
+        }, Promise.resolve()).then(function () {
+          rebuildStream();
+        });
+      });
+    mk('Keep them',
+      'The rows stay on the feed; this card returns in the next edition.',
+      function () {
+        progress.textContent = 'kept — no changes made.';
+        bar.appendChild(progress);
+        return Promise.resolve();
+      });
+    return bar;
   }
 
   // Operator decisions: moss buttons, the outcome prints BEFORE the
@@ -543,9 +638,19 @@
   function buildSeq() {
     var d = feed.data;
     var seq = [];
-    (d.articles || []).slice().sort(function (x, y) {
+    var cur = (d.articles || []).slice().sort(function (x, y) {
       return (y.score || 0) - (x.score || 0);
-    }).forEach(function (a) { seq.push({ k: 'a', a: a }); });
+    });
+    var flood = cur.filter(isFlood);
+    var rest = cur.filter(function (a) { return !isFlood(a); });
+    if (flood.length) {
+      // collapse the family into one card at the top flood score slot
+      var top = flood[0].score || 0;
+      var at = 0;
+      while (at < rest.length && (rest[at].score || 0) >= top) at += 1;
+      rest.splice(at, 0, floodArticle(flood));
+    }
+    rest.forEach(function (a) { seq.push({ k: 'a', a: a }); });
     (d.editions || []).slice().reverse().forEach(function (e) {
       (e.articles || []).slice().sort(function (x, y) {
         return (y.score || 0) - (x.score || 0);

@@ -70,7 +70,7 @@ class Base(unittest.TestCase):
         self._write("sessions.json", {"generated": z(NOW), "sessions": [
             {"id": "run-1", "state": "active", "mission": "bench the model",
              "age": 120.0},
-            {"id": "run-2", "state": "active", "mission": "patrol",
+            {"id": "run-2", "state": "active", "mission": "patrol the queue",
              "age": 30.0}]})
         self._write("research-routes.json", {
             "schema": "routes/1", "generated": z(NOW), "routes": [

@@ -108,6 +108,14 @@ class BroadsheetViewJs(unittest.TestCase):
     def test_outcome_visible_before_click(self):
         self.assertIn("className = 'outcome'", self.js)
 
+    def test_flood_family_collapse(self):
+        self.assertIn("'[feedback:idea] from email'", self.js)
+        self.assertIn("floodIds", self.js)
+        self.assertIn("The empty-idea flood (' + n + ' items)", self.js)
+        self.assertIn("Dismiss all ' + nLabel", self.js)
+        self.assertIn("'/operator-item/dismiss'", self.js)
+        self.assertIn("FLOOD_MAX_DISMISS = 80", self.js)
+
 
 class Styles(unittest.TestCase):
     def setUp(self):
