@@ -1,0 +1,15 @@
+# feed	category	url	enabled	weight
+bbc-world	world	http://feeds.bbci.co.uk/news/world/rss.xml	1	0.7
+bbc-politics	politics	http://feeds.bbci.co.uk/news/politics/rss.xml	1	0.5
+bbc-business	business	http://feeds.bbci.co.uk/news/business/rss.xml	1	0.5
+bbc-sports	sports	http://feeds.bbci.co.uk/sport/rss.xml	1	0.5
+bbc-technology	technology	http://feeds.bbci.co.uk/news/technology/rss.xml	1	0.5
+phoronix-linux	linux	https://www.phoronix.com/rss.php	1	0.7
+hnrss-technology	technology	https://hnrss.org/frontpage	1	0.5
+arxiv-ai	ai	http://export.arxiv.org/rss/cs.AI	1	0.5
+quanta-science	science	https://www.quantamagazine.org/feed/	1	0.5
+nasa-space	space	https://www.nasa.gov/rss/dyn/breaking_news.rss	1	0.5
+ieee-robotics	robotics	https://spectrum.ieee.org/feeds/topic/robotics.rss	1	0.5
+defensenews-military	military	https://www.defensenews.com/arc/outboundfeeds/rss/	1	0.5
+rps-games	games	https://www.rockpapershotgun.com/feed	1	0.5
+lwn-open-source	open-source	https://lwn.net/headlines/rss	1	0.5

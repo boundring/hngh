@@ -1,0 +1,106 @@
+{
+ "generated": "2026-09-27T06:00:00Z",
+ "edition": {
+  "date": "2026-09-27",
+  "number": 3,
+  "slot": 0,
+  "weather": {"temp_c": 14.3, "summary": "rain", "source": "open-meteo"},
+  "system": {
+   "queue_depth": 4,
+   "sessions_active": 1,
+   "fleet": [
+    {"name": "brickertop", "online": true, "os": "linux"},
+    {"name": "brickus", "online": false, "os": "android"}
+   ]
+  }
+ },
+ "queues": {
+  "queued": 4,
+  "done": 5,
+  "world": 2,
+  "linux": 1,
+  "operator": 1,
+  "system": 1
+ },
+ "articles": [
+  {
+   "id": "a1b2c3d4",
+   "category": "operator",
+   "headline": "feedback-ingest | alert | [feedback:idea] from email",
+   "deck": "feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]",
+   "body": ["feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]"],
+   "span": 3,
+   "score": 0.95,
+   "ts": "2026-09-27T05:41:54Z",
+   "sources": [{"label": "operator-items", "url": ""}],
+   "choices": [
+    {"label": "Handle",
+     "outcome": "Marks the item handled (operator-approved.json).",
+     "action": {"endpoint": "/operator-item/handle",
+                "payload": {"id": "6cb1737b"}}},
+    {"label": "Dismiss",
+     "outcome": "Moves the item to operator-dismissed.json; it returns in the next edition if it re-fires.",
+     "action": {"endpoint": "/operator-item/dismiss",
+                "payload": {"id": "6cb1737b"}}}
+   ]
+  },
+  {
+   "id": "b2c3d4e5",
+   "category": "world",
+   "headline": "Sample wire story: storm system moves across the Atlantic",
+   "deck": "A deep low pressure system is tracking eastward. Forecasters expect coastal gales by Tuesday.",
+   "body": ["A deep low pressure system is tracking eastward toward the continent.",
+            "Forecasters expect coastal gales and heavy rain by Tuesday."],
+   "span": 2,
+   "score": 0.71,
+   "ts": "2026-09-27T03:12:00Z",
+   "sources": [{"label": "bbc-world", "url": "https://www.bbc.co.uk/news/world-6"}],
+   "choices": []
+  },
+  {
+   "id": "c3d4e5f6",
+   "category": "linux",
+   "headline": "Kernel release adds scheduler tuning for hybrid cores",
+   "deck": "The new release tunes task placement across performance and efficiency cores.",
+   "body": ["The new release tunes task placement across performance and efficiency cores."],
+   "span": 1,
+   "score": 0.48,
+   "ts": "2026-09-26T21:40:00Z",
+   "sources": [{"label": "phoronix", "url": "https://www.phoronix.com/news/kernel-sample"}],
+   "choices": []
+  },
+  {
+   "id": "d4e5f6a7",
+   "category": "system",
+   "headline": "model benchmark 2026-09-27 0110",
+   "deck": "mission: model benchmark 2026-09-27 0110",
+   "body": ["mission: model benchmark 2026-09-27 0110",
+            "state: evacuated",
+            "age: 1556s"],
+   "span": 1,
+   "score": 0.6,
+   "ts": "2026-09-27T05:47:00Z",
+   "sources": [{"label": "sessions", "url": ""}],
+   "choices": []
+  }
+ ],
+ "editions": [
+  {
+   "date": "2026-09-26",
+   "articles": [
+    {
+     "id": "e5f6a7b8",
+     "category": "technology",
+     "headline": "Yesterday's chip roundup",
+     "deck": "Fabrication capacity news led yesterday's technology coverage.",
+     "body": ["Fabrication capacity news led yesterday's technology coverage."],
+     "span": 1,
+     "score": 0.12,
+     "ts": "2026-09-26T18:00:00Z",
+     "sources": [{"label": "hn-frontpage", "url": "https://hnrss.org/item/1"}],
+   "choices": []
+  }
+ ]
+  }
+ ]
+}
