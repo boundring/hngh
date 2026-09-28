@@ -29,6 +29,7 @@ LAYERS = {
     "launch-jcode.sh": 1, "model-demote.sh": 1,
     "memory-gate.sh": 1,
     "bailiff.sh": 1,
+    "wicket.sh": 1, "privileged.sh": 1,
     # layer 2: feature modules over foundation + leaves
     "model.sh": 2, "credentials.sh": 2, "notify.sh": 2,
     "notify-email.sh": 2, "context-pack.sh": 2,

@@ -190,6 +190,7 @@ test:
 	bash tests/test-arc-to-slice.sh
 	bash tests/test-omarchy-readiness.sh
 	bash tests/test-pins-drift.sh
+	bash tests/test-wicket.sh
 	bash tests/test-omarchy-readiness.sh
 	bash tests/test-pins-drift.sh
 	bash tests/test-wicket.sh

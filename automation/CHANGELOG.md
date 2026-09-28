@@ -1,6 +1,31 @@
 # Changelog
 
 ## 2026-09-27
+- wicket: governed privileged-action channel for package installs - ONE
+  exact-command sudoers grant (`hngh ALL=(root) NOPASSWD:
+  /usr/local/lib/hngh/wicket.sh install-base`; template
+  config/wicket.sudoers.example carries the one-time bootstrap window:
+  root-owned 0755 dispatcher, root-owned 0444 manifest, validated 0440
+  drop-in) points at dispatcher lib/wicket.sh, which allowlists
+  install-base against the root-owned manifest (WICKET_MANIFEST, default
+  /usr/local/lib/hngh/omarchy-base.packages; blank/# lines skipped,
+  `# aur` lines skipped+counted - AUR is never a root concern; zero
+  installable -> refuse rc 4) and runs pacman -Sy --needed --noconfirm
+  as ONE transaction (no partial-upgrade hazard), logging before/after
+  via logger -t hngh-wicket (WICKET_LOG file sink for tests), rc
+  propagated. User-side seam lib/privileged.sh wicket <action> checks
+  the armed grant with `sudo -n -l -U` (never prompts, fail-soft),
+  prints `wicket not armed:` + the bootstrap block and exits 3 when
+  absent, else execs the dispatcher via sudo -n and crumbs best-effort
+  (lib/breadcrumbs.sh). NOTHING is armed until the operator runs the
+  bootstrap - no installer changes, no NOPASSWD:ALL, no interactive
+  sudo. Trust-on-manifest ceiling documented (install scripts); hash
+  pinning is the later upgrade. Test tests/test-wicket.sh (26 hermetic
+  checks: CLI rc 2 law, exact pacman argv, aur skip/count, refuse-empty
+  rc 4 variants, missing/unreadable manifest, pacman/logger absence,
+  sink assertions, sudoers template law incl. visudo -cf, seam
+  armed/not-armed/rc-propagation/crumb) registered after
+  test-pins-drift.
 - pins-drift: daily pins-vs-pacman drift checker (comparator, never
   actuator) - jobs/pins-drift.py (pure pins x pacman-db -> report;
   read-only `pacman -Q`/`-Qq`, exit 0 clean-or-drift / 2 fail-closed,

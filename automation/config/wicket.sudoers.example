@@ -1,0 +1,46 @@
+# wicket.sudoers.example — the wicket privilege DELEGATION template.
+# (docs/records/2026-09-27-wicket-privileged-channel.md; same law as
+# hngh-automation.sudoers.example). Design surface only: NOTHING in this
+# repo installs sudoers. The operator copies this file to
+# /etc/sudoers.d/hngh-wicket (mode 0440) AFTER validating:
+#
+#     visudo -cf automation/config/wicket.sudoers.example
+#     sudo install -m 0440 automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket
+#
+# Law: ONE exact command, exact args, NOPASSWD per command — NEVER
+# NOPASSWD:ALL, no interactive sudo from automation. The grant names the
+# dispatcher WITH its action argument, so `sudo -l` output carries the
+# literal string `wicket.sh install-base` that lib/privileged.sh greps
+# for when checking armed state. Everything else (package SET, refusal
+# rules) is allowlisted INSIDE the dispatcher against the root-owned
+# manifest. Execution is logged by the dispatcher (logger -t
+# hngh-wicket) and independently by sudo (journalctl/syslog) — two audit
+# trails.
+#
+# The dispatcher AND the manifest must be root-owned and not writable by
+# the automation user BEFORE this grant lands — otherwise the
+# exact-command grant is an arbitrary-root shell in waiting (the user
+# could edit the script sudo runs). That is what the bootstrap window
+# below establishes first.
+
+# ONE grant only. `hngh` is a placeholder — rename to the user the
+# automation tier runs as (mirrors hngh-automation.sudoers.example).
+hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-base
+
+# ---------------------------------------------------------------------------
+# One-time bootstrap window — copy-paste from the hngh repo root, IN THIS
+# ORDER. The same block is printed verbatim by automation/lib/privileged.sh
+# when the wicket is not armed; keep the two in sync.
+#
+#   # (a) dispatcher: root-owned 0755, not writable by the user
+#   sudo install -D -o root -g root -m 0755 automation/lib/wicket.sh /usr/local/lib/hngh/wicket.sh
+#   # (b) manifest: root-owned 0444 — root ownership is what makes the
+#   #     package-set pin real (the user cannot edit what root will install)
+#   sudo install -o root -g root -m 0444 automation/config/omarchy-base.packages /usr/local/lib/hngh/omarchy-base.packages
+#   # (c) validate + install the sudoers drop-in (the one password moment)
+#   visudo -cf automation/config/wicket.sudoers.example && \
+#     sudo install -m 0440 automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket
+#
+# Until the operator runs this block NOTHING is armed: no dispatcher at
+# /usr/local/lib/hngh/wicket.sh, no grant, and lib/privileged.sh exits 3
+# with `wicket not armed:`. There is no partial arming state.
