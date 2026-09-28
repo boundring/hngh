@@ -18,6 +18,7 @@ import importlib.util
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -27,6 +28,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # automation/
+DS_PATH = os.path.join(ROOT, "dashboard-server.py")
 
 STUB_RQ = r'''
 import os, sys
@@ -41,6 +43,15 @@ printf '%s\\n' "$*" >> "$HNGH_STUB_PRIV_LOG"
 echo "line-one"
 echo "stderr-line" >&2
 exit "${HNGH_STUB_PRIV_RC:-0}"
+'''
+
+STUB_AUR = '''#!/usr/bin/env bash
+# stand-in for automation/jobs/aur-build.sh: logs argv, canned output
+printf '%s\\n' "$*" >> "$HNGH_STUB_AUR_LOG"
+echo "line-one"
+echo "aur-build: staged owe-1.0.0-1-any.pkg.tar.zst"
+echo "aur-build: follow-up: stub-privileged.sh wicket install-file owe-1.0.0-1-any.pkg.tar.zst"
+exit "${HNGH_STUB_AUR_RC:-0}"
 '''
 
 
@@ -536,6 +547,163 @@ class Desk(Lifecycle):
             self.assertEqual(code, 403, route)
         self.assertEqual(self.rows(), [])
         self.assertEqual(self.priv_calls(), [])
+
+
+class DeskAur(Desk):
+    """POST /desk/run-aur: the gated user-session AUR lane. The job is
+    a stub script; no test builds a package, touches the network, or
+    runs pacman for real."""
+
+    AUR_NAMES = ("foot",)
+
+    def setUp(self):
+        super().setUp()
+        self.aur_log = Path(self.tmp.name) / "aur.log"
+        stub = Path(self.tmp.name) / "stub-aur-build.sh"
+        stub.write_text(STUB_AUR)
+        stub.chmod(0o755)
+        self.old_attrs["AUR_BUILD_SH"] = ds.AUR_BUILD_SH
+        ds.AUR_BUILD_SH = str(stub)
+        # AUR_PKGS parsed from the stubbed manifest by the same helper
+        # the server uses at import (env OMARCHY_MANIFEST-or-default).
+        self.old_attrs["AUR_PKGS"] = ds.AUR_PKGS
+        ds.AUR_PKGS = frozenset(ds._aur_manifest_names(str(self.manifest)))
+        self._old_aur_env = {k: os.environ.get(k) for k in
+                             ("HNGH_STUB_AUR_LOG", "HNGH_STUB_AUR_RC")}
+        os.environ["HNGH_STUB_AUR_LOG"] = str(self.aur_log)
+        os.environ.pop("HNGH_STUB_AUR_RC", None)
+        self.addCleanup(self._aur_teardown)
+
+    def _aur_teardown(self):
+        ds._aur_running = False
+        for key, val in self._old_aur_env.items():
+            if val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = val
+
+    def aur_calls(self):
+        if not self.aur_log.exists():
+            return []
+        return [ln for ln in self.aur_log.read_text().splitlines() if ln]
+
+    def arm(self):
+        self.approve()
+        self.wicket_armed = (True, "")
+
+    # ---- manifest parse -------------------------------------------------
+    def test_aur_names_parsed_from_real_manifest(self):
+        real = os.path.join(ROOT, "config", "omarchy-base.packages")
+        self.assertEqual(ds._aur_manifest_names(real),
+                         ["hyprland-preview-share-picker", "owe",
+                          "owe-lockfeed"])
+
+    def test_aur_pkgs_env_override(self):
+        mf = Path(self.tmp.name) / "override.packages"
+        mf.write_text("# lead\nbare\nfoo # aur\n# nope # aur\n")
+        code = ("import importlib.util, json"
+                ";spec = importlib.util.spec_from_file_location('m', %r)"
+                ";m = importlib.util.module_from_spec(spec)"
+                ";spec.loader.exec_module(m)"
+                ";print(json.dumps(sorted(m.AUR_PKGS)))" % DS_PATH)
+        p = subprocess.run([sys.executable, "-B", "-c", code],
+                           env=dict(os.environ, OMARCHY_MANIFEST=str(mf)),
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(json.loads(p.stdout), ["foo"])
+
+    # ---- desk-state -----------------------------------------------------
+    def test_desk_state_lists_aur_pkgs_and_running(self):
+        self.reset_cache()
+        _, st = self.get_json("desk-state.json")
+        self.assertEqual(st["aur"], {"pkgs": ["foot"], "running": False})
+        ds._aur_running = True
+        try:
+            self.reset_cache()
+            _, st = self.get_json("desk-state.json")
+        finally:
+            ds._aur_running = False
+        self.assertTrue(st["aur"]["running"])
+
+    # ---- run-aur gate chain ----------------------------------------------
+    def test_run_aur_needs_token(self):
+        code, _ = self.post("desk/run-aur", {"pkg": "foot"}, token=False)
+        self.assertEqual(code, 403)
+        self.assertEqual(self.aur_calls(), [])
+
+    def test_run_aur_bad_body_400(self):
+        for body in ({}, {"pkg": ""}, {"pkg": 5}, ["foot"]):
+            code, out = self.post("desk/run-aur", body)
+            self.assertEqual(code, 400, body)
+            self.assertFalse(out.get("ok"), body)
+        self.assertEqual(self.aur_calls(), [])
+
+    def test_run_aur_unknown_pkg_400_known_list(self):
+        code, body = self.post("desk/run-aur", {"pkg": "not-in-manifest"})
+        self.assertEqual(code, 400)
+        self.assertEqual(body.get("error"), "unknown aur package")
+        self.assertEqual(body.get("known"), list(self.AUR_NAMES))
+        self.assertEqual(self.aur_calls(), [])
+
+    def test_run_aur_unapproved_409(self):
+        code, body = self.post("desk/run-aur", {"pkg": "foot"})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertEqual(body.get("error"), "phase 1 not authorized")
+        self.assertIn("Stage authorization", body["remediation"])
+        self.assertIn("desk-authz:phase-1", body["remediation"])
+        self.assertEqual(self.aur_calls(), [])
+
+    def test_run_aur_unarmed_409(self):
+        self.approve()
+        code, body = self.post("desk/run-aur", {"pkg": "foot"})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertIn("wicket not armed", body["error"])
+        self.assertIn("sudo install", body["remediation"])
+        self.assertEqual(self.aur_calls(), [])
+
+    def test_run_aur_happy_201_follow_up_extracted(self):
+        self.arm()
+        code, body = self.post("desk/run-aur", {"pkg": "foot"})
+        self.assertEqual(code, 201)
+        self.assertTrue(body.get("ok"))
+        self.assertEqual(body.get("pkg"), "foot")
+        self.assertIn("line-one", body["tail"])
+        self.assertEqual(body.get("follow_up"),
+                         "aur-build: follow-up: stub-privileged.sh wicket"
+                         " install-file owe-1.0.0-1-any.pkg.tar.zst")
+        self.assertEqual(self.aur_calls(), ["foot"])
+        self.assertFalse(ds._aur_running)
+
+    def test_run_aur_stub_failure_502(self):
+        self.arm()
+        os.environ["HNGH_STUB_AUR_RC"] = "4"
+        code, body = self.post("desk/run-aur", {"pkg": "foot"})
+        self.assertEqual((code, body.get("ok"), body.get("rc")),
+                         (502, False, 4))
+        self.assertIn("line-one", body["tail"])
+        self.assertIsNone(body.get("follow_up"))
+        self.assertFalse(ds._aur_running)
+
+    def test_run_aur_in_flight_409(self):
+        self.arm()
+        ds._aur_running = True
+        try:
+            code, body = self.post("desk/run-aur", {"pkg": "foot"})
+        finally:
+            ds._aur_running = False
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertEqual(self.aur_calls(), [])
+
+    # ---- regression: the phase-1 lanes behave unchanged ------------------
+    def test_phase1_and_stage_authz_unchanged_alongside_aur(self):
+        code, body = self.post("desk/stage-authz", {"phase": "1"})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertEqual(body.get("identity"), "desk-authz:phase-1")
+        self.arm()
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("rc")), (201, 0))
+        self.assertEqual(self.priv_calls(), ["wicket install-base"])
+        self.assertEqual(self.aur_calls(), [])
 
 
 class _Result:

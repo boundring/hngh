@@ -1,6 +1,22 @@
 # Changelog
 
 ## 2026-09-28
+- desk AUR add-ons lane — dashboard-server.py parses the manifest's
+  aur-marked lines into AUR_PKGS at import (same partition('#') rule as
+  the manifest probe; OMARCHY_MANIFEST overrides the source manifest)
+  and exposes POST /desk/run-aur {pkg}: 400 bad body / off-manifest name
+  (known list returned), then the SAME phase-1 gates as run-phase-1
+  (409 unapproved, 409 wicket not armed, remediation verbatim), 409
+  while another aur build is in flight, then `bash jobs/aur-build.sh
+  <pkg>` (900s, run-and-tail like run-phase-1) — 201 with the tail plus
+  the printed `wicket install-file` follow-up line, 502 rc + tail on
+  failure. desk-state.json gains "aur" {"pkgs", "running"}; desk.html +
+  desk-view.js add the AUR add-ons section under the phase ledger (one
+  Run button per package, gate-disabled with printed reasons, tail +
+  follow-up rendered into the remediation block). Tests: DeskAur cases
+  in test-dashboard-lifecycle.py (full gate chain, stubbed job, manifest
+  parser + OMARCHY_MANIFEST override, in-flight guard, phase-1
+  regression).
 - wicket staging lane + AUR build job — lib/wicket.sh adds `stage <path>`
   (realpath regular file, readable, not root-owned, <=64MiB, sanitized
   basename, copied into WICKET_STAGING_DIR /var/lib/hngh/staging 0755,

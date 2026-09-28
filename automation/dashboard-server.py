@@ -159,6 +159,24 @@ POST /desk/run-phase-1  {}
     (desk-phase-1) either way. 201 {"ok": true, "rc": 0, "tail"};
     502 {"ok": false, "rc", "tail"} on rc != 0 / exec failure / timeout.
 
+POST /desk/run-aur  {"pkg": "<aur-marked manifest name>"}
+    The gated user-session AUR build lane for the manifest's aur-marked
+    lines (AUR_PKGS, parsed with the same partition('#') rule as the
+    manifest probe; OMARCHY_MANIFEST overrides the source manifest at
+    import). Validations in order: 400 bad body / pkg not a non-empty
+    string; 400 {"error": "unknown aur package", "known": [...]} for an
+    off-manifest name; then the SAME phase-1 gates as run-phase-1 (409
+    unapproved, 409 wicket not armed — remediation verbatim); 409 while
+    another aur build is already in flight (one at a time). Then runs
+    `bash jobs/aur-build.sh <pkg>` (timeout 900s — the job never roots:
+    user-session makepkg, staging via privileged.sh wicket stage inside
+    the job) and returns the output tail (last ~40 lines) plus the
+    printed `wicket install-file` follow-up line when present.
+    201 {"ok": true, "pkg", "tail", "follow_up"}; 502 {"ok": false,
+    "rc", "tail"} on rc != 0 / exec failure / timeout. Not
+    handoffs-logged: the job stages; the operator's install-file is the
+    printed follow-up. desk-state.json gains "aur" {"pkgs", "running"}.
+
 Contract (shared, same style as /flag):
     - session/id: non-empty, <=80 chars, [A-Za-z0-9._-]
     - note:       non-empty, <=200 chars after stripping pipes
@@ -196,6 +214,7 @@ REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 # it at stubs (the STUB_RQ pattern) and never touches the real machine.
 DESK_AUTHZ_ID = "desk-authz:phase-1"
 PRIVILEGED_SH = os.path.join(ROOT, "lib", "privileged.sh")
+AUR_BUILD_SH = os.path.join(ROOT, "jobs", "aur-build.sh")
 WICKET_SUDOERS_EXAMPLE = os.path.join(ROOT, "config", "wicket.sudoers.example")
 MANIFEST = os.path.join(ROOT, "config", "omarchy-base.packages")
 DRIFT_JOB = os.path.join(ROOT, "jobs", "pins-drift.py")
@@ -566,6 +585,31 @@ def _desk_probe_manifest():
     return out, bool(nonaur) and all(n in installed for n in nonaur)
 
 
+def _aur_manifest_names(path):
+    """The manifest's aur-marked names — SAME partition('#') rule as
+    _desk_probe_manifest: non-comment installable lines whose comment
+    tail mentions 'aur'. Unreadable manifest -> [] (fail closed: the
+    AUR lane then has no known packages and run-aur refuses 400)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return []
+    names = []
+    for ln in lines:
+        if ln.lstrip().startswith("#"):
+            continue
+        head, sep, tail = ln.partition("#")
+        name = head.strip()
+        if name and sep and "aur" in tail.lower():
+            names.append(name)
+    return names
+
+
+AUR_PKGS = frozenset(_aur_manifest_names(
+    os.environ.get("OMARCHY_MANIFEST") or MANIFEST))
+
+
 def _desk_probe_wicket():
     """armed = `sudo -n -l -U <user>` lists `wicket.sh install-base`.
     Any failure reads as un-armed with the sudo refusal as the reason
@@ -604,6 +648,8 @@ def _desk_probe_drift():
 
 
 _desk_cache = (0.0, None)
+_aur_running = False  # run-aur one-at-a-time guard (check-then-set is
+                      # fine: the desk serves one operator at a time)
 
 
 def desk_state_json():
@@ -630,6 +676,7 @@ def desk_state_json():
         "drift": _desk_probe_drift(),
         "approvals": {DESK_AUTHZ_ID: DESK_AUTHZ_ID in approved},
         "phase1_ready": ready,
+        "aur": {"pkgs": sorted(AUR_PKGS), "running": _aur_running},
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     _desk_cache = (time.monotonic(), state)
@@ -1031,6 +1078,7 @@ class Handler(SimpleHTTPRequestHandler):
              "report-queue/mark-read": self._mark_read,
              "desk/stage-authz": self._desk_stage_authz,
              "desk/run-phase-1": self._desk_run_phase1,
+             "desk/run-aur": self._desk_run_aur,
              "feedback": self._feedback}[p]()
         except KeyError:
             self._json(404, {"ok": False, "error": "not found"})
@@ -1477,6 +1525,72 @@ class Handler(SimpleHTTPRequestHandler):
                     " install-base rc=%s\n" % (ts, DESK_AUTHZ_ID, rc))
         if rc == 0:
             self._json(201, {"ok": True, "rc": rc, "tail": tail})
+        else:
+            self._json(502, {"ok": False, "rc": rc, "tail": tail})
+
+    def _desk_run_aur(self):
+        """The gated user-session AUR build (docs block above): gates in
+        ORDER — body shape, AUR_PKGS membership, phase-1 approval, wicket
+        armed, one-at-a-time — then `bash jobs/aur-build.sh <pkg>` via
+        the same run-and-tail pattern as run-phase-1 (900s). The job
+        never roots; the follow-up install-file line it prints is the
+        operator's hand, returned verbatim."""
+        global _aur_running
+        try:
+            body = self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        pkg = body.get("pkg") if isinstance(body, dict) else None
+        if not isinstance(pkg, str) or not pkg.strip():
+            self._json(400, {"ok": False,
+                             "error": "missing or invalid pkg"})
+            return
+        pkg = pkg.strip()
+        if pkg not in AUR_PKGS:
+            self._json(400, {"error": "unknown aur package",
+                             "known": sorted(AUR_PKGS)})
+            return
+        try:
+            with open(APPROVED, encoding="utf-8") as f:
+                approved = json.load(f).get("approved") or {}
+        except Exception:
+            approved = {}
+        if DESK_AUTHZ_ID not in approved:
+            self._json(409, {"ok": False, "error": "phase 1 not authorized",
+                             "remediation": "Stage authorization, then"
+                             " approve the %s item" % DESK_AUTHZ_ID})
+            return
+        armed, reason = _desk_probe_wicket()
+        if not armed:
+            self._json(409, {"ok": False, "error": "wicket not armed: %s"
+                             % reason,
+                             "remediation": desk_bootstrap_block()})
+            return
+        if _aur_running:
+            self._json(409, {"ok": False,
+                             "error": "an aur build is already running"})
+            return
+        _aur_running = True
+        try:
+            try:
+                p = subprocess.run(["bash", AUR_BUILD_SH, pkg],
+                                   capture_output=True, text=True,
+                                   timeout=900)
+                rc, out = p.returncode, (p.stdout or "") + (p.stderr or "")
+            except subprocess.TimeoutExpired as e:
+                rc = None
+                out = (e.stdout or "") + (e.stderr or "")
+            except Exception as e:
+                rc, out = None, str(e)
+        finally:
+            _aur_running = False
+        tail = "\n".join(out.splitlines()[-40:])
+        follow = next((ln for ln in out.splitlines()
+                       if "wicket install-file" in ln), None)
+        if rc == 0:
+            self._json(201, {"ok": True, "pkg": pkg, "tail": tail,
+                             "follow_up": follow})
         else:
             self._json(502, {"ok": False, "rc": rc, "tail": tail})
 

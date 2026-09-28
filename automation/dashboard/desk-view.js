@@ -122,6 +122,93 @@
     return '';
   }
 
+  // ---------- AUR add-ons: one Run button per aur-marked package ----------
+  function aurGate(st) {
+    // Mirrors the server's run-aur 409 chain: approval, armed, in-flight.
+    if (!(st.approvals && st.approvals['desk-authz:phase-1']))
+      return 'disabled: stage authorization, then approve' +
+        ' desk-authz:phase-1';
+    if (!(st.wicket && st.wicket.armed))
+      return 'disabled: wicket not armed — ' +
+        ((st.wicket && st.wicket.reason) || 'run the bootstrap block');
+    if (st.aur && st.aur.running)
+      return 'disabled: an aur build is already in flight';
+    return '';
+  }
+
+  var aurBuilt = '';  // pkg-set the rows were last built from
+  function renderAur(st) {
+    var box = $('aur-rows');
+    if (!box) return;
+    var pkgs = (st.aur && st.aur.pkgs) || [];
+    var key = pkgs.join(',');
+    if (key !== aurBuilt) {
+      aurBuilt = key;
+      box.innerHTML = pkgs.map(function (p) {
+        return '<div class="choice-row">' +
+          '<button id="aur-run-' + esc(p) + '" class="choice">Run ' +
+          esc(p) + '</button>' +
+          '<span class="outcome" id="aur-out-' + esc(p) + '">builds in' +
+          ' the user session (jobs/aur-build.sh), stages via the' +
+          ' wicket; the printed install-file command is the follow-up' +
+          '</span></div>' +
+          '<div id="aur-reason-' + esc(p) + '" class="reason" hidden>' +
+          '</div>';
+      }).join('');
+      pkgs.forEach(function (p) {
+        $('aur-run-' + p).addEventListener('click', function () {
+          runAur(p);
+        });
+      });
+    }
+    var gate = aurGate(st);
+    pkgs.forEach(function (p) {
+      var b = $('aur-run-' + p);
+      if (!b) return;
+      b.disabled = !!gate;
+      var rr = $('aur-reason-' + p);
+      rr.hidden = !gate;
+      rr.textContent = gate;
+    });
+  }
+
+  function runAur(p) {
+    var b = $('aur-run-' + p);
+    b.disabled = true;
+    out('aur-out-' + p, 'building ' + p + '… (up to 900s)');
+    $('remediation').hidden = true;
+    postDesk('/desk/run-aur', { pkg: p }).then(function (r) {
+      if (r.status === 201) {
+        out('aur-out-' + p, 'staged ' + (r.body.pkg || p) +
+          ' — tail' + (r.body.follow_up ? ' + follow-up command' : '') +
+          ' printed below');
+        $('remediation').hidden = false;
+        $('remediation').textContent =
+          (r.body.tail || '(no output)') +
+          (r.body.follow_up ? '\n' + r.body.follow_up : '');
+      } else if (r.status === 409) {
+        b.disabled = false;
+        out('aur-out-' + p, 'refused: ' + (r.body.error || ''));
+        $('remediation').hidden = false;
+        $('remediation').textContent = r.body.remediation ||
+          '(no remediation printed)';
+      } else if (r.status === 502) {
+        b.disabled = false;
+        out('aur-out-' + p, 'failed rc ' + r.body.rc + ' — tail:');
+        $('remediation').hidden = false;
+        $('remediation').textContent = r.body.tail || '(no output)';
+      } else {
+        b.disabled = false;
+        out('aur-out-' + p, 'refused (' + r.status + '): ' +
+          (r.body.error || 'unknown'));
+      }
+      poll();
+    }).catch(function (e) {
+      b.disabled = false;
+      out('aur-out-' + p, 'failed: ' + e.message);
+    });
+  }
+
   function render(st) {
     if (!st || typeof st !== 'object') throw new Error('bad state feed');
     stateCards(st);
@@ -136,6 +223,7 @@
     sr.hidden = !approved;
     sr.textContent = approved ? 'disabled: already approved —' +
       ' desk-authz:phase-1 is in the approved ledger' : '';
+    renderAur(st);
     $('desk-line').textContent = 'the installation desk · state stamped '
       + (st.generated || '(unstamped)');
   }
