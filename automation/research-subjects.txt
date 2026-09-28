@@ -391,3 +391,7 @@ patrol-20260928-github-ci-bad-execution	patrol: surface github-ci filed bad-exec
 patrol-20260928-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260928-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
 patrol-20260928-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+synth-2026-09-28-1	Verify steer-vs-die threshold claims (unverified citations, no telemetry, no confirmed integration points) against the actual repo in arc-20260926-descent-adoption-gate
+synth-2026-09-28-2	Confirm kernel/view locations for dashboard expansion rotation (unconfirmed kernel/view locations, reopening requires R1 verification pass completion) in arc-20260927-dashboard-expansion-rotation
+synth-2026-09-28-3	Inspect repo to resolve masthead temperature research question (honest preamble with zero findings; unanswerable until repo inspection completes) in arc-20260927-dashboard-masthead-temperature
+fail-20260913-patrol-gate-cure	patrol: the router routed alert identity patrol:gate-cure (gate-cure-refused x2) to plan 2026-09-13-routed-patrol-gate-cure -- does the red-gate self-cure surface still fail, and which guardrail closes it?
