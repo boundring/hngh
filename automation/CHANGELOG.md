@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-28
+- wicket staging lane + AUR build job — lib/wicket.sh adds `stage <path>`
+  (realpath regular file, readable, not root-owned, <=64MiB, sanitized
+  basename, copied into WICKET_STAGING_DIR /var/lib/hngh/staging 0755,
+  audit-logged, refuse rc 4) and `install-file <name>` (name validated +
+  resolved under the staging dir, no symlink escape, exact
+  `pacman -U --noconfirm --needed`), both emitting an upgrade-signal line
+  (count + list of `upgrading <pkg>`); install-base gains the same signal.
+  lib/privileged.sh arms against any of the three grants; sudoers example
+  gains the stage/install-file exact-command grants (args validated inside
+  the root-owned script, never by sudoers). jobs/aur-build.sh: AUR RPC v5
+  lookup with search exact-name fallback (near-miss names on failure, exit
+  3), `pacman -T` dep gate (exit 4 listing missing), verified-origin clone
+  into <home>/db/omarchy/aur/<pkg>, `makepkg --noconfirm` (no -s, no
+  sudo), stages the artifact via privileged.sh and prints the follow-up
+  `wicket install-file` command. Seams AUR_RPC_URL/GIT_BIN/MAKEPKG_BIN/
+  PACMAN_BIN. Tests: test-wicket.sh extended (stage/install-file/
+  upgrading-signal/refusals), new test-omarchy-aur-build.sh (fixture RPC
+  JSON, stub seams, exit-code law).
 ## 2026-09-27
 - installation desk: the dashboard page from which the operator drives
   Omarchy-on-CachyOS phase 1 (session stack install) —

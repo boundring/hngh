@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # wicket.sh — the hngh privileged-action dispatcher (the wicket). ONE
-# exact-command sudoers grant points here (config/wicket.sudoers.example);
-# this script is the ONLY thing root runs, and it allowlists actions
-# against a root-owned package manifest (WICKET_MANIFEST, default
-# /usr/local/lib/hngh/omarchy-base.packages). Fail-closed throughout:
-# unknown argv -> usage rc 2; missing/unreadable/empty-transaction
-# manifest -> rc 4; pacman absent -> rc 4; pacman rc propagates. Every
+# exact-command sudoers grant PER ACTION points here
+# (config/wicket.sudoers.example); this script is the ONLY thing root
+# runs. Actions: install-base (allowlisted against the root-owned
+# package manifest WICKET_MANIFEST, default
+# /usr/local/lib/hngh/omarchy-base.packages), stage <path> (copy one
+# user-owned artifact into the root-owned WICKET_STAGING_DIR, default
+# /var/lib/hngh/staging), install-file <name> (one sanitized staged
+# file via pacman -U). Fail-closed throughout: unknown argv -> usage
+# rc 2; missing/unreadable/empty-transaction manifest, staging
+# refusals, pacman absent -> rc 4; pacman rc propagates. Every
 # execution is logged (logger -t hngh-wicket, best-effort; WICKET_LOG
 # file sink overrides for hermetic tests).
 #
@@ -20,9 +24,10 @@
 set -u
 
 WICKET_MANIFEST="${WICKET_MANIFEST:-/usr/local/lib/hngh/omarchy-base.packages}"
+WICKET_STAGING_DIR="${WICKET_STAGING_DIR:-/var/lib/hngh/staging}"
 
 usage() {
-  echo "usage: wicket.sh install-base | wicket.sh version" >&2
+  echo "usage: wicket.sh install-base | wicket.sh stage <path> | wicket.sh install-file <name> | wicket.sh version" >&2
 }
 
 # _wicket_log MSG — one audit line per execution. Sink: WICKET_LOG file
@@ -55,6 +60,35 @@ _wicket_parse() { # FILE
   done <"$1"
 }
 
+# _wicket_run_transaction LABEL CMD ARGS... — run one pacman
+# transaction, pass its full output through to the operator, and set
+# WICKET_UPGRADES / WICKET_UPGRADE_LIST from `^upgrading <pkg>` lines.
+# That is the partial-upgrade drift signal the operator reviews before
+# treating the transaction as settled
+# (docs/design/omarchy-gap-registry.md partial-upgrade caveat).
+_wicket_run_transaction() { # LABEL CMD ARGS...
+  local line pkg rc=0 out
+  shift
+  WICKET_UPGRADES=0
+  WICKET_UPGRADE_LIST=""
+  out="$("$@" 2>&1)" || rc=$?
+  [ -n "$out" ] && printf '%s\n' "$out"
+  while IFS= read -r line; do
+    case "$line" in
+    upgrading\ *)
+      pkg="${line#upgrading }"
+      pkg="${pkg%%[!a-z0-9._+-]*}" # name runs to the first other char
+      pkg="${pkg%%...}"
+      pkg="${pkg%.}"
+      [ -n "$pkg" ] || continue
+      WICKET_UPGRADE_LIST="${WICKET_UPGRADE_LIST:+$WICKET_UPGRADE_LIST,}$pkg"
+      WICKET_UPGRADES=$((WICKET_UPGRADES + 1))
+      ;;
+    esac
+  done <<<"$out"
+  return "$rc"
+}
+
 _wicket_install_base() {
   if [ ! -f "$WICKET_MANIFEST" ] || [ ! -r "$WICKET_MANIFEST" ]; then
     echo "wicket: manifest missing or unreadable: $WICKET_MANIFEST" >&2
@@ -80,19 +114,141 @@ _wicket_install_base() {
   # single transaction: one -Sy pass with --needed only — never a bare
   # -Sy per package (partial-upgrade hazard)
   local rc=0
-  "$pacman_bin" -Sy --needed --noconfirm "${pkgs[@]}" || rc=$?
-  _wicket_log "install-base rc=$rc"
+  _wicket_run_transaction install-base \
+    "$pacman_bin" -Sy --needed --noconfirm "${pkgs[@]}" || rc=$?
+  _wicket_log "install-base rc=$rc upgrades=$WICKET_UPGRADES${WICKET_UPGRADE_LIST:+ list=$WICKET_UPGRADE_LIST}"
+  exit "$rc"
+}
+
+# _wicket_stage PATH — copy one user-readable, user-owned artifact into
+# the root-owned staging dir (created on demand, 0755). Staging is the
+# ONLY place install-file installs from, so the copy — validated for
+# regular-file, readability, non-root ownership, 64MiB cap, sanitized
+# basename, no '..' traversal — defines what root may ever see.
+# Refusals are rc 4.
+_wicket_stage() {
+  [ $# -eq 1 ] || {
+    usage
+    exit 2
+  }
+  local src="$1" rp owner size base
+  case "$src" in
+  .. | ../* | */.. | */../*)
+    echo "wicket: refusing '..' traversal in path: $src" >&2
+    exit 4
+    ;;
+  esac
+  rp="$(realpath -e -- "$src" 2>/dev/null)" || {
+    echo "wicket: cannot resolve staged file: $src" >&2
+    exit 4
+  }
+  [ -f "$rp" ] || {
+    echo "wicket: not a regular file: $rp" >&2
+    exit 4
+  }
+  [ -r "$rp" ] || {
+    echo "wicket: not readable: $rp" >&2
+    exit 4
+  }
+  owner="$(stat -c %u -- "$rp" 2>/dev/null)" || {
+    echo "wicket: cannot stat: $rp" >&2
+    exit 4
+  }
+  [ "$owner" -ne 0 ] || {
+    echo "wicket: refusing root-owned file: $rp" >&2
+    exit 4
+  }
+  size="$(stat -c %s -- "$rp" 2>/dev/null)" || {
+    echo "wicket: cannot stat: $rp" >&2
+    exit 4
+  }
+  [ "$size" -le 67108864 ] || {
+    echo "wicket: file exceeds the 64MiB staging cap ($size bytes): $rp" >&2
+    exit 4
+  }
+  base="$(basename -- "$rp")"
+  if ! [[ "$base" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+    echo "wicket: refusing unsanitized basename: $base" >&2
+    exit 4
+  fi
+  mkdir -p -m 0755 -- "$WICKET_STAGING_DIR" 2>/dev/null || {
+    echo "wicket: cannot create staging dir: $WICKET_STAGING_DIR" >&2
+    exit 4
+  }
+  cp -p -- "$rp" "$WICKET_STAGING_DIR/$base" || {
+    echo "wicket: staging copy failed: $rp -> $WICKET_STAGING_DIR/$base" >&2
+    exit 4
+  }
+  _wicket_log "stage file=$base src=$rp"
+  echo "staged: $WICKET_STAGING_DIR/$base"
+}
+
+# _wicket_install_file NAME — install exactly one staged package file:
+# NAME must match the sanitized-basename pattern AND resolve to a real
+# regular file INSIDE WICKET_STAGING_DIR (no traversal, no symlink
+# escape), then a single `pacman -U --noconfirm --needed` transaction.
+# rc 2 misuse (bad name); rc 4 refused (staging/file not resolvable).
+_wicket_install_file() {
+  [ $# -eq 1 ] || {
+    usage
+    exit 2
+  }
+  local name="$1" sd rp pacman_bin rc=0
+  if ! [[ "$name" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+    echo "wicket: install-file: bad name (must match ^[a-z0-9][a-z0-9._-]*\$): $name" >&2
+    exit 2
+  fi
+  sd="$(realpath -e -- "$WICKET_STAGING_DIR" 2>/dev/null)" || {
+    echo "wicket: staging dir missing: $WICKET_STAGING_DIR" >&2
+    exit 4
+  }
+  rp="$(realpath -e -- "$sd/$name" 2>/dev/null)" || {
+    echo "wicket: staged file not found: $sd/$name" >&2
+    exit 4
+  }
+  if [ "$rp" != "$sd/$name" ] || [ ! -f "$rp" ]; then
+    echo "wicket: refusing file outside the staging dir: $name" >&2
+    exit 4
+  fi
+  pacman_bin="$(command -v pacman 2>/dev/null)" || {
+    echo "wicket: pacman not found" >&2
+    exit 4
+  }
+  _wicket_log "install-file pkg=$name file=$rp"
+  _wicket_run_transaction install-file \
+    "$pacman_bin" -U --noconfirm --needed "$rp" || rc=$?
+  _wicket_log "install-file pkg=$name rc=$rc upgrades=$WICKET_UPGRADES${WICKET_UPGRADE_LIST:+ list=$WICKET_UPGRADE_LIST}"
   exit "$rc"
 }
 
 main() {
-  if [ $# -ne 1 ]; then
+  if [ $# -lt 1 ]; then
     usage
     exit 2
   fi
   case "$1" in
-  version) echo "hngh-wicket 1" ;;
-  install-base) _wicket_install_base ;;
+  version)
+    [ $# -eq 1 ] || {
+      usage
+      exit 2
+    }
+    echo "hngh-wicket 1"
+    ;;
+  install-base)
+    [ $# -eq 1 ] || {
+      usage
+      exit 2
+    }
+    _wicket_install_base
+    ;;
+  stage)
+    shift
+    _wicket_stage "$@"
+    ;;
+  install-file)
+    shift
+    _wicket_install_file "$@"
+    ;;
   *)
     usage
     exit 2

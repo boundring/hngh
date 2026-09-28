@@ -199,6 +199,7 @@ test:
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-credential-health-argv.sh
 	bash tests/test-probe-token-mode.sh
+	bash tests/test-omarchy-aur-build.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
 	bash tests/test-permissions.sh

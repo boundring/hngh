@@ -7,15 +7,16 @@
 #     visudo -cf automation/config/wicket.sudoers.example
 #     sudo install -m 0440 automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket
 #
-# Law: ONE exact command, exact args, NOPASSWD per command — NEVER
-# NOPASSWD:ALL, no interactive sudo from automation. The grant names the
-# dispatcher WITH its action argument, so `sudo -l` output carries the
-# literal string `wicket.sh install-base` that lib/privileged.sh greps
-# for when checking armed state. Everything else (package SET, refusal
-# rules) is allowlisted INSIDE the dispatcher against the root-owned
-# manifest. Execution is logged by the dispatcher (logger -t
-# hngh-wicket) and independently by sudo (journalctl/syslog) — two audit
-# trails.
+# Law: exact commands, NOPASSWD per command — NEVER NOPASSWD:ALL, no
+# interactive sudo from automation. Each grant names the dispatcher
+# WITH its action argument, so `sudo -l` output carries the literal
+# strings (`wicket.sh install-base`, `wicket.sh stage`,
+# `wicket.sh install-file`) that lib/privileged.sh greps for when
+# checking armed state. Everything else (package SET, staged-file
+# validation, refusal rules) is allowlisted INSIDE the dispatcher
+# against the root-owned manifest. Execution is logged by the
+# dispatcher (logger -t hngh-wicket) and independently by sudo
+# (journalctl/syslog) — two audit trails.
 #
 # The dispatcher AND the manifest must be root-owned and not writable by
 # the automation user BEFORE this grant lands — otherwise the
@@ -23,9 +24,20 @@
 # could edit the script sudo runs). That is what the bootstrap window
 # below establishes first.
 
-# ONE grant only. `hngh` is a placeholder — rename to the user the
+# Three grants, one per action. `hngh` is a placeholder — rename to the user the
 # automation tier runs as (mirrors hngh-automation.sudoers.example).
 hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-base
+
+# AUR-build lane (jobs/aur-build.sh): `stage` copies one user-built
+# package file into the root-owned staging dir
+# (/var/lib/hngh/staging), `install-file` installs exactly one staged
+# file via `pacman -U --noconfirm --needed`. Trust model: sudoers pins
+# ONLY the dispatcher + subcommand; the VARIABLE argument (source path
+# / staged name) is validated INSIDE the root-owned script — sanitized
+# name pattern, staging-dir resolution, size cap, ownership — never by
+# sudoers, which cannot express those checks.
+hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh stage
+hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-file
 
 # ---------------------------------------------------------------------------
 # One-time bootstrap window — copy-paste from the hngh repo root, IN THIS

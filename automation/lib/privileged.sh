@@ -17,17 +17,17 @@ set -u
 WICKET_BIN="${WICKET_BIN:-/usr/local/lib/hngh/wicket.sh}"
 
 usage() {
-  echo "usage: privileged.sh wicket <action>   # actions: install-base, version" >&2
+  echo "usage: privileged.sh wicket <action>   # actions: install-base, stage <path>, install-file <name>, version" >&2
 }
 
-# _pv_armed — 0 iff sudo lists the exact wicket grant for this user.
+# _pv_armed — 0 iff sudo lists any exact wicket grant for this user.
 # `sudo -n` NEVER prompts (rc != 0 when a password would be required ->
 # not armed); timeout guards a hung sudoer. Fail-soft everywhere.
 _pv_armed() {
   command -v sudo >/dev/null 2>&1 || return 1
   local out
   out="$(timeout 10 sudo -n -l -U "$(id -un)" 2>/dev/null)" || return 1
-  printf '%s\n' "$out" | grep -qF 'wicket.sh install-base'
+  printf '%s\n' "$out" | grep -qE 'wicket\.sh (install-base|stage|install-file)'
 }
 
 _pv_bootstrap_block() {
@@ -62,7 +62,7 @@ fi
 
 if ! _pv_armed; then
   {
-    echo "wicket not armed: no sudoers grant for $WICKET_BIN install-base."
+    echo "wicket not armed: no sudoers grant for $WICKET_BIN (install-base | stage | install-file)."
     echo "One-time operator bootstrap (repo root):"
     _pv_bootstrap_block
   } >&2

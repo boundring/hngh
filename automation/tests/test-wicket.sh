@@ -10,12 +10,22 @@
 # (c) tooling fail-closed: pacman absent rc 4;
 # (d) audit sink: logger absent -> still success; logger stub -> pkgs
 #     line; WICKET_LOG file sink -> pkgs + rc lines;
-# (e) sudoers template: exactly one grant, exact command incl. action
-#     arg, no NOPASSWD:ALL, visudo -cf parses;
+# (e) sudoers template: exactly three per-action grants (install-base,
+#     stage, install-file) naming dispatcher+subcommand, no
+#     NOPASSWD:ALL, visudo -cf parses;
 # (f) privileged.sh seam: not armed -> stderr starts `wicket not armed:`
 #     plus the bootstrap block, rc 3; armed -> stub sudo execed with the
 #     exact dispatcher argv, best-effort crumb fires; action failure rc
-#     propagates; usage rc 2.
+#     propagates; armed via the stage grant alone; usage rc 2;
+# (g) stage lane: happy copy (mode preserved, audit line), refusals
+#     (dir-as-file, absent, root-owned, >64MiB, bad basename, '..'
+#     traversal), rc 4 law;
+# (h) install-file: EXACT `pacman -U --noconfirm --needed <staged>`
+#     argv, happy audit lines, refusals (bad name rc 2, absent /
+#     symlink-escape rc 4, no-arg usage rc 2);
+# (i) upgrading-signal extraction: canned pacman output with
+#     `upgrading foo` -> upgrades=1 list=foo; without -> upgrades=0;
+#     pacman rc propagates through the captured-output path.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SANDBOX="$(mktemp -d)"
@@ -36,12 +46,16 @@ mkdir -p "$SANDBOX/core" "$SANDBOX/pac" "$SANDBOX/log" "$SANDBOX/sud"
 for t in bash id timeout grep cat dirname visudo; do
  p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$SANDBOX/core/$t"
 done
+for t in realpath stat cp mkdir basename truncate; do
+ p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$SANDBOX/core/$t"
+done
 ln -sf "$(command -v python3)" "$SANDBOX/core/python3" # crumbs writer needs it
 
 # pacman stub: records full argv, configurable rc
 cat >"$SANDBOX/pac/pacman" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "pacman $*" >>"$PACMAN_LOG"
+[ -n "${PACMAN_OUT:-}" ] && cat "$PACMAN_OUT"
 exit "${PACMAN_RC:-0}"
 STUB
 chmod +x "$SANDBOX/pac/pacman"
@@ -146,7 +160,7 @@ want="pacman -Sy --needed --noconfirm hyprland grim"
 grep -qx "install-base pkgs=2 manifest=$MIXED" "$WLOG" &&
  ok "pkgs line: count 2, aur lines skipped" ||
  bad "pkgs line got: $(cat "$WLOG")"
-grep -qx "install-base rc=0" "$WLOG" &&
+grep -qx "install-base rc=0 upgrades=0" "$WLOG" &&
  ok "rc line logged" ||
  bad "rc line missing"
 
@@ -194,11 +208,14 @@ grep -q "install-base pkgs=2 manifest=$MIXED" "$SANDBOX/logger.log" &&
 
 # --- (e) sudoers template law ------------------------------------------------
 grantlines="$(grep -v '^[[:space:]]*#' "$SUDOERS_TMPL" | grep -c 'NOPASSWD')"
-exact="$(grep -c 'wicket\.sh install-base' "$SUDOERS_TMPL")"
-if [ "$grantlines" -eq 1 ] && [ "$exact" -ge 1 ]; then
- ok "template: exactly one grant naming the exact command+arg"
+grants_ok=1
+for g in install-base stage install-file; do
+ grep -q "NOPASSWD: /usr/local/lib/hngh/wicket\.sh $g" "$SUDOERS_TMPL" || grants_ok=0
+done
+if [ "$grantlines" -eq 3 ] && [ "$grants_ok" -eq 1 ]; then
+ ok "template: exactly three per-action grants naming dispatcher+subcommand"
 else
- bad "template grants=$grantlines exact=$exact"
+ bad "template grants: lines=$grantlines per-action-present=$grants_ok"
 fi
 if grep -v '^[[:space:]]*#' "$SUDOERS_TMPL" | grep -q 'NOPASSWD:ALL'; then
  bad "template: NOPASSWD:ALL present"
@@ -260,6 +277,133 @@ SUDO_ARMED=1 SUDO_EXEC_RC=7 \
  pv_run "$CORE:$SANDBOX/sud" wicket install-base
 rc=$?
 [ "$rc" -eq 7 ] && ok "action failure: rc propagates (7)" || bad "failure rc=$rc"
+
+: >"$SUDO_EXEC_LOG"
+SUDO_ARMED=1 SUDO_EXEC_RC=0 \
+ SUDO_LIST_OUT="  (root) NOPASSWD: /usr/local/lib/hngh/wicket.sh stage" \
+ pv_run "$CORE:$SANDBOX/sud" wicket stage "$SANDBOX/src/owe-1.0-1-x86_64.pkg.tar.zst"
+rc=$?
+wantexec="sudo-exec -n /usr/local/lib/hngh/wicket.sh stage $SANDBOX/src/owe-1.0-1-x86_64.pkg.tar.zst"
+[ "$rc" -eq 0 ] && [ "$(cat "$SUDO_EXEC_LOG")" = "$wantexec" ] &&
+ ok "armed (stage grant): passthrough execs exact dispatcher argv" ||
+ bad "armed stage got: $(cat "$SUDO_EXEC_LOG")"
+
+# --- (g) stage lane -----------------------------------------------------------
+SD="$SANDBOX/staging"
+export WICKET_STAGING_DIR="$SD"
+mkdir -p "$SANDBOX/src"
+GOOD="$SANDBOX/src/owe-1.0-1-x86_64.pkg.tar.zst"
+printf 'PKGDATA' >"$GOOD"
+chmod 640 "$GOOD"
+SDLOG="$SANDBOX/stage.log"
+wicket_run "$MIXED" "$PATH_FULL" "$SDLOG" stage "$GOOD"
+rc=$?
+if [ "$rc" -eq 0 ] &&
+ [ "$(cat "$SD/owe-1.0-1-x86_64.pkg.tar.zst" 2>/dev/null)" = "PKGDATA" ] &&
+ [ "$(stat -c %a "$SD/owe-1.0-1-x86_64.pkg.tar.zst" 2>/dev/null)" = "640" ]; then
+ ok "stage happy: copied into staging, mode preserved"
+else
+ bad "stage happy rc=$rc mode=$(stat -c %a "$SD/owe-1.0-1-x86_64.pkg.tar.zst" 2>/dev/null)"
+fi
+grep -qx "stage file=owe-1.0-1-x86_64.pkg.tar.zst src=$GOOD" "$SDLOG" &&
+ ok "stage: audit line" ||
+ bad "stage audit got: $(cat "$SDLOG")"
+
+mkdir -p "$SANDBOX/src/adir"
+wicket_run "$MIXED" "$PATH_FULL" "" stage "$SANDBOX/src/adir"
+[ "$?" -eq 4 ] && ok "stage: dir-as-file rc 4" || bad "stage dir rc"
+wicket_run "$MIXED" "$PATH_FULL" "" stage "$SANDBOX/src/absent-1.0-1-x86_64.pkg.tar.zst"
+[ "$?" -eq 4 ] && ok "stage: absent file rc 4" || bad "stage absent rc"
+
+ROOTOWNED=""
+if [ "$(id -u)" -ne 0 ]; then
+ for c in /etc/hosts /etc/hostname /etc/passwd; do
+  [ -f "$c" ] && [ -r "$c" ] && [ "$(stat -c %u "$c" 2>/dev/null)" = "0" ] && {
+   ROOTOWNED="$c"
+   break
+  }
+ done
+fi
+if [ -n "$ROOTOWNED" ]; then
+ wicket_run "$MIXED" "$PATH_FULL" "" stage "$ROOTOWNED"
+ [ "$?" -eq 4 ] && ok "stage: root-owned src refused ($ROOTOWNED)" || bad "stage root-owned rc"
+else
+ echo "skip: stage root-owned case (no root-owned readable regular file / running as root)"
+fi
+
+BIG="$SANDBOX/src/big-1.0-1-x86_64.pkg.tar.zst"
+truncate -s 67108865 "$BIG" # 64MiB + 1, sparse
+wicket_run "$MIXED" "$PATH_FULL" "" stage "$BIG"
+[ "$?" -eq 4 ] && ok "stage: over 64MiB cap rc 4" || bad "stage big rc"
+
+printf 'x' >"$SANDBOX/src/Bad Name.pkg.tar.zst"
+wicket_run "$MIXED" "$PATH_FULL" "" stage "$SANDBOX/src/Bad Name.pkg.tar.zst"
+[ "$?" -eq 4 ] && ok "stage: unsanitized basename rc 4" || bad "stage badname rc"
+
+wicket_run "$MIXED" "$PATH_FULL" "" stage "$SANDBOX/src/sub/../owe-1.0-1-x86_64.pkg.tar.zst"
+[ "$?" -eq 4 ] && ok "stage: '..' traversal rc 4" || bad "stage traversal rc"
+
+# --- (h) install-file ----------------------------------------------------------
+resolved="$(realpath -e -- "$SD/owe-1.0-1-x86_64.pkg.tar.zst")"
+IFLOG="$SANDBOX/installfile.log"
+wicket_run "$MIXED" "$PATH_FULL" "$IFLOG" install-file owe-1.0-1-x86_64.pkg.tar.zst
+rc=$?
+wantU="pacman -U --noconfirm --needed $resolved"
+if [ "$rc" -eq 0 ] && [ "$(cat "$SANDBOX/pacman.log")" = "$wantU" ]; then
+ ok "install-file happy: EXACT pacman argv"
+else
+ bad "install-file rc=$rc argv=$(cat "$SANDBOX/pacman.log")"
+fi
+grep -qx "install-file pkg=owe-1.0-1-x86_64.pkg.tar.zst file=$resolved" "$IFLOG" &&
+ grep -qx "install-file pkg=owe-1.0-1-x86_64.pkg.tar.zst rc=0 upgrades=0" "$IFLOG" &&
+ ok "install-file: audit + result lines" ||
+ bad "install-file audit got: $(cat "$IFLOG")"
+
+wicket_run "$MIXED" "$PATH_FULL" "" install-file "../evil.pkg.tar.zst"
+[ "$?" -eq 2 ] && ok "install-file: bad name rc 2 (misuse)" || bad "install-file badname rc"
+wicket_run "$MIXED" "$PATH_FULL" "" install-file absent-1.0-1-x86_64.pkg.tar.zst
+[ "$?" -eq 4 ] && ok "install-file: absent staged file rc 4" || bad "install-file absent rc"
+
+ln -sf "$MIXED" "$SD/escape-1.0-1-x86_64.pkg.tar.zst" # symlink escape out of staging
+wicket_run "$MIXED" "$PATH_FULL" "" install-file escape-1.0-1-x86_64.pkg.tar.zst
+[ "$?" -eq 4 ] && ok "install-file: symlink escape refused rc 4" || bad "install-file escape rc"
+
+wicket_run "$MIXED" "$PATH_FULL" "" install-file
+[ "$?" -eq 2 ] && ok "install-file: no arg usage rc 2" || bad "install-file noarg rc"
+
+# --- (i) upgrading-signal extraction -------------------------------------------
+UP="$SANDBOX/up.out"
+printf 'resolving dependencies...\nupgrading foo 1.0-1 -> 1.1-1\n(2/2) installing bar\n:: Running post-transaction hooks...\n' >"$UP"
+UPLOG="$SANDBOX/up.log"
+PACMAN_OUT="$UP" wicket_run "$MIXED" "$PATH_FULL" "$UPLOG" install-base
+rc=$?
+[ "$rc" -eq 0 ] && grep -qx "install-base rc=0 upgrades=1 list=foo" "$UPLOG" &&
+ ok "upgrading signal: count=1 list=foo" ||
+ bad "upgrading rc=$rc log=$(cat "$UPLOG")"
+
+NOUP="$SANDBOX/noup.out"
+printf 'resolving dependencies...\n(1/1) installing hyprland\n' >"$NOUP"
+NOPLOG="$SANDBOX/noup.log"
+PACMAN_OUT="$NOUP" wicket_run "$MIXED" "$PATH_FULL" "$NOPLOG" install-base
+rc=$?
+[ "$rc" -eq 0 ] && grep -qx "install-base rc=0 upgrades=0" "$NOPLOG" &&
+ ok "no upgrading lines: count=0" ||
+ bad "no-upgrade rc=$rc log=$(cat "$NOPLOG")"
+
+IFUPLOG="$SANDBOX/installfile-up.log"
+PACMAN_OUT="$UP" wicket_run "$MIXED" "$PATH_FULL" "$IFUPLOG" install-file owe-1.0-1-x86_64.pkg.tar.zst
+rc=$?
+[ "$rc" -eq 0 ] &&
+ grep -qx "install-file pkg=owe-1.0-1-x86_64.pkg.tar.zst rc=0 upgrades=1 list=foo" "$IFUPLOG" &&
+ ok "install-file: same upgrading signal" ||
+ bad "install-file upgrading rc=$rc log=$(cat "$IFUPLOG")"
+
+RCLOG="$SANDBOX/rc.log"
+PACMAN_RC=3 PACMAN_OUT="$UP" wicket_run "$MIXED" "$PATH_FULL" "$RCLOG" install-base
+rc=$?
+[ "$rc" -eq 3 ] && grep -qx "install-base rc=3 upgrades=1 list=foo" "$RCLOG" &&
+ ok "pacman rc propagates through captured output" ||
+ bad "pacman rc=3 path rc=$rc log=$(cat "$RCLOG")"
 
 pv_run "$CORE:$SANDBOX/sud"
 rc=$?
