@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/hngh-status-report.sh` that outputs current job counts from `jobs/` directory
-  Verification: bash -n scripts/hngh-status-report.sh
+- [ ] Add a new job template for batch data ingestion under jobs/ with a basic structure and placeholder logic
+  Verification: bash -n jobs/batch-ingest.sh
 
-- [ ] Create `tests/test-status-report.sh` that asserts the script exits 0 and prints job count
-  Verification: bash tests/test-status-report.sh
+- [ ] Create a verification script that runs the new job template and confirms it exits cleanly
+  Verification: bash jobs/batch-ingest.sh
 
-- [ ] Add a cadence job `cadence/run-status-report.cron` that invokes the script every 6 hours
-  Verification: grep -q "run-status-report" cadence/run-status-report.cron
+- [ ] Add a test case in tests/ that validates the job template produces expected output format
+  Verification: make test
 
-- [ ] Update `dashboard/README.md` to document the new status report endpoint
-  Verification: grep -q "status-report" dashboard/README.md
+- [ ] Update cadence/ to register the new job template for periodic execution
+  Verification: grep -q batch-ingest cadence/schedule.yaml
 
-- [ ] Run `make test` to confirm all existing tests still pass after additions
+- [ ] Add a dashboard snippet that displays the new job's status and last run timestamp
+  Verification: bash -n dashboard/job-status.sh
+
+- [ ] Run the full test suite to confirm no regressions from the new job template addition
   Verification: make test
