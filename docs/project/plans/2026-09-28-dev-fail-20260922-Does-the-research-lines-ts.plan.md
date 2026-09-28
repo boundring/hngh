@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence script that validates all job definitions parse correctly before scheduling
-  Verification: bash scripts/cadence/validate-jobs.sh
+- [ ] Add a test harness script that validates cadence job definitions parse correctly
+  Verification: bash -n cadence/test-harness.sh && make test
 
-- [ ] Create a test helper that asserts job output conforms to expected schema
-  Verification: python3 tests/test_job_schema.py
+- [ ] Create a job definition template under jobs/ that documents required fields
+  Verification: grep -q "required_fields" jobs/template.yaml
 
-- [ ] Update cadence runner to gate execution on validation script passing
-  Verification: bash -n cadence/runner.sh && make test
+- [ ] Add a verification script that checks all new job definitions against the template
+  Verification: bash cadence/validate-job.sh
 
-- [ ] Add a dashboard digest that reports job success rates per cadence window
-  Verification: bash scripts/digest/report-cadence.sh
+- [ ] Update the dashboard digest to include test harness results
+  Verification: grep -q "test-harness" dashboard/digest.md
 
-- [ ] Extend lib utilities with a job-dependency resolver for parallel execution
-  Verification: python3 lib/job_resolver.py && make test
+- [ ] Add a lib utility function for job definition validation
+  Verification: node --check lib/job-validator.js && make test
 
-- [ ] Add a test suite covering cadence ordering and parallel job isolation
+- [ ] Commit all changes and run full test suite to confirm no regressions
   Verification: make test

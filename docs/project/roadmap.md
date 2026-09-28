@@ -26,7 +26,7 @@ Stages 5 and 6 run in alternation (grow beats and research/design beats per
 |---|---|---|---|
 | **0 — Kernel & governance** | pure spine, seven use cases (the six original fake-backed use cases plus queue-ranking select-course, 2026-08-27), governance C0–C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
 | **1 — Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
-| **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **landing** |
+| **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **done** |
 | **3 — The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated — chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` → observatory `working` → `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md §4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **landing** |
 | **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
 | **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
@@ -204,8 +204,11 @@ merges the former stage 4 into it).
 
 Working order, per the route:
 
-1. **Land stage 2** (nerve-center consolidation is in final
-   verification); the config-backup lanes are scheduled on the 30m tier
+1. **Land stage 2 — DONE** (2026-09-28 exit-criteria close-out,
+   [2026-09-28-stage2-exit-criteria-closeout](../records/2026-09-28-stage2-exit-criteria-closeout.md):
+   all three exit criteria verified; the nerve center is the standing
+   interface and evolves via the QoL cadence from stage 6 onward); the
+   config-backup lanes are scheduled on the 30m tier
    (landed: `hngh-cadence-30m.timer`, hngh-automation `34cd275`) — the
    gbd subsumption is complete and retired
    (`2026-08-27-dashboard-evolution-gbd-retirement`). The self-improvement cadence

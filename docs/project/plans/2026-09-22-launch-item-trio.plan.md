@@ -11,7 +11,7 @@ certificate ceremony parks on the operator.
 
 ## Steps
 
-- [ ] 1. UNBLOCK (review item 3) — add per-step Verification lines to
+- [x] 1. UNBLOCK (review item 3) — add per-step Verification lines to
       `docs/project/plans/2026-09-13-governed-fleet-consolidation.plan.md`.
       The plan is status=proposed with a global Verification paragraph
       only; the acceptance parser
@@ -27,11 +27,15 @@ certificate ceremony parks on the operator.
       not flip the front-matter (accept-plans owns that flip).
       Verification: importing accept-plans.py, `first_unverified_step(steps_text(...))`
       returns 0 for the fleet plan; kernel `make test` green.
+      LANDED 2026-09-22: fleet plan accepted 2026-09-22T13:03:06Z with
+      per-step Verification lines (accept-plans flipped it at accept);
+      no overnight:plan-accept-blocked re-fire since (report-queue head
+      re-checked 2026-09-28).
       SLA: same-session edit + commit. Halt: parser still rejects after
       a grammar-faithful edit -> fix to the actual grammar (parser source
       already read once); a red-gate blocker unrelated to this plan
       files an alert and parks, never widens this lane.
-- [ ] 2. DISPATCH (review item 2) — charter step-4 remainder: staged
+- [x] 2. DISPATCH (review item 2) — charter step-4 remainder: staged
       dispatch + spend ceilings on the dispatch side. ng cadence gains a
       dispatch admission gate alongside the `_token_cap`/`_attempt_cap`
       pattern in `automation/ng/cadence.py`: daily dispatch cap (env
@@ -48,6 +52,14 @@ certificate ceremony parks on the operator.
       dispatch-gate cases (admit under cap; refuse + escalate at cap;
       deferred work survives to the next beat; leg ordering prefers
       pre-paid legs); kernel `make test` green.
+      LANDED 2026-09-22 (18fb44ad, "automation: dispatch admission gate
+      with prepaid-leg-first routing"): gate at automation/ng/cadence.py
+      (env HNGH_DISPATCH_DAY_CAP > cadence-params dispatch-day-max >
+      fail-closed default 4), escalation reason=dispatch-capped with
+      defer-to-next-beat, prepaid-first leg ordering
+      (automation/ng/tiering.py); suite automation/ng/
+      test-dispatch-gate.py wired into the automation Makefile;
+      self-check re-run green 2026-09-28.
       SLA: one slice, one commit, both gates green same session.
       Halt: if enforcement requires kernel-side state (src/tests/
       Makefile/hngh.asd) -> file the defect, park on operator; that is
