@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job type template for batch data ingestion under jobs/batch-ingest/
-  Verification: bash -n jobs/batch-ingest/template.sh
+- [ ] Add a `lib/hngh-automation/utils.py` module with a `validate_input` function that checks required fields in a config dict
+  Verification: python3 -c "import sys; sys.path.insert(0, '.'); from lib.hngh-automation.utils import validate_input; print(validate_input({'name': 'test'}))"
 
-- [ ] Extend cadence scheduler to recognize the new batch-ingest job type
-  Verification: bash -n cadence/scheduler.c
+- [ ] Create `jobs/validate-config.sh` script that runs `make test` and exits 0 on success
+  Verification: bash -n jobs/validate-config.sh
 
-- [ ] Add unit tests for batch-ingest job execution path
+- [ ] Add `tests/test_validate_input.py` with a single test case asserting the function returns True for valid input
+  Verification: python3 tests/test_validate_input.py
+
+- [ ] Update `cadence/run.sh` to call `validate-config.sh` before proceeding with job execution
+  Verification: bash -n cadence/run.sh
+
+- [ ] Commit all changes and run `make test` to confirm the pipeline passes
   Verification: make test
-
-- [ ] Update dashboard job registry to include batch-ingest type
-  Verification: grep -q "batch-ingest" dashboard/registry.json
-
-- [ ] Create a helper script for batch-ingest configuration validation
-  Verification: python3 scripts/validate_batch_ingest_config.py
