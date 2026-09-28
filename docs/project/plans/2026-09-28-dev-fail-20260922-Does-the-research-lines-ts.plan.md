@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Create a new job wrapper script under jobs/ that validates input before execution
-  Verification: bash -n jobs/hngh-job-wrapper.sh
+- [ ] Add a cadence validation script that checks job file syntax and structure
+  Verification: bash -n cadence/validate.sh
 
-- [ ] Add a test script under tests/ that exercises the new wrapper with sample inputs
-  Verification: bash tests/test-hngh-job-wrapper.sh
+- [ ] Create a test case that exercises the new validation script against sample job files
+  Verification: bash cadence/validate.sh tests/sample-job.yaml
 
-- [ ] Update cadence configuration under cadence/ to register the new job wrapper
-  Verification: grep -q "hngh-job-wrapper" cadence/cadence.yaml
+- [ ] Add a git hook to enforce validation before commits in the cadence directory
+  Verification: git grep -l "validate.sh" cadence/
 
-- [ ] Run make test to confirm no existing tests are broken
+- [ ] Update the dashboard README to document the new validation workflow
+  Verification: grep -c "validation" dashboard/README.md
+
+- [ ] Run make test to confirm all existing tests still pass after changes
   Verification: make test
-
-- [ ] Add a verification script under scripts/ that checks the wrapper's exit code on invalid input
-  Verification: bash scripts/verify-hngh-job-wrapper-exit.sh
-
-- [ ] Commit all changes and verify the repository is clean
-  Verification: git status --porcelain | grep -q .
