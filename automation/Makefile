@@ -74,6 +74,7 @@ test:
 	python3 -B tests/test-dashboard-p0.py
 	python3 -B tests/test-dashboard-p1.py
 	python3 -B tests/test-dashboard-p1-ui.py
+	python3 -B tests/test-dashboard-lifecycle.py
 	python3 -B tests/test-story-view.py
 	python3 -B tests/test-newspaper-view.py
 	python3 -B tests/test-routes-view.py
