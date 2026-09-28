@@ -1,6 +1,36 @@
 # Changelog
 
 ## 2026-09-28
+- wicket arm fix — `wicket.sudoers.example` granted placeholder user
+  `hngh` (no such user on the operator desktop); the pinned bootstrap
+  block installs the example verbatim, so a verbatim run armed nothing
+  (drop-in grants a ghost, operator's `sudo -l` shows no wicket lines,
+  privileged.sh exits 3). Grants now target `%wheel` (the operator
+  group; equivalent on single-operator machines, laptop deploy
+  inherits it); placeholder-rename comment replaced by the wheel
+  rationale. DESK_BOOTSTRAP_PINNED trailing comment synced. Full gate
+  green; test-wicket.sh template law green (three per-action grants,
+  no NOPASSWD:ALL, visudo parses).
+- weekly distro update-watch —
+  `cadence/calendar/weekly/31-distro-update-watch.sh`: archlinux.org
+  news feed + CachyOS/omarchy latest-release APIs, 7-day last-seen
+  dedup (`$HNGH_HOME_DIR/db/distro-watch/`), NEW_CAP 5 rows per
+  sighting, per-source URL env overrides, first sighting arms state
+  only (sibling 28-omp-changelog-watch convention). Hermetic test
+  (27 checks, stubbed curl). Registered in cadence/README.md weekly
+  list.
+- live-ISO scaffold: combined CachyOS+Omarchy profile under
+  `iso/profile/` (mkarchiso releng shape, bootmodes bios.syslinux +
+  uefi.systemd-boot, CachyOS kernel, omarchy session core mirroring
+  `config/omarchy-base.packages` with the avoid-list intact — no
+  linux-omarchy/limine/UKI/sddm/plymouth) + the `iso/build-live-iso.sh`
+  wrapper (profile validation before build, seams MKARCHISO_BIN /
+  ISO_PROFILE_DIR / ISO_WORKDIR / ISO_OUTDIR, artifacts under
+  ~/.hngh/db/iso, never the dev repo; never escalates — operator runs
+  it under sudo). Test `tests/test-iso-build.sh` hermetic via a
+  mkarchiso stub: exact argv, HNGH_HOME_DIR defaults, usage rc 2,
+  missing-prereq rc 3, broken-profile rc 3 with zero stub invocations,
+  failure rc propagation.
 - stage-authz handoff fix — POST /desk/stage-authz returned only
   {ok, identity} while the desk promised "run the bootstrap block
   printed below": the block lived solely in the filed report-queue

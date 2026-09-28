@@ -232,7 +232,7 @@ DESK_BOOTSTRAP_PINNED = (
     " /etc/hngh/omarchy-base.packages\n"
     "sudo install -o root -g root -m 0440"
     " automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket"
-    "  # set the operator user in the drop-in first")
+    "  # grants %wheel (the operator group)")
 SERVICE_CTL = os.path.join(ROOT, "scripts", "service-ctl.sh")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 PLANS_DOCS = os.path.join(HNGH, "docs", "project", "plans")

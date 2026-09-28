@@ -24,9 +24,9 @@
 # could edit the script sudo runs). That is what the bootstrap window
 # below establishes first.
 
-# Three grants, one per action. `hngh` is a placeholder — rename to the user the
-# automation tier runs as (mirrors hngh-automation.sudoers.example).
-hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-base
+# Three grants, one per action: `%wheel` = the operator group (the
+# automation tier runs as the login operator, a wheel member).
+%wheel ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-base
 
 # AUR-build lane (jobs/aur-build.sh): `stage` copies one user-built
 # package file into the root-owned staging dir
@@ -36,8 +36,8 @@ hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-base
 # / staged name) is validated INSIDE the root-owned script — sanitized
 # name pattern, staging-dir resolution, size cap, ownership — never by
 # sudoers, which cannot express those checks.
-hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh stage
-hngh ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-file
+%wheel ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh stage
+%wheel ALL=(root) NOPASSWD: /usr/local/lib/hngh/wicket.sh install-file
 
 # ---------------------------------------------------------------------------
 # One-time bootstrap window — copy-paste from the hngh repo root, IN THIS
