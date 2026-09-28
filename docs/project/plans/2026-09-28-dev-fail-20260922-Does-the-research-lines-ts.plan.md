@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence validation script that checks job file syntax and structure
-  Verification: bash -n cadence/validate.sh
-
-- [ ] Create a test case that exercises the new validation script against sample job files
-  Verification: bash cadence/validate.sh tests/sample-job.yaml
-
-- [ ] Add a git hook to enforce validation before commits in the cadence directory
-  Verification: git grep -l "validate.sh" cadence/
-
-- [ ] Update the dashboard README to document the new validation workflow
-  Verification: grep -c "validation" dashboard/README.md
-
-- [ ] Run make test to confirm all existing tests still pass after changes
+- [ ] Add a new job template for automated literature review cadence
+  Verification: bash -n jobs/literature-review.sh
+- [ ] Add verification script to confirm literature review job output format
+  Verification: python3 scripts/verify-lit-review-output.py
+- [ ] Add cadence entry to schedule literature review jobs
+  Verification: bash -n cadence/literature-review-cadence.sh
+- [ ] Add test for literature review job template
   Verification: make test
+- [ ] Add dashboard snippet to display literature review status
+  Verification: bash -n dashboard/literature-review-status.sh
+- [ ] Add digest template for literature review findings
+  Verification: bash -n digest/literature-review-digest.sh
+
+This plan implements the research line for automated literature review synthesis, adding new job templates, cadence scheduling, and verification mechanisms for hngh-automation.

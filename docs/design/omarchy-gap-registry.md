@@ -79,3 +79,11 @@ Two-home split untouched (kernel/cert state in `~/.hngh-automation`, userspace i
 kernel `src/` surfaces untouched this wave; every privileged action: exact-command grant →
 manifest pin → `--noconfirm` single transaction → journal audit; fail-closed on every
 missing precondition; no daemons added (dashboard server + systemd timers already exist).
+
+Partial-upgrade caveat (corrected 2026-09-28): `--needed` skips only the *named*
+targets already at repo version; the dep closure can still upgrade *other*
+installed packages once `-Sy` re-syncs. Nil as of the 2026-09-27 DB snapshot
+(all 4 pre-installed names at repo version; deps all new-side), but repo drift
+between snapshot and run is unprojected. Signal: wicket reports `upgrading <pkg>`
+lines from the transaction tail; operator reviews the tail before treating
+phase 1 as settled.
