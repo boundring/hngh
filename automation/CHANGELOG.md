@@ -19,6 +19,36 @@
   PACMAN_BIN. Tests: test-wicket.sh extended (stage/install-file/
   upgrading-signal/refusals), new test-omarchy-aur-build.sh (fixture RPC
   JSON, stub seams, exit-code law).
+- omarchy-file-probe: user-level (no sudo) pre-install file-conflict
+  probe for the omarchy phase-1 manifest — jobs/omarchy-file-probe.py
+  reads config/omarchy-base.packages (OMARCHY_MANIFEST override;
+  blank/#-only lines skipped, aur-marked names counted but not probed;
+  unreadable or zero repo names -> exit 2), fetches each pacman.conf
+  repo's <name>.files DB (repos + servers from
+  HNGH_PROBE_PACMAN_CONF / HNGH_PROBE_MIRRORS overrides of
+  /etc/pacman.conf + mirrorlist; file:// URLs work for tests; urllib
+  60s timeout; a repo whose mirrors all fail -> exit 2 naming it)
+  into HNGH_PROBE_CACHE (default <hngh-home>/db/omarchy/filedb,
+  reused offline until --refresh), then classifies every
+  manifest-package file: owned-elsewhere (one cached `pacman -Qlq`
+  set), on-disk-unowned, protected-prefix (/etc, /boot,
+  /usr/lib/systemd/system, /usr/lib/modules); first match wins in
+  that order. Existing on-disk-unowned / protected-prefix files are
+  copied mode-preserved to
+  <hngh-home>/db/omarchy/preinstall-backup/<UTC-ts>/ with a
+  path/sha256/class manifest.tsv; per-file backup failures log and
+  continue except /etc/sudoers* or /boot -> abort exit 2. Report at
+  <hngh-home>/db/omarchy/file-probe.json {generated,
+  manifest_counts:{repo,aur}, repos:[{name,url,packages}],
+  conflicts:[{path,pkg,cls,backed_up}], clean}; exit 0 clean / 1
+  conflicts / 2 fail-closed. Hermetic suite
+  tests/test-omarchy-file-probe.py (fixture .files tarball, file://
+  mirror, PATH-stub pacman -Qlq, sandboxed HNGH_HOME; sudoers/boot
+  aborts via monkeypatched _lexists/_copy2 seams, never touching real
+  /etc or /boot) registered in make test; structure mirrors
+  pins-drift (CheckError fail-closed), no pacman write ops, all
+  writes under the hngh home (HNGH_HOME / HNGH_HOME_DIR / ~/.hngh).
+
 ## 2026-09-27
 - installation desk: the dashboard page from which the operator drives
   Omarchy-on-CachyOS phase 1 (session stack install) —
