@@ -21,6 +21,12 @@ Pipeline:
                until --refresh. A repo whose mirrors all fail -> exit
                2 naming the repo.
   3. classify  each manifest-package file path:
+                 (installed target) a package already installed is
+                                  satisfied: all of its paths are
+                                  skipped -- it owns its own files
+                 (shared dir)     .files directory entries (trailing
+                                  /) are deliberately co-ownable;
+                                  never conflicts
                  owned-elsewhere  in the `pacman -Qlq` set of every
                                   installed package (queried once)
                  on-disk-unowned  exists on disk, no owner
@@ -37,12 +43,13 @@ Pipeline:
   5. report    <home>/db/omarchy/file-probe.json:
                {generated, manifest_counts:{repo,aur},
                 repos:[{name,url,packages}],
-                conflicts:[{path,pkg,cls,backed_up}], clean}
+                conflicts:[{path,pkg,cls,backed_up}], clean,
+                satisfied:[pkg], shared_dirs:n}
 
 Exit conventions mirror pins-drift / scripts/report-queue (2 on
 malformed input, fail closed): 0 clean, 1 conflicts found, 2 error.
-No sudo, no pacman write operations (auditable by grep: only -Qlq is
-shelled out); the only writes are under the hngh home.
+No sudo, no pacman write operations (auditable by grep: only
+-Qlq/-Qq are shelled out); the only writes are under the hngh home.
 """
 
 import datetime
@@ -259,6 +266,21 @@ def installed_files():
     return {ln for ln in cp.stdout.splitlines() if ln}
 
 
+def installed_names():
+    """Name of every installed package (`pacman -Qq`), queried once:
+    the satisfied set. A target already installed owns its own files,
+    so its whole path set is exempt from conflict classification."""
+    try:
+        cp = subprocess.run(["pacman", "-Qq"], capture_output=True,
+                            text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise CheckError("pacman -Qq unavailable: %r" % e)
+    if cp.returncode != 0:
+        raise CheckError("pacman -Qq failed rc=%d: %s"
+                         % (cp.returncode, cp.stderr.strip()[:200]))
+    return {ln for ln in cp.stdout.splitlines() if ln}
+
+
 def classify(abspath, owned):
     """-> conflict class token or None; owned beats disk beats prefix."""
     if abspath in owned:
@@ -319,6 +341,7 @@ def probe(refresh=False):
     dbs = fetch_dbs(repos, cache, refresh)
     owned = installed_files()
     wanted = set(names)
+    satisfied = wanted & installed_names()
     repo_pkgs = {name: [] for name in dbs}
     by_path = {}  # abspath -> pkg (first repo in pacman.conf order wins)
     for repo, (db_path, _url) in dbs.items():
@@ -326,8 +349,13 @@ def probe(refresh=False):
             repo_pkgs[repo].append(pkg)
             for p in paths:
                 by_path.setdefault(p, pkg)
-    conflicts, to_backup = [], []
+    conflicts, to_backup, shared_dirs = [], [], 0
     for abspath in sorted(by_path):
+        if abspath.endswith("/"):
+            shared_dirs += 1     # .files co-ownable dir: benign, never
+            continue             # a conflict
+        if by_path[abspath] in satisfied:
+            continue             # installed target: owns its own files
         cls = classify(abspath, owned)
         if cls is None:
             continue
@@ -350,6 +378,8 @@ def probe(refresh=False):
                    "packages": sorted(repo_pkgs[name])} for name in dbs],
         "conflicts": conflicts,
         "clean": not conflicts,
+        "satisfied": sorted(satisfied),
+        "shared_dirs": shared_dirs,
     }
     out = os.path.join(home_root(), "db", "omarchy", "file-probe.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)

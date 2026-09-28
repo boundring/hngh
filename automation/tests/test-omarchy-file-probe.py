@@ -67,7 +67,7 @@ class Fixture:
     """Sandbox: file:// mirror with a fixture .files DB, pacman.conf,
     stub pacman, canned `pacman -Qlq` output, hngh home."""
 
-    def __init__(self, root, pkgs=None, manifest=None):
+    def __init__(self, root, pkgs=None, manifest=None, installed=None):
         self.root = Path(root)
         self.home = self.root / "home"
         self.cache = self.home / "db" / "omarchy" / "filedb"
@@ -96,11 +96,14 @@ class Fixture:
         self.mirrorlist.write_text("Server = file://%s\n" % self.mirror)
         self.qlq = self.root / "qlq.txt"
         self.qlq.write_text("/etc/vimrc\n/usr/bin/other-pkg-file\n")
+        self.qq = self.root / "qq.txt"
+        self.qq.write_text("".join(n + "\n" for n in (installed or [])))
         self.bin = self.root / "bin"
         self.bin.mkdir(exist_ok=True)
         stub = self.bin / "pacman"
         stub.write_text('#!/bin/sh\n'
                         '[ "$1" = -Qlq ] && { cat "$PACMAN_QLQ"; exit 0; }\n'
+                        '[ "$1" = -Qq ] && { cat "$PACMAN_QQ"; exit 0; }\n'
                         'echo "stub pacman: unsupported: $*" >&2\nexit 1\n')
         stub.chmod(0o755)
 
@@ -108,6 +111,7 @@ class Fixture:
         e = os.environ.copy()
         e["PATH"] = str(self.bin) + os.pathsep + e.get("PATH", "")
         e["PACMAN_QLQ"] = str(self.qlq)
+        e["PACMAN_QQ"] = str(self.qq)
         e["HNGH_HOME"] = str(self.home)
         e["OMARCHY_MANIFEST"] = str(self.manifest)
         e["HNGH_PROBE_PACMAN_CONF"] = str(self.conf)
@@ -232,6 +236,37 @@ class OmarchyFileProbe(unittest.TestCase):
         r = fx.run()
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("x86_64_v4", json.dumps(fx.report()))
+
+    def test_installed_target_satisfied_never_conflict(self):
+        """An installed target owns its own files: every one of its
+        paths is skipped (no owned-elsewhere, no on-disk backup), the
+        report names it under 'satisfied', and it cannot manufacture a
+        conflict or an exit 1 by being pre-installed."""
+        fx = Fixture(self.tmp, installed=["probeb"])
+        r = fx.run()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rep = fx.report()
+        self.assertEqual(rep["satisfied"], ["probeb"])
+        self.assertEqual(rep["conflicts"], [])
+        self.assertTrue(rep["clean"])
+
+    def test_files_directory_entries_never_conflict(self):
+        """.files DB directory entries (trailing /) are shared dirs:
+        pacman deliberately allows co-ownership, so they are counted
+        under 'shared_dirs' and never classified as conflicts -- even
+        in a run that has a genuine on-disk conflict."""
+        exists = Path(self.tmp) / "exists.txt"
+        fx = Fixture(self.tmp,
+                     pkgs={"probea": [_rel(exists),
+                                      "usr/share/probe-dir/"]})
+        r = fx.run()
+        self.assertEqual(r.returncode, 1, r.stderr)
+        rep = fx.report()
+        self.assertEqual(rep["shared_dirs"], 1)
+        self.assertEqual({(c["path"], c["cls"]) for c in rep["conflicts"]},
+                         {(str(exists), "on-disk-unowned")})
+        self.assertNotIn("usr/share/probe-dir/",
+                         {c["path"] for c in rep["conflicts"]})
 
     def test_unknown_arg_exit_2(self):
         fx = Fixture(self.tmp)
