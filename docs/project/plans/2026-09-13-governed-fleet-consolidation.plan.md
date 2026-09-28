@@ -73,10 +73,17 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       gcode-session-cost live-log format drift (today's logs lack the
       "API call complete" lines entirely) is a separate backlog lane,
       out of this slice.
-- [ ] Slice C: witnessed delegation cycle + seeded stall auto-replace
-      (evidence: ledger/dashboard record)
-      Verification: the ledger/dashboard record exists; kernel
-      `make test` green.
+<!-- plan-note: 2026-09-27 slice C split for 1800s executor budget (blocker blk-20260927) -->
+- [ ] Slice C1: witnessed clean delegation cycle (spawn one session,
+      observe completion, record ledger evidence)
+      Verification: the ledger record shows one clean completion.
+- [ ] Slice C2: seeded stall auto-replace observation, single 5m
+      subhour tick scope
+      Verification: the ledger record shows the stall detected and
+      the session auto-replaced.
+- [ ] Slice C3: supervision residue check + kernel `make test` green
+      (separate session)
+      Verification: no supervision residue; kernel `make test` green.
 - [ ] Slice D: governed package upgrade through the certificate loop
       (evidence: certificate + commit in git log)
       Verification: the certificate + commit appear in git log; kernel
