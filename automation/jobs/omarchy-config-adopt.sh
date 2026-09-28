@@ -52,6 +52,11 @@ die3() { # fail-closed prereq: name the path + remediation, exit 3
   exit 3
 }
 
+case "$UPSTREAM" in
+*'
+'*) die3 "refusing: clone path contains a newline: $UPSTREAM" ;;
+esac
+
 # ---- (a) fail-closed prereqs -------------------------------------------------
 [ -d "$UPSTREAM" ] || die3 "upstream clone missing or not a directory: $UPSTREAM (remediation: git clone https://github.com/omarchy/omarchy $UPSTREAM)"
 CFG="$UPSTREAM/config"
@@ -90,6 +95,11 @@ adopt_file() { # src dst
     fi
     ;;
   backup)
+    if [ -e "$dst.bak" ]; then
+      skipped=$((skipped + 1))
+      log "refusing: $rel.bak exists (resolve it first); skipped $rel"
+      return
+    fi
     backed=$((backed + 1))
     if [ "$DRY" -eq 1 ]; then
       log "would backup $rel -> $rel.bak and copy"

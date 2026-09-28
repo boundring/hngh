@@ -599,7 +599,8 @@ class Desk(Lifecycle):
         self.assertIn("stderr-line", body["tail"])
 
     def test_desk_posts_need_token(self):
-        for route in ("desk/stage-authz", "desk/run-phase-1"):
+        for route in ("desk/stage-authz", "desk/run-phase-1",
+                      "desk/approve"):
             code, _ = self.post(route, {"phase": "1"}, token=False)
             self.assertEqual(code, 403, route)
         self.assertEqual(self.rows(), [])

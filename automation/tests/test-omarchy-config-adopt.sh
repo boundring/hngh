@@ -146,6 +146,30 @@ rc=$?
   ok "usage: unknown flag rc 2 + usage line, nothing written" ||
   bad "usage rc=$rc err=$(cat "$SANDBOX/g.err")"
 
+# --- (h) pre-existing .bak: refuse the backup, skip the file ------------------
+H="$HOMES/h2"
+run "$UP" "$H" "$JOB" >/dev/null 2>&1
+printf 'operator edit\n' >>"$H/.config/foot/foot.ini"
+printf 'stale backup\n' >"$H/.config/foot/foot.ini.bak"
+run "$UP" "$H" "$JOB" >"$SANDBOX/h2.out" 2>"$SANDBOX/h2.err"
+rc=$?
+[ "$rc" -eq 0 ] && grep -q "refusing" "$SANDBOX/h2.err" &&
+  [ "$(cat "$H/.config/foot/foot.ini.bak")" = "stale backup" ] &&
+  grep -q "operator edit" "$H/.config/foot/foot.ini" &&
+  grep -q "backed-up=0" "$SANDBOX/h2.out" &&
+  ok ".bak refusal: existing .bak preserved, target untouched" ||
+  bad ".bak refusal rc=$rc err=$(cat "$SANDBOX/h2.err")"
+
+# --- (i) clone path with embedded newline: rc 3 -------------------------------
+H="$HOMES/h3"
+UP="$SANDBOX/nl
+up"
+run "$UP" "$H" "$JOB" >"$SANDBOX/h3.out" 2>"$SANDBOX/h3.err"
+rc=$?
+[ "$rc" -eq 3 ] && grep -q "newline" "$SANDBOX/h3.err" &&
+  ok "newline clone path: rc 3" ||
+  bad "newline rc=$rc err=$(cat "$SANDBOX/h3.err")"
+
 # --- summary -------------------------------------------------------------------
 if [ "$fails" -eq 0 ]; then
   echo "PASS: test-omarchy-config-adopt"
