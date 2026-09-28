@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence runner script that executes a single job and reports status
-  Verification: bash -n cadence/run-job.sh
+- [ ] Add a cadence script that validates all job definitions parse correctly before scheduling
+  Verification: bash scripts/cadence/validate-jobs.sh
 
-- [ ] Create a test that validates the cadence runner script syntax
-  Verification: bash cadence/run-job.sh --dry-run
+- [ ] Create a test helper that asserts job output conforms to expected schema
+  Verification: python3 tests/test_job_schema.py
 
-- [ ] Add a dashboard integration test that checks job output format
-  Verification: python3 tests/test_dashboard_format.py
+- [ ] Update cadence runner to gate execution on validation script passing
+  Verification: bash -n cadence/runner.sh && make test
 
-- [ ] Update the Makefile test target to include the new cadence test
+- [ ] Add a dashboard digest that reports job success rates per cadence window
+  Verification: bash scripts/digest/report-cadence.sh
+
+- [ ] Extend lib utilities with a job-dependency resolver for parallel execution
+  Verification: python3 lib/job_resolver.py && make test
+
+- [ ] Add a test suite covering cadence ordering and parallel job isolation
   Verification: make test
-
-- [ ] Add a lib helper function for job status parsing
-  Verification: bash -n lib/job-status.sh
-
-- [ ] Verify all new scripts pass syntax checks
-  Verification: bash -n scripts/cadence-runner.sh && bash -n lib/job-status.sh
