@@ -1,7 +1,16 @@
 # Changelog
 
 ## 2026-09-27
-
+- omarchy-readiness: daily phase-readiness beat (pure reporting, never
+  acts) - files ONE identity-deduped progress row
+  (`omarchy-readiness:<date>`, 7d) summarizing omarchy-on-CachyOS
+  phase-1 readiness (`phase1 a=<clone> b=<manifest>(<n>) c=<hyprland>
+  d=<session> e=<pins-drift ok|drift|unknown>`), plus one alert
+  (`omarchy-ready:phase1-pending`) only when hyprland is installed but
+  no session desktop file is staged. Env knobs: OMARCHY_UPSTREAM_DIR,
+  OMARCHY_SESSIONS_DIR. Test `tests/test-omarchy-readiness.sh` (17
+  hermetic checks: all-yes, clone/manifest/hyprland/desktop/pins
+  variants, same-day dedupe, comment-only manifest).
 - arc-to-slice: daily research->dev converter beat - scans
   research-dispositions.tsv for arcs whose terminal disposition
   (parked/killed, dated today) sits on a crystallized line

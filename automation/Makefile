@@ -188,6 +188,10 @@ test:
 	bash tests/test-wiki-health.sh
 	bash tests/test-omp-changelog-watch.sh
 	bash tests/test-arc-to-slice.sh
+	bash tests/test-omarchy-readiness.sh
+	bash tests/test-omarchy-readiness.sh
+	bash tests/test-pins-drift.sh
+	bash tests/test-wicket.sh
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
 	bash tests/test-credential-health-argv.sh
