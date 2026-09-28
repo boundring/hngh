@@ -7,21 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job template for automated digest generation
-  Verification: bash -n jobs/digest-template.sh
+- [ ] Add a cadence helper script that validates job output schemas before ingestion
+  Verification: bash -n cadence/schema-validator.sh
 
-- [ ] Create a test script validating the new job template syntax
+- [ ] Create a test fixture that generates sample job outputs for schema validation
+  Verification: python3 tests/test_schema_fixtures.py
+
+- [ ] Update the digest pipeline to call the schema validator before processing
   Verification: make test
 
-- [ ] Add a verification script to confirm template integration
-  Verification: bash scripts/verify-digest-template.sh
+- [ ] Add a dashboard view showing schema validation success rates over time
+  Verification: bash -n dashboard/schema-metrics.sh
 
-- [ ] Update cadence configuration to include the new template
-  Verification: grep -q 'digest-template' cadence/config.yaml
-
-- [ ] Run full test suite to confirm no regressions
+- [ ] Write integration test that exercises the full validation pipeline end-to-end
   Verification: make test
 
----
-
-**Rationale:** Implements the research line `hngh-job-template-automation` by introducing a new digest generation template with syntax validation and integration verification, all gated by `make test` for normal-risk delivery.
+- [ ] Document the schema validation flow in the jobs README
+  Verification: grep -q "schema validation" jobs/README.md
