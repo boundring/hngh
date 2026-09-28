@@ -432,3 +432,9 @@ next rotation or tomorrow, whichever comes first.
 - **State:** clean; queue 71 queued / 17 done; next=Land stage 2.
 - **Probes:** model=local; network=reachable; audio=3/10.
 - **Action:** none — no action card mounted for Land stage 2
+
+## 2026-09-28 — heartbeat #29 (schedule-heartbeat)
+
+- **State:** clean; queue 71 queued / 17 done; next=Land stage 2.
+- **Probes:** model=local; network=reachable; audio=9/10.
+- **Action:** none — no action card mounted for Land stage 2
