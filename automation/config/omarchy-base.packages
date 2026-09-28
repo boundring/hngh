@@ -2,6 +2,11 @@
 # Derived from omacom/omarchy @ quattro (4.0.x), clone commit 3faafba234e530b0986196b98dc2c38951e7dd6f
 # Plan: ~/Projects/etc/omarchy-integration-plan.md phase 1 (session-only, no boot-chain contact).
 # Note: omarchy v4 ships no hypridle/hyprlock/hyprpaper — lock screen is owe/owe-lockfeed.
+# Marks: `# aur` = genuinely in the AUR (wicket aur-build lane);
+# `# omarchy-repo` = ships from upstream's signed [omarchy] pacman repo
+# (pkgs.omarchy.org/stable/$arch, upstream default/pacman/pacman-stable.conf)
+# — completion there is a repo-add, i.e. a provider-configuration change
+# on the certificate lane, NOT a makepkg/AUR build.
 
 # Hyprland session core
 hyprland
@@ -11,7 +16,7 @@ foot
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 hyprland-guiutils
-hyprland-preview-share-picker # aur
+hyprland-preview-share-picker # omarchy-repo
 hyprpicker
 hyprsunset
 
@@ -27,8 +32,8 @@ wireplumber
 xdg-terminal-exec
 
 # Lock-screen / desktop-video (v4 uses OWE instead of hyprlock/hypridle)
-owe # aur
-owe-lockfeed # aur
+owe # omarchy-repo
+owe-lockfeed # omarchy-repo
 
 # EXCLUDED (avoid-list, conflict matrix — do NOT install):
 # linux-omarchy            — cachyos 7.2.8-1 kernel stays; DO NOT install (also -headers)

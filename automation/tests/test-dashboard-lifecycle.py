@@ -595,8 +595,7 @@ class DeskAur(Desk):
     def test_aur_names_parsed_from_real_manifest(self):
         real = os.path.join(ROOT, "config", "omarchy-base.packages")
         self.assertEqual(ds._aur_manifest_names(real),
-                         ["hyprland-preview-share-picker", "owe",
-                          "owe-lockfeed"])
+                         [])
 
     def test_aur_pkgs_env_override(self):
         mf = Path(self.tmp.name) / "override.packages"

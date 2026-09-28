@@ -1,6 +1,29 @@
 # Changelog
 
 ## 2026-09-28
+- gate hygiene — automation/Makefile registered readiness,
+  pins-drift, and wicket suites twice back-to-back (every gate ran
+  them twice); duplicate triplet dropped.
+- file-probe conflict refinement — the live probe's 407-conflict
+  headline overstated by orders of magnitude through two benign
+  classes: targets already installed own their own files (satisfied:
+  every path of an installed target is skipped; report gains
+  "satisfied": [pkgs]), and .files DB directory entries (trailing /)
+  are deliberately co-ownable and never conflict (report gains
+  "shared_dirs": n). True live conflicts: 1 (protected-prefix
+  /etc/xdg/foot/foot.ini, pkg foot). Stub pacman gains -Qq (PACMAN_QQ);
+  two new fixture cases (installed-target satisfied; shared dir).
+- manifest provenance correction — hyprland-preview-share-picker,
+  owe, owe-lockfeed are NOT AUR packages (AUR RPC resultcount=1:
+  only a same-day third-party `owe` mirror): they ship from
+  upstream's signed [omarchy] pacman repo
+  (pkgs.omarchy.org/stable/$arch). omarchy-base.packages marks the
+  three `# omarchy-repo` with the mark grammar documented in the
+  header; the desk AUR add-ons set parsed from the real manifest is
+  empty (real-manifest parser test pins []), fixture-based gate tests
+  unchanged. Completion path for the trio is a repo-add — provider
+  configuration, certificate lane / operator instruction, phase-2
+  scope; NOT run-aur or run-phase-1.
 - desk AUR add-ons lane — dashboard-server.py parses the manifest's
   aur-marked lines into AUR_PKGS at import (same partition('#') rule as
   the manifest probe; OMARCHY_MANIFEST overrides the source manifest)

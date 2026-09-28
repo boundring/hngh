@@ -75,3 +75,40 @@ real omarchy-base.packages (exactly the three aur names, comment
 section excluded); the OMARCHY_MANIFEST override (subprocess import);
 and a regression case pinning stage-authz + run-phase-1 behavior
 alongside the new overrides.
+
+## 6. Correction (2026-09-28, later the same day): the "AUR trio" are
+not AUR packages
+
+The record above (and the operator report) called
+hyprland-preview-share-picker, owe, and owe-lockfeed "the AUR trio".
+Wrong premise, verified against the upstream clone
+(~/Projects/etc/omarchy-upstream @ 3faafba): all three are plain lines
+in upstream install/omarchy-base.packages, and upstream serves them
+from its OWN signed pacman repo — default/pacman/pacman-stable.conf
+defines `[omarchy] Server = https://pkgs.omarchy.org/stable/$arch`
+(migration 1787589206.sh dropped the legacy TrustAll override, so the
+packages are signed; the repo inherits the global
+Required/DatabaseOptional policy). In the AUR proper only `owe`
+exists, as a same-day third-party mirror (0 votes) — building it via
+makepkg would be a supply-chain downgrade, and the other two names are
+not in the AUR at all (RPC resultcount=1).
+
+Corrections landed: automation/config/omarchy-base.packages now marks
+the three `# omarchy-repo` (documented mark grammar in the header:
+`# aur` = wicket aur-build lane; `# omarchy-repo` = signed upstream
+repo, completion is a repo-add — a provider-configuration change on
+the certificate lane, not a makepkg build). The desk AUR add-ons set
+parsed from the real manifest is therefore empty until a genuinely
+AUR-only package appears; the fixture-based DeskAur gate tests are
+unchanged (foot stub manifest), and
+test_aur_names_parsed_from_real_manifest now pins `[]`. The aur-build
+job and desk wiring stay: fail-closed, generic, correct for genuine
+AUR names. The governed completion path for the omarchy-repo trio is
+the repo-add, which belongs in a later phase (phase 2, config adopt)
+and requires the certificate lane / explicit operator instruction —
+it is NOT covered by run-aur or run-phase-1.
+This section supersedes §5's sentence pinning "the parser against the
+real omarchy-base.packages (exactly the three aur names, comment
+section excluded)": the real-manifest pin is now `[]` (the mark
+grammar makes `# aur` mean genuinely-AUR only), while the fixture
+`foot # aur` cases keep the parsing rule itself covered.
