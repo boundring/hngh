@@ -7,20 +7,21 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a test harness script that validates cadence job definitions parse correctly
-  Verification: bash -n cadence/test-harness.sh && make test
+- [ ] Add a new job template for automated digest generation
+  Verification: bash -n jobs/digest-template.sh
 
-- [ ] Create a job definition template under jobs/ that documents required fields
-  Verification: grep -q "required_fields" jobs/template.yaml
-
-- [ ] Add a verification script that checks all new job definitions against the template
-  Verification: bash cadence/validate-job.sh
-
-- [ ] Update the dashboard digest to include test harness results
-  Verification: grep -q "test-harness" dashboard/digest.md
-
-- [ ] Add a lib utility function for job definition validation
-  Verification: node --check lib/job-validator.js && make test
-
-- [ ] Commit all changes and run full test suite to confirm no regressions
+- [ ] Create a test script validating the new job template syntax
   Verification: make test
+
+- [ ] Add a verification script to confirm template integration
+  Verification: bash scripts/verify-digest-template.sh
+
+- [ ] Update cadence configuration to include the new template
+  Verification: grep -q 'digest-template' cadence/config.yaml
+
+- [ ] Run full test suite to confirm no regressions
+  Verification: make test
+
+---
+
+**Rationale:** Implements the research line `hngh-job-template-automation` by introducing a new digest generation template with syntax validation and integration verification, all gated by `make test` for normal-risk delivery.

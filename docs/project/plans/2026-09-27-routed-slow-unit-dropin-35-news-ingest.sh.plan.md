@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:35-news-ingest.sh -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=slow-unit:dropin:35-news-ingest.sh -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-04T22:00:40Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -11,3 +11,7 @@ at 2026-09-27T22:00:40Z. Alert text: [oversight] slow-unit: dropin:35-news-inges
 
 - [ ] Delve: open research subject fail-20260927-slow-unit-dropin-35-news-ingest.sh for slow-unit:dropin:35-news-ingest.sh; record disposition; then fix or park
       Verification: research subject fail-20260927-slow-unit-dropin-35-news-ingest.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-28T22:00:53Z re-occurred (dedup window expired)
