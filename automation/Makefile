@@ -193,9 +193,6 @@ test:
 	bash tests/test-omarchy-readiness.sh
 	bash tests/test-pins-drift.sh
 	bash tests/test-wicket.sh
-	bash tests/test-omarchy-readiness.sh
-	bash tests/test-pins-drift.sh
-	bash tests/test-wicket.sh
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
 	python3 -B tests/test-omarchy-preflight.py
