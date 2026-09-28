@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-hngh.sh` that checks repository structure integrity
-  Verification: bash -n scripts/validate-hngh.sh && bash scripts/validate-hngh.sh
+- [ ] Add a cadence runner script that executes a single job and reports status
+  Verification: bash -n cadence/run-job.sh
 
-- [ ] Add `tests/test-validate-hngh.sh` to exercise the validation script
-  Verification: bash -n tests/test-validate-hngh.sh && make test
+- [ ] Create a test that validates the cadence runner script syntax
+  Verification: bash cadence/run-job.sh --dry-run
 
-- [ ] Add `cadence/cadence-rules.md` documenting validation cadence
-  Verification: grep -q "validation" cadence/cadence-rules.md
+- [ ] Add a dashboard integration test that checks job output format
+  Verification: python3 tests/test_dashboard_format.py
 
-- [ ] Add `lib/hngh-utils.sh` with shared path constants
-  Verification: bash -n lib/hngh-utils.sh && grep -q "HNGH_ROOT" lib/hngh-utils.sh
+- [ ] Update the Makefile test target to include the new cadence test
+  Verification: make test
 
-- [ ] Update `dashboard/dashboard-config.yaml` to reference new validation script
-  Verification: grep -q "validate-hngh" dashboard/dashboard-config.yaml
+- [ ] Add a lib helper function for job status parsing
+  Verification: bash -n lib/job-status.sh
 
-- [ ] Add `jobs/job-validate.sh` that runs validation as a job
-  Verification: bash -n jobs/job-validate.sh && make test
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n scripts/cadence-runner.sh && bash -n lib/job-status.sh
