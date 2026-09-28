@@ -91,10 +91,10 @@
       (st.drift.count + ' drifted')) : 'no drift feed',
       st.drift ? '' : 'jobs/pins-drift.py unavailable',
       st.drift ? !!st.drift.ok : true);
-    var approved = !!(st.approvals && st.approvals['desk-authz:phase-1']);
+    var approved = !!(st.approvals && st.approvals['desk-authz-phase-1']);
     html += card('authorization', approved ? 'approved' : 'not approved',
-      approved ? 'desk-authz:phase-1 in the approved ledger' :
-        'stage + approve desk-authz:phase-1',
+      approved ? 'desk-authz-phase-1 in the approved ledger' :
+        'stage + approve desk-authz-phase-1',
       approved);
     $('state-cards').innerHTML = html;
     $('desk-ready').hidden = !st.phase1_ready;
@@ -109,9 +109,9 @@
   function runGate(st) {
     // Fail-closed order mirrors the server's 409 chain: approval, armed,
     // clone+manifest. phase1_ready is the OUTCOME, never a gate.
-    if (!(st.approvals && st.approvals['desk-authz:phase-1']))
+    if (!(st.approvals && st.approvals['desk-authz-phase-1']))
       return 'disabled: stage authorization, then approve' +
-        ' desk-authz:phase-1';
+        ' desk-authz-phase-1';
     if (!(st.wicket && st.wicket.armed))
       return 'disabled: wicket not armed — ' +
         ((st.wicket && st.wicket.reason) || 'run the bootstrap block');
@@ -125,9 +125,9 @@
   // ---------- AUR add-ons: one Run button per aur-marked package ----------
   function aurGate(st) {
     // Mirrors the server's run-aur 409 chain: approval, armed, in-flight.
-    if (!(st.approvals && st.approvals['desk-authz:phase-1']))
+    if (!(st.approvals && st.approvals['desk-authz-phase-1']))
       return 'disabled: stage authorization, then approve' +
-        ' desk-authz:phase-1';
+        ' desk-authz-phase-1';
     if (!(st.wicket && st.wicket.armed))
       return 'disabled: wicket not armed — ' +
         ((st.wicket && st.wicket.reason) || 'run the bootstrap block');
@@ -217,12 +217,12 @@
     var rr = $('run-reason');
     rr.hidden = !gate;
     rr.textContent = gate;
-    var approved = !!(st.approvals && st.approvals['desk-authz:phase-1']);
+    var approved = !!(st.approvals && st.approvals['desk-authz-phase-1']);
     $('btn-stage').disabled = approved;
     var sr = $('stage-reason');
     sr.hidden = !approved;
     sr.textContent = approved ? 'disabled: already approved —' +
-      ' desk-authz:phase-1 is in the approved ledger' : '';
+      ' desk-authz-phase-1 is in the approved ledger' : '';
     renderAur(st);
     $('desk-line').textContent = 'the installation desk · state stamped '
       + (st.generated || '(unstamped)');
@@ -254,7 +254,7 @@
         $('remediation').hidden = false;
         $('remediation').textContent = r.body.remediation ||
           '(bootstrap block missing from the response — see the' +
-          ' desk-authz:phase-1 item in the newspaper operator feed)';
+          ' desk-authz-phase-1 item in the newspaper operator feed)';
         poll();
       } else {
         b.disabled = false;

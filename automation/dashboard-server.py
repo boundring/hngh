@@ -136,7 +136,7 @@ POST /report-queue/mark-read  {"id": str}
     400 bad id / refused id; 500 exec failure.
 
 POST /desk/stage-authz  {"phase": "1"}
-    Files ONE report-queue alert row (identity desk-authz:phase-1,
+    Files ONE report-queue alert row (identity desk-authz-phase-1,
     7-day identity window — report-queue dedups by identity, so repeat
     posts are idempotent within the window) whose text IS the operator
     authorization request: the wicket bootstrap block (quoted from
@@ -144,12 +144,12 @@ POST /desk/stage-authz  {"phase": "1"}
     install-dispatcher+manifest-root-owned+sudoers-drop-in text) plus
     the approve instruction. Fail closed: a report-queue refusal leaves
     no handoffs line. Handoffs-logged (desk-stage-authz). 201 {"ok":
-    true, "identity": "desk-authz:phase-1"}; 400 on any phase but "1".
+    true, "identity": "desk-authz-phase-1"}; 400 on any phase but "1".
 
 POST /desk/run-phase-1  {}
     The gated privileged install for the Omarchy-on-CachyOS session
     stack. Validations in order, each failure 409 {"ok": false,
-    "error", "remediation"}: (a) desk-authz:phase-1 present in
+    "error", "remediation"}: (a) desk-authz-phase-1 present in
     dashboard/operator-approved.json (remediation: stage + approve
     first); (b) the wicket armed (remediation = the bootstrap block);
     (c) the upstream clone and the omarchy-base.packages manifest
@@ -212,7 +212,7 @@ REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 # Installation Desk (2026-09-27): the Omarchy-on-CachyOS phase-1 gate.
 # Every path here is a module constant so the lifecycle suite can point
 # it at stubs (the STUB_RQ pattern) and never touches the real machine.
-DESK_AUTHZ_ID = "desk-authz:phase-1"
+DESK_AUTHZ_ID = "desk-authz-phase-1"
 PRIVILEGED_SH = os.path.join(ROOT, "lib", "privileged.sh")
 AUR_BUILD_SH = os.path.join(ROOT, "jobs", "aur-build.sh")
 MANIFEST = os.path.join(ROOT, "config", "omarchy-base.packages")
@@ -1439,7 +1439,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _desk_stage_authz(self):
         """Files the operator authorization request as ONE report-queue
-        alert row (identity desk-authz:phase-1, 7-day window — the
+        alert row (identity desk-authz-phase-1, 7-day window — the
         report-queue identity dedupe makes retries idempotent): the row
         text IS the request, the wicket bootstrap block plus the approve
         instruction. Alert = the operator-item creation channel (lib/

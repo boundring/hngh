@@ -1,6 +1,19 @@
 # Changelog
 
 ## 2026-09-28
+- desk approval-chain fix — the phase-1 human gate could never
+  complete: DESK_AUTHZ_ID contained a colon (`desk-authz:phase-1`) but
+  the only verb writing the approved ledger (`/operator-item/handle`)
+  validates ids against SESSION_RE (`^[A-Za-z0-9._-]{1,80}$`, no
+  colons), so the desk Handle click 400'd "invalid id" forever and
+  run-phase-1 409'd on the never-writable key (the lifecycle suite
+  masked this: its approve() helper wrote the ledger file directly,
+  bypassing the verb). Id renamed colon-free `desk-authz-phase-1`
+  across the constant, stage-authz identity/alert text, run-phase-1
+  gate, desk-view.js/desk.html, and test literals; new regression test
+  `test_approval_via_handle_verb_gates_run_phase1` drives the REAL
+  chain (stage → handle verb → past the approval 409). Red→green:
+  81 tests, 2 failures before the rename → OK.
 - omarchy-repo deferral in the wicket — the three `# omarchy-repo`
   manifest lines entered the single pacman transaction, which pacman
   refuses WHOLE on target-not-found until the signed [omarchy] repo

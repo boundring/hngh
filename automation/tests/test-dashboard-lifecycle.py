@@ -387,7 +387,7 @@ class Desk(Lifecycle):
 
     def approve(self):
         self.approved.write_text(json.dumps(
-            {"approved": {"desk-authz:phase-1": "2026-09-27T00:00:00Z"}}))
+            {"approved": {"desk-authz-phase-1": "2026-09-27T00:00:00Z"}}))
 
     def priv_calls(self):
         if not self.priv_log.exists():
@@ -420,7 +420,7 @@ class Desk(Lifecycle):
         self.assertEqual(st["wicket"]["reason"],
                          "sudo: a password is required")
         self.assertIsNone(st["drift"])
-        self.assertEqual(st["approvals"], {"desk-authz:phase-1": False})
+        self.assertEqual(st["approvals"], {"desk-authz-phase-1": False})
         self.assertFalse(st["phase1_ready"])
         self.assertRegex(st["generated"], r"^\d{4}-\d{2}-\d{2}T")
 
@@ -433,7 +433,7 @@ class Desk(Lifecycle):
         self.assertEqual([p["installed"] for p in st["manifest"]["pkgs"]],
                          [True, False, True])
         self.assertTrue(st["phase1_ready"])
-        self.assertEqual(st["approvals"], {"desk-authz:phase-1": True})
+        self.assertEqual(st["approvals"], {"desk-authz-phase-1": True})
 
     def test_desk_state_cached_within_window(self):
         self.reset_cache()
@@ -467,13 +467,13 @@ class Desk(Lifecycle):
     def test_stage_authz_files_row_and_handoff(self):
         code, body = self.post("desk/stage-authz", {"phase": "1"})
         self.assertEqual((code, body.get("ok")), (201, True))
-        self.assertEqual(body.get("identity"), "desk-authz:phase-1")
+        self.assertEqual(body.get("identity"), "desk-authz-phase-1")
         # the desk prints this block: the response must carry it
         self.assertIn("wicket.sh", body.get("remediation") or "")
         rows = self.rows()
         self.assertEqual(len(rows), 1)
         self.assertIn("'alert'", rows[0])
-        self.assertIn("'desk-authz:phase-1'", rows[0])
+        self.assertIn("'desk-authz-phase-1'", rows[0])
         self.assertIn("'--window'", rows[0])
         self.assertIn("desk-stage-authz | ", self.handoffs.read_text())
 
@@ -488,12 +488,32 @@ class Desk(Lifecycle):
         self.assertEqual((code, body.get("ok")), (500, False))
         self.assertFalse(self.handoffs.exists())
 
+    def test_approval_via_handle_verb_gates_run_phase1(self):
+        # The REAL human gate: the desk Handle button drives
+        # /operator-item/handle with DESK_AUTHZ_ID itself, so the id
+        # must survive the verb's id law and land as the exact key
+        # run-phase-1 checks in the approved ledger. Regression: the
+        # colon-form id 400'd at the verb, so the human gate could
+        # never complete (2026-09-28 desk approval-chain fix).
+        self.post("desk/stage-authz", {"phase": "1"})
+        code, body = self.post("operator-item/handle",
+                               {"id": ds.DESK_AUTHZ_ID})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        approved = json.loads(self.approved.read_text())["approved"]
+        self.assertIn(ds.DESK_AUTHZ_ID, approved)
+        # the gate chain must now be PAST the approval 409: unarmed ->
+        # the armed remediation, not "phase 1 not authorized"
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertNotIn("Stage authorization", body["remediation"])
+        self.assertIn("wicket.sh", body["remediation"])
+
     # ---- run-phase-1 gate chain -----------------------------------------------
     def test_run_phase1_unapproved_409(self):
         code, body = self.post("desk/run-phase-1", {})
         self.assertEqual((code, body.get("ok")), (409, False))
         self.assertIn("Stage authorization", body["remediation"])
-        self.assertIn("desk-authz:phase-1", body["remediation"])
+        self.assertIn("desk-authz-phase-1", body["remediation"])
         self.assertEqual(self.probe_calls, [])
         self.assertEqual(self.priv_calls(), [])
 
@@ -649,7 +669,7 @@ class DeskAur(Desk):
         self.assertEqual((code, body.get("ok")), (409, False))
         self.assertEqual(body.get("error"), "phase 1 not authorized")
         self.assertIn("Stage authorization", body["remediation"])
-        self.assertIn("desk-authz:phase-1", body["remediation"])
+        self.assertIn("desk-authz-phase-1", body["remediation"])
         self.assertEqual(self.aur_calls(), [])
 
     def test_run_aur_unarmed_409(self):
@@ -697,7 +717,7 @@ class DeskAur(Desk):
     def test_phase1_and_stage_authz_unchanged_alongside_aur(self):
         code, body = self.post("desk/stage-authz", {"phase": "1"})
         self.assertEqual((code, body.get("ok")), (201, True))
-        self.assertEqual(body.get("identity"), "desk-authz:phase-1")
+        self.assertEqual(body.get("identity"), "desk-authz-phase-1")
         self.arm()
         code, body = self.post("desk/run-phase-1", {})
         self.assertEqual((code, body.get("rc")), (201, 0))

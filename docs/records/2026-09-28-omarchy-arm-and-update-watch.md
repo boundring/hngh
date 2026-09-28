@@ -35,6 +35,21 @@ see the deferral section below. (Machine precedent for user-scoped
 grants — the hngh-automation ufw grant — is operator-configured outside
 the repo; the repo template needed the portable form.)
 
+## Desk approval-chain fix (colon id vs SESSION_RE)
+
+The phase-1 human gate was dead-on-arrival: run-phase-1 requires
+`desk-authz:phase-1` in dashboard/operator-approved.json, but the only
+verb that writes that ledger (`/operator-item/handle`) rejects colon
+ids (SESSION_RE `^[A-Za-z0-9._-]{1,80}$`), so the desk Handle click
+could never land the approval and run-phase-1 409'd forever. The
+lifecycle suite masked the break: its approve() helper wrote the
+ledger file directly, bypassing the verb. Renamed colon-free to
+`desk-authz-phase-1` everywhere (constant, stage-authz identity/alert
+text, gate check, desk-view.js/desk.html, test literals); regression
+test `test_approval_via_handle_verb_gates_run_phase1` drives the real
+chain (stage-authz → handle verb → gate past the approval 409).
+Live flow re-staged under the new identity after this fix.
+
 ## Omarchy-repo deferral in the dispatcher
 
 The three `# omarchy-repo` manifest lines (hyprland-preview-share-
