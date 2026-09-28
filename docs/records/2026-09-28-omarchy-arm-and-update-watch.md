@@ -50,6 +50,27 @@ test `test_approval_via_handle_verb_gates_run_phase1` drives the real
 chain (stage-authz → handle verb → gate past the approval 409).
 Live flow re-staged under the new identity after this fix.
 
+Phase-1 outcome (2026-09-28 ~20:10Z): operator approved in-channel;
+the handle verb was POSTed with the literal id and run-phase-1
+returned rc 0 — one `pacman -Sy --needed --noconfirm` transaction
+landed the 18 CachyOS/extra packages (verified: hyprland 0.56.2-3.1,
+uwsm, quickshell, foot, both portals, hyprland-guiutils, hyprpicker,
+hyprsunset, grim, slurp, cliphist, wl-clipboard, wireplumber, pamixer,
+brightnessctl); the omarchy-repo trio is correctly absent. Wayland
+sessions now carry hyprland.desktop + hyprland-uwsm.desktop next to
+plasma.desktop — Plasma remains the default session.
+
+Known follow-up (surface, not gate): the newspaper feed's Handle
+button posts the row's text-hash id, so it can never write the literal
+`desk-authz-phase-1` key — the approval went through a direct verb
+POST on the operator's in-channel consent. Proper fix when picked up:
+a dedicated `POST /desk/approve` (token-gated, owed report row first,
+atomic approved[DESK_AUTHZ_ID] write, mirroring `_handle`'s
+fail-closed order) plus an Approve button in desk-view.js gated on
+`!approved` and the same real-chain test. The feed item was also
+absent from operator-items.json (feed reads crumbs + digest bullets,
+not report-queue rows; rebuild is a subhour beat) — same pickup.
+
 ## Omarchy-repo deferral in the dispatcher
 
 The three `# omarchy-repo` manifest lines (hyprland-preview-share-
