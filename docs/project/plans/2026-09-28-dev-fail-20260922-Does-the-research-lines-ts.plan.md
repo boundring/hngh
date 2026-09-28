@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a configuration consistency check script under scripts/
-  Verification: bash -n scripts/config-consistency-check.sh
+- [ ] Add a new data-processing job template under jobs/ with a valid bash syntax check
+  Verification: bash -n jobs/data-processing.sh
 
-- [ ] Create a cadence job that runs the consistency check on each commit
-  Verification: bash scripts/config-consistency-check.sh
+- [ ] Create a verification script that confirms the job template is structurally complete
+  Verification: bash scripts/verify-job-template.sh
 
-- [ ] Add a test case validating the check script produces expected output
+- [ ] Add unit tests for the new job template under tests/
   Verification: make test
 
-- [ ] Document the new job in cadence/README.md
-  Verification: grep -q "config-consistency" cadence/README.md
+- [ ] Update cadence/ to register the new job template in the scheduling manifest
+  Verification: grep -q "data-processing" cadence/schedule.yaml
 
-- [ ] Verify all new files pass syntax validation
-  Verification: bash -n scripts/config-consistency-check.sh && grep -q "config-consistency" cadence/README.md
+- [ ] Add a digest entry documenting the new job template
+  Verification: grep -q "data-processing" digest/README.md
+
+- [ ] Run full test suite to confirm no regressions from the new job template
+  Verification: make test
