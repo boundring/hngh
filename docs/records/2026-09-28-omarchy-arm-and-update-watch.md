@@ -124,6 +124,18 @@ ISO_PROFILE_DIR / ISO_WORKDIR / ISO_OUTDIR, artifacts under
 sweep + test target). archiso NOT yet installed on the host — building
 a real artifact still needs `pacman -S archiso` (operator command).
 
+Same-day increments: (1) the first real build FAILED in pacstrap —
+`[cachyos-v3]`'s CDN path serves a 988-byte HTML page instead of a db
+("GPGME error: No data"); the section is dropped from the profile and
+`cachyos-v3-mirrorlist` removed from the package list. (2) Live-ssh
+path for assisted installs: `openssh` added, sshd enabled via an
+airootfs multi-user.target.wants symlink, root authorized_keys shipped
+(id_ed25519_hngh.pub) with a hngh-ssh-keyperm.service oneshot fixing
+perms before sshd — hngh machines can then be installed remotely,
+ssh-key + sudo authorized, per operator doctrine. Rebuilt artifact:
+hngh-2026.09.28-x86_64.iso (1.7 GiB, bootable); USB re-imaged and
+verified (hybrid partition sizes match the ISO).
+
 ## Jevify verdict (phase-1 manifest vs this desktop)
 
 Deterministic pre-pass (pacman -Q + pacman -Si): 4 of 25 already

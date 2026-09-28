@@ -18,9 +18,9 @@ mkinitcpio-archiso
 syslinux
 cachyos-keyring
 cachyos-mirrorlist
-cachyos-v3-mirrorlist
 networkmanager
 sudo
+openssh
 terminus-font
 
 # --- Omarchy session core (from omarchy-base.packages, session subset)
