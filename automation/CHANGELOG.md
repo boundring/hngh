@@ -19,6 +19,20 @@
   PACMAN_BIN. Tests: test-wicket.sh extended (stage/install-file/
   upgrading-signal/refusals), new test-omarchy-aur-build.sh (fixture RPC
   JSON, stub seams, exit-code law).
+- omarchy-preflight: pre-install/adopt snapshot job — jobs/omarchy-preflight.py
+  archives user configs (~/.config/{hypr,waybar,quickshell,foot,alacritty,
+  kitty,gtk-3.0,gtk-4.0} + omarchy when present), read-only /etc state
+  (nsswitch.conf, security/faillock.conf, sddm.conf.d; sudoers.d metadata-only
+  when unreadable), and `pacman -Qqe` output into
+  <hngh-home>/db/omarchy/preflight-<UTC>.tar.zst with a sha256 manifest.tsv at
+  the archive root; per-file failures logged and counted (exit still 0),
+  60s re-run refusal via stamp (--force overrides), --dry-run plan-only,
+  --strict exits 2 when nothing is capturable. OMARCHY_ETC_DIR overrides /etc
+  for tests. Adds config/omarchy-defaults.tsv (4-field TSV of intended
+  omarchy defaults: palette/fonts/terminal/browser/editor/session) and
+  tests/test-omarchy-preflight.py (10 hermetic cases: capture+manifest
+  sha256, missing dirs tolerated, refusal/force, dry-run no-writes, strict
+  fail-closed, defaults schema gate).
 - omarchy-file-probe: user-level (no sudo) pre-install file-conflict
   probe for the omarchy phase-1 manifest — jobs/omarchy-file-probe.py
   reads config/omarchy-base.packages (OMARCHY_MANIFEST override;

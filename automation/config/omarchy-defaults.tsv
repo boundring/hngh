@@ -1,0 +1,17 @@
+# key	value	source	note
+palette.scheme	Blueprints	~/.local/share/color-schemes/Blueprints.colors	KDE color scheme driving the palette rows
+palette.accent	#357591	operator	palette row of the Blueprints scheme
+palette.window_bg	#1e3f58	operator	palette row of the Blueprints scheme
+palette.view_bg	#275373	operator	palette row of the Blueprints scheme
+palette.positive	#43c897	operator	palette row of the Blueprints scheme
+palette.negative	#b30404	operator	palette row of the Blueprints scheme
+font.ui	Averia	operator	AveriaLibre faces ship in automation/dashboard/fonts/
+font.mono	Iosevka	operator	terminal + editor face
+terminal.default	foot	operator	wayland-native default terminal
+terminal.alt	alacritty	operator	fallback terminal
+browser.default	firefox-developer-edition	operator	daily browser
+browser.alt	chromium	operator	fallback browser
+editor.default	emacs	operator	primary editor
+wallpaper.engine	owe	operator	omarchy-wallpaper engine
+session.target	hyprland-via-uwsm	operator	target wayland session
+session.host_type	x11-plasma	operator	host type being migrated away from
