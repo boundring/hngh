@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence scheduler entry for the daily digest pipeline in `cadence/daily-digest.yaml`
-  Verification: `bash -n cadence/daily-digest.yaml`
+- [ ] Add a `scripts/hngh-status-check.sh` helper that outputs current cadence state
+  Verification: bash -n scripts/hngh-status-check.sh
 
-- [ ] Create a verification script in `scripts/verify-cadence-entry.sh` that checks the YAML is parseable and references exist
-  Verification: `bash scripts/verify-cadence-entry.sh`
+- [ ] Create `tests/test_status_check.sh` to validate the helper script runs cleanly
+  Verification: bash tests/test_status_check.sh
 
-- [ ] Add a test case in `tests/cadence/daily-digest.test` that asserts the entry loads without errors
-  Verification: `bash -n tests/cadence/daily-digest.test`
+- [ ] Add `cadence/state-summary.md` documenting expected cadence states
+  Verification: grep -q "cadence" cadence/state-summary.md
 
-- [ ] Update `lib/cadence-loader.py` to include parsing of the new daily-digest entry format
-  Verification: `python3 -c "import lib.cadence-loader; print('ok')"`
+- [ ] Update `jobs/run-cadence.sh` to invoke the new status-check helper before execution
+  Verification: bash -n jobs/run-cadence.sh
 
-- [ ] Add a dashboard snippet in `dashboard/cadence-status.md` documenting the new entry
-  Verification: `grep -q 'daily-digest' dashboard/cadence-status.md`
+- [ ] Add `dashboard/cadence-trace.log` template for tracking cadence execution
+  Verification: grep -q "cadence" dashboard/cadence-trace.log
 
-- [ ] Run `make test` to confirm all changes pass the existing test suite
-  Verification: `make test`
+- [ ] Run full test suite to confirm no regressions
+  Verification: make test
