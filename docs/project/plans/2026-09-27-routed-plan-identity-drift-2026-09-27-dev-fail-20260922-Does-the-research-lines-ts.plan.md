@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=plan-identity-drift:2026-09-27-dev-fail-20260922-Does-the-research-lines-ts -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=plan-identity-drift:2026-09-27-dev-fail-20260922-Does-the-research-lines-ts -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-04T08:00:53Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -11,3 +11,7 @@ at 2026-09-27T08:00:53Z. Alert text: plan 2026-09-27-dev-fail-20260922-Does-the-
 
 - [ ] Delve: open research subject fail-20260927-plan-identity-drift-2026-09-27-dev-fail-20260922-does-the-research-lines-ts for plan-identity-drift:2026-09-27-dev-fail-20260922-Does-the-research-lines-ts; record disposition; then fix or park
       Verification: research subject fail-20260927-plan-identity-drift-2026-09-27-dev-fail-20260922-does-the-research-lines-ts present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-28T12:00:50Z re-occurred (dedup window expired)
