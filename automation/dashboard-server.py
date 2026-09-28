@@ -215,24 +215,25 @@ REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
 DESK_AUTHZ_ID = "desk-authz:phase-1"
 PRIVILEGED_SH = os.path.join(ROOT, "lib", "privileged.sh")
 AUR_BUILD_SH = os.path.join(ROOT, "jobs", "aur-build.sh")
-WICKET_SUDOERS_EXAMPLE = os.path.join(ROOT, "config", "wicket.sudoers.example")
 MANIFEST = os.path.join(ROOT, "config", "omarchy-base.packages")
 DRIFT_JOB = os.path.join(ROOT, "jobs", "pins-drift.py")
 OMARCHY_UPSTREAM = (
     os.environ.get("OMARCHY_UPSTREAM_DIR") or os.path.join(
         os.path.expanduser("~"), "Projects", "etc", "omarchy-upstream"))
-# Pinned fallback bootstrap block (used only while the wicket slice's
-# config/wicket.sudoers.example is absent; paths repo-relative on purpose
-# so the report-queue public-bound redaction never has to rewrite them).
+# The wicket bootstrap block — SAME FOUR COMMAND LINES as the heredoc in
+# automation/lib/privileged.sh `_pv_bootstrap_block` (edit both or
+# neither; privileged.sh is the source of truth). Paths repo-relative on
+# purpose so the report-queue public-bound redaction never has to
+# rewrite them.
 DESK_BOOTSTRAP_PINNED = (
-    "sudo install -o root -g root -m 0755 automation/lib/wicket.sh"
+    "sudo install -D -o root -g root -m 0755 automation/lib/wicket.sh"
     " /usr/local/lib/hngh/wicket.sh\n"
-    "sudo install -o root -g root -m 0644"
+    "sudo install -o root -g root -m 0444"
     " automation/config/omarchy-base.packages"
-    " /etc/hngh/omarchy-base.packages\n"
-    "sudo install -o root -g root -m 0440"
-    " automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket"
-    "  # grants %wheel (the operator group)")
+    " /usr/local/lib/hngh/omarchy-base.packages\n"
+    "visudo -cf automation/config/wicket.sudoers.example && \\\n"
+    "  sudo install -m 0440"
+    " automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket")
 SERVICE_CTL = os.path.join(ROOT, "scripts", "service-ctl.sh")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 PLANS_DOCS = os.path.join(HNGH, "docs", "project", "plans")
@@ -519,17 +520,10 @@ def _run_ro(argv, timeout=15):
 
 
 def desk_bootstrap_block():
-    """The wicket bootstrap block: quoted verbatim from the wicket
-    slice's config/wicket.sudoers.example when present, else the pinned
-    dispatcher+manifest+sudoers text. This exact text is both the
+    """The wicket bootstrap block: the pinned four command lines,
+    single-sourced with the privileged.sh heredoc (edit both or
+    neither). This exact text is both the
     stage-authz row body and the run-phase-1 remediation."""
-    try:
-        with open(WICKET_SUDOERS_EXAMPLE, encoding="utf-8") as f:
-            body = f.read().strip()
-        if body:
-            return body
-    except OSError:
-        pass
     return DESK_BOOTSTRAP_PINNED
 
 

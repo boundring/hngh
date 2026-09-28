@@ -105,9 +105,12 @@ hyprland
 uwsm # aur
 grim
 foot # aur
+quickshell # omarchy-repo
 EOF
 AURONLY="$SANDBOX/auronly.packages"
 printf 'owe # aur\nowe-lockfeed # aur\n' >"$AURONLY"
+OMARCHYONLY="$SANDBOX/omarchyonly.packages"
+printf 'hyprland-preview-share-picker # omarchy-repo\nowe # omarchy-repo\nowe-lockfeed # omarchy-repo\n' >"$OMARCHYONLY"
 COMMENTSONLY="$SANDBOX/comments.packages"
 printf '# a\n#b\n' >"$COMMENTSONLY"
 EMPTY="$SANDBOX/empty.packages"
@@ -166,10 +169,20 @@ grep -qx "install-base rc=0 upgrades=0" "$WLOG" &&
 
 wicket_run "$AURONLY" "$PATH_FULL" "" install-base
 rc=$?
-if [ "$rc" -eq 4 ] && [ ! -s "$SANDBOX/pacman.log" ]; then
+if [ "$rc" -eq 4 ] && [ ! -s "$SANDBOX/pacman.log" ] &&
+ grep -q 'aur skipped: 2' "$SANDBOX/err"; then
  ok "aur-only manifest: rc 4, pacman never called"
 else
  bad "aur-only rc=$rc pacmanlog=$(cat "$SANDBOX/pacman.log")"
+fi
+
+wicket_run "$OMARCHYONLY" "$PATH_FULL" "" install-base
+rc=$?
+if [ "$rc" -eq 4 ] && [ ! -s "$SANDBOX/pacman.log" ] &&
+ grep -q 'omarchy-repo deferred: 3' "$SANDBOX/err"; then
+ ok "omarchy-only manifest: rc 4, pacman never called (trio deferred)"
+else
+ bad "omarchy-only rc=$rc pacmanlog=$(cat "$SANDBOX/pacman.log")"
 fi
 
 wicket_run "$COMMENTSONLY" "$PATH_FULL" "" install-base

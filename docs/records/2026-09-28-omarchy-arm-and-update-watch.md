@@ -27,10 +27,42 @@ rc 0) with the change in tree.
 Operator state at record time: dispatcher + root manifest installed
 (root-owned, verified), omarchy signing key
 `40DFB630FF42BCFFB047046CF0134EE680CAC571` imported to the pacman
-keyring; pending operator commands: sudoers drop-in install, `[omarchy]`
-repo append to /etc/pacman.conf. (Machine precedent for user-scoped
+keyring; pending operator commands: re-run of the dispatcher+manifest
+installs (root copies predate the deferral fix) and the sudoers
+drop-in install. The `[omarchy]` repo append is deliberately deferred
+to phase 2 (provider-configuration change on the certificate lane);
+see the deferral section below. (Machine precedent for user-scoped
 grants — the hngh-automation ufw grant — is operator-configured outside
 the repo; the repo template needed the portable form.)
+
+## Omarchy-repo deferral in the dispatcher
+
+The three `# omarchy-repo` manifest lines (hyprland-preview-share-
+picker, owe, owe-lockfeed) previously entered wicket's single
+`pacman -Sy --needed --noconfirm` transaction — which pacman refuses
+WHOLE on "target not found" until the repo is configured, so phase 1
+could never complete as landed. `_wicket_parse` now skips and counts
+`# omarchy-repo` tails exactly like `# aur`; the empty-transaction rc 4
+message reports both counts. The trio rides phase 2: repo-add first
+(certificate lane), then the packages become installable.
+
+Two adjacent defects fixed in the same slice: (1) the skip counts were
+set inside a `$(...)` subshell and NEVER propagated — "aur skipped: N"
+always printed 0; the parse loop is now inlined into
+`_wicket_install_base` with counts surviving in the caller's shell.
+(2) `desk_bootstrap_block()` rendered the whole 58-line example file
+(the unreadable desk block the operator complained about) and fell
+back to a DESK_BOOTSTRAP_PINNED constant that had drifted from
+privileged.sh (manifest installed to /etc/hngh 0644 instead of
+/usr/local/lib/hngh 0444 — would make wicket rc 4 fail-closed). The
+pinned constant is now verbatim-aligned with the privileged.sh
+`_pv_bootstrap_block` heredoc (the source of truth) and
+`desk_bootstrap_block()` returns it unconditionally; the vestigial
+WICKET_SUDOERS_EXAMPLE constant and its lifecycle-suite override are
+deleted. Red→green: test-wicket.sh gained the omarchy-only and
+mixed-manifest cases (5 failures before the fix → PASS, 46 ok);
+lifecycle suite 79 OK; test-distro-update-watch.sh wired into
+automation/Makefile:192 (had been missed).
 
 ## Weekly distro update-watch
 

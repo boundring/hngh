@@ -1,6 +1,23 @@
 # Changelog
 
 ## 2026-09-28
+- omarchy-repo deferral in the wicket — the three `# omarchy-repo`
+  manifest lines entered the single pacman transaction, which pacman
+  refuses WHOLE on target-not-found until the signed [omarchy] repo
+  lands, so phase 1 could never complete. The dispatcher now skips and
+  counts `# omarchy-repo` tails exactly like `# aur` (rc 4 refusal
+  reports both counts); trio rides phase 2 (repo-add via the
+  certificate lane). Adjacent fixes: skip counts were set inside a
+  `$()` subshell and never propagated ("aur skipped" always printed 0)
+  — parse loop inlined into `_wicket_install_base`;
+  `desk_bootstrap_block()` no longer renders the whole 58-line example
+  file, it returns DESK_BOOTSTRAP_PINNED, now verbatim-aligned with the
+  privileged.sh heredoc (manifest path/mode corrected to
+  /usr/local/lib/hngh 0444; vestigial WICKET_SUDOERS_EXAMPLE constant
+  and its lifecycle override deleted). Red→green: test-wicket.sh 5
+  failures → PASS 46 ok; lifecycle 79 OK;
+  tests/test-distro-update-watch.sh wired into the Makefile test
+  target (had been missed).
 - wicket arm fix — `wicket.sudoers.example` granted placeholder user
   `hngh` (no such user on the operator desktop); the pinned bootstrap
   block installs the example verbatim, so a verbatim run armed nothing

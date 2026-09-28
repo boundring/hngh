@@ -331,8 +331,6 @@ class Desk(Lifecycle):
                           ("MANIFEST", str(self.manifest)),
                           ("PRIVILEGED_SH", str(priv)),
                           ("DRIFT_JOB", str(base / "absent-drift.py")),
-                          ("WICKET_SUDOERS_EXAMPLE",
-                           str(base / "absent-sudoers.example")),
                           ("DASHBOARD", str(base / "dashboard"))):
             self.old_attrs[name] = getattr(ds, name)
             setattr(ds, name, val)

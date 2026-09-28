@@ -189,6 +189,7 @@ test:
 	bash tests/test-unit-model-env.sh
 	bash tests/test-wiki-health.sh
 	bash tests/test-omp-changelog-watch.sh
+	bash tests/test-distro-update-watch.sh
 	bash tests/test-arc-to-slice.sh
 	bash tests/test-omarchy-readiness.sh
 	bash tests/test-pins-drift.sh

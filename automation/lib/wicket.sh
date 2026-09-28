@@ -41,25 +41,6 @@ _wicket_log() {
   fi
 }
 
-# _wicket_parse FILE — prints installable packages one per line; sets
-# WICKET_AUR_SKIPPED. Blank lines and # comments skipped; a line whose
-# tail is `# aur` is SKIPPED AND COUNTED (AUR builds are a user-session
-# concern, never root).
-_wicket_parse() { # FILE
-  WICKET_AUR_SKIPPED=0
-  local line pkg rest
-  while IFS= read -r line || [ -n "$line" ]; do
-    line="${line%$'\r'}"
-    read -r pkg rest <<<"$line" || true
-    case "$pkg" in '' | '#'*) continue ;; esac # blank line, or # comment
-    if [ "${rest:-}" = '# aur' ]; then
-      WICKET_AUR_SKIPPED=$((WICKET_AUR_SKIPPED + 1))
-      continue
-    fi
-    printf '%s\n' "$pkg"
-  done <"$1"
-}
-
 # _wicket_run_transaction LABEL CMD ARGS... — run one pacman
 # transaction, pass its full output through to the operator, and set
 # WICKET_UPGRADES / WICKET_UPGRADE_LIST from `^upgrading <pkg>` lines.
@@ -94,15 +75,34 @@ _wicket_install_base() {
     echo "wicket: manifest missing or unreadable: $WICKET_MANIFEST" >&2
     exit 4
   fi
-  local parsed pkgs=() n=0
-  WICKET_AUR_SKIPPED=0 # set inside the parse subshell; init for set -u
-  parsed="$(_wicket_parse "$WICKET_MANIFEST")"
-  if [ -n "$parsed" ]; then
-    while IFS= read -r n; do pkgs+=("$n"); done <<<"$parsed"
-  fi
+  # Inline parse — NOT a $(...) subshell: skip counts must survive into
+  # this shell (the rc=4 refusal reports them). Blank lines and #comment
+  # lines skipped. A `# aur` tail is SKIPPED AND COUNTED (AUR builds are
+  # a user-session concern, never root). A `# omarchy-repo` tail is
+  # SKIPPED AND COUNTED too: those packages ship from the signed
+  # [omarchy] repo, which lands via a phase-2 repo-add on the
+  # certificate lane — including them before that would make pacman
+  # refuse the WHOLE transaction on target-not-found.
+  local line pkg rest pkgs=() n
+  WICKET_AUR_SKIPPED=0
+  WICKET_OMARCHY_SKIPPED=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    read -r pkg rest <<<"$line" || true
+    case "$pkg" in '' | '#'*) continue ;; esac # blank line, or # comment
+    if [ "${rest:-}" = '# aur' ]; then
+      WICKET_AUR_SKIPPED=$((WICKET_AUR_SKIPPED + 1))
+      continue
+    fi
+    if [ "${rest:-}" = '# omarchy-repo' ]; then
+      WICKET_OMARCHY_SKIPPED=$((WICKET_OMARCHY_SKIPPED + 1))
+      continue
+    fi
+    pkgs+=("$pkg")
+  done <"$WICKET_MANIFEST"
   n=${#pkgs[@]}
   if [ "$n" -eq 0 ]; then
-    echo "wicket: manifest admits no installable packages (aur skipped: $WICKET_AUR_SKIPPED); refusing empty transaction: $WICKET_MANIFEST" >&2
+    echo "wicket: manifest admits no installable packages (aur skipped: $WICKET_AUR_SKIPPED, omarchy-repo deferred: $WICKET_OMARCHY_SKIPPED); refusing empty transaction: $WICKET_MANIFEST" >&2
     exit 4
   fi
   local pacman_bin
