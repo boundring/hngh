@@ -1,6 +1,17 @@
 # Changelog
 
 ## 2026-09-27
+- pins-drift: daily pins-vs-pacman drift checker (comparator, never
+  actuator) - jobs/pins-drift.py (pure pins x pacman-db -> report;
+  read-only `pacman -Q`/`-Qq`, exit 0 clean-or-drift / 2 fail-closed,
+  --json {drift,unpinned_count,ok}; pins file config/hngh-pins.tsv
+  created on first run with prereq_pkg seed, NOT hngh-packages.tsv =
+  the collected-repos registry) + daily/30-pins-drift.sh beat (drift
+  -> one alert pins-drift:summary 7d, module error -> pins-drift:error,
+  clean -> nothing, every path exit 0). Test tests/test-pins-drift.sh
+  (41 hermetic checks: seeding, kinds missing/older, epoch floors,
+  malformed-row skip, pacman failure, beat dedupe). Record:
+  docs/records/2026-09-27-pins-drift-checker.md.
 - omarchy-readiness: daily phase-readiness beat (pure reporting, never
   acts) - files ONE identity-deduped progress row
   (`omarchy-readiness:<date>`, 7d) summarizing omarchy-on-CachyOS

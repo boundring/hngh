@@ -1,0 +1,6 @@
+# hngh pins vs pacman drift check (jobs/pins-drift.py);
+# min_version = floor (empty = presence only); seeded from
+name	min_version	note
+python		seeded from lib/prereqs.sh
+sqlite		seeded from lib/prereqs.sh
+util-linux		seeded from lib/prereqs.sh

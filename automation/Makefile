@@ -189,6 +189,7 @@ test:
 	bash tests/test-omp-changelog-watch.sh
 	bash tests/test-arc-to-slice.sh
 	bash tests/test-omarchy-readiness.sh
+	bash tests/test-pins-drift.sh
 	bash tests/test-omarchy-readiness.sh
 	bash tests/test-pins-drift.sh
 	bash tests/test-wicket.sh
