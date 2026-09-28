@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `lib/hngh-automation/utils.py` module with a `validate_input` function that checks required fields in a config dict
-  Verification: python3 -c "import sys; sys.path.insert(0, '.'); from lib.hngh-automation.utils import validate_input; print(validate_input({'name': 'test'}))"
+- [ ] Add a `scripts/validate-hngh.sh` that checks repository structure integrity
+  Verification: bash -n scripts/validate-hngh.sh && bash scripts/validate-hngh.sh
 
-- [ ] Create `jobs/validate-config.sh` script that runs `make test` and exits 0 on success
-  Verification: bash -n jobs/validate-config.sh
+- [ ] Add `tests/test-validate-hngh.sh` to exercise the validation script
+  Verification: bash -n tests/test-validate-hngh.sh && make test
 
-- [ ] Add `tests/test_validate_input.py` with a single test case asserting the function returns True for valid input
-  Verification: python3 tests/test_validate_input.py
+- [ ] Add `cadence/cadence-rules.md` documenting validation cadence
+  Verification: grep -q "validation" cadence/cadence-rules.md
 
-- [ ] Update `cadence/run.sh` to call `validate-config.sh` before proceeding with job execution
-  Verification: bash -n cadence/run.sh
+- [ ] Add `lib/hngh-utils.sh` with shared path constants
+  Verification: bash -n lib/hngh-utils.sh && grep -q "HNGH_ROOT" lib/hngh-utils.sh
 
-- [ ] Commit all changes and run `make test` to confirm the pipeline passes
-  Verification: make test
+- [ ] Update `dashboard/dashboard-config.yaml` to reference new validation script
+  Verification: grep -q "validate-hngh" dashboard/dashboard-config.yaml
+
+- [ ] Add `jobs/job-validate.sh` that runs validation as a job
+  Verification: bash -n jobs/job-validate.sh && make test
