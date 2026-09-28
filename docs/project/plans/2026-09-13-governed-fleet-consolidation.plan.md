@@ -74,9 +74,32 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       "API call complete" lines entirely) is a separate backlog lane,
       out of this slice.
 <!-- plan-note: 2026-09-27 slice C split for 1800s executor budget (blocker blk-20260927) -->
-- [ ] Slice C1: witnessed clean delegation cycle (spawn one session,
+- [x] Slice C1: witnessed clean delegation cycle (spawn one session,
       observe completion, record ledger evidence)
       Verification: the ledger record shows one clean completion.
+      Executed 2026-09-28: one delegated session spawned through the
+      fleet's own path (automation/lib/launch-session.sh, slug
+      slicec1-witness, opencode executor on the opencode-go quota leg,
+      TIMEOUT_S=600) completed rc=0 disposition=complete in about 100s
+      wall clock: bridge receipts creation 2026-09-28T03:16:26Z ->
+      admission (transport worker, scope repository, route model) ->
+      close state cancelled (the spine-complete mapping, no unclosed
+      run residue this time); budget row 2026-09-28T03:17:55Z in
+      automation/logs/budget.md; spawn log
+      automation/logs/overnight-slicec1-witness-20260927T231627.log
+      shows the bounded assignment executed verbatim
+      (tests/test-agent-supervision.py: Ran 9 tests in 1.092s, OK,
+      exit 0; no edits, no commits, no further spawns); handoff rows
+      appended to automation/agent-handoffs.md. The prior 2026-09-27
+      slicec-witness run had run two suites instead of spawning, so
+      the cycle itself stayed unwitnessed until now.
+      Witness finding (recorded, not fixed): the cause classifier
+      stamped cause=bad-execution on this rc=0 log because
+      lib/causes.sh keyword-matches the log body and the spawned
+      session correctly recited the lessons bestiary (steer away from
+      bad-execution runs) - a compliant session gets stamped with the
+      class it avoided; some of yesterday's bad-execution lessons may
+      share this mechanism. Ordinary backlog lane, out of this slice.
 - [ ] Slice C2: seeded stall auto-replace observation, single 5m
       subhour tick scope
       Verification: the ledger record shows the stall detected and
