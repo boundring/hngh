@@ -37,6 +37,11 @@
   (41 hermetic checks: seeding, kinds missing/older, epoch floors,
   malformed-row skip, pacman failure, beat dedupe). Record:
   docs/records/2026-09-27-pins-drift-checker.md.
+- governed-fleet: split plan Slice C into C1/C2/C3 budget-sized steps
+  (each fits the 1800s executor ceiling) after three rc=124 overnight
+  deaths parked blk-20260927; deleted the parked blocker row from
+  state/beat-blockers.tsv to re-admit the plan; triage record at
+  docs/records/2026-09-27-fleet-blocker-triage.md. TIMEOUT_S untouched.
 - omarchy-readiness: daily phase-readiness beat (pure reporting, never
   acts) - files ONE identity-deduped progress row
   (`omarchy-readiness:<date>`, 7d) summarizing omarchy-on-CachyOS
