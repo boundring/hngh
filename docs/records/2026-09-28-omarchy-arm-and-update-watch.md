@@ -136,6 +136,13 @@ ssh-key + sudo authorized, per operator doctrine. Rebuilt artifact:
 hngh-2026.09.28-x86_64.iso (1.7 GiB, bootable); USB re-imaged and
 verified (hybrid partition sizes match the ISO).
 
+Follow-up: first boot dead-ended at `hngh-live login:` — the profile
+never overrode the shadow package's LOCKED root (passwordless-root was
+an unverified assumption), so console login and any wifi setup were
+impossible. Profile now ships `airootfs/etc/shadow` (root empty
+password) + tty1 autologin drop-in, matching releng practice. ssh root
+key auth is unaffected by the lock (works once network is up).
+
 ## Jevify verdict (phase-1 manifest vs this desktop)
 
 Deterministic pre-pass (pacman -Q + pacman -Si): 4 of 25 already
