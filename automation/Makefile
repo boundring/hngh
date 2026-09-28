@@ -201,6 +201,7 @@ test:
 	bash tests/test-probe-token-mode.sh
 	bash tests/test-omarchy-aur-build.sh
 	bash tests/test-iso-build.sh
+	bash tests/test-omarchy-config-adopt.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
 	bash tests/test-permissions.sh
