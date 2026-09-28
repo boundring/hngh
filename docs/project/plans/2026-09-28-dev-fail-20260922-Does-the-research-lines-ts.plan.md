@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence job scheduler that runs periodic digest generation tasks
-  Verification: bash -n cadence/scheduler.sh
+- [ ] Add a `scripts/hngh-status-report.sh` that outputs current job counts from `jobs/` directory
+  Verification: bash -n scripts/hngh-status-report.sh
 
-- [ ] Create a test script that validates scheduler output format
-  Verification: python3 tests/test_scheduler_output.py
+- [ ] Create `tests/test-status-report.sh` that asserts the script exits 0 and prints job count
+  Verification: bash tests/test-status-report.sh
 
-- [ ] Add a dashboard integration script that displays cadence job status
-  Verification: bash -n dashboard/cadence_status.sh
+- [ ] Add a cadence job `cadence/run-status-report.cron` that invokes the script every 6 hours
+  Verification: grep -q "run-status-report" cadence/run-status-report.cron
 
-- [ ] Write a lib utility for job completion verification
-  Verification: bash -n lib/job_verify.py
+- [ ] Update `dashboard/README.md` to document the new status report endpoint
+  Verification: grep -q "status-report" dashboard/README.md
 
-- [ ] Add a make test target that exercises the full cadence pipeline
+- [ ] Run `make test` to confirm all existing tests still pass after additions
   Verification: make test
-
-- [ ] Create a digest template that the scheduler populates on each run
-  Verification: bash -n jobs/digest_template.sh
