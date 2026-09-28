@@ -39,7 +39,7 @@ status:
 	@tail -n 5 STATE.md
 
 test:
-	find cadence jobs lib scripts -name '*.sh' -print0 | xargs -0 -n8 bash -n
+	find cadence jobs lib scripts iso -name '*.sh' -print0 | xargs -0 -n8 bash -n
 	python3 -B tests/test-plan-acceptance.py
 	bash tests/test-accept-plans-principle.sh
 	python3 -B tests/test-identity-seam.py
@@ -199,6 +199,7 @@ test:
 	bash tests/test-credential-health-argv.sh
 	bash tests/test-probe-token-mode.sh
 	bash tests/test-omarchy-aur-build.sh
+	bash tests/test-iso-build.sh
 	bash tests/test-bootstrap.sh
 	bash tests/test-installer.sh
 	bash tests/test-permissions.sh

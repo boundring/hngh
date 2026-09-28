@@ -1,0 +1,49 @@
+# packages.x86_64 — hngh live ISO manifest: CachyOS base + Omarchy session.
+# Session core mirrors the phase-1 manifest automation/config/omarchy-base.packages
+# (clone @ 3faafba2, session-only subset): update the two lists together.
+# The avoid-list holds on the ISO: NO linux-omarchy/-headers, limine,
+# mkinitcpio UKI hooks, sddm, plymouth. Repo notes: hyprland-guiutils,
+# hyprland-preview-share-picker, owe, owe-lockfeed ship from the signed
+# [omarchy] repo; the rest from CachyOS/core/extra.
+
+# --- CachyOS base (CachyOS kernel; stock archiso loaders, no boot-chain contact)
+base
+linux-cachyos
+linux-cachyos-headers
+linux-firmware
+amd-ucode
+intel-ucode
+mkinitcpio
+mkinitcpio-archiso
+syslinux
+cachyos-keyring
+cachyos-mirrorlist
+cachyos-v3-mirrorlist
+networkmanager
+sudo
+terminus-font
+
+# --- Omarchy session core (from omarchy-base.packages, session subset)
+hyprland
+uwsm
+quickshell
+foot
+foot-terminfo
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+hyprland-guiutils
+hyprland-preview-share-picker
+hyprpicker
+hyprsunset
+grim
+slurp
+cliphist
+wl-clipboard
+wtype
+brightnessctl
+pamixer
+pipewire
+wireplumber
+xdg-terminal-exec
+owe
+owe-lockfeed
