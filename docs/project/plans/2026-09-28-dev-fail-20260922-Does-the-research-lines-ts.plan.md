@@ -7,13 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence job that validates lib/ structure on every commit
+- [ ] Add a cadence helper script that validates job file syntax before execution
+  Verification: bash -n cadence/check-job-syntax.sh
+
+- [ ] Create a test that runs the cadence helper against a sample job file
   Verification: make test
-- [ ] Create a scripts/validate-commit.sh that checks no forbidden paths are modified
-  Verification: bash -n scripts/validate-commit.sh
-- [ ] Add a cadence/commit-gate.sh script that runs make test before allowing merge
-  Verification: bash scripts/commit-gate.sh
-- [ ] Update lib/README.md with the new cadence validation workflow
-  Verification: grep -q "cadence validation" lib/README.md
-- [ ] Add a tests/validate-plan.sh script that confirms all steps are present
-  Verification: bash tests/validate-plan.sh
+
+- [ ] Add a dashboard digest script that logs job completion status
+  Verification: bash -n dashboard/digest-job-status.sh
+
+- [ ] Extend the test suite to cover the new digest script
+  Verification: make test
+
+- [ ] Add a lib utility for safe file pruning with dry-run mode
+  Verification: bash -n lib/prune-safe.sh
+
+- [ ] Verify all new scripts pass syntax checks and tests together
+  Verification: make test
