@@ -5,8 +5,10 @@
 # (a) dispatcher CLI: version; usage rc 2 on unknown argv / no argv;
 # (b) manifest law: happy path builds EXACTLY one `pacman -Sy --needed
 #     --noconfirm <pkgs>` argv in manifest order; `# aur` lines skipped
-#     and counted; aur-only / comment-only / empty manifest refuse rc 4;
-#     missing / unreadable manifest rc 4;
+#     and counted; `# omarchy-repo` lines join the transaction only when
+#     WICKET_PACMAN_CONF carries an uncommented `[omarchy]` section,
+#     else skipped+counted (deferred rc 4); aur-only / comment-only /
+#     empty manifest refuse rc 4; missing / unreadable manifest rc 4;
 # (c) tooling fail-closed: pacman absent rc 4;
 # (d) audit sink: logger absent -> still success; logger stub -> pkgs
 #     line; WICKET_LOG file sink -> pkgs + rc lines;
@@ -121,6 +123,7 @@ wicket_run() { # MANIFEST PATHSPEC LOGFILE args... ; captures out/err
  : >"$SANDBOX/logger.log" # fresh stub logs per case
  PACMAN_LOG="$SANDBOX/pacman.log" LOGGER_LOG="$SANDBOX/logger.log" \
   WICKET_MANIFEST="$1" PATH="$2" WICKET_LOG="${3:-}" \
+  WICKET_PACMAN_CONF="${WICKET_PACMAN_CONF:-$SANDBOX/no-such-pacman.conf}" \
   "$WICKET" "${@:4}" >"$SANDBOX/out" 2>"$SANDBOX/err"
 }
 
@@ -184,6 +187,62 @@ if [ "$rc" -eq 4 ] && [ ! -s "$SANDBOX/pacman.log" ] &&
 else
  bad "omarchy-only rc=$rc pacmanlog=$(cat "$SANDBOX/pacman.log")"
 fi
+
+# omarchy-repo conditional: trio joins the transaction ONLY when the
+# conf named by WICKET_PACMAN_CONF has an uncommented `[omarchy]` line.
+PACCONF_PRESENT="$SANDBOX/pacman-omarchy.conf"
+cat >"$PACCONF_PRESENT" <<'EOF'
+[omarchy]
+Server = https://example/$repo/$arch
+EOF
+PACCONF_COMMENTED="$SANDBOX/pacman-commented.conf"
+cat >"$PACCONF_COMMENTED" <<'EOF'
+#[omarchy]
+Server = https://example/$repo/$arch
+EOF
+OMARCHYMIXED="$SANDBOX/omarchy-mixed.packages"
+cat >"$OMARCHYMIXED" <<'EOF'
+# sandbox fixture — comment lines are skipped
+hyprland
+grim
+foot # aur
+hyprland-preview-share-picker # omarchy-repo
+owe # omarchy-repo
+owe-lockfeed # omarchy-repo
+EOF
+
+WICKET_PACMAN_CONF="$PACCONF_PRESENT" wicket_run "$OMARCHYMIXED" "$PATH_FULL" "$SANDBOX/om.log" install-base
+rc=$?
+want="pacman -Sy --needed --noconfirm hyprland grim hyprland-preview-share-picker owe owe-lockfeed"
+[ "$rc" -eq 0 ] && ok "omarchy repo present: rc 0" || bad "omarchy repo present rc=$rc"
+[ "$(cat "$SANDBOX/pacman.log")" = "$want" ] &&
+ ok "omarchy repo present: argv includes trio" ||
+ bad "omarchy repo present argv got: $(cat "$SANDBOX/pacman.log")"
+grep -qx "install-base pkgs=5 manifest=$OMARCHYMIXED" "$SANDBOX/om.log" &&
+ ok "omarchy repo present: pkgs=5" ||
+ bad "omarchy repo present pkgs line got: $(cat "$SANDBOX/om.log")"
+
+WICKET_PACMAN_CONF="$PACCONF_PRESENT" wicket_run "$OMARCHYONLY" "$PATH_FULL" "" install-base
+rc=$?
+[ "$rc" -eq 0 ] &&
+ [ "$(cat "$SANDBOX/pacman.log")" = "pacman -Sy --needed --noconfirm hyprland-preview-share-picker owe owe-lockfeed" ] &&
+ ok "omarchy-only + repo present: trio transaction rc 0" ||
+ bad "omarchy-only + repo present rc=$rc pacmanlog=$(cat "$SANDBOX/pacman.log")"
+
+WICKET_PACMAN_CONF="$SANDBOX/no-such-pacman.conf" wicket_run "$OMARCHYMIXED" "$PATH_FULL" "" install-base
+rc=$?
+want="pacman -Sy --needed --noconfirm hyprland grim"
+[ "$rc" -eq 0 ] &&
+ [ "$(cat "$SANDBOX/pacman.log")" = "$want" ] &&
+ ok "omarchy repo absent (missing conf): argv EXACT unchanged" ||
+ bad "omarchy repo absent rc=$rc argv=$(cat "$SANDBOX/pacman.log")"
+
+WICKET_PACMAN_CONF="$PACCONF_COMMENTED" wicket_run "$OMARCHYONLY" "$PATH_FULL" "" install-base
+rc=$?
+[ "$rc" -eq 4 ] && [ ! -s "$SANDBOX/pacman.log" ] &&
+ grep -q 'omarchy-repo deferred: 3' "$SANDBOX/err" &&
+ ok "commented '#[omarchy]' conf: treated absent, omarchy-only rc 4" ||
+ bad "commented #[omarchy] rc=$rc pacmanlog=$(cat "$SANDBOX/pacman.log")"
 
 wicket_run "$COMMENTSONLY" "$PATH_FULL" "" install-base
 [ "$?" -eq 4 ] && ok "comment-only manifest: rc 4" || bad "comment-only rc"

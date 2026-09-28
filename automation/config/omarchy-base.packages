@@ -7,9 +7,11 @@
 # (pkgs.omarchy.org/stable/$arch, upstream default/pacman/pacman-stable.conf)
 # — completion there is a repo-add, i.e. a provider-configuration change
 # on the certificate lane, NOT a makepkg/AUR build. The dispatcher
-# (automation/lib/wicket.sh) DEFERS `# omarchy-repo` lines exactly like
-# `# aur` until that repo lands — otherwise pacman would refuse the
-# whole phase-1 transaction on target-not-found.
+# (automation/lib/wicket.sh) defers `# omarchy-repo` lines only while
+# the repo is absent from pacman.conf (no uncommented `[omarchy]`
+# section — otherwise pacman would refuse the whole transaction on
+# target-not-found); once the repo lands there, the lines are included
+# in the transaction automatically.
 
 # Hyprland session core
 hyprland

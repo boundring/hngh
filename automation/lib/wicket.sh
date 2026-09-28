@@ -25,6 +25,7 @@ set -u
 
 WICKET_MANIFEST="${WICKET_MANIFEST:-/usr/local/lib/hngh/omarchy-base.packages}"
 WICKET_STAGING_DIR="${WICKET_STAGING_DIR:-/var/lib/hngh/staging}"
+WICKET_PACMAN_CONF="${WICKET_PACMAN_CONF:-/etc/pacman.conf}"
 
 usage() {
   echo "usage: wicket.sh install-base | wicket.sh stage <path> | wicket.sh install-file <name> | wicket.sh version" >&2
@@ -78,11 +79,12 @@ _wicket_install_base() {
   # Inline parse — NOT a $(...) subshell: skip counts must survive into
   # this shell (the rc=4 refusal reports them). Blank lines and #comment
   # lines skipped. A `# aur` tail is SKIPPED AND COUNTED (AUR builds are
-  # a user-session concern, never root). A `# omarchy-repo` tail is
-  # SKIPPED AND COUNTED too: those packages ship from the signed
-  # [omarchy] repo, which lands via a phase-2 repo-add on the
-  # certificate lane — including them before that would make pacman
-  # refuse the WHOLE transaction on target-not-found.
+  # a user-session concern, never root). A `# omarchy-repo` tail ships
+  # from the signed [omarchy] repo: INCLUDED once that repo is actually
+  # configured — WICKET_PACMAN_CONF (default /etc/pacman.conf) exists
+  # and carries an uncommented `[omarchy]` section line — because
+  # including it earlier (repo absent) would make pacman refuse the
+  # WHOLE transaction on target-not-found. Until then: SKIP AND COUNT.
   local line pkg rest pkgs=() n
   WICKET_AUR_SKIPPED=0
   WICKET_OMARCHY_SKIPPED=0
@@ -95,7 +97,12 @@ _wicket_install_base() {
       continue
     fi
     if [ "${rest:-}" = '# omarchy-repo' ]; then
-      WICKET_OMARCHY_SKIPPED=$((WICKET_OMARCHY_SKIPPED + 1))
+      if [ -f "$WICKET_PACMAN_CONF" ] &&
+        grep -q '^[[:space:]]*\[omarchy\]' "$WICKET_PACMAN_CONF"; then
+        pkgs+=("$pkg") # repo live: the line joins the transaction
+      else
+        WICKET_OMARCHY_SKIPPED=$((WICKET_OMARCHY_SKIPPED + 1))
+      fi
       continue
     fi
     pkgs+=("$pkg")
