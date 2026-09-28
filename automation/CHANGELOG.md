@@ -33,6 +33,11 @@
   tests/test-omarchy-preflight.py (10 hermetic cases: capture+manifest
   sha256, missing dirs tolerated, refusal/force, dry-run no-writes, strict
   fail-closed, defaults schema gate).
+- omarchy-file-probe: resolve pacman `Architecture = auto` to the
+  machine arch (platform.machine) before URL template expansion;
+  CachyOS v4 mirrorlists use `$arch_v4` templates and the literal
+  `auto` produced dead `auto_v4` paths. Red-first regression case
+  in tests/test-omarchy-file-probe.py.
 - omarchy-file-probe: user-level (no sudo) pre-install file-conflict
   probe for the omarchy phase-1 manifest — jobs/omarchy-file-probe.py
   reads config/omarchy-base.packages (OMARCHY_MANIFEST override;

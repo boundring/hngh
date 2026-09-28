@@ -49,6 +49,7 @@ import datetime
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -153,7 +154,7 @@ def load_repos(conf_path, mirror_override=None):
         key, val = key.strip(), val.strip()
         if current is None:
             if key == "Architecture" and val:
-                arch = val
+                arch = platform.machine() if val == "auto" else val
         elif key == "Server":
             repos[current].append(_expand(val, current, arch))
         elif key == "Include":

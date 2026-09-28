@@ -219,6 +219,20 @@ class OmarchyFileProbe(unittest.TestCase):
         self.assertNotIn("fetch failed", second.stderr)
         self.assertEqual(db.stat().st_mtime_ns, mtime)
 
+    def test_architecture_auto_resolves_machine_arch(self):
+        fx = Fixture(self.tmp)
+        v4 = fx.mirror / "x86_64_v4"
+        v4.mkdir()
+        (v4 / "fixture.files").write_bytes(
+            (fx.mirror / "fixture.files").read_bytes())
+        fx.conf.write_text("[options]\nArchitecture = auto\n\n"
+                           "[fixture]\n"
+                           "Include = /etc/pacman.d/mirrorlist\n")
+        fx.mirrorlist.write_text("Server = file://%s/$arch_v4\n" % fx.mirror)
+        r = fx.run()
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("x86_64_v4", json.dumps(fx.report()))
+
     def test_unknown_arg_exit_2(self):
         fx = Fixture(self.tmp)
         r = fx.run("--frobnicate")
