@@ -277,7 +277,7 @@ arc-20260926-fractal-fanout	reviewed	2026-09-27T05:15:46Z	question-matrix genera
 fb-20260927-1-feedback-capture-integrity	reviewed	2026-09-27T09:48:17Z	where is feedback idea text lost between the digest-email form, imap capture, and feedback-ingest, and what fail-closed guard stops empty [feedback:idea] floods?
 arc-20260927-dashboard-masthead-splash	reviewed	2026-09-27T20:24:33Z	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
 arc-20260927-dashboard-voice-majority	reviewed	2026-09-28T01:11:31Z	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
-arc-20260927-dashboard-wire-capped	crystallized	2026-09-28T00:31:00Z	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
+arc-20260927-dashboard-wire-capped	reviewed	2026-09-28T01:58:44Z	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
 arc-20260927-dashboard-single-webgl	reviewed	2026-09-27T23:11:59Z	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
 arc-20260927-dashboard-masthead-expansion	reviewed	2026-09-27T19:44:05Z	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
 arc-20260927-dashboard-masthead-temperature	reviewed	2026-09-27T21:11:10Z	Where should weather-ingest derive temp_f alongside temp_c so the broadsheet masthead prints both units?
