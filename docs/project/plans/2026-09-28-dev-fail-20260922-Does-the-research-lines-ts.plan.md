@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new data-processing job template under jobs/ with a valid bash syntax check
-  Verification: bash -n jobs/data-processing.sh
+- [ ] Add a new job template under jobs/ for a simple data ingestion task
+  Verification: bash -n jobs/data-ingest-template.sh
 
-- [ ] Create a verification script that confirms the job template is structurally complete
-  Verification: bash scripts/verify-job-template.sh
+- [ ] Create a verification script under scripts/ that validates job template syntax
+  Verification: bash scripts/validate-job-template.sh
 
-- [ ] Add unit tests for the new job template under tests/
+- [ ] Update cadence/ to include the new job template in the automation schedule
+  Verification: grep -q "data-ingest" cadence/schedule.conf
+
+- [ ] Add a test case under tests/ that exercises the new job template
   Verification: make test
 
-- [ ] Update cadence/ to register the new job template in the scheduling manifest
-  Verification: grep -q "data-processing" cadence/schedule.yaml
+- [ ] Update dashboard/ to reflect the new job template in the status view
+  Verification: grep -q "data-ingest" dashboard/status.conf
 
-- [ ] Add a digest entry documenting the new job template
-  Verification: grep -q "data-processing" digest/README.md
-
-- [ ] Run full test suite to confirm no regressions from the new job template
+- [ ] Run full test suite to confirm no regressions
   Verification: make test

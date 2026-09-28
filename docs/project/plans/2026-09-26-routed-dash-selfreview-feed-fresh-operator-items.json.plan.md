@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:operator-items.json  cause=obsolete disposed=2026-09-26T16:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:operator-items.json  cause=obsolete disposed=2026-09-26T16:00:13Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-03T13:00:13Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
