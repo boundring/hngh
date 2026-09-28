@@ -402,6 +402,10 @@ class Desk(Lifecycle):
         self.assertEqual(code, 200)
         self.assertIn('meta name="hngh-token"', text)
         self.assertIn("THE INSTALLATION", text)
+        self.assertIn('id="btn-approve"', text)
+        self.assertIn("Approve phase 1", text)
+        self.assertIn('id="approve-outcome"', text)
+        self.assertIn('id="approve-reason"', text)
 
     # ---- desk-state assembly -----------------------------------------------
     def test_desk_state_shape_and_fail_closed_defaults(self):
@@ -486,6 +490,39 @@ class Desk(Lifecycle):
         os.environ["HNGH_STUB_RQ_RC"] = "1"
         code, body = self.post("desk/stage-authz", {"phase": "1"})
         self.assertEqual((code, body.get("ok")), (500, False))
+        self.assertFalse(self.handoffs.exists())
+
+    # ---- desk approve: the one-click phase-1 human gate -----------------------
+    def test_desk_approve_gates_run_phase1(self):
+        code, body = self.post("desk/approve", {})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertEqual(body.get("identity"), ds.DESK_AUTHZ_ID)
+        approved = json.loads(self.approved.read_text())["approved"]
+        self.assertIn(ds.DESK_AUTHZ_ID, approved)
+        # the gate chain must now be PAST the approval 409: unarmed ->
+        # the armed remediation, not "Stage authorization"
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertNotIn("Stage authorization", body["remediation"])
+        self.assertIn("wicket.sh", body["remediation"])
+
+    def test_desk_approve_idempotent(self):
+        code, body = self.post("desk/approve", {})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        code, body = self.post("desk/approve", {})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertIn("'operator-item:%s:approved'" % ds.DESK_AUTHZ_ID,
+                      rows[0])
+        approved = json.loads(self.approved.read_text())["approved"]
+        self.assertEqual(list(approved), [ds.DESK_AUTHZ_ID])
+
+    def test_desk_approve_fails_closed_on_rq_refusal(self):
+        os.environ["HNGH_STUB_RQ_RC"] = "1"
+        code, body = self.post("desk/approve", {})
+        self.assertEqual((code, body.get("ok")), (500, False))
+        self.assertFalse(self.approved.exists())
         self.assertFalse(self.handoffs.exists())
 
     def test_approval_via_handle_verb_gates_run_phase1(self):

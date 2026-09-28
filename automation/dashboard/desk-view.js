@@ -223,9 +223,21 @@
     sr.hidden = !approved;
     sr.textContent = approved ? 'disabled: already approved —' +
       ' desk-authz-phase-1 is in the approved ledger' : '';
+    renderApprove(st);
     renderAur(st);
     $('desk-line').textContent = 'the installation desk · state stamped '
       + (st.generated || '(unstamped)');
+  }
+
+  function renderApprove(st) {
+    var b = $('btn-approve');
+    if (!b) return;
+    var approved = !!(st.approvals && st.approvals['desk-authz-phase-1']);
+    b.disabled = approved;
+    var rr = $('approve-reason');
+    rr.hidden = !approved;
+    rr.textContent = approved ? 'disabled: already approved —' +
+      ' desk-authz-phase-1 is in the approved ledger' : '';
   }
 
   function poll() {
@@ -268,6 +280,30 @@
     }).catch(function (e) {
       b.disabled = false;
       out('stage-outcome', 'failed: ' + e.message);
+    });
+  });
+
+  $('btn-approve').addEventListener('click', function () {
+    var b = $('btn-approve');
+    b.disabled = true;
+    out('approve-outcome', 'approving…');
+    postDesk('/desk/approve', {}).then(function (r) {
+      if (r.status === 201) {
+        out('approve-outcome', 'authorized: ' +
+          (r.body.identity || 'desk-authz-phase-1'));
+        poll();
+      } else {
+        b.disabled = false;
+        out('approve-outcome', 'refused (' + r.status + '): ' +
+          (r.body.error || 'unknown'));
+        if (r.body.remediation) {
+          $('remediation').hidden = false;
+          $('remediation').textContent = r.body.remediation;
+        }
+      }
+    }).catch(function (e) {
+      b.disabled = false;
+      out('approve-outcome', 'failed: ' + e.message);
     });
   });
 

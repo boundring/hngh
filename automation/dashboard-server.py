@@ -1071,6 +1071,7 @@ class Handler(SimpleHTTPRequestHandler):
              "system/backup-now": self._system_backup_now,
              "report-queue/mark-read": self._mark_read,
              "desk/stage-authz": self._desk_stage_authz,
+             "desk/approve": self._desk_approve,
              "desk/run-phase-1": self._desk_run_phase1,
              "desk/run-aur": self._desk_run_aur,
              "feedback": self._feedback}[p]()
@@ -1469,6 +1470,37 @@ class Handler(SimpleHTTPRequestHandler):
                     " request filed\n" % (ts, DESK_AUTHZ_ID))
         self._json(201, {"ok": True, "identity": DESK_AUTHZ_ID,
                          "remediation": desk_bootstrap_block()})
+
+    def _desk_approve(self):
+        """The one-click phase-1 human gate: approves DESK_AUTHZ_ID the
+        same way an operator-item handle of it would (the newspaper
+        Handle posts text-hash ids that can never match this literal
+        key, so the desk gets its own verb). Mirrors _handle's
+        fail-closed order: the owed report-queue progress row (identity
+        operator-item:<id>:approved) is filed BEFORE the approved-ledger
+        write — a refusal 500s with every ledger untouched. Idempotent:
+        an already-approved identity skips the row (report-queue's
+        identity dedupe keeps a retry after a partial failure safe) and
+        still 201s. Body is ignored; the shared token guard in do_POST
+        still applies."""
+        try:
+            with open(APPROVED, encoding="utf-8") as f:
+                approved = json.load(f).get("approved") or {}
+        except Exception:
+            approved = {}
+        if DESK_AUTHZ_ID not in approved and not self._report_row(
+                DESK_AUTHZ_ID, "approved"):
+            return  # fail closed: the owed row is filed BEFORE the ledger write
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write("desk-approve | %s | automation|%s | phase 1"
+                    " authorized\n" % (ts, DESK_AUTHZ_ID))
+        approved[DESK_AUTHZ_ID] = ts
+        tmp = APPROVED + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"approved": approved}, f, indent=2)
+        os.replace(tmp, APPROVED)
+        self._json(201, {"ok": True, "identity": DESK_AUTHZ_ID})
 
     def _desk_run_phase1(self):
         """The gated privileged install: validations in ORDER, each
