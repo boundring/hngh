@@ -17,6 +17,7 @@ Run: python3 automation/tests/test-dashboard-lifecycle.py
 import importlib.util
 import json
 import os
+import shutil
 import sys
 import tempfile
 import threading
@@ -32,6 +33,14 @@ import os, sys
 with open(os.environ["HNGH_STUB_RQ_LOG"], "a") as f:
     f.write(repr(sys.argv[1:]) + "\n")
 raise SystemExit(int(os.environ.get("HNGH_STUB_RQ_RC", "0")))
+'''
+
+STUB_PRIV = '''#!/usr/bin/env bash
+# stand-in for automation/lib/privileged.sh: logs argv, exits on demand
+printf '%s\\n' "$*" >> "$HNGH_STUB_PRIV_LOG"
+echo "line-one"
+echo "stderr-line" >&2
+exit "${HNGH_STUB_PRIV_RC:-0}"
 '''
 
 
@@ -276,6 +285,266 @@ class DunderGuard(Lifecycle):
                          if self.approved.exists() else {}, {})
         self.assertEqual(self.handoffs.read_text()
                          if self.handoffs.exists() else "", "")
+
+
+
+
+
+class Desk(Lifecycle):
+    """The Installation Desk: /desk-state.json assembly (stubbed probes,
+    fail closed), /desk/stage-authz filing, and the gated
+    /desk/run-phase-1 chain. The privileged channel is a stub script;
+    no test ever installs a package or runs sudo for real."""
+
+    MANIFEST_TEXT = (
+        "# test manifest\n"
+        "hyprland\n"
+        "foot # aur\n"
+        "grim\n")
+
+    def setUp(self):
+        super().setUp()
+        base = Path(self.tmp.name)
+        self.probe_calls = []
+        self.installed = set()
+        self.clone = base / "omarchy-upstream"
+        (self.clone / ".git").mkdir(parents=True)
+        self.manifest = base / "omarchy-base.packages"
+        self.manifest.write_text(self.MANIFEST_TEXT)
+        self.priv_log = base / "priv.log"
+        priv = base / "stub-privileged.sh"
+        priv.write_text(STUB_PRIV)
+        priv.chmod(0o755)
+        self.old_attrs = {}
+        for name, val in (("OMARCHY_UPSTREAM", str(self.clone)),
+                          ("MANIFEST", str(self.manifest)),
+                          ("PRIVILEGED_SH", str(priv)),
+                          ("DRIFT_JOB", str(base / "absent-drift.py")),
+                          ("WICKET_SUDOERS_EXAMPLE",
+                           str(base / "absent-sudoers.example")),
+                          ("DASHBOARD", str(base / "dashboard"))):
+            self.old_attrs[name] = getattr(ds, name)
+            setattr(ds, name, val)
+        self.old_run_ro = ds._run_ro
+        self.old_probe_wicket = ds._desk_probe_wicket
+        ds._run_ro = self._fake_run
+        self.wicket_armed = (False, "sudo: a password is required")
+        ds._desk_probe_wicket = lambda: self.wicket_armed
+        self._old_priv_env = {k: os.environ.get(k) for k in
+                              ("HNGH_STUB_PRIV_LOG", "HNGH_STUB_PRIV_RC")}
+        os.environ["HNGH_STUB_PRIV_LOG"] = str(self.priv_log)
+        os.environ.pop("HNGH_STUB_PRIV_RC", None)
+        self.addCleanup(self._desk_teardown)
+
+    def _desk_teardown(self):
+        ds._run_ro = self.old_run_ro
+        ds._desk_probe_wicket = self.old_probe_wicket
+        for name, val in self.old_attrs.items():
+            setattr(ds, name, val)
+        for key, val in self._old_priv_env.items():
+            if val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = val
+
+    def _fake_run(self, argv, timeout=15):
+        self.probe_calls.append(list(argv))
+        exe = argv[0]
+        if exe == "git":
+            return _Result(0, "abc1234\n", "")
+        if exe == "pacman":
+            return _Result(0 if argv[2] in self.installed else 1, "", "")
+        if exe == "sudo":
+            return _Result(1, "", "sudo: a password is required\n")
+        if exe == "python3":
+            return _Result(0, '{"drift": [], "ok": true}', "")
+        return _Result(1, "", "unexpected probe %r" % (argv,))
+
+    def reset_cache(self):
+        ds._desk_cache = (0.0, None)
+
+    def get(self, route):
+        try:
+            with urllib.request.urlopen(
+                    "http://127.0.0.1:%d/%s" % (self.port, route),
+                    timeout=5) as r:
+                return r.status, r.read().decode()
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode()
+
+    def get_json(self, route):
+        code, text = self.get(route)
+        return code, json.loads(text)
+
+    def approve(self):
+        self.approved.write_text(json.dumps(
+            {"approved": {"desk-authz:phase-1": "2026-09-27T00:00:00Z"}}))
+
+    def priv_calls(self):
+        if not self.priv_log.exists():
+            return []
+        return [ln for ln in self.priv_log.read_text().splitlines() if ln]
+
+    # ---- desk page ---------------------------------------------------------
+    def test_desk_page_served_with_token_meta(self):
+        shutil.copy2(os.path.join(ROOT, "dashboard", "desk.html"),
+                     Path(self.tmp.name) / "dashboard" / "desk.html")
+        code, text = self.get("desk.html")
+        self.assertEqual(code, 200)
+        self.assertIn('meta name="hngh-token"', text)
+        self.assertIn("THE INSTALLATION", text)
+
+    # ---- desk-state assembly -----------------------------------------------
+    def test_desk_state_shape_and_fail_closed_defaults(self):
+        self.reset_cache()
+        code, st = self.get_json("desk-state.json")
+        self.assertEqual(code, 200)
+        self.assertEqual(st["clone"], {"present": True, "ref": "abc1234"})
+        self.assertTrue(st["manifest"]["present"])
+        self.assertEqual(st["manifest"]["count"], 3)
+        self.assertEqual(st["manifest"]["aur_count"], 1)
+        self.assertEqual(st["manifest"]["pkgs"],
+                         [{"name": "hyprland", "installed": False},
+                          {"name": "foot", "installed": False},
+                          {"name": "grim", "installed": False}])
+        self.assertFalse(st["wicket"]["armed"])
+        self.assertEqual(st["wicket"]["reason"],
+                         "sudo: a password is required")
+        self.assertIsNone(st["drift"])
+        self.assertEqual(st["approvals"], {"desk-authz:phase-1": False})
+        self.assertFalse(st["phase1_ready"])
+        self.assertRegex(st["generated"], r"^\d{4}-\d{2}-\d{2}T")
+
+    def test_desk_state_installed_mapping_and_ready(self):
+        self.installed.update(("hyprland", "grim"))
+        self.approve()
+        self.reset_cache()
+        code, st = self.get_json("desk-state.json")
+        self.assertEqual(code, 200)
+        self.assertEqual([p["installed"] for p in st["manifest"]["pkgs"]],
+                         [True, False, True])
+        self.assertTrue(st["phase1_ready"])
+        self.assertEqual(st["approvals"], {"desk-authz:phase-1": True})
+
+    def test_desk_state_cached_within_window(self):
+        self.reset_cache()
+        _, first = self.get_json("desk-state.json")
+        self.installed.add("hyprland")  # cache must hide the flip
+        _, second = self.get_json("desk-state.json")
+        self.assertEqual(first["generated"], second["generated"])
+        self.assertEqual(second["manifest"]["pkgs"][0]["installed"], False)
+
+    def test_desk_state_drift_passthrough(self):
+        drift_job = Path(self.tmp.name) / "drift.py"
+        drift_job.write_text("# stub")
+        ds.DRIFT_JOB = str(drift_job)
+        old = ds._run_ro
+
+        def drift_run(argv, timeout=15):
+            if any("drift.py" in a for a in argv):
+                return _Result(0, '{"drift": [{"n": 1}, {"n": 2}],'
+                                  ' "ok": false}', "")
+            return self._fake_run(argv, timeout=timeout)
+
+        ds._run_ro = drift_run
+        self.reset_cache()
+        try:
+            _, st = self.get_json("desk-state.json")
+        finally:
+            ds._run_ro = old
+        self.assertEqual(st["drift"], {"ok": False, "count": 2})
+
+    # ---- stage-authz ---------------------------------------------------------
+    def test_stage_authz_files_row_and_handoff(self):
+        code, body = self.post("desk/stage-authz", {"phase": "1"})
+        self.assertEqual((code, body.get("ok")), (201, True))
+        self.assertEqual(body.get("identity"), "desk-authz:phase-1")
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertIn("'alert'", rows[0])
+        self.assertIn("'desk-authz:phase-1'", rows[0])
+        self.assertIn("'--window'", rows[0])
+        self.assertIn("desk-stage-authz | ", self.handoffs.read_text())
+
+    def test_stage_authz_refuses_other_phases(self):
+        code, body = self.post("desk/stage-authz", {"phase": "2"})
+        self.assertEqual((code, body.get("ok")), (400, False))
+        self.assertEqual(self.rows(), [])
+
+    def test_stage_authz_fails_closed_on_rq_refusal(self):
+        os.environ["HNGH_STUB_RQ_RC"] = "1"
+        code, body = self.post("desk/stage-authz", {"phase": "1"})
+        self.assertEqual((code, body.get("ok")), (500, False))
+        self.assertFalse(self.handoffs.exists())
+
+    # ---- run-phase-1 gate chain -----------------------------------------------
+    def test_run_phase1_unapproved_409(self):
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertIn("Stage authorization", body["remediation"])
+        self.assertIn("desk-authz:phase-1", body["remediation"])
+        self.assertEqual(self.probe_calls, [])
+        self.assertEqual(self.priv_calls(), [])
+
+    def test_run_phase1_approved_but_unarmed_409(self):
+        self.approve()
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertIn("wicket not armed", body["error"])
+        self.assertIn("sudo install", body["remediation"])
+        self.assertEqual(self.priv_calls(), [])
+
+    def test_run_phase1_missing_clone_409(self):
+        self.approve()
+        self.wicket_armed = (True, "")
+        ghost = Path(self.tmp.name) / "not-a-clone"
+        ds.OMARCHY_UPSTREAM = str(ghost)
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok")), (409, False))
+        self.assertIn(str(ghost), body["remediation"])
+
+    def test_run_phase1_missing_manifest_409(self):
+        self.approve()
+        self.wicket_armed = (True, "")
+        ds.MANIFEST = str(Path(self.tmp.name) / "absent.packages")
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual(code, 409)
+        self.assertIn("absent.packages", body["remediation"])
+
+    def test_run_phase1_happy_path_runs_stub(self):
+        self.approve()
+        self.wicket_armed = (True, "")
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("rc")), (201, 0))
+        self.assertTrue(body.get("ok"))
+        self.assertEqual(self.priv_calls(), ["wicket install-base"])
+        self.assertIn("line-one", body["tail"])
+        self.assertIn("desk-phase-1 | ", self.handoffs.read_text())
+
+    def test_run_phase1_stub_failure_502(self):
+        self.approve()
+        self.wicket_armed = (True, "")
+        os.environ["HNGH_STUB_PRIV_RC"] = "2"
+        code, body = self.post("desk/run-phase-1", {})
+        self.assertEqual((code, body.get("ok"), body.get("rc")),
+                         (502, False, 2))
+        self.assertIn("stderr-line", body["tail"])
+
+    def test_desk_posts_need_token(self):
+        for route in ("desk/stage-authz", "desk/run-phase-1"):
+            code, _ = self.post(route, {"phase": "1"}, token=False)
+            self.assertEqual(code, 403, route)
+        self.assertEqual(self.rows(), [])
+        self.assertEqual(self.priv_calls(), [])
+
+
+class _Result:
+    """Stand-in for a CompletedProcess (no subprocess in the probes)."""
+
+    def __init__(self, returncode, stdout, stderr):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
 
 
 if __name__ == "__main__":

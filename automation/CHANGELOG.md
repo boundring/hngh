@@ -1,6 +1,40 @@
 # Changelog
 
 ## 2026-09-27
+- installation desk: the dashboard page from which the operator drives
+  Omarchy-on-CachyOS phase 1 (session stack install) —
+  dashboard/desk.html + desk-view.js (+ desk.css), broadsheet.css
+  newspaper idiom, ghost links from broadsheet + console toolbars. GET
+  /desk-state.json (30s cache, research-routes fail-soft pattern):
+  read-only assembly of upstream clone (OMARCHY_UPSTREAM_DIR env,
+  default ~/Projects/etc/omarchy-upstream) via `git -C ... rev-parse
+  --short HEAD`, manifest facts from config/omarchy-base.packages
+  (installable/aur counts, per-name `pacman -Q` installed bool),
+  wicket armed probe (`sudo -n -l -U <user>` output contains
+  `wicket.sh install-base`; any failure -> armed:false + reason), pins
+  drift passthrough from jobs/pins-drift.py --json (absence -> null),
+  approvals from operator-approved.json, and the derived
+  phase1_ready (all non-aur manifest packages installed). POST
+  /desk/stage-authz {phase:"1"} files the authorization request as an
+  operator item (report-queue alert, identity desk-authz:phase-1,
+  7d window, same seam as the operator verbs; body = the wicket
+  bootstrap block quoted from config/wicket.sudoers.example + the
+  approve-this-item instruction) and writes a handoffs line; 400 on
+  any other phase. POST /desk/run-phase-1 gates fail-closed in order:
+  (1) desk-authz:phase-1 present in the approved ledger, else 409 +
+  "Stage authorization, then approve the desk-authz:phase-1 item";
+  (2) wicket armed, else 409 + the bootstrap block verbatim; (3)
+  clone .git + manifest file present, else 409 naming the missing
+  path; then `bash lib/privileged.sh wicket install-base` (900s
+  timeout, output tail kept) -> 201 {rc:0} / 502 {rc, tail}. The UI
+  renders every failure's remediation verbatim (fail-closed but
+  never silent), phases 2-4 as honest scheduled rows, and polls
+  desk-state on the 30s chain. All desk probes route through one
+  monkeypatchable seam (_run_ro) and every privileged call is a
+  module constant, so the lifecycle suite stubs everything: tests
+  test-dashboard-lifecycle.py 46 green (13 desk cases; privileged
+  stub logs argv, no test installs or sudos for real). Record
+  docs/records/2026-09-27-installation-desk.md.
 - wicket: governed privileged-action channel for package installs - ONE
   exact-command sudoers grant (`hngh ALL=(root) NOPASSWD:
   /usr/local/lib/hngh/wicket.sh install-base`; template

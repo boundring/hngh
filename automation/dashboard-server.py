@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """dashboard-server — static file server for hngh-automation/dashboard/
-PLUS exactly sixteen write endpoints (any other POST path -> 404) and the
+PLUS exactly twenty write endpoints (any other POST path -> 404) and the
 read-only GET routes below (session slice, SSE push, telemetry, jails).
 
 POST auth (plan 2026-09-09 step 6, security, fail closed): every POST
@@ -135,6 +135,30 @@ POST /report-queue/mark-read  {"id": str}
     --prune stays CLI-only (it deletes ledger rows). 201 {"ok": true};
     400 bad id / refused id; 500 exec failure.
 
+POST /desk/stage-authz  {"phase": "1"}
+    Files ONE report-queue alert row (identity desk-authz:phase-1,
+    7-day identity window — report-queue dedups by identity, so repeat
+    posts are idempotent within the window) whose text IS the operator
+    authorization request: the wicket bootstrap block (quoted from
+    config/wicket.sudoers.example when present, else the pinned
+    install-dispatcher+manifest-root-owned+sudoers-drop-in text) plus
+    the approve instruction. Fail closed: a report-queue refusal leaves
+    no handoffs line. Handoffs-logged (desk-stage-authz). 201 {"ok":
+    true, "identity": "desk-authz:phase-1"}; 400 on any phase but "1".
+
+POST /desk/run-phase-1  {}
+    The gated privileged install for the Omarchy-on-CachyOS session
+    stack. Validations in order, each failure 409 {"ok": false,
+    "error", "remediation"}: (a) desk-authz:phase-1 present in
+    dashboard/operator-approved.json (remediation: stage + approve
+    first); (b) the wicket armed (remediation = the bootstrap block);
+    (c) the upstream clone and the omarchy-base.packages manifest
+    present (remediation names the missing path). Then runs
+    `bash automation/lib/privileged.sh wicket install-base` (timeout
+    900s) and returns the output tail (last ~40 lines). Handoffs-logged
+    (desk-phase-1) either way. 201 {"ok": true, "rc": 0, "tail"};
+    502 {"ok": false, "rc", "tail"} on rc != 0 / exec failure / timeout.
+
 Contract (shared, same style as /flag):
     - session/id: non-empty, <=80 chars, [A-Za-z0-9._-]
     - note:       non-empty, <=200 chars after stripping pipes
@@ -143,6 +167,7 @@ All writes are append-only (ledger) or atomic-replace (JSON). Nothing
 writes docs/project/backlog.md anymore (archived 2026-09-25).
 """
 import importlib.util
+import getpass
 import hmac
 import ipaddress
 import json
@@ -166,6 +191,29 @@ BACKLOG = os.path.join(HNGH, "docs", "project", "backlog.md")
 BACKLOG_REFUSED = ("backlog.md archived 2026-09-25: folded into queue.md"
                    " (no further writes)")
 REPORT_QUEUE = os.path.join(HNGH, "scripts", "report-queue")
+# Installation Desk (2026-09-27): the Omarchy-on-CachyOS phase-1 gate.
+# Every path here is a module constant so the lifecycle suite can point
+# it at stubs (the STUB_RQ pattern) and never touches the real machine.
+DESK_AUTHZ_ID = "desk-authz:phase-1"
+PRIVILEGED_SH = os.path.join(ROOT, "lib", "privileged.sh")
+WICKET_SUDOERS_EXAMPLE = os.path.join(ROOT, "config", "wicket.sudoers.example")
+MANIFEST = os.path.join(ROOT, "config", "omarchy-base.packages")
+DRIFT_JOB = os.path.join(ROOT, "jobs", "pins-drift.py")
+OMARCHY_UPSTREAM = (
+    os.environ.get("OMARCHY_UPSTREAM_DIR") or os.path.join(
+        os.path.expanduser("~"), "Projects", "etc", "omarchy-upstream"))
+# Pinned fallback bootstrap block (used only while the wicket slice's
+# config/wicket.sudoers.example is absent; paths repo-relative on purpose
+# so the report-queue public-bound redaction never has to rewrite them).
+DESK_BOOTSTRAP_PINNED = (
+    "sudo install -o root -g root -m 0755 automation/lib/wicket.sh"
+    " /usr/local/lib/hngh/wicket.sh\n"
+    "sudo install -o root -g root -m 0644"
+    " automation/config/omarchy-base.packages"
+    " /etc/hngh/omarchy-base.packages\n"
+    "sudo install -o root -g root -m 0440"
+    " automation/config/wicket.sudoers.example /etc/sudoers.d/hngh-wicket"
+    "  # set the operator user in the drop-in first")
 SERVICE_CTL = os.path.join(ROOT, "scripts", "service-ctl.sh")
 RESEARCH_DOCS = os.path.join(HNGH, "docs", "research")
 PLANS_DOCS = os.path.join(HNGH, "docs", "project", "plans")
@@ -444,6 +492,150 @@ def research_routes_json():
     return _routes_cache[1]
 
 
+def _run_ro(argv, timeout=15):
+    """The desk's ONE read-only subprocess seam (pacman/git/sudo/pins-drift
+    probes all route through here; the lifecycle suite monkeypatches it)."""
+    return subprocess.run(argv, capture_output=True, text=True,
+                          timeout=timeout)
+
+
+def desk_bootstrap_block():
+    """The wicket bootstrap block: quoted verbatim from the wicket
+    slice's config/wicket.sudoers.example when present, else the pinned
+    dispatcher+manifest+sudoers text. This exact text is both the
+    stage-authz row body and the run-phase-1 remediation."""
+    try:
+        with open(WICKET_SUDOERS_EXAMPLE, encoding="utf-8") as f:
+            body = f.read().strip()
+        if body:
+            return body
+    except OSError:
+        pass
+    return DESK_BOOTSTRAP_PINNED
+
+
+def _desk_probe_clone():
+    """Upstream clone presence + short ref (OMARCHY_UPSTREAM_DIR honored
+    via the module constant); any fault reads as absent — fail closed."""
+    try:
+        if not os.path.isdir(os.path.join(OMARCHY_UPSTREAM, ".git")):
+            return {"present": False, "ref": ""}
+        p = _run_ro(["git", "-C", OMARCHY_UPSTREAM,
+                     "rev-parse", "--short", "HEAD"])
+        return {"present": True,
+                "ref": p.stdout.strip() if p.returncode == 0 else ""}
+    except Exception:
+        return {"present": False, "ref": ""}
+
+
+def _desk_probe_manifest():
+    """omarchy-base.packages: installable-line count, aur-marked count,
+    per-package installed bools (pacman -Q, rc 0/1, read-only). Returns
+    (manifest_payload, phase1_ready) — ready = every NON-aur installable
+    line already installed."""
+    out = {"present": False, "count": 0, "aur_count": 0, "pkgs": []}
+    try:
+        with open(MANIFEST, encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return out, False
+    names, nonaur, aur = [], [], 0
+    for ln in lines:
+        if ln.lstrip().startswith("#"):
+            continue
+        head, sep, tail = ln.partition("#")
+        name = head.strip()
+        if not name:
+            continue
+        names.append(name)
+        if sep and "aur" in tail.lower():
+            aur += 1
+        else:
+            nonaur.append(name)
+    installed = set()
+    for name in names:
+        try:
+            if _run_ro(["pacman", "-Q", name]).returncode == 0:
+                installed.add(name)
+        except Exception:
+            pass  # pacman missing/faulting: the package reads uninstalled
+        out["pkgs"].append({"name": name, "installed": name in installed})
+    out["present"] = True
+    out["count"] = len(names)
+    out["aur_count"] = aur
+    return out, bool(nonaur) and all(n in installed for n in nonaur)
+
+
+def _desk_probe_wicket():
+    """armed = `sudo -n -l -U <user>` lists `wicket.sh install-base`.
+    Any failure reads as un-armed with the sudo refusal as the reason
+    (fail closed, and the UI prints the reason verbatim)."""
+    try:
+        user = getpass.getuser()
+    except Exception:
+        return False, "cannot resolve the invoking user"
+    try:
+        p = _run_ro(["sudo", "-n", "-l", "-U", user])
+    except Exception as e:
+        return False, "sudo probe failed: %s" % e
+    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    if "wicket.sh install-base" in out:
+        return True, ""
+    for ln in out.splitlines():
+        ln = ln.strip()
+        if ln:
+            return False, ln[:120]
+    return False, "sudo -l rc=%d with no grant line" % p.returncode
+
+
+def _desk_probe_drift():
+    """pins-drift --json passthrough ({ok, count} only), fail-soft:
+    job absent / nonzero exit / unparsable output all read as null."""
+    if not os.path.isfile(DRIFT_JOB):
+        return None
+    try:
+        p = _run_ro(["python3", "-B", DRIFT_JOB, "--json"], timeout=60)
+        if p.returncode != 0:
+            return None
+        j = json.loads(p.stdout or "{}")
+        return {"ok": bool(j.get("ok")), "count": len(j.get("drift") or [])}
+    except Exception:
+        return None
+
+
+_desk_cache = (0.0, None)
+
+
+def desk_state_json():
+    """GET /desk-state.json — the Installation Desk's read-only assembly
+    (clone/manifest/wicket/drift/approvals + the phase1_ready verdict),
+    cached ~30s like the other feeds. Every probe is individually
+    fail-soft so the desk always prints state, never a blank page."""
+    global _desk_cache
+    ts, cached = _desk_cache
+    if cached is not None and time.monotonic() - ts < TELEMETRY_TTL_S:
+        return cached
+    clone = _desk_probe_clone()
+    manifest, ready = _desk_probe_manifest()
+    armed, reason = _desk_probe_wicket()
+    try:
+        with open(APPROVED, encoding="utf-8") as f:
+            approved = json.load(f).get("approved") or {}
+    except Exception:
+        approved = {}
+    state = {
+        "clone": clone,
+        "manifest": manifest,
+        "wicket": {"armed": armed, "reason": reason},
+        "drift": _desk_probe_drift(),
+        "approvals": {DESK_AUTHZ_ID: DESK_AUTHZ_ID in approved},
+        "phase1_ready": ready,
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    _desk_cache = (time.monotonic(), state)
+    return state
+
+
 def telemetry_24h():
     """24h aggregates from telemetry.db, emitted on request (no new job);
     cached 30s in-process (feed cadence is minutes, not seconds)."""
@@ -539,7 +731,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         route = self.path.split("?")[0]
         if route in ("/", "/index.html", "/console.html",
-                     "/broadsheet.html"):
+                     "/broadsheet.html", "/desk.html"):
             self._serve_index()
             return
         if route.startswith("/session/"):
@@ -562,6 +754,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/research-routes.json":
             self._json(200, research_routes_json())
+            return
+        if route == "/desk-state.json":
+            self._json(200, desk_state_json())
             return
         if route == "/fleet.json":
             # Rung B resource-pool feed (pooled-hardware rung): the fleet
@@ -672,7 +867,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    # GET / (and /index.html, /console.html, /broadsheet.html) — static
+    # GET / (and /index.html, /console.html, /broadsheet.html, /desk.html)
+    # — static
     # page with the POST
     # token injected as <meta name="hngh-token"> so the legit UI reads it
     # from the page it already loaded (no second secret channel). The
@@ -681,7 +877,8 @@ class Handler(SimpleHTTPRequestHandler):
     # every mutation 403s: fail closed.
     def _serve_index(self):
         base = os.path.basename(self.path.split("?")[0])
-        name = base if base in ("console.html", "broadsheet.html") \
+        name = base if base in ("console.html", "broadsheet.html",
+                                "desk.html") \
             else "index.html"
         try:
             with open(os.path.join(DASHBOARD, name), "rb") as f:
@@ -832,6 +1029,8 @@ class Handler(SimpleHTTPRequestHandler):
              "system/service-act": self._system_service_act,
              "system/backup-now": self._system_backup_now,
              "report-queue/mark-read": self._mark_read,
+             "desk/stage-authz": self._desk_stage_authz,
+             "desk/run-phase-1": self._desk_run_phase1,
              "feedback": self._feedback}[p]()
         except KeyError:
             self._json(404, {"ok": False, "error": "not found"})
@@ -1169,12 +1368,23 @@ class Handler(SimpleHTTPRequestHandler):
         so no transition lands silently without its row. The stable
         identity makes a retry safe (report-queue dedups within its
         window)."""
+        return self._rq_row(
+            "progress",
+            "operator item %s %s%s"
+            % (item_id, state, " (%s)" % detail if detail else ""),
+            "operator-item:%s:%s" % (item_id, state))
+
+    def _rq_row(self, kind, text, identity, window=None):
+        """The shared report-queue filing seam (operator-item settle rows
+        AND the desk's authorization request): ONE row, stable identity,
+        fail closed — a refusal leaves every ledger untouched so nothing
+        lands silently without its row. `window` narrows report-queue's
+        identity-dedup window (seconds)."""
         try:
             p = subprocess.run(
-                ["python3", REPORT_QUEUE, "--add", "progress",
-                 "operator item %s %s%s"
-                 % (item_id, state, " (%s)" % detail if detail else ""),
-                 "--identity", "operator-item:%s:%s" % (item_id, state)],
+                ["python3", REPORT_QUEUE, "--add", kind, text,
+                 "--identity", identity]
+                + (["--window", str(window)] if window else []),
                 capture_output=True, text=True, timeout=15)
         except Exception:
             self._json(500, {"ok": False, "error": "report-queue exec failed"})
@@ -1184,6 +1394,91 @@ class Handler(SimpleHTTPRequestHandler):
                              " (rc=%d)" % p.returncode})
             return False
         return True
+
+    def _desk_stage_authz(self):
+        """Files the operator authorization request as ONE report-queue
+        alert row (identity desk-authz:phase-1, 7-day window — the
+        report-queue identity dedupe makes retries idempotent): the row
+        text IS the request, the wicket bootstrap block plus the approve
+        instruction. Alert = the operator-item creation channel (lib/
+        operator-item.sh files alert rows); fail closed like the verbs."""
+        try:
+            phase = str(self._body().get("phase", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        if phase != "1":
+            self._json(400, {"ok": False,
+                             "error": "unsupported phase (only \"1\")"})
+            return
+        text = (
+            "operator authorization request: %s\n"
+            "Phase 1 (session stack) installs only after BOTH steps:\n\n"
+            "%s\n\n"
+            "2) Then approve this item (%s) — it gates"
+            " POST /desk/run-phase-1." % (DESK_AUTHZ_ID,
+                                          desk_bootstrap_block(),
+                                          DESK_AUTHZ_ID))
+        if not self._rq_row("alert", text, DESK_AUTHZ_ID, window=604800):
+            return
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write("desk-stage-authz | %s | automation|%s | authorization"
+                    " request filed\n" % (ts, DESK_AUTHZ_ID))
+        self._json(201, {"ok": True, "identity": DESK_AUTHZ_ID})
+
+    def _desk_run_phase1(self):
+        """The gated privileged install: validations in ORDER, each
+        failure 409 with the exact remediation the desk prints —
+        (a) approval in the operator-approved ledger, (b) wicket armed,
+        (c) clone + manifest present — then the privileged channel runs
+        (bash privileged.sh wicket install-base, 900s). Nothing here
+        installs anything directly: privileged.sh is the only hand."""
+        try:
+            with open(APPROVED, encoding="utf-8") as f:
+                approved = json.load(f).get("approved") or {}
+        except Exception:
+            approved = {}
+        if DESK_AUTHZ_ID not in approved:
+            self._json(409, {"ok": False, "error": "phase 1 not authorized",
+                             "remediation": "Stage authorization, then"
+                             " approve the %s item" % DESK_AUTHZ_ID})
+            return
+        armed, reason = _desk_probe_wicket()
+        if not armed:
+            self._json(409, {"ok": False, "error": "wicket not armed: %s"
+                             % reason,
+                             "remediation": desk_bootstrap_block()})
+            return
+        if not os.path.isdir(os.path.join(OMARCHY_UPSTREAM, ".git")):
+            self._json(409, {"ok": False, "error": "upstream clone missing",
+                             "remediation": "missing: %s (set"
+                             " OMARCHY_UPSTREAM_DIR if the clone lives"
+                             " elsewhere)" % OMARCHY_UPSTREAM})
+            return
+        if not os.path.isfile(MANIFEST):
+            self._json(409, {"ok": False, "error": "manifest missing",
+                             "remediation": "missing: %s" % MANIFEST})
+            return
+        try:
+            p = subprocess.run(["bash", PRIVILEGED_SH, "wicket",
+                                "install-base"],
+                               capture_output=True, text=True, timeout=900)
+            rc, out = p.returncode, (p.stdout or "") + (p.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            rc = None
+            out = (e.stdout or "") + (e.stderr or "")
+        except Exception as e:
+            rc, out = None, str(e)
+        tail = "\n".join(out.splitlines()[-40:])
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(HANDOFFS, "a", encoding="utf-8") as f:
+            f.write("desk-phase-1 | %s | automation|%s | privileged"
+                    " install-base rc=%s\n" % (ts, DESK_AUTHZ_ID, rc))
+        if rc == 0:
+            self._json(201, {"ok": True, "rc": rc, "tail": tail})
+        else:
+            self._json(502, {"ok": False, "rc": rc, "tail": tail})
 
     def _spawn(self):
         try:

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THE INSTALLATION DESK · hngh-automation</title>
+<link rel="icon" href="data:,"/>
+<link rel="stylesheet" href="broadsheet.css">
+<link rel="stylesheet" href="desk.css">
+<!-- token placeholder: the dashboard server injects the real token meta
+     for front pages at cutover; standalone, mutations fail closed. -->
+<meta name="hngh-token" content="">
+</head>
+<body id="top">
+<div id="deskerr" class="error" hidden></div>
+
+<header class="sheet masthead">
+  <h1>THE INSTALLATION <span class="sub">desk</span></h1>
+  <div class="dateline">
+    <span id="desk-line">…</span>
+    <span id="desk-ready" class="syn-badge" hidden>PHASE 1 LANDED</span>
+  </div>
+</header>
+
+<main class="sheet desk">
+
+  <section class="desk-block" aria-label="state of the desk">
+    <h2>State of the desk</h2>
+    <div id="state-cards" class="cards">
+      <div class="placeholder">loading…</div>
+    </div>
+  </section>
+
+  <section class="desk-block" aria-label="the phase ledger">
+    <h2>The phase ledger</h2>
+    <table class="phase-table">
+      <thead><tr><th>phase</th><th>scope</th><th>status</th></tr></thead>
+      <tbody>
+        <tr id="phase-row-1">
+          <td>Phase 1</td>
+          <td>session stack (omarchy-base.packages)</td>
+          <td class="phase-status">…</td>
+        </tr>
+        <tr class="scheduled">
+          <td>Phase 2</td>
+          <td>config adopt</td>
+          <td class="phase-status">scheduled — requires phase 1 landed</td>
+        </tr>
+        <tr class="scheduled">
+          <td>Phase 3</td>
+          <td>bins</td>
+          <td class="phase-status">scheduled — requires phase 1 landed</td>
+        </tr>
+        <tr class="scheduled">
+          <td>Phase 4</td>
+          <td>look port</td>
+          <td class="phase-status">scheduled — requires phase 1 landed</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="desk-block" aria-label="operator actions">
+    <h2>Operator actions</h2>
+
+    <div class="choice-row">
+      <button id="btn-stage" class="choice">Stage authorization</button>
+      <span class="outcome" id="stage-outcome">files the authorization
+        request (report-queue row desk-authz:phase-1) so the operator can
+        run the bootstrap block, then approve it</span>
+    </div>
+    <div id="stage-reason" class="reason" hidden></div>
+
+    <div class="choice-row">
+      <button id="btn-run" class="choice">Run phase 1</button>
+      <span class="outcome" id="run-outcome">runs the privileged session
+        stack install through the wicket (lib/privileged.sh wicket
+        install-base); refused until approved, armed, and stocked</span>
+    </div>
+    <div id="run-reason" class="reason" hidden></div>
+
+    <pre id="remediation" class="remediation" hidden></pre>
+  </section>
+
+</main>
+
+<script src="desk-view.js"></script>
+</body>
+</html>

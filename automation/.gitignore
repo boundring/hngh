@@ -25,6 +25,9 @@ dashboard/*
 !dashboard/style.css
 !dashboard/index.html
 !dashboard/gantt.html
+!dashboard/desk.html
+!dashboard/desk-view.js
+!dashboard/desk.css
 digest/
 logs/
 archive/
