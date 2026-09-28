@@ -252,14 +252,18 @@
           ' — run the bootstrap block printed below, then approve the' +
           ' item');
         $('remediation').hidden = false;
-        $('remediation').textContent = '';
-        // show the request text the operator must act on: re-pull state
-        // (the row itself lives in the report queue)
+        $('remediation').textContent = r.body.remediation ||
+          '(bootstrap block missing from the response — see the' +
+          ' desk-authz:phase-1 item in the newspaper operator feed)';
         poll();
       } else {
         b.disabled = false;
         out('stage-outcome', 'refused (' + r.status + '): ' +
           (r.body.error || 'unknown'));
+        if (r.body.remediation) {
+          $('remediation').hidden = false;
+          $('remediation').textContent = r.body.remediation;
+        }
       }
     }).catch(function (e) {
       b.disabled = false;

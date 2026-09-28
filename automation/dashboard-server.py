@@ -1473,7 +1473,8 @@ class Handler(SimpleHTTPRequestHandler):
         with open(HANDOFFS, "a", encoding="utf-8") as f:
             f.write("desk-stage-authz | %s | automation|%s | authorization"
                     " request filed\n" % (ts, DESK_AUTHZ_ID))
-        self._json(201, {"ok": True, "identity": DESK_AUTHZ_ID})
+        self._json(201, {"ok": True, "identity": DESK_AUTHZ_ID,
+                         "remediation": desk_bootstrap_block()})
 
     def _desk_run_phase1(self):
         """The gated privileged install: validations in ORDER, each

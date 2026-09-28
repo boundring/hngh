@@ -470,6 +470,8 @@ class Desk(Lifecycle):
         code, body = self.post("desk/stage-authz", {"phase": "1"})
         self.assertEqual((code, body.get("ok")), (201, True))
         self.assertEqual(body.get("identity"), "desk-authz:phase-1")
+        # the desk prints this block: the response must carry it
+        self.assertIn("wicket.sh", body.get("remediation") or "")
         rows = self.rows()
         self.assertEqual(len(rows), 1)
         self.assertIn("'alert'", rows[0])

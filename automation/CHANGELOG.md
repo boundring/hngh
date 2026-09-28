@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-09-28
+- stage-authz handoff fix — POST /desk/stage-authz returned only
+  {ok, identity} while the desk promised "run the bootstrap block
+  printed below": the block lived solely in the filed report-queue
+  row, so no commands ever rendered (first click or repeat). The 201
+  response now carries "remediation": desk_bootstrap_block(), and the
+  desk renders it into #remediation (refused paths also render a
+  remediation when the response carries one). Red-first:
+  test_stage_authz_files_row_and_handoff asserts the response block.
 - gate hygiene — automation/Makefile registered readiness,
   pins-drift, and wicket suites twice back-to-back (every gate ran
   them twice); duplicate triplet dropped.
