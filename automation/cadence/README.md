@@ -71,7 +71,9 @@ inside each script skips runs until the Inventory interval elapses.
   pages-on-disk vs registry count + meta staleness per llm-wiki vault,
   one identity-deduped alert per unhealthy vault), plus the pre-existing
   day drop-ins
-- calendar/weekly (was week): `01-roadmap-review`, `02-bench-trigger`
+- calendar/weekly (was week): `01-roadmap-review`, `02-bench-trigger`,
+  `31-distro-update-watch` (arch/cachyos/omarchy release+news feeds,
+  7-day dedup via last-seen state, one row per source per sighting)
 
 Daily drop-ins (calendar/daily, one beat per script, lexical order):
 `01-activity-tick` · `01-lesson-harvest` · `02-ledger-prune` ·
