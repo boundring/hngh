@@ -67,9 +67,11 @@ POST on the operator's in-channel consent. Proper fix when picked up:
 a dedicated `POST /desk/approve` (token-gated, owed report row first,
 atomic approved[DESK_AUTHZ_ID] write, mirroring `_handle`'s
 fail-closed order) plus an Approve button in desk-view.js gated on
-`!approved` and the same real-chain test. The feed item was also
-absent from operator-items.json (feed reads crumbs + digest bullets,
-not report-queue rows; rebuild is a subhour beat) — same pickup.
+`!approved` and the same real-chain test. LANDED 2026-09-28 in
+f6dc44b2 (verb, button, real-chain tests) — historical; the
+feed-absence half stays open. The feed item was also absent from
+operator-items.json (feed reads crumbs + digest bullets, not
+report-queue rows; rebuild is a subhour beat) — same pickup.
 
 ## Omarchy-repo deferral in the dispatcher
 

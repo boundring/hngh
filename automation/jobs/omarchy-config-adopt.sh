@@ -81,8 +81,11 @@ adopt_file() { # src dst
     if [ "$DRY" -eq 1 ]; then
       log "would copy $rel"
     else
-      mkdir -p "$(dirname "$dst")"
-      cp -- "$src" "$dst"
+      mkdir -p "$(dirname "$dst")" || exit 3
+      cp -- "$src" "$dst" || {
+        log "copy failed: $rel"
+        exit 3
+      }
       log "copied $rel"
     fi
     ;;
@@ -91,9 +94,15 @@ adopt_file() { # src dst
     if [ "$DRY" -eq 1 ]; then
       log "would backup $rel -> $rel.bak and copy"
     else
-      mkdir -p "$(dirname "$dst")"
-      mv -- "$dst" "$dst.bak"
-      cp -- "$src" "$dst"
+      mkdir -p "$(dirname "$dst")" || exit 3
+      mv -- "$dst" "$dst.bak" || {
+        log "backup mv failed: $rel"
+        exit 3
+      }
+      cp -- "$src" "$dst" || {
+        log "copy failed: $rel"
+        exit 3
+      }
       log "backed up $rel -> .bak"
     fi
     ;;

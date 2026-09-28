@@ -134,7 +134,7 @@ run "$UP" "$H" "$JOB" >"$SANDBOX/f.out" 2>"$SANDBOX/f.err"
 rc=$?
 [ "$rc" -eq 0 ] && grep -q "copied=0" "$SANDBOX/f.out" &&
   grep -q "backed-up=0" "$SANDBOX/f.out" &&
-  ! ls "$H/.config" >/dev/null 2>&1 | grep -q "bak" &&
+  ! find "$H/.config" -name '*.bak' | grep -q . &&
   ok "idempotent: rerun copies and backs up nothing" ||
   bad "idempotent rc=$rc out=$(cat "$SANDBOX/f.out")"
 
