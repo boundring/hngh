@@ -53,3 +53,22 @@ Laptop: wholly Hngh OS, encrypted, passwordless boot, hngh tier live,
 LAN-reachable dashboard (token-gated), wake-over-LAN dispatcher installed.
 Credentials were delivered out-of-band to the operator (recovery passphrase,
 root and brick passwords); nothing sensitive is recorded in-repo.
+
+## Tier migration to brick (same day, follow-up)
+
+The tier was initially deployed under root (root's home + user units).
+Migrated to the desktop model: cloned + `install.sh --non-interactive` +
+`make enable` as `brick` (linger enabled; `su` sessions need explicit
+`XDG_RUNTIME_DIR=/run/user/<uid>` + `DBUS_SESSION_BUS_ADDRESS` for
+`systemctl --user` — ssh/su sessions do not carry them), permissions
+profile mirrored to `/home/brick/.hngh-automation/`, root-tier units
+stopped and root linger disabled (root's user manager retired entirely).
+Verified: root-dash inactive, brick-dash active on :8890, desktop curl
+gets the token-gated 403. Console autologin switched root -> brick on
+tty1 (the GUI live-session pattern: `.zprofile` uwsm hook lands with the
+scripted-installer slice; installer codification in flight).
+
+Installer-relevant gap re-confirmed on the installed target: `su`-based
+user-manager access is the friction point for any headless tier work —
+the scripted installer should enable linger + run `make enable` through
+`machinectl shell <user>@` or the explicit-env pattern above.
