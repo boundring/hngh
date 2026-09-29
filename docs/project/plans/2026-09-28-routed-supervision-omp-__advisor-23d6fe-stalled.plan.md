@@ -11,3 +11,7 @@ at 2026-09-28T18:00:51Z. Alert text: agent-supervision: omp-__advisor-23d6fe sta
 
 - [ ] Stop the stalled session, write a handoff brief (last state + next action), start the replacement
       Verification: old session id gone from supervision state; handoff brief file exists; replacement session shows fresh tool activity
+
+## Occurrences
+
+- 2026-09-29T19:00:42Z re-occurred (dedup window expired)
