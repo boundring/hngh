@@ -7,14 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a validation script under scripts/ that checks job definition files for required fields
-  Verification: bash -n scripts/validate-jobs.sh
+- [ ] Add a new cadence job template for incremental digest generation
+  Verification: bash -n cadence/incremental-digest.sh
 
-- [ ] Add a unit test under tests/ that exercises the validation script with a sample job file
-  Verification: bash tests/test-validate-jobs.sh
+- [ ] Add a test script that validates the new cadence job template syntax
+  Verification: python3 tests/test_cadence_template.py
 
-- [ ] Add a cadence entry under cadence/ that runs the validation script on a schedule
-  Verification: bash -n cadence/run-validation.sh
+- [ ] Add a lib helper function for safe path resolution used by the new job
+  Verification: bash -n lib/path_resolver.sh
 
-- [ ] Run the full test suite to confirm no regressions
+- [ ] Add a dashboard snippet that displays cadence job status
+  Verification: bash -n dashboard/cadence_status.sh
+
+- [ ] Add a make test entry that exercises the new cadence job end-to-end
   Verification: make test
+
+- [ ] Add a grep check confirming no secrets or credentials in new files
+  Verification: grep -r 'password\|secret\|token' jobs/ cadence/ lib/ tests/ dashboard/ digest/ | grep -v 'none'
