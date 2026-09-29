@@ -7,6 +7,10 @@
 # run the same day reuses the pack (exists + non-empty -> exit 0, print
 # nothing). Fail-soft: a missing input degrades to an empty section; the
 # script always exits 0. The logs dir is runtime data, never committed.
+# Artifact-class boundary: like lib/context-pack.sh's delegated-session
+# packs, this is ORIENTATION, never an article dispatch bundle — the
+# dashboard's id-keyed /article/omp-session bundles are a different
+# artifact class and never route through any context-pack.
 set -u
 
 AUTOMATION_ROOT="${AUTOMATION_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
