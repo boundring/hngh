@@ -5,16 +5,26 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+## Rationale
+
+This plan implements the **hngh-automation test-utility research line** by adding a lightweight validation script that checks job definition syntax before execution, reducing runtime failures from malformed inputs.
+
 ## Steps
 
-- [ ] Add a new data-validation job script under jobs/
-  Verification: bash -n jobs/data-validation.sh
+- [ ] Create a shell script under `scripts/` that validates job definition files for required fields and correct syntax
+  Verification: `bash -n scripts/validate-job-def.sh`
 
-- [ ] Add unit tests for the new validation job under tests/
-  Verification: bash -n tests/test_data_validation.sh
+- [ ] Add a test case under `tests/` that exercises the validation script with a sample malformed job definition
+  Verification: `bash tests/test-validate-job-def.sh`
 
-- [ ] Register the new job in cadence configuration
-  Verification: grep -q 'data-validation' cadence/jobs.yaml
+- [ ] Update `make test` to include the new validation script check in the test suite
+  Verification: `make test`
 
-- [ ] Run full test suite to confirm no regressions
-  Verification: make test
+- [ ] Create a helper script under `cadence/` that wraps the validation for use in automated job pipelines
+  Verification: `bash -n cadence/run-with-validation.sh`
+
+- [ ] Add documentation under `dashboard/` describing the validation script usage and expected output format
+  Verification: `grep -l "validation" dashboard/*.md`
+
+- [ ] Verify all new scripts pass syntax checks and the full test suite remains green
+  Verification: `make test && bash -n scripts/validate-job-def.sh && bash -n cadence/run-with-validation.sh`
