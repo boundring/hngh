@@ -334,6 +334,61 @@ class GhostDesk(unittest.TestCase):
         self.assertIn(".mast-ghost:empty", css)
 
 
+class SettleReceipt(unittest.TestCase):
+    """The settlement receipt: after a successful verb post the page
+    names the ledgers the decision (and note) hit -- the card itself
+    is filtered from the stream, so the receipt is the only feedback
+    that survives the rebuild."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def _fn(self, name):
+        m = re.search(r"function %s\([a-z, ]*\) \{[\s\S]*?\n  \}" % name,
+                      self.js)
+        self.assertTrue(m, name + " missing")
+        return m.group(0)
+
+    def test_wiring_and_style(self):
+        self.assertIn("settleReceipt(act.endpoint, payload)", self.js)
+        self.assertNotIn(
+            ".then(function () { rebuildStream(); })", self.js)
+        css = read("broadsheet.css")
+        self.assertIn("#settle-receipt", css)
+        self.assertIn("#settle-receipt.on", css)
+
+    def _receipt(self, endpoint, item_id, note):
+        esc = re.search(r"function esc\(s\) \{[\s\S]*?\n  \}", self.js)
+        self.assertTrue(esc, "esc missing")
+        script = (esc.group(0) + "\n" + self._fn("ledgerSide") + "\n" +
+                  self._fn("receiptText") +
+                  "\nconsole.log(JSON.stringify(receiptText(" +
+                  json.dumps(endpoint) + ", " + json.dumps(item_id) +
+                  ", " + json.dumps(note) + ")))")
+        return json.loads(subprocess.run(
+            ["node", "-e", script],
+            capture_output=True, text=True,
+            check=True).stdout.strip())
+
+    def test_park_receipt(self):
+        t = self._receipt("/operator-item/park", "faa648fe",
+                          "filed as backlog debt")
+        self.assertIn("park settled — faa648fe", t)
+        self.assertIn("operator-item:faa648fe:parked", t)
+        self.assertIn("dismissed-side ledger", t)
+        self.assertIn('your note: "filed as backlog debt"', t)
+        self.assertIn("the card leaves the next edition", t)
+
+    def test_acknowledge_and_silent_verbs(self):
+        t = self._receipt("/operator-item/acknowledge", "ff2f2a18",
+                          "leave open for the sweep")
+        self.assertIn("operator-item:ff2f2a18:acknowledged", t)
+        self.assertIn("approved-side ledger", t)
+        t = self._receipt("/operator-item/dismiss", "37bc583b", None)
+        self.assertIn("dismiss settled — 37bc583b", t)
+        self.assertNotIn("your note", t)
+
+
 class OperatorGuidance(unittest.TestCase):
     """Guidance blocks render from the feed payload only, fail open."""
 

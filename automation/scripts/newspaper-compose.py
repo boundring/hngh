@@ -427,6 +427,41 @@ def _op_narrative(text, cls, occurrences):
         "stay available for a plain close."))
 
 
+def settled_article():
+    """Recent operator decisions -> one digest article recording HOW
+    each item was settled, the guidance note included. Reads the
+    handoff ledger the dashboard-server appends on every operator-*
+    verb (HNGH_HANDOFFS overrides for tests); fail-open: a missing or
+    malformed ledger yields no article."""
+    path = os.environ.get("HNGH_HANDOFFS") or os.path.join(
+        AUTOMATION_ROOT, "agent-handoffs.md")
+    rows = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                parts = [p.strip() for p in line.strip().split(" | ")]
+                if (len(parts) != 4
+                        or not parts[0].startswith("operator-")
+                        or "|" not in parts[2]):
+                    continue
+                rows.append((parts[0][len("operator-"):], parts[1],
+                             parts[2].split("|")[-1], parts[3]))
+    except OSError:
+        return None
+    if not rows:
+        return None
+    rows.sort(key=lambda r: r[1], reverse=True)
+    return base_article(
+        "settled", "operator",
+        "Operator settlements: how decisions landed",
+        "The most recent operator decisions on this page and the "
+        "guidance each one filed.",
+        ["%s · %s %s — %s" % (ts, verb, oid, why)
+         for verb, ts, oid, why in rows[:8]],
+        rows[0][1], 0.9,
+        [{"label": "agent-handoffs", "url": ""}])
+
+
 def operator_articles(op, queues):
     """Open operator items -> decision cards (choices carry the real
     operator-item ids; endpoint literals are view-tested, do not edit).
@@ -765,6 +800,9 @@ def compose(args):
     articles = operator_articles(
         load_json(dpath("operator-items.json"), "operator items") or {},
         queues)
+    settled = settled_article()
+    if settled:
+        articles.append(settled)
     sess = session_articles(sess_data)
     articles += sess
     articles += research_articles(

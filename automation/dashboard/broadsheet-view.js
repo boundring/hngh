@@ -716,6 +716,41 @@
   // Operator decisions: moss buttons, the outcome prints BEFORE the
   // click, a progress line runs during multi-action, the feed reloads
   // after success (scroll position preserved).
+  // Settlement receipt: a decided card vanishes from the stream (the
+  // dismissed filter drops it at once; the composer drops it from the
+  // next edition), so the page must say where the decision and any
+  // guidance note were recorded.
+  function ledgerSide(endpoint) {
+    return (endpoint === '/operator-item/acknowledge' ||
+            endpoint === '/operator-item/handle')
+      ? 'approved-side ledger' : 'dismissed-side ledger';
+  }
+  function receiptText(endpoint, id, note) {
+    var verb = endpoint.split('/').pop();
+    var state = { park: 'parked', expire: 'expired',
+      suppress: 'suppressed', acknowledge: 'acknowledged',
+      handle: 'handled', dismiss: 'dismissed' }[verb] || verb;
+    var t = verb + ' settled — ' + id + ' · recorded in the ' +
+      'report-queue ledger (operator-item:' + id + ':' + state +
+      ') and the ' + ledgerSide(endpoint);
+    if (note) t += ' · your note: "' + note + '"';
+    return t + ' · the card leaves the next edition.';
+  }
+  var receiptTimer = null;
+  function settleReceipt(endpoint, payload) {
+    var el = document.getElementById('settle-receipt');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'settle-receipt';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = esc(receiptText(endpoint,
+      (payload && payload.id) || '?', payload && payload.note));
+    el.className = 'on';
+    clearTimeout(receiptTimer);
+    receiptTimer = setTimeout(function () {
+      el.className = ''; }, 15000);
+  }
   function choicesEl(a) {
     var bar = document.createElement('div');
     bar.className = 'choices';
@@ -753,7 +788,10 @@
         }
         progress.textContent = 'sending ' + (ch.label || 'decision') + '…';
         postJson(act.endpoint, payload)
-          .then(function () { rebuildStream(); })
+          .then(function () {
+            settleReceipt(act.endpoint, payload);
+            rebuildStream();
+          })
           .catch(function (e) {
             b.disabled = false;
             progress.textContent = 'failed: ' + e.message;

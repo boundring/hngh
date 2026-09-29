@@ -260,3 +260,14 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
 .oguide .og-rules { color: var(--ink-soft); margin-top: 4px;
   font-size: 11px; }
 .oguide .og-docs { margin: 4px 0 0; padding-left: 16px; }
+
+/* settlement receipt: fixed chip naming the ledgers a decision hit */
+#settle-receipt {
+  position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60;
+  max-width: 26rem; padding: 0.55rem 0.9rem;
+  border: 1px solid var(--rule); background: var(--paper);
+  color: var(--ink); font-size: 12px; line-height: 1.5;
+  box-shadow: 3px 3px 0 rgba(38, 34, 28, 0.18);
+  opacity: 0; pointer-events: none; transition: opacity 0.4s;
+}
+#settle-receipt.on { opacity: 1; }

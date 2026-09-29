@@ -56,6 +56,11 @@ class Base(unittest.TestCase):
         self.dbhome = os.path.join(self.sb, "db")
         os.makedirs(self.dash)
         os.makedirs(self.dbhome)
+        # settled digest reads the real handoff ledger by default;
+        # tests get an absent sandbox stub unless they write one
+        os.environ["HNGH_HANDOFFS"] = os.path.join(
+            self.sb, "absent-handoffs.md")
+        self.addCleanup(os.environ.pop, "HNGH_HANDOFFS", None)
         self.db = os.path.join(self.sb, "news.db")
         self._feed_files()
         self.crumbs = os.path.join(self.sb, "crumbs.db")
@@ -585,6 +590,71 @@ class ChoiceClasses(Base):
                          ["/operator-item/acknowledge", "/operator-item/park"])
 
 
+class Settlements(Base):
+    """The settled digest: recent operator decisions from the handoff
+    ledger as one operator-category record article -- newest first,
+    capped at 8 rows, guidance note included; fail-open on a missing
+    or malformed ledger."""
+    LINE = "operator-%s | %s | automation|%s | %s\n"
+
+    def setUp(self):
+        super().setUp()
+        self.hand = os.path.join(self.sb, "agent-handoffs.md")
+        os.environ["HNGH_HANDOFFS"] = self.hand
+        self.addCleanup(os.environ.pop, "HNGH_HANDOFFS", None)
+
+    def _settled(self, out):
+        with open(out) as fh:
+            doc = json.load(fh)
+        return [a for a in doc["articles"]
+                if a["headline"].startswith("Operator settlements")]
+
+    def test_digest_present(self):
+        with open(self.hand, "w") as f:
+            f.write(self.LINE % (
+                "park", "2026-09-29T13:56:25Z", "faa648fe",
+                "parked with guidance: filed as backlog debt; revisit "
+                "at the next disposition sweep"))
+            f.write(self.LINE % (
+                "acknowledge", "2026-09-29T12:34:34Z", "ff2f2a18",
+                "acknowledged: leave open for the sweep"))
+            f.write("not a handoff line\n")
+            f.write("build: something | with | pipes | galore\n")
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        arts = self._settled(out)
+        self.assertEqual(len(arts), 1)
+        a = arts[0]
+        self.assertEqual(a["category"], "operator")
+        self.assertEqual(a["choices"], [])
+        self.assertNotIn("guidance", a)
+        text = "\n".join(a["body"])
+        self.assertIn("park faa648fe", text)
+        self.assertIn(
+            "parked with guidance: filed as backlog debt", text)
+        self.assertIn("acknowledge ff2f2a18", text)
+        self.assertEqual(a["ts"], "2026-09-29T13:56:25Z")  # newest
+
+    def test_cap_and_order(self):
+        with open(self.hand, "w") as f:
+            for i in range(10):
+                f.write(self.LINE % (
+                    "dismiss", "2026-09-%02dT00:00:00Z" % (20 + i),
+                    "id%d" % i, "item dismissed as viewed"))
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a = self._settled(out)[0]
+        self.assertEqual(len(a["body"]), 8)
+        self.assertIn("dismiss id9", a["body"][0])
+        self.assertIn("dismiss id2", a["body"][-1])
+
+    def test_fail_open(self):
+        os.environ["HNGH_HANDOFFS"] = os.path.join(self.sb, "absent.md")
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._settled(out), [])
+
+
 class Guidance(Base):
     """Every operator decision card carries guidance per the shared
     contract: why/note_rules/verbs/docs, verbs mirroring the card's
@@ -595,7 +665,10 @@ class Guidance(Base):
     def _op_cards(self, out):
         with open(out) as fh:
             doc = json.load(fh)
-        return [a for a in doc["articles"] if a["category"] == "operator"]
+        # decision cards only: the settled digest is operator-category
+        # but a record, not a card with choices
+        return [a for a in doc["articles"]
+                if a["category"] == "operator" and a.get("choices")]
 
     @staticmethod
     def _verb(choice):

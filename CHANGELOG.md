@@ -6,6 +6,14 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-29
 
+- **Settlement visibility on the broadsheet**: a settled-decisions
+  digest article (newest 8 `operator-*` handoff rows — verb, id, and
+  the recorded why — read from `automation/agent-handoffs.md`,
+  `HNGH_HANDOFFS` override, fail-open) keeps parked/handled items
+  visible after they leave the feed, and an in-page receipt chip now
+  confirms each decision POST: which ledgers hold the row
+  (report-queue `operator-item:<id>:parked`, dismissed/approved side),
+  the note attached, and that the card leaves the next edition.
 - **Operator note guidance on decision cards**: broadsheet operator
   decision cards now carry a guidance payload — a verb/note/effect
   cause-and-effect table mirroring the card's own choices (Park requires
