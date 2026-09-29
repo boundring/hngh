@@ -100,10 +100,34 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       bad-execution runs) - a compliant session gets stamped with the
       class it avoided; some of yesterday's bad-execution lessons may
       share this mechanism. Ordinary backlog lane, out of this slice.
-- [ ] Slice C2: seeded stall auto-replace observation, single 5m
+- [x] Slice C2: seeded stall auto-replace observation, single 5m
       subhour tick scope
       Verification: the ledger record shows the stall detected and
       the session auto-replaced.
+      Executed 2026-09-29 (hermetic single tick): invoked
+      jobs/agent-supervision.py directly (never the cadence wrapper,
+      never the 300s self-gate stamp) against all-temporary fixture
+      surfaces reachable only through the documented env seams:
+      SUPERVISION_STATE pre-seeded with run-1 misses:1 (the steer
+      stamp from the pre-observation missed tick), stub-binary
+      hngh/omp-bridge/report-queue logging argv, record.lisp fixture
+      stale by 1h. One invocation: stall detected (misses -> 2),
+      die_session fired on the bridge source, replace_stalled_bridge_run
+      executed close-run run-1 dead + record rotation into
+      20260929T163436Z-run-1 + exactly one omp-bridge --run-start
+      auto-replace re-provision. Assertion evidence: tick rc=0;
+      fixture handoffs die row 'session-drop | ... | supervision|run-1 |
+      dead: stalled past 2 ticks cause=unclassified'; argv log line
+      '--run-start auto-replace seeded stall observation slice c2'
+      (count 1); store root carries no record.lisp, one rotated
+      subdir; the permanent evidence row is appended to
+      automation/agent-handoffs.md (overnight-lead | governed-fleet|
+      slice-c2 row, the C1 pattern). Advisory: cause=unclassified is
+      the absent SUPERVISION_CAUSES_SH stub, matching the blk-20260928
+      live observation. No real bridge store, dashboard state, real
+      agent-handoffs death rows, beat-blockers.tsv, or cadence state
+      touched; no production edits, no spawned session, no restarts.
+      C3 owns the residue check.
 - [ ] Slice C3: supervision residue check + kernel `make test` green
       (separate session)
       Verification: no supervision residue; kernel `make test` green.
