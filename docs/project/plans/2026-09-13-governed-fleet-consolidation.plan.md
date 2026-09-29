@@ -128,9 +128,25 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       agent-handoffs death rows, beat-blockers.tsv, or cadence state
       touched; no production edits, no spawned session, no restarts.
       C3 owns the residue check.
-- [ ] Slice C3: supervision residue check + kernel `make test` green
+- [x] Slice C3: supervision residue check + kernel `make test` green
       (separate session)
       Verification: no supervision residue; kernel `make test` green.
+      Executed 2026-09-29: the fixed-pass residue sweep is clean - the
+      only slice-c2 rows in agent-handoffs.md are the intended evidence
+      pair (:1690 witness row, :1693 respawn-refused), the rotation
+      marker 20260929T163436Z appears exactly once (inside the :1690
+      row), dashboard/agent-supervision-state.json, state/
+      beat-blockers.tsv, and kernel scripts carry zero fixture-marker
+      hits, and the real store has no slice-c-shaped subdir beyond the
+      2026-09-27 positive controls and no rotated marker; nothing was
+      cleaned or rewritten. Kernel `make test` green rc=0 with 2954
+      checks passed and the asdf load-system leg clean (second pass
+      authoritative; the first pass's output was lost to a capture
+      slip and left no failure signal, so the gate was re-verified once
+      rather than assumed). Evidence row appended to
+      automation/agent-handoffs.md (overnight-lead | governed-fleet|
+      slice-c3, the C1/C2 pattern); no spawned session, no respawn, no
+      kernel surface touched.
 - [ ] Slice D: governed package upgrade through the certificate loop
       (evidence: certificate + commit in git log)
       Verification: the certificate + commit appear in git log; kernel
