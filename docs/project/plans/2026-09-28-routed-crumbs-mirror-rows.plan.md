@@ -11,3 +11,7 @@ at 2026-09-28T14:00:42Z. Alert text: crumbs mirror mismatch: crumbs rows=213547 
 
 - [ ] Delve: open research subject fail-20260928-crumbs-mirror-rows for crumbs-mirror:rows; record disposition; then fix or park
       Verification: research subject fail-20260928-crumbs-mirror-rows present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-29T17:00:41Z re-occurred (dedup window expired)

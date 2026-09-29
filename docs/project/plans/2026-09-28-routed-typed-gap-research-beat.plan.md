@@ -11,3 +11,7 @@ at 2026-09-28T10:00:41Z. Alert text: research verdict parked untyped for arc-202
 
 - [ ] Delve: open research subject fail-20260928-typed-gap-research-beat for typed-gap:research-beat; record disposition; then fix or park
       Verification: research subject fail-20260928-typed-gap-research-beat present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-29T17:00:41Z re-occurred (dedup window expired)
