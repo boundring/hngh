@@ -9,6 +9,12 @@
 # Keyring law, hngh docs/design/keyring.md: credentials live in the
 # keyring harness and its store, never in records or packs).
 #
+# Artifact-class boundary: a pack is SESSION ORIENTATION (role/slug/
+# repo state, <= CONTEXT_PACK_BYTES). The dashboard's id-keyed article
+# dispatch bundles (headline/deck/guidance, written by the
+# /article/omp-session endpoint) are a different artifact class and
+# are never routed through context_pack.
+#
 # Source AFTER lib/common.sh (needs marked_cut). Env seams for tests:
 # ROOT/AUTOMATION_ROOT (pack root), HNGH_HOME (kernel repo),
 # CONTEXT_PACK_BYTES (hard cap, default 1500).
