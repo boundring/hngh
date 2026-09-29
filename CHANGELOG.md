@@ -4,6 +4,18 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-29
+
+- **Operator note guidance on decision cards**: broadsheet operator
+  decision cards now carry a guidance payload — a verb/note/effect
+  cause-and-effect table mirroring the card's own choices (Park requires
+  a note, Acknowledge optional), per-class example notes with the effect
+  each filing causes, note rules (<=200 chars, pipes stripped, recorded
+  in the report-queue row and ledger), and verified doc links. The
+  broadsheet renders it on expand (jailed `/hngh-docs/` anchors for
+  `docs/` paths) and fails open without it
+  (docs/records/2026-09-29-operator-guidance-tables.md).
+
 ### 2026-09-27
 
 - **Newspaper rebalance — hngh-voice majority + system-resources

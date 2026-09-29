@@ -265,6 +265,127 @@ OP_NARRATIVE_WHY = {
 }
 OP_URGENCY_RE = re.compile(r"alert|escalat|regression|\brout", re.I)
 
+#
+# Operator guidance payload: tells the operator what the card is doing
+# on the desk and what filing a note with each verb durably does.
+# Effects mirror the dashboard-server operator-item endpoints; example
+# notes are concrete and pipe-free (the server strips '|').
+OP_NOTE_RULES = ("note <=200 chars; '|' stripped; recorded in the "
+                 "report-queue row text and the durable ledger row")
+OP_VERB_EFFECT = {
+    "park": "Files your guidance note with a dismissed-side ledger "
+            "row (operator-item:<id>:parked); the note rides the row "
+            "text and the handoff why.",
+    "acknowledge": "Records the item acknowledged (note optional) on "
+                   "the approved side, so it survives feed rebuilds "
+                   "(operator-item:<id>:acknowledged).",
+    "handle": "Marks the item handled in operator-approved.json; no "
+              "note.",
+    "dismiss": "Moves the item to operator-dismissed.json; it returns "
+               "in the next edition if it re-fires.",
+    "expire": "Archives the item as stale; it returns only if it "
+              "re-fires.",
+    "suppress": "Suppresses this identity so repeated copies stay "
+                "collapsed.",
+}
+OP_GUIDANCE_DOCS = {
+    "real-regression": [
+        {"label": "Autonomous development control",
+         "path": "docs/design/autonomous-development-control.md"},
+        {"label": "Wake mutation lane landing",
+         "path": "docs/records/2026-09-13-wake-mutation-lane-landing.md"},
+    ],
+    "operator-decision": [
+        {"label": "Autonomous development control",
+         "path": "docs/design/autonomous-development-control.md"},
+        {"label": "Plans README",
+         "path": "docs/project/plans/README.md"},
+    ],
+    "transient-heartbeat": [
+        {"label": "Ceremony loop mechanics",
+         "path": "automation/dashboard/kb/hngh-ceremony-loop-mechanics.md"},
+    ],
+    "stale-superseded": [
+        {"label": "Plans README",
+         "path": "docs/project/plans/README.md"},
+        {"label": "Backlog disposition sweep",
+         "path": "automation/dashboard/kb/backlog-disposition-sweep-"
+                 "reduces-accepted-plans-by-half.md"},
+    ],
+    "automation-debt": [
+        {"label": "Backlog disposition sweep",
+         "path": "automation/dashboard/kb/backlog-disposition-sweep-"
+                 "reduces-accepted-plans-by-half.md"},
+        {"label": "Autonomous development control",
+         "path": "docs/design/autonomous-development-control.md"},
+    ],
+}
+OP_GUIDANCE_EXAMPLES = {
+    ("real-regression", "park"): [
+        ("regression since 3c28f6b feed build; bisect before closing",
+         "Parks the card; the note becomes the row's guidance, so the "
+         "bisect rationale survives with the identity."),
+    ],
+    ("real-regression", "acknowledge"): [
+        ("seen; tracked in the regression lane, no action this edition",
+         "Acknowledges with the note on the approved side; the item "
+         "stays acknowledged across feed rebuilds."),
+    ],
+    ("operator-decision", "park"): [
+        ("keep unsloth context cap at 8k until the canary lands; "
+         "revisit after the next ceremony",
+         "Parks the decision with your rationale as its guidance; the "
+         "dismissed-side row keeps the decision auditable."),
+    ],
+    ("operator-decision", "acknowledge"): [
+        ("decision deferred to the next operator session",
+         "Acknowledges with the note; the approved-side row survives "
+         "feed rebuilds."),
+    ],
+    ("transient-heartbeat", "acknowledge"): [
+        ("transient flap, cleared on its own; reopen if it re-fires "
+         "within 24h",
+         "Acknowledges with the note; if the pulse re-fires it comes "
+         "back as a fresh open item."),
+    ],
+    ("stale-superseded", "park"): [
+        ("superseded by the newer plan revision; expire this copy",
+         "Parks the stale copy with the supersession note as its "
+         "guidance; the dismissed-side row records why it was set "
+         "aside."),
+    ],
+    ("automation-debt", "park"): [
+        ("filed as backlog debt; revisit at the next disposition sweep",
+         "Parks the card; the note files the debt with the dismissed-"
+         "side row, so the sweep can find the rationale later."),
+    ],
+    ("automation-debt", "acknowledge"): [
+        ("noted; leave open for the disposition sweep",
+         "Acknowledges with the note; the approved-side row survives "
+         "feed rebuilds."),
+    ],
+}
+
+
+def _op_guidance(cls, choices):
+    verbs = []
+    for ch in choices:
+        verb = ch["action"]["endpoint"].rsplit("/", 1)[-1]
+        verbs.append({
+            "verb": verb,
+            "label": ch["label"],
+            "note": {"park": "required",
+                     "acknowledge": "optional"}.get(verb),
+            "effect": OP_VERB_EFFECT[verb],
+            "examples": [{"note": note, "effect": effect}
+                         for note, effect in
+                         OP_GUIDANCE_EXAMPLES.get((cls, verb), ())],
+        })
+    return {"why": OP_NARRATIVE_WHY[cls],
+            "note_rules": OP_NOTE_RULES,
+            "verbs": verbs,
+            "docs": OP_GUIDANCE_DOCS[cls]}
+
 
 def _op_dedupe_key(text):
     """Identity = the first line's PREFIX: the "job | kind" head before
@@ -345,6 +466,7 @@ def operator_articles(op, queues):
                 {"label": label, "outcome": outcome,
                  "action": {"endpoint": "/operator-item/" + verb,
                             "payload": {"id": oid}}})
+        art["guidance"] = _op_guidance(cls, art["choices"])
         art["occurrences"] = len(members)
         if len(members) > 1 or OP_URGENCY_RE.search(text):
             art["narrative"] = _op_narrative(text, cls, len(members))

@@ -334,6 +334,80 @@ class GhostDesk(unittest.TestCase):
         self.assertIn(".mast-ghost:empty", css)
 
 
+class OperatorGuidance(unittest.TestCase):
+    """Guidance blocks render from the feed payload only, fail open."""
+
+    G = {
+        "why": "the operator is the only seam owner",
+        "note_rules": "note <=200 chars; '|' stripped",
+        "verbs": [
+            {"verb": "park", "label": "Park", "note": "required",
+             "effect": "row parked; note recorded in the ledger",
+             "examples": [{"note": "waiting on unsloth slot",
+                           "effect": "parked row carries the note"}]},
+            {"verb": "acknowledge", "label": "Acknowledge",
+             "note": "optional", "effect": "approved-side ledger row",
+             "examples": []},
+            {"verb": "dismiss", "label": "Dismiss", "note": None,
+             "effect": "dismissed-side ledger row", "examples": []},
+        ],
+        "docs": [
+            {"label": "kernel doc", "path": "docs/research/foo.md"},
+            {"label": "readme", "path": "automation/README.md"},
+        ],
+    }
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def run_guidance(self, *calls):
+        esc = re.search(r"function esc\(s\) \{[\s\S]*?\n  \}", self.js)
+        g = re.search(r"function guidanceHTML\(g\) \{[\s\S]*?\n  \}", self.js)
+        self.assertTrue(esc and g, "esc/guidanceHTML missing")
+        script = ("var G = " + json.dumps(self.G) + ";\n" +
+                  esc.group(0) + "\n" + g.group(0) +
+                  ";console.log(JSON.stringify([" + calls[0] + "]))")
+        return json.loads(subprocess.run(
+            ["node", "-e", script],
+            capture_output=True, text=True, check=True).stdout)[0]
+
+    def test_wiring_and_style(self):
+        self.assertIn("guidanceHTML(a.guidance)", self.js)
+        css = read("broadsheet.css")
+        self.assertIn(".oguide", css)
+        self.assertIn(".art.expanded .oguide", css)
+
+    def test_note_semantics_pin(self):
+        # guidance display must mirror the endpoints' note contract
+        self.assertIn("'/operator-item/park': 'required'", self.js)
+        self.assertIn("'/operator-item/acknowledge': 'optional'", self.js)
+
+    def test_renders_when_present(self):
+        out = self.run_guidance("guidanceHTML(G)")
+        self.assertIn("oguide", out)
+        self.assertIn("the operator is the only seam owner", out)
+        self.assertIn("note &lt;=200 chars", out)
+        # one row per verb: label / note requirement / durable effect
+        self.assertIn("<td>Park</td><td class=\"og-need\">required</td>", out)
+        self.assertIn("<td>Acknowledge</td>"
+                      "<td class=\"og-need\">optional</td>", out)
+        self.assertIn("<td>Dismiss</td><td class=\"og-need\">-</td>", out)
+        self.assertIn("row parked; note recorded in the ledger", out)
+        self.assertIn("dismissed-side ledger row", out)
+        # example notes: note text + what filing it causes
+        self.assertIn("&quot;waiting on unsloth slot&quot;", out)
+        self.assertIn("parked row carries the note", out)
+        # docs: docs/ path earns the jailed href, others plain text
+        self.assertIn('<a href="/hngh-docs/docs/docs%2Fresearch%2Ffoo.md">', out)
+        self.assertIn("readme: automation/README.md", out)
+        self.assertNotIn("automation/README.md</a>", out)
+
+    def test_fail_open_when_absent(self):
+        # absent/empty guidance renders exactly nothing (byte no-op)
+        self.assertEqual(self.run_guidance("guidanceHTML(undefined)"), "")
+        self.assertEqual(self.run_guidance("guidanceHTML({})"), "")
+
+
 class RefreshStaleness(unittest.TestCase):
     """The refresh button must re-fetch for real and show it (review)."""
 

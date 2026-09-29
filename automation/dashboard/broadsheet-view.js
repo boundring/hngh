@@ -484,6 +484,7 @@
     });
     if (a.span === 3) art.classList.add('expanded');
     art.insertAdjacentHTML('beforeend', ghostHTML(a.ghost));
+    art.insertAdjacentHTML('beforeend', guidanceHTML(a.guidance));
     if (Array.isArray(a.sources) && a.sources.length) {
       var src = a.sources.map(function (s) { return s && s.label; })
         .filter(Boolean).join(' · ');
@@ -505,6 +506,50 @@
     if (!g || !g.voice || !g.text) return '';
     return '<div class="ghostdesk"><p>' + esc(g.text) + '</p>' +
       '<div class="ghost-sig">— ' + esc(g.voice) + ', ghost desk</div></div>';
+  }
+
+  // Operator guidance: the composer may attach a cause-and-effect
+  // card for a decision item (why this class of item sits on the
+  // operator's desk, what each verb durably does, example notes,
+  // doc paths). Honesty: every word comes from the feed payload; the
+  // view adds structure only. Fail open: absent guidance renders
+  // nothing. Note requirement mirrors NOTE_ENDPOINTS semantics
+  // (park required, acknowledge optional, others no note).
+  function guidanceHTML(g) {
+    if (!g || !Array.isArray(g.verbs) || !g.verbs.length) return '';
+    var rows = g.verbs.map(function (v) {
+      var need = v && v.note === 'required' ? 'required' :
+        v && v.note === 'optional' ? 'optional' : '-';
+      var html = '<tr><td>' + esc((v && v.label) || (v && v.verb) || '?') +
+        '</td><td class="og-need">' + need + '</td><td>' +
+        esc((v && v.effect) || '') + '</td></tr>';
+      ((v && v.examples) || []).forEach(function (e) {
+        html += '<tr class="og-exrow"><td></td>' +
+          '<td colspan="2">&quot;' + esc((e && e.note) || '') +
+          '&quot; -> ' + esc((e && e.effect) || '') + '</td></tr>';
+      });
+      return html;
+    }).join('');
+    var docs = (Array.isArray(g.docs) ? g.docs : []).map(function (d) {
+      var p = d && d.path;
+      // jailed evidence link (routes-view refHtml parity): only a
+      // repo-relative docs/ path earns an href through the served
+      // /hngh-docs/docs/ route; anything else stays plain cited text.
+      if (typeof p === 'string' && p.indexOf('docs/') === 0) {
+        return '<li><a href="/hngh-docs/docs/' + encodeURIComponent(p) +
+          '">' + esc((d && d.label) || p) + '</a></li>';
+      }
+      return '<li>' + esc(((d && d.label) ? d.label + ': ' : '') +
+        (p || '')) + '</li>';
+    }).join('');
+    return '<div class="oguide">' +
+      (g.why ? '<div class="og-why">' + esc(g.why) + '</div>' : '') +
+      '<table class="og-table"><thead><tr><th>verb</th><th>note</th>' +
+      '<th>durable effect</th></tr></thead><tbody>' + rows +
+      '</tbody></table>' +
+      (g.note_rules ? '<div class="og-rules">' + esc(g.note_rules) +
+        '</div>' : '') +
+      (docs ? '<ul class="og-docs">' + docs + '</ul>' : '') + '</div>';
   }
 
   // The empty-idea flood family: every "[feedback:idea] from email"

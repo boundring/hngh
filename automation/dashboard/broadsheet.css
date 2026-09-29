@@ -243,3 +243,20 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
   text-align: left; hyphens: none; margin: 0 0 4px; }
 .ghostdesk .ghost-sig { font-size: 12px; letter-spacing: 0.05em;
   color: var(--ink-soft); font-style: normal; }
+
+/* Operator guidance: cause-and-effect card inside expanded articles */
+.oguide { display: none; margin: 10px 0 8px; padding: 4px 0 4px 14px;
+  border-left: 2px solid var(--rule); font-size: 12px; }
+.art.expanded .oguide { display: block; }
+.oguide .og-why { font-style: italic; color: var(--ink-soft);
+  margin: 0 0 4px; }
+.oguide table { border-collapse: collapse; width: 100%; }
+.oguide th { text-align: left; font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-soft);
+  padding: 2px 8px 2px 0; }
+.oguide td { vertical-align: top; padding: 2px 8px 2px 0; }
+.oguide .og-need { white-space: nowrap; }
+.oguide .og-exrow td { color: var(--ink-soft); }
+.oguide .og-rules { color: var(--ink-soft); margin-top: 4px;
+  font-size: 11px; }
+.oguide .og-docs { margin: 4px 0 0; padding-left: 16px; }

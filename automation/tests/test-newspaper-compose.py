@@ -30,7 +30,8 @@ SCHEMA_EDITION = {"date", "number", "slot", "weather", "system"}
 SCHEMA_ART = {"id", "category", "headline", "deck", "body", "span",
               "score", "ts", "sources", "choices"}
 SCHEMA_ART_GHOST = SCHEMA_ART | {"ghost"}
-SCHEMA_ART_OP = {"narrative", "occurrences"}  # optional operator fields
+SCHEMA_ART_OP = {"narrative", "occurrences",
+                 "guidance"}  # optional operator fields
 ENDPOINTS = {"/operator-item/handle", "/operator-item/dismiss",
              "/operator-item/park", "/operator-item/expire",
              "/operator-item/suppress", "/operator-item/acknowledge"}
@@ -582,6 +583,72 @@ class ChoiceClasses(Base):
                   " upgrade")])
         self.assertEqual(verbs["r1"][:2],
                          ["/operator-item/acknowledge", "/operator-item/park"])
+
+
+class Guidance(Base):
+    """Every operator decision card carries guidance per the shared
+    contract: why/note_rules/verbs/docs, verbs mirroring the card's
+    own choices 1:1, example notes <=200 chars and pipe-free, and
+    docs paths that exist in the repo right now."""
+    NOTE_VERBS = ("park", "acknowledge")
+
+    def _op_cards(self, out):
+        with open(out) as fh:
+            doc = json.load(fh)
+        return [a for a in doc["articles"] if a["category"] == "operator"]
+
+    @staticmethod
+    def _verb(choice):
+        return choice["action"]["endpoint"].rsplit("/", 1)[-1]
+
+    def test_operator_cards_carry_guidance(self):
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cards = self._op_cards(out)
+        self.assertTrue(cards)
+        for card in cards:
+            g = card.get("guidance")
+            self.assertIsInstance(g, dict)
+            self.assertTrue(g.get("why"))
+            self.assertIn("200", g.get("note_rules", ""))
+            docs = g.get("docs")
+            self.assertTrue(docs)
+            for d in docs:
+                self.assertTrue(d.get("label"))
+                path = d["path"]
+                self.assertTrue(os.path.exists(
+                    os.path.join(AUTO, os.pardir, path)), path)
+            verbs = g.get("verbs")
+            self.assertEqual(len(verbs), len(card["choices"]))
+            for entry, choice in zip(verbs, card["choices"]):
+                self.assertEqual(entry["verb"], self._verb(choice))
+                self.assertEqual(entry["label"], choice["label"])
+                if entry["verb"] in self.NOTE_VERBS:
+                    self.assertIn(entry["note"], ("required", "optional"))
+                    self.assertTrue(entry["examples"])
+                else:
+                    self.assertIsNone(entry["note"])
+                for ex in entry.get("examples", ()):
+                    self.assertLessEqual(len(ex["note"]), 200)
+                    self.assertNotIn("|", ex["note"])
+                    self.assertTrue(ex["effect"])
+
+    def test_guidance_present_without_note_verb(self):
+        # transient-heartbeat items carry expire/suppress/handle/dismiss
+        # only -- guidance must still render (fail-open contract).
+        self._write("operator-items.json", {"generated_at": z(NOW), "items": [
+            {"id": "pulse01", "text": "watchdog | heartbeat | pulse "
+             "flapping on lane 3", "status": "open",
+             "first_seen": z(NOW), "last_seen": z(NOW)}]})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cards = self._op_cards(out)
+        self.assertEqual(len(cards), 1)
+        g = cards[0].get("guidance")
+        self.assertIsInstance(g, dict)
+        self.assertEqual(
+            [v["verb"] for v in g["verbs"]],
+            [self._verb(c) for c in cards[0]["choices"]])
 
 
 class DupeCollapse(Base):
