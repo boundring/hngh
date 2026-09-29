@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z -->
+<!-- plan: status=proposed risk=normal accepted=- -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-09-28 - dev-fail-20260922-Does-the-research-lines-ts (synthesized from adopted research)
 
@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper script that validates job output schemas before ingestion
-  Verification: bash -n cadence/schema-validator.sh
+- [ ] Add a cadence scheduler script that tracks job completion timestamps
+  Verification: bash -n scripts/cadence-tracker.sh
 
-- [ ] Create a test fixture that generates sample job outputs for schema validation
-  Verification: python3 tests/test_schema_fixtures.py
-
-- [ ] Update the digest pipeline to call the schema validator before processing
+- [ ] Create a test that validates cadence tracking output format
   Verification: make test
 
-- [ ] Add a dashboard view showing schema validation success rates over time
-  Verification: bash -n dashboard/schema-metrics.sh
+- [ ] Add a dashboard digest job that summarizes cadence metrics
+  Verification: bash -n jobs/digest-cadence-summary.sh
 
-- [ ] Write integration test that exercises the full validation pipeline end-to-end
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n scripts/cadence-tracker.sh && bash -n jobs/digest-cadence-summary.sh
+
+- [ ] Run full test suite to confirm no regressions
   Verification: make test
-
-- [ ] Document the schema validation flow in the jobs README
-  Verification: grep -q "schema validation" jobs/README.md
