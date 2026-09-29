@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence script that validates job definitions against a schema before execution
-  Verification: bash scripts/cadence/validate-job.sh
+- [ ] Add a new cadence job that validates automation output consistency
+  Verification: bash -n cadence/validate-outputs.sh
 
-- [ ] Create a test fixture that generates a sample job definition for validation testing
-  Verification: python3 tests/test_validate_job.py
+- [ ] Create a helper script to parse automation commit logs
+  Verification: python3 scripts/parse-commit-logs.py
 
-- [ ] Update the cadence runner to invoke the validation script before job dispatch
-  Verification: bash -n cadence/runner.sh
+- [ ] Add a test case for cadence job scheduling
+  Verification: make test
 
-- [ ] Add a dashboard endpoint that lists validated jobs with their last run status
-  Verification: python3 dashboard/list_jobs.py
+- [ ] Update dashboard to display cadence job status
+  Verification: bash -n dashboard/cadence-status.sh
 
-- [ ] Create a digest summary script that aggregates job validation results for reporting
-  Verification: bash scripts/digest/summarize.sh
+- [ ] Add a digest summary for automation run results
+  Verification: bash -n digest/automation-summary.sh
+
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n jobs/cadence/validate-outputs.sh && bash -n scripts/parse-commit-logs.py && bash -n dashboard/cadence-status.sh && bash -n digest/automation-summary.sh
