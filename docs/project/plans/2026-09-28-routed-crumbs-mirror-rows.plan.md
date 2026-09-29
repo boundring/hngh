@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=crumbs-mirror:rows -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z routed-from=crumbs-mirror:rows -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-05T14:00:42Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

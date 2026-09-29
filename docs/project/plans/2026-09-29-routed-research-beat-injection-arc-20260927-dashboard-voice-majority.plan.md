@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:injection:arc-20260927-dashboard-voice-majority -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z routed-from=research-beat:injection:arc-20260927-dashboard-voice-majority -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-06T00:00:54Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:sessions.json -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=dash-selfreview:feed-fresh:sessions.json -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-05T08:00:43Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -11,3 +11,7 @@ at 2026-09-28T08:00:43Z. Alert text: [dash-selfreview] feed-fresh:sessions.json:
 
 - [ ] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+## Occurrences
+
+- 2026-09-29T08:00:53Z re-occurred (dedup window expired)

@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper script that validates job manifest syntax before execution
-  Verification: bash -n cadence/validate-manifest.sh
+- [ ] Add a new cadence job template for hourly digest generation
+  Verification: bash -n cadence/hourly-digest.sh
 
-- [ ] Create a test that exercises the manifest validator against a sample job definition
+- [ ] Create a verification script that confirms the new cadence job exists
+  Verification: grep -q 'hourly-digest' cadence/hourly-digest.sh
+
+- [ ] Add a test case for the new cadence job template
   Verification: make test
 
-- [ ] Add a dashboard digest entry that reports validator pass/fail status
-  Verification: bash -n dashboard/digest-validator-report.sh
+- [ ] Update the dashboard manifest to include the new job
+  Verification: grep -q 'hourly-digest' dashboard/manifest.json
 
-- [ ] Update the main automation entrypoint to invoke the validator before job dispatch
+- [ ] Run the full test suite to confirm no regressions
   Verification: make test
-
-- [ ] Add a lib utility that extracts job metadata for downstream digest consumption
-  Verification: python3 lib/extract-job-metadata.py

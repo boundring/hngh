@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=supervision:overnight-lead:same-cause:bad-execution -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z routed-from=supervision:overnight-lead:same-cause:bad-execution -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-06T00:00:54Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

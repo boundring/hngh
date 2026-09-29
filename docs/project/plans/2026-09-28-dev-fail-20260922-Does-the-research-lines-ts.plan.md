@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-09-28 - dev-fail-20260922-Does-the-research-lines-ts (synthesized from adopted research)
 

@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:25-newspaper-compose.sh -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=slow-unit:dropin:25-newspaper-compose.sh -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-05T14:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -11,3 +11,7 @@ at 2026-09-28T14:00:41Z. Alert text: [oversight] slow-unit: dropin:25-newspaper-
 
 - [ ] Delve: open research subject fail-20260928-slow-unit-dropin-25-newspaper-compose.sh for slow-unit:dropin:25-newspaper-compose.sh; record disposition; then fix or park
       Verification: research subject fail-20260928-slow-unit-dropin-25-newspaper-compose.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-29T14:00:53Z re-occurred (dedup window expired)

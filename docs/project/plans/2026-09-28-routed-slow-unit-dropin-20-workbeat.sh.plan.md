@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:20-workbeat.sh -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=slow-unit:dropin:20-workbeat.sh -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-05T09:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

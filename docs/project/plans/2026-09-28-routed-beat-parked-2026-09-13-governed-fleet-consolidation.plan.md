@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=beat-parked:2026-09-13-governed-fleet-consolidation -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-29T14:05:41Z routed-from=beat-parked:2026-09-13-governed-fleet-consolidation -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-05T23:00:53Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
