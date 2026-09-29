@@ -6,6 +6,16 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-29
 
+- **Parked-items automated care**: a daily cadence beat
+  (`automation/jobs/parked-care.py` +
+  `cadence/calendar/daily/12-parked-care.sh`) groups parked
+  report-queue rows into kin groups — rows sharing a rare word token
+  (corpus df 2..8; park*, template boilerplate, function words, and
+  digit-bearing pointers excluded; no transitive closure) — and files
+  one `needs` breadcrumb per group (top 8, deduped against the crumbs
+  journal) so the disposition sweep sees combined debt instead of
+  scattered singles (docs/records/2026-09-29-parked-care.md).
+
 - **Living-newspaper wave \u2014 motion, desks, one-click Fire**:
   decision cards gain a Fire action pre-filled from guidance
   examples (never a blank Park), narrative desk placement, a single
