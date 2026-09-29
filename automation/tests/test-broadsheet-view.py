@@ -568,10 +568,14 @@ class ComposerWidgets(unittest.TestCase):
 
     def test_narrative_wiring_and_style(self):
         self.assertIn("narrativeHTML(a.narrative)", self.js)
-        # old string narrative keeps its deck placement (back-compat)
-        self.assertIn("typeof a.narrative === 'string'", self.js)
         self.assertIn(".art-narrative", self.css)
         self.assertIn(".art.expanded .art-narrative", self.css)
+
+    def test_srcline_supporting_info_expanded_only(self):
+        # supporting info stays out of the collapsed card: the source
+        # line reveals with the expanded context (ink-reveal parity)
+        self.assertIn(".art .srcline { display: none;", self.css)
+        self.assertIn(".art.expanded .srcline", self.css)
 
     # ---- embed ----
     def test_embed_btop_poll_start_stop(self):

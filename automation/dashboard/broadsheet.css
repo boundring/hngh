@@ -155,8 +155,9 @@ body.paper-fallback {
 .art p.rest { display: none; }
 .art.expanded, .art.span3 { column-span: all; }
 .art.expanded p.rest { display: block; }
-.art .srcline { font-size: 11.5px; color: var(--ink-soft);
-  font-style: italic; margin-top: 2px; }
+.art .srcline { display: none; font-size: 11.5px;
+  color: var(--ink-soft); font-style: italic; margin-top: 2px; }
+.art.expanded .srcline { display: block; }
 
 /* Operator decisions: moss-green buttons, outcome visible BEFORE click */
 .choices { margin-top: 8px; }
@@ -291,6 +292,7 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
 }
 .art.expanded p.rest, .art.expanded .ghostdesk,
 .art.expanded .oguide, .art.expanded .art-narrative,
+.art.expanded .srcline,
 .art.expanded .btop-embed { animation: ink-reveal 300ms ease-out; }
 
 /* narrative aside: a line of editorial chalk pinned to the guidance */
@@ -373,7 +375,7 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
 /* the kill switch: an operator who asked for stillness gets stillness */
 @media (prefers-reduced-motion: reduce) {
   .art { animation: none; transition: none; }
-  .art.expanded p.rest, .art.expanded .ghostdesk, .art.expanded .oguide, .art.expanded .art-narrative, .art.expanded .btop-embed { animation: none; transition: none; }
+  .art.expanded p.rest, .art.expanded .ghostdesk, .art.expanded .oguide, .art.expanded .art-narrative, .art.expanded .srcline, .art.expanded .btop-embed { animation: none; transition: none; }
   .mega-fold { animation: none; }
   #megastructure .mega-tilt { transition: none; }
   #megastructure.tilt .mega-tilt { transform: none; }

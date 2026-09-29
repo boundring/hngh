@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-29
 
+- **Card presentation simplification**: collapsed cards drop the
+  dead legacy string-narrative path (the composer emits object
+  narratives only) and supporting info — the source line — now
+  reveals only in the expanded card, joining the rest/ghost/guidance/
+  embed contract (docs/records/
+  2026-09-29-card-presentation-simplification.md).
+
 - **Parked-items automated care**: a daily cadence beat
   (`automation/jobs/parked-care.py` +
   `cadence/calendar/daily/12-parked-care.sh`) groups parked

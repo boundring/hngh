@@ -471,11 +471,6 @@
       d.className = 'deck'; d.textContent = a.deck;
       art.appendChild(d);
     }
-    if (a.narrative && typeof a.narrative === 'string') {
-      var nv = document.createElement('p');
-      nv.className = 'deck narrative'; nv.textContent = a.narrative;
-      art.appendChild(nv);
-    }
     var body = Array.isArray(a.body) ? a.body : [];
     if (body.length) {
       var p0 = document.createElement('p');
