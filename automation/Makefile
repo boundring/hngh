@@ -198,6 +198,7 @@ test:
 	bash tests/test-ttsr-fit.sh
 	bash tests/test-probe-hygiene.sh
 	python3 -B tests/test-omarchy-preflight.py
+	python3 -B tests/test-omarchy-plugin.py
 	bash tests/test-credential-health-argv.sh
 	bash tests/test-probe-token-mode.sh
 	bash tests/test-omarchy-aur-build.sh

@@ -6,6 +6,17 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-29
 
+- **hngh dashboard as an Omarchy shell plugin**: new
+  `automation/omarchy-plugin/boundring.hngh/` bar-widget plugin — a
+  live "hngh N" operator-queue button polling
+  `http://127.0.0.1:8890/newspaper.json` (fail-open `hngh ?` when the
+  dashboard is unreachable), a KeyboardPanel listing decision cards
+  with one-click handle and note-gated park posts, and a broadsheet
+  link; manifest contract validated by a 10-test structural suite
+  (schema, entry points, no symlinks, local-URL-only and endpoint
+  allowlist pins) registered in the gate
+  (docs/records/2026-09-29-omarchy-plugin.md).
+
 - **Card presentation simplification**: collapsed cards drop the
   dead legacy string-narrative path (the composer emits object
   narratives only) and supporting info — the source line — now

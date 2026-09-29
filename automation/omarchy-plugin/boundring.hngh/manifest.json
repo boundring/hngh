@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "boundring.hngh",
+  "name": "hngh Dashboard",
+  "version": "0.1.0",
+  "author": "boundring",
+  "license": "MIT",
+  "description": "hngh automation desk in the Omarchy bar: operator queue count, decision items, one-click handle/park against the local dashboard on 127.0.0.1:8890.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "hngh",
+    "category": "hngh",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
