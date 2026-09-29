@@ -7,20 +7,22 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper that validates job dependency graphs before scheduling
-  Verification: bash -n cadence/validate_deps.sh
+- [ ] Add a `scripts/validate-hngh.sh` helper that checks repository structure integrity
+  Verification: bash scripts/validate-hngh.sh && echo "PASS"
 
-- [ ] Create a test script that asserts all jobs/ entries have required fields populated
-  Verification: python3 tests/check_job_fields.py
+- [ ] Add a `tests/test-hngh-structure.sh` that verifies required directories exist
+  Verification: bash tests/test-hngh-structure.sh && echo "PASS"
 
-- [ ] Add a dashboard script that lists jobs with missing verification steps
-  Verification: bash dashboard/missing_verifications.sh
+- [ ] Add a `cadence/cadence-check.sh` script that validates cadence file syntax
+  Verification: bash cadence/cadence-check.sh && echo "PASS"
 
-- [ ] Extend lib/ with a utility to parse and normalize job metadata from YAML
-  Verification: node --check lib/parse_job_yaml.js
+- [ ] Add a `lib/hngh-utils.sh` library with common utility functions
+  Verification: bash -n lib/hngh-utils.sh && echo "PASS"
 
-- [ ] Add a script that runs make test after each cadence validation change
-  Verification: make test
+- [ ] Add a `dashboard/dashboard-init.sh` that initializes dashboard state
+  Verification: bash dashboard/dashboard-init.sh && echo "PASS"
 
-- [ ] Create a digest entry template for tracking automation research progress
-  Verification: bash -n digest/progress_template.sh
+- [ ] Add a `digest/digest-format.sh` script that formats digest output
+  Verification: bash digest/digest-format.sh && echo "PASS"
+
+Steps must be small, concrete, and land as plain commits in hngh-automation (gated by its make test). Normal-risk ONLY. FORBIDDEN, critical class, never include: provider or credential configuration, systemd unit lifecycle, hngh kernel src/tests/Makefile/hngh.asd changes, non-prune deletions, secrets or security posture.
