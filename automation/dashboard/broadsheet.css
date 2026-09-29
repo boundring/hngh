@@ -271,3 +271,112 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
   opacity: 0; pointer-events: none; transition: opacity 0.4s;
 }
 #settle-receipt.on { opacity: 1; }
+
+/* ---- motion layer (2026-09-29): cards rise as newsprint scraps,
+   expanded matter inks in, settles rip the page, parked strips fly to
+   the shelf, and the folded-paper press hall idles bottom-left.
+   Everything here is killed by prefers-reduced-motion below. ---- */
+.art {
+  animation: art-rise 520ms cubic-bezier(.2, .7, .2, 1) backwards;
+  animation-delay: var(--rise-d, 0ms);
+}
+@keyframes art-rise {
+  from { opacity: 0; transform: translateY(26px) rotate(1.4deg) scale(.985); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ink-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.art.expanded p.rest, .art.expanded .ghostdesk,
+.art.expanded .oguide, .art.expanded .art-narrative,
+.art.expanded .btop-embed { animation: ink-reveal 300ms ease-out; }
+
+/* narrative aside: a line of editorial chalk pinned to the guidance */
+.art-narrative { display: none; font-style: italic; font-size: 12.5px;
+  line-height: 1.5; color: var(--ink-soft); padding: 3px 0; }
+.art.expanded .art-narrative { display: block; }
+
+/* btop embed: plain-text teletype block, polled while expanded */
+.btop-embed { display: none; margin: 6px 0; padding: 6px 8px;
+  max-height: 200px; overflow: auto; white-space: pre-wrap;
+  font-family: 'Courier New', monospace; font-size: 10.5px; line-height: 1.45;
+  color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); }
+.art.expanded .btop-embed { display: block; }
+
+/* omp session launcher: quiet outline against the moss decisions */
+.omp-btn { background: transparent; color: var(--ink-soft);
+  border: 1px dashed var(--rule); font-weight: 400; font-style: italic; }
+.omp-btn:hover { background: transparent; color: var(--ink);
+  border-color: var(--ink-soft); }
+.art.expanded .omp-btn { opacity: 0.9; }
+
+/* parked shelf: the right-edge rail of strips waiting on a slot */
+.parked-shelf { position: fixed; right: 0; top: 96px; bottom: 96px;
+  width: 158px; z-index: 40; pointer-events: none;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 6px 8px 10px; overflow: hidden;
+  border-left: 3px double var(--rule); }
+.parked-strip { font-size: 10px; line-height: 1.35;
+  font-family: 'Courier New', monospace; color: var(--ink-soft);
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 3px 6px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; transform: rotate(1deg); }
+.ps-ts { font-weight: 700; color: var(--ink); }
+.park-fly { position: fixed; z-index: 70; pointer-events: none;
+  box-shadow: 0 2px 8px rgba(38, 34, 28, .3);
+  transition: transform 480ms cubic-bezier(.3, .7, .3, 1),
+    opacity 480ms ease-in; }
+
+/* paper-rip burst: shards tear off a settled card */
+.rip { position: fixed; width: 34px; height: 22px; z-index: 60;
+  pointer-events: none; background: var(--paper);
+  border: 1px solid var(--rule);
+  clip-path: polygon(0 12%, 28% 0, 55% 18%, 82% 4%, 100% 30%,
+    88% 68%, 100% 92%, 60% 100%, 26% 88%, 0 100%);
+  animation: rip-fly 620ms ease-out forwards; }
+@keyframes rip-fly {
+  from { opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1); }
+  to { opacity: 0;
+    transform: translate(var(--ripx, 40px), var(--ripy, -80px))
+      rotate(var(--ripr, 50deg)) scale(.6); }
+}
+.rip0 { --ripx: -46px; --ripy: -84px; --ripr: -55deg; }
+.rip1 { --ripx: 30px; --ripy: -110px; --ripr: 40deg; }
+.rip2 { --ripx: 64px; --ripy: -60px; --ripr: 75deg; }
+
+/* folded-paper megastructure: the press hall that never sleeps */
+#megastructure { position: fixed; left: 16px; bottom: 12px;
+  width: 180px; height: 180px; z-index: 30; pointer-events: none;
+  perspective: 700px; }
+#megastructure .mega-tilt { width: 100%; height: 100%;
+  transition: transform 420ms ease; }
+#megastructure.tilt .mega-tilt { transform: rotateX(14deg) rotateY(-18deg); }
+.mega-fold { position: relative; width: 110px; height: 110px;
+  margin: 35px auto; transform-style: preserve-3d;
+  animation: mega-sway 7s ease-in-out infinite; }
+@keyframes mega-sway {
+  0%, 100% { transform: rotateX(24deg) rotateZ(-8deg); }
+  50% { transform: rotateX(24deg) rotateZ(9deg); }
+}
+.mf { position: absolute; inset: 0; background: var(--paper);
+  border: 1px solid var(--rule); opacity: .92; }
+.mf1 { transform: translateZ(0); }
+.mf2 { transform: rotateX(58deg); transform-origin: top; }
+.mf3 { transform: rotateX(-58deg); transform-origin: bottom; }
+.mf4 { transform: rotateY(58deg); transform-origin: left; }
+.mf5 { transform: rotateY(-58deg); transform-origin: right; }
+
+/* the kill switch: an operator who asked for stillness gets stillness */
+@media (prefers-reduced-motion: reduce) {
+  .art { animation: none; transition: none; }
+  .art.expanded p.rest, .art.expanded .ghostdesk, .art.expanded .oguide, .art.expanded .art-narrative, .art.expanded .btop-embed { animation: none; transition: none; }
+  .mega-fold { animation: none; }
+  #megastructure .mega-tilt { transition: none; }
+  #megastructure.tilt .mega-tilt { transform: none; }
+  .rip { display: none; }
+  .park-fly { transition: none; }
+}

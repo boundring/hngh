@@ -7,8 +7,10 @@ Fixture db + fixture dashboard feeds in a temp sandbox (no network, no
 span rules with the one-span-3 cap, editions grouping (7 dates, 40 cap),
 fail-open on missing inputs, and the committed sample fixture. The
 rebalance cases pin the hngh-internal majority: wire capped per category
-and <=40% of the page, sessions/opportunities capped, the system desk
-(load/memory/disks) and the crumbs activity digest above the fold.
+and <=40% of the page, sessions/opportunities capped, the consolidated
+system desk (one embedded article) and the crumbs activity digest above
+the fold. The 2026-09-29 card contract: fire (default-verb example),
+narrative {"place", "line"}, and the parked-desk digest.
 """
 import datetime
 import json
@@ -30,8 +32,8 @@ SCHEMA_EDITION = {"date", "number", "slot", "weather", "system"}
 SCHEMA_ART = {"id", "category", "headline", "deck", "body", "span",
               "score", "ts", "sources", "choices"}
 SCHEMA_ART_GHOST = SCHEMA_ART | {"ghost"}
-SCHEMA_ART_OP = {"narrative", "occurrences",
-                 "guidance"}  # optional operator fields
+SCHEMA_ART_OP = {"narrative", "occurrences", "guidance", "fire",
+                 "embed", "parked"}  # optional desk fields
 ENDPOINTS = {"/operator-item/handle", "/operator-item/dismiss",
              "/operator-item/park", "/operator-item/expire",
              "/operator-item/suppress", "/operator-item/acknowledge"}
@@ -193,7 +195,7 @@ class Base(unittest.TestCase):
                    HNGH_GHOST_STUB=self.ghost_stub,
                    HNGH_REPORT_IDENTITIES=os.path.join(
                        self.sb, "report-identities.json"),
-                   HNGH_REPORT_ROOT=self.sb)
+                   HNGH_REPORT_ROOT=getattr(self, "report_root", self.sb))
         if getattr(self, "no_ghost_bridge", False):
             env.pop("HNGH_GHOST_STUB", None)
             env["HNGH_XIAOMI_CMD"] = "exit 7"
@@ -279,7 +281,7 @@ class OperatorAndQueues(Base):
         self.assertEqual(q["linux"], 1)
         self.assertEqual(q.get("technology", 0), 0)  # old items uncounted
         self.assertEqual(q["operator"], 1)
-        self.assertEqual(q["system"], 6)  # 2 sessions + desk(3) + digest
+        self.assertEqual(q["system"], 4)  # 2 sessions + desk(1) + digest
         self.assertEqual(q["opportunities"], 1)
 
 
@@ -328,7 +330,7 @@ class FailOpen(Base):
         # the stale snapshot triggers a real system-ingest refresh; the
         # desk still lands on this host (load + memory always exist)
         desk = [a for a in doc["articles"] if a["category"] == "system"
-                and a["headline"].startswith("Load:")]
+                and a["headline"].startswith("System desk:")]
         self.assertTrue(desk)
 
 
@@ -393,22 +395,24 @@ class Rebalance(Base):
         with open(out) as fh:
             doc = json.load(fh)
         arts = doc["articles"]
-        self.assertEqual([a["category"] for a in arts[:5]],
-                         ["operator", "system", "system", "system",
-                          "system"])
-        by_head = {a["headline"]: a for a in arts if a["id"]}
-        load = next(a for h, a in by_head.items()
-                    if h.startswith("Load: "))
-        self.assertEqual(load["headline"],
-                         "Load: 1.23 / 0.45 / 0.67 on 32 threads")
-        self.assertIn("fleet: 1/2 fleet nodes online", load["body"])
-        mem = next(a for h, a in by_head.items()
-                   if h.startswith("Memory: "))
-        self.assertEqual(mem["headline"], "Memory: 31.2/62 GB used (50%)")
-        disks = next(a for h, a in by_head.items()
-                     if h.startswith("Disks: "))
-        self.assertEqual(disks["headline"],
-                         "Disks: hngh 42%, dbhome 61%")
+        self.assertEqual([a["category"] for a in arts[:2]],
+                         ["operator", "system"])
+        desk = [a for a in arts
+                if a["headline"].startswith("System desk:")]
+        self.assertEqual(len(desk), 1)  # consolidated: exactly one
+        desk = desk[0]
+        self.assertEqual(desk["headline"],
+                         "System desk: live machine readout")
+        self.assertEqual(desk["embed"],
+                         {"kind": "btop", "src": "/system/btop",
+                          "alt": "live btop++ snapshot"})
+        # the deck line still comes from system-resources data
+        self.assertIn("load 1.23 on 32 threads", desk["deck"])
+        self.assertIn("50% memory used", desk["deck"])
+        self.assertIn("fleet: 1/2 fleet nodes online", desk["body"])
+        self.assertIn("/srv/hngh: 42% used, 537.0 GB free", desk["body"])
+        self.assertIn("/srv/hngh/dbhome: 61% used, 180.6 GB free",
+                      desk["body"])
 
     def test_activity_digest(self):
         r, out = self.run_compose()
@@ -531,7 +535,7 @@ class GhostDesk(Base):
                          "Operator desk: 3 more open items on the console")
         blob = json.dumps(doc)
         self.assertNotIn("op-01", blob)
-        self.assertNotIn("acked", blob)  # closed items stay off the page
+        self.assertNotIn("| acked", blob)  # closed items stay off the page
 
 
 class ChoiceClasses(Base):
@@ -794,7 +798,8 @@ class DupeCollapse(Base):
 
 
 class Narrative(Base):
-    """Urgency-signalled items carry a plain-template narrative."""
+    """Every operator card carries the per-class megastructure
+    narrative: {"place", "line"}, ASCII only."""
 
     def _card(self, items):
         self._write("operator-items.json",
@@ -813,18 +818,148 @@ class Narrative(Base):
                              "status": "open", "first_seen": seen,
                              "last_seen": z(NOW)}])
         self.assertEqual(len(cards), 1)
-        self.assertIn("narrative", cards[0])
-        parts = re.split(r"(?<=[.!?])\s+", cards[0]["narrative"].strip())
-        self.assertTrue(2 <= len(parts) <= 4, parts)
-        self.assertIn("feed.sh", cards[0]["narrative"])
+        n = cards[0]["narrative"]
+        self.assertEqual(set(n), {"place", "line"})
+        self.assertTrue(n["place"] and n["line"])
+        self.assertTrue(n["place"].isascii() and n["line"].isascii())
+        self.assertEqual(n["place"], "the alarm desk")  # real-regression
 
-    def test_no_narrative_without_signals(self):
-        cards = self._card([{"id": "n2",
-                             "text": "plain.sh | note | ordinary update",
-                             "status": "open", "first_seen": z(NOW),
-                             "last_seen": z(NOW)}])
+    def test_narrative_differs_per_class(self):
+        cards = self._card([
+            {"id": "n2", "text": "plain.sh | note | ordinary update",
+             "status": "open", "first_seen": z(NOW), "last_seen": z(NOW)},
+            {"id": "n3", "text": "watchdog | heartbeat | pulse flapping",
+             "status": "open", "first_seen": z(NOW), "last_seen": z(NOW)}])
+        self.assertEqual(len(cards), 2)
+        places = {c["narrative"]["place"] for c in cards}
+        self.assertEqual(len(places), 2)  # class-keyed, not boilerplate
+        for c in cards:
+            n = c["narrative"]
+            self.assertEqual(set(n), {"place", "line"})
+            self.assertTrue(n["place"].isascii() and n["line"].isascii())
+
+
+class Fire(Base):
+    """Fire strip: the card's DEFAULT verb (first choice whose
+    (class, verb) pair has a guidance example) carries that example's
+    note + effect; absent when no example verb exists (fail-open)."""
+
+    def _cards(self, out):
+        with open(out) as fh:
+            doc = json.load(fh)
+        return [a for a in doc["articles"]
+                if a["category"] == "operator" and a.get("choices")]
+
+    def test_fire_default_verb_note_effect(self):
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cards = self._cards(out)
         self.assertEqual(len(cards), 1)
-        self.assertNotIn("narrative", cards[0])
+        fire = cards[0].get("fire")
+        self.assertIsInstance(fire, dict)
+        self.assertEqual(set(fire), {"verb", "endpoint", "note", "effect"})
+        # automation-debt card: Suppress first (no example), Park second
+        # (example) -> park is the default verb
+        self.assertEqual(fire["verb"], "park")
+        self.assertEqual(fire["endpoint"], "/operator-item/park")
+        self.assertEqual(
+            fire["note"],
+            "filed as backlog debt; revisit at the next disposition sweep")
+        self.assertEqual(
+            fire["effect"],
+            "Parks the card; the note files the debt with the dismissed-"
+            "side row, so the sweep can find the rationale later.")
+
+    def test_fire_absent_without_example_verb(self):
+        # transient-heartbeat: expire/suppress/handle/dismiss only, no
+        # (class, verb) example pair -> no fire, never a crash
+        self._write("operator-items.json", {"generated_at": z(NOW), "items": [
+            {"id": "pulse09", "text": "watchdog | heartbeat | pulse "
+             "flapping on lane 3", "status": "open",
+             "first_seen": z(NOW), "last_seen": z(NOW)}]})
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cards = self._cards(out)
+        self.assertEqual(len(cards), 1)
+        self.assertNotIn("fire", cards[0])
+        self.assertIn("guidance", cards[0])
+
+
+class ParkedDesk(Base):
+    """Parked-desk digest: report-queue rows marked parked, newest
+    first, capped at 8, with kin (class/keyword-token siblings);
+    fail-open when the queue is absent or broken."""
+
+    HEAD = "Parked desk: debt on the shelf, kin noted"
+
+    def _seed_queue(self, rows):
+        root = os.path.join(self.sb, "qroot")
+        os.makedirs(os.path.join(root, "docs", "project"))
+        with open(os.path.join(root, "docs", "project", "reports.md"),
+                  "w") as fh:
+            fh.write("| timestamp | kind | id | first line | body |\n")
+            for ts, kind, rid, first in rows:
+                fh.write("| %s | %s | %s | %s | %s |\n"
+                         % (ts, kind, rid, first, rid + ".md"))
+        self.report_root = root
+
+    def _desk(self, out):
+        with open(out) as fh:
+            doc = json.load(fh)
+        return [a for a in doc["articles"]
+                if a["headline"] == self.HEAD]
+
+    def test_digest_cap8_newest_first_with_kin(self):
+        rows = [("2026-09-29T%02d:00:00Z" % h, "alert", "hb%d" % h,
+                 "watchdog: heartbeat flapping lane %d parked pending"
+                 % h) for h in (1, 8, 9, 10)]
+        rows += [("2026-09-29T%02d:00:00Z" % h, "alert", "rg%d" % h,
+                  "accept-plans: plan %d parked (regression risk)" % h)
+                 for h in range(2, 8)]
+        rows += [("2026-09-29T09:30:00Z", "optimization", "lz1",
+                  "zephyr quixel mordant lonesome parked"),
+                 ("2026-09-29T11:00:00Z", "progress", "live1",
+                  "backup run: ok 10 files wall=2s"),
+                 ("2026-09-29T12:00:00Z", "progress", "live2",
+                  "canary: nominal")]
+        self._seed_queue(list(reversed(rows)))  # ledger: oldest first
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        desk = self._desk(out)
+        self.assertEqual(len(desk), 1)
+        desk = desk[0]
+        self.assertEqual(desk["category"], "operator")
+        self.assertEqual(desk["choices"], [])
+        for absent in ("fire", "guidance", "occurrences"):
+            self.assertNotIn(absent, desk)
+        parked = desk["parked"]
+        self.assertEqual(len(parked), 8)  # 10 parked rows -> cap 8
+        self.assertEqual([e["id"] for e in parked],
+                         ["hb10", "lz1", "hb9", "hb8",
+                          "rg7", "rg6", "rg5", "rg4"])  # newest first
+        by = {e["id"]: e for e in parked}
+        for e in parked:
+            self.assertEqual(set(e) - {"kin"}, {"id", "ts", "why"})
+            self.assertTrue(e["why"])
+            self.assertTrue(e["ts"].endswith("Z"))
+        self.assertEqual(set(by["rg5"]["kin"]), {"rg4", "rg6", "rg7"})
+        self.assertNotIn("rg5", by["hb8"].get("kin", []))
+        self.assertNotIn("kin", by["lz1"])  # no class/token sibling
+
+    def test_absent_queue_no_article(self):
+        self.report_root = os.path.join(self.sb, "never-seeded")
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._desk(out), [])
+
+    def test_broken_queue_fails_open(self):
+        # report-queue crashes when its ledger path is a directory
+        root = os.path.join(self.sb, "broken")
+        os.makedirs(os.path.join(root, "docs", "project", "reports.md"))
+        self.report_root = root
+        r, out = self.run_compose()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._desk(out), [])
 
 
 class Whitelist(Base):

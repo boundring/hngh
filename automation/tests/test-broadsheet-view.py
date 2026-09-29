@@ -511,5 +511,189 @@ class RefreshStaleness(unittest.TestCase):
         self.assertNotIn("rebuildStream(", rejected[rejected.index("rejected"):])
 
 
+ESC_RE = r"function esc\(s\) \{[\s\S]*?\n  \}"
+
+
+class ComposerWidgets(unittest.TestCase):
+    """Composer/server contract fields (2026-09-29): fire, narrative,
+    embed, parked, omp session. The view codes fail-open: an absent
+    field renders nothing and never breaks the card."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+        self.html = read("broadsheet.html")
+        self.css = read("broadsheet.css")
+
+    def _fn(self, name):
+        m = re.search(r"function %s\([a-z, ]*\) \{[\s\S]*?\n  \}" % name,
+                      self.js)
+        self.assertTrue(m, name + " missing")
+        return m.group(0)
+
+    def _node(self, expr, *fns):
+        script = "\n".join(fns) + \
+            ";console.log(JSON.stringify(" + expr + "))"
+        return json.loads(subprocess.run(
+            ["node", "-e", script],
+            capture_output=True, text=True, check=True).stdout)
+
+    # ---- fire ----
+    def test_fire_button_wiring_payload_receipt(self):
+        # fail-open gate: no endpoint string, no button
+        self.assertIn("typeof fire.endpoint === 'string'", self.js)
+        self.assertIn("{ id: a.id, note: fire.note }", self.js)
+        # receipt via the settle chip pattern, esc'd override text
+        settle = self._fn("settleReceipt")
+        self.assertIn("esc(override ||", settle)
+        self.assertIn(
+            "'fired ' + (fire.verb || '?') + ' — ' + (fire.effect || '')",
+            self.js)
+        self.assertIn("settleReceipt(fire.endpoint, payload,", self.js)
+
+    # ---- narrative ----
+    def test_narrative_renders_line_and_place(self):
+        out = self._node(
+            "[narrativeHTML({place: 'below',"
+            " line: 'the seam owner walked the floor'}),"
+            " narrativeHTML({place: 'above', line: 'x'}),"
+            " narrativeHTML(undefined), narrativeHTML({}),"
+            " narrativeHTML({place: 'below'})]",
+            re.search(ESC_RE, self.js).group(0), self._fn("narrativeHTML"))
+        self.assertIn("art-narrative", out[0])
+        self.assertIn("narr-below", out[0])
+        self.assertIn("the seam owner walked the floor", out[0])
+        self.assertIn("narr-above", out[1])
+        for empty in out[2:]:
+            self.assertEqual(empty, "")
+
+    def test_narrative_wiring_and_style(self):
+        self.assertIn("narrativeHTML(a.narrative)", self.js)
+        # old string narrative keeps its deck placement (back-compat)
+        self.assertIn("typeof a.narrative === 'string'", self.js)
+        self.assertIn(".art-narrative", self.css)
+        self.assertIn(".art.expanded .art-narrative", self.css)
+
+    # ---- embed ----
+    def test_embed_btop_poll_start_stop(self):
+        self.assertIn("kind === 'btop'", self.js)  # unknown kinds: nothing
+        self.assertIn("'btop-embed'", self.js)
+        self.assertIn("embedSync(art, a)", self.js)
+        self.assertIn("fetchText(a.embed.src, 4000)", self.js)
+        # chained 2s poll while expanded; a BARE clearInterval stops it
+        self.assertIn("setTimeout(loop, 2000)", self.js)
+        self.assertRegex(self.js, r"(?m)^\s+clearInterval\(pre\._embT\);$")
+        # rebuilt/trimmed cards stop polling with their node
+        self.assertIn("!pre.isConnected", self.js)
+
+    def test_embed_style_and_alt(self):
+        self.assertIn(".btop-embed", self.css)
+        self.assertIn(".art.expanded .btop-embed", self.css)
+        self.assertIn("a.embed.alt || 'btop'", self.js)
+
+    # ---- parked shelf ----
+    def test_shelf_renders_parked_rows(self):
+        self.assertIn('id="parked-shelf"', self.html)
+        self.assertIn('class="parked-shelf"', self.html)
+        self.assertIn(".parked-shelf", self.css)
+        self.assertIn("Array.isArray(a && a.parked)", self.js)
+        out = self._node(
+            "[shelfStrip({id: 'aa', ts: '2026-09-29T12:34:56Z',"
+            " why: 'waiting on unsloth slot'}),"
+            " shelfStrip({why: 'x' * 100}), shelfStrip(null)]",
+            re.search(ESC_RE, self.js).group(0), self._fn("shelfStrip"))
+        self.assertIn("parked-strip", out[0])
+        self.assertIn("2026-09-29T12:34", out[0])
+        self.assertIn("waiting on unsloth slot", out[0])
+        self.assertNotIn("x" * 49, out[1])  # why truncated to fit the rail
+        self.assertIn("parked-strip", out[2])  # null row strips, no crash
+        self.assertIn("shelfRender()", self.js)
+
+    def test_park_flies_to_shelf_before_rebuild(self):
+        choices = self._fn("choicesEl")
+        self.assertIn("parkFly(bar.closest('article'), payload)", choices)
+        self.assertIn(
+            "setTimeout(function () { rebuildStream(true); }, 520)", choices)
+        fly = self._fn("parkFly")
+        self.assertIn("prefers-reduced-motion", fly)
+        self.assertIn("getBoundingClientRect", fly)
+
+    # ---- omp session ----
+    def test_omp_session_button_fail_visible(self):
+        self.assertIn("postJson('/article/omp-session', { id: a.id })",
+                      self.js)
+        self.assertIn("j.path || j.package", self.js)
+        self.assertIn("j.command", self.js)
+        # 503: the launcher's command string is shown, never swallowed
+        self.assertIn("e.body.command", self.js)
+        self.assertIn("'launcher unavailable — run: '", self.js)
+        self.assertIn("err.body = j", self.js)  # postJson surfaces the body
+        self.assertIn("ompBtnEl(a)", self.js)
+        self.assertIn(".omp-btn", self.css)
+        self.assertIn(".art.expanded .omp-btn", self.css)
+
+
+class MotionLayer(unittest.TestCase):
+    """Insert rise, expand reveal, rip burst, park fly, the folded-paper
+    #megastructure, and the reduced-motion kill switch."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+        self.html = read("broadsheet.html")
+        self.css = read("broadsheet.css")
+
+    def _fn(self, name):
+        m = re.search(r"function %s\([a-z, ]*\) \{[\s\S]*?\n  \}" % name,
+                      self.js)
+        self.assertTrue(m, name + " missing")
+        return m.group(0)
+
+    def test_insert_animation_delay_variety(self):
+        self.assertIn("art-rise", self.css)
+        self.assertIn("animation-delay: var(--rise-d, 0ms)", self.css)
+        self.assertIn("'--rise-d'", self.js)
+        self.assertIn("h32(String(a.id || '')) % 5", self.js)
+
+    def test_rip_burst_on_settle(self):
+        self.assertIn("ripBurst(bar.closest('article'))",
+                      self._fn("choicesEl"))
+        rip = self._fn("ripBurst")
+        self.assertIn("prefers-reduced-motion", rip)
+        self.assertIn("'rip rip' + i", rip)
+        self.assertIn("animationend", rip)
+        self.assertIn(".rip", self.css)
+        self.assertIn("@keyframes rip-fly", self.css)
+
+    def test_megastructure_folded_planes_and_tilt(self):
+        self.assertIn('id="megastructure"', self.html)
+        self.assertEqual(self.html.count('class="mf mf'), 5)  # 4-6 faces
+        self.assertIn("preserve-3d", self.css)
+        self.assertIn("@keyframes mega-sway", self.css)
+        self.assertIn("#megastructure.tilt .mega-tilt", self.css)
+        self.assertIn("megaTilt();", self.js)
+        self.assertIn("classList.add('tilt')", self.js)
+        self.assertIn("width: 180px", self.css)
+        self.assertIn("bottom: 12px", self.css)
+
+    def test_reduced_motion_kills_motion_layer(self):
+        m = re.search(
+            r"@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}",
+            self.css)
+        self.assertTrue(m, "reduced-motion guard missing")
+        block = m.group(0)
+        for needle in (".art", ".mega-fold", ".rip", ".park-fly",
+                       "animation: none", "transition: none"):
+            self.assertIn(needle, block)
+
+    def test_fail_open_without_new_fields(self):
+        # every new widget is gated on its field; legacy cards render
+        # exactly as before
+        self.assertIn(
+            "(Array.isArray(a.choices) && a.choices.length) || a.fire",
+            self.js)
+        self.assertIn("narrativeHTML(a.narrative)", self.js)
+        self.assertIn("kind === 'btop'", self.js)
+        self.assertIn("Array.isArray(a && a.parked)", self.js)
+
+
 if __name__ == "__main__":
     unittest.main()

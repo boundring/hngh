@@ -77,7 +77,11 @@
       clearTimeout(t);
       return r.json().catch(function () { return {}; })
         .then(function (j) {
-          if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+          if (!r.ok) {
+            var err = new Error(j.error || ('HTTP ' + r.status));
+            err.body = j; // surfaced for fail-visible handlers (omp 503)
+            throw err;
+          }
           return j;
         });
     }).catch(function (e) { clearTimeout(t); throw e; });
@@ -444,6 +448,9 @@
     art.className = 'art' +
       (a.span === 3 ? ' span3' : a.span === 2 ? ' span2' : '');
     art.style.setProperty('--cat', catColor(a.category));
+    // insert variety: newsprint scraps rise with a per-card stagger
+    art.style.setProperty('--rise-d',
+      ((h32(String(a.id || '')) % 5) * 70) + 'ms');
     var kick = '<div class="kicker">' +
       esc(a.kicker || a.category || 'bulletin');
     if (feed.data && feed.data.queues &&
@@ -464,7 +471,7 @@
       d.className = 'deck'; d.textContent = a.deck;
       art.appendChild(d);
     }
-    if (a.narrative) {
+    if (a.narrative && typeof a.narrative === 'string') {
       var nv = document.createElement('p');
       nv.className = 'deck narrative'; nv.textContent = a.narrative;
       art.appendChild(nv);
@@ -481,10 +488,14 @@
     });
     h.addEventListener('click', function () {
       art.classList.toggle('expanded');
+      embedSync(art, a);
     });
     if (a.span === 3) art.classList.add('expanded');
     art.insertAdjacentHTML('beforeend', ghostHTML(a.ghost));
-    art.insertAdjacentHTML('beforeend', guidanceHTML(a.guidance));
+    var guide = guidanceHTML(a.guidance);
+    var narr = narrativeHTML(a.narrative);
+    art.insertAdjacentHTML('beforeend',
+      narr && a.narrative.place === 'below' ? guide + narr : narr + guide);
     if (Array.isArray(a.sources) && a.sources.length) {
       var src = a.sources.map(function (s) { return s && s.label; })
         .filter(Boolean).join(' · ');
@@ -494,9 +505,17 @@
         art.appendChild(sl);
       }
     }
+    if (a.embed && a.embed.kind === 'btop' &&
+        typeof a.embed.src === 'string') {
+      var emb = document.createElement('pre');
+      emb.className = 'btop-embed';
+      emb.textContent = a.embed.alt || '…';
+      art.appendChild(emb);
+    }
     if (a.floodIds) art.appendChild(floodChoicesEl(a));
-    else if (Array.isArray(a.choices) && a.choices.length)
+    else if ((Array.isArray(a.choices) && a.choices.length) || a.fire)
       art.appendChild(choicesEl(a));
+    if (a.embed) embedSync(art, a); // span3 prints expanded: poll at once
     return art;
   }
 
@@ -737,15 +756,16 @@
     return t + ' · the card leaves the next edition.';
   }
   var receiptTimer = null;
-  function settleReceipt(endpoint, payload) {
+  function settleReceipt(endpoint, payload, override) {
     var el = document.getElementById('settle-receipt');
     if (!el) {
       el = document.createElement('div');
       el.id = 'settle-receipt';
       document.body.appendChild(el);
     }
-    el.innerHTML = esc(receiptText(endpoint,
-      (payload && payload.id) || '?', payload && payload.note));
+    el.innerHTML = esc(override ||
+      receiptText(endpoint, (payload && payload.id) || '?',
+        payload && payload.note));
     el.className = 'on';
     clearTimeout(receiptTimer);
     receiptTimer = setTimeout(function () {
@@ -755,7 +775,8 @@
     var bar = document.createElement('div');
     bar.className = 'choices';
     var progress = null;
-    a.choices.forEach(function (ch) {
+    var list = Array.isArray(a.choices) ? a.choices : [];
+    list.forEach(function (ch) {
       var act = ch && ch.action;
       if (!act || ALLOWED_ENDPOINTS.indexOf(act.endpoint) === -1) return;
       var row = document.createElement('div');
@@ -789,8 +810,13 @@
         progress.textContent = 'sending ' + (ch.label || 'decision') + '…';
         postJson(act.endpoint, payload)
           .then(function () {
+            megaTilt();
+            ripBurst(bar.closest('article'));
             settleReceipt(act.endpoint, payload);
-            rebuildStream();
+            if (act.endpoint === '/operator-item/park' &&
+                parkFly(bar.closest('article'), payload)) {
+              setTimeout(function () { rebuildStream(true); }, 520);
+            } else rebuildStream();
           })
           .catch(function (e) {
             b.disabled = false;
@@ -802,7 +828,188 @@
       row.appendChild(out);
       bar.appendChild(row);
     });
+    // one-click Fire: composer-pinned verb, the note rides in the
+    // payload, receipt names verb + effect via the settle chip
+    var fire = a.fire;
+    if (fire && typeof fire.endpoint === 'string' &&
+        fire.endpoint.charAt(0) === '/') {
+      var frow = document.createElement('div');
+      frow.className = 'choice-row';
+      var fb = document.createElement('button');
+      fb.className = 'choice fire';
+      fb.textContent = 'fire: ' + (fire.verb || fire.endpoint);
+      var fout = document.createElement('span');
+      fout.className = 'outcome';
+      fout.textContent = fire.effect || '';
+      fb.addEventListener('click', function () {
+        fb.disabled = true;
+        if (!progress) {
+          progress = document.createElement('div');
+          progress.className = 'choice-progress';
+          bar.appendChild(progress);
+        }
+        var payload = { id: a.id, note: fire.note };
+        progress.textContent = 'firing ' + (fire.verb || '') + '…';
+        postJson(fire.endpoint, payload)
+          .then(function () {
+            megaTilt();
+            ripBurst(bar.closest('article'));
+            var receipt = 'fired ' + (fire.verb || '?') + ' — ' + (fire.effect || '');
+            settleReceipt(fire.endpoint, payload, receipt);
+            rebuildStream();
+          })
+          .catch(function (e) {
+            fb.disabled = false;
+            progress.textContent = 'failed: ' + e.message;
+            showErr('fire failed: ' + e.message);
+          });
+      });
+      frow.appendChild(fb);
+      frow.appendChild(fout);
+      bar.appendChild(frow);
+    }
+    bar.appendChild(ompBtnEl(a));
     return bar;
+  }
+
+  // ---- composer contract widgets (2026-09-29) ----
+  // narrative: a one-line editorial aside pinned above/below the
+  // guidance block inside the expanded card. Fail open: absent or
+  // line-less payloads render nothing.
+  function narrativeHTML(n) {
+    if (!n || !n.line) return '';
+    return '<p class="art-narrative ' +
+      (n.place === 'below' ? 'narr-below' : 'narr-above') + '">' +
+      esc(n.line) + '</p>';
+  }
+
+  // btop embed: a plain-text block fetched from the composer while the
+  // card is expanded. The poll is card-scoped: the chained 2s re-arm
+  // stops on collapse (the bare clearInterval clears the pending
+  // chained timeout too - one timer pool) and dies with the node when
+  // a rebuild or trim removes the card from the document.
+  function embedSync(art, a) {
+    var pre = art.querySelector('.btop-embed');
+    if (!pre) return;
+    if (!art.classList.contains('expanded')) {
+      clearInterval(pre._embT);
+      return;
+    }
+    var loop = function () {
+      if (!pre.isConnected) return;
+      fetchText(a.embed.src, 4000).then(function (t) {
+        pre.textContent = t;
+      }).catch(function (e) {
+        pre.textContent = (a.embed.alt || 'btop') +
+          ' — embed unavailable: ' + e.message;
+      });
+      pre._embT = setTimeout(loop, 2000);
+    };
+    // during the initial build the card is still detached (appendNext
+    // attaches right after), so the first tick waits one arm instead
+    // of dying on the isConnected guard
+    if (pre.isConnected) loop();
+    else pre._embT = setTimeout(loop, 2000);
+  }
+
+  // parked shelf: the fixed right-edge rail fed by composer rows
+  // (art.parked = [{id, ts, why}]); ts + why truncate to fit.
+  function shelfStrip(p) {
+    var ts = String((p && p.ts) || '').slice(0, 16);
+    var why = String((p && p.why) || '').slice(0, 48);
+    return '<div class="parked-strip"><span class="ps-ts">' + esc(ts) +
+      '</span> ' + esc(why) + '</div>';
+  }
+  function shelfRender() {
+    var shelf = document.getElementById('parked-shelf');
+    if (!shelf) return;
+    var rows = [];
+    ((feed.data && feed.data.articles) || []).forEach(function (a) {
+      if (Array.isArray(a && a.parked))
+        rows = rows.concat(a.parked.filter(Boolean).map(shelfStrip));
+    });
+    shelf.innerHTML = rows.join('');
+    shelf.hidden = !rows.length;
+  }
+
+  // fly-over: on a successful park a strip clone travels to the shelf
+  // before the rebuild drops the card. Skipped under reduced motion or
+  // with no shelf in view - the rebuild lands immediately instead.
+  function parkFly(card, payload) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    var shelf = document.getElementById('parked-shelf');
+    if (!shelf || shelf.hidden || !card) return false;
+    var from = card.getBoundingClientRect();
+    var to = shelf.getBoundingClientRect();
+    var fly = document.createElement('div');
+    fly.className = 'parked-strip park-fly';
+    fly.textContent = 'parked · ' + String((payload && payload.note) || '');
+    fly.style.left = Math.round(from.left) + 'px';
+    fly.style.top = Math.round(from.top + from.height / 2) + 'px';
+    document.body.appendChild(fly);
+    var dx = Math.round(to.left - from.left);
+    var dy = Math.round(to.top + 14 - (from.top + from.height / 2));
+    requestAnimationFrame(function () {
+      fly.style.transform =
+        'translate(' + dx + 'px,' + dy + 'px) rotate(9deg)';
+      fly.style.opacity = '0.2';
+    });
+    setTimeout(function () { fly.remove(); }, 540);
+    return true;
+  }
+
+  // paper-rip burst: shards tear off the settled card and fade; each
+  // removes itself when its animation ends.
+  function ripBurst(card) {
+    if (!card || matchMedia('(prefers-reduced-motion: reduce)').matches)
+      return;
+    var r = card.getBoundingClientRect();
+    for (var i = 0; i < 3; i++) {
+      var s = document.createElement('div');
+      s.className = 'rip rip' + i;
+      s.style.left = (r.left + r.width * (0.18 + 0.28 * i)) + 'px';
+      s.style.top = (r.top + 8) + 'px';
+      s.addEventListener('animationend', function () { this.remove(); });
+      document.body.appendChild(s);
+    }
+  }
+
+  // brief tilt of the folded-paper press hall when a settle lands
+  // (the reduced-motion media query freezes the transition)
+  function megaTilt() {
+    var m = document.getElementById('megastructure');
+    if (!m) return;
+    m.classList.remove('tilt');
+    void m.offsetWidth; // restart the tilt transition on repeat settles
+    m.classList.add('tilt');
+    setTimeout(function () { m.classList.remove('tilt'); }, 650);
+  }
+
+  // omp session launcher on cards that carry choices: the receipt
+  // echoes the response package path + command; a 503 prints the
+  // returned command string so the operator can run it (fail visible).
+  function ompBtnEl(a) {
+    var b = document.createElement('button');
+    b.className = 'choice omp-btn';
+    b.textContent = 'omp session';
+    b.addEventListener('click', function () {
+      b.disabled = true;
+      postJson('/article/omp-session', { id: a.id })
+        .then(function (j) {
+          b.disabled = false;
+          settleReceipt('/article/omp-session', { id: a.id },
+            'omp session: ' + [j.path || j.package, j.command]
+              .filter(Boolean).join(' · '));
+        })
+        .catch(function (e) {
+          b.disabled = false;
+          settleReceipt('/article/omp-session', { id: a.id },
+            e.body && e.body.command
+              ? 'launcher unavailable — run: ' + e.body.command
+              : 'omp session failed: ' + e.message);
+        });
+    });
+    return b;
   }
 
   // The wrap divider: giant title repeat + real edition details.
@@ -1045,6 +1252,7 @@
       d.articles = d.articles.filter(function (x) {
         return x && !feed.dismissed[x.id];
       });
+      shelfRender();
       mastheadRender(d.edition, d.generated);
       // initial load always builds; an explicit refresh rebuilds the
       // whole sheet so a new snapshot is actually visible. The silent

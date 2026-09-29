@@ -6,6 +6,16 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-29
 
+- **Living-newspaper wave \u2014 motion, desks, one-click Fire**:
+  decision cards gain a Fire action pre-filled from guidance
+  examples (never a blank Park), narrative desk placement, a single
+  live system-desk card embedding `btop` (`GET /system/btop`), a
+  parked-desk digest from the report-queue, folded-paper
+  megastructure + newsprint motion (killed under
+  `prefers-reduced-motion`), parked-shelf fly-over, and
+  `/article/omp-session` to spawn an omp session with a prepared
+  context package
+  (docs/records/2026-09-29-living-newspaper-wave.md).
 - **Settlement visibility on the broadsheet**: a settled-decisions
   digest article (newest 8 `operator-*` handoff rows — verb, id, and
   the recorded why — read from `automation/agent-handoffs.md`,

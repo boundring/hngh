@@ -192,6 +192,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import sqlite3
 import subprocess
 import time
@@ -255,6 +256,17 @@ FEEDBACK_TYPES = ("css-theme", "data-format", "correction", "idea")
 SESSION_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 DELEGATE_SLUG_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 DELEGATE_PROVIDERS = ("zai", "unsloth")
+
+# Article desks (2026-09-29): GET /system/btop serves a fixed-size
+# tmux capture of the operator-mandated btop++ embed; POST
+# /article/omp-session writes a context package into the hngh home and
+# spawns the operator's terminal on it. These plus the tmux session
+# itself are the ONLY process surfaces this server starts (the
+# terminal strictly on the explicit POST).
+NEWSPAPER_JSON = os.path.join(DASHBOARD, "newspaper.json")
+REPORTS_MD = os.path.join(HNGH, "docs", "project", "reports.md")
+BTOP_SESSION = "hngh-btop"
+BTOP_CAP = 65536
 
 
 def validate_delegate_body(body):
@@ -344,6 +356,13 @@ _rrspec = importlib.util.spec_from_file_location(
     "research_routes", os.path.join(ROOT, "jobs", "research-routes.py"))
 research_routes = importlib.util.module_from_spec(_rrspec)
 _rrspec.loader.exec_module(research_routes)
+
+# lib/hngh_home.py -- userspace home resolution (HNGH_HOME_DIR seam):
+# the article desk writes context packages under <home>/dispatch/.
+_hhspec = importlib.util.spec_from_file_location(
+    "hngh_home", os.path.join(ROOT, "lib", "hngh_home.py"))
+hngh_home = importlib.util.module_from_spec(_hhspec)
+_hhspec.loader.exec_module(hngh_home)
 
 
 def _launchers():
@@ -805,6 +824,9 @@ class Handler(SimpleHTTPRequestHandler):
             # payload is fleet-manager's, never filtered here.
             self._json(200, fleet_pool_json())
             return
+        if route == "/system/btop":
+            self._system_btop()
+            return
         if self.path.startswith("/hngh-docs/research/"):
             self._serve_md(RESEARCH_DOCS, DOC_NAME_RE)
             return
@@ -853,6 +875,102 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
+
+    # POST /article/omp-session {id} -- write ONE context package for a
+    # newspaper article (headline/deck/body/guidance from
+    # newspaper.json plus any report-queue rows mentioning the id)
+    # under <hngh-home>/dispatch/<UTC-date>/<id>.context.md, then
+    # best-effort spawn the operator's terminal running `omp` pointed
+    # at it. Fail visible: no graphical session, no terminal binary,
+    # or a failed spawn answers 503 with the attempted command --
+    # never a fake success. Token-gated + SESSION_RE like every
+    # operator POST; the package is still written on the 503 paths so
+    # the operator can open it by hand.
+    def _article_omp_session(self):
+        try:
+            aid = str(self._body().get("id", "")).strip()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        if not SESSION_RE.fullmatch(aid):
+            self._json(400, {"ok": False, "error": "invalid id"})
+            return
+        try:
+            with open(NEWSPAPER_JSON, encoding="utf-8") as f:
+                art = next((a for a in (json.load(f).get("articles") or [])
+                            if a.get("id") == aid), None)
+        except Exception:
+            art = None
+        if art is None:
+            self._json(404, {"ok": False, "error": "unknown article id"})
+            return
+        rows = []
+        try:
+            with open(REPORTS_MD, encoding="utf-8") as f:
+                rows = [ln.rstrip("\n") for ln in f if aid in ln]
+        except OSError:
+            pass
+        pkg = os.path.join(hngh_home.dispatch_dir(),
+                           time.strftime("%Y-%m-%d", time.gmtime()),
+                           aid + ".context.md")
+        os.makedirs(os.path.dirname(pkg), exist_ok=True)
+        g = art.get("guidance") or {}
+        md = "\n".join(
+            ["# hngh article desk: %s" % art.get("headline", ""),
+             "",
+             "id: %s" % aid,
+             "category: %s" % art.get("category", ""),
+             "generated: %s" % _ts(),
+             "",
+             "## Headline", art.get("headline", ""), "",
+             "## Deck", art.get("deck", ""), "",
+             "## Body"]
+            + ["- %s" % b for b in (art.get("body") or [])]
+            + ["",
+               "## Guidance",
+               "note rules: %s" % g.get("note_rules", "")]
+            + ["- %s (%s)" % (d.get("label", ""), d.get("path", ""))
+               for d in (g.get("docs") or [])]
+            + (["", "## Report-queue rows"] + rows if rows else [])
+            + ["",
+               "## Omp session instructions",
+               "Open one omp session on this article and act on it:",
+               '  omp "Read the context package at %s and act on its'
+               ' instructions."' % pkg,
+               "Userspace only: automation/ is the free-commit surface;",
+               "kernel src/, tests/, Makefile and hngh.asd are off-limits.",
+               ""])
+        with open(pkg, "w", encoding="utf-8") as f:
+            f.write(md)
+        found = (os.environ.get("HNGH_TERMINAL")
+                 or ("foot" if shutil.which("foot") else None)
+                 or ("kitty" if shutil.which("kitty") else None))
+        cmd = ["systemd-run", "--user", "--on-active=2",
+               found or "foot",
+               "bash", "-lc",
+               'omp "Read the context package at %s and act on its'
+               ' instructions."' % pkg]
+        if not found:
+            self._json(503, {"ok": False, "command": cmd,
+                             "error": "no terminal binary found"
+                             " (tried HNGH_TERMINAL, foot, kitty)"})
+            return
+        if not (os.environ.get("DISPLAY")
+                or os.environ.get("WAYLAND_DISPLAY")):
+            self._json(503, {"ok": False, "command": cmd,
+                             "error": "no graphical session"
+                             " (DISPLAY/WAYLAND_DISPLAY unset)"})
+            return
+        try:
+            subprocess.Popen(cmd, start_new_session=True,
+                             stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+        except Exception as e:
+            self._json(503, {"ok": False, "command": cmd,
+                             "error": "terminal spawn failed: %s" % e})
+            return
+        self._json(201, {"ok": True, "package": pkg, "command": cmd})
 
     def _serve_md(self, base, name_re):
         name = urllib.parse.unquote(self.path.rsplit("/", 1)[-1].split("?")[0])
@@ -1069,6 +1187,7 @@ class Handler(SimpleHTTPRequestHandler):
              "system/reset-failed": self._system_reset_failed,
              "system/service-act": self._system_service_act,
              "system/backup-now": self._system_backup_now,
+             "article/omp-session": self._article_omp_session,
              "report-queue/mark-read": self._mark_read,
              "desk/stage-authz": self._desk_stage_authz,
              "desk/approve": self._desk_approve,
@@ -1199,6 +1318,37 @@ class Handler(SimpleHTTPRequestHandler):
         self._json(201 if p.returncode == 0 else 500,
                    {"ok": p.returncode == 0, "rc": p.returncode, "wall": wall,
                     "tail": tail[0] if tail else ""})
+
+    # GET /system/btop -- text/plain snapshot of the operator-mandated
+    # btop++ embed: ensure the fixed-size tmux session exists (160x48
+    # so capture-pane output is stable; `btop -lt` = low-color + tty,
+    # the flags verified against installed btop 1.4.7 -- its `-c` takes
+    # a config FILE, so the `-lc tty` spelling would misparse), spawn
+    # it only when absent, then capture the pane capped at 64KB.
+    # Idempotent: has-session gates the spawn.
+    def _system_btop(self):
+        try:
+            has = subprocess.run(
+                ["tmux", "has-session", "-t", BTOP_SESSION],
+                capture_output=True, timeout=5)
+            if has.returncode != 0:
+                subprocess.run(
+                    ["tmux", "new-session", "-d", "-x", "160", "-y", "48",
+                     "-s", BTOP_SESSION, "btop -lt"],
+                    capture_output=True, timeout=10)
+            cap = subprocess.run(
+                ["tmux", "capture-pane", "-p", "-t", BTOP_SESSION],
+                capture_output=True, timeout=10)
+            payload = cap.stdout[:BTOP_CAP]
+        except Exception as e:
+            self._json(502, {"ok": False,
+                             "error": "btop capture failed: %s" % e})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def _flag(self):
         try:

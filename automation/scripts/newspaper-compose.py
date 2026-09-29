@@ -13,6 +13,7 @@ newspaper.json) from the news lane + dashboard feeds:
   dashboard/sessions.json     active sessions -> hngh-activity articles
   dashboard/research-routes.json  research threads -> opportunities
   dashboard/fleet.json        fleet-manager snapshot (system masthead)
+  scripts/report-queue --json  parked rows -> the parked-desk digest
 
 Fail-open: a missing input file is a stderr note plus a skip -- the
 edition still publishes with what exists. Never fabricates: an empty
@@ -263,7 +264,16 @@ OP_NARRATIVE_WHY = {
     "automation-debt": "It is automation debt worth a short guidance "
                        "note.",
 }
-OP_URGENCY_RE = re.compile(r"alert|escalat|regression|\brout", re.I)
+
+# One place per card class on the hngh megastructure: the narrative
+# pairs the desk place with the class's why (no new copy voice).
+OP_PLACES = {
+    "real-regression": "the alarm desk",
+    "operator-decision": "the decision desk",
+    "transient-heartbeat": "the pulse desk",
+    "stale-superseded": "the shelf",
+    "automation-debt": "the debt shelf",
+}
 
 #
 # Operator guidance payload: tells the operator what the card is doing
@@ -408,23 +418,18 @@ def _op_class(text):
     return "automation-debt"
 
 
-def _op_narrative(text, cls, occurrences):
-    """Plain-template explanatory story: what happened / why it
-    matters / what the buttons do. No LLM call."""
-    head = text.split("|")
-    ident = head[0].strip() if head and head[0].strip() else "This item"
-    kind = (head[1].strip() if len(head) > 1 and head[1].strip()
-            else "signal")
-    if occurrences > 1:
-        first = ("%s re-fired as a %s signal on the desk, now seen %d "
-                 "times." % (ident, kind, occurrences))
-    else:
-        first = "%s fired as a %s signal on the desk." % (ident, kind)
-    return " ".join((
-        first,
-        OP_NARRATIVE_WHY[cls],
-        "The first button records that disposition; Handle and Dismiss "
-        "stay available for a plain close."))
+def _op_fire(cls, choices):
+    """Fire strip: the card's DEFAULT verb -- the first choice whose
+    (class, verb) pair has a guidance example -- carries that
+    example's note + effect. Absent when no example verb exists."""
+    for ch in choices:
+        verb = ch["action"]["endpoint"].rsplit("/", 1)[-1]
+        ex = OP_GUIDANCE_EXAMPLES.get((cls, verb))
+        if ex:
+            note, effect = ex[0]
+            return {"verb": verb, "endpoint": "/operator-item/" + verb,
+                    "note": note, "effect": effect}
+    return None
 
 
 def settled_article():
@@ -503,8 +508,11 @@ def operator_articles(op, queues):
                             "payload": {"id": oid}}})
         art["guidance"] = _op_guidance(cls, art["choices"])
         art["occurrences"] = len(members)
-        if len(members) > 1 or OP_URGENCY_RE.search(text):
-            art["narrative"] = _op_narrative(text, cls, len(members))
+        art["narrative"] = {"place": OP_PLACES[cls],
+                            "line": OP_NARRATIVE_WHY[cls]}
+        fire = _op_fire(cls, art["choices"])
+        if fire:
+            art["fire"] = fire
         arts.append(art)
     if len(groups) > OPERATOR_CAP:
         fams = {}
@@ -600,51 +608,118 @@ def system_resources(home_db):
 
 
 def system_articles(res, fleet):
-    """Machine resource snapshot -> 1-3 system-desk articles (fleet
-    status folds into the lead body; absent data skips silently)."""
+    """Machine snapshot -> exactly ONE system-desk article: the deck
+    line carries the numbers, the embed renders the live btop++ view
+    (fleet status folds into the body; absent data skips silently)."""
     if not res:
         return []
-    src = [{"label": "system-resources", "url": ""}]
     ts = res.get("generated") or ""
     online = sum(1 for n in fleet if n["online"])
     fl = "%d/%d fleet nodes online" % (online, len(fleet)) if fleet else ""
-    arts = []
     load = res.get("load") or {}
-    if load.get("load1") is not None and res.get("cpu_threads"):
-        arts.append(base_article(
-            "system-load", "system",
-            "Load: %.2f / %.2f / %.2f on %d threads" % (
-                load["load1"], load["load5"], load["load15"],
-                res["cpu_threads"]),
-            "Load averages over 1, 5 and 15 minutes on this machine.",
-            ["load 1/5/15m: %.2f / %.2f / %.2f" % (
-                load["load1"], load["load5"], load["load15"])] +
-            (["fleet: %s" % fl] if fl else []),
-            ts, 0.80, src))
     mem = res.get("memory") or {}
-    if mem.get("total_mb"):
-        used = mem["total_mb"] - mem.get("avail_mb", 0.0)
-        arts.append(base_article(
-            "system-memory", "system",
-            "Memory: %.1f/%.0f GB used (%.0f%%)" % (
-                used / 1024.0, mem["total_mb"] / 1024.0,
-                mem.get("used_pct", 0.0)),
-            "Memory use from /proc/meminfo.",
-            ["total: %.1f GB" % (mem["total_mb"] / 1024.0),
-             "available: %.1f GB" % (mem.get("avail_mb", 0.0) / 1024.0)],
-            ts, 0.79, src))
     disks = res.get("disks") or []
+    deck = []
+    if load.get("load1") is not None and res.get("cpu_threads"):
+        deck.append("load %.2f on %d threads"
+                    % (load["load1"], res["cpu_threads"]))
+    if mem.get("total_mb"):
+        deck.append("%.0f%% memory used" % mem.get("used_pct", 0.0))
     if disks:
-        arts.append(base_article(
-            "system-disks", "system",
-            "Disks: %s" % ", ".join(
-                "%s %.0f%%" % (os.path.basename(d["path"].rstrip("/")) or
-                               d["path"], d["used_pct"]) for d in disks),
-            "Disk use on the repo home and the hngh db home.",
-            ["%s: %.0f%% used, %.1f GB free" % (
-                d["path"], d["used_pct"], d["free_gb"]) for d in disks],
-            ts, 0.78, src))
-    return arts
+        deck.append("%d disks tracked" % len(disks))
+    if not deck:
+        return []
+    body = ["load 1/5/15m: %.2f / %.2f / %.2f" % (
+                load.get("load1", 0.0), load.get("load5", 0.0),
+                load.get("load15", 0.0)),
+            "memory: %.1f/%.1f GB used" % (
+                (mem.get("total_mb", 0.0) - mem.get("avail_mb", 0.0))
+                / 1024.0, mem.get("total_mb", 0.0) / 1024.0)]
+    body += ["%s: %.0f%% used, %.1f GB free" % (
+        d["path"], d["used_pct"], d["free_gb"]) for d in disks]
+    if fl:
+        body.append("fleet: %s" % fl)
+    art = base_article(
+        "system-desk", "system",
+        "System desk: live machine readout",
+        "; ".join(deck) + ".",
+        body, ts, 0.80, [{"label": "system-resources", "url": ""}])
+    art["embed"] = {"kind": "btop", "src": "/system/btop",
+                    "alt": "live btop++ snapshot"}
+    return [art]
+
+
+PARKED_CAP = 8
+_PARK_RE = re.compile(r"\bpark", re.I)
+
+
+def _parked_rows():
+    """scripts/report-queue --json (repo-root cwd, read-only) -> parked
+    rows, newest first (sorted by ts; ledger order is oldest-first).
+    Fail-open: an absent or broken queue -> []."""
+    try:
+        p = subprocess.run(
+            [sys.executable, "-B",
+             os.path.join(AUTOMATION_ROOT, "..", "scripts",
+                          "report-queue"), "--json"],
+            capture_output=True, timeout=30,
+            cwd=os.path.dirname(AUTOMATION_ROOT))
+        data = json.loads(p.stdout.decode("utf-8", "replace"))
+        rows = data.get("reports") if isinstance(data, dict) else None
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    out = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        first = " ".join((row.get("first") or "").split())
+        if not _PARK_RE.search(first):
+            continue
+        # ASCII-only page: anything non-ASCII in the why scrubs to "-"
+        out.append({"id": str(row.get("id") or ""),
+                    "ts": str(row.get("ts") or ""),
+                    "why": "".join(c if ord(c) < 128 else "-"
+                                   for c in first)})
+    out.sort(key=lambda e: e["ts"], reverse=True)
+    return out
+
+
+def _kin(entries):
+    """Annotate entries with kin: other parked rows sharing the card
+    class or a keyword token (park* itself excluded)."""
+    toks = {}
+    for e in entries:
+        toks[e["id"]] = {t for t in re.findall(r"[a-z0-9]{4,}",
+                                               e["why"].lower())
+                         if not t.startswith("park")}
+    for e in entries:
+        cls = _op_class(e["why"])
+        kin = [o["id"] for o in entries
+               if o["id"] != e["id"]
+               and (cls == _op_class(o["why"])
+                    or toks[e["id"]] & toks[o["id"]])]
+        if kin:
+            e["kin"] = kin
+
+
+def parked_article():
+    """Report queue -> the parked-desk digest: rows parked for the
+    operator, newest first (report-queue order), capped at PARKED_CAP,
+    kin noted. Fail-open: no queue, no article."""
+    entries = _parked_rows()[:PARKED_CAP]
+    if not entries:
+        return None
+    _kin(entries)
+    art = base_article(
+        "parked-desk", "operator",
+        "Parked desk: debt on the shelf, kin noted",
+        "Debt parked for the operator, newest first, with the rows it "
+        "sits next to on the shelf.",
+        ["%s: %s" % (e["id"], e["why"]) for e in entries],
+        entries[0]["ts"], 0.73,
+        [{"label": "report-queue", "url": ""}])
+    art["parked"] = entries
+    return art
 
 
 def activity_article(crumbs_path):
@@ -803,6 +878,9 @@ def compose(args):
     settled = settled_article()
     if settled:
         articles.append(settled)
+    parked = parked_article()
+    if parked:
+        articles.append(parked)
     sess = session_articles(sess_data)
     articles += sess
     articles += research_articles(
