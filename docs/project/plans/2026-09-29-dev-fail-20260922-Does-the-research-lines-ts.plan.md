@@ -5,24 +5,19 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Rationale: Implements the cadence-scheduling research line by adding a lightweight job runner that validates and executes scheduled automation tasks.
-
 ## Steps
 
-- [ ] Add a cadence-validation script that checks job definition syntax
-  Verification: bash -n scripts/cadence-validate.sh
+- [ ] Add a new integration test job under jobs/ that validates dashboard digest output
+  Verification: bash -n jobs/dashboard-digest-integration.sh
 
-- [ ] Add unit tests for cadence validation logic
+- [ ] Create a verification script under scripts/ that runs the new job and checks exit code
+  Verification: bash scripts/run-dashboard-digest-integration.sh && echo "PASS" || echo "FAIL"
+
+- [ ] Update cadence/ to register the new job in the test matrix
+  Verification: grep -q "dashboard-digest-integration" cadence/test-matrix.yaml
+
+- [ ] Add a unit test under tests/ for the digest parsing logic
   Verification: make test
 
-- [ ] Add a digest-summary script that aggregates job results
-  Verification: bash -n scripts/digest-summary.sh
-
-- [ ] Add tests for digest summary generation
+- [ ] Verify all existing tests still pass after additions
   Verification: make test
-
-- [ ] Update the automation test suite to include new validations
-  Verification: make test
-
-- [ ] Verify all new scripts pass syntax checks
-  Verification: bash -n scripts/cadence-validate.sh && bash -n scripts/digest-summary.sh

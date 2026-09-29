@@ -11,3 +11,7 @@ at 2026-09-28T20:01:03Z. Alert text: [oversight] slow-unit: dropin:57-digest-sen
 
 - [ ] Delve: open research subject fail-20260928-slow-unit-dropin-57-digest-send.sh for slow-unit:dropin:57-digest-send.sh; record disposition; then fix or park
       Verification: research subject fail-20260928-slow-unit-dropin-57-digest-send.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-29T21:00:41Z re-occurred (dedup window expired)
