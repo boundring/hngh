@@ -1,6 +1,56 @@
 # Changelog
 
 ## 2026-09-28
+- scripted OS installer codified into the live ISO profile —
+  `airootfs/root/install-hngh-os.sh` (executable, bash -n clean,
+  shellcheck clean, shfmt -i 2): the 2026-09-28 laptop arc is now
+  boot stick -> omarchy session (liveuser) -> one script. Full install
+  mode mirrors the arc step-for-step: UEFI + NTP + omarchy-signing-key
+  preflight (key import per the arc command), sgdisk GPT (1G ESP
+  C12A7328-F81F-11D2-BA4B-00A0C93EC93B + rest 8300), LUKS2 with keyfile
+  (4K urandom, slot 0) + generated recovery passphrase (printed, typed
+  confirmation x3, `--yes` skips for scripted runs), btrfs `hngh-root` +
+  vfat `HNGH-EFI`, keyfile verified on the ESP (4096 bytes) before
+  pacstrap -K of the exact verified set (base/linux-cachyos/…/owe
+  owe-lockfeed; `make` included — the gap found on the arc), the live
+  env's baked pacman.conf + resolv.conf handed to the target
+  (serverless-conf gap), mkinitcpio conf.d HOOKS with `encrypt` +
+  FILES keyfile **proved present via lsinitcpio before bootctl**, loader
+  entry with
+  `cryptdevice=UUID=…:hngh-root root=/dev/mapper/hngh-root rw cryptkey=rootfs:/boot/hngh-keyfile.bin`,
+  key-only sshd (authorized_keys from the live env), ufw default-deny +
+  22/tcp + 8890/tcp from 192.168.0.0/24, wheel tier user + sudoers +
+  tty1 autologin + skel zprofile hook, passwords (interactive or
+  `--gen-passwords`), 70-hngh-wol NM dispatcher, linger by file,
+  permissions-profile ride-along, tier tail (clone -> install.sh
+  --non-interactive -> make smoke noted) then the recovery card +
+  reboot gate. `make enable` is NOT run from the chroot (no systemd user
+  manager): it is wired as a self-disabling `hngh-firstboot.service`
+  user unit (retry loop + logger fallback, linger already set), matching
+  the arc's run-the-tail-on-first-boot order. `--tier-migrate` codifies
+  f2b1cee0: stop/disable the old tier's hngh-* user units, move
+  ~/.hngh-automation + the repo to the new tier home, enable-linger +
+  install.sh + smoke + make enable under the explicit
+  XDG_RUNTIME_DIR/DBUS_SESSION_BUS_ADDRESS pattern, verify the :8890
+  listener uid belongs to the NEW tier, then retire the old tier's
+  linger and flip tty1 autologin.
+- live-env GUI session — the tty1 autologin now lands in omarchy, not a
+  root shell: airootfs adds `liveuser` (wheel/video/audio/storage/
+  input/render, NOPASSWD sudo via /etc/sudoers.d/liveuser at 0440),
+  getty@tty1 autologin drop-in targets liveuser (root GUI unsupported —
+  ssh stays root key-only), and `/etc/skel/.zprofile` runs
+  `exec uwsm start hyprland` tty1-guarded (`[ "$(tty)" = /dev/tty1 ]`);
+  the installer copies that hook to the tier user explicitly (target
+  skel is generated post-build). `hngh-liveuser-setup` (oneshot,
+  multi-user enabled) creates the user idempotently in the live env.
+- tests red-first — test-iso-build.sh grew sections (g) installer
+  shape, (h) --tier-migrate + :8890 verify + STOP OLD -> ENABLE NEW ->
+  VERIFY PORT OWNER -> RETIRE OLD LINGER order, (i) GUI-session files:
+  20 assertions written red (all NOT OK before the files existed), all
+  green after (suite 31 ok / 0 fail). Liveuser enablement asserts
+  symlink + readlink target (absolute, same convention as
+  hngh-ssh-keyperm.service) rather than -e, which cannot hold in-tree
+  for airootfs absolute symlinks.
 - desk approval-chain fix — the phase-1 human gate could never
   complete: DESK_AUTHZ_ID contained a colon (`desk-authz:phase-1`) but
   the only verb writing the approved ledger (`/operator-item/handle`)

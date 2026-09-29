@@ -1,0 +1,4 @@
+# live medium only: physical access is already root-equivalent, and the
+# console operator runs install-hngh-os.sh from the omarchy session.
+# root itself stays ssh-only (see hngh-liveuser-setup header).
+liveuser ALL=(ALL) NOPASSWD: ALL

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# hngh-liveuser-setup — live-env GUI account. The omarchy session must not
+# run as root: portals/xdg refuse root and omarchy assumes a normal user,
+# so tty1 autologin targets `liveuser` (uid from the system range, wheel +
+# device/input groups for session and removable media). Idempotent: the
+# archiso sysusers may already have made the account without a home; this
+# completes it either way so the skel .zprofile uwsm hook lands before
+# agetty logs in. liveuser gets passwordless sudo (/etc/sudoers.d/liveuser):
+# on a live medium physical access is already root-equivalent, and the
+# console operator must be able to run install-hngh-os.sh. root stays
+# ssh-only (authorized_keys, key-only sshd) per the 2026-09-28 arc.
+# 2026-09-28 arc: docs/records/2026-09-28-laptop-hngh-os-deployment.md.
+set -euo pipefail
+
+id liveuser >/dev/null 2>&1 ||
+  useradd -m -G wheel,video,audio,storage,input,render -s /bin/bash liveuser
+
+install -d -m 750 -o liveuser -g liveuser /home/liveuser
+[ -f /home/liveuser/.zprofile ] ||
+  install -m 644 -o liveuser -g liveuser /etc/skel/.zprofile /home/liveuser/.zprofile

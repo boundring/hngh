@@ -72,3 +72,53 @@ Installer-relevant gap re-confirmed on the installed target: `su`-based
 user-manager access is the friction point for any headless tier work —
 the scripted installer should enable linger + run `make enable` through
 `machinectl shell <user>@` or the explicit-env pattern above.
+
+## Same day, later — installer codified into the live ISO (follow-up)
+
+The arc above is now a script:
+`automation/iso/profile/airootfs/root/install-hngh-os.sh`, so the next
+machine is boot stick -> omarchy graphical session -> one command. It
+replays every step this record verified by hand, in the same order, and
+fails closed (exit 3 with remediation text) at each gate the arc learned
+to check: UEFI vars present, tools installed (the live env needs
+`pacman -Sy --needed arch-install-scripts sgdisk cryptsetup btrfs-progs
+dosfstools ufw ethtool efibootmgr archlinux-keyring make git jq`), the
+omarchy signing key imported, network up, `DESTROY` typed to wipe, the
+recovery passphrase typed back correctly (3 attempts, or `--yes` for
+scripted runs), the keyfile 4096 bytes on the ESP, exactly 2 LUKS
+keyslots, the keyfile **proven inside the initramfs via lsinitcpio
+before systemd-boot is configured**, sudoers valid, authorized_keys
+present (key-only sshd would otherwise lock everyone out), fstab
+complete. Inputs are flags, env, or interactive prompts:
+TARGET_DISK (/dev/sda), HOSTNAME (brick-hngh; read via printenv because
+bash seeds an unexported $HOSTNAME from the live medium), TIER_USER
+(brick), optional WIFI_SSID/WIFI_PASS, --gen-passwords, --yes.
+
+Two arc gaps are encoded rather than repeated: the target's serverless
+pacman.conf (installer copies the live env's baked conf + resolv.conf
+before the tail), and `make enable` — a chroot has no systemd user
+manager, so the installer wires a self-disabling
+`hngh-firstboot.service` user unit (retry loop, logger fallback; linger
+is already set) that runs `make enable` on the first boot, which is
+exactly when the arc ran it. The recovery card (LUKS uuid, recovery
+passphrase, root + tier passwords, boot entry, firewall posture) is
+printed at the end, with a reboot prompt.
+
+The live env itself now boots to the omarchy session: airootfs adds
+`liveuser` (wheel + device groups, NOPASSWD sudo), tty1 autologin
+targets it (root GUI session unsupported; root ssh stays key-only), and
+a tty1-guarded `/etc/skel/.zprofile` runs `exec uwsm start hyprland`.
+The installer copies that hook to the tier user, since the target's
+skel is generated post-build. `--tier-migrate` codifies the f2b1cee0
+retier for already-installed boxes: stop/disable the old tier's hngh-*
+user units, move ~/.hngh-automation and the repo to the new tier home,
+enable-linger + install.sh + make smoke (noted) + make enable under the
+explicit XDG_RUNTIME_DIR/DBUS_SESSION_BUS_ADDRESS pattern this record
+identified as the friction point, verify the :8890 listener uid belongs
+to the NEW tier, then retire the old tier's linger and flip tty1
+autologin.
+
+Tests red-first in `automation/tests/test-iso-build.sh` (sections g–i,
+20 assertions): all NOT OK before the files existed, all green after
+(suite 31 ok / 0 fail). The ISO itself was NOT rebuilt here — needs
+operator sudo; the profile is ready for the next build-live-iso run.

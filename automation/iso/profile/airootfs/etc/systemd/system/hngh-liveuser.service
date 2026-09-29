@@ -1,0 +1,14 @@
+[Unit]
+Description=hngh live: GUI session account (liveuser) + omarchy hook
+# liveuser must exist WITH a home before agetty autologins it on tty1,
+# else the session falls back to a bare console instead of omarchy.
+After=systemd-sysusers.service
+Before=getty@tty1.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/hngh-liveuser-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

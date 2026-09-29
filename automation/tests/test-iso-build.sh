@@ -115,6 +115,92 @@ rc=$?
   ok "propagate: mkarchiso failure rc passes through" ||
   bad "propagate rc=$rc"
 
+# --- (g) scripted OS installer (2026-09-28 laptop arc, codified) -----------
+INSTALLER="$ROOT/iso/profile/airootfs/root/install-hngh-os.sh"
+if [ -x "$INSTALLER" ]; then
+  ok "installer: present + executable"
+else
+  bad "installer missing or not executable: $INSTALLER"
+fi
+bash -n "$INSTALLER" 2>"$SANDBOX/g.bashn" &&
+  ok "installer: bash -n clean" ||
+  bad "installer bash -n: $(cat "$SANDBOX/g.bashn")"
+grep -q 'cryptkey=rootfs:/boot/hngh-keyfile.bin' "$INSTALLER" &&
+  ok "installer: cryptkey= cmdline pattern (keyfile unlock)" ||
+  bad "installer: cryptkey= cmdline pattern missing"
+grep -q -- '--type luks2' "$INSTALLER" &&
+  ok "installer: LUKS2 format" ||
+  bad "installer: LUKS2 format missing"
+grep -q 'lsinitcpio' "$INSTALLER" &&
+  ok "installer: initramfs keyfile verified via lsinitcpio" ||
+  bad "installer: lsinitcpio verification missing"
+grep -q 'useradd -m -G wheel' "$INSTALLER" &&
+  ok "installer: tier-user steps (useradd -m -G wheel)" ||
+  bad "installer: tier-user steps missing"
+grep -q 'install.sh --non-interactive' "$INSTALLER" &&
+  ok "installer: hngh tail (install.sh --non-interactive)" ||
+  bad "installer: hngh tail missing"
+grep -q 'make -C automation smoke' "$INSTALLER" &&
+  ok "installer: tail runs make smoke" ||
+  bad "installer: tail make smoke missing"
+grep -q 'make -C automation enable' "$INSTALLER" &&
+  ok "installer: tail runs make enable" ||
+  bad "installer: tail make enable missing"
+
+# --- (h) --tier-migrate mode (stop old -> enable new -> verify port -> linger)
+grep -q -- '--tier-migrate' "$INSTALLER" &&
+  ok "installer: --tier-migrate mode present" ||
+  bad "installer: --tier-migrate mode missing"
+grep -q 'VERIFY PORT OWNER' "$INSTALLER" &&
+  grep -q '8890' "$INSTALLER" &&
+  ok "installer: migrate verifies :8890 owner" ||
+  bad "installer: migrate port-owner verification missing"
+stop_line="$(grep -n 'STOP OLD' "$INSTALLER" | cut -d: -f1 | head -n1)"
+enable_line="$(grep -n 'ENABLE NEW' "$INSTALLER" | cut -d: -f1 | head -n1)"
+verify_line="$(grep -n 'VERIFY PORT OWNER' "$INSTALLER" | cut -d: -f1 | head -n1)"
+linger_line="$(grep -n 'RETIRE OLD LINGER' "$INSTALLER" | cut -d: -f1 | head -n1)"
+if [ -n "$stop_line" ] && [ -n "$enable_line" ] && [ -n "$verify_line" ] &&
+  [ -n "$linger_line" ] && [ "$stop_line" -lt "$enable_line" ] &&
+  [ "$enable_line" -lt "$verify_line" ] && [ "$verify_line" -lt "$linger_line" ]; then
+  ok "installer: migrate invariant order STOP OLD -> ENABLE NEW -> VERIFY PORT OWNER -> RETIRE OLD LINGER"
+else
+  bad "installer: migrate invariant order broken (stop=$stop_line enable=$enable_line verify=$verify_line linger=$linger_line)"
+fi
+
+# --- (i) live-env GUI: omarchy session on tty1, NEVER as root --------------
+ZPROFILE="$ROOT/iso/profile/airootfs/etc/skel/.zprofile"
+[ -f "$ZPROFILE" ] &&
+  ok "live GUI: skel .zprofile hook present" ||
+  bad "live GUI: skel .zprofile hook missing: $ZPROFILE"
+grep -qF '[ "$(tty)" = /dev/tty1 ]' "$ZPROFILE" &&
+  ok "live GUI: zprofile tty1-guarded" ||
+  bad "live GUI: zprofile not tty1-guarded"
+grep -q 'uwsm start hyprland' "$ZPROFILE" &&
+  ok "live GUI: zprofile starts omarchy via uwsm" ||
+  bad "live GUI: zprofile uwsm start missing"
+AUTOLOGIN="$ROOT/iso/profile/airootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf"
+grep -q -- '--autologin liveuser' "$AUTOLOGIN" &&
+  ! grep -q -- '--autologin root' "$AUTOLOGIN" &&
+  ok "live GUI: tty1 autologin targets liveuser, not root" ||
+  bad "live GUI: tty1 autologin must target liveuser (root GUI session unsupported)"
+LIVEUSER_SETUP="$ROOT/iso/profile/airootfs/usr/local/sbin/hngh-liveuser-setup"
+if [ -x "$LIVEUSER_SETUP" ]; then
+  ok "live GUI: liveuser setup script present + executable"
+else
+  bad "live GUI: liveuser setup script missing: $LIVEUSER_SETUP"
+fi
+bash -n "$LIVEUSER_SETUP" 2>"$SANDBOX/i.bashn" &&
+  ok "live GUI: liveuser setup bash -n clean" ||
+  bad "liveuser setup bash -n: $(cat "$SANDBOX/i.bashn")"
+grep -q 'useradd -m' "$LIVEUSER_SETUP" &&
+  ok "live GUI: liveuser created with home (skel hook lands)" ||
+  bad "live GUI: liveuser setup must useradd -m"
+[ -f "$ROOT/iso/profile/airootfs/etc/systemd/system/hngh-liveuser.service" ] &&
+  [ -L "$ROOT/iso/profile/airootfs/etc/systemd/system/multi-user.target.wants/hngh-liveuser.service" ] &&
+  [ "$(readlink "$ROOT/iso/profile/airootfs/etc/systemd/system/multi-user.target.wants/hngh-liveuser.service")" = "/etc/systemd/system/hngh-liveuser.service" ] &&
+  ok "live GUI: liveuser setup service enabled" ||
+  bad "live GUI: liveuser setup service/enabled symlink missing"
+
 # --- summary ----------------------------------------------------------------
 if [ "$fails" -eq 0 ]; then
   echo "PASS: test-iso-build"
