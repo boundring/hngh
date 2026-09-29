@@ -7,17 +7,14 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new integration test job under jobs/ that validates dashboard digest output
-  Verification: bash -n jobs/dashboard-digest-integration.sh
+- [ ] Add a new data-validation job script under jobs/
+  Verification: bash -n jobs/data-validation.sh
 
-- [ ] Create a verification script under scripts/ that runs the new job and checks exit code
-  Verification: bash scripts/run-dashboard-digest-integration.sh && echo "PASS" || echo "FAIL"
+- [ ] Add unit tests for the new validation job under tests/
+  Verification: bash -n tests/test_data_validation.sh
 
-- [ ] Update cadence/ to register the new job in the test matrix
-  Verification: grep -q "dashboard-digest-integration" cadence/test-matrix.yaml
+- [ ] Register the new job in cadence configuration
+  Verification: grep -q 'data-validation' cadence/jobs.yaml
 
-- [ ] Add a unit test under tests/ for the digest parsing logic
-  Verification: make test
-
-- [ ] Verify all existing tests still pass after additions
+- [ ] Run full test suite to confirm no regressions
   Verification: make test
