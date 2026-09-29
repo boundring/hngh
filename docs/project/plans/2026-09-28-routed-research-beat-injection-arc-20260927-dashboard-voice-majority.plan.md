@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:injection:arc-20260927-dashboard-voice-majority -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=research-beat:injection:arc-20260927-dashboard-voice-majority -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-05T00:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
@@ -11,3 +11,7 @@ at 2026-09-28T00:00:41Z. Alert text: injection signature(s) redacted from resear
 
 - [ ] Delve: open research subject fail-20260928-research-beat-injection-arc-20260927-dashboard-voice-majority for research-beat:injection:arc-20260927-dashboard-voice-majority; record disposition; then fix or park
       Verification: research subject fail-20260928-research-beat-injection-arc-20260927-dashboard-voice-majority present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-29T00:00:54Z re-occurred (dedup window expired)
