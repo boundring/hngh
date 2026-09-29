@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job template for incremental digest generation
-  Verification: bash -n cadence/incremental-digest.sh
+- [ ] Add a cadence helper script that validates job manifest syntax before execution
+  Verification: bash -n cadence/validate-manifest.sh
 
-- [ ] Add a test script that validates the new cadence job template syntax
-  Verification: python3 tests/test_cadence_template.py
-
-- [ ] Add a lib helper function for safe path resolution used by the new job
-  Verification: bash -n lib/path_resolver.sh
-
-- [ ] Add a dashboard snippet that displays cadence job status
-  Verification: bash -n dashboard/cadence_status.sh
-
-- [ ] Add a make test entry that exercises the new cadence job end-to-end
+- [ ] Create a test that exercises the manifest validator against a sample job definition
   Verification: make test
 
-- [ ] Add a grep check confirming no secrets or credentials in new files
-  Verification: grep -r 'password\|secret\|token' jobs/ cadence/ lib/ tests/ dashboard/ digest/ | grep -v 'none'
+- [ ] Add a dashboard digest entry that reports validator pass/fail status
+  Verification: bash -n dashboard/digest-validator-report.sh
+
+- [ ] Update the main automation entrypoint to invoke the validator before job dispatch
+  Verification: make test
+
+- [ ] Add a lib utility that extracts job metadata for downstream digest consumption
+  Verification: python3 lib/extract-job-metadata.py
