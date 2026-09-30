@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:dropin:05-ui-audit.sh -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-30T12:06:33Z routed-from=slow-unit:dropin:05-ui-audit.sh -->
 <!-- attempt: 3 -->
 <!-- expires: 2026-10-07T08:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

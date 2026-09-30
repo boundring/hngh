@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=slow-unit:hngh-cadence-subhour.service -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-30T12:06:33Z routed-from=slow-unit:hngh-cadence-subhour.service -->
 <!-- attempt: 3 -->
 <!-- expires: 2026-10-07T04:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

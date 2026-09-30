@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=news-quarantine:1cf28959ca438cd5aaea34b2df3eea7ef107e093 -->
+<!-- plan: status=accepted risk=normal accepted=2026-09-30T12:06:33Z routed-from=news-quarantine:1cf28959ca438cd5aaea34b2df3eea7ef107e093 -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-07T01:00:50Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
