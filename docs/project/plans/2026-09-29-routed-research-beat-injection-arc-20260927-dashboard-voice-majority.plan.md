@@ -11,3 +11,7 @@ at 2026-09-29T00:00:54Z. Alert text: injection signature(s) redacted from resear
 
 - [ ] Delve: open research subject fail-20260929-research-beat-injection-arc-20260927-dashboard-voice-majority for research-beat:injection:arc-20260927-dashboard-voice-majority; record disposition; then fix or park
       Verification: research subject fail-20260929-research-beat-injection-arc-20260927-dashboard-voice-majority present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-09-30T01:00:51Z re-occurred (dedup window expired)
