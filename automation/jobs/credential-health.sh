@@ -264,4 +264,85 @@ python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" 
 vault_ola="${CREDENTIAL_VAULT_OLA_DAYS:-180}"
 python3 "$AUTOMATION_ROOT/lib/vault-freshness.py" "$vault_ola" |
   head -n 5 | while IFS= read -r finding; do alert "vault-freshness" "$finding"; done
+
+# --- 9. credential-seam sweep (slice E, governed-fleet.md:248) ---
+# Token-only verified per seam: every model-chain leg shares ONE posture -
+# env key or a mode-600 key file, the value riding the stdin curl config
+# (never argv), and a silent fail-closed-skip when no credential answers
+# (lib/model.sh per-leg gates). The sweep rechecks the DECLARED file
+# surface per seam (stat mode only, values never read); the live wire
+# probing stays in sections 1-6. Fail-soft: findings are identity-deduped
+# alert rows, never exits.
+sweep_seam() { # seam kfile -> 0
+  local seam="$1" kfile="$2" mode
+  if [ -n "$kfile" ] && [ -e "$kfile" ]; then
+    mode="$(stat -c %a "$kfile" 2>/dev/null)"
+    if [ "$mode" != "600" ]; then
+      alert "seam-$seam" "key file $kfile mode is not 600 (chmod 600 required); token-only posture drift"
+      return 0
+    fi
+    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: token-only verified (key file 600; leg gate skips fail-closed on any other mode)"
+  else
+    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: dormant (no key file present; leg skips fail-closed silently)"
+  fi
+}
+# kfile defaults mirror lib/model.sh's per-leg resolution exactly:
+# remote model.sh:465 ($REMOTE_TOKEN_FILE), kimi model.sh:735,
+# ocgo model.sh:788, zai model.sh:908, xiaomi model.sh:971; unsloth/
+# refresh are the section-1 pair ($TOKEN_FILE/$REFRESH_FILE).
+sweep_seam unsloth "${TOKEN_FILE:-}"
+sweep_seam refresh "${REFRESH_FILE:-}"
+sweep_seam remote "${REMOTE_TOKEN_FILE:-$HOME/.config/hngh/remote-key}"
+sweep_seam kimi "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}"
+sweep_seam ocgo "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
+sweep_seam zai "${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}"
+sweep_seam xiaomi "${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}"
+# --- 10. pinned-key freshness (slice E: peer admission wiring) ---
+# governed-fleet.md:248: "pinned-key freshness wiring for peer
+# admission". The lattice peer is keyed like a transport (pins +
+# attestation, section 5); until slice F lands the peer registry row,
+# this section arms the freshness HALF: a configured PEER_TOKEN_FILE
+# (mode 600, the same posture every leg enforces) records/feeds the
+# SAME credential-evidence ledger under the credential id 'peer-pin',
+# so slice F's admission gate can check(OLA) this row like any other
+# tracked credential. Unconfigured = silent (the peer does not exist
+# yet — never an alert; the deck-leg posture). Unverifiable = alert,
+# never a silent pass (sections 7/8 contract).
+peer_file="${PEER_TOKEN_FILE:-}"
+if [ -n "$peer_file" ]; then
+  if [ ! -e "$peer_file" ]; then
+    alert "peer-pin" "peer key file missing ($peer_file)"
+  elif [ "$(stat -c %a "$peer_file" 2>/dev/null)" != "600" ]; then
+    alert "peer-pin" "peer key file too open; chmod 600 required ($peer_file)"
+  else
+    # bootstrap mirrors section 7: a MISSING ledger seeds at the live
+    # clock (the record() digest never reads the value into any log;
+    # record() refuses an existing-but-empty ledger like section 7).
+    # Slice E test gap fix: the seed is ROW-level, not file-level — when
+    # section 7 already seeded the ledger (the unsloth pair is always
+    # present in production), record() appends the peer-pin row by name
+    # and every other tracked credential row survives; there is no prior
+    # peer-pin digest to launder (the peer was never tracked before), so
+    # the empty-ledger refusal does not apply to a name-append.
+    if [ ! -s "$freshness_ledger" ]; then
+      if [ -e "$freshness_ledger" ]; then
+        breadcrumb "$JOB_NAME" "peer-pin" "freshness ledger empty; re-seed REFUSED (same operator re-arm path as section 7)"
+      else
+        python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record peer-pin "$peer_file" "$freshness_ledger" "$(date +%s)"
+        breadcrumb "$JOB_NAME" "peer-pin" "freshness ledger seeded (bootstrap)"
+      fi
+    elif ! grep -qP '^peer-pin\t' "$freshness_ledger" 2>/dev/null; then
+      if python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" record peer-pin "$peer_file" "$freshness_ledger" "$(date +%s)"; then
+        breadcrumb "$JOB_NAME" "peer-pin" "peer-pin row appended to the live freshness ledger (first tracking; digest only)"
+      else
+        alert "peer-pin" "peer-pin record refused (existing ledger holds no verifiable row?); operator re-arm path applies"
+      fi
+    fi
+    peer_ola="${PEER_FRESHNESS_OLA:-$freshness_ola}"
+    python3 "$AUTOMATION_ROOT/lib/credential-evidence.py" check "$freshness_ledger" "$peer_ola" |
+      grep -E '^(stale|hash-mismatch|evidence-missing|ledger-empty): peer-pin|^ledger-empty:|^malformed-row: peer-pin' | head -n 5 |
+      while IFS= read -r finding; do alert "peer-pin" "$finding"; done
+    breadcrumb "$JOB_NAME" "peer-pin" "peer key freshness checked (OLA=${peer_ola}s)"
+  fi
+fi
 exit 0

@@ -217,6 +217,8 @@ test:
 	python3 -B tests/test-ghost-voices.py
 	bash tests/test-model-xiaomi-leg.sh
 	bash tests/test-slice-a-bili-surface.sh
+	bash tests/test-credential-health-argv.sh
+	bash tests/test-slice-e-seam-surface.sh
 	python3 -B tests/test-session-cost-cache.py
 	bash tests/test-deck-availability.sh
 	python3 -B tests/test-breadcrumb-single-line.py
@@ -231,4 +233,4 @@ test:
 # adhoc: run one cadence tick for a tier now (no systemd required).
 # usage: make adhoc TIER=5m
 adhoc:
-	bash jobs/cadence-tick.sh TIER="$(TIER)"
+	bash jobs/cadence-tick.sh TIER="$(TIER)"tail -1 /tmp/opencode/auto-test-err.log 2>/dev/null
