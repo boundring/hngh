@@ -147,10 +147,47 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       automation/agent-handoffs.md (overnight-lead | governed-fleet|
       slice-c3, the C1/C2 pattern); no spawned session, no respawn, no
       kernel surface touched.
-- [ ] Slice D: governed package upgrade through the certificate loop
+- [x] Slice D: governed package upgrade through the certificate loop
       (evidence: certificate + commit in git log)
       Verification: the certificate + commit appear in git log; kernel
       `make test` green.
+      Executed 2026-09-30: one governed package upgrade exercised
+      end-to-end through the certificate loop on this host - bili
+      (npm billion-context) 0.1.173 -> 0.1.174, already installed
+      through the maintained updater (hngh-omp-update.sh) with the
+      registry stale at the 0.1.141 pin from 2026-09-23; the slice's
+      governed act is the certificate-bound reconciliation: registry
+      rows (hngh-packages.tsv bili + acp-kernel embodiment), the
+      decision record docs/records/2026-09-30-governed-package-
+      upgrade-bili.md, and the CHANGELOG entry landed as the
+      candidate commit `hngh: candidate <hash>` (the certificate
+      content hash; see git log and the fresh ceremony receipts in
+      the automation home's cert-receipts.tsv), with the fast-test
+      gate = full kernel `make test` green (2954 checks, ~42s warm).
+      Pre-flight: the loop rehearsed via ceremony-drive --dry-run on
+      a disposable /tmp fixture built from the real kernel sources
+      (dream stop after propose, ten principles passed; both refusal
+      classes hit and corrected pre-mutation: a candidate with no .md
+      conclusion file refuses source-grounding, a run without
+      HNGH_LOADOUT facts refuses cost-and-route-discipline). Real
+      drive: ONE ceremony-drive call (fresh /tmp store, plain-words
+      objective, 3 advisory findings) -> create-run -> admit-transport
+      model/repository -> propose -> prepare-candidate -> commit ->
+      certificate-gated push (push proposes under class=push-request
+      into its own verdict; never a git hook). Upstream 0.1.174
+      retires the BILI_STREAM_STALL_MS stall guard (upstream PR 1714);
+      hngh carries no such export and no idle-budget override, so the
+      change is behavior-neutral here. Incident recorded during
+      pre-flight: a compound fixture-setup command briefly overwrote
+      the kernel Makefile with the fixture stub and staged the real
+      repo's unrelated dirty paths; caught and fully reverted in the
+      same session (git restore from HEAD, zero commits landed) - the
+      fixture lane now uses absolute paths only. The System-view
+      upgrade trigger (governed-fleet.md section 6 slice D prose)
+      stays open as free-commit automation follow-through, filed in
+      the queue ledger, not a slice-D gate; the running bili instance
+      keeps its loaded binary until its own exit (per-launch
+      semantics, no service restart).
 - [ ] Slice E: credential-seam sweep + model-tier refresh cadence
       Verification: see plans/README verification contract; kernel
       `make test` green.

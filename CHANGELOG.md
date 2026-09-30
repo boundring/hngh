@@ -4,6 +4,19 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-09-30
+
+- **Governed package upgrade through the certificate loop (slice D)**:
+  bili (npm billion-context) 0.1.173 -> 0.1.174 admitted through the
+  full ceremony (ceremony-drive: create-run -> model transport ->
+  ten-principle propose -> prepare-candidate -> commit -> gated
+  push); the hngh-packages.tsv registry rows reconciled from the
+  stale 0.1.141 pin to the verified host state. Upstream 0.1.174
+  retires the BILI_STREAM_STALL_MS stall guard (behavior-neutral
+  for hngh: no stale export, no idle-budget override). The loop was
+  rehearsed first via ceremony-drive --dry-run on a disposable
+  /tmp fixture. Record: docs/records/2026-09-30-governed-package-
+  upgrade-bili.md.
 ### 2026-09-29
 
 - **hngh dashboard as an Omarchy shell plugin**: new
