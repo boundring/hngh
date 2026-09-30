@@ -188,9 +188,25 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       the queue ledger, not a slice-D gate; the running bili instance
       keeps its loaded binary until its own exit (per-launch
       semantics, no service restart).
-- [ ] Slice E: credential-seam sweep + model-tier refresh cadence
+- [x] Slice E: credential-seam sweep + model-tier refresh cadence
       Verification: see plans/README verification contract; kernel
       `make test` green.
+      Executed 2026-09-30: the sweep surface landed in the automation
+      tree as a free commit (afe632e7): credential-health.sh sections
+      9-10 (stat-mode-only token-only per-seam sweep across the
+      model-chain legs; configured PEER_TOKEN_FILE alerts stale/unseen,
+      unconfigured stays silent by design), the monthly drop-in
+      cadence/calendar/monthly/02-model-tier-refresh.sh emitting the
+      route row quarterly per the OLA read from cadence-params.tsv
+      (model-tier-refresh-ola=7776000; absent/unknown OLA is a
+      fail-open alert), Makefile:221 wiring, and
+      tests/test-slice-e-seam-surface.sh (27 hermetic checks, all
+      pass, stub-binary, no token values). Gates green: automation
+      `make test` rc=0, kernel `make test` rc=0. queue.md:75 flipped
+      done citing docs/records/2026-09-30-credential-seam-sweep-
+      model-tier-refresh-ola.md and backlog.md:670-684. The obsolete-
+      class death of this lane (blk-20260930) was closed by re-deriving
+      live state first and adopting the in-flight tree surface.
 - [ ] Slice F: node-lattice admission -- one peer admitted through the
       same gates (federation exit)
       Verification: see plans/README verification contract; kernel

@@ -72,7 +72,7 @@ backlog-system-awareness-rung	queued	System awareness rung	backlog.md:570
 backlog-time-ledger-delay-flagging	queued	Time ledger & delay flagging (self-optimization telemetry)	backlog.md:590
 backlog-session-observatory	queued	Session observatory (live subagent runs page)	backlog.md:615
 backlog-browser-notification-surface	queued	Browser notification surface	backlog.md:636
-backlog-model-tier-refresh-cadence	queued	Model-tier refresh cadence	backlog.md:670
+backlog-model-tier-refresh-cadence	done	cadence landed as slice E	backlog.md:670
 backlog-host-orientation-pass	queued	Host orientation pass (new-system situating)	backlog.md:686
 backlog-report-ledger-retention-policy	queued	Report-ledger retention policy	backlog.md:705
 backlog-widget-grid-qol	queued	Widget grid + QoL evolution cadence (dashboard surfaces)	backlog.md:725

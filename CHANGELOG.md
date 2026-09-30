@@ -6,6 +6,18 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-09-30
 
+- **Credential-seam sweep + model-tier refresh cadence (slice E)**:
+  every model-chain leg seam is swept token-only and stat-mode-only in
+  `credential-health.sh` (sections 9-10; mode 600 or fail-closed, no
+  values ever read), the configured peer-pin freshness half fires on
+  stale/unseen peer keys while PEER_TOKEN_FILE unconfigured stays
+  silent, and the monthly drop-in `cadence/calendar/monthly/02-model
+  -tier-refresh.sh` emits the route row quarterly per the OLA row in
+  `cadence-params.tsv` (model-tier-refresh-ola); absent/unknown OLA is
+  a fail-open alert. 27-check hermetic test wired into the automation
+  Makefile; both gates green. See
+  docs/records/2026-09-30-credential-seam-sweep-model-tier
+  -refresh-ola.md.
 - **Governed package upgrade through the certificate loop (slice D)**:
   bili (npm billion-context) 0.1.173 -> 0.1.174 admitted through the
   full ceremony (ceremony-drive: create-run -> model transport ->
