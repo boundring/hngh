@@ -207,10 +207,46 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       model-tier-refresh-ola.md and backlog.md:670-684. The obsolete-
       class death of this lane (blk-20260930) was closed by re-deriving
       live state first and adopting the in-flight tree surface.
-- [ ] Slice F: node-lattice admission -- one peer admitted through the
+- [x] Slice F: node-lattice admission -- one peer admitted through the
       same gates (federation exit)
       Verification: see plans/README verification contract; kernel
       `make test` green.
+      Executed 2026-09-30: the deck peer (pinned 2026-09-07 in
+      ~/.hngh-automation/pins/pins.tsv as an ed25519 host
+      key, tailnet 100.79.162.3, tailscale state active; direct) was
+      admitted through the kernel's own gates with zero new kernel
+      code (the deck-node study phase-1 shape): admission run created
+      -> admit-transport federation (loadout network label
+      remote-evidence, tool labels carrier-bundle+worker-task) ->
+      admit-peer with fresh attestation evidence (ssh-keygen
+      fingerprint of the pinned host key, fixed-width UTC last-seen,
+      staleness bound 86400s) -> record.lisp rows: creation +
+      transport:federation admission + peer admission
+      (peer: steamdeck, fingerprint SHA256:Hj31...1TAg, last-seen) in
+      /tmp/opencode/slicef/store. list-pins renders the pin. Wake
+      cycle: one real bounded ssh probe transport injected into
+      hngh.adapters.federation wake-peer-request -> wake status=issued
+      peer=steamdeck; the plain CLI correctly refuses
+      no-wake-transport (wake stays injection-only by design; the
+      wake-mutation certificate lane exists but a pinned wake file
+      transport would be a future boundary amendment). Read-only
+      worker across hosts: run-worker run-1 task=steamdeck-deck-facts
+      worker=FILE real subprocess transport (bounded ssh to the deck)
+      -> status=complete (deck facts: 6.18.50-valve kernel, up 3d4h,
+      261G free; deck-side unchanged). Run-sequence constraint found
+      live: the admit-peer and arm-run ledger rows share the same
+      store record key (admission run-id) so arm must precede
+      admit-peer in one store (three-order probe verified); kernel
+      finding recorded as an ordinary backlog lane:
+      dispatch-admit-peer discards store-record-run's :conflict and
+      prints status=admitted even when no row landed (silent-drop
+      class, src/main.lisp:1782-1803) - kernel src is FORBIDDEN this
+      session, out of this slice's surface. Gates: kernel `make test`
+      green rc=0 (2954 checks; no kernel tree change so the baseline
+      stands), automation `make test` green rc=0; witness rows in
+      automation/agent-handoffs.md (overnight-lead | governed-fleet |
+      slice-f) and automation/STATE.md; worker-transport fixture
+      removed, /tmp stores left as throwaway evidence.
 - [ ] Slice G: operations knowledge-graph surface in the dashboard --
       3D WebGL view of the section-2 registries, live-fed, 2D/static
       fallback (NOT exit-bearing)
