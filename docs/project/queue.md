@@ -82,7 +82,8 @@ backlog-self-supervision-tick	queued	Self-supervision tick (Hngh watches its own
 backlog-research-lines-user-controls	queued	Research lines: user controls	backlog.md:810
 backlog-memory-surface	queued	Memory surface (llm-wiki integration)	backlog.md:831
 backlog-startup-launch-flow	queued	Startup launch flow	backlog.md:848
-backlog-governed-package-operations	queued	System controls → governed package operations	backlog.md:865
+backlog-governed-package-operations	done	System controls → governed package operations	backlog.md:865; slice D landed 2026-09-30: one governed package upgrade start-to-finish through the certificate loop (bili 0.1.174, ceremony-drive, commit hngh: candidate 2f03525d, docs/records/2026-09-30-governed-package-upgrade-bili.md); the System-view upgrade trigger stays open as its own queued row below
+package-upgrade-system-trigger	queued	System-view governed package upgrade trigger (dashboard button -> declared-window upgrade lane through the certificate loop)	governed-fleet.md section 6 slice D prose; the certificate exercise landed 2026-09-30 (docs/records/2026-09-30-governed-package-upgrade-bili.md); free-commit automation surface (dashboard-server.py POST + system-view.js button, v1 system-op pattern)
 backlog-research-precedence	queued	Research precedence + collected material	backlog.md:883
 backlog-cadence-watch-fixes	queued	Cadence watch fixes (gated red, recorded not landed 2026-08-28)	backlog.md:899
 backlog-report-queue-escalation-caps	queued	report-queue escalation caps	backlog.md:930
