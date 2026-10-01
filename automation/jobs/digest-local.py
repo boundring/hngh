@@ -15,6 +15,7 @@ paper. Seams (hermetic tests): HNGH_HOME_DIR, HNGH_DIGESTS_DIR,
 HNGH_TELEMETRY_DB.
 """
 import os
+import importlib.machinery
 import importlib.util
 import re
 import shutil
@@ -27,15 +28,23 @@ digest_html = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(digest_html)
 
 MEDIA_RE = re.compile(r'/hngh-docs/media/([^"\']+)')
+FILE_URL_RE = re.compile(r"file://\S+")
 
 
 def _stage_media(page, out_dir, repo):
     """Copy every referenced repo media file into the edition dir and
     rewrite its src to the relative path (self-contained over plain
-    HTTP). Per-file copies fail open; the page renders either way."""
+    HTTP). A rel that escapes docs/media (absolute or ..) is refused
+    outright -- staging never copies from outside the media tree
+    (hngh-292); per-file copies of in-tree media fail open."""
+    media_root = os.path.realpath(os.path.join(repo, "docs", "media"))
+
     def stage(m):
         rel = m.group(1)
-        src = os.path.join(repo, "docs", "media", rel)
+        src = os.path.realpath(os.path.join(repo, "docs", "media", rel))
+        if src != media_root and not src.startswith(media_root + os.sep):
+            raise ValueError("digest-local: media escape refused: %s"
+                             % rel)
         if os.path.isfile(src):
             dst = os.path.join(out_dir, rel)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -45,6 +54,23 @@ def _stage_media(page, out_dir, repo):
                 pass
         return rel
     return MEDIA_RE.sub(stage, page)
+
+
+def _load_redact_home():
+    """lib/scrub.py's redact_home (the single-source home-path
+    tilde-renderer), fail-closed (hngh-292): the local edition is an
+    egress surface, so a missing or broken scrub module raises here
+    and rendering refuses rather than ship raw /home paths."""
+    path = os.path.join(ROOT, "lib", "scrub.py")
+    loader = importlib.machinery.SourceFileLoader("hngh_scrub_local",
+                                                  path)
+    spec = importlib.util.spec_from_loader("hngh_scrub_local", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod.redact_home
+
+
+_redact_home = _load_redact_home()
 
 
 def _rebuild_index(home):
@@ -84,10 +110,15 @@ def main(argv):
     out_dir = os.path.join(home, "dispatch", date)
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, "index.html")
+    try:
+        page = _stage_media(digest_html.render_page(digest, digests, db),
+                            out_dir, os.path.dirname(ROOT))
+        page = _redact_home(FILE_URL_RE.sub("[redacted file url]", page))
+    except ValueError as exc:
+        print("digest-local: %s" % exc, file=sys.stderr)
+        return 1
     with open(out, "w", encoding="utf-8") as fh:
-        fh.write(_stage_media(
-            digest_html.render_page(digest, digests, db), out_dir,
-            os.path.dirname(ROOT)))
+        fh.write(page)
     _rebuild_index(home)
     print("digest-local: %s" % out, file=sys.stderr)
     return 0

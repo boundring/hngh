@@ -86,8 +86,8 @@ def _load_scrub():
     by several writers and not every append passes a scrubbed seam
     (patrol morning rounds, any future direct writer), so the renderer
     itself fail-closes host path tokens before text reaches an egress
-    surface. Fail-open to identity ONLY if the module cannot load
-    (same posture as gdelt-news.py's import)."""
+    surface. A missing or broken scrub module raises here: the
+    renderer refuses to emit an unguarded egress line (hngh-292)."""
     try:
         loader = importlib.machinery.SourceFileLoader(
             "hngh_scrub", os.path.join(ROOT, "lib", "scrub.py"))
@@ -95,8 +95,10 @@ def _load_scrub():
         mod = importlib.util.module_from_spec(spec)
         loader.exec_module(mod)
         return mod.scrub_paths
-    except Exception:
-        return lambda text: text
+    except Exception as exc:
+        raise RuntimeError(
+            "digest-html: scrub module unloadable; refusing to render"
+        ) from exc
 
 
 scrub_paths = _load_scrub()

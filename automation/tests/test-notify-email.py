@@ -14,6 +14,7 @@ import io
 import json
 import os
 import re
+import shutil
 import smtplib
 import subprocess
 import sys
@@ -278,6 +279,16 @@ class OnePasswordPrecedence(unittest.TestCase):
 class EmailDigest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        # html-digest loads scrub_paths fail-closed from
+        # <AUTOMATION>/jobs/digest-ledger.py -> <AUTOMATION>/lib/scrub.py;
+        # stage the real modules so the sandbox renders for real
+        # (matching test-digest-html.py's fixture law: no second regex).
+        (self.tmp / "jobs").mkdir()
+        shutil.copy(str(ROOT / "jobs" / "digest-ledger.py"),
+                    str(self.tmp / "jobs" / "digest-ledger.py"))
+        (self.tmp / "lib").mkdir()
+        shutil.copy(str(ROOT / "lib" / "scrub.py"),
+                    str(self.tmp / "lib" / "scrub.py"))
         # fixture kernel: one fresh research doc + a lesson harvest
         kernel = self.tmp / "kernel"
         (kernel / "docs" / "research").mkdir(parents=True)

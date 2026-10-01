@@ -6,6 +6,13 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-01
 
+- **Digest PII seams fail closed (hngh-292)**: digest-html/html-digest
+  refuse to render when the scrub module is unloadable (was: silent
+  identity fallback); digest-public gains a fail-closed scrub seam with
+  per-line path/file-url/dash-id redaction; digest-local refuses media
+  rels escaping docs/media and cuts `file://` URLs. New fixture suite
+  automation/tests/test-digest-pii-seams.sh (13 pins);
+  docs/records/2026-10-01-digest-pii-seam-hardening.md.
 - **The Governed Fleet (stage 3) flipped done**: all ten invariants
   verified under standing guards and patrols; record
   docs/records/2026-10-01-governed-fleet-stage3-exit.md. On the way

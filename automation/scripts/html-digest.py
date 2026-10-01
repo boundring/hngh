@@ -38,8 +38,9 @@ def _load_scrub():
     owning a regex — no fourth redaction definition in the tree.
     digest/<date>.md is written by several writers and not every append
     is scrubbed at the writer, so the email HTML part fail-closes host
-    path tokens at render. Fail-open to identity ONLY if the module
-    cannot load (same posture as jobs/gdelt-news.py)."""
+    path tokens at render. A missing or broken scrub module raises
+    here: the mailer refuses to emit an unguarded egress line
+    (hngh-292)."""
     try:
         loader = importlib.machinery.SourceFileLoader(
             "hngh_digest_ledger", os.path.join(
@@ -48,8 +49,10 @@ def _load_scrub():
         mod = importlib.util.module_from_spec(spec)
         loader.exec_module(mod)
         return mod.scrub_paths
-    except Exception:
-        return lambda text: text
+    except Exception as exc:
+        raise RuntimeError(
+            "html-digest: scrub module unloadable; refusing to render"
+        ) from exc
 
 SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 AUTOMATION = os.environ.get(

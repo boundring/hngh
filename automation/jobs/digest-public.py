@@ -24,6 +24,25 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_scrub():
+    """lib/scrub.py, the single-source redaction family, fail-closed
+    (hngh-292): the public edition is an egress surface, so a missing
+    or broken scrub module raises here and publication refuses rather
+    than render unguarded (mirrors research-harvest's loader)."""
+    path = os.path.join(HERE, os.pardir, "lib", "scrub.py")
+    loader = importlib.machinery.SourceFileLoader("hngh_scrub_public",
+                                                  path)
+    spec = importlib.util.spec_from_loader("hngh_scrub_public", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+SCRUB = _load_scrub()
+FILE_URL_RE = re.compile(r"file://\S+")
+
 DEFAULT_REPO = os.path.dirname(os.path.dirname(HERE))
 _DH = None
 
@@ -185,11 +204,13 @@ def saga_md(day, repo):
             park = "the park sealed it in a quiet wing"
         else:
             park = "it paces the hall still, watched"
+        bid = SCRUB.scrub_truncate_pathy(_ascii(b[0]))
         out.append("In the %s wing the crew met %s: it struck %s "
                    "time(s) on %s, and %s. [^b%s]"
-                   % (b[1], flavor, b[4], b[2], park, _ascii(b[0])))
+                   % (b[1], flavor, b[4], b[2], park, bid))
         out.append("[^b%s]: state/beat-blockers.tsv | lane %s | "
-                   "cause %s | x%s | %s" % (b[0], b[1], b[2], b[4], b[5]))
+                   "cause %s | x%s | %s"
+                   % (bid, b[1], b[2], b[4], b[5]))
     if lessons:
         counts = {}
         for c in lessons:
@@ -314,7 +335,15 @@ def render_page(date, repo):
         "- Records and research: docs/records/, docs/research/",
         "",
     ]
-    return "\n".join(out)
+    # Per-line seam: scrub_paths is line-safe, and the dash-form
+    # truncator cuts its INPUT at the first path-derived segment, so
+    # it must run per line -- page-wide it would amputate everything
+    # after the first mangled slug (hngh-292).
+    return "\n".join(
+        SCRUB.scrub_truncate_pathy(
+            SCRUB.scrub_paths(FILE_URL_RE.sub("[redacted file url]",
+                                              line)))
+        for line in out)
 
 
 def write_publication(date, repo=None):
