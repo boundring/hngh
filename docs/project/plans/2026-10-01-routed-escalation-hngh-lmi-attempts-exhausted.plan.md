@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=escalation:hngh-lmi:attempts-exhausted -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-01T22:35:34Z routed-from=escalation:hngh-lmi:attempts-exhausted -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-08T22:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
