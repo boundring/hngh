@@ -212,6 +212,7 @@ test:
 	bash tests/test-dispatch.sh
 	python3 -B tests/test-digest-local.py
 	bash tests/test-digest-send-schedule.sh
+	bash tests/test-digest-pii-seams.sh
 	python3 -B tests/test-digest-compose-upgrades.py
 	python3 -B tests/test-typesafe-docs-ingest.py
 	python3 -B tests/test-typesafe-wrapper.py

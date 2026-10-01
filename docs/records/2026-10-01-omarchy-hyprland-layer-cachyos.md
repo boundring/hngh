@@ -26,13 +26,21 @@ avoid-list in `automation/config/omarchy-base.packages`).
   hyprland.desktop`). The desktop's labeled entry mirrors that shape.
 - Readiness beat green (rc 0, reporting-only; d=true via
   hyprland.desktop presence).
+- Note: the beat's session boolean matches only `hyprland-omarchy.desktop`
+  or `hyprland.desktop`, so the labeled `omarchy.desktop` entry is
+  invisible to it; d already passes via the pre-existing
+  hyprland.desktop, and no beat change is planned.
 
 ## Operator actions (approval given; pasted in their terminal)
 
 1. `/usr/share/wayland-sessions/omarchy.desktop` — Name=Omarchy entry,
    same uwsm exec line as the laptop's hyprland-uwsm.desktop.
-2. `/etc/plasmalogin.conf` `Session=plasma` -> `Session=omarchy.desktop`
+2. `/etc/plasmalogin.conf` `Session=plasma` -> `Session=omarchy`
    (default at the greeter; Plasma stays selectable).
+   Value shape: the shipped conf uses the bare session stem
+   (`Session=plasma`), so the bare stem is the shape-consistent value;
+   plasmalogin 6.7.4 is a stripped Qt/KF6 binary with no shipped
+   example documenting a suffixed form.
 
 Visual greeter/session confirmation happens at the operator's next
 logout — asked, never forced.
