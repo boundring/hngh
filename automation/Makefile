@@ -111,6 +111,7 @@ test:
 	python3 -B tests/test-history-feed.py
 	python3 -B tests/test-fleet-feed.py
 	python3 -B tests/test-graph-data.py
+	python3 -B tests/test-graph-feed-refresh.py
 	python3 -B tests/test-system-feed.py
 	python3 -B tests/test-system-ingest.py
 	python3 -B tests/test-report-queue-evidence.py

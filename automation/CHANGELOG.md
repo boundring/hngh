@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-01
+- governed-fleet slice-G closure — operations knowledge-graph surface
+  verified on its own surfaces and the lane re-admitted: blocker row
+  blk-20260930 deleted after the delve disposition
+  (research-dispositions.tsv fail-20261001-beat-parked row, commit
+  4c1c0d38); tests/test-graph-feed-refresh.py wired into `make test`
+  (8 hermetic cases: 30s fail-soft cache, cold-start fail-closed,
+  unknown-kind pass-through, all-sessions slot isolation); live probes
+  200 (/graph.json 408 nodes / 401 edges / 11 kinds, console.html);
+  kernel docs closure record + plan G box flip; NOT exit-bearing — the
+  roadmap stage-3 flip remains the separate final plan step.
+
 ## 2026-09-28
 - scripted OS installer codified into the live ISO profile —
   `airootfs/root/install-hngh-os.sh` (executable, bash -n clean,
