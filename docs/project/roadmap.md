@@ -27,7 +27,7 @@ Stages 5 and 6 run in alternation (grow beats and research/design beats per
 | **0 — Kernel & governance** | pure spine, seven use cases (the six original fake-backed use cases plus queue-ranking select-course, 2026-08-27), governance C0–C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
 | **1 — Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
 | **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **done** |
-| **3 — The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated — chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` → observatory `working` → `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md §4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **landing** |
+| **3 — The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated — chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` → observatory `working` → `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md §4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **done** |
 | **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
 | **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
 | **7 — Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
@@ -225,10 +225,12 @@ Working order, per the route:
    governed package upgrade, E the credential-seam sweep, F
    node-lattice admission (the federation exit); G renders the
    operations knowledge graph in the dashboard (non-exit-bearing).
-3. **Flip the merged stage 3 to done** only when all ten invariants
-   (governed-fleet.md §4) hold under standing guards and patrols —
-   config lanes and the witnessed cycle are already standing; the
-   stage-4 exit (governed package upgrade) rides the certificate loop.
+3. **Flip the merged stage 3 to done — DONE** (2026-10-01: all ten
+   invariants verified under standing guards and patrols after
+   reviving the dormant calendar tier,
+   [record](../records/2026-10-01-governed-fleet-stage3-exit.md));
+   the stage-4 exit (governed package upgrade) rode the certificate
+   loop.
 4. **Stage 5 beats** alternate with stage 3 grow work per the
    alternation rule; the research view makes the state visible.
 5. **Fold the third-evening intake** (eight observations, session-notes

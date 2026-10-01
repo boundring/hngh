@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-22T13:03:06Z -->
+<!-- plan: status=executed risk=normal accepted=2026-09-22T13:03:06Z -->
 # The Governed Fleet -- ratify and land the stages 3+4 consolidation
 
 Proposed via `omp-bridge --propose` (omp session propose surface;
@@ -269,11 +269,27 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       (rides this kernel docs commit). Gates: kernel `make test` green,
       automation `make test` green. NOT exit-bearing; the roadmap
       stage-3 flip stays the separate final plan step.
-- [ ] Roadmap stage 3 row flips to done when all ten invariants hold
+- [x] Roadmap stage 3 row flips to done when all ten invariants hold
       under standing guards and patrols
       Verification: `scripts/omp-bridge --plan-status
       governed-fleet-consolidation` reports the landed state; kernel
       `make test` green.
+      Executed 2026-10-01: the flip landed. All ten invariants hold
+      under standing guards and patrols (record:
+      docs/records/2026-10-01-governed-fleet-stage3-exit.md) after
+      reviving the dormant calendar tier - the cadence calendar pick
+      read UTC against the local-time OnCalendar instants (nothing
+      mounted since 2026-09-24); it now picks from the local clock
+      with a hermetic CADENCE_PICK_INSTANT seam, and the fresh day
+      patrol passed the four invariant routes (service-health,
+      service-children, package-ghosts, session-budget). Candidate
+      commit `hngh: candidate <hash>` (the certificate content hash;
+      see git log and the fresh ceremony receipts in the automation
+      home's cert-receipts.tsv); the receipt residue rows stamped
+      2026-10-01T06:02:10Z are a refused/faulted run, ignored. Gates
+      at the ceremony boundary: kernel `make test` green (2954
+      checks) and automation `make test` green. Slice G's closure
+      record (operations knowledge-graph surface) rides this commit.
 
 Verification: make test green in both repos before the ceremony
 commit; roadmap.md table rows keep consistent pipe field counts;
