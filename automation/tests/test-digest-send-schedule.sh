@@ -108,8 +108,13 @@ check "no digest re-run within the slot" "" "$([ -f "$sb/marker" ] && echo x)"
 check "no second send within the slot" "1" "$(sends)"
 
 # 3) force without the TEST flag is ignored (live-safety interlock)
+# HNGH_DIGEST_NOW_HHMM pins the live clock OUTSIDE every slot window so
+# the check proves the interlock alone (FORCE is never consulted without
+# TEST=1): a broken interlock would still touch the marker and fail,
+# while real New York wall time can no longer flip the verdict (the
+# 2026-09-30 make-test run crossed into the 0730 NY window mid-suite).
 reset_stamps
-out="$(run HNGH_DIGEST_FORCE_SLOT=1530)"
+out="$(run HNGH_DIGEST_FORCE_SLOT=1530 HNGH_DIGEST_NOW_HHMM=1200)"
 check "force without TEST flag exits 0" "0" "$out"
 check "force without TEST flag runs nothing" "" \
   "$([ -f "$sb/marker" ] && echo x)"

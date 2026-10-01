@@ -3,8 +3,8 @@
 # the deterministic check it runs (pure function over existing ledgers and
 # commands -- no model calls), the cadence tier that mounts it, and the
 # bestiary finding-class its FAILs file under. Consumed by jobs/patrol.py;
-# executed from cadence/30m/58-patrol.sh (quick surfaces) and
-# cadence/day/27-patrol.sh (heavier surfaces). A FAIL files a report-queue
+# executed from cadence/subhour/58-patrol.sh (quick surfaces) and
+# cadence/calendar/daily/27-patrol.sh (heavier surfaces). A FAIL files a report-queue
 # alert (identity patrol:<patrol-id>) and appends to
 # automation/digest/PATROL-<date>.md; the same patrol+cause on two
 # consecutive runs auto-queues a research-subjects entry (the patrol finds

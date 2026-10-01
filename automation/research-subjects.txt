@@ -395,3 +395,54 @@ synth-2026-09-28-1	Verify steer-vs-die threshold claims (unverified citations, n
 synth-2026-09-28-2	Confirm kernel/view locations for dashboard expansion rotation (unconfirmed kernel/view locations, reopening requires R1 verification pass completion) in arc-20260927-dashboard-expansion-rotation
 synth-2026-09-28-3	Inspect repo to resolve masthead temperature research question (honest preamble with zero findings; unanswerable until repo inspection completes) in arc-20260927-dashboard-masthead-temperature
 fail-20260913-patrol-gate-cure	patrol: the router routed alert identity patrol:gate-cure (gate-cure-refused x2) to plan 2026-09-13-routed-patrol-gate-cure -- does the red-gate self-cure surface still fail, and which guardrail closes it?
+arc-20260929-dashboard-voice-majority	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
+arc-20260929-dashboard-single-webgl	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
+arc-20260929-dashboard-fail-closed-auth	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
+arc-20260929-dashboard-masthead-splash	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
+arc-20260929-dashboard-masthead-expansion	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
+arc-20260929-dashboard-masthead-varies	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
+arc-20260929-dashboard-ghost-desk	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
+arc-20260929-dashboard-expansion-rotation	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
+patrol-20260929-journal-error-unclaimed-err	patrol: surface journal-error filed unclaimed-err on two consecutive runs -- why does it keep failing and which guardrail closes it?
+question-synth-2026-09-30-1	"Does the dashboard's HonestDismiss arm contract (present + not dismissed predicate at data boundary, tab-switch preservation, cross-item stale impossibility by construction) hold against a new operatorItemsHtml re-render triggered by a post-load op-state update, or does the pre-load early-return guard mask a latent race where lastRender.d is defined but lastRender.res is undefined during the first renderLogs call?"
+question-synth-2026-09-30-2	"Does the ux-review precheck amendment (allowing en/em dashes and typographic quotes as house style per docs/README.md) fully suppress the non-ASCII byte false-positive class (6e562932), or is there a residual case where a non-house non-ASCII byte (e.g., a stray control character or non-typographic symbol) still triggers the precheck in cadence/day/19?"
+synth-2026-09-30-3	"Does the ledger-sync commit race (hngh commit d34ba58, docs: machine ledger sync — N changed file(s) message pattern) still permit a new untracked docs/ file to be machine-committed before a lane stages it, given that the sync's message pattern makes machine commits identifiable but does not prevent the commit itself?"
+arc-20260930-dashboard-voice-majority	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
+arc-20260930-dashboard-masthead-splash	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
+arc-20260930-dashboard-masthead-expansion	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
+arc-20260930-dashboard-masthead-varies	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
+arc-20260930-dashboard-fail-closed-auth	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
+arc-20260930-dashboard-expansion-rotation	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
+arc-20260930-dashboard-single-webgl	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
+arc-20260930-dashboard-ghost-desk	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
+patrol-20260930-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260930-feeds-feed-stale	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260930-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260930-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260930-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20260930-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+arc-20260930-dashboard-wire-capped-r2	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
+fail-20260930-supervision	What knowledge was missing for supervision?
+synth-2026-10-01-1	Define a steer-vs-die threshold rule for stalled sessions replacing ad hoc per-session judgment, using the steer-vs-die threshold finding as the basis.
+synth-2026-10-01-2	Make the unversioned plan ledger visible to the monitor by resolving the tree-skew whitelist + unversioned plan ledger finding's open item about the plan ledger staying invisible.
+synth-2026-10-01-3	Confirm lane discipline prevents ledger-sync commit race by verifying that new untracked docs/ files staged promptly by lanes block machine commits from the hourly sync.
+arc-20261001-dashboard-masthead-varies	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
+fail-20261001-beat-parked-2026-09-13-governed-fleet-consolidation	Why did the governed-fleet-consolidation lane die twice with cause bad-execution (blocker-escalate-n park, blk-20260930), what does the landed slice-G graph surface actually contain at HEAD, and what closure package sized to one session re-admits the lane and lands the residue?
+arc-20261001-dashboard-voice-majority	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
+arc-20261001-dashboard-ghost-desk	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
+arc-20261001-dashboard-masthead-splash	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
+arc-20261001-dashboard-masthead-expansion	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
+arc-20261001-dashboard-wire-capped-r3	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
+arc-20261001-dashboard-single-webgl	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
+arc-20261001-dashboard-fail-closed-auth	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
+arc-20261001-dashboard-expansion-rotation	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
+patrol-20261001-automation-gate-gate-stale	patrol: surface automation-gate filed gate-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20261001-feeds-feed-stale	patrol: surface feeds filed feed-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20261001-github-ci-bad-execution	patrol: surface github-ci filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20261001-handoffs-bad-execution	patrol: surface handoffs filed bad-execution on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20261001-manga-manga-stale	patrol: surface manga filed manga-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+patrol-20261001-pending-checks-check-pending-stale	patrol: surface pending-checks filed check-pending-stale on two consecutive runs -- why does it keep failing and which guardrail closes it?
+fail-20261001-supervision	What knowledge was missing for supervision?
+question-synth-2026-10-01-1	Reopen `dashboard-logs 1` (premise stale) with a fresh evidence pass: verify that `rerenderWithOpState`/`rerenderOp` truly early-return on `lastRender.d === undefined` and that no path exists where `lastRender.d` is defined but `lastRender.res` is undefined, since the finding's own pre-load safety check passed but the runtime-error premise remains unverified.
+synth-2026-10-01-2	Reopen `fail-20260913-Is-there-an-existing-pattern-in-the-repo` (recheck) to confirm that `automation/lib/docfilter.py` `injection_lines()` + `finalize()` is the single choke-point lexical guard consumed by `cadence/hour/33-research-beat.sh`, and verify that kernel-side original file names remain unverified by design as the record states.
+synth-2026-10-01-3	Reopen `arc-20260927-dashboard-wire-capped` (parked) to verify findings R1-R5 against the live `broadsheet-view.js` and vault contents, since the line's core findings are logically sound but rest on unverified empirical premises (edition variability, refill existence, surface separation) and recommendations cannot be implemented without access to the hngh kernel or vault contents.

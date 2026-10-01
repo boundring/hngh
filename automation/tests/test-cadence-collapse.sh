@@ -10,7 +10,8 @@
 # and (b) the NEW 3-unit firing set + the stamp gates + the calendar
 # subdir pick, asserting identical firing minutes per job. The calendar
 # pick is asserted through the real cadence-tick seam
-# (CADENCE_PICK_ECHO=1): 2026-09-24 (Thu) -> daily only; 2026-09-28 (Mon)
+# (CADENCE_PICK_ECHO=1, hermetic instant override CADENCE_PICK_INSTANT):
+# 2026-09-24 (Thu) -> daily only; 2026-09-28 (Mon)
 # -> daily+weekly; 2026-10-01 (the 1st) -> daily+monthly; 2026-06-01 (a
 # Monday the 1st) -> daily+weekly+monthly.
 # usage: bash automation/tests/test-cadence-collapse.sh
@@ -54,9 +55,14 @@ set_old day 01-activity-tick 01-lesson-harvest 02-ledger-prune 03-gate-check \
   11-service-recovery 13-email-qa 14-plan-ledger-sync 15-resume-pass \
   16-curator-beat 17-torch-audit 18-mimic-drill 19-ux-review \
   20-model-saturation 21-context-ratio 22-ttsr-fit 23-bctx-canary \
-  25-wiki-health 26-publication-review 27-patrol 50-hygiene
-set_old week 01-roadmap-review 02-bench-trigger 03-typesafe-docs-refresh
-set_old month 01-zoom-out
+  25-wiki-health 26-publication-review 27-patrol 50-hygiene \
+  12-parked-care 28-omp-changelog-watch 29-arc-to-slice 30-pins-drift \
+  31-omarchy-readiness
+set_old week 01-roadmap-review 02-bench-trigger 03-typesafe-docs-refresh \
+  31-distro-update-watch
+set_old month 01-zoom-out 02-model-tier-refresh
+# post-collapse additions (2026-09-25..10-01) ride one firing each; their
+# OLD_TIER row is the tier whose firing pattern they now run under.
 
 # ---- unit specs (the NEW firing set is modeled from these) ----
 count_lines() { grep -c "$1" "$2"; }
@@ -151,6 +157,20 @@ ck "pick Mon 06:00" "weekly" "$(pick_for 06 1 28)"
 ck "pick 1st 06:00" "monthly" "$(pick_for 06 4 01)"
 ck "pick Monday 1st 06:00" "monthly weekly" "$(pick_for 06 1 01)"
 ck "pick non-firing hour runs nothing" "" "$(pick_for 14 4 24)"
+
+# ---- local-time seam (2026-10-01 calendar-pick regression): the pick ----
+# ---- must read the LOCAL clock (the clock the OnCalendar rows are ----
+# ---- written in); CADENCE_PICK_INSTANT pins the instant hermetically ----
+pick_instant() { # "hh dow dom" -> sorted subdir names, space-joined
+  CADENCE_PICK_INSTANT="$1" CADENCE_PICK_ECHO=1 bash "$TICK" |
+    sort | tr '\n' ' ' | sed 's/ $//'
+}
+ck "instant seam 05 Thu 30 -> daily" "daily" "$(pick_instant '05 4 30')"
+ck "instant seam 06 Mon 15 -> weekly" "weekly" "$(pick_instant '06 1 15')"
+ck "instant seam 06 Thu 01 -> monthly only" "monthly" "$(pick_instant '06 4 01')"
+ck "instant seam 06 Mon 01 -> weekly+monthly" "monthly weekly" "$(pick_instant '06 1 01')"
+ck "instant seam 09 Thu 30 (UTC-hour failure shape) -> empty" "" "$(pick_instant '09 4 30')"
+ck "live pick path never reads date -u" "0" "$(grep -c "date -u '+%H" "$TICK")"
 
 # ---- firing simulation 0..1439: old expansions vs new set per job ----
 old_minutes() { # tier dow dom -> minute list

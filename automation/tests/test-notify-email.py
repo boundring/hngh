@@ -633,7 +633,20 @@ class EmailDigest(unittest.TestCase):
 
 
 class ClassifyAlert(unittest.TestCase):
-    """classify_alert rubric — first match wins, default digest-only."""
+    """classify_alert rubric — first match wins, default digest-only.
+
+    The rubric under test is the pattern table, not the operator's
+    HNGH_NOTIFY_IMMEDIATE=0 kill switch — a quiet-mode login shell
+    (alert 2026-09-30: make test red under the operator env) must not
+    flip every expected immediate verdict to digest, so setUp clears
+    the override for these tests only.
+    """
+
+    def setUp(self):
+        os.environ.pop("HNGH_NOTIFY_IMMEDIATE", None)
+
+    def tearDown(self):
+        os.environ.pop("HNGH_NOTIFY_IMMEDIATE", None)
 
     def test_immediate_classes(self):
         for t in (

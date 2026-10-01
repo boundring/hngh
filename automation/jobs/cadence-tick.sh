@@ -12,12 +12,16 @@
 # usage: TIER=<calendar|hour|subhour> jobs/cadence-tick.sh
 set -u
 
-# calendar subdir pick (2026-09-24 tier collapse, B3): the 05:00 firing
-# runs daily; a 06:00 firing runs weekly on Mondays and monthly on the
-# 1st (both when the 1st is a Monday). Hour-aware so the one calendar
-# timer preserves every old day/week/month firing instant exactly.
-# CADENCE_PICK_ECHO=1 prints the pick for `date -u` and exits — the pin
-# seam (automation/tests/test-cadence-collapse.sh).
+# calendar subdir pick (2026-09-24 tier collapse, B3): the 05:00 local
+# firing runs daily; a 06:00 local firing runs weekly on Mondays and
+# monthly on the 1st (both when the 1st is a Monday). Hour-aware so the
+# one calendar timer preserves every old day/week/month firing instant
+# exactly. The pick reads the LOCAL clock — the clock the systemd
+# OnCalendar rows are written in (a UTC read fired nothing, the
+# 2026-10-01 calendar-pick regression).
+# CADENCE_PICK_ECHO=1 prints the pick for the local instant and exits —
+# the pin seam (automation/tests/test-cadence-collapse.sh);
+# CADENCE_PICK_INSTANT='hh dow dom' overrides it hermetically.
 calendar_pick() { # hh dow dom -> subdir names, one per line
  if [ "$1" = "05" ]; then
   echo daily
@@ -30,7 +34,11 @@ calendar_pick() { # hh dow dom -> subdir names, one per line
  return 0
 }
 if [ "${CADENCE_PICK_ECHO:-0}" = "1" ]; then
- read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
+ if [ -n "${CADENCE_PICK_INSTANT:-}" ]; then
+  read -r _hh _dow _dom <<<"$CADENCE_PICK_INSTANT"
+ else
+  read -r _hh _dow _dom <<<"$(date '+%H %u %d')"
+ fi
  calendar_pick "$_hh" "$_dow" "$_dom"
  exit 0
 fi
@@ -85,7 +93,7 @@ TIMING_LOG="$AUTOMATION_ROOT/logs/drop-in-timing.log"
 mkdir -p "$AUTOMATION_ROOT/logs"
 DIRS="$TIER"
 if [ "$TIER" = "calendar" ]; then
- read -r _hh _dow _dom <<<"$(date -u '+%H %u %d')"
+ read -r _hh _dow _dom <<<"$(date '+%H %u %d')"
  DIRS=""
  for _sub in $(calendar_pick "$_hh" "$_dow" "$_dom"); do
   DIRS="$DIRS calendar/$_sub"
