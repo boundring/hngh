@@ -6,6 +6,12 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-01
 
+- **Omarchy Hyprland layer landed on CachyOS**: wicket armed (root
+  copies md5-paired), phase-1 session stack complete (desk phase-1 rc 0
+  under desk-authz-phase-1), readiness beat green; labeled
+  omarchy.desktop entry + plasmalogin default are the operator's two
+  sudo one-liners (approval given). No boot-chain contact;
+  docs/records/2026-10-01-omarchy-hyprland-layer-cachyos.md.
 - **Ornith-1.5-9B research leg live on unsloth**: loaded at the
   lowered 8192 window (~8.6/20 GiB VRAM, ~39 tok/s); delegated jcode
   probe completed rc 0 in 294 s and drove the hngh-1ec catalog
