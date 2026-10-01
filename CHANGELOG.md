@@ -4,6 +4,15 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-10-01
+
+- **The Governed Fleet (stage 3) flipped done**: all ten invariants
+  verified under standing guards and patrols; record
+  docs/records/2026-10-01-governed-fleet-stage3-exit.md. On the way
+  the dormant calendar tier was revived -- the cadence calendar pick
+  compared a UTC instant against the local-time OnCalendar rows
+  (nothing mounted since 2026-09-24); it now reads the local clock
+  with a hermetic instant seam, and the day patrols run again.
 ### 2026-09-30
 
 - **Credential-seam sweep + model-tier refresh cadence (slice E)**:
