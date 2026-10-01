@@ -78,26 +78,24 @@ record per physical line."
 differing only in scope or payload collide."
   (list (getf line :identifier) (getf line :kind) (getf line :transport)))
 
-(defun read-line-form (stream)
-  "Read one record from STREAM; a read error is a transport fault.
-Returns NIL at end of file. The #. reader macro is refused: stored
-lines are data, never code, so read-eval poisoning fails closed."
-  (let ((eof (gensym "EOF"))
-        (*read-eval* nil))
-    (handler-case
-        (let ((form (read stream nil eof)))
-          (unless (eq form eof) form))
-      (error () (error 'transport-fault)))))
-
 (defun read-lines (file)
   ;; The probe-then-read pattern above races: a record file that passes
   ;; probe-file can fail open (vanished, replaced by a directory). That
   ;; window must fail closed as a transport fault, never a raw error.
+  ;; A form that reads as a top-level atom (including a bare () — NIL)
+  ;; is poison: replay refuses the whole file instead of silently
+  ;; truncating at it. The #. reader macro is refused via *read-eval*
+  ;; nil: stored lines are data, never code, so read-eval poisoning
+  ;; fails closed.
   (handler-case
       (with-open-file (stream file :direction :input)
-        (loop for form = (read-line-form stream)
-              while form
-              collect form))
+        (let ((eof (gensym "EOF"))
+              (*read-eval* nil))
+          (loop for form = (read stream nil eof)
+                until (eq form eof)
+                when (atom form)
+                  do (error 'transport-fault)
+                collect form)))
     (error () (error 'transport-fault))))
 
 (defun existing-keys (file)

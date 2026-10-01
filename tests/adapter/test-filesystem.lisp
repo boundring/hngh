@@ -214,6 +214,43 @@
            "recording when the record file turned unreadable is a transport fault")
     (uiop:delete-directory-tree root :validate t)))
 
+;;; A poisoned record line — anything that reads as a top-level atom,
+;;; including a bare () — must fail the replay closed: read-lines
+;;; refuses the whole file, and the dedupe path refuses to append past
+;;; it. A truncating reader would silently drop every line after the
+;;; poison instead.
+
+(let* ((root (fresh-fs-root))
+       (store (hngh.adapters.filesystem:make-filesystem-store :root root))
+       (file (merge-pathnames "record.lisp" root)))
+  (hngh.adapters.filesystem:store-record-run store (fs-record-line "run-1" :creation))
+  (with-open-file (out file :direction :output :if-exists :append)
+    (write '() :stream out)
+    (terpri out)
+    (write (fs-record-line "run-2" :creation) :stream out)
+    (terpri out))
+  (check (signals-transport-fault-p
+          (lambda () (hngh.adapters.filesystem:store-entries store)))
+         "a bare () line poisons the replay into a transport fault")
+  (check (signals-transport-fault-p
+          (lambda ()
+            (hngh.adapters.filesystem:store-record-run
+             store (fs-record-line "run-3" :creation))))
+         "recording into a poisoned ledger refuses instead of appending past it")
+  (uiop:delete-directory-tree root :validate t))
+
+(let* ((root (fresh-fs-root))
+       (store (hngh.adapters.filesystem:make-filesystem-store :root root))
+       (file (merge-pathnames "record.lisp" root)))
+  (hngh.adapters.filesystem:store-record-run store (fs-record-line "run-1" :creation))
+  (with-open-file (out file :direction :output :if-exists :append)
+    (write 42 :stream out)
+    (terpri out))
+  (check (signals-transport-fault-p
+          (lambda () (hngh.adapters.filesystem:store-entries store)))
+         "a top-level atom line poisons the replay into a transport fault")
+  (uiop:delete-directory-tree root :validate t))
+
 (check (equal (list (package-name (find-package :cl)))
               (mapcar #'package-name
                       (package-use-list

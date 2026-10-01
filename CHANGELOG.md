@@ -13,6 +13,14 @@ lives under Pre-release / early development until the first release.
   compared a UTC instant against the local-time OnCalendar rows
   (nothing mounted since 2026-09-24); it now reads the local clock
   with a hermetic instant seam, and the day patrols run again.
+
+- **Transport-adapter poison guard (hngh-3fx)**: `read-lines` in the
+  filesystem store now refuses any record line that reads as a
+  top-level atom -- including a bare `()` -- as a transport fault
+  instead of silently truncating the replay at it; the dedupe path
+  refuses to append into a poisoned ledger. Failing-first proof:
+  the pre-fix suite dies on the new poisoned-ledger checks.
+
 ### 2026-09-30
 
 - **Credential-seam sweep + model-tier refresh cadence (slice E)**:
