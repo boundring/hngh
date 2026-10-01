@@ -247,11 +247,28 @@ Design reference: docs/design/governed-fleet.md (sections 6, 7, 8, 10).
       automation/agent-handoffs.md (overnight-lead | governed-fleet |
       slice-f) and automation/STATE.md; worker-transport fixture
       removed, /tmp stores left as throwaway evidence.
-- [ ] Slice G: operations knowledge-graph surface in the dashboard --
+- [x] Slice G: operations knowledge-graph surface in the dashboard --
       3D WebGL view of the section-2 registries, live-fed, 2D/static
       fallback (NOT exit-bearing)
       Verification: the dashboard serves the knowledge-graph view with
       the 2D/static fallback; kernel `make test` green.
+      Executed 2026-10-01 (closure package, attempt 2 after the
+      blk-20260930 park): the surface was already landed 2026-09-14
+      (automation sg commits 5b48f69d, c1e016df, f93261a8, 38b6c354,
+      c507b197, f611a771; per-increment records 2026-09-14/09-19) and
+      verified live this session: tests test-graph-data.py (25 OK),
+      test-plan-feed-graph.py (5 OK), test-graph-feed-refresh.py (8 OK,
+      now wired into the automation gate), live GET /graph.json 200
+      (408 nodes / 401 edges / 11 kinds) + ?all-sessions=1 200 +
+      console.html 200. The WebGL requirement is answered by the
+      recorded divergence (graph-view.js v2: operator Chrome has
+      getContext('webgl') null; canvas-3D renderer; SVG fallback behind
+      ?graph2d=1). Re-admission: blocker row blk-20260930 deleted after
+      the delve disposition (automation commit 4c1c0d38); closure
+      record docs/records/2026-10-01-operations-knowledge-graph-surface.md
+      (rides this kernel docs commit). Gates: kernel `make test` green,
+      automation `make test` green. NOT exit-bearing; the roadmap
+      stage-3 flip stays the separate final plan step.
 - [ ] Roadmap stage 3 row flips to done when all ten invariants hold
       under standing guards and patrols
       Verification: `scripts/omp-bridge --plan-status
