@@ -6,6 +6,11 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-01
 
+- **Ornith-1.5-9B research leg live on unsloth**: loaded at the
+  lowered 8192 window (~8.6/20 GiB VRAM, ~39 tok/s); delegated jcode
+  probe completed rc 0 in 294 s and drove the hngh-1ec catalog
+  dedupe fix shape. Standing subject line appended;
+  docs/records/2026-10-01-ornith15-unsloth-research-lane.md.
 - **Digest PII seams fail closed (hngh-292)**: digest-html/html-digest
   refuse to render when the scrub module is unloadable (was: silent
   identity fallback); digest-public gains a fail-closed scrub seam with
