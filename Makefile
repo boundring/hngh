@@ -24,6 +24,7 @@ test:
 	python3 tests/scripts/test-fleet-manager.py
 	python3 tests/scripts/test-osd-operative.py
 	python3 tests/scripts/test-report-queue.py
+	python3 tests/scripts/test-queue-readers-json.py
 	python3 tests/scripts/test-run-autonomous.py
 	python3 tests/scripts/test-omp-bridge.py
 	python3 tests/scripts/test-ceremony-drive-dry-run.py

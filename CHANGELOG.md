@@ -6,6 +6,17 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-02
 
+- **Queue readers on the --json contract**: scripts/dashboard-tui and
+  scripts/osd-operative called report-queue with `--json --unread`
+  (the --unread command dispatches first, so stdout was never JSON)
+  and read the wrong schema keys (`first_line` vs `first`;
+  `body` treated as a filename instead of body text) — the TUI queue
+  tab permanently showed "queue not alive" and the osd strip omitted
+  reports. Both readers now call plain `--json` and render real
+  rows; pinned by tests/scripts/test-queue-readers-json.py
+  (red before, 3/3 after; existing reader suites unaffected — they
+  only pinned the fail-closed fallbacks, which is how the break
+  survived). docs/records/2026-10-02-queue-readers-json-contract.md.
 - **Dashboard style-evolution: hermetic test mount + warning-collision
   guard**: tests/scripts/test-evolve-dashboard-style.py no longer
   snapshots/restores the live current-overlay.json (lost-update race

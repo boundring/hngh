@@ -437,7 +437,10 @@ def _reports(maxrows=5, timeout=4):
     queue's absence (it is another lane's in-flight work)."""
     try:
         out = subprocess.run(
-            [sys.executable, str(REPORT_QUEUE), "--json", "--unread"],
+            # plain --json: the payload already carries only unread rows
+            # (--unread dispatches first and prints text, which broke
+            # json.loads here since the flag pair was introduced)
+            [sys.executable, str(REPORT_QUEUE), "--json"],
             capture_output=True, text=True, timeout=timeout)
         if out.returncode != 0:
             return [], 0, False
@@ -460,22 +463,13 @@ def _newest_unseen(seen, reports):
 
 
 def _report_body_text(report):
-    """The full body of REPORT: the report-bodies file named by the
-    body key when present, else the first line. Fail closed — any
-    missing/unreadable body falls back to the first line."""
-    first = report.get("first_line") or ""
-    key = report.get("body")
-    if key:
-        name = Path(str(key).removesuffix(".md")).name
-        for cand in (_REPORT_BODIES / f"{name}.md", Path(str(key))):
-            try:
-                if cand.is_file():
-                    text = cand.read_text(encoding="utf-8").strip()
-                    if text:
-                        return text
-            except OSError:
-                pass
-    return first
+    """The full body of REPORT: the body text the queue's --json
+    payload carries, else the first line. Fail closed — anything
+    missing falls back to the first line."""
+    body = report.get("body")
+    if body:
+        return str(body).strip()
+    return report.get("first") or ""
 
 
 def _state(queued, done, sessions):

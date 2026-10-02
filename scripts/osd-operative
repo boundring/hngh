@@ -131,7 +131,8 @@ def report_status(timeout=4):
     queue = ROOT / "scripts" / "report-queue"
     try:
         out = subprocess.run(
-            [sys.executable, str(queue), "--json", "--unread"],
+            # plain --json: the payload already carries only unread rows
+            [sys.executable, str(queue), "--json"],
             capture_output=True, text=True, timeout=timeout)
         if out.returncode != 0:
             return ""
@@ -142,7 +143,7 @@ def report_status(timeout=4):
             return f" · reports {unread}" if unread else ""
         r = reports[0]
         kind = r.get("kind") or "?"
-        first = r.get("first_line") or ""
+        first = r.get("first") or ""
         return (f" · {kind} {first[:40]}" if first
                 else f" · reports {len(reports)}")
     except Exception:
