@@ -48,3 +48,22 @@ close-half refactor discovery (plan
 mattered because S2 made the digest the progress-cursor closer and
 S1 made the cursor self-healing — consumers must render the stream
 they now close.
+
+## Post-ceremony follow-ups (same day)
+
+- A third payload consumer survived the first sweep:
+  `dashboard-tui`'s queue-tab table read `first_line` and rendered
+  empty row text. The cell build is now the pure
+  `_report_row_cells(r, accent)` (used by the compose loop), pinned
+  by `test_tui_table_cells_use_payload_first`.
+- The digest mark loop walked the payload newest-first, but
+  `mark_read` is a single-id overwrite watermark — the last call
+  wins, so the walk now runs oldest→newest and the final overwrite
+  covers the whole window (order pinned in
+  `automation/tests/test-digest-send-schedule.sh`; automation-side
+  commit).
+- Known limitation, deferred with a bd issue: the watermark is
+  kind-blind, so progress marks bury alerts older than the newest
+  marked progress row (those are ≥7d old; the 14d prune archives
+  them). An alert read-set / per-kind watermark is a
+  kernel-semantics candidate if the operator ever wants it exact.

@@ -17,6 +17,11 @@ lives under Pre-release / early development until the first release.
   (red before, 3/3 after; existing reader suites unaffected — they
   only pinned the fail-closed fallbacks, which is how the break
   survived). docs/records/2026-10-02-queue-readers-json-contract.md.
+  Follow-ups the same day: the queue-tab table's third `first_line`
+  read became the pure `_report_row_cells` (pinned); the digest
+  mark loop now walks oldest→newest (mark_read's last overwrite
+  wins — automation commit); kind-blind watermark limitation
+  deferred with a bd issue.
 - **Dashboard style-evolution: hermetic test mount + warning-collision
   guard**: tests/scripts/test-evolve-dashboard-style.py no longer
   snapshots/restores the live current-overlay.json (lost-update race

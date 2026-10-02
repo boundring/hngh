@@ -472,6 +472,17 @@ def _report_body_text(report):
     return report.get("first") or ""
 
 
+def _report_row_cells(r, accent):
+    """The queue-tab table cells for one report row (pure test seam;
+    the payload key for the first line is `first` — see
+    tests/scripts/test-queue-readers-json.py)."""
+    kind = r.get("kind") or "?"
+    glyph = _REPORT_GLYPH.get(kind, "•")
+    style = f"bold {accent}" if kind == "alert" else accent
+    return (_styled(f" {glyph}", style),
+            _kw_text(_cut(r.get("first") or "", 50), accent))
+
+
 def _state(queued, done, sessions):
     """Same state selection dashboard-readout's rich watch uses."""
     if any(s.get("state") == "running" for s in sessions):
@@ -764,12 +775,7 @@ class HnghTUI(App):
         reports_w = self.query_one("#reports", DataTable)
         reports_w.clear()
         for r in reports:
-            kind = r.get("kind") or "?"
-            glyph = _REPORT_GLYPH.get(kind, "•")
-            style = f"bold {accent}" if kind == "alert" else accent
-            reports_w.add_row(_styled(f" {glyph}", style),
-                              _kw_text(_cut(r.get("first_line") or "", 50),
-                                       accent))
+            reports_w.add_row(*_report_row_cells(r, accent))
 
         roster_w = self.query_one("#roster", DataTable)
         roster_w.clear()

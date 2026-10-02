@@ -78,6 +78,15 @@ class TestQueueReaders(unittest.TestCase):
         text = self.tui._report_body_text(alert)
         self.assertIn("make test failed", text)
 
+    def test_tui_table_cells_use_payload_first(self):
+        # the queue-tab table is the third consumer of the payload's
+        # first-line key: it read `first_line` (absent) and rendered
+        # empty rows after the other two sites were fixed
+        cells = self.tui._report_row_cells(
+            {"kind": "alert", "first": "kernel red gate: make test failed"},
+            "#e6b450")
+        self.assertIn("make test failed", str(cells[1]))
+
     def test_osd_report_status_renders_first_report(self):
         status = self.osd.report_status()
         self.assertTrue(status, "report_status returned empty")
