@@ -62,8 +62,12 @@ they now close.
   covers the whole window (order pinned in
   `automation/tests/test-digest-send-schedule.sh`; automation-side
   commit).
-- Known limitation, deferred with a bd issue: the watermark is
-  kind-blind, so progress marks bury alerts older than the newest
-  marked progress row (those are ≥7d old; the 14d prune archives
-  them). An alert read-set / per-kind watermark is a
-  kernel-semantics candidate if the operator ever wants it exact.
+- Known limitation, deferred with a bd issue (hngh-4pe): the
+  watermark is kind-blind, so each delivery buries EVERY alert
+  older than the newest marked progress row — any age, not just
+  stale ones (an alert filed 10:00 leaves the unread stream at the
+  15:00 delivery once a 14:50 progress row closes the window), and
+  it stays out of the digest until the 14d prune archives it.
+  "Alerts unread until dismissed or 14d" is therefore only
+  approximated; an alert read-set / per-kind watermark is the
+  kernel-semantics candidate that would make it exact.
