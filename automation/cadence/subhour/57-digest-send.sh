@@ -96,7 +96,10 @@ try:
         env=env, timeout=60).stdout or "{}")
 except (ValueError, OSError, subprocess.TimeoutExpired):
     raise SystemExit(0)
-for r in payload.get("reports", []):
+for r in reversed(payload.get("reports", [])):
+# reversed: mark_read overwrites the single-id watermark, so the LAST
+# call wins — walk oldest→newest so the final overwrite covers the
+# whole window (payload is newest-first)
     if r.get("kind") == "progress":
         subprocess.run(["python3", rq, "--mark-read", r.get("id", "")],
                        capture_output=True, env=env, timeout=60)

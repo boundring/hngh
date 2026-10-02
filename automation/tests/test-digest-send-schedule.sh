@@ -141,6 +141,8 @@ check "queued send exits 0" "0" "$out"
 check "progress p1 marked read" "1" "$(grep -c -- '--mark-read p1' "$sb/rq.log")"
 check "progress p2 marked read" "1" "$(grep -c -- '--mark-read p2' "$sb/rq.log")"
 check "alert row never marked read" "0" "$(grep -c -- '--mark-read a1' "$sb/rq.log")"
+check "final mark-read is the newest progress row (single-id overwrite watermark)" \
+ "1" "$(grep -- '--mark-read' "$sb/rq.log" | tail -1 | grep -c -- '--mark-read p1')"
 
 # 6) failed send files the alert and marks NOTHING read
 reset_stamps
