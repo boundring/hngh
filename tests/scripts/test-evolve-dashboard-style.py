@@ -2,7 +2,9 @@
 """evolve-dashboard-style: hermetic evolution-loop test.
 
 Runs the real script in the real repo (read-only outputs it controls:
-the ui-grades.md ledger append and the current-overlay.json mount).
+the ui-grades.md ledger append; the overlay mount is redirected to a
+throwaway EVOLVE_OVERLAY path so the live docs/design mount and the
+subhour cadence writer are never touched).
 Assertions cover the determinism contract, generation bounding, the
 self-grade ledger rows, and the mounted fittest overlay being loadable.
 No fixtures, no mocks — the suite reads the actual artifacts it writes.
@@ -11,9 +13,11 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import random
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -23,8 +27,11 @@ SCRIPT = ROOT / "scripts" / "evolve-dashboard-style"
 OVERLAY = ROOT / "docs" / "design" / "ui-evolve" / "current-overlay.json"
 LEDGER = ROOT / "docs" / "project" / "ui-grades.md"
 
-# Save/restore the real mount + ledger so the test never leaves noise.
-_SAVED_OVERLAY = OVERLAY.read_bytes() if OVERLAY.exists() else None
+# Hermetic mount: every script run writes EVOLVE_OVERLAY under a throwaway
+# dir, never the live docs/design mount (lost-update vs the subhour
+# cadence writer). The ledger append is still exercised + restored.
+_TMP_DIR = Path(tempfile.mkdtemp(prefix="evolve-dash-test-"))
+_MOUNT = _TMP_DIR / "current-overlay.json"
 _SAVED_LEDGER = LEDGER.read_bytes() if LEDGER.exists() else None
 
 
@@ -40,8 +47,9 @@ def load_script():
 
 
 def run(args):
+    env = dict(os.environ, EVOLVE_OVERLAY=str(_MOUNT))
     return subprocess.run([sys.executable, str(SCRIPT)] + args,
-                          capture_output=True, text=True, cwd=ROOT)
+                          capture_output=True, text=True, cwd=ROOT, env=env)
 
 
 def ledger_rows_since(start):
@@ -62,11 +70,7 @@ class TestEvolveDashboardStyle(unittest.TestCase):
         cls.mod = load_script()
 
     def tearDown(self):
-        # restore the mount + ledger after each test
-        if _SAVED_OVERLAY is not None:
-            OVERLAY.write_bytes(_SAVED_OVERLAY)
-        elif OVERLAY.exists():
-            OVERLAY.unlink()
+        # restore the ledger after each test (the mount went to _MOUNT)
         if _SAVED_LEDGER is not None:
             LEDGER.write_bytes(_SAVED_LEDGER)
         else:
@@ -104,12 +108,28 @@ class TestEvolveDashboardStyle(unittest.TestCase):
         self.assertRegex(last, r"\|\s\d{4}-\d{2}-\d{2} \d{2}:\d{2} \| "
                                   r"dashboard-tui-ocean-gen2 \| \d+/10 \|")
         # mount exists, valid json, matching preset, scored grade
-        self.assertTrue(OVERLAY.exists())
-        doc = json.loads(OVERLAY.read_text(encoding="utf-8"))
+        self.assertTrue(_MOUNT.exists())
+        doc = json.loads(_MOUNT.read_text(encoding="utf-8"))
         self.assertEqual(doc["preset"], "ocean")
         self.assertIn(doc["gen"], (1, 2))
         self.assertRegex(doc["grade"], r"\d+/10")
         self.assertIn("fields", doc)
+
+    def test_warning_never_collides_with_signal_colors(self):
+        # Regression (2026-10-02): _swap_pair could put the success
+        # color into warning, mounting a palette where the dashboard
+        # renders warnings in green. Sweep every preset across many
+        # seeds: warning must stay distinct from primary/success/error.
+        for preset, base in self.mod.PRESETS.items():
+            for seed in range(200):
+                fields = dict(base)
+                rng = random.Random(seed)
+                for _ in range(rng.randint(1, 6)):
+                    self.mod.mutate(fields, rng)
+                self.assertNotIn(
+                    fields["warning"],
+                    {fields["primary"], fields["success"], fields["error"]},
+                    msg=f"{preset} seed {seed}")
 
     def test_needs_no_repo_state_for_self_grade(self):
         # self-grade path is hermetic by construction: no grade-interface,

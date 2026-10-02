@@ -44,7 +44,9 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OVERLAY = ROOT / "docs" / "design" / "ui-evolve" / "current-overlay.json"
+OVERLAY = Path(os.environ.get(
+    "EVOLVE_OVERLAY",
+    str(ROOT / "docs" / "design" / "ui-evolve" / "current-overlay.json")))
 LEDGER = ROOT / "docs" / "project" / "ui-grades.md"
 LEDGER_HEADER = "| timestamp | target | grade | first finding |"
 
@@ -130,11 +132,25 @@ def _shift_channel(hexcolor, rng):
 
 
 def _swap_pair(fields, rng):
-    """Swap two distinct color field values."""
+    """Swap two distinct color field values.
+
+    A swap may never leave warning equal to primary/success/error: the
+    TUI renders warnings from the same palette, and a green warning is
+    unactionable (2026-10-02 overlay finding). Channel shifts cannot
+    collide (delta +/-8); swaps are the only vector, so refuse here.
+    """
     a = COLOR_FIELDS[rng.randrange(len(COLOR_FIELDS))]
     b = COLOR_FIELDS[rng.randrange(len(COLOR_FIELDS))]
     if a == b:
         return
+    if "warning" in (a, b):
+        partner = b if a == "warning" else a
+        # fields landing in warning keep their old values; every
+        # protected field except the partner is untouched by the swap.
+        protected = ("primary", "success", "error")
+        if any(fields[partner] == fields[f]
+               for f in protected if f != partner):
+            return
     fields[a], fields[b] = fields[b], fields[a]
 
 

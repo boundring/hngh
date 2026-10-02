@@ -4,6 +4,21 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-10-02
+
+- **Dashboard style-evolution: hermetic test mount + warning-collision
+  guard**: tests/scripts/test-evolve-dashboard-style.py no longer
+  snapshots/restores the live current-overlay.json (lost-update race
+  vs the subhour cadence writer; interrupted runs stranded test state
+  on the mount) — the mount path is env-overridable (`EVOLVE_OVERLAY`)
+  and the suite writes only a throwaway path. `_swap_pair` refuses
+  swaps that would leave `warning` equal to `primary`/`success`/
+  `error` (hngh preset shares #5af78e across primary/accent/success;
+  swaps could mount a green-warning palette that grading could not
+  see). Failing-first: collision reproduced at hngh seed 59; live
+  mount byte-identical across the suite; make test green, 2957
+  checks. docs/records/2026-10-02-evolve-overlay-hermetic-mount-warning-guard.md.
+
 ### 2026-10-01
 
 - **Omarchy Hyprland layer landed on CachyOS**: wicket armed (root
