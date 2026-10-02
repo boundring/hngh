@@ -700,8 +700,11 @@ build_plan_prompt() { # slug plan_file step -> prompt path on stdout
  mkdir -p "$ROOT/prompts/overnight"
  local wake unread
  wake="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ # alert count, not raw unread: progress rows auto-read at digest
+ # delivery (S2 close-half refactor) — the waking session's real
+ # signal is the alert stream
  unread="$(python3 "$KERNEL/scripts/report-queue" --json 2>/dev/null |
-  python3 -c 'import json,sys; print(json.load(sys.stdin).get("unread", 0))' 2>/dev/null || echo '?')"
+  python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("summary") or {}).get("alert", d.get("unread", 0)))' 2>/dev/null || echo '?')"
  {
   printf 'WAKE CONTEXT: %s UTC. You are waking mid-stream — read the plan\nand ledger state before acting. Unread ledger alerts: %s.\n\n' \
    "$wake" "$unread"

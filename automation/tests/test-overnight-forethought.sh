@@ -58,6 +58,20 @@ chmod +x "$stubdir/omp"
 printf '#!/usr/bin/env bash\necho "run run-42 started $*"\n' >"$stubdir/bridge-stub.sh"
 chmod +x "$stubdir/bridge-stub.sh"
 
+# kernel report-queue stub: --json payload with an alert/progress split
+# that discriminates the WAKE CONTEXT count (alert=2) from raw unread
+# (6) and from progress rows (4) — regression surface for the S2
+# close-half refactor (progress auto-reads; the wake line shows alerts)
+mkdir -p "$kernel/scripts"
+cat >"$kernel/scripts/report-queue" <<'STUB'
+#!/usr/bin/env python3
+import os, sys
+if "--json" in sys.argv[1:]:
+    print(os.environ.get("RQ_PAYLOAD", "{}"))
+STUB
+chmod +x "$kernel/scripts/report-queue"
+export RQ_PAYLOAD='{"reports":[{"id":"a1","kind":"alert"},{"id":"a2","kind":"alert"},{"id":"p1","kind":"progress"},{"id":"p2","kind":"progress"},{"id":"p3","kind":"progress"},{"id":"p4","kind":"progress"}],"unread":6,"summary":{"alert":2,"progress":4}}'
+
 plan_with_step() { # step -> writes accepted seed plan
  printf '<!-- plan: status=accepted risk=normal author=operator -->\n# seed plan\n\n## Steps\n\n- [ ] %s -- verify: marker exists\n' "$1" \
   >"$kernel/docs/project/plans/seed.plan.md"
@@ -88,6 +102,14 @@ n="$(wc -l <"$MARKER")"
 [ "$n" -eq 1 ] || fail "depth=0 launched $n sessions, expected 1 (executor only)"
 grep -q 'launch:dream' "$MARKER" && fail "depth=0 launched a dream session"
 ok "depth=0: no dream launch, executor only"
+# WAKE CONTEXT carries the alert count only (S2 close-half refactor):
+# raw unread here is 6, progress rows are 4 — only summary.alert (2)
+# is the waking session's signal
+grep -q 'Unread ledger alerts: 2' "$auto/prompts/overnight/seed.md" ||
+ fail "wake context shows $(grep -o 'Unread ledger alerts: [0-9?]*' "$auto/prompts/overnight/seed.md" | head -1), expected 2 (alert count)"
+grep -q 'Unread ledger alerts: 6' "$auto/prompts/overnight/seed.md" &&
+ fail "wake context counts raw unread (regression to .get(unread))"
+ok "wake context shows the alert count (2 of 6 unread)"
 
 # --- (b) depth=1 + kernel-touching step: dream runs, executor is dream-informed
 reset_runs

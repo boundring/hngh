@@ -15,23 +15,23 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 sb="$(mktemp -d)"
 trap 'rm -rf "$sb"' EXIT
 mkdir -p "$sb/kernel/scripts" "$sb/auto/bin" "$sb/auto/scripts" \
-  "$sb/auto/logs" "$sb/auto/lib" "$sb/stamps"
+ "$sb/auto/logs" "$sb/auto/lib" "$sb/stamps"
 ln -s "$root/lib/notify-email.sh" "$sb/auto/lib/"
 ln -s "$root/lib/breadcrumbs.sh" "$sb/auto/lib/"
 ln -s "$root/lib/common.sh" "$sb/auto/lib/"
 cp "$root/scripts/notify-email.py" "$sb/auto/scripts/notify-email.py"
 DIGEST="$root/cadence/subhour/57-digest-send.sh"
 [ -f "$DIGEST" ] || {
-  echo "FAIL: $DIGEST missing"
-  exit 1
+ echo "FAIL: $DIGEST missing"
+ exit 1
 }
 
 fails=0
 check() { # check <desc> <expected> <actual>
-  if [ "$2" = "$3" ]; then printf 'ok %s\n' "$1"; else
-    printf 'FAIL %s: expected [%s] got [%s]\n' "$1" "$2" "$3"
-    fails=$((fails + 1))
-  fi
+ if [ "$2" = "$3" ]; then printf 'ok %s\n' "$1"; else
+  printf 'FAIL %s: expected [%s] got [%s]\n' "$1" "$2" "$3"
+  fails=$((fails + 1))
+ fi
 }
 
 # stub digest command: touches the marker (proves it ran)
@@ -56,6 +56,9 @@ cat >"$sb/kernel/scripts/report-queue" <<'EOF'
 import os, sys
 with open(os.environ["RQ_LOG"], "a") as f:
     f.write(" ".join(sys.argv[1:]) + "\n")
+payload = os.environ.get("QUEUES_JSON")
+if payload is not None and "--json" in sys.argv[1:]:
+    print(payload)
 EOF
 chmod +x "$sb/kernel/scripts/report-queue"
 
@@ -64,28 +67,28 @@ chmod +x "$sb/kernel/scripts/report-queue"
 chmod 600 "$sb/notify-email.conf"
 
 sends() {
-  if [ -f "$sb/sends.log" ]; then
-    grep -c -- '--subject' "$sb/sends.log"
-  else
-    printf '0'
-  fi
+ if [ -f "$sb/sends.log" ]; then
+  grep -c -- '--subject' "$sb/sends.log"
+ else
+  printf '0'
+ fi
 }
 
 run() { # run [K=V ...] — extra K=V pairs land in env (last wins)
-  local rc=0
-  (cd "$sb" && env HNGH_HOME="$sb/kernel" HNGH_AUTOMATION_ROOT="$sb/auto" \
-    HNGH_DIGEST_STAMP_DIR="$sb/stamps" PATH="$sb/auto/bin:$PATH" \
-    DIGEST_MARKER="$sb/marker" SEND_LOG="$sb/sends.log" \
-    RQ_LOG="$sb/rq.log" HNGH_NOTIFY_EMAIL_CONF="$sb/notify-email.conf" \
-    HNGH_CRUMBS_DB="$sb/crumbs.db" \
-    HNGH_DIGEST_BIN="$sb/auto/bin/digest-stub" \
-    "$@" \
-    bash "$DIGEST") || rc=$?
-  printf '%s' "$rc"
+ local rc=0
+ (cd "$sb" && env HNGH_HOME="$sb/kernel" HNGH_AUTOMATION_ROOT="$sb/auto" \
+  HNGH_DIGEST_STAMP_DIR="$sb/stamps" PATH="$sb/auto/bin:$PATH" \
+  DIGEST_MARKER="$sb/marker" SEND_LOG="$sb/sends.log" \
+  RQ_LOG="$sb/rq.log" HNGH_NOTIFY_EMAIL_CONF="$sb/notify-email.conf" \
+  HNGH_CRUMBS_DB="$sb/crumbs.db" \
+  HNGH_DIGEST_BIN="$sb/auto/bin/digest-stub" \
+  "$@" \
+  bash "$DIGEST") || rc=$?
+ printf '%s' "$rc"
 }
 reset_stamps() {
-  rm -rf "$sb/stamps" "$sb/marker" "$sb/sends.log" "$sb/rq.log"
-  mkdir -p "$sb/stamps"
+ rm -rf "$sb/stamps" "$sb/marker" "$sb/sends.log" "$sb/rq.log"
+ mkdir -p "$sb/stamps"
 }
 
 # 1) off-slot run: no digest, no send, exit 0
@@ -117,7 +120,7 @@ reset_stamps
 out="$(run HNGH_DIGEST_FORCE_SLOT=1530 HNGH_DIGEST_NOW_HHMM=1200)"
 check "force without TEST flag exits 0" "0" "$out"
 check "force without TEST flag runs nothing" "" \
-  "$([ -f "$sb/marker" ] && echo x)"
+ "$([ -f "$sb/marker" ] && echo x)"
 
 # 4) send failure: alert row filed, exactly-once preserved (no retry)
 reset_stamps
@@ -129,8 +132,36 @@ out="$(run HNGH_DIGEST_TEST=1 HNGH_DIGEST_FORCE_SLOT=0730 SEND_RC=0)"
 check "retry attempt after failure exits 0" "0" "$out"
 check "failed slot did not retry the send" "1" "$(sends)"
 
+# 5) successful send marks every progress row read; alerts untouched
+# (S2 close-half refactor: the operator's unread stream is alerts only)
+reset_stamps
+out="$(run HNGH_DIGEST_TEST=1 HNGH_DIGEST_FORCE_SLOT=0730 \
+ QUEUES_JSON='{"reports":[{"id":"p1","kind":"progress","first":"x"},{"id":"p2","kind":"progress","first":"y"},{"id":"a1","kind":"alert","first":"z"}],"unread":3,"summary":{"progress":2,"alert":1}}')"
+check "queued send exits 0" "0" "$out"
+check "progress p1 marked read" "1" "$(grep -c -- '--mark-read p1' "$sb/rq.log")"
+check "progress p2 marked read" "1" "$(grep -c -- '--mark-read p2' "$sb/rq.log")"
+check "alert row never marked read" "0" "$(grep -c -- '--mark-read a1' "$sb/rq.log")"
+
+# 6) failed send files the alert and marks NOTHING read
+reset_stamps
+out="$(run HNGH_DIGEST_TEST=1 HNGH_DIGEST_FORCE_SLOT=0730 SEND_RC=1 \
+ QUEUES_JSON='{"reports":[{"id":"p1","kind":"progress","first":"x"}],"unread":1,"summary":{"progress":1}}')"
+check "failed send exits 0" "0" "$out"
+check "failed send files one alert" "1" "$(grep -c -- '--add alert' "$sb/rq.log")"
+check "failed send marks nothing read" "0" "$(grep -c -- '--mark-read' "$sb/rq.log")"
+
+# 7) dormant (no conf): artifacts still render, progress still marks read
+reset_stamps
+mv "$sb/notify-email.conf" "$sb/notify-email.conf.bak"
+out="$(run HNGH_DIGEST_TEST=1 HNGH_DIGEST_FORCE_SLOT=0730 \
+ QUEUES_JSON='{"reports":[{"id":"p1","kind":"progress","first":"x"}],"unread":1,"summary":{"progress":1}}')"
+check "dormant run exits 0" "0" "$out"
+check "dormant sends nothing" "0" "$(sends)"
+check "dormant marks progress read" "1" "$(grep -c -- '--mark-read p1' "$sb/rq.log")"
+mv "$sb/notify-email.conf.bak" "$sb/notify-email.conf"
+
 if [ "$fails" -gt 0 ]; then
-  printf '%d check(s) failed\n' "$fails"
-  exit 1
+ printf '%d check(s) failed\n' "$fails"
+ exit 1
 fi
 echo "digest-send schedule: all checks passed"

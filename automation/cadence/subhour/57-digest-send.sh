@@ -80,6 +80,29 @@ if [ -f "$CONF" ]; then
  fi
 fi
 
+if [ "$sent" != "no" ]; then
+ # progress rows auto-read at digest delivery (S2 close-half
+ # refactor): the operator's unread stream is alerts only. A failed
+ # send files its alert above and marks nothing. First run after
+ # landing walks the accumulated backlog once; later runs are O(day).
+ KERNEL="$KERNEL" python3 - <<'PYEOF' >/dev/null 2>&1 || true
+import json, os, subprocess
+rq = os.path.join(os.environ["KERNEL"], "scripts", "report-queue")
+env = dict(os.environ)
+env.setdefault("HNGH_REPORT_ROOT", os.environ["KERNEL"])
+try:
+    payload = json.loads(subprocess.run(
+        ["python3", rq, "--json"], capture_output=True, text=True,
+        env=env, timeout=60).stdout or "{}")
+except (ValueError, OSError, subprocess.TimeoutExpired):
+    raise SystemExit(0)
+for r in payload.get("reports", []):
+    if r.get("kind") == "progress":
+        subprocess.run(["python3", rq, "--mark-read", r.get("id", "")],
+                       capture_output=True, env=env, timeout=60)
+PYEOF
+fi
+
 HNGH_REPORT_ROOT="${HNGH_REPORT_ROOT:-$KERNEL}" python3 \
  "$KERNEL/scripts/report-queue" --add progress \
  "digest $nyd $slot: logs/email-digest-$nyd.md (sent=$sent)" \
