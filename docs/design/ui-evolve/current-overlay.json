@@ -1,10 +1,10 @@
 {
   "preset": "hngh",
-  "gen": 1,
+  "gen": 2,
   "grade": "10/10",
-  "seed": 2984827,
+  "seed": 2984832,
   "fields": {
-    "primary": "#5af78e",
+    "primary": "#5af786",
     "secondary": "#3d9c78",
     "accent": "#5af78e",
     "foreground": "#c8d0d8",
