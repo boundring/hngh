@@ -31,7 +31,11 @@ avoid-list in `automation/config/omarchy-base.packages`).
   invisible to it; d already passes via the pre-existing
   hyprland.desktop, and no beat change is planned.
 
-## Operator actions (approval given; pasted in their terminal)
+## Operator actions (LANDED + VERIFIED 2026-10-01)
+
+Verified post-paste: file present root:root 0644 with the exact entry;
+conf reads `Session=omarchy`; Hyprland 0.56.2 runs; readiness beat
+rc 0.
 
 1. `/usr/share/wayland-sessions/omarchy.desktop` — Name=Omarchy entry,
    same uwsm exec line as the laptop's hyprland-uwsm.desktop.
