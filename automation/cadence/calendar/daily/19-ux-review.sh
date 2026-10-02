@@ -65,6 +65,7 @@ NSURFACES=5
 idx=$(($(date -u +%s) / 86400 % NSURFACES))
 surface="$(printf 'dashboard-camp\ndashboard-logs\nemail-digest\nkernel-docs\novernight-report\n' |
   sed -n "$((idx + 1))p")"
+surface="${UX_REVIEW_SURFACE:-$surface}"  # hermetic test seam
 
 # --- gather evidence + surface file list ------------------------------
 evidence=""
@@ -105,7 +106,12 @@ if [ -z "$evidence" ]; then
   exit 0
 fi
 defects=""
-case "$(printf '%s' "$evidence" | LC_ALL=C grep -c '[^ -~\t]' || true)" in
+# House style sanctions en/em dashes + typographic quotes (U+2013,
+# U+2014, U+2018-U+201D — docs/design/writing-register.md itself uses
+# them): strip those UTF-8 sequences before the ASCII check. Any other
+# non-ASCII byte still flags (fail-closed).
+sanctioned="$(printf '%s' "$evidence" | LC_ALL=C sed 's/\xe2\x80[\x93\x94\x98\x99\x9c\x9d]//g')"
+case "$(printf '%s' "$sanctioned" | LC_ALL=C grep -c '[^ -~\t]' || true)" in
 0) ;;
 *) defects="non-ASCII byte in $surface evidence" ;;
 esac
