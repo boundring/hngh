@@ -206,7 +206,12 @@ env = {**os.environ,
        "SUPERVISION_BLOCKERS": str(root / "state" / "beat-blockers.tsv"),
        "SUPERVISION_PARAMS": str(root / "params.tsv"),
        "HNGH_CRUMBS_DB": str(root / "state" / "crumbs.db"),
-       "SUPERVISION_CAUSES_SH": str(tas.CAUSES_SH)}
+       "SUPERVISION_CAUSES_SH": str(tas.CAUSES_SH),
+       # the renv array's HNGH_REPORT_IDENTITIES does not reach this
+       # os.environ block; without it the fixture's loop-requeue /
+       # supervision identities leak into the real state file
+       # (caught 2026-10-02 by the zero-new-keys gate canary)
+       "HNGH_REPORT_IDENTITIES": str(root / "identities.json")}
 
 def tick():
     return subprocess.run([sys.executable, str(ROOT / "jobs"

@@ -87,6 +87,11 @@ class SupervisionBase(unittest.TestCase):
             "SUPERVISION_PARAMS": str(self.params),
             "HNGH_CRUMBS_DB": str(self.crumbs_db),
             "SUPERVISION_CAUSES_SH": str(CAUSES_SH),
+            # fixture identities (agent-stall:*) must never reach the
+            # real state file: leaked ones went terminally silent there
+            # after 7d and red the beat-silence pins on 2026-10-02
+            "HNGH_REPORT_IDENTITIES":
+                str(self.root / "state" / "report-identities.json"),
         }
 
     def tearDown(self):

@@ -237,6 +237,19 @@ class AppendResearchSubject(unittest.TestCase):
         self.assertEqual(len(self.rows()), 1)
         self.assertIn("Does the gate in", self.rows()[0])
 
+    def test_date_twin_same_slug_refused(self):
+        # a twin lane filed on an earlier day must dedup against
+        # today's append: the id-prefix check is date-blind
+        # (2026-10-02: the subjects file grew 15-19 date twins of one
+        # templated patrol question because only same-day ids matched)
+        self.subjects.write_text(
+            "fail-20260912-dup-check\tearlier question about rc\n",
+            encoding="utf-8")
+        r = self.append("dup-check", "a different question entirely")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertIn("earlier question about rc", self.rows()[0])
+
     def test_redaction_fail_closed_refuses_append(self):
         # redact_home is a command substitution: a broken guard (here:
         # stubbed to emit nothing, the exact scrub.sh fail-closed

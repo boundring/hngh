@@ -44,8 +44,25 @@ def _iso(dt):
 
 
 def _identity_path():
-    return os.environ.get("HNGH_REPORT_IDENTITIES") or os.path.join(
-        REPO, "automation", "state", "report-identities.json")
+    p = os.environ.get("HNGH_REPORT_IDENTITIES")
+    if p:
+        return p
+    stub = os.environ.get("HNGH_REPORT_QUEUE")
+    if stub:
+        # stub queue binary = hermetic test run: identity state lives
+        # next to the stub, never in the real automation/state file
+        # (2026-10-02: leaked fixture slugs went terminally silent
+        # there after 7d and red three suites on a clean tree)
+        return os.path.join(os.path.dirname(os.path.abspath(stub)),
+                            "report-identities.json")
+    auto = os.environ.get("HNGH_AUTOMATION_ROOT")
+    if auto:
+        # pinned automation root (sandboxed harnesses, self-test
+        # drills) keeps identity state inside that root; production
+        # never sets it, so the fallback below is byte-identical
+        return os.path.join(auto, "state", "report-identities.json")
+    return os.path.join(REPO, "automation", "state",
+                        "report-identities.json")
 
 
 def _load_state():

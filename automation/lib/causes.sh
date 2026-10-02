@@ -141,7 +141,7 @@ _filing_crumb() { # event detail -> journal row, never fatal
 }
 
 append_research_subject() { # slug question -> appends to research-subjects.txt
- local slug redacted q root file id norm match_id rid rnorm
+ local slug redacted q root file id dsid norm match_id rid rnorm
  slug="$1" q="$2"
  [ -n "$slug" ] && [ -n "$q" ] || return 1
  redacted="$(redact_home "$q")"
@@ -193,8 +193,13 @@ append_research_subject() { # slug question -> appends to research-subjects.txt
    return 0
  else
   id="fail-$(date -u +%Y%m%d)-$slug"
-  # refuse duplicates by id prefix match: the subject is already queued
-  awk -F'\t' -v id="$id" 'index($1, id) == 1 {found=1} END{exit !found}' \
+  # refuse duplicates by id prefix match: the subject is already queued.
+  # Date-blind (2026-10-02): strip any 20xxxxxx token from BOTH sides so
+  # a fail-<yesterday>-<slug> twin still blocks today's mint.
+  dsid="$(printf '%s' "$id" | sed 's/20[0-9]\{6\}/-/g')"
+  awk -F'\t' -v id="$dsid" \
+   '{ d=$1; gsub(/20[0-9][0-9][0-9][0-9][0-9][0-9]/, "-", d);
+     if (index(d, id) == 1) {found=1; exit} } END{exit !found}' \
    "$file" 2>/dev/null && return 0
   # filing-about-filing (P7b): a subject whose text is (contained in)
   # an existing disposition verdict is the machine filing about its own

@@ -132,6 +132,33 @@ def load_mod():
     return mod
 
 
+class ResearchMatchId(unittest.TestCase):
+    """_research_match_id must block date-twin mints: an existing
+    patrol-<olddate>-<slug> lane must match today's
+    patrol-<today>-<slug> rid (2026-10-02: only the NEW rid's date was
+    stripped, so the subjects file grew 15-19 twins of one templated
+    patrol question)."""
+
+    def test_old_date_lane_blocks_today_mint(self):
+        mod = load_mod()
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            lines = td / "research-lines.tsv"
+            lines.write_text(
+                "patrol-20260912-handoffs-bad-execution\tplanned\tn\n",
+                encoding="utf-8")
+            subs = td / "research-subjects.txt"
+            subs.write_text(
+                "patrol-20260912-handoffs-bad-execution\told question\n",
+                encoding="utf-8")
+            ctx = {"research_lines": str(lines), "subjects": str(subs)}
+            self.assertEqual(
+                mod._research_match_id(
+                    ctx, "patrol-20261002-handoffs-bad-execution",
+                    "20261002"),
+                "patrol-20260912-handoffs-bad-execution")
+
+
 class Patrol(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()
@@ -140,6 +167,12 @@ class Patrol(unittest.TestCase):
         self.kernel = self.sb / "kernel"
         for d in ("dashboard", "digest", "logs", "state", "config", "lib"):
             (self.auto / d).mkdir(parents=True, exist_ok=True)
+        # fixture identities must never touch the real state file:
+        # leaked fixture slugs went terminally silent there after 7d
+        # and red 11 suites on 2026-10-02 (shim default is the repo path)
+        self._ident_env = os.environ.get("HNGH_REPORT_IDENTITIES")
+        os.environ["HNGH_REPORT_IDENTITIES"] = str(
+            self.auto / "state" / "report-identities.json")
         (self.kernel / "tests" / "scripts").mkdir(parents=True)
         # the kernel surface is always a git repo: the day-tier walk
         # includes the candidate-hash reconciliation check, whose input
@@ -256,6 +289,10 @@ class Patrol(unittest.TestCase):
         self._mod = load_mod()
 
     def tearDown(self):
+        if self._ident_env is None:
+            os.environ.pop("HNGH_REPORT_IDENTITIES", None)
+        else:
+            os.environ["HNGH_REPORT_IDENTITIES"] = self._ident_env
         self._td.cleanup()
 
     def sync_crumbs(self):

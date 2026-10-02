@@ -216,6 +216,12 @@ class AcceptPlans(unittest.TestCase):
         self.assertTrue(any("design-hold:2026-08-30-x" in r
                             and "delve: produce or locate the design" in r
                             for r in self.rows()), self.rows())
+        # the identity state must live in the sandbox, never the real
+        # automation/state/report-identities.json (a leak goes
+        # terminally silent there after 7d — red suites 2026-10-02)
+        ident = json.loads(
+            (self.root / "report-identities.json").read_text())
+        self.assertIn("design-hold:2026-08-30-x", ident)
         # research demand wired: one fail-<date>-<slug> subject row
         subj = self.root / "research-subjects.txt"
         lines = subj.read_text().splitlines()
@@ -503,6 +509,18 @@ class AppendResearchSubject(unittest.TestCase):
         # REDACTED text (one token family, one dedup identity)
         self.assertFalse(self.mod.append_research_subject("other-slug", q))
         self.assertEqual(len(self.rows()), 1)
+
+    def test_date_twin_same_slug_refused(self):
+        # same slug minted on an earlier day must still dedup: the
+        # id-prefix check compares date-stripped ids (2026-10-02 S4,
+        # mirror of the lib/causes.sh fix)
+        (self.td / "research-subjects.txt").write_text(
+            "fail-20260912-dup-check\tearlier question about rc\n",
+            encoding="utf-8")
+        self.assertFalse(self.mod.append_research_subject(
+            "dup-check", "a different question entirely"))
+        self.assertEqual(len(self.rows()), 1)
+        self.assertIn("earlier question about rc", self.rows()[0])
 
     def test_redaction_fail_closed_refuses_append(self):
         # guard broken (scrub module unavailable): refuse the append,

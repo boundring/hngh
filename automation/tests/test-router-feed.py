@@ -55,6 +55,12 @@ class RouterFeed(unittest.TestCase):
             **os.environ,
             "HNGH_HOME": str(self.kernel),
             "HNGH_REPORT_ROOT": str(self.kernel),
+            # fixture identities must never touch the real state file:
+            # leaked 2026-09-25 fixtures went terminally silent there
+            # (7d expiry) and red this suite on 2026-10-02 — router-tick
+            # files through the shim, which reads this env
+            "HNGH_REPORT_IDENTITIES":
+                str(self.root / "report-identities.json"),
             "HNGH_CRUMBS_DB": str(self.db),
             "HNGH_FILING_STATE": str(self.state),
             "ROUTER_FED_STATE": str(self.root / "fed.tsv"),

@@ -221,6 +221,14 @@ def has_principle(text):
     return PRINCIPLE.search(text[:m.start()] if m else text) is not None
 
 
+def _date_free(sid):
+    """Date-blind id comparison: collapse any 20xxxxxx date token to a
+    single dash so a fail-<yesterday>-<slug> row still dedups against
+    today's mint (2026-10-02 S4; mirror of the lib/causes.sh date-blind
+    prefix check)."""
+    return re.sub(r"-+", "-", re.sub(r"20\d{6}", "-", sid))
+
+
 def append_research_subject(slug, question):
     """Python mirror of lib/causes.sh append_research_subject: append a
     fail-<date>-<slug> row to research-subjects.txt with the same dedup
@@ -269,9 +277,10 @@ def append_research_subject(slug, question):
         rows = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         rows = []
+    sid_free = _date_free(sid)
     for row in rows:
         cols = row.split("\t")
-        if (cols and cols[0].startswith(sid)) or \
+        if (cols and _date_free(cols[0]).startswith(sid_free)) or \
                 (len(cols) > 1 and cols[1] == question):
             return False
     try:

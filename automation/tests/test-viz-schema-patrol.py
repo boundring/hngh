@@ -370,6 +370,11 @@ class ProducerIdentityCrossCheck(unittest.TestCase):
                      ("PATROL_REPORT_ROOT", str(sb)),
                      ("REPORT_QUEUE_BIN", str(sb / "rq-stub.sh")),
                      ("RQ_LOG", str(sb / "rq.log")),
+                    # fixture identities stay in the sandbox: leaked
+                    # keys in the real state file went terminally
+                    # silent there and red this suite on 2026-10-02
+                    ("HNGH_REPORT_IDENTITIES",
+                     str(sb / "report-identities.json")),
                      ("PATROL_NOW_EPOCH", str(NOW))]:
             self._saved[k] = os.environ.get(k)
             os.environ[k] = v

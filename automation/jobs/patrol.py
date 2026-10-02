@@ -1907,13 +1907,25 @@ def _norm_slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
+def _date_free_slug(slug):
+    """Date-blind slug: drop patrol-<8digits>- prefixes and any 20xxxxxx
+    token, then collapse runs of '-'. Date-twin blocking (2026-10-02):
+    patrol-20260912-handoffs and patrol-20261002-handoffs are one lane.
+    Mirrors the date-blind id-prefix dedup in lib/causes.sh."""
+    slug = re.sub(r"patrol-\d{8}-", "", slug)
+    slug = re.sub(r"20\d{6}", "", slug)
+    return re.sub(r"-{2,}", "-", slug).strip("-")
+
+
 def _research_match_id(ctx, rid, rid_day):
     """Existing open-line/subject id whose normalized col1 equals the
     normalized rid token (patrol-<day>- prefix stripped) or the raw
-    normalized rid. Open lines: planned|contracting|crystallized.
+    normalized rid. Date-blind: an old-date twin lane still matches
+    (2026-10-02). Open lines: planned|contracting|crystallized.
     None when no ledger matches (the rid mints fresh)."""
-    token = _norm_slug(re.sub(r"^patrol-%s-" % re.escape(rid_day), "", rid))
-    raw = _norm_slug(rid)
+    token = _date_free_slug(
+        _norm_slug(re.sub(r"^patrol-%s-" % re.escape(rid_day), "", rid)))
+    raw = _date_free_slug(_norm_slug(rid))
     paths = []
     if ctx.get("research_lines"):
         paths.append(("lines", ctx["research_lines"]))
@@ -1931,7 +1943,7 @@ def _research_match_id(ctx, rid, rid_day):
                         if len(parts) < 2 or parts[1] not in (
                                 "planned", "contracting", "crystallized"):
                             continue
-                    norm = _norm_slug(cid)
+                    norm = _date_free_slug(_norm_slug(cid))
                     if norm and norm in (token, raw):
                         return cid
         except OSError:
