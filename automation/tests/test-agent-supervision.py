@@ -248,6 +248,43 @@ class SupervisionStates(SupervisionBase):
                               if "supervision:%s:stalled" % sid in r]), 3)
 
 
+class SupervisionAdvisorExclusion(SupervisionBase):
+    """Harness-internal advisor side-transcripts (__advisor.jsonl) are
+    advisory byproducts of parent sessions: they go quiet exactly when
+    the parent stops consulting the advisor, so tracking them only
+    generates perpetual stalled alerts (2026-10-02: three routed
+    omp-__advisor-* plans; real siblings at misses 30-51). Excluded at
+    the source: never tracked, never alerted, never handoffed."""
+
+    def write_session(self, name, body, mtime_ago_s):
+        p = self.sessions / name
+        p.write_text(body)
+        t = time.time() - mtime_ago_s
+        os.utime(p, (t, t))
+        return p
+
+    def test_advisor_side_transcript_is_never_tracked(self):
+        self.write_session(
+            "__advisor.jsonl",
+            asst_line(iso(30 * 60), "advisory synthesis") + "\n",
+            30 * 60)
+        self.tick()
+        self.tick()
+        self.assertEqual(self.rows(), [],
+                         "advisor side-transcripts are never tracked")
+        self.assertNotIn("omp-__advisor", self.state.read_text())
+        self.assertEqual(self.handoffs.read_text(), "")
+
+    def test_regular_sibling_session_is_still_tracked(self):
+        p = self.write_session(
+            "real-one.jsonl",
+            asst_line(iso(30 * 60), "thinking about the design") + "\n",
+            30 * 60)
+        self.tick()
+        self.assertIn(self.sid(p), json.loads(self.state.read_text()),
+                      "exclusion is narrow: only __advisor.jsonl is skipped")
+
+
 class SupervisionBridgeDie(SupervisionBase):
     """Bridge runs keep the roguelike replace path on the second missed
     tick, with cause= classified from the record by lib/causes.sh."""

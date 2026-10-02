@@ -403,6 +403,13 @@ def omp_sessions(now):
         paths += glob.glob(os.path.join(src, "*.jsonl"))
         paths += glob.glob(os.path.join(src, "*", "*.jsonl"))
         paths += glob.glob(os.path.join(src, "*", "*", "*.jsonl"))
+    # Harness-internal advisor side-transcripts (__advisor.jsonl) are
+    # advisory byproducts of parent sessions: they idle exactly when the
+    # parent stops consulting the advisor, so tracking them only
+    # generates perpetual stalled alerts (2026-10-02: three routed
+    # omp-__advisor-* plans, real siblings at misses 30-51). Excluded at
+    # the source — never tracked, so steer/die/eviction never see them.
+    paths = [p for p in paths if os.path.basename(p) != "__advisor.jsonl"]
     cands = []
     for path in paths:
         try:
