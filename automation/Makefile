@@ -117,6 +117,7 @@ test:
 	python3 -B tests/test-report-queue-evidence.py
 	python3 -B tests/test-report-queue-redaction.py
 	bash tests/test-config-backup-fail-redact.sh
+	bash tests/test-config-backup-success-quiet.sh
 	bash tests/test-oversight-tick-alert-redact.sh
 	bash tests/test-research-beat-ingest-redact.sh
 	bash tests/test-research-dispositions-redact.sh

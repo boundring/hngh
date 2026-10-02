@@ -262,11 +262,11 @@ if [ "$push_mode" -eq 1 ]; then
  fi
 fi
 
-# 6. one progress row (wall seconds feed the time ledger's estimates:
-# test-and-time now, tracked on every execute)
+# 6. success is crumb-only (the 30-min progress rows were unread-queue
+# spam, 2026-10-02 close-half refactor); wall seconds ride the crumb
 [ -n "${run_started_s:-}" ] || run_started_s=$SECONDS
 walls=$((SECONDS - run_started_s))
 [ "$pushed" -eq 1 ] || push_target=none
-report progress "config-backup $lane: ok $copied files push=$push_target wall=${walls}s"
-breadcrumb "$JOB_NAME" "progress" "config-backup $lane: ok copied=$copied skipped=$skipped committed=$committed pushed=$pushed"
+breadcrumb "$JOB_NAME" "progress" \
+ "config-backup $lane: ok copied=$copied skipped=$skipped committed=$committed pushed=$pushed wall=${walls}s"
 log "$lane: ok copied=$copied skipped=$skipped committed=$committed pushed=$pushed target=$push_target"
