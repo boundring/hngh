@@ -406,7 +406,21 @@ def chain_live_count(identity):
             continue
         path = os.path.join(PLANS, name)
         status, _ = plan_status_age(path)
-        if status in ("executed", "rejected") or status == "accepted":
+        if status in ("executed", "rejected"):
+            continue
+        if status == "accepted":
+            # an accepted plan binds the re-route bound only while
+            # inert (zero closed steps — the auto-accept treadmill
+            # class); accepted with closed steps is execution supply,
+            # not a duplicate (S3 close-half refactor)
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    closed_ct, _ = step_states(fh.read())
+            except OSError:
+                closed_ct = 0
+            if closed_ct > 0:
+                continue
+            n += 1
             continue
         if status == "expired":
             try:
@@ -672,6 +686,13 @@ def route(identity, text):
                        "%s suppressed (%s live, %dh old); day count %d"
                        % (identity, dup_slug, int(age // 3600), count))
         if disposed is not None and disposed.returncode == 0:
+            # the lane is dead: silence the SOURCE identity so its
+            # alert stops re-firing (S3 close-half refactor; operator
+            # policy 2026-10-02 "park + silence"; re-arm is
+            # operator-only). Critical-class alerts never mint
+            # candidates, so every identity reaching this block is
+            # non-critical by construction.
+            report_queue.silence_identity(identity)
             report("alert", "router escalated: %s re-occurred %d times "
                    "without landing — plan %s parked (cause=obsolete); "
                    "operator disposition stands" % (identity, occurrences,
@@ -704,6 +725,10 @@ def route(identity, text):
                    "%s chain closed: %d plan(s) expired" % (identity, closed))
         return 0
     if chain_live_count(identity) >= bound:
+        # same silence contract as the escalation park: the bound is
+        # the lane's terminal halt, so the source alert stops firing
+        # (re-arm operator-only)
+        report_queue.silence_identity(identity)
         report("alert", "router parks %s at the re-route bound - "
                "SLA: re-fires bump this row for 7d, then it expires on "
                "silence; halt: the lane stops until the identity is "

@@ -175,6 +175,51 @@ class RouterTick(unittest.TestCase):
         self.assertTrue(any("| router | parked |" in b
                             for b in self.breadcrumbs()))
 
+    def test_accepted_inert_carriers_bind_reroute(self):
+        # S3: accepted plans with ZERO closed steps bind the re-route
+        # bound — the auto-accept treadmill minted a fresh twin per TTL
+        # expiry because accepted carriers were invisible to
+        # chain_live_count (58-patrol class: 8 accepted twins, zero
+        # landings)
+        for i in range(3):
+            p = self.plans.joinpath(
+                "2026-08-30-routed-lane-%d.plan.md" % i)
+            p.write_text(accepted_plan("  "))
+            old = time.time() - 2 * 86400  # too old for the dedup window
+            os.utime(p, (old, old))
+        out = self.run_tick("lane")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertTrue(any("re-route bound" in r for r in self.rows()),
+                        self.rows())
+        self.assertEqual(len(self.candidates()), 3)  # no fresh twin
+        state = json.loads(
+            (self.root / "report-identities.json").read_text())
+        self.assertTrue(state["lane"]["escalated"])  # source silenced
+
+    def test_accepted_worked_carrier_does_not_bind(self):
+        # accepted WITH a closed step is execution supply, not a
+        # duplicate: the bound must not park a lane the executor is
+        # actively working
+        p = self.plans.joinpath("2026-08-30-routed-lane.plan.md")
+        p.write_text(accepted_plan("x "))
+        old = time.time() - 2 * 86400
+        os.utime(p, (old, old))
+        out = self.run_tick("lane")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertFalse(any("re-route bound" in r for r in self.rows()),
+                         self.rows())
+
+    def test_critical_park_does_not_silence(self):
+        # critical classes never mint candidates and never reach the
+        # silenced park sites: the operator-facing alert must keep
+        # re-firing
+        out = self.run_tick("remote-posture:degraded")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        state_path = self.root / "report-identities.json"
+        if state_path.exists():
+            state = json.loads(state_path.read_text())
+            self.assertNotIn("remote-posture:degraded", state)
+
     def test_tagged_candidate_round_trips_parsers(self):
         self.run_tick("gate-red:kernel-red", "kernel make test failed")
         cand = self.candidates()[0]

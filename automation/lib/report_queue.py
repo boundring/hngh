@@ -85,6 +85,20 @@ def _save_state(state):
         pass  # a lost state entry may re-escalate once; never crash
 
 
+def silence_identity(identity):
+    """Terminal silence for one identity (S3 close-half refactor): the
+    next filing and every filing after are swallowed, exactly like a
+    lapsed escalated identity. Re-arm is operator-only (clear the
+    entry) — used by the router when it parks an identity's plan lane,
+    so a parked lane stops re-firing its source alert forever."""
+    if not identity:
+        return False
+    state = _load_state()
+    state[identity] = {"expires": _iso(_now()), "escalated": True}
+    _save_state(state)
+    return True
+
+
 def _file(kind, text, identity=None, window=None, evidence=None,
           binary=None, root=None):
     argv = [binary or os.path.join(REPO, "scripts", "report-queue"),
