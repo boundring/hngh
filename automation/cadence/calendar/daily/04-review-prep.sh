@@ -15,6 +15,10 @@ set -u
 . "$AUTOMATION_ROOT/lib/params.sh"
 
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../../.." && pwd)}"
+# one repo, two subtrees since the 2026-09-07 import: packet
+# headings, range lines, and both verdict loops use these labels.
+K_LABEL=hngh
+A_LABEL=hngh-automation
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 TELEMETRY="$AUTOMATION_ROOT/jobs/telemetry.py"
@@ -33,21 +37,22 @@ day="$(date -u +%Y-%m-%d)"
 
 packet=""
 ranges=""
-repo_review() { # dir — append this repo's 36h commit packet + range summary
-  local dir="$1" log n oldest newest
-  log="$(git -C "$dir" log --since='36 hours ago' --oneline 2>/dev/null)"
+repo_review() { # dir label pathspec... -- append one subtree's 36h commit packet + range summary
+  local dir="$1" label="$2" log n oldest newest
+  shift 2
+  log="$(git -C "$dir" log --since='36 hours ago' --oneline -- "$@" 2>/dev/null)"
   [ -n "$log" ] || return 1
   n="$(printf '%s\n' "$log" | wc -l)"
   oldest="$(printf '%s\n' "$log" | tail -n 1 | cut -d' ' -f1)"
   newest="$(printf '%s\n' "$log" | head -n 1 | cut -d' ' -f1)"
-  ranges+="- $(basename "$dir"): ${oldest}^..${newest} (${n} commits)
+  ranges+="- $label: ${oldest}^..${newest} (${n} commits)
 "
-  packet+="## $(basename "$dir")
-$(git -C "$dir" log --since='36 hours ago' --stat -p 2>/dev/null | marked_cut 60000)
+  packet+="## $label
+$(git -C "$dir" log --since='36 hours ago' --stat -p -- "$@" 2>/dev/null | marked_cut 60000)
 "
 }
-repo_review "$KERNEL"
-repo_review "$AUTOMATION_ROOT"
+repo_review "$KERNEL" "$K_LABEL" . ':(exclude)automation'
+repo_review "$KERNEL" "$A_LABEL" automation
 if [ -z "$packet" ]; then
   breadcrumb "$JOB_NAME" "review-skip" "no commits in either repo in the last 36h"
   exit 0
@@ -106,7 +111,7 @@ verdicts="$(printf '%s\n' "$response" | awk '
   /^- /   { if (repo != "") print repo "\t" substr($0,3) }
 ')"
 if [ -z "$verdicts" ]; then
-  for repo in "$(basename "$KERNEL")" "$(basename "$AUTOMATION_ROOT")"; do
+  for repo in "$K_LABEL" "$A_LABEL"; do
     file_report progress "review: $repo response did not match the expected format (see digest/REVIEW-$day.md)"
   done
   file_report alert "review: model response unparseable — read digest/REVIEW-$day.md" "review:parse" 86400
@@ -136,7 +141,7 @@ done <<EOF
 $verdicts
 EOF
 
-for repo in "$(basename "$KERNEL")" "$(basename "$AUTOMATION_ROOT")"; do
+for repo in "$K_LABEL" "$A_LABEL"; do
   n="$(printf '%s\n' "$verdicts" | awk -F'\t' -v r="$repo" '$1==r{n++}END{print n+0}')"
   p01="$(printf '%s\n' "$verdicts" | awk -F'\t' -v r="$repo" '$1==r && $2~/^P[01]:/{n++}END{print n+0}')"
   if printf '%s\n' "$verdicts" | grep -q "^$repo$(printf '\t')no findings"; then

@@ -130,7 +130,11 @@ ls "$sb"/archive/skipped-*.txt >/dev/null 2>&1 &&
 # --- review beat sandbox: unparseable -> bad-execution demotion ----------
 git -C "$sb/kernel" init -q
 git -C "$sb" init -q
-gitc() { git -C "$1" -c user.email=t@t -c user.name=t commit -q --allow-empty -m t; }
+gitc() { # file-touching commit: pathspec-limited logs drop empty commits
+  printf t >"$1/seed.txt"
+  git -C "$1" add seed.txt
+  git -C "$1" -c user.email=t@t -c user.name=t commit -q -m t
+}
 gitc "$sb/kernel"
 gitc "$sb"
 run_beat() { # (runs cadence/calendar/daily/04-review-prep.sh; caller set the stub row)

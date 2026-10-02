@@ -19,11 +19,13 @@ out="$AUTOMATION_ROOT/logs/email-digest-$day.md"
 mkdir -p "$AUTOMATION_ROOT/logs"
 
 # live gathers (composer reads env seams; tests substitute fixtures)
+# one repo since the 2026-09-07 subtree import: split by pathspec so
+# the kernel and automation commit lists never overlap.
 HNGH_DIGEST_KERNEL_COMMITS="$(
-  git -C "$KERNEL" log --since='24 hours ago' --oneline --no-decorate 2>/dev/null || true
+  git -C "$KERNEL" log --since='24 hours ago' --oneline --no-decorate -- . ':(exclude)automation' 2>/dev/null || true
 )"
 HNGH_DIGEST_AUTO_COMMITS="$(
-  git -C "$AUTOMATION_ROOT" log --since='24 hours ago' --oneline --no-decorate 2>/dev/null || true
+  git -C "$KERNEL" log --since='24 hours ago' --oneline --no-decorate -- automation 2>/dev/null || true
 )"
 HNGH_DIGEST_RESEARCH="$(
   git -C "$AUTOMATION_ROOT" status --porcelain 2>/dev/null | grep '/docs/' || true
