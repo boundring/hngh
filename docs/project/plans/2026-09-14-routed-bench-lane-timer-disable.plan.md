@@ -6,8 +6,9 @@ at 2026-09-14T03:00:39Z. Alert text: bench-trigger lane step 3 residue: hngh-mod
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260914-bench-lane-timer-disable for bench-lane-timer-disable; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260914-bench-lane-timer-disable for bench-lane-timer-disable; record disposition; then fix or park
       Verification: research subject fail-20260914-bench-lane-timer-disable present in research-subjects.txt with a recorded disposition; alert fixed or parked
+      Evidence 2026-10-02T22:12:06Z: subject opened in automation/research-subjects.txt; disposition parked in automation/research-dispositions.tsv — hngh-model-bench.timer re-verified enabled+active today (NextElapse 2026-10-03 01:10 EDT), and the disable is unit lifecycle, forbidden to machine sessions; operator action stands: systemctl --user disable --now hngh-model-bench.timer
 
 ## Occurrences
 
