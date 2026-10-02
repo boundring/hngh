@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=review:hngh:P1-new-plan-step-verifies-lib- -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-02T20:35:17Z routed-from=review:hngh:P1-new-plan-step-verifies-lib- -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-09T16:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

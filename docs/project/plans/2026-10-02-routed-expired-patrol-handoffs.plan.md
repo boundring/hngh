@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=expired:patrol:handoffs -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-02T20:35:17Z routed-from=expired:patrol:handoffs -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-09T18:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

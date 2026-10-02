@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=review-finding:2026-10-02:ledger-sync-has-no-path-scoping-04-06-co -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-02T20:35:17Z routed-from=review-finding:2026-10-02:ledger-sync-has-no-path-scoping-04-06-co -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-09T16:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

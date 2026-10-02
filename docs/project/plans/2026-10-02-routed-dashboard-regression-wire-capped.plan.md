@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=dashboard-regression:wire-capped -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-02T20:35:17Z routed-from=dashboard-regression:wire-capped -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-09T19:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
