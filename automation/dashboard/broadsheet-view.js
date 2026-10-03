@@ -1080,7 +1080,7 @@
   }
   function editionLine(ed) {
     var sys = (ed && ed.system) || {};
-    var age = editionAge(ed && ed.generated, Date.now());
+    var age = editionAge(feed.data && feed.data.generated, Date.now());
     var w = ed && ed.weather;
     var online = (sys.fleet || []).filter(function (f) {
       return f && f.online; }).length;

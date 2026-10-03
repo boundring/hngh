@@ -784,6 +784,12 @@ class EditionAwarePoll(unittest.TestCase):
         self.assertIn("'stale edition \u00b7 '", self.js)
         self.assertIn("feed.openCount + ' open'", self.js)
 
+    def test_age_reads_feed_root_generated(self):
+        # the stamp lives at the feed root, NOT inside edition{} — the
+        # first cut read ed.generated (always undefined, age never shown)
+        self.assertIn("editionAge(feed.data && feed.data.generated,",
+                      self.js)
+
     def test_edition_age_math(self):
         m = re.search(r"function editionAge\([\s\S]*?\n  \}", self.js)
         self.assertTrue(m, "editionAge missing")
