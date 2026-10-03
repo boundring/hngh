@@ -849,5 +849,24 @@ class GuidanceProgressiveReveal(unittest.TestCase):
                       self.css)
 
 
+
+
+class ConsoleHistoryRows(unittest.TestCase):
+    """Tranche 2026-10-03 slice 5: the console History tab rendered a
+    full status line ("204 entries · 204 shown") but zero rows —
+    setBody wrote #hist-body, which exists only in standalone
+    history.html; tab mounts ship a bare #history-root and got nothing.
+    """
+
+    def setUp(self):
+        self.js = read("history-view.js")
+
+    def test_init_builds_toolbar_and_body_for_tab_mounts(self):
+        self.assertIn("bar = document.createElement('div');", self.js)
+        self.assertIn("bar.className = 'hv-toolbar';", self.js)
+        self.assertIn("rows.id = 'hist-body';", self.js)
+        self.assertIn("el.appendChild(rows);", self.js)
+
+
 if __name__ == "__main__":
     unittest.main()

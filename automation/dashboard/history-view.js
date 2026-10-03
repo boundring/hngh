@@ -249,6 +249,16 @@
   function init(el) {
     injectStyle();
     var bar = el.querySelector('.hv-toolbar');
+    if (!bar) {
+      // tab mounts (console/index panes) ship a bare #history-root:
+      // build the toolbar here plus the rows container setBody writes
+      bar = document.createElement('div');
+      bar.className = 'hv-toolbar';
+      el.appendChild(bar);
+      var rows = document.createElement('div');
+      rows.id = 'hist-body';
+      el.appendChild(rows);
+    }
     if (bar && !bar.childElementCount) {
       var html = chip('all sources', 'source', '', true);
       SOURCES.forEach(function (s) {
