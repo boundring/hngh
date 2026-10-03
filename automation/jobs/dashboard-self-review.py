@@ -59,7 +59,8 @@ FEED_TIERS = {
 
 # served file -> marker that must appear in the 200 body
 PAGE_MARKERS = {
-  "index.html": "verdict-pill",
+  "index.html": "mast-splash",  # broadsheet front page (verdict pills live in console.html)
+    "console.html": "verdict-pill",
     "sessions-view.js": "SessionsView",
     "sessions.js": "observatory",  # compat stub: meta-refresh to the nerve center
     "gantt.js": "ESTIMATE",
