@@ -131,7 +131,7 @@ daily)
     echo "## Sources scanned"
     echo "- Records newer than last harvest: $new_count"
     echo "- Watchdog handoff ledger: $handoff_seen lines ($handoff_new new)"
-    echo "- Guardrails: $GUARDRAILS"
+    echo "- Guardrails: ${GUARDRAILS#$HNGH_REPO/}"
     echo
     if [ -n "$found" ]; then
      echo "## New lesson-bearing records"
