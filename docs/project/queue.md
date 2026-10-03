@@ -138,10 +138,8 @@ rows is folded here; the TSV rows keep the rotation state unchanged.
 
 ## Next
 
-- **Land stage 2** — next queued set=2026-09-25 ttl=7 (roadmap.md:198: nerve-center
-  consolidation is in final verification; the config-backup lanes are
-  scheduled on the 30m tier).
-
+- **pooled-hardware** — next queued set=2026-10-03 ttl=7 (advanced from Land stage 2: cause=ttl-expired)
+- Land stage 2 — re-queued 2026-10-03 with cause: ttl-expired (set 2026-09-25, 8 days)
 - pooled-hardware — re-queued 2026-09-25 with cause: stale Next (set
   2026-08-25, 31 days) and dep-circular — its open dep "resource pool
   view" is a backlog lane, not a queue item.

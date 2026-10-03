@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=escalation:hngh-4pe:dispatch-capped -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-03T00:06:34Z routed-from=escalation:hngh-4pe:dispatch-capped -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-09T23:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
