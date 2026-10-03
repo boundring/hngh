@@ -60,6 +60,20 @@ def item_id(text):
     return hashlib.sha256(norm(text).encode()).hexdigest()[:8]
 
 
+def settled_key(text):
+    """Fuzzy settlement identity: producer|kind verbatim, digit-collapsed
+    tail. Queue texts embed volatile numbers (pids, wall times, stamps);
+    each rewording mints a fresh sha id no ledger knows, so an operator
+    decision would not stick to the next instance of the same alert
+    (2026-10-03). The shape keeps matching across that churn while two
+    genuinely different stores stay distinct."""
+    head, sep, rest = norm(text).partition(" | ")
+    if not sep:
+        return re.sub(r"[0-9]+", "#", head)
+    second, _sep2, tail = rest.partition(" | ")
+    return "%s | %s | %s" % (head, second, re.sub(r"[0-9]+", "#", tail))
+
+
 def subject_tokens(text):
     return set(TOKEN_RE.findall(norm(text)))
 
@@ -119,11 +133,14 @@ def is_operator_item(event, joined):
 
 def main():
     prior = {}
+    prior_settled = {}
     try:
         with open(OUT, encoding="utf-8") as f:
-            for it in json.load(f).get("items") or []:
-                if isinstance(it, dict) and it.get("id"):
-                    prior[it["id"]] = it.get("first_seen")
+            prior_doc = json.load(f)
+        for it in prior_doc.get("items") or []:
+            if isinstance(it, dict) and it.get("id"):
+                prior[it["id"]] = it.get("first_seen")
+        prior_settled = prior_doc.get("settled") or {}
     except Exception:
         pass  # no prior file / broken: first_seen falls back to today
 
@@ -198,12 +215,22 @@ def main():
             # above already set handled, which still outranks the
             # ledger — so setdefault, never override.
             it.setdefault("status", "dismissed")
+            it["_sticky"] = True
         elif iid in approved:
             # the operator approved this id; keep handled across the
             # rebuild (a RESOLVED crumb above already set handled too).
             it.setdefault("status", "handled")
+            it["_sticky"] = True
         else:
-            it.setdefault("status", "open")
+            # fuzzy half: the exact id is unknown but the alert SHAPE
+            # was settled by an operator decision that must not be
+            # clobbered by digit churn (settled_key docstring).
+            ps = prior_settled.get(settled_key(it["text"])) or {}
+            it.setdefault("status", ps.get("status") or "open")
+            if ps.get("status"):
+                # the shape carries an operator decision forward: keep
+                # it in the settled map even though the exact id is new
+                it["_sticky"] = True
         it["last_seen"] = now
 
     # [feedback:] operator submissions outrank the standing alert crowd:
@@ -212,7 +239,17 @@ def main():
     ranked = sorted(by_id.values(), key=lambda x: (
         "[feedback:" not in x["text"], x["status"] != "open"))
     out_items = ranked[:CAP]
-    feed = {"generated_at": now, "items": out_items}
+    # settled shapes: rebuilt fresh every run from the rows that still
+    # arrive, so an entry lives only while its source keeps emitting —
+    # settlements stick across rewording without growing unbounded.
+    settled = {}
+    for it in by_id.values():
+        if it.get("_sticky") and it["status"] in ("dismissed", "handled"):
+            ps = prior_settled.get(settled_key(it["text"])) or {}
+            settled[settled_key(it["text"])] = {
+                "status": it["status"],
+                "ts": ps.get("ts") or it["first_seen"]}
+    feed = {"generated_at": now, "items": out_items, "settled": settled}
     # per-PID tmp — the 1m drop-in and refresh-dashboard.sh overlap (see
     # sessions-feed.py)
     tmp = "%s.%d.tmp" % (OUT, os.getpid())

@@ -164,5 +164,93 @@ class ResiduePurge(unittest.TestCase):
         self.assertEqual(rerun, items)
 
 
+
+class SettledShapes(unittest.TestCase):
+    """Settlements survive rewording (2026-10-03 operator): queue texts
+    embed volatile digits (pids, wall times, stamps), so every churn
+    mints a fresh sha id no ledger knows and a parked/dismissed alert
+    walks straight back in. The feed keeps a settled-shape map: same
+    producer|kind with a digit-collapsed tail stays settled; a genuinely
+    different first line prints open; the map prunes when the source
+    stops emitting the shape."""
+
+    T1 = "oversight-tick | alert | stale-store: /tmp/a-1234 record untouched 30min"
+    T2 = "oversight-tick | alert | stale-store: /tmp/a-9876 record untouched 95min"
+    T3 = "patrol.py | alert | different complaint needs attention"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.addCleanup(os.environ.pop, "HNGH_CRUMBS_DB", None)
+        os.environ["HNGH_CRUMBS_DB"] = os.path.join(self.tmp.name, "c.db")
+        # main() calls crumbs() unconditionally and bails on a missing
+        # journal: seed an empty synced db so digest items drive the run
+        state = os.path.join(self.tmp.name, "STATE.md")
+        with open(state, "w", encoding="utf-8") as f:
+            f.write("")
+        subprocess.run([sys.executable,
+                        os.path.join(ROOT, "lib", "crumbs-db.py"),
+                        "sync", "--state", state,
+                        "--db", os.environ["HNGH_CRUMBS_DB"]],
+                       check=True, capture_output=True)
+        self.feed = _load_feed()
+        self.feed.DATA = os.path.join(self.tmp.name, "data.json")
+        self.feed.OUT = os.path.join(self.tmp.name, "operator-items.json")
+        self.feed.DISMISSED = os.path.join(self.tmp.name, "dismissed.json")
+        self.feed.APPROVED = os.path.join(self.tmp.name, "approved.json")
+
+    def run_feed(self, lines):
+        with open(self.feed.DATA, "w", encoding="utf-8") as f:
+            json.dump({"digest": "## For the operator\n" + "".join(
+                "- %s\n" % ln for ln in lines),
+                "generated_at": "2026-10-03T12:00:00Z"}, f)
+        self.feed.main()
+        with open(self.feed.OUT, encoding="utf-8") as f:
+            return json.load(f)
+
+    def dismiss(self, text):
+        with open(self.feed.DISMISSED, "w", encoding="utf-8") as f:
+            json.dump({"dismissed": {self.feed.item_id(text):
+                                     "2026-10-03T00:00:00Z"}}, f)
+
+    def test_digit_churn_stays_dismissed(self):
+        first = self.run_feed([self.T1])
+        self.assertEqual(first["items"][0]["status"], "open")
+        self.dismiss(self.T1)
+        second = self.run_feed([self.T1])
+        self.assertEqual(second["items"][0]["status"], "dismissed")
+        third = self.run_feed([self.T2])  # digits churn: new id, same shape
+        self.assertEqual(third["items"][0]["id"], self.feed.item_id(self.T2))
+        self.assertEqual(third["items"][0]["status"], "dismissed")
+        self.assertIn(self.feed.settled_key(self.T2), third["settled"])
+
+    def test_different_shape_prints_open(self):
+        self.run_feed([self.T1])
+        self.dismiss(self.T1)
+        out = self.run_feed([self.T1, self.T3])
+        status = {it["text"]: it["status"] for it in out["items"]}
+        self.assertEqual(status[self.T1], "dismissed")
+        self.assertEqual(status[self.T3], "open")
+
+    def test_map_prunes_when_source_stops(self):
+        self.run_feed([self.T1])
+        self.dismiss(self.T1)
+        settled = self.run_feed([self.T1])["settled"]
+        self.assertTrue(settled)
+        # churned successor: exact id absent from the ledger, the shape
+        # stays settled via the map relay
+        self.assertEqual(self.run_feed([self.T2])["items"][0]["status"],
+                         "dismissed")
+        # source stops: the map prunes (an append-only ledger id would
+        # always reseed its own shape, so the relay is what can lapse)
+        self.assertEqual(self.run_feed([])["settled"], {})
+        # ...so the successor shape returns as a new occurrence
+        self.assertEqual(self.run_feed([self.T2])["items"][0]["status"],
+                         "open")
+        # while the exact ledger id still outranks for its own rows
+        self.assertEqual(self.run_feed([self.T1])["items"][0]["status"],
+                         "dismissed")
+
+
 if __name__ == "__main__":
     unittest.main()
