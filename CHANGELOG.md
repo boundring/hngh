@@ -4,6 +4,28 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-10-03
+
+- **Dashboard deficiency tranche (eight slices)**: closed the eight
+  defects behind the operator review's four experience failures —
+  static Handle clicks (handled cards now dim + chip in place via a
+  persistent store, verbStore maps each endpoint to its ledger side,
+  c81a391b), the Camp "ALL CLEAR" vs header "NEEDS ATTENTION"
+  contradiction (verdict override unified in verdictOf, af2c08dc),
+  the frozen front page (dateline now carries edition age + open
+  count; the silent poll rebuilds on a new edition stamp,
+  d42c247a), opaque operator rows (producer-first decomposition +
+  tooltip, broadsheet deck dedupe, 2bb59586), invisible History rows
+  (the view builds pane skeletons for tab mounts, ae51b255),
+  title:null decision buttons (outcome titles from the guidance
+  payload; guidance reveals why at rest, details on expand,
+  f4b3a68f), the two-meta-tag token race (first NON-EMPTY content
+  wins; orphan newspaper-view.js deleted, ecc964e8), and
+  dash-selfreview staleness alerts that the verdict ignored (now
+  warn reasons; glossary names the kernel-gate boundary). Nine new
+  test classes, red before each fix; full gate green after each
+  slice. docs/records/2026-10-03-dashboard-deficiency-tranche.md.
+
 ### 2026-10-02
 
 - **Queue readers on the --json contract**: scripts/dashboard-tui and
