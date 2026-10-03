@@ -492,10 +492,18 @@
         : '');
     h.title = 'click to expand or collapse';
     art.appendChild(h);
+    // the composer serves deck = full text, so decks often repeat the
+    // headline verbatim — strip that prefix, drop empty remainder
+    // (display-layer only; the feed schema is untouched)
     if (a.deck) {
-      var d = document.createElement('p');
-      d.className = 'deck'; d.textContent = a.deck;
-      art.appendChild(d);
+      var deckText = (a.headline && a.deck.indexOf(a.headline) === 0)
+        ? a.deck.slice(a.headline.length).replace(/^[\s\u2014.-]+/, '')
+        : a.deck;
+      if (deckText) {
+        var d = document.createElement('p');
+        d.className = 'deck'; d.textContent = deckText;
+        art.appendChild(d);
+      }
     }
     var body = Array.isArray(a.body) ? a.body : [];
     if (body.length) {

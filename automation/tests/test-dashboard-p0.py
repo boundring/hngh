@@ -451,5 +451,50 @@ class VerdictOverride(unittest.TestCase):
         self.assertIn("window.HnghOps.verdict(d, spine)", vb)
 
 
+
+
+class OpRowDecompose(unittest.TestCase):
+    """Tranche 2026-10-03: operator rows render producer-first instead of
+    one dense pipe string; the full raw text stays on the row title;
+    broadsheet decks that repeat the headline verbatim are deduped."""
+
+    def setUp(self):
+        self.js = src("app.js")
+
+    def test_decompose_helper_shape(self):
+        m = re.search(r"function decomposeOpText\(text\) \{[\s\S]*?\n  \}",
+                      self.js)
+        self.assertTrue(m, "decomposeOpText missing")
+        script = m.group(0) + (";console.log(JSON.stringify(["
+            "decomposeOpText('19-ux-review.sh | alert | ux-review:x'),"
+            "decomposeOpText('no shape here'),"
+            "decomposeOpText(null)]))")
+        import json
+        import subprocess
+        out = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True,
+            check=True).stdout)
+        self.assertEqual(out, [
+            {"producer": "19-ux-review.sh", "kind": "alert",
+             "rest": "ux-review:x"},
+            None, None])
+
+    def test_rows_render_producer_first_with_raw_title(self):
+        self.assertIn('class="oprod"', self.js)
+        self.assertIn('class="opkind"', self.js)
+        self.assertIn(
+            """return '<div class="opitem" title="' + esc(it.text) + '">' +""",
+            self.js)
+
+    def test_optext_word_breaks(self):
+        css = src("style.css")
+        self.assertIn("word-break: break-word;", css)
+        self.assertIn(".oprod {", css)
+        self.assertIn(".opkind {", css)
+
+    def test_broadsheet_deck_deduped(self):
+        self.assertIn("a.deck.indexOf(a.headline) === 0", src("broadsheet-view.js"))
+
+
 if __name__ == "__main__":
     unittest.main()

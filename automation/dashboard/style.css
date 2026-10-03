@@ -46,7 +46,9 @@ h1 { font-size: 14px; margin: 0; font-weight: 650; }
   border-bottom: 1px dashed rgba(127,127,127,.18); }
 .opitem:last-child { border-bottom: 0; }
 .opstat { white-space: nowrap; font-size: 11.5px; color: var(--muted); flex: none; }
-.optext { flex: 1 1 auto; min-width: 0; }
+.optext { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+.oprod { color: var(--dim); }
+.opkind { color: var(--dim); font-style: italic; margin: 0 4px; }
 .opev { flex-basis: 100%; padding-left: 2px; }
 .crumb { display: flex; align-items: baseline; gap: 8px; padding: 3px 0;
   border-bottom: 1px solid var(--line); font-size: 12px; min-width: 0; }

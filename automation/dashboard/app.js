@@ -190,6 +190,14 @@
   }
   var armedId = null; // item whose dismiss is armed, awaiting the inline confirm
   var armedHandle = null; // item whose handle is armed, awaiting the inline confirm
+  // "producer | kind | payload" is the house alert shape: decompose for
+  // the row so the operator reads producer-first instead of one dense
+  // pipe-delimited string; anything else renders exactly as before.
+  function decomposeOpText(text) {
+    var m = /^([^\s|]+)\s*\|\s*([^\s|]+)\s*\|\s*([\s\S]+)$/.exec(text || '');
+    return m ? { producer: m[1], kind: m[2], rest: m[3] } : null;
+  }
+
   function operatorItemsHtml(filter) {
     // filter: optional predicate over live items — Camp shows open/handled
     // separately; null (Logs) renders the full live list + counters.
@@ -231,7 +239,8 @@
           '<button class="ghost" data-dismiss-no="' + esc(it.id) + '">no</button></span>'
         : '<button class="ghost" data-dismiss="' + esc(it.id) + '" ' +
           'title="mark viewed — hides the item; recurring items return until their source stops emitting them">dismiss</button>';
-      return '<div class="opitem">' +
+      var parts = decomposeOpText(it.text);
+      return '<div class="opitem" title="' + esc(it.text) + '">' +
         (handled
           ? '<span class="opstat"><i class="sw green"></i>✓ handled</span>'
           : '<span class="opstat"><i class="sw amber"></i>open</span>') +
@@ -239,7 +248,11 @@
         (it.recurring
           ? '<span class="opstat" title="recurring items return until their source stops emitting them">↻ recurring</span>'
           : '') +
-        '<span class="optext">' + esc(it.text) + '</span>' +
+        (parts
+          ? '<span class="oprod">' + esc(parts.producer) + '</span>' +
+            '<span class="opkind">' + esc(parts.kind) + '</span>' +
+            '<span class="optext">' + esc(parts.rest) + '</span>'
+          : '<span class="optext">' + esc(it.text) + '</span>') +
         (handled && it.evidence ? '<span class="opev dim">' + esc(it.evidence) + '</span>' : '') +
         ctl +
         '</div>';
