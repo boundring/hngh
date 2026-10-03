@@ -1042,8 +1042,21 @@
     return slot === 0 ? 'morning edition'
       : slot === 1 ? 'midday edition' : 'evening edition';
   }
+  // how old is the printed edition: the composer runs on the subhour
+  // tier, so an old stamp means the operator is reading a stale paper
+  // off a still-open tab; 90 minutes = three missed subhour runs.
+  function editionAge(gen, now) {
+    var t = Date.parse(gen);
+    if (!isFinite(t)) return null;
+    var m = Math.max(0, Math.round((now - t) / 60000));
+    var text = m >= 60
+      ? Math.floor(m / 60) + 'h ' + (m % 60) + 'm old'
+      : m + 'm old';
+    return { text: text, stale: m >= 90 };
+  }
   function editionLine(ed) {
     var sys = (ed && ed.system) || {};
+    var age = editionAge(ed && ed.generated, Date.now());
     var w = ed && ed.weather;
     var online = (sys.fleet || []).filter(function (f) {
       return f && f.online; }).length;
@@ -1051,6 +1064,8 @@
       (ed && ed.date) || todayFromStamp(ed || {}) || 'undated',
       'no. ' + ((ed && ed.number) != null ? ed.number : '?'),
       slotName(ed && ed.slot),
+      age ? (age.stale ? 'stale edition · ' + age.text
+                       : 'edition ' + age.text) : '',
       (ed && ed.generated ? ed.generated.slice(11, 16) + ' UTC' : ''),
       w && typeof w.temp_c === 'number'
         ? 'weather: ' + w.temp_c.toFixed(1) + '°C / ' + cToF(w.temp_c) +
@@ -1060,7 +1075,8 @@
       'queue ' + (sys.queue_depth != null ? sys.queue_depth : '?') +
         ' - sessions ' + (sys.sessions_active != null
           ? sys.sessions_active : '?') +
-        ' - fleet ' + online + '/' + ((sys.fleet || []).length) + ' online'
+        ' - fleet ' + online + '/' + ((sys.fleet || []).length) + ' online',
+      feed.openCount != null ? feed.openCount + ' open' : ''
     ].filter(Boolean);
     return bits.join(' · ');
   }
@@ -1248,6 +1264,7 @@
     var y = keepScroll ? scrollY : 0;
     stream.innerHTML = '';
     feed.seq = buildSeq();
+    feed.renderedGenerated = (feed.data || {}).generated;
     feed.n = 0;
     for (var i = 0; i < 6; i++) appendNext();
     fillToSentinel();
@@ -1277,13 +1294,20 @@
       d.articles = d.articles.filter(function (x) {
         return x && !feed.dismissed[x.id];
       });
+      // edition-aware silent poll: a changed stamp means the composer
+      // printed a new edition — rebuild once so the paper is actually
+      // fresh; unchanged snapshots still never rebuild (the original
+      // flash bug). renderedGenerated is stamped inside rebuildStream.
+      var freshEdition = $('stream').childNodes.length > 0 &&
+        feed.renderedGenerated && d.generated !== feed.renderedGenerated;
       shelfRender();
       mastheadRender(d.edition, d.generated);
       // initial load always builds; an explicit refresh rebuilds the
       // whole sheet so a new snapshot is actually visible. The silent
       // 30s poll deliberately does neither (rebuilding from a stale
       // snapshot was the original flash bug).
-      if (rebuild || !$('stream').childNodes.length) rebuildStream(true);
+      if (rebuild || freshEdition || !$('stream').childNodes.length)
+        rebuildStream(true);
     });
   }
   function refresh(rebuild) {
@@ -1292,11 +1316,21 @@
       fetchJSON('fleet.json').then(function (f) {
         var nodes = f && Array.isArray(f.nodes) ? f.nodes : [];
         if (!mapState.scene) mapInit(nodes); // live map only binds once
-      })
+      }),
+      // open items for the dateline: ledger ids are already dropped by
+      // the feed rebuild, so the array length IS the open count; null
+      // on failure keeps the segment off the line entirely
+      fetchJSON('operator-items.json').then(function (o) {
+        feed.openCount = o && Array.isArray(o.items) ? o.items.length
+                                                     : null;
+      }).catch(function () { feed.openCount = null; })
     ]).then(function (rs) {
       // fail-stale: a rejected refetch leaves the current edition on
       // screen (no rebuild, feed.data untouched) and says so
       if (rs[0].status === 'rejected') showErr(rs[0].reason.message);
+      if (feed.openCount != null)
+        mastheadRender(feed.data && feed.data.edition,
+                       feed.data && feed.data.generated);
     });
   }
 

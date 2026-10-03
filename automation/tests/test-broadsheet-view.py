@@ -490,8 +490,11 @@ class RefreshStaleness(unittest.TestCase):
         # the original flash bug)
         self.assertIn("refresh(true)", self.js)
         self.assertIn("function loadFeed(rebuild)", self.js)
-        self.assertIn("if (rebuild || !$('stream').childNodes.length) "
-                      "rebuildStream(true)", self.js)
+        # slice 3: the silent poll rebuilds ONLY on a changed edition
+        # stamp (freshEdition); unchanged snapshots keep the old rule
+        self.assertIn("if (rebuild || freshEdition || "
+                      "!$('stream').childNodes.length)", self.js)
+        self.assertIn("rebuildStream(true);", self.js)
         # poll chain keeps the no-rebuild semantics
         self.assertIn("Promise.resolve(refresh()).then", self.js)
 
@@ -753,6 +756,52 @@ class HandledInPlace(unittest.TestCase):
         css = read("broadsheet.css")
         self.assertIn(".art.ohandled", css)
         self.assertIn(".ohandled-chip", css)
+
+
+
+
+class EditionAwarePoll(unittest.TestCase):
+    """Tranche 2026-10-03 slice 3: the silent 30s poll must rebuild the
+    sheet when the composer stamps a NEW edition (otherwise an open tab
+    reads the same paper all day), the dateline must carry the edition
+    age + open-item count, and an unchanged snapshot still never
+    rebuilds (the original flash bug)."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def test_rebuild_stamps_and_compares_generated(self):
+        self.assertIn("feed.renderedGenerated = (feed.data || {}).generated;",
+                      self.js)
+        self.assertIn("d.generated !== feed.renderedGenerated", self.js)
+
+    def test_refresh_fetches_open_count(self):
+        self.assertIn("fetchJSON('operator-items.json')", self.js)
+        self.assertIn("feed.openCount", self.js)
+
+    def test_edition_line_carries_age_and_open(self):
+        self.assertIn("function editionAge(", self.js)
+        self.assertIn("'stale edition \u00b7 '", self.js)
+        self.assertIn("feed.openCount + ' open'", self.js)
+
+    def test_edition_age_math(self):
+        m = re.search(r"function editionAge\([\s\S]*?\n  \}", self.js)
+        self.assertTrue(m, "editionAge missing")
+        script = m.group(0) + (
+            ";var t0 = Date.parse('2026-10-03T14:44:42Z');"
+            "console.log(JSON.stringify(["
+            "editionAge('2026-10-03T14:44:42Z', t0 + 12 * 60000),"
+            "editionAge('2026-10-03T14:44:42Z', t0 + 96 * 60000),"
+            "editionAge('2026-10-03T14:44:42Z', t0),"
+            "editionAge('garbage', t0)]))")
+        out = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True,
+            check=True).stdout)
+        self.assertEqual(out, [
+            {"text": "12m old", "stale": False},
+            {"text": "1h 36m old", "stale": True},
+            {"text": "0m old", "stale": False},
+            None])
 
 
 if __name__ == "__main__":
