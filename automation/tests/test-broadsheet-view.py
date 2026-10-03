@@ -752,6 +752,16 @@ class HandledInPlace(unittest.TestCase):
         self.assertIn("var persist = verbStore(fire.endpoint);", self.js)
         self.assertIn("if (persist) persist(a.id);", self.js)
 
+    def test_dismiss_drops_card_from_cached_feed_now(self):
+        # the refetch dismissed-filter only runs on the next poll; the
+        # receipt promises the card leaves THIS rebuild — drop it from
+        # feed.data before rebuilding (live 2026-10-03: card lingered
+        # up to 30s after "dismiss settled")
+        self.assertIn("persist === dismissPersist", self.js)
+        self.assertIn("feed.data.articles = feed.data.articles.filter",
+                      self.js)
+        self.assertIn("x.id !== a.id", self.js)
+
     def test_persist_keys_on_article_id_not_payload(self):
         # choice actions carry act.payload.id = OPERATOR-ITEM id; cards
         # are keyed by the ARTICLE id (a.id). Persisting payload.id made

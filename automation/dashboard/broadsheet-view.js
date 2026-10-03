@@ -853,6 +853,15 @@
           .then(function () {
             var persist = verbStore(act.endpoint);
             if (persist) persist(a.id);
+            if (persist === dismissPersist && feed.data &&
+                feed.data.articles) {
+              // dismissed = gone, client-side, now: the refetch filter
+              // only runs on the next poll, but the receipt promises the
+              // card leaves THIS rebuild
+              feed.data.articles = feed.data.articles.filter(function (x) {
+                return x.id !== a.id;
+              });
+            }
             megaTilt();
             ripBurst(bar.closest('article'));
             settleReceipt(act.endpoint, payload);
@@ -899,6 +908,15 @@
           .then(function () {
             var persist = verbStore(fire.endpoint);
             if (persist) persist(a.id);
+            if (persist === dismissPersist && feed.data &&
+                feed.data.articles) {
+              // dismissed = gone, client-side, now: the refetch filter
+              // only runs on the next poll, but the receipt promises the
+              // card leaves THIS rebuild
+              feed.data.articles = feed.data.articles.filter(function (x) {
+                return x.id !== a.id;
+              });
+            }
             megaTilt();
             ripBurst(bar.closest('article'));
             var receipt = 'fired ' + (fire.verb || '?') + ' — ' + (fire.effect || '');
