@@ -984,5 +984,46 @@ class Whitelist(Base):
         self.assertLessEqual(emitted, allowed)
 
 
+def _load_compose():
+    """Module object for direct unit calls (base_article, session_articles)."""
+    import importlib.machinery
+    import importlib.util
+    loader = importlib.machinery.SourceFileLoader(
+        "hngh_compose_test", COMPOSE)
+    spec = importlib.util.spec_from_loader("hngh_compose_test", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+class PresentableText(unittest.TestCase):
+    def test_base_article_tildes_paths_and_strips_markup(self):
+        mod = _load_compose()
+        art = mod.base_article(
+            "k", "operator",
+            'watch <span class="x">span-id</span> broken',
+            "Repo: /home/nyx/Projects/etc/hngh.",
+            ["body /home/nyx/x line <div class=\"lcd\">v</div>"],
+            "", 0.5, [])
+        blob = json.dumps(art)
+        self.assertNotIn("/home/", blob)
+        self.assertNotIn("<span", blob)
+        self.assertNotIn("<div", blob)
+        self.assertIn("~/", art["deck"])
+
+    def test_session_articles_skip_delegation_missions(self):
+        mod = _load_compose()
+        rows = {"sessions": [
+            {"id": "a", "state": "active", "age": 12,
+             "mission": "Complete assignment thoroughly: "
+                        "Survey hngh dashboard CLIENT code."},
+            {"id": "b", "state": "active", "age": 5,
+             "mission": "bench the model"},
+        ], "generated": "2026-10-03T00:00:00Z"}
+        arts = mod.session_articles(rows)
+        self.assertEqual([a["headline"] for a in arts],
+                         ["bench the model"])
+
+
 if __name__ == "__main__":
     unittest.main()

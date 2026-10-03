@@ -41,6 +41,8 @@ AUTOMATION_LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AUTOMATION_ROOT = os.path.abspath(os.path.join(AUTOMATION_LIB, ".."))
 sys.path.insert(0, AUTOMATION_LIB)
 
+from scrub import redact_home as _redact_home
+
 def _news_db_dir():
     """hngh userspace db home (two-home split; HNGH_HOME_DIR seams)."""
     from hngh_home import db_dir
@@ -198,7 +200,25 @@ def db_articles(db_path, weights, queues, fresh_h=72.0):
     return today, editions
 
 
+def _presentable(s):
+    """Print-clean card text: kernel tilde paths, no raw markup.
+
+    Every article routes through base_article, so one seam here covers
+    operator items, session missions, and machine readouts alike
+    (2026-10-03 operator feedback: home paths print raw, HTML-ish
+    check markup leaks into decks/bodies)."""
+    s = _redact_home(s)
+    s = re.sub(r"</?[a-zA-Z][^>\n]{0,200}>", "", s)
+    return re.sub(r" {2,}", " ", s)
+
+
 def base_article(kind, category, headline, deck, body, ts, score, sources):
+    headline = _presentable(headline)
+    deck = _presentable(deck)
+    if isinstance(body, str):
+        body = _presentable(body)
+    else:
+        body = [_presentable(b) for b in (body or [])]
     return {
         "id": sha8("%s/%s" % (kind, headline)),
         "category": category,
@@ -541,6 +561,8 @@ def session_articles(sessions):
     arts = []
     for s in rows or []:
         mission = (s.get("mission") or "").strip() or "(no mission)"
+        if re.match(r"Complete assignment thoroughly\b", mission):
+            continue  # omp delegation prompt, not news (2026-10-03)
         body = ["mission: %s" % mission,
                 "state: %s" % (s.get("state") or "unknown"),
                 "age: %ds" % int(s.get("age") or 0)]
