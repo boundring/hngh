@@ -6,7 +6,7 @@ at 2026-09-14T14:00:39Z. Alert text: deck was reachable earlier today but the pu
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260914-deck-unreachable-2026-09-14 for deck-unreachable-2026-09-14; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260914-deck-unreachable-2026-09-14 for deck-unreachable-2026-09-14; record disposition; then fix or park
       Verification: research subject fail-20260914-deck-unreachable-2026-09-14 present in research-subjects.txt with a recorded disposition; alert fixed or parked
 
 ## Occurrences
