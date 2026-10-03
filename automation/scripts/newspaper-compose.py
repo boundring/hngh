@@ -304,11 +304,11 @@ OP_NOTE_RULES = ("note <=200 chars; '|' stripped; recorded in the "
                  "report-queue row text and the durable ledger row")
 OP_VERB_EFFECT = {
     "park": "Files your guidance note with a dismissed-side ledger "
-            "row (operator-item:<id>:parked); the note rides the row "
+            "row (operator-item: the item id, parked); the note rides the row "
             "text and the handoff why.",
     "acknowledge": "Records the item acknowledged (note optional) on "
                    "the approved side, so it survives feed rebuilds "
-                   "(operator-item:<id>:acknowledged).",
+                   "(operator-item: the item id, acknowledged).",
     "handle": "Marks the item handled in operator-approved.json; no "
               "note.",
     "dismiss": "Moves the item to operator-dismissed.json; it returns "
