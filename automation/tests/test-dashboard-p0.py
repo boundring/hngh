@@ -397,5 +397,59 @@ class GraphCameraPreserve(unittest.TestCase):
         self.assertIn("CAMERA_OK", out)
 
 
+
+
+class VerdictOverride(unittest.TestCase):
+    """Tranche 2026-10-03 slice 1: ONE verdict computation. The open-items
+    warn override used to live only in renderHeader, so Camp (which calls
+    HnghOps.verdict directly) could show ALL CLEAR beside a NEEDS ATTENTION
+    header on the same screen. The override moves into verdictOf; renderHeader
+    keeps only rendering."""
+
+    def test_open_items_pull_verdict_to_warn(self):
+        a = src("app.js")
+        dv = a[a.index("function digestVerdict"):a.index("function parseOperators")]
+        oc = a[a.index("function openOpCount"):a.index("function rerenderWithOpState")]
+        vo = a[a.index("function verdictOf"):a.index("function renderHeader")]
+        script = (
+            "var opState = { items: [{id:'a', status:'open'}], dismissed: {} };\n"
+            + dv + "\n" + oc + "\n" + vo + "\n"
+            "var r = verdictOf({}, {verdict: {state: 'clear'}});\n"
+            "if (r.level !== 'warn' || r.label !== 'Needs attention')\n"
+            "  throw new Error('open override missing: ' + JSON.stringify(r));\n"
+            "if (r.reasons.join('|') !== '1 open operator item')\n"
+            "  throw new Error('reason wrong: ' + r.reasons.join('|'));\n"
+            "opState.items = [];\n"
+            "var r0 = verdictOf({}, {verdict: {state: 'clear'}});\n"
+            "if (r0.level !== 'ok' || r0.label !== 'clear')\n"
+            "  throw new Error('clean spine mutated: ' + JSON.stringify(r0));\n"
+            "opState.items = [{id: 'b', status: 'open'}, {id: 'c', status: 'open'}];\n"
+            "var rn = verdictOf({}, {verdict: {state: 'clear', reasons: ['x']}});\n"
+            "if (rn.reasons.join('|') !== 'x|2 open operator items')\n"
+            "  throw new Error('plural/concat wrong: ' + rn.reasons.join('|'));\n"
+            "var rl = verdictOf({digest: 'no repairs needed'}, null);\n"
+            "if (rl.label !== 'Needs attention' || rl.level !== 'warn')\n"
+            "  throw new Error('legacy fallback not overridden: ' + JSON.stringify(rl));\n"
+            "console.log('VERDICT_OK');\n"
+        )
+        self.assertIn("VERDICT_OK", run_node(script))
+
+    def test_render_header_renders_shared_verdict_only(self):
+        a = src("app.js")
+        rh = a[a.index("function renderHeader"):a.index("function headerNoSignal")]
+        self.assertNotIn("v.level = 'warn'", rh,
+                         "renderHeader still carries its own override")
+        self.assertIn("verdictOf(d, spine)", rh)
+        # attention count + title badge still read openOp directly
+        self.assertIn("document.title = openOp > 0", rh)
+
+    def test_camp_verdict_not_duplicated(self):
+        v = src("overview-view.js")
+        vb = v[v.index("function verdictBlock"):v.index("function opBlock")]
+        self.assertNotIn("reasons.push(ops.open", vb,
+                         "Camp re-derives the open-items reason")
+        self.assertIn("window.HnghOps.verdict(d, spine)", vb)
+
+
 if __name__ == "__main__":
     unittest.main()

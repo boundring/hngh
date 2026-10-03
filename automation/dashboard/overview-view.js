@@ -54,11 +54,8 @@
   var root = null, lastHtml = null;
 
   function verdictBlock(d, spine) {
-    var v = window.HnghOps.verdict(d, spine);
+    var v = window.HnghOps.verdict(d, spine); // open-items reason arrives via verdictOf
     var reasons = (v.reasons || []).slice();
-    var ops = window.HnghOps.html(null);
-    if (ops.open > 0)
-      reasons.push(ops.open + ' open operator item' + (ops.open === 1 ? '' : 's'));
     var lines = reasons.length
       ? '<div class="ov-reasons">' + reasons.map(function (r) {
           return '<div>' + esc(r) + '</div>';

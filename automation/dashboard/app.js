@@ -458,24 +458,32 @@
       var s = String(v.state);
       var ok = /clear|green|healthy|ok/i.test(s);
       var unknown = /none|unknown/i.test(s);
-      return {
+      v = {
         level: ok ? 'ok' : (unknown ? 'none' : 'warn'),
         label: s.replace(/[-_]+/g, ' '),
         reasons: v.reasons || []
       };
+    } else {
+      // legacy fallback: derive from the digest text when the spine carries no verdict
+      var dv = digestVerdict(d ? d.digest : '');
+      v = { level: dv.level, label: dv.label, reasons: [] };
     }
-    // legacy fallback: derive from the digest text when the spine carries no verdict
-    var dv = digestVerdict(d ? d.digest : '');
-    return { level: dv.level, label: dv.label, reasons: [] };
-  }
-  function renderHeader(d, spine, res) {
-    var v = verdictOf(d, spine);
+    // ONE verdict everywhere: open operator items pull the level to warn for
+    // every consumer (header pill, Camp verdict block) — the override used to
+    // live only in renderHeader, so Camp could show ALL CLEAR beside a
+    // NEEDS ATTENTION header on the same screen.
     var openOp = openOpCount();
     if (openOp > 0) {
       v.level = 'warn';
       v.label = 'Needs attention';
-      v.reasons = v.reasons.concat([openOp + ' open operator item' + (openOp === 1 ? '' : 's')]);
+      v.reasons = (v.reasons || []).concat([openOp + ' open operator item' + (openOp === 1 ? '' : 's')]);
     }
+    return v;
+  }
+  function renderHeader(d, spine, res) {
+    // the open-items override lives in verdictOf now — every consumer shares it
+    var v = verdictOf(d, spine);
+    var openOp = openOpCount(); // attention count + title badge below
     var pill = $('verdict-pill');
     pill.className = 'strip-verdict ' + v.level;
     pill.textContent = v.label;
