@@ -253,9 +253,14 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
   color: var(--ink-soft); font-style: normal; }
 
 /* Operator guidance: cause-and-effect card inside expanded articles */
-.oguide { display: none; margin: 10px 0 8px; padding: 4px 0 4px 14px;
+/* at rest only the one-line why shows; the verb table, rules, and
+   docs unfold with the expanded article (progressive reveal) */
+.oguide { margin: 10px 0 8px; padding: 4px 0 4px 14px;
   border-left: 2px solid var(--rule); font-size: 12px; }
-.art.expanded .oguide { display: block; }
+.oguide .og-table, .oguide .og-rules, .oguide .og-docs { display: none; }
+.art.expanded .oguide .og-table { display: table; }
+.art.expanded .oguide .og-rules,
+.art.expanded .oguide .og-docs { display: block; }
 .oguide .og-why { font-style: italic; color: var(--ink-soft);
   margin: 0 0 4px; }
 .oguide table { border-collapse: collapse; width: 100%; }

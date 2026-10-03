@@ -804,5 +804,50 @@ class EditionAwarePoll(unittest.TestCase):
             None])
 
 
+
+
+class VerbTitles(unittest.TestCase):
+    """Tranche 2026-10-03 slice 4: every decision button names its
+    outcome — the front page's verb buttons had no title/aria-label at
+    all, so a scanning operator had to know the grammar cold."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def test_choice_buttons_carry_outcome(self):
+        self.assertIn("b.title = ch.outcome;", self.js)
+        self.assertIn("b.setAttribute('aria-label',", self.js)
+
+    def test_fire_button_titled(self):
+        self.assertIn("fb.title = 'fire: dispatches this article verb now';",
+                      self.js)
+        self.assertIn("fb.setAttribute('aria-label', fb.title);", self.js)
+
+    def test_omp_button_titled(self):
+        self.assertIn(
+            "b.title = 'opens an omp session in a terminal bound to this"
+            " article';", self.js)
+
+
+class GuidanceProgressiveReveal(unittest.TestCase):
+    """Tranche 2026-10-03 slice 4: the guidance card shows its one-line
+    why at rest (cause-and-effect without opening every article); the
+    verb table, rules, and docs unfold with the expanded article."""
+
+    def setUp(self):
+        self.css = read("broadsheet.css")
+
+    def test_why_visible_rest_blocks_hidden(self):
+        self.assertIn(".oguide .og-table, .oguide .og-rules, "
+                      ".oguide .og-docs { display: none; }", self.css)
+
+    def test_expanded_reveals_blocks(self):
+        self.assertIn(".art.expanded .oguide .og-table { display: table; }",
+                      self.css)
+        self.assertIn(".art.expanded .oguide .og-rules,", self.css)
+        self.assertIn(".art.expanded .oguide .og-docs { display: block; }",
+                      self.css)
+
+
 if __name__ == "__main__":
     unittest.main()

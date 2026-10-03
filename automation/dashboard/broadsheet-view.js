@@ -805,6 +805,11 @@
       var b = document.createElement('button');
       b.className = 'choice';
       b.textContent = ch.label || act.endpoint;
+      if (ch.outcome) {
+        b.title = ch.outcome;
+        b.setAttribute('aria-label',
+          (ch.label || act.endpoint) + ' — ' + ch.outcome);
+      }
       var out = document.createElement('span');
       out.className = 'outcome';
       out.textContent = ch.outcome || '';
@@ -861,6 +866,8 @@
       var fb = document.createElement('button');
       fb.className = 'choice fire';
       fb.textContent = 'fire: ' + (fire.verb || fire.endpoint);
+      fb.title = 'fire: dispatches this article verb now';
+      fb.setAttribute('aria-label', fb.title);
       var fout = document.createElement('span');
       fout.className = 'outcome';
       fout.textContent = fire.effect || '';
@@ -1017,6 +1024,8 @@
     var b = document.createElement('button');
     b.className = 'choice omp-btn';
     b.textContent = 'omp session';
+    b.title = 'opens an omp session in a terminal bound to this article';
+    b.setAttribute('aria-label', b.title);
     b.addEventListener('click', function () {
       b.disabled = true;
       postJson('/article/omp-session', { id: a.id })
