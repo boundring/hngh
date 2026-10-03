@@ -472,6 +472,23 @@
   }
 
   // ---------- header strip (verdict + spine counts, always visible) ----------
+  // dash-selfreview files staleness alerts into the report queue; the
+  // verdict used to ignore them (ALL CLEAR beside a stale-feed queue).
+  // Client-only: rqState.rows is already fetched by fetchQueue().
+  function selfReviewAlerts(rows) {
+    return (rows || []).filter(function (r) {
+      var t = (r && (r.first || r.text || r.body)) || '';
+      return t.indexOf('[dash-selfreview]') !== -1 &&
+        /unacceptable|stale|missing|failing/i.test(t);
+    });
+  }
+  function selfReviewChecks(rows) {
+    return selfReviewAlerts(rows).map(function (r) {
+      var t = String((r && (r.first || r.text || r.body)) || '');
+      var m = /\[dash-selfreview\]\s*([\w.-]+(?::[\w.-]+)*)/.exec(t);
+      return m ? m[1] : 'unknown-check';
+    });
+  }
   function verdictOf(d, spine) {
     var v = spine && spine.verdict;
     if (v && v.state) {
@@ -497,6 +514,14 @@
       v.level = 'warn';
       v.label = 'Needs attention';
       v.reasons = (v.reasons || []).concat([openOp + ' open operator item' + (openOp === 1 ? '' : 's')]);
+    }
+    var srChecks = selfReviewChecks(rqState.rows);
+    if (srChecks.length) {
+      v.level = 'warn';
+      v.label = 'Needs attention';
+      v.reasons = (v.reasons || []).concat(srChecks.map(function (c) {
+        return 'dashboard self-review failing: ' + c;
+      }));
     }
     return v;
   }

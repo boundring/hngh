@@ -411,9 +411,11 @@ class VerdictOverride(unittest.TestCase):
         dv = a[a.index("function digestVerdict"):a.index("function parseOperators")]
         oc = a[a.index("function openOpCount"):a.index("function rerenderWithOpState")]
         vo = a[a.index("function verdictOf"):a.index("function renderHeader")]
+        sr = a[a.index("function selfReviewAlerts"):a.index("function verdictOf")]
         script = (
             "var opState = { items: [{id:'a', status:'open'}], dismissed: {} };\n"
-            + dv + "\n" + oc + "\n" + vo + "\n"
+            "var rqState = { rows: [] };\n"
+            + dv + "\n" + oc + "\n" + sr + "\n" + vo + "\n"
             "var r = verdictOf({}, {verdict: {state: 'clear'}});\n"
             "if (r.level !== 'warn' || r.label !== 'Needs attention')\n"
             "  throw new Error('open override missing: ' + JSON.stringify(r));\n"
@@ -494,6 +496,56 @@ class OpRowDecompose(unittest.TestCase):
 
     def test_broadsheet_deck_deduped(self):
         self.assertIn("a.deck.indexOf(a.headline) === 0", src("broadsheet-view.js"))
+
+
+
+
+class SelfReviewSurfacing(unittest.TestCase):
+    """Tranche 2026-10-03: dash-selfreview files staleness alerts into
+    the report queue, but the verdict ignored them — the page said ALL
+    CLEAR while the queue held "feed-fresh:operator-items.json:
+    unacceptable-now". Self-review rows now feed verdictOf (client-only:
+    rqState.rows is already fetched)."""
+
+    def setUp(self):
+        self.js = src("app.js")
+
+    def _extract(self):
+        fns = []
+        for name in ("selfReviewAlerts", "selfReviewChecks"):
+            m = re.search(r"function %s\(rows\) \{[\s\S]*?\n  \}" % name,
+                          self.js)
+            self.assertTrue(m, name + " missing")
+            fns.append(m.group(0))
+        return "\n".join(fns)
+
+    def test_alert_filter_and_check_names(self):
+        script = self._extract() + (
+            ";console.log(JSON.stringify(["
+            "selfReviewAlerts([{first: '[dash-selfreview] "
+            "feed-fresh:operator-items.json: unacceptable-now - stale 1501s'},"
+            "{first: '[dash-selfreview] spend: on budget'},"
+            "{first: 'operator item abc handled'},"
+            "{first: '[dash-selfreview] slow-unit:x: failing 2 checks'}]).length,"
+            "selfReviewChecks([{first: '[dash-selfreview] "
+            "feed-fresh:operator-items.json: unacceptable-now - stale 1501s'},"
+            "{first: '[dash-selfreview] slow-unit:x: failing 2 checks'}]),"
+            "selfReviewAlerts([]).length]))")
+        import json
+        import subprocess
+        out = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True,
+            check=True).stdout)
+        self.assertEqual(out, [2,
+            ["feed-fresh:operator-items.json", "slow-unit:x"], 0])
+
+    def test_verdictof_consumes_rqstate_rows(self):
+        self.assertIn("selfReviewChecks(rqState.rows)", self.js)
+        self.assertIn("dashboard self-review failing: ' + c", self.js)
+
+    def test_glossary_names_kernel_gate_boundary(self):
+        self.assertIn("the last ceremony commit lives on the Plans tab",
+                      src("console.html"))
 
 
 if __name__ == "__main__":
