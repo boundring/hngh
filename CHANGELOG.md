@@ -6,6 +6,23 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-03
 
+- **Newspaper readability tranche (four slices)**: answered the
+  follow-up operator feedback — cards print clean text (home paths
+  tilded via the kernel scrub convention and raw markup stripped at the
+  single base_article seam; omp delegation prompts like "Complete
+  assignment thoroughly" stop printing as articles, 6f7fed15), parking
+  is real again (the operator-items feed keeps a settled-shape map:
+  producer|kind with a digit-collapsed tail stays dismissed/handled
+  across the pid/wall churn that used to mint fresh ids per re-emit,
+  a15e243a), cards never split mid-article across columns, expansion
+  scrolls the card back into view, the paper carries a newsprint grain,
+  and the console header ticker reads statically instead of an
+  unreadable 18s marquee, and the composer's verb guidance spells the
+  `<id>` placeholder in words so no angle brackets reach the page
+  (2d46fc98, 25faeb09), and the daily lesson harvest writes a
+  repo-relative guardrails path so it stops re-leaking the home
+  directory into the lessons file (15637fd8).
+
 - **Dashboard deficiency tranche (eight slices)**: closed the eight
   defects behind the operator review's four experience failures —
   static Handle clicks (handled cards now dim + chip in place via a
