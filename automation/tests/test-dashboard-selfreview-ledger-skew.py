@@ -138,6 +138,25 @@ class LedgerSkew(unittest.TestCase):
         f = self._rows_fixture(unread=10, total=80, bodies=80, head_age=60)
         self.assertEqual(f, [])
 
+    def test_prune_archive_files_not_counted_as_bodies(self):
+        # prune-archive-*.md inside docs/project/report-bodies are the
+        # folded archive of rows report-queue --prune already removed;
+        # body_path() never writes that name, so the drift body-count
+        # must glob past them or every archive day adds fake drift
+        # that permanently re-fires the reconcile alert.
+        k = make_kernel(rows=50, bodies=50, head_age=60)
+        self._tmpdirs.append(k)
+        bodies_dir = k / "docs" / "project" / "report-bodies"
+        (bodies_dir / "prune-archive-2026-09-01.md").write_text("archive\n")
+        for i in range(120):
+            (bodies_dir / f"prune-archive-2026-09-{i:02d}.md").write_text("a\n")
+        # 120 stray archive files > LEDGER_DRIFT_MAX=50: the check must
+        # glob past them (body_path() never writes that name), or it
+        # permanently re-fires on archives. No threshold override —
+        # LEDGER_DRIFT_MAX is a hardcoded constant.
+        f = load_job({"HNGH_REPO": str(k)}).check_ledger()
+        self.assertEqual(f, [])
+
     def _rows_fixture(self, unread, total, bodies, head_age=None):
         k = Path(tempfile.mkdtemp(prefix="hngh-ledger-skew-"))
         self._tmpdirs.append(k)

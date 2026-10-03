@@ -187,7 +187,13 @@ def check_ledger():
     except Exception as e:
         f.append(finding("ledger-sanity", True, f"report-queue --json failed: {e}"))
         return f
-    bodies = len(list((Path(HNGH_REPO) / "docs/project/report-bodies").glob("*.md")))
+    # prune-archive-*.md hold the folded rows report-queue --prune already
+    # removed; body_path() never writes that name. Glob past them so each
+    # archive day does not add fake drift that re-fires the reconcile alert.
+    bodies = len([p for p in
+                  (Path(HNGH_REPO) / "docs/project/report-bodies")
+                  .glob("*.md")
+                  if not p.name.startswith("prune-archive-")])
     drift = abs(rows - bodies)
     if drift > LEDGER_DRIFT_MAX:
         # Tree-freshness guard: cross-machine ledger-sync skew makes the
