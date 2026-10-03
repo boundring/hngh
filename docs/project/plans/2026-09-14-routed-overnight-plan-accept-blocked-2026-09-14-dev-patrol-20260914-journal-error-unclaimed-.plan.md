@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:plan-accept-blocked:2026-09-14-dev-patrol-20260914-journal-error-unclaimed- -->
+<!-- plan: status=executed risk=normal accepted=2026-09-18T01:41:57Z routed-from=overnight:plan-accept-blocked:2026-09-14-dev-patrol-20260914-journal-error-unclaimed- -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `overnight:plan-accept-blocked:2026-09-14-dev-patrol-20260914-journal-error-unclaimed-`
@@ -6,7 +6,7 @@ at 2026-09-14T20:00:32Z. Alert text: plan 2026-09-14-dev-patrol-20260914-journal
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260914-overnight-plan-accept-blocked-2026-09-14-dev-patrol-20260914-journal-error-unclaimed for overnight:plan-accept-blocked:2026-09-14-dev-patrol-20260914-journal-error-unclaimed-; record disposition; then fix or park
+- [x] Delve: opened research subject fail-20260914-overnight-plan-accept-blocked-2026-09-14-dev-patrol-20260914-journal-error-unclaimed for overnight:plan-accept-blocked:2026-09-14-dev-patrol-20260914-journal-error-unclaimed-; disposition recorded as PARKED (duplication row: admission contract already hardened, identity self-resolved 2026-09-18, open threads owned by the dev-synth line) in research-dispositions.tsv + research-lines.tsv + research-subjects.txt; crystallized in docs/research/2026-10-03-fail-20260914-overnight-plan-accept-blocked-2026-09-14-dev-patrol-20260914-journal-error-unclaimed.md
       Verification: research subject fail-20260914-overnight-plan-accept-blocked-2026-09-14-dev-patrol-20260914-journal-error-unclaimed present in research-subjects.txt with a recorded disposition; alert fixed or parked
 
 ## Occurrences
