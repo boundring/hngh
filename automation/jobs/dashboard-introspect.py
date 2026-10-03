@@ -103,7 +103,9 @@ INTENTS = [
     ("dismiss-immediate", "major",
      "How should broadsheet dismissals update the rendered stream "
      "immediately (in-place DOM/state update) instead of waiting for a "
-     "refetch?"),
+     "refetch? Landed 2026-10-03: dismissed-family verbs drop the card "
+     "on rebuild via the broadsheet-dismissed store; handle/acknowledge "
+     "mark the card in place (dim + chip) via broadsheet-handled."),
     ("no-dead-buttons", "major",
      "Which wiring pass guarantees every broadsheet.html button id has a "
      "live handler in broadsheet-view.js?"),

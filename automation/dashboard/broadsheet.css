@@ -236,6 +236,13 @@ button.choice:disabled { opacity: 0.55; cursor: wait; }
 }
 .art .kicker { box-shadow: 0 1px 0 rgba(244, 240, 226, 0.6); }
 
+/* decided cards: APPROVED-side verbs (handle/acknowledge) keep the card
+   visible but marked until the next composer edition drops it;
+   DISMISSED-side verbs already filter the card out on rebuild */
+.art.ohandled { opacity: 0.55; }
+.ohandled-chip { font-size: 10px; letter-spacing: 0.04em;
+  border: 1px solid var(--rule); padding: 0 4px; margin-left: 6px; }
+
 /* Ghost counsel: signed ghost-desk block inside expanded articles */
 .ghostdesk { display: none; margin: 10px 0 8px; padding: 4px 0 4px 14px;
   border-left: 2px solid var(--rule); }

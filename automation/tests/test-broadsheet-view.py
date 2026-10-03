@@ -699,5 +699,61 @@ class MotionLayer(unittest.TestCase):
         self.assertIn("Array.isArray(a && a.parked)", self.js)
 
 
+
+
+class HandledInPlace(unittest.TestCase):
+    """Handle/acknowledge leave the card on the sheet but visibly marked
+    (tranche 2026-10-03 slice 2). The click already rebuilt the stream —
+    from the same stale composer snapshot, so the card returned
+    identical and the click read as a no-op. Contract: APPROVED-side
+    verbs mark the card in place (dim + chip) via a persistent store;
+    DISMISSED-side verbs keep the existing filter (gone on rebuild).
+    """
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+
+    def test_handled_store_mirrors_dismissed_pattern(self):
+        self.assertIn("'broadsheet-handled'", self.js)
+        self.assertIn("handledPersist(id)", self.js)
+        self.assertIn("feed.handled[id] = true", self.js)
+
+    def test_verb_store_maps_ledger_sides(self):
+        m = re.search(r"function verbStore\(endpoint\) \{[\s\S]*?\n  \}",
+                      self.js)
+        self.assertTrue(m, "verbStore missing")
+        script = ("function handledPersist() {}; function dismissPersist() {};\n"
+                  + m.group(0) +
+                  ";console.log(JSON.stringify(["
+                  "verbStore('/operator-item/handle') === handledPersist,"
+                  "verbStore('/operator-item/acknowledge') === handledPersist,"
+                  "verbStore('/operator-item/dismiss') === dismissPersist,"
+                  "verbStore('/operator-item/park') === dismissPersist,"
+                  "verbStore('/operator-item/expire') === dismissPersist,"
+                  "verbStore('/operator-item/suppress') === dismissPersist,"
+                  "verbStore('/flag')]))")
+        out = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True,
+            check=True).stdout)
+        self.assertEqual(out, [True, True, True, True, True, True, None])
+
+    def test_card_marks_handled_in_place(self):
+        self.assertIn("feed.handled[a.id]", self.js)
+        self.assertIn("classList.add('ohandled')", self.js)
+        self.assertIn("ohandled-chip", self.js)
+        self.assertIn("handled \u2713 \u2014 leaves the next edition", self.js)
+
+    def test_success_handler_persists_before_feedback(self):
+        # both the choice click and the fire path route through verbStore
+        self.assertIn("var persist = verbStore(act.endpoint);", self.js)
+        self.assertIn("var persist = verbStore(fire.endpoint);", self.js)
+        self.assertIn("if (persist && payload.id) persist(payload.id);", self.js)
+
+    def test_css_marks_decided_cards(self):
+        css = read("broadsheet.css")
+        self.assertIn(".art.ohandled", css)
+        self.assertIn(".ohandled-chip", css)
+
+
 if __name__ == "__main__":
     unittest.main()

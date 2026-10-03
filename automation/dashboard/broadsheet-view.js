@@ -441,6 +441,29 @@
       JSON.stringify(feed.dismissed)); } catch (e) { /* private mode */ }
   }
 
+  // decided cards persist the same way: handle/acknowledge leave the card
+  // on the sheet but visibly marked (the APPROVED ledger drops it from the
+  // feed on the next composer edition); dismissed-family verbs already
+  // filter. Same reconciliation story as DISMISSED_KEY above.
+  var HANDLED_KEY = 'broadsheet-handled';
+  feed.handled = (function () {
+    try { return JSON.parse(localStorage.getItem(HANDLED_KEY) || '{}'); }
+    catch (e) { return {}; } // malformed storage: fail open to fresh
+  })();
+  function handledPersist(id) {
+    feed.handled[id] = true;
+    try { localStorage.setItem(HANDLED_KEY,
+      JSON.stringify(feed.handled)); } catch (e) { /* private mode */ }
+  }
+  // which store a verb's success touches: APPROVED verbs mark the card in
+  // place, DISMISSED verbs drop it on the next rebuild; other endpoints
+  // (fire dispatches, omp session) touch neither store.
+  function verbStore(endpoint) {
+    if (/handle|acknowledge/.test(endpoint)) return handledPersist;
+    if (/dismiss|expire|suppress|park/.test(endpoint)) return dismissPersist;
+    return null;
+  }
+
   function catColor(cat) { return 'var(--c-' + esc(cat) + ', var(--rule))'; }
 
   function articleEl(a) {
@@ -451,6 +474,7 @@
     // insert variety: newsprint scraps rise with a per-card stagger
     art.style.setProperty('--rise-d',
       ((h32(String(a.id || '')) % 5) * 70) + 'ms');
+    if (feed.handled && feed.handled[a.id]) art.classList.add('ohandled');
     var kick = '<div class="kicker">' +
       esc(a.kicker || a.category || 'bulletin');
     if (feed.data && feed.data.queues &&
@@ -458,6 +482,8 @@
       kick += '<span class="qchip">queue ' +
         feed.data.queues[a.category] + '</span>';
     }
+    if (feed.handled && feed.handled[a.id])
+      kick += '<span class="ohandled-chip">handled ✓ — leaves the next edition</span>';
     kick += '</div>';
     var h = document.createElement('h2');
     h.innerHTML = kick + esc(a.headline || 'untitled') +
@@ -805,6 +831,8 @@
         progress.textContent = 'sending ' + (ch.label || 'decision') + '…';
         postJson(act.endpoint, payload)
           .then(function () {
+            var persist = verbStore(act.endpoint);
+            if (persist && payload.id) persist(payload.id);
             megaTilt();
             ripBurst(bar.closest('article'));
             settleReceipt(act.endpoint, payload);
@@ -847,6 +875,8 @@
         progress.textContent = 'firing ' + (fire.verb || '') + '…';
         postJson(fire.endpoint, payload)
           .then(function () {
+            var persist = verbStore(fire.endpoint);
+            if (persist && payload.id) persist(payload.id);
             megaTilt();
             ripBurst(bar.closest('article'));
             var receipt = 'fired ' + (fire.verb || '?') + ' — ' + (fire.effect || '');
