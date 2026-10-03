@@ -750,7 +750,13 @@ class HandledInPlace(unittest.TestCase):
         # both the choice click and the fire path route through verbStore
         self.assertIn("var persist = verbStore(act.endpoint);", self.js)
         self.assertIn("var persist = verbStore(fire.endpoint);", self.js)
-        self.assertIn("if (persist && payload.id) persist(payload.id);", self.js)
+        self.assertIn("if (persist) persist(a.id);", self.js)
+
+    def test_persist_keys_on_article_id_not_payload(self):
+        # choice actions carry act.payload.id = OPERATOR-ITEM id; cards
+        # are keyed by the ARTICLE id (a.id). Persisting payload.id made
+        # the mark never match the rendered card (live 2026-10-03).
+        self.assertNotIn("persist(payload.id)", self.js)
 
     def test_css_marks_decided_cards(self):
         css = read("broadsheet.css")

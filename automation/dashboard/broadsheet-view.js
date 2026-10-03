@@ -852,7 +852,7 @@
         postJson(act.endpoint, payload)
           .then(function () {
             var persist = verbStore(act.endpoint);
-            if (persist && payload.id) persist(payload.id);
+            if (persist) persist(a.id);
             megaTilt();
             ripBurst(bar.closest('article'));
             settleReceipt(act.endpoint, payload);
@@ -898,7 +898,7 @@
         postJson(fire.endpoint, payload)
           .then(function () {
             var persist = verbStore(fire.endpoint);
-            if (persist && payload.id) persist(payload.id);
+            if (persist) persist(a.id);
             megaTilt();
             ripBurst(bar.closest('article'));
             var receipt = 'fired ' + (fire.verb || '?') + ' — ' + (fire.effect || '');
