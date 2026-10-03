@@ -525,6 +525,9 @@
     h.addEventListener('click', function () {
       art.classList.toggle('expanded');
       embedSync(art, a);
+      // the column-span reflow can push the card below the fold —
+      // keep the reader on it (2026-10-03 operator feedback)
+      art.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
     if (a.span === 3) art.classList.add('expanded');
     art.insertAdjacentHTML('beforeend', ghostHTML(a.ghost));

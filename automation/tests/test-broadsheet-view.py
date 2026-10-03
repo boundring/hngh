@@ -909,5 +909,36 @@ class TokenFailSafe(unittest.TestCase):
             self.assertIn("if (v) return v;", js, name)
 
 
+
+class NewsprintAndFlow(unittest.TestCase):
+    """Cards hold their column, expansion keeps the reader in place,
+    paper reads as newsprint, the ticker reads statically
+    (2026-10-03 operator feedback)."""
+
+    def setUp(self):
+        self.js = read("broadsheet-view.js")
+        self.sheet = read("broadsheet.css")
+        self.style = read("style.css")
+
+    def test_cards_never_split_across_columns(self):
+        self.assertIn("break-inside: avoid", self.sheet)
+
+    def test_expand_keeps_card_in_view(self):
+        self.assertIn("scrollIntoView({ block: 'nearest'", self.js)
+
+    def test_paper_grain_overlay(self):
+        self.assertIn("body::after", self.sheet)
+        self.assertIn("feTurbulence", self.sheet)
+
+    def test_ticker_static(self):
+        m = re.search(r"\.lcd-ticker-inner \{[^}]*\}", self.style)
+        self.assertTrue(m, ".lcd-ticker-inner block missing")
+        block = m.group(0)
+        self.assertNotIn("animation", block)
+        self.assertNotIn("padding-left: 100%", block)
+        self.assertIn("text-overflow: ellipsis", block)
+        self.assertNotIn("@keyframes lcd-scroll", self.style)
+
+
 if __name__ == "__main__":
     unittest.main()
