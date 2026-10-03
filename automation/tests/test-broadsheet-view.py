@@ -868,5 +868,24 @@ class ConsoleHistoryRows(unittest.TestCase):
         self.assertIn("el.appendChild(rows);", self.js)
 
 
+
+
+class TokenFailSafe(unittest.TestCase):
+    """Tranche 2026-10-03: the served page carries two hngh-token metas
+    (server-injected real one, then the empty file:// placeholder).
+    querySelector stops at the first match in document order, which is
+    fine served but wrong on any page order change; read the first
+    NON-EMPTY content across all matches instead."""
+
+    def test_first_non_empty_across_all_views(self):
+        qsa = "querySelectorAll('meta[name=" + '"' + "hngh-token" + '"' + "]')"
+        qs = "document.querySelector('meta[name=" + '"' + "hngh-token" + '"' + "]')"
+        for name in ("broadsheet-view.js", "app.js", "desk-view.js"):
+            js = read(name)
+            self.assertIn(qsa, js, name)
+            self.assertNotIn(qs, js, name)
+            self.assertIn("if (v) return v;", js, name)
+
+
 if __name__ == "__main__":
     unittest.main()

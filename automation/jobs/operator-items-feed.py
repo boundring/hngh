@@ -46,8 +46,7 @@ CAP = 40
 # unseamed FEEDBACK dir in test-dashboard-p1.py leaked these rows into
 # the crumbs corpus; every carrier was verified non-operator content.
 # Pinned literal, NOT a pattern — the dashboard views flood-guard on
-# the same needle (dashboard/newspaper-view.js FLOOD_NEEDLE,
-# dashboard/broadsheet-view.js FLOOD_NEEDLE). The [w=...] stamp tails
+# the same needle (dashboard/broadsheet-view.js FLOOD_NEEDLE). The [w=...] stamp tails
 # given rows fresh ids per rebuild, which resurrected dismissed rows;
 # the only durable kill is at the filing boundary.
 FLOOD_NEEDLE = "[feedback:idea] from email"

@@ -52,8 +52,15 @@
   // token: an inline "session expired — reload" chip, never a silent
   // failure.
   function hnghToken() {
-    var m = document.querySelector('meta[name="hngh-token"]');
-    return m ? (m.getAttribute('content') || '') : '';
+    // the served page carries two token metas (server-injected real one
+    // first, then the empty file:// placeholder): take the first
+    // NON-EMPTY content across all matches, else ''
+    var metas = document.querySelectorAll('meta[name="hngh-token"]');
+    for (var i = 0; i < metas.length; i++) {
+      var v = metas[i].getAttribute('content') || '';
+      if (v) return v;
+    }
+    return '';
   }
   function tokenExpiredChip() {
     if (document.getElementById('hngh-expired')) return;

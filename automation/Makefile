@@ -78,7 +78,6 @@ test:
 	python3 -B tests/test-dashboard-lifecycle.py
 	python3 -B tests/test-omarchy-file-probe.py
 	python3 -B tests/test-story-view.py
-	python3 -B tests/test-newspaper-view.py
 	python3 -B tests/test-routes-view.py
 	python3 -B tests/test-dashboard-selfreview-ledger-skew.py
 	python3 -B tests/test-digest-html.py

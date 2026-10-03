@@ -19,7 +19,6 @@ STATE.md
 agent-handoffs.md
 dashboard/*
 !dashboard/story.html
-!dashboard/newspaper-view.js
 !dashboard/console.html
 !dashboard/story-view.js
 !dashboard/style.css
