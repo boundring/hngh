@@ -471,3 +471,19 @@ patrol-20261002-automation-gate-gate-stale	patrol: surface automation-gate filed
 fail-20261002-supervision	What knowledge was missing for supervision?
 arc-20261002-dashboard-wire-capped-r4	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
 fail-20260914-bench-lane-timer-disable	Why is hngh-model-bench.timer still enabled+active after the bench-trigger lane disable step, and what closes the residue: a machine-side guard or an operator systemctl action?
+fail-20261002-Does-the-overnight-harness-enable-verify	Does the overnight harness enable/verify step issue `systemctl enable`, `enable --now`, or `start` on hngh-model-bench.timer, and does the journal across the last disableovernight window show the unit being re-armed by that cycle?
+fail-20261002-What-do-the-deployed-hngh-model-bench-ti	What do the deployed hngh-model-bench.timer unit and its drop-ins actually contain for `Persistent=` and `OnCalendar=`, and does a stamp file exist on disk indicating a stored last-trigger timestamp?
+arc-20261003-dashboard-masthead-splash	How should the broadsheet masthead render a volumetric ASCII-art splash title (banner-glyph table in broadsheet-view.js), and which module owns the glyph renderer?
+arc-20261003-dashboard-wire-capped-r4	What cap and demotion rule keeps wire-category articles at or below the configured share of the edition?
+arc-20261003-dashboard-masthead-varies	How should edition.masthead.expansion vary per edition without colliding across the editions history window?
+arc-20261003-dashboard-single-webgl	How should the paper texture and the megastructure map share one WebGL context (or one canvas) in broadsheet-view.js?
+arc-20261003-dashboard-expansion-rotation	How should broadsheet-view.js carry a rotation table of at least N spelled H.N.G.H. expansions so the masthead varies durably?
+arc-20261003-dashboard-ghost-desk	How should each edition carry ghost-counsel summary blocks or an explicit ghost_quiet marker, never silently neither?
+arc-20261003-dashboard-masthead-expansion	Where should the procedural H.N.G.H. expansion generator live so newspaper.json edition.masthead.expansion carries four fully spelled words with initials H N G H?
+arc-20261003-dashboard-voice-majority	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
+arc-20261003-dashboard-fail-closed-auth	How should broadsheet fetches attach the dashboard token and fail closed (error state, no fake data) on 401/403?
+patrol-20261003-rotation-due	patrol: surface rotation-due filed rotation-due on two consecutive runs -- why does it keep failing and which guardrail closes it?
+synth-2026-10-03-1	synth-2026-10-02-1 — what is the correct two-signal DIE threshold that reconciles the steer-vs-die rule with the death-as-default principle and resolves the single-stall DIE edge case?
+synth-2026-10-03-2	tree-skew whitelist + unversioned plan ledger — how does the `hngh_wl` whitelist that silences tree-skew flapping also hide the plan ledger from the monitor, and what is the minimal visibility change that makes the ledger auditable without reintroducing false alarms?
+synth-2026-10-03-3	fail-20261001-beat-parked-2026-09-13-governed-fleet-consolidation — what is the named-path-only staging closure that verifies the six commits, three test suites, and three live GET probes without triggering a full rebuild of the already-landed surface?
+fail-20260914-correction-5dfa8329	Why did one "Mark read" click empty the report queue to "no unread reports" (correction-5dfa8329, x2), and is the live mark-read path fixed post-restart?
