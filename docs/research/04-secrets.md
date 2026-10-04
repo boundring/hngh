@@ -2,6 +2,8 @@
 category: secrets
 persona: The Keyholder
 status: seed
+anchored: 2026-10-03
+note: automation anchors predate the 2026-10-04 control-room cut (broadsheet/ghost/wire surfaces retired)
 ---
 
 # Secrets — what hngh runs today
@@ -10,7 +12,7 @@ hngh separates secrets from data at the filesystem level: `~/.hngh/` is userspac
 
 A documented cutover purged 26 remaining plaintext API keys (`env_vars.sh`, `unsloth.env`, systemd user environment, 14 vestigial `EnvironmentFile` drop-ins) into vault `Hngh Secrets`, read on demand through `automation/lib/opv`/`automation/lib/secrets.py` — 27/27 reads verified — and fixed an 11-char `ZHIPU_API_KEY` prefix that a journal-harvest leak had embedded in `docs/project/reports.md` (automation/CHANGELOG.md:682-689). The notify-email lane stores an `op://` item reference instead of the raw SMTP password (password read at send time, never touches disk; automation/CHANGELOG.md:1345-1354).
 
-**Redaction is single-sourced**: `automation/lib/scrub.py` is the ONE token family (home/Users/root/tmp bare or segmented, scheme-relative `~ tilde rendering, credential-URL userinfo), with `scrub.sh` as shell wrapper and parity tests on both sides (automation/CHANGELOG.md:1045-1055,912-916). Fix-at-writer beats fix-at-reader everywhere: research-beat disposition columns, digest copies, and notify-email subjects scrub before write/send (automation/CHANGELOG.md:727-731,762-766). The kernel side has its own boundary backstop: `scripts/report-queue` rewrites machine-local paths and URL userinfo at the argument boundary BEFORE the dedup lookup, so the ledger's git-tracked public rows never carry raw paths (scripts/report-queue:98-121,154-169,366-379). Rotation is vault-as-ledger: `jobs/credential-health.sh:258-261` treats each vault item's `updated_at` as the rotate date (titles + timestamps only, never values).
+**Redaction is single-sourced**: `automation/lib/scrub.py` is the ONE token family (home/Users/root/tmp bare or segmented, scheme-relative `//host/home/`, tilde rendering, credential-URL userinfo), with `scrub.sh` as shell wrapper and parity tests on both sides (automation/CHANGELOG.md:1045-1055,912-916). Fix-at-writer beats fix-at-reader everywhere: research-beat disposition columns, digest copies, and notify-email subjects scrub before write/send (automation/CHANGELOG.md:727-731,762-766). The kernel side has its own boundary backstop: `scripts/report-queue` rewrites machine-local paths and URL userinfo at the argument boundary BEFORE the dedup lookup, so the ledger's git-tracked public rows never carry raw paths (scripts/report-queue:98-121,154-169,366-379). Rotation is vault-as-ledger: `jobs/credential-health.sh:258-261` treats each vault item's `updated_at` as the rotate date (titles + timestamps only, never values).
 
 ## Open questions for web research
 

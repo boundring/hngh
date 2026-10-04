@@ -2,6 +2,8 @@
 category: packaging/dependencies
 persona: The Quartermaster
 status: seed
+anchored: 2026-10-03
+note: automation anchors predate the 2026-10-04 control-room cut (broadsheet/ghost/wire surfaces retired)
 ---
 
 # Packaging & Dependencies — what hngh runs today

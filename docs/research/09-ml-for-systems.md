@@ -2,6 +2,8 @@
 category: ml-for-systems
 persona: The Augur
 status: seed
+anchored: 2026-10-03
+note: automation anchors predate the 2026-10-04 control-room cut (broadsheet/ghost/wire surfaces retired)
 ---
 
 # ML for Systems — what hngh runs today
