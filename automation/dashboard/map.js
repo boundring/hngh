@@ -2,7 +2,8 @@
    docs/design/megastructure-sim.md P1: seed topology hosts, live fleet
    nodes on the ground ring, alert fauna orbiting the automation ring,
    ring tint follows the open-item count. Positions are editorial, not
-   measured; unknown names stay 'unresolved'. */
+   measured; unknown names render by device class, never a bare
+   'unresolved'. */
 function $(id) { return document.getElementById(id); }
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -119,7 +120,7 @@ function mapRefresh(fleetNodes, openCount) {
     var named = n.name && n.name !== '?';
     var dot = mapNodeDot(THREE, n.online ? 0x4a6b3a : 0x8a4a3a);
     dot.position.set(x, -0.6, z);
-    var lab = mapLabel(THREE, named ? n.name : 'unresolved',
+    var lab = mapLabel(THREE, named ? n.name : ((n.os || 'device') + ' node'),
       n.online ? '#35502a' : '#7a4030');
     lab.position.set(x, -0.25, z);
     s.live.add(dot); s.live.add(lab);
@@ -249,7 +250,7 @@ function mapFallback(fleetNodes, openCount, why) {
     var named = n.name && n.name !== '?';
     li.innerHTML = '<span class="map-dot ' +
       (n.online ? 'on' : 'off') + '"></span>' +
-      esc(named ? n.name : 'mesh node (unresolved)') +
+      esc(named ? n.name : 'mesh ' + (n.os || 'device')) +
       ' - ' + (n.online ? 'online' : 'offline') +
       (n.os ? ' - ' + esc(n.os) : '');
     ul.appendChild(li);
