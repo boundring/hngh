@@ -267,6 +267,50 @@ privileged CI run. Matches the wicket posture: exact-command grants and printed 
 windows, never automated root (`docs/design/omarchy-gap-registry.md:20-25`;
 `install.sh:529-571`).
 
+## 6. Pre-test sanity and review postures (operator directive 2026-10-04)
+
+REQ-I23 (drift check at the point of execution). Census output is evidence,
+never a lease: before any phase executes for real it re-reads the live facts
+it acts on and refuses on drift -- ESP signature present where census saw
+none, ESP mounted, fstab ESP pin changed, target disk absent. Landed seed:
+the esp phase refuses a mounted ESP
+(`automation/jobs/omarchy-boot-build.sh:113`). A phase whose preconditions
+moved is a new decision for the operator, not something to retry harder.
+
+REQ-I24 (existing-install detection; two explicit modes). Before any
+disk-touching phase the installer enumerates installed Linux systems
+(`/etc/os-release` on each mountable root, `lsblk -f` partition map) and
+records them in the REQ-I4 run record. Mode selection is explicit and never
+automatic: `integrate` installs Hngh into an EXISTING distro and never
+repartitions; `omarchy` is the repartition path of section 2. Planned home:
+`automation/jobs/` census extension (encoded source; no seam yet, GAP-I4).
+
+REQ-I25 (repartition gate). Repartitioning runs only in omarchy mode. The
+confirmation names every partition it destroys and the detected installs
+whose roots live there; a partition hosting a detected existing install is
+refused unless the operator re-confirms naming that install. Before/after
+partition tables land in the run log (REQ-I26).
+
+REQ-I26 (live per-stage logs). Every run -- dry or real -- mirrors its
+output line-by-line to a timestamped per-phase log
+(`HNGH_BOOT_LOGDIR`, default `~/.hngh/installer-logs`): header carries
+phase, mode, disk, user, UTC; the log IS the review artifact a dry-run
+exists to produce. stdin stays attached so sudo keeps its TTY prompt; log
+loss is never a gate. LANDED: `automation/jobs/omarchy-boot-build.sh:178-192`
+(header + `exec > >(tee ...)`), hermetic proofs
+`automation/tests/test-omarchy-boot-build.sh:71-111` (dry capture incl. the
+rc=3 die path, `--help` writes no log, adopt-check hint logged, REAL mode
+logged even when sudo fails).
+
+REQ-I27 (boot-entry preservation). Before the boot layer changes at all:
+`efibootmgr -v` snapshot into the run log; enumerate existing loaders
+(limine, grub, systemd-boot) and the initramfs generators of detected
+installs (mkinitcpio, dracut). New boot entries are ADDED, never replaced;
+each detected install gets a chainload entry so its access survives the
+install; a `--restore-entries` path re-registers entries from the snapshot.
+Encoded source -- planned for the build/esp phases of
+`automation/jobs/omarchy-boot-build.sh` (GAP-I4).
+
 ## Gaps
 
 GAP-I1 (closed 2026-10-04). `automation/jobs/omarchy-boot-build.sh` is in the tree with
@@ -283,6 +327,16 @@ GAP-I3. Post-boot feed verification (2.7) depends on the digest dead hop being f
 (`docs/design/harness-data-plane.md:388`); until then the verify phase reports the gap by
 name and cannot claim end-to-end feed health.
 
+GAP-I4. Installer modes and boot-entry preservation (REQ-I24, REQ-I25,
+REQ-I27) are specified, not implemented: nothing in the tree enumerates
+existing installs, no repartition path exists outside the single encoded
+esp phase, and no efibootmgr snapshot/restore seam exists. Census extension
+plus an entries subcommand on `automation/jobs/omarchy-boot-build.sh` is
+the planned landing shape.
+
 ## Status
 
-Proposed (2026-10-04). Awaiting operator review.
+Proposed (2026-10-04). Awaiting operator review. Amended 2026-10-04:
+section 6 added (REQ-I23-I27); REQ-I26 landed in
+`automation/jobs/omarchy-boot-build.sh` with hermetic proofs; GAP-I4
+opened for the modes + boot-entry work.
