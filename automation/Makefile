@@ -226,6 +226,7 @@ test:
 	python3 -B tests/test-lint-home-paths.py
 	bash scripts/lint-identifiers.sh
 	python3 -B scripts/lint-home-paths.py
+	bash tests/test-omarchy-boot-build.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 
 # adhoc: run one cadence tick for a tier now (no systemd required).
