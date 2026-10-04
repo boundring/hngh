@@ -598,6 +598,9 @@ class ControlRoomShell(unittest.TestCase):
         self.assertIn("fetchJSON('operator-items.json')", self.js)
         self.assertIn("fetchJSON('fleet.json')", self.js)
         self.assertIn("setTimeout(pollLoop, 30000)", self.js)
+        self.assertIn("scene.background = new THREE.Color(0x191b1f)", self.js)
+        self.assertNotIn("alpha: true", self.js)
+        self.assertIn("sys.queue_depth != null", self.js)
         # rebuilt-when-built: init must refresh, not freeze at first build
         self.assertIn("if (mapState.built) { mapRefresh(fleetNodes,"
                       " openCount); return; }", self.js)

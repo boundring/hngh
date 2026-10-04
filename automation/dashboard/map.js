@@ -58,12 +58,14 @@ function mapInit(fleetNodes, openCount) {
 }
 function mapBuild(THREE, host) {
   var w = host.clientWidth, h = host.clientHeight;
-  var rend = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  var rend = new THREE.WebGLRenderer({ antialias: true });
   if (!rend.getContext()) throw new Error('map webgl unavailable');
   rend.setSize(w, h);
   rend.setPixelRatio(Math.min(devicePixelRatio || 1, 1.6));
   host.appendChild(rend.domElement);
+  mapState.rend = rend;
   var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x191b1f);
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
   var sun = new THREE.DirectionalLight(0xfff4e0, 0.9);
   sun.position.set(4, 6, 3);
@@ -95,6 +97,8 @@ function mapBuild(THREE, host) {
   mapState.scene = scene; mapState.cam = cam0(THREE, w, h);
   mapBindInput(host);
   mapResize();
+  if (window.ResizeObserver)
+    mapState.ro = new ResizeObserver(mapResize).observe(host);
   if (!mapState.raf) mapState.raf = requestAnimationFrame(mapFrame);
 }
 function cam0(THREE, w, h) {
@@ -262,7 +266,7 @@ function renderDateline(ed, generated, openCount, fleetNodes) {
     (ed && ed.date) || 'undated',
     age ? (age.stale ? 'stale edition · ' + age.text
                      : 'edition ' + age.text) : '',
-    'queue ' + (sys.queue != null ? sys.queue : '?') +
+    'queue ' + (sys.queue_depth != null ? sys.queue_depth : '?') +
       ' - sessions ' + (sys.sessions_active != null
         ? sys.sessions_active : '?') +
       ' - fleet ' + online + '/' + ((fleetNodes || []).length) + ' online',
