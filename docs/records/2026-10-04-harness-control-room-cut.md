@@ -59,3 +59,45 @@ docs/design/triple-kernel.md plus three ceremony plan drafts, bodies
 pending). The megastructure-sim and federation designs landed earlier
 in the program (006b5720, 4080b31d). Phase C2 (map as primary surface
 with live states + attention rail) executes on top of this cut.
+
+## Update 2026-10-04 — C2 and C3 landed
+
+C2 (map as primary surface): automation/dashboard/map.js (classic
+script, dynamic three-module import with a 2D fallback) renders the
+live megastructure — fleet nodes on the ground ring, fauna motes for
+open attention with a '+N more' cap, ring tint by attention state,
+dateline from the newspaper feed with an honest edition-age segment,
+attention rail capped by preference. Poll hygiene keeps the
+no-setInterval rule (setTimeout loop). index.html was rewritten in
+place as the control-room shell ('hngh control room', body
+#control-room), keeping the server route tuple and _serve_index
+fallback stable. Landed f1b26b8f; the render-null fix (renderer
+stored on state, opaque scene, resize observer, queue_depth key)
+landed 72f8ccc3.
+
+C3 (settings + routes fold): a per-browser settings drawer
+(#settings, localStorage control-room-prefs) holds attention cap
+(4/8/12/16), map-drift toggle, and poll cadence (15/30/60 s; the
+drawer stores seconds, the engine multiplies to ms). The Routes tab
+folded away — the research map survives as the standalone
+routes.html, linked from the Plans panel head and the nerve-center
+header; console.html lost its p-routes panel and app.js its
+routes-root registry row, and test-routes-view.py pins folded to the
+assertNotIn reality (37 tests OK). Landed 82472851.
+
+Live proof (managed Chrome, screenshots in
+~/Pictures/Screenshots/omp/): map renders with seed + fleet labels,
+attention re-caps live under the drawer setting, prefs persist across
+reload, poll select shows 30, dateline counts edition age and open
+count.
+
+C4 sweep: the only remaining 'broadsheet' mentions in live code are
+three historical attribution comments in desk-view.js (kept
+deliberately). `make smoke`: runs/crumbs/index/data.json OK; the two
+digest FAILs are the pre-existing two-home skew parked above.
+
+Phase E (Omarchy boot) remains the operator-privileged lane: ESP
+provisioning, mkinitcpio, and limine install all need root on the
+target disk; the steps are staged in the program plan
+(local://harness-skeleton-program-plan.md) and parked at the
+point-of-risk boundary.

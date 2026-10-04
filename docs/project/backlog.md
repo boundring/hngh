@@ -1210,3 +1210,28 @@ completed; history in git + records (folded 2026-09-24)
 - **Risk:** interpretation must stay advisory - it never admits or refuses a mutation and never enters the evidence ledger as proof.
 - **Dependencies:** the interpretation doctrine's named seams; the typed-challenge / research review output rows.
 - **Review trigger:** one typed-challenge or research review carries supportive/adversarial advisory rows while its mechanical verdict is unchanged.
+
+## Resource-pool view rung - follow-up 2026-10-04 (dashboard tier)
+
+- **Follow-up (2026-10-04):** the node-pool view (megastructure map)
+  was promoted to the control room's primary surface before its
+  roadmap rung was admitted; this entry restores the governance
+  order.
+- **Problem:** docs/design/megastructure-sim.md phases P1-P4 and the
+  rung binding in docs/project/system-harness-roadmap.md were never
+  paired with a backlog row, so the map's live states shipped ahead
+  of their recorded review trigger.
+- **Smallest useful outcome:** the rung carries its Problem/Smallest/
+  Evidence/Risk/Dependencies/Review trigger shape here, and the next
+  map phase (recorded playback, P2) lands only after this row is
+  reviewed.
+- **Evidence:** docs/design/megastructure-sim.md (entity table,
+  honesty rule: every entity maps to a queryable row);
+  automation/dashboard/map.js (f1b26b8f, 72f8ccc3, 82472851).
+- **Risk:** a view that outpaces its review trigger normalizes
+  ambient surfaces; the honesty rule (view-only, read-only render)
+  must hold per phase.
+- **Dependencies:** fleet.json + operator-items.json feeds (landed);
+  the federation node rows (F-b) for the multi-node skyline.
+- **Review trigger:** P2 (recorded playback) proposes against this
+  row; any write-capable control surfaces (edicts) reopen it.

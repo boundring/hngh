@@ -14,8 +14,15 @@ lives under Pre-release / early development until the first release.
   and the research corpus (docs/research/01..12) plus the jevify
   verdict ledgers landed first (e306830d). Triple-kernel design and the
   megastructure/federation designs landed as docs/design/ drafts
-  (4080b31d, 006b5720). Phase C2 (live megastructure map) executes
-  next. docs/records/2026-10-04-harness-control-room-cut.md.
+  (4080b31d, 006b5720). docs/records/2026-10-04-harness-control-room-cut.md.
+
+- **Phase C2/C3 - live megastructure map and control-room settings**:
+  map.js renders fleet states, attention motes, and an honest
+  edition-age dateline with a 2D fallback (f1b26b8f; render-null fix
+  72f8ccc3); a per-browser settings drawer (attention cap, map drift,
+  poll cadence) persists via localStorage and the Routes tab folded to
+  the standalone research-map page (82472851). The resource-pool-view
+  rung got its backlog row (docs/project/backlog.md).
 
 ### 2026-10-03
 
