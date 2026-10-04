@@ -4,6 +4,19 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-10-04
+
+- **Harness-skeleton program, phase C1 — control-room cut**: the
+  newspaper/wire/ghost surface retired and the control-room console is
+  the dashboard's single working surface (46 files, +455/-6603,
+  2e6ea458); `/` serves the control-room shell, retired paths redirect,
+  the composer composes session/research/operator/parked desks only,
+  and the research corpus (docs/research/01..12) plus the jevify
+  verdict ledgers landed first (e306830d). Triple-kernel design and the
+  megastructure/federation designs landed as docs/design/ drafts
+  (4080b31d, 006b5720). Phase C2 (live megastructure map) executes
+  next. docs/records/2026-10-04-harness-control-room-cut.md.
+
 ### 2026-10-03
 
 - **Newspaper readability tranche (four slices)**: answered the
