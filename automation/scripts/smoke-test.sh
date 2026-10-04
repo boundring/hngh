@@ -21,6 +21,7 @@ bad() {
 # captures (regenerable), so resetting the current day makes the fetch see
 # every source as "new" and guarantees a real model summary is produced.
 TODAY="$(date +%F)"
+MORNING="$DIGEST_DIR/MORNING-$TODAY.md"
 rm -rf "$AUTOMATION_ROOT/snapshots/$TODAY" 2>/dev/null
 rm -f "$DIGEST_DIR/$TODAY.md" "$DIGEST_DIR/MORNING-$TODAY.md"
 
@@ -39,10 +40,10 @@ rc=$?
 [ -s "dashboard/data.json" ] && jq -e . "dashboard/data.json" >/dev/null 2>&1 &&
   ok "dashboard/data.json exists + valid JSON" ||
   bad "dashboard/data.json missing/invalid"
-[ -f "digest/$TODAY.md" ] && [ -s "digest/$TODAY.md" ] &&
-  ok "digest/$TODAY.md exists (non-empty)" ||
-  bad "digest/$TODAY.md missing/empty"
-grep -q "CRITICAL\|NOTABLE\|CONTEXT" "digest/$TODAY.md" 2>/dev/null &&
+[ -f "$MORNING" ] && [ -s "$MORNING" ] &&
+  ok "MORNING-$TODAY.md exists (non-empty)" ||
+  bad "MORNING-$TODAY.md missing/empty at $DIGEST_DIR"
+grep -q "CRITICAL\|NOTABLE\|CONTEXT" "$MORNING" 2>/dev/null &&
   ok "digest has tiered summary" ||
   bad "digest has no tiered summary (model may have produced nothing)"
 RUNS="$(jq -r '.hngh_runs // 0' dashboard/data.json 2>/dev/null)"
@@ -72,8 +73,8 @@ breadcrumb "smoke" "end" "smoke run finished (fail=$FAIL)"
 echo
 if [ "$FAIL" = "0" ]; then
   echo "SMOKE: ALL CHECKS PASSED"
-  echo "--- digest/$TODAY.md (first 30 lines) ---"
-  head -n 30 "digest/$TODAY.md"
+  echo "--- $MORNING (first 30 lines) ---"
+  head -n 30 "$MORNING"
   echo
   echo "--- crumbs journal tail ---"
   python3 "$AUTOMATION_ROOT/lib/crumbs-db.py" export --tail 8 --db "$db"
