@@ -68,6 +68,48 @@ if [ "$rrc" -eq 99 ]; then ok "real path reaches sudo under double authorization
 HNGH_BOOT_DISK=/dev/hngh-test-nonexistent bash "$SCRIPT" build </dev/null >/dev/null 2>&1 &&
   ok "no-flag invocation stays dry" || bad "no-flag invocation stays dry" "unexpected nonzero rc"
 
+# 10. live stage log: census mirrors output to a timestamped log
+LOGS="$(mktemp -d)"
+out="$(HNGH_BOOT_LOGDIR="$LOGS" HNGH_BOOT_DISK=/dev/hngh-test-nonexistent bash "$SCRIPT" census 2>&1)" && lrc=0 || lrc=$?
+if [ "$lrc" -eq 3 ]; then ok "logged census rc=3 (unchanged)"; else bad "logged census rc" "rc=$lrc"; fi
+sleep 0.3 # tee procsub may drain just after exit
+log_file="$(printf '%s\n' "$LOGS"/census-*.log)"
+if [ -f "$log_file" ]; then ok "census log file exists"; else bad "census log file" "$LOGS is empty"; fi
+log_body="$(cat "$LOGS"/census-*.log 2>/dev/null)"
+case "$log_body" in
+  *"== omarchy-boot-build phase=census mode=dry-run"*) ok "log header recorded" ;;
+  *) bad "log header" "$(printf '%s\n' "$log_body" | head -1)" ;;
+esac
+case "$log_body" in
+  *inconclusive*) ok "log captures phase output incl. die path" ;;
+  *) bad "log phase output" "missing inconclusive line" ;;
+esac
+
+# 11. --help writes no log
+nlogs_before="$(ls "$LOGS" | wc -l)"
+bash "$SCRIPT" --help >/dev/null 2>&1
+sleep 0.2
+nlogs_after="$(ls "$LOGS" | wc -l)"
+if [ "$nlogs_before" -eq "$nlogs_after" ]; then ok "--help writes no log"; else bad "--help writes no log" "$nlogs_before -> $nlogs_after"; fi
+
+# 12. adopt-check logs its hint line
+HNGH_BOOT_LOGDIR="$LOGS" bash "$SCRIPT" adopt-check >/dev/null 2>&1
+sleep 0.2
+case "$(cat "$LOGS"/adopt-check-*.log 2>/dev/null)" in
+  *"OMARCHY_UPSTREAM_DIR="*) ok "adopt-check log present" ;;
+  *) bad "adopt-check log" "missing hint line" ;;
+esac
+
+# 13. real path logs mode=REAL even when sudo fails (shim exit 99)
+PATH="$SHIMDIR:$PATH" HNGH_BOOT_CONFIRM=YES HNGH_BOOT_DISK=/dev/hngh-test-nonexistent \
+  HNGH_BOOT_LOGDIR="$LOGS" bash "$SCRIPT" esp --yes >/dev/null 2>&1
+sleep 0.2
+case "$(cat "$LOGS"/esp-*.log 2>/dev/null)" in
+  *"mode=REAL"*) ok "real attempt logged as REAL" ;;
+  *) bad "REAL log header" "missing mode=REAL" ;;
+esac
+rm -rf "$LOGS"
+
 if [ "$fails" -eq 0 ]; then
   printf 'test-omarchy-boot-build: all proofs passed\n'
   exit 0

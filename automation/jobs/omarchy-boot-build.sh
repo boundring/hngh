@@ -34,6 +34,9 @@
 #   HNGH_ESP_LABEL  mkfs label     (default OMARCHY-ESP)
 #   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
 #                                  (default ~/Projects/etc/omarchy-upstream)
+#   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
+#                                  ~/.hngh/installer-logs; every run --
+#                                  dry or real -- mirrors its output there)
 set -u
 
 DISK="${HNGH_BOOT_DISK:-/dev/nvme0n1}"
@@ -60,6 +63,7 @@ usage() {
   say "  phases: census esp build qemu adopt-check all"
   say "  dry-run default; --yes executes the named phase (privileged)"
   say "  env: HNGH_BOOT_DISK HNGH_BOOT_MNT HNGH_BOOT_USER HNGH_ESP_ID HNGH_ESP_LABEL HNGH_UPSTREAM"
+  say "       HNGH_BOOT_LOGDIR (live stage log; default ~/.hngh/installer-logs)"
   exit 0
 }
 
@@ -170,6 +174,24 @@ phase_adopt_check() {
   say "# host path rule: a /run/media upstream path dangles at boot; the target-side"
   say "# clone at /home/<user>/Projects/etc/omarchy-upstream is the boot-valid path"
 }
+
+# Live stage log (REQ-I26): every run mirrors stdout+stderr to a
+# timestamped log while lines are produced (tee flushes per line); stdin
+# stays attached so sudo keeps its TTY password prompt. Dry-runs log too --
+# the printed plan IS the review artifact. Log loss is never a gate: if
+# the directory is unwritable the run proceeds unmirrored.
+case "$PHASE" in
+--help | -h | help | '') ;; # usage prints below; no log
+*)
+  now="$(date -u +%Y%m%dT%H%M%SZ)"
+  logdir="${HNGH_BOOT_LOGDIR:-$HOME/.hngh/installer-logs}"
+  if mkdir -p "$logdir" 2>/dev/null && [ -d "$logdir" ]; then
+    exec > >(tee -a "$logdir/$PHASE-$now.log") 2>&1
+    mode=dry-run; [ "$DRY" -eq 0 ] && mode=REAL
+    say "== omarchy-boot-build phase=$PHASE mode=$mode disk=$DISK user=$USER_NAME $(date -u +%Y-%m-%dT%H:%M:%SZ) =="
+  fi
+  ;;
+esac
 
 case "$PHASE" in
 --help | -h | help | '') usage ;;
