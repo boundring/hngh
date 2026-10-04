@@ -6,6 +6,17 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-04
 
+- **Installer program — boot-layer script + design docs**: boot-window
+  bring-up for live-Omarchy targets is scripted and tested
+  (`automation/jobs/omarchy-boot-build.sh`: census/esp/build/qemu/
+  adopt-check phases; dry-run default, TTY-gated `--yes`, hermetic
+  21-proof test suite, Makefile-registered). Installer requirements
+  doc (`docs/design/hngh-installer.md`, REQ-I1..I22 + mesh + wizard
+  QoL) and operator-orchestration doc
+  (`docs/design/operator-orchestration.md`, gov-emulation taxonomy,
+  expeditions, one-orienting-fixture, autonomy) landed; mesh evidence
+  logged (192.168.0.16 publickey-denied — GAP-I2). Record:
+  docs/records/2026-10-04-installer-program-boot-layer-and-design-docs.md.
 - **Harness-skeleton program, phase C1 — control-room cut**: the
   newspaper/wire/ghost surface retired and the control-room console is
   the dashboard's single working surface (46 files, +455/-6603,
