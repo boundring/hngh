@@ -568,5 +568,64 @@ class TokenFailSafe(unittest.TestCase):
             self.assertIn("if (v) return v;", js, name)
 
 
+
+class ControlRoomShell(unittest.TestCase):
+    """Harness program phase C2 (2026-10-04): the control-room shell is
+    the primary dashboard surface — live megastructure map, honest 2D
+    fallback, attention rail fed by operator-items.json, dateline with
+    edition age + open count. The map refreshes its live layer every
+    poll instead of binding once (the old broadsheet map froze at first
+    build)."""
+
+    def setUp(self):
+        self.html = src("index.html")
+        self.js = src("map.js")
+
+    def test_shell_structure(self):
+        for needle in ('id="map3d"', 'id="map-fallback"',
+                       'id="attention"', 'id="dateline"',
+                       'src="map.js"', 'href="console.html"'):
+            self.assertIn(needle, self.html)
+
+    def test_map_carries_live_layer_and_fauna(self):
+        self.assertIn("var MAP_SEEDS", self.js)
+        self.assertIn("mapState.live", self.js)
+        self.assertIn("Math.min(openCount || 0, 8)", self.js)
+        self.assertIn("s.ring.color.setHex(openCount > 0 ? 0x8a6b2a"
+                      " : 0x4a6b3a)", self.js)
+
+    def test_poll_refreshes_map_every_cycle(self):
+        self.assertIn("fetchJSON('operator-items.json')", self.js)
+        self.assertIn("fetchJSON('fleet.json')", self.js)
+        self.assertIn("setTimeout(pollLoop, 30000)", self.js)
+        # rebuilt-when-built: init must refresh, not freeze at first build
+        self.assertIn("if (mapState.built) { mapRefresh(fleetNodes,"
+                      " openCount); return; }", self.js)
+
+    def test_attention_rail_points_at_the_verbs(self):
+        self.assertIn("the nerve center holds the verbs", self.js)
+        self.assertIn("items.slice(0, 8)", self.js)
+
+    def test_edition_age_math(self):
+        m = re.search(r"function editionAge\([\s\S]*?\n\}", self.js)
+        self.assertTrue(m, "editionAge missing")
+        script = m.group(0) + (
+            ";var t0 = Date.parse('2026-10-04T20:00:00Z');"
+            "console.log(JSON.stringify(["
+            "editionAge('2026-10-04T20:00:00Z', t0 + 12 * 60000),"
+            "editionAge('2026-10-04T20:00:00Z', t0 + 96 * 60000),"
+            "editionAge('garbage', t0)]))")
+        import json
+        import subprocess
+        out = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True,
+            check=True).stdout)
+        self.assertEqual(out, [
+            {"text": "12m old", "stale": False},
+            {"text": "1h 36m old", "stale": True},
+            None])
+
+
+
 if __name__ == "__main__":
     unittest.main()

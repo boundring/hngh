@@ -9,9 +9,15 @@
 <body id="control-room">
 <header>
   <h1>hngh control room</h1>
+  <p id="dateline">reading the floor…</p>
   <p><a href="console.html">nerve center</a></p>
 </header>
-<p>the live megastructure map is under reconstruction.</p>
-<main id="map3d"></main>
+<main id="map3d" aria-label="the hngh megastructure, live"></main>
+<div id="map-fallback" hidden></div>
+<aside id="attention" aria-label="open operator items">
+  <h2>attention</h2>
+  <ol id="attention-list"></ol>
+</aside>
+<script src="map.js"></script>
 </body>
 </html>

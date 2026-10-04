@@ -23,6 +23,7 @@ dashboard/*
 !dashboard/index.html
 !dashboard/desk.html
 !dashboard/desk-view.js
+!dashboard/map.js
 !dashboard/desk.css
 digest/
 logs/
