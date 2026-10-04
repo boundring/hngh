@@ -267,12 +267,22 @@ refresh_unsloth_token() {
 # explicit max_seq_length so the fitter sizes the window to the beat's
 # budget instead of filling free VRAM (the 2026-09-22 09:04 crash load
 # auto-fit 8.4 GB of KV at context 127488). Bearer rides the stdin curl
-# config (`-K -`), never argv (probe-hygiene law). Fail-open: any pin
-# miss (timeout, 4xx/5xx, transport error) breadcrumbs and continues
-# unpinned — a pin failure must never block a beat.
-unsloth_load_ctx() { # model ctx -> 0 = pinned (or nothing to pin)
- local model="$1" ctx="$2" tok btmp code
+# config (`-K -`), never argv (probe-hygiene law). The request is clamped
+# to the registry's server_observed window for the model
+# (config/unsloth-contexts.tsv; llama-server clamps to the quant's trained
+# max anyway — Ornith/Gemma quants serve 8192, Qwen3.8-27B 30976).
+# Fail closed (2026-10-04 VRAM lane): a pin miss (timeout, 4xx/5xx,
+# transport error) breadcrumbs and skips the leg — continuing unpinned
+# would let the fitter auto-fit KV from free VRAM, the 2026-09-22
+# Plasma-crash class.
+unsloth_load_ctx() { # model ctx -> 0 = pinned (or nothing to pin); 1 = pin miss
+ local model="$1" ctx="$2" tok btmp code reg
  case "$ctx" in '' | *[!0-9]*) return 0 ;; esac # nothing to pin
+ reg="$(awk -F'	' -v m="$model" '$1 == m && $2 ~ /^[0-9]+$/ {print $2; exit}' \
+  "$AUTOMATION_ROOT/config/unsloth-contexts.tsv" 2>/dev/null)"
+ case "$reg" in
+ [0-9]*) [ "$ctx" -gt "$reg" ] && ctx="$reg" ;; # never ask past the quant
+ esac
  tok="$(cat "${TOKEN_FILE:-}" 2>/dev/null)"
  btmp="$(mktemp)"
  python3 - "$model" "$ctx" <<'PY' >"$btmp"
@@ -288,16 +298,21 @@ PY
  case "$code" in
  2*) return 0 ;; # pinned
  esac
- breadcrumb model "load-ctx" "model=$model ctx=$ctx http=$code — continuing unpinned"
- return 0
+ breadcrumb model "load-ctx" "model=$model ctx=$ctx http=$code — pin miss; skipping leg (unpinned auto-fit is the VRAM-crash class)"
+ return 1
 }
 
 # one raw Unsloth attempt writing the response into $tmp; echoes the http code.
 unsloth_attempt() { # tmp model prompt max_tokens thinking token -> http code
  # pin the load window before every post (2026-09-22 context lane);
- # HNGH_LOADCTX_PIN=0 is the hermetic-test seam (no /load POST at all)
- [ "${HNGH_LOADCTX_PIN:-1}" = 1 ] &&
-  unsloth_load_ctx "$2" "${MODEL_CTX:-$(get_param ctx-standard 16384)}"
+ # HNGH_LOADCTX_PIN=0 is the hermetic-test seam (no /load POST at all).
+ # Pin miss -> echo 000 and stop: no chat post against an unpinned
+ # (auto-fit) load; unsloth_chat falls through to the next backend.
+ if [ "${HNGH_LOADCTX_PIN:-1}" = 1 ] &&
+  ! unsloth_load_ctx "$2" "${MODEL_CTX:-$(get_param ctx-standard 16384)}"; then
+  printf '000'
+  return 0
+ fi
  local tmp="$1" model="$2" prompt="$3" maxtok="$4" thinking="$5" tok="$6" code raw t tin tout btmp
  btmp="$(mktemp)"
  printf '%s' "$(_json_body "$model" "$prompt" "$maxtok" 0 "$thinking")" >"$btmp"
@@ -381,6 +396,14 @@ unsloth_chat() {
  # --- phase A: default budget, thinking enabled ---
  tmp="$(mktemp)"
  code="$(unsloth_attempt "$tmp" "$model" "$prompt" "$max_tokens" 1 "$tok")"
+ if [ "$code" != "200" ] && grep -q exceed_context_size_error "$tmp" 2>/dev/null; then
+  # the guard's cached ACTIVE window lied (model swapped under the 10-min
+  # TTL): drop it so the next call re-probes, and skip the leg
+  rm -f "$AUTOMATION_ROOT/tmp-unsloth-ctx.txt"
+  breadcrumb model "unsloth" "server: prompt exceeds loaded window; ctx cache invalidated -> next backend"
+  rm -f "$tmp"
+  return 1
+ fi
  if [ "$code" = "401" ] && [ "$refreshed" = "0" ]; then
   rm -f "$tmp"
   if refresh_unsloth_token; then

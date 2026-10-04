@@ -40,6 +40,14 @@ class H(http.server.BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0)); self.rfile.read(n)
         with open(os.path.join(d, "chat-hits"), "a") as f:
             f.write(self.path + "\n")
+        if os.path.exists(os.path.join(d, "exceed-mode")):
+            # the loaded model's window shrank under the guard's cache
+            out = json.dumps({"error": {"message": "request exceeds the available context size",
+                                        "type": "exceed_context_size_error"}}).encode()
+            self.send_response(400); self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(out))); self.end_headers()
+            self.wfile.write(out)
+            return
         content = "stub-says-hi"
         out = json.dumps({"choices": [{"message": {"content": content}}],
                           "usage": {"prompt_tokens": 11}}).encode()
@@ -109,6 +117,27 @@ ck "oversized: window cached (no extra probe)" "$hit1" "$(wc -l <"$stubdir/statu
 rm -f "$sb/tmp-unsloth-ctx.txt"
 out="$(call "down" 1)"
 ck "down: leg attempted (archive-only after failure)" "" "$out"
+
+# 4. server-side exceed (model swapped under the 10-min cache TTL) ->
+#    guard cache invalidated (next call re-probes) + leg skipped.
+rm -f "$sb/tmp-unsloth-ctx.txt"
+rm -f "$HNGH_CRUMBS_DB" # per-case journal: breadcrumb counts stay clean
+touch "$stubdir/exceed-mode"
+out="$(call "hello small")"
+ck "exceed: empty stdout" "" "$out"
+ck "exceed: archived" "none:archive-only" "$(cat "$sb/tmp-modelused.txt")"
+ck "exceed: cache file removed" "" "$(ls "$sb/tmp-unsloth-ctx.txt" 2>/dev/null)"
+# the chain attempts $MODEL twice on a miss (primary :1203 + ranked
+# loop :1212 re-iterates $MODEL first), and the cache was invalidated by
+# attempt 1, so attempt 2 re-probes -> two invalidations per call.
+ck "exceed: invalidation per chain attempt" "2" \
+ "$(python3 "$root/lib/crumbs-db.py" export --db "$HNGH_CRUMBS_DB" 2>/dev/null | grep -c 'ctx cache invalidated')"
+pre="$(wc -l <"$stubdir/status-hits")"
+out="$(call "hello small")"
+ck "exceed: next call re-probes window (per attempt)" "$((pre + 2))" "$(wc -l <"$stubdir/status-hits")"
+rm -f "$stubdir/exceed-mode"
+out="$(call "hello small")"
+ck "exceed: recovers once model fits again" "stub-says-hi" "$out"
 
 echo "fails=$fails"
 [ "$fails" = 0 ]

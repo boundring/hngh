@@ -5,8 +5,12 @@
 #   (a) 2xx /load -> exactly one load POST whose body carries the
 #       max_seq_length value (the ctx-standard row here is 7777, not
 #       16384, so a body carrying 7777 proves the row was read)
-#   (b) non-200 /load -> the chat attempt still runs and a load-ctx
-#       breadcrumb saying "continuing unpinned" is written (fail-open)
+#   (b) non-200 /load -> fail closed (2026-10-04 VRAM lane): NO chat
+#       post against an unpinned (auto-fit) load; one load-ctx
+#       breadcrumb saying "skipping leg" is written and the chain
+#       moves to the next backend
+#   (b2) the pin request clamps to the registry's server_observed
+#       window for the model (config/unsloth-contexts.tsv)
 #   (c) HNGH_LOADCTX_PIN=0 -> zero /load POSTs (hermetic kill switch)
 #   (d) MODEL_CTX env beats the ctx-standard row
 #   (e) xiaomi leg: no key -> skipped fail-closed (no xiaomi: tag);
@@ -135,13 +139,23 @@ ck "2xx pin: body carries ctx-standard row 7777" "1" "$(hits 'max_seq_length[^0-
 ck "argv hygiene: bearer never on curl argv" "0" "$(count 'stub-token-never-real' "$fake/curl-argv.log")"
 ck "argv hygiene: bearer never on report-queue argv" "0" "$(count 'stub-token-never-real' "$FAKE_QUEUE_LOG")"
 
-# (b) non-200 load: fail-open to unpinned + one breadcrumb
+# (b) non-200 load: fail closed — no unpinned chat post
 reset_logs
 out="$(leg 'unsloth_chat "say ok" 16 stub-model' FAKE_LOAD_STATUS=500)"
-ck "non-200 load: chat attempt still ran" "unsloth-says-hi" "$out"
-ck "non-200 load: chat POST happened" "1" "$(hits '/v1/chat/completions')"
+ck "non-200 load: empty stdout" "" "$out"
+ck "non-200 load: NO chat POST" "0" "$(hits '/v1/chat/completions')"
+ck "non-200 load: one load POST attempted" "1" "$(hits '/api/inference/load')"
 ck "non-200 load: one load-ctx breadcrumb" "1" "$(count 'load-ctx' <(journal))"
-ck "non-200 load: breadcrumb says continuing unpinned" "1" "$(count 'continuing unpinned' <(journal))"
+ck "non-200 load: breadcrumb says skipping leg" "1" "$(count 'skipping leg' <(journal))"
+
+# (b2) pin request clamps to the registry server_observed window
+mkdir -p "$sb/config"
+printf 'stub-model\t2000\t\t\thttp://stub\t2026-10-04\n' >"$sb/config/unsloth-contexts.tsv"
+reset_logs
+leg 'unsloth_chat "say ok" 16 stub-model' >/dev/null
+ck "clamp: body carries server_observed 2000" "1" "$(hits 'max_seq_length[^0-9]*2000')"
+ck "clamp: row 7777 never asked" "0" "$(hits '7777')"
+rm -f "$sb/config/unsloth-contexts.tsv"
 
 # (c) HNGH_LOADCTX_PIN=0: zero load POSTs (hermetic kill switch)
 reset_logs
