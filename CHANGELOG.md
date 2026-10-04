@@ -6,6 +6,23 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-04
 
+- **Automation — unsloth context pins fail closed**: after a 453-error
+  day of `exceed_context_size_error` 400s (jcode swarm sessions sized
+  prompts off hub-advertised context windows while the loaded quants
+  served 8192), `automation/lib/model.sh` now clamps every
+  `unsloth_load_ctx` pin to the registry's measured `server_observed`
+  window (`config/unsloth-contexts.tsv`), treats a failed pin as a skip
+  (echoes `000`, no chat POST — an unpinned auto-fit load is the
+  2026-09-22 VRAM-crash class), and on `exceed_context_size_error`
+  invalidates the 10-minute context-guard cache so the next call
+  re-probes and falls to the next backend. Tests: loadctx fail-closed +
+  registry-clamp cases, context-guard exceed case. Quant audit: every
+  GGUF in the studio catalog carries context_length=262144 (the old
+  8192/30976 "observed" rows measured the studio's launch-time -c, not
+  the quants) - registry `server_observed` rewritten from GGUF metadata
+  for all 13 catalog models, and `~/.jcode/config.toml` mirrored to the
+  real catalog (5 phantom IDs dropped, 6 undeclared models added, all
+  windows 262144).
 - **Automation — parallel gate runner**: `make test-parallel` runs the
   exact `make test` suite list concurrently (8 workers, per-suite
   timing, per-suite logs, recipe-order summary); measured 46s vs ~466s
