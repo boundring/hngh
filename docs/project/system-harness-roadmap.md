@@ -93,3 +93,31 @@ New rungs (`resource-pool-view`, `config-manager`, `security-manager`,
 [backlog.md](..) before any governance binding; each carries the
 established Problem/Smallest/Evidence/Risk/Dependencies/Review trigger
 shape.
+## Harness-skeleton program — rung mapping (2026-10-04)
+
+How the landed harness-skeleton work advances the rungs above (records:
+`2026-10-04-omarchy-drive-e1-census-e2-assets.md`,
+`2026-10-04-installer-program-boot-layer-and-design-docs.md`,
+`2026-10-04-parallel-gate-runner.md`):
+
+- **Rung A (node lattice):** the Omarchy node is admitted-ready —
+  pinned hngh clone, 27 user units, 13 timer wants placed on the
+  target root (E1/E2); the boot layer (`automation/jobs/omarchy-boot-build.sh`,
+  esp/build/qemu phases) closes installer GAP-I1; mesh key
+  provisioning (GAP-I2) is the remaining admission seam.
+- **Rung B (resource pool view):** the control-room cut (C1-C3) left
+  the dashboard as shell + dependency map — the read-only render
+  surface this rung needs; `resource-pool-view` carries the backlog row.
+- **Rung C (component status):** deficiency + readability tranches
+  (verdictOf, handled-in-place, edition stamps, `presentable()` scrub,
+  settled-shape map) made operator items per-component readable.
+- **Rung D (declared config):** `automation/jobs/omarchy-config-adopt.sh`
+  + boot-build `adopt-check` encode the declared-config apply shape
+  (boot-valid upstream path, dry-run default, `--yes` consent gate);
+  the REAL apply stays operator-parked.
+- **Rung E (security):** two-home split + 1Password service-account
+  seam documented (`.hngh-automation/README.md`, `docs/design/hngh-installer.md`);
+  ssh publickey-denied evidence recorded at the mesh host.
+- **Rung F (benchmarking):** `make test-parallel` (466s -> 46s,
+  per-suite log/rc/secs evidence) is the first parameterized
+  per-suite evaluation substrate.
