@@ -11,12 +11,24 @@
   <h1>hngh control room</h1>
   <p id="dateline">reading the floor…</p>
   <p><a href="console.html">nerve center</a></p>
+  <button id="settings-btn" type="button" aria-controls="settings">settings</button>
 </header>
 <main id="map3d" aria-label="the hngh megastructure, live"></main>
 <div id="map-fallback" hidden></div>
 <aside id="attention" aria-label="open operator items">
   <h2>attention</h2>
   <ol id="attention-list"></ol>
+</aside>
+<aside id="settings" hidden aria-label="control-room settings">
+  <h2>settings</h2>
+  <label>attention rows
+    <select id="set-attention"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
+  </label>
+  <label><input type="checkbox" id="set-rotate" checked> map drift</label>
+  <label>poll seconds
+    <select id="set-poll"><option>15</option><option selected>30</option><option>60</option></select>
+  </label>
+  <p class="set-note">stored in this browser only</p>
 </aside>
 <script src="map.js"></script>
 </body>

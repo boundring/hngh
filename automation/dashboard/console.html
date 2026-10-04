@@ -41,7 +41,6 @@
   <button role="tab" id="tab-kb"       aria-controls="p-kb"       data-tab="kb">KB</button>
   <button role="tab" id="tab-graph"    aria-controls="p-graph"    data-tab="graph">Graph</button>
   <button role="tab" id="tab-history"  aria-controls="p-history"  data-tab="history">History</button>
-  <button role="tab" id="tab-routes"   aria-controls="p-routes"   data-tab="routes">Routes</button>
   </div>
 </nav>
 
@@ -65,7 +64,7 @@
 
   <section class="panel" id="p-plans" role="tabpanel" aria-labelledby="tab-plans" hidden>
     <div class="panel-head">
-      <span class="p-title">Plans · queue &amp; ceremony</span>
+      <span class="p-title">Plans · queue &amp; ceremony</span> <a class="ghost" href="routes.html" title="research lines as routes over a time axis">routes</a>
       <span class="p-summary" id="plans-sum"></span>
     </div>
     <div class="p-body"><div id="plans-root"><div class="placeholder">loading…</div></div></div>
@@ -136,14 +135,6 @@
       <span class="p-summary" id="hist-sum"></span>
     </div>
     <div class="p-body"><div id="history-root"></div></div>
-  </section>
-
-  <section class="panel" id="p-routes" role="tabpanel" aria-labelledby="tab-routes" hidden>
-    <div class="panel-head">
-      <span class="p-title">Routes · research map</span>
-      <span class="p-summary" id="routes-sum"></span>
-    </div>
-    <div class="p-body"><div id="routes-root"></div></div>
   </section>
 
 </main>

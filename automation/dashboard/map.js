@@ -178,11 +178,51 @@ function mapResize() {
   s.cam.aspect = host.clientWidth / Math.max(1, host.clientHeight);
   s.cam.updateProjectionMatrix();
 }
+function prefs() {
+  var d = { attentionCap: 8, rotate: true, pollMs: 30000 };
+  try {
+    var raw = localStorage.getItem('control-room-prefs');
+    if (!raw) return d;
+    var v = JSON.parse(raw) || {};
+    return { attentionCap: [4, 8, 12, 16].indexOf(v.attentionCap) >= 0 ? v.attentionCap : d.attentionCap,
+             rotate: v.rotate !== false,
+             pollMs: [15000, 30000, 60000].indexOf(v.pollMs) >= 0 ? v.pollMs : d.pollMs };
+  } catch (e) { return d; }
+}
+
+function savePrefs(next) {
+  try { localStorage.setItem('control-room-prefs', JSON.stringify(next)); } catch (e) { /* private mode */ }
+}
+
+function wireSettings() {
+  var btn = document.getElementById('settings-btn');
+  var box = document.getElementById('settings');
+  if (!btn || !box) return;
+  btn.addEventListener('click', function () { box.hidden = !box.hidden; });
+  var p = prefs();
+  var att = document.getElementById('set-attention');
+  var rot = document.getElementById('set-rotate');
+  var pol = document.getElementById('set-poll');
+  if (att) { att.value = String(p.attentionCap); att.addEventListener('change', applySettings); }
+  if (rot) { rot.checked = p.rotate; rot.addEventListener('change', applySettings); }
+  if (pol) { pol.value = String(p.pollMs / 1000); pol.addEventListener('change', applySettings); }
+}
+
+function applySettings() {
+  var p = {
+    attentionCap: parseInt(document.getElementById('set-attention').value, 10),
+    rotate: document.getElementById('set-rotate').checked,
+    pollMs: parseInt(document.getElementById('set-poll').value, 10) * 1000
+  };
+  savePrefs(p);
+  renderAttention(lastItems);
+}
+
 function mapFrame() {
   mapState.raf = requestAnimationFrame(mapFrame);
   var s = mapState;
   if (!s.scene || document.hidden) return;
-  s.scene.rotation.y += 0.0012; // slow auto-rotation
+  if (prefs().rotate) s.scene.rotation.y += 0.0012; // slow auto-rotation, settings can stop it
   if (s.fauna) s.fauna.rotation.y -= 0.004;
   s.cam.position.set(
     s.dist * Math.sin(s.phi) * Math.cos(s.theta),
@@ -236,11 +276,14 @@ function editionAge(gen, now) {
     : m + 'm old';
   return { text: text, stale: m >= 90 };
 }
+var lastItems = [];
+
 function renderAttention(items) {
+  lastItems = items || [];
   var ol = $('attention-list');
   if (!ol) return;
   ol.innerHTML = '';
-  items.slice(0, 8).forEach(function (it) {
+  items.slice(0, prefs().attentionCap).forEach(function (it) {
     var li = document.createElement('li');
     li.innerHTML = '<span class="att-text">' + esc(it.text) + '</span>' +
       (it.first_seen ? '<span class="att-age">' +
@@ -291,10 +334,11 @@ function poll() {
                    items.length, nodes);
   });
 }
+wireSettings();
 pollLoop();
 
 function pollLoop() {
   poll();
   // house poll pattern: setTimeout chain, no raw timer loops
-  setTimeout(pollLoop, 30000);
+  setTimeout(pollLoop, prefs().pollMs);
 }

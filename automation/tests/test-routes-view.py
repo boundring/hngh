@@ -437,12 +437,15 @@ class RoutesPage(unittest.TestCase):
         self.assertIn('href="routes.html"', src("console.html"))
 
     def test_tabs_and_registry_mounting(self):
+        # 2026-10-04 control-room cut: the Routes TAB folded away — the
+        # research map survives as the standalone routes.html page,
+        # linked from the Plans panel head and the nerve-center header
         idx = src("console.html")
-        self.assertIn('data-tab="routes"', idx)
-        self.assertIn('id="p-routes"', idx)
-        self.assertIn('id="routes-root"', idx)
+        self.assertNotIn('data-tab="routes"', idx)
+        self.assertNotIn('id="p-routes"', idx)
+        self.assertNotIn('id="routes-root"', idx)
         self.assertIn('src="routes-view.js" defer', idx)
-        self.assertIn("'routes-root': ['routes',  'RoutesView']", src("app.js"))
+        self.assertNotIn("'routes-root'", src("app.js"))
 
     def test_fail_closed_banner_id_is_literal(self):
         self.assertIn('id="routeserr"', self.html)
@@ -696,7 +699,7 @@ class RoutesEndpoint(unittest.TestCase):
         self.assertIn(b"routes-view.js", body)
         st2, idx = self.get("/console.html")
         self.assertEqual(st2, 200)
-        self.assertIn(b'data-tab="routes"', idx)
+        self.assertIn(b'href="routes.html"', idx)
 
 
 if __name__ == "__main__":

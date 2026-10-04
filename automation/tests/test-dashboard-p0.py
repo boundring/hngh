@@ -597,7 +597,7 @@ class ControlRoomShell(unittest.TestCase):
     def test_poll_refreshes_map_every_cycle(self):
         self.assertIn("fetchJSON('operator-items.json')", self.js)
         self.assertIn("fetchJSON('fleet.json')", self.js)
-        self.assertIn("setTimeout(pollLoop, 30000)", self.js)
+        self.assertIn("setTimeout(pollLoop, prefs().pollMs)", self.js)
         self.assertIn("scene.background = new THREE.Color(0x191b1f)", self.js)
         self.assertNotIn("alpha: true", self.js)
         self.assertIn("sys.queue_depth != null", self.js)
@@ -607,7 +607,7 @@ class ControlRoomShell(unittest.TestCase):
 
     def test_attention_rail_points_at_the_verbs(self):
         self.assertIn("the nerve center holds the verbs", self.js)
-        self.assertIn("items.slice(0, 8)", self.js)
+        self.assertIn("items.slice(0, prefs().attentionCap)", self.js)
 
     def test_edition_age_math(self):
         m = re.search(r"function editionAge\([\s\S]*?\n\}", self.js)
@@ -627,6 +627,29 @@ class ControlRoomShell(unittest.TestCase):
             {"text": "12m old", "stale": False},
             {"text": "1h 36m old", "stale": True},
             None])
+
+
+
+class ControlRoomSettings(unittest.TestCase):
+    """C3: a settings drawer on the control room; console Routes tab folds away."""
+
+    def test_drawer_and_prefs_key_pinned(self):
+        shell = src("index.html")
+        self.assertIn('id="settings"', shell)
+        self.assertIn("settings", shell)
+        js = src("map.js")
+        self.assertIn("localStorage.getItem('control-room-prefs')", js)
+        for key in ("attentionCap", "rotate", "pollMs"):
+            self.assertIn(key, js)
+
+    def test_routes_tab_folded_into_plans(self):
+        console = src("console.html")
+        self.assertNotIn("tab-routes", console)
+        self.assertNotIn("p-routes", console)
+        self.assertIn("routes.html", console)
+        app = src("app.js")
+        self.assertNotIn("'routes-root'", app)
+
 
 
 
