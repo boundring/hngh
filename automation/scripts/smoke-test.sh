@@ -62,7 +62,7 @@ CODE="$(curl -s -o /tmp/smoke-index.html -w '%{http_code}' --max-time 10 "http:/
 CODE2="$(curl -s -o /tmp/smoke-data.json -w '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT/data.json")"
 kill "$SRV" 2>/dev/null
 wait "$SRV" 2>/dev/null
-[ "$CODE" = "200" ] && grep -qi "hngh-automation" /tmp/smoke-index.html &&
+[ "$CODE" = "200" ] && grep -qi "control-room" /tmp/smoke-index.html &&
   ok "index.html renders (HTTP $CODE)" || bad "index.html HTTP $CODE"
 [ "$CODE2" = "200" ] && jq -e . /tmp/smoke-data.json >/dev/null 2>&1 &&
   ok "data.json served (HTTP 200, valid JSON)" || bad "data.json HTTP $CODE2"
