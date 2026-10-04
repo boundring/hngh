@@ -24,6 +24,21 @@ lives under Pre-release / early development until the first release.
   the standalone research-map page (82472851). The resource-pool-view
   rung got its backlog row (docs/project/backlog.md).
 
+- **Phase B - research corpus re-anchored**: the twelve persona seeds
+  in docs/research/01..12 were re-anchored to their pre-cut citations
+  (status: seed front-matter, anchored: 2026-10-03 stamps, and a note
+  marking broadsheet/ghost-surface references as pre-control-room-cut
+  anchors rather than live paths).
+
+- **Phase E - Omarchy drive E1/E2 executed**: the powered-off target
+  was censused (Omarchy 4.0.4 root, blank boot layer, empty
+  /etc/mkinitcpio.d, ESP pinned UUID=317A-31FF, zero hngh footprint)
+  and the hngh checkout, omarchy-upstream clone, 27 user units, 13
+  timer want-links, the dashboard service link, and both homes'
+  skeletons were placed on the target; boot layer, linger, and the
+  real adopt run stay operator-lane.
+  docs/records/2026-10-04-omarchy-drive-e1-census-e2-assets.md.
+
 ### 2026-10-03
 
 - **Newspaper readability tranche (four slices)**: answered the
