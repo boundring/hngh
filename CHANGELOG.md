@@ -6,6 +6,11 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-04
 
+- **Automation — parallel gate runner**: `make test-parallel` runs the
+  exact `make test` suite list concurrently (8 workers, per-suite
+  timing, per-suite logs, recipe-order summary); measured 46s vs ~466s
+  sequential with all 182 suites green. Also removes a duplicate
+  `test-credential-health-argv.sh` recipe line the runner exposed.
 - **Installer program — boot-layer script + design docs**: boot-window
   bring-up for live-Omarchy targets is scripted and tested
   (`automation/jobs/omarchy-boot-build.sh`: census/esp/build/qemu/
