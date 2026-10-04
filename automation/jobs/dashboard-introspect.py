@@ -66,86 +66,18 @@ REPORT_ROOT = os.environ.get(
     "HNGH_REPORT_ROOT", os.path.dirname(AUTOMATION_ROOT))
 
 VOICE_CATS = {"system", "operator", "research", "hngh", "resources"}
-WIRE_CATS = {"politics", "world", "business", "sports", "technology",
-             "military", "space", "entertainment", "games"}
 
 # slug -> (severity, research question)
 INTENTS = [
-    ("masthead-splash", "major",
-     "How should the broadsheet masthead render a volumetric ASCII-art "
-     "splash title (banner-glyph table in broadsheet-view.js), and which "
-     "module owns the glyph renderer?"),
-    ("masthead-expansion", "major",
-     "Where should the procedural H.N.G.H. expansion generator live so "
-     "newspaper.json edition.masthead.expansion carries four fully "
-     "spelled words with initials H N G H?"),
-    ("masthead-varies", "minor",
-     "How should edition.masthead.expansion vary per edition without "
-     "colliding across the editions history window?"),
-    ("masthead-emboss", "minor",
-     "What ink-emboss text-shadow treatment should broadsheet.css apply "
-     "to the masthead rule?"),
-    ("masthead-temperature", "minor",
-     "How should broadsheet-view.js emit the masthead temperature in "
-     "both degrees C and degrees F?"),
-    ("paper-texture", "major",
-     "How should the paper-texture canvas stay animated across the whole "
-     "page without breaching the single-WebGL-context budget?"),
-    ("printed-frames", "minor",
-     "Which printed-frame border treatment should broadsheet.css use so "
-     "every card reads as ink on paper?"),
-    ("leaf-light-motion", "minor",
-     "How should the dappled leaf-light animation stay frame-rate "
-     "independent and honor prefers-reduced-motion?"),
     ("choice-previews", "major",
      "How should operator-item choices always carry outcome preview text "
      "in newspaper.json composition?"),
-    ("dismiss-immediate", "major",
-     "How should broadsheet dismissals update the rendered stream "
-     "immediately (in-place DOM/state update) instead of waiting for a "
-     "refetch? Landed 2026-10-03: dismissed-family verbs drop the card "
-     "on rebuild via the broadsheet-dismissed store; handle/acknowledge "
-     "mark the card in place (dim + chip) via broadsheet-handled."),
-    ("no-dead-buttons", "major",
-     "Which wiring pass guarantees every broadsheet.html button id has a "
-     "live handler in broadsheet-view.js?"),
-    ("family-card", "major",
-     "How should newspaper composition collapse a flood of empty "
-     "feedback ideas into one family card (family:true marker)?"),
-    ("no-empty-feedback", "major",
-     "What composition-side filter drops or folds empty [feedback:idea] "
-     "items so they never render as individual articles?"),
-]
-INTENTS += [
     ("voice-majority", "major",
      "How should newspaper composition reach the operator's voice-"
      "majority target (>=60% system/operator/research/hngh articles)?"),
-    ("wire-capped", "minor",
-     "What cap and demotion rule keeps wire-category articles at or "
-     "below the configured share of the edition?"),
-    ("single-webgl", "minor",
-     "How should the paper texture and the megastructure map share one "
-     "WebGL context (or one canvas) in broadsheet-view.js?"),
-    ("reduced-motion", "major",
-     "Where does the broadsheet honor prefers-reduced-motion so all "
-     "animations (paper, leaf-light, map) collapse to static?"),
-    ("no-client-today", "major",
-     "How should the broadsheet keep every displayed date sourced from "
-     "newspaper.json rather than client Date?"),
-    ("evidence-sources", "major",
-     "What composition guard drops wire articles lacking sources so the "
-     "broadsheet stays evidence-only?"),
     ("fail-closed-auth", "major",
-     "How should broadsheet fetches attach the dashboard token and fail "
+     "How should dashboard fetches attach the session token and fail "
      "closed (error state, no fake data) on 401/403?"),
-    ("feed-error-banner", "minor",
-     "How should the broadsheet surface a feed-missing error banner "
-     "instead of an empty page?"),
-    ("scroll-60fps", "minor",
-     "How should the broadsheet stream stay lazily rendered "
-     "(IntersectionObserver sentinel) so scroll holds 60fps?"),
-]
-INTENTS += [
     ("feedback-flood", "major",
      "What keeps open [feedback:idea] from email items at zero in "
      "operator-items.json (the 2026-09-11..27 flood leak must never "
@@ -157,16 +89,6 @@ INTENTS += [
      "How does composition surface real hngh editorial rows (alerts, "
      "fleet notes, real operator decisions) instead of only stub-class "
      "internal content?"),
-    ("expansion-rotation", "major",
-     "How should broadsheet-view.js carry a rotation table of at least "
-     "N spelled H.N.G.H. expansions so the masthead varies durably?"),
-    ("ghost-desk", "major",
-     "How should each edition carry ghost-counsel summary blocks or an "
-     "explicit ghost_quiet marker, never silently neither?"),
-    ("dismissed-clean", "major",
-     "What keeps test-artifact ids out of operator-dismissed.json so "
-     "smoke sentinels (dunder-prefixed keys) never pollute the "
-     "durable dismiss ledger?"),
 ]
 SLUGS = [i[0] for i in INTENTS]
 SEVERITY = {i[0]: i[1] for i in INTENTS}
@@ -201,31 +123,7 @@ def _read(path):
 def probe_feed(data):
     """JSON-level probes -> {slug: (met, detail)} for newspaper.json."""
     out = {}
-    edit = data.get("edition") or {}
     arts = data.get("articles") or []
-
-    # masthead-expansion / masthead-varies
-    mh = edit.get("masthead") or {}
-    exp = mh.get("expansion") or ""
-    words = [w.strip(".") for w in exp.split()]
-    initials_ok = (len(words) == 4
-                   and all(len(w) >= 3 for w in words)
-                   and "".join(w[0].lower() for w in words) == "hngh")
-    out["masthead-expansion"] = (
-        initials_ok, "expansion=%r" % exp[:60])
-    hist = set()
-    for e in data.get("editions") or []:
-        x = ((e.get("masthead") or {}).get("expansion") or "").strip()
-        if x:
-            hist.add(x)
-    out["masthead-varies"] = (
-        len(hist) >= 2, "distinct expansions=%d" % len(hist))
-
-    # ghost-desk: ghost summary blocks or an explicit quiet marker
-    out["ghost-desk"] = (
-        bool(edit.get("ghost")) or bool(edit.get("ghost_quiet")),
-        "ghost=%s ghost_quiet=%s" % (
-            bool(edit.get("ghost")), bool(edit.get("ghost_quiet"))))
 
     # choice-previews: every choice of every article has an outcome
     bad = n_choice_arts = 0
@@ -242,45 +140,19 @@ def probe_feed(data):
 
 
 def probe_feed_balance(data):
-    """family/noise/balance probes (split out: probe_feed stays small)."""
+    """voice/balance probes (split out: probe_feed stays small)."""
     arts = data.get("articles") or []
     out = {}
-    fam = sum(1 for a in arts if a.get("family") is True)
-    empty_fb = voice = wire = wire_missing_src = 0
+    voice = 0
     for a in arts:
         cat = (a.get("category") or "").strip().lower()
-        head = (a.get("headline") or "").strip()
         if cat in VOICE_CATS:
             voice += 1
-        if cat in WIRE_CATS:
-            wire += 1
-            if not [s for s in (a.get("sources") or []) if str(s).strip()]:
-                wire_missing_src += 1
-        if head.startswith("[feedback:idea]") and a.get("family") is not True:
-            body = a.get("body")
-            blocks = body if isinstance(body, list) else (
-                [body] if body else [])
-            if not [b for b in blocks if str(b).strip()]:
-                empty_fb += 1
     total = len(arts)
-    out["family-card"] = (fam <= 1, "family-marked=%d" % fam)
-    out["no-empty-feedback"] = (
-        empty_fb == 0, "individual-empty-feedback=%d" % empty_fb)
     voice_share = (100.0 * voice / total) if total else 0.0
     out["voice-majority"] = (
         total > 0 and voice_share >= 60.0,
         "voice=%d/%d=%.0f%%" % (voice, total, voice_share))
-    try:
-        wire_max = float(get_param("introspect-wire-max-share", "25"))
-    except ValueError:
-        wire_max = 25.0
-    wire_share = (100.0 * wire / total) if total else 0.0
-    out["wire-capped"] = (
-        total > 0 and wire_share <= wire_max,
-        "wire=%d/%d=%.0f%% cap=%.0f%%" % (wire, total, wire_share, wire_max))
-    out["evidence-sources"] = (
-        wire > 0 and wire_missing_src == 0,
-        "wire-articles-without-sources=%d" % wire_missing_src)
 
     # editorial-present: real hngh editorial rows (review 2026-09-27:
     # 100% of internal content was stub-class). File-level discriminator:
@@ -302,92 +174,18 @@ def probe_feed_balance(data):
     return out
 
 
-def probe_code(view, css, html):
-    """File-level probes over the view/css/html text."""
+def probe_code(view):
+    """File-level probes over the console view text."""
     out = {}
-    # masthead-temperature: view emits both units (review axis-1:
-    # client-side cToF conversion, e.g. "14.3°C / 57.7°F")
-    degc = "°C" in view
-    degf = "°F" in view
-    out["masthead-temperature"] = (degc and degf, "°C=%s °F=%s" % (
-        degc, degf))
-
-    # expansion-rotation: view declares an expansion rotation table
-    # (EXPANSION marker) with >= N spelled H.N.G.H. candidates
-    try:
-        exp_min = int(get_param("introspect-expansion-min", "4"))
-    except ValueError:
-        exp_min = 4
-    pos = view.find("EXPANSION")
-    rotations = 0
-    if pos >= 0:
-        for lit in re.findall(r"['\"]([^'\"]{12,})['\"]",
-                              view[pos:pos + 800]):
-            words = [w for w in re.split(r"\W+", lit) if len(w) >= 3]
-            if len(words) == 4 and "".join(
-                    w[0] for w in words).lower() == "hngh":
-                rotations += 1
-    out["expansion-rotation"] = (
-        pos >= 0 and rotations >= exp_min,
-        "table=%s expansions=%d min=%d" % (
-            pos >= 0, rotations, exp_min))
-
-    out["masthead-splash"] = (
-        "splash" in view and "ascii" in view.lower(),
-        "splash=%s ascii=%s" % ("splash" in view, "ascii" in view.lower()))
-
-    emboss = False
-    lines = css.splitlines()
-    for i, ln in enumerate(lines):
-        if "masthead" in ln and "{" in ln:
-            if any("text-shadow" in x for x in lines[i:i + 7]):
-                emboss = True
-                break
-    out["masthead-emboss"] = (emboss, "css masthead text-shadow=%s" % emboss)
-
-    out["paper-texture"] = (
-        "paper-canvas" in html and "paperInit" in view,
-        "html-canvas=%s paperInit=%s" % (
-            "paper-canvas" in html, "paperInit" in view))
-    dbl = re.search(r"border[^;:]*:\s*[^;]*\bdouble\b", css) is not None
-    out["printed-frames"] = (dbl, "css double-rule=%s" % dbl)
-    dapple = "dapple" in view.lower() or "leaf" in view.lower()
-    out["leaf-light-motion"] = (dapple, "dapple/leaf=%s" % dapple)
-    out["dismiss-immediate"] = (
-        "dismiss" in view.lower()
-        and re.search(r"removeChild|classList|\.remove\(|hidden", view)
-        is not None,
-        "dismiss+dom-update")
-    ids = re.findall(r'<button[^>]*\bid="([^"]+)"', html)
-    missing = [i for i in ids if i not in view]
-    out["no-dead-buttons"] = (
-        len(ids) > 0 and not missing,
-        "buttons=%d unbound=%s" % (len(ids), ",".join(missing) or "none"))
-    gl_sites = (len(re.findall(r"getContext\(\s*['\"]webgl", view))
-                + len(re.findall(r"WebGLRenderer", view)))
-    out["single-webgl"] = (gl_sites <= 1, "webgl-context-sites=%d" % gl_sites)
-    rm = ("prefers-reduced-motion" in view
-          or "prefers-reduced-motion" in css)
-    out["reduced-motion"] = (rm, "prefers-reduced-motion=%s" % rm)
-    client_today = "new Date(" in view or "toISOString(" in view
-    out["no-client-today"] = (
-        not client_today, "client-date-derivation=%s" % client_today)
     auth = ("hngh-token" in view
             and re.search(r"\b40[13]\b", view) is not None)
     out["fail-closed-auth"] = (auth, "token+401/403=%s" % auth)
-    banner = "papererr" in html and "papererr" in view
-    out["feed-error-banner"] = (banner, "papererr html+view=%s" % banner)
-    out["scroll-60fps"] = (
-        "IntersectionObserver" in view,
-        "IntersectionObserver=%s" % bool("IntersectionObserver" in view))
     return out
 
 
-FEED_SLUGS = {"masthead-expansion", "masthead-varies",
-              "choice-previews", "family-card", "no-empty-feedback",
-              "voice-majority", "wire-capped", "evidence-sources",
-              "ghost-desk", "editorial-present", "feedback-flood",
-              "edition-fresh", "dismissed-clean"}
+FEED_SLUGS = {"choice-previews", "voice-majority",
+              "feedback-flood", "edition-fresh",
+              "editorial-present"}
 
 
 def probe_operator():
@@ -410,27 +208,6 @@ def probe_operator():
         and "[feedback:idea]" in (r.get("text") or ""))
     return {"feedback-flood": (open_flood == 0,
             "open-flood=%d items=%d" % (open_flood, len(rows)))}
-
-
-def probe_dismissed():
-    """dismissed-clean: no test-artifact keys in operator-dismissed.json.
-    Sentinels are dunder-prefixed (observed: "__smoke_no_such_item__"
-    leaked 2026-09-27T06:21Z from an unseamed smoke test); real ids are
-    8-hex hashes or task slugs, never starting with '__'."""
-    path = os.environ.get(
-        "INTROSPECT_OPERATOR_DISMISSED",
-        os.path.join(DASH, "operator-dismissed.json"))
-    try:
-        with open(path, encoding="utf-8") as f:
-            op = json.load(f)
-    except (OSError, ValueError) as exc:
-        return {"dismissed-clean": (False,
-                "operator-dismissed.json unreadable: %s" % exc)}
-    rows = op.get("dismissed") if isinstance(op, dict) else None
-    rows = [k for k in (rows or {}) if isinstance(k, str)]
-    bad = [k for k in rows if k.startswith("__")]
-    return {"dismissed-clean": (not bad,
-            "sentinels=%s total=%d" % (",".join(bad) or "none", len(rows)))}
 
 
 def probe_fresh(now):
@@ -458,15 +235,12 @@ def run_probes():
     except (OSError, ValueError) as exc:
         data = None
         feed_err = "newspaper.json unreadable: %s" % exc
-    view = _read(os.path.join(DASH, "broadsheet-view.js"))
-    css = _read(os.path.join(DASH, "broadsheet.css"))
-    html = _read(os.path.join(DASH, "broadsheet.html"))
+    view = _read(os.path.join(DASH, "app.js"))
     feed_probes = {}
     if data is not None:
         feed_probes = probe_feed(data)
         feed_probes.update(probe_feed_balance(data))
     feed_probes.update(probe_operator())
-    feed_probes.update(probe_dismissed())
     feed_probes.update(probe_fresh(now=time.time()))
     results = {}
     for slug in SLUGS:
@@ -474,7 +248,7 @@ def run_probes():
             results[slug] = feed_probes[slug]
         elif slug in FEED_SLUGS:
             results[slug] = (False, feed_err or "no feed data")
-    results.update(probe_code(view, css, html))
+    results.update(probe_code(view))
     return [(slug, 1 if results[slug][0] else 0, str(results[slug][1])[:160])
             for slug in SLUGS]
 
@@ -516,7 +290,7 @@ def jev_order(pending):
     """ONE batched ask_nouls call ordering the pending gaps. ADVISORY
     ONLY: returns [] on any failure (caller falls back to probe order).
     Runs in a bounded child so a hung SDK can never stall the tick."""
-    state = ("Dashboard intent-probe gap triage for the hngh broadsheet. "
+    state = ("Dashboard intent-probe gap triage for the hngh dashboard. "
              "Unmet probes decide arc filing already; you only rank which "
              "gap most deserves an engineering arc filed this hour. "
              "Pending gaps: "

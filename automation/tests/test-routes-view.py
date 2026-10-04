@@ -432,12 +432,9 @@ class RoutesPage(unittest.TestCase):
             if href.startswith(("http", "data:")):
                 continue
             self.assertTrue((DASH / href.split("?")[0]).exists(), href)
-        # reachable from the nerve center and the standalone siblings;
-        # since the 2026-09-27 cutover the broadsheet front keeps
-        # specialty pages behind the console
+        # reachable from the nerve center; the standalone specialty
+        # siblings (gantt/story) retired with the 2026-10-03 cut
         self.assertIn('href="routes.html"', src("console.html"))
-        self.assertIn('href="routes.html"', src("gantt.html"))
-        self.assertIn('href="routes.html"', src("story.html"))
 
     def test_tabs_and_registry_mounting(self):
         idx = src("console.html")

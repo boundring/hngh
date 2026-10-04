@@ -70,14 +70,12 @@ test:
 	python3 -B tests/test-slow-units.py
 	python3 -B tests/test-slow-units-e2e.py
 	python3 -B tests/test-readout-writers.py
-	python3 -B tests/test-story-view.py
 	python3 -B tests/test-dashboard-feedback.py
 	python3 -B tests/test-dashboard-p0.py
 	python3 -B tests/test-dashboard-p1.py
 	python3 -B tests/test-dashboard-p1-ui.py
 	python3 -B tests/test-dashboard-lifecycle.py
 	python3 -B tests/test-omarchy-file-probe.py
-	python3 -B tests/test-story-view.py
 	python3 -B tests/test-routes-view.py
 	python3 -B tests/test-dashboard-selfreview-ledger-skew.py
 	python3 -B tests/test-dashboard-selfreview-page-markers.py
@@ -86,12 +84,8 @@ test:
 	python3 -B tests/test-email-digest-overwide-intake.py
 	python3 -B tests/test-scrub-module.py
 	python3 -B tests/test-gdelt-news.py
-	python3 -B tests/test-news-desk.py
-	python3 -B tests/test-news-ingest.py
-	bash tests/test-news-articles.sh
 	bash tests/test-dashboard-introspect.sh
 	python3 -B tests/test-newspaper-compose.py
-	python3 -B tests/test-newspaper-window.py
 	python3 -B tests/test-manga-draft.py
 	python3 -B tests/test-manga-collage.py
 	python3 -B tests/test-manga-vision-token-mode.py
@@ -148,7 +142,6 @@ test:
 	python3 -B tests/test-launcher-templates.py
 	python3 -B tests/test-resume-pass.py
 	python3 -B tests/test-context-ratio.py
-	bash tests/test-news-screen.sh
 	python3 -B jobs/agent-supervision.py --selfcheck
 	bash tests/test-model-deck-leg.sh
 	bash tests/test-model-remote-token-mode.sh
@@ -220,7 +213,6 @@ test:
 	python3 -B tests/test-digest-compose-upgrades.py
 	python3 -B tests/test-typesafe-docs-ingest.py
 	python3 -B tests/test-typesafe-wrapper.py
-	python3 -B tests/test-ghost-voices.py
 	bash tests/test-model-xiaomi-leg.sh
 	bash tests/test-slice-a-bili-surface.sh
 	bash tests/test-credential-health-argv.sh

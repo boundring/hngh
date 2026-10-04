@@ -45,8 +45,8 @@ CAP = 40
 # Exact test-residue payload (operator-directed purge 2026-09-27): an
 # unseamed FEEDBACK dir in test-dashboard-p1.py leaked these rows into
 # the crumbs corpus; every carrier was verified non-operator content.
-# Pinned literal, NOT a pattern — the dashboard views flood-guard on
-# the same needle (dashboard/broadsheet-view.js FLOOD_NEEDLE). The [w=...] stamp tails
+# Pinned literal, NOT a pattern — the composer flood-guards on
+# the same needle (scripts/newspaper-compose.py FLOOD_NEEDLE). The [w=...] stamp tails
 # given rows fresh ids per rebuild, which resurrected dismissed rows;
 # the only durable kill is at the filing boundary.
 FLOOD_NEEDLE = "[feedback:idea] from email"

@@ -108,12 +108,9 @@ class HistoryPage(unittest.TestCase):
             if href.startswith(("http", "data:")):
                 continue
             self.assertTrue((DASH / href.split("?")[0]).exists(), href)
-        # reachable from the nerve center and the standalone siblings;
-        # since the 2026-09-27 cutover the broadsheet front keeps
-        # specialty pages behind the console
+        # reachable from the nerve center; the standalone specialty
+        # siblings (gantt/story) retired with the 2026-10-03 cut
         self.assertIn('href="history.html"', src("console.html"))
-        self.assertIn('href="history.html"', src("gantt.html"))
-        self.assertIn('href="history.html"', src("story.html"))
 
     def test_tabs_and_registry_mounting(self):
         idx = src("console.html")
@@ -379,6 +376,27 @@ class HistoryEndpoint(unittest.TestCase):
         self.assertEqual(st3, 404)
         st4, _ = self.get("/hngh-docs/docs/records/" + probe.name + ".bak")
         self.assertEqual(st4, 404)
+
+
+
+
+class ConsoleHistoryRows(unittest.TestCase):
+    """Tranche 2026-10-03 slice 5: the console History tab rendered a
+    full status line ("204 entries · 204 shown") but zero rows —
+    setBody wrote #hist-body, which exists only in standalone
+    history.html; tab mounts ship a bare #history-root and got nothing.
+    (Extracted from test-broadsheet-view.py before the broadsheet
+    suite retired with the 2026-10-03 control-room cut.)
+    """
+
+    def setUp(self):
+        self.js = src("history-view.js")
+
+    def test_init_builds_toolbar_and_body_for_tab_mounts(self):
+        self.assertIn("bar = document.createElement('div');", self.js)
+        self.assertIn("bar.className = 'hv-toolbar';", self.js)
+        self.assertIn("rows.id = 'hist-body';", self.js)
+        self.assertIn("el.appendChild(rows);", self.js)
 
 
 if __name__ == "__main__":

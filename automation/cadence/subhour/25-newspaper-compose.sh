@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 25-newspaper-compose -- broadsheet front-page rebuild (2026-09-27).
+# 25-newspaper-compose -- newspaper.json rebuild (2026-09-27).
 # Refreshes the fleet snapshot then reruns newspaper-compose.py so
 # automation/dashboard/newspaper.json tracks every subhour tick (1m tier
-# heritage). Local-only: no network in the composer (news/weather/
-# this-day land via the hour news-ingest beat); fail-open per input
+# heritage). Local-only: no network in the composer (weather lands
+# via the hour ingest beat); fail-open per input
 # (missing file = stderr note + skip); exits 0 on every expected path.
 #
 # usage: cadence/subhour/25-newspaper-compose.sh  (via cadence-tick.sh

@@ -138,8 +138,6 @@ class TelemetryStat(unittest.TestCase):
 class PollHygiene(unittest.TestCase):
     def test_no_raw_setinterval_outside_gantt(self):
         for js in DASH.glob("*.js"):
-            if js.name == "gantt.js":  # standalone page, separate wave
-                continue
             self.assertNotIn("setInterval(", js.read_text(), str(js))
 
 

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""newspaper-compose -- broadsheet front-page data layer (2026-09-27).
+"""newspaper-compose -- newspaper.json data layer (2026-09-27).
 
-Rebuilds the WebGL broadsheet feed (default automation/dashboard/
-newspaper.json) from the news lane + dashboard feeds:
+Rebuilds the automation/dashboard/newspaper.json feed from the
+dashboard feeds (2026-10-03 control-room cut: the news wire lane is
+retired; surviving desks are operator, system, session, research,
+parked, settled):
 
-  <home>/db/hngh-news.db      items from news-ingest.py (last 72h =
-                              today's edition; older = past editions)
   <home>/db/weather-state.json weather-ingest.py cache (fail-open null)
-  <home>/db/onthisday.json    this-day-ingest.py cache (fail-open skip)
   dashboard/readout.json      queue depth + plan-queue statuses
   dashboard/operator-items.json  open items -> operator decision cards
   dashboard/sessions.json     active sessions -> hngh-activity articles
@@ -17,9 +16,7 @@ newspaper.json) from the news lane + dashboard feeds:
 
 Fail-open: a missing input file is a stderr note plus a skip -- the
 edition still publishes with what exists. Never fabricates: an empty
-category is absent, not padded. Scoring: news = feed weight (news-feeds
-.tsv col 5, default 0.5) * recency decay exp(-age_h/36), +0.05 boost
-when the category has queued plan work; operator decision cards are
+category is absent, not padded. Scoring: operator decision cards are
 fixed high (0.95 floor). span: score>0.85 -> 3, >0.6 -> 2, else 1, at
 most ONE span-3 per edition (highest score). Local-only, exits 0 on
 every expected path (the subhour beat wraps it).
@@ -27,9 +24,7 @@ every expected path (the subhour beat wraps it).
 import argparse
 import datetime
 import hashlib
-import importlib.util
 import json
-import math
 import os
 import re
 import sqlite3
@@ -53,12 +48,9 @@ DASHBOARD = os.environ.get("HNGH_DASHBOARD_DIR") or \
     os.path.join(AUTOMATION_ROOT, "dashboard")
 NOW = datetime.datetime.now(datetime.timezone.utc)
 
-# page shape (hngh-internal desks lead; wire is capped; Jev-consulted
-# 2026-09-27: wire_cat cap10 @0.37, wire share <=40% @0.22, system desk
-# led by load @0.5; research/session caps resolved from the operator
-# brief's "capped hard" since Jev confidence was noise there)
-WIRE_CAT_CAP = 10
-WIRE_SHARE = 2.0 / 3.0  # wire_cap = int(2/3 * hngh) -> wire <= 40% of page
+# page shape (hngh-internal desks lead; research/session caps resolved
+# from the operator brief's "capped hard" since Jev confidence was
+# noise there)
 SESSION_CAP = 8
 RESEARCH_CAP = 6
 OPERATOR_CAP = 12
@@ -101,27 +93,6 @@ def load_json(path, note):
         return None
 
 
-def feed_weights():
-    """feed name -> weight from config/news-feeds.tsv (default 0.5)."""
-    weights = {}
-    path = os.path.join(AUTOMATION_ROOT, "config", "news-feeds.tsv")
-    try:
-        with open(path, encoding="utf-8") as fh:
-            for line in fh:
-                if line.startswith("#") or not line.strip():
-                    continue
-                cols = line.rstrip("\n").split("\t")
-                if len(cols) >= 5:
-                    try:
-                        weights[cols[0]] = float(cols[4])
-                    except ValueError:
-                        pass
-    except OSError as exc:
-        print("newspaper-compose: skip news-feeds.tsv (%s)" % exc,
-              file=sys.stderr)
-    return weights
-
-
 def sentences(text, limit=2):
     """First <=limit sentences of text (deck builder, no fabrication)."""
     text = re.sub(r"\s+", " ", (text or "").strip())
@@ -146,58 +117,6 @@ def score_age(ts):
     if d is None:
         return float("inf")
     return max(0.0, (NOW - d).total_seconds() / 3600.0)
-
-
-def news_article(row, weights, queues):
-    """hngh-news.db row -> broadsheet article (score/span rules)."""
-    age_h = score_age(row["published"] or row["fetched"])
-    weight = weights.get(row["feed"], 0.5)
-    score = weight * math.exp(-age_h / 36.0)
-    if queues.get(row["category"], 0) > 0:
-        score = min(1.0, score + 0.05)
-    summary = (row["summary"] or "").strip()
-    return {
-        "id": sha8(row["link"] or row["title"]),
-        "category": row["category"],
-        "headline": row["title"] or "(untitled)",
-        "deck": sentences(summary),
-        "body": paragraphs(summary),
-        "span": 1,
-        "score": round(score, 4),
-        "ts": z(parse_z(row["published"] or row["fetched"]) or NOW),
-        "sources": [{"label": row["feed"], "url": row["link"]}],
-        "choices": [],
-    }
-
-
-def db_articles(db_path, weights, queues, fresh_h=72.0):
-    """(today's news articles, past-edition date groups) from the db."""
-    today, editions = [], []
-    try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT feed, category, title, link, summary, published,"
-            " fetched FROM items").fetchall()
-        conn.close()
-    except sqlite3.Error as exc:
-        print("newspaper-compose: skip news db (%s)" % exc, file=sys.stderr)
-        return today, editions
-    past = {}
-    for row in rows:
-        art = news_article(row, weights, queues)
-        ts = parse_z(row["published"] or row["fetched"])
-        if ts is not None and score_age(row["published"] or
-                                        row["fetched"]) > fresh_h:
-            past.setdefault(ts.strftime("%Y-%m-%d"), []).append(art)
-        else:
-            today.append(art)
-    for date in sorted(past, reverse=True)[:7]:
-        arts = past[date][:40]
-        for art in arts:
-            art["span"] = 1  # editions never lead
-        editions.append({"date": date, "articles": arts})
-    return today, editions
 
 
 def _presentable(s):
@@ -778,20 +697,6 @@ def activity_article(crumbs_path):
         body, z(NOW), 0.77, [{"label": "crumbs", "url": ""}])
 
 
-def cap_news(news, total_cap):
-    """Wire articles capped per category and in total (hngh-internal
-    desks keep the majority of the page)."""
-    by_cat = {}
-    for a in news:
-        by_cat.setdefault(a["category"], []).append(a)
-    wire = []
-    for cat in sorted(by_cat):
-        wire += sorted(by_cat[cat],
-                       key=lambda a: (-a["score"], a["id"]))[:WIRE_CAT_CAP]
-    wire.sort(key=lambda a: (-a["score"], a["id"]))
-    return wire[:total_cap]
-
-
 def fleet_nodes(fleet):
     """fleet-manager payload -> [{name, online, os}] (both shapes)."""
     nodes = fleet.get("nodes") if isinstance(fleet, dict) else fleet
@@ -802,24 +707,6 @@ def fleet_nodes(fleet):
                         "online": bool(n.get("online")),
                         "os": n.get("os") or ""})
     return out
-
-
-def thisday_article(td):
-    """onthisday.json -> one world-history column (absent if empty)."""
-    events = td.get("events") if isinstance(td, dict) else None
-    if not events:
-        return None
-    lines = ["%s: %s" % (e.get("year", "?"), (e.get("text") or "").strip())
-             for e in events[:3]]
-    day = td.get("day") or ""
-    return base_article(
-        "onthisday-%s" % day, "world",
-        "On this day%s" % (" -- %s" % day if day else ""),
-        lines[0] if lines else "", lines,
-        td.get("fetched") or "", 0.55,
-        [{"label": "wikipedia on this day", "url":
-          "https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/"
-          "selected/%s" % day[5:].replace("-", "/") if day else ""}])
 
 
 def apply_spans(arts):
@@ -834,44 +721,7 @@ def apply_spans(arts):
     return arts
 
 
-def ghost_decorate(articles):
-    """Ghost-counsel complete summaries on the front slots (operator
-    directive 2026-09-27). Fail-open but LOUD: when the ghost lane
-    produces nothing, returns a short quiet reason for the edition
-    marker and files one deduped report-queue breadcrumb (script
-    layer: libs may not import sibling libs)."""
-    try:
-        spec = importlib.util.spec_from_file_location(
-            "hngh_ghost_voices",
-            os.path.join(AUTOMATION_LIB, "ghost-voices.py"))
-        gv = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(gv)
-        got, quiet = gv.ghost_summaries(
-            articles[:12],
-            "%s-%d" % (NOW.strftime("%Y-%m-%d"), NOW.hour // 8))
-    except Exception as exc:
-        print("newspaper-compose: ghost summaries failed (%s)" % exc,
-              file=sys.stderr)
-        return "ghost bridge unusable (%s)" % exc
-    landed = 0
-    for a in articles[:12]:
-        g = got.get(a["id"])
-        if g:
-            a["ghost"] = {"voice": g["voice"], "text": g["text"]}
-            landed += 1
-    if quiet and landed == 0:
-        try:
-            import report_queue
-            report_queue.report(
-                "model", "ghost desk quiet: %s" % quiet,
-                identity=gv.QUIET_IDENTITY, window=gv.QUIET_WINDOW_S)
-        except Exception:
-            pass
-    return quiet if quiet and landed == 0 else None
-
-
 def compose(args):
-    weights = feed_weights()
     dashboard = args.dashboard or DASHBOARD
     dpath = lambda name: os.path.join(dashboard, name)  # noqa: E731
 
@@ -888,10 +738,6 @@ def compose(args):
 
     weather = load_json(os.path.join(args.home_db, "weather-state.json"),
                         "weather cache")
-    td = load_json(os.path.join(args.home_db, "onthisday.json"),
-                   "on this day cache")
-
-    news, past_editions = db_articles(args.db, weights, queues)
 
     sess_data = load_json(dpath("sessions.json"), "sessions") or {}
     articles = operator_articles(
@@ -915,10 +761,6 @@ def compose(args):
                                         "crumbs.db"))
     if dig:
         articles.append(dig)
-    td_art = thisday_article(td or {})
-    if td_art:
-        articles.append(td_art)
-
     def keep(arts):
         # junk filter: empty or near-empty headlines are layout residue
         # ("FOLLOWON:"-style stubs from research-routes rows), not news
@@ -926,15 +768,10 @@ def compose(args):
                 if len("".join(a["headline"].split())) >= 8]
 
     articles = keep(articles)
-    news = keep(news)
-    # hngh-internal desks keep the majority: wire capped per category and
-    # at <=40% of the page total
-    articles += cap_news(news, int(len(articles) * WIRE_SHARE))
     # masthead histogram: plan statuses + every category on today's page
     for art in articles:
         queues[art["category"]] = queues.get(art["category"], 0) + 1
     apply_spans(articles)
-    ghost_quiet = ghost_decorate(articles)
 
     # weather fail-open: only a well-formed cache becomes the masthead
     # value; anything else composes as null (the page renders dry).
@@ -943,7 +780,7 @@ def compose(args):
         weather = None
 
     editions = [{"date": NOW.strftime("%Y-%m-%d"),
-                 "number": len(past_editions) + 1,
+                 "number": 1,
                  "slot": NOW.hour // 8,
                  "weather": weather,
                  "system": {"queue_depth": queue_depth,
@@ -955,16 +792,12 @@ def compose(args):
            "edition": editions[0],
            "queues": queues,
            "articles": articles,
-           "editions": past_editions}
-    if ghost_quiet:
-        out["ghost_quiet"] = ghost_quiet
+           "editions": []}
     return out
 
 
 def main(argv):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db",
-                    default=os.path.join(_news_db_dir(), "hngh-news.db"))
     ap.add_argument("--out",
                     default=os.path.join(DASHBOARD, "newspaper.json"))
     ap.add_argument("--dashboard", default=None,

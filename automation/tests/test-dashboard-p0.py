@@ -457,8 +457,8 @@ class VerdictOverride(unittest.TestCase):
 
 class OpRowDecompose(unittest.TestCase):
     """Tranche 2026-10-03: operator rows render producer-first instead of
-    one dense pipe string; the full raw text stays on the row title;
-    broadsheet decks that repeat the headline verbatim are deduped."""
+    one dense pipe string; the full raw text stays on the row title.
+"""
 
     def setUp(self):
         self.js = src("app.js")
@@ -494,8 +494,6 @@ class OpRowDecompose(unittest.TestCase):
         self.assertIn(".oprod {", css)
         self.assertIn(".opkind {", css)
 
-    def test_broadsheet_deck_deduped(self):
-        self.assertIn("a.deck.indexOf(a.headline) === 0", src("broadsheet-view.js"))
 
 
 
@@ -546,6 +544,28 @@ class SelfReviewSurfacing(unittest.TestCase):
     def test_glossary_names_kernel_gate_boundary(self):
         self.assertIn("the last ceremony commit lives on the Plans tab",
                       src("console.html"))
+
+
+
+
+class TokenFailSafe(unittest.TestCase):
+    """Tranche 2026-10-03: the served page carries two hngh-token metas
+    (server-injected real one, then the empty file:// placeholder).
+    querySelector stops at the first match in document order, which is
+    fine served but wrong on any page order change; read the first
+    NON-EMPTY content across all matches instead.
+    (Extracted from test-broadsheet-view.py before the broadsheet
+    suite retired with the 2026-10-03 control-room cut.)
+    """
+
+    def test_first_non_empty_across_all_views(self):
+        qsa = "querySelectorAll('meta[name=" + '"' + "hngh-token" + '"' + "]')"
+        qs = "document.querySelector('meta[name=" + '"' + "hngh-token" + '"' + "]')"
+        for name in ("app.js", "desk-view.js"):
+            js = src(name)
+            self.assertIn(qsa, js, name)
+            self.assertNotIn(qs, js, name)
+            self.assertIn("if (v) return v;", js, name)
 
 
 if __name__ == "__main__":

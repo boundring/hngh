@@ -790,8 +790,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._deny_source()
             return
         route = self.path.split("?")[0]
-        if route in ("/", "/index.html", "/console.html",
-                     "/broadsheet.html", "/desk.html"):
+        if route in ("/", "/index.html", "/console.html", "/desk.html"):
             self._serve_index()
             return
         if route.startswith("/session/"):
@@ -847,6 +846,16 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/digest-html/"):
             self._serve_digest_html()
+            return
+        # retired pages (2026-10-03 control-room cut): send the browser
+        # to the front page instead of a bare 404
+        dead = ("/story.html", "/gantt.html", "/sessions.html",
+                "/broadsheet.html")
+        if urllib.parse.unquote(self.path.split("?")[0]).lower() in dead:
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
             return
         super().do_GET()
 
@@ -1026,8 +1035,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    # GET / (and /index.html, /console.html, /broadsheet.html, /desk.html)
-    # — static
+    # GET / (and /index.html, /console.html, /desk.html) — static
     # page with the POST
     # token injected as <meta name="hngh-token"> so the legit UI reads it
     # from the page it already loaded (no second secret channel). The
@@ -1036,8 +1044,7 @@ class Handler(SimpleHTTPRequestHandler):
     # every mutation 403s: fail closed.
     def _serve_index(self):
         base = os.path.basename(self.path.split("?")[0])
-        name = base if base in ("console.html", "broadsheet.html",
-                                "desk.html") \
+        name = base if base in ("console.html", "desk.html") \
             else "index.html"
         try:
             with open(os.path.join(DASHBOARD, name), "rb") as f:

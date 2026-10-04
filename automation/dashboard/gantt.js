@@ -1,14 +1,11 @@
-/* hngh-automation · cascading gantt engine (gantt.html + Schedule tab)
+/* hngh-automation · cascading gantt engine (Schedule tab)
    Pure reader. Every bar is an ESTIMATE with its source shown; projected
    starts are relative (now / depends-on satisfied) — no dates are invented.
    Display only: estimates and projections never feed governance.
 
-   Two consumers:
-   · gantt.html (standalone): skeleton already in DOM with the g* IDs —
-     auto-mounts in legacy mode on load, fetches readout/ledger/sessions.
-   · index.html Schedule tab: schedule-view.js loads this file, then calls
-     window.GanttEngine.mount(host, {embed:true}) and feeds a unified lane
-     model (setLanes/setSpine/setSessions) derived from schedule.json.       */
+   Consumer: the console Schedule tab. schedule-view.js loads this file,
+   then calls window.GanttEngine.mount(host, {embed:true}) and feeds a
+   unified lane model (setLanes/setSpine/setSessions) from schedule.json. */
 (function () {
   'use strict';
 
@@ -19,7 +16,6 @@
   var PANOFF = 0;             // pan offset (ms)
   var ROW_H = 48, RULER_H = 28, MIN_BAR_PX = 6;
   var DEFAULT_EST_S = 30 * 60;
-  var REFRESH_MS = 60000;
   var MAX_OCC = 48;           // per-lane occurrence cap; denser cadences -> one band
 
   var $ = function (id) { return document.getElementById(id); };
@@ -28,13 +24,6 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
-  }
-  function fetchJson(url, ms) {
-    var ctrl = new AbortController();
-    var t = setTimeout(function () { ctrl.abort(); }, ms || 8000);
-    return fetch(url, { cache: 'no-store', signal: ctrl.signal })
-      .then(function (r) { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .catch(function (e) { clearTimeout(t); throw e; });
   }
   function ago(ts) {
     var t = Date.parse(ts);
@@ -164,8 +153,6 @@
   var tipEl = null;
 
   function el(k) {
-    if (!view.embed) return $({ sum: 'gsum', fresh: 'fresh', labels: 'glabels',
-      tracks: 'gtracks', err: 'gerr', tip: 'gtip' }[k]);
     return view.root.querySelector('.gt-' + k);
   }
 
@@ -573,13 +560,9 @@
       if (dragMovedFlag) return;
       var b = e.target.closest('[data-goto]');
       if (!b) return;
-      if (view.embed) {
-        // embedded: the session observatory lives on the sessions tab
-        try { sessionStorage.setItem('hngh-tab', 'sessions'); } catch (err) { /* private mode */ }
-        location.hash = 'tab-sessions';
-      } else {
-        location.href = 'sessions.html#' + b.getAttribute('data-goto');
-      }
+      // the session observatory lives on the console sessions tab
+      try { sessionStorage.setItem('hngh-tab', 'sessions'); } catch (err) { /* private mode */ }
+      location.hash = 'tab-sessions';
     });
   }
 
@@ -679,34 +662,8 @@
       return api;
     }
 
-    /* ---------- legacy standalone loop (gantt.html) ---------- */
-    function refresh() {
-      return Promise.all([
-        fetchJson('readout.json'),
-        fetchJson('time-ledger.json'),
-        fetchJson('sessions.json'),
-        fetchJson('plans.json').catch(function () { return null; }) // fail-closed: schedule still renders
-      ]).then(function (rs) {
-        data.spine = rs[0];
-        data.ledger = rs[1];
-        data.sessions = (rs[2] && rs[2].sessions) || [];
-        data.plansFeed = rs[3];
-        data.lanes = null; // re-derive from the spine
-        api.note(null);
-        render();
-      }).catch(function (e) {
-        api.note('feed error: ' + e.message + ' — is hngh-dashboard.service up?');
-      });
-    }
-    var refreshBtn = $('refresh-btn');
-    if (refreshBtn) refreshBtn.addEventListener('click', refresh);
-    refresh();
-    setInterval(refresh, REFRESH_MS);
-    api.refresh = refresh;
     return api;
   }
 
-  /* standalone page: mount immediately into the existing skeleton */
-  if ($('gtracks')) mount(document.body);
-  else window.GanttEngine = { mount: mount };
+  window.GanttEngine = { mount: mount };
 })();

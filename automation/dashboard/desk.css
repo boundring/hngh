@@ -1,5 +1,54 @@
-/* desk - the installation desk (2026-09-27). Ink and type live in
-   broadsheet.css; this sheet only lays out the desk's own blocks. */
+/* desk styles: ink, type, and palette live here (migrated from
+   the retired broadsheet.css, 2026-10-03 control-room cut) */
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Bold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-Italic.woff2') format('woff2');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Averia Libre';
+  src: url('fonts/AveriaLibre-BoldItalic.woff2') format('woff2');
+  font-weight: 700; font-style: italic; font-display: swap;
+}
+
+:root {
+  --paper: #f4f0e6;
+  --ink: #26221c;
+  --ink-soft: #4c463c;
+  --rule: #b9b09c;
+  --moss: #4a6b3a;
+  --c-hngh-activity: #7a3a2e;
+  --c-operator-blocks: #6b3a5e;
+  --c-research: #3a4a7a;
+  --c-system: #4a5568;
+  --c-technology: #2e6b6b;
+  --c-linux: #8a5a2e;
+  --c-ai: #5c4a8a;
+  --c-space: #2e5c7a;
+  --c-science: #3a5c46;
+  --c-world: #7a5c3a;
+}
+
+.syn-badge {
+  display: inline-block; margin-left: 10px; padding: 1px 8px;
+  border: 1px solid var(--c-world); color: var(--c-world);
+  font-size: 11px; font-style: italic;
+}
+
+/* The hidden attribute must always win over component display rules
+   (syn-badge shipped visible-on-hidden because of this) */
+[hidden] { display: none !important; }
+
 
 .desk {
   max-width: 1100px; margin: 0 auto; padding: 4px 28px 60px;

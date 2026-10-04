@@ -1,176 +1,288 @@
 {
- "generated": "2026-09-27T06:00:00Z",
+ "articles": [
+  {
+   "body": [
+    "feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]"
+   ],
+   "category": "operator",
+   "choices": [
+    {
+     "action": {
+      "endpoint": "/operator-item/handle",
+      "payload": {
+       "id": "6cb1737b"
+      }
+     },
+     "label": "Handle",
+     "outcome": "Marks the item handled (operator-approved.json)."
+    },
+    {
+     "action": {
+      "endpoint": "/operator-item/dismiss",
+      "payload": {
+       "id": "6cb1737b"
+      }
+     },
+     "label": "Dismiss",
+     "outcome": "Moves the item to operator-dismissed.json; it returns in the next edition if it re-fires."
+    },
+    {
+     "action": {
+      "endpoint": "/operator-item/park",
+      "payload": {
+       "id": "6cb1737b",
+       "note": "watch after 7"
+      }
+     },
+     "label": "Park",
+     "outcome": "Parks the item and files your guidance note (required)."
+    },
+    {
+     "action": {
+      "endpoint": "/operator-item/expire",
+      "payload": {
+       "id": "6cb1737b"
+      }
+     },
+     "label": "Expire",
+     "outcome": "Archives the item as stale; it returns only if it re-fires."
+    },
+    {
+     "action": {
+      "endpoint": "/operator-item/suppress",
+      "payload": {
+       "id": "6cb1737b"
+      }
+     },
+     "label": "Suppress",
+     "outcome": "Suppresses this identity so repeated copies stay collapsed."
+    },
+    {
+     "action": {
+      "endpoint": "/operator-item/acknowledge",
+      "payload": {
+       "id": "6cb1737b"
+      }
+     },
+     "label": "Acknowledge",
+     "outcome": "Records the item acknowledged with an optional note."
+    }
+   ],
+   "deck": "feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]",
+   "headline": "feedback-ingest | alert | [feedback:idea] from email",
+   "id": "a1b2c3d4",
+   "score": 0.95,
+   "sources": [
+    {
+     "label": "operator-items",
+     "url": ""
+    }
+   ],
+   "span": 3,
+   "ts": "2026-09-27T05:41:54Z"
+  },
+  {
+   "body": [
+    "load 1/5/15m: 1.23 / 0.45 / 0.67",
+    "fleet: 1/2 fleet nodes online"
+   ],
+   "category": "system",
+   "choices": [],
+   "deck": "Load averages over 1, 5 and 15 minutes on this machine.",
+   "headline": "Load: 1.23 / 0.45 / 0.67 on 32 threads",
+   "id": "f0a1b2c3",
+   "score": 0.8,
+   "sources": [
+    {
+     "label": "system-resources",
+     "url": ""
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T05:45:00Z"
+  },
+  {
+   "body": [
+    "total: 62.5 GB",
+    "available: 31.2 GB"
+   ],
+   "category": "system",
+   "choices": [],
+   "deck": "Memory use from /proc/meminfo.",
+   "headline": "Memory: 31.2/62 GB used (50%)",
+   "id": "a9b8c7d6",
+   "score": 0.79,
+   "sources": [
+    {
+     "label": "system-resources",
+     "url": ""
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T05:45:00Z"
+  },
+  {
+   "body": [
+    "/srv/hngh: 42% used, 537.0 GB free",
+    "/srv/hngh/dbhome: 61% used, 180.6 GB free"
+   ],
+   "category": "system",
+   "choices": [],
+   "deck": "Disk use on the repo home and the hngh db home.",
+   "headline": "Disks: hngh 42%, dbhome 61%",
+   "id": "5e6f7a8b",
+   "score": 0.78,
+   "sources": [
+    {
+     "label": "system-resources",
+     "url": ""
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T05:45:00Z"
+  },
+  {
+   "body": [
+    "progress: 8",
+    "tick-done: 2",
+    "alert: 1",
+    "busiest: 33-research-beat.sh (6)"
+   ],
+   "category": "system",
+   "choices": [],
+   "deck": "What the machine did in the last hour, from the crumbs journal.",
+   "headline": "Last hour: 12 machine events, 1 alert",
+   "id": "7c8d9e0f",
+   "score": 0.77,
+   "sources": [
+    {
+     "label": "crumbs",
+     "url": ""
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T06:00:00Z"
+  },
+  {
+   "body": [
+    "A deep low pressure system is tracking eastward toward the continent.",
+    "Forecasters expect coastal gales and heavy rain by Tuesday."
+   ],
+   "category": "world",
+   "choices": [],
+   "deck": "A deep low pressure system is tracking eastward. Forecasters expect coastal gales by Tuesday.",
+   "headline": "Sample wire story: storm system moves across the Atlantic",
+   "id": "b2c3d4e5",
+   "score": 0.71,
+   "sources": [
+    {
+     "label": "bbc-world",
+     "url": "https://www.bbc.co.uk/news/world-6"
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T03:12:00Z"
+  },
+  {
+   "body": [
+    "mission: model benchmark 2026-09-27 0110",
+    "state: evacuated",
+    "age: 1556s"
+   ],
+   "category": "system",
+   "choices": [],
+   "deck": "mission: model benchmark 2026-09-27 0110",
+   "headline": "model benchmark 2026-09-27 0110",
+   "id": "d4e5f6a7",
+   "score": 0.66,
+   "sources": [
+    {
+     "label": "sessions",
+     "url": ""
+    }
+   ],
+   "span": 2,
+   "ts": "2026-09-27T05:47:00Z"
+  },
+  {
+   "body": [
+    "The new release tunes task placement across performance and efficiency cores."
+   ],
+   "category": "linux",
+   "choices": [],
+   "deck": "The new release tunes task placement across performance and efficiency cores.",
+   "headline": "Kernel release adds scheduler tuning for hybrid cores",
+   "id": "c3d4e5f6",
+   "score": 0.48,
+   "sources": [
+    {
+     "label": "phoronix",
+     "url": "https://www.phoronix.com/news/kernel-sample"
+    }
+   ],
+   "span": 1,
+   "ts": "2026-09-26T21:40:00Z"
+  }
+ ],
  "edition": {
   "date": "2026-09-27",
   "number": 3,
   "slot": 0,
-  "weather": {"temp_c": 14.3, "summary": "rain", "source": "open-meteo"},
   "system": {
-   "queue_depth": 4,
-   "sessions_active": 1,
    "fleet": [
-    {"name": "brickertop", "online": true, "os": "linux"},
-    {"name": "brickus", "online": false, "os": "android"}
-   ]
+    {
+     "name": "brickertop",
+     "online": true,
+     "os": "linux"
+    },
+    {
+     "name": "brickus",
+     "online": false,
+     "os": "android"
+    }
+   ],
+   "queue_depth": 4,
+   "sessions_active": 1
+  },
+  "weather": {
+   "source": "open-meteo",
+   "summary": "rain",
+   "temp_c": 14.3
   }
  },
- "queues": {
-  "queued": 4,
-  "done": 5,
-  "world": 2,
-  "linux": 1,
-  "operator": 1,
-  "system": 5
- },
- "articles": [
-  {
-   "id": "a1b2c3d4",
-   "category": "operator",
-   "headline": "feedback-ingest | alert | [feedback:idea] from email",
-   "deck": "feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]",
-   "body": ["feedback-ingest | alert | [feedback:idea] from email [w=crumbs.py@184774]"],
-   "span": 3,
-   "score": 0.95,
-   "ts": "2026-09-27T05:41:54Z",
-   "sources": [{"label": "operator-items", "url": ""}],
-   "choices": [
-    {"label": "Handle",
-     "outcome": "Marks the item handled (operator-approved.json).",
-     "action": {"endpoint": "/operator-item/handle",
-                "payload": {"id": "6cb1737b"}}},
-    {"label": "Dismiss",
-     "outcome": "Moves the item to operator-dismissed.json; it returns in the next edition if it re-fires.",
-     "action": {"endpoint": "/operator-item/dismiss",
-                "payload": {"id": "6cb1737b"}}}
-   ,
-   {"label": "Park",
-    "outcome": "Parks the item and files your guidance note (required).",
-    "action": {"endpoint": "/operator-item/park",
-               "payload": {"id": "6cb1737b", "note": "watch after 7"}}},
-   {"label": "Expire",
-    "outcome": "Archives the item as stale; it returns only if it re-fires.",
-    "action": {"endpoint": "/operator-item/expire",
-               "payload": {"id": "6cb1737b"}}},
-   {"label": "Suppress",
-    "outcome": "Suppresses this identity so repeated copies stay collapsed.",
-    "action": {"endpoint": "/operator-item/suppress",
-               "payload": {"id": "6cb1737b"}}},
-   {"label": "Acknowledge",
-    "outcome": "Records the item acknowledged with an optional note.",
-    "action": {"endpoint": "/operator-item/acknowledge",
-               "payload": {"id": "6cb1737b"}}}
-   ]
-  },
-  {
-   "id": "f0a1b2c3",
-   "category": "system",
-   "headline": "Load: 1.23 / 0.45 / 0.67 on 32 threads",
-   "deck": "Load averages over 1, 5 and 15 minutes on this machine.",
-   "body": ["load 1/5/15m: 1.23 / 0.45 / 0.67",
-            "fleet: 1/2 fleet nodes online"],
-   "span": 2,
-   "score": 0.8,
-   "ts": "2026-09-27T05:45:00Z",
-   "sources": [{"label": "system-resources", "url": ""}],
-   "choices": []
-  },
-  {
-   "id": "a9b8c7d6",
-   "category": "system",
-   "headline": "Memory: 31.2/62 GB used (50%)",
-   "deck": "Memory use from /proc/meminfo.",
-   "body": ["total: 62.5 GB", "available: 31.2 GB"],
-   "span": 2,
-   "score": 0.79,
-   "ts": "2026-09-27T05:45:00Z",
-   "sources": [{"label": "system-resources", "url": ""}],
-   "choices": []
-  },
-  {
-   "id": "5e6f7a8b",
-   "category": "system",
-   "headline": "Disks: hngh 42%, dbhome 61%",
-   "deck": "Disk use on the repo home and the hngh db home.",
-   "body": ["/srv/hngh: 42% used, 537.0 GB free",
-            "/srv/hngh/dbhome: 61% used, 180.6 GB free"],
-   "span": 2,
-   "score": 0.78,
-   "ts": "2026-09-27T05:45:00Z",
-   "sources": [{"label": "system-resources", "url": ""}],
-   "choices": []
-  },
-  {
-   "id": "7c8d9e0f",
-   "category": "system",
-   "headline": "Last hour: 12 machine events, 1 alert",
-   "deck": "What the machine did in the last hour, from the crumbs journal.",
-   "body": ["progress: 8", "tick-done: 2", "alert: 1",
-            "busiest: 33-research-beat.sh (6)"],
-   "span": 2,
-   "score": 0.77,
-   "ts": "2026-09-27T06:00:00Z",
-   "sources": [{"label": "crumbs", "url": ""}],
-   "choices": []
-  },
-  {
-   "id": "b2c3d4e5",
-   "category": "world",
-   "headline": "Sample wire story: storm system moves across the Atlantic",
-   "deck": "A deep low pressure system is tracking eastward. Forecasters expect coastal gales by Tuesday.",
-   "body": ["A deep low pressure system is tracking eastward toward the continent.",
-            "Forecasters expect coastal gales and heavy rain by Tuesday."],
-   "span": 2,
-   "score": 0.71,
-   "ts": "2026-09-27T03:12:00Z",
-   "sources": [{"label": "bbc-world", "url": "https://www.bbc.co.uk/news/world-6"}],
-   "choices": [],
-   "ghost": {"voice": "George Orwell",
-             "text": "The storm is the sort of fact that arrives without permission and cannot be argued with; the forecasters do their careful arithmetic, the coastal towns board their windows, and the low pressure system grinds eastward all the same, indifferent to every ledger kept against it."}
-  },
-  {
-   "id": "d4e5f6a7",
-   "category": "system",
-   "headline": "model benchmark 2026-09-27 0110",
-   "deck": "mission: model benchmark 2026-09-27 0110",
-   "body": ["mission: model benchmark 2026-09-27 0110",
-            "state: evacuated",
-            "age: 1556s"],
-   "span": 2,
-   "score": 0.66,
-   "ts": "2026-09-27T05:47:00Z",
-   "sources": [{"label": "sessions", "url": ""}],
-   "choices": []
-  },
-  {
-   "id": "c3d4e5f6",
-   "category": "linux",
-   "headline": "Kernel release adds scheduler tuning for hybrid cores",
-   "deck": "The new release tunes task placement across performance and efficiency cores.",
-   "body": ["The new release tunes task placement across performance and efficiency cores."],
-   "span": 1,
-   "score": 0.48,
-   "ts": "2026-09-26T21:40:00Z",
-   "sources": [{"label": "phoronix", "url": "https://www.phoronix.com/news/kernel-sample"}],
-   "choices": []
-  }
- ],
  "editions": [
   {
-   "date": "2026-09-26",
    "articles": [
     {
-     "id": "e5f6a7b8",
+     "body": [
+      "Fabrication capacity news led yesterday's technology coverage."
+     ],
      "category": "technology",
-     "headline": "Yesterday's chip roundup",
+     "choices": [],
      "deck": "Fabrication capacity news led yesterday's technology coverage.",
-     "body": ["Fabrication capacity news led yesterday's technology coverage."],
-     "span": 1,
+     "headline": "Yesterday's chip roundup",
+     "id": "e5f6a7b8",
      "score": 0.12,
-     "ts": "2026-09-26T18:00:00Z",
-     "sources": [{"label": "hn-frontpage", "url": "https://hnrss.org/item/1"}],
-     "choices": []
+     "sources": [
+      {
+       "label": "hn-frontpage",
+       "url": "https://hnrss.org/item/1"
+      }
+     ],
+     "span": 1,
+     "ts": "2026-09-26T18:00:00Z"
     }
-   ]
+   ],
+   "date": "2026-09-26"
   }
- ]
+ ],
+ "generated": "2026-09-27T06:00:00Z",
+ "queues": {
+  "done": 5,
+  "linux": 1,
+  "operator": 1,
+  "queued": 4,
+  "system": 5,
+  "world": 2
+ }
 }
