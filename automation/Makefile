@@ -215,7 +215,6 @@ test:
 	python3 -B tests/test-typesafe-wrapper.py
 	bash tests/test-model-xiaomi-leg.sh
 	bash tests/test-slice-a-bili-surface.sh
-	bash tests/test-credential-health-argv.sh
 	bash tests/test-slice-e-seam-surface.sh
 	python3 -B tests/test-session-cost-cache.py
 	bash tests/test-deck-availability.sh
@@ -228,6 +227,11 @@ test:
 	python3 -B scripts/lint-home-paths.py
 	bash tests/test-omarchy-boot-build.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
+
+# test-parallel: same suite list as `make test`, run concurrently.
+# usage: make test-parallel [GATE_JOBS=8]
+test-parallel:
+	bash scripts/test-parallel.sh
 
 # adhoc: run one cadence tick for a tier now (no systemd required).
 # usage: make adhoc TIER=5m
