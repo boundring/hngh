@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=- routed-from=slow-unit:dropin:16-remote-push.sh  cause=obsolete disposed=2026-09-14T07:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=expired risk=normal accepted=- routed-from=slow-unit:dropin:16-remote-push.sh  cause=obsolete disposed=2026-09-14T07:00:39Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `slow-unit:dropin:16-remote-push.sh`
