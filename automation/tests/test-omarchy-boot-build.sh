@@ -265,6 +265,125 @@ if [ "$erc" -eq 0 ] && [ "$out" = "$EXP" ]; then ok "emit-entry exact block (sud
 if grep -q blkid "$SLOG"; then ok "fallback used non-interactive sudo -n"; else bad "sudo -n evidence" "$(cat "$SLOG")"; fi
 rm -rf "$LOGS" "$ERRF" "$SLOG" "$DEVDIR"
 
+# 22-27. build phase on a half-installed target: pacman routing
+# (-Syu when the chroot pacman sync dir has no *.db), one keyring
+# retry, idempotent mounts, failure-path unmount. Every external
+# command is a PATH stub: sudo passes through to the stubs and the
+# arch-chroot stub runs the in-chroot script on this host -- no real
+# sudo, pacman, mkinitcpio, mount, or umount ever executes.
+SHIMB="$(mktemp -d)"
+BLOG="$SHIMB/log"
+MNT="$(mktemp -d)"
+SYNC="$(mktemp -d)"
+LOGS="$(mktemp -d)"
+export HNGH_STUB_LOG="$BLOG"
+cat >"$SHIMB/sudo" <<'SB'
+#!/bin/sh
+exec "$@"
+SB
+cat >"$SHIMB/arch-chroot" <<'SB'
+#!/bin/sh
+exec /bin/bash -euo pipefail
+SB
+cat >"$SHIMB/pacman" <<'SB'
+#!/bin/sh
+printf 'pacman %s\n' "$*" >>"$HNGH_STUB_LOG"
+case "${HNGH_PACMAN_FAIL:-}" in
+  keyring)
+    if [ "$1" = "-Sy" ] && [ "${2:-}" = "archlinux-keyring" ]; then exit 0; fi
+    if [ -e "$HNGH_STUB_LOG.flag" ]; then exit 0; fi
+    : >"$HNGH_STUB_LOG.flag"
+    printf '%s\n' 'error: linux-omarchy: signature from "Test Key <t@example.invalid>" is unknown trust' >&2
+    exit 1
+    ;;
+  other)
+    printf '%s\n' 'error: target not found: linux-omarchy' >&2
+    exit 1
+    ;;
+esac
+exit 0
+SB
+cat >"$SHIMB/mkinitcpio" <<'SB'
+#!/bin/sh
+printf 'mkinitcpio %s\n' "$*" >>"$HNGH_STUB_LOG"
+SB
+cat >"$SHIMB/touch" <<'SB'
+#!/bin/sh
+printf 'touch %s\n' "$*" >>"$HNGH_STUB_LOG"
+SB
+cat >"$SHIMB/mount" <<'SB'
+#!/bin/sh
+printf 'mount %s\n' "$*" >>"$HNGH_STUB_LOG"
+SB
+cat >"$SHIMB/umount" <<'SB'
+#!/bin/sh
+printf 'umount %s\n' "$*" >>"$HNGH_STUB_LOG"
+SB
+cat >"$SHIMB/findmnt" <<'SB'
+#!/bin/sh
+[ "${HNGH_FINDMNT_MOUNTED:-}" = "1" ] && exit 0
+exit 1
+SB
+chmod +x "$SHIMB"/*
+run_build() {
+  : >"$BLOG"
+  rm -f "$BLOG.flag"
+  env HNGH_BOOT_CONFIRM=YES HNGH_BOOT_MNT="$MNT" HNGH_PACMAN_SYNC_DIR="$SYNC" \
+    HNGH_BOOT_LOGDIR="$LOGS" HNGH_PACMAN_FAIL="${1:-}" \
+    HNGH_FINDMNT_MOUNTED="${HNGH_FINDMNT_MOUNTED:-}" \
+    PATH="$SHIMB:$PATH" bash "$SCRIPT" build --yes 2>&1
+}
+
+# 22. no sync databases under the chroot pacman sync dir (the
+#     half-installed target case): ONE -Syu transaction with the targets
+out="$(run_build)" && brc=0 || brc=$?
+if [ "$brc" -eq 0 ]; then ok "empty-sync build rc=0"; else bad "empty-sync build rc=0" "rc=$brc $out"; fi
+if grep -q '^pacman -Syu --needed linux-omarchy limine$' "$BLOG"; then ok "empty sync routes to -Syu with targets"; else bad "-Syu routing" "$(cat "$BLOG")"; fi
+
+# 23. sync databases present: the existing bare -S shape is kept
+: >"$SYNC/core.db"
+out="$(run_build)" && brc=0 || brc=$?
+if [ "$brc" -eq 0 ]; then ok "initialized-sync build rc=0"; else bad "initialized-sync build rc=0" "rc=$brc $out"; fi
+if grep -q '^pacman -S --needed linux-omarchy limine$' "$BLOG" && ! grep -q -- '-Syu' "$BLOG"; then
+  ok "initialized sync keeps bare -S shape"
+else
+  bad "-S shape" "$(cat "$BLOG")"
+fi
+rm -f "$SYNC/core.db"
+
+# 24. keyring/signature failure: exactly one archlinux-keyring sync and
+#     exactly one retry of the same transaction; never a loop
+out="$(run_build keyring)" && brc=0 || brc=$?
+if [ "$brc" -eq 0 ]; then ok "keyring retry build rc=0"; else bad "keyring retry build rc=0" "rc=$brc $out"; fi
+pac_log="$(grep '^pacman ' "$BLOG")"
+exp_pac="$(printf '%s\n' 'pacman -Syu --needed linux-omarchy limine' 'pacman -Sy archlinux-keyring' 'pacman -Syu --needed linux-omarchy limine' 'pacman -Ql limine')"
+if [ "$pac_log" = "$exp_pac" ]; then ok "keyring error: one keyring sync + one retry"; else bad "keyring retry sequence" "$pac_log"; fi
+case "$out" in
+*retry*) ok "keyring retry printed" ;;
+*) bad "keyring retry printed" "$out" ;;
+esac
+
+# 25. non-keyring failure: the error propagates and nothing is retried
+out="$(run_build other)" && brc=0 || brc=$?
+if [ "$brc" -ne 0 ]; then ok "non-keyring failure propagates"; else bad "non-keyring failure propagates" "rc=0 $out"; fi
+pac_log="$(grep '^pacman ' "$BLOG")"
+if [ "$pac_log" = "pacman -Syu --needed linux-omarchy limine" ]; then ok "non-keyring error does not retry"; else bad "non-keyring retry" "$pac_log"; fi
+
+# 26. already-mounted mountpoints are skipped (idempotence): with
+#     findmnt reporting every mountpoint mounted, no mount runs at all
+out="$(HNGH_FINDMNT_MOUNTED=1 run_build)" && brc=0 || brc=$?
+if [ "$brc" -eq 0 ]; then ok "idempotent build rc=0"; else bad "idempotent build rc=0" "rc=$brc $out"; fi
+if grep -q '^mount ' "$BLOG"; then bad "idempotent mounts" "$(grep '^mount ' "$BLOG")"; else ok "already-mounted skip: no mount calls"; fi
+
+# 27. failure-path cleanup: what THIS run mounted is unmounted in
+#     reverse order (subvol mounts, then the ESP at boot, then the root)
+out="$(run_build other)" && brc=0 || brc=$?
+if [ "$brc" -ne 0 ]; then ok "failure cleanup follows nonzero exit"; else bad "failure cleanup follows nonzero exit" "rc=0"; fi
+um_log="$(grep '^umount ' "$BLOG")"
+exp_um="$(printf '%s\n' "umount $MNT/var/cache/pacman/pkg" "umount $MNT/var/log" "umount $MNT/home" "umount $MNT/boot" "umount $MNT")"
+if [ "$um_log" = "$exp_um" ]; then ok "failure unmounts in reverse order"; else bad "unmount order" "$um_log"; fi
+rm -rf "$SHIMB" "$MNT" "$SYNC" "$LOGS"
+
 if [ "$fails" -eq 0 ]; then
   printf 'test-omarchy-boot-build: all proofs passed\n'
   exit 0

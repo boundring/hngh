@@ -40,6 +40,9 @@
 #   HNGH_ROOT_UUID  emit-entry override: root filesystem UUID (probed
 #                                  at runtime when unset)
 #   HNGH_DEV_DISK   by-partuuid/by-uuid scan root (default /dev/disk)
+#   HNGH_PACMAN_SYNC_DIR pacman sync-db dir probed inside the chroot for
+#                                  the -Syu fallback (default
+#                                  /var/lib/pacman/sync)
 #   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
 #                                  (default ~/Projects/etc/omarchy-upstream)
 #   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
@@ -94,13 +97,49 @@ gate() {
   exit 2
 }
 
+# MOUNTED tracks the mountpoints THIS run mounted (newest first); the
+# build-phase failure trap unmounts them in reverse order.
+MOUNTED=""
+
+# mount_one <mountpoint> <mount args...>: idempotent mount -- when the
+# mountpoint is already mounted (findmnt -n hits) the mount is skipped,
+# so a re-run after a failed run can never double-mount.
+mount_one() {
+  mount_mp="$1"
+  shift
+  if findmnt -n "$mount_mp" >/dev/null 2>&1; then
+    say "# $mount_mp already mounted -- skipping (idempotent)"
+    return 0
+  fi
+  run_root mount "$@"
+  MOUNTED="$mount_mp $MOUNTED"
+}
+
 mount_cmds() {
-  run_root mount -o subvol=@,compress=zstd:3 "$ROOTP" "$MNT"
+  mount_one "$MNT" -o subvol=@,compress=zstd:3 "$ROOTP" "$MNT"
   run_root mkdir -p "$MNT/boot"
-  run_root mount "$ESP" "$MNT/boot" # ESP AT /boot -- fstab pins UUID=317A-31FF
-  run_root mount --mkdir -o subvol=@home "$ROOTP" "$MNT/home"
-  run_root mount --mkdir -o subvol=@log "$ROOTP" "$MNT/var/log"
-  run_root mount --mkdir -o subvol=@pkg "$ROOTP" "$MNT/var/cache/pacman/pkg"
+  mount_one "$MNT/boot" "$ESP" "$MNT/boot" # ESP AT /boot -- fstab pins UUID=317A-31FF
+  mount_one "$MNT/home" --mkdir -o subvol=@home "$ROOTP" "$MNT/home"
+  mount_one "$MNT/var/log" --mkdir -o subvol=@log "$ROOTP" "$MNT/var/log"
+  mount_one "$MNT/var/cache/pacman/pkg" --mkdir -o subvol=@pkg "$ROOTP" "$MNT/var/cache/pacman/pkg"
+}
+
+# build_cleanup: failure-path cleanup for phase_build (EXIT trap; it
+# only acts on a nonzero exit -- a successful build KEEPS its mounts so
+# the driver's verify stage can read them). Unmounts what THIS run
+# mounted in reverse order: the @ subvolume mounts first, then the ESP
+# at /mnt/boot, then /mnt. Never installed in dry-run (nothing mounts).
+build_cleanup() {
+  build_rc=$?
+  [ "$build_rc" -eq 0 ] && return 0
+  [ -z "$MOUNTED" ] && return 0
+  say "# build failed (rc=$build_rc) -- unmounting what this run mounted, in reverse order"
+  for build_mp in $MOUNTED; do
+    say "+ sudo umount $build_mp"
+    if sudo umount "$build_mp"; then :; else
+      say "WARN: umount $build_mp failed (rc=$?) -- unmount by hand before retrying"
+    fi
+  done
 }
 
 phase_census() {
@@ -129,32 +168,63 @@ phase_esp() {
 phase_build() {
   gate build
   say "== build: chroot kernel + initramfs + linger =="
+  [ "$DRY" -eq 0 ] && trap 'build_cleanup' EXIT
   mount_cmds
   say "+ sudo arch-chroot $MNT /bin/bash -s  (in-chroot sequence below)"
   [ "$DRY" -eq 1 ] && {
     say "ls /etc/mkinitcpio.d/            # expect EMPTY pre-reinstall"
     say "grep ^HOOKS /etc/mkinitcpio.conf # census: limine hook ABSENT; warn if still absent"
     say "pacman -S --needed linux-omarchy limine   # reinstall-FIRST: drops /boot/vmlinuz-linux-omarchy + preset"
+    say "# half-installed root (no /var/lib/pacman/sync/*.db): one pacman -Syu --needed linux-omarchy limine transaction instead; on a keyring/signature failure: pacman -Sy archlinux-keyring then ONE retry"
     say "mkinitcpio -P                    # needs the preset from the previous line"
     say "ls /usr/bin | grep -i limine     # discover tooling; loader path is NOT guessed here"
+    say "pacman -Ql limine | grep -E 'limine.conf|initcpio|hooks/' + ls /etc/limine* /boot/limine*   # discover config authorship; nothing is written"
     say "touch /var/lib/systemd/linger/$USER_NAME   # loginctl enable-linger fails in chroot (no bus)"
     return 0
   }
-  sudo arch-chroot "$MNT" /bin/bash -euo pipefail <<CHROOT
-ls /etc/mkinitcpio.d/
+  PACMAN_SYNC_DIR="${HNGH_PACMAN_SYNC_DIR:-/var/lib/pacman/sync}"
+  sudo arch-chroot "$MNT" /bin/bash -euo pipefail <<CHROOT || exit $?
+ls /etc/mkinitcpio.d/ 2>/dev/null || echo "no /etc/mkinitcpio.d (nothing installed yet)"
 if grep -q '^HOOKS=.*limine' /etc/mkinitcpio.conf; then
   echo "HOOKS: limine hook present"
 else
   echo "WARN: limine hook absent from HOOKS (bootloader install is separate; do not sed unattended)"
 fi
-pacman -S --needed linux-omarchy limine
+sync_dir="$PACMAN_SYNC_DIR"
+if ls "\$sync_dir"/*.db >/dev/null 2>&1; then
+  tx=(pacman -S --needed linux-omarchy limine)
+else
+  echo "pacman: no sync databases under \$sync_dir (half-installed target) -- one -Syu transaction instead of -S"
+  tx=(pacman -Syu --needed linux-omarchy limine)
+fi
+pacman_err=/tmp/hngh-pacman-tx.err
+if "\${tx[@]}" 2>"\$pacman_err"; then
+  :
+else
+  tx_rc=\$?
+  cat "\$pacman_err" >&2
+  if grep -Eqi 'keyring|signature|invalid or corrupted package' "\$pacman_err"; then
+    echo "pacman: transaction failed with a keyring/signature error -- syncing archlinux-keyring and retrying once"
+    pacman -Sy archlinux-keyring
+    "\${tx[@]}" || { rc=\$?; echo "pacman: retry after archlinux-keyring failed (rc=\$rc)" >&2; exit "\$rc"; }
+    echo "pacman: retry after archlinux-keyring succeeded"
+  else
+    echo "pacman: transaction failed (rc=\$tx_rc) -- no retry (not a keyring/signature error)"
+    exit "\$tx_rc"
+  fi
+fi
 mkinitcpio -P
+echo "--- limine packaging discovery (print only; no config is written here) ---"
+pacman -Ql limine 2>/dev/null | grep -E 'limine\.conf|initcpio|hooks/' || echo "WARN: pacman -Ql limine matched no conf/initcpio/hook paths"
+ls /etc/limine* /boot/limine* 2>/dev/null || echo "no /etc/limine* or /boot/limine* files present"
+echo "--- end discovery ---"
 ls /usr/bin | grep -i limine || echo "WARN: no limine tooling found in /usr/bin"
 touch "/var/lib/systemd/linger/$USER_NAME"
 echo "linger stamped for $USER_NAME"
 echo "NEXT (operator): pick the limine install path from the tooling list above, then:"
 echo "  efibootmgr --create --disk $DISK --part 1 --label 'Omarchy (limine)' --loader <loader.efi>"
 CHROOT
+  trap - EXIT
 }
 
 phase_qemu() {
