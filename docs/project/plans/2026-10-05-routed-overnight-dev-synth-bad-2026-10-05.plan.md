@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:dev-synth-bad:2026-10-05 -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-05T18:06:27Z routed-from=overnight:dev-synth-bad:2026-10-05 -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-12T17:01:01Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
