@@ -88,7 +88,6 @@ overflow_run() { # [K=V ...] -> one subhour-tier overflow run
   env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
    RESEARCH_OVERFLOW_STAMP_FILE="$sb/of-stamp" \
    RESEARCH_OVERFLOW_COUNT_FILE="$sb/of-count" \
-   OVERFLOW_SLEEP_S=0 \
    "$@" \
    bash "$sb/cadence/subhour/50-research-overflow.sh" >/dev/null 2>&1
  )
@@ -178,20 +177,21 @@ grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
 }
 
 # --- b) overflow beat: 15-minute cadence, own failfirst state -----------
-# b1: full speed -> TWO beats per 30m tick (OVERFLOW_SLEEP_S=0), both
+# b1: one beat per gated run (2026-10-04: the in-tick sleep that staged a
+# second beat froze the every-minute tier and starved the 60s feeds);
 # pinned kimi; a pace-blocked kimi falls through to the local chain inside
 # model_call (never blocks)
 reset_beat 4
 overflow_run "${kimi_env[@]}"
-ck "overflow: kimi answered on both beats" "2" "$(hits stubK)"
-ck "overflow run2: kimi answers" "kimi:kimi-test-model" \
+ck "overflow: kimi answered once" "1" "$(hits stubK)"
+ck "overflow: kimi answers" "kimi:kimi-test-model" \
  "$(cat "$sb/tmp-modelused.txt")"
-ck "overflow run2: unsloth never hit" "0" "$(hits stubU)"
-# pick_line finishes lines before starting them: beat 1 advances
-# line-1 planned->expanding, beat 2 advances line-1 expanding->contracting
-grep -q $'line-1\tcontracting\t' "$sb/research-lines.tsv" &&
- echo "ok: overflow: both beats advanced line-1" || {
- echo "FAIL: overflow: line-1 not advanced twice"
+ck "overflow: unsloth never hit" "0" "$(hits stubU)"
+# pick_line finishes lines before starting them: the beat advances
+# line-1 planned->expanding only
+grep -q $'line-1\texpanding\t' "$sb/research-lines.tsv" &&
+ echo "ok: overflow: beat advanced line-1" || {
+ echo "FAIL: overflow: line-1 not advanced"
  fails=$((fails + 1))
 }
 [ -f "$sb/ff/failfirst-research-overflow" ] &&
@@ -206,8 +206,8 @@ grep -q $'line-1\tcontracting\t' "$sb/research-lines.tsv" &&
 }
 ck "overflow: state says ok at full" "ok" "$(sed -n 's/^last=//p' "$sb/ff/failfirst-research-overflow")"
 
-# b2: degraded overflow operation -> both beats of the tick throttle
-# (15-minute tick: standard paces to 30 minutes)
+# b2: degraded overflow operation -> the gated beat throttles
+# (standard paces to 30 minutes between transitions)
 reset_beat 4
 (
  export FAILFIRST_STATE_DIR="$sb/ff"
@@ -232,6 +232,32 @@ printf '%s\n' "$((now - 1801))" >"$sb/of-stamp"
 sed -i "s/^lastrun=.*/lastrun=$((now - 1801))/" "$sb/ff/failfirst-research-overflow"
 overflow_run "${kimi_env[@]}"
 ck "overflow aged: gate released, kimi pinned" "1" "$(hits stubK)"
+
+# b4: the 1800s entry stamp is the only cadence pacer (2026-10-04: no
+# in-tick sleep) -- a fresh stamp exits before any beat; backdating
+# releases the next beat
+reset_beat 4
+printf '%s\n' "$now" >/tmp/.hngh-cadence-50-research-overflow-last
+(
+ cd "$sb"
+ env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
+  RESEARCH_OVERFLOW_STAMP_FILE="$sb/of-stamp" \
+  RESEARCH_OVERFLOW_COUNT_FILE="$sb/of-count" \
+  "${kimi_env[@]}" \
+  bash "$sb/cadence/subhour/50-research-overflow.sh" >/dev/null 2>&1
+)
+ck "overflow fresh entry stamp: no beat" "0" "$(hits stubK)"
+printf '%s\n' "$((now - 1801))" >/tmp/.hngh-cadence-50-research-overflow-last
+(
+ cd "$sb"
+ env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
+  RESEARCH_OVERFLOW_STAMP_FILE="$sb/of-stamp" \
+  RESEARCH_OVERFLOW_COUNT_FILE="$sb/of-count" \
+  "${kimi_env[@]}" \
+  bash "$sb/cadence/subhour/50-research-overflow.sh" >/dev/null 2>&1
+)
+ck "overflow backdated entry stamp: beat ran" "1" "$(hits stubK)"
+rm -f /tmp/.hngh-cadence-50-research-overflow-last
 
 # --- c) review interleave ------------------------------------------------
 # c1: counter 2 -> run 3, 3%3=0 (default interleave 3), crystallized

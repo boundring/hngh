@@ -476,7 +476,18 @@
   // verdict used to ignore them (ALL CLEAR beside a stale-feed queue).
   // Client-only: rqState.rows is already fetched by fetchQueue().
   function selfReviewAlerts(rows) {
-    return (rows || []).filter(function (r) {
+    // A failing row means "last observed failing at ts" — the tick only
+    // re-files while failing, so alerts that predate the newest
+    // "summary: 0 findings" heartbeat are resolved history, not state
+    // (2026-10-04: the 16:00-17:00Z stale-feed incident stayed on the
+    // verdict for hours after recovery).
+    var list = rows || [];
+    var cut = -1;
+    for (var i = 0; i < list.length; i++) {
+      var h = (list[i] && (list[i].first || list[i].text || list[i].body)) || '';
+      if (/\[dash-selfreview\] summary: 0 findings/.test(h)) cut = i;
+    }
+    return list.slice(cut + 1).filter(function (r) {
       var t = (r && (r.first || r.text || r.body)) || '';
       return t.indexOf('[dash-selfreview]') !== -1 &&
         /unacceptable|stale|missing|failing/i.test(t);

@@ -4,7 +4,7 @@
 Procedural recognition of sufficient vs insufficient dashboard state
 (operator directive 2026-08-27). Checks the served surfaces + feeds:
 
-  1. freshness   sessions/operator-items (1m tier), time-ledger (5m),
+  1. freshness   sessions/operator-items (5m tier), time-ledger (5m),
                  readout (30m) — stale beyond STALE_MULT x tier = finding.
   2. validity    each feed parses; required keys present (sessions rows>0
                  OR explicit empty marker; time-ledger units>=1).
@@ -28,6 +28,7 @@ finding, exit 0 always (a broken self-review must never break cadence).
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -50,9 +51,12 @@ LEDGER_SKEW_MAX_AGE = int(
 REPORT_WINDOW = "86400" # dedup window (s) for report-queue identities
 
 # feed -> expected refresh tier (seconds)
+# measured 2026-10-04: the subhour tick completes in ~3-4 min (00- probes
+# + feed steps + overflow beat), so minute-tier feeds refresh on that
+# cadence, not per wall-clock minute; tier 60 tripped on healthy feeds.
 FEED_TIERS = {
-    "sessions.json": 60,
-    "operator-items.json": 60,
+    "sessions.json": 300,
+    "operator-items.json": 300,
     "time-ledger.json": 300,
     "readout.json": 1800,
 }
@@ -229,12 +233,21 @@ def report(findings):
     rq = importlib.util.module_from_spec(spec)
     loader.exec_module(rq)
 
-    def add_or_bump(ident, text):
+    def add_or_bump(ident, text, heartbeat=False):
+        # bump_row folds xN into a row but never rewrites its text, so a
+        # heartbeat may only bump while the stored summary still matches
+        # the current one; a state change (e.g. 3 findings -> 0) files a
+        # fresh row and lets the old one age out as history (2026-10-04).
         for r in reversed(rq.read_rows()):
             if (r[1] == "alert" and rq.row_identity(r) == ident
                     and rq.within_window(r[0], int(REPORT_WINDOW))):
-                rq.bump_row(r, rq.now_ts())
-                return
+                if not heartbeat:
+                    rq.bump_row(r, rq.now_ts())
+                    return
+                if re.sub(r" \xd7\d+$", "", r[3]) == text:
+                    rq.bump_row(r, rq.now_ts())
+                    return
+                break
         rq.add("alert", text, identity=ident, window=int(REPORT_WINDOW))
 
     for x in findings:
@@ -243,9 +256,9 @@ def report(findings):
     u = sum(1 for x in findings if x["status"] == "unacceptable-now")
     a = len(findings) - u
     add_or_bump(
-        "dash-selfreview:summary",
+        f"dash-selfreview:summary:{len(findings)}",
         f"[dash-selfreview] summary: {len(findings)} findings "
-        f"({u} unacceptable-now, {a} acceptable-for-now)")
+        f"({u} unacceptable-now, {a} acceptable-for-now)", heartbeat=True)
     for x in findings:
         print(f"{x['check']}: {x['status']} — {x['detail']}", file=sys.stderr)
     print(f"dashboard-self-review: {len(findings)} findings "
@@ -258,9 +271,12 @@ def main():
                     + check_served() + check_ledger())
     except Exception as e:  # fail closed: the tick itself never breaks cadence
         findings = [finding("self-review", True, f"tick crashed: {e!r}")]
-    if findings:
-        report(findings)
-    # all-clear ticks are silent
+    # every tick files the summary row (identity dedup bumps it xN within
+    # REPORT_WINDOW), so an all-clear summary marks recovery: the client
+    # ignores alerts that predate the newest clean summary (2026-10-04,
+    # stale 16:00-17:00Z incident rows pinned the verdict at warn for hours
+    # after the feeds recovered).
+    report(findings)
     return 0
 
 

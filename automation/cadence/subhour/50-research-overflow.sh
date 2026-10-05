@@ -11,12 +11,15 @@
 # research-lines.tsv races between the two beats.
 #
 # Cadence (operator directive: research more often than once per hour):
-# the subhour tier fires :00 and :30; this beat runs immediately and again
-# 15 minutes later -- a 15-minute research cadence (:00 :15 :30 :45)
-# without a new systemd unit. At fail-first FULL speed that is 4 overflow
-# transitions/hour plus the hour beat's local transition; the overflow's
-# own tuning state (failfirst-research-overflow, FAILFIRST_TICK_S=900)
-# paces it down just below its observed ceiling when the quota/deck legs
+# the 1800s entry stamp paces this to one beat per 30 minutes (:00 :30)
+# across the every-minute triggers, with NO in-tick sleep. The former
+# `sleep 900` + second beat froze the whole subhour tier for a quarter
+# hour per activation, stalling the 60s-tier feeds and filing
+# dash-selfreview stale alerts every time the hourly check sampled the
+# frozen window (2026-10-04 storm; same collision class as the 2026-09-24
+# tier collapse -- a beat must never block the tick). The overflow's own
+# tuning state (failfirst-research-overflow, FAILFIRST_TICK_S=900) still
+# paces it down below its observed ceiling when the quota/deck legs
 # degrade, and promotes it back after consecutive oks.
 #
 # Gates:
@@ -32,8 +35,10 @@
 #      (the hour beat is always "recent" at a 15-minute cadence).
 # usage: cadence/subhour/50-research-overflow.sh   (via cadence-tick.sh TIER=subhour)
 set -u
-# self-gate (31-heartbeat stamp pattern): one real run per 1800s - the
-# former 30m beat, paced by stamp since the 2026-09-24 tier collapse.
+# self-gate (31-heartbeat stamp pattern): one real run per 1800s (30m
+# tier window; the collapse guard pins allowed windows). The stamp is the
+# ONLY pacer -- never an in-tick sleep; a blocked tick starves the minute
+# tier (2026-09-24 collapse, 2026-10-04 freeze recurrence).
 STAMP="/tmp/.hngh-cadence-50-research-overflow-last"; now="$(date +%s)"
 last="$(cat "$STAMP" 2>/dev/null || printf '0')"; last="${last//[!0-9]/}"; last="${last:-0}"
 [ $((now - last)) -ge 1800 ] || exit 0
@@ -75,7 +80,5 @@ overflow_once() { # one gated, pinned research transition
  bash "$AUTOMATION_ROOT/cadence/hour/33-research-beat.sh"
 }
 
-overflow_once || true
-sleep "${OVERFLOW_SLEEP_S:-900}" # second beat of the 15-minute cadence (seam for hermetic tests)
 overflow_once || true
 exit 0
