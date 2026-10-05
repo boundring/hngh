@@ -5,10 +5,17 @@
 
 This directory is the active working surface.
 
-These documents serve two audiences. People read [Intent](intent.md) first:
-it explains why Hngh exists and where it is going in plain language.
-Engineers and agents then read the contracts, which freeze the facts of how
-things work today. Intent frames direction; contracts pin down details.
+The goal: Hngh is a system harness for practically any Linux system -
+early targets CachyOS and Omarchy, both Arch-based. The plain-language
+why lives in [Intent](intent.md); the scripted path to any install on any
+OS starts at the [installer design](design/hngh-installer.md).
+
+These documents serve two audiences, in one reading order. It starts
+with [Getting started](getting-started.md): the first working session,
+end to end. [Intent](intent.md) is the plain-language why-doc, read
+second or whenever you want the vision. Engineers and agents then read
+the contracts, which freeze the facts of how things work today. Intent
+frames direction; contracts pin down details.
 
 For newcomers: read [README.md](../README.md) at the repository root first.
 The four sections below are the whole map; everything listed here is
@@ -162,6 +169,33 @@ kernel `src/` knows nothing of either home. See `~/.hngh/README.md`.
 - [System-harness roadmap](project/system-harness-roadmap.md) - a
   fleet of nodes under one governance: resource pool, config manager,
   security manager.
+
+### System harness program
+
+Hngh aims at practically any Linux system - CachyOS and Omarchy first,
+both Arch-based. These are the program's designs: the machinery that
+grows the harness from one machine to the fleet, and the charter that
+keeps the growth governed.
+
+- [Installer](design/hngh-installer.md) - one scripted step family for
+  any install on any OS.
+- [Omarchy integration](design/omarchy-integration.md) - interface
+  parts, plugin hosts, the omp delta.
+- [CachyOS optimization](design/cachyos-optimization.md) - evidence and
+  applicable findings for the host.
+- [Harness data plane](design/harness-data-plane.md) - stores,
+  pipelines, buses, routes, end-forms.
+- [Operator orchestration](design/operator-orchestration.md) -
+  government emulation, expeditions, one orienting fixture.
+- [Federation](design/federation-two-pc.md) - two PCs, one machine
+  impression.
+- [Megastructure sim](design/megastructure-sim.md) - the Megastructure
+  Simulation: from map to living machine.
+- [Triple kernel](design/triple-kernel.md) - judgment, legislation,
+  execution; design drafts only, no kernel code.
+- [Governed fleet](design/governed-fleet.md) - the stage-3 charter: one
+  pattern over the whole fleet, stages 3+4 consolidated and
+  operator-ratified (2026-09-13).
 
 <!-- HISTORICAL: records/, journal/, research/ - point-in-time evidence,
      decisions, and long-form history. Rule: trust CURRENT for how things
