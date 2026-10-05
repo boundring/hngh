@@ -28,6 +28,55 @@ session never holds the sudo password.
    pure black screen is unlikely to be syntax.
 5. GPU/console - lowest: the host boots the same console/driver family.
 
+## Unattended stock reinstall (pilot-first)
+
+`automation/jobs/omarchy-unattended-install.sh` replaces the interactive
+wizard with a seeded cidata install: three phases, dry-run by default.
+
+- `seed` bakes the cidata file pair + `cidata.iso` in the secrets home
+  (`HNGH_SECRETS_HOME`, default `~/.hngh-automation/omarchy-unattended` --
+  never the repo, never `~/.hngh`), workdir 0700. Password hashes go in
+  (`--credentials-hash` = `openssl passwd -6` output) and never come out:
+  every print says `<redacted>`. `--defer-provisioning` writes an empty
+  `cidata/defer-provisioning` marker and NO credentials at all; first-boot
+  provisioning then completes from live SSH.
+- schema provenance: `seed --iso <iso>` extracts the ISO's own
+  `usr/local/bin/omarchy-cidata-load` (bare sfs-relative extraction) and
+  reads the exact keys it consumes from `user_configuration.json` /
+  `user_credentials.json`; the emitted seed must cover them all or seed
+  fails closed naming the gaps. Without `--iso`/`--config-sample` the seed
+  still builds but prints a loud `SCHEMA-UNVERIFIED` warning naming what
+  was never verified -- suspect it first when the wizard stays interactive.
+- `run` installs: pilot by default (qcow2 overlay
+  `qemu-img create -f qcow2 -b <DISK> -F raw <workdir>/pilot.qcow2`,
+  backing untouched), or `--real-disk`, which FORMATTEDs the disk and
+  carries its own y/N gate naming it. The backing must be unmounted, not
+  the host system disk, and not held by any qemu. One `sudo -v` up front,
+  then y/N per action. A `run-manifest` records mode/target/backing/iso/
+  serials/user so `verify` boots exactly what `run` wrote.
+- detection proof (host-side): the partition layout must APPEAR on the
+  target within minutes -- an unconsumed cidata leaves the wizard
+  interactive forever, so the layout change IS the signal (the serial
+  stays tiny, ~425 bytes). `run` prints the watch command; no layout after
+  ~10 minutes means the cidata was NOT consumed (seed files first).
+- `verify` boots the target disk-only (no cdrom) with hostfwd 2222 and
+  always kills its VM on exit. Verdict table: `verdict: BOOTED+SSH`
+  (serial over 425B + boot marker + ssh probe = proven complete),
+  `verdict: BOOT_ONLY` (booted, no ssh: check authorized_keys and the
+  user credentials), `verdict: TIMEOUT` (serial never crossed the floor).
+- flags: `--disk --iso --credentials-hash --defer-provisioning
+  --config-sample --authorized-keys --user --hostname --timezone
+  --keyboard --pilot --real-disk`; `help` prints the full contract.
+
+Physical sequence (pilot first): `run --yes` (pilot) -> `verify --yes`
+green -> `run --yes --real-disk` -> `verify --yes` green -> re-emit the
+host limine entry (`omarchy-boot-build.sh emit-entry`) and follow the
+staged reboot table. Nothing here reboots the host or touches NVRAM.
+
+ISO hashes: every published Omarchy ISO has a `.sha256` beside it at the
+same URL -- download both into one directory and check the ISO before
+seeding (see the omarchy-iso README: https://github.com/omacom/omarchy-iso).
+
 ## The entry block (point-in-time example)
 
 Point-in-time example -- run `automation/jobs/omarchy-boot-build.sh
