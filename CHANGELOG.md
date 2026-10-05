@@ -6,6 +6,19 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-04
 
+- **Automation — megastructure P1 lands on the control-room map**:
+  session denizens render one walker per live row of sessions.json
+  (deterministic placement, drift with the recorded set), the automation
+  ring swells with report-queue depth from the same edition.system block
+  the dateline prints, and the operator-host spire carries a beacon while
+  operator items are open — all recorded-data-only per
+  docs/design/megastructure-sim.md P1 honesty constraints.
+- **Automation — CachyOS host optimization lane**:
+  docs/design/cachyos-optimization.md records the measured evidence (zram
+  configured-and-off while 12G sits in an NVMe swapfile; everything else
+  already optimal) and jobs/cachyos-optimize.sh applies it dry-by-default
+  with the installer's consent posture (census/zram/swappiness stages,
+  --yes gated on TTY or HNGH_OPT_CONFIRM=YES, per-stage logs).
 - **Automation — subhour tick freeze cured, self-review learns recovery**:
   the research-overflow beat slept 900s inside the every-minute cadence
   tick, freezing all subhour feeds for a quarter hour per half hour and
