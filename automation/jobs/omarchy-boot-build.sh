@@ -34,11 +34,12 @@
 #                                  pins UUID=317A-31FF for /boot; a wrong
 #                                  id breaks the pinned mount)
 #   HNGH_ESP_LABEL  mkfs label     (default OMARCHY-ESP)
-#   HNGH_ESP_PARTUUID emit-entry override: ESP GPT PARTUUID (probed from
-#                                  lsblk when unset; HNGH_ESP_ID doubles
-#                                  as the FAT volume id override)
+#   HNGH_ESP_PARTUUID emit-entry override: ESP GPT PARTUUID (probed at
+#                                  runtime when unset; HNGH_ESP_ID
+#                                  doubles as the FAT volume id override)
 #   HNGH_ROOT_UUID  emit-entry override: root filesystem UUID (probed
-#                                  from lsblk when unset)
+#                                  at runtime when unset)
+#   HNGH_DEV_DISK   by-partuuid/by-uuid scan root (default /dev/disk)
 #   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
 #                                  (default ~/Projects/etc/omarchy-upstream)
 #   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
@@ -54,6 +55,7 @@ USER_NAME="${HNGH_BOOT_USER:-bricker}"
 ESP_ID="${HNGH_ESP_ID:-317A31FF}"
 ESP_LABEL="${HNGH_ESP_LABEL:-OMARCHY-ESP}"
 UPSTREAM="${HNGH_UPSTREAM:-$HOME/Projects/etc/omarchy-upstream}"
+DEV_DISK="${HNGH_DEV_DISK:-/dev/disk}"
 
 PHASE="${1:---help}"
 DRY=1
@@ -108,7 +110,7 @@ phase_census() {
     exit 3
   fi
   lsblk -o NAME,SIZE,FSTYPE,LABEL,PARTUUID "$DISK"
-  say "ESP to format: $ESP (mkfs id $ESP_ID label $ESP_LABEL)"
+  say "ESP: $ESP (informational) -- mkfs id $ESP_ID label $ESP_LABEL are the canonical esp-phase defaults only; the esp phase is not part of the provisioning flow"
   say "fstab on the target pins UUID=317A-31FF for /boot -- the volume id must match"
 }
 
@@ -182,8 +184,37 @@ phase_adopt_check() {
   say "# clone at /home/<user>/Projects/etc/omarchy-upstream is the boot-valid path"
 }
 
-# probe_id <lsblk-column> <device>: first value lsblk reports, or empty.
-probe_id() { lsblk -no "$1" "$2" 2>/dev/null | head -n 1 | tr -d '[:space:]'; }
+# probe_id <partuuid|fsuuid> <device>: resolve one identifier through
+# the source chain, first hit wins. Unprivileged sources first -- lsblk
+# prints empty columns without the disk group on this host -- then
+# udevadm properties, then the /dev/disk/by-* symlink scan (the id IS
+# the symlink name); the last resort is a NON-INTERACTIVE sudo probe
+# (sudo -n never prompts: it fails silently without a cached
+# credential). Empty output means every source missed and the caller
+# fails closed.
+probe_id() {
+  probe_dev="$2"
+  probe_want="${probe_dev##*/}"
+  case "$1" in
+  partuuid) probe_col=PARTUUID probe_key=ID_PART_ENTRY_UUID probe_sub=by-partuuid ;;
+  *) probe_col=UUID probe_key=ID_FS_UUID probe_sub=by-uuid ;;
+  esac
+  probe_val="$(lsblk -no "$probe_col" "$probe_dev" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+  [ -n "$probe_val" ] || probe_val="$(udevadm info -q property -n "$probe_dev" 2>/dev/null | grep "^$probe_key=" | head -n 1 | cut -d= -f2- | tr -d '[:space:]')"
+  if [ -z "$probe_val" ] && [ -d "$DEV_DISK/$probe_sub" ]; then
+    for probe_link in "$DEV_DISK/$probe_sub"/*; do
+      [ -L "$probe_link" ] || continue
+      probe_tgt="$(readlink "$probe_link" 2>/dev/null)"
+      if [ "${probe_tgt##*/}" = "$probe_want" ]; then
+        probe_val="${probe_link##*/}"
+        break
+      fi
+    done
+  fi
+  [ -n "$probe_val" ] || probe_val="$(sudo -n lsblk -no "$probe_col" "$probe_dev" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+  [ -n "$probe_val" ] || probe_val="$(sudo -n blkid -s "$probe_col" -o value "$probe_dev" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+  printf '%s\n' "$probe_val"
+}
 
 UUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 FAT_RE='^[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}$'
@@ -197,14 +228,15 @@ emit_die() {
   exit 2
 }
 
-# phase_emit_entry: read-only in dry-run and --yes alike (never calls
-# sudo). Prints the host chainload entry plus the target-side kernel
-# entry TEMPLATE for the CURRENT ids, probed at runtime unless the env
-# seams override them. All three ids are validated BEFORE any output.
+# phase_emit_entry: read-only in dry-run and --yes alike -- it never
+# PROMPTS (the last-resort probe is sudo -n). Prints the host chainload
+# entry plus the target-side kernel entry TEMPLATE for the CURRENT ids,
+# probed at runtime unless the env seams override them. All three ids
+# are validated BEFORE any output.
 phase_emit_entry() {
-  PARTUUID="${HNGH_ESP_PARTUUID:-$(probe_id PARTUUID "$ESP")}"
-  FAT_ID="${HNGH_ESP_ID:-$(probe_id UUID "$ESP")}"
-  ROOT_UUID="${HNGH_ROOT_UUID:-$(probe_id UUID "$ROOTP")}"
+  PARTUUID="${HNGH_ESP_PARTUUID:-$(probe_id partuuid "$ESP")}"
+  FAT_ID="${HNGH_ESP_ID:-$(probe_id fsuuid "$ESP")}"
+  ROOT_UUID="${HNGH_ROOT_UUID:-$(probe_id fsuuid "$ROOTP")}"
   # the FAT volume id is written 317A31FF (mkfs -i) but reported
   # 317A-31FF (lsblk UUID): normalize the undashed form
   case "$FAT_ID" in

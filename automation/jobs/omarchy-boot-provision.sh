@@ -89,6 +89,15 @@ if [ "$DRY" -eq 0 ] && [ "${HNGH_BOOT_CONFIRM:-}" != "YES" ] && [ ! -t 0 ]; then
   exit 2
 fi
 
+# One password up front (--yes only -- dry-run NEVER prompts): preflight
+# reads block-device identifiers and the unprivileged probe chain can
+# miss (e.g. outside the disk group); one sudo -v caches the credential
+# for the later sudo -n probes and the privileged steps.
+if [ "$DRY" -eq 0 ]; then
+  say "sudo -v once: preflight reads block-device identifiers; one password is cached for the later sudo -n probes and privileged steps"
+  sudo -v || exit $?
+fi
+
 # confirm <action>: y/N, default N. Only y/yes proceeds; empty input or
 # anything else aborts THIS action (fail-closed).
 confirm() {
@@ -110,6 +119,7 @@ stage_preflight() {
   bash "$BUILD" census || say "# census rc=$? (target disk absent = inconclusive; continuing)"
   ENTRY_OUT="$(bash "$BUILD" emit-entry)" || {
     printf 'omarchy-boot-provision: emit-entry failed (unresolvable id, fail-closed); nothing to install\n' >&2
+    [ "$DRY" -eq 1 ] && printf 'omarchy-boot-provision: hint: dry-run never prompts; --yes runs sudo -v once up front so the privileged identifier probes can run\n' >&2
     exit 2
   }
   say "--- entry block (from emit-entry) ---"

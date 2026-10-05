@@ -189,6 +189,82 @@ out="$(env -u HNGH_BOOT_DISK HNGH_ESP_PARTUUID=c1953180-ad35-427a-a8cd-1fd922897
 if [ "$erc" -eq 0 ] && [ "$out" = "$EXP" ]; then ok "emit-entry --yes is safe and exact"; else bad "emit-entry --yes" "rc=$erc $(printf '%s\n' "$out")"; fi
 rm -rf "$LOGS" "$ERRF"
 
+# 19-21. probe chain widening (emit-entry): unprivileged sources first,
+# non-interactive sudo only as the last resort; every source missing
+# still fails closed
+LOGS="$(mktemp -d)"
+ERRF="$(mktemp)"
+SLOG="$(mktemp)"
+export SLOG
+DEVDIR="$(mktemp -d)"
+
+# 19. udevadm properties hit when lsblk reads empty columns (no disk
+#     group membership); the exit-99 sudo shim proves no sudo was needed
+cat >"$SHIMDIR/lsblk" <<'LS'
+#!/bin/sh
+exit 1
+LS
+cat >"$SHIMDIR/udevadm" <<'UD'
+#!/bin/sh
+case "$5" in
+  /dev/nvme0n1p1)
+    printf '%s\n' 'ID_PART_ENTRY_UUID=c1953180-ad35-427a-a8cd-1fd922897680' 'ID_FS_UUID=317A-31FF' 'ID_FS_TYPE=vfat'
+    ;;
+  /dev/nvme0n1p2)
+    printf '%s\n' 'ID_PART_ENTRY_UUID=29e56cf7-0000-0000-0000-000000000000' 'ID_FS_UUID=deadbeef-1234-4abc-8def-1234567890ab' 'ID_FS_TYPE=btrfs'
+    ;;
+  *) exit 1 ;;
+esac
+UD
+chmod +x "$SHIMDIR/lsblk" "$SHIMDIR/udevadm"
+out="$(env -u HNGH_BOOT_DISK -u HNGH_ESP_ID -u HNGH_ESP_PARTUUID -u HNGH_ROOT_UUID \
+  HNGH_DEV_DISK="$DEVDIR/none" HNGH_BOOT_LOGDIR="$LOGS" PATH="$SHIMDIR:$PATH" \
+  bash "$SCRIPT" emit-entry 2>"$ERRF")" && erc=0 || erc=$?
+if [ "$erc" -eq 0 ] && [ "$out" = "$EXP" ]; then ok "emit-entry exact block (udevadm path)"; else bad "emit-entry udevadm path" "rc=$erc $(printf '%s\n' "$out")"; fi
+
+# 20. /dev/disk/by-* symlink scan: the id IS the fixture symlink name
+mkdir -p "$DEVDIR/by-partuuid" "$DEVDIR/by-uuid"
+ln -s ../../nvme0n1p1 "$DEVDIR/by-partuuid/c1953180-ad35-427a-a8cd-1fd922897680"
+ln -s ../../nvme0n1p1 "$DEVDIR/by-uuid/317A-31FF"
+ln -s ../../nvme0n1p2 "$DEVDIR/by-uuid/deadbeef-1234-4abc-8def-1234567890ab"
+cat >"$SHIMDIR/udevadm" <<'UD'
+#!/bin/sh
+exit 1
+UD
+chmod +x "$SHIMDIR/udevadm"
+out="$(env -u HNGH_BOOT_DISK -u HNGH_ESP_ID -u HNGH_ESP_PARTUUID -u HNGH_ROOT_UUID \
+  HNGH_DEV_DISK="$DEVDIR" HNGH_BOOT_LOGDIR="$LOGS" PATH="$SHIMDIR:$PATH" \
+  bash "$SCRIPT" emit-entry 2>"$ERRF")" && erc=0 || erc=$?
+if [ "$erc" -eq 0 ] && [ "$out" = "$EXP" ]; then ok "emit-entry exact block (by-* symlink scan)"; else bad "emit-entry by-* path" "rc=$erc $(printf '%s\n' "$out")"; fi
+
+# 21. sudo -n blkid fallback when every unprivileged source misses; the
+#     stub refuses anything that is not sudo -n, so a prompting sudo can
+#     never be the hitting source
+cat >"$SHIMDIR/sudo" <<'SU'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SLOG"
+[ "$1" = "-n" ] || exit 99
+shift
+case "$1" in
+  blkid)
+    case "$3:$6" in
+      PARTUUID:/dev/nvme0n1p1) printf '%s\n' c1953180-ad35-427a-a8cd-1fd922897680 ;;
+      UUID:/dev/nvme0n1p1) printf '%s\n' 317A-31FF ;;
+      UUID:/dev/nvme0n1p2) printf '%s\n' deadbeef-1234-4abc-8def-1234567890ab ;;
+      *) exit 1 ;;
+    esac
+    ;;
+  *) exit 1 ;;
+esac
+SU
+chmod +x "$SHIMDIR/sudo"
+out="$(env -u HNGH_BOOT_DISK -u HNGH_ESP_ID -u HNGH_ESP_PARTUUID -u HNGH_ROOT_UUID \
+  HNGH_DEV_DISK="$DEVDIR/none" HNGH_BOOT_LOGDIR="$LOGS" PATH="$SHIMDIR:$PATH" \
+  bash "$SCRIPT" emit-entry 2>"$ERRF")" && erc=0 || erc=$?
+if [ "$erc" -eq 0 ] && [ "$out" = "$EXP" ]; then ok "emit-entry exact block (sudo -n blkid fallback)"; else bad "emit-entry sudo -n fallback" "rc=$erc $(printf '%s\n' "$out")"; fi
+if grep -q blkid "$SLOG"; then ok "fallback used non-interactive sudo -n"; else bad "sudo -n evidence" "$(cat "$SLOG")"; fi
+rm -rf "$LOGS" "$ERRF" "$SLOG" "$DEVDIR"
+
 if [ "$fails" -eq 0 ]; then
   printf 'test-omarchy-boot-build: all proofs passed\n'
   exit 0

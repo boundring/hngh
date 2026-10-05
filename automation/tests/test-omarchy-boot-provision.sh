@@ -24,7 +24,16 @@ LOGS="$WORK/logs"
 SHIM="$WORK/shim-pass"
 SHIM99="$WORK/shim-fail"
 mkdir -p "$MNT/boot/EFI/BOOT" "$LOGS" "$SHIM" "$SHIM99"
-printf '#!/bin/sh\nexec "$@"\n' >"$SHIM/sudo"
+cat >"$SHIM/sudo" <<'SH'
+#!/bin/sh
+case "$1" in
+  -v)
+    printf 'sudo -v\n' >>"$HNGH_STUB_LOG"
+    exit 0
+    ;;
+esac
+exec "$@"
+SH
 printf '#!/bin/sh\nexit 99\n' >"$SHIM99/sudo"
 chmod +x "$SHIM/sudo" "$SHIM99/sudo"
 : >"$STUB_LOG"
@@ -37,6 +46,7 @@ printf '%s\n' "$*" >>"$HNGH_STUB_LOG"
 case "${1:-}" in
   census) echo "== census: stub ==" ;;
   emit-entry)
+    [ "${HNGH_STUB_FAIL:-}" = "1" ] && exit 2
     printf '%s\n' \
       '/Omarchy 4.0.4 (chainload nvme0n1 ESP)' \
       '    protocol: efi' \
@@ -146,6 +156,10 @@ case "$out" in
 *checklist*) ok "staged checklist printed" ;;
 *) bad "staged checklist" "missing" ;;
 esac
+#    --yes pays exactly one sudo -v up front, before preflight
+n_sv="$(grep -c '^sudo -v$' "$STUB_LOG")"
+if [ "$n_sv" = "1" ]; then ok "--yes runs sudo -v exactly once"; else bad "--yes sudo -v count" "$n_sv"; fi
+if [ "$(head -n 1 "$STUB_LOG")" = "sudo -v" ]; then ok "sudo -v runs before preflight"; else bad "sudo -v order" "$(head -n 3 "$STUB_LOG" | tr '\n' ' ')"; fi
 
 # 7. duplicate title: fail-closed, the file is left untouched
 rm -f "$CONF".bak-*
@@ -177,6 +191,22 @@ if [ -e "$bak" ]; then bad "no backup on empty input" "$bak exists"; else ok "no
 # 9. live stage log mirroring (same convention as omarchy-boot-build.sh)
 sleep 0.3
 if ls "$LOGS"/provision-*.log >/dev/null 2>&1; then ok "provision log file exists"; else bad "provision log file" "$LOGS is empty"; fi
+
+# 10. dry-run never prompts: no sudo -v at all (the logging shim would
+#     have recorded it)
+: >"$STUB_LOG"
+out="$(run_drv "$SHIM" '' '' 2>&1)" && d2rc=0 || d2rc=$?
+if [ "$d2rc" -eq 0 ]; then ok "dry-run (logging shim) rc=0"; else bad "dry-run (logging shim) rc=0" "rc=$d2rc"; fi
+if grep -q '^sudo -v$' "$STUB_LOG"; then bad "dry-run never invokes sudo -v" "$(cat "$STUB_LOG")"; else ok "dry-run never invokes sudo -v"; fi
+
+# 11. dry-run preflight failure: fail-closed exit 2 plus the hint that
+#     --yes will prompt once for sudo -v
+out="$(HNGH_STUB_FAIL=1 run_drv "$SHIM" '' '' 2>&1)" && f2rc=0 || f2rc=$?
+if [ "$f2rc" -eq 2 ]; then ok "dry-run probe failure rc=2"; else bad "dry-run probe failure rc=2" "rc=$f2rc"; fi
+case "$out" in
+*"sudo -v once up front"*) ok "probe failure hints at the --yes sudo -v" ;;
+*) bad "probe failure hint" "$out" ;;
+esac
 
 if [ "$fails" -eq 0 ]; then
   printf 'test-omarchy-boot-provision: all proofs passed\n'
