@@ -1,4 +1,4 @@
-<!-- plan: status=held risk=normal accepted=- cause=missing-design held=2026-10-05T04:01:30Z -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-05T05:06:28Z cause=missing-design held=2026-10-05T04:01:30Z -->
 principle: evidence-before-claims -- a lesson is a claim about the world and must ride an evidence row through the two-sided review gate (docs/design/descent.md; canon method per docs/records/2026-09-25-p10-refoundation-close.md)
 # Meta-cyclical learning loop over Hngh state changes
 
