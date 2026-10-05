@@ -80,6 +80,7 @@ test:
 	python3 -B tests/test-dashboard-selfreview-ledger-skew.py
 	python3 -B tests/test-dashboard-selfreview-page-markers.py
 	python3 -B tests/test-dashboard-selfreview-heartbeat.py
+	bash tests/test-cachyos-optimize.sh
 	python3 -B tests/test-digest-html.py
 	python3 -B tests/test-digest-append-scrub.py
 	python3 -B tests/test-email-digest-overwide-intake.py
