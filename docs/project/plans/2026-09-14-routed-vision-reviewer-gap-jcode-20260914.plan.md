@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-09-18T01:41:57Z routed-from=vision-reviewer-gap-jcode-20260914 -->
+<!-- plan: status=executed risk=normal accepted=2026-09-18T01:41:57Z routed-from=vision-reviewer-gap-jcode-20260914 -->
 # 2026-09-14 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `vision-reviewer-gap-jcode-20260914`
@@ -6,5 +6,15 @@ at 2026-09-14T22:00:13Z. Alert text: jcode-delegate-controls step 3 remaining lo
 
 ## Steps
 
-- [ ] Fix the review finding in docs/automation with a named verification
+- [x] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+
+      Landed 2026-10-05: reviewer endpoint now serves 13 models (the
+      2026-09-14 "zero models" premise is stale); unsloth/Qwen3.8-27B-GGUF
+      proven image-capable by a live round-trip probe (solid-red PNG →
+      "Red") after unsloth/gemma-4-12b-it-qat-GGUF returned empty/400-class
+      results; one-shot grade-interface-style regrade of the existing
+      automation/dashboard/shots/sessions-delegate-after.png appended one
+      vision row to docs/project/ui-grades.md: 5/10 (honest vision grade,
+      old 3/10 fallback row untouched; grade truncated at 2048 tokens on
+      the first pass, landed parseable at 4096).
