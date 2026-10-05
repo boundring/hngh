@@ -603,7 +603,9 @@ class ControlRoomShell(unittest.TestCase):
         self.assertIn("sys.queue_depth != null", self.js)
         # rebuilt-when-built: init must refresh, not freeze at first build
         self.assertIn("if (mapState.built) { mapRefresh(fleetNodes,"
-                      " openCount); return; }", self.js)
+                      " openCount, sessions, queueDepth); return; }", self.js)
+        self.assertIn("fetchJSON('sessions.json')", self.js)
+        self.assertIn("x.state === 'live'", self.js)
 
     def test_attention_rail_points_at_the_verbs(self):
         self.assertIn("the nerve center holds the verbs", self.js)

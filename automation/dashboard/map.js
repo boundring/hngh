@@ -1,9 +1,11 @@
 /* control-room map — the hngh megastructure with live states.
    docs/design/megastructure-sim.md P1: seed topology hosts, live fleet
    nodes on the ground ring, alert fauna orbiting the automation ring,
-   ring tint follows the open-item count. Positions are editorial, not
-   measured; unknown names render by device class, never a bare
-   'unresolved'. */
+   ring tint follows the open-item count, session denizens appear and
+   drift with sessions.json live rows, the automation ring swells with
+   report-queue pressure, and the operator-host spire carries a beacon
+   while attention is open. Positions are editorial, not measured;
+   unknown names render by device class, never a bare 'unresolved'. */
 function $(id) { return document.getElementById(id); }
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -28,7 +30,8 @@ var MAP_EDGES = [
 ];
 var mapState = { scene: null, cam: null, rend: null, raf: 0,
                  dist: 9, theta: 0.6, phi: 1.15, drag: null, lastWheel: 0,
-                 live: null, ring: null, fauna: null, THREE: null };
+                 live: null, ring: null, ringDot: null, fauna: null,
+                 denizens: null, beacon: null, THREE: null };
 function mapLabel(THREE, text, color) {
   var c = document.createElement('canvas');
   c.width = 256; c.height = 64;
@@ -47,15 +50,25 @@ function mapNodeDot(THREE, color) {
   return new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10),
     new THREE.MeshLambertMaterial({ color: color }));
 }
-function mapInit(fleetNodes, openCount) {
+function mapInit(fleetNodes, openCount, sessions, queueDepth) {
   var host = $('map3d');
   if (!host) return;
-  if (mapState.built) { mapRefresh(fleetNodes, openCount); return; }
+  if (mapState.built) { mapRefresh(fleetNodes, openCount, sessions, queueDepth); return; }
   mapState.built = true;
   import('./vendor/three.module.min.js').then(function (THREE) {
-    try { mapBuild(THREE, host); mapRefresh(fleetNodes, openCount); }
-    catch (e) { mapFallback(fleetNodes, openCount, e.message); }
-  }).catch(function (e) { mapFallback(fleetNodes, openCount, e.message); });
+    try { mapBuild(THREE, host);
+          mapRefresh(fleetNodes, openCount, sessions, queueDepth); }
+    catch (e) { mapFallback(fleetNodes, openCount, sessions, e.message); }
+  }).catch(function (e) {
+    mapFallback(fleetNodes, openCount, sessions, e.message);
+  });
+}
+function sessAng(id) { // deterministic editorial placement per session row
+  var h = 0;
+  String(id).split('').forEach(function (c) {
+    h = (h * 31 + c.charCodeAt(0)) % 997;
+  });
+  return (h / 997) * Math.PI * 2;
 }
 function mapBuild(THREE, host) {
   var w = host.clientWidth, h = host.clientHeight;
@@ -82,7 +95,7 @@ function mapBuild(THREE, host) {
     lab.position.set(s.x, y + 0.34, s.z);
     scene.add(dot); scene.add(lab);
     byId[s.id] = [s.x, y, s.z];
-    if (isRing) mapState.ring = dot.material;
+    if (isRing) { mapState.ring = dot.material; mapState.ringDot = dot; }
   });
   MAP_EDGES.forEach(function (e) {
     var a = byId[e[0]], b = byId[e[1]];
@@ -106,7 +119,7 @@ function cam0(THREE, w, h) {
   var cam = new THREE.PerspectiveCamera(46, w / Math.max(1, h), 0.1, 100);
   return cam;
 }
-function mapRefresh(fleetNodes, openCount) {
+function mapRefresh(fleetNodes, openCount, sessions, queueDepth) {
   var s = mapState;
   if (!s.live || !s.THREE) return;
   var THREE = s.THREE;
@@ -149,6 +162,49 @@ function mapRefresh(fleetNodes, openCount) {
   s.live.add(s.fauna);
   // RING TINT follows attention: green when quiet, amber when items open.
   if (s.ring) s.ring.color.setHex(openCount > 0 ? 0x8a6b2a : 0x4a6b3a);
+  // QUEUE PRESSURE: the automation ring swells with report-queue depth
+  // (the same edition.system.queue_depth the dateline prints — one fact,
+  // two renderings, no new source).
+  if (s.ringDot) {
+    var qd = Math.max(0, Number(queueDepth) || 0);
+    s.ringDot.scale.setScalar(1 + Math.min(qd, 60) / 60 * 0.7);
+    if (s.ring && qd > 30) s.ring.color.setHex(0x8a4a2a);
+  }
+  // SESSION DENIZENS: one dim walker per live session row — appears and
+  // leaves exactly with sessions.json (recorded state, never decor);
+  // placement is a deterministic hash of the row id.
+  s.denizens = new THREE.Group();
+  var live = (sessions || []).filter(function (x) {
+    return x && x.state === 'live';
+  });
+  var dcap = Math.min(live.length, 10);
+  for (var di = 0; di < dcap; di++) {
+    var sess = live[di];
+    var ang = sessAng(sess.id);
+    var dx = Math.cos(ang) * 3.4, dz = Math.sin(ang) * 3.4;
+    var walker = mapNodeDot(THREE, 0x3a5a6b);
+    walker.scale.set(0.5, 0.5, 0.5);
+    walker.position.set(dx, 0.0, dz);
+    s.denizens.add(walker);
+    var tail = String(sess.id).replace(/^(run-|omp-)+/, '').slice(-6);
+    var dlab = mapLabel(THREE, tail + ' · live', '#4a6a7a');
+    dlab.position.set(dx, 0.3, dz);
+    s.denizens.add(dlab);
+  }
+  if (dcap < live.length) {
+    var dmore = mapLabel(THREE, '+' + (live.length - dcap) + ' live', '#4a6a7a');
+    dmore.position.set(3.4, 0.5, 0);
+    s.denizens.add(dmore);
+  }
+  s.live.add(s.denizens);
+  // HOST BEACON: the operator-host spire lights while attention is open.
+  s.beacon = null;
+  if ((openCount || 0) > 0) {
+    var beacon = mapNodeDot(THREE, 0x8a6b2a);
+    beacon.position.set(0, 2.15, 0);
+    s.live.add(beacon);
+    s.beacon = beacon;
+  }
 }
 function mapBindInput(host) {
   host.addEventListener('pointerdown', function (ev) {
@@ -225,6 +281,9 @@ function mapFrame() {
   if (!s.scene || document.hidden) return;
   if (prefs().rotate) s.scene.rotation.y += 0.0012; // slow auto-rotation, settings can stop it
   if (s.fauna) s.fauna.rotation.y -= 0.004;
+  if (s.denizens) s.denizens.rotation.y += 0.0006; // walkers drift with the recorded session set
+  if (s.beacon) s.beacon.scale.setScalar(
+    0.8 + 0.25 * (0.5 + 0.5 * Math.sin(Date.now() / 300)));
   s.cam.position.set(
     s.dist * Math.sin(s.phi) * Math.cos(s.theta),
     s.dist * Math.cos(s.phi),
@@ -233,7 +292,7 @@ function mapFrame() {
   s.rend.render(s.scene, s.cam);
 }
 // honest 2D fallback: a plain list with status dots, real names only
-function mapFallback(fleetNodes, openCount, why) {
+function mapFallback(fleetNodes, openCount, sessions, why) {
   var host = $('map3d');
   if (host) host.hidden = true;
   var fb = $('map-fallback');
@@ -255,10 +314,17 @@ function mapFallback(fleetNodes, openCount, why) {
       (n.os ? ' - ' + esc(n.os) : '');
     ul.appendChild(li);
   });
+  var liveN = (sessions || []).filter(function (x) {
+    return x && x.state === 'live';
+  }).length;
   var li = document.createElement('li');
-  li.innerHTML = '<span class="map-dot off"></span>' +
-    esc(openCount || 0) + ' open operator items';
+  li.innerHTML = '<span class="map-dot on"></span>' +
+    esc(liveN) + ' live sessions';
   ul.appendChild(li);
+  var li2 = document.createElement('li');
+  li2.innerHTML = '<span class="map-dot off"></span>' +
+    esc(openCount || 0) + ' open operator items';
+  ul.appendChild(li2);
   fb.appendChild(ul);
   if (window.console) console.warn('control-room map fallback: ' + why);
 }
@@ -322,15 +388,19 @@ function poll() {
   Promise.allSettled([
     fetchJSON('operator-items.json'),
     fetchJSON('fleet.json'),
-    fetchJSON('newspaper.json')
+    fetchJSON('newspaper.json'),
+    fetchJSON('sessions.json')
   ]).then(function (rs) {
     var o = rs[0].status === 'fulfilled' ? rs[0].value : null;
     var f = rs[1].status === 'fulfilled' ? rs[1].value : null;
     var n = rs[2].status === 'fulfilled' ? rs[2].value : null;
+    var ss = rs[3].status === 'fulfilled' ? rs[3].value : null;
     var items = o && Array.isArray(o.items) ? o.items : [];
     var nodes = f && Array.isArray(f.nodes) ? f.nodes : [];
+    var sessions = ss && Array.isArray(ss.sessions) ? ss.sessions : [];
+    var sys = (n && n.edition && n.edition.system) || {};
     renderAttention(items);
-    mapInit(nodes, items.length);
+    mapInit(nodes, items.length, sessions, sys.queue_depth);
     renderDateline(n && n.edition, n && n.generated,
                    items.length, nodes);
   });
