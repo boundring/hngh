@@ -6,6 +6,15 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-04
 
+- **Automation — subhour tick freeze cured, self-review learns recovery**:
+  the research-overflow beat slept 900s inside the every-minute cadence
+  tick, freezing all subhour feeds for a quarter hour per half hour and
+  filing dash-selfreview stale alerts whenever the hourly check sampled a
+  frozen window (docs/records/2026-10-04-subhour-tick-freeze-selfreview-storm.md).
+  Deleted the in-tick sleep (the 1800s entry stamp is the only pacer);
+  the self-review now files a state-keyed summary heartbeat every tick and
+  the console verdict cuts alert history at the newest clean summary, so a
+  recovered incident leaves the header instead of pinning it at warn.
 - **Automation — unsloth context pins fail closed**: after a 453-error
   day of `exceed_context_size_error` 400s (jcode swarm sessions sized
   prompts off hub-advertised context windows while the loaded quants
