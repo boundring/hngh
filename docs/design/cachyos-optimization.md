@@ -36,6 +36,12 @@ inverts under the operator constraint: zram-off + zswap-on + swapfile
 backing is exactly the end state `cachyos-zswap-migrate` produces. There
 is no applicable system change left on this host.
 
+Audit-trail evidence: the host IS a completed migration. The tool's own
+verification for run `20260715T120144Z`
+(`~/.local/state/cachyos-zswap-migrate/20260715T120144Z/verify.json`)
+records verdict `OK` with cmdline / zram / swapfile / zswap / hibernation
+all green (2026-07-15), matching the live posture measured 2026-10-05.
+
 - If a future census finds `zswap enabled=N` or the swapfile gone, the
   fix is the operator's migrate tool (inspect → plan → apply, reversible,
   backed up) — not an ad-hoc rewrite here.
