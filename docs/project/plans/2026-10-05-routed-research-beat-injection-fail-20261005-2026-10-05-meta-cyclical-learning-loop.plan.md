@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:injection:fail-20261005-2026-10-05-meta-cyclical-learning-loop -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-05T06:34:58Z routed-from=research-beat:injection:fail-20261005-2026-10-05-meta-cyclical-learning-loop -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-12T06:00:42Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
