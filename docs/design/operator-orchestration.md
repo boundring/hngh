@@ -1,5 +1,7 @@
 # Operator orchestration: government emulation, expeditions, one orienting fixture
 
+Part of the system harness program: an any-Linux-system harness (early targets CachyOS and Omarchy, both Arch-based).
+
 This design absorbs three operator directives (2026-10-04): government emulation,
 expedition orchestration UX, and kernel-to-kernel simplification of orienting
 attention fixtures. Sections 1-2 describe the coordinating layer's model, section 3
@@ -209,8 +211,9 @@ orchestration, no vote ledger, and no results-pattern runner.
 
 ## 5. Autonomy goal
 
-hngh maximizes useful awake-time work without operator participation: R&D
-(hourly research beat `automation/cadence/hour/33-research-beat.sh:2`, overnight
+hngh maximizes useful awake-time work without operator presence; point-of-risk
+confirmations remain operator-held (REQ-A3). The awake-time work: R&D (hourly
+research beat `automation/cadence/hour/33-research-beat.sh:2`, overnight
 research `automation/jobs/night-research.sh`), UI/UX evolution runs
 (`scripts/evolve-operative`, `scripts/evolve-dashboard-style`), idle observation
 (the map's simulated layer, recorded events only,
@@ -221,7 +224,7 @@ red gates on its own authority path (`automation/jobs/patrol.py:14-18`).
 Operator attention is reserved for point-of-risk confirmations: provider
 configuration or service enablement still requires a current policy certificate
 or an explicit operator instruction naming the exact action and target
-(`AGENTS.md:79-81`). The operator-item ledger is the attention channel, with
+(`AGENTS.md:78-80`). The operator-item ledger is the attention channel, with
 arm-then-confirm on handle/dismiss (`automation/dashboard/app.js:125-233`).
 
 REQ-A1 (auditable absence). Every unattended loop leaves a record (crumb, report
@@ -235,7 +238,7 @@ thing the operator must read to be current; `attentionCap`
 spine (REQ-K2) guarantees nothing is lost behind the cap.
 
 REQ-A3 (point-of-risk policy unchanged). Autonomy never extends to the
-`AGENTS.md:79-81` action classes; those stay certificate-or-explicit-
+`AGENTS.md:78-80` action classes; those stay certificate-or-explicit-
 instruction, and the 2026-10-04 directives add no new interrupt classes.
 
 ## Status
