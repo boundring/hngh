@@ -3,15 +3,15 @@
 ## Direction
 
 Hngh is a small, predictable core that decides what is valid, with the
-messy outside world — files, Git, models, terminals, packages, desktops —
+messy outside world - files, Git, models, terminals, packages, desktops -
 plugged in at the edges. Evidence comes before claims, so nothing is
 believed without a record; permission is re-checked at the moment of
 action, so a certificate is never a free pass; reviewers advise but never
 decide. The kernel is built. The governance loop is built. The machine
 now watches itself: a time ledger measures every level, a self-review
 inspects its own dashboard hourly, and the oversight path flags drift
-before a human would. What remains is expansion — more system harnessed,
-more delegation governed, more surface polished — each expansion riding
+before a human would. What remains is expansion - more system harnessed,
+more delegation governed, more surface polished - each expansion riding
 the same gates. For the vision in full, read [the intent
 document](../intent.md).
 
@@ -20,33 +20,39 @@ document](../intent.md).
 Seven stages, each with exit criteria; a stage is done when its exit
 criteria hold under the standing gates, not when its code merely exists.
 Stages 5 and 6 run in alternation (grow beats and research/design beats per
-[master-plan.md](master-plan.md) §4) rather than strictly in sequence.
+[master-plan.md](master-plan.md) section 4) rather than strictly in sequence.
 
 | Stage | Scope | Exit criteria | State |
 |---|---|---|---|
-| **0 — Kernel & governance** | pure spine, seven use cases (the six original fake-backed use cases plus queue-ranking select-course, 2026-08-27), governance C0–C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
-| **1 — Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
-| **2 — One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open→handled→dismissed | **done** |
-| **3 — The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated — chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` → observatory `working` → `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md §4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **done** |
-| **5 — Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons→records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
-| **6 — QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects — all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
-| **7 — Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
+| **0 - Kernel & governance** | pure spine, seven use cases (the six original fake-backed use cases plus queue-ranking select-course, 2026-08-27), governance C0-C3, evidence/mutation/review adapters, 19 CLI verbs, certificate loop, cadence continuum | `make test` green; every commit certificate-bound; loop-history guard silent | **done** |
+| **1 - Self-watch** | time ledger at every level; dashboard self-review (hourly, two-tier findings); oversight alerts (flap-suppressed); watchdog; transcript supervision pattern proven | self-review runs silent when healthy and catches a seeded fault within one tick; delays noticed procedurally | **done** |
+| **2 - One interface** | nerve center: formal tabs (Schedule default, Sessions, System, Research, Logs); session transcript observatory; unified schedule with system backdrop; window tiling + spawn; operator-item lifecycle | every tab renders at desktop + mobile widths; cold deep-links mount; operator items flow open->handled->dismissed | **done** |
+| **3 - The Governed Fleet** (absorbs former stage 4; ratified 2026-09-13, [governed-fleet.md](../design/governed-fleet.md)) | one pattern over the whole fleet: registry-declared, guard-tested, patrol-watched, certificate-gated - chain legs in budget loadouts, services with health patrols, packages, cadence params, credential seams token-only fail-soft, spawn paths in the compression/telemetry matrix; delegation wrapped `--run-start` -> observatory `working` -> `--run-end` with self-supervision (seeded stall auto-replace); governed package upgrades through the certificate loop; config lanes on the 30m cadence; node-lattice admission begins here | ten invariants hold under standing guards and patrols (governed-fleet.md section 4): declared legs, patrolled services, token-only seams, matrixed spawn paths, package ghost rule, quota windows, one witnessed cycle with a seeded stall auto-replaced, one governed package upgrade through the ceremony, config lanes on cadence, one lattice peer admitted (federation exit) | **done** |
+| **5 - Research alternation institutionalized** | research view drives the alternation: research beats scheduled on cadence, lessons->records pipeline, research telemetry register (time/cost/models/references/searches per subject, per [ledger-and-records-spec.md](../design/ledger-and-records-spec.md)), R&D view grows into the alternation driver with a tech-tree presentation | a research beat lands a parseable artifact through the standard gates without a human demanding it | **queued** |
+| **6 - QoL & graphic evolution** | widget grid (GridStack), uPlot charts, Winamp-skin-parser themes, procedural/WebGL/music-reactive effects - all behind the QoL cadence and the display register | one graded QoL change per cycle, revertible, before/after evidence attached | **queued** |
+| **7 - Federation & fleet** | multi-host lattice, wake, pooled resources (system-harness rungs A/B) | a second host orients, admits, and backs up through the same gates | **later** |
 
 Stage 4 was merged into stage 3 on 2026-09-13 (operator ratification,
 [governed-fleet.md](../design/governed-fleet.md)); the stage-4 number is
-retired, not renumbered — history stays honest. Stages 0–2 and 5–7 are
+retired, not renumbered - history stays honest. Stages 0-2 and 5-7 are
 unchanged; stage 7 keeps orient/backup/scale-out (one peer is already
 admitted in stage 3).
 
 Sequencing rules: every stage feeds stage 1's ledger (timed, flagged,
 optimized); nothing skips the gates; research/design beats (stage 5
 output) gate the next grow stage when a grow run cannot proceed without
-a missing design — grow cannot outrun its designs, and designs do not
+a missing design - grow cannot outrun its designs, and designs do not
 exist without grow demanding them.
+
+No daemon, provider, watcher, scheduler, unowned dashboard, or
+unbounded mutation is admitted by this roadmap stage.
 
 ## Now
 
-the bounded read-only worker task (rung 18) — rungs 14–18 all landed 2026-08-25.
+Stages 0-3 stand done: stage 2 ("One interface") closed 2026-09-28
+([record](../records/2026-09-28-stage2-exit-criteria-closeout.md));
+stage 3 ("The Governed Fleet") flipped done 2026-10-01
+([record](../records/2026-10-01-governed-fleet-stage3-exit.md)).
 
 The Descent cycle ([design/descent.md](../design/descent.md)) now
 governs the stage 5/6 alternation: research lines gain a review
@@ -61,45 +67,46 @@ Two operator-directed design docs are admitted as design pressure
 (2026-09-07): the operator-coherence layer
 ([design/operator-mirror.md](../design/operator-mirror.md)) and the
 credential-rotation harness ([design/keyring.md](../design/keyring.md)).
-Both extend existing doctrine — registers, the Bestiary cause routing,
-the browser-relay transport, the 1Password seam — rather than adding new
+Both extend existing doctrine - registers, the Bestiary cause routing,
+the browser-relay transport, the 1Password seam - rather than adding new
 machinery, and both are research-ready. Implementation rides the normal
-rung path: backlog rows, proposal, gates, certificate — no shortcut.
+rung path: backlog rows, proposal, gates, certificate - no shortcut.
 
 Staging design pressure (2026-09-11): the operator's long-horizon
 operating-system harness vision
 ([records/2026-09-11-operating-system-harness-vision.md](../records/2026-09-11-operating-system-harness-vision.md))
 is admitted as operator-directed design pressure, per the same precedent
-as the operator-mirror and keyring admissions — the distro ambition is
+as the operator-mirror and keyring admissions - the distro ambition is
 explicitly back-burnered behind named triggers, and the near-term ladder
 (installer skeleton -> environment contract -> package registry ->
 cross-platform abstraction) routes through existing backlog rows and the
-stage 5 research alternation. Companion policies the same turn (both
-struck 2026-09-24):
+stage 5 research alternation. Companion policies the same turn, admitted 2026-09-11, struck
+2026-09-24 (no aligned purpose in the foundation phase; restore from
+git to re-open as a named future lane):
 
-- social surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md)) - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
-- OSS contribution ([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)) - no aligned purpose in the foundation phase, 2026-09-24 (content/commercial lane; restore from git to re-open as a named future lane)
+- social surfaces ([records/2026-09-11-social-surfaces-policy.md](../records/2026-09-11-social-surfaces-policy.md)) - content/commercial lane
+- OSS contribution ([records/2026-09-11-oss-contribution-policy.md](../records/2026-09-11-oss-contribution-policy.md)) - content/commercial lane
 
 Governed Fleet consolidation (2026-09-13): stages 3+4 are merged into
 one stage ("The Governed Fleet",
 [governed-fleet.md](../design/governed-fleet.md); operator-ratified,
-all four section-9 losses accepted): the one pattern —
-registry-declared, guard-tested, patrol-watched, certificate-gated —
+all four section-9 losses accepted): the one pattern -
+registry-declared, guard-tested, patrol-watched, certificate-gated -
 now carries the fleet (chain legs, services, packages, credential
 seams, spawn paths, cadence params) plus the delegation wrap and the
-node-lattice admission (federation exit). Sequencing: slices A–F per
+node-lattice admission (federation exit). Sequencing: slices A-F per
 the design; slice G (operations knowledge-graph surface, 3D in the
 dashboard, 2D fallback) is the operator-directed visibility
 replacement and is never exit-bearing.
 
 Refoundation pass landed (2026-09-25, records
 [2026-09-25-p10-refoundation-close.md](../records/2026-09-25-p10-refoundation-close.md)):
-P1–P10 all committed — STATE readers on one crumbs-db seam, queue
+P1-P10 all committed - STATE readers on one crumbs-db seam, queue
 pointer + pickers, gate-refusal records, single supervision plane,
 ceremony receipts + fast lane with decay review, research at the gewu
 boundary, initiative budget, typed-everything strict, canon method at
 every decision seam. The admission rule is active: plan acceptance
-fails closed without a `principle:` line (GOVERNANCE §6).
+fails closed without a `principle:` line (GOVERNANCE section 6).
 
 ### Completed
 
@@ -117,19 +124,19 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   - `checkpoint`, so only passed verification and complete manifest evidence can advance a running run;
   - `close-run`, policy-gated, so a run reaches a terminal state (`:cancelled`, `:evacuated`, or `:dead`) only under an `:admitted` policy verdict, with closed transition refusals and no certificate for run-state transitions.
 - Added a read-only candidate evidence bundle (`make verify-candidate`): explicit manifest admission, candidate-local policy scans, fixed local evidence commands, and closed status output; it observes whole-tree state without inferring scope or mutating Git.
-- Added governance C0–C3:
+- Added governance C0-C3:
   - the proposal-evidence ledger;
-  - deterministic principle evaluation — one `policy-verdict` per proposal with ten matrix-ordered principle results and closed refusals for missing, stale, malformed, conflicting, or unverifiable evidence;
-  - the closed failure-disposition policy — one deterministic disposition per failure category, refusing unknown categories;
+  - deterministic principle evaluation - one `policy-verdict` per proposal with ten matrix-ordered principle results and closed refusals for missing, stale, malformed, conflicting, or unverifiable evidence;
+  - the closed failure-disposition policy - one deterministic disposition per failure category, refusing unknown categories;
   - a non-mutating candidate authorization certificate binding one closed action to the admitting verdict and facts, issued by a mechanical pure issuer (action-admission policy deferred to the executor).
-- Published source-grounded autonomous development policy, the closed principle and certificate vocabulary, and a human-approval deployment profile — documentation only, no execution added.
-- Added the read-only evidence adapter (promotion rung 4): a fixed, enumerable set of read-only local evidence commands — repository revision, whole-tree working-tree status, and file content hashing — gathered through an injected process transport and mapped to domain evidence facts and source manifest entries with closed states. Unknown commands, malformed output, escaping or option-like paths, and duplicate evidence fail closed; the kernel stays pure and the adapter never decides policy.
+- Published source-grounded autonomous development policy, the closed principle and certificate vocabulary, and a human-approval deployment profile - documentation only, no execution added.
+- Added the read-only evidence adapter (promotion rung 4): a fixed, enumerable set of read-only local evidence commands - repository revision, whole-tree working-tree status, and file content hashing - gathered through an injected process transport and mapped to domain evidence facts and source manifest entries with closed states. Unknown commands, malformed output, escaping or option-like paths, and duplicate evidence fail closed; the kernel stays pure and the adapter never decides policy.
 - Added the mutation executor (promotion rung 5): `hngh.adapters.mutation` accepts a current certificate and fresh evidence, rechecks repository identity, base revision, candidate paths, content and evidence hashes, principle verdicts, source manifest, review findings, policy profile, and expiry, then issues only the certificate-bound fixed Git action through an injected transport. `:none`, action escalation, stale facts, malformed evidence, command failures, and transport faults refuse without a mutation.
-- Added the bounded model-review adapter (promotion rung 6): `hngh.adapters.review` turns a closed review request — candidate paths, content hash, and policy-context labels — into one fixed prompt, sends it through an injected reviewer transport, and maps the structured output into immutable finding labels and citations plus one deterministic domain evidence fact. Missing, malformed, unsafe, duplicate, or oversized output refuses closed; a failed review call becomes an `:unverifiable` fact; reviewers advise and never decide, and no default provider transport exists.
+- Added the bounded model-review adapter (promotion rung 6): `hngh.adapters.review` turns a closed review request - candidate paths, content hash, and policy-context labels - into one fixed prompt, sends it through an injected reviewer transport, and maps the structured output into immutable finding labels and citations plus one deterministic domain evidence fact. Missing, malformed, unsafe, duplicate, or oversized output refuses closed; a failed review call becomes an `:unverifiable` fact; reviewers advise and never decide, and no default provider transport exists.
 - Added the composition root and operator-visible presentation (promotion rung 7): `hngh.presentation` renders application results, runs, receipts, evidence facts, policy verdicts, candidate certificates, and adapter results into plain factual strings without mutating canonical state or importing any adapter; the optional reference lexicon supplies display copy only at a named surface and can never carry canonical control. `hngh.main` composes the five use cases into one `run-harness` with injected or fail-closed default port adapters, wires the installed evidence, mutation, and review adapters through injected transports, keeps an operator-visible in-memory record root, and renders every result through presentation. No daemon, provider, watcher, or background execution.
 - Added the operator-facing command surface and transport admission (promotion rung 8, 2026-08-24): `hngh.application:admit-transport` admits closed transport kinds (`:filesystem`) under mission/loadout authorization; `hngh.adapters.filesystem` records canonical run-and-receipt lines under an explicit root path; `hngh.main:dispatch-command` and `scripts/hngh` expose the 7 CLI operations (`create-run`, `admit-transport`, `arm-run`, `start-run`, `checkpoint`, `close-run`, `present`) with a strict exit code protocol (0 accepted, 1 refusal/conflict, 2 malformed, 3 fault). Persistence occurs only under an explicit `--store=PATH`.
 - Completed the dogfood development loop (promotion rung 9, 2026-08-24): the operator governance surface (`propose`, `issue-cert`, `mutation-check` in `scripts/hngh`) forms closed policy proposals, binds candidate certificates under admitted verdicts, and executes the certificate-bound mutation against real repository evidence including live base revision, per-file content hashes, and the installed verify-candidate script. Two self-governed commits were produced, reviewed, and committed by Hngh under its own certificates and pushed to origin: the documentation change that completed this rung (`2a16a69`) and the two adapter bug fixes the first governance loop surfaced (`33b8d94`).
-- Completed the bounded agent worker transports (promotion rung 10, 2026-08-24): `hngh.adapters.model:make-model-transports` supplies the transport `complete` callback shape so the existing bounded review adapter can drive a real provider (advisory only, no default provider, closed route admission), and `hngh.adapters.terminal` captures one bounded operator statement as a `:terminal` evidence fact (advisory only, in-process SHA-256 fingerprint, no subprocess, no default input). `hngh.application:admit-transport` reuses the run loadout for the two new kinds — `:model` needs a non-`local` route plus the `model-review` network label, `:terminal` needs the `terminal-input` tool label — with the closed `loadout-refuses-transport` refusal. `hngh.main:dispatch-command` exposes the `review` and `terminal` operations, both fail-closed without injected ports (no-review-transport / no-terminal-transport) and both served only to a run holding the matching admission receipt; `hngh.presentation` stays outward-only with the added `render-operator-result`.
+- Completed the bounded agent worker transports (promotion rung 10, 2026-08-24): `hngh.adapters.model:make-model-transports` supplies the transport `complete` callback shape so the existing bounded review adapter can drive a real provider (advisory only, no default provider, closed route admission), and `hngh.adapters.terminal` captures one bounded operator statement as a `:terminal` evidence fact (advisory only, in-process SHA-256 fingerprint, no subprocess, no default input). `hngh.application:admit-transport` reuses the run loadout for the two new kinds - `:model` needs a non-`local` route plus the `model-review` network label, `:terminal` needs the `terminal-input` tool label - with the closed `loadout-refuses-transport` refusal. `hngh.main:dispatch-command` exposes the `review` and `terminal` operations, both fail-closed without injected ports (no-review-transport / no-terminal-transport) and both served only to a run holding the matching admission receipt; `hngh.presentation` stays outward-only with the added `render-operator-result`.
 - Completed the distributed attestation & evidence federation slice (promotion rung 11, 2026-08-24): `hngh.domain` adds the pure `remote-attestation` value and `verify-attestation-shape` checker in `src/domain/attestation.lisp`; `hngh.adapters.federation` gathers carrier-bundle claims into evidence facts (`fetch-remote` port; `:current`/`:unverifiable`/`:malformed`/`:missing`/`:conflicting` states) and verifies attestation envelopes through `resolve-pinned-key` + `verify-signature` ports with the closed refusal taxonomy; `:federation` joins `+admitted-transports+` under the `remote-evidence` network label or `carrier-bundle` tool label; `hngh.main` threads `fetch-evidence` / `verify-attestation` behind `:federation-ports` / `:attestation-ports` with no default transport, so plain `scripts/hngh` still never touches a wire.
 - Added the operator pinned-key registry and signature-verification
   transport (promotion rung 12, 2026-08-25): `hngh.domain` adds the pure
@@ -139,7 +146,7 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   codec, and `make-pinned-attestation-ports`, which resolves keys from the
   operator's registry and verifies one envelope signature through a single
   bounded `openssl dgst -sha256 -verify` invocation on the injected
-  process transport — no default transport, nothing pinned refuses
+  process transport - no default transport, nothing pinned refuses
   `unknown-peer-key`. `verify-attestation RUN FILE [pins=PATH]` admits the
   operator pins file as the trust anchor and `list-pins PATH` renders the
   registry; both refuse malformed pins closed. Verified live with a real
@@ -158,7 +165,7 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   findings document and a `:current` review fact.
 - Completed the Ed25519 signature-transport hardening (promotion rung 14,
   2026-08-25): the pins file gains an optional closed ALGORITHM column
-  (`rsa-sha256` default, `ed25519` admitted); verification routes per pin —
+  (`rsa-sha256` default, `ed25519` admitted); verification routes per pin -
   digest signatures via `openssl dgst -sha256 -verify`, raw Ed25519
   signatures via `openssl pkeyutl -verify -rawin -in`; `list-pins` renders
   each pin's algorithm. Verified live end to end with a real Ed25519
@@ -169,7 +176,7 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   set; `fetch-evidence` accepts `method=carrier-bundle|http-claim`
   (default carrier-bundle) and the method reaches the injected
   transport on the request. The peer stays a plain identifier and
-  endpoint resolution stays transport-owned — no default wire. Verified
+  endpoint resolution stays transport-owned - no default wire. Verified
   live over a real local HTTP server through an injected transport and
   bound through the self-governed validation loop.
 - Completed the operator policy profiles (promotion rung 16,
@@ -180,7 +187,7 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   broadens. Committed through the self-governed validation loop.
 - Completed the wake-on-demand slice (promotion rung 17, 2026-08-25):
   `wake-peer RUN PINS-FILE PEER` issues one explicit wake request for a
-  pinned lattice peer behind an injected transport — admission
+  pinned lattice peer behind an injected transport - admission
   evidence is the pins registry, the run needs a `:federation` receipt,
   and there is no default transport or daemon. Unpinned peers refuse
   `unknown-peer-key`. Committed through the self-governed validation loop.
@@ -191,59 +198,61 @@ fails closed without a `principle:` line (GOVERNANCE §6).
   and a completed task binds a `:worker` evidence fact (a worker
   self-report is evidence, never acceptance). Committed through the
   self-governed validation loop.
-- No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap step.
+- Landed stage 2 ("One interface") 2026-09-28 (exit-criteria close-out,
+  [2026-09-28-stage2-exit-criteria-closeout](../records/2026-09-28-stage2-exit-criteria-closeout.md):
+  all three exit criteria verified; the nerve center is the standing
+  interface and evolves via the QoL cadence from stage 6 onward); the
+  config-backup lanes are scheduled on the 30m tier (landed:
+  `hngh-cadence-30m.timer`, hngh-automation `34cd275`) - the gbd
+  subsumption is complete and retired
+  (`2026-08-27-dashboard-evolution-gbd-retirement`). The
+  self-improvement cadence is routine: the day tier prunes the ledger,
+  checks the kernel gate, runs the fresh-eyes review and a daylight
+  research beat, with telemetry store v0 and the 30m schedule/research
+  feeds wired (hngh-automation `232c5fe`). The automation-advancement
+  review (`2026-08-28-automation-advancement`) tracks how much of this
+  loop the machine now runs itself.
+- Ran the Governed Fleet slices in order (governed-fleet.md section 6):
+  A bili chain legs (telemetry.py before model.sh), B spawn-path matrix,
+  C the witnessed cycle + seeded stall auto-replace, D the governed
+  package upgrade, E the credential-seam sweep, F node-lattice
+  admission (the federation exit) - A-F all landed by 2026-09-30,
+  evidenced in the stage-3 exit record; G the operations knowledge
+  graph in the dashboard (non-exit-bearing) landed 2026-09-14, closed
+  2026-10-01
+  ([record](../records/2026-10-01-operations-knowledge-graph-surface.md)).
+- Flipped the merged stage 3 ("The Governed Fleet") to done 2026-10-01:
+  all ten invariants verified under standing guards and patrols after
+  reviving the dormant calendar tier
+  ([record](../records/2026-10-01-governed-fleet-stage3-exit.md)); the
+  stage-4 exit (governed package upgrade) rode the certificate loop.
 
 ## Next
 
 The route table above supersedes the enumerated Next list (history: the
 autonomy-continuum directives live in the queue ledger and
 [architecture index](../architecture-index.md); the worker-driver E2E and
-the node-lattice admission amendment both roll into stage 3 — the
+the node-lattice admission amendment both roll into stage 3 - the
 2026-09-13 consolidation ([governed-fleet.md](../design/governed-fleet.md))
 merges the former stage 4 into it).
 
 Working order, per the route:
 
-1. **Land stage 2 — DONE** (2026-09-28 exit-criteria close-out,
-   [2026-09-28-stage2-exit-criteria-closeout](../records/2026-09-28-stage2-exit-criteria-closeout.md):
-   all three exit criteria verified; the nerve center is the standing
-   interface and evolves via the QoL cadence from stage 6 onward); the
-   config-backup lanes are scheduled on the 30m tier
-   (landed: `hngh-cadence-30m.timer`, hngh-automation `34cd275`) — the
-   gbd subsumption is complete and retired
-   (`2026-08-27-dashboard-evolution-gbd-retirement`). The self-improvement cadence
-   is routine: the day tier prunes the ledger, checks the kernel gate,
-   runs the fresh-eyes review and a daylight research beat, with
-   telemetry store v0 and the 30m schedule/research feeds wired
-   (hngh-automation `232c5fe`).
-   The automation-advancement review
-   (`2026-08-28-automation-advancement`) tracks how much of this loop
-   the machine now runs itself.
-2. **Run the Governed Fleet slices in order** (governed-fleet.md §6):
-   A bili chain legs (telemetry.py before model.sh), B spawn-path
-   matrix, C the witnessed cycle + seeded stall auto-replace, D the
-   governed package upgrade, E the credential-seam sweep, F
-   node-lattice admission (the federation exit); G renders the
-   operations knowledge graph in the dashboard (non-exit-bearing).
-3. **Flip the merged stage 3 to done — DONE** (2026-10-01: all ten
-   invariants verified under standing guards and patrols after
-   reviving the dormant calendar tier,
-   [record](../records/2026-10-01-governed-fleet-stage3-exit.md));
-   the stage-4 exit (governed package upgrade) rode the certificate
-   loop.
-4. **Stage 5 beats** alternate with stage 3 grow work per the
-   alternation rule; the research view makes the state visible.
-5. **Fold the third-evening intake** (eight observations, session-notes
-   §9) per the two new design docs: telemetry/records split + research
-   and session-cost capture ([ledger-and-records-spec.md](../design/ledger-and-records-spec.md)),
+1. **Stage 5 research/design beats** gate stage 7 growth and run
+   standalone per the alternation rule (master-plan.md section 4);
+   the research view makes the state visible.
+2. **Fold the third-evening intake** (eight observations, session-notes
+   section 9) per the two new design docs: telemetry/records split +
+   research and session-cost capture
+   ([ledger-and-records-spec.md](../design/ledger-and-records-spec.md)),
    knowledge-base viewer/publisher posture
    ([knowledge-base-spec.md](../design/knowledge-base-spec.md)), the
    Schedule text-legibility floor in the display register's grade hooks,
-   and structured session identity (category, hierarchy, model, cost —
+   and structured session identity (category, hierarchy, model, cost -
    display side rides the SessionsTitles wave).
 
 Operator goals as design pressure (2026-08-28): the self-funding
-runway rides the publications pipeline — `scripts/generate-publication
+runway rides the publications pipeline - `scripts/generate-publication
 --ebook/--site` consuming the crystallized `docs/research/` lines, with
 the ebook-longform, public-surface, royalty-pipeline, and funding-rails
 backlog rows as the admission path. The Steam Deck is paired and
@@ -251,8 +260,6 @@ hardened (hngh-automation REMOTE-ACCESS.md); deck-as-node federation
 stays in the device-fleet and node-lattice backlog rows. The remaining
 remote step is operator-side (`sudo tailscale serve --bg 8890`,
 documented in hngh-automation REMOTE-ACCESS.md; never from automation).
-
-No daemon, provider, watcher, scheduler, dashboard, or unbounded mutation is admitted by this roadmap stage.
 
 ---
 

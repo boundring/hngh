@@ -1,16 +1,16 @@
-# Plans — the operator-session lifecycle, as routine
+# Plans - the operator-session lifecycle, as routine
 
 > Every bolt in this structure was logged when it was tightened.
 > That is not sentiment. It is how the building stays standing while
 > it grows.
 
-NOTE 2026-09-10: the "Autonomy rule (standing)" paragraph below is now
-the plans/README.md "Autonomy reference" section; future plans cite it
-instead of copying this text. Body kept as-is (append-only edit).
+NOTE 2026-09-10: the "Autonomy rule (standing)" paragraph is now the
+"Autonomy reference" section below (see that heading); future plans
+cite it instead of copying this text. Body kept as-is (append-only edit).
 
 Plans are how working sessions organize multi-step work: authored as a
 file, accepted by machine-checkable evidence, executed step by step,
-kept as a record. The lifecycle is a Hngh routine — the barrier is
+kept as a record. The lifecycle is a Hngh routine - the barrier is
 governance (certificates + green gates), not a person; human approval
 is reserved for critical-class work.
 
@@ -34,7 +34,7 @@ is reserved for critical-class work.
   the front-matter comment sorts an accepted plan ahead of the rest in
   that selection; ties and absence fall back to filename order.
   It runs
-  continuously, 24/7 by intent — the script name
+  continuously, 24/7 by intent - the script name
   (`hngh-automation/scripts/overnight-cycle.sh`) is a stable CLI name,
   not a doctrine that the cycle only runs overnight (same convention
   as `ceremony-drive`).
@@ -47,8 +47,8 @@ is reserved for critical-class work.
   (`blocked <slug> missing-principle`).
 - Body hold (2026-09-18): a proposed plan may park itself from
   auto-acceptance with a line before `## Steps` matching
-  `**HOLD — do not accept/execute without promotion.**` (the marker is
-  a line-level `/HOLD.*do not accept/i`, precision-first — loose
+  `**HOLD - do not accept/execute without promotion.**` (the marker is
+  a line-level `/HOLD.*do not accept/i`, precision-first - loose
   "hold" wording does not trigger). accept-plans.py emits
   `parked <slug> body-hold-promotion-required` and files one deduped
   alert row; status stays `proposed`, so removing the marker re-enters
@@ -62,7 +62,7 @@ is reserved for critical-class work.
 
 An oh-my-pi plugin propose surface participates by writing
 `<date>-<slug>.plan.md` with `status=proposed` into this directory
-(plain file write through the same hngh-side path any doc uses — the
+(plain file write through the same hngh-side path any doc uses - the
 plan-mode `xd://propose` flow maps 1:1 onto this contract). Acceptance
 and execution then happen automatically per the rules above; the
 plugin reads status back from the front-matter or from
@@ -89,7 +89,7 @@ full verification text.
 The standing autonomy rule all normal-risk plans inherit (cite this
 instead of repeating it): hngh docs land via certificate ceremony with
 a green `make test`; kernel `src/`, `tests/`, `Makefile`, and `hngh.asd`
-are FORBIDDEN to machine sessions — park them with an alert row.
+are FORBIDDEN to machine sessions - park them with an alert row.
 Never touch provider or credential configuration, systemd unit state
 beyond an already-installed unit, tracked deletions outside the 48h
 prune, or secrets. hngh-automation commits are free once automation
@@ -102,7 +102,7 @@ The operator-facing contract for a ceremony-drive invocation: ONE
 `scripts/ceremony-drive` call per batched docs landing, against a fresh
 `/tmp` store; pre-flight candidates against the public-content gate
 first; no `src/` files as ceremony candidates (machine-owned dirty
-paths — journals, reports, untracked routed plans — are landed by the
+paths - journals, reports, untracked routed plans - are landed by the
 machine's own steps, never ceremony candidates). Plans reference this
 runbook by name instead of restating the invocation details.
 
