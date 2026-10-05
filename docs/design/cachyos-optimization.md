@@ -1,75 +1,65 @@
 # CachyOS host optimization — evidence and applicable findings
 
-Status: proposed 2026-10-05 (operator program m10884 item 7). Real system
-changes ride `automation/jobs/cachyos-optimize.sh` and need the operator's
-`--yes` consent; nothing here is applied by landing the doc.
+Status: amended 2026-10-05 (operator directive: zram is contraindicated on
+this host; zswap is the house posture). Read-only verification lives in
+`automation/jobs/cachyos-optimize.sh`; real swap-posture mutations belong
+to the operator's own migration tool
+(github.com/boundring/cachyos-zswap-migrate), never to this script.
+
+## 0. Operator constraint (binding)
+
+AMD desktops on CachyOS fail to suspend/wake under zram memory pressure
+(CachyOS wiki "switching from zram to zswap"; the operator lived it on
+this machine class — GPU hardware issues until zram was disabled in favor
+of zswap). The operator's `cachyos-zswap-migrate` encodes the sanctioned
+migration: zram removed, zswap enabled with a hibernation-capable
+swapfile. zram must NOT be re-enabled here, whatever the generic CachyOS
+guidance says.
 
 ## 1. Host evidence (measured 2026-10-04/05)
 
 | Area | Measured | Verdict |
 |---|---|---|
-| zram | `zram-generator 1.2.1` installed, `/etc/systemd/zram-generator.conf` exists but is EMPTY (0 B), `zramctl` empty, `systemd-zram-setup@zram0` inactive, zram module not loaded | **gap — not configured** |
-| Swap | `/swap/swapfile` 33G on `/swap`, **12.1G used**, prio -1 | real pressure under llama residency; every fault pays NVMe swap-in latency |
-| RAM | 30951 MiB total, ~13.5G used, buff/cache ~6G, 12G in swap at peak | anon-heavy workload (model weights + KV), swap is load-bearing |
-| vm.swappiness | 60 (default) | with zram active the CachyOS default posture is 100 — anon pages should prefer compressed RAM over the disk file |
-| NVMe scheduler | `kyber` active (of none/mq-deadline/kyber/adios/bfq) | already optimal for this class of device — no change |
-| CPU freq | `amd-pstate-epp`, governor `powersave`, EPP `balance_performance` | sane default; no latency complaint measured — no change |
-| Repos | `cachyos-znver4` (+core/extra) repos active, `ParallelDownloads=10`, `Color` | already optimized |
-| Services | `ananicy-cpp 1.2.0` + `cachyos-ananicy-rules` installed and running | already optimized |
+| zram | `zram-generator` installed, `/etc/systemd/zram-generator.conf` EMPTY (0 B), `zramctl` empty, module not loaded | **correct posture — zram off by operator history, not a gap** |
+| zswap | `enabled=Y`, `compressor=zstd`, `max_pool_percent=30`, `shrinker_enabled=Y` | **active — the house posture is already in place** |
+| Swap | `/swap/swapfile` 33G on NVMe, 10-12G used, prio -1 | zswap's backing store, load-bearing under llama residency |
+| vm.swappiness | 60 (default) | with zswap+file backing, no evidence-based change; raising it only adds NVMe IO — leave |
+| NVMe scheduler | `kyber` active | already optimal — no change |
+| CPU freq | `amd-pstate-epp`, governor `powersave`, EPP `balance_performance` | sane default — no change |
+| Repos | `cachyos-znver4` (+core/extra), `ParallelDownloads=10`, `Color` | already optimized |
+| Services | `ananicy-cpp` + `cachyos-ananicy-rules` running | already optimized |
 
-## 2. Finding Z1 — zram swap is configured-and-off
+## 2. Finding — posture verified, nothing to apply
 
-The one material gap. The box swaps gigabytes to an NVMe file while the
-installed zram-generator sits unconfigured. Proposed state:
+The one candidate gap from the first census (empty zram-generator.conf)
+inverts under the operator constraint: zram-off + zswap-on + swapfile
+backing is exactly the end state `cachyos-zswap-migrate` produces. There
+is no applicable system change left on this host.
 
-```ini
-# /etc/systemd/zram-generator.conf
-[zram0]
-zram-size = min(ram / 2, 16384)
-compression-algorithm = zstd
-swap-priority = 100
-fs-type = swap
-```
+- If a future census finds `zswap enabled=N` or the swapfile gone, the
+  fix is the operator's migrate tool (inspect → plan → apply, reversible,
+  backed up) — not an ad-hoc rewrite here.
+- The empty `/etc/systemd/zram-generator.conf` file is inert detritus;
+  removing it is an optional cosmetic mutation needing consent. Leave it.
 
-- 16G cap (half of 30951 MiB rounded down): enough to absorb the current
-  12G swap working set at ~3:1 zstd anon compression without pinning an
-  unbounded chunk of RAM.
-- priority 100 > swapfile's -1: zram serves hot swapped pages; the disk
-  file demotes to overflow for pages that do not compress.
-- Rollback: stop `systemd-zram-setup@zram0.service`, `swapoff /dev/zram0`,
-  empty the conf — the swapfile never left the pool, so rollback is
-  lossless by construction.
-- Risk: mis-sized zram + swapfile both full = OOM earlier than today.
-  Mitigated by the 16G cap and by keeping the 33G file; the census stage
-  re-reads live swap pressure before any change (REQ-I23 posture: census
-  is evidence, not a lease).
-
-## 3. Finding Z2 — swappiness posture
-
-With Z1 active, `vm.swappiness = 100` (persisted in
-`/etc/sysctl.d/90-zram-posture.conf`) matches the CachyOS zram posture:
-anonymous pages rotate through compressed RAM quickly instead of
-languishing in page cache until the disk file takes them. Without Z1
-applied, leave 60 — raising swappiness toward a spinning/NVMe file only
-adds IO. Z2 is gated on Z1 in the script (it refuses to raise swappiness
-while `zramctl` is empty).
-
-## 4. Non-findings (leave alone)
+## 3. Non-findings (leave alone)
 
 kyber scheduler, EPP balance_performance, znver4 repos, ananicy-cpp,
-ParallelDownloads — all already in their best measured state. Listed so
-the next pass does not re-derive them.
+ParallelDownloads, swappiness=60 — all already in their best measured
+state. Listed so the next pass does not re-derive them.
 
-## 5. Application path
+## 4. Verification path
 
-`automation/jobs/cachyos-optimize.sh` — same discipline as
-`omarchy-boot-build.sh`:
+`automation/jobs/cachyos-optimize.sh` — read-only by construction:
 
-- `census` (default, dry, no sudo): prints the evidence table above from
-  the live host; exit 0. The run's stdout is the review artifact.
-- `zram` / `swappiness` / `all --yes`: real changes, root via sudo, gated
-  on a TTY or `HNGH_OPT_CONFIRM=YES` (refused exit 2 otherwise, fail
-  closed). Re-runs are idempotent: an already-satisfied stage is a no-op
-  line, never a rewrite.
-- every run appends a per-stage log under `${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}`
-  (REQ-I26 posture shared with the installer).
+- `census` (default): prints the evidence table from the live host,
+  including the zswap parameter block; exit 0.
+- `zswap`: asserts the house posture (zswap enabled, zstd, zram absent,
+  swapfile present); a miss prints the migrate-tool pointer and exits 1
+  (fail closed) — it never mutates.
+- every run appends a per-stage log under
+  `${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}` (REQ-I26 posture
+  shared with the installer); the log is the review artifact.
+- superseded: the earlier `zram`/`swappiness` apply stages (and their
+  `--yes` consent machinery) were removed with this amendment — the
+  posture they applied is contraindicated on this host.

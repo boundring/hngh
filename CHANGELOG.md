@@ -13,12 +13,22 @@ lives under Pre-release / early development until the first release.
   the dateline prints, and the operator-host spire carries a beacon while
   operator items are open — all recorded-data-only per
   docs/design/megastructure-sim.md P1 honesty constraints.
-- **Automation — CachyOS host optimization lane**:
-  docs/design/cachyos-optimization.md records the measured evidence (zram
-  configured-and-off while 12G sits in an NVMe swapfile; everything else
-  already optimal) and jobs/cachyos-optimize.sh applies it dry-by-default
-  with the installer's consent posture (census/zram/swappiness stages,
-  --yes gated on TTY or HNGH_OPT_CONFIRM=YES, per-stage logs).
+- **Automation — research-overflow cadence restored to 15 minutes**:
+  the entry-stamp gate moved 1800s -> 900s once the in-tick sleep was
+  gone (the stamp no longer blocks the tick, so the 2026-09-24
+  load-triage halving no longer applies); the collapse guard whitelist
+  grew to 300/600/900/1800 and the equivalence baseline records the
+  job's effective pre-collapse 15m cadence.
+- **Automation — CachyOS host posture lane (amended)**:
+  docs/design/cachyos-optimization.md records the measured evidence and
+  the operator constraint that supersedes the first proposal — zram is
+  contraindicated on this host (AMD suspend/wake failures under zram
+  pressure; the operator migrated to zswap), so zram-off + zswap-on +
+  swapfile backing IS the desired posture and is already in place.
+  jobs/cachyos-optimize.sh is a read-only verifier (census + zswap
+  posture assert, per-stage logs); a posture miss names the operator's
+  cachyos-zswap-migrate tool instead of mutating. The earlier
+  zram/swappiness apply stages were removed with this amendment.
 - **Automation — subhour tick freeze cured, self-review learns recovery**:
   the research-overflow beat slept 900s inside the every-minute cadence
   tick, freezing all subhour feeds for a quarter hour per half hour and

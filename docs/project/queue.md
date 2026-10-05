@@ -104,6 +104,7 @@ backlog-jcode-observatory-surface	queued	Jcode observatory surface	backlog.md:11
 backlog-router-re-route-policy	queued	Router re-route policy: bound/expiry per alert identity, park past it (refoundation P7)	backlog.md:1164
 backlog-adopted-disposition-adoption-wire	queued	Adopted-disposition adoption wire: one runtime decision reads adopted verdicts	backlog.md:1174
 backlog-interpretation-seam-for-findings	queued	Interpretation seam for findings: advisory canon-informed commentary rows (refoundation P9-adjacent)	backlog.md:1204
+feed-writer-bound	queued	Bound feed writers: operator-items crumbs scan off the serial tick	operator-items-feed.py O(items*rows) crumbs scan ~4min dominates the serial subhour tick (tick wall ~3-4min vs 180s feed-freshness threshold, measured 2026-10-04); cure = bound the scan or write feeds off-tick/async; docs/records/2026-10-04-subhour-tick-freeze-selfreview-storm.md
 ```
 ## Struck rows (2026-09-24)
 

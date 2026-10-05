@@ -36,9 +36,16 @@ row into `dashboard self-review failing: ...` reasons and pinned the header at
 ## Fixes
 
 - `50-research-overflow.sh`: deleted the in-tick `sleep 900` + unconditional
-  second beat. The 1800s entry stamp is the only pacer (collapse guard pins
-  allowed windows to 300/600/1800; 900 would violate the encoded lesson).
-  Research cadence stays one beat per 30 minutes; the tick never blocks.
+  second beat. A self-gate stamp is the only pacer; the tick never blocks.
+- Cadence amendment (same day, post-fix): the 2026-09-24 collapse response
+  had halved the beat to a 1800s stamp while the sleep still blocked the
+  tick -- load triage, not a cadence target. With the sleep gone the stamp
+  is non-blocking, so the entry gate moved to 900s, restoring the
+  pre-collapse EFFECTIVE 15-minute cadence (:00 :15 :30 :45) that the
+  sleep+second-beat had synthesized. The collapse guard whitelist grew to
+  300/600/900/1800 and the equivalence baseline records this job's old
+  tier as 15m (what actually fired), not the 30m systemd trigger. Quota
+  pacing stays with failfirst-research-overflow (FAILFIRST_TICK_S=900).
 - `dashboard-self-review.py`: every tick files the summary row
   (heartbeat). Identity is now state-keyed (`dash-selfreview:summary:<n>`)
   and the heartbeat bumps only while the stored text matches the current
