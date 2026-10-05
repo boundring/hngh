@@ -43,8 +43,12 @@ set_old 5m 00-time-ledger 01-oversight 01-system 02-agent-supervision
 set_old 10m 01-evolve-ui
 set_old 30m 05-readout 10-system-feed 15-schedule-feed 20-config-backup \
   25-research-feed 35-plan-feed 45-agent-respawn \
-  50-research-overflow 54-feedback-ingest 55-feedback-apply \
+  54-feedback-ingest 55-feedback-apply \
   56-imap-poll 58-patrol 59-unsloth-observe
+# 50-research-overflow: the old 30m tier carried an in-tick sleep 900 +
+# second beat, so the EFFECTIVE firing cadence was 15 minutes -- the
+# equivalence baseline records what actually fired.
+set_old 15m 50-research-overflow
 set_old hour 00-dashboard-self-review 05-ui-audit 10-router-feed 16-remote-push \
   20-workbeat 25-bead-beat 25-session-cost 30-kernel-ledger-sync \
   31-heartbeat 32-deck-facts 33-research-beat 40-gdelt-news \
@@ -124,8 +128,8 @@ for j in "${!JOB_PATH[@]}"; do
     win="$(sed -n 's/.*now - last)) -ge \([0-9][0-9]*\).*/\1/p' "$f" | head -n1)"
     case "$win" in
     "") KIND[$j]=ungated ;;
-    300 | 600 | 1800) KIND[$j]="g$win" ;;
-    *) bad "$j: stamp gate window '$win' is not 300/600/1800" ;;
+    300 | 600 | 900 | 1800) KIND[$j]="g$win" ;;
+    *) bad "$j: stamp gate window '$win' is not 300/600/900/1800" ;;
     esac
     ;;
   */hour/*) KIND[$j]=hour ;;
@@ -180,6 +184,7 @@ old_minutes() { # tier dow dom -> minute list
     case "$t" in
     1m) hit=1 ;;
     5m) ((m % 5 == 0)) && hit=1 ;;
+    15m) ((m % 15 == 0)) && hit=1 ;;
     10m) ((m % 10 == 0)) && hit=1 ;;
     30m) ((m % 30 == 0)) && hit=1 ;;
     hour) ((m % 60 == 0)) && hit=1 ;;
@@ -209,6 +214,7 @@ new_minutes() { # kind dow dom -> minute list
   ungated) gate_minutes 0 ;;
   g300) gate_minutes 300 ;;
   g600) gate_minutes 600 ;;
+  g900) gate_minutes 900 ;;
   g1800) gate_minutes 1800 ;;
   hour) old_minutes hour "$dow" "$dom" ;;
   daily)
@@ -228,6 +234,7 @@ old_get() { # tier -> cached minute list
   case "$1" in
   1m) printf '%s' "$old_1m" ;;
   5m) printf '%s' "$old_5m" ;;
+  15m) printf '%s' "$old_15m" ;;
   10m) printf '%s' "$old_10m" ;;
   30m) printf '%s' "$old_30m" ;;
   hour) printf '%s' "$old_hour" ;;
@@ -241,6 +248,7 @@ new_get() { # kind -> cached minute list
   ungated) printf '%s' "$new_ungated" ;;
   g300) printf '%s' "$new_g300" ;;
   g600) printf '%s' "$new_g600" ;;
+  g900) printf '%s' "$new_g900" ;;
   g1800) printf '%s' "$new_g1800" ;;
   hour) printf '%s' "$new_hour" ;;
   daily) printf '%s' "$new_daily" ;;
@@ -260,10 +268,10 @@ for fx in "2026-09-24 4 24 daily" "2026-09-28 1 28 daily weekly" \
   union="$(pick_for 05 "$dow" "$dom") $(pick_for 06 "$dow" "$dom")"
   union="$(printf '%s\n' $union | sort -u | tr '\n' ' ' | sed 's/ $//')"
   ck "calendar picks $date ($want)" "$want" "$union"
-  for t in 1m 5m 10m 30m hour day week month; do
+  for t in 1m 5m 10m 15m 30m hour day week month; do
     eval "old_$t=\"\$(old_minutes $t $dow $dom)\""
   done
-  for k in ungated g300 g600 g1800 hour daily weekly monthly; do
+  for k in ungated g300 g600 g900 g1800 hour daily weekly monthly; do
     eval "new_$k=\"\$(new_minutes $k $dow $dom)\""
   done
   mism=0

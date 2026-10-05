@@ -22,7 +22,7 @@ Tier collapse (2026-09-24, plan 2026-09-24-unresolved-matters-pass):
 the old 1m/5m/10m/30m timers collapsed into the one subhour tick, the old
 day/week/month timers into the one calendar timer. Former 5m/10m/30m
 drop-ins keep their beat with a 4-line `/tmp` stamp self-gate (the
-31-heartbeat pattern) at 300/600/1800s; former 1m drop-ins stay
+31-heartbeat pattern) at 300/600/900/1800s; former 1m drop-ins stay
 ungated. The calendar tick picks its subdir from the UTC firing instant:
 05:00 runs daily, 06:00 runs weekly on Mondays and monthly on the 1st
 (both when the 1st is a Monday), so every old firing instant is

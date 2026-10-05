@@ -233,9 +233,9 @@ sed -i "s/^lastrun=.*/lastrun=$((now - 1801))/" "$sb/ff/failfirst-research-overf
 overflow_run "${kimi_env[@]}"
 ck "overflow aged: gate released, kimi pinned" "1" "$(hits stubK)"
 
-# b4: the 1800s entry stamp is the only cadence pacer (2026-10-04: no
-# in-tick sleep) -- a fresh stamp exits before any beat; backdating
-# releases the next beat
+# b4: the 900s entry stamp is the only cadence pacer (2026-10-04: no
+# in-tick sleep; 15-minute cadence restored) -- a fresh stamp exits
+# before any beat; backdating releases the next beat
 reset_beat 4
 printf '%s\n' "$now" >/tmp/.hngh-cadence-50-research-overflow-last
 (
@@ -247,7 +247,7 @@ printf '%s\n' "$now" >/tmp/.hngh-cadence-50-research-overflow-last
   bash "$sb/cadence/subhour/50-research-overflow.sh" >/dev/null 2>&1
 )
 ck "overflow fresh entry stamp: no beat" "0" "$(hits stubK)"
-printf '%s\n' "$((now - 1801))" >/tmp/.hngh-cadence-50-research-overflow-last
+printf '%s\n' "$((now - 901))" >/tmp/.hngh-cadence-50-research-overflow-last
 (
  cd "$sb"
  env -i PATH="$PATH" HOME="$sb" "${BEAT_ENV[@]}" \
