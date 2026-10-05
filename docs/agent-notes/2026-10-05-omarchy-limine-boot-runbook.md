@@ -1,5 +1,8 @@
 # Omarchy limine boot runbook (2026-10-05)
 
+> The screen was black because nothing was there yet -- not even an
+> error worth printing.
+
 Machine-specific operator runbook for booting the Omarchy 4.0.4 install
 (nvme0n1) from the host's limine bootloader on the dual-SSD UEFI box.
 Diagnosis source: LimineBootDiagnosis scout, 2026-10-05 (evidence in

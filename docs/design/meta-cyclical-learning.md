@@ -1,5 +1,7 @@
 # Meta-cyclical learning
 
+> First you build the mirror; then you teach it to look back.
+
 Status: design, 2026-10-05. Machinery named here rides what already exists;
 none of it is built yet except where marked.
 
