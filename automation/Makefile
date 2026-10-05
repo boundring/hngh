@@ -228,6 +228,7 @@ test:
 	bash scripts/lint-identifiers.sh
 	python3 -B scripts/lint-home-paths.py
 	bash tests/test-omarchy-boot-build.sh
+	bash tests/test-omarchy-boot-provision.sh
 	@echo "identifier lint passed; run make smoke for the end-to-end proof"
 
 # test-parallel: same suite list as `make test`, run concurrently.

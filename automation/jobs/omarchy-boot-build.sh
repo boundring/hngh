@@ -11,6 +11,8 @@
 #   qemu        E4 boot proof on a qcow2 overlay over the real disk [privileged]
 #   adopt-check print the post-boot config-adopt command (runs on the
 #               booted TARGET, not here; safe)
+#   emit-entry  print the limine chainload entry + target kernel entry
+#               template for the probed ids (read-only, never guesses)
 #   all         census -> esp -> build -> qemu
 #
 # House rules (match install.sh / bootstrap):
@@ -32,6 +34,11 @@
 #                                  pins UUID=317A-31FF for /boot; a wrong
 #                                  id breaks the pinned mount)
 #   HNGH_ESP_LABEL  mkfs label     (default OMARCHY-ESP)
+#   HNGH_ESP_PARTUUID emit-entry override: ESP GPT PARTUUID (probed from
+#                                  lsblk when unset; HNGH_ESP_ID doubles
+#                                  as the FAT volume id override)
+#   HNGH_ROOT_UUID  emit-entry override: root filesystem UUID (probed
+#                                  from lsblk when unset)
 #   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
 #                                  (default ~/Projects/etc/omarchy-upstream)
 #   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
@@ -60,7 +67,7 @@ die() {
 
 usage() {
   say "usage: omarchy-boot-build.sh <phase> [--yes]"
-  say "  phases: census esp build qemu adopt-check all"
+  say "  phases: census esp build qemu adopt-check emit-entry all"
   say "  dry-run default; --yes executes the named phase (privileged)"
   say "  env: HNGH_BOOT_DISK HNGH_BOOT_MNT HNGH_BOOT_USER HNGH_ESP_ID HNGH_ESP_LABEL HNGH_UPSTREAM"
   say "       HNGH_BOOT_LOGDIR (live stage log; default ~/.hngh/installer-logs)"
@@ -71,7 +78,7 @@ usage() {
 run_root() {
   say "+ sudo $*"
   [ "$DRY" -eq 1 ] && return 0
-  sudo "$@" || exit $?   # fail-closed: never mount over a failed mkfs
+  sudo "$@" || exit $? # fail-closed: never mount over a failed mkfs
 }
 
 # gate <phase>: dry-run never gates. Real execution (--yes) must come
@@ -175,22 +182,83 @@ phase_adopt_check() {
   say "# clone at /home/<user>/Projects/etc/omarchy-upstream is the boot-valid path"
 }
 
+# probe_id <lsblk-column> <device>: first value lsblk reports, or empty.
+probe_id() { lsblk -no "$1" "$2" 2>/dev/null | head -n 1 | tr -d '[:space:]'; }
+
+UUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+FAT_RE='^[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}$'
+
+# emit_die <what>: one line to stderr, no entry block, exit 2. Empty or
+# malformed ids are never guessed around.
+emit_die() {
+  emit_msg="omarchy-boot-build: emit-entry: cannot resolve $1 (fail-closed, no entry block)"
+  printf '%s\n' "$emit_msg" >&2
+  [ -n "$LOGFILE" ] && printf '%s\n' "$emit_msg" >>"$LOGFILE"
+  exit 2
+}
+
+# phase_emit_entry: read-only in dry-run and --yes alike (never calls
+# sudo). Prints the host chainload entry plus the target-side kernel
+# entry TEMPLATE for the CURRENT ids, probed at runtime unless the env
+# seams override them. All three ids are validated BEFORE any output.
+phase_emit_entry() {
+  PARTUUID="${HNGH_ESP_PARTUUID:-$(probe_id PARTUUID "$ESP")}"
+  FAT_ID="${HNGH_ESP_ID:-$(probe_id UUID "$ESP")}"
+  ROOT_UUID="${HNGH_ROOT_UUID:-$(probe_id UUID "$ROOTP")}"
+  # the FAT volume id is written 317A31FF (mkfs -i) but reported
+  # 317A-31FF (lsblk UUID): normalize the undashed form
+  case "$FAT_ID" in
+  [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f])
+    FAT_ID="${FAT_ID%????}-${FAT_ID#????}"
+    ;;
+  esac
+  [[ "$PARTUUID" =~ $UUID_RE ]] || emit_die "ESP partition GPT PARTUUID"
+  [[ "$FAT_ID" =~ $FAT_RE ]] || emit_die "ESP FAT volume id"
+  [[ "$ROOT_UUID" =~ $UUID_RE ]] || emit_die "root partition filesystem UUID"
+  block="$(printf '%s\n' \
+    "/Omarchy 4.0.4 (chainload ${DISK##*/} ESP)" \
+    "    protocol: efi" \
+    "    path: guid($PARTUUID):/EFI/BOOT/BOOTX64.EFI" \
+    "" \
+    "# probed at runtime: ESP FAT volume id $FAT_ID (equivalent: guid($FAT_ID))," \
+    "# root filesystem UUID $ROOT_UUID." \
+    "# Target-side kernel entry TEMPLATE -- UNCONFIRMED: verify against whatever" \
+    "# authors the target limine config (mkinitcpio hook vs hand-authored) before use." \
+    "/Omarchy 4.0.4 (target kernel TEMPLATE - edit before use)" \
+    "    protocol: linux" \
+    "    kernel_path: guid($PARTUUID):/vmlinuz-linux-omarchy" \
+    "    module_path: guid($PARTUUID):/initramfs-linux-omarchy.img" \
+    "    cmdline: root=UUID=$ROOT_UUID rootflags=subvol=@")"
+  printf '%s\n' "$block"
+  [ -n "$LOGFILE" ] && printf '%s\n' "$block" >>"$LOGFILE"
+}
+
 # Live stage log (REQ-I26): every run mirrors stdout+stderr to a
 # timestamped log while lines are produced (tee flushes per line); stdin
 # stays attached so sudo keeps its TTY password prompt. Dry-runs log too --
 # the printed plan IS the review artifact. Log loss is never a gate: if
-# the directory is unwritable the run proceeds unmirrored.
+# the directory is unwritable the run proceeds unmirrored. The == header
+# line goes to the log file only: stdout stays the pure phase artifact
+# (emit-entry's block stays copy-paste ready).
+LOGFILE=""
 case "$PHASE" in
 --help | -h | help | '') ;; # usage prints below; no log
-*)
+census | esp | build | qemu | adopt-check | emit-entry | all)
   now="$(date -u +%Y%m%dT%H%M%SZ)"
   logdir="${HNGH_BOOT_LOGDIR:-$HOME/.hngh/installer-logs}"
   if mkdir -p "$logdir" 2>/dev/null && [ -d "$logdir" ]; then
-    exec > >(tee -a "$logdir/$PHASE-$now.log") 2>&1
-    mode=dry-run; [ "$DRY" -eq 0 ] && mode=REAL
-    say "== omarchy-boot-build phase=$PHASE mode=$mode disk=$DISK user=$USER_NAME $(date -u +%Y-%m-%dT%H:%M:%SZ) =="
+    mode=dry-run
+    [ "$DRY" -eq 0 ] && mode=REAL
+    LOGFILE="$logdir/$PHASE-$now.log"
+    printf '%s\n' "== omarchy-boot-build phase=$PHASE mode=$mode disk=$DISK user=$USER_NAME $(date -u +%Y-%m-%dT%H:%M:%SZ) ==" >"$LOGFILE"
+    # emit-entry keeps stdout/stderr pristine (copy-paste block, real
+    # errors); every other phase mirrors live via tee.
+    if [ "$PHASE" != "emit-entry" ]; then
+      exec > >(tee -a "$LOGFILE") 2>&1
+    fi
   fi
   ;;
+*) ;; # unknown phase: no log -- $PHASE must never reach a filename
 esac
 
 case "$PHASE" in
@@ -200,6 +268,7 @@ esp) phase_esp ;;
 build) phase_build ;;
 qemu) phase_qemu ;;
 adopt-check) phase_adopt_check ;;
+emit-entry) phase_emit_entry ;;
 all)
   phase_census
   phase_esp

@@ -28,9 +28,12 @@ session never holds the sudo password.
    pure black screen is unlikely to be syntax.
 5. GPU/console - lowest: the host boots the same console/driver family.
 
-## The entry block (verified UUIDs)
+## The entry block (point-in-time example)
 
-For the host loader config (/boot/EFI/limine/limine.conf on the host
+Point-in-time example -- run `automation/jobs/omarchy-boot-build.sh
+emit-entry` to generate the current block; it probes the ids at runtime
+and never guesses. The literal block below is what was verified
+2026-10-05. For the host loader config (/boot/EFI/limine/limine.conf on the host
 ESP; root-owned, 0077 directory):
 
 ```
@@ -44,6 +47,16 @@ ESP; root-owned, 0077 directory):
 - NEVER root partition f5b8200b / 29e56cf7. NEVER the host ESP
   (2972-BC0E / b938d556-bba0-40b8-86f9-30cd1e3f6d0d) - that chains
   limine into itself.
+
+## Driver-first
+
+Run `automation/jobs/omarchy-boot-provision.sh` from your own terminal
+first: it drives the steps below and prompts y/N (default N) before each
+privileged action. It refuses the esp phase (it would mkfs the live
+ESP), backs up /boot/EFI/limine/limine.conf before appending the entry
+block, and stops after printing the staged reboot checklist -- it never
+reboots and never touches NVRAM. The numbered sequence below stays as
+the manual reference and as physical-observation guidance.
 
 ## Operator run sequence (in order)
 
