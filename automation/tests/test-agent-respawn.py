@@ -76,7 +76,6 @@ class RespawnGuards(unittest.TestCase):
         omp.write_text(
             "#!/usr/bin/env bash\n"
             'printf "%s\\n" "$*" >> "$MARKER"\n'
-            'printf "session output\\n" > "$2" 2>/dev/null || true\n'
             "exit 0\n")
         bridge.chmod(0o755)
         omp.chmod(0o755)

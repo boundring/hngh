@@ -43,7 +43,6 @@ LIB = ("common.sh", "breadcrumbs.sh", "causes.sh", "notify-email.sh",
 
 OMP_STUB = ('#!/usr/bin/env bash\n'
             'printf "%s\\n" "$*" >> "$MARKER"\n'
-            'printf "session output\\n" > "$2" 2>/dev/null || true\n'
             'exit 0\n')
 BILI_STUB = ('#!/usr/bin/env bash\n'
              '# bili wrapper: record the omp args, then delegate\n'
