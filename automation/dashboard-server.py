@@ -185,6 +185,7 @@ All writes are append-only (ledger) or atomic-replace (JSON). Nothing
 writes docs/project/backlog.md anymore (archived 2026-09-25).
 """
 import importlib.util
+import fnmatch
 import getpass
 import hmac
 import ipaddress
@@ -195,6 +196,7 @@ import shlex
 import shutil
 import sqlite3
 import subprocess
+import threading
 import time
 import urllib.parse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -221,6 +223,35 @@ DRIFT_JOB = os.path.join(ROOT, "jobs", "pins-drift.py")
 OMARCHY_UPSTREAM = (
     os.environ.get("OMARCHY_UPSTREAM_DIR") or os.path.join(
         os.path.expanduser("~"), "Projects", "etc", "omarchy-upstream"))
+# Installer wizard (2026-10-06): the Winamp-skinned face of
+# jobs/omarchy-unattended-install.sh. The driver is the installer;
+# the wizard reads its artifacts (workdir, stage logs, verdicts) and
+# opens REAL TERMINAL WINDOWS that run the privileged phases, so the
+# operator's sudo password and y/N gates never cross HTTP. Every
+# path is a module constant so the wizard suite can point it at
+# stubs, exactly like the desk probes.
+WIZARD_DRIVER = os.path.join(ROOT, "jobs", "omarchy-unattended-install.sh")
+WIZARD_BOOT_BUILD = os.path.join(ROOT, "jobs", "omarchy-boot-build.sh")
+WIZARD_SECRETS_HOME = (os.environ.get("HNGH_SECRETS_HOME")
+                       or os.path.join(os.path.expanduser("~"),
+                                       ".hngh-automation",
+                                       "omarchy-unattended"))
+WIZARD_LOGDIR = (os.environ.get("HNGH_BOOT_LOGDIR")
+                 or os.path.join(os.path.expanduser("~"), "installer-logs"))
+WIZARD_DOWNLOADS = os.path.join(os.path.expanduser("~"),
+                                "Downloads", "installs")
+WIZARD_ISO_DIRS = os.environ.get("HNGH_ISO_DIRS", "")  # colon-separated
+WIZARD_LOG_STEM = {"seed": "seed", "pilot": "run",
+                   "go-real": "full", "verify": "verify"}
+WIZARD_PRIV_STEPS = ("pilot", "go-real", "verify")
+WIZARD_TERMINALS = ("kitty", "konsole", "alacritty", "foot", "xterm")
+WIZARD_URL_HOSTS = ("omarchy.org", "github.com",
+                    "objects.githubusercontent.com")
+WIZARD_USER_RE = re.compile(r"^[a-z_][a-z0-9_-]*$")
+WIZARD_DISK_RE = re.compile(r"^/dev/[a-zA-Z0-9/_-]+$")
+WIZARD_PKG_RE = re.compile(r"^[a-zA-Z0-9@._+][a-zA-Z0-9@._+-]*$")
+WIZARD_SVC_RE = re.compile(r"^[a-zA-Z0-9@:._+-]+$")
+WIZARD_VERDICT_RE = re.compile(r"^verdict: (\S+)$", re.MULTILINE)
 # The wicket bootstrap block — SAME FOUR COMMAND LINES as the heredoc in
 # automation/lib/privileged.sh `_pv_bootstrap_block` (edit both or
 # neither; privileged.sh is the source of truth). Paths repo-relative on
@@ -351,6 +382,14 @@ _hfeed_spec = importlib.util.spec_from_file_location(
     "history_feed", os.path.join(ROOT, "jobs", "history-feed.py"))
 history_feed = importlib.util.module_from_spec(_hfeed_spec)
 _hfeed_spec.loader.exec_module(history_feed)
+
+# same treatment for lib/scrub.py: the single-source redaction
+# definition; the wizard renders its spawn command through
+# redact_home so the operator's home path never rides the wire.
+_scrub_spec = importlib.util.spec_from_file_location(
+    "scrub", os.path.join(ROOT, "lib", "scrub.py"))
+scrub = importlib.util.module_from_spec(_scrub_spec)
+_scrub_spec.loader.exec_module(scrub)
 
 _rrspec = importlib.util.spec_from_file_location(
     "research_routes", os.path.join(ROOT, "jobs", "research-routes.py"))
@@ -696,6 +735,268 @@ def desk_state_json():
     return state
 
 
+class WizardDriversMissing(Exception):
+    """Raised by wizard_state_json when the driver scripts are absent;
+    do_GET turns it into the 409 + remediation idiom."""
+
+
+def _wiz_path(*names):
+    return os.path.join(WIZARD_SECRETS_HOME, *names)
+
+
+def _wiz_params():
+    try:
+        with open(_wiz_path("wizard-params.json"), encoding="utf-8") as f:
+            p = json.load(f)
+        return p if isinstance(p, dict) else {}
+    except Exception:
+        return {}
+
+
+def _wiz_save_params(patch):
+    """wizard-params.json = the wizard's 'params last used' record."""
+    p = _wiz_params()
+    p.update(patch)
+    os.makedirs(WIZARD_SECRETS_HOME, exist_ok=True)
+    tmp = _wiz_path("wizard-params.json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(p, f, sort_keys=True)
+    os.replace(tmp, _wiz_path("wizard-params.json"))
+
+
+def _wiz_pid(step):
+    try:
+        with open(_wiz_path("wizard-%s.pid" % step), encoding="utf-8") as f:
+            return int(f.read().strip())
+    except Exception:
+        return None
+
+
+def _wiz_pid_live(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _wiz_workdir():
+    """The seeded workdir: the newest <UTC-ts> dir under the secrets
+    home holding cidata.iso (the shape run_workdir() picks in the
+    driver). Missing -> empty string."""
+    try:
+        names = sorted(os.listdir(WIZARD_SECRETS_HOME), reverse=True)
+    except OSError:
+        return ""
+    for n in names:
+        d = _wiz_path(n)
+        if os.path.isdir(d) and os.path.isfile(os.path.join(d, "cidata.iso")):
+            return d
+    return ""
+
+
+def _wiz_isos():
+    """ISO candidates: omarchy*.iso in the downloads dir plus
+    $HNGH_ISO_DIRS. Names/sizes/mtimes only - never contents."""
+    dirs = [WIZARD_DOWNLOADS] + [d for d in WIZARD_ISO_DIRS.split(":") if d]
+    out, seen = [], set()
+    for d in dirs:
+        d = os.path.expanduser(d)
+        try:
+            names = sorted(os.listdir(d))
+        except OSError:
+            continue
+        for n in names:
+            if not fnmatch.fnmatch(n, "omarchy*.iso"):
+                continue
+            p = os.path.join(d, n)
+            if p in seen or not os.path.isfile(p):
+                continue
+            seen.add(p)
+            try:
+                st = os.stat(p)
+            except OSError:
+                continue
+            out.append({"path": p, "name": n,
+                        "size": st.st_size, "mtime": int(st.st_mtime)})
+    return out
+
+
+def _wiz_authkey_name(name):
+    return (name.endswith((".key", ".pem"))
+            or "authkey" in name or "tailscale" in name)
+
+
+def _wiz_authkey_files():
+    """Candidate authkey FILES under the secrets home: paths only, the
+    contents are never read. The authkey field takes a path; this list
+    just shows what is lying around to point it at."""
+    out = []
+    try:
+        for n in sorted(os.listdir(WIZARD_SECRETS_HOME)):
+            p = _wiz_path(n)
+            if os.path.isdir(p):
+                try:
+                    for sub in sorted(os.listdir(p)):
+                        if _wiz_authkey_name(sub):
+                            out.append(os.path.join(p, sub))
+                except OSError:
+                    pass
+            elif _wiz_authkey_name(n):
+                out.append(p)
+    except OSError:
+        pass
+    return out[:20]
+
+
+def _wiz_tail_file(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return "\n".join(f.read().splitlines()[-40:])
+    except OSError:
+        return ""
+
+
+def _wiz_log(stem, logdir):
+    """newest <stem>-*.log under logdir -> (name, tail40);
+    none -> ("", "")."""
+    try:
+        names = sorted(n for n in os.listdir(logdir)
+                       if n.startswith(stem + "-") and n.endswith(".log"))
+    except OSError:
+        return "", ""
+    if not names:
+        return "", ""
+    name = names[-1]
+    return name, _wiz_tail_file(os.path.join(logdir, name))
+
+
+def _wiz_verdict():
+    """The verify verdict: newest verify-*.log, else newest full-*.log."""
+    for stem in ("verify", "full"):
+        name, _tail = _wiz_log(stem, WIZARD_LOGDIR)
+        if not name:
+            continue
+        try:
+            with open(os.path.join(WIZARD_LOGDIR, name), encoding="utf-8",
+                      errors="replace") as f:
+                txt = f.read()
+        except OSError:
+            continue
+        m = WIZARD_VERDICT_RE.search(txt)
+        if m:
+            return m.group(1)
+    return None
+
+
+def _wiz_disks():
+    """Disk candidates straight from lsblk; every row gets an
+    unmounted flag for the go-real FORMATTED warning."""
+    try:
+        p = _run_ro(["lsblk", "--json", "-o",
+                     "NAME,SIZE,FSTYPE,PARTUUID,MOUNTPOINTS"], timeout=15)
+        devs = json.loads(p.stdout or "{}").get("blockdevices") or []
+    except Exception:
+        return []
+    out = []
+
+    def walk(items):
+        for it in items:
+            mps = it.get("mountpoints")
+            if mps is None:  # util-linux < 2.34: singular "mountpoint"
+                mps = [it.get("mountpoint")]
+            mps = [m for m in (mps or []) if m]
+            out.append({"name": it.get("name") or "",
+                        "size": it.get("size") or "",
+                        "fstype": it.get("fstype") or "",
+                        "partuuid": it.get("partuuid") or "",
+                        "mountpoints": ",".join(mps),
+                        "unmounted": not mps})
+            walk(it.get("children") or [])
+
+    walk(devs)
+    return out
+
+
+def _wiz_terminal():
+    """$HNGH_TERMINAL -> $TERMINAL -> kitty -> konsole -> alacritty ->
+    foot -> xterm, first one command -v can see (resolved path);
+    none -> empty string."""
+    for cand in (os.environ.get("HNGH_TERMINAL"), os.environ.get("TERMINAL")):
+        if cand:
+            hit = shutil.which(cand)
+            if hit:
+                return hit
+    for cand in WIZARD_TERMINALS:
+        hit = shutil.which(cand)
+        if hit:
+            return hit
+    return ""
+
+
+def wizard_state_json():
+    """GET /wizard-state.json - the wizard's read-only assembly (iso
+    candidates, selected iso, seed state, step liveness, stage-log
+    tails, verdict, entry block, disk candidates). Every probe is
+    individually fail-soft so the page always prints state; only
+    missing driver scripts are fatal."""
+    if not (os.path.isfile(WIZARD_DRIVER)
+            and os.path.isfile(WIZARD_BOOT_BUILD)):
+        raise WizardDriversMissing(
+            "installer drivers missing:"
+            " jobs/omarchy-unattended-install.sh and"
+            " jobs/omarchy-boot-build.sh must exist in this checkout")
+    p = _wiz_params()
+    params = {"user": str(p.get("user") or ""),
+              "disk": str(p.get("disk") or ""),
+              "authkey_path": str(p.get("authkey_path") or ""),
+              "defer": bool(p.get("defer"))}
+    for k in ("packages", "repos", "services"):
+        v = p.get(k)
+        params[k] = [str(x) for x in v] if isinstance(v, list) else []
+    logs = {}
+    for step, stem in WIZARD_LOG_STEM.items():
+        name, tail = _wiz_log(stem, WIZARD_LOGDIR)
+        logs[step] = {"file": name, "tail": tail}
+    dl_log = _wiz_path("wizard-download.log")
+    logs["download"] = {"file": "wizard-download.log"
+                        if os.path.isfile(dl_log) else "",
+                        "tail": _wiz_tail_file(dl_log)}
+    try:
+        with open(_wiz_path("entry-block.txt"), encoding="utf-8") as f:
+            entry = f.read()
+    except OSError:
+        entry = None
+    try:
+        q = _run_ro(["pgrep", "-af", "qemu-system"])
+        qemu = q.returncode == 0 and bool((q.stdout or "").strip())
+    except Exception:
+        qemu = False
+    wd = _wiz_workdir()
+    return {
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "iso": str(p.get("iso") or ""),
+        "isos": _wiz_isos(),
+        "authkey_files": _wiz_authkey_files(),
+        "seed": {"workdir": wd,
+                 "cidata": bool(wd) and os.path.isfile(
+                     os.path.join(wd, "cidata.iso")),
+                 "manifest": bool(wd) and os.path.isfile(
+                     os.path.join(wd, "run-manifest")),
+                 "params": params},
+        "steps": {s: {"pid": _wiz_pid(s),
+                      "running": _wiz_pid_live(_wiz_pid(s))}
+                  for s in ("pilot", "go-real", "verify", "download")},
+        "qemu_running": qemu,
+        "logs": logs,
+        "verdict": _wiz_verdict(),
+        "entry": entry,
+        "disks": _wiz_disks(),
+    }
+
+
 def telemetry_24h():
     """24h aggregates from telemetry.db, emitted on request (no new job);
     cached 30s in-process (feed cadence is minutes, not seconds)."""
@@ -790,7 +1091,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._deny_source()
             return
         route = self.path.split("?")[0]
-        if route in ("/", "/index.html", "/console.html", "/desk.html"):
+        if route in ("/", "/index.html", "/console.html", "/desk.html",
+                     "/wizard.html"):
             self._serve_index()
             return
         if route.startswith("/session/"):
@@ -816,6 +1118,19 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/desk-state.json":
             self._json(200, desk_state_json())
+            return
+        if route == "/wizard-state.json":
+            try:
+                self._json(200, wizard_state_json())
+            except WizardDriversMissing as e:
+                self._json(409, {"ok": False, "error": str(e),
+                                 "remediation": "restore"
+                                 " automation/jobs/"
+                                 "omarchy-unattended-install.sh and"
+                                 " omarchy-boot-build.sh in this"
+                                 " checkout (the wizard drives the"
+                                 " installer; it never substitutes"
+                                 " one)"})
             return
         if route == "/fleet.json":
             # Rung B resource-pool feed (pooled-hardware rung): the fleet
@@ -1044,7 +1359,8 @@ class Handler(SimpleHTTPRequestHandler):
     # every mutation 403s: fail closed.
     def _serve_index(self):
         base = os.path.basename(self.path.split("?")[0])
-        name = base if base in ("console.html", "desk.html") \
+        name = base if base in ("console.html", "desk.html",
+                                "wizard.html") \
             else "index.html"
         try:
             with open(os.path.join(DASHBOARD, name), "rb") as f:
@@ -1200,6 +1516,11 @@ class Handler(SimpleHTTPRequestHandler):
              "desk/approve": self._desk_approve,
              "desk/run-phase-1": self._desk_run_phase1,
              "desk/run-aur": self._desk_run_aur,
+             "wizard/iso-select": self._wizard_iso_select,
+             "wizard/iso-download": self._wizard_iso_download,
+             "wizard/seed": self._wizard_seed,
+             "wizard/terminal": self._wizard_terminal,
+             "wizard/entry-preview": self._wizard_entry_preview,
              "feedback": self._feedback}[p]()
         except KeyError:
             self._json(404, {"ok": False, "error": "not found"})
@@ -1885,6 +2206,304 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _research_note(self):
         self._json(410, {"ok": False, "error": BACKLOG_REFUSED})
+
+    # ---- Installer wizard (2026-10-06) ------------------------------
+    # The face of jobs/omarchy-unattended-install.sh: seed runs the
+    # driver synchronously (the run-aur pattern); the privileged steps
+    # open REAL TERMINAL WINDOWS running the whole phase command, so
+    # the sudo password and y/N gates live on the operator's TTY and
+    # never cross HTTP. The wizard never substitutes for the CLI.
+
+    def _wizard_iso_select(self):
+        try:
+            body = self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        path = body.get("path") if isinstance(body, dict) else None
+        if not isinstance(path, str) or not path.strip():
+            self._json(400, {"ok": False, "error": "missing or invalid path"})
+            return
+        path = os.path.expanduser(path.strip())
+        if (not os.path.isfile(path) or not fnmatch.fnmatch(
+                os.path.basename(path), "omarchy*.iso")):
+            self._json(400, {"ok": False,
+                             "error": "not an existing omarchy*.iso file"})
+            return
+        _wiz_save_params({"iso": path})
+        self._json(201, {"ok": True, "path": path})
+
+    def _wizard_iso_download(self):
+        try:
+            body = self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        url = body.get("url") if isinstance(body, dict) else None
+        if not isinstance(url, str) or not url.strip():
+            self._json(400, {"ok": False, "error": "missing or invalid url"})
+            return
+        url = url.strip()
+        parts = urllib.parse.urlsplit(url)
+        if parts.scheme != "https":
+            self._json(400, {"ok": False, "error": "https URLs only"})
+            return
+        if parts.hostname not in WIZARD_URL_HOSTS:
+            self._json(400, {"ok": False,
+                             "error": "host not on the allowlist: %s"
+                             % (parts.hostname or "")})
+            return
+        name = os.path.basename(parts.path)
+        if name in ("", ".", ".."):
+            self._json(400, {"ok": False, "error": "url has no file name"})
+            return
+        if _wiz_pid_live(_wiz_pid("download")):
+            self._json(409, {"ok": False,
+                             "error": "a download is already running",
+                             "remediation": "wait for it to finish (its"
+                             " progress shows in the download log)"
+                             " or remove the stale wizard-download.pid"})
+            return
+        os.makedirs(WIZARD_DOWNLOADS, exist_ok=True)
+        os.makedirs(WIZARD_SECRETS_HOME, exist_ok=True)
+        dest = os.path.join(WIZARD_DOWNLOADS, name)
+        # ponytail: the allowlist pins the initial URL only; curl -L
+        # follows any redirect hop (upgrade path: validate each hop)
+        try:
+            logf = open(_wiz_path("wizard-download.log"), "wb")
+        except OSError as e:
+            self._json(500, {"ok": False,
+                             "error": "cannot open download log: %s" % e})
+            return
+        try:
+            proc = subprocess.Popen(
+                ["curl", "-L", "--proto-redir", "=https", "-o", dest, url],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=logf, start_new_session=True)
+            threading.Thread(target=proc.wait, daemon=True).start()
+        except Exception as e:
+            logf.close()
+            self._json(500, {"ok": False,
+                             "error": "cannot spawn curl: %s" % e})
+            return
+        logf.close()
+        with open(_wiz_path("wizard-download.pid"), "w",
+                  encoding="utf-8") as f:
+            f.write(str(proc.pid))
+        self._json(201, {"ok": True, "pid": proc.pid, "path": dest})
+
+    def _wizard_seed(self):
+        try:
+            body = self._body()
+        except Exception:
+            body = None
+        if not isinstance(body, dict):
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        user = str(body.get("user") or "").strip()
+        disk = str(body.get("disk") or "").strip()
+        if not WIZARD_USER_RE.fullmatch(user):
+            self._json(400, {"ok": False, "error": "missing or invalid user"})
+            return
+        if not WIZARD_DISK_RE.fullmatch(disk):
+            self._json(400, {"ok": False, "error": "missing or invalid disk"})
+            return
+        lists = {}
+        for key in ("packages", "repos", "services"):
+            v = body.get(key)
+            if v is None:
+                v = []
+            if not isinstance(v, list) or not all(
+                    isinstance(x, str) for x in v):
+                self._json(400, {"ok": False,
+                                 "error": "%s must be a string list" % key})
+                return
+            lists[key] = [x.strip() for x in v if x.strip()]
+        for x in lists["packages"]:
+            if not WIZARD_PKG_RE.fullmatch(x):
+                self._json(400, {"ok": False,
+                                 "error": "malformed package name '%s'" % x})
+                return
+        for x in lists["services"]:
+            if not WIZARD_SVC_RE.fullmatch(x):
+                self._json(400, {"ok": False,
+                                 "error": "malformed service unit '%s'" % x})
+                return
+        for x in lists["repos"]:
+            if "://" not in x:
+                self._json(400, {"ok": False,
+                                 "error": "repo url must name a scheme"
+                                 ": '%s'" % x})
+                return
+        authkey = str(body.get("authkey_path") or "").strip()
+        if authkey:
+            authkey = os.path.expanduser(authkey)
+            if not os.path.isfile(authkey):
+                self._json(400, {"ok": False,
+                                 "error": "authkey_path is not a file"})
+                return
+        defer = bool(body.get("defer"))
+        if not defer:
+            # Contract gap resolved fail-closed: the request body has no
+            # hash field and key material must never cross HTTP.
+            self._json(400, {
+                "ok": False,
+                "error": "wizard seed needs defer:true",
+                "remediation": "credentials never cross HTTP: seed with"
+                               " defer (set the password later), or run"
+                               " the CLI with --credentials-hash <hash>"})
+            return
+        argv = [WIZARD_DRIVER, "seed", "--yes",
+                "--disk", disk, "--user", user]
+        iso = str(_wiz_params().get("iso") or "")
+        if iso:
+            argv += ["--iso", iso]
+        for x in lists["packages"]:
+            argv += ["--package", x]
+        for x in lists["repos"]:
+            argv += ["--repo", x]
+        for x in lists["services"]:
+            argv += ["--service", x]
+        if authkey:
+            argv += ["--tailscale-authkey", authkey]
+        argv += ["--defer-provisioning"]
+        try:
+            p = subprocess.run(argv, capture_output=True, text=True,
+                               timeout=300)
+            rc, out = p.returncode, (p.stdout or "") + (p.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            rc, out = None, (e.stdout or "") + (e.stderr or "")
+        except Exception as e:
+            rc, out = None, str(e)
+        _wiz_save_params({"user": user, "disk": disk, "defer": defer,
+                          "authkey_path": authkey,
+                          "packages": lists["packages"],
+                          "repos": lists["repos"],
+                          "services": lists["services"]})
+        tail = "\n".join(out.splitlines()[-40:])
+        if rc == 0:
+            self._json(201, {"ok": True, "rc": 0, "tail": tail})
+        else:
+            self._json(502, {"ok": False, "rc": rc, "tail": tail})
+
+    def _wizard_terminal(self):
+        try:
+            body = self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        step = body.get("step") if isinstance(body, dict) else None
+        if step not in ("pilot", "go-real", "verify"):
+            self._json(400, {"ok": False, "error": "bad step"})
+            return
+        p = _wiz_params()
+        disk = str(p.get("disk") or "")
+        iso = str(p.get("iso") or "")
+        user = str(p.get("user") or "")
+        if step == "pilot":
+            words = ["run", "--yes", "--pilot", "--disk", disk, "--iso", iso]
+            need = {"disk": disk, "iso": iso}
+        elif step == "go-real":
+            words = ["full", "--yes", "--go-real", "--disk", disk,
+                     "--iso", iso, "--user", user]
+            need = {"disk": disk, "iso": iso, "user": user}
+        else:
+            words = ["verify", "--yes", "--disk", disk]
+            need = {"disk": disk}
+        missing = sorted(k for k, v in need.items() if not v)
+        if missing:
+            self._json(409, {"ok": False,
+                             "error": "seed params missing: %s"
+                             % ", ".join(missing),
+                             "remediation": "run the seed step first"
+                             " (it records disk/iso/user for the phases)"})
+            return
+        term = _wiz_terminal()
+        if not term:
+            self._json(409, {"ok": False,
+                             "error": "no terminal binary found",
+                             "remediation": "install kitty, konsole,"
+                             " alacritty, foot, or xterm, or point"
+                             " HNGH_TERMINAL at one"})
+            return
+        if not (os.environ.get("WAYLAND_DISPLAY")
+                or os.environ.get("DISPLAY")):
+            self._json(409, {"ok": False,
+                             "error": "no display session",
+                             "remediation": "the privileged phases open"
+                             " real terminal windows: run the wizard"
+                             " inside the desktop session"
+                             " (WAYLAND_DISPLAY/DISPLAY unset here)"})
+            return
+        for other in WIZARD_PRIV_STEPS:
+            if _wiz_pid_live(_wiz_pid(other)):
+                self._json(409, {"ok": False,
+                                 "error": "a privileged step is already"
+                                 " running: %s" % other,
+                                 "remediation": "finish it first (its"
+                                 " terminal window holds the y/N gates)"})
+                return
+        try:
+            q = _run_ro(["pgrep", "-af", "qemu-system"])
+            if q.returncode == 0 and (q.stdout or "").strip():
+                self._json(409, {"ok": False,
+                                 "error": "a qemu VM is already running",
+                                 "remediation": "wait for it to exit (or"
+                                 " close its terminal) before opening"
+                                 " another phase"})
+                return
+        except Exception:
+            pass  # probe fault is not a grant: spawn stays the operator's click
+        repo = os.path.dirname(ROOT)
+        argstr = " ".join(shlex.quote(w) for w in words)
+        script = ("cd %s && bash automation/jobs/"
+                  "omarchy-unattended-install.sh %s;"
+                  " rc=$?; echo \"=== exit rc=$rc ===\"; read -r"
+                  % (shlex.quote(repo), argstr))
+        env = dict(os.environ)
+        wd = _wiz_workdir()
+        if wd:
+            env["HNGH_UNATTENDED_DIR"] = wd
+        try:
+            proc = subprocess.Popen(
+                [term, "-e", "bash", "-c", script],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, start_new_session=True, env=env)
+            threading.Thread(target=proc.wait, daemon=True).start()
+        except Exception as e:
+            self._json(500, {"ok": False,
+                             "error": "cannot spawn terminal: %s" % e})
+            return
+        with open(_wiz_path("wizard-%s.pid" % step), "w",
+                  encoding="utf-8") as f:
+            f.write(str(proc.pid))
+        self._json(201, {"ok": True, "pid": proc.pid,
+                         "cmd": scrub.redact_home(shlex.join(
+                             [term, "-e", "bash", "-c", script]))})
+
+    def _wizard_entry_preview(self):
+        try:
+            self._body()
+        except Exception:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        try:
+            p = subprocess.run([WIZARD_BOOT_BUILD, "emit-entry"],
+                               capture_output=True, text=True, timeout=60)
+            rc, out = p.returncode, (p.stdout or "") + (p.stderr or "")
+        except Exception as e:
+            self._json(502, {"ok": False, "rc": None,
+                             "tail": "\n".join(str(e).splitlines()[-40:])})
+            return
+        if rc != 0:
+            self._json(502, {"ok": False, "rc": rc,
+                             "tail": "\n".join(out.splitlines()[-40:])})
+            return
+        block = (p.stdout or "").rstrip() + "\n"
+        os.makedirs(WIZARD_SECRETS_HOME, exist_ok=True)
+        with open(_wiz_path("entry-block.txt"), "w", encoding="utf-8") as f:
+            f.write(block)
+        self._json(201, {"ok": True, "entry": block})
 
     def _json(self, code, obj):
         payload = json.dumps(obj).encode()

@@ -49,6 +49,9 @@ config/installer-choices.json
 !dashboard/system-view.js
 !dashboard/history.html
 !dashboard/history-view.js
+!dashboard/wizard.html
+!dashboard/wizard-view.js
+!dashboard/wizard.css
 !dashboard/reports.md
 !dashboard/report-cursor
 !dashboard/vendor/

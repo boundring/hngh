@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OMARCHY INSTALL WIZARD - hngh-automation</title>
+<link rel="icon" href="data:,"/>
+<link rel="stylesheet" href="wizard.css">
+<!-- token placeholder: the dashboard server injects the real token meta
+     for front pages at cutover; standalone, mutations fail closed. -->
+<meta name="hngh-token" content="">
+</head>
+<body id="top">
+<div id="wizerr" class="error" hidden></div>
+
+<div class="wiz-shell">
+
+  <div class="win mainwin">
+    <div class="titlebar">
+      <span class="tt">OMARCHY INSTALL WIZARD</span>
+      <span class="tb-lcd"><span id="wiz-line" class="lcd tiny">loading...</span></span>
+    </div>
+    <div class="mainbody">
+      <div class="marquee lcd">OMARCHY INSTALL WIZARD :: hngh automation driver :: read every warning before you arm a step</div>
+      <ol class="steps-rail" aria-label="wizard steps">
+        <li><span class="step-name">ISO</span><span id="step-iso" class="badge pending">pending</span></li>
+        <li><span class="step-name">SEED</span><span id="step-seed" class="badge pending">pending</span></li>
+        <li><span class="step-name">PILOT</span><span id="step-pilot" class="badge pending">pending</span></li>
+        <li><span class="step-name">VERIFY</span><span id="step-verify" class="badge pending">pending</span></li>
+        <li><span class="step-name">GO-REAL</span><span id="step-go-real" class="badge pending">pending</span></li>
+        <li><span class="step-name">ENTRY</span><span id="step-entry" class="badge pending">pending</span></li>
+        <li><span class="step-name">DONE</span><span id="step-done" class="badge pending">pending</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <section class="win pane" id="pane-iso" aria-label="iso select">
+    <div class="titlebar"><span class="tt">ISO SELECT</span></div>
+    <div class="body">
+      <div id="iso-list" class="iso-list"><div class="placeholder">loading...</div></div>
+      <div class="row">
+        <span class="lbl">selected:</span>
+        <span id="iso-selected" class="lcd wide">none</span>
+      </div>
+      <div class="row">
+        <label class="lbl" for="iso-url">download URL:</label>
+        <input id="iso-url" type="text" spellcheck="false"
+               placeholder="paste an allowlisted TLS URL">
+        <button id="btn-iso-download" type="button">Download</button>
+      </div>
+      <div id="iso-out" class="out"></div>
+    </div>
+    <span class="grip" title="drag the title bar to move, the corner grip to resize"></span>
+  </section>
+
+  <section class="win pane" id="pane-options" aria-label="seed options">
+    <div class="titlebar"><span class="tt">SEED OPTIONS</span></div>
+    <div class="body">
+      <div class="row">
+        <label class="lbl" for="opt-user">user:</label>
+        <input id="opt-user" type="text" spellcheck="false">
+      </div>
+      <div class="row">
+        <label class="lbl" for="opt-disk">disk:</label>
+        <input id="opt-disk" type="text" spellcheck="false"
+               placeholder="pick a name from the disk list below">
+      </div>
+      <div class="row">
+        <label class="lbl" for="opt-packages">packages:</label>
+        <input id="opt-packages" type="text" spellcheck="false"
+               placeholder="comma or newline separated">
+      </div>
+      <div class="row">
+        <label class="lbl" for="opt-repos">repos:</label>
+        <input id="opt-repos" type="text" spellcheck="false"
+               placeholder="comma or newline separated">
+      </div>
+      <div class="row">
+        <label class="lbl" for="opt-services">services:</label>
+        <input id="opt-services" type="text" spellcheck="false"
+               placeholder="comma or newline separated">
+      </div>
+      <div class="row">
+        <label class="lbl" for="opt-authkey">authkey path:</label>
+        <input id="opt-authkey" type="text" spellcheck="false"
+               placeholder="typed by hand - the browser cannot give real paths">
+      </div>
+      <div class="hint">current seed authkey: <span id="authkey-current">none</span></div>
+      <div class="subhead">KEY FILES SEEN BY THE DRIVER (click to fill the path)</div>
+      <div id="authkey-list" class="iso-list"><div class="placeholder">loading...</div></div>
+      <div class="row check">
+        <input id="opt-defer" type="checkbox" checked>
+        <label for="opt-defer">defer credential provisioning (seed runs with no credentials)</label>
+      </div>
+      <div class="row">
+        <button id="btn-seed" type="button" class="big">SEED</button>
+      </div>
+      <div id="seed-out" class="out"></div>
+      <div class="subhead">DISKS (from the driver scan)</div>
+      <div id="disk-list" class="iso-list"><div class="placeholder">loading...</div></div>
+    </div>
+    <span class="grip" title="drag the title bar to move, the corner grip to resize"></span>
+  </section>
+
+  <section class="win pane" id="pane-steps" aria-label="privileged steps">
+    <div class="titlebar"><span class="tt">PRIVILEGED STEPS</span></div>
+    <div class="body">
+      <div class="row">
+        <button id="btn-pilot" type="button">PILOT (terminal)</button>
+        <span id="pilot-reason" class="reason" hidden></span>
+      </div>
+      <div class="row">
+        <button id="btn-verify" type="button">VERIFY (terminal)</button>
+        <span id="verify-reason" class="reason" hidden></span>
+      </div>
+      <div id="formatted-warning" class="warn">DANGER: THE SELECTED DISK WILL BE FORMATTED</div>
+      <div class="row">
+        <button id="btn-go-real" type="button" class="danger">GO-REAL (terminal)</button>
+        <span id="go-real-reason" class="reason" hidden></span>
+      </div>
+      <div class="row check">
+        <input id="go-real-check" type="checkbox">
+        <label for="go-real-check">I understand: the disk WILL BE FORMATTED and every byte on it will be lost</label>
+      </div>
+      <div id="steps-out" class="out"></div>
+    </div>
+    <span class="grip" title="drag the title bar to move, the corner grip to resize"></span>
+  </section>
+
+  <section class="win pane" id="pane-logs" aria-label="log readouts">
+    <div class="titlebar"><span class="tt">LOG READOUTS</span></div>
+    <div class="body logs">
+      <div class="logwrap"><div class="subhead">SEED</div><pre id="log-seed" class="log">loading...</pre></div>
+      <div class="logwrap"><div class="subhead">PILOT</div><pre id="log-pilot" class="log">loading...</pre></div>
+      <div class="logwrap"><div class="subhead">VERIFY</div><pre id="log-verify" class="log">loading...</pre></div>
+      <div class="logwrap"><div class="subhead">GO-REAL</div><pre id="log-go-real" class="log">loading...</pre></div>
+      <div class="logwrap"><div class="subhead">DOWNLOAD</div><pre id="log-download" class="log">loading...</pre></div>
+    </div>
+    <span class="grip" title="drag the title bar to move, the corner grip to resize"></span>
+  </section>
+
+  <section class="win pane" id="pane-entry" aria-label="limine entry">
+    <div class="titlebar"><span class="tt">LIMINE ENTRY</span></div>
+    <div class="body">
+      <pre id="entry-block" class="log tall">(no entry block yet - press ENTRY PREVIEW)</pre>
+      <div class="row">
+        <button id="btn-entry" type="button">ENTRY PREVIEW</button>
+      </div>
+      <div id="entry-out" class="out"></div>
+    </div>
+    <span class="grip" title="drag the title bar to move, the corner grip to resize"></span>
+  </section>
+
+</div>
+
+<script src="wizard-view.js"></script>
+</body>
+</html>

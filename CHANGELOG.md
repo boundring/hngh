@@ -4,6 +4,35 @@ All notable changes to Hngh are documented here. Entries are dated by the
 day they were recorded. Nothing has been released yet; development work
 lives under Pre-release / early development until the first release.
 
+### 2026-10-06
+
+- **Automation — unattended stock-Omarchy install driver lands**:
+  jobs/omarchy-unattended-install.sh runs seed | run | verify against a
+  cidata pair whose JSON keys are verified against the ISO's own
+  omarchy-cidata-load (SCHEMA-UNVERIFIED fallback otherwise); run
+  defaults to a qcow2 pilot overlay over the backing disk, --real-disk
+  is the explicit FORMATTED-gated step; verify boots the target
+  disk-only and returns BOOTED+SSH / BOOT_ONLY / TIMEOUT; secrets stay
+  under ~/.hngh-automation with hash/key redaction. The `full` phase
+  collapses the flow to two commands (pilot chain, then --go-real,
+  refused without a green pilot manifest) ending in a fresh limine
+  entry block from omarchy-boot-build.sh emit-entry. Seed options:
+  --package/--packages-from/--repo/--service feed loader-consumed JSON
+  arrays (ground truth extracted from omarchy-4.0.4.iso:
+  archinstall_adapter consumes packages and services) and
+  --tailscale-authkey writes the cidata FILE the loader actually copies,
+  never a JSON key.
+- **Automation — the installation desk gains an installer wizard**:
+  automation/dashboard/wizard.{html,js,css} (Winamp-skinned, no
+  framework, poll-chain idiom) on new dashboard-server routes
+  (/wizard-state.json, iso-select, iso-download with https + hostname
+  allowlist, seed, terminal, entry-preview; 27-proof suite). Privileged
+  steps open a real terminal window running the entire driver phase —
+  sudo password and y/N gates stay in that tty, and per-tty sudo
+  timestamps cover the whole phase; credentials never cross HTTP, so
+  wizard seed is defer-only with CLI remediation. Recorded in
+  docs/records/2026-10-06-omarchy-unattended-install-lane.md.
+
 ### 2026-10-04
 
 - **Automation — megastructure P1 lands on the control-room map**:

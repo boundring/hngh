@@ -59,6 +59,28 @@ wizard with a seeded cidata install: four phases (`seed` `run` `verify`
 4. Reboot and pick the entry (staged reboot table below). Nothing here
    reboots the host or touches NVRAM.
 
+### Wizard (the desk's installer face)
+
+`automation/dashboard/wizard.html` (linked from `desk.html`) rides the
+same driver as the two-command flow above: `GET /wizard-state.json`
+assembles iso candidates, seed state, step liveness, stage-log tails,
+the verify verdict, the entry block, and disk candidates;
+`POST /wizard/{iso-select,iso-download,seed,terminal,entry-preview}`
+drive the phases. Served with the dashboard on
+`http://127.0.0.1:8890/wizard.html` (token injected like the desk page).
+
+Authorization is the terminal-window pattern: pilot, run --go-real,
+and verify open as REAL terminal windows running the entire driver
+phase command, so the sudo password and the y/N gates (REAL DISK
+FORMATTED etc.) live in that window, never over HTTP. One privileged
+step at a time. The wizard's seed step is `--defer-provisioning` only
+(a hash would cross HTTP, which is refused); `--credentials-hash`
+stays on the CLI.
+
+The CLI flow above remains the ground truth: same phases, same gates,
+same stage logs and run-manifest -- the wizard only drives them.
+
+
 ### Seed package-selection options
 
 All five flags are `seed` inputs (they pass through `full` untouched);
