@@ -58,6 +58,9 @@ cat >"$SHIM/pgrep" <<'SH'
 printf 'pgrep %s\n' "$*" >>"$HNGH_STUB_LOG"
 if [ -f "$HNGH_STUB_LOG.qemuproc" ]; then
   printf '12345 qemu-system-x86_64 %s\n' "$(cat "$HNGH_STUB_LOG.qemuproc")"
+  # one-shot observation: the daemonized install VM powers off at install
+  # end, so the next poll finds nothing (models the run -> verify hand-off)
+  rm -f "$HNGH_STUB_LOG.qemuproc"
   exit 0
 fi
 if [ "${HNGH_STUB_QEMU_ALIVE:-}" = "1" ]; then
@@ -150,8 +153,13 @@ case "$1" in
 esac
 exec "$@"
 SH
+cat >"$SHIM/sleep" <<'SH'
+#!/bin/sh
+printf 'sleep %s\n' "$*" >>"$HNGH_STUB_LOG"
+exit 0
+SH
 chmod +x "$SHIM"/qemu-system-x86_64 "$SHIM"/genisoimage "$SHIM"/unsquashfs \
-  "$SHIM"/ssh "$SHIM"/df "$SHIM"/sudo
+  "$SHIM"/ssh "$SHIM"/df "$SHIM"/sudo "$SHIM"/sleep
 
 # ---- run helper: answers on stdin; gate '' = no HNGH_BOOT_CONFIRM ----
 run_job() {
@@ -166,6 +174,7 @@ run_job() {
     HNGH_BOOT_LOGDIR="$LOGS" \
     HNGH_OVMF_CODE="$OVMF_CODE" HNGH_OVMF_VARS="$OVMF_VARS" \
     HNGH_KVM_DEVICE="$KVM" \
+    HNGH_BOOT_BUILD="${BOOT_BUILD_STUB:-}" \
     HNGH_VERIFY_INTERVAL=1 HNGH_VERIFY_TIMEOUT=5 \
     HNGH_PILOT_MIN_FREE_GB="${FREE_GB:-30}" \
     HNGH_STUB_DISK_BYTES="${STUB_BYTES:-42949672960}" \
@@ -492,6 +501,108 @@ if [ "$rc1" -eq 0 ] && [ "$rc2" -eq 0 ] && [ "$rc3" -eq 0 ] && [ ! -s "$STUB_LOG
   ok "16 dry-run prints full plans and invokes zero external stubs"
 else
   bad "16 dry-run prints full plans and invokes zero external stubs" "rc=$rc1/$rc2/$rc3 stubs=$(cat "$STUB_LOG")"
+fi
+
+# ---- 17: full pilot chain calls seed -> run -> verify in order ----
+: >"$STUB_LOG"
+SECRETS2="$(mktemp -d "$WORK/secrets17.XXXXXX")"
+out="$(run_job 'y
+y
+' YES full --disk /dev/nvme0n1 --iso "$ISO" --user omarchy \
+  --credentials-hash "$HASH" --yes)"
+rc=$?
+g_line="$(grep -n '^genisoimage ' "$STUB_LOG" | head -n 1 | cut -d: -f1)"
+qi_line="$(grep -n '^qemu-img create' "$STUB_LOG" | head -n 1 | cut -d: -f1)"
+in_line="$(grep -n '^qemu-system-x86_64 .*serial-install.log' "$STUB_LOG" | head -n 1 | cut -d: -f1)"
+vf_line="$(grep -n '^qemu-system-x86_64 .*serial-verify.log' "$STUB_LOG" | head -n 1 | cut -d: -f1)"
+ssh_line="$(grep -n '^ssh ' "$STUB_LOG" | head -n 1 | cut -d: -f1)"
+n_q="$(grep -c '^qemu-system-x86_64 ' "$STUB_LOG")"
+in_qlog="$(grep '^qemu-system-x86_64 ' "$STUB_LOG" | head -n 1)"
+if [ "$rc" -eq 0 ] && [ -n "$g_line" ] && [ -n "$qi_line" ] && [ -n "$in_line" ] &&
+  [ -n "$vf_line" ] && [ -n "$ssh_line" ] && [ "$n_q" -eq 2 ] &&
+  [ "$g_line" -lt "$qi_line" ] && [ "$qi_line" -lt "$in_line" ] &&
+  [ "$in_line" -lt "$vf_line" ] && [ "$vf_line" -lt "$ssh_line" ]; then
+  ok "17 full pilot chain calls seed -> run -> verify in order"
+else
+  bad "17 full pilot chain calls seed -> run -> verify in order" "rc=$rc g=$g_line qi=$qi_line in=$in_line vf=$vf_line ssh=$ssh_line n_q=$n_q"
+fi
+
+# ---- 18: the pilot chain stops green at the real-disk gate (exit 0) ----
+if [ "$rc" -eq 0 ] &&
+  case "$out" in *"pilot green: $UDIR/pilot.qcow2 proved the install"*) true ;; *) false ;; esac &&
+  case "$out" in *'full --yes --go-real'*) true ;; *) false ;; esac &&
+  case "$in_qlog" in *'pilot.qcow2,if=virtio,format=qcow2'*) true ;; *) false ;; esac &&
+  case "$out" in *FORMATTED*) false ;; *) true ;; esac then
+  ok "18 pilot chain stops at the real-disk gate (message + exit 0, gate never fired)"
+else
+  bad "18 pilot chain stops at the real-disk gate (message + exit 0, gate never fired)" "rc=$rc out=$out"
+fi
+
+# ---- 19: full --go-real without a pilot run-manifest fails closed ----
+mv "$man" "$man.saved"
+: >"$STUB_LOG"
+out="$(run_job '' YES full --yes --go-real --disk /dev/nvme0n1 --iso "$ISO" --user omarchy)"
+rc=$?
+mv "$man.saved" "$man"
+if [ "$rc" -eq 2 ] &&
+  case "$out" in *'pilot run-manifest'*) true ;; *) false ;; esac &&
+  case "$out" in *'run the pilot chain first'*) true ;; *) false ;; esac &&
+  ! grep -q '^qemu-system-x86_64 ' "$STUB_LOG"; then
+  ok "19 full --go-real without pilot run-manifest exits 2 (pilot first)"
+else
+  bad "19 full --go-real without pilot run-manifest exits 2 (pilot first)" "rc=$rc out=$out stubs=$(cat "$STUB_LOG")"
+fi
+
+# ---- 20: full --go-real happy path: real gates + entry block hand-off ----
+: >"$STUB_LOG"
+BOOT_BUILD_STUB="$WORK/boot-build-stub"
+cat >"$BOOT_BUILD_STUB" <<'SH'
+#!/bin/sh
+printf 'boot-build %s\n' "$*" >>"$HNGH_STUB_LOG"
+[ "$1" = "emit-entry" ] || exit 2
+printf '%s\n' '/Omarchy 4.0.4 (chainload nvme0n1 ESP)' '    protocol: efi' \
+  '    path: guid(TEST-PARTUUID):/EFI/BOOT/BOOTX64.EFI'
+exit 0
+SH
+chmod +x "$BOOT_BUILD_STUB"
+out="$(run_job 'y
+y
+y
+' YES full --yes --go-real --disk /dev/nvme0n1 --iso "$ISO" --user omarchy)"
+rc=$?
+q1="$(grep '^qemu-system-x86_64 ' "$STUB_LOG" | head -n 1)"
+q2="$(grep '^qemu-system-x86_64 ' "$STUB_LOG" | tail -n 1)"
+prompts="$(grep -o '\[y/N\]' <<<"$out" | wc -l)"
+if [ "$rc" -eq 0 ] &&
+  case "$q1" in *'file=/dev/nvme0n1,if=virtio,format=raw'*serial-install.log*) true ;; *) false ;; esac &&
+  case "$q2" in *'file=/dev/nvme0n1,if=virtio,format=raw'*serial-verify.log*) true ;; *) false ;; esac &&
+  ! grep -q '^qemu-img create' "$STUB_LOG"; then
+  ok "20a full --go-real installs onto the real disk and verifies it (no pilot overlay)"
+else
+  bad "20a full --go-real installs onto the real disk and verifies it (no pilot overlay)" "rc=$rc q1=$q1 q2=$q2 stubs=$(cat "$STUB_LOG")"
+fi
+if [ "$rc" -eq 0 ] && [ "$prompts" -eq 3 ] &&
+  case "$out" in *'REAL DISK: /dev/nvme0n1 will be FORMATTED'*) true ;; *) false ;; esac then
+  ok "20b the real-disk FORMATTED y/N gate still asks exactly once"
+else
+  bad "20b the real-disk FORMATTED y/N gate still asks exactly once" "rc=$rc prompts=$prompts out=$out"
+fi
+if [ "$rc" -eq 0 ] &&
+  case "$out" in *'omarchy-boot-build.sh emit-entry'*) true ;; *) false ;; esac &&
+  case "$out" in *'chainload nvme0n1 ESP'*) true ;; *) false ;; esac &&
+  case "$out" in *'/boot/EFI/limine/limine.conf'*'duplicate title'*) true ;; *) false ;; esac &&
+  case "$out" in *'limine.conf.bak-'*) true ;; *) false ;; esac then
+  ok "20c prints the emit-entry block + hand-edit steps for limine.conf"
+else
+  bad "20c prints the emit-entry block + hand-edit steps for limine.conf" "rc=$rc out=$out"
+fi
+
+# ---- 21: full --go-real reuses the seed (idempotent skip) ----
+if [ "$rc" -eq 0 ] && ! grep -q '^genisoimage ' "$STUB_LOG" &&
+  case "$out" in *'idempotent skip'*) true ;; *) false ;; esac then
+  ok "21 full --go-real reuses the seeded workdir (idempotent skip, no new cidata)"
+else
+  bad "21 full --go-real reuses the seeded workdir (idempotent skip, no new cidata)" "rc=$rc out=$out stubs=$(cat "$STUB_LOG")"
 fi
 
 if [ "$fails" -eq 0 ]; then

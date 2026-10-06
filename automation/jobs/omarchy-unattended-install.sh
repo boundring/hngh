@@ -5,7 +5,7 @@
 # your own terminal. Runbook:
 # docs/agent-notes/2026-10-05-omarchy-limine-boot-runbook.md
 #
-# Usage: omarchy-unattended-install.sh <seed|run|verify|help> [flags] [--dry-run|--yes]
+# Usage: omarchy-unattended-install.sh <seed|run|verify|full|help> [flags] [--dry-run|--yes]
 #   --dry-run is the DEFAULT: the full plan is printed and nothing is
 #   written. --yes executes; every privileged action still asks y/N
 #   (default N) on the operator's TTY. HNGH_BOOT_CONFIRM=YES authorizes
@@ -14,6 +14,9 @@
 #   seed   build the cidata dir + cidata.iso under the SECRETS home
 #   run    preflight + launch the unattended install VM
 #   verify boot the installed target disk-only and judge the outcome
+#   full   one-flow reinstall: seed -> run --pilot -> verify, stopping
+#          green at the real-disk gate; --go-real continues onto DISK
+#          and prints the fresh limine entry block + hand-edit steps
 #
 # Flags:
 #   --disk DISK             target disk (REQUIRED seed/run; verify
@@ -38,6 +41,10 @@
 #                           qcow2 overlay over DISK (backing untouched);
 #                           --real-disk installs onto DISK and will be
 #                           FORMATTED (its own y/N gate)
+#   --go-real               full only: after the pilot chain, reuse the
+#                           seed and install onto DISK (the FORMATTED
+#                           y/N gate still asks), verify, then print the
+#                           limine entry block for the host limine.conf
 #
 # Hard rules (fail-closed):
 #   - secrets home split: the cidata dir + cidata.iso carry the
@@ -49,6 +56,8 @@
 #     warning names exactly what was not verified;
 #   - an unmounted backing disk is REQUIRED (pilot mode included); a live
 #     qemu on the disk is refused (never double-open);
+#   - --go-real is refused until a pilot run-manifest exists (pilot green
+#     first) and it never bypasses the real-disk y/N gate;
 #   - verify kills its VM on exit and never leaves a disk-only VM around.
 #
 # Env knobs:
@@ -59,6 +68,8 @@
 #   HNGH_OVMF_VARS      default /usr/share/edk2/x64/OVMF_VARS.4m.fd
 #   HNGH_KVM_DEVICE     default /dev/kvm
 #   HNGH_BOOT_LOGDIR    stage-log dir (default ~/.hngh/installer-logs)
+#   HNGH_BOOT_BUILD     omarchy-boot-build.sh for emit-entry (default:
+#                       sibling of this script)
 #   HNGH_VERIFY_TIMEOUT   seconds (default 300)
 #   HNGH_VERIFY_INTERVAL  seconds (default 10)
 #   HNGH_PILOT_MIN_FREE_GB pilot free-space floor (default 30)
@@ -69,6 +80,7 @@ UNATTENDED_DIR="${HNGH_UNATTENDED_DIR:-}"
 OVMF_CODE="${HNGH_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}"
 OVMF_VARS="${HNGH_OVMF_VARS:-/usr/share/edk2/x64/OVMF_VARS.4m.fd}"
 KVM_DEVICE="${HNGH_KVM_DEVICE:-/dev/kvm}"
+BOOT_BUILD="${HNGH_BOOT_BUILD:-$(dirname "$0")/omarchy-boot-build.sh}"
 VTIME="${HNGH_VERIFY_TIMEOUT:-300}"
 VINT="${HNGH_VERIFY_INTERVAL:-10}"
 PILOT_MIN_GB="${HNGH_PILOT_MIN_FREE_GB:-30}"
@@ -86,6 +98,8 @@ HASH=""
 AKEYS=""
 DEFER=0
 REALDISK=0
+TARGET_FLAG=""
+GO_REAL=0
 WORKDIR=""
 
 say() { printf '%s\n' "$*"; }
@@ -145,9 +159,14 @@ while [ $# -gt 0 ]; do
       shift;;
     --pilot)
       REALDISK=0
+      TARGET_FLAG="pilot"
       shift;;
     --real-disk)
       REALDISK=1
+      TARGET_FLAG="real-disk"
+      shift;;
+    --go-real)
+      GO_REAL=1
       shift;;
     -*)
       refuse "unknown flag $1 (see help)";;
@@ -161,18 +180,20 @@ done
 case "$PHASE" in
   help | '')
     if [ -z "$PHASE" ]; then
-      refuse "missing phase (seed|run|verify|help)"
+      refuse "missing phase (seed|run|verify|full|help)"
     fi
     ;;
 esac
 
 case "$PHASE" in
-  seed | run | verify) ;;
+  seed | run | verify | full) ;;
   help) ;;
-  *) refuse "unknown phase $PHASE (seed|run|verify|help)";;
+  *) refuse "unknown phase $PHASE (seed|run|verify|full|help)";;
 esac
 
-if [ "$PHASE" = "seed" ] || [ "$PHASE" = "run" ]; then
+[ "$GO_REAL" -eq 0 ] || [ "$PHASE" = "full" ] ||
+  refuse "--go-real applies to full only (see help)"
+if [ "$PHASE" = "seed" ] || [ "$PHASE" = "run" ] || [ "$PHASE" = "full" ]; then
   [ -n "$DISK" ] || refuse "missing required --disk"
 fi
 if [ -n "$DISK" ]; then
@@ -217,6 +238,21 @@ if [ "$PHASE" = "verify" ]; then
     [ -z "$tok" ] || refuse "verify reads the run-manifest only; seed/run flags do not apply"
   done
   [ "$DEFER" -eq 0 ] || refuse "--defer-provisioning does not apply to verify"
+fi
+if [ "$PHASE" = "full" ]; then
+  [ -n "$ISO" ] || refuse "missing required --iso"
+  [ -f "$ISO" ] || refuse "--iso $ISO does not exist"
+  [ -n "$USER_NAME" ] || refuse "missing required --user"
+  [ -z "$TARGET_FLAG" ] ||
+    refuse "--$TARGET_FLAG does not apply to full (full pilots first; --go-real selects the real disk)"
+  [ -z "$SAMPLE" ] || [ -f "$SAMPLE" ] || refuse "--config-sample $SAMPLE does not exist"
+  [ -z "$AKEYS" ] || [ -f "$AKEYS" ] || refuse "--authorized-keys $AKEYS does not exist"
+  if [ -n "$HASH" ] && [ "$DEFER" -eq 1 ]; then
+    refuse "--credentials-hash and --defer-provisioning are mutually exclusive"
+  fi
+  if [ "$GO_REAL" -eq 0 ] && [ -z "$HASH" ] && [ "$DEFER" -eq 0 ]; then
+    refuse "credentials source missing: give --credentials-hash with --user, or --defer-provisioning"
+  fi
 fi
 
 # ---- schema provenance: the ISO's own omarchy-cidata-load is the
@@ -744,30 +780,110 @@ phase_verify() {
   return 1
 }
 
+# ---- phase: full -- seed -> pilot -> verify, then the real-disk pass --
+# Pure orchestration of the phase functions above: same gates, same y/N
+# confirmations, same manifests. One sequencing hand-off is added: the
+# daemonized install VM must exit before verify runs (verify's
+# never-double-open gate), so the chain waits for it and says how to stop
+# it -- the 7-command operator simply waited between run and verify.
+wait_for_install_vm() {
+  while pgrep -af qemu-system >/dev/null 2>&1; do
+    say "# install VM still running -- verify never double-opens the target."
+    say "# wait for the guest to power off at install end, or stop it yourself"
+    say "# (sudo kill <pid>) once the layout appeared and the install is done."
+    sleep 30
+  done
+}
+
+emit_entry_step() {
+  say ""
+  say "# entry block from: omarchy-boot-build.sh emit-entry (read-only; probed ids)"
+  [ -f "$BOOT_BUILD" ] || cannot "read $BOOT_BUILD (emit-entry)"
+  entry_block="$("$BOOT_BUILD" emit-entry)" ||
+    cannot "generate the limine entry block (omarchy-boot-build.sh emit-entry)"
+  say "$entry_block"
+  say ""
+  say "hand edit (the last step): replace the stale '/Omarchy ...' title block in"
+  say "/boot/EFI/limine/limine.conf (sudo) with the chainload entry above -- a title"
+  say "block is the '/Omarchy ...' title line plus its indented directives. This"
+  say "paste is deliberately manual: omarchy-boot-provision.sh fails closed on a"
+  say "duplicate title, so it cannot swap the stale block for you. Back up first:"
+  say "  sudo cp /boot/EFI/limine/limine.conf /boot/EFI/limine/limine.conf.bak-\$(date -u +%Y%m%dT%H%M%SZ)"
+  say "then reboot and pick the entry (nothing here reboots the host or touches NVRAM)."
+}
+
+phase_full() {
+  if [ "$DRY" -eq 1 ]; then
+    WORKDIR='<workdir>'
+    if [ "$GO_REAL" -eq 1 ]; then
+      say "+ full --go-real: fail closed unless a pilot run-manifest exists (pilot first)"
+      say "+ seed: reuse the seeded workdir (manifest present) -- idempotent skip"
+      REALDISK=1
+      phase_run
+      say "+ wait for the install VM to exit (verify never double-opens the target)"
+      phase_verify
+      say "+ invoke omarchy-boot-build.sh emit-entry (read-only) and print the entry block + hand-edit steps"
+      return 0
+    fi
+    say "+ full: seed -> run --pilot -> verify, then stop at the real-disk gate"
+    phase_seed
+    phase_run
+    say "+ wait for the install VM to exit (verify never double-opens the target)"
+    phase_verify
+    say "+ print the pilot stop line and exit 0"
+    return 0
+  fi
+
+  if [ "$GO_REAL" -eq 1 ]; then
+    REALDISK=1
+    WORKDIR="$(run_workdir)"
+    [ -f "$WORKDIR/run-manifest" ] ||
+      cannot "find a pilot run-manifest under $WORKDIR -- run the pilot chain first (omarchy-unattended-install.sh full --yes)"
+    say "seed: reusing $WORKDIR (pilot run-manifest present) -- idempotent skip"
+  else
+    phase_seed || return 1
+  fi
+  phase_run || return 1
+  wait_for_install_vm
+  phase_verify || return 1
+  if [ "$GO_REAL" -eq 0 ]; then
+    say ""
+    say "pilot green: $WORKDIR/pilot.qcow2 proved the install. Inspect if you wish, then re-run:"
+    say "  omarchy-unattended-install.sh full --yes --go-real --disk $DISK --iso $ISO --user $USER_NAME"
+    return 0
+  fi
+  emit_entry_step
+}
+
 usage() {
   cat <<USAGE
 omarchy-unattended-install.sh -- unattended stock Omarchy reinstall (cidata)
 
-usage: omarchy-unattended-install.sh <seed|run|verify|help> [flags] [--dry-run|--yes]
+usage: omarchy-unattended-install.sh <seed|run|verify|full|help> [flags] [--dry-run|--yes]
 
 phases:
   seed    bake the cidata file pair + cidata.iso in the secrets home
   run     launch the install VM (pilot qcow2 overlay by default)
   verify  boot the target disk-only and prove the install
+  full    seed -> run --pilot -> verify in one flow, stopping green at
+          the real-disk gate; --go-real continues on the real disk and
+          prints the fresh limine entry block + hand-edit steps
 
 flags:
-  --disk PATH              target disk (required for seed/run)
-  --iso PATH               Omarchy ISO (run; seed reads its schema from it)
+  --disk PATH              target disk (required for seed/run/full)
+  --iso PATH               Omarchy ISO (run/full; seed reads its schema from it)
   --credentials-hash HASH  openssl passwd -6 hash (seed; REDACTED everywhere)
   --defer-provisioning     empty marker instead of credentials (seed)
   --config-sample FILE     wizard-written user_configuration.json reference (seed)
   --authorized-keys FILE   ssh public key file (seed)
-  --user NAME              login user for the hash (seed)
+  --user NAME              login user for the hash (seed/full)
   --hostname NAME          guest hostname (seed; default omarchy-hngh)
   --timezone TZ            guest timezone (seed; default America/New_York)
   --keyboard LAYOUT        guest keyboard (seed; default us)
   --pilot                  qcow2 overlay install (DEFAULT; backing untouched)
   --real-disk              install straight onto --disk (FORMATTED; own y/N gate)
+  --go-real                full only: after the pilot chain, install onto --disk
+                           (FORMATTED gate still asks) + print the entry block
   --dry-run                print the plan, touch nothing (DEFAULT)
   --yes                    attended run: one sudo -v + y/N confirmations
 
@@ -775,7 +891,9 @@ hard rules: secrets live in the secrets home (HNGH_SECRETS_HOME), never the
 repo or the installer log dir; hashes are REDACTED in all output; the cidata
 schema is verified against the ISO's own omarchy-cidata-load or loudly
 SCHEMA-UNVERIFIED; the backing disk must be unmounted and qemu-free; verify
-always kills its VM on exit; nothing ever reboots the host or touches NVRAM.
+always kills its VM on exit; --go-real is refused without a pilot
+run-manifest and never bypasses the real-disk y/N gate; nothing ever reboots
+the host or touches NVRAM.
 USAGE
 }
 
@@ -785,7 +903,7 @@ USAGE
 mode=dry-run
 [ "$DRY" -eq 0 ] && mode=REAL
 case "$PHASE" in
-  seed | run | verify)
+  seed | run | verify | full)
     now="$(date -u +%Y%m%dT%H%M%SZ)"
     logdir="${HNGH_BOOT_LOGDIR:-$HOME/.hngh/installer-logs}"
     if mkdir -p "$logdir" 2>/dev/null && [ -d "$logdir" ]; then
@@ -801,5 +919,6 @@ case "$PHASE" in
   seed) phase_seed;;
   run) phase_run;;
   verify) phase_verify;;
+  full) phase_full;;
 esac
 exit $?

@@ -31,7 +31,35 @@ session never holds the sudo password.
 ## Unattended stock reinstall (pilot-first)
 
 `automation/jobs/omarchy-unattended-install.sh` replaces the interactive
-wizard with a seeded cidata install: three phases, dry-run by default.
+wizard with a seeded cidata install: four phases (`seed` `run` `verify`
+`full`), dry-run by default.
+
+### Two-command flow (the operator path)
+
+1. Pilot chain -- one command, ends green at the real-disk gate:
+   `automation/jobs/omarchy-unattended-install.sh full --yes --disk <disk> --iso <iso> --user <name> --credentials-hash <hash>`
+   (or `--defer-provisioning` instead of the hash). Runs `seed` ->
+   `run --pilot` -> `verify` in order, waiting for the install VM to
+   power off before verify (verify never double-opens the target). Then
+   it prints `pilot green: <workdir>/pilot.qcow2 proved the install.`
+   plus the exact re-run command and exits 0.
+2. Real pass:
+   `automation/jobs/omarchy-unattended-install.sh full --yes --go-real --disk <disk> --iso <iso> --user <name>`
+   Fails closed without a pilot `run-manifest` (pilot green first).
+   Reuses the seed (idempotent skip), installs onto the real disk -- the
+   "will be FORMATTED" y/N gate still asks once -- verifies the same
+   way, then prints a fresh limine entry block (via
+   `omarchy-boot-build.sh emit-entry`, read-only) and the hand-edit steps.
+3. Paste the entry: back up `/boot/EFI/limine/limine.conf` (e.g.
+   `sudo cp /boot/EFI/limine/limine.conf /boot/EFI/limine/limine.conf.bak-<UTC>`)
+   and replace the stale `/Omarchy ...` title block (title line + its
+   indented directives) with the chainload entry from step 2. This paste
+   is deliberately manual: `omarchy-boot-provision.sh` fails closed on a
+   duplicate title, so it cannot swap the stale block for you.
+4. Reboot and pick the entry (staged reboot table below). Nothing here
+   reboots the host or touches NVRAM.
+
+### Phase reference (surgical use)
 
 - `seed` bakes the cidata file pair + `cidata.iso` in the secrets home
   (`HNGH_SECRETS_HOME`, default `~/.hngh-automation/omarchy-unattended` --
@@ -66,12 +94,8 @@ wizard with a seeded cidata install: three phases, dry-run by default.
   user credentials), `verdict: TIMEOUT` (serial never crossed the floor).
 - flags: `--disk --iso --credentials-hash --defer-provisioning
   --config-sample --authorized-keys --user --hostname --timezone
-  --keyboard --pilot --real-disk`; `help` prints the full contract.
-
-Physical sequence (pilot first): `run --yes` (pilot) -> `verify --yes`
-green -> `run --yes --real-disk` -> `verify --yes` green -> re-emit the
-host limine entry (`omarchy-boot-build.sh emit-entry`) and follow the
-staged reboot table. Nothing here reboots the host or touches NVRAM.
+  --keyboard --pilot --real-disk --go-real`; `help` prints the full
+  contract.
 
 ISO hashes: every published Omarchy ISO has a `.sha256` beside it at the
 same URL -- download both into one directory and check the ISO before
@@ -80,8 +104,9 @@ seeding (see the omarchy-iso README: https://github.com/omacom/omarchy-iso).
 ## The entry block (point-in-time example)
 
 Point-in-time example -- run `automation/jobs/omarchy-boot-build.sh
-emit-entry` to generate the current block; it probes the ids at runtime
-and never guesses. The literal block below is what was verified
+emit-entry` to generate the current block (`full --go-real` prints it at
+the end of the two-command flow); it probes the ids at runtime and never
+guesses. The literal block below is what was verified
 2026-10-05. For the host loader config (/boot/EFI/limine/limine.conf on the host
 ESP; root-owned, 0077 directory):
 
