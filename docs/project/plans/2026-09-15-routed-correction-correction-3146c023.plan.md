@@ -37,3 +37,21 @@ row (research-subjects.txt), its killed-dup disposition
 cycle over a resolved incident. No code change owed; the alert is
 quiet: 0 open report-queue rows, no occurrence since
 2026-09-15T20:00:13Z (checked 2026-10-06T00:42Z).
+
+Lane SLA / halt (escalation-sla rule, 2026-09-23 tune): this lane is
+closed as killed-as-duplicate, NOT resolved — the fix claim belongs to
+the survivor chain (research-dispositions.tsv:107) and rests on the
+2026-10-05 wake's test evidence, not on a live-surface verification
+this session. SLA: the killed-dup verdict is valid only while the
+identity stays quiet; the first new occurrence after 2026-10-06T00:42Z
+(this identity or any new same-prose identity) stales it, and the
+router's dedup-expiry re-route is the enforcement — the re-routed plan
+supersedes this disposition and must NOT be killed-as-duplicate again.
+Halt: on that re-route, stop dispositioning duplicates; verify the
+live mark-read POST path against the running dashboard process first
+(process start time vs 9b0876c — the family's contradictory verdicts
+:107/:450 vs :432, plus synth-2026-10-04-2, leave
+stale-process-vs-over-breadth unresolved). A failed live POST files
+an operator alert carrying this same SLA/halt pair (stale at 48h ->
+auto re-route; halt = dashboard restart + mark-read gate re-check, no
+further research cycles on the prose family).
