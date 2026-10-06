@@ -605,6 +605,185 @@ else
   bad "21 full --go-real reuses the seeded workdir (idempotent skip, no new cidata)" "rc=$rc out=$out stubs=$(cat "$STUB_LOG")"
 fi
 
+# ---- 22: --package / --packages-from append to the packages array ----
+printf '# comment line\n\nripgrep\n  fd  \ngit\n' >"$WORK/pkgs22.txt"
+SECRETS2="$(mktemp -d "$WORK/secrets22.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes \
+  --package jq --package ripgrep --packages-from "$WORK/pkgs22.txt")"
+rc=$?
+cfg="$(ls "$SECRETS2"/*/cidata/user_configuration.json 2>/dev/null | head -n 1)"
+n_git="$(grep -c '"git"' "$cfg" 2>/dev/null)"
+n_rr="$(grep -c '"ripgrep"' "$cfg" 2>/dev/null)"
+if [ "$rc" -eq 0 ] && [ -n "$cfg" ] &&
+  case "$(cat "$cfg")" in *'"jq"'*'"fd"'*) true ;; *) false ;; esac &&
+  [ "$n_git" -eq 1 ] && [ "$n_rr" -eq 1 ]; then
+  ok "22 --package + --packages-from append (comments/blanks skipped, duplicates dropped)"
+else
+  bad "22 --package + --packages-from append (comments/blanks skipped, duplicates dropped)" "rc=$rc cfg=$cfg git=$n_git rr=$n_rr out=$out"
+fi
+
+# ---- 22b: --package exact duplicate refused, offender named ----
+SECRETS2="$(mktemp -d "$WORK/secrets22b.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --package jq --package jq)"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'duplicate --package jq'*) true ;; *) false ;; esac; then
+  ok "22b duplicate --package refused naming the offender"
+else
+  bad "22b duplicate --package refused naming the offender" "rc=$rc out=$out"
+fi
+
+# ---- 22c: --package duplicating a base package refused, offender named ----
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --package git)"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'duplicate --package git'*) true ;; *) false ;; esac; then
+  ok "22c --package duplicating a base package refused naming the offender"
+else
+  bad "22c --package duplicating a base package refused naming the offender" "rc=$rc out=$out"
+fi
+
+# ---- 22d: --packages-from missing file refused ----
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --packages-from "$WORK/no-such-list")"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'--packages-from'*'does not exist'*) true ;; *) false ;; esac; then
+  ok "22d --packages-from missing file exits 2"
+else
+  bad "22d --packages-from missing file exits 2" "rc=$rc out=$out"
+fi
+
+# ---- 23: --repo emits {"url": URL} into custom_repositories ----
+SECRETS2="$(mktemp -d "$WORK/secrets23.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes \
+  --repo 'https://example.com/archlinux/$repo/os/$arch' --repo 'ftp://mirror.example/repo')"
+rc=$?
+cfg="$(ls "$SECRETS2"/*/cidata/user_configuration.json 2>/dev/null | head -n 1)"
+if [ "$rc" -eq 0 ] &&
+  case "$(cat "$cfg")" in
+    *'{"url": "https://example.com/archlinux/$repo/os/$arch"}'*'{"url": "ftp://mirror.example/repo"}'*) true;;
+    *) false;;
+  esac; then
+  ok "23 --repo emits {url: URL} custom_repositories entries"
+else
+  bad "23 --repo emits {url: URL} custom_repositories entries" "rc=$rc cfg=$cfg out=$out"
+fi
+
+# ---- 23b: --repo URL without a scheme refused ----
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --repo example.com/repo)"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'malformed --repo'*'scheme'*) true ;; *) false ;; esac; then
+  ok "23b --repo without a scheme exits 2"
+else
+  bad "23b --repo without a scheme exits 2" "rc=$rc out=$out"
+fi
+
+# ---- 24: --service appends to the services array ----
+SECRETS2="$(mktemp -d "$WORK/secrets24.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --service tailscaled --service sshd)"
+rc=$?
+cfg="$(ls "$SECRETS2"/*/cidata/user_configuration.json 2>/dev/null | head -n 1)"
+if [ "$rc" -eq 0 ] &&
+  case "$(cat "$cfg")" in *'"tailscaled",'*'"sshd"'*) true ;; *) false ;; esac; then
+  ok "24 --service appends to the services array"
+else
+  bad "24 --service appends to the services array" "rc=$rc cfg=$cfg out=$out"
+fi
+
+# ---- 24b: duplicate --service refused, offender named ----
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --service sshd --service sshd)"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'duplicate --service sshd'*) true ;; *) false ;; esac; then
+  ok "24b duplicate --service refused naming the offender"
+else
+  bad "24b duplicate --service refused naming the offender" "rc=$rc out=$out"
+fi
+
+# ---- 25: --tailscale-authkey file lands in cidata, value redacted ----
+TSV='tskey-auth-REDTEST-97531'
+printf '%s\n' "$TSV" >"$WORK/tskey25"
+SECRETS2="$(mktemp -d "$WORK/secrets25.XXXXXX")"
+: >"$STUB_LOG"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --tailscale-authkey "$WORK/tskey25")"
+rc=$?
+tsfile="$(ls "$SECRETS2"/*/cidata/tailscale_authkey 2>/dev/null | head -n 1)"
+tsok=0
+[ -n "$tsfile" ] && [ "$(cat "$tsfile" 2>/dev/null)" = "$TSV" ] && tsok=1
+only="$(grep -rlF "$TSV" "$SECRETS2" 2>/dev/null)"
+logs_hit="$(grep -rlF "$TSV" "$LOGS" 2>/dev/null | wc -l)"
+stub_hit=0
+grep -qF "$TSV" "$STUB_LOG" 2>/dev/null && stub_hit=1
+if [ "$rc" -eq 0 ] && [ "$tsok" -eq 1 ] && [ "$only" = "$tsfile" ] &&
+  case "$out" in *"$TSV"*) false ;; *) true ;; esac &&
+  [ "$logs_hit" -eq 0 ] && [ "$stub_hit" -eq 0 ]; then
+  ok "25 --tailscale-authkey lands in cidata and the value is redacted everywhere"
+else
+  bad "25 --tailscale-authkey lands in cidata and the value is redacted everywhere" "rc=$rc tsok=$tsok only=$only logs=$logs_hit stub=$stub_hit out=$out"
+fi
+
+# ---- 25b: --tailscale-authkey - reads the key from stdin ----
+SECRETS2="$(mktemp -d "$WORK/secrets25b.XXXXXX")"
+out="$(run_job "$TSV
+" YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --tailscale-authkey -)"
+rc=$?
+tsfile="$(ls "$SECRETS2"/*/cidata/tailscale_authkey 2>/dev/null | head -n 1)"
+tsok=0
+[ -n "$tsfile" ] && [ "$(cat "$tsfile" 2>/dev/null)" = "$TSV" ] && tsok=1
+if [ "$rc" -eq 0 ] && [ "$tsok" -eq 1 ] &&
+  case "$out" in *"$TSV"*) false ;; *) true ;; esac; then
+  ok "25b --tailscale-authkey - writes the stdin key, still redacted"
+else
+  bad "25b --tailscale-authkey - writes the stdin key, still redacted" "rc=$rc tsok=$tsok out=$out"
+fi
+
+# ---- 25c: exactly one key per file, nothing else passes ----
+printf 'key-one\nkey-two\n' >"$WORK/tskey25c"
+SECRETS2="$(mktemp -d "$WORK/secrets25c.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --tailscale-authkey "$WORK/tskey25c")"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'exactly one key'*) true ;; *) false ;; esac &&
+  case "$out" in *key-one*) false ;; *) true ;; esac; then
+  ok "25c --tailscale-authkey with two keys exits 2 without printing either"
+else
+  bad "25c --tailscale-authkey with two keys exits 2 without printing either" "rc=$rc out=$out"
+fi
+
+# ---- 25d: --tailscale-authkey missing file refused ----
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes --tailscale-authkey "$WORK/no-such-key")"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'--tailscale-authkey'*'does not exist'*) true ;; *) false ;; esac; then
+  ok "25d --tailscale-authkey missing file exits 2"
+else
+  bad "25d --tailscale-authkey missing file exits 2" "rc=$rc out=$out"
+fi
+
+# ---- 26: all five seed inputs together ----
+SECRETS2="$(mktemp -d "$WORK/secrets26.XXXXXX")"
+out="$(run_job '' YES seed --disk /dev/nvme0n1 --defer-provisioning --yes \
+  --package jq --packages-from "$WORK/pkgs22.txt" --repo 'https://example.com/arch' \
+  --service tailscaled --tailscale-authkey "$WORK/tskey25")"
+rc=$?
+cfg="$(ls "$SECRETS2"/*/cidata/user_configuration.json 2>/dev/null | head -n 1)"
+tsfile="$(ls "$SECRETS2"/*/cidata/tailscale_authkey 2>/dev/null | head -n 1)"
+tsok=0
+[ -n "$tsfile" ] && [ "$(cat "$tsfile" 2>/dev/null)" = "$TSV" ] && tsok=1
+if [ "$rc" -eq 0 ] && [ "$tsok" -eq 1 ] &&
+  case "$(cat "$cfg")" in
+    *'"tailscaled"'*'{"url": "https://example.com/arch"}'*'"jq"'*'"fd"'*) true;;
+    *) false;;
+  esac &&
+  case "$out" in *"$TSV"*) false ;; *) true ;; esac; then
+  ok "26 combined seed flags all land together, authkey still redacted"
+else
+  bad "26 combined seed flags all land together, authkey still redacted" "rc=$rc tsok=$tsok out=$out"
+fi
+
+# ---- 27: new seed inputs are refused outside seed (fail closed) ----
+out="$(run_job '' YES run --disk /dev/nvme0n1 --iso "$ISO" --yes --package jq)"
+rc=$?
+if [ "$rc" -eq 2 ] && case "$out" in *'seed-only flags do not apply to run'*) true ;; *) false ;; esac; then
+  ok "27 run refuses --package (seed-only input)"
+else
+  bad "27 run refuses --package (seed-only input)" "rc=$rc out=$out"
+fi
+
 if [ "$fails" -eq 0 ]; then
   echo "test-omarchy-unattended-install: all proofs passed"
   exit 0

@@ -59,6 +59,27 @@ wizard with a seeded cidata install: four phases (`seed` `run` `verify`
 4. Reboot and pick the entry (staged reboot table below). Nothing here
    reboots the host or touches NVRAM.
 
+### Seed package-selection options
+
+All five flags are `seed` inputs (they pass through `full` untouched);
+`run`/`verify` refuse them. A dry-run lists the plan as before.
+
+| flag | effect on the baked seed |
+| --- | --- |
+| `--package NAME` (repeatable) | appends `NAME` to the `packages` array; an exact duplicate is refused, naming the offender |
+| `--packages-from FILE` | one package per line; `#` comment lines and blank lines are skipped, entries are trimmed, and duplicates (against `--package` and the base set) are dropped; a missing file is refused |
+| `--repo URL` (repeatable) | appends `{"url": URL}` to `mirror_config.custom_repositories`; a URL with no scheme is refused |
+| `--service UNIT` (repeatable) | appends `UNIT` to the `services` array; same dedup/refuse rules as `--package` |
+| `--tailscale-authkey FILE` | writes the key as the cidata file `tailscale_authkey` -- the name `omarchy-cidata-load` copies from the cidata drive (it is a file there, not a JSON key). `-` reads stdin. Exactly one key per file, matching the consumer's contract. The value is REDACTED like the `--credentials-hash` and never printed, logged, or echoed. |
+
+What stays manual (NOT covered by these flags):
+
+- kernel swap: the emit-entry template assumes `linux-omarchy` (the boot
+  layer is coupled to it), so booting a different kernel is a manual,
+  boot-layer-coupled change on top of the reinstall.
+- secrets/config porting: carrying existing secrets and host config into
+  the fresh install is a future port phase, outside these flags.
+
 ### Phase reference (surgical use)
 
 - `seed` bakes the cidata file pair + `cidata.iso` in the secrets home

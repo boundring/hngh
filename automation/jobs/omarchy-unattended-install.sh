@@ -37,6 +37,17 @@
 #   --defer-provisioning    no-credentials install, first-boot user
 #                           creation (seed)
 #   --authorized-keys FILE  public keys for the installed user (seed)
+#   --package NAME          extra installed package (repeatable, seed)
+#   --packages-from FILE    one package per line, '#' comments + blank
+#                           lines skipped, duplicates dropped (seed)
+#   --repo URL              extra pacman repo {"url": URL} (repeatable,
+#                           seed)
+#   --service UNIT          systemd service in the guest (repeatable,
+#                           seed)
+#   --tailscale-authkey FILE Tailscale auth key written as the cidata
+#                           file tailscale_authkey (the name the ISO
+#                           loader copies; exactly one key); "-" reads
+#                           stdin; value REDACTED everywhere (seed)
 #   --pilot | --real-disk   run target: pilot (DEFAULT) installs into a
 #                           qcow2 overlay over DISK (backing untouched);
 #                           --real-disk installs onto DISK and will be
@@ -96,6 +107,11 @@ KB=""
 USER_NAME=""
 HASH=""
 AKEYS=""
+PKG_NAMES=$'base-devel\ngit\nomarchy-keyring\nomarchy-settings\nomarchy'
+PKG_OPTS=0
+SERVICES=""
+REPOS=""
+TS_AUTH=""
 DEFER=0
 REALDISK=0
 TARGET_FLAG=""
@@ -127,6 +143,19 @@ gate() {
   refuse "--yes but no TTY; set HNGH_BOOT_CONFIRM=YES to authorize non-interactive execution"
 }
 uuid4() { read -r u </proc/sys/kernel/random/uuid; printf '%s\n' "$u"; }
+add_package() { # $1 = package name, $2 = source context (for refusal text)
+  ap_name="$1"
+  [[ "$ap_name" =~ ^[a-zA-Z0-9@._+][a-zA-Z0-9@._+-]*$ ]] ||
+    refuse "malformed package name '$ap_name' in $2"
+  case $'\n'"$PKG_NAMES"$'\n' in
+    *$'\n'"$ap_name"$'\n'*)
+      case "$2" in
+        --package) refuse "duplicate --package $ap_name (already in the packages array)";;
+      esac
+      return 0;;
+  esac
+  PKG_NAMES="$PKG_NAMES"$'\n'"$ap_name"
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -139,7 +168,7 @@ while [ $# -gt 0 ]; do
     --help | -h)
       PHASE="help"
       break;;
-    --disk | --iso | --config-sample | --hostname | --timezone | --keyboard | --user | --credentials-hash | --authorized-keys)
+    --disk | --iso | --config-sample | --hostname | --timezone | --keyboard | --user | --credentials-hash | --authorized-keys | --package | --packages-from | --repo | --service | --tailscale-authkey)
       opt="$1"
       [ $# -ge 2 ] || refuse "missing value for $opt"
       case "$opt" in
@@ -152,6 +181,37 @@ while [ $# -gt 0 ]; do
         --user) USER_NAME="$2";;
         --credentials-hash) HASH="$2";;
         --authorized-keys) AKEYS="$2";;
+        --package)
+          PKG_OPTS=1
+          add_package "$2" "--package";;
+        --packages-from)
+          PKG_OPTS=1
+          [ -f "$2" ] || refuse "--packages-from $2 does not exist"
+          while IFS= read -r pkg_line || [ -n "$pkg_line" ]; do
+            pkg_line="${pkg_line#"${pkg_line%%[![:space:]]*}"}"
+            pkg_line="${pkg_line%"${pkg_line##*[![:space:]]}"}"
+            case "$pkg_line" in '' | '#'*) continue;; esac
+            add_package "$pkg_line" "--packages-from $2"
+          done <"$2";;
+        --service)
+          service_name="$2"
+          [[ "$service_name" =~ ^[a-zA-Z0-9@:._+-]+$ ]] ||
+            refuse "malformed --service unit name '$service_name'"
+          case $'\n'"$SERVICES"$'\n' in
+            *$'\n'"$service_name"$'\n'*)
+              refuse "duplicate --service $service_name (already in the services array)";;
+          esac
+          SERVICES="${SERVICES:+$SERVICES$'\n'}$service_name";;
+        --repo)
+          repo_url="$2"
+          url_re='^[A-Za-z][A-Za-z0-9+.-]*://[^"\\[:space:]]+$'
+          [[ "$repo_url" =~ $url_re ]] ||
+            refuse "malformed --repo URL (needs a scheme like https://): $repo_url"
+          REPOS="${REPOS:+$REPOS$'\n'}$repo_url";;
+        --tailscale-authkey)
+          TS_AUTH="$2"
+          [ "$TS_AUTH" = "-" ] || [ -f "$TS_AUTH" ] ||
+            refuse "--tailscale-authkey $TS_AUTH does not exist";;
       esac
       shift 2;;
     --defer-provisioning)
@@ -229,6 +289,8 @@ if [ "$PHASE" = "run" ]; then
   for tok in "$SAMPLE" "$HASH" "$AKEYS" "$HOST_NAME" "$TZ" "$KB"; do
     [ -z "$tok" ] || refuse "seed-only flags do not apply to run (see help)"
   done
+  [ "$PKG_OPTS" -eq 0 ] && [ -z "$SERVICES$REPOS$TS_AUTH" ] ||
+    refuse "seed-only flags do not apply to run (see help)"
   [ "$DEFER" -eq 0 ] || refuse "--defer-provisioning does not apply to run (it is a seed input)"
   [ -n "$ISO" ] || refuse "missing required --iso"
   [ -f "$ISO" ] || refuse "--iso $ISO does not exist"
@@ -237,6 +299,8 @@ if [ "$PHASE" = "verify" ]; then
   for tok in "$ISO" "$SAMPLE" "$HASH" "$AKEYS" "$USER_NAME" "$HOST_NAME" "$TZ" "$KB"; do
     [ -z "$tok" ] || refuse "verify reads the run-manifest only; seed/run flags do not apply"
   done
+  [ "$PKG_OPTS" -eq 0 ] && [ -z "$SERVICES$REPOS$TS_AUTH" ] ||
+    refuse "verify reads the run-manifest only; seed/run flags do not apply"
   [ "$DEFER" -eq 0 ] || refuse "--defer-provisioning does not apply to verify"
 fi
 if [ "$PHASE" = "full" ]; then
@@ -295,6 +359,25 @@ join_lines() {
   join_out="$(cat)"
   printf '%s' "${join_out//$'\n'/ }"
 }
+json_array() { # $1 = element prefix, $2 = element suffix; stdin = one entry
+  # per line; emits "\n        <pre><entry><suf>" joined by "," plus a
+  # closing "\n    "; empty input emits nothing (valid empty array body)
+  ja_pre="$1"
+  ja_suf="$2"
+  ja_first=1
+  ja_out=""
+  while IFS= read -r ja_line; do
+    [ -n "$ja_line" ] || continue
+    if [ "$ja_first" -eq 1 ]; then
+      ja_first=0
+      ja_out=$'\n        '"$ja_pre$ja_line$ja_suf"
+    else
+      ja_out="$ja_out"$',\n        '"$ja_pre$ja_line$ja_suf"
+    fi
+  done
+  [ "$ja_first" -eq 1 ] || ja_out="$ja_out"$'\n    '
+  printf '%s' "$ja_out"
+}
 # ---- phase: seed -- bake the cidata file pair in the secrets home ------
 phase_seed() {
   [ -z "$HOST_NAME" ] && HOST_NAME="omarchy-hngh"
@@ -305,6 +388,7 @@ phase_seed() {
     say "+ mkdir -p $SECRETS_HOME (0700) + workdir <utc timestamp> (0700)"
     say "+ probe $DISK size (lsblk -bno SIZE); main btrfs = size - 2148532224 - 1048576 (GPT reserve)"
     say "+ write cidata/user_configuration.json (guest device /dev/vda; 2GiB ESP + btrfs @ @home @log @pkg)"
+    [ -z "$TS_AUTH" ] || say "+ write cidata/tailscale_authkey (auth key REDACTED in all output)"
     if [ "$DEFER" -eq 1 ]; then
       say "+ write empty cidata/defer-provisioning marker (no user_credentials.json)"
     else
@@ -346,6 +430,9 @@ phase_seed() {
   defer_json=false
   [ "$DEFER" -eq 1 ] && defer_json=true
   config="$cidata/user_configuration.json"
+  packages_json="$(printf '%s\n' "$PKG_NAMES" | json_array '"' '"')"
+  services_json="$(printf '%s\n' "$SERVICES" | json_array '"' '"')"
+  repos_json="$(printf '%s\n' "$REPOS" | json_array '{"url": "' '"}')"
   cat >"$config" <<JSON
 {
     "app_config": null,
@@ -414,12 +501,12 @@ phase_seed() {
     "ntp": true,
     "parallel_downloads": 8,
     "script": null,
-    "services": [],
+    "services": [$services_json],
     "swap": true,
     "timezone": "$TZ",
     "locale_config": { "kb_layout": "$KB", "sys_enc": "UTF-8", "sys_lang": "en_US.UTF-8" },
     "mirror_config": {
-        "custom_repositories": [],
+        "custom_repositories": [$repos_json],
         "custom_servers": [
             {"url": "https://mirror.omarchy.org/\$repo/os/\$arch"},
             {"url": "https://mirror.rackspace.com/archlinux/\$repo/os/\$arch"},
@@ -428,13 +515,7 @@ phase_seed() {
         "mirror_regions": {},
         "optional_repositories": []
     },
-    "packages": [
-        "base-devel",
-        "git",
-        "omarchy-keyring",
-        "omarchy-settings",
-        "omarchy"
-    ],
+    "packages": [$packages_json],
     "profile_config": { "gfx_driver": null, "greeter": null, "profile": {} },
     "version": "3.0.9"
 }
@@ -466,6 +547,22 @@ JSON
   printf 'false\n' >"$cidata/user_encrypt_installation.txt"
   if [ -n "$AKEYS" ]; then
     cp "$AKEYS" "$cidata/authorized_keys"
+  fi
+  if [ -n "$TS_AUTH" ]; then
+    # the ISO loader omarchy-cidata-load consumes the cidata FILE
+    # tailscale_authkey (its optional_inputs list), NOT a JSON key. The
+    # value is written once and never printed anywhere (same redaction
+    # posture as the $6$ hash).
+    if [ "$TS_AUTH" = "-" ]; then
+      cat >"$cidata/tailscale_authkey" || cannot "read the tailscale auth key from stdin"
+    else
+      cp "$TS_AUTH" "$cidata/tailscale_authkey" || cannot "copy the tailscale auth key from $TS_AUTH"
+    fi
+    chmod 600 "$cidata/tailscale_authkey" 2>/dev/null
+    ts_keys="$(grep -cv -e '^[[:space:]]*$' -e '^[[:space:]]*#' "$cidata/tailscale_authkey" 2>/dev/null)"
+    case "$ts_keys" in '' | *[!0-9]*) ts_keys=0;; esac
+    [ "$ts_keys" -eq 1 ] ||
+      refuse "--tailscale-authkey must contain exactly one key (found $ts_keys)"
   fi
 
   # ---- schema provenance (addendum): the ISO's own omarchy-cidata-load
@@ -876,6 +973,13 @@ flags:
   --defer-provisioning     empty marker instead of credentials (seed)
   --config-sample FILE     wizard-written user_configuration.json reference (seed)
   --authorized-keys FILE   ssh public key file (seed)
+  --package NAME           extra installed package (repeatable; seed)
+  --packages-from FILE     one package per line, '#' comments + blanks
+                           skipped, duplicates dropped (seed)
+  --repo URL               extra pacman repo {"url": URL} (repeatable; seed)
+  --service UNIT           systemd service for the guest (repeatable; seed)
+  --tailscale-authkey FILE Tailscale auth key, '-' reads stdin (seed; value
+                           REDACTED like the hash; exactly one key)
   --user NAME              login user for the hash (seed/full)
   --hostname NAME          guest hostname (seed; default omarchy-hngh)
   --timezone TZ            guest timezone (seed; default America/New_York)
