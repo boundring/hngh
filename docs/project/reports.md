@@ -960,7 +960,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-02T22:18:45Z | alert | 16b070d7 | session touched critical paths in ~/Projects/etc/hngh: tests/scripts/test-queue-readers-json.py ×2 | 2026-10-02T22:18:45Z-alert-16b070d7.md |
 | 2026-10-02T22:25:02Z | progress | c34c3482 | plan 2026-09-14-routed-bench-lane-timer-disable executed (all steps checked) | 2026-10-02T22:25:02Z-progress-c34c3482.md |
 | 2026-10-02T22:25:02Z | alert | 1d8d2c22 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-digest-send-schedule.sh ×2 | 2026-10-02T22:25:02Z-alert-1d8d2c22.md |
-| 2026-10-02T22:25:03Z | alert | 5f06dc39 | escalation hngh-4pe: dispatch-capped (SLA: re-fires bump this row for 7d, then it expires on silence; halt: bead attempt cap files one final attempts-exhausted escalation and the bead leaves the retry loop) ×94 | 2026-10-02T22:25:03Z-alert-5f06dc39.md |
+| 2026-10-02T22:25:03Z | alert | 5f06dc39 | escalation hngh-4pe: dispatch-capped (SLA: re-fires bump this row for 7d, then it expires on silence; halt: bead attempt cap files one final attempts-exhausted escalation and the bead leaves the retry loop) ×95 | 2026-10-02T22:25:03Z-alert-5f06dc39.md |
 | 2026-10-02T22:26:55Z | progress | 79a7c8ac | research line fail-20260914-bench-lane-timer-disable: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-02-fail-20260914-bench-lane-timer-disable.md | 2026-10-02T22:26:55Z-progress-79a7c8ac.md |
 | 2026-10-02T22:32:01Z | alert | 7e9da61c | [oversight] slow-unit: hngh-cadence-hour.service wall=1614.4s median=460.3s ×31 | 2026-10-02T22:32:01Z-alert-7e9da61c.md |
 | 2026-10-02T22:35:08Z | progress | ca5cc111 | plan 2026-10-02-routed-escalation-hngh-lmi-attempts-exhausted auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-02T22:35:08Z expires=2026-10-09T22:35:08Z | 2026-10-02T22:35:08Z-progress-ca5cc111.md |
@@ -1714,7 +1714,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-06T20:54:01Z | progress | 6a1746c8 | research line fail-20261006-Does-a-repo-wide-grep-for-exact-delta-co: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-06-fail-20261006-Does-a-repo-wide-grep-for-exact-delta-co.md | 2026-10-06T20:54:01Z-progress-6a1746c8.md |
 | 2026-10-06T21:00:00Z | progress | ce7ea157 | course pooled-hardware: card mounted, last increment 2026-10-06T20:00:00Z | 2026-10-06T21:00:00Z-progress-ce7ea157.md |
 | 2026-10-06T21:08:07Z | progress | 8be2f86a | research line fail-20261006-Does-a-repo-wide-grep-for-exact-delta-co: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-06-fail-20261006-Does-a-repo-wide-grep-for-exact-delta-co.md | 2026-10-06T21:08:07Z-progress-8be2f86a.md |
-| 2026-10-06T21:08:08Z | progress | 18cf5c74 | news ingest ok: weather cached: clear, 17.4 C ×21 | 2026-10-06T21:08:08Z-progress-18cf5c74.md |
+| 2026-10-06T21:08:08Z | progress | 18cf5c74 | news ingest ok: weather cached: clear, 17.4 C ×22 | 2026-10-06T21:08:08Z-progress-18cf5c74.md |
 | 2026-10-06T21:08:09Z | progress | 5af23ee1 | dashboard introspection grade 5/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) ×2 | 2026-10-06T21:08:09Z-progress-5af23ee1.md |
 | 2026-10-06T21:10:05Z | progress | 2b156c1b | research line fail-20261006-Does-a-repo-wide-grep-for-exact-delta-co reviewed: parked (parked -- methodology sound and pre-registration valuable, but all execution is blocked on material access and even the triggering ui-grades race is unevidenced; retain record, take no action now.) | 2026-10-06T21:10:05Z-progress-2b156c1b.md |
 | 2026-10-06T21:10:10Z | progress | 7c8a346c | agent-supervision: evicted-stale omp-DeskInstallWizard-f109b5 (idle 365m) expires=2026-10-13T21:10:10Z | 2026-10-06T21:10:10Z-progress-7c8a346c.md |
@@ -1747,10 +1747,10 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-07T00:00:42Z | progress | 6b8ad707 | router routed supervision:omp-2026-10-06T23-06-39-831Z_01a-c5a65f:stalled -> plan candidate 2026-10-07-routed-supervision-omp-2026-10-06T23-06-39-831Z_01a-c5a65f-stalled (routed-at 2026-10-07T00:00:42Z) expires=2026-10-14T00:00:42Z | 2026-10-07T00:00:42Z-progress-6b8ad707.md |
 | 2026-10-07T00:43:21Z | progress | 07ccc129 | agent-supervision: omp-2026-10-06T14-19-53-642Z_01a-a48864 slow-valid (last tool-call 28m ago) — re-queue at a cheaper tier if it persists expires=2026-10-14T00:43:21Z | 2026-10-07T00:43:21Z-progress-07ccc129.md |
 | 2026-10-07T01:00:00Z | progress | 66e82045 | course pooled-hardware: card mounted, last increment 2026-10-07T00:00:00Z | 2026-10-07T01:00:00Z-progress-66e82045.md |
-| 2026-10-07T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×18 | 2026-10-07T01:00:10Z-alert-ef49c9f7.md |
+| 2026-10-07T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×19 | 2026-10-07T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-07T02:00:00Z | progress | 0829504f | course pooled-hardware: card mounted, last increment 2026-10-07T01:00:00Z | 2026-10-07T02:00:00Z-progress-0829504f.md |
 | 2026-10-07T02:04:00Z | progress | fb6db66c | digest 2026-10-06 2200: logs/email-digest-2026-10-06.md (sent=yes) | 2026-10-07T02:04:00Z-progress-fb6db66c.md |
-| 2026-10-07T02:24:52Z | alert | f95bfdf9 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=10.6s median=0.0s ×28 | 2026-10-07T02:24:52Z-alert-f95bfdf9.md |
+| 2026-10-07T02:24:52Z | alert | f95bfdf9 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=10.6s median=0.0s ×30 | 2026-10-07T02:24:52Z-alert-f95bfdf9.md |
 | 2026-10-07T02:58:44Z | progress | cdf00753 | agent-supervision: evicted-stale omp-P0Scaffold-d3f5cb (idle 361m) expires=2026-10-14T02:58:44Z | 2026-10-07T02:58:44Z-progress-cdf00753.md |
 | 2026-10-07T03:00:00Z | progress | 1c22d330 | course pooled-hardware: card mounted, never incremented | 2026-10-07T03:00:00Z-progress-1c22d330.md |
 | 2026-10-07T03:32:53Z | progress | aa488b31 | agent-supervision: evicted-stale omp-P0Finish-72a377 (idle 364m) expires=2026-10-14T03:32:53Z | 2026-10-07T03:32:53Z-progress-aa488b31.md |
@@ -1827,7 +1827,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-07T13:00:00Z | progress | df7de350 | course pooled-hardware: card mounted, last increment 2026-10-07T12:00:00Z | 2026-10-07T13:00:00Z-progress-df7de350.md |
 | 2026-10-07T13:34:27Z | progress | 19247abd | model openrouter/z-ai/glm-5.3-flash back in rotation (ok outcome; demotion cleared) | 2026-10-07T13:34:27Z-progress-19247abd.md |
 | 2026-10-07T13:34:27Z | progress | a612d6f6 | plan 2026-09-15-routed-overnight-dev-synth-bad-2026-09-15 executed (all steps checked) | 2026-10-07T13:34:27Z-progress-a612d6f6.md |
-| 2026-10-07T13:41:27Z | alert | a2d94620 | [oversight] slow-unit: hngh-cadence-hour.service wall=2070.8s median=433.3s ×4 | 2026-10-07T13:41:27Z-alert-a2d94620.md |
+| 2026-10-07T13:41:27Z | alert | a2d94620 | [oversight] slow-unit: hngh-cadence-hour.service wall=2070.8s median=433.3s ×8 | 2026-10-07T13:41:27Z-alert-a2d94620.md |
 | 2026-10-07T14:00:00Z | progress | 8ee3edb2 | course pooled-hardware: card mounted, last increment 2026-10-07T13:00:00Z | 2026-10-07T14:00:00Z-progress-8ee3edb2.md |
 | 2026-10-07T15:00:00Z | progress | 20351d5f | course pooled-hardware: card mounted, last increment 2026-10-07T14:00:00Z | 2026-10-07T15:00:00Z-progress-20351d5f.md |
 | 2026-10-07T16:00:00Z | progress | cd5359d9 | course pooled-hardware: card mounted, last increment 2026-10-07T15:00:00Z | 2026-10-07T16:00:00Z-progress-cd5359d9.md |
@@ -1836,6 +1836,13 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-07T16:38:47Z | progress | f78ab01c | agent-supervision: omp-P7Impl-7fda68 recovered expires=2026-10-14T16:38:47Z | 2026-10-07T16:38:47Z-progress-f78ab01c.md |
 | 2026-10-07T17:00:00Z | progress | 5c771e73 | course pooled-hardware: card mounted, last increment 2026-10-07T16:00:00Z | 2026-10-07T17:00:00Z-progress-5c771e73.md |
 | 2026-10-07T17:00:42Z | progress | e2154bf7 | router routed supervision:omp-P7Impl-7fda68:stalled -> plan candidate 2026-10-07-routed-supervision-omp-P7Impl-7fda68-stalled (routed-at 2026-10-07T17:00:42Z) expires=2026-10-14T17:00:42Z | 2026-10-07T17:00:42Z-progress-e2154bf7.md |
-| 2026-10-07T17:17:13Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×19 | 2026-10-07T17:17:13Z-progress-2978e1fd.md |
+| 2026-10-07T17:17:13Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×26 | 2026-10-07T17:17:13Z-progress-2978e1fd.md |
 | 2026-10-07T18:00:00Z | progress | 2fea01ca | course pooled-hardware: card mounted, last increment 2026-10-07T17:00:00Z | 2026-10-07T18:00:00Z-progress-2fea01ca.md |
 | 2026-10-07T18:37:26Z | progress | a90a716f | plan 2026-09-15-routed-repeat-crumbs executed (all steps checked) | 2026-10-07T18:37:26Z-progress-a90a716f.md |
+| 2026-10-07T18:37:53Z | progress | 5e223224 | research line fail-20260915-repeat-crumbs: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-07-fail-20260915-repeat-crumbs.md | 2026-10-07T18:37:53Z-progress-5e223224.md |
+| 2026-10-07T18:44:29Z | progress | 6ace35e7 | research line fail-20260915-repeat-crumbs: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-07-fail-20260915-repeat-crumbs.md | 2026-10-07T18:44:29Z-progress-6ace35e7.md |
+| 2026-10-07T18:53:10Z | alert | a98a621a | agent-supervision: omp-2026-10-07T18-07-27-034Z_01a-475aca stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-14T18:53:10Z ×2 | 2026-10-07T18:53:10Z-alert-a98a621a.md |
+| 2026-10-07T19:00:00Z | progress | b521c71a | course pooled-hardware: card mounted, last increment 2026-10-07T18:00:00Z | 2026-10-07T19:00:00Z-progress-b521c71a.md |
+| 2026-10-07T19:00:42Z | alert | 91185de2 | ui-audit unavailable: Waiting for selector `#p-schedule .glabel-row .gname` failed: Waiting failed: 30000ms exceeded | 2026-10-07T19:00:42Z-alert-91185de2.md |
+| 2026-10-07T19:00:42Z | progress | f0e26eda | router routed supervision:omp-2026-10-07T18-07-27-034Z_01a-475aca:stalled -> plan candidate 2026-10-07-routed-supervision-omp-2026-10-07T18-07-27-034Z_01a-475aca-stalled (routed-at 2026-10-07T19:00:42Z) expires=2026-10-14T19:00:42Z | 2026-10-07T19:00:42Z-progress-f0e26eda.md |
+| 2026-10-07T19:02:24Z | progress | 787bcf2d | research line fail-20260915-repeat-crumbs: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-07-fail-20260915-repeat-crumbs.md | 2026-10-07T19:02:24Z-progress-787bcf2d.md |
