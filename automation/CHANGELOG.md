@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-07
+- repeat-crumbs alert identity closed by retiring the probe (second
+  application of the 2026-09-02 disposition, lost in the subtree
+  refoundation): `probe_repeated_breadcrumbs` compared the last two
+  rendered crumbs for byte-identity, and the render includes the
+  timestamp, so two identical lines necessarily share a second — the
+  only reachable signal was same-second duplicate burst writes (live
+  evidence: `ttsr-fit:threeinj` x3 at 2026-09-15T15:32:17Z), never a
+  cross-time loop. Probe + alert deleted from
+  `jobs/oversight-tick.sh`; identity dropped from
+  `scripts/notify-email.py` digest patterns and the README rubric;
+  genuine loop recognition stays with the steer leg's typed hazard
+  gate. Disposition row `fail-20260915-repeat-crumbs` = fixed;
+  research note docs/research/2026-10-07-fail-20260915-repeat-crumbs.md.
+
 ## 2026-10-01
 - governed-fleet slice-G closure — operations knowledge-graph surface
   verified on its own surfaces and the lane re-admitted: blocker row

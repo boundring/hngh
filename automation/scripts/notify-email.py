@@ -32,7 +32,7 @@ never spams the inbox:
     down/recovered; agent-stall; git-push-fail; credential/config
     touches; ceremony/verdict failures; kernel tree-skew; budget cap
     exceeded.
-  DEFER-TO-DIGEST: routine gate flaps; ui-audit nits; repeat-crumbs;
+  DEFER-TO-DIGEST: routine gate flaps; ui-audit nits;
     feed-validity one-steppers.
 Set HNGH_NOTIFY_IMMEDIATE=0 to force everything to digest-only
 (tests/override).
@@ -211,7 +211,6 @@ IMMEDIATE_PATTERNS = (  # ranked; first match wins
 DIGEST_PATTERNS = (
     ("routine gate flaps", ("gate",)),
     ("ui-audit nits", ("ui-audit",)),
-    ("repeat-crumbs", ("repeat-crumb",)),
     ("feed-validity one-steppers", ("feed-validity",)),
 )
 

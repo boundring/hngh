@@ -180,7 +180,7 @@ forces everything to digest-only):
 |---|---|
 | park/critical-class | routine gate flaps |
 | service-ctl actions | ui-audit nits |
-| unsloth serving down/recovered | repeat-crumbs |
+| unsloth serving down/recovered | |
 | agent-stall | feed-validity one-steppers |
 | git-push failures | anything unrecognized |
 | credential/config touches | |

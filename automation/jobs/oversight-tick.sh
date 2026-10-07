@@ -175,12 +175,6 @@ EOF
  done
 }
 
-probe_repeated_breadcrumbs() {
- # identical last-two breadcrumbs are a stuck loop signal
- python3 "$ROOT/lib/crumbs-db.py" export --db "$_crumbs_db" --tail 2 2>/dev/null |
-  awk 'NR==1{a=$0} NR==2&&$0==a{print "REPEAT"}'
-}
-
 probe_gate_red() {
  # unread gate-red alert rows (identity gate-check:<repo>, filed by
  # cadence/day/03-gate-check.sh when a repo's make test fails) must reach
@@ -460,9 +454,6 @@ self_review() {
  ui_sig="$(probe_ui_audit)"
  [ -n "$ui_sig" ] &&
   breadcrumb "oversight-tick" "ui-audit-regression" "$ui_sig"
- probe_repeated_breadcrumbs | grep -q REPEAT &&
-  alert "repeat-crumbs" "identical breadcrumb loop detected" \
-   "repeat-crumbs" 86400
  loop_sig=$(probe_test_loops)
  [ -n "$loop_sig" ] && alert "loop-signal" "$loop_sig" "loop-signal" 86400
  probe_system_awareness
