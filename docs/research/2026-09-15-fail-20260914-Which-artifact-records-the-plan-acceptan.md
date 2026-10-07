@@ -79,3 +79,56 @@ The artifact fails R2 if it only has a single acceptance boolean. It also fails 
 If inspection finds no plan-acceptance event record,
 
 [truncated at model call: completion hit the max_tokens cap (finish_reason=length) - re-run the beat]
+
+## R1/R2 execution — host inspection (2026-10-07)
+
+Executed on-host by the routed session for plan
+`2026-09-15-routed-research-beat-injection-fail-20260914-Which-artifact-records-the-plan-acceptan`
+(the adopted disposition's R1 obligation). The triggering alert was the
+docfilter capture-side filter working as designed — injection signature(s)
+in the unsloth Qwen3.8-27B-GGUF capture were redacted at write time; the
+alert row has aged out of the report prune (no row for the identity remains
+in `docs/project/reports.md` or `docs/project/report-bodies/`), and the
+research-beat picker skips `reviewed` lines, so no future capture can
+re-fire it for this subject.
+
+### R1 — the artifact exists; two surfaces record the acceptance event
+
+1. `hngh-automation/logs/acceptance.log` (ACCEPT_LOG default,
+   `automation/scripts/accept-plans.py:67`): append-only event log, row
+   shape `<UTC ts> | <verb> <slug> [<detail>]`. Observed rows for the run
+   tag:
+   - `2026-09-09T14:01:12Z | blocked 2026-09-09-stall-recovery-and-operator-surfaces kernel-gate-red-rc2` (repeated 14:31:12Z)
+   - `2026-09-09T15:01:13Z | accepted 2026-09-09-stall-recovery-and-operator-surfaces 2026-09-09T15:01:13Z`
+   - five further `blocked … step-1-no-verification` rows, 2026-09-10T00:00:18Z through 02:30:15Z
+2. Plan-file front-matter comment
+   (`docs/project/plans/2026-09-09-stall-recovery-and-operator-surfaces.plan.md`
+   line 1): carries `accepted=2026-09-09T15:01:13Z` and the later disposal
+   (`status=parked … cause=obsolete disposed=2026-09-27T01:46:59Z
+   reason=superseded…`); no parse/override fields.
+
+### R2 — representational-capacity verdict: FAILS
+
+- The writer's whole verb set is `accepted <slug> <ts>`, `blocked <slug>
+  <cause>`, `held <slug> <cause>`; the tokens `parse_pass` and
+  `operator_override` appear nowhere in `automation/scripts/accept-plans.py`
+  nor in any repo file (repo-wide search: zero hits outside research prose).
+- No row kind represents "parse failed but operator overrode": an operator
+  override is a hand-edit of the front-matter comment and leaves no
+  acceptance.log row at all. `parse_pass=true` with `operator_override=true`
+  collapses into the same single `accepted` row as a plain parse pass.
+- One timestamp per event; no `override_ts` / `actor` / `rationale`
+  fields; R2's minimum schema is unmet.
+- The gap is visible on real data: the same plan was `accepted` at
+  2026-09-09T15:01:13Z and then re-blocked `step-1-no-verification` five
+  times on 2026-09-10 — the record alone cannot classify the 15:01:13Z
+  event. O1 of sibling line
+  `fail-20260910-overnight-plan-accept-blocked-2026-09-09-stall-recovery-and-operator-surfaces`
+  stays open for the same reason.
+
+**Answer:** the plan-acceptance event is recorded in
+`hngh-automation/logs/acceptance.log` (plus the plan comment's
+`accepted=<ts>`), and it does NOT distinguish `parse_pass` from
+`operator_override`; the distinction is reconstructible only from git
+history of the plan comment — prose/history, not structured fields. The
+line's question is answered; R1 is discharged.
