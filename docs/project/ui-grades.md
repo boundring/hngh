@@ -14542,3 +14542,15 @@ scores are kept, not sanded — a flattering ledger is a broken instrument.
 | 2026-10-06 23:02 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-10-06 23:02 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
 | 2026-10-06 23:02 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:15 | dashboard-tui-hngh-gen1 | 6/10 | self-grade 6/10 fg/bg contrast 2.2:1 |
+| 2026-10-06 23:15 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 11.8:1 |
+| 2026-10-06 23:15 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:28 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:28 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.5:1 |
+| 2026-10-06 23:28 | dashboard-tui-hngh-gen3 | 6/10 | self-grade 6/10 fg/bg contrast 1.1:1 |
+| 2026-10-06 23:41 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:41 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:41 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:54 | dashboard-tui-hngh-gen1 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:54 | dashboard-tui-hngh-gen2 | 10/10 | self-grade 10/10 fg/bg contrast 12.4:1 |
+| 2026-10-06 23:54 | dashboard-tui-hngh-gen3 | 10/10 | self-grade 10/10 fg/bg contrast 5.7:1 |
