@@ -2,7 +2,8 @@
 # test-remote-push.sh — sandbox proof for 16-remote-push.sh gate handling:
 # a stale gate-red crumb must re-run the repo gate inline (the crumb says
 # "run the gate before pushing") and push on fresh green; a red crumb with
-# a genuinely red gate still refuses; no crumb pushes on green. Hermetic:
+# a genuinely red gate still refuses; no crumb pushes on green. A held
+# gate lock defers the push (never races a gate evaluation). Hermetic:
 # fixture repos, no real origin, no real gate.
 set -u
 # fixture containment: never inherit repo selection from the caller's shell (2026-09-17 kernel-contamination lesson)
@@ -20,10 +21,10 @@ ck() { # desc expected actual
  fi
 }
 run_push() { # repo-dir -> runs the real script against it
- mkdir -p "$sb/logs"
+ mkdir -p "$sb/logs" "$sb/tmp"
  HNGH_HOME="$1" HNGH_CRUMBS_DB="$sb/crumbs.db" \
   HNGH_PUSH_LOCK="$sb/push.lock" JOB_NAME=test-push \
-  GATE_RERUN_DIR="$sb/logs" \
+  GATE_RERUN_DIR="$sb/logs" GATE_LOCK="$sb/gate.lock" TMPDIR="$sb/tmp" \
   bash "$root/cadence/hour/16-remote-push.sh" 2>&1
 }
 crumbs() {
@@ -112,6 +113,50 @@ new_commit "$d"
 [ -e /tmp/hngh-gate-rerun-hngh.log ] && shared_leak=1 || shared_leak=0
 run_push "$d" >/dev/null
 ck "no shared gate log after green run" "0" "$shared_leak"
+
+# case 6: red crumb + gate green, but a gate evaluation holds the gate
+# lock -> push deferred: no inline re-run, no red crumb, no gate log
+# (a busy lock is not a red gate)
+reset_state
+red_crumb
+d="$sb/c6"
+fixture "$d" 0
+new_commit "$d"
+: >"$sb/marker6"
+# pkill the -c child too: it inherits the locked fd, and killing the
+# flock wrapper alone would leak the shared lock into case 7
+flock -s "$sb/gate.lock" -c "touch '$sb/lock-held'; sleep 5" &
+flock_pid=$!
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+ [ -e "$sb/lock-held" ] && break
+ sleep 0.1
+done
+run_push "$d" >/dev/null
+pkill -P "$flock_pid" 2>/dev/null
+kill "$flock_pid" 2>/dev/null
+wait "$flock_pid" 2>/dev/null
+ck "held gate lock defers push" "1" "$(ahead_count "$d")"
+ck "gate-lock-busy crumb filed" "1" \
+ "$(python3 "$root/lib/crumbs-db.py" export --db "$sb/crumbs.db" | grep -c 'gate-lock-busy')"
+ck "held gate lock writes no gate log" "0" \
+ "$(find "$sb/tmp" "$sb/logs" -name 'gate-rerun-*' -newer "$sb/marker6" 2>/dev/null | wc -l)"
+ck "held gate lock files no gate crumb" "0" \
+ "$(python3 "$root/lib/crumbs-db.py" export --db "$sb/crumbs.db" | grep -c 'push-refused\|gate-refresh')"
+
+# case 7: red crumb + gate green + gate lock FREE -> the inline re-run
+# runs and the push lands (case-1 contract with the lock in play)
+reset_state
+red_crumb
+d="$sb/c7"
+fixture "$d" 0
+new_commit "$d"
+: >"$sb/marker7"
+run_push "$d" >/dev/null
+ck "free gate lock pushes" "0" "$(ahead_count "$d")"
+ck "free gate lock re-runs the gate" "1" \
+ "$(find "$sb/tmp" -name 'gate-rerun-*' -newer "$sb/marker7" 2>/dev/null | wc -l)"
+ck "free gate lock files gate-refresh crumb" "1" \
+ "$(python3 "$root/lib/crumbs-db.py" export --db "$sb/crumbs.db" | grep -c 'gate-refresh')"
 
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || {

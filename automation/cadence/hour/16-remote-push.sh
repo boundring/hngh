@@ -5,6 +5,10 @@
 # but only when the tree has nothing staged (never push half-landed
 # operator work) and the last gate signal for the repo is green (crumb
 # recorded by 03-gate-check; no crumb -> run `make test` quietly).
+# An inline re-run first takes the shared gate-evaluation flock (the
+# lock accept-plans.py holds across an admit-time gate): busy -> a
+# gate-lock-busy crumb and the push defers -- a busy lock is not a
+# red gate; the next hook/tick fires this again (2026-10-08).
 # Refusal, unreachability and auth failures breadcrumb and exit 0 —
 # never retried in-script.
 # Event-driven (2026-09-08): the git post-commit hook fires this after
@@ -31,6 +35,11 @@ JOB_NAME="${JOB_NAME:-16-remote-push}"
 # make-test runs, no double push
 exec 9>"${HNGH_PUSH_LOCK:-/tmp/.hngh-remote-push-lock}"
 flock -n 9 || exit 0
+
+# gate-evaluation lock, same key accept-plans.py uses (sha1 of the
+# automation root, first 12 hex chars) so an inline gate re-run here
+# and an admit-time gate evaluation never compile side by side
+GATE_LOCK="${GATE_LOCK:-${TMPDIR:-/tmp}/hngh-gate-$(printf %s "$AUTOMATION_ROOT" | sha1sum | cut -c1-12).lock}"
 
 # last_gate <label> — echoes "<state> <crumb-iso-ts>" from the latest
 # gate-check crumb for that repo (green/red/none + its timestamp).
@@ -91,7 +100,15 @@ push_repo() { # name dir
   # unique per invocation: a fixed name let concurrent pushes (hook-fired
   # + tick) and the test fixtures clobber one shared log, cross-
   # contaminating the captured evidence (2026-09-10 diagnosis)
-  gate_log="${TMPDIR:-/tmp}/hngh-gate-rerun-$name-$$.log"
+  # a gate evaluation in flight holds the shared lock: defer the push
+  # -- a busy lock is not a red gate (case: 2026-10-08 mass plan-block)
+  exec 8>>"$GATE_LOCK"
+  if ! flock -n 8; then
+   breadcrumb "$JOB_NAME" "gate-lock-busy" \
+    "$name: gate evaluation holds the gate lock -- push deferred"
+   return 0
+  fi
+  gate_log="${TMPDIR:-/tmp}/gate-rerun-$name-$$.log"
   if (cd "$dir" && timeout 290 make test >"$gate_log" 2>&1); then
    [ "$gate_state" != none ] &&
     breadcrumb "$JOB_NAME" "gate-refresh" \

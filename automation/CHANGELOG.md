@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-08
+- automation gate unblocked: the 2026-10-06/07 dead sessions left
+  test-remote-push.sh cases 6-7 (failing-first) asserting gate-lock
+  deferral in 16-remote-push.sh that was never implemented, so every
+  overnight plan admission hit automation-gate-red-rc2 (mass block,
+  2026-10-08T04:06:38Z). Landed: inline gate re-runs take the shared
+  gate-evaluation flock (same sha1-of-automation-root key as
+  accept-plans.py GATE_LOCK, verified byte-equal c693f6d61df3); a busy
+  lock is not a red gate -- gate-lock-busy crumb, push deferred, next
+  hook/tick retries; rerun log renamed gate-rerun-<name>-<pid>.log so
+  gate-rerun-* find patterns see it. Fixture teardown pkills the
+  flock -c child (it inherits the locked fd and leaked the shared lock
+  into the next case). make test green 2026-10-08.
+
 ## 2026-10-07
 - repeat-crumbs alert identity closed by retiring the probe (second
   application of the 2026-09-02 disposition, lost in the subtree
