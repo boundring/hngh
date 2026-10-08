@@ -11,3 +11,7 @@ at 2026-10-07T10:00:42Z. Alert text: ttsr fit: session CisternImpl — ttsr inje
 
 - [ ] Delve: open research subject fail-20261007-ttsr-fit-cisternimpl for ttsr-fit:CisternImpl; record disposition; then fix or park
       Verification: research subject fail-20261007-ttsr-fit-cisternimpl present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-10-08T11:00:42Z re-occurred (dedup window expired)
