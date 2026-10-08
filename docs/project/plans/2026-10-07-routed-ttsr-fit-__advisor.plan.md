@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ttsr-fit:__advisor -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-08T05:06:56Z routed-from=ttsr-fit:__advisor -->
 <!-- attempt: 3 -->
 <!-- expires: 2026-10-14T10:00:42Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
