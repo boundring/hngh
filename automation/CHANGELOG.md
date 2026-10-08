@@ -13,6 +13,16 @@
   gate-rerun-* find patterns see it. Fixture teardown pkills the
   flock -c child (it inherits the locked fd and leaked the shared lock
   into the next case). make test green 2026-10-08.
+- stale routed plan 2026-09-16-...-What-are-the-exact-file-pa executed:
+  its subject was never registered (the routed id is lowercase; the
+  underlying research ran under fail-20260915-What-are-the-exact-file-
+  paths-for-the-ca, adopted 2026-09-16). Registered in
+  research-subjects.txt with the original 20260916 alert date;
+  disposition = fixed in research-dispositions.tsv: dev-synth now
+  emits Verification lines on every step (the same slug re-synthesized
+  2026-10-08T04:07:25Z proves it), and the admission blocker that
+  re-triggered the class (automation gate red rc2) is the f1477a40 fix
+  above; plan status accepted -> executed.
 
 ## 2026-10-07
 - repeat-crumbs alert identity closed by retiring the probe (second
