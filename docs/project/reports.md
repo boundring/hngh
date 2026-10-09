@@ -1688,14 +1688,14 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-08T00:28:18Z | progress | eab1f289 | agent-supervision: evicted-stale omp-P6Impl-e1e761 (idle 361m) expires=2026-10-15T00:28:18Z | 2026-10-08T00:28:18Z-progress-eab1f289.md |
 | 2026-10-08T00:37:16Z | progress | c9ac3d33 | agent-supervision: evicted-stale omp-2026-10-07T18-07-27-034Z_01a-475aca (idle 362m) expires=2026-10-15T00:37:16Z | 2026-10-08T00:37:16Z-progress-c9ac3d33.md |
 | 2026-10-08T01:00:00Z | progress | ad971839 | course pooled-hardware: card mounted, last increment 2026-10-08T00:00:00Z | 2026-10-08T01:00:00Z-progress-ad971839.md |
-| 2026-10-08T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×23 | 2026-10-08T01:00:10Z-alert-ef49c9f7.md |
+| 2026-10-08T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×24 | 2026-10-08T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-08T01:00:42Z | progress | c8e557a8 | router routed dash-selfreview:summary:0 -> plan candidate 2026-10-08-routed-dash-selfreview-summary-0 (routed-at 2026-10-08T01:00:42Z) expires=2026-10-15T01:00:42Z | 2026-10-08T01:00:42Z-progress-c8e557a8.md |
 | 2026-10-08T02:00:00Z | progress | 8e291776 | course pooled-hardware: card mounted, last increment 2026-10-08T01:00:00Z | 2026-10-08T02:00:00Z-progress-8e291776.md |
 | 2026-10-08T02:02:34Z | progress | 94e7d029 | digest 2026-10-07 2200: logs/email-digest-2026-10-07.md (sent=yes) | 2026-10-08T02:02:34Z-progress-94e7d029.md |
-| 2026-10-08T02:25:05Z | alert | 79837ce1 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=16.8s median=0.0s ×49 | 2026-10-08T02:25:05Z-alert-79837ce1.md |
+| 2026-10-08T02:25:05Z | alert | 79837ce1 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=16.8s median=0.0s ×53 | 2026-10-08T02:25:05Z-alert-79837ce1.md |
 | 2026-10-08T03:00:00Z | progress | 1c22d330 | course pooled-hardware: card mounted, never incremented | 2026-10-08T03:00:00Z-progress-1c22d330.md |
-| 2026-10-08T03:32:41Z | alert | e55b01e1 | agent-supervision: omp-2026-10-08T02-28-43-502Z_01a-803aab stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-15T03:32:41Z ×75 | 2026-10-08T03:32:41Z-alert-e55b01e1.md |
-| 2026-10-08T03:41:44Z | progress | ba3a12e7 | agent-supervision: omp-2026-10-08T02-28-43-502Z_01a-803aab recovered expires=2026-10-15T03:41:44Z ×17 | 2026-10-08T03:41:44Z-progress-ba3a12e7.md |
+| 2026-10-08T03:32:41Z | alert | e55b01e1 | agent-supervision: omp-2026-10-08T02-28-43-502Z_01a-803aab stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-15T03:32:41Z ×79 | 2026-10-08T03:32:41Z-alert-e55b01e1.md |
+| 2026-10-08T03:41:44Z | progress | ba3a12e7 | agent-supervision: omp-2026-10-08T02-28-43-502Z_01a-803aab recovered expires=2026-10-15T03:41:44Z ×18 | 2026-10-08T03:41:44Z-progress-ba3a12e7.md |
 | 2026-10-08T04:00:00Z | progress | 4a8e9331 | course pooled-hardware: card mounted, last increment 2026-10-08T03:00:00Z | 2026-10-08T04:00:00Z-progress-4a8e9331.md |
 | 2026-10-08T04:00:42Z | progress | ba36abee | router routed supervision:omp-2026-10-08T02-28-43-502Z_01a-803aab:stalled -> plan candidate 2026-10-08-routed-supervision-omp-2026-10-08T02-28-43-502Z_01a-803aab-stalled (routed-at 2026-10-08T04:00:42Z) expires=2026-10-15T04:00:42Z | 2026-10-08T04:00:42Z-progress-ba36abee.md |
 | 2026-10-08T04:31:55Z | progress | 71d87506 | automation gate unblocked (f1477a40): 16-remote-push.sh now takes the shared gate-evaluation flock before inline re-runs (busy = gate-lock-busy crumb, push deferred) and the rerun log matches gate-rerun-* find patterns; the failing-first test cases 6-7 left by dead 2026-10-06/07 sessions pass, full make test green. Mass plan-block 2026-10-08T04:06:38Z cause removed. Stale 09-16 routed plan-accept-blocked candidate executed too (subject registered with original date, disposition fixed, plan executed, e1629a43). Admission resumes on next accept-plans tick. | 2026-10-08T04:31:55Z-progress-71d87506.md |
@@ -1837,10 +1837,10 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-08T17:06:43Z | progress | 67d05231 | agent-supervision: omp-P9Judge-f3aa51 recovered expires=2026-10-15T17:06:43Z | 2026-10-08T17:06:43Z-progress-67d05231.md |
 | 2026-10-08T17:07:22Z | progress | de20c131 | plan 2026-10-08-routed-overnight-dev-synth-bad-2026-10-08 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-08T17:07:21Z expires=2026-10-15T17:07:21Z | 2026-10-08T17:07:22Z-progress-de20c131.md |
 | 2026-10-08T17:07:22Z | progress | 99217355 | plan 2026-10-08-routed-supervision-omp-2026-10-08T14-07-22-236Z_01a-c12958-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-08T17:07:21Z expires=2026-10-15T17:07:22Z | 2026-10-08T17:07:22Z-progress-99217355.md |
-| 2026-10-08T17:19:54Z | progress | 7150c8cc | newspaper compose ok: newspaper composed: 22 article(s), 0 edition(s) ×72 | 2026-10-08T17:19:54Z-progress-7150c8cc.md |
+| 2026-10-08T17:19:54Z | progress | 7150c8cc | newspaper compose ok: newspaper composed: 22 article(s), 0 edition(s) ×89 | 2026-10-08T17:19:54Z-progress-7150c8cc.md |
 | 2026-10-08T18:00:00Z | progress | 6767fc72 | course pooled-hardware: card mounted, last increment 2026-10-08T17:00:00Z | 2026-10-08T18:00:00Z-progress-6767fc72.md |
 | 2026-10-08T19:00:00Z | progress | 2955e8d4 | course pooled-hardware: card mounted, last increment 2026-10-08T18:00:00Z | 2026-10-08T19:00:00Z-progress-2955e8d4.md |
-| 2026-10-08T19:00:42Z | alert | 91185de2 | ui-audit unavailable: Waiting for selector `#p-schedule .glabel-row .gname` failed: Waiting failed: 30000ms exceeded ×5 | 2026-10-08T19:00:42Z-alert-91185de2.md |
+| 2026-10-08T19:00:42Z | alert | 91185de2 | ui-audit unavailable: Waiting for selector `#p-schedule .glabel-row .gname` failed: Waiting failed: 30000ms exceeded ×6 | 2026-10-08T19:00:42Z-alert-91185de2.md |
 | 2026-10-08T19:07:02Z | progress | afcc3782 | agent-supervision: evicted-stale omp-Scope8-99bcc5 (idle 360m) expires=2026-10-15T19:07:02Z | 2026-10-08T19:07:02Z-progress-afcc3782.md |
 | 2026-10-08T19:14:41Z | progress | 19247abd | model openrouter/z-ai/glm-5.3-flash back in rotation (ok outcome; demotion cleared) | 2026-10-08T19:14:41Z-progress-19247abd.md |
 | 2026-10-08T19:14:41Z | progress | 078e5b1d | plan 2026-09-16-routed-overnight-plan-accept-gate-kernel-2 executed (all steps checked) | 2026-10-08T19:14:41Z-progress-078e5b1d.md |
@@ -1859,7 +1859,11 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-08T21:01:47Z | alert | 2a3aa2b4 | [oversight] slow-unit: dropin:05-operator-items.sh wall=505.7s median=245.8s | 2026-10-08T21:01:47Z-alert-2a3aa2b4.md |
 | 2026-10-08T21:58:06Z | progress | 5812a91e | agent-supervision: evicted-stale omp-IntentSync-715bbd (idle 360m) expires=2026-10-15T21:58:06Z | 2026-10-08T21:58:06Z-progress-5812a91e.md |
 | 2026-10-08T22:00:00Z | progress | 03aeb25c | course pooled-hardware: card mounted, last increment 2026-10-08T21:00:01Z | 2026-10-08T22:00:00Z-progress-03aeb25c.md |
-| 2026-10-08T22:07:44Z | progress | 7f86077f | news ingest ok: weather cached: overcast, 22.4 C | 2026-10-08T22:07:44Z-progress-7f86077f.md |
+| 2026-10-08T22:07:44Z | progress | 7f86077f | news ingest ok: weather cached: overcast, 22.4 C ×2 | 2026-10-08T22:07:44Z-progress-7f86077f.md |
 | 2026-10-08T22:07:45Z | progress | 320f458a | dashboard introspection grade 6/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) | 2026-10-08T22:07:45Z-progress-320f458a.md |
 | 2026-10-08T22:49:25Z | progress | 51e1797d | agent-supervision: evicted-stale omp-P9Design-77b91b (idle 362m) expires=2026-10-15T22:49:25Z | 2026-10-08T22:49:25Z-progress-51e1797d.md |
 | 2026-10-08T23:00:00Z | progress | e4643d69 | course pooled-hardware: card mounted, last increment 2026-10-08T22:00:00Z | 2026-10-08T23:00:00Z-progress-e4643d69.md |
+| 2026-10-08T23:32:30Z | progress | a51ae64e | agent-supervision: evicted-stale omp-P12Design-0bfc15 (idle 364m) expires=2026-10-15T23:32:29Z | 2026-10-08T23:32:30Z-progress-a51ae64e.md |
+| 2026-10-08T23:57:11Z | progress | 12ebae89 | agent-supervision: evicted-stale omp-P9Impl-5abfd9 (idle 362m) expires=2026-10-15T23:57:11Z | 2026-10-08T23:57:11Z-progress-12ebae89.md |
+| 2026-10-09T00:00:00Z | progress | baf2d8b4 | course pooled-hardware: card mounted, last increment 2026-10-08T23:00:00Z | 2026-10-09T00:00:00Z-progress-baf2d8b4.md |
+| 2026-10-09T00:08:29Z | progress | c8c22834 | research line synth-2026-10-09-2: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-09-synth-2026-10-09-2.md | 2026-10-09T00:08:29Z-progress-c8c22834.md |
