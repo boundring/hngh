@@ -1,47 +1,65 @@
-# fail-20260916-patrol-handoffs — patrol:handoffs delve (routed plan 2026-09-16-routed-patrol-handoffs-2)
+# Why did alert identity patrol:handoffs file bad-execution on agent-handoffs.md (10 dead/cancelled in last 10 overnight-lead rows) at 2026-09-16T21:00:14Z, and what disposition (fix or park) closes it? (twin of live patrol class carrier patrol-20260925-handoffs-bad-execution)
 
-Alert: `patrol handoffs: bad-execution on agent-handoffs.md -- 10 dead/cancelled in last 10 rows` (filed 2026-09-16T21:00:14Z by scripts/router-tick.py). Routed plan auto-accepted 2026-09-18T01:41:57Z; delve executed 2026-10-09T00Z.
+Status: crystallized 2026-10-09 from research line `fail-20260916-patrol-handoffs`; per-beat
+material lives in hngh-automation digest/RESEARCH-BEAT-*-fail-20260916-patrol-handoffs.md.
 
-## Mechanism
+# research beat 2026-10-09 — crystallization
 
-`check_handoff_deaths` (automation/jobs/patrol.py:261-286): takes the last
-HANDOFFS_LAST_N=10 `overnight-lead |` rows of automation/agent-handoffs.md,
-counts rows containing `" dead "` or `"cancelled"`, files the bad-execution
-alert when the count >= HANDOFFS_THRESHOLD=3. Route row: config/patrol-routes.tsv
-`handoffs -> handoffs-accumulation -> handoff-deaths (30m)`.
+_line: Why did alert identity patrol:handoffs file bad-execution on agent-handoffs.md (10 dead/cancelled in last 10 overnight-lead rows) at 2026-09-16T21:00:14Z, and what disposition (fix or park) closes it? | state: contracting → **crystallized** | twin: patrol-20260925-handoffs-bad-execution_
 
-## Condition at disposition time (2026-10-09T00:19Z) — LIVE, not self-healed
+---
 
-4 of the last 10 overnight-lead rows are genuine rc=124 timeout-kill deaths:
+## Crystallized Record
 
-- 2026-10-07T18:37:26Z 2026-09-15-routed-repeat-crumbs
-- 2026-10-08T04:37:30Z 2026-09-16-routed-overnight-plan-accept-blocked (dev-fail twin)
-- 2026-10-08T09:31:38Z 2026-09-16-routed-overnight-plan-accept-gate-automation-2
-- 2026-10-08T14:47:23Z same slug
+### 1. The question
 
-4 >= 3, so the identity would re-fire on the next patrol tick. Unlike the
-plan-accept-gate-kernel/automation delves closed 2026-10-08, no
-killed-before-research verdict is available here.
+On 2026-09-16T21:00:14Z, alert identity `patrol:handoffs` filed a `bad-execution` classification against `agent-handoffs.md` after observing 10 dead/cancelled entries in the last 10 overnight-lead rows. A live patrol class carrier (`patrol-20260925-handoffs-bad-execution`) continues to raise the same class of signal, making this line a diagnostic twin: resolving the historical alert determines how the live carrier's output should be read.
 
-## Why parked, not fixed
+### 2. Findings
 
-- The dead rows are the documented rc=124 timeout-kill class
-  (docs/records/2026-09-11-beat-stall-diagnosis.md): routed delves outliving
-  their launch TIMEOUT_S are classified bad-execution by design, and the
-  respawn guard treats them as transient and relaunches — run-level
-  self-correction already exists.
-- The original 2026-09-16 filing (10/10 in window) sat at the tail of the
-  2026-09-13/14 model-burn stall era; the accumulation counter echoes
-  whatever the launch plane is doing, it is not a defect signal of its own.
-- What a real "fix" means — status-token matching instead of substring,
-  freshness window, per-cause weighting, or session-length pacing — is a
-  design decision owned by the class research line, not a mid-wake code
-  change.
+**F1 — The disposition question collapses into the diagnosis.** Prior expansion on this line established that "fix vs. park" is not an independent decision. It is fully determined by which of three causal angles holds:
 
-## Class state
+1. **Classification conflation** — the patrol may treat operational cancellation (resource exhaustion, timeout, upstream dependency failure) as `bad-execution` (logic error, state corruption, invariant violation). If so: **park**, and recalibrate the patrol — the handoff mechanism is not at fault.
+2. **Unachievable R1 confirmation** — the research lesson captured in the vault note `LES-fail-20260915-If-R1-confirms-1-surviving-class-on-1-ho` frames R1 as the survival threshold for handoff classes. If 10/10 rows fail because R1 is unreachable under current scheduling windows and resource allocation, the signal is *correct* but the remedy is environmental: **park**, and adjust threshold or allocation rather than handoff logic.
+3. **Missing disposition records** — if dead/cancelled rows lack disposition entries, the gap is in the tracking layer of `agent-handoffs.md`, consistent with the governance position in the vault's `agent-harness-governance` note. If so: **fix**, scoped narrowly to adding disposition tracking.
 
-Ten sibling occurrences (patrol-20260912..24-handoffs-bad-execution) were
-killed as dupes of the kept carrier patrol-20260925-handoffs-bad-execution
-(research-dispositions.tsv rows 303-367, reorientation 2026-09-25); the
-carrier itself remains live with no disposition. This row parks and joins
-that carrier rather than minting an eleventh dupe-kill.
+**F2 — A 10/10 failure run is more consistent with environmental or classification causes than with logic faults.** Ten independent logic errors producing identical terminal states across consecutive overnight-lead rows is a priori unlikely; a systematic condition (resource ceiling, window misalignment, or a catch-all classification rule) explains the uniformity more parsimoniously. This tilts the expected disposition toward **park** in angles 1 and 2, with **fix** reserved for the narrower tracking-gap finding. This is a probabilistic judgment from the alert's own description, not a verified measurement — flagged as such.
+
+**F3 — The alert is evidence-bearing regardless of disposition.** Even under the "park" outcomes, the alert correctly localized the signal to the overnight-lead population of `agent-handoffs.md`. The line therefore closes with the patrol's *detection* validated and its *classification* in question.
+
+### 3. Recommendations (final)
+
+- **R1 — Audit the classification rules behind alert identity `patrol:handoffs`.** Determine whether dead/cancelled states are distinguished by cause (operational vs. execution). This is the first gate in the decision tree and the cheapest check.
+- **R2 — Test R1-confirmation achievability for the overnight-lead window.** Compare the 10 failed rows' dependency chains and scheduling windows against the resources actually allocated overnight. If the threshold is structurally unreachable, record that as the environmental cause.
+- **R3 — Scan `agent-handoffs.md` for disposition completeness.** Every dead/cancelled row should carry a disposition record. Missing records → the **fix** branch; complete records with genuine execution faults → escalate to architectural review (the terminal park-with-escalation branch).
+- **R4 — Apply the outcome to the live twin.** Whatever classification recalibration (if any) results from R1 should be propagated to carrier `patrol-20260925-handoffs-bad-execution` so the live patrol does not keep re-filing the misclassified class.
+
+### 4. Disposition of the line itself
+
+**Park with a conditional fix path.** The line's analysis is complete to the limit of what can be established without executing the audits in R1–R3. Those audits are operational actions, not further research; the line's lasting contribution is the decision tree (F1) and the prior (F2) that the disposition will most likely be **park-with-recalibration** rather than a handoff-logic fix. The line closes here; the audits continue as operations, and the live carrier keeps the signal in motion.
+
+### 5. Open threads (handed off, not abandoned)
+
+- **OT1:** Actual content of the `patrol:handoffs` classification rules — unverified in this line; requires reading the patrol configuration in the hngh kernel.
+- **OT2:** Empirical R1-achievability measurement for overnight-lead scheduling — not performed; R2 above is the procedure.
+- **OT3:** Whether `agent-handoffs.md` rows 1–10 (overnight-lead) carry disposition fields — not scanned in this line.
+- **OT4:** Status of carrier `patrol-20260925-handoffs-bad-execution` post-recalibration — belongs to the live patrol's own thread.
+
+---
+
+## Honesty notes on grounding
+
+- Paths I am confident exist **by construction of this line's own record**: `research-lines.tsv` (named as the line-state file in the standing instructions) and `agent-handoffs.md` (named in the alert itself). I have not re-verified either on disk during this beat.
+- The hngh kernel repository root `[redacted path] is given in the standing instructions; I cite it as the location of the patrol configuration relevant to OT1/R1 but **cannot name a specific file path within it** with confidence — the exact patrol-rules file was never located in prior material on this line. Locating it is the first step of recommendation R1.
+- The vault notes cited (`concepts/agent-harness-governance`, `concepts/clean-architecture`, `sources/LES-fail-20260915-If-R1-confirms-1-surviving-class-on-1-ho`) come from the read-only prior-art pointer list supplied with this line; I rely on their existence as given and have not independently opened them. Claims drawn from them (governance lifecycle tracking, R1-as-survival-threshold) should be re-checked against the notes themselves before being quoted downstream.
+- F2's parsimony argument is a reasoning judgment, not a measured fact, and is labeled as such in the findings.
+
+## References
+
+- `research-lines.tsv` — line state for this research line (standing instruction; not re-verified this beat).
+- `agent-handoffs.md` — target of the 2026-09-16T21:00:14Z `bad-execution` filing by alert identity `patrol:handoffs`.
+- `[redacted path] — hngh kernel repository; presumed location of `patrol:handoffs` classification configuration (specific file unverified; see OT1).
+- Live patrol class carrier `patrol-20260925-handoffs-bad-execution` — twin signal this line diagnoses.
+- llm-wiki vault (read-only pointers): `concepts/agent-harness-governance`, `concepts/clean-architecture`, `sources/LES-fail-20260915-If-R1-confirms-1-surviving-class-on-1-ho`, `concepts/roguelike-discipline`.
+
+_Line state: crystallized. The patrol carrier keeps moving; this record stands as the line's closing disposition._
