@@ -5,21 +5,18 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the research line on "cadence job schema validation" by introducing a lightweight shell-based linter for job definition files before execution.
+Implements the "cadence-validation" research line by introducing a local script that asserts job output structure without touching kernel state or external credentials.
 
 ## Steps
 
-- [ ] Create `scripts/validate_jobs.sh` to check syntax of job files in `jobs/`
-  Verification: bash -n scripts/validate_jobs.sh
+- [ ] Create `scripts/cadence_check.sh` containing a bash function that validates a standard log line format
+  Verification: bash -n scripts/cadence_check.sh
 
-- [ ] Add a call to `scripts/validate_jobs.sh` within `cadence/runner.sh`
-  Verification: bash -n cadence/runner.sh
+- [ ] Create `tests/test_cadence_check.sh` that invokes the script against a hardcoded sample input and asserts exit code 0
+  Verification: bash -n tests/test_cadence_check.sh
 
-- [ ] Add a unit test in `tests/` that exercises the validation script
-  Verification: bash -n tests/test_validate_jobs.sh
-
-- [ ] Run `make test` to confirm no regressions
+- [ ] Run `make test` to ensure the new files do not break the existing pipeline
   Verification: make test
 
-- [ ] Verify `scripts/validate_jobs.sh` is referenced by `cadence/runner.sh`
-  Verification: git grep 'validate_jobs' cadence/runner.sh
+- [ ] Verify `scripts/cadence_check.sh` contains the expected function name via grep
+  Verification: git grep -l check_cadence scripts/cadence_check.sh
