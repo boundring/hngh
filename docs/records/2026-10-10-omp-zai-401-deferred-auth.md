@@ -68,10 +68,10 @@ key in the shell env, both with fresh and stale (regenerated) env file.
   still served requests until it expired today. The wrapper makes this
   non-fatal: it re-reads the vault on first omp launch, minutes later,
   when the network is up.
-- Optional hardening if session-level keys ever matter again: a systemd
-  user oneshot (After=network-online.target) that re-runs
-  `secrets.py --exports` + `systemctl --user import-environment`. Not
-  implemented: consumers are covered by the wrapper pattern, which is
-  strictly more robust than session env.
-- The stale zai OAuth blob (agent.db id=4) remains; harmless now that
-  env resolution wins, but consider `omp /logout zai` to remove it.
+- DONE (stale OAuth blob cleanup): `omp auth-broker logout zai`
+  disabled the dead credential (agent.db id=4, now marked
+  `disabled_cause="logged out by user"`, row retained by omp's own
+  logout semantics). Verified post-cleanup: omp still answers via the
+  env-key path (`omp --print` -> OK). agent.db backed up to
+  `~/.hngh-automation/backups/agent.db.backup-20261010-omp-zai-oauth-removal`
+  before the logout.
