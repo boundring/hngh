@@ -5,21 +5,16 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the research line **hngh-automation: lib-output-parsing-standardization** by introducing a reusable shell utility for normalizing job stdout before downstream digest aggregation.
-
 ## Steps
 
-- [ ] Create `scripts/parse_output.sh` containing a function to validate and normalize job stdout.
-  Verification: `bash -n scripts/parse_output.sh`
-
-- [ ] Integrate `scripts/parse_output.sh` into `cadence/run_job.sh` to normalize output before logging.
-  Verification: `bash -n cadence/run_job.sh`
-
-- [ ] Add `tests/test_parse_output.sh` asserting the parser handles empty and multiline inputs.
-  Verification: `bash tests/test_parse_output.sh`
-
-- [ ] Update `digest/aggregate.sh` to consume the normalized output from `cadence/run_job.sh`.
-  Verification: `bash -n digest/aggregate.sh`
-
-- [ ] Execute `make test` to confirm all new and existing tests pass.
+- [ ] Add a new job in `jobs/` that runs the existing automation pipeline with a synthetic low-volume input to confirm baseline stability
   Verification: `make test`
+
+- [ ] Create a helper script in `scripts/` that generates a fixed-size placeholder dataset for controlled testing of downstream digest steps
+  Verification: `bash -n <file>`
+
+- [ ] Update the cadence configuration in `cadence/` to include the new synthetic job alongside existing ones without modifying scheduling logic
+  Verification: `grep <new-job-name> <file>`
+
+- [ ] Add a test case in `tests/` that asserts the synthetic dataset is correctly ingested and produces an expected non-empty digest output
+  Verification: `bash <script>`
