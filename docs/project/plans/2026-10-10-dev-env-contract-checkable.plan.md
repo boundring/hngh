@@ -5,18 +5,19 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the "Pre-execution script linting" research line by adding a syntax-check gate to the job submission workflow.
-
 ## Steps
 
-- [ ] Create scripts/lint-job.sh to validate bash syntax on new job scripts
-  Verification: bash -n scripts/lint-job.sh
+- [ ] Add a new cadence job template for hngh-automation test validation
+  Verification: bash -n cadence/hngh-automation-test-template.sh
 
-- [ ] Create tests/test-lint.sh to verify the lint script runs without errors
-  Verification: bash tests/test-lint.sh
+- [ ] Create a verification script that runs make test against the new cadence job
+  Verification: bash scripts/validate-cadence-job.sh
 
-- [ ] Update jobs/run.sh to invoke the lint script before execution
-  Verification: grep -q 'lint-job' jobs/run.sh
+- [ ] Add a test case for the new cadence job template in tests/
+  Verification: make test
 
-- [ ] Update cadence/ directory to register the new lint step
-  Verification: git grep -q 'lint-job' cadence/
+- [ ] Update dashboard configuration to reflect the new cadence job
+  Verification: bash -n dashboard/cadence-job-dashboard-config.sh
+
+- [ ] Run full test suite to confirm no regressions from the new cadence job
+  Verification: make test
