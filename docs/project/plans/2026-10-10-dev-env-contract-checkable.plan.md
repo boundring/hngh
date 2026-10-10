@@ -5,19 +5,19 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+The research line "hngh-automation: cadence-scheduler" is implemented by adding a deterministic job-ordering script that sorts pending tasks by priority and timestamp before dispatch.
+
 ## Steps
 
-- [ ] Add a utility script that validates input parameters before processing
-  Verification: bash -n scripts/validate_params.sh
-
-- [ ] Create a test script that exercises the validation logic
-  Verification: python3 tests/test_validate_params.py
-
-- [ ] Update the main automation entry point to call the validation script
-  Verification: bash -n jobs/run_pipeline.sh
-
-- [ ] Add a grep check to confirm no hardcoded credentials in new files
-  Verification: grep -r "password\|secret\|token" scripts/validate_params.sh tests/test_validate_params.py
-
-- [ ] Run the full test suite to confirm no regressions
+- [ ] Create a priority-sorting script under `jobs/` that reads a pending-task list and outputs them ordered by priority then timestamp
+  Verification: bash -n jobs/sort-pending.sh && bash jobs/sort-pending.sh --help
+- [ ] Add a verification test under `tests/` that asserts the sort script produces stable output for a fixed input set
+  Verification: bash tests/test-sort-pending.sh
+- [ ] Integrate the sort script into the existing `make test` pipeline so it runs before dispatch logic
   Verification: make test
+- [ ] Create a dry-run wrapper under `scripts/` that invokes the sort script and logs the resulting order without executing jobs
+  Verification: bash -n scripts/dry-run-sort.sh && bash scripts/dry-run-sort.sh --verify
+- [ ] Add a cadence configuration snippet under `cadence/` that defines default priority levels for standard job categories
+  Verification: grep -q "priority_levels" cadence/default-config.yaml
+- [ ] Write a regression test under `tests/` that confirms the dry-run wrapper output matches the sort script output for identical inputs
+  Verification: bash tests/test-dry-run-consistency.sh
