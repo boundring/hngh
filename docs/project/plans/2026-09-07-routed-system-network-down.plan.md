@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-07T13:01:22Z routed-from=system-network-down  cause=obsolete disposed=2026-09-07T16:00:17Z reason=identity re-occurred 3 times without landing; operator escalation stands -->
+<!-- plan: status=parked risk=normal accepted=2026-09-07T13:01:22Z routed-from=system-network-down  cause=obsolete disposed=2026-09-07T16:00:17Z reason=identity re-occurred 3 times without landing; operator escalation stands  cause=obsolete disposed=2026-10-10T21:00:42Z reason=identity re-occurred 10 times without landing; operator escalation stands -->
 # 2026-09-07 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `system-network-down`
@@ -20,3 +20,4 @@ at 2026-09-07T13:00:36Z. Alert text: [oversight] system-network-down: critical r
 - 2026-09-07T20:00:38Z re-occurred (dedup window expired)
 - 2026-09-07T21:00:36Z re-occurred (dedup window expired)
 - 2026-09-07T22:00:36Z re-occurred (dedup window expired)
+- 2026-10-10T21:00:42Z re-occurred (dedup window expired)

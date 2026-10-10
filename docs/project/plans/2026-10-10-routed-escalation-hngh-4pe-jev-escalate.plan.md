@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=escalation:hngh-4pe:jev-escalate -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-10T20:35:15Z routed-from=escalation:hngh-4pe:jev-escalate -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-17T20:00:42Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
