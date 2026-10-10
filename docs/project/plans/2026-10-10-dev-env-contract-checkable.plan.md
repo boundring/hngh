@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a repository health check script under scripts/ that validates core automation paths exist and are readable
-  Verification: bash scripts/repo-health-check.sh
+- [ ] Add a basic test script that validates hngh-automation job scheduling logic
+  Verification: `bash -n tests/test_scheduling.sh`
 
-- [ ] Create a cadence job that runs the health check script on a daily schedule and logs results to dashboard/
-  Verification: bash -n cadence/daily-health-job.sh
+- [ ] Create a helper script to format and display job cadence output
+  Verification: `bash scripts/format_cadence.sh`
 
-- [ ] Add a test for the health check script under tests/ to ensure it exits cleanly on a valid repository state
-  Verification: make test
+- [ ] Update the dashboard digest to include a new metrics summary section
+  Verification: `grep -q "metrics_summary" dashboard/digest.md`
 
-- [ ] Update the dashboard digest to include health check status in its next run output
-  Verification: bash -n dashboard/digest-template.sh
+- [ ] Add a simple validation check for job configuration files
+  Verification: `python3 scripts/validate_jobs.py`
 
-- [ ] Verify all new scripts pass syntax validation before integration
-  Verification: bash -n scripts/repo-health-check.sh && bash -n cadence/daily-health-job.sh && bash -n dashboard/digest-template.sh
+- [ ] Commit all changes and run the full test suite
+  Verification: `make test`
