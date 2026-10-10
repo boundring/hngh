@@ -1,23 +1,25 @@
-<!-- plan: status=accepted risk=normal accepted=2026-10-10T14:07:15Z -->
+<!-- plan: status=proposed risk=normal accepted=- -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-10-10 - dev-env-contract-checkable (synthesized from adopted research)
 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implements the research line **hngh-automation: lib-output-parsing-standardization** by introducing a reusable shell utility for normalizing job stdout before downstream digest aggregation.
+
 ## Steps
 
-- [ ] Add a new cadence job that runs a lint check on lib/ on every push
-  Verification: `grep -q 'lint' cadence/jobs.yaml && grep -q 'lib' cadence/jobs.yaml`
+- [ ] Create `scripts/parse_output.sh` containing a function to validate and normalize job stdout.
+  Verification: `bash -n scripts/parse_output.sh`
 
-- [ ] Create a verification script that confirms the lint job is registered in the cadence manifest
-  Verification: `bash -n cadence/jobs.yaml && python3 -c "import yaml; yaml.safe_load(open('cadence/jobs.yaml'))"`
+- [ ] Integrate `scripts/parse_output.sh` into `cadence/run_job.sh` to normalize output before logging.
+  Verification: `bash -n cadence/run_job.sh`
 
-- [ ] Add a test case in tests/ that asserts the lint job output is captured on successful runs
-  Verification: `bash -n tests/test_lint_job.sh && grep -q 'lint' tests/test_lint_job.sh`
+- [ ] Add `tests/test_parse_output.sh` asserting the parser handles empty and multiline inputs.
+  Verification: `bash tests/test_parse_output.sh`
 
-- [ ] Update the dashboard to display the lint job status alongside existing cadence entries
-  Verification: `grep -q 'lint' dashboard/status.html && grep -q 'cadence' dashboard/status.html`
+- [ ] Update `digest/aggregate.sh` to consume the normalized output from `cadence/run_job.sh`.
+  Verification: `bash -n digest/aggregate.sh`
 
-- [ ] Run the full test suite to confirm all new steps pass without breaking existing automation
+- [ ] Execute `make test` to confirm all new and existing tests pass.
   Verification: `make test`
