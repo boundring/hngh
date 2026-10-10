@@ -5,18 +5,19 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the "cadence-validation" research line by introducing a local script that asserts job output structure without touching kernel state or external credentials.
-
 ## Steps
 
-- [ ] Create `scripts/cadence_check.sh` containing a bash function that validates a standard log line format
-  Verification: bash -n scripts/cadence_check.sh
+- [ ] Add a shell script that validates hngh-automation job definitions before execution
+  Verification: bash -n jobs/validate-job.sh
 
-- [ ] Create `tests/test_cadence_check.sh` that invokes the script against a hardcoded sample input and asserts exit code 0
-  Verification: bash -n tests/test_cadence_check.sh
+- [ ] Create a test script that exercises the new job validator against sample inputs
+  Verification: bash tests/test-job-validator.sh
 
-- [ ] Run `make test` to ensure the new files do not break the existing pipeline
+- [ ] Update the main Makefile to include the new validation step in the test pipeline
+  Verification: grep -q 'validate-job' Makefile
+
+- [ ] Add a README note documenting the new validation workflow
+  Verification: grep -q 'job validation' jobs/README.md
+
+- [ ] Run the full test suite to confirm no regressions
   Verification: make test
-
-- [ ] Verify `scripts/cadence_check.sh` contains the expected function name via grep
-  Verification: git grep -l check_cadence scripts/cadence_check.sh
