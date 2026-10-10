@@ -39,10 +39,10 @@ hngh-automation `cadence/calendar/daily/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
 - Research lines: 349 reviewed (hngh-automation/research-lines.tsv).
-- Queue Next: pooled-hardware, set 2026-10-03 (6 days old) (hngh docs/project/queue.md).
-- Plan ledger: 898 plan files, 835 routed candidates (hngh docs/project/plans/).
+- Queue Next: pooled-hardware, set 2026-10-03 (7 days old) (hngh docs/project/queue.md).
+- Plan ledger: 916 plan files, 852 routed candidates (hngh docs/project/plans/).
 - Operator items: 28 open (hngh-automation/dashboard/operator-items.json; display cap 40).
-- Gates: 16-remote-push.sh — gate-refresh — hngh: gate crumb was stale — make test re-run green [w=crumbs.py@378222] (hngh-automation crumbs journal crumb tail).
+- Gates: 16-remote-push.sh — gate-refresh — hngh: gate crumb was red — make test re-run green [w=crumbs.py@391773] (hngh-automation crumbs journal crumb tail).
 <!-- torch:end -->
 
 ## What is broken and being fixed
