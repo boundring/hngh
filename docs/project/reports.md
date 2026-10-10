@@ -1471,7 +1471,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-09T13:22:20Z | progress | 53d8b10f | plan 2026-09-16-routed-patrol-handoffs-3 executed (all steps checked) | 2026-10-09T13:22:20Z-progress-53d8b10f.md |
 | 2026-10-09T14:00:00Z | progress | 2bf8fe71 | course pooled-hardware: card mounted, last increment 2026-10-09T13:00:00Z | 2026-10-09T14:00:00Z-progress-2bf8fe71.md |
 | 2026-10-09T15:00:00Z | progress | 30588ad1 | course pooled-hardware: card mounted, last increment 2026-10-09T14:00:00Z | 2026-10-09T15:00:00Z-progress-30588ad1.md |
-| 2026-10-09T15:08:44Z | alert | d1c466f9 | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-16T15:08:44Z ×94 | 2026-10-09T15:08:44Z-alert-d1c466f9.md |
+| 2026-10-09T15:08:44Z | alert | d1c466f9 | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-16T15:08:44Z ×95 | 2026-10-09T15:08:44Z-alert-d1c466f9.md |
 | 2026-10-09T15:27:07Z | progress | 3da010df | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 recovered expires=2026-10-16T15:27:06Z ×15 | 2026-10-09T15:27:07Z-progress-3da010df.md |
 | 2026-10-09T16:00:00Z | progress | e77671e0 | course pooled-hardware: card mounted, last increment 2026-10-09T15:00:00Z | 2026-10-09T16:00:00Z-progress-e77671e0.md |
 | 2026-10-09T16:00:42Z | progress | cc6e2b92 | router routed supervision:omp-2026-10-09T14-36-45-433Z_01a-9dc492:stalled -> plan candidate 2026-10-09-routed-supervision-omp-2026-10-09T14-36-45-433Z_01a-9dc492-stalled (routed-at 2026-10-09T16:00:42Z) expires=2026-10-16T16:00:42Z | 2026-10-09T16:00:42Z-progress-cc6e2b92.md |
@@ -1504,7 +1504,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-09T22:00:44Z | progress | b26c1e37 | router routed supervision:omp-crystal-roguedev-resources-197f6c:stalled -> plan candidate 2026-10-09-routed-supervision-omp-crystal-roguedev-resources-197f6c-stalled (routed-at 2026-10-09T22:00:44Z) expires=2026-10-16T22:00:44Z | 2026-10-09T22:00:44Z-progress-b26c1e37.md |
 | 2026-10-09T22:01:10Z | alert | 7cd81d9b | [oversight] slow-unit: dropin:45-agent-respawn.sh wall=10.9s median=0.0s ×2 | 2026-10-09T22:01:10Z-alert-7cd81d9b.md |
 | 2026-10-09T22:09:51Z | alert | d4f8c4a3 | [oversight] slow-unit: hngh-cadence-subhour.service wall=517.6s median=243.5s ×4 | 2026-10-09T22:09:51Z-alert-d4f8c4a3.md |
-| 2026-10-09T22:09:51Z | progress | 9cf31eaa | news ingest ok: weather: overcast, 20.3 C (open-meteo) ×20 | 2026-10-09T22:09:51Z-progress-9cf31eaa.md |
+| 2026-10-09T22:09:51Z | progress | 9cf31eaa | news ingest ok: weather: overcast, 20.3 C (open-meteo) ×21 | 2026-10-09T22:09:51Z-progress-9cf31eaa.md |
 | 2026-10-09T22:09:52Z | alert | 418f6bf7 | [oversight] slow-unit: dropin:58-patrol.sh wall=30.1s median=0.0s ×5 | 2026-10-09T22:09:52Z-alert-418f6bf7.md |
 | 2026-10-09T22:09:53Z | progress | 320f458a | dashboard introspection grade 6/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) | 2026-10-09T22:09:53Z-progress-320f458a.md |
 | 2026-10-09T22:18:34Z | alert | ce7d4bfb | [oversight] slow-unit: dropin:01-oversight.sh wall=70.1s median=1.1s | 2026-10-09T22:18:34Z-alert-ce7d4bfb.md |
@@ -1518,7 +1518,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T00:00:00Z | progress | fc5d3626 | course pooled-hardware: card mounted, last increment 2026-10-09T23:00:00Z | 2026-10-10T00:00:00Z-progress-fc5d3626.md |
 | 2026-10-10T00:00:42Z | progress | 5565c1dc | router routed escalation:hngh-4pe:dispatch-capped -> plan candidate 2026-10-10-routed-escalation-hngh-4pe-dispatch-capped (routed-at 2026-10-10T00:00:41Z) expires=2026-10-17T00:00:41Z | 2026-10-10T00:00:42Z-progress-5565c1dc.md |
 | 2026-10-10T01:00:00Z | progress | cd2e638d | course pooled-hardware: card mounted, last increment 2026-10-10T00:00:00Z | 2026-10-10T01:00:00Z-progress-cd2e638d.md |
-| 2026-10-10T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×17 | 2026-10-10T01:00:10Z-alert-ef49c9f7.md |
+| 2026-10-10T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×18 | 2026-10-10T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-10T01:04:01Z | alert | aa5ae888 | synthesized development plan malformed (no verifiable steps); discarded ×3 | 2026-10-10T01:04:01Z-alert-aa5ae888.md |
 | 2026-10-10T02:00:00Z | progress | 81e09a2d | course pooled-hardware: card mounted, last increment 2026-10-10T01:00:00Z | 2026-10-10T02:00:00Z-progress-81e09a2d.md |
 | 2026-10-10T02:00:42Z | progress | c0d8f632 | router routed overnight:dev-synth-bad:2026-10-10 -> plan candidate 2026-10-10-routed-overnight-dev-synth-bad-2026-10-10 (routed-at 2026-10-10T02:00:42Z) expires=2026-10-17T02:00:42Z | 2026-10-10T02:00:42Z-progress-c0d8f632.md |
@@ -1526,7 +1526,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T03:00:00Z | progress | 1c22d330 | course pooled-hardware: card mounted, never incremented | 2026-10-10T03:00:00Z-progress-1c22d330.md |
 | 2026-10-10T03:01:35Z | alert | a5c22637 | plan 2026-10-10-dev-env-contract-checkable not auto-accepted: step 6 has no Verification line expires=2026-10-17T03:01:35Z | 2026-10-10T03:01:35Z-alert-a5c22637.md |
 | 2026-10-10T03:19:41Z | alert | 82d3f98e | agent-supervision: omp-Compose-dbcbf3 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-17T03:19:41Z ×3 | 2026-10-10T03:19:41Z-alert-82d3f98e.md |
-| 2026-10-10T03:35:45Z | alert | edbf5ee6 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=10.8s median=0.0s ×39 | 2026-10-10T03:35:45Z-alert-edbf5ee6.md |
+| 2026-10-10T03:35:45Z | alert | edbf5ee6 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=10.8s median=0.0s ×40 | 2026-10-10T03:35:45Z-alert-edbf5ee6.md |
 | 2026-10-10T03:43:39Z | progress | 51614351 | agent-supervision: omp-Compose-dbcbf3 recovered expires=2026-10-17T03:43:39Z | 2026-10-10T03:43:39Z-progress-51614351.md |
 | 2026-10-10T04:00:00Z | progress | 50d81a6d | course pooled-hardware: card mounted, last increment 2026-10-10T03:00:00Z | 2026-10-10T04:00:00Z-progress-50d81a6d.md |
 | 2026-10-10T04:00:43Z | progress | 586ac00a | router routed supervision:omp-Compose-dbcbf3:stalled -> plan candidate 2026-10-10-routed-supervision-omp-Compose-dbcbf3-stalled (routed-at 2026-10-10T04:00:43Z) expires=2026-10-17T04:00:43Z | 2026-10-10T04:00:43Z-progress-586ac00a.md |
@@ -1611,7 +1611,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T12:00:00Z | progress | 1c22d330 | course pooled-hardware: card mounted, never incremented | 2026-10-10T12:00:00Z-progress-1c22d330.md |
 | 2026-10-10T13:00:00Z | progress | 6008a914 | course pooled-hardware: card mounted, last increment 2026-10-10T12:00:00Z | 2026-10-10T13:00:00Z-progress-6008a914.md |
 | 2026-10-10T14:00:00Z | progress | fe7447cd | course pooled-hardware: card mounted, last increment 2026-10-10T13:00:00Z | 2026-10-10T14:00:00Z-progress-fe7447cd.md |
-| 2026-10-10T14:41:38Z | alert | 7562656e | agent-supervision: omp-crystal-bevy-site-358433 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-17T14:41:38Z ×11 | 2026-10-10T14:41:38Z-alert-7562656e.md |
+| 2026-10-10T14:41:38Z | alert | 7562656e | agent-supervision: omp-crystal-bevy-site-358433 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-17T14:41:38Z ×13 | 2026-10-10T14:41:38Z-alert-7562656e.md |
 | 2026-10-10T14:48:42Z | progress | 5fd7cb49 | agent-supervision: omp-crystal-bevy-site-358433 recovered expires=2026-10-17T14:48:42Z ×8 | 2026-10-10T14:48:42Z-progress-5fd7cb49.md |
 | 2026-10-10T15:00:00Z | progress | 9066b8f7 | course pooled-hardware: card mounted, last increment 2026-10-10T14:00:00Z | 2026-10-10T15:00:00Z-progress-9066b8f7.md |
 | 2026-10-10T15:00:42Z | progress | d2fcde20 | router routed supervision:omp-crystal-bevy-site-358433:stalled -> plan candidate 2026-10-10-routed-supervision-omp-crystal-bevy-site-358433-stalled (routed-at 2026-10-10T15:00:42Z) expires=2026-10-17T15:00:42Z | 2026-10-10T15:00:42Z-progress-d2fcde20.md |
@@ -1627,7 +1627,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T17:00:00Z | progress | 634b1f44 | course pooled-hardware: card mounted, last increment 2026-10-10T16:00:00Z | 2026-10-10T17:00:00Z-progress-634b1f44.md |
 | 2026-10-10T17:00:42Z | progress | ed1edc1f | router routed supervision:omp-2026-10-10T16-10-54-296Z_01a-43172d:stalled -> plan candidate 2026-10-10-routed-supervision-omp-2026-10-10T16-10-54-296Z_01a-43172d-stalled (routed-at 2026-10-10T17:00:42Z) expires=2026-10-17T17:00:42Z | 2026-10-10T17:00:42Z-progress-ed1edc1f.md |
 | 2026-10-10T17:07:06Z | progress | 03c845d9 | plan 2026-10-10-routed-supervision-omp-2026-10-10T16-10-54-296Z_01a-43172d-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-10T17:07:06Z expires=2026-10-17T17:07:06Z | 2026-10-10T17:07:06Z-progress-03c845d9.md |
-| 2026-10-10T17:20:49Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×26 | 2026-10-10T17:20:49Z-progress-2978e1fd.md |
+| 2026-10-10T17:20:49Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×30 | 2026-10-10T17:20:49Z-progress-2978e1fd.md |
 | 2026-10-10T18:00:00Z | progress | 9a0ac1cf | course pooled-hardware: card mounted, last increment 2026-10-10T17:00:00Z | 2026-10-10T18:00:00Z-progress-9a0ac1cf.md |
 | 2026-10-10T19:36:58Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-10-10T19:36:58Z-alert-bbdf87ef.md |
 | 2026-10-10T19:36:58Z | alert | 6977bb9b | [dash-selfreview] feed-fresh:sessions.json: unacceptable-now — stale 3423s > 3x tier 300s — producer for sessions.json is not firing or is failing | 2026-10-10T19:36:58Z-alert-6977bb9b.md |
@@ -1637,13 +1637,18 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T19:36:58Z | alert | 5b05c98d | [dash-selfreview] summary: 3 findings (3 unacceptable-now, 0 acceptable-for-now) | 2026-10-10T19:36:58Z-alert-5b05c98d.md |
 | 2026-10-10T19:36:59Z | progress | d2652d03 | course pooled-hardware: card mounted, last increment 2026-10-10T18:00:00Z | 2026-10-10T19:36:59Z-progress-d2652d03.md |
 | 2026-10-10T19:36:59Z | alert | c3b6c67b | credential vault-freshness: error: op item list failed rc=1 | 2026-10-10T19:36:59Z-alert-c3b6c67b.md |
-| 2026-10-10T19:37:30Z | alert | 91185de2 | ui-audit unavailable: Waiting for selector `#p-schedule .glabel-row .gname` failed: Waiting failed: 30000ms exceeded | 2026-10-10T19:37:30Z-alert-91185de2.md |
+| 2026-10-10T19:37:30Z | alert | 91185de2 | ui-audit unavailable: Waiting for selector `#p-schedule .glabel-row .gname` failed: Waiting failed: 30000ms exceeded ×2 | 2026-10-10T19:37:30Z-alert-91185de2.md |
 | 2026-10-10T19:37:30Z | progress | ed07fa8a | router routed dash-selfreview:summary:3 -> plan candidate 2026-10-10-routed-dash-selfreview-summary-3 (routed-at 2026-10-10T19:37:30Z) expires=2026-10-17T19:37:30Z | 2026-10-10T19:37:30Z-progress-ed07fa8a.md |
 | 2026-10-10T19:37:31Z | alert | 0590b1f3 | identity expired: router:routed-expired:2026-09-26-routed-dash-selfreview-feed-fresh-time-ledger.json cannot close within its window (expires=2026-10-05T10:00:41Z); auto-parked after one operator escalation -- close the condition or re-arm by clearing its identity state | 2026-10-10T19:37:31Z-alert-0590b1f3.md |
 | 2026-10-10T19:37:31Z | alert | 164ae9b8 | identity expired: router:escalated:dash-selfreview:feed-fresh:time-ledger.json cannot close within its window (expires=2026-10-05T10:00:41Z); auto-parked after one operator escalation -- close the condition or re-arm by clearing its identity state | 2026-10-10T19:37:31Z-alert-164ae9b8.md |
 | 2026-10-10T19:40:02Z | alert | 9a81f384 | config-backup agent-configs: push failed to git@github.com:boundring/agent-configs.git (local commit intact, nothing partial) | 2026-10-10T19:40:02Z-alert-9a81f384.md |
-| 2026-10-10T19:42:38Z | alert | 82a04771 | [oversight] system-network-down: critical resource flag set | 2026-10-10T19:42:38Z-alert-82a04771.md |
+| 2026-10-10T19:42:38Z | alert | 82a04771 | [oversight] system-network-down: critical resource flag set ×2 | 2026-10-10T19:42:38Z-alert-82a04771.md |
 | 2026-10-10T19:42:38Z | alert | 809e3ac0 | [oversight] slow-unit: dropin:01-system.sh wall=12.2s median=1.4s | 2026-10-10T19:42:38Z-alert-809e3ac0.md |
 | 2026-10-10T19:42:38Z | alert | 711e11aa | [oversight] slow-unit: dropin:20-config-backup.sh wall=15.2s median=0.0s | 2026-10-10T19:42:38Z-alert-711e11aa.md |
 | 2026-10-10T19:47:34Z | progress | 867f4969 | plan 2026-10-10-routed-dash-selfreview-summary-3 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-10T19:47:34Z expires=2026-10-17T19:47:34Z | 2026-10-10T19:47:34Z-progress-867f4969.md |
-| 2026-10-10T19:48:24Z | alert | 4597701e | escalation hngh-4pe: jev-escalate (SLA: re-fires bump this row for 7d, then it expires on silence; halt: bead attempt cap files one final attempts-exhausted escalation and the bead leaves the retry loop) | 2026-10-10T19:48:24Z-alert-4597701e.md |
+| 2026-10-10T19:48:24Z | alert | 4597701e | escalation hngh-4pe: jev-escalate (SLA: re-fires bump this row for 7d, then it expires on silence; halt: bead attempt cap files one final attempts-exhausted escalation and the bead leaves the retry loop) ×2 | 2026-10-10T19:48:24Z-alert-4597701e.md |
+| 2026-10-10T19:50:10Z | alert | 495d4a22 | [oversight] slow-unit: dropin:25-bead-beat.sh wall=10.4s median=0.7s ×2 | 2026-10-10T19:50:10Z-alert-495d4a22.md |
+| 2026-10-10T20:00:00Z | progress | 40e3e035 | course pooled-hardware: card mounted, last increment 2026-10-10T19:36:59Z | 2026-10-10T20:00:00Z-progress-40e3e035.md |
+| 2026-10-10T20:00:42Z | progress | 537d888b | router routed slow-unit:dropin:25-bead-beat.sh -> plan candidate 2026-10-10-routed-slow-unit-dropin-25-bead-beat.sh (routed-at 2026-10-10T20:00:42Z) expires=2026-10-17T20:00:42Z | 2026-10-10T20:00:42Z-progress-537d888b.md |
+| 2026-10-10T20:00:42Z | progress | 900ec367 | router routed escalation:hngh-4pe:jev-escalate -> plan candidate 2026-10-10-routed-escalation-hngh-4pe-jev-escalate (routed-at 2026-10-10T20:00:42Z) expires=2026-10-17T20:00:42Z | 2026-10-10T20:00:42Z-progress-900ec367.md |
+| 2026-10-10T20:00:42Z | progress | a036486d | router routed slow-unit:dropin:20-config-backup.sh -> plan candidate 2026-10-10-routed-slow-unit-dropin-20-config-backup.sh (routed-at 2026-10-10T20:00:42Z) expires=2026-10-17T20:00:42Z | 2026-10-10T20:00:42Z-progress-a036486d.md |
