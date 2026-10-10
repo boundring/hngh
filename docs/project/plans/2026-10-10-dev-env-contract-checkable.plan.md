@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-10T14:07:15Z -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-10-10 - dev-env-contract-checkable (synthesized from adopted research)
 
