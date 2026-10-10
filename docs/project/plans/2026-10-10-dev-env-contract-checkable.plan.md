@@ -7,14 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job in `jobs/` that runs the existing automation pipeline with a synthetic low-volume input to confirm baseline stability
-  Verification: `make test`
+- [ ] Add a repository health check script under scripts/ that validates core automation paths exist and are readable
+  Verification: bash scripts/repo-health-check.sh
 
-- [ ] Create a helper script in `scripts/` that generates a fixed-size placeholder dataset for controlled testing of downstream digest steps
-  Verification: `bash -n <file>`
+- [ ] Create a cadence job that runs the health check script on a daily schedule and logs results to dashboard/
+  Verification: bash -n cadence/daily-health-job.sh
 
-- [ ] Update the cadence configuration in `cadence/` to include the new synthetic job alongside existing ones without modifying scheduling logic
-  Verification: `grep <new-job-name> <file>`
+- [ ] Add a test for the health check script under tests/ to ensure it exits cleanly on a valid repository state
+  Verification: make test
 
-- [ ] Add a test case in `tests/` that asserts the synthetic dataset is correctly ingested and produces an expected non-empty digest output
-  Verification: `bash <script>`
+- [ ] Update the dashboard digest to include health check status in its next run output
+  Verification: bash -n dashboard/digest-template.sh
+
+- [ ] Verify all new scripts pass syntax validation before integration
+  Verification: bash -n scripts/repo-health-check.sh && bash -n cadence/daily-health-job.sh && bash -n dashboard/digest-template.sh
