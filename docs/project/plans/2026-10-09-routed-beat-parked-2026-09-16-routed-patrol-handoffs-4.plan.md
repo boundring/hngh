@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=beat-parked:2026-09-16-routed-patrol-handoffs-4 -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-10T04:35:35Z routed-from=beat-parked:2026-09-16-routed-patrol-handoffs-4 -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-16T23:00:42Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

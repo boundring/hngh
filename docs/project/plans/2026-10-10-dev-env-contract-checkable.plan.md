@@ -7,15 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script under `scripts/` that parses a JSON digest file and writes a plain-text summary to `digest/last-run.txt`
-  Verification: bash scripts/parse-digest.sh && cat digest/last-run.txt
-- [ ] Add a shell script under `scripts/` that validates the JSON structure of a digest file using only stdlib tools
-  Verification: bash scripts/validate-digest.sh
-- [ ] Add a test file under `tests/` that runs both scripts against a sample digest fixture and asserts non-zero exit on malformed input
+- [ ] Add a utility script that validates input parameters before processing
+  Verification: bash -n scripts/validate_params.sh
+
+- [ ] Create a test script that exercises the validation logic
+  Verification: python3 tests/test_validate_params.py
+
+- [ ] Update the main automation entry point to call the validation script
+  Verification: bash -n jobs/run_pipeline.sh
+
+- [ ] Add a grep check to confirm no hardcoded credentials in new files
+  Verification: grep -r "password\|secret\|token" scripts/validate_params.sh tests/test_validate_params.py
+
+- [ ] Run the full test suite to confirm no regressions
   Verification: make test
-- [ ] Add a cadence entry under `cadence/` that schedules the digest parser and validator to run after every successful `make test`
-  Verification: grep -q "parse-digest" cadence/*.sh
-- [ ] Add a dashboard snippet under `dashboard/` that displays the last 5 lines of `digest/last-run.txt`
-  Verification: bash dashboard/show-last-digest.sh
-- [ ] Add a commit message template under `jobs/` that enforces a prefix for automation-related commits
-  Verification: bash -n jobs/commit-msg-hook.sh

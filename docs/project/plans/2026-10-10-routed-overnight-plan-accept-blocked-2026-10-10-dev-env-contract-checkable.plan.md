@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=overnight:plan-accept-blocked:2026-10-10-dev-env-contract-checkable -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-10T04:35:35Z routed-from=overnight:plan-accept-blocked:2026-10-10-dev-env-contract-checkable -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-17T04:00:43Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
