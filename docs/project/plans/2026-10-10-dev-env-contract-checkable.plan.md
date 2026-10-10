@@ -5,25 +5,13 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-## Rationale
-Implements the research line on *cadence-job reliability and verification harness* to ensure scheduled automation tasks execute deterministically and report status without external dependencies.
+Rationale: Implements the hngh-automation research line on cadence-job status reporting to surface job health metrics without modifying execution paths.
 
 ## Steps
 
-- [ ] Create a shell script to validate job definition syntax
-  Verification: bash -n scripts/validate-job.sh
-
-- [ ] Create a sample job definition for testing
-  Verification: grep -q 'job_id' tests/fixtures/sample-job.conf
-
-- [ ] Create a unit test for the job validator
-  Verification: bash -n tests/test-validate-job.sh
-
-- [ ] Integrate the validator into the cadence runner
-  Verification: grep -q 'validate-job' cadence/run-job.sh
-
-- [ ] Add a library function for job status reporting
-  Verification: bash -n lib/job-status.sh
-
-- [ ] Run the full test suite to confirm integration
-  Verification: make test
+- [ ] Create `scripts/cadence-status-check.sh` that iterates `jobs/` and prints active status markers
+  Verification: `bash -n scripts/cadence-status-check.sh`
+- [ ] Create `tests/test_cadence_status.sh` that asserts the script exits 0 on a populated `jobs/` directory
+  Verification: `bash -n tests/test_cadence_status.sh`
+- [ ] Confirm the new scripts integrate cleanly with the existing build pipeline
+  Verification: `make test`
