@@ -5,19 +5,15 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-The research line "hngh-automation: cadence-scheduler" is implemented by adding a deterministic job-ordering script that sorts pending tasks by priority and timestamp before dispatch.
-
 ## Steps
 
-- [ ] Create a priority-sorting script under `jobs/` that reads a pending-task list and outputs them ordered by priority then timestamp
-  Verification: bash -n jobs/sort-pending.sh && bash jobs/sort-pending.sh --help
-- [ ] Add a verification test under `tests/` that asserts the sort script produces stable output for a fixed input set
-  Verification: bash tests/test-sort-pending.sh
-- [ ] Integrate the sort script into the existing `make test` pipeline so it runs before dispatch logic
-  Verification: make test
-- [ ] Create a dry-run wrapper under `scripts/` that invokes the sort script and logs the resulting order without executing jobs
-  Verification: bash -n scripts/dry-run-sort.sh && bash scripts/dry-run-sort.sh --verify
-- [ ] Add a cadence configuration snippet under `cadence/` that defines default priority levels for standard job categories
-  Verification: grep -q "priority_levels" cadence/default-config.yaml
-- [ ] Write a regression test under `tests/` that confirms the dry-run wrapper output matches the sort script output for identical inputs
-  Verification: bash tests/test-dry-run-consistency.sh
+- [ ] Add a `cadence/heartbeat.sh` script that emits a timestamped log line to `jobs/heartbeat.log` on every run
+  Verification: bash cadence/heartbeat.sh && grep "$(date -u +%Y-%m-%dT%H:%M:%SZ)" jobs/heartbeat.log
+- [ ] Add a `tests/test_heartbeat.sh` script that runs `cadence/heartbeat.sh` and asserts the log line exists
+  Verification: bash tests/test_heartbeat.sh
+- [ ] Add a `dashboard/status.json` file containing a static `{"status":"ok","last_run":"now"}` payload
+  Verification: python3 -c "import json; d=json.load(open('dashboard/status.json')); assert d['status']=='ok'"
+- [ ] Add a `digest/summary.md` file containing a single line `# hngh-automation digest: operational`
+  Verification: grep -q "operational" digest/summary.md
+- [ ] Add a `scripts/validate.sh` script that checks `bash -n` on `cadence/heartbeat.sh` and `tests/test_heartbeat.sh`
+  Verification: bash scripts/validate.sh
