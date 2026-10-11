@@ -537,3 +537,9 @@ question-synth-2026-10-09-1	What caused the 2026-09-15 synthesized development p
 synth-2026-10-09-2	What is the specific methodology for verifying the +2 counts and tick-phase correlation for fail-20261006-gate-evolve-ledger-race before landing R1/R2?
 synth-2026-10-09-3	What are the specific requirements for a "live-fetch proof" and "size ceiling" for new sources as defined in the feed rot + ingest-time bounding lesson?
 fail-20260916-patrol-handoffs	Why did alert identity patrol:handoffs file bad-execution on agent-handoffs.md (10 dead/cancelled in last 10 overnight-lead rows) at 2026-09-16T21:00:14Z, and what disposition (fix or park) closes it? (twin of live patrol class carrier patrol-20260925-handoffs-bad-execution)
+synth-2026-10-11-1	What are the specific +2 counts and tick-phase correlation requirements for landing R1/R2 as specified in fail-20261006-gate-evolve-ledger-race?
+synth-2026-10-11-2	What are the specific audit classification rules (R1) and scheduling/resource measurement requirements (R2) for the patrol recalibration design slice derived from fail-20260916-patrol-handoffs?
+synth-2026-10-11-3	What are the specific "live-fetch proof," "size ceiling," and "feed rot + ingest-time bounding" requirements for the news pipeline as identified in the backlog item "feed rot + ingest-time bounding"?
+bevy-engine-techniques	What Bevy (Rust ECS) engine techniques from recent releases apply to Hngh's kernel/edge architecture, and which transfer to non-game agent harnesses?
+voxel-engine-practice	Which voxel engine data structures (chunk meshing, greedy meshing, palette compression) are the current practice baseline worth prototyping against the Cistern architecture?
+manga-composition-studies	What manga panel-composition principles (flow, gutters, focal hierarchy) are documented well enough to codify as reviewable checklists for page layout?
