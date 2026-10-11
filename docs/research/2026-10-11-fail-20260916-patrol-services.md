@@ -47,4 +47,5 @@ operator row on a dead port still fails service-down). Suite: 54/54 green.
 Live check after fix: `patrol --patrol services` -> PASS comfyui
 (transient, not probed), PASS unsloth-llamaserver, PASS ollama.
 
-Commit: automation `b6f4f314` (2026-10-11, pushed to origin/main).
+Commit: automation `b6f4f314` (2026-10-11, pushed to origin/main);
+kernel docs `20af3365` (this file + carrier plan executed).
