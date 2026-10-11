@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=ram-gate:trip -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-11T18:35:29Z routed-from=ram-gate:trip -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-18T18:00:14Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

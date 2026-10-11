@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `lib/hngh-automation/utils.sh` helper that validates input paths before processing
-  Verification: bash -n lib/hngh-automation/utils.sh
+- [ ] Add a cadence runner script that validates job definitions before execution
+  Verification: bash scripts/cadence/validate-jobs.sh
 
-- [ ] Add a `tests/test_utils.sh` script that exercises path validation with valid and invalid inputs
-  Verification: bash tests/test_utils.sh
+- [ ] Update the dashboard to surface job validation results in a new status column
+  Verification: bash -n dashboard/status-column.patch
 
-- [ ] Update `jobs/run.sh` to call the new path validation helper before executing job payloads
-  Verification: bash -n jobs/run.sh
+- [ ] Extend tests to cover the new validation script with three edge cases
+  Verification: make test
 
-- [ ] Add a `scripts/validate-input.sh` entrypoint that demonstrates the helper in isolation
-  Verification: bash scripts/validate-input.sh
+- [ ] Add a digest entry template for cadence validation failures
+  Verification: bash scripts/digest/validate-template.sh
 
-- [ ] Add `cadence/validate-input.md` documenting the new validation contract for future contributors
-  Verification: grep -q "validate-input" cadence/validate-input.md
-
-- [ ] Run full test suite to confirm no regressions after adding the validation layer
+- [ ] Commit all changes and run the full test suite to confirm no regressions
   Verification: make test
