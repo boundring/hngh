@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence runner script that validates job definitions before execution
-  Verification: bash scripts/cadence/validate-jobs.sh
+- [ ] Add a `scripts/validate-cadence.sh` helper that checks cadence rule files parse without errors
+  Verification: bash scripts/validate-cadence.sh && bash -n scripts/validate-cadence.sh
 
-- [ ] Update the dashboard to surface job validation results in a new status column
-  Verification: bash -n dashboard/status-column.patch
+- [ ] Create `cadence/validate-rules.py` to lint cadence rule definitions before they enter the pipeline
+  Verification: python3 cadence/validate-rules.py && python3 -c "import ast; ast.parse(open('cadence/validate-rules.py').read())"
 
-- [ ] Extend tests to cover the new validation script with three edge cases
+- [ ] Update `make test` to include cadence validation in the pre-commit gate
   Verification: make test
 
-- [ ] Add a digest entry template for cadence validation failures
-  Verification: bash scripts/digest/validate-template.sh
+- [ ] Add `tests/test-cadence-validation.py` covering edge cases for rule parsing
+  Verification: python3 tests/test-cadence-validation.py
 
-- [ ] Commit all changes and run the full test suite to confirm no regressions
-  Verification: make test
+- [ ] Document the new validation flow in `dashboard/docs/cadence-validation.md`
+  Verification: grep -q "cadence-validation" dashboard/docs/cadence-validation.md
