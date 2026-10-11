@@ -6,8 +6,9 @@ at 2026-09-16T19:00:34Z. Alert text: patrol pending-checks: check-pending on cor
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20260916-patrol-pending-checks for patrol:pending-checks; record disposition; then fix or park
+- [x] Delve: open research subject fail-20260916-patrol-pending-checks for patrol:pending-checks; record disposition; then fix or park
       Verification: research subject fail-20260916-patrol-pending-checks present in research-subjects.txt with a recorded disposition; alert fixed or parked
+      Disposition 2026-10-11: parked. Subject + parked disposition recorded in automation research-subjects.txt / research-dispositions.tsv; all six pending-checks rows (correction-f6 + five deck-UI reports) flipped to status=parked in state/pending-checks.tsv, so check_pending_checks emits no fails and the identity stops firing. Deck complaints left to the active ui-evolve lane.
 
 ## Occurrences
 
