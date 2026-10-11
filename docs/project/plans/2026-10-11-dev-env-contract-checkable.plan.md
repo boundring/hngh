@@ -5,22 +5,21 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implement a digest-driven cadence scheduler to advance the hngh-automation research line toward autonomous job execution.
+
 ## Steps
 
-- [ ] Add a cadence runner script that iterates over job definitions in jobs/ and executes them sequentially
-  Verification: bash -n cadence/run_jobs.sh
+- [ ] Create `scripts/validate_digest.py` to check digest schema compliance
+  Verification: python3 scripts/validate_digest.py --dry-run
 
-- [ ] Create a test harness in tests/ that validates each job script returns exit code 0 on success
-  Verification: bash tests/test_job_runner.sh
+- [ ] Create `jobs/run_digest_check.sh` to invoke the validator script
+  Verification: bash -n jobs/run_digest_check.sh
 
-- [ ] Add a dashboard digest entry that records job completion timestamps to digest/
-  Verification: grep -q "job_timestamp" digest/last_run.log
+- [ ] Create `tests/test_digest_check.sh` to assert validator output
+  Verification: bash tests/test_digest_check.sh
 
-- [ ] Extend lib/ to expose a job status query function callable by the cadence runner
-  Verification: bash -n lib/job_status.py
+- [ ] Create `cadence/schedule_digest.sh` to orchestrate the job lifecycle
+  Verification: bash -n cadence/schedule_digest.sh
 
-- [ ] Add a cleanup step that prunes digest entries older than 7 days without deleting source jobs
-  Verification: bash scripts/prune_digest.sh
-
-- [ ] Wire the cadence runner into the existing make test pipeline as a pre-check target
-  Verification: make test
+- [ ] Create `scripts/run_pipeline.sh` to wrap the test suite
+  Verification: bash -n scripts/run_pipeline.sh
