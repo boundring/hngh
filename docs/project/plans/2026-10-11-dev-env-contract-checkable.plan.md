@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script that validates a sample job manifest structure before execution
-  Verification: bash -n jobs/validate-manifest.sh && bash jobs/validate-manifest.sh
+- [ ] Add a cadence helper script that validates a sample job manifest structure
+  Verification: bash -n cadence/validate-job.sh
 
-- [ ] Create a cadence runner that logs execution timestamps to a digest file
-  Verification: bash cadence/run-digest.sh && grep -q "timestamp" digest/latest.log
+- [ ] Add unit test for cadence helper that asserts valid manifest passes and invalid manifest fails
+  Verification: make test
 
-- [ ] Write a test that confirms the validation script rejects malformed input
-  Verification: bash tests/test-validate.sh && grep -q "FAIL" tests/output.log
+- [ ] Add a digest helper script that summarizes a single job's status from a sample log
+  Verification: bash -n digest/summarize-job.sh
 
-- [ ] Add a lib helper function for safe file existence checks used by cadence
-  Verification: bash -n lib/file-checks.sh && grep -q "exists" lib/file-checks.sh
+- [ ] Add unit test for digest helper that asserts correct summary output for a known log
+  Verification: make test
 
-- [ ] Update the dashboard config to reference the new validation script path
-  Verification: grep -q "validate-manifest" dashboard/config.yaml
+- [ ] Add a lib utility that parses a job manifest and returns its name field
+  Verification: bash -n lib/parse-manifest.py
+
+- [ ] Add unit test for lib utility that asserts correct name extraction from a known manifest
+  Verification: make test
