@@ -7,17 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a health-check script under scripts/ that validates core automation paths exist and are readable
-  Verification: bash -n scripts/health-check.sh && bash scripts/health-check.sh
+- [ ] Add a cadence runner script that iterates over job definitions in jobs/ and executes them sequentially
+  Verification: bash -n cadence/run_jobs.sh
 
-- [ ] Add a test for the health-check script under tests/ that asserts exit code 0 on success
+- [ ] Create a test harness in tests/ that validates each job script returns exit code 0 on success
+  Verification: bash tests/test_job_runner.sh
+
+- [ ] Add a dashboard digest entry that records job completion timestamps to digest/
+  Verification: grep -q "job_timestamp" digest/last_run.log
+
+- [ ] Extend lib/ to expose a job status query function callable by the cadence runner
+  Verification: bash -n lib/job_status.py
+
+- [ ] Add a cleanup step that prunes digest entries older than 7 days without deleting source jobs
+  Verification: bash scripts/prune_digest.sh
+
+- [ ] Wire the cadence runner into the existing make test pipeline as a pre-check target
   Verification: make test
-
-- [ ] Add a cadence entry under cadence/ that runs the health-check script on a 6-hour interval
-  Verification: bash -n cadence/run-health-check.sh
-
-- [ ] Add a verification step in tests/ that confirms cadence entry is syntactically valid
-  Verification: bash -n cadence/run-health-check.sh && grep -q "health-check" cadence/run-health-check.sh
-
-- [ ] Add a README note under dashboard/ documenting the new health-check cadence
-  Verification: grep -q "health-check" dashboard/README.md
