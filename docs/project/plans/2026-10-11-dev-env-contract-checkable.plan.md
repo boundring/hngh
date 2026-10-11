@@ -5,19 +5,17 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implements the hngh-cadence research line by introducing a dry-run validation pipeline for job definitions and cadence manifests.
+
 ## Steps
 
-- [ ] Add a test helper script that validates test output format compliance
-  Verification: bash -n jobs/test-helpers/format-check.sh
-
-- [ ] Create a cadence script that runs format-check.sh and reports pass/fail status
-  Verification: bash cadence/run-format-check.sh
-
-- [ ] Update Makefile to include format-check.sh in the test target
-  Verification: grep -q "format-check" Makefile
-
-- [ ] Add a dashboard snippet that displays format-check results
-  Verification: grep -q "format-check" dashboard/format-status.md
-
-- [ ] Verify all new scripts pass syntax validation
-  Verification: bash -n jobs/test-helpers/format-check.sh && bash -n cadence/run-format-check.sh
+- [ ] Create `scripts/dry_run.sh` to validate job definition syntax before execution
+  Verification: bash -n scripts/dry_run.sh
+- [ ] Create `cadence/manifest.json` defining the cadence schedule structure
+  Verification: python3 -c "import json; json.load(open('cadence/manifest.json'))"
+- [ ] Create `lib/cadence_utils.py` with helper functions for schedule parsing
+  Verification: python3 -c "import ast; ast.parse(open('lib/cadence_utils.py').read())"
+- [ ] Create `tests/test_cadence.sh` to exercise the dry-run and manifest validation
+  Verification: bash -n tests/test_cadence.sh
+- [ ] Create `dashboard/summary.md` template for cadence execution reports
+  Verification: grep -q 'summary' dashboard/summary.md
