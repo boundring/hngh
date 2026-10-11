@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-hngh.sh` that checks the hngh-automation repository for syntax errors in all shell scripts
-  Verification: bash -n scripts/validate-hngh.sh
+- [ ] Add a `lib/hngh-automation/utils.sh` helper that validates input paths before processing
+  Verification: bash -n lib/hngh-automation/utils.sh
 
-- [ ] Create `tests/test-validate-hngh.sh` that runs `bash -n` against every `.sh` file under `scripts/` and `jobs/`
-  Verification: bash tests/test-validate-hngh.sh
+- [ ] Add a `tests/test_utils.sh` script that exercises path validation with valid and invalid inputs
+  Verification: bash tests/test_utils.sh
 
-- [ ] Add `cadence/validate.sh` that invokes `make test` and exits non-zero on failure
-  Verification: bash cadence/validate.sh
+- [ ] Update `jobs/run.sh` to call the new path validation helper before executing job payloads
+  Verification: bash -n jobs/run.sh
 
-- [ ] Update `Makefile` to include `validate-hngh` as a pre-commit hook target that runs `bash scripts/validate-hngh.sh`
-  Verification: grep -q "validate-hngh" Makefile
+- [ ] Add a `scripts/validate-input.sh` entrypoint that demonstrates the helper in isolation
+  Verification: bash scripts/validate-input.sh
 
-- [ ] Add `dashboard/validate-summary.sh` that reports pass/fail status of `make test` for documentation
-  Verification: bash dashboard/validate-summary.sh
+- [ ] Add `cadence/validate-input.md` documenting the new validation contract for future contributors
+  Verification: grep -q "validate-input" cadence/validate-input.md
 
-- [ ] Commit all changes and verify `make test` passes in the repository
+- [ ] Run full test suite to confirm no regressions after adding the validation layer
   Verification: make test
