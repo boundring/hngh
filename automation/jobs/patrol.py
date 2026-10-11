@@ -366,7 +366,12 @@ def check_service_health(ctx):
     """Companion services: one HTTP probe per in-use/operator-run row
     with a health-url in config/hngh-services.tsv. Any HTTP answer is a
     responsive service (the deck-probe convention); transport failure is
-    service-down."""
+    service-down. Automation-managed rows (managed-by automation/*) are
+    TRANSIENT lifecycles (spawn -> use -> stop inside the run process,
+    lib/comfyui.sh contract): down between runs is the expected state,
+    so a fixed-URL probe is skipped -- the children check owns their
+    aliveness (leak detection) instead. (Closes the patrol:services
+    false alarm: 14 router occurrences of service-down on comfyui.)"""
     out = {"passes": [], "fails": []}
     try:
         with open(ctx["services_tsv"], encoding="utf-8",
@@ -381,6 +386,11 @@ def check_service_health(ctx):
             continue
         svc, url, disp = f[0], f[5], f[7]
         if disp not in ("in-use", "operator-run") or not url:
+            continue
+        if f[6].startswith("automation/"):
+            out["passes"].append(
+                ("service-health:" + svc,
+                 "transient automation-managed, not probed"))
             continue
         try:
             urllib.request.urlopen(url, timeout=3).read(64)

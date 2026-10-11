@@ -1038,6 +1038,29 @@ class Patrol(unittest.TestCase):
             proc.kill()
             proc.wait()
 
+    # --- service-health: transient automation-managed rows are not
+    # probed (spawn->use->stop lifecycle is expected down between runs;
+    # the fixed-URL probe reported that as service-down -- the
+    # patrol:services false alarm, 14 router occurrences) ---
+    def test_service_health_skips_transient_managed(self):
+        (self.auto / "config" / "hngh-services.tsv").write_text(
+            "service\trole\tmethod\tpath\tstart\thealth\tmanaged\t"
+            "disposition\n"
+            "comfyui\tr\tvenv\t/opt/comfyui\tcd /opt/comfyui\t"
+            "http://127.0.0.1:9/\tautomation/lib/comfyui.sh\tin-use\n"
+            "ollama\tr\tscript\t/usr/local/bin/ollama\tserve\t"
+            "http://127.0.0.1:9/\toperator\tin-use\n")
+        r = self.run_py("--patrol", "services")
+        self.assertEqual(r.returncode, 0)
+        fails = [ln for ln in r.stdout.splitlines()
+                 if ln.startswith("FAIL")]
+        # operator-managed rows stay probed (dead port -> service-down)
+        self.assertTrue(any("ollama" in ln and "service-down" in ln
+                            for ln in fails), r.stdout)
+        # transient automation-managed rows are not probed
+        self.assertFalse(any("comfyui" in ln for ln in fails), r.stdout)
+        self.assertIn("PASS services/service-health:comfyui", r.stdout)
+
     # --- (17) an adopted disposition with no follow-on is a finding ---
     def test_adopted_no_followon_fails(self):
         (self.auto / "research-dispositions.tsv").write_text(
