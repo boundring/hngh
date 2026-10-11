@@ -5,15 +5,22 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the research line "Structured job output validation for improved observability" by adding a lightweight shell validator and integrating it into the runner.
-
 ## Steps
 
-- [ ] Create `scripts/validate-output.sh` that checks for a `PASS` marker in input and echoes status.
-  Verification: `bash -n scripts/validate-output.sh`
-- [ ] Create `tests/test-validate.sh` that asserts the validator script exists and is executable.
-  Verification: `bash -n tests/test-validate.sh`
-- [ ] Update `jobs/runner.sh` to invoke `scripts/validate-output.sh` after execution.
-  Verification: `git grep -l validate-output.sh`
-- [ ] Run `make test` to confirm integration does not break existing checks.
-  Verification: `make test`
+- [ ] Add a new job script that validates input data before processing
+  Verification: bash -n jobs/validate-input.sh
+
+- [ ] Create a test file that exercises the validation job with sample data
+  Verification: make test
+
+- [ ] Add a script that logs validation results to a digest file
+  Verification: bash scripts/log-validation-results.sh
+
+- [ ] Update the cadence runner to include the new validation step
+  Verification: bash -n cadence/runner-update.sh
+
+- [ ] Add a dashboard snippet showing validation pass rate
+  Verification: python3 dashboard/validate-rate.py
+
+- [ ] Run the full test suite to confirm no regressions
+  Verification: make test
