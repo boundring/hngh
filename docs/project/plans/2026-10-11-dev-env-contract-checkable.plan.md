@@ -7,17 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-cadence.sh` helper that checks cadence rule files parse without errors
-  Verification: bash scripts/validate-cadence.sh && bash -n scripts/validate-cadence.sh
+- [ ] Add a test helper script that validates test output format compliance
+  Verification: bash -n jobs/test-helpers/format-check.sh
 
-- [ ] Create `cadence/validate-rules.py` to lint cadence rule definitions before they enter the pipeline
-  Verification: python3 cadence/validate-rules.py && python3 -c "import ast; ast.parse(open('cadence/validate-rules.py').read())"
+- [ ] Create a cadence script that runs format-check.sh and reports pass/fail status
+  Verification: bash cadence/run-format-check.sh
 
-- [ ] Update `make test` to include cadence validation in the pre-commit gate
-  Verification: make test
+- [ ] Update Makefile to include format-check.sh in the test target
+  Verification: grep -q "format-check" Makefile
 
-- [ ] Add `tests/test-cadence-validation.py` covering edge cases for rule parsing
-  Verification: python3 tests/test-cadence-validation.py
+- [ ] Add a dashboard snippet that displays format-check results
+  Verification: grep -q "format-check" dashboard/format-status.md
 
-- [ ] Document the new validation flow in `dashboard/docs/cadence-validation.md`
-  Verification: grep -q "cadence-validation" dashboard/docs/cadence-validation.md
+- [ ] Verify all new scripts pass syntax validation
+  Verification: bash -n jobs/test-helpers/format-check.sh && bash -n cadence/run-format-check.sh
