@@ -5,17 +5,22 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-Implements the hngh-cadence research line by introducing a dry-run validation pipeline for job definitions and cadence manifests.
-
 ## Steps
 
-- [ ] Create `scripts/dry_run.sh` to validate job definition syntax before execution
-  Verification: bash -n scripts/dry_run.sh
-- [ ] Create `cadence/manifest.json` defining the cadence schedule structure
-  Verification: python3 -c "import json; json.load(open('cadence/manifest.json'))"
-- [ ] Create `lib/cadence_utils.py` with helper functions for schedule parsing
-  Verification: python3 -c "import ast; ast.parse(open('lib/cadence_utils.py').read())"
-- [ ] Create `tests/test_cadence.sh` to exercise the dry-run and manifest validation
-  Verification: bash -n tests/test_cadence.sh
-- [ ] Create `dashboard/summary.md` template for cadence execution reports
-  Verification: grep -q 'summary' dashboard/summary.md
+- [ ] Add a job-status reporter script that logs completion of automated jobs to a shared state file
+  Verification: bash -n jobs/report-status.sh
+
+- [ ] Create a cadence runner that executes the reporter script on a configurable interval
+  Verification: bash -n cadence/run-cadence.sh
+
+- [ ] Add a test that confirms the reporter script runs without syntax errors
+  Verification: make test
+
+- [ ] Add a test that confirms the cadence runner executes the reporter without errors
+  Verification: make test
+
+- [ ] Add a dashboard snippet that reads the state file and displays job history
+  Verification: bash -n dashboard/show-history.sh
+
+- [ ] Add a test that confirms the dashboard snippet parses the state file correctly
+  Verification: make test
