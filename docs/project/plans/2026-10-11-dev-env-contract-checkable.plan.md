@@ -7,13 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `cadence/` entry that runs a single `make test` on the `hngh-automation` tree and records the exit code as a plain text log file
-  Verification: `bash -n cadence/run-hngh-test.sh && grep -q 'make test' cadence/run-hngh-test.sh`
-- [ ] Create a `scripts/` helper that parses the last 5 lines of `cadence/` logs and prints a one-line summary of pass/fail counts
-  Verification: `bash -n scripts/parse-cadence-log.sh && grep -q 'pass/fail' scripts/parse-cadence-log.sh`
-- [ ] Wire the helper into a `cadence/` schedule so that running `bash cadence/run-hngh-test.sh` produces a dated summary file under `cadence/`
-  Verification: `bash cadence/run-hngh-test.sh && ls -t cadence/ | head -1`
-- [ ] Add a `tests/` unit that asserts the summary file contains the word "passed" when `make test` exits zero
-  Verification: `python3 tests/assert-summary-passed.py`
-- [ ] Commit the new files and run `make test` to confirm the pipeline is green end-to-end
-  Verification: `make test`
+- [ ] Add a health-check script under scripts/ that validates core automation paths exist and are readable
+  Verification: bash -n scripts/health-check.sh && bash scripts/health-check.sh
+
+- [ ] Add a test for the health-check script under tests/ that asserts exit code 0 on success
+  Verification: make test
+
+- [ ] Add a cadence entry under cadence/ that runs the health-check script on a 6-hour interval
+  Verification: bash -n cadence/run-health-check.sh
+
+- [ ] Add a verification step in tests/ that confirms cadence entry is syntactically valid
+  Verification: bash -n cadence/run-health-check.sh && grep -q "health-check" cadence/run-health-check.sh
+
+- [ ] Add a README note under dashboard/ documenting the new health-check cadence
+  Verification: grep -q "health-check" dashboard/README.md
