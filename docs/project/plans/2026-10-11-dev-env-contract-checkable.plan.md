@@ -5,16 +5,13 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Rationale: Implements the 'job-syntax-gating' research line by introducing a pre-integration validation script that ensures all new automation jobs pass bash syntax checks before being merged into the repository.
+
 ## Steps
 
-- [ ] Create a plain-text manifest listing the three research lines adopted from ADOPTED findings: 'scheduling', 'throttling', and 'retry-budget'.
-  Verification: grep -c "research-line\|schedule\|throttle\|retry" hngh-automation/digest/adopted-findings.txt
-
-- [ ] Add a `cadence/synth-plan.yaml` entry mapping each research line to its corresponding automation job name under `jobs/`.
-  Verification: python3 -c "import yaml; d=yaml.safe_load(open('hngh-automation/cadence/synth-plan.yaml')); print(list(d.keys()))"
-
-- [ ] Implement a small `scripts/plan-mapper.sh` that reads the manifest and emits one line per job with its research-line tag.
-  Verification: bash scripts/plan-mapper.sh | wc -l
-
-- [ ] Add a unit test in `tests/test_plan_mapper.py` asserting that each emitted line contains exactly one of the three required tags.
-  Verification: python3 tests/test_plan_mapper.py
+- [ ] Create a validation script at `scripts/check-job-syntax.sh` that iterates over `jobs/` and runs `bash -n` on each file to catch syntax errors.
+  Verification: bash -n scripts/check-job-syntax.sh
+- [ ] Add a test case in `tests/test-job-syntax.sh` that invokes the validation script against a known-good job file to confirm it returns success.
+  Verification: bash tests/test-job-syntax.sh
+- [ ] Confirm the validation script integrates with the existing test suite without breaking the standard test target.
+  Verification: make test
