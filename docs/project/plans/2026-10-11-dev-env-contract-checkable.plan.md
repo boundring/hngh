@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence helper script that validates a sample job manifest structure
-  Verification: bash -n cadence/validate-job.sh
+- [ ] Add a `scripts/validate-hngh.sh` that checks the hngh-automation repository for syntax errors in all shell scripts
+  Verification: bash -n scripts/validate-hngh.sh
 
-- [ ] Add unit test for cadence helper that asserts valid manifest passes and invalid manifest fails
-  Verification: make test
+- [ ] Create `tests/test-validate-hngh.sh` that runs `bash -n` against every `.sh` file under `scripts/` and `jobs/`
+  Verification: bash tests/test-validate-hngh.sh
 
-- [ ] Add a digest helper script that summarizes a single job's status from a sample log
-  Verification: bash -n digest/summarize-job.sh
+- [ ] Add `cadence/validate.sh` that invokes `make test` and exits non-zero on failure
+  Verification: bash cadence/validate.sh
 
-- [ ] Add unit test for digest helper that asserts correct summary output for a known log
-  Verification: make test
+- [ ] Update `Makefile` to include `validate-hngh` as a pre-commit hook target that runs `bash scripts/validate-hngh.sh`
+  Verification: grep -q "validate-hngh" Makefile
 
-- [ ] Add a lib utility that parses a job manifest and returns its name field
-  Verification: bash -n lib/parse-manifest.py
+- [ ] Add `dashboard/validate-summary.sh` that reports pass/fail status of `make test` for documentation
+  Verification: bash dashboard/validate-summary.sh
 
-- [ ] Add unit test for lib utility that asserts correct name extraction from a known manifest
+- [ ] Commit all changes and verify `make test` passes in the repository
   Verification: make test
