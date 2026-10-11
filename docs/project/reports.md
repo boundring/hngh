@@ -1244,7 +1244,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-09T13:22:20Z | progress | 53d8b10f | plan 2026-09-16-routed-patrol-handoffs-3 executed (all steps checked) | 2026-10-09T13:22:20Z-progress-53d8b10f.md |
 | 2026-10-09T14:00:00Z | progress | 2bf8fe71 | course pooled-hardware: card mounted, last increment 2026-10-09T13:00:00Z | 2026-10-09T14:00:00Z-progress-2bf8fe71.md |
 | 2026-10-09T15:00:00Z | progress | 30588ad1 | course pooled-hardware: card mounted, last increment 2026-10-09T14:00:00Z | 2026-10-09T15:00:00Z-progress-30588ad1.md |
-| 2026-10-09T15:08:44Z | alert | d1c466f9 | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-16T15:08:44Z ×164 | 2026-10-09T15:08:44Z-alert-d1c466f9.md |
+| 2026-10-09T15:08:44Z | alert | d1c466f9 | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-16T15:08:44Z ×165 | 2026-10-09T15:08:44Z-alert-d1c466f9.md |
 | 2026-10-09T15:27:07Z | progress | 3da010df | agent-supervision: omp-2026-10-09T14-36-45-433Z_01a-9dc492 recovered expires=2026-10-16T15:27:06Z ×19 | 2026-10-09T15:27:07Z-progress-3da010df.md |
 | 2026-10-09T16:00:00Z | progress | e77671e0 | course pooled-hardware: card mounted, last increment 2026-10-09T15:00:00Z | 2026-10-09T16:00:00Z-progress-e77671e0.md |
 | 2026-10-09T16:00:42Z | progress | cc6e2b92 | router routed supervision:omp-2026-10-09T14-36-45-433Z_01a-9dc492:stalled -> plan candidate 2026-10-09-routed-supervision-omp-2026-10-09T14-36-45-433Z_01a-9dc492-stalled (routed-at 2026-10-09T16:00:42Z) expires=2026-10-16T16:00:42Z | 2026-10-09T16:00:42Z-progress-cc6e2b92.md |
@@ -1400,7 +1400,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-10T17:00:00Z | progress | 634b1f44 | course pooled-hardware: card mounted, last increment 2026-10-10T16:00:00Z | 2026-10-10T17:00:00Z-progress-634b1f44.md |
 | 2026-10-10T17:00:42Z | progress | ed1edc1f | router routed supervision:omp-2026-10-10T16-10-54-296Z_01a-43172d:stalled -> plan candidate 2026-10-10-routed-supervision-omp-2026-10-10T16-10-54-296Z_01a-43172d-stalled (routed-at 2026-10-10T17:00:42Z) expires=2026-10-17T17:00:42Z | 2026-10-10T17:00:42Z-progress-ed1edc1f.md |
 | 2026-10-10T17:07:06Z | progress | 03c845d9 | plan 2026-10-10-routed-supervision-omp-2026-10-10T16-10-54-296Z_01a-43172d-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-10T17:07:06Z expires=2026-10-17T17:07:06Z | 2026-10-10T17:07:06Z-progress-03c845d9.md |
-| 2026-10-10T17:20:49Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×262 | 2026-10-10T17:20:49Z-progress-2978e1fd.md |
+| 2026-10-10T17:20:49Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×265 | 2026-10-10T17:20:49Z-progress-2978e1fd.md |
 | 2026-10-10T18:00:00Z | progress | 9a0ac1cf | course pooled-hardware: card mounted, last increment 2026-10-10T17:00:00Z | 2026-10-10T18:00:00Z-progress-9a0ac1cf.md |
 | 2026-10-10T19:36:58Z | alert | bbdf87ef | credential unsloth-token: unexpected http=000000 on session probe | 2026-10-10T19:36:58Z-alert-bbdf87ef.md |
 | 2026-10-10T19:36:58Z | alert | 6977bb9b | [dash-selfreview] feed-fresh:sessions.json: unacceptable-now — stale 3423s > 3x tier 300s — producer for sessions.json is not firing or is failing | 2026-10-10T19:36:58Z-alert-6977bb9b.md |
@@ -1555,3 +1555,6 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-11T11:06:52Z | progress | e8bd0157 | plan 2026-10-11-routed-ux-review-email-digest-2-defect-crumbs-rows-198025-watermark-29 auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-11T11:06:52Z expires=2026-10-18T11:06:52Z | 2026-10-11T11:06:52Z-progress-e8bd0157.md |
 | 2026-10-11T11:06:52Z | progress | 6d73796c | plan 2026-10-11-routed-ux-review-email-digest-3-defect-518-accepted-plans-with-uncheck auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-11T11:06:52Z expires=2026-10-18T11:06:52Z | 2026-10-11T11:06:52Z-progress-6d73796c.md |
 | 2026-10-11T11:06:56Z | alert | aa5ae888 | synthesized development plan malformed (no verifiable steps); discarded | 2026-10-11T11:06:56Z-alert-aa5ae888.md |
+| 2026-10-11T12:33:15Z | alert | 6d4bd44c | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-patrol.py | 2026-10-11T12:33:15Z-alert-6d4bd44c.md |
+| 2026-10-11T12:37:31Z | progress | afb2e9f3 | plan 2026-09-16-routed-patrol-services executed (all steps checked) | 2026-10-11T12:37:31Z-progress-afb2e9f3.md |
+| 2026-10-11T12:37:31Z | alert | 6d4bd44c | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-patrol.py | 2026-10-11T12:37:31Z-alert-6d4bd44c.md |
