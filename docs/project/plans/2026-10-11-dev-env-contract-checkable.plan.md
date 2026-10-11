@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script that validates input data before processing
-  Verification: bash -n jobs/validate-input.sh
+- [ ] Add a cadence verification script that checks job output timestamps are within expected windows
+  Verification: bash -n cadence/verify-cadence.sh
 
-- [ ] Create a test file that exercises the validation job with sample data
+- [ ] Add unit test for cadence verification script with mocked output files
   Verification: make test
 
-- [ ] Add a script that logs validation results to a digest file
-  Verification: bash scripts/log-validation-results.sh
+- [ ] Add a digest helper that validates output file checksums against expected values
+  Verification: bash -n digest/checksums.sh
 
-- [ ] Update the cadence runner to include the new validation step
-  Verification: bash -n cadence/runner-update.sh
+- [ ] Add unit test for digest helper with sample output files
+  Verification: make test
 
-- [ ] Add a dashboard snippet showing validation pass rate
-  Verification: python3 dashboard/validate-rate.py
+- [ ] Add a lib utility that normalizes job output paths for cross-platform consistency
+  Verification: bash -n lib/normalize-paths.sh
 
-- [ ] Run the full test suite to confirm no regressions
+- [ ] Add unit test for path normalization utility with edge cases
   Verification: make test
