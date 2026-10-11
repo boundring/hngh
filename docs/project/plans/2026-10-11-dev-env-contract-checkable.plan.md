@@ -5,17 +5,19 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
-This plan implements the "deterministic cadence parsing" research line by introducing a shared log-extraction utility and integrating it into the digest pipeline to ensure consistent job status reporting.
-
 ## Steps
 
-- [ ] Create `scripts/parse_cadence.sh` to extract status lines from job logs
-  Verification: `bash -n scripts/parse_cadence.sh`
-- [ ] Create `lib/cadence_parser.py` wrapping the extraction logic for Python consumers
-  Verification: `python3 -c "import ast; ast.parse(open('lib/cadence_parser.py').read())"`
-- [ ] Add `tests/test_cadence_parser.py` to verify extraction against sample log fixtures
-  Verification: `python3 tests/test_cadence_parser.py`
-- [ ] Update `digest/summary.py` to invoke the new parser for status aggregation
-  Verification: `git grep -l "parse_cadence" digest/summary.py`
-- [ ] Run the full test suite to confirm no regressions
+- [ ] Add a `scripts/validate-input.sh` that checks required fields in job input files before execution
+  Verification: `bash -n scripts/validate-input.sh`
+
+- [ ] Add a `tests/test-validate-input.sh` that asserts the script rejects malformed input and accepts valid input
+  Verification: `bash tests/test-validate-input.sh`
+
+- [ ] Add a `cadence/validate-input.cron` entry that runs `scripts/validate-input.sh` before each job cycle
+  Verification: `grep -q 'validate-input' cadence/validate-input.cron`
+
+- [ ] Update `jobs/README.md` to document the new validation step in the pipeline
+  Verification: `grep -q 'validate-input' jobs/README.md`
+
+- [ ] Run `make test` to confirm all existing and new tests pass
   Verification: `make test`
