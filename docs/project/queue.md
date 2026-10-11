@@ -139,7 +139,8 @@ rows is folded here; the TSV rows keep the rotation state unchanged.
 
 ## Next
 
-- **pooled-hardware** — next queued set=2026-10-03 ttl=7 (advanced from Land stage 2: cause=ttl-expired)
+- **pooled-hardware** — next queued set=2026-10-11 ttl=7 (advanced from pooled-hardware: cause=ttl-expired)
+- pooled-hardware — re-queued 2026-10-11 with cause: ttl-expired (set 2026-10-03, 8 days)
 - Land stage 2 — re-queued 2026-10-03 with cause: ttl-expired (set 2026-09-25, 8 days)
 - pooled-hardware — re-queued 2026-09-25 with cause: stale Next (set
   2026-08-25, 31 days) and dep-circular — its open dep "resource pool
