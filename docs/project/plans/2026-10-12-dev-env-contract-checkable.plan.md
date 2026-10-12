@@ -7,20 +7,14 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job under `jobs/` that runs an empty shell script to serve as a baseline automation target
-  Verification: `bash -n jobs/hngh-automation-baseline.sh`
+- [ ] Add a `lib/verify.sh` helper that runs `make test` and returns exit code
+  Verification: bash -n lib/verify.sh
 
-- [ ] Create a corresponding test script under `tests/` that invokes `make test` against the new job and asserts exit code 0
-  Verification: `bash tests/hngh-automation-baseline-test.sh`
+- [ ] Create `scripts/cadence-check.sh` that validates cadence schedule files exist under `cadence/`
+  Verification: bash scripts/cadence-check.sh
 
-- [ ] Add a script under `scripts/` that parses the job output and confirms the baseline job completed without errors
-  Verification: `bash scripts/hngh-automation-baseline-check.sh`
+- [ ] Add a `tests/test-verify.sh` that asserts `lib/verify.sh` exits 0 after `make test`
+  Verification: bash tests/test-verify.sh
 
-- [ ] Integrate the new job into the existing cadence by adding a reference in `cadence/` that points to the job path
-  Verification: `grep -q "hngh-automation-baseline" cadence/*.yaml`
-
-- [ ] Run `make test` in the repository root to confirm all existing and new tests pass
-  Verification: `make test`
-
-- [ ] Verify that no changes were made to `hngh kernel src/tests/Makefile/hngh.asd` or any credential or systemd files
-  Verification: `git diff --name-only | grep -E "(hngh\.asd|systemd|credential|secret)" || echo "No forbidden files modified"`
+- [ ] Update `jobs/README.md` to document the new verification helpers
+  Verification: grep -q "verify.sh" jobs/README.md
