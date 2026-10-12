@@ -5,22 +5,21 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implement the "Safe Cadence Dry-Run" research line by adding a no-op execution mode to the digest pipeline, ensuring pipeline changes are validated without side effects before scheduling.
+
 ## Steps
 
-- [ ] Add a `cadence/run.sh` script that iterates over `jobs/` entries in sorted order and executes each one
-  Verification: bash -n cadence/run.sh
+- [ ] Add `--dry-run` flag to `cadence/runner.sh` to bypass execution
+  Verification: bash -n cadence/runner.sh
 
-- [ ] Add a `cadence/README.md` documenting the run order and how new jobs are discovered
-  Verification: grep -q "run order" cadence/README.md
+- [ ] Update `digest/generate.py` to skip file writes when dry-run is active
+  Verification: python3 -c "import ast; ast.parse(open('digest/generate.py').read())"
 
-- [ ] Add a `tests/test_cadence.sh` script that asserts `cadence/run.sh` exists and is executable
-  Verification: bash tests/test_cadence.sh
+- [ ] Add syntax validation script `scripts/check_syntax.sh` for pipeline files
+  Verification: bash -n scripts/check_syntax.sh
 
-- [ ] Add a `lib/cadence.sh` helper that provides `cadence_next_job` and `cadence_done` functions
-  Verification: bash -n lib/cadence.sh
+- [ ] Add regression test `tests/test_dryrun.sh` covering the dry-run path
+  Verification: bash -n tests/test_dryrun.sh
 
-- [ ] Add a `dashboard/cadence_status.json` template file with initial empty structure
-  Verification: grep -q "cadence_status" dashboard/cadence_status.json
-
-- [ ] Add a `digest/cadence_digest.sh` script that logs cadence run completion to `digest/`
-  Verification: bash -n digest/cadence_digest.sh
+- [ ] Run full test suite to confirm no regressions
+  Verification: make test
