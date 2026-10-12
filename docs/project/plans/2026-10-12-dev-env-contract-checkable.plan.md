@@ -7,14 +7,11 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `lib/verify.sh` helper that runs `make test` and returns exit code
-  Verification: bash -n lib/verify.sh
-
-- [ ] Create `scripts/cadence-check.sh` that validates cadence schedule files exist under `cadence/`
-  Verification: bash scripts/cadence-check.sh
-
-- [ ] Add a `tests/test-verify.sh` that asserts `lib/verify.sh` exits 0 after `make test`
-  Verification: bash tests/test-verify.sh
-
-- [ ] Update `jobs/README.md` to document the new verification helpers
-  Verification: grep -q "verify.sh" jobs/README.md
+- [ ] Add a new script `jobs/hngh-baseline-metrics.py` that computes the repository's current commit count and last update timestamp from git log output.
+  Verification: bash -n jobs/hngh-baseline-metrics.py && python3 jobs/hngh-baseline-metrics.py
+- [ ] Update `cadence/sprint-timeline.md` to include a new row referencing the baseline metrics script in the next sprint's automation backlog.
+  Verification: grep -q "hngh-baseline-metrics" cadence/sprint-timeline.md
+- [ ] Add a test case in `tests/test_baseline_metrics.py` that asserts the metrics script runs without error and returns an exit code of zero.
+  Verification: bash -n tests/test_baseline_metrics.py
+- [ ] Commit all changes with message "chore: add baseline metrics tracking for hngh automation".
+  Verification: git log --oneline -1
