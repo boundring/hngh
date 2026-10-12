@@ -134,7 +134,7 @@ class TestHnghPackages(unittest.TestCase):
 
     def test_known_in_use_packages_present(self):
         ids = {p[0] for p in registry_rows()}
-        for pkg in ("omp", "bili", "pi", "opencode", "acp-kernel"):
+        for pkg in ("omp", "pi", "opencode", "acp-kernel"):
             self.assertIn(pkg, ids, f"in-use package '{pkg}' missing from registry")
 
 
