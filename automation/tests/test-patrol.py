@@ -159,6 +159,143 @@ class ResearchMatchId(unittest.TestCase):
                 "patrol-20260912-handoffs-bad-execution")
 
 
+class HandoffDeathsRecalibration(unittest.TestCase):
+    """check_handoff_deaths recalibration design slice (patrol:handoffs,
+    disposition row 478 next-lane): cause-distinction + narrative-row
+    exclusion. A death is a run row carrying the dead/cancelled token;
+    its cause is parsed per row (rc=124 timeout(1) kill vs other
+    failure) and reported in the alert detail. `| session |` closure
+    narrative rows (ledger convention, row 478 R3) quote the alert
+    vocabulary without carrying run status -- they are not deaths.
+    Genuine deaths keep firing: HANDOFFS_LAST_N/HANDOFFS_THRESHOLD
+    semantics are unchanged and rc=124 timeout-kill deaths MUST still
+    fire (the operator threshold-semantics decision; suppression would
+    be the symptom edit row 478 rejected)."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.ledger = Path(self._td.name) / "agent-handoffs.md"
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def check(self):
+        return load_mod().check_handoff_deaths({"handoffs": str(self.ledger)})
+
+    def row(self, ts, body):
+        return "overnight-lead | %s | %s\n" % (ts, body)
+
+    def test_three_rc124_timeout_kill_deaths_fire(self):
+        # rc=124 timeout-kill deaths are genuine deaths (conflation
+        # class a); three of them at exactly the threshold fire
+        self.ledger.write_text("".join([
+            self.row("2026-10-08T04:37:30Z",
+                     "plan-a|run-1 | rc=124 dead log=logs/a.log"),
+            self.row("2026-10-08T09:31:38Z",
+                     "plan-b|run-1 | rc=124 dead log=logs/b.log"),
+            self.row("2026-10-08T14:47:23Z",
+                     "plan-c|run-1 | rc=124 dead log=logs/c.log"),
+            self.row("2026-10-08T19:14:41Z",
+                     "plan-d|run-1 | rc=0 complete log=logs/d.log"),
+            ]), encoding="utf-8")
+        out = self.check()
+        self.assertEqual(out["passes"], [])
+        self.assertEqual(
+            out["fails"],
+            [("agent-handoffs.md", "bad-execution",
+              "3 dead/cancelled in last 4 rows "
+              "(timeout-kill=3, failure=0, narrative=0 excluded)")])
+
+    def test_narrative_rows_plus_one_real_death_do_not_fire(self):
+        # closure narrative rows quoting the vocabulary (conflation
+        # class c) are not deaths; one real rc=1 failure is below the
+        # threshold
+        self.ledger.write_text("".join([
+            self.row("2026-10-08T14:41:18Z",
+                     "session | routed plan x executed: delve closed "
+                     "killed -- alert identity patrol:handoffs "
+                     "(bad-execution: 10 dead/cancelled in last 10 "
+                     "overnight-lead rows)"),
+            self.row("2026-10-08T19:10:22Z",
+                     "session | routed plan x executed: delve closed "
+                     "parked-live-condition"),
+            self.row("2026-10-09T00:21:11Z",
+                     "session | routed plan x executed: delve closed "
+                     "parked-live-condition (R1-R3 audited)"),
+            self.row("2026-10-09T00:21:30Z",
+                     "plan-e|run-1 | rc=1 dead log=logs/e.log"),
+            self.row("2026-10-09T04:54:10Z",
+                     "plan-f|run-1 | rc=0 complete log=logs/f.log"),
+            ]), encoding="utf-8")
+        out = self.check()
+        self.assertEqual(out["fails"], [])
+        self.assertEqual(
+            out["passes"],
+            [("handoffs-accumulation",
+              "1 dead/cancelled in last 5 rows "
+              "(timeout-kill=0, failure=1, narrative=3 excluded)")])
+
+    def test_genuine_deaths_still_fire_at_threshold(self):
+        # rc=0 cancelled and rc=1/rc=2 dead are genuine non-timeout
+        # deaths; exactly threshold 3 must still fire bad-execution
+        self.ledger.write_text("".join([
+            self.row("2026-10-07T10:00:00Z",
+                     "plan-a|run-1 | rc=1 dead log=logs/a.log"),
+            self.row("2026-10-07T11:00:00Z",
+                     "plan-b|run-1 | rc=0 cancelled log=logs/b.log"),
+            self.row("2026-10-07T12:00:00Z",
+                     "plan-c|run-1 | rc=2 dead log=logs/c.log"),
+            self.row("2026-10-07T13:00:00Z",
+                     "plan-d|run-1 | rc=0 complete log=logs/d.log"),
+            ]), encoding="utf-8")
+        out = self.check()
+        self.assertEqual(
+            out["fails"],
+            [("agent-handoffs.md", "bad-execution",
+              "3 dead/cancelled in last 4 rows "
+              "(timeout-kill=0, failure=3, narrative=0 excluded)")])
+
+    def test_mixed_causes_fire_with_cause_breakdown(self):
+        # the real 2026-10-09 window shape: 2 timeout-kills, 2 rc=1
+        # failures, 4 narratives quoting the vocabulary, 2 completes --
+        # the 4 genuine deaths fire and the detail breaks the causes out
+        self.ledger.write_text("".join([
+            self.row("2026-10-08T09:31:38Z",
+                     "plan-b|run-1 | rc=124 dead log=logs/b.log"),
+            self.row("2026-10-08T14:41:18Z",
+                     "session | routed plan x executed: delve closed "
+                     "killed-before-research -- alert identity "
+                     "overnight:plan (10 dead/cancelled quoted)"),
+            self.row("2026-10-08T14:47:23Z",
+                     "plan-c|run-1 | rc=124 dead log=logs/c.log"),
+            self.row("2026-10-08T19:10:22Z",
+                     "session | routed plan x executed: delve closed "
+                     "killed-before-research"),
+            self.row("2026-10-08T19:14:41Z",
+                     "plan-d|run-1 | rc=0 complete log=logs/d.log"),
+            self.row("2026-10-09T00:21:11Z",
+                     "session | routed plan x executed: delve closed "
+                     "parked-live-condition (bad-execution: 10 "
+                     "dead/cancelled quoted)"),
+            self.row("2026-10-09T00:21:30Z",
+                     "plan-e|run-1 | rc=1 dead log=logs/e.log"),
+            self.row("2026-10-09T04:50:55Z",
+                     "session | routed plan x executed: delve closed "
+                     "parked-live-condition"),
+            self.row("2026-10-09T04:54:10Z",
+                     "plan-f|run-1 | rc=0 complete log=logs/f.log"),
+            self.row("2026-10-09T09:07:54Z",
+                     "plan-g|run-1 | rc=1 dead log=logs/g.log"),
+            ]), encoding="utf-8")
+        out = self.check()
+        self.assertEqual(out["passes"], [])
+        self.assertEqual(
+            out["fails"],
+            [("agent-handoffs.md", "bad-execution",
+              "4 dead/cancelled in last 10 rows "
+              "(timeout-kill=2, failure=2, narrative=4 excluded)")])
+
+
 class Patrol(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()

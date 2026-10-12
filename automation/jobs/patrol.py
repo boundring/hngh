@@ -67,6 +67,13 @@ FEEDS = [("plans.json", 3600), ("operator-items.json", 600),
 LESSONS_STALE_HOURS = 6  # disposition landing -> harvest refresh budget
 HANDOFFS_LAST_N = 10
 HANDOFFS_THRESHOLD = 3
+# run-death signature `rc=<n> dead|cancelled` (patrol:handoffs
+# recalibration design slice, disposition row 478): the rc IS the death
+# cause -- 124 is the timeout(1) kill signature (documented class,
+# docs/records/2026-09-11-beat-stall-diagnosis.md), any other rc is a
+# failure. Both causes are genuine deaths and still fire; the
+# distinction is reported in the alert detail, never used to suppress
+_RC_DEATH_RE = re.compile(r"\brc=(\d+) (dead|cancelled)\b")
 GATE_STALE_HOURS = 26  # the day gate runs once a day; 24h + one tier slack
 GATE_CRUMB_TTL_S = 86400  # a crumb older than this is not gate evidence
 DISK_PCT = 90
@@ -259,9 +266,19 @@ def check_stall_crumbs(ctx):
 
 
 def check_handoff_deaths(ctx):
-    """Handoff accumulation: dead/cancelled runs among the last N
-    overnight-lead rows (the accumulation signature a director session
-    used to count by eye)."""
+    """Handoff accumulation, cause-distinct (patrol:handoffs
+    recalibration design slice, disposition row 478 next-lane): a
+    death is a run row carrying the dead/cancelled token, with its
+    cause parsed per row (rc=124 timeout-kill vs other failure) and
+    broken out in the alert detail. `| session |` closure narrative
+    rows (ledger convention, row 478 R3) quote the alert vocabulary
+    without carrying run status -- they are excluded, they are not
+    deaths. Genuine deaths keep firing: HANDOFFS_LAST_N/HANDOFFS_
+    THRESHOLD semantics unchanged, rc=124 timeout-kills included (the
+    operator threshold-semantics decision; suppressing a cause would
+    be the inline symptom edit row 478 rejected). The 2026-09-16
+    filing conflated all classes into one flat token count -- the
+    breakdown is what makes a fire actionable."""
     out = {"passes": [], "fails": []}
     rows = []
     try:
@@ -273,16 +290,26 @@ def check_handoff_deaths(ctx):
         out["passes"].append(("handoffs-accumulation", "no handoff ledger"))
         return out
     tail = rows[-HANDOFFS_LAST_N:]
-    dead = [ln for ln in tail
-            if " dead " in ln or "cancelled" in ln]
-    if len(dead) >= HANDOFFS_THRESHOLD:
-        out["fails"].append(("agent-handoffs.md", "bad-execution",
-                             "%d dead/cancelled in last %d rows"
-                             % (len(dead), len(tail))))
+    deaths = kills = failures = narr = 0
+    for ln in tail:
+        if "| session |" in ln:
+            narr += 1
+            continue
+        m = _RC_DEATH_RE.search(ln)
+        if not (m or " dead " in ln or "cancelled" in ln):
+            continue
+        deaths += 1
+        if m and m.group(1) == "124":
+            kills += 1
+        else:
+            failures += 1
+    detail = ("%d dead/cancelled in last %d rows "
+              "(timeout-kill=%d, failure=%d, narrative=%d excluded)"
+              % (deaths, len(tail), kills, failures, narr))
+    if deaths >= HANDOFFS_THRESHOLD:
+        out["fails"].append(("agent-handoffs.md", "bad-execution", detail))
     else:
-        out["passes"].append(("handoffs-accumulation",
-                              "%d dead/cancelled in last %d rows"
-                              % (len(dead), len(tail))))
+        out["passes"].append(("handoffs-accumulation", detail))
     return out
 
 
