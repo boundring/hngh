@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=supervision:omp-CisternP3Wave-b292c2:stalled -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-12T06:35:30Z routed-from=supervision:omp-CisternP3Wave-b292c2:stalled -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-19T06:00:12Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
