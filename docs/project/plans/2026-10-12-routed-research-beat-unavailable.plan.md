@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=research-beat:unavailable -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-12T02:35:25Z routed-from=research-beat:unavailable -->
 <!-- attempt: 2 -->
 <!-- expires: 2026-10-19T02:00:12Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)

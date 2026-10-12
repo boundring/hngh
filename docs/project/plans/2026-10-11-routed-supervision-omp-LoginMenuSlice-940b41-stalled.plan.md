@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=supervision:omp-LoginMenuSlice-940b41:stalled -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-12T02:35:25Z routed-from=supervision:omp-LoginMenuSlice-940b41:stalled -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-18T23:00:12Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
