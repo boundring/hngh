@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `jobs/parse-adoptions.sh` script that reads the current `ADOPTED` findings list and prints each line prefixed with `ADOPTED:`
-  Verification: bash jobs/parse-adoptions.sh
+- [ ] Add a `cadence/run.sh` script that iterates over `jobs/` entries in sorted order and executes each one
+  Verification: bash -n cadence/run.sh
 
-- [ ] Create `cadence/track-adoptions.md` with a table mapping each ADOPTED finding to a proposed automation step and its expected verification command
-  Verification: grep -c "ADOPTED" cadence/track-adoptions.md
+- [ ] Add a `cadence/README.md` documenting the run order and how new jobs are discovered
+  Verification: grep -q "run order" cadence/README.md
 
-- [ ] Add a `tests/test-adoptions.sh` script that asserts `jobs/parse-adoptions.sh` outputs at least one line containing "ADOPTED:"
-  Verification: bash tests/test-adoptions.sh
+- [ ] Add a `tests/test_cadence.sh` script that asserts `cadence/run.sh` exists and is executable
+  Verification: bash tests/test_cadence.sh
 
-- [ ] Update `Makefile` to include `test-adoptions` as a new test target that runs `tests/test-adoptions.sh`
-  Verification: make test-adoptions
+- [ ] Add a `lib/cadence.sh` helper that provides `cadence_next_job` and `cadence_done` functions
+  Verification: bash -n lib/cadence.sh
 
-- [ ] Add a `dashboard/adoptions-status.json` file with a JSON object listing each ADOPTED finding and a placeholder `status: "pending"` field
-  Verification: python3 -c "import json; d=json.load(open('dashboard/adoptions-status.json')); assert 'findings' in d and len(d['findings'])>0"
+- [ ] Add a `dashboard/cadence_status.json` template file with initial empty structure
+  Verification: grep -q "cadence_status" dashboard/cadence_status.json
 
-- [ ] Create `scripts/update-adoptions-status.sh` that updates `dashboard/adoptions-status.json` with a `status: "in-progress"` marker for each ADOPTED finding
-  Verification: bash scripts/update-adoptions-status.sh && python3 -c "import json; d=json.load(open('dashboard/adoptions-status.json')); assert all(f['status']=='in-progress' for f in d['findings'])"
+- [ ] Add a `digest/cadence_digest.sh` script that logs cadence run completion to `digest/`
+  Verification: bash -n digest/cadence_digest.sh
