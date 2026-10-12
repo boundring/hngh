@@ -400,7 +400,7 @@ class ProducerIdentityCrossCheck(unittest.TestCase):
         self.assertEqual(r["passes"], [])
         self.assertEqual(r["fails"], [
             ("agent-handoffs.md", "bad-execution",
-             "3 dead/cancelled in last 5 rows")])
+             "3 dead/cancelled in last 5 rows (timeout-kill=0, failure=3, narrative=0 excluded)")])
 
     def test_alert_identity_matches_schema_id(self):
         # end-to-end through main(): the FAIL files a report-queue alert
