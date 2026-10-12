@@ -5,17 +5,15 @@ principle: adopted evidence before new surface (docs/project/decisions.md entry 
 Synthesized by the overnight cycle from verdict=adopted research
 dispositions (local chain, pinned); admission via accept-plans.
 
+Implementing the cadence output normalization research line by introducing a standardized formatting script and corresponding unit tests.
+
 ## Steps
 
-- [ ] Add a reusable job-output validator script under scripts/validate-job-output.sh that checks exit codes and stdout patterns
-  Verification: bash -n scripts/validate-job-output.sh
-- [ ] Add a test case under tests/ that exercises the validator with a sample job directory
-  Verification: make test
-- [ ] Add a cadence helper under cadence/run-check.sh that invokes the validator against the last job run
-  Verification: bash -n cadence/run-check.sh
-- [ ] Add a dashboard snippet under dashboard/job-status.json that records validator pass/fail state
-  Verification: bash -n dashboard/job-status.json
-- [ ] Add a lib helper under lib/job-utils.sh that wraps the validator for reuse by other scripts
-  Verification: bash -n lib/job-utils.sh
-- [ ] Add a test under tests/ that verifies the cadence helper integrates with the dashboard state
+- [ ] Create a shell script to normalize cadence job output logs
+  Verification: bash -n scripts/cadence_format.sh
+- [ ] Add a unit test script to validate the formatting logic
+  Verification: bash -n tests/cadence_format_test.sh
+- [ ] Wire the formatting script into the cadence job definition
+  Verification: grep -q cadence_format cadence/format_job.sh
+- [ ] Run the full test suite to confirm no regressions
   Verification: make test
