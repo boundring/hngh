@@ -22,11 +22,22 @@ set -u
 SCRIPT_NAME="disk-headroom.sh"
 LOGDIR="${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}"
 
+# The etc/ frame seam, same default as lib/common.sh:15. This job deliberately
+# does NOT source lib/common.sh: it must keep running even when the hngh tree
+# is mid-move or mid-merge, because it is the job you reach for when the tree
+# is exactly in that state.
+ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
+
+# cistern's checkout. Same seam as CISTERN_ROOT in lib/common.sh:31 — kept
+# local because this job cannot source common.sh, so it must not depend on a
+# tree it may be repairing. The §3.2 move commit edits THIS line only.
+CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/20260830/cistern}"
+
 # Trees this job is allowed to prune. Each entry is "<path>|<label>".
 # Keep this list explicit: a glob over $HOME is how cleanup jobs delete things
 # they were never asked about.
 PRUNE_INCREMENTAL=(
-  "$HOME/Projects/etc/20260830/cistern/target/debug/incremental|cistern incremental"
+  "$CISTERN_ROOT/target/debug/incremental|cistern incremental"
   "$HOME/src/jcode/target/debug/incremental|jcode debug incremental"
   "$HOME/src/jcode/target/release/incremental|jcode release incremental"
 )
@@ -105,7 +116,7 @@ stage_census() {
 
   say ""
   say "not reclaimable by this job:"
-  say "  cistern target/debug/deps  — $(du_of "$HOME/Projects/etc/20260830/cistern/target/debug/deps")  current build artifacts"
+  say "  cistern target/debug/deps  — $(du_of "$CISTERN_ROOT/target/debug/deps")  current build artifacts"
   say "  ~/.cache/huggingface      — $(du_of "$HOME/.cache/huggingface")  model weights, fetch is slow"
   say "  ~/.cargo/registry         — $(du_of "$HOME/.cargo/registry")  crate sources"
 

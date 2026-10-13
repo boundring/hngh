@@ -42,7 +42,12 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-UPSTREAM="${OMARCHY_UPSTREAM_DIR:-$HOME/Projects/etc/omarchy-upstream}"
+# This job bootstraps standalone (no lib/common.sh — it parses its own flags
+# and runs under `set -u`), so it carries its own copy of the etc/ frame seam.
+# Keep the default identical to ETC_ROOT in lib/common.sh:15.
+ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
+
+UPSTREAM="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/omarchy-upstream}"
 ADOPT_HOME="${HNGH_CONFIG_ADOPT_HOME:-$HOME}"
 DOTCFG="$ADOPT_HOME/.config"
 

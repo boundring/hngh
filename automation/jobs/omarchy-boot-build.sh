@@ -50,6 +50,10 @@
 #                                  dry or real -- mirrors its output there)
 set -u
 
+# Standalone bootstrap under `set -u` (no lib/common.sh). Same etc/ frame
+# seam as lib/common.sh:15 — keep the default identical.
+ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
+
 DISK="${HNGH_BOOT_DISK:-/dev/nvme0n1}"
 ESP="${DISK}p1"
 ROOTP="${DISK}p2"
@@ -57,7 +61,7 @@ MNT="${HNGH_BOOT_MNT:-/mnt}"
 USER_NAME="${HNGH_BOOT_USER:-bricker}"
 ESP_ID="${HNGH_ESP_ID:-317A31FF}"
 ESP_LABEL="${HNGH_ESP_LABEL:-OMARCHY-ESP}"
-UPSTREAM="${HNGH_UPSTREAM:-$HOME/Projects/etc/omarchy-upstream}"
+UPSTREAM="${HNGH_UPSTREAM:-$ETC_ROOT/omarchy-upstream}"
 DEV_DISK="${HNGH_DEV_DISK:-/dev/disk}"
 
 PHASE="${1:---help}"

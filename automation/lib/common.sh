@@ -14,6 +14,22 @@ JOB_NAME="${JOB_NAME:-$(basename "$0")}"
 HNGH_HOME_DIR="${HNGH_HOME_DIR:-$HOME/.hngh}"
 DIGEST_DIR="${DIGEST_DIR:-$HNGH_HOME_DIR/archive/digest}"
 
+# The etc/ frame — the context layer that holds sibling repos and knowledge
+# bases. Every cross-project path default resolves through this one seam, so
+# relocating a sibling (llm-wiki, omarchy-upstream, cistern) is a one-line
+# change here instead of a hunt through ten call sites. Before this existed,
+# ten sites across eight scripts each re-spelled $HOME/Projects/etc/<sibling>,
+# and every move cost ten edits — a missed one being a silent wrong-path
+# default at run time. ETC_ROOT overrides for hermetic tests.
+ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
+
+# cistern's checkout is its own seam because it moves out of the dated
+# 20260830/ frame, while ETC_ROOT itself stays put. Default follows cistern to
+# where it actually is on disk today; the §3.2 move commit flips this default
+# to $ETC_ROOT/cistern. Two layers because the etc/ frame and its children have
+# different lifetimes — the frame is the stable anchor, the children churn.
+CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/20260830/cistern}"
+
 hngh_catalog() { # kind path [note] -> append to ~/.hngh/catalog.tsv
  local file="$HNGH_HOME_DIR/catalog.tsv"
  # Idempotency (2026-09-13): the same kind+path catalogued 5x in 17s

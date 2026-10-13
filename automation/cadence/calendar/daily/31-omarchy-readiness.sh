@@ -33,7 +33,7 @@ set -u
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
-UPSTREAM_DIR="${OMARCHY_UPSTREAM_DIR:-$HOME/Projects/etc/omarchy-upstream}"
+UPSTREAM_DIR="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/omarchy-upstream}"
 SESSIONS_DIR="${OMARCHY_SESSIONS_DIR:-/usr/share/wayland-sessions}"
 MANIFEST="$AUTOMATION_ROOT/config/omarchy-base.packages"
 PINS_MODULE="$AUTOMATION_ROOT/jobs/pins-drift.py"
