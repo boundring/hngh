@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=%h/Projects/etc/hngh/automation/scripts/night-session.sh prompts/morning-report.md morning-report
-ExecStartPost=%h/Projects/etc/hngh/automation/jobs/refresh-dashboard.sh morning-report
-WorkingDirectory=%h/Projects/etc/hngh/automation
+ExecStart=%h/.hngh/bin/hngh-night-session prompts/morning-report.md morning-report
+ExecStartPost=%h/.hngh/bin/hngh-refresh-dashboard morning-report
+
 Restart=no

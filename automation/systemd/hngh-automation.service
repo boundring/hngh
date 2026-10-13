@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=%h/Projects/etc/hngh/automation/jobs/ping-hourly.sh
-WorkingDirectory=%h/Projects/etc/hngh/automation
+ExecStart=%h/.hngh/bin/hngh-ping-hourly
+
 # fail-closed jobs always exit 0 on expected conditions; nonzero = real bug
 Restart=no
 

@@ -1,9 +1,9 @@
 [Unit]
 Description=hngh-automation security check (every 4h)
-[Service]
-Type=oneshot
-ExecStart=%h/Projects/etc/hngh/automation/jobs/security-check.sh
-WorkingDirectory=%h/Projects/etc/hngh/automation
+
+# NOTE: the [Service] section that used to sit here was ignored by systemd
+# ("Unknown section 'Service'" in a .timer file), so its ExecStart never ran.
+# hngh-security.service is the real unit; this file only schedules it.
 
 [Timer]
 OnCalendar=*-*-* 00,04,08,12,16,20:00:00

@@ -1,9 +1,11 @@
 [Unit]
 Description=hngh-automation morning digest
-[Service]
-Type=oneshot
-ExecStart=%h/Projects/etc/hngh/automation/jobs/morning-digest.sh
-WorkingDirectory=%h/Projects/etc/hngh/automation
+
+# NOTE: this timer used to carry a [Service] section with its own ExecStart.
+# systemd ignores [Service] in a .timer file ("Unknown section 'Service'"), so
+# that ExecStart never ran. The work is driven by hngh-morning.service, which
+# hngh-cadence-* and the morning timer chain reach; keeping the section here
+# only ever misled readers.
 
 [Timer]
 OnCalendar=*-*-* 06,07,08,09:00:00

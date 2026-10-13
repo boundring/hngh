@@ -9,8 +9,8 @@ Wants=network-online.target
 # override so a lane switch (e.g. hour workbeat) cannot drop it
 Environment=OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash
 Type=oneshot
-ExecStart=%h/Projects/etc/hngh/automation/scripts/overnight-cycle.sh
-WorkingDirectory=%h/Projects/etc/hngh/automation
+ExecStart=%h/.hngh/bin/hngh-overnight-cycle
+
 Restart=no
 
 [Install]
