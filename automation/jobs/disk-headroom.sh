@@ -204,12 +204,35 @@ stage_census() {
     say "  - (no deps tree)"
   fi
 
+  # The etc/ frame after the 2026-10-13 regroup. Reported, never pruned: which
+  # of these a sweep may touch is a policy question (package F f8, deferred), so
+  # this table exists to make drift visible, not to authorise anything.
+  say ""
+  say "etc/ frame (group dirs after the 2026-10-13 regroup):"
+  local g
+  for g in "$ETC_ROOT"/*/; do
+    [ -d "$g" ] || continue
+    say "$(printf '  %6s  %s' "$(du_of "$g")" "${g%/}")"
+  done
+
+  # Same posture for the cache tree: report, never prune. The parfact of the
+  # 2026-10-13 sweep (paru 23 G, uv 13 G, yay 4.8 G) was one-time, and no
+  # standing job is allowed to repeat it.
+  #
+  # Top 12 only: huggingface alone is 119 G, and a census that lists every cache
+  # dir would bury the two numbers that actually need a decision.
+  say ""
+  say "largest ~/.cache entries (report only; each needs its own policy):"
+  for g in $(du -s "$HOME"/.cache/*/ 2>/dev/null | sort -rn | head -12 | cut -f2-); do
+    say "$(printf '  %6s  %s' "$(du_of "$g")" "${g%/}")"
+  done
+
   say ""
   say "  ~/.cache/huggingface      — $(du_of "$HOME/.cache/huggingface")  model weights, fetch is slow"
   say "  ~/.cargo/registry         — $(du_of "$HOME/.cargo/registry")  crate sources"
 
   say ""
-  [ "$DRY_RUN" = "1" ] && say "(dry run: HNGH_OPT_DRY_RUN=1)" || say "run 'sweep' to prune the reclaimable set."
+  [ "$DRY_RUN" = "1" ] && say "(dry run: HNGH_OPT_DRY_RUN=1)" || say "run 'sweep' to prune the reclaimable set, or 'strip' to drop debug info."
 }
 
 stage_sweep() {
