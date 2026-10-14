@@ -114,6 +114,76 @@ awk -F'\t' -v OFS='\t' '$2=="fresh" && $6=="parked" && $5==2 {ok=1} END{exit !ok
  fail "blocker_tick unparked a row inside the cooldown window"
 ok "blocker_tick: parked row within cooldown stays parked"
 
+# --- (g1) blocker_row_gc: reclaims a row whose plan is no longer accepted --
+# The bug (2026-10-14): the ledger only ever cleared on success, so a scope
+# that died once and whose plan was later retired/done/executed/parked kept
+# its row forever. 16 of 25 live rows were dead on 2026-10-14.
+rm -f "$BLOCKERS"
+seed_row deadplan bad-execution 1
+seed_row liveplan bad-execution 1
+rm -f "$kernel"/docs/project/plans/*.plan.md
+mkdir -p "$kernel/docs/project/plans"
+plan_with_step liveplan 'touch the sandbox marker'
+printf '<!-- plan: status=executed risk=normal accepted=2026-09-01T00:00:00Z -->\n# done\n' \
+ >"$kernel/docs/project/plans/deadplan.plan.md"
+BEAT_BLOCKERS_FILE="$BLOCKERS" blocker_row_gc "$kernel/docs/project/plans"
+grep -q 'deadplan' "$BLOCKERS" && fail "blocker_row_gc kept a row whose plan is executed"
+grep -q 'liveplan' "$BLOCKERS" || fail "blocker_row_gc reclaimed a row whose plan is still accepted"
+[ "$(wc -l <"$BLOCKERS")" -eq 1 ] || fail "blocker_row_gc left $(wc -l <"$BLOCKERS") rows, expected 1"
+ok "blocker_row_gc reclaims the dead row, keeps the live one"
+
+# --- (g2) blocker_row_gc never touches a scope with no plan file ------------
+# Lane scopes (overnight, overnight-silence, research:<id>, publication:<f>)
+# never have a plan file. "no plan" must NOT read as "dead row" -- the first
+# draft had this inverted and would have deleted every lane scope.
+rm -f "$BLOCKERS"
+seed_row overnight bad-execution 1
+seed_row overnight-silence bad-execution 1
+seed_row 'research:2026-09-01T00:00:00Z' redaction-failed 1
+seed_row 'publication:2026-10-12.md' review-red 1
+seed_row 'a-plan-that-was-deleted' bad-execution 1
+BEAT_BLOCKERS_FILE="$BLOCKERS" blocker_row_gc "$kernel/docs/project/plans"
+for s in overnight overnight-silence 'research:2026-09-01T00:00:00Z' \
+  'publication:2026-10-12.md' 'a-plan-that-was-deleted'; do
+ grep -qF "$s" "$BLOCKERS" || fail "blocker_row_gc reclaimed plan-less scope '$s'"
+done
+[ "$(wc -l <"$BLOCKERS")" -eq 5 ] || fail "blocker_row_gc changed the plan-less row count"
+ok "blocker_row_gc leaves every plan-less (lane) scope alone"
+
+# --- (g3) blocker_row_gc reclaims a router-parked plan's row ---------------
+rm -f "$BLOCKERS"
+seed_parked_row parkedplan bad-execution 2 "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf '<!-- plan: status=parked risk=normal accepted=2026-09-01T00:00:00Z cause=obsolete -->\n# parked\n' \
+ >"$kernel/docs/project/plans/parkedplan.plan.md"
+BEAT_BLOCKERS_FILE="$BLOCKERS" blocker_row_gc "$kernel/docs/project/plans"
+grep -q 'parkedplan' "$BLOCKERS" &&
+ fail "blocker_row_gc kept a row whose plan the router parked"
+ok "blocker_row_gc reclaims a router-parked plan's row"
+
+# --- (g4) blocker_row_gc is fail-closed on a missing plans dir -------------
+rm -f "$BLOCKERS"
+seed_row keepme bad-execution 1
+BEAT_BLOCKERS_FILE="$BLOCKERS" blocker_row_gc "$td/no-such-dir"
+grep -q 'keepme' "$BLOCKERS" ||
+ fail "blocker_row_gc dropped the whole ledger when the plans dir was absent"
+ok "blocker_row_gc fails closed when the plans dir is absent"
+
+# --- (g5) the beat reclaims on its own (integration, not just the unit) -----
+rm -f "$BLOCKERS"
+rm -f "$MARKER"
+crumbs_reset
+rm -rf "$td/ff"
+rm -f "$kernel"/docs/project/plans/*.plan.md
+seed_row rotdead bad-execution 1
+plan_with_step rotlive 'touch the sandbox marker'
+printf '<!-- plan: status=executed risk=normal accepted=2026-09-01T00:00:00Z -->\n# done\n' \
+ >"$kernel/docs/project/plans/rotdead.plan.md"
+DREAM_OUT="$auto/prompts/overnight/rotlive.dream.md" run_cycle >/dev/null 2>&1
+[ "$?" -eq 0 ] || fail "gc cycle exited non-zero"
+grep -q 'rotdead' "$BLOCKERS" &&
+ fail "the overnight beat did not reclaim the dead row at beat start"
+ok "the overnight beat reclaims dead rows at beat start"
+
 # --- (u3) unparked plan re-enters the rotation ------------------------------
 rm -f "$MARKER"
 crumbs_reset

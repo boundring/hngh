@@ -926,3 +926,61 @@ exactly like a lane with nothing to do.** Absence of alerts is not
 evidence of absence of work. When an automation never once produces an
 alert, "working" and "structurally incapable" are the same observation
 until something actually goes red.
+
+## 2026-10-14 — The blocker ledger only ever cleared on success, so 16 of 25 rows were dead weight
+
+Triage of `automation/state/beat-blockers.tsv` (the orchestrator's own
+lifecycle ledger, as-above-so-below 2026-09-11) found every row accounted
+for, and most of them dead:
+
+| class | rows |
+|---|---|
+| scope names no plan file (lane scopes: `overnight`, `overnight-silence`, `research:*`, `publication:*`) | 5 |
+| plan file exists but is `executed` / `done` / `parked` | 16 |
+| plan still `accepted` and rotating | 4 |
+
+**Why they accumulated.** The ledger's only clearing path was
+`blocker_clear`, called on *success* by the overnight remediation loop
+(`automation/scripts/overnight-cycle.sh:1163`), the research beat
+(`automation/cadence/hour/33-research-beat.sh:1098,1232`) and the
+publication review (`26-publication-review.sh:53`). A scope that died
+once and whose plan was then finished, retired or parked by the router
+had no clearing path at all — nothing else ever touched the row. Oldest
+surviving row: 32 days. The cost was not disk. The rows are rendered
+into the public digest (`automation/jobs/digest-public.py:176-211`),
+so 21 stale rows read as "the operator owes you something" when the
+truth was that 5 lanes were actually blocked.
+
+**The fix is `blocker_row_gc` in `automation/lib/beat-blockers.sh`**,
+called at beat start beside `blocker_tick`
+(`automation/scripts/overnight-cycle.sh:663`) so it runs *before* the
+rotation scan. A row is dead only when a plan file for its scope exists
+on disk and its front-matter no longer says `status=accepted`.
+
+**The load-bearing decision, and why the first draft had it backwards.**
+The first draft called a row dead when its plan file was *missing*. That
+is exactly backwards: lane scopes (`overnight`, `overnight-silence`,
+`research:<id>`, `publication:<artifact>`) never have plan files, and
+"no plan" is their normal state. That draft would have silently deleted
+every lane scope in the ledger while leaving the actual dead rows. The
+predicate is therefore one-directional — GC only judges scopes it can
+*find* a plan for, and leaves every plan-less scope untouched. Test
+case (g2) in `automation/tests/test-beat-blockers.sh` pins this
+specifically, with a scope named `a-plan-that-was-deleted` to make the
+distinction explicit.
+
+**Verification.** Red-then-green proven by stashing both files and
+re-running the contract suite: old code `FAIL: blocker_row_gc kept a row
+whose plan is executed`, exit 1; new code 12/12 ok. Against a copy of
+the real live ledger the GC reclaimed 16 rows and kept all 9 survivors
+(5 lane scopes, 4 live rotation rows) — the predicted 16, no
+collateral. Fail-closed: a missing plans dir leaves the ledger byte-
+identical (case g4), and the rewrite is atomic via `mv` on a temp file,
+matching `blocker_park` / `blocker_clear`.
+
+**Generalizable lesson.** A ledger whose only clearing path is
+"success" will accumulate rows for every work item that ends any other
+way. Finishing, being superseded, and being abandoned are all non-
+success endings, and all three are ordinary. Any queue that reports to
+a human needs a reaper, or "the queue has 25 items" silently becomes a
+measure of how long the repo has existed.

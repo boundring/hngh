@@ -83,6 +83,68 @@ blocker_tick() { # [hours] -> unpark rows whose last update is older than the co
   ' "$f" >"$f.tmp.$$" 2>/dev/null && mv "$f.tmp.$$" "$f" || rm -f "$f.tmp.$$"
 }
 
+blocker_row_gc() { # [plans_dir] -> reclaims rows whose plan can no longer run
+ # The ledger only ever cleared a row on success (blocker_clear) or an
+ # explicit park, so a scope that died once and then had its plan
+ # retired/finished stayed forever. Measured 2026-10-14 on the live
+ # ledger: 25 rows, 21 of them naming a plan that is gone, executed,
+ # or done -- dead weight that still reads as "the operator owes you
+ # something" in the public digest. GC reclaims them at beat start
+ # (beside blocker_tick) so the queue reports LIVE blockers only.
+ # Scope namespaces: research:<id>, publication:<artifact> and the
+ # overnight lane rows (overnight, overnight-silence) are NOT plan
+ # files -- their own beats own them (26-publication-review.sh,
+ # 33-research-beat.sh pass_line, the remediation loop). GC therefore
+ # only considers a scope when a plan file for it exists on disk; a
+ # scope naming no plan is never the GC's to judge, because "no plan"
+ # is the normal state for a lane scope. That inverts the first draft:
+ # a missing plan file must NOT be read as a dead row.
+ # Fail-closed: if the rewrite fails the ledger is left exactly as it
+ # was (same discipline as blocker_park/blocker_clear).
+ local f="$BEAT_BLOCKERS_FILE" dir="${1:-$KERNEL/docs/project/plans}" keep drop
+ [ -f "$f" ] || return 0
+ [ -d "$dir" ] || return 0
+ keep="$(awk -F'\t' -v dir="$dir" '
+   # A row is DEAD only when its plan file exists and its front-matter no
+   # longer says accepted: the plan was retired, marked done, executed,
+   # or parked by the router. First line carries the plan status.
+   function dead(s,   path, line) {
+     if (index(s, ":") > 0) return 0          # namespaced scope
+     if (s == "") return 0                     # malformed row: leave alone
+     path = dir "/" s ".plan.md"
+     if ((getline line < path) <= 0) { close(path); return 0 }  # no plan = not ours
+     close(path)
+     return (line ~ /status=accepted/) ? 0 : 1
+   }
+   !dead($2) { print }
+ ' "$f" 2>/dev/null)" || return 0
+ drop="$(awk -F'\t' -v dir="$dir" '
+   function dead(s,   path, line) {
+     if (index(s, ":") > 0) return 0
+     if (s == "") return 0
+     path = dir "/" s ".plan.md"
+     if ((getline line < path) <= 0) { close(path); return 0 }
+     close(path)
+     return (line ~ /status=accepted/) ? 0 : 1
+   }
+   dead($2) { print $2 }
+ ' "$f" 2>/dev/null)"
+ [ -n "$drop" ] || return 0
+ printf '%s\n' "$keep" >"$f.gc.$$" 2>/dev/null && mv "$f.gc.$$" "$f" || {
+   rm -f "$f.gc.$$" 2>/dev/null
+   return 0
+ }
+ while IFS= read -r scope; do
+   [ -n "$scope" ] || continue
+   if command -v breadcrumb >/dev/null 2>&1; then
+    breadcrumb "beat-blockers" "row-gc" \
+     "reclaimed dead row '$scope' (its plan is retired, done, executed or parked); the queue reports live blockers only"
+   fi
+ done <<EOF
+$drop
+EOF
+}
+
 blocker_clear() { # scope -> success removes the row entirely
  local f="$BEAT_BLOCKERS_FILE"
  [ -f "$f" ] || return 0

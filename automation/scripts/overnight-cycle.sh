@@ -655,6 +655,12 @@ step_class() { # plan_file -> T1|T2|T3
 plan_slugs=() plan_files=() plan_steps=() prio_hi=() prio_hif=() prio_hist=()
 synth_slugs=() synth_files=() synth_steps=()
 blocker_tick "$(get_param blocker-park-cooldown-hours 24)"
+# reclaim rows whose plan has been retired/done/executed/parked since it
+# died (2026-10-14: 16 of 25 live rows). Runs beside blocker_tick, before
+# the rotation scan, so the plan loop below never sees a row for a plan
+# that is no longer accepted. A scope naming no plan file is left alone:
+# lane scopes (overnight, research:*, publication:*) never have one.
+blocker_row_gc "$KERNEL/docs/project/plans"
 for f in "$KERNEL"/docs/project/plans/*.plan.md; do
  [ -f "$f" ] || continue
  grep -q "status=accepted" "$f" 2>/dev/null || continue
