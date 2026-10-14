@@ -254,8 +254,11 @@ stage_census() {
   # 2026-10-13 sweep (paru 23 G, uv 13 G, yay 4.8 G) was one-time, and no
   # standing job is allowed to repeat it.
   #
-  # Top 12 only: huggingface alone is 119 G, and a census that lists every cache
-  # dir would bury the two numbers that actually need a decision.
+  # Top 12 only: huggingface alone is ~194 G, and a census that lists every
+  # cache dir would bury the two numbers that actually need a decision.
+  # (The figure was 119 G on 2026-10-13 and 194 G on 2026-10-14. Quote a day,
+  # never a bare size — this tree grew 75 G in one day, so an undated number
+  # in a comment is wrong within a week.)
   #
   # Paths print as ~/.cache/... rather than the absolute form du gives, because
   # this job's output is read by people and pasted into documents, and hngh's
@@ -266,8 +269,15 @@ stage_census() {
     say "$(printf '  %6s  ~%s' "$(du_of "$g")" "${g#"$HOME"/}")"
   done
 
+  # "model weights, fetch is slow" was wrong in the way that mattered: it said
+  # the tree was static, and it is not. Measured 2026-10-14, every one of the
+  # 180 G under hub/blobs/ was snapshot-reachable and zero blobs were orphaned,
+  # so there is nothing to clean up here — reclaiming is a decision about which
+  # models to keep, not a cleanup, and that decision is the operator's. It also
+  # grew 119 G -> 194 G in one day under `unsloth studio`, which is a downloader
+  # and a process, not this job's business.
   say ""
-  say "  ~/.cache/huggingface      — $(du_of "$HOME/.cache/huggingface")  model weights, fetch is slow"
+  say "  ~/.cache/huggingface      — $(du_of "$HOME/.cache/huggingface")  model weights; all snapshot-reachable, none orphaned — reclaim is a keep-list decision, not cleanup"
   say "  ~/.cargo/registry         — $(du_of "$HOME/.cargo/registry")  crate sources"
 
   say ""
