@@ -23,7 +23,7 @@ DEM_LIB="$root/lib/model-demote.sh"
 # OVERNIGHT_MODEL is scrubbed too, though nothing reads it since 2026-10-14:
 # a stray export must not be able to reach the selector even if a rung comes
 # back. Case 1 asserts exactly that.
-sed -n '/^best_bench_model() {/,/^}/p; /^select_model() {/,/^}/p' "$LIB_OC" >"$sb/select_model.snippet"
+sed -n '/^best_bench_model() {/,/^}/p; /^best_bench_model_ok() {/,/^}/p; /^select_model() {/,/^}/p' "$LIB_OC" >"$sb/select_model.snippet"
 
 sm() { # env assignments as KEY=VAL... then eval select_model
   env -u OVERNIGHT_MODEL -u OVERNIGHT_PAID_MODEL -u SESSION_MODEL_QUOTA_KEY_PRESENT \
@@ -104,6 +104,20 @@ with open("$sb/stats/model-bench-t.jsonl", "w") as fh:
     fh.write(json.dumps({"model": "$1", "score": 5, "ts": time.time()}) + "\\n")
 PY
 }
+# Seed two 5/5 models in one file, first-row demoted. The bench score is
+# binary (5 pass/fail probes), so every trustworthy row ties and the
+# selector must apply the demotion gate per candidate rather than keep
+# the first row it reads -- that bug put a demoted 9B ahead of two
+# healthy models and dropped unattended sessions to paid (2026-10-14).
+bench_seed_two() { # first-row-model second-model
+  mkdir -p "$sb/stats"
+  python3 - "$1" "$2" <<PY
+import json, time
+with open("$sb/stats/model-bench-t.jsonl", "w") as fh:
+    for m in ("$1", "$2"):
+        fh.write(json.dumps({"model": m, "score": 5, "ts": time.time()}) + "\\n")
+PY
+}
 bench_clear() { rm -f "$sb/stats"/model-bench-*.jsonl; }
 
 # 10a. T1 pins local-bench over a healthy configured quota row
@@ -170,6 +184,19 @@ ck "T1/T2 file no operator-item" "0" "$(wc -l <"$OPITEMS" | tr -d ' ')"
 bench_clear
 params 1 kimi:dead-leg
 ck "T1 bench-empty + unhealthy quota -> paid" "zai/glm-5.3|paid-fallback" "$(smc T1)"
+
+# 10l. bench ties on score (binary), so the demotion gate decides, not
+#      file order: a demoted first row must not sink the second 5/5 model
+bench_seed_two unsloth/first unsloth/second
+printf 'unsloth/first\t2\t1\tbad-execution\t20260914\n' >"$sb/state/model-demote.tsv"
+ck "demoted first 5/5 falls through to the second" "unsloth/second|local-bench" \
+  "$(smc T2)"
+# 10m. every 5/5 demoted -> paid fallback (not a silent empty bench)
+bench_seed_two unsloth/first unsloth/second
+printf 'unsloth/first\t2\t1\tbad-execution\t20260914\n' >"$sb/state/model-demote.tsv"
+printf 'unsloth/second\t2\t1\tbad-execution\t20260914\n' >>"$sb/state/model-demote.tsv"
+ck "all 5/5 demoted -> paid" "zai/glm-5.3|paid-fallback" "$(smc T2)"
+rm -f "$sb/state/model-demote.tsv"
 
 echo "---"
 [ "$fails" -eq 0 ] && echo "ALL PASS" || {

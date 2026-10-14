@@ -148,10 +148,21 @@ file_alert() { # identity text — the row is the contract; email is convenience
 #     (fail-closed, same convention as step_class).
 # Demotion (stall-recovery step 1) and health gates (step 9) apply to
 # every rung in every class.
-best_bench_model() { # stats_dir -> best fresh 5/5 bench model on stdout ("" none)
+best_bench_model() { # stats_dir -> every fresh 5/5 bench model on stdout, one
+# per line, best first ("" if none).
+# The bench score is binary: jobs/model-bench.sh scores exactly 5
+# pass/fail probes, so every trustworthy row reads 5 and "> top" can
+# never separate them. The selector therefore has to decide among
+# equals. It used to keep the FIRST 5/5 row of the freshest file, which
+# is bench order, and the first-benched model has been unsloth/Ornith-
+# 1.0-9B-GGUF on every 2026-10-1x day — so when the demotion gate
+# knocked out the 9B it knocked out the whole rung and unattended
+# sessions fell to paid despite two other 5/5 models being healthy
+# (2026-10-14). Emitting all of them lets select_model apply the
+# demotion gate per candidate.
  python3 - "$1" <<'PY'
 import glob, json, os, sys, time
-best, top = "", 0
+rows = {}
 cutoff = time.time() - 86400
 for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
     try:
@@ -164,10 +175,27 @@ for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
             r = json.loads(ln)
         except ValueError:
             continue
-        if r.get("score", 0) >= 5 and r.get("score", 0) > top:
-            best, top = r.get("model", ""), r["score"]
-print(best)
+        if r.get("score", 0) >= 5:
+            rows[r.get("model", "")] = r["score"]
+# sorted for determinism: equal scores have no inherent order, and a
+# stable order keeps the pick reproducible across beats and tests.
+for m in sorted(rows):
+    if m:
+        print(m)
 PY
+}
+# First fresh 5/5 bench model that is not demoted ("" if every one is).
+# The demotion gate belongs here, not at each call site: it is what
+# makes an unranked set of equal scores usable at all.
+best_bench_model_ok() {
+ local m
+ while IFS= read -r m; do
+  [ -n "$m" ] || continue
+  if [ "$(model_demoted "$m")" != 1 ]; then
+   printf '%s' "$m"
+   return 0
+  fi
+ done < <(best_bench_model "$1")
 }
 
 select_model() { # [class] -> "model|source" on stdout
@@ -186,12 +214,11 @@ select_model() { # [class] -> "model|source" on stdout
    "T3 step (deep intelligence) routed to a delegated session; the director should take it per docs/design/cost-tiering.md — decompose into T1/T2 or take over"
  fi
  # bench scan is shared by the T1 pin and the standard local-bench rung
- best="$(best_bench_model "$ROOT/stats")"
+ best="$(best_bench_model_ok "$ROOT/stats")"
  # T1 pins the local-bench rung BEFORE the quota rung: mechanical work
- # never burns quota unless the bench yields nothing (empty or its
- # model demoted) — then the T2 ladder applies ("unless bench is empty").
- if [ "$cls" = "T1" ] && [ -n "$best" ] &&
-  [ "$(model_demoted "$best")" != 1 ]; then
+ # never burns quota unless the bench yields nothing (empty or every
+ # candidate demoted) — then the T2 ladder applies.
+ if [ "$cls" = "T1" ] && [ -n "$best" ]; then
   printf '%s|local-bench\n' "$best"
   return 0
  fi
@@ -225,13 +252,14 @@ select_model() { # [class] -> "model|source" on stdout
     --identity "quota-leg-unhealthy:$q" --window 86400 >/dev/null 2>&1 || true
   done
  fi
- # standard bench rung (the T1 fall-through lands here on an empty or
- # demoted-but-unpinned scan: the demotion gate applies per rung)
- if [ -n "$best" ] && [ "$(model_demoted "$best")" != 1 ]; then
+ # standard bench rung (the T1 fall-through lands here when every
+ # candidate is demoted or the scan is empty)
+ if [ -n "$best" ]; then
   printf '%s|local-bench\n' "$best"
   return 0
  fi
- # bench leg demoted (or no bench): paid fallback, unless it too is demoted
+ # bench leg unavailable (or every candidate demoted): paid fallback,
+ # unless it too is demoted
  local paid="${OVERNIGHT_PAID_MODEL:-zai/glm-5.3}"
  if [ "$(model_demoted "$paid")" != 1 ]; then
   printf '%s|paid-fallback\n' "$paid"
