@@ -64,3 +64,17 @@ tmp*.tmp/
 hngh-fasttest-*.ok
 gn-profile-*.txt
 tmp*-tmp.txt
+
+# 2026-10-14: ImageMagick `import` debris. Running a Python file under bash
+# (`bash tests/foo.py`) makes its `import os` / `import re` lines execute
+# /usr/bin/import, which writes a 6.4M PostScript file named after the "image
+# filename" into the cwd. Observed once in this repo root (six files: os, re,
+# subprocess, sys, tempfile, unittest) and once in automation/. Both are silent:
+# the caller still exits 0. Ignore the pattern rather than chase every caller.
+/os
+/re
+/sys
+/tempfile
+/unittest
+/subprocess
+/*.ps
