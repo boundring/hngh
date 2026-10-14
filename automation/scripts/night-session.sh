@@ -27,12 +27,25 @@ if [ ! -f "$PROMPT_FILE" ]; then
   exit 0
 fi
 
-# Budget ceiling guard: at most MAX_SESSIONS paid sessions (≈ $30 zai credit).
-count="$(grep -c 'session-run' "$BUDGET" 2>/dev/null || true)"
+# Budget ceiling guard: at most MAX_SESSIONS paid sessions (≈ $30 zai credit)
+# PER UTC DAY, counting only this job's own label.
+#
+# 2026-10-14: the count was `grep -c 'session-run' "$BUDGET"` over the WHOLE
+# ledger, which every delegated session writes to. That file holds 803 rows
+# (night-agent's own rows are 0 — it has never run), so `count` was always
+# >= MAX_SESSIONS and this guard would have refused unconditionally, right
+# after the prompt-file guard. Two of three guards in this script were
+# fail-closed into permanent refusal and nobody noticed because both exit 0
+# and the timers journal success either way.
+#
+# The per-day shape mirrors the sibling job (scripts/overnight-cycle.sh:107):
+# filter to today's UTC date first, then to this label.
+today="$(date -u +%Y-%m-%d)"
+count="$(grep -F "$today" "$BUDGET" 2>/dev/null | grep -cF " | $LABEL | session-run" || true)"
 [ -z "$count" ] && count=0
 if [ "$count" -ge "$MAX_SESSIONS" ]; then
   breadcrumb "night-session.sh" "budget-cap" \
-    "refusing: $count session-run entries >= $MAX_SESSIONS"
+    "refusing: $count $LABEL session-run entries today >= $MAX_SESSIONS"
   exit 0
 fi
 
