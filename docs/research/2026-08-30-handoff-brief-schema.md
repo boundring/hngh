@@ -81,8 +81,9 @@ discipline (the ledger refuses `|` inside notes for exactly this reason —
 
 ## 5. Secondary framing
 
-`~/Projects/etc/20260830/09-runbook.md` (operator-authored,
-audited) was read as optional framing material. Its §7 "Key in-flight state"
+[09-runbook.md](../core/09-runbook.md) (operator-authored,
+audited; merged into this repo from the 2026-08-30 suite, which lived
+outside version control) was read as optional framing material. Its §7 "Key in-flight state"
 mirrors this schema's spirit — HEAD, uncommitted whitelisted dirt, gate
 state, what plan is executing — and its §2 maps where state lands. Its
 *framing* (state must be recoverable from a fixed, named list of places) is
@@ -110,8 +111,8 @@ Verified paths read for this beat (2026-08-31, `test -f` each):
   (Queue Next / Roadmap Next / Working tree / Last ceremony commit),
   `--run-start` objective + loadout limits, `--register` pipe-discipline
   refusal (fields 1, 3, 4, 5; §3)
-- `~/Projects/etc/20260830/09-runbook.md` — optional secondary
-  framing only (§5)
+- [`docs/core/09-runbook.md`](../core/09-runbook.md) — optional secondary
+  framing only (§5; merged into this repo from the 2026-08-30 suite)
 
 Live run: `hngh scripts/omp-bridge --orient` (verified read-only in source
 before running: it only reads the queue/roadmap files and runs

@@ -52,10 +52,11 @@ set_old 15m 50-research-overflow
 set_old hour 00-dashboard-self-review 05-ui-audit 10-router-feed 16-remote-push \
   20-workbeat 25-bead-beat 25-session-cost 30-kernel-ledger-sync \
   31-heartbeat 32-deck-facts 33-research-beat 40-gdelt-news \
-  35-news-ingest 41-newspaper-edition 42-dashboard-introspect
+  35-news-ingest 41-newspaper-edition 42-dashboard-introspect \
+  16a-systemd-units
 set_old day 01-activity-tick 01-lesson-harvest 02-ledger-prune 03-gate-check \
   04-review-prep 06-remote-posture 06-review-disposition \
-  07-budget-digest 08-doc-suite-check 09-email-digest 10-bench-fresh \
+  07-budget-digest 09-email-digest 10-bench-fresh \
   11-service-recovery 13-email-qa 14-plan-ledger-sync 15-resume-pass \
   16-curator-beat 17-torch-audit 18-mimic-drill 19-ux-review \
   20-model-saturation 21-context-ratio 22-ttsr-fit 23-bctx-canary \

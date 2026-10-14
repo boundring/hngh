@@ -79,7 +79,7 @@ Daily drop-ins (calendar/daily, one beat per script, lexical order):
 `01-activity-tick` · `01-lesson-harvest` · `02-ledger-prune` ·
 `03-gate-check` · `04-review-prep` · `06-remote-posture` ·
 `06-review-disposition` (sinks digest findings to the report queue) ·
-`07-budget-digest` · `08-doc-suite-check` · `09-email-digest` ·
+`07-budget-digest` · `09-email-digest` ·
 `10-bench-fresh` · `11-service-recovery` · `13-email-qa` ·
 `14-plan-ledger-sync` · `15-resume-pass` ·
 `17-torch-audit` · `18-mimic-drill` ·
