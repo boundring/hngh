@@ -1,13 +1,27 @@
-# The Hngh doc suite — 2026-08-30
+# Hngh doc suite — 2026-08-30 (archived index)
 
-Doc suite index v1.1, 2026-08-30 (revised after adversarial audit) · the machine-maintained changelog this suite carried is archived at
-`~/Projects/etc/jcode-sessions/2026-10-13/notes/20260830-doc-suite-CHANGELOG.md`
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
+Doc suite index v1.1, 2026-08-30 (revised after adversarial audit) · the
+machine-maintained changelog this suite carried is archived at
+`~/Projects/etc/hngh-related/jcode-sessions/2026-10-13/notes/20260830-doc-suite-CHANGELOG.md`
 (the day-tier verifier that wrote it is deleted; see the handoff §3.3).
 
-Part of the `~/Projects/etc/20260830` day set. **Start at
-[00-introduction.md](00-introduction.md)** — it indexes this suite with
-guided reading paths. Each doc is self-contained on its subject and carries
-file/record references for every claim, like the originals they grew from.
+**This index is a 2026-08-30 snapshot, not the current documentation map.** The
+files below now live in three trees of this repo — `docs/core/` (kernel and
+runbook), `docs/design/` (machine and governance), `docs/project/` (roadmap and
+investigation) — and the suite's own directory is gone. For how Hngh is
+documented *now*, start at [`docs/README.md`](../README.md) and
+[`architecture-index.md`](../architecture-index.md).
+
+**Start at [00-introduction.md](00-introduction.md)** — it indexes this suite
+with guided reading paths. Each doc is self-contained on its subject and
+carries file/record references for every claim, like the originals they grew
+from.
 
 ## The suite
 
