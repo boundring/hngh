@@ -103,11 +103,23 @@ launch_session() { # slug objective prompt_file [role] (env: STORE TIMEOUT_S SES
   # never a failed launch.
   bctx_bin="$(command -v bili || true)"
   if [ -z "$bctx_bin" ]; then
-   omp_bin="$(command -v omp || true)"
-   [ -n "$omp_bin" ] || omp_bin="$HOME/.bun/bin/omp"
    breadcrumb "launch-session" "bctx-absent" \
     "bctx: bili absent — launching uncompressed"
   fi
+ fi
+ # omp_bin is needed by every omp fallback leg, which is a DIFFERENT set
+ # from the legs that prefer bili. Resolving it only inside the
+ # bili-absent branch (pre-2026-10-14) left it empty whenever bili WAS
+ # present, so the opencode-executor fallback at the bottom ran
+ # `timeout "$TIMEOUT_S" "" -p --model ...` and every such session died
+ # with `timeout: failed to run command '': No such file or directory`
+ # while still recording a budget row. Measured: 14 overnight logs
+ # carry that signature, and every overnight session since
+ # 2026-10-12T12:35Z was one. Resolve unconditionally; the bili path
+ # stays the preferred launch, this is just the fallback's executable.
+ if [ -z "$omp_bin" ]; then
+  omp_bin="$(command -v omp || true)"
+  [ -n "$omp_bin" ] || omp_bin="$HOME/.bun/bin/omp"
  fi
 
  mkdir -p "${STORE:?STORE unset}" "$ROOT/prompts/overnight" "$ROOT/logs"

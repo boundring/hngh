@@ -470,6 +470,49 @@ class OcgoLaunch(unittest.TestCase):
         self.assertFalse(self.oc_marker.exists())
         self.assertIn("-p --model", self.omp_marker.read_text())
 
+    def test_omp_fallback_resolves_omp_with_bili_present(self):
+        # 2026-10-14: omp_bin used to be resolved ONLY inside the
+        # bili-absent branch, so whenever bili WAS on PATH every omp
+        # fallback leg spawned `timeout "" -p --model ...` and died with
+        # `timeout: failed to run command ''` — while still writing a
+        # budget row, so it read as "ran". Every other test in this file
+        # pins OMP_BIN_CMD and therefore never reached the resolution.
+        # This one lets the real PATH resolution run, with bili present.
+        #
+        # PATH is scoped to self.td + the system dirs ON PURPOSE: this.td
+        # holds the omp stub, and the operator's real omp install must
+        # NOT be reachable, or a "hermetic" test spends real money.
+        # lint-home-paths keeps that path out of this comment.
+        bili = self.td / "bili"
+        bili.write_text('#!/usr/bin/env bash\nexit 0\n')
+        bili.chmod(0o755)
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\nsession-executor\topencode\ttest\tarmed\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OMP_BIN_CMD=None,
+                        PATH="%s:/usr/bin:/bin" % self.td)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(self.oc_marker.exists())
+        # The old code reached `timeout "" ...`, so the stub was never
+        # invoked and the marker was never created. Report that as the
+        # empty-command failure it is, not as a missing file.
+        self.assertTrue(self.omp_marker.exists(),
+                        "omp stub never ran — omp_bin resolved empty "
+                        "(bili present but not on this PATH, so the "
+                        "pre-2026-10-14 branch left omp_bin unset)")
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
+    def test_omp_fallback_resolves_omp_with_bili_absent(self):
+        # same contract on the other side of the branch: no bili on PATH,
+        # no OMP_BIN_CMD, PATH discovery must still land on the omp stub.
+        (self.auto / "cadence-params.tsv").write_text(
+            "# Inventory\nsession-executor\topencode\ttest\tarmed\n")
+        r = self.launch(HNGH_SESSION_EXECUTOR="opencode",
+                        OMP_BIN_CMD=None,
+                        PATH="%s:/usr/bin:/bin" % self.td)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("-p --model", self.omp_marker.read_text())
+
     def _assert_key_never_on_argv(self, env_extra, key_name, key_value,
                                   marker_keylen):
         # e1 finding #3 (2026-09-16): the provider key VALUE must never
