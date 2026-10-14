@@ -78,6 +78,12 @@ case "$p" in
  */api/inference/status) status=200; resp='{"context_length":65536}' ;;
  */stub-xiaomi*) status=200
   resp='{"choices":[{"message":{"content":"xiaomi-says-hi"}}],"usage":{"prompt_tokens":3,"completion_tokens":2}}' ;;
+ */stub-minimax*) status=200
+  # MiniMax-M3 inlines reasoning into .choices[0].message.content
+  # (measured live 2026-10-14), so the stub answers the same shape:
+  # the jq strip in minimax_chat is only proven if the reply on the
+  # wire actually carries a leading <think> block.
+  resp='{"choices":[{"message":{"content":"<think>\nThe user asked me to say ok.\n</think>\n\nminimax-says-hi"}}],"usage":{"prompt_tokens":3,"completion_tokens":2}}' ;;
  */v1/chat/completions) status=200
   resp='{"choices":[{"message":{"content":"unsloth-says-hi"}}],"usage":{"prompt_tokens":3,"completion_tokens":2},"finish_reason":"stop"}' ;;
  *) status=404; resp='{}' ;;
@@ -124,6 +130,7 @@ leg() { # model.sh code [K=V ...] -> stdout of one sandbox run
   export UNSLOTH_URL="http://127.0.0.1:1/studio" MODEL=stub-model MODEL_TIMEOUT=5
   unset MODEL_CTX HNGH_LOADCTX_PIN FAKE_LOAD_STATUS
   unset XIAOMI_AI_API_KEY XIAOMI_URL XIAOMI_MODEL XIAOMI_KEY_FILE
+  unset MINIMAX_API_KEY MINIMAX_URL MINIMAX_MODEL MINIMAX_KEY_FILE MINIMAX_DAILY_CAP_CALLS
   code="$1"
   shift
   for kv in "$@"; do export "$kv"; done
@@ -184,6 +191,39 @@ ck "xiaomi armed: exactly one POST" "1" "$(hits 'stub-xiaomi')"
 ck "xiaomi armed: MODEL_USED tagged" "xiaomi:mimo-v2.6-pro" "$(cat "$sb/tmp-modelused.txt" 2>/dev/null)"
 ck "xiaomi argv hygiene: key never on curl argv" "0" "$(count 'stub-xiaomi-key-never-real' "$fake/curl-argv.log")"
 ck "xiaomi argv hygiene: key never on report-queue argv" "0" "$(count 'stub-xiaomi-key-never-real' "$FAKE_QUEUE_LOG")"
+
+# (e2) minimax leg (2026-10-14, Q4): same contract as xiaomi -- no key
+#      fails closed, armed answers exactly one POST, the body carries
+#      the provider-native thinking-off flag AND the jq strips a leading
+#      <think> block (MiniMax-M3 inlines reasoning into content), and
+#      the key never rides an argv. Unarmed is the shipped state today:
+#      no ~/.config/hngh/minimax-key exists, so the fail-closed case is
+#      the real-world case and it must be silent, not an alert.
+reset_logs
+rm -f "$sb/tmp-modelused.txt"
+leg '_minimax_leg "say ok" 16' MINIMAX_URL="http://127.0.0.1:1/stub-minimax/v1/chat/completions" MINIMAX_MODEL=MiniMax-M3 >/dev/null
+ck "minimax no key: zero minimax POSTs" "0" "$(hits 'stub-minimax')"
+ck "minimax no key: MODEL_USED not minimax:" "0" "$(count '^minimax:' "$sb/tmp-modelused.txt")"
+reset_logs
+rm -f "$sb/tmp-modelused.txt"
+reply="$(leg '_minimax_leg "say ok" 16' MINIMAX_API_KEY=stub-minimax-key-never-real \
+ MINIMAX_URL="http://127.0.0.1:1/stub-minimax/v1/chat/completions" \
+ MINIMAX_MODEL=MiniMax-M3 MINIMAX_DAILY_CAP_CALLS=60)"
+ck "minimax armed: exactly one POST" "1" "$(hits 'stub-minimax')"
+ck "minimax armed: MODEL_USED tagged" "minimax:MiniMax-M3" "$(cat "$sb/tmp-modelused.txt" 2>/dev/null)"
+ck "minimax armed: native thinking-off in body" "1" "$(hits '"thinking":[[:space:]]*{"type":[[:space:]]*"disabled"}')"
+ck "minimax armed: <think> block stripped from reply" "minimax-says-hi" "$reply"
+ck "minimax argv hygiene: key never on curl argv" "0" "$(count 'stub-minimax-key-never-real' "$fake/curl-argv.log")"
+ck "minimax argv hygiene: key never on report-queue argv" "0" "$(count 'stub-minimax-key-never-real' "$FAKE_QUEUE_LOG")"
+# cap 0 blocks the leg forever (the same dead-leg shape as ocgo); the
+# shipped default row is 40, so the row itself has to be what admits it
+reset_logs
+rm -f "$sb/tmp-modelused.txt"
+leg '_minimax_leg "say ok" 16' MINIMAX_API_KEY=stub-minimax-key-never-real \
+ MINIMAX_URL="http://127.0.0.1:1/stub-minimax/v1/chat/completions" \
+ MINIMAX_MODEL=MiniMax-M3 MINIMAX_DAILY_CAP_CALLS=0 >/dev/null
+ck "minimax cap 0: leg stays blocked" "0" "$(hits 'stub-minimax')"
+ck "minimax cap 0: MODEL_USED not minimax:" "0" "$(count '^minimax:' "$sb/tmp-modelused.txt")"
 
 # (f) ocgo pacing gate (2026-09-22 quota-tier re-arm): cap 0 blocks the
 #     leg forever (the dead-leg shape that kept ocgo dark); a real cap

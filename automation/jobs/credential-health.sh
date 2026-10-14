@@ -357,6 +357,16 @@ sweep_seam zai "${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}" \
 	Z_AI_API_KEY
 sweep_seam xiaomi "${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}" \
 	XIAOMI_AI_API_KEY
+# minimax (2026-10-14, Q4): the leg is built and shipped but UNARMED --
+# no ~/.config/hngh/minimax-key exists and this job did not create one,
+# because the live credential belongs to oh-my-pi and moving it between
+# namespaces is the operator's decision. Registering the seam here is
+# what makes that state legible instead of invisible: without the row
+# the sweep would say nothing at all about a provider that now sits in
+# the model ladder, and "absent" would be indistinguishable from
+# "never wired". It reads as dormant until the key file appears.
+sweep_seam minimax "${MINIMAX_KEY_FILE:-$HOME/.config/hngh/minimax-key}" \
+	MINIMAX_API_KEY
 # --- 10. pinned-key freshness (slice E: peer admission wiring) ---
 # governed-fleet.md:248: "pinned-key freshness wiring for peer
 # admission". The lattice peer is keyed like a transport (pins +

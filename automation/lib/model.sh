@@ -9,8 +9,11 @@
 # (Z.AI subscription quota leg, 5h + weekly paced, see zai_chat) ->
 # xiaomi (Xiaomi MiMo token-plan quota leg, see xiaomi_chat) -> ocgo
 # (quota leg, OpenCode Go, every-window paced, see ocgo_chat) -> kimi
-# (quota leg, see kimi_chat) -> remote (budget-gated, see remote_chat)
-# -> ollama -> deck (param-gated, see deck_chat) -> archive-only.
+# (quota leg, see kimi_chat) -> minimax (MiniMax provider-credit quota
+# leg, see minimax_chat; armed only once an hngh-side credential seam
+# exists, unarmed it skips fail-closed) -> remote (budget-gated, see
+# remote_chat) -> ollama -> deck (param-gated, see deck_chat) ->
+# archive-only.
 # MODEL_PIN routes a call:
 #   local  unsloth -> ollama only (remote, deck, and the quota legs kimi/
 #          ocgo are skipped): news/ux-review/bench pin local
@@ -191,10 +194,22 @@ _post_chat() { # url jq_expr [bearer] [session_hdr] [noproxy_host] [cacert] -> c
 # thinking=1 leaves Qwen thinking enabled; thinking=0 sends enable_thinking:false
 # (harmless if the server ignores it — gets Qwen models to skip the reasoning
 # stage that otherwise eats the token budget).
-_json_body() { # model prompt max_tokens ollama(0|1) thinking(0|1) -> stdout
- python3 - "$1" "$2" "$3" "$4" "$5" <<'PY'
+_json_body() { # model prompt max_tokens ollama(0|1) thinking(0|1) native_think(0|1) -> stdout
+ # The 6th arg (2026-10-14, minimax_chat) is the PROVIDER-NATIVE
+ # thinking-off slot, defaulting to 0 so no existing caller's body
+ # changes byte-for-byte. It exists because MiniMax ignores
+ # chat_template_kwargs.enable_thinking -- measured 2026-10-14: with
+ # enable_thinking:false it still returned a leading
+ # "<think>\nThe user is asking me to say \"ok\"..." into
+ # .choices[0].message.content, while its own
+ # {"thinking":{"type":"disabled"}} returned clean "ok" with
+ # completion_tokens:1. So the flag this helper could already emit is
+ # not a cross-provider switch, and a leg that needs the reasoning
+ # gone must ask in the provider's own dialect.
+ python3 - "$1" "$2" "$3" "$4" "$5" "${6:-0}" <<'PY'
 import json, sys
 model, prompt, maxtok, ollama, thinking = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4] == "1", sys.argv[5] == "1"
+native_think = len(sys.argv) > 6 and sys.argv[6] == "1"
 msg = {"role": "user", "content": prompt}
 if ollama:
     body = {"model": model, "messages": [msg], "stream": False, "options": {"num_predict": maxtok}}
@@ -204,6 +219,8 @@ else:
     body = {"model": model, "messages": [msg], "max_tokens": maxtok, "temperature": 0.3}
     if not thinking:
         body["chat_template_kwargs"] = {"enable_thinking": False}
+    if native_think:
+        body["thinking"] = {"type": "disabled"}
 print(json.dumps(body))
 PY
 }
@@ -1025,6 +1042,83 @@ xiaomi_chat() { # prompt max_tokens -> 0 = answered
  printf '%s\n' "$content"
 }
 
+# minimax quota leg (2026-10-14, 99-QUESTIONS.md Q4). OpenAI-compatible
+# /v1/chat/completions at https://api.minimax.io, so _post_chat serves it
+# unchanged. Credential posture is the token-only seam every other quota
+# leg uses: env MINIMAX_API_KEY first, else a mode-600 key file. There is
+# NO key file in place today and this session did not create one -- the
+# live key belongs to oh-my-pi (~/.config/omp/agent.env, mode 600), and
+# moving it into hngh's namespace is the operator's call, not this
+# commit's. Until then every gate here fails CLOSED and the leg skips
+# silently: an unarmed leg must never look like a broken one.
+#
+# Two provider facts measured 2026-10-14 against the live API, both of
+# which shaped the body below:
+#   1. /v1/models returns MiniMax-M3, MiniMax-M2.7, MiniMax-M2.7-highspeed,
+#      MiniMax-M2.5, MiniMax-M2.5-highspeed. M3 is the reasoning-class
+#      model; it is NOT the MiniMax-H3 GGUF in the local bench fleet,
+#      which was dropped from BENCH_MODELS at 0/5 (7a4041e).
+#   2. M3 inlines its reasoning INTO .choices[0].message.content and
+#      ignores chat_template_kwargs.enable_thinking (see _json_body's
+#      6th arg). It DOES honour {"thinking":{"type":"disabled"}}, so that
+#      is what this leg sends (thinking arg 1 = the cross-provider flag
+#      is deliberately NOT used here). The jq below strips a leading
+#      <think> block anyway, because a reasoning turn can still leave
+#      one and hngh writes model replies into documents.
+#      The strip uses [^<]* rather than .*? for the block body, and
+#      that is not a style choice. On jq 1.8.2 (this box) a sub()
+#      pattern of "^\\s*<think>.*?</think>\\s*" does NOT match a
+#      multi-line block at all -- measured: it left "<think>\nabc\n
+#      </think>\nxy" untouched, while test() on the same pattern
+#      returned true. Same for the greedy .* form. [^<]* matches and
+#      strips. So the naive POSIX-ish spelling would have shipped a
+#      silent no-op that looked correct in review.
+minimax_chat() { # prompt max_tokens -> 0 = answered
+ local prompt="$1" max_tokens="$2" url model key kfile content
+ url="${MINIMAX_URL:-$(get_param minimax-endpoint '')}"
+ [ -n "$url" ] || return 1 # empty/absent endpoint: leg skipped fail-closed
+ model="${MINIMAX_MODEL:-$(get_param minimax-model '')}"
+ [ -n "$model" ] || return 1 # operator has not named the quota model yet
+ key="${MINIMAX_API_KEY:-}"
+ if [ -z "$key" ]; then
+  kfile="${MINIMAX_KEY_FILE:-$HOME/.config/hngh/minimax-key}"
+  if [ -f "$kfile" ]; then
+   if [ "$(stat -c %a "$kfile" 2>/dev/null)" != "600" ]; then
+    breadcrumb model "minimax" "key file too open (chmod 600 required) -> next backend"
+    return 1
+   fi
+   key="$(cat "$kfile" 2>/dev/null)"
+  fi
+ fi
+ [ -n "$key" ] || {
+  breadcrumb model "minimax" "no key (env MINIMAX_API_KEY / key file) -> next backend"
+  return 1
+ }
+ # daily-cap pacer (xiaomi_chat shape): the UTC-day pace counts
+ # kind=model/source=minimax telemetry, which this function emits on
+ # success, so direct callers are paced too, not just _minimax_leg.
+ # The cap row ships in the SAME commit as this leg because the pacer
+ # fails open on a missing row -- an uncapped leg is the defect Q4 was
+ # raised to prevent.
+ cap="${MINIMAX_DAILY_CAP_CALLS:-$(get_param minimax-cap-day 40)}"
+ pace="$(quota_pace_blocked minimax "$cap")"
+ if [ -n "$pace" ]; then
+  breadcrumb model "minimax" "quota pace: minimax used ${pace% *}/cap ${pace#* } -- deferring to next leg"
+  return 1
+ fi
+ content="$(
+  printf '%s' "$(_json_body "$model" "$prompt" "$max_tokens" 0 1 1)" |
+   _post_chat "$url" \
+    '(.choices[0].message.content // "") | sub("^\\s*<think>[^<]*</think>\\s*"; "")' \
+    "$key"
+ )" || {
+  breadcrumb model "minimax" "HTTP $(cat "$POST_CODE_FILE" 2>/dev/null) -> next backend"
+  return 1
+ }
+ _model_emit minimax "$model"
+ printf '%s\n' "$content"
+}
+
 # zai quota leg: call, tag MODEL_USED, persist tmp-modelused.txt, emit
 # one telemetry row (source=zai -- the shared Z.AI bucket pair). Shared
 # by the unpinned chain and MODEL_PIN=zai.
@@ -1049,6 +1143,20 @@ _xiaomi_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
  printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
  # telemetry emit lives inside xiaomi_chat (slice 5): direct callers
  # are pacer-visible; the leg adds only the MODEL_USED bookkeeping.
+ return 0
+}
+
+# minimax quota leg: call, tag MODEL_USED, persist tmp-modelused.txt.
+# Unpinned-tier position only -- like xiaomi, no MODEL_PIN value exists
+# for it. The telemetry emit lives inside minimax_chat (xiaomi_chat
+# shape) so that direct callers are pacer-visible too; the wrapper adds
+# only the MODEL_USED bookkeeping.
+_minimax_leg() { # prompt max_tokens -> 0 = answered (MODEL_USED set)
+ local mm
+ minimax_chat "$1" "$2" || return 1
+ mm="${MINIMAX_MODEL:-$(get_param minimax-model '')}"
+ MODEL_USED="minimax:$mm"
+ printf '%s' "$MODEL_USED" >"$MODEL_USED_FILE"
  return 0
 }
 
@@ -1220,14 +1328,21 @@ print('skip' if beat_skip_gate(sig) else 'keep')
   fi
  done
  # unpinned-tail ladder (2026-09-24 ops fold): ONE ordered leg list
- # (zai -> xiaomi -> ocgo -> kimi -> remote -> ollama -> deck) plus a
- # lane-membership check per leg. Each leg's skip-set names the pins
- # that exclude it from this lane -- the exact guard sets of the five
- # folded blocks (kimi keeps running under pin_deck).
+ # (zai -> xiaomi -> ocgo -> kimi -> minimax -> remote -> ollama ->
+ # deck) plus a lane-membership check per leg. Each leg's skip-set
+ # names the pins that exclude it from this lane -- the exact guard
+ # sets of the five folded blocks (kimi keeps running under pin_deck).
  # archive_only below is the always-on fall-through; a leg miss falls
  # through to the next leg.
+ # minimax sits AFTER the three proven legs and BEFORE paid remote
+ # (2026-10-14, Q4). That is deliberate and is the conservative
+ # insertion point: a provider nobody has run through this chain yet
+ # must not displace quota capacity that is already being spent, but
+ # provider-credit legs belong ahead of budget-gated paid openrouter.
+ # Unarmed (no credential seam yet) it costs one stat per call and
+ # falls through, which is the same silence xiaomi has always had.
  local _leg _skips _p _pv _skip
- for _leg in zai xiaomi ocgo kimi remote ollama deck; do
+ for _leg in zai xiaomi ocgo kimi minimax remote ollama deck; do
   case "$_leg" in
   kimi) _skips="review local kimi ocgo zai" ;;
   deck) _skips="review local deck" ;;
@@ -1244,6 +1359,7 @@ print('skip' if beat_skip_gate(sig) else 'keep')
   done
   [ "$_skip" = 1 ] && continue
   case "$_leg" in
+  minimax) _minimax_leg "$prompt" "$max_tokens" && return 0 ;;
   zai) _zai_leg "$prompt" "$max_tokens" && return 0 ;;
   xiaomi) _xiaomi_leg "$prompt" "$max_tokens" && return 0 ;;
   ocgo) _ocgo_leg "$prompt" "$max_tokens" && return 0 ;;
