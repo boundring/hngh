@@ -273,8 +273,30 @@ python3 "$AUTOMATION_ROOT/lib/vault-freshness.py" "$vault_ola" |
 # surface per seam (stat mode only, values never read); the live wire
 # probing stays in sections 1-6. Fail-soft: findings are identity-deduped
 # alert rows, never exits.
-sweep_seam() { # seam kfile -> 0
-  local seam="$1" kfile="$2" mode
+sweep_seam() { # seam kfile env_names... -> 0
+  # env_names are the env variables lib/model.sh reads BEFORE the key
+  # file for this leg. They are checked by NAME ONLY (never the value) and
+  # the sweep still stats the key file when one exists, so the token-only
+  # posture is unchanged: an env key and a mode-600 file are equally
+  # acceptable, and a too-open file is still an alert even when an env
+  # key would have answered.
+  #
+  # Without this the sweep LIES about four of the six seams. kimi
+  # (KIMI_AI_KEY|KIMI_FOR_CODING_KEY|MOONSHOTAI_API_KEY), ocgo
+  # (OPENCODE_API_KEY), zai (Z_AI_API_KEY) and xiaomi (XIAOMI_AI_API_KEY)
+  # are all env-first with the key file as fallback, and all four env keys
+  # are SET in the systemd user manager environment. Their key files are
+  # absent, so the sweep read "dormant (no key file present; leg skips
+  # fail-closed silently)" for legs that are live and being paid for. That
+  # is the same fail-open-on-missing-credential shape handoff §8.3 names,
+  # in the health check rather than in the leg.
+  local seam="$1" kfile="$2" mode envkey
+  shift 2
+  envkey=""
+  for envkey in "$@"; do
+    [ -n "${!envkey:-}" ] && { envkey="$envkey"; break; }
+    envkey=""
+  done
   if [ -n "$kfile" ] && [ -e "$kfile" ]; then
     mode="$(stat -c %a "$kfile" 2>/dev/null)"
     if [ "$mode" != "600" ]; then
@@ -282,8 +304,22 @@ sweep_seam() { # seam kfile -> 0
       return 0
     fi
     breadcrumb "$JOB_NAME" "seam-sweep" "$seam: token-only verified (key file 600; leg gate skips fail-closed on any other mode)"
+  elif [ -n "$envkey" ]; then
+    # Says "credential present", NOT "works". The sweep is a presence
+    # and posture check; whether the credential is accepted is the live
+    # probe in sections 1-6, which runs first and files its own alert.
+    # 2026-10-14 run: kimi read "present (KIMI_AI_KEY)" here while the
+    # probe above it returned http=401. One row must not imply the other
+    # answered.
+    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: token-only posture verified (credential present via env $envkey; key file $kfile absent; acceptance is the section 1-6 probe, not this row)"
+  elif [ "${HNGH_SEAM_PARKED:-}" = "$seam" ]; then
+    # Parked on purpose (handoff §8.3): the operator keeps the provider
+    # wired and available in oh-my-pi and wants it unused for now. Say so,
+    # in words a reader can act on, instead of letting "dormant" read the
+    # same as a leg that broke on its own.
+    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: PARKED by policy (no key file; leg is disabled by choice, not by failure — restore the key file to bring it back)"
   else
-    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: dormant (no key file present; leg skips fail-closed silently)"
+    breadcrumb "$JOB_NAME" "seam-sweep" "$seam: dormant (no key file and no env key; leg skips fail-closed silently)"
   fi
 }
 # kfile defaults mirror lib/model.sh's per-leg resolution exactly:
@@ -300,13 +336,27 @@ sweep_seam() { # seam kfile -> 0
 # The default is now declared once, in config.env, and read through the variable
 # it defines. Every other seam here keeps its inline default because model.sh
 # really does default those to the same paths itself.
-sweep_seam unsloth "${TOKEN_FILE:-}"
+#
+# remote is ALSO the one leg with no env fallback (model.sh:484 reads the
+# file and nothing else), which is what makes its "dormant" report true
+# today: OPENROUTER_API_KEY is set in the systemd environment but
+# remote_chat cannot see it. handoff §8.3 asks for that dormancy to be
+# explicit, so HNGH_SEAM_PARKED below makes it read as a choice rather
+# than as a leg that broke on its own. Restore the token file to bring
+# the leg back; nothing here needs changing to do it. The oh-my-pi
+# wiring is untouched and stays available.
+HNGH_SEAM_PARKED="${HNGH_SEAM_PARKED:-remote}"
+sweep_seam unsloth "${TOKEN_FILE:-}" UNSLOTH_API_KEY
 sweep_seam refresh "${REFRESH_FILE:-}"
 sweep_seam remote "${REMOTE_TOKEN_FILE:-$HOME/.hngh-automation/openrouter.token}"
-sweep_seam kimi "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}"
-sweep_seam ocgo "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
-sweep_seam zai "${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}"
-sweep_seam xiaomi "${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}"
+sweep_seam kimi "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}" \
+	KIMI_AI_KEY KIMI_FOR_CODING_KEY MOONSHOTAI_API_KEY
+sweep_seam ocgo "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}" \
+	OPENCODE_API_KEY
+sweep_seam zai "${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}" \
+	Z_AI_API_KEY
+sweep_seam xiaomi "${XIAOMI_KEY_FILE:-$HOME/.config/hngh/xiaomi-key}" \
+	XIAOMI_AI_API_KEY
 # --- 10. pinned-key freshness (slice E: peer admission wiring) ---
 # governed-fleet.md:248: "pinned-key freshness wiring for peer
 # admission". The lattice peer is keyed like a transport (pins +
