@@ -287,12 +287,22 @@ sweep_seam() { # seam kfile -> 0
   fi
 }
 # kfile defaults mirror lib/model.sh's per-leg resolution exactly:
-# remote model.sh:465 ($REMOTE_TOKEN_FILE), kimi model.sh:735,
+# remote model.sh:484-488 ($REMOTE_TOKEN_FILE), kimi model.sh:735,
 # ocgo model.sh:788, zai model.sh:908, xiaomi model.sh:971; unsloth/
 # refresh are the section-1 pair ($TOKEN_FILE/$REFRESH_FILE).
+#
+# remote was wrong until 2026-10-14 (handoff §8.3): this line carried its own
+# default of ~/.config/hngh/remote-key while model.sh and config.env:64 both
+# resolve ~/.hngh-automation/openrouter.token. Both paths are absent today, so
+# the sweep reported "dormant" and stayed consistent with the dead leg by
+# accident -- which is exactly how the real breakage stayed invisible. Restoring
+# the token would have restored the leg and left the sweep still blind to it.
+# The default is now declared once, in config.env, and read through the variable
+# it defines. Every other seam here keeps its inline default because model.sh
+# really does default those to the same paths itself.
 sweep_seam unsloth "${TOKEN_FILE:-}"
 sweep_seam refresh "${REFRESH_FILE:-}"
-sweep_seam remote "${REMOTE_TOKEN_FILE:-$HOME/.config/hngh/remote-key}"
+sweep_seam remote "${REMOTE_TOKEN_FILE:-$HOME/.hngh-automation/openrouter.token}"
 sweep_seam kimi "${KIMI_KEY_FILE:-$HOME/.config/hngh/kimi-key}"
 sweep_seam ocgo "${OPENCODE_KEY_FILE:-$HOME/.config/hngh/opencode-key}"
 sweep_seam zai "${ZAI_KEY_FILE:-$HOME/.config/hngh/zai-key}"
