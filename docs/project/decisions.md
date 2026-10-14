@@ -984,3 +984,37 @@ way. Finishing, being superseded, and being abandoned are all non-
 success endings, and all three are ordinary. Any queue that reports to
 a human needs a reaper, or "the queue has 25 items" silently becomes a
 measure of how long the repo has existed.
+
+## 2026-10-14 — A dry-run guard is only as good as the side effects it covers
+
+Chasing the duplicate-plan hypothesis above, I ran a `DRY_RUN=1` probe that
+called `router-tick.py`'s `route()` against the real plans directory. The
+probe was supposed to be read-only. It was not.
+
+`expire_stale_candidates` had no dry-run branch, so it marked **nine live
+plan files** `status=expired` while reporting nothing. I reverted them with
+`git checkout -- docs/project/plans/` and dropped the identity from the
+gitignored report-identities ledger.
+
+The failure mode is worth naming precisely: the router already guarded
+`report()`, `breadcrumb()`, the dispose bump, and the plan mint. Every
+guarded site was a *deliberate decision to act*. The one site that was not
+guarded was the one that looked like bookkeeping — so the incomplete guard
+list was invisible in review and only showed up when a read-only caller
+existed.
+
+The fix at `automation/scripts/router-tick.py:255-262` is a `DRY_RUN` branch
+that still computes and reports which candidates *would* be expired, then
+continues without writing. Pinned by
+`automation/tests/test-router-tick.py:248 test_dry_run_never_expires_stale_candidates`:
+it back-dates a candidate three days, runs a dry-run tick, asserts the file
+is byte-identical, and asserts the dry-run row still names the candidate.
+Red against the unguarded router (`FAILED (failures=1)`), green with the
+guard (32 router tests OK, `make test` 2957 checks).
+
+**The lesson generalizes past dry runs.** Any mutation entry point needs its
+own enumerated dry-run branch; inheriting the safety of its neighbours is
+not inheritance, it is a coincidence that lasts until the first unguarded
+callee. And a dry-run *mode* deserves the same adversarial testing as the
+real path — a rehearsal that mutates is worse than no rehearsal, because it
+destroys the state it claims to protect.

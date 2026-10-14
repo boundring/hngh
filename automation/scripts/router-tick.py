@@ -81,7 +81,7 @@ STEP_SUFFIX = re.compile(r":step-(\d+)$")
 # word; false negatives would leak.
 #
 # 2026-09-17 single-source re-point: the dash-form stem family and the
-# env seam live in lib/scrub.py (PATHY_STEMS / pathy_stems / 
+# env seam live in lib/scrub.py (PATHY_STEMS / pathy_stems /
 # scrub_truncate_pathy) so the research id seams share the exact
 # mechanism; PATHY_STEMS below is imported, not redefined. The
 # PATH_COMPONENTS heuristic stays router-local (plan-class identity
@@ -251,6 +251,14 @@ def expire_stale_candidates(identity):
         if status in TERMINAL_STATUS or status == "accepted":
             continue  # executed/rejected/expired or accepted: not re-expired
         if age < ttl:
+            continue
+        # dry-run must not rewrite the plans dir: a read-only probe that
+        # marks candidates expired changes the very state the caller is
+        # about to reason about (2026-10-14: a DRY_RUN route() probe
+        # expired 9 live plan files before the guard existed).
+        if os.environ.get("DRY_RUN") == "1":
+            if oldest is None or age > oldest[1]:
+                oldest = (name[:-8], age)
             continue
         mark_expired(path, text)
         expired_any = True

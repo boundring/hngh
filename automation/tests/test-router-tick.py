@@ -245,6 +245,28 @@ class RouterTick(unittest.TestCase):
         self.assertIn("status=proposed",
                       (self.plans / cand).read_text())
 
+    def test_dry_run_never_expires_stale_candidates(self):
+        """DRY_RUN=1 must not rewrite the plans dir.
+
+        2026-10-14: a read-only probe called route() with DRY_RUN=1 and
+        expire_stale_candidates had no dry-run branch, so the probe marked
+        nine live plan files status=expired. A dry-run guard is only as
+        good as the side effects it actually covers."""
+        stale = "2026-09-01-routed-fixture-identity.plan.md"
+        (self.plans / stale).write_text(
+            accepted_plan([(" ",)], status="proposed"))
+        old = time.time() - 3 * 86400  # well past the 24h ttl
+        os.utime(self.plans / stale, (old, old))
+        before = (self.plans / stale).read_text()
+        out = self.run_tick("fixture:identity", dry="1")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual((self.plans / stale).read_text(), before)
+        self.assertIn("status=proposed", before)
+        # the dry run still reports what a real run would have done
+        # (report() prints a [dry-run] row instead of writing the queue)
+        self.assertIn("[dry-run] row alert|router expired candidate", out.stdout)
+        self.assertIn("routed-fixture-identity", out.stdout)
+
     def test_refire_naming_missing_plan_files_nothing(self):
         out = self.run_tick("gate:plan:2026-08-31-missing:step-1")
         self.assertEqual(out.returncode, 0)
