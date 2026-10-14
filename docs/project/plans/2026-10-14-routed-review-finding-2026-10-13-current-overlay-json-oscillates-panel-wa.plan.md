@@ -1,4 +1,4 @@
-<!-- plan: status=proposed risk=normal accepted=- routed-from=review-finding:2026-10-13:current-overlay-json-oscillates-panel-wa -->
+<!-- plan: status=accepted risk=normal accepted=2026-10-14T04:35:29Z routed-from=review-finding:2026-10-13:current-overlay-json-oscillates-panel-wa -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-21T03:00:14Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
