@@ -106,9 +106,9 @@ Every one of these would have shipped broken.
    guard exists precisely to stop an un-budgeted leg entering the chain, and
    it fired on the new leg exactly as designed. Row added at
    `leg-budgets.tsv:37`.
-4. **`shellcheck` noise is pre-existing.** The four warnings on the touched
-   files are identical before and after (verified by stashing the diff and
-   re-running: 7 finding locations both ways). None are from this change.
+4. **`shellcheck` noise is pre-existing.** The four findings on the touched
+   files (SC2034, SC2148, SC2155, SC2163) are identical with the change
+   stashed, verified by count: 1/1/1/1 each way. None are from this change.
 
 ## Deliberately not done
 
