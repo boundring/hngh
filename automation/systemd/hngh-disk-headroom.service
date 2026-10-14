@@ -1,0 +1,16 @@
+[Unit]
+Description=hngh disk headroom census (monthly, report only)
+Documentation=file:%h/Projects/etc/hngh/automation/jobs/disk-headroom.sh
+
+[Service]
+Type=oneshot
+# Census only, and that is enforced by the shim rather than by an argument
+# here. disk-headroom.sh defaults to the census stage when it is given no stage
+# argument, so passing none is what keeps a scheduled run non-destructive --
+# there is no code path by which this unit can reach `sweep` or `strip`.
+#
+# The census writes one log per run to $HOME/.hngh/installer-logs/ via the job's
+# own log_begin, so there is nothing for journald to keep beyond the exit code.
+ExecStart=%h/.hngh/bin/hngh-disk-headroom
+
+Restart=no

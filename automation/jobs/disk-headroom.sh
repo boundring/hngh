@@ -166,6 +166,24 @@ strip_total() { # deps_dir -> bytes of strippable debug info
   printf '%s\n' "$n"
 }
 
+# Build-date distribution over the deps tree: one line per date, oldest first,
+# each carrying the file count and the bytes. This is the measurement that
+# separates "one big build" from "many small stale ones", which is the whole
+# question Tier 2 lever 1 turns on.
+#
+# Report only. Nothing in this function deletes, and nothing in this file acts on
+# what it prints -- the lever-1 policy is operator-owned (package F f8).
+#
+# mtime, not ctime: cargo writes artifacts once and hardlinks them, so ctime
+# tracks the link, not the build. Age here means "how long since this artifact
+# was produced", which is the quantity the lever is reasoning about.
+build_dates() { # deps_dir -> "YYYY-MM-DD count bytes" lines, oldest first
+  find "$1" -type f -printf '%TY-%Tm-%Td %s\n' 2>/dev/null |
+    awk '{ c[$1]++; s[$1] += $2 }
+         END { for (d in c) printf "%s %d %d\n", d, c[d], s[d] }' |
+    sort
+}
+
 stage_census() {
   say "disk-headroom census — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   say ""
@@ -194,12 +212,29 @@ stage_census() {
   # to run on a timer, stripping is not.
   say ""
   say "Tier 2 lever — strippable debug info in deps (strip stage removes it):"
-  local deps total
+  local deps total row d c b ndates
   deps="$CISTERN_ROOT/target/debug/deps"
   if [ -d "$deps" ]; then
     total="$(strip_total "$deps")"
     say "  $(human "$total") in unstripped ELF over ${STRIP_MIN_SIZE_MB}M"
     say "  $(strip_count "$deps") files"
+  else
+    say "  - (no deps tree)"
+  fi
+
+  # Tier 2 lever 1 is undecided (package F f8), so this table exists to make the
+  # decision possible rather than to pre-empt it. Capped at the 10 oldest dates
+  # because a deps tree accumulates one per build day and the interesting rows
+  # are always the old ones.
+  say ""
+  say "Tier 2 lever — deps build-date distribution (report only, nothing prunes):"
+  if [ -d "$deps" ]; then
+    ndates=0
+    while read -r d c b; do
+      ndates=$(( ndates + 1 ))
+      [ "$ndates" -le 10 ] && say "$(printf '  %-10s  %6s files  %8s' "$d" "$c" "$(human "$b")")"
+    done < <(build_dates "$deps")
+    say "  $(printf '(%s distinct build dates; oldest %s shown)' "$ndates" "$([ "$ndates" -gt 10 ] && echo 10 || echo "$ndates")")"
   else
     say "  - (no deps tree)"
   fi

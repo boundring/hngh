@@ -1,0 +1,19 @@
+[Unit]
+Description=hngh disk headroom census (monthly 04:20, report only)
+Documentation=file:%h/Projects/etc/hngh/automation/jobs/disk-headroom.sh
+
+[Timer]
+# 04:20 on the 1st of the month. Monthly is the right cadence here on purpose:
+# the census reads 14k+ paths in the deps tree and runs ~9s, but the numbers it
+# reports (growth per build date, strippable bytes) only move meaningfully over
+# weeks, and a daily log would be 365 rows of near-identical census a year.
+#
+# Persistent=true so a suspended machine still gets the month's census on
+# resume. RandomizedDelaySec is deliberately NOT set: this job competes for
+# disk with builds, so a fixed offset from the hour boundary is predictable,
+# which is worth more here than spreading load.
+OnCalendar=*-*-01 04:20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
