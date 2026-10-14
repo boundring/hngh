@@ -10,6 +10,12 @@
 # Stages:
 #   census   default — print the measured table, no mutation, no sudo
 #   sweep    prune the reclaimable set; requires a live-free check per tree
+#   strip    Tier 2 lever 2 — remove debug info from large ELF build artifacts
+#
+# sweep and strip are separate levers on the same tree and their savings must
+# never be added together: stripping is reversible only by a full rebuild, and
+# dropping stale variants changes what is left to strip. Run one, measure, then
+# decide on the other.
 #
 # Every run appends a per-stage log under
 # ${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}; the log is the review
@@ -21,6 +27,14 @@ set -u
 
 SCRIPT_NAME="disk-headroom.sh"
 LOGDIR="${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}"
+
+# Tier 2, lever 2. `strip -g` keeps the loadable segments and drops .debug_*,
+# which is the whole of the win: debug info is only read by a debugger, and a
+# build artifact is not something anyone debugs. The proven saving is 74%
+# (1.7 G -> 437 M, binary still launched Bevy and reported the RADV adapter).
+# Files below this size are not worth a temp copy and a rename.
+STRIP_MIN_SIZE_MB="${HNGH_OPT_STRIP_MIN_SIZE_MB:-100}"
+STRIP_FLAGS="${HNGH_OPT_STRIP_FLAGS:--g}"
 
 # The etc/ frame seam, same default as lib/common.sh:15. This job deliberately
 # does NOT source lib/common.sh: it must keep running even when the hngh tree
@@ -86,12 +100,70 @@ du_of() { # path -> human size, or "-" when absent
   du -sh "$1" 2>/dev/null | cut -f1 || printf -- '?\n'
 }
 
+# human <bytes> -> 437M. The census and the strip report both quote byte counts,
+# and `du -h` cannot be used for a single file's size without a second stat.
+human() { # bytes
+  awk -v b="${1:-0}" 'BEGIN {
+    split("B K M G T P", u, " ")
+    i = 1
+    while (b >= 1024 && i < 6) { b /= 1024; i++ }
+    printf (i == 1 ? "%d%s\n" : "%.1f%s\n"), b, u[i]
+  }'
+}
+
 # A build tree is prunable only when no process is using it. Cargo and rustc do
 # not hold the target dir open exclusively, so match on the owning binary name
 # and the tree path, which is what actually indicates a live build.
 build_busy() { # path
   local path="$1"
-  pgrep -af 'cargo|rustc' 2>/dev/null | grep -Fq "$path"
+  # $$ is excluded because a caller that reaches this job through a shell whose
+  # own command line mentions both cargo and this path would otherwise make the
+  # job skip itself forever.
+  pgrep -af 'cargo|rustc' 2>/dev/null | grep -v "^$$[ ]" | grep -Fq "$path"
+}
+
+# A binary under this tree that a live process is currently executing. Stripping
+# one of those replaces the inode a running process is holding open, so the
+# guard is not optional.
+deps_in_use() { # deps_dir
+  local link
+  for link in /proc/[0-9]*/exe; do
+    readlink "$link" 2>/dev/null || true
+  done | grep -F "$1/" | sort -u
+}
+
+# NUL-delimited for `read -d ''`, and counted here so the two call sites cannot
+# disagree about how many files qualify.
+strip_count() { # deps_dir
+  unstripped_big "$1" | tr '\0' '\n' | grep -c .
+}
+
+# Every ELF file at or above the threshold that still carries DWARF debug info.
+#
+# The selector is `with debug_info`, NOT file(1)'s bare `not stripped`. `strip -g`
+# keeps .symtab, so a fully stripped artifact still reads "not stripped" and
+# selecting on that word would make this stage re-strip the same 111 G forever
+# while the census kept reporting it as available. Only the debug_info clause
+# means there is something left to remove.
+#
+# Non-ELF files in deps (preallocated test fixtures that file(1) calls plain
+# "data", and .rlib ar archives) are excluded by construction, which is correct:
+# strip does not reclaim archive members here.
+unstripped_big() { # deps_dir
+  find "$1" -type f -size +"${STRIP_MIN_SIZE_MB}"M -print0 2>/dev/null |
+    while IFS= read -r -d '' f; do
+      if file -b "$f" 2>/dev/null | grep -q 'with debug_info'; then
+        printf '%s\0' "$f"
+      fi
+    done
+}
+
+strip_total() { # deps_dir -> bytes of strippable debug info
+  local f n=0
+  while IFS= read -r -d '' f; do
+    n=$(( n + $(stat -c %s "$f" 2>/dev/null || echo 0) ))
+  done < <(unstripped_big "$1")
+  printf '%s\n' "$n"
 }
 
 stage_census() {
@@ -117,6 +189,22 @@ stage_census() {
   say ""
   say "not reclaimable by this job:"
   say "  cistern target/debug/deps  — $(du_of "$CISTERN_ROOT/target/debug/deps")  current build artifacts"
+
+  # Tier 2 lever 2, reported but never acted on here: census-and-report is safe
+  # to run on a timer, stripping is not.
+  say ""
+  say "Tier 2 lever — strippable debug info in deps (strip stage removes it):"
+  local deps total
+  deps="$CISTERN_ROOT/target/debug/deps"
+  if [ -d "$deps" ]; then
+    total="$(strip_total "$deps")"
+    say "  $(human "$total") in unstripped ELF over ${STRIP_MIN_SIZE_MB}M"
+    say "  $(strip_count "$deps") files"
+  else
+    say "  - (no deps tree)"
+  fi
+
+  say ""
   say "  ~/.cache/huggingface      — $(du_of "$HOME/.cache/huggingface")  model weights, fetch is slow"
   say "  ~/.cargo/registry         — $(du_of "$HOME/.cargo/registry")  crate sources"
 
@@ -166,12 +254,91 @@ stage_sweep() {
   df -h "$HOME" 2>/dev/null | tail -1 | sed 's/^/  /'
 }
 
+# Tier 2 lever 2. Strips debug info out of large build artifacts. This is not a
+# prune: every file survives, only its .debug_* sections go, so a failed strip
+# leaves an unstripped binary rather than a broken one. Each file is stripped to
+# a sibling temp path and renamed into place only after it is verified to still
+# be a readable ELF, so an interrupted run cannot leave a truncated artifact.
+stage_strip() {
+  local deps="$CISTERN_ROOT/target/debug/deps"
+  [ -d "$deps" ] || { say "no deps tree at $deps"; return 0; }
+
+  if build_busy "$deps"; then
+    say "skip (build in flight): $deps"
+    return 0
+  fi
+
+  local busy
+  busy="$(deps_in_use "$deps")"
+  if [ -n "$busy" ]; then
+    say "skip (running process holds these binaries):"
+    printf '  %s\n' $busy
+    return 0
+  fi
+
+  local before after saved n=0 skipped=0 failed=0
+  before="$(strip_total "$deps")"
+  say "strippable: $(human "$before") across $(strip_count "$deps") files"
+
+  local f tmp
+  while IFS= read -r -d '' f; do
+    tmp="$f.dhstrip.$$"
+    # A hardlinked artifact is shared with a stable top-level path such as
+    # target/debug/<bin>, which is the one someone actually runs. Renaming over
+    # the deps copy would free nothing (the other name still holds the old
+    # inode) and would leave the two names pointing at different builds.
+    if [ "$(stat -c %h "$f")" -gt 1 ]; then
+      say "  left alone (hardlinked, shares an inode with a stable path): ${f#"$deps"/}"
+      skipped=$(( skipped + 1 ))
+      continue
+    fi
+    if [ "$DRY_RUN" = "1" ]; then
+      say "would strip $(human "$(stat -c %s "$f")") — ${f#"$deps"/}"
+      n=$(( n + 1 ))
+      continue
+    fi
+    if ! strip "$STRIP_FLAGS" -o "$tmp" "$f" 2>/dev/null; then
+      say "  FAILED to strip: ${f#"$deps"/}"
+      rm -f -- "$tmp" 2>/dev/null
+      failed=$(( failed + 1 ))
+      continue
+    fi
+    # Never replace an artifact with something that is not an ELF. A file that
+    # stopped being an ELF means the strip went wrong, and the original is
+    # still intact because the rename has not happened.
+    if ! file -b "$tmp" 2>/dev/null | grep -q 'ELF'; then
+      say "  DISCARDED (not an ELF after strip): ${f#"$deps"/}"
+      rm -f -- "$tmp" 2>/dev/null
+      failed=$(( failed + 1 ))
+      continue
+    fi
+    if [ "$(stat -c %s "$tmp")" -ge "$(stat -c %s "$f")" ]; then
+      say "  no saving, left alone: ${f#"$deps"/}"
+      rm -f -- "$tmp" 2>/dev/null
+      skipped=$(( skipped + 1 ))
+      continue
+    fi
+    mv -f -- "$tmp" "$f" || { rm -f -- "$tmp" 2>/dev/null; failed=$(( failed + 1 )); }
+    n=$(( n + 1 ))
+  done < <(unstripped_big "$deps")
+
+  say "stripped: $n  left-alone: $skipped  failed: $failed"
+  after="$(strip_total "$deps")"
+  saved=$(( before - after ))
+  say "reclaimed: $(human "$saved")"
+
+  say ""
+  [ "$DRY_RUN" = "1" ] && say "(dry run: nothing was stripped)"
+  df -h "$HOME" 2>/dev/null | tail -1 | sed 's/^/  /'
+}
+
 main() {
   local stage="${1:-census}"
   case "$stage" in
     census) log_begin census; stage_census ;;
     sweep)  log_begin sweep;  stage_sweep ;;
-    *) die "unknown stage '$stage' (use: census | sweep)" ;;
+    strip)  log_begin strip;  stage_strip ;;
+    *) die "unknown stage '$stage' (use: census | sweep | strip)" ;;
   esac
 }
 
