@@ -1,6 +1,12 @@
 # 06 — Observability: feeds, ledgers, watchers
 
-Doc suite v1.3, 2026-08-30 (revised after adversarial audit) · part of [README.md](../core/README-architecture.md). What the machine
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
+Doc suite v1.3, 2026-08-30 (revised after adversarial audit) · part of [suite index](../core/README-architecture.md). What the machine
 records about itself, where it lands, how alerts behave, and what the
 33h unattended window proved (including the 2026-08-30 fix set).
 

@@ -1,6 +1,12 @@
 # 04 — The automation machine (hngh-automation)
 
-Doc suite v1.2, 2026-08-30 (revised after adversarial audit) · part of the family indexed by [README.md](../core/README-architecture.md).
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
+Doc suite v1.2, 2026-08-30 (revised after adversarial audit) · part of the family indexed by [suite index](../core/README-architecture.md).
 Evidence: repo sources read this session; live `systemctl --user list-timers`
 (2026-08-30: all active, 0 failed).
 
