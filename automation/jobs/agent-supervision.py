@@ -62,6 +62,9 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "lib"))
+# one identity seam, same as patrol.py:61 — a row that quotes a machine
+# path must not carry the real home into tracked content
+from scrub import redact_home
 import report_queue  # the shared report-queue row shim (lib/report_queue.py)
 
 STATE_FILE = os.environ.get(
@@ -261,10 +264,21 @@ def ts_utc(epoch=None):
 
 def append_handoff(line):
     """One agent-handoffs.md row — the ledger agent-respawn.sh and the
-    overnight-lead same-cause rule read. Any fault is silent."""
+    overnight-lead same-cause rule read. Any fault is silent.
+
+    Every row goes through redact_home on the way out. The row text
+    embeds steer_reason(), which quotes a transcript toolResult
+    verbatim, and those results carry machine-local paths (2026-10-12:
+    three session-drop rows landed in docs/project/lessons-2026-10-12.md
+    quoting /home/<user>/.config/syncthing/... verbatim). agent-handoffs.md
+    is tracked content, so an unsanitized row fails
+    automation/scripts/lint-home-paths.py and blocks the next commit that
+    stages it. Redact at the write, not in the doc: the ledger is the
+    chokepoint every handoff row passes through, so fixing it here fixes
+    hygiene.py's rows and any future writer's too."""
     try:
         with open(HANDOFFS, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
+            f.write(redact_home(line) + "\n")
     except OSError:
         pass
 
@@ -851,6 +865,30 @@ def selfcheck():
     assert trailing_failures([["ok"], ["failed"], ["ok"]]) == 0
     assert trailing_same_cause([("s", "x"), ("s", "x")]) == ("s", "x", 2)
     assert trailing_same_cause([("s", "x"), ("s", "y")]) == ("s", "y", 1)
+    # handoff-row redaction: a steer_reason quotes a toolResult verbatim,
+    # so what lands in the ledger must not carry the real home. Exercises
+    # append_handoff itself (the chokepoint), not redact_home directly —
+    # a fixture on the helper passes even when the write is unsanitized.
+    import tempfile
+    leak = ("session-drop | 2026-10-12T00:29:21Z | supervision|omp-x | "
+            "stalled: steer: hard error result, no corrective step: "
+            "Path not found: %s/.config/syncthing/config.xml"
+            % os.path.expanduser("~"))
+    plain = "session-drop | t | supervision|x | no paths here"
+    with tempfile.TemporaryDirectory() as td:
+        saved, globals()["HANDOFFS"] = HANDOFFS, os.path.join(td, "h.md")
+        try:
+            append_handoff(leak)
+            append_handoff(plain)
+            with open(HANDOFFS, encoding="utf-8") as f:
+                rows = f.read().splitlines()
+        finally:
+            globals()["HANDOFFS"] = saved
+    assert len(rows) == 2, rows
+    assert os.path.expanduser("~") not in rows[0], rows[0]
+    assert rows[0].endswith("~/.config/syncthing/config.xml"), rows[0]
+    assert rows[0].count("|") == 4, rows[0]     # ledger row shape survives
+    assert rows[1] == plain, rows[1]           # no-path rows pass through
     assert trailing_same_cause([]) is None
     assert parse_dead_rows(
         "overnight-lead | 2026-09-25T00:00:00Z | slug-a|run-1 | "
