@@ -1498,9 +1498,9 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T00:05:46Z | progress | 7d0a9a61 | plan 2026-10-13-routed-ttsr-fit-2026-10-11T15-50-13-479Z_01a12ba8-50e7-7603-b6a7-9ad7ce6f283c auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T00:05:44Z expires=2026-10-21T00:05:46Z | 2026-10-14T00:05:46Z-progress-7d0a9a61.md |
 | 2026-10-14T00:05:46Z | progress | 6f345b92 | plan 2026-10-13-routed-ux-review-overnight-report-surface-missing auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T00:05:44Z expires=2026-10-21T00:05:46Z | 2026-10-14T00:05:46Z-progress-6f345b92.md |
 | 2026-10-14T01:00:00Z | progress | 566d99a1 | course pooled-hardware: card mounted, last increment 2026-10-14T00:00:00Z | 2026-10-14T01:00:00Z-progress-566d99a1.md |
-| 2026-10-14T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×21 | 2026-10-14T01:00:10Z-alert-ef49c9f7.md |
+| 2026-10-14T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×22 | 2026-10-14T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-14T02:00:00Z | progress | c3c9fbcd | course pooled-hardware: card mounted, last increment 2026-10-14T01:00:00Z | 2026-10-14T02:00:00Z-progress-c3c9fbcd.md |
-| 2026-10-14T02:00:29Z | progress | 9db52bae | news ingest ok: weather: clear, 19.3 C (open-meteo) ×19 | 2026-10-14T02:00:29Z-progress-9db52bae.md |
+| 2026-10-14T02:00:29Z | progress | 9db52bae | news ingest ok: weather: clear, 19.3 C (open-meteo) ×20 | 2026-10-14T02:00:29Z-progress-9db52bae.md |
 | 2026-10-14T02:00:30Z | progress | 320f458a | dashboard introspection grade 6/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) | 2026-10-14T02:00:30Z-progress-320f458a.md |
 | 2026-10-14T02:02:02Z | progress | 214c879d | digest 2026-10-13 2200: logs/email-digest-2026-10-13.md (sent=yes) | 2026-10-14T02:02:02Z-progress-214c879d.md |
 | 2026-10-14T02:55:57Z | alert | 16925fee | agent-supervision: omp-2026-10-14T02-30-06-239Z_01a-0d69f5 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T02:55:57Z ×56 | 2026-10-14T02:55:57Z-alert-16925fee.md |
@@ -1617,7 +1617,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T15:08:31Z | progress | 2c736e85 | agent-supervision: evicted-stale omp-2026-10-14T09-08-06-697Z_01a-296019 (idle 360m) expires=2026-10-21T15:08:31Z | 2026-10-14T15:08:31Z-progress-2c736e85.md |
 | 2026-10-14T16:00:00Z | progress | 703d58fb | course pooled-hardware: card mounted, last increment 2026-10-14T15:00:00Z | 2026-10-14T16:00:00Z-progress-703d58fb.md |
 | 2026-10-14T17:00:00Z | progress | 624db1a7 | course pooled-hardware: card mounted, last increment 2026-10-14T16:00:00Z | 2026-10-14T17:00:00Z-progress-624db1a7.md |
-| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×85 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
+| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×106 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
 | 2026-10-14T18:00:00Z | progress | 5fa51854 | course pooled-hardware: card mounted, last increment 2026-10-14T17:00:00Z | 2026-10-14T18:00:00Z-progress-5fa51854.md |
 | 2026-10-14T19:00:00Z | progress | 9dfde2f4 | course pooled-hardware: card mounted, last increment 2026-10-14T18:00:00Z | 2026-10-14T19:00:00Z-progress-9dfde2f4.md |
 | 2026-10-14T19:28:24Z | progress | 0bd15313 | digest 2026-10-14 1530: logs/email-digest-2026-10-14.md (sent=yes) | 2026-10-14T19:28:24Z-progress-0bd15313.md |
@@ -1625,7 +1625,8 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T20:06:51Z | alert | 5c903edd | [oversight] slow-unit: hngh-automation.service wall=356.2s median=58.1s ×10 | 2026-10-14T20:06:51Z-alert-5c903edd.md |
 | 2026-10-14T20:17:32Z | progress | d631c54d | plan 2026-09-16-routed-ui-audit-axe-color-contrast-5 executed (all steps checked) | 2026-10-14T20:17:32Z-progress-d631c54d.md |
 | 2026-10-14T20:21:43Z | progress | 5ecde53c | plan 2026-09-16-routed-ui-audit-axe-color-contrast-4 executed (all steps checked) | 2026-10-14T20:21:43Z-progress-5ecde53c.md |
-| 2026-10-14T20:23:29Z | alert | 2c53dde9 | agent-supervision: omp-2026-10-14T20-00-18-195Z_01a-817055 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T20:23:28Z ×8 | 2026-10-14T20:23:29Z-alert-2c53dde9.md |
+| 2026-10-14T20:23:29Z | alert | 2c53dde9 | agent-supervision: omp-2026-10-14T20-00-18-195Z_01a-817055 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T20:23:28Z ×18 | 2026-10-14T20:23:29Z-alert-2c53dde9.md |
 | 2026-10-14T21:00:00Z | progress | 9383fcac | course pooled-hardware: card mounted, last increment 2026-10-14T20:00:00Z | 2026-10-14T21:00:00Z-progress-9383fcac.md |
 | 2026-10-14T21:00:12Z | progress | e7999c65 | router routed supervision:omp-2026-10-14T20-00-18-195Z_01a-817055:stalled -> plan candidate 2026-10-14-routed-supervision-omp-2026-10-14T20-00-18-195Z_01a-817055-stalled (routed-at 2026-10-14T21:00:12Z) expires=2026-10-21T21:00:12Z | 2026-10-14T21:00:12Z-progress-e7999c65.md |
 | 2026-10-14T21:05:42Z | progress | 5829ae16 | plan 2026-10-14-routed-supervision-omp-2026-10-14T20-00-18-195Z_01a-817055-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T21:05:42Z expires=2026-10-21T21:05:42Z | 2026-10-14T21:05:42Z-progress-5829ae16.md |
+| 2026-10-14T22:00:00Z | progress | d2c196c4 | course pooled-hardware: card mounted, last increment 2026-10-14T21:00:00Z | 2026-10-14T22:00:00Z-progress-d2c196c4.md |
