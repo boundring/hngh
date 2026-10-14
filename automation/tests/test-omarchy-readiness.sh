@@ -36,7 +36,7 @@ exit "${PACMAN_RC:-0}"
 EOF
 chmod +x "$sb/stubbin/pacman"
 
-clone="$home/Projects/etc/omarchy-upstream"
+clone="$home/Projects/etc/hngh-related/omarchy-upstream"
 
 seed_clone() { [ "$1" = yes ] && mkdir -p "$clone/.git" || rm -rf "$clone"; }
 seed_manifest() { # text ("" deletes)

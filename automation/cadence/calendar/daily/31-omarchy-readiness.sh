@@ -11,7 +11,7 @@
 # Boolean layout in the row text:
 #   phase1 a=<clone> b=<manifest>(<n>) c=<hyprland> d=<session> e=<pins>
 #     a: upstream clone at $OMARCHY_UPSTREAM_DIR (default
-#        ~/Projects/etc/omarchy-upstream) has a .git
+#        ~/Projects/etc/hngh-related/omarchy-upstream) has a .git
 #     b: $AUTOMATION_ROOT/config/omarchy-base.packages present and
 #        non-empty; n = uncommented line count
 #     c: `pacman -Q hyprland` exits 0
@@ -33,7 +33,7 @@ set -u
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
-UPSTREAM_DIR="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/omarchy-upstream}"
+UPSTREAM_DIR="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/hngh-related/omarchy-upstream}"
 SESSIONS_DIR="${OMARCHY_SESSIONS_DIR:-/usr/share/wayland-sessions}"
 MANIFEST="$AUTOMATION_ROOT/config/omarchy-base.packages"
 PINS_MODULE="$AUTOMATION_ROOT/jobs/pins-drift.py"

@@ -44,7 +44,8 @@
 #                                  the -Syu fallback (default
 #                                  /var/lib/pacman/sync)
 #   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
-#                                  (default ~/Projects/etc/omarchy-upstream)
+#                                  (default
+#                                  ~/Projects/etc/hngh-related/omarchy-upstream)
 #   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
 #                                  ~/.hngh/installer-logs; every run --
 #                                  dry or real -- mirrors its output there)
@@ -61,7 +62,7 @@ MNT="${HNGH_BOOT_MNT:-/mnt}"
 USER_NAME="${HNGH_BOOT_USER:-bricker}"
 ESP_ID="${HNGH_ESP_ID:-317A31FF}"
 ESP_LABEL="${HNGH_ESP_LABEL:-OMARCHY-ESP}"
-UPSTREAM="${HNGH_UPSTREAM:-$ETC_ROOT/omarchy-upstream}"
+UPSTREAM="${HNGH_UPSTREAM:-$ETC_ROOT/hngh-related/omarchy-upstream}"
 DEV_DISK="${HNGH_DEV_DISK:-/dev/disk}"
 
 PHASE="${1:---help}"
@@ -255,7 +256,7 @@ phase_adopt_check() {
   say "== adopt-check: runs on the BOOTED TARGET, not here =="
   say "OMARCHY_UPSTREAM_DIR=$UPSTREAM ~/.hngh/automation/jobs/omarchy-config-adopt.sh"
   say "# host path rule: a /run/media upstream path dangles at boot; the target-side"
-  say "# clone at /home/<user>/Projects/etc/omarchy-upstream is the boot-valid path"
+  say "# clone at /home/<user>/Projects/etc/hngh-related/omarchy-upstream is the boot-valid path"
 }
 
 # probe_id <partuuid|fsuuid> <device>: resolve one identifier through

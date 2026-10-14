@@ -17,7 +17,8 @@
 # OMARCHY_PATH.
 #
 # Usage: omarchy-config-adopt.sh [--dry-run]
-#   OMARCHY_UPSTREAM_DIR    upstream clone (default ~/Projects/etc/omarchy-upstream)
+#   OMARCHY_UPSTREAM_DIR    upstream clone (default
+#                           ~/Projects/etc/hngh-related/omarchy-upstream)
 #   HNGH_CONFIG_ADOPT_HOME  target home (default $HOME; tests sandbox it)
 #   HNGH_CONFIG_ADOPT_DRY=1 plan only, same as --dry-run
 # Exit: 0 ok, 2 usage (unknown flag), 3 fail-closed prereq.
@@ -44,10 +45,10 @@ done
 
 # This job bootstraps standalone (no lib/common.sh — it parses its own flags
 # and runs under `set -u`), so it carries its own copy of the etc/ frame seam.
-# Keep the default identical to ETC_ROOT in lib/common.sh:15.
+# Keep the default identical to ETC_ROOT in lib/common.sh:24.
 ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
 
-UPSTREAM="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/omarchy-upstream}"
+UPSTREAM="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/hngh-related/omarchy-upstream}"
 ADOPT_HOME="${HNGH_CONFIG_ADOPT_HOME:-$HOME}"
 DOTCFG="$ADOPT_HOME/.config"
 
