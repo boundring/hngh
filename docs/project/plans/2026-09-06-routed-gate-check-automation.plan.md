@@ -1,4 +1,4 @@
-<!-- plan: status=parked risk=normal accepted=2026-09-06T01:01:30Z routed-from=gate-check:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same identity, same resolved premise: gate green 2026-09-08T09:01Z + 2026-09-09T09:01Z (STATE.md)"-->
+<!-- plan: status=expired risk=normal accepted=2026-09-06T01:01:30Z routed-from=gate-check:automation  cause=obsolete disposed=2026-09-09T15:27:53Z reason="same identity, same resolved premise: gate green 2026-09-08T09:01Z + 2026-09-09T09:01Z (STATE.md)"-->
 # 2026-09-06 — routed candidate
 
 Routed by scripts/router-tick.py from alert identity `gate-check:automation`
@@ -8,3 +8,7 @@ at 2026-09-06T00:00:45Z. Alert text: gate: hngh-automation make test FAILED (rc=
 
 - [ ] Re-run the named gate, capture the failing check, fix or park
       Verification: both `make test` gates green; failing check captured
+
+## Occurrences
+
+- 2026-10-14T09:00:12Z re-occurred (dedup window expired)

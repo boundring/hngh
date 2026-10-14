@@ -11,3 +11,7 @@ at 2026-10-13T09:00:12Z. Alert text: orchestrator blocker parked '2026-09-16-rou
 
 - [ ] Delve: open research subject fail-20261013-beat-parked-2026-09-16-routed-ui-audit-axe-color-contrast-4 for beat-parked:2026-09-16-routed-ui-audit-axe-color-contrast-4; record disposition; then fix or park
       Verification: research subject fail-20261013-beat-parked-2026-09-16-routed-ui-audit-axe-color-contrast-4 present in research-subjects.txt with a recorded disposition; alert fixed or parked
+
+## Occurrences
+
+- 2026-10-14T09:00:12Z re-occurred (dedup window expired)
