@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-10-01T22:35:34Z routed-from=overnight:plan-accept-blocked:2026-10-01-t-poison-read-lines-fail-closed -->
+<!-- plan: status=killed risk=normal accepted=2026-10-01T22:35:34Z routed-from=overnight:plan-accept-blocked:2026-10-01-t-poison-read-lines-fail-closed  cause=obsolete disposed=2026-10-14T02:41:22Z reason=root plan 2026-10-01-t-poison-read-lines-fail-closed killed 2026-10-14 (its work shipped in commit 5ded4007); this alert-derived delve carrier exists only to resolve an alert that no longer applies -->
 <!-- attempt: 1 -->
 <!-- expires: 2026-10-08T22:00:41Z -->
 principle: routed candidates keep alert lineage machine-visible (docs/project/plans/README.md)
