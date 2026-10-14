@@ -42,8 +42,14 @@ max-intelligence reserve -> operator session for the deciding step.
    through inside `model_call` (research/reviews never block). Paid
    fallback for blocked T2 is muse-spark-contributor (cheap, capped) -
    never the gemini burst lane, which is entered only by its class pin.
-4. **Operator steering outranks policy.** `OVERNIGHT_MODEL` and explicit
-   `MODEL_PIN` env overrides are the operator, not a cost decision.
+4. **Operator steering outranks policy** — via the `MODEL_PIN` env
+   override and the `session-model-preference` params row, both of
+   which are real inputs the ladder reads. The `OVERNIGHT_MODEL` env
+   override used to be listed here too; it was removed 2026-10-14
+   because it outranked policy in the one place policy could not
+   check it (the launcher overrode the chosen model before the call),
+   which makes "operator steering" a claim the logs contradict. See
+   docs/records/2026-10-14-overnight-model-pin-removal.md.
 
 ## Per-call token caps (summary)
 

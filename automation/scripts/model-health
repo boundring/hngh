@@ -2,8 +2,9 @@
 # model-health — on-demand model state as JSON (stall-recovery step 1
 # surface). Prints: demotion counters per model (consecutive_bad,
 # demoted), the selector's current pick (same ladder overnight-cycle
-# uses: env > bench > paid, with demotion filtering), and failfirst
-# development speed. Stdlib only, fail-closed ({} on trouble), no daemon.
+# uses: local-bench 5/5 > paid fallback, with demotion filtering), and
+# failfirst development speed. Stdlib only, fail-closed ({} on trouble),
+# no daemon.
 #
 # usage: automation/scripts/model-health [--pretty]
 set -u
@@ -15,10 +16,10 @@ KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../.." && pwd)}"
 DEMOTE_STATE="${DEMOTE_STATE:-$AUTOMATION_ROOT/state/model-demote.tsv}"
 FF_STATE="${FAILFIRST_STATE_DIR:-$AUTOMATION_ROOT/state/failfirst}/failfirst-development"
 
-python3 - "$DEMOTE_STATE" "$FF_STATE" "${OVERNIGHT_MODEL:-}" "$ROOT/stats" <<'PY'
+python3 - "$DEMOTE_STATE" "$FF_STATE" "$ROOT/stats" <<'PY'
 import glob, json, os, sys, time
 
-state, ff, env_model, stats_dir = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+state, ff, stats_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 models = {}
 try:
     for ln in open(state, errors="replace"):
@@ -62,13 +63,12 @@ try:
 except OSError:
     pass
 
-active, source = env_model, "env"
-if not active:
-    ok = [b for b in bench if b["score"] >= 5 and not b["demoted"]]
-    if ok:
-        active, source = ok[0]["model"], "local-bench"
-    else:
-        active, source = os.environ.get("OVERNIGHT_PAID_MODEL", "zai/glm-5.3"), "paid-fallback"
+active, source = None, None
+ok = [b for b in bench if b["score"] >= 5 and not b["demoted"]]
+if ok:
+    active, source = ok[0]["model"], "local-bench"
+else:
+    active, source = os.environ.get("OVERNIGHT_PAID_MODEL", "zai/glm-5.3"), "paid-fallback"
 
 out = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
        "active": {"model": active, "source": source},

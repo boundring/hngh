@@ -102,8 +102,14 @@ health before routing, identification before persistence.
   the bounded-call lane directly.
 - LobeHub's endpoint 404s since config (quota-utilization doc); the
   T2 quota tier is kimi-first until that is diagnosed.
-- The env override (OVERNIGHT_MODEL) outranks everything by design:
-  operator steering is not a cost decision, it is the operator.
+- Superseded 2026-10-14: the OVERNIGHT_MODEL env override is gone. It
+  did outrank everything, and that was the defect — an env rung that
+  short-circuits every policy rung reads as operator steering while
+  launch-session.sh already served the session from cadence-params
+  `opencode-model`. Model choice is now the ladder's alone
+  (T1 local-bench > quota row > paid fallback); operator steering lives
+  in `session-model-preference` and the bench's own scores. See
+  docs/records/2026-10-14-overnight-model-pin-removal.md.
 
 ## Reset-cycle pacing
 

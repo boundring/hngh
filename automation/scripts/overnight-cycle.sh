@@ -124,13 +124,18 @@ file_alert() { # identity text — the row is the contract; email is convenience
 }
 
 # --- model selection (local-cost lever) -----------------------------------
-# OVERNIGHT_MODEL (operator override) > best local model from a bench
-# result fresher than 24h scoring 5/5 probes (the bench scores exactly 5
-# coding/review probes; only a perfect local score is trusted for
-# unattended delegated sessions — see jobs/model-bench.sh) > paid
-# fallback. The source is logged with every session for spend
-# attribution: roguelike budget loop — free local when it proves itself,
-# paid only as fallback while the bench keeps re-validating.
+# T1 pins the local-bench rung ahead of quota; T2 walks best local model
+# from a bench result fresher than 24h scoring 5/5 probes (the bench scores
+# exactly 5 coding/review probes; only a perfect local score is trusted for
+# unattended delegated sessions — see jobs/model-bench.sh) > quota row >
+# paid fallback. There is deliberately no env override rung above this:
+# it outranked every policy rung while launch-session.sh was overriding it
+# with cadence-params `opencode-model` anyway, so the pinned value was
+# discarded before the call on the common path (removed 2026-10-14; see
+# docs/records/2026-10-14-overnight-model-pin-removal.md). The source is
+# logged with every session for spend attribution: roguelike budget loop —
+# free local when it proves itself, paid only as fallback while the bench
+# keeps re-validating.
 #
 # Class-aware pinning (cost-tiering plan step 2, docs/design/cost-tiering.md):
 # select_model [class] — the class is the launched step's tier (step_class).
@@ -172,10 +177,6 @@ select_model() { # [class] -> "model|source" on stdout
   . "$ROOT/lib/model-demote.sh"
  # demotion guard (stall-recovery step 1): a model with 2 consecutive
  # bad-execution outcomes is skipped, whatever rung would have served it
- if [ -n "${OVERNIGHT_MODEL:-}" ] && [ "$(model_demoted "$OVERNIGHT_MODEL")" != 1 ]; then
-  printf '%s|env\n' "$OVERNIGHT_MODEL"
-  return 0
- fi
  # T3: the ladder is untouched, but the beat files the operator-item
  # (ONE deduped request — the director should take this step; the
  # operator decides whether to decompose or take over).
@@ -236,12 +237,8 @@ select_model() { # [class] -> "model|source" on stdout
   printf '%s|paid-fallback\n' "$paid"
   return 0
  fi
- # every rung demoted: last known non-demoted wins via env leg echo; the
- # session will fail closed through the bridge instead of burning budget
- if [ -n "$OVERNIGHT_MODEL" ]; then
-  printf '%s|env-all-demoted\n' "$OVERNIGHT_MODEL"
-  return 0
- fi
+ # every rung demoted: the paid fallback stands, and the session fails closed
+ # through the bridge rather than burning budget.
  printf '%s|paid-fallback\n' "$paid"
 }
 # beat-level default (T2: the safe middle); run_one re-selects per slot

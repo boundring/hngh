@@ -130,13 +130,9 @@ for f in glob.glob(os.path.join(sys.argv[1], "model-bench-*.jsonl")):
 PY
 }
 
-session_model_source() { # model selected-via -> quota|paid|env|bench
+session_model_source() { # model selected-via -> quota|paid|bench
  local m="$1" via="${2:-}"
  case "$via" in
- env | env-all-demoted)
-  printf 'env'
-  return 0
-  ;;
  local-bench)
   printf 'bench'
   return 0

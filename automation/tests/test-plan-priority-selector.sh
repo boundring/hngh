@@ -75,7 +75,7 @@ run_cycle() {
  env HNGH_HOME="$kernel" OVERNIGHT_LOCK="$td/cycle.lock" \
   OVERNIGHT_TIMEOUT="5" FAILFIRST_STATE_DIR="$td/ff" \
   FORETHOUGHT_DEPTH="0" OVERNIGHT_MAX_SESSIONS_DAY="1" \
-  OVERNIGHT_MODEL="stub-model" HNGH_RAM_FLOOR_MB="1" \
+  HNGH_RAM_FLOOR_MB="1" \
   OMP_BIN_CMD="$stubdir/omp" MARKER="$MARKER" \
   OMP_BRIDGE_BIN="$stubdir/bridge-stub.sh" \
   PATH="$stubdir:/usr/bin:/bin" \

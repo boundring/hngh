@@ -4,10 +4,10 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-# operator authorization 2026-09-09: prefer GLM 5.3 Flash for cost;
-# every unit that can reach overnight-cycle.sh must carry the
-# override so a lane switch (e.g. hour workbeat) cannot drop it
-Environment=OVERNIGHT_MODEL=openrouter/z-ai/glm-5.3-flash
+# No OVERNIGHT_MODEL override: the env rung was removed 2026-10-14
+# (docs/records/2026-10-14-overnight-model-pin-removal.md). This lane
+# now resolves its model through select_model's ladder, the same as any
+# other lane — see test-unit-model-env.sh, which guards that.
 Type=oneshot
 ExecStart=%h/.hngh/bin/hngh-overnight-cycle
 

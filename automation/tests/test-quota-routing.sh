@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-quota-routing.sh - stall-recovery step 9: session-model-preference
-# quota routing. Ladder: env > quota-row model (when configured and not
+# quota routing. Ladder: quota-row model (when configured and not
 # demoted) > local-bench > paid-fallback. budget.md session-run rows tag
 # source=quota vs source=cash. Hermetic: sandbox params/state, stub gates.
 set -u
@@ -17,10 +17,12 @@ ck() {
 }
 LIB_OC="$root/scripts/overnight-cycle.sh"
 DEM_LIB="$root/lib/model-demote.sh"
-# select_model reads OVERNIGHT_MODEL/OVERNIGHT_PAID_MODEL and
-# SESSION_MODEL_QUOTA_KEY_PRESENT straight from the environment; a cadence
-# unit exports OVERNIGHT_MODEL, so scrub before each case or the env
-# short-circuit outranks the leg under test (hermeticity, 2026-09-10).
+# select_model reads OVERNIGHT_PAID_MODEL and SESSION_MODEL_QUOTA_KEY_PRESENT
+# straight from the environment, so scrub before each case or the caller's
+# ambient values leak into the leg under test (hermeticity, 2026-09-10).
+# OVERNIGHT_MODEL is scrubbed too, though nothing reads it since 2026-10-14:
+# a stray export must not be able to reach the selector even if a rung comes
+# back. Case 1 asserts exactly that.
 sed -n '/^best_bench_model() {/,/^}/p; /^select_model() {/,/^}/p' "$LIB_OC" >"$sb/select_model.snippet"
 
 sm() { # env assignments as KEY=VAL... then eval select_model
@@ -31,13 +33,17 @@ sm() { # env assignments as KEY=VAL... then eval select_model
 }
 
 
-# 1. env short-circuit stays first
-ck "env outranks quota row" "flash|env" \
-  "$(sm OVERNIGHT_MODEL=flash SESSION_MODEL_PREFERENCE=kimi:k3 SESSION_MODEL_QUOTA_KEY_PRESENT=1 | tr -d ' ')"
 params() { # gate-value -> write sandbox cadence-params.tsv
   printf 'session-model-quota-keys\t%s\ttest\ttest\n' "$1" >"$sb/cadence-params.tsv"
   printf 'session-model-preference\t%s\ttest\ttest\n' "$2" >>"$sb/cadence-params.tsv"
 }
+
+# 1. OVERNIGHT_MODEL no longer short-circuits the ladder. This case used to
+#    assert the opposite ("env outranks quota row", want flash|env); the
+#    env rung was removed 2026-10-14, so a stray export must now be inert.
+params 1 openrouter/quota-model
+ck "stale OVERNIGHT_MODEL is inert" "openrouter/quota-model|quota" \
+  "$(sm OVERNIGHT_MODEL=flash SESSION_MODEL_PREFERENCE=kimi:k3 SESSION_MODEL_QUOTA_KEY_PRESENT=1 | tr -d ' ')"
 # 2. quota row, keys present -> quota model wins over local-bench and paid
 #    (no bench data, no env) -> quota
 params 1 openrouter/quota-model
@@ -64,7 +70,7 @@ ck "unhealthy quota leg skipped" "zai/glm-5.3|paid-fallback" \
   "$(sm)"
 
 # 6. source tagging: launch-session writes source= field into budget row
-#    (function-level: source_of MODEL PREF) -> quota|paid|bench|env
+#    (function-level: source_of MODEL PREF) -> quota|paid|bench
 params 1 kimi:k3,openrouter/quota-model
 src() { # model via
   env DEMOTE_STATE="$sb/state/model-demote.tsv" AUTOMATION_ROOT="$sb" \
@@ -73,11 +79,10 @@ src() { # model via
 }
 ck "quota source tag" "quota" "$(src openrouter/quota-model yes)"
 ck "paid source tag" "paid" "$(src zai/glm-5.3 no)"
-ck "env source tag" "env" "$(src flash env)"
 ck "bench source tag" "bench" "$(src unsloth/x local-bench)"
 # --- 10. cost-tiering step 2: class-aware select_model ----------------------
 # select_model [class]: T1 pins the local-bench rung (quota and paid skipped
-# unless the bench is empty/demoted), T2 keeps env > quota > local-bench >
+# unless the bench is empty/demoted), T2 walks quota > local-bench >
 # paid, T3 leaves the ladder untouched but files the T3 operator-item (the
 # director should take it). Demotion + health gates apply to every rung.
 # operator_item is stubbed to a log file (lib/operator-item.sh is the real
@@ -120,8 +125,11 @@ printf 'unsloth/bench-model\t2\t1\tbad-execution\t20260914\n' >"$sb/state/model-
 ck "T1 demoted bench falls through to quota" "openrouter/quota-model|quota" "$(smc T1)"
 rm -f "$sb/state/model-demote.tsv"
 
-# 10d. T1 respects the env override (operator steering outranks the pin)
-ck "T1 env override wins" "flash|env" "$(smc T1 OVERNIGHT_MODEL=flash | tr -d ' ')"
+# 10d. a stale OVERNIGHT_MODEL in the environment changes nothing for T1
+#    either: T1 still returns the bench pick (the 2026-09-10 "operator
+#    steering outranks the pin" case, now inverted — see case 1)
+ck "T1 ignores a stale OVERNIGHT_MODEL" "unsloth/bench-model|local-bench" \
+  "$(smc T1 OVERNIGHT_MODEL=flash)"
 
 # 10e. T2 keeps the ladder: quota outranks the bench even when one exists
 ck "T2 quota outranks bench" "openrouter/quota-model|quota" "$(smc T2)"
