@@ -880,3 +880,49 @@ A latency claim needs the binary the test really invokes, and it needs
 a load regime where the failure is actually visible -- otherwise the
 threshold looks safe precisely because nothing is competing for the
 CPU.
+## 2026-10-14 — The automated gate-cure was dead, not idle: an unexported config value
+
+Unblocking the lane by hand (the previous two entries) exposed a second,
+quieter fault: the *automated* cure could never have run at all, and its
+symptom -- silence -- is indistinguishable from "nothing needed curing".
+
+`automation/jobs/patrol.py` `_drive_ceremony` invokes
+`scripts/ceremony-drive` through `subprocess`. The drive reads its four
+cost-and-route fact values out of `HNGH_LOADOUT`
+(`scripts/ceremony-drive:156` `loadout-fact-values`) and refuses
+fail-closed when a key is missing. The automation config declares that
+variable at `automation/config.env:102` -- but as a plain shell
+assignment. The same file states the rule at lines 97-100: unexported
+values do not cross cadence-tick's `bash $f` drop-in boundary *or the
+python child env*. Two neighbours (`HNGH_NOTIFY_IMMEDIATE`,
+`HNGH_ROUTER_PATHY_STEMS`) are exported for precisely that reason;
+this one was missed. Measured, not inferred: sourcing `lib/common.sh`
+then asking a child python what it sees prints `CHILD_SEES: <ABSENT>`,
+while the shell variable is set.
+
+Consequence: every automated gate-cure refused at the ceremony step with
+`cost-and-route-discipline:refused`, after already having appended the
+exemption rows. The lane was structurally incapable of completing.
+
+The fix is at the seam, not in the env file: `_drive_ceremony` now
+builds `env = dict(os.environ)` and `setdefault`s the loadout, mirroring
+the omp-bridge ceremony leg (`scripts/omp-bridge:397`), so an
+operator-exported `HNGH_LOADOUT` still wins for one invocation. Exporting
+the config value instead would have silently overridden every job's own
+environment -- the same class of coupling that the no-export note
+exists to prevent.
+
+Verification is the part that distinguishes a working lane from a
+plausible one, so it is a real drive, not an env-plumbing assertion:
+with nothing in the environment to inherit, the unfixed seam returns
+rc=1 and the fixture HEAD never leaves `fixture base`; the fixed seam
+returns rc=0 with `hngh: candidate <hash>` committed through the same
+`scripts/ceremony-drive` the patrol actually calls.
+`tests/scripts/test-patrol-ceremony-seam.py` pins all of it (3 of its 5
+tests fail against the old seam).
+
+The lesson generalizes past this bug: **a lane that fails closed looks
+exactly like a lane with nothing to do.** Absence of alerts is not
+evidence of absence of work. When an automation never once produces an
+alert, "working" and "structurally incapable" are the same observation
+until something actually goes red.

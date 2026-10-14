@@ -990,15 +990,28 @@ def append_exemptions(kernel, shas, date):
 def _drive_ceremony(kernel, objective, files):
     """The ceremony-drive seam: run scripts/ceremony-drive with a fresh
     /tmp store (PATROL_CEREMONY_BIN overrides, the rq-stub convention).
-    Returns (rc, last output line)."""
+    Returns (rc, last output line).
+
+    The loadout is supplied HERE, not inherited (2026-10-14): the patrol
+    reaches ceremony-drive through subprocess, and an unexported
+    config.env value never crosses a python child env, so the drive ran
+    with no cost-and-route facts and cost-and-route-discipline refused
+    every time -- the automated cure could never complete. Same shape as
+    the omp-bridge ceremony leg (scripts/omp-bridge:397); setdefault, so
+    an HNGH_LOADOUT exported in the environment still wins."""
     cmd = [os.environ.get(
                "PATROL_CEREMONY_BIN",
                os.path.join(kernel, "scripts", "ceremony-drive")),
            "--store=" + tempfile.mkdtemp(prefix="hngh-ceremony-"),
            objective] + list(files)
+    env = dict(os.environ)
+    env.setdefault(
+        "HNGH_LOADOUT",
+        "loadout-route-label=ceremony loadout-cost-limit=2000"
+        " loadout-token-limit=50000 loadout-time-limit=1800")
     try:
         r = subprocess.run(cmd, cwd=kernel, capture_output=True,
-                           text=True, timeout=3600)
+                           text=True, timeout=3600, env=env)
     except (subprocess.SubprocessError, OSError) as exc:
         return 1, str(exc)
     out = (r.stdout.strip().splitlines() or [""])[-1]
@@ -1960,7 +1973,7 @@ def _research_match_id(ctx, rid, rid_day):
     normalized rid. Date-blind: an old-date twin lane still matches
     (2026-10-02). Open lines: planned|contracting|crystallized.
     None when no ledger matches (the rid mints fresh)."""
-    token = _date_free_slug(
+    stem = _date_free_slug(
         _norm_slug(re.sub(r"^patrol-%s-" % re.escape(rid_day), "", rid)))
     raw = _date_free_slug(_norm_slug(rid))
     paths = []
@@ -1981,7 +1994,7 @@ def _research_match_id(ctx, rid, rid_day):
                                 "planned", "contracting", "crystallized"):
                             continue
                     norm = _date_free_slug(_norm_slug(cid))
-                    if norm and norm in (token, raw):
+                    if norm and norm in (stem, raw):
                         return cid
         except OSError:
             continue
