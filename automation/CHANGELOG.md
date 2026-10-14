@@ -1,5 +1,58 @@
 # Changelog
 
+## 2026-10-14
+- slow-units design envelope for the stamp-paced unsloth observe unit
+  (`a7e62ae8`): dropin:59-unsloth-observe.sh is bimodal by design since
+  the 2026-09-24 1800s self-gate stamp (skip-exit ~0.003s is the
+  median) and its real run is bounded upstream (status call urllib
+  timeout=10s, journal fallback ~0.03s measured, optional 400-probe
+  urllib timeout=10s; worst-case chain ~20.6s, observed real walls
+  0.5-12.1s) -- but the bare 10s floor at p50=0.003 flagged any real
+  run over 10s. The routed 30.4s x3 alert (2026-09-16) predates the
+  2026-09-23 probe_400 guaranteed-400 bounding (68539580, the old
+  150k-pair body got GPU-processed ~4.4min) and the stamp pacing, with
+  no re-occurrence since; the 12.057s row (2026-09-20) would have
+  re-fired it. Envelope 22s = 10+10+2 margin; over it is the pre-fix
+  unbounded-GPU-probe class again. Failing-first tests
+  `test_unsloth_observe_in_envelope_never_flagged` /
+  `test_unsloth_observe_over_envelope_flagged`, suite 13/13 + e2e 3/3,
+  live ledger quiet. Research subject
+  fail-20260916-slow-unit-dropin-59-unsloth-observe.sh recorded fixed
+  (research-subjects.txt row); orchestrator blocker row
+  blk-20261012-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh
+  cleared (blocker_clear) to re-admit the 2026-09-16 routed plan; both
+  routed plan steps ticked.
+
+## 2026-10-11
+- patrol service-health stopped probing transient automation-managed
+  rows (`b6f4f314`): the comfyui row is in-use with a fixed health-url
+  but its lifecycle is spawn->use->stop inside the imagegen run
+  (lib/comfyui.sh contract, never a daemon), so down-between-runs is the
+  expected state and the probe fired `service-down` on every tick
+  without an active run -- alert identity patrol:services re-fired 14
+  times (2026-09-16..2026-10-03) and the router parked it at re-route
+  bound 3. Rows whose managed-by starts with automation/ now emit PASS
+  "transient automation-managed, not probed"; operator-managed rows
+  stay probed. Failing-first test `Patrol.
+  test_service_health_skips_transient_managed`, suite 54/54, live
+  check quiet. Research line fail-20260916-patrol-services recorded
+  fixed (dispositions row, doc docs/research/2026-10-11-fail-
+  20260916-patrol-services.md in the kernel repo).
+
+- ui-audit sees the dashboard again: jobs/ui-audit.mjs now scans
+  console.html (the tabbed dashboard since the 2026-10-04 control-room
+  split) with domcontentloaded -- '/' is the 3D control room now and
+  the console polls continuously, so the old `/` + networkidle2 probe
+  had filed `ui-audit unavailable` on every hourly tick since
+  2026-09-30 (nav timeout, then selector timeout after the console
+  moved off /). First live run after the repair: 0 violation(s) across
+  0 rule(s). The 2026-09-16 axe color-contrast alert (3 in-bar
+  .gbar-lab labels) does not reproduce: gantt v2 renders label text
+  only on .gbar-out spans over the dark row background, in-bar spans
+  are empty (measured 87 labels, 34 text-bearing, all out, 0 in-bar);
+  subject + disposition rows appended (killed-fixed), routed plan
+  2026-09-16-routed-ui-audit-axe-color-contrast-2 executed-ticked.
+
 ## 2026-10-08
 - automation gate unblocked: the 2026-10-06/07 dead sessions left
   test-remote-push.sh cases 6-7 (failing-first) asserting gate-lock

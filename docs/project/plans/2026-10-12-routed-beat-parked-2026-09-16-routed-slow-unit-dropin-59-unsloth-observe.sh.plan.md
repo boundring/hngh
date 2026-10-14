@@ -9,5 +9,5 @@ at 2026-10-12T21:00:12Z. Alert text: orchestrator blocker parked '2026-09-16-rou
 
 ## Steps
 
-- [ ] Delve: open research subject fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh for beat-parked:2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh; record disposition; then fix or park
+- [x] Delve: open research subject fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh for beat-parked:2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh; record disposition; then fix or park
       Verification: research subject fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh present in research-subjects.txt with a recorded disposition; alert fixed or parked
