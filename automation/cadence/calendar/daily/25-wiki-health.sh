@@ -55,7 +55,7 @@ REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
 
 WIKI_PERSONAL="${HNGH_WIKI_PERSONAL:-$HOME/.llm-wiki}"
-WIKI_PROJECT="${HNGH_WIKI_PROJECT:-$ETC_ROOT/llm-wiki/.llm-wiki}"
+WIKI_PROJECT="${HNGH_WIKI_PROJECT:-$ETC_ROOT/kb/llm-wiki/.llm-wiki}"
 STALE_DAYS="${HNGH_WIKI_STALE_DAYS:-14}"
 WEEK_S=604800 # 7d identity window: one row per vault per week
 LESSONS_SRC="$KERNEL/docs/project/lessons-index.md"

@@ -169,7 +169,7 @@ TELEMETRY="$AUTOMATION_ROOT/jobs/telemetry.py"
 LINES="$AUTOMATION_ROOT/research-lines.tsv"
 SUBJECTS="$AUTOMATION_ROOT/research-subjects.txt"
 DISPOSITIONS="$AUTOMATION_ROOT/research-dispositions.tsv"
-WIKI_PROJECT_IDX="${HNGH_WIKI_PROJECT_INDEX:-$ETC_ROOT/llm-wiki/.llm-wiki/meta/index.md}"
+WIKI_PROJECT_IDX="${HNGH_WIKI_PROJECT_INDEX:-$ETC_ROOT/kb/llm-wiki/.llm-wiki/meta/index.md}"
 WIKI_PERSONAL_IDX="${HNGH_WIKI_PERSONAL_INDEX:-$HOME/.llm-wiki/meta/index.md}"
 
 # sweep self-heal (2026-09-22 gate-flap cure): the research-tsv
@@ -1079,7 +1079,7 @@ else:
  # covers the gap until then). Fail-closed on malformed input: the
  # disposition above was already recorded, so a harvest failure never
  # loses the verdict -- the alert names it for the operator.
- HARVEST_VAULT="${HNGH_WIKI_PROJECT:-$ETC_ROOT/llm-wiki/.llm-wiki}"
+ HARVEST_VAULT="${HNGH_WIKI_PROJECT:-$ETC_ROOT/kb/llm-wiki/.llm-wiki}"
  if [ ! -d "$HARVEST_VAULT/wiki" ]; then
   breadcrumb "$JOB_NAME" "research-harvest-skip" \
    "wiki vault absent ($HARVEST_VAULT): lesson TSV only"

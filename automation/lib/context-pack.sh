@@ -59,7 +59,7 @@ context_project_block() { # role
   printf 'test command: cd %s && emacs -Q --batch -l tests/run.el -f cistern-run-all-tests\n' "$repo"
   printf 'dirty files (uncommitted — another session owns them; observe, never edit/commit):\n'
   git -C "$repo" status --porcelain 2>/dev/null | sed 's/^/  /'
-  printf 'wiki lessons: ~/Projects/etc/llm-wiki/.llm-wiki/wiki/syntheses/delegated-subagent-steering.md and wiki/cases/cistern-emacs-rewrite.md\n'
+  printf 'wiki lessons: ~/Projects/etc/kb/llm-wiki/.llm-wiki/wiki/syntheses/delegated-subagent-steering.md and wiki/cases/cistern-emacs-rewrite.md\n'
   ;;
  esac
 }
