@@ -247,19 +247,23 @@ stage_census() {
   local g
   for g in "$ETC_ROOT"/*/; do
     [ -d "$g" ] || continue
-    say "$(printf '  %6s  %s' "$(du_of "$g")" "${g%/}")"
+    say "$(printf '  %6s  ~%s' "$(du_of "$g")" "${g#"$ETC_ROOT"/}")"
   done
 
-  # Same posture for the cache tree: report, never prune. The parfact of the
+  # Same posture for the cache tree: report, never prune. The point of the
   # 2026-10-13 sweep (paru 23 G, uv 13 G, yay 4.8 G) was one-time, and no
   # standing job is allowed to repeat it.
   #
   # Top 12 only: huggingface alone is 119 G, and a census that lists every cache
   # dir would bury the two numbers that actually need a decision.
+  #
+  # Paths print as ~/.cache/... rather than the absolute form du gives, because
+  # this job's output is read by people and pasted into documents, and hngh's
+  # lint-home-paths gate exists precisely because the absolute form leaks.
   say ""
   say "largest ~/.cache entries (report only; each needs its own policy):"
   for g in $(du -s "$HOME"/.cache/*/ 2>/dev/null | sort -rn | head -12 | cut -f2-); do
-    say "$(printf '  %6s  %s' "$(du_of "$g")" "${g%/}")"
+    say "$(printf '  %6s  ~%s' "$(du_of "$g")" "${g#"$HOME"/}")"
   done
 
   say ""
