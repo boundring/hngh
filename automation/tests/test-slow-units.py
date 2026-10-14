@@ -107,6 +107,29 @@ class SlowUnits(unittest.TestCase):
         self.assertEqual(r.stdout.strip(),
                          "dropin:33-research-beat.sh wall=861.0s median=0.2s")
 
+    def test_unsloth_observe_in_envelope_never_flagged(self):
+        # 59-unsloth-observe.sh is bimodal by design since the 2026-09-24
+        # 1800s self-gate stamp: skip-exit ~0.003s is the median, the real
+        # run is bounded by two chained 10s urllib timeouts (status call,
+        # optional 400-probe) + journal fallback ~0.03s. Observed real
+        # walls 0.476-12.057s (the 12s row 2026-09-20 would have flagged
+        # on the bare 10s floor at p50=0.003); worst-case chain ~20.6s.
+        for last, p50 in [(0.476, 0.003), (9.396, 0.003),
+                          (12.057, 0.003), (20.6, 0.003)]:
+            r = self.run_probe([{"unit": "dropin:59-unsloth-observe.sh",
+                                 "last_wall_s": last, "p50_s": p50}])
+            self.assertEqual((r.returncode, r.stdout.strip()),
+                             (0, ""), (last, p50))
+
+    def test_unsloth_observe_over_envelope_flagged(self):
+        # the routed alert's own values (2026-09-16, wall=30.4 median=0.1
+        # x3): past the envelope both rules flag -- the pre-2026-09-23
+        # unbounded-GPU-probe class, unreachable under the current caps.
+        r = self.run_probe([{"unit": "dropin:59-unsloth-observe.sh",
+                             "last_wall_s": 30.4, "p50_s": 0.1}])
+        self.assertEqual(r.stdout.strip(),
+                         "dropin:59-unsloth-observe.sh wall=30.4s median=0.1s")
+
     def test_plain_unit_median_rule_still_fires(self):
         r = self.run_probe([{"unit": "dropin:01-system.sh",
                              "last_wall_s": 60.0, "p50_s": 1.8}])

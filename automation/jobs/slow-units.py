@@ -41,6 +41,17 @@ ENVELOPE = {
     # +60s margin (routed alert 2026-09-12, identity re-routed 5x since
     # 2026-09-08).
     "dropin:33-research-beat.sh": 800.0 + 60.0,
+    # 59-unsloth-observe.sh: bimodal since the 2026-09-24 1800s self-gate
+    # stamp (skip-exit ~0.003s is the median); the real run is bounded
+    # upstream -- /api/inference/status urllib timeout=10s, journal
+    # fallback ~0.03s (measured 25ms over 3847 boot lines), optional
+    # oversized-prompt 400-probe urllib timeout=10s -- so the worst-case
+    # chain is ~20.6s (observed real walls 0.5-12.1s post-fix; the routed
+    # 30.4s x3 alert 2026-09-16 predates the 2026-09-23 probe_400
+    # guaranteed-400 bounding 68539580 and the stamp pacing, with no
+    # re-occurrence since). 22s = 10+10+2 margin; over it is the
+    # pre-fix unbounded-GPU-probe class again.
+    "dropin:59-unsloth-observe.sh": 22.0,
 }
 
 
