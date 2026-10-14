@@ -30,3 +30,4 @@ at 2026-09-24T02:00:16Z. Alert text: [oversight] slow-unit: dropin:58-patrol.sh 
 - 2026-10-11T00:00:56Z re-occurred (dedup window expired)
 - 2026-10-12T01:00:17Z re-occurred (dedup window expired)
 - 2026-10-13T02:00:16Z re-occurred (dedup window expired)
+- 2026-10-14T04:00:16Z re-occurred (dedup window expired)
