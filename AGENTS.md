@@ -83,6 +83,58 @@ base, not imported back into this repository. Treat prior-state records
   there require the ceremony label (`hngh: candidate <hash>`); the
   automation free-commit rule covers `automation/` only.
 
+## Working rules the repo enforces nowhere else
+
+These four were being re-explained in session after session and existed only as
+prose in a handoff. They are enforced by convention, not by tooling — which is
+exactly why they belong in this file. (The machine-readable equivalents live in
+`automation/scripts/lint-home-paths.py` and the `.beads/hooks/pre-commit` that
+runs it; if a rule here must actually be enforced, it needs a `lint-*.sh`, not
+a reader of this file.)
+
+1. **Verify against the machine before writing a claim into a document.**
+   `disk-headroom.sh` and the retired `doc-suite-update.sh` were both documents
+   that outran their evidence. If you cannot re-run the measurement, say the
+   number is unverified rather than carrying it forward.
+
+2. **A destructive action routes through one chokepoint and has a dry run.**
+   The existing good instance is `automation/jobs/disk-headroom.sh`'s single
+   `prune()` chokepoint driven by `HNGH_OPT_DRY_RUN=1`. New destructive code
+   follows that shape: one function, one env-var dry run, no `rm -rf` at a call
+   site.
+
+3. **Never `grep -rln` unscoped over `~/Projects/etc/`.** It walks cistern's
+   164 G `target/debug/deps` and times out. Always scope, and always exclude:
+   `--exclude-dir=target --exclude-dir=node_modules --exclude-dir=venv
+   --exclude-dir=.venv --exclude-dir=__pycache__`.
+
+4. **Commit by explicit pathspec, never `-A`.** This one has bitten twice:
+   cadence jobs stage files into the index on their own schedule, so a bare
+   `git commit` sweeps in whatever a background job staged since your last
+   command. When a commit picks up unexpected files, `git reset -q` first, then
+   re-`add` explicit paths. (`git status --cached` is not a command; it is
+   `git diff --cached --name-status`.)
+
+## Path seams and the systemd deploy
+
+Every cross-project path default resolves through `ETC_ROOT` and `CISTERN_ROOT`,
+declared **once** in `automation/lib/common.sh`. Two scripts that must survive a
+mid-move tree declare their own instead — `automation/jobs/disk-headroom.sh` and
+`automation/jobs/omarchy-config-adopt.sh`. If you are adding a tenth call site,
+you have missed the seam; if you are editing one of those two, you are editing a
+deliberate exception, and the comment above it says why.
+
+**No systemd unit in `automation/systemd/` names a repo path.** Every
+`ExecStart`/`ExecStartPost` is a shim under `~/.hngh/bin/`, because systemd does
+not expand environment variables in the executable position of `ExecStart` —
+only `%h` works. `WorkingDirectory=` is therefore absent from every unit; the
+shims reproduce it. Deploy with
+`bash automation/jobs/systemd-units.sh apply`, which also removes any deployed
+`hngh-*` unit that has no repo counterpart — the check that stops a retired unit
+from being re-armed by hand. The hourly reconciler
+`automation/cadence/hour/16a-systemd-units.sh` runs `status` and only applies on
+drift.
+
 ## Jcode orientation addendum
 
 @docs/agent-notes/jcode-orientation.md
