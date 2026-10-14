@@ -1,7 +1,7 @@
 # Multi-project design — Hngh as a development machine for more than itself
 
 Status: designed 2026-09-08. Cistern (an external emacs roguelike at
-`~/Projects/etc/20260830/cistern`, ~17K LOC elisp) becomes the second
+`~/Projects/etc/cistern`, ~17K LOC elisp) becomes the second
 project Hngh serves, after Hngh itself. This doc fixes the shape of
 that relationship before machinery accretes: what generalizes, what
 stays per-project, and where the boundary sits.
@@ -25,7 +25,7 @@ work or generating packs:
 ```tsv
 # project<TAB>repo<TAB>test-command<TAB>context-pack-role<TAB>key-files
 hngh	~/Projects/etc/hngh	make -C automation test	hngh	automation/lib/, docs/
-cistern	~/Projects/etc/20260830/cistern	emacs -Q --batch -l tests/run.el -f cistern-run-all-tests	cistern	src/cistern-domain.el src/cistern-game.el src/cistern-view.el
+cistern	~/Projects/etc/cistern	emacs -Q --batch -l tests/run.el -f cistern-run-all-tests	cistern	src/cistern-domain.el src/cistern-game.el src/cistern-view.el
 ```
 
 Today the cistern row lives inline in `automation/lib/context-pack.sh`

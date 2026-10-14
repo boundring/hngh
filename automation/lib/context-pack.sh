@@ -52,7 +52,7 @@ context_role_hint() { # role
 context_project_block() { # role
  case "$1" in
  cistern)
-  local repo="${CISTERN_REPO:-${CISTERN_ROOT:-$ETC_ROOT/20260830/cistern}}"
+  local repo="${CISTERN_REPO:-${CISTERN_ROOT:-$ETC_ROOT/cistern}}"
   printf 'cistern repo: %s (emacs roguelike, ~17K LOC, clean architecture)\n' "$repo"
   printf 'architecture: domain (pure core, no buffers/faces/timers) -> game (use cases: state+intent -> state+log) -> view (render) -> input (adapter) -> driver (keymap/timer, the single cistern--st global)\n'
   printf 'key files: src/cistern-domain.el (3555 lines, the pure core), src/cistern-game.el, src/cistern-view.el, src/cistern.el, tests/run.el (canonical runner, PROCESS-RETRO P3)\n'

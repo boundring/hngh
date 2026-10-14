@@ -23,12 +23,13 @@ DIGEST_DIR="${DIGEST_DIR:-$HNGH_HOME_DIR/archive/digest}"
 # default at run time. ETC_ROOT overrides for hermetic tests.
 ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
 
-# cistern's checkout is its own seam because it moves out of the dated
-# 20260830/ frame, while ETC_ROOT itself stays put. Default follows cistern to
-# where it actually is on disk today; the §3.2 move commit flips this default
-# to $ETC_ROOT/cistern. Two layers because the etc/ frame and its children have
-# different lifetimes — the frame is the stable anchor, the children churn.
-CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/20260830/cistern}"
+# cistern's checkout is its own seam because it is a sibling of the frame, not
+# a child of the dated 20260830/ set it used to live in (handoff §3.5, applied
+# 2026-10-13). Override with CISTERN_ROOT= if the checkout moves again; nothing
+# else in the tree hardcodes the path. Two layers because the etc/ frame and
+# its children have different lifetimes — the frame is the stable anchor, the
+# children churn.
+CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/cistern}"
 
 hngh_catalog() { # kind path [note] -> append to ~/.hngh/catalog.tsv
  local file="$HNGH_HOME_DIR/catalog.tsv"

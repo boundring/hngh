@@ -1,6 +1,6 @@
 # Cistern v6 intake queue — index
 
-Source repo: `~/Projects/etc/20260830/cistern` (HEAD d638e3f at
+Source repo: `~/Projects/etc/cistern` (HEAD d638e3f at
 queue time, tree clean, suite canonical 140/140). Contracts live THERE and
 stay single-source: `docs/v6/V6-SPEC.md`, `docs/HANDBRIEF-TEMPLATE.md`,
 `docs/FAILURE-LEDGER.md`, `docs/PROCESS-RETRO.md`. Procedure:

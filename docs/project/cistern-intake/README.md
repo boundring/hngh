@@ -2,7 +2,7 @@
 
 ## What this queue is
 
-The Cistern repo (`~/Projects/etc/20260830/cistern`) has a
+The Cistern repo (`~/Projects/etc/cistern`) has a
 21-directive expansion queued (`cistern docs/v6/V6-SPEC.md`, wave-ordered
 V6-01..V6-21). The director's live runs landed wave 1's first two directives
 and then halted cleanly mid-wave (ledger L-112) so the work could hand off to

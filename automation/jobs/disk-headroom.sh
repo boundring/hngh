@@ -28,10 +28,10 @@ LOGDIR="${HNGH_OPT_LOGDIR:-$HOME/.hngh/installer-logs}"
 # is exactly in that state.
 ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
 
-# cistern's checkout. Same seam as CISTERN_ROOT in lib/common.sh:31 — kept
+# cistern's checkout. Same seam as CISTERN_ROOT in lib/common.sh:32 — kept
 # local because this job cannot source common.sh, so it must not depend on a
-# tree it may be repairing. The §3.2 move commit edits THIS line only.
-CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/20260830/cistern}"
+# tree it may be repairing.
+CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/cistern}"
 
 # Trees this job is allowed to prune. Each entry is "<path>|<label>".
 # Keep this list explicit: a glob over $HOME is how cleanup jobs delete things
