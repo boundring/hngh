@@ -1,5 +1,11 @@
 # Hngh — project architecture, scope, roadmap, and next-steps
 
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
 Draft v1.2, 2026-08-30 (revised after adversarial audit). Written for the operator after 33h of unattended
 operation (2026-08-28T19:43Z → 2026-08-30T04:54Z) proved the autonomy
 machine end-to-end. Every claim carries a file or record reference.

@@ -1,7 +1,13 @@
 # 00 — Introduction: exploring the Hngh doc suite
 
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
 Introduction v1.1, 2026-08-30 (revised after adversarial audit) · front door to the set indexed by
-[README.md](README-architecture.md). Read this first; it routes you everywhere else.
+[suite index](README-architecture.md). Read this first; it routes you everywhere else.
 
 ## 1. What Hngh is, in three sentences
 

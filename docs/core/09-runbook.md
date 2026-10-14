@@ -1,6 +1,12 @@
 # 09 — Runbook
 
-Doc suite, 2026-08-30 · part of [README.md](README-architecture.md). Operations cheat
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
+Doc suite, 2026-08-30 · part of [suite index](README-architecture.md). Operations cheat
 sheet — grounded in `hngh-automation/digest/TRIP-STATUS-2026-08-28.md`
 (still accurate) plus the 2026-08-30 fixes.
 
@@ -87,6 +93,6 @@ Services are oneshots; timers are the switches. Dashboard service:
   plan is accepted (R2).
 - All 17+ timers active, 0 failed units (checked 2026-08-30T04:54Z).
 
-Cross-links: [README.md](README-architecture.md) (suite index) ·
+Cross-links: [suite index](README-architecture.md) (suite index) ·
 `hngh-automation/digest/TRIP-STATUS-2026-08-28.md` (stop-command source) ·
 `hngh-automation/docs/NIGHT-OPS.md`.

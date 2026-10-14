@@ -52,7 +52,10 @@ try {
   });
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 1000 });
-  await page.goto(BASE + '/', { waitUntil: 'networkidle2', timeout: 30000 });
+  // console.html is the tabbed dashboard (2026-10-04: '/' became the 3D
+  // control room). domcontentloaded, not networkidle2 — the console polls
+  // continuously, so the network never idles and goto would time out.
+  await page.goto(BASE + '/console.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
   // schedule is the default-open tab; activate anyway (idempotent) so the
   // lazy view init has definitely run before measuring.
   await page.click('#tab-schedule').catch(() => {});

@@ -1,5 +1,11 @@
 # 03 — The kernel (`hngh`): code and structure
 
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
 Doc suite v1.2, 2026-08-30 (revised after adversarial audit) · companion to `README.md` in this directory.
 Claims carry file references; all read this session.
 

@@ -1,5 +1,11 @@
 # Hngh — expanded architecture & refactor/redesign investigation
 
+<!-- MERGED 2026-10-13 from the 2026-08-30 doc suite, which lived
+     outside version control (handoff §3.3). Provenance snapshot:
+     paths and counts are as measured 2026-08-30. In particular
+     `hngh-automation/` names a repo that has since merged into this
+     one -- read it as `automation/`, and `~/Projects/etc/hngh` as the
+     repo root. Facts that moved are fixed in place, not annotated. -->
 Expanded v2.1, 2026-08-30 (revised after adversarial audit). Supersedes (extends)
 [01-architecture-overview.md](01-architecture-overview.md) in this
 directory: same factual ground, plus a grounded refactor/redesign

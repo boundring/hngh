@@ -537,6 +537,8 @@ class Patrol(unittest.TestCase):
                         "mode:0xc0de0", 3, ident="kernel"),
             self._jline("usb 1-5.2: device descriptor read/64, error -71",
                         3, ident="kernel"),
+            self._jline("Bluetooth: hci0: ACL packet for unknown "
+                        "connection handle 3837", 3, ident="kernel"),
             self._jline("plasmashell: Cannot read property "
                         "'effectiveDestUrl' of null", 4,
                         ident="plasmashell"),
@@ -561,6 +563,9 @@ class Patrol(unittest.TestCase):
         self.assertIn("FAIL journal-error/journald-suppressed alert", o)
         self.assertIn("FAIL journal-error/mem-alloc-failure alert", o)
         self.assertIn("FAIL journal-error/input-transport-fault alert", o)
+        self.assertIn("PASS journal-error/journal-error:"
+                      "bluetooth-acl-stale", o)
+        self.assertIn("1 hit(s) counted (alert>=10)", o)
         self.assertIn("FAIL journal-error/unknown-journal-error "
                       "unclaimed-err", o)
         self.assertNotIn("effectiveDestUrl", o)  # unknown warning: silent
