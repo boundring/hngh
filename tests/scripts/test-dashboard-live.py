@@ -137,12 +137,33 @@ class DashboardExport(unittest.TestCase):
                          "no theme and no --tone stays colorless")
 
     def test_watch_cursor_contract(self):
+        # Wait for the first repaint instead of sleeping a fixed span. The
+        # watch loop renders its first frame only after the quit check and
+        # (under a loaded box) the session refresh, so a fixed sleep turns
+        # into a coin flip -- measured first-output latency here ranged
+        # 1.46s..2.48s while load average was 18. A deadline far past the
+        # old 1.8s keeps the assertion on the contract, not on the schedule.
         p = subprocess.Popen(
             [sys.executable, str(SCRIPT), "--watch", "1"],
             stdout=subprocess.PIPE, text=True, cwd=ROOT)
-        time.sleep(1.8)
+        chunks = []
+        deadline = time.time() + 20.0
+        while time.time() < deadline:
+            ready, _, _ = select.select([p.stdout], [], [], 0.2)
+            if ready:
+                chunks.append(p.stdout.readline())
+                if any("\x1b[H\x1b[0J" in c for c in chunks):
+                    break
         p.terminate()
-        out = p.stdout.read()
+        p.wait(timeout=10)
+        # Drain whatever the quit path still owed us: rich's exit repaint
+        # writes the cursor-restore after SIGTERM, and reading only the
+        # pre-terminate chunks would drop the last contract line.
+        try:
+            chunks.append(p.stdout.read() or "")
+        except (ValueError, OSError):
+            pass
+        out = "".join(chunks)
         self.assertIn("\x1b[?25l", out, "watch hides the cursor")
         self.assertIn("\x1b[H\x1b[0J", out, "watch repaints in place")
         self.assertIn("updated", out, "watch shows a live status footer")

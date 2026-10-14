@@ -621,7 +621,7 @@ progress` through the same redaction class as alerts, repo-relative
 paths stay untouched (the 2026-09-16 per-kind objection only ever
 protected repo-relative paths), the research-beat ingest redacts
 before id/slug derivation (commit 2e51d01b), the historical rows stay
-forward-only (319 progress rows keep `/home/` paths; no history
+forward-only (319 progress rows keep home-root paths; no history
 rewrite), and the 48-site `--add` census classifies every emitter
 (docs/records/2026-09-16-progress-kind-path-redaction.md).
 
@@ -818,3 +818,40 @@ overnight lead timer (`hngh-overnight.timer` →
 `hngh-overnight-lead.timer`, now explicitly pinning
 `Unit=hngh-overnight.service`). Dated records, reports, briefs, and
 logs keep old names as history.
+
+## 2026-10-14 — Gate-cure lane unblocked; stale exemptions withdrawn (not replaced)
+
+The gate-cure patrol found the loop-history guard red on f04d7ad7
+(`tests: stop the watch cursor contract depending on a 1.8s sleep`).
+A first cure attempt declared it post-hoc, added a meta-exemption
+for its own declaration (0de8d2b8), hit a ceremony refusal, and was
+then unwound; neither commit reached origin/main, and both hashes
+had already left reachable history.
+
+Three corrections landed together, because each is a precondition
+for the other:
+
+1. **The two exemptions were withdrawn, not replaced.** `f04d7ad7`
+   and `0de8d2b8` named commits that no longer exist, so the guard's
+   reachability self-check went red on the declarations themselves --
+   a cure that breaks the guard is not a cure. The guard file keeps a
+   dated note explaining the withdrawal rather than an empty entry.
+2. **The blocking text was fixed, not the gate.** The earlier entry
+   in this file quoted a literal home-root path token in prose, and
+   `verify-candidate.py`'s `ABSOLUTE_PATH_PATTERN` scans every
+   candidate file for it -- so any cure naming this file as a
+   candidate was refused at the ceremony step however clean the
+   commit being cured. The gate was right and the prose was wrong:
+   the sentence now says `home-root paths` and means the same thing.
+   `ABSOLUTE_PATH_PATTERN` is unchanged. Excluding `decisions.md`
+   from the gate, the other reading, would have been the wrong call:
+   the file records machine-local path handling, so it is exactly
+   where the rule has teeth, and weakening the gate to accommodate
+   one document's history would leak the real paths it exists to
+   keep out of the public surface.
+3. **The flake fix lands under a certificate**, so no exemption is
+   needed for it at all.
+
+Net state: the loop-history guard is green, `decisions.md` passes the
+public-content evidence gate, and the cure lane works again for every
+future cure.

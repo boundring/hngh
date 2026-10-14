@@ -246,6 +246,14 @@ KNOWN_EXEMPTIONS = {
         "reason": "tests: break exemption infinite regress (terminal commit) (declared miss, gate-cure patrol)",
         "patch-id": "a214f7b06e3d11e4014b9d403210ab4065c5e686",
     },
+    # NOTE: 2026-10-14. The f04d7ad7 and 0de8d2b8 entries that used to sit
+    # here were removed, not replaced. Both hashes left reachable history
+    # when the unpublished gate-cure attempt was unwound, so they were
+    # exemptions for commits that no longer exist -- a declaration that
+    # exempts nothing is worse than no declaration, because the guard's
+    # reachability self-check goes red on it. The real fix for f04d7ad7
+    # (the test-dashboard-live.py sleep flake) lands under a certificate
+    # instead of an exemption; see docs/project/decisions.md 2026-10-14.
 }
 
 CODE_SURFACE = ("src/", "tests/", "scripts/", "Makefile", "hngh.asd")
