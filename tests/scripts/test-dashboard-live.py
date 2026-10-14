@@ -140,9 +140,13 @@ class DashboardExport(unittest.TestCase):
         # Wait for the first repaint instead of sleeping a fixed span. The
         # watch loop renders its first frame only after the quit check and
         # (under a loaded box) the session refresh, so a fixed sleep turns
-        # into a coin flip -- measured first-output latency here ranged
-        # 1.46s..2.48s while load average was 18. A deadline far past the
-        # old 1.8s keeps the assertion on the contract, not on the schedule.
+        # into a coin flip. Measured first-repaint latency for
+        # scripts/dashboard-readout --watch 1 on this host: 1.42s..1.78s at
+        # load average ~19 (a fixed 1.8s sleep passes only just), and
+        # 3.83s..4.80s with 24 spinners on top, where the old sleep failed
+        # 10 of 10 and 3 of 3 head-to-head against this waiter. A deadline
+        # far past the old 1.8s keeps the assertion on the contract, not
+        # on the schedule.
         p = subprocess.Popen(
             [sys.executable, str(SCRIPT), "--watch", "1"],
             stdout=subprocess.PIPE, text=True, cwd=ROOT)

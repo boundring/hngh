@@ -855,3 +855,28 @@ for the other:
 Net state: the loop-history guard is green, `decisions.md` passes the
 public-content evidence gate, and the cure lane works again for every
 future cure.
+
+## 2026-10-14 — The watch-cursor flake is a schedule bug, measured not assumed
+
+The fix waits on the first repaint instead of a fixed 1.8s sleep. The
+first measurement that motivated it was taken on the wrong binary
+(`scripts/dashboard-tui`, which rejects `--watch 1`) and reported a
+0.42s..0.50s first-output latency that made the flake look impossible.
+Re-measured against the script the test actually runs,
+`scripts/dashboard-readout`:
+
+- idle, load average ~19: first repaint 1.42s..1.78s, so the old 1.8s
+  sleep passed only just -- it was already on the edge;
+- 24 CPU spinners added: 3.83s..4.80s, and the old sleep failed 10 of
+  10 runs;
+- head-to-head under that same load: old code FAILED 3 of 3, new code
+  OK 3 of 3.
+
+The lesson worth keeping is about the measurement, not the sleep.
+Both the optimistic reading and the range originally recorded in the
+code comment (1.46s..2.48s) were wrong in opposite directions, and the
+durable record had to be corrected before it hardened into folklore.
+A latency claim needs the binary the test really invokes, and it needs
+a load regime where the failure is actually visible -- otherwise the
+threshold looks safe precisely because nothing is competing for the
+CPU.
