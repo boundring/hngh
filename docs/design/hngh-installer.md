@@ -138,7 +138,7 @@ Runs the existing adopt seam, unchanged (`automation/jobs/omarchy-config-adopt.s
 target home, plus the uwsm env hook pinning `OMARCHY_PATH`. Two added requirements:
 
 - `OMARCHY_UPSTREAM_DIR` must resolve to a boot-valid HOST path (e.g.
-  `~/Projects/etc/omarchy-upstream`), never a `/run/media/...` mount path --
+  `~/Projects/etc/hngh-related/omarchy-upstream`), never a `/run/media/...` mount path --
   the env hook pins the path permanently and a removable-media path dangles at boot.
 - The phase runs adopt `--dry-run` first and shows the copy/skip/backup counts as the
   point-of-risk confirmation body (dry-run census 2026-10-04: copy=0 skip=12 backup=5).

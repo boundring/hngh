@@ -2,7 +2,7 @@
 
 Date: 2026-09-28. Companion to `docs/design/omarchy-theming-map.md` and
 `docs/design/omarchy-gap-registry.md`. Upstream reference: omacom/omarchy
-v4.0.x, clone at `~/Projects/etc/omarchy-upstream` (commit 3faafba2, per
+v4.0.x, clone at `~/Projects/etc/hngh-related/omarchy-upstream` (commit 3faafba2, per
 `automation/config/omarchy-base.packages:2`). All facts verified by reading
 the cited files (or live host state, marked `host`).
 

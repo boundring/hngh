@@ -5,7 +5,7 @@ Procedural mapping from the operator's skeuomorphic KDE palette
 theme-template engine, so phase 4 (look port) is fill-in-the-blanks.
 
 Upstream reference: omacom/omarchy v4.0.4 (sha c668141e), clone at
-`~/Projects/etc/omarchy-upstream`. Canonical templates in
+`~/Projects/etc/hngh-related/omarchy-upstream`. Canonical templates in
 `default/themed/*.tpl`; user overrides in `config/omarchy/themed/*.tpl`;
 appliers `bin/omarchy-theme-set` (+ per-app wrappers) and
 `bin/omarchy-font-set`; drop-in hooks `theme-set.d/` + `font-set.d/`.
@@ -136,7 +136,7 @@ palette table above — nothing else to wire.
 ## Provenance
 
 - Recon session 2026-09-27: upstream omacom/omarchy ref v4.0.4, sha c668141e;
-  clone inspected at `~/Projects/etc/omarchy-upstream` (working HEAD
+  clone inspected at `~/Projects/etc/hngh-related/omarchy-upstream` (working HEAD
   3faafba234e, ahead of tag; tpl var set re-verified against working tree).
 - Template vars confirmed in clone: full `*_strip` family incl.
   `purple_strip`, `magenta`/`bright_magenta`, `accent`, `background_rgb`,
