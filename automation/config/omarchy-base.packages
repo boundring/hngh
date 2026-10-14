@@ -1,6 +1,10 @@
 # omarchy-base.packages — phase-1 additive session stack
 # Derived from omacom/omarchy @ quattro (4.0.x), clone commit 3faafba234e530b0986196b98dc2c38951e7dd6f
-# Plan: ~/Projects/etc/omarchy-integration-plan.md phase 1 (session-only, no boot-chain contact).
+# Plan: docs/design/omarchy-integration.md + docs/design/omarchy-session-integration.md
+#   (phase 1: session-only, no boot-chain contact). Superseded by those design
+#   docs; the 2026-09-27 loose plan they grew out of is archived at
+#   ~/Projects/etc/hngh-related/jcode-sessions/2026-10-13/notes/
+#   2026-09-27-omarchy-integration-plan-SUPERSEDED.md
 # Note: omarchy v4 ships no hypridle/hyprlock/hyprpaper — lock screen is owe/owe-lockfeed.
 # Marks: `# aur` = genuinely in the AUR (wicket aur-build lane);
 # `# omarchy-repo` = ships from upstream's signed [omarchy] pacman repo
