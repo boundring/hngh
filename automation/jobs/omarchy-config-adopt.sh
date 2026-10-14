@@ -44,11 +44,23 @@ while [ $# -gt 0 ]; do
 done
 
 # This job bootstraps standalone (no lib/common.sh — it parses its own flags
-# and runs under `set -u`), so it carries its own copy of the etc/ frame seam.
-# Keep the default identical to ETC_ROOT in lib/common.sh:24.
+# and runs under `set -u`), so it carries its own copy of the seams. Keep the
+# defaults identical to lib/common.sh (ETC_ROOT:24, OMARCHY_RUNTIME_DIR:55).
 ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
 
-UPSTREAM="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/hngh-related/omarchy-upstream}"
+# Adopt FROM the runtime checkout, because that is the tree whose config/ the
+# session actually loads — so "identical" means "this file is what the running
+# shell would use", not "this file matches a clone nothing boots". This
+# pointed at the pristine etc/ reference, a Sep-27 checkout the session has
+# never loaded (measured 2026-10-14: reference at 3faafba, runtime at
+# v4.0.4+hngh patch; adopting from the reference is what wrote five stale
+# files into ~/.config on 2026-09-28, one of them naming the omarchy.elsewhen
+# bar plugin the v4.0.4 shell does not ship).
+#
+# OMARCHY_UPSTREAM_DIR is still honoured as a deprecated alias so an existing
+# caller keeps working; OMARCHY_RUNTIME_DIR is the name to use. Setting both to
+# different values is refused rather than silently resolved.
+UPSTREAM="${OMARCHY_RUNTIME_DIR:-${OMARCHY_UPSTREAM_DIR:-$HOME/.local/share/omarchy}}"
 ADOPT_HOME="${HNGH_CONFIG_ADOPT_HOME:-$HOME}"
 DOTCFG="$ADOPT_HOME/.config"
 
@@ -63,12 +75,17 @@ case "$UPSTREAM" in
 '*) die3 "refusing: clone path contains a newline: $UPSTREAM" ;;
 esac
 
+if [ -n "${OMARCHY_RUNTIME_DIR:-}" ] && [ -n "${OMARCHY_UPSTREAM_DIR:-}" ] \
+  && [ "$OMARCHY_RUNTIME_DIR" != "$OMARCHY_UPSTREAM_DIR" ]; then
+ die3 "OMARCHY_RUNTIME_DIR and OMARCHY_UPSTREAM_DIR disagree ($OMARCHY_RUNTIME_DIR vs $OMARCHY_UPSTREAM_DIR); unset OMARCHY_UPSTREAM_DIR, it is the deprecated alias"
+fi
+
 # ---- (a) fail-closed prereqs -------------------------------------------------
-[ -d "$UPSTREAM" ] || die3 "upstream clone missing or not a directory: $UPSTREAM (remediation: git clone https://github.com/omarchy/omarchy $UPSTREAM)"
+[ -d "$UPSTREAM" ] || die3 "runtime checkout missing or not a directory: $UPSTREAM (remediation: git clone https://github.com/omarchy/omarchy $UPSTREAM, or set OMARCHY_RUNTIME_DIR)"
 CFG="$UPSTREAM/config"
-[ -d "$CFG/hypr" ] || die3 "upstream missing session-critical dir: $CFG/hypr"
-[ -f "$CFG/omarchy/shell.json" ] || die3 "upstream missing: $CFG/omarchy/shell.json"
-[ -d "$CFG/omarchy/hooks" ] || die3 "upstream missing: $CFG/omarchy/hooks"
+[ -d "$CFG/hypr" ] || die3 "runtime checkout missing session-critical dir: $CFG/hypr"
+[ -f "$CFG/omarchy/shell.json" ] || die3 "runtime checkout missing: $CFG/omarchy/shell.json"
+[ -d "$CFG/omarchy/hooks" ] || die3 "runtime checkout missing: $CFG/omarchy/hooks"
 
 UPREAL="$(realpath "$UPSTREAM")"
 copied=0 skipped=0 backed=0

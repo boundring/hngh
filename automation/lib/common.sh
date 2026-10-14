@@ -31,6 +31,38 @@ ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
 # children churn.
 CISTERN_ROOT="${CISTERN_ROOT:-$ETC_ROOT/cistern}"
 
+# omarchy's runtime checkout is its own seam, NOT a child of the etc/ frame.
+# There is no packaged /usr/share/omarchy on this box (measured 2026-10-14:
+# `pacman -Qo /usr/share/omarchy` -> "No package owns", only omarchy-nvim is
+# installed), so a checkout IS the runtime. Two checkouts existed and the
+# handoff inherited the disagreement:
+#   ~/.local/share/omarchy            v4.0.4 + hngh-omarchy install patch,
+#                                     at detached HEAD 78255a23; this is the
+#                                     path hngh-omarchy itself uses
+#                                     (hngh-omarchy/lib/common.sh:19
+#                                     hngh_omarchy_dir) and the one the
+#                                     session must load.
+#   ~/Projects/etc/hngh-related/omarchy-upstream
+#                                     unpatched Sep-27 clone at 3faafba on
+#                                     branch quattro, 0 local commits. Five
+#                                     automation files defaulted to it and
+#                                     the uwsm env hook pointed the session
+#                                     at it.
+# So the seam is the RUNTIME, and the etc/ clone is the diff reference. Both
+# roles are real, which is why the old name (OMARCHY_UPSTREAM_DIR) was
+# ambiguous: it named the reference while the hook wrote it into the path the
+# session resolves. Override with OMARCHY_RUNTIME_DIR= if the checkout moves.
+# OMARCHY_UPSTREAM_DIR is honoured as a deprecated alias here, at the seam,
+# because a consumer that sources this file would otherwise always get this
+# default and silently ignore an alias its caller had exported.
+OMARCHY_RUNTIME_DIR="${OMARCHY_RUNTIME_DIR:-${OMARCHY_UPSTREAM_DIR:-$HOME/.local/share/omarchy}}"
+
+# The etc/ clone is the PRISTINE REFERENCE and stays where it is: it is what
+# `git fetch` + `git diff` compares the adopted ~/.config layer against, so
+# "did upstream move under me?" stays answerable without a second opinion.
+# Override with OMARCHY_REFERENCE_DIR= if the reference checkout moves.
+OMARCHY_REFERENCE_DIR="${OMARCHY_REFERENCE_DIR:-$ETC_ROOT/hngh-related/omarchy-upstream}"
+
 hngh_catalog() { # kind path [note] -> append to ~/.hngh/catalog.tsv
  local file="$HNGH_HOME_DIR/catalog.tsv"
  # Idempotency (2026-09-13): the same kind+path catalogued 5x in 17s

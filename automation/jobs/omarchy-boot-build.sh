@@ -43,9 +43,10 @@
 #   HNGH_PACMAN_SYNC_DIR pacman sync-db dir probed inside the chroot for
 #                                  the -Syu fallback (default
 #                                  /var/lib/pacman/sync)
-#   HNGH_UPSTREAM   host-path omarchy upstream clone for the adopt hint
-#                                  (default
-#                                  ~/Projects/etc/hngh-related/omarchy-upstream)
+#   HNGH_UPSTREAM   host-path omarchy RUNTIME checkout for the adopt hint
+#                                  (default ~/.local/share/omarchy; named
+#                                  HNGH_OMARCHY_RUNTIME for symmetry with
+#                                  the seam in lib/common.sh)
 #   HNGH_BOOT_LOGDIR live stage-log directory (REQ-I26, default
 #                                  ~/.hngh/installer-logs; every run --
 #                                  dry or real -- mirrors its output there)
@@ -54,6 +55,11 @@ set -u
 # Standalone bootstrap under `set -u` (no lib/common.sh). Same etc/ frame
 # seam as lib/common.sh:15 — keep the default identical.
 ETC_ROOT="${ETC_ROOT:-$HOME/Projects/etc}"
+# Same default as OMARCHY_RUNTIME_DIR in lib/common.sh:55. This is only a hint
+# string printed for the BOOTED TARGET (phase_adopt_check below), never read
+# here — but a hint that names a checkout the target does not have is worse
+# than none, and the target's runtime is where hngh-omarchy puts it.
+HNGH_OMARCHY_RUNTIME="${HNGH_OMARCHY_RUNTIME:-$HOME/.local/share/omarchy}"
 
 DISK="${HNGH_BOOT_DISK:-/dev/nvme0n1}"
 ESP="${DISK}p1"
@@ -62,7 +68,7 @@ MNT="${HNGH_BOOT_MNT:-/mnt}"
 USER_NAME="${HNGH_BOOT_USER:-bricker}"
 ESP_ID="${HNGH_ESP_ID:-317A31FF}"
 ESP_LABEL="${HNGH_ESP_LABEL:-OMARCHY-ESP}"
-UPSTREAM="${HNGH_UPSTREAM:-$ETC_ROOT/hngh-related/omarchy-upstream}"
+UPSTREAM="${HNGH_UPSTREAM:-$HNGH_OMARCHY_RUNTIME}"
 DEV_DISK="${HNGH_DEV_DISK:-/dev/disk}"
 
 PHASE="${1:---help}"
@@ -254,9 +260,9 @@ phase_qemu() {
 
 phase_adopt_check() {
   say "== adopt-check: runs on the BOOTED TARGET, not here =="
-  say "OMARCHY_UPSTREAM_DIR=$UPSTREAM ~/.hngh/automation/jobs/omarchy-config-adopt.sh"
+  say "OMARCHY_RUNTIME_DIR=$UPSTREAM ~/.hngh/automation/jobs/omarchy-config-adopt.sh"
   say "# host path rule: a /run/media upstream path dangles at boot; the target-side"
-  say "# clone at /home/<user>/Projects/etc/hngh-related/omarchy-upstream is the boot-valid path"
+  say "# checkout at /home/<user>/.local/share/omarchy is the boot-valid path"
 }
 
 # probe_id <partuuid|fsuuid> <device>: resolve one identifier through

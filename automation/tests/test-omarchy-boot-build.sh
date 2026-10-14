@@ -92,11 +92,13 @@ sleep 0.2
 nlogs_after="$(ls "$LOGS" | wc -l)"
 if [ "$nlogs_before" -eq "$nlogs_after" ]; then ok "--help writes no log"; else bad "--help writes no log" "$nlogs_before -> $nlogs_after"; fi
 
-# 12. adopt-check logs its hint line
+# 12. adopt-check logs its hint line. The hint names the RUNTIME checkout, so
+# the env var is OMARCHY_RUNTIME_DIR; it read OMARCHY_UPSTREAM_DIR before the
+# 2026-10-14 runtime/reference split.
 HNGH_BOOT_LOGDIR="$LOGS" bash "$SCRIPT" adopt-check >/dev/null 2>&1
 sleep 0.2
 case "$(cat "$LOGS"/adopt-check-*.log 2>/dev/null)" in
-*"OMARCHY_UPSTREAM_DIR="*) ok "adopt-check log present" ;;
+*"OMARCHY_RUNTIME_DIR="*) ok "adopt-check log present" ;;
 *) bad "adopt-check log" "missing hint line" ;;
 esac
 

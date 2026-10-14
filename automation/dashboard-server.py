@@ -220,9 +220,17 @@ PRIVILEGED_SH = os.path.join(ROOT, "lib", "privileged.sh")
 AUR_BUILD_SH = os.path.join(ROOT, "jobs", "aur-build.sh")
 MANIFEST = os.path.join(ROOT, "config", "omarchy-base.packages")
 DRIFT_JOB = os.path.join(ROOT, "jobs", "pins-drift.py")
+# The Omarchy RUNTIME checkout — the tree the session loads. This constant's
+# old default was ~/Projects/etc/omarchy-upstream, a path that does not exist
+# (it was missing the hngh-related/ component), so the clone probe has been
+# reading as absent since it was written. The pristine etc/ clone still exists
+# at ~/Projects/etc/hngh-related/omarchy-upstream but is the diff reference,
+# not the runtime. OMARCHY_RUNTIME_DIR is the env seam; OMARCHY_UPSTREAM_DIR
+# is the deprecated alias, kept so an existing export keeps working.
 OMARCHY_UPSTREAM = (
-    os.environ.get("OMARCHY_UPSTREAM_DIR") or os.path.join(
-        os.path.expanduser("~"), "Projects", "etc", "omarchy-upstream"))
+    os.environ.get("OMARCHY_RUNTIME_DIR")
+    or os.environ.get("OMARCHY_UPSTREAM_DIR")
+    or os.path.join(os.path.expanduser("~"), ".local", "share", "omarchy"))
 # Installer wizard (2026-10-06): the Winamp-skinned face of
 # jobs/omarchy-unattended-install.sh. The driver is the installer;
 # the wizard reads its artifacts (workdir, stage logs, verdicts) and
@@ -586,7 +594,7 @@ def desk_bootstrap_block():
 
 
 def _desk_probe_clone():
-    """Upstream clone presence + short ref (OMARCHY_UPSTREAM_DIR honored
+    """Runtime checkout presence + short ref (OMARCHY_RUNTIME_DIR honored
     via the module constant); any fault reads as absent — fail closed."""
     try:
         if not os.path.isdir(os.path.join(OMARCHY_UPSTREAM, ".git")):
@@ -2004,9 +2012,9 @@ class Handler(SimpleHTTPRequestHandler):
                              "remediation": desk_bootstrap_block()})
             return
         if not os.path.isdir(os.path.join(OMARCHY_UPSTREAM, ".git")):
-            self._json(409, {"ok": False, "error": "upstream clone missing",
+            self._json(409, {"ok": False, "error": "runtime checkout missing",
                              "remediation": "missing: %s (set"
-                             " OMARCHY_UPSTREAM_DIR if the clone lives"
+                             " OMARCHY_RUNTIME_DIR if the checkout lives"
                              " elsewhere)" % OMARCHY_UPSTREAM})
             return
         if not os.path.isfile(MANIFEST):

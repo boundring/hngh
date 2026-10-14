@@ -10,8 +10,11 @@
 #
 # Boolean layout in the row text:
 #   phase1 a=<clone> b=<manifest>(<n>) c=<hyprland> d=<session> e=<pins>
-#     a: upstream clone at $OMARCHY_UPSTREAM_DIR (default
-#        ~/Projects/etc/hngh-related/omarchy-upstream) has a .git
+#     a: the Omarchy RUNTIME checkout at $OMARCHY_RUNTIME_DIR (default
+#        ~/.local/share/omarchy; OMARCHY_UPSTREAM_DIR is the deprecated
+#        alias) has a .git — measured 2026-10-14, this row was reading the
+#        pristine etc/ reference clone, a Sep-27 checkout the session never
+#        loads, so "clone present" did not mean "runtime present"
 #     b: $AUTOMATION_ROOT/config/omarchy-base.packages present and
 #        non-empty; n = uncommented line count
 #     c: `pacman -Q hyprland` exits 0
@@ -33,7 +36,7 @@ set -u
 KERNEL="${HNGH_HOME:-$(cd "$(dirname "$0")/../../../.." && pwd)}"
 REPORT="python3 $KERNEL/scripts/report-queue"
 report_root="${HNGH_REPORT_ROOT:-$KERNEL}"
-UPSTREAM_DIR="${OMARCHY_UPSTREAM_DIR:-$ETC_ROOT/hngh-related/omarchy-upstream}"
+UPSTREAM_DIR="$OMARCHY_RUNTIME_DIR"
 SESSIONS_DIR="${OMARCHY_SESSIONS_DIR:-/usr/share/wayland-sessions}"
 MANIFEST="$AUTOMATION_ROOT/config/omarchy-base.packages"
 PINS_MODULE="$AUTOMATION_ROOT/jobs/pins-drift.py"
