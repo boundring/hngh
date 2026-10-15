@@ -1445,7 +1445,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T15:08:31Z | progress | 2c736e85 | agent-supervision: evicted-stale omp-2026-10-14T09-08-06-697Z_01a-296019 (idle 360m) expires=2026-10-21T15:08:31Z | 2026-10-14T15:08:31Z-progress-2c736e85.md |
 | 2026-10-14T16:00:00Z | progress | 703d58fb | course pooled-hardware: card mounted, last increment 2026-10-14T15:00:00Z | 2026-10-14T16:00:00Z-progress-703d58fb.md |
 | 2026-10-14T17:00:00Z | progress | 624db1a7 | course pooled-hardware: card mounted, last increment 2026-10-14T16:00:00Z | 2026-10-14T17:00:00Z-progress-624db1a7.md |
-| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×445 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
+| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×470 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
 | 2026-10-14T18:00:00Z | progress | 5fa51854 | course pooled-hardware: card mounted, last increment 2026-10-14T17:00:00Z | 2026-10-14T18:00:00Z-progress-5fa51854.md |
 | 2026-10-14T19:00:00Z | progress | 9dfde2f4 | course pooled-hardware: card mounted, last increment 2026-10-14T18:00:00Z | 2026-10-14T19:00:00Z-progress-9dfde2f4.md |
 | 2026-10-14T19:28:24Z | progress | 0bd15313 | digest 2026-10-14 1530: logs/email-digest-2026-10-14.md (sent=yes) | 2026-10-14T19:28:24Z-progress-0bd15313.md |
@@ -1465,7 +1465,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-15T00:30:50Z | progress | dca91df2 | research line synth-2026-10-15-1: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-1.md | 2026-10-15T00:30:50Z-progress-dca91df2.md |
 | 2026-10-15T00:47:13Z | progress | 8d12513d | research line synth-2026-10-15-2: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-2.md | 2026-10-15T00:47:13Z-progress-8d12513d.md |
 | 2026-10-15T01:00:00Z | progress | 5c7b3d5c | course pooled-hardware: card mounted, last increment 2026-10-15T00:00:00Z | 2026-10-15T01:00:00Z-progress-5c7b3d5c.md |
-| 2026-10-15T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×13 | 2026-10-15T01:00:10Z-alert-ef49c9f7.md |
+| 2026-10-15T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×14 | 2026-10-15T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-15T01:02:26Z | progress | 5942efc2 | research line synth-2026-10-15-2: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-2.md | 2026-10-15T01:02:26Z-progress-5942efc2.md |
 | 2026-10-15T01:03:27Z | progress | d4323d76 | research line synth-2026-10-15-2: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-2.md | 2026-10-15T01:03:27Z-progress-d4323d76.md |
 | 2026-10-15T01:20:31Z | progress | 74b124f6 | research line synth-2026-10-15-1 reviewed: parked (parked -- structurally sound rule, but premise unmeasured, steer mechanism unverified, BLOCKED-state gap unfixed, and kernel integration unlocated; no work can start until these prerequisites resolve.) | 2026-10-15T01:20:31Z-progress-74b124f6.md |
@@ -1474,7 +1474,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-15T02:00:00Z | progress | 5a70e8d1 | course pooled-hardware: card mounted, last increment 2026-10-15T01:00:00Z | 2026-10-15T02:00:00Z-progress-5a70e8d1.md |
 | 2026-10-15T02:01:22Z | progress | 16f1261b | digest 2026-10-14 2200: logs/email-digest-2026-10-14.md (sent=yes) | 2026-10-15T02:01:22Z-progress-16f1261b.md |
 | 2026-10-15T02:03:09Z | progress | 6933721f | research line synth-2026-10-15-3: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-3.md | 2026-10-15T02:03:09Z-progress-6933721f.md |
-| 2026-10-15T02:03:10Z | progress | b6bb7c5b | news ingest ok: weather: overcast, 22.5 C (open-meteo) ×11 | 2026-10-15T02:03:10Z-progress-b6bb7c5b.md |
+| 2026-10-15T02:03:10Z | progress | b6bb7c5b | news ingest ok: weather: overcast, 22.5 C (open-meteo) ×12 | 2026-10-15T02:03:10Z-progress-b6bb7c5b.md |
 | 2026-10-15T02:03:11Z | progress | 320f458a | dashboard introspection grade 6/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) | 2026-10-15T02:03:11Z-progress-320f458a.md |
 | 2026-10-15T02:10:34Z | progress | 90a28328 | research line synth-2026-10-15-2 reviewed: parked (typed verdict parked (confidence 0.94)) | 2026-10-15T02:10:34Z-progress-90a28328.md |
 | 2026-10-15T02:27:51Z | progress | 1ff31397 | research line synth-2026-10-15-3 reviewed: killed (killed -- The line is chasing a potentially non-existent incident record; the "four owed verification greps" cannot be identified without the script, and the script's existence is unverified.) | 2026-10-15T02:27:51Z-progress-1ff31397.md |
@@ -1486,7 +1486,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-15T04:00:12Z | progress | 2f7148be | router routed supervision:omp-2026-10-15T03-04-29-438Z_01a-cc0a31:stalled -> plan candidate 2026-10-15-routed-supervision-omp-2026-10-15T03-04-29-438Z_01a-cc0a31-stalled (routed-at 2026-10-15T04:00:12Z) expires=2026-10-22T04:00:12Z | 2026-10-15T04:00:12Z-progress-2f7148be.md |
 | 2026-10-15T04:25:12Z | alert | 0f1efe75 | [oversight] slow-unit: dropin:05-operator-items.sh wall=301.9s median=145.9s ×8 | 2026-10-15T04:25:12Z-alert-0f1efe75.md |
 | 2026-10-15T04:30:26Z | alert | c6f70ee8 | [oversight] slow-unit: hngh-cadence-subhour.service wall=315.9s median=153.5s ×10 | 2026-10-15T04:30:26Z-alert-c6f70ee8.md |
-| 2026-10-15T04:36:29Z | alert | dc0c9da1 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=24.3s median=0.0s ×23 | 2026-10-15T04:36:29Z-alert-dc0c9da1.md |
+| 2026-10-15T04:36:29Z | alert | dc0c9da1 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=24.3s median=0.0s ×25 | 2026-10-15T04:36:29Z-alert-dc0c9da1.md |
 | 2026-10-15T04:36:29Z | alert | 66521269 | [oversight] slow-unit: dropin:58-patrol.sh wall=18.4s median=0.0s ×2 | 2026-10-15T04:36:29Z-alert-66521269.md |
 | 2026-10-15T04:41:33Z | alert | 5c6637a6 | [oversight] slow-unit: dropin:45-agent-respawn.sh wall=14.4s median=0.0s ×2 | 2026-10-15T04:41:33Z-alert-5c6637a6.md |
 | 2026-10-15T05:00:01Z | progress | 60471707 | course pooled-hardware: card mounted, last increment 2026-10-15T04:00:00Z | 2026-10-15T05:00:01Z-progress-60471707.md |
@@ -1550,3 +1550,4 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-15T12:55:15Z | progress | 2cf0bdf7 | plan 2026-09-16-routed-ux-review-email-digest-defect-pace-stalling-0-steps-in-24h-3-pl executed (all steps checked) | 2026-10-15T12:55:15Z-progress-2cf0bdf7.md |
 | 2026-10-15T12:55:15Z | alert | 59bd4a80 | session touched critical paths in ~/Projects/etc/hngh/automation: automation/tests/test-queue-progress.py | 2026-10-15T12:55:15Z-alert-59bd4a80.md |
 | 2026-10-15T13:00:00Z | progress | 25ef9182 | course pooled-hardware: card mounted, last increment 2026-10-15T12:00:00Z | 2026-10-15T13:00:00Z-progress-25ef9182.md |
+| 2026-10-15T14:00:00Z | progress | 5242b07e | course pooled-hardware: card mounted, last increment 2026-10-15T13:00:00Z | 2026-10-15T14:00:00Z-progress-5242b07e.md |
