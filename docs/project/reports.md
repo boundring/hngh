@@ -1500,7 +1500,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T01:00:00Z | progress | 566d99a1 | course pooled-hardware: card mounted, last increment 2026-10-14T00:00:00Z | 2026-10-14T01:00:00Z-progress-566d99a1.md |
 | 2026-10-14T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) ×24 | 2026-10-14T01:00:10Z-alert-ef49c9f7.md |
 | 2026-10-14T02:00:00Z | progress | c3c9fbcd | course pooled-hardware: card mounted, last increment 2026-10-14T01:00:00Z | 2026-10-14T02:00:00Z-progress-c3c9fbcd.md |
-| 2026-10-14T02:00:29Z | progress | 9db52bae | news ingest ok: weather: clear, 19.3 C (open-meteo) ×22 | 2026-10-14T02:00:29Z-progress-9db52bae.md |
+| 2026-10-14T02:00:29Z | progress | 9db52bae | news ingest ok: weather: clear, 19.3 C (open-meteo) ×23 | 2026-10-14T02:00:29Z-progress-9db52bae.md |
 | 2026-10-14T02:00:30Z | progress | 320f458a | dashboard introspection grade 6/6 met; filed=0 regressions=0 (probes docs/design/dashboard-intent.md) | 2026-10-14T02:00:30Z-progress-320f458a.md |
 | 2026-10-14T02:02:02Z | progress | 214c879d | digest 2026-10-13 2200: logs/email-digest-2026-10-13.md (sent=yes) | 2026-10-14T02:02:02Z-progress-214c879d.md |
 | 2026-10-14T02:55:57Z | alert | 16925fee | agent-supervision: omp-2026-10-14T02-30-06-239Z_01a-0d69f5 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T02:55:57Z ×56 | 2026-10-14T02:55:57Z-alert-16925fee.md |
@@ -1525,7 +1525,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T04:08:39Z | progress | 2b6368c0 | research line fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-14-fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh.md | 2026-10-14T04:08:39Z-progress-2b6368c0.md |
 | 2026-10-14T04:16:31Z | progress | 6d6b1398 | research line fail-20260916-slow-unit-dropin-59-unsloth-observe.sh reviewed: parked (typed verdict parked (confidence 0.88)) | 2026-10-14T04:16:31Z-progress-6d6b1398.md |
 | 2026-10-14T04:31:01Z | progress | ef756ee0 | research line fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-14-fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh.md | 2026-10-14T04:31:01Z-progress-ef756ee0.md |
-| 2026-10-14T04:31:03Z | alert | 0a4c0241 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=72.8s median=0.0s ×39 | 2026-10-14T04:31:03Z-alert-0a4c0241.md |
+| 2026-10-14T04:31:03Z | alert | 0a4c0241 | [oversight] slow-unit: dropin:50-research-overflow.sh wall=72.8s median=0.0s ×40 | 2026-10-14T04:31:03Z-alert-0a4c0241.md |
 | 2026-10-14T04:35:29Z | progress | 06f39d01 | plan 2026-10-14-routed-review-finding-2026-10-13-accept-plans-idempotence-broken-reports auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T04:35:29Z expires=2026-10-21T04:35:29Z | 2026-10-14T04:35:29Z-progress-06f39d01.md |
 | 2026-10-14T04:35:30Z | progress | fd218ba7 | plan 2026-10-14-routed-review-finding-2026-10-13-current-overlay-json-oscillates-panel-wa auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T04:35:29Z expires=2026-10-21T04:35:29Z | 2026-10-14T04:35:30Z-progress-fd218ba7.md |
 | 2026-10-14T04:35:30Z | progress | 1c3ccdd4 | plan 2026-10-14-routed-supervision-omp-2026-10-14T02-30-06-239Z_01a-0d69f5-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T04:35:29Z expires=2026-10-21T04:35:30Z | 2026-10-14T04:35:30Z-progress-1c3ccdd4.md |
@@ -1556,7 +1556,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T08:06:38Z | progress | 75ff17e2 | plan 2026-10-14-routed-review-hngh-P1-scope-violation-2026-10-12- auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T08:06:38Z expires=2026-10-21T08:06:38Z | 2026-10-14T08:06:38Z-progress-75ff17e2.md |
 | 2026-10-14T08:15:39Z | progress | 19247abd | model openrouter/z-ai/glm-5.3-flash back in rotation (ok outcome; demotion cleared) | 2026-10-14T08:15:39Z-progress-19247abd.md |
 | 2026-10-14T08:19:42Z | progress | def797b6 | plan 2026-09-16-routed-ui-audit-axe-color-contrast-2 executed (all steps checked) | 2026-10-14T08:19:42Z-progress-def797b6.md |
-| 2026-10-14T08:24:41Z | alert | abc3ccfd | [oversight] slow-unit: hngh-cadence-hour.service wall=1187.3s median=361.2s ×15 | 2026-10-14T08:24:41Z-alert-abc3ccfd.md |
+| 2026-10-14T08:24:41Z | alert | abc3ccfd | [oversight] slow-unit: hngh-cadence-hour.service wall=1187.3s median=361.2s ×25 | 2026-10-14T08:24:41Z-alert-abc3ccfd.md |
 | 2026-10-14T09:00:00Z | progress | 797c1b72 | implementation: 2026-10-14 10 open lane(s); next=lane: hngh-autonomy-build — started: report-queue + run-autonomous + tests | 2026-10-14T09:00:00Z-progress-797c1b72.md |
 | 2026-10-14T09:00:00Z | progress | 7ebd9815 | review: 2026-10-14 latest progress increment=797c1b72 (implementation:2026-10-1410openlane(s);next=lane:hngh-autonomy-build—started:report-queue+run-autonomous+tests) | 2026-10-14T09:00:00Z-progress-7ebd9815.md |
 | 2026-10-14T09:00:00Z | progress | 0eaa1c91 | cleanup: 2026-10-14 done markers present; cleanup due | 2026-10-14T09:00:00Z-progress-0eaa1c91.md |
@@ -1617,7 +1617,7 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T15:08:31Z | progress | 2c736e85 | agent-supervision: evicted-stale omp-2026-10-14T09-08-06-697Z_01a-296019 (idle 360m) expires=2026-10-21T15:08:31Z | 2026-10-14T15:08:31Z-progress-2c736e85.md |
 | 2026-10-14T16:00:00Z | progress | 703d58fb | course pooled-hardware: card mounted, last increment 2026-10-14T15:00:00Z | 2026-10-14T16:00:00Z-progress-703d58fb.md |
 | 2026-10-14T17:00:00Z | progress | 624db1a7 | course pooled-hardware: card mounted, last increment 2026-10-14T16:00:00Z | 2026-10-14T17:00:00Z-progress-624db1a7.md |
-| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×153 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
+| 2026-10-14T17:28:08Z | progress | 2978e1fd | newspaper compose ok: newspaper composed: 21 article(s), 0 edition(s) ×175 | 2026-10-14T17:28:08Z-progress-2978e1fd.md |
 | 2026-10-14T18:00:00Z | progress | 5fa51854 | course pooled-hardware: card mounted, last increment 2026-10-14T17:00:00Z | 2026-10-14T18:00:00Z-progress-5fa51854.md |
 | 2026-10-14T19:00:00Z | progress | 9dfde2f4 | course pooled-hardware: card mounted, last increment 2026-10-14T18:00:00Z | 2026-10-14T19:00:00Z-progress-9dfde2f4.md |
 | 2026-10-14T19:28:24Z | progress | 0bd15313 | digest 2026-10-14 1530: logs/email-digest-2026-10-14.md (sent=yes) | 2026-10-14T19:28:24Z-progress-0bd15313.md |
@@ -1625,10 +1625,16 @@ dashboard reads it newest-first and the bodies sit beside the table.
 | 2026-10-14T20:06:51Z | alert | 5c903edd | [oversight] slow-unit: hngh-automation.service wall=356.2s median=58.1s ×10 | 2026-10-14T20:06:51Z-alert-5c903edd.md |
 | 2026-10-14T20:17:32Z | progress | d631c54d | plan 2026-09-16-routed-ui-audit-axe-color-contrast-5 executed (all steps checked) | 2026-10-14T20:17:32Z-progress-d631c54d.md |
 | 2026-10-14T20:21:43Z | progress | 5ecde53c | plan 2026-09-16-routed-ui-audit-axe-color-contrast-4 executed (all steps checked) | 2026-10-14T20:21:43Z-progress-5ecde53c.md |
-| 2026-10-14T20:23:29Z | alert | 2c53dde9 | agent-supervision: omp-2026-10-14T20-00-18-195Z_01a-817055 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T20:23:28Z ×40 | 2026-10-14T20:23:29Z-alert-2c53dde9.md |
+| 2026-10-14T20:23:29Z | alert | 2c53dde9 | agent-supervision: omp-2026-10-14T20-00-18-195Z_01a-817055 stalled (missed tick 1) — steer: no transcript evidence this tick expires=2026-10-21T20:23:28Z ×51 | 2026-10-14T20:23:29Z-alert-2c53dde9.md |
 | 2026-10-14T21:00:00Z | progress | 9383fcac | course pooled-hardware: card mounted, last increment 2026-10-14T20:00:00Z | 2026-10-14T21:00:00Z-progress-9383fcac.md |
 | 2026-10-14T21:00:12Z | progress | e7999c65 | router routed supervision:omp-2026-10-14T20-00-18-195Z_01a-817055:stalled -> plan candidate 2026-10-14-routed-supervision-omp-2026-10-14T20-00-18-195Z_01a-817055-stalled (routed-at 2026-10-14T21:00:12Z) expires=2026-10-21T21:00:12Z | 2026-10-14T21:00:12Z-progress-e7999c65.md |
 | 2026-10-14T21:05:42Z | progress | 5829ae16 | plan 2026-10-14-routed-supervision-omp-2026-10-14T20-00-18-195Z_01a-817055-stalled auto-accepted (normal-risk, verification runnable, both gates green); accepted=2026-10-14T21:05:42Z expires=2026-10-21T21:05:42Z | 2026-10-14T21:05:42Z-progress-5829ae16.md |
 | 2026-10-14T22:00:00Z | progress | d2c196c4 | course pooled-hardware: card mounted, last increment 2026-10-14T21:00:00Z | 2026-10-14T22:00:00Z-progress-d2c196c4.md |
 | 2026-10-14T23:00:00Z | progress | 4a5b45ff | course pooled-hardware: card mounted, last increment 2026-10-14T22:00:00Z | 2026-10-14T23:00:00Z-progress-4a5b45ff.md |
 | 2026-10-15T00:00:00Z | progress | c1f6b454 | course pooled-hardware: card mounted, last increment 2026-10-14T23:00:00Z | 2026-10-15T00:00:00Z-progress-c1f6b454.md |
+| 2026-10-15T00:03:28Z | progress | 79d65b92 | research line synth-2026-10-15-1: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-1.md | 2026-10-15T00:03:28Z-progress-79d65b92.md |
+| 2026-10-15T00:14:17Z | progress | 446daa16 | research line synth-2026-10-15-1: expanding -> contracting -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-1.md | 2026-10-15T00:14:17Z-progress-446daa16.md |
+| 2026-10-15T00:30:50Z | progress | dca91df2 | research line synth-2026-10-15-1: contracting -> crystallized -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-1.md | 2026-10-15T00:30:50Z-progress-dca91df2.md |
+| 2026-10-15T00:47:13Z | progress | 8d12513d | research line synth-2026-10-15-2: planned -> expanding -> ~/.hngh/archive/digest/RESEARCH-BEAT-2026-10-15-synth-2026-10-15-2.md | 2026-10-15T00:47:13Z-progress-8d12513d.md |
+| 2026-10-15T01:00:00Z | progress | 5c7b3d5c | course pooled-hardware: card mounted, last increment 2026-10-15T00:00:00Z | 2026-10-15T01:00:00Z-progress-5c7b3d5c.md |
+| 2026-10-15T01:00:10Z | alert | ef49c9f7 | [dash-selfreview] summary: 0 findings (0 unacceptable-now, 0 acceptable-for-now) | 2026-10-15T01:00:10Z-alert-ef49c9f7.md |
