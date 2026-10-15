@@ -7,20 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new test script that validates hngh-automation job definitions parse correctly
-  Verification: python3 scripts/validate_jobs.py
+- [ ] Add a cadence job that validates automation script syntax before execution
+  Verification: bash -n cadence/validate-syntax.sh
 
-- [ ] Create a cadence script that generates a weekly digest of automation test results
-  Verification: bash cadence/weekly_digest.sh
+- [ ] Create a helper script to lint all automation scripts in jobs/
+  Verification: bash scripts/lint-jobs.sh
 
-- [ ] Add a lib utility function for safe job name generation
-  Verification: bash -n lib/job_utils.sh
-
-- [ ] Create a test case that verifies job name generation follows naming conventions
+- [ ] Add a test that confirms linting passes for existing scripts
   Verification: make test
 
-- [ ] Add a dashboard script that aggregates test pass rates from recent runs
-  Verification: bash dashboard/aggregate_tests.sh
+- [ ] Document the validation workflow in cadence/README.md
+  Verification: grep -q "validation" cadence/README.md
 
-- [ ] Create a script that prunes stale test artifacts older than 30 days
-  Verification: bash scripts/prune_artifacts.sh
+- [ ] Verify all new scripts pass syntax checks
+  Verification: bash -n jobs/*.sh scripts/*.sh cadence/*.sh
