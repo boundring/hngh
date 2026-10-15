@@ -6,8 +6,14 @@ at 2026-09-16T10:00:39Z. Alert text: defect: "pace: stalling (0 steps in 24h; 3 
 
 ## Steps
 
-- [ ] Fix the review finding in docs/automation with a named verification
+- [x] Fix the review finding in docs/automation with a named verification
       Verification: the finding's own check passes; `make test` green
+      Done 2026-10-15: pace() captions in automation/scripts/email-digest.py
+      now lead with the literal delta ("pace: 0 steps in 24h; %d plans
+      pending", "pace: %d steps in 24h"); rising/idle/first-digest branches
+      stayed untouched (not named by the finding). Pinning tests rewritten
+      red-first in automation/tests/test-queue-progress.py; automation
+      `make test` green; real-repo compose renders the literal caption.
 
 ## Occurrences
 

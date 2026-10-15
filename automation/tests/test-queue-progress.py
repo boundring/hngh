@@ -98,6 +98,9 @@ class QueueProgress(unittest.TestCase):
         self.assertIn("steps 1/4 (-2)", sec)
         self.assertIn("p-fresh", sec)
         self.assertIn("(new)", sec)
+        # register fix (2026-10-15 ux-review): the negative delta IS the
+        # caption — literal number first, no hedging adjective
+        self.assertIn("pace: -2 steps in 24h", sec)
 
     def test_no_live_plans_still_reports_counts(self):
         self.set_plans([{"slug": "p-done", "status": "executed", "risk": "normal",
@@ -124,9 +127,10 @@ class QueueProgress(unittest.TestCase):
         self.assertIn("(plans.json unreadable)", sec)
         self.assertIn("kernel queue: unreadable", sec)
 
-    def test_pace_zero_steps_with_pending_is_stalling(self):
+    def test_pace_zero_steps_with_pending_counts_them(self):
         # rubric fix (2026-09-04 digest): 0 ticks + pending work is NOT
-        # steady — the honest verdict is stalling with the pending count
+        # steady — the caption states the pending count literally, no
+        # significance adjective
         self.set_plans([{"slug": "p-live", "status": "accepted",
                          "risk": "normal", "steps_total": 4,
                          "steps_done": 2}])
@@ -135,7 +139,7 @@ class QueueProgress(unittest.TestCase):
                         "steps 2/4\n")
         sec = self.section(self.digest(
             HNGH_DIGEST_PREV_DIGEST=str(prev)).stdout)
-        self.assertIn("pace: stalling (0 steps in 24h; 1 plans pending)", sec)
+        self.assertIn("pace: 0 steps in 24h; 1 plans pending", sec)
 
     def test_pace_zero_without_pending_is_idle(self):
         self.set_plans([{"slug": "p-done", "status": "executed",

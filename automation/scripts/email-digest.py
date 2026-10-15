@@ -215,18 +215,19 @@ def queue_progress():
 
 
 def pace(delta, have_prev, pending):
-    """One-line verdict from the delta math + pending supply. Rubric fix
-    (2026-09-04 digest said "steady" on a 0-step day while 40 accepted
-    plans sat unchecked): 0 ticks with pending accepted work is
-    STALLING, not steady; 0 ticks with an empty queue is idle."""
+    """One-line verdict from the delta math + pending supply. Caption
+    states the literal numbers first (register law, kernel
+    docs/design/writing-register.md); the 2026-09-04 rubric fix
+    stands: 0 ticks with pending accepted work is not steady, 0
+    ticks with an empty queue is idle."""
     if not have_prev:
         return "pace: first digest (no prior digest to diff)"
     if delta > 0:
         return "pace: rising (+%d steps in 24h)" % delta
     if delta < 0:
-        return "pace: stalling (%d steps in 24h)" % delta
+        return "pace: %d steps in 24h" % delta
     if pending > 0:
-        return "pace: stalling (0 steps in 24h; %d plans pending)" % pending
+        return "pace: 0 steps in 24h; %d plans pending" % pending
     return "pace: idle (queue empty)"
 
 
