@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-10-15T20:07:23Z -->
+<!-- plan: status=proposed risk=normal accepted=- -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-10-15 - dev-fail-20260917-overnight-plan-accept-bloc (synthesized from adopted research)
 
@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a cadence script that validates job definitions against a schema
-  Verification: bash -n cadence/validate-jobs.sh && make test
+- [ ] Add a job-cadence validation script that checks all jobs/ entries have required metadata fields
+  Verification: bash scripts/validate-cadence.sh
 
-- [ ] Create a lib helper for safe path resolution under jobs/
-  Verification: bash -n lib/path-resolver.sh && make test
+- [ ] Create a test suite for cadence validation in tests/ directory
+  Verification: make test
 
-- [ ] Add a test for the path resolver helper
-  Verification: bash tests/test-path-resolver.sh && make test
+- [ ] Add a dashboard digest entry that reports cadence validation results
+  Verification: bash -n dashboard/digest-cadence-report.sh
 
-- [ ] Update dashboard config to reference the new cadence script
-  Verification: grep -q 'validate-jobs' dashboard/config.yaml && make test
+- [ ] Update lib/ to include cadence validation helper functions
+  Verification: node --check lib/cadence-helpers.js
 
-- [ ] Add a digest script that summarizes cadence validation results
-  Verification: bash -n digest/summarize-cadence.sh && make test
+- [ ] Add a script to prune stale cadence entries older than 30 days
+  Verification: bash scripts/prune-cadence.sh
 
-- [ ] Verify all new scripts pass syntax checks and tests
+- [ ] Verify all new scripts pass syntax checks and tests pass
   Verification: make test
