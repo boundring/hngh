@@ -7,11 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new `cadence/` helper script that generates a deterministic daily summary file from the last three logs in `jobs/`.
-  Verification: bash -n cadence/generate-digest.sh && ls jobs/run-001.log jobs/run-002.log jobs/run-003.log > /dev/null
+- [ ] Add a cadence script that validates job definitions against a schema
+  Verification: bash -n cadence/validate-jobs.sh && make test
 
-- [ ] Create a plain-text commit that registers this new digest script as a runnable entry in `dashboard/`.
-  Verification: grep -q "generate-digest" dashboard/hngh-plan.md && git diff --cached --quiet || true
+- [ ] Create a lib helper for safe path resolution under jobs/
+  Verification: bash -n lib/path-resolver.sh && make test
 
-- [ ] Add a unit test under `tests/` that asserts the helper returns a non-empty summary file when invoked.
-  Verification: python3 tests/test_digest_helper.py
+- [ ] Add a test for the path resolver helper
+  Verification: bash tests/test-path-resolver.sh && make test
+
+- [ ] Update dashboard config to reference the new cadence script
+  Verification: grep -q 'validate-jobs' dashboard/config.yaml && make test
+
+- [ ] Add a digest script that summarizes cadence validation results
+  Verification: bash -n digest/summarize-cadence.sh && make test
+
+- [ ] Verify all new scripts pass syntax checks and tests
+  Verification: make test
