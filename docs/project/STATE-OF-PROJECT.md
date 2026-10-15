@@ -38,11 +38,11 @@ Regenerated weekly from live ledgers by
 hngh-automation `cadence/calendar/daily/17-torch-audit.sh` — do not hand-edit
 inside the sentinels.
 
-- Research lines: 364 reviewed (hngh-automation/research-lines.tsv).
-- Queue Next: pooled-hardware, set 2026-10-11 (3 days old) (hngh docs/project/queue.md).
-- Plan ledger: 996 plan files, 929 routed candidates (hngh docs/project/plans/).
+- Research lines: 367 reviewed (hngh-automation/research-lines.tsv).
+- Queue Next: pooled-hardware, set 2026-10-11 (4 days old) (hngh docs/project/queue.md).
+- Plan ledger: 1006 plan files, 939 routed candidates (hngh docs/project/plans/).
 - Operator items: 28 open (hngh-automation/dashboard/operator-items.json; display cap 40).
-- Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok [w=crumbs.py@457480] (hngh-automation crumbs journal crumb tail).
+- Gates: 03-gate-check.sh — gate-green — hngh-automation: make test ok [w=crumbs.py@475518] (hngh-automation crumbs journal crumb tail).
 <!-- torch:end -->
 
 ## What is broken and being fixed
