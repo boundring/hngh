@@ -7,17 +7,15 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `scripts/validate-plan.sh` that checks plan step count and verification presence
-  Verification: bash scripts/validate-plan.sh
-
-- [ ] Add a `tests/test-plan-format.sh` that validates step indentation and verification syntax
-  Verification: bash tests/test-plan-format.sh
-
-- [ ] Add a `cadence/plan-rules.sh` that enforces normal-risk gating before plan admission
-  Verification: bash cadence/plan-rules.sh
-
-- [ ] Add a `lib/plan-validator.py` (stdlib only) that parses plan body and rejects forbidden paths
-  Verification: python3 lib/plan-validator.py
-
-- [ ] Add a `dashboard/plan-summary.sh` that extracts step count and verification count from plan
-  Verification: bash dashboard/plan-summary.sh
+- [ ] Add a cadence job that validates dashboard digest output format
+  Verification: bash -n cadence/validate-digest.sh
+- [ ] Create a lib utility for parsing digest JSON into structured fields
+  Verification: python3 -c "import json; json.load(open('lib/digest-parser.py'))"
+- [ ] Add a test case that exercises the digest parser with sample data
+  Verification: make test
+- [ ] Update cadence/validate-digest.sh to use the new lib parser
+  Verification: bash -n cadence/validate-digest.sh
+- [ ] Add a dashboard integration test that runs the full digest pipeline
+  Verification: make test
+- [ ] Document the new cadence job in cadence/README.md
+  Verification: grep -q "validate-digest" cadence/README.md
