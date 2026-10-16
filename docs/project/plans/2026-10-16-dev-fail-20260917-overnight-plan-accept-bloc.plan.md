@@ -7,11 +7,14 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a `cadence/routine-check.sh` script that logs the current timestamp and verifies the hngh agent is responsive via ping
-  Verification: bash cadence/routine-check.sh && echo "Agent logged heartbeat"
-- [ ] Create a `scripts/daily-digest.py` using only stdlib to fetch today's top HN items from the local cached list
-  Verification: python3 scripts/daily-digest.py --help && echo "Digest module loads cleanly"
-- [ ] Update `.gitignore` to exclude any non-standard artifacts and confirm repo hygiene with a clean build
-  Verification: git status --porcelain | wc -l == 0 && make test
-- [ ] Add `tests/test_digest_pipeline.sh` that runs the daily-digest script and asserts exit code zero
-  Verification: bash tests/test_digest_pipeline.sh
+- [ ] Add a shell script that validates the current branch is not main before running automation jobs
+  Verification: bash -n jobs/pre-check-branch.sh
+
+- [ ] Create a test that asserts the pre-check script exits non-zero on main branch
+  Verification: make test
+
+- [ ] Add a grep check confirming no secrets are referenced in new job scripts
+  Verification: grep -r "password\|secret\|token" jobs/ --include="*.sh" | grep -v "^Binary"
+
+- [ ] Commit the new pre-check and test as a plain commit
+  Verification: git log --oneline -1
