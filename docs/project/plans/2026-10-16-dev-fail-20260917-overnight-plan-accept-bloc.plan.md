@@ -1,4 +1,4 @@
-<!-- plan: status=accepted risk=normal accepted=2026-10-16T05:06:16Z -->
+<!-- plan: status=proposed risk=normal accepted=- -->
 principle: adopted evidence before new surface (docs/project/decisions.md entry template)
 # 2026-10-16 - dev-fail-20260917-overnight-plan-accept-bloc (synthesized from adopted research)
 
@@ -7,17 +7,11 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new cadence job that runs a health-check script on a daily schedule
-  Verification: `bash -n cadence/health-check-job.sh`
-
-- [ ] Create a verification script that confirms the cadence job file is syntactically valid
-  Verification: `bash cadence/health-check-job.sh --dry-run`
-
-- [ ] Add a test case that validates the new cadence job integrates with existing automation
-  Verification: `make test`
-
-- [ ] Update the dashboard digest to include the new health-check job status
-  Verification: `bash -n dashboard/digest-template.sh`
-
-- [ ] Run the full test suite to confirm no regressions from the new cadence job
-  Verification: `make test`
+- [ ] Add a `cadence/routine-check.sh` script that logs the current timestamp and verifies the hngh agent is responsive via ping
+  Verification: bash cadence/routine-check.sh && echo "Agent logged heartbeat"
+- [ ] Create a `scripts/daily-digest.py` using only stdlib to fetch today's top HN items from the local cached list
+  Verification: python3 scripts/daily-digest.py --help && echo "Digest module loads cleanly"
+- [ ] Update `.gitignore` to exclude any non-standard artifacts and confirm repo hygiene with a clean build
+  Verification: git status --porcelain | wc -l == 0 && make test
+- [ ] Add `tests/test_digest_pipeline.sh` that runs the daily-digest script and asserts exit code zero
+  Verification: bash tests/test_digest_pipeline.sh
