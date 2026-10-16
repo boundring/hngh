@@ -7,15 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a shell script in `scripts/` that validates hngh-automation commit hygiene
-  Verification: `bash -n scripts/hngh-commit-hygiene.sh`
-- [ ] Add a test job in `jobs/` that runs the hygiene script as part of the pipeline
-  Verification: `make test`
-- [ ] Add a cadence entry in `cadence/` that schedules the hygiene check
-  Verification: `bash -n cadence/hngh-cadence-check.sh`
-- [ ] Add a lib helper in `lib/` that extracts commit metadata for verification
-  Verification: `bash -n lib/hngh-commit-metadata.sh`
-- [ ] Add a test in `tests/` that asserts the lib helper returns expected output
-  Verification: `bash -n tests/hngh-commit-metadata-test.sh`
-- [ ] Add a dashboard snippet in `dashboard/` that displays hygiene status
-  Verification: `bash -n dashboard/hngh-hygiene-dashboard.sh`
+- [ ] Add a new job script under jobs/ that validates input data structure before processing
+  Verification: bash -n jobs/validate-input.sh
+
+- [ ] Create a corresponding test file under tests/ that exercises the validation logic
+  Verification: make test
+
+- [ ] Add a verification script under scripts/ that checks job output format compliance
+  Verification: bash scripts/check-output-format.sh
+
+- [ ] Update cadence/ configuration to register the new validation job in the pipeline
+  Verification: grep -q 'validate-input' cadence/pipeline.yaml
+
+- [ ] Add a dashboard snippet under dashboard/ that displays validation pass/fail status
+  Verification: bash -n dashboard/validation-status.js
+
+- [ ] Create a digest template under digest/ that formats validation results for downstream consumers
+  Verification: grep -q 'validation' digest/template.md
