@@ -7,20 +7,20 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add a new job script under jobs/ that validates input data structure before processing
-  Verification: bash -n jobs/validate-input.sh
+- [ ] Add a script to validate automation job definitions before execution
+  Verification: bash -n jobs/validate-job-def.sh
 
-- [ ] Create a corresponding test file under tests/ that exercises the validation logic
+- [ ] Create a helper script that checks cadence schedule consistency
+  Verification: python3 cadence/check-schedule.py
+
+- [ ] Add a test script that validates automation output format compliance
   Verification: make test
 
-- [ ] Add a verification script under scripts/ that checks job output format compliance
-  Verification: bash scripts/check-output-format.sh
+- [ ] Create a script to verify dashboard digest file structure
+  Verification: bash scripts/verify-digest-structure.sh
 
-- [ ] Update cadence/ configuration to register the new validation job in the pipeline
-  Verification: grep -q 'validate-input' cadence/pipeline.yaml
+- [ ] Add a linting step to enforce naming conventions for automation jobs
+  Verification: bash -n jobs/lint-job-names.sh
 
-- [ ] Add a dashboard snippet under dashboard/ that displays validation pass/fail status
-  Verification: bash -n dashboard/validation-status.js
-
-- [ ] Create a digest template under digest/ that formats validation results for downstream consumers
-  Verification: grep -q 'validation' digest/template.md
+- [ ] Create a verification script that confirms all automation paths are under allowed directories
+  Verification: python3 scripts/check-path-constraints.py
