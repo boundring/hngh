@@ -7,11 +7,17 @@ dispositions (local chain, pinned); admission via accept-plans.
 
 ## Steps
 
-- [ ] Add `cadence/README.md` documenting the automated research-line ingestion workflow for hngh-automation.
-  Verification: bash -n cadence/README.md && grep -q "hngh" cadence/README.md
-- [ ] Create `scripts/generate_plan.sh` that reads adopted findings and emits a templated development plan into `cadence/draft-plan.md`.
-  Verification: bash -n scripts/generate_plan.sh && bash scripts/generate_plan.sh 2>&1 | grep -q "hngh"
-- [ ] Add `tests/test_plan_generation.py` using stdlib to assert that generated plans contain exactly one rationale line and a '## Steps' header.
-  Verification: python3 tests/test_plan_generation.py
-- [ ] Update `.gitignore` in `jobs/` to exclude any build artifacts or credential traces from the plan directory.
-  Verification: grep -q "credential" jobs/.gitignore || grep -q ".env" jobs/.gitignore
+- [ ] Add a `scripts/validate-plan.sh` that checks plan step count and verification presence
+  Verification: bash scripts/validate-plan.sh
+
+- [ ] Add a `tests/test-plan-format.sh` that validates step indentation and verification syntax
+  Verification: bash tests/test-plan-format.sh
+
+- [ ] Add a `cadence/plan-rules.sh` that enforces normal-risk gating before plan admission
+  Verification: bash cadence/plan-rules.sh
+
+- [ ] Add a `lib/plan-validator.py` (stdlib only) that parses plan body and rejects forbidden paths
+  Verification: python3 lib/plan-validator.py
+
+- [ ] Add a `dashboard/plan-summary.sh` that extracts step count and verification count from plan
+  Verification: bash dashboard/plan-summary.sh
